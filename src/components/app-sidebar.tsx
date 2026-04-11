@@ -143,11 +143,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             />
           </SidebarMenuButton>
           <CollapsibleContent className={teamsScrollable ? "min-h-0 flex-1" : undefined}>
-            <div
-              className={teamsScrollable ? "h-full min-h-0 overflow-y-auto pr-[1px]" : undefined}
-            >
-              {renderNavItems(item.items)}
-            </div>
+            <div>{renderNavItems(item.items)}</div>
           </CollapsibleContent>
         </SidebarMenuItem>
       </Collapsible>
