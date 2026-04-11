@@ -21,7 +21,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowRight01Icon, LayoutBottomIcon } from "@hugeicons/core-free-icons"
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = useRouterState({
@@ -90,18 +90,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <Sidebar {...props}>
-      <SidebarHeader>
+      <SidebarHeader className="px-2 pt-3 pb-1">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" render={<Link to="/inbox" />}>
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                <HugeiconsIcon
-                  icon={LayoutBottomIcon}
-                  strokeWidth={2}
-                  className="size-4"
+            <SidebarMenuButton
+              size="lg"
+              className="h-7 py-0"
+              render={<Link to="/inbox" />}
+            >
+              <div className="flex items-center gap-2 leading-none">
+                <img
+                  src="/img/Logo%20Forge.png"
+                  alt="Forge"
+                  className="size-4 object-contain"
                 />
-              </div>
-              <div className="leading-none">
                 <span className="text-base font-semibold">Forge</span>
               </div>
             </SidebarMenuButton>
