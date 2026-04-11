@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import { Link, useRouterState } from "@tanstack/react-router"
-import { SearchForm } from "@/components/search-form"
 import { appNav, isNavItemActive, type AppNavChild } from "@/lib/app-navigation"
 import {
   Collapsible,
@@ -51,7 +50,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             >
               <SidebarMenuSubItem>
                 <SidebarMenuButton
-                  className="h-8 text-sm font-medium [&>svg]:size-4"
+                  className="h-7 py-1 text-sm font-medium [&>svg]:size-4"
                   isActive={isNavItemActive(pathname, item)}
                   render={<CollapsibleTrigger />}
                 >
@@ -73,7 +72,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           ) : (
             <SidebarMenuSubItem key={item.title}>
               <SidebarMenuButton
-                className="h-8 text-sm font-medium [&>svg]:size-4"
+                className="h-7 py-1 text-sm font-medium [&>svg]:size-4"
                 isActive={pathname === item.to}
                 render={renderNavLink(item.to)}
               >
@@ -108,7 +107,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        <SearchForm />
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup className="flex-1 min-h-0">
@@ -132,7 +130,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     }
                   >
                     <SidebarMenuButton
-                      className="text-sm font-medium"
+                      className="h-7 py-1 text-sm font-medium"
                       isActive={isNavItemActive(pathname, item)}
                       render={<CollapsibleTrigger />}
                     >
@@ -166,7 +164,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               ) : (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
-                    className="text-sm font-medium"
+                    className="h-7 py-1 text-sm font-medium"
                     isActive={pathname === item.to}
                     render={renderNavLink(item.to)}
                   >
