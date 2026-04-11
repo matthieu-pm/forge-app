@@ -18,7 +18,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSub,
-  SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
@@ -76,11 +75,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       />
                     </SidebarMenuButton>
                     <CollapsibleContent>
-                      <SidebarMenuSub>
+                      <SidebarMenuSub className="gap-0.5">
                         {item.items.map((subItem) => (
                           <SidebarMenuSubItem key={subItem.title}>
-                            <SidebarMenuSubButton
-                              className="text-sm"
+                            <SidebarMenuButton
+                              className="h-8 text-sm font-medium [&>svg]:size-4"
                               isActive={pathname === subItem.to}
                               render={<Link to={subItem.to} />}
                             >
@@ -89,7 +88,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                 strokeWidth={2}
                               />
                               {subItem.title}
-                            </SidebarMenuSubButton>
+                            </SidebarMenuButton>
                           </SidebarMenuSubItem>
                         ))}
                       </SidebarMenuSub>
