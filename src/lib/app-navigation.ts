@@ -102,14 +102,14 @@ export const yourTeamsNav: AppNavChild[] = teamDefinitions.map((team) => ({
 
 export const appNav: AppNavItem[] = [
   {
-    title: "Forge",
-    to: "/forge",
-    iconSrc: "/img/logo-forge-black.png",
-  },
-  {
     title: "Inbox",
     to: "/inbox",
     icon: InboxUnreadIcon,
+  },
+  {
+    title: "Forge",
+    to: "/forge",
+    iconSrc: "/img/logo-forge-black.png",
   },
   {
     title: "My issues",
