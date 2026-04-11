@@ -22,6 +22,10 @@ import { Route as WorkspaceMembersRouteImport } from './routes/workspace/members
 import { Route as WorkspaceInsightsRouteImport } from './routes/workspace/insights'
 import { Route as WorkspaceInitiativesRouteImport } from './routes/workspace/initiatives'
 import { Route as WorkspaceCallsRouteImport } from './routes/workspace/calls'
+import { Route as TeamsTeamSlugSignalsRouteImport } from './routes/teams/$teamSlug/signals'
+import { Route as TeamsTeamSlugProjectsRouteImport } from './routes/teams/$teamSlug/projects'
+import { Route as TeamsTeamSlugInsightsRouteImport } from './routes/teams/$teamSlug/insights'
+import { Route as TeamsTeamSlugCallsRouteImport } from './routes/teams/$teamSlug/calls'
 
 const MyIssuesRoute = MyIssuesRouteImport.update({
   id: '/my-issues',
@@ -88,6 +92,26 @@ const WorkspaceCallsRoute = WorkspaceCallsRouteImport.update({
   path: '/workspace/calls',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TeamsTeamSlugSignalsRoute = TeamsTeamSlugSignalsRouteImport.update({
+  id: '/teams/$teamSlug/signals',
+  path: '/teams/$teamSlug/signals',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TeamsTeamSlugProjectsRoute = TeamsTeamSlugProjectsRouteImport.update({
+  id: '/teams/$teamSlug/projects',
+  path: '/teams/$teamSlug/projects',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TeamsTeamSlugInsightsRoute = TeamsTeamSlugInsightsRouteImport.update({
+  id: '/teams/$teamSlug/insights',
+  path: '/teams/$teamSlug/insights',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TeamsTeamSlugCallsRoute = TeamsTeamSlugCallsRouteImport.update({
+  id: '/teams/$teamSlug/calls',
+  path: '/teams/$teamSlug/calls',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -103,6 +127,10 @@ export interface FileRoutesByFullPath {
   '/workspace/signals': typeof WorkspaceSignalsRoute
   '/workspace/teams': typeof WorkspaceTeamsRoute
   '/workspace/views': typeof WorkspaceViewsRoute
+  '/teams/$teamSlug/calls': typeof TeamsTeamSlugCallsRoute
+  '/teams/$teamSlug/insights': typeof TeamsTeamSlugInsightsRoute
+  '/teams/$teamSlug/projects': typeof TeamsTeamSlugProjectsRoute
+  '/teams/$teamSlug/signals': typeof TeamsTeamSlugSignalsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -118,6 +146,10 @@ export interface FileRoutesByTo {
   '/workspace/signals': typeof WorkspaceSignalsRoute
   '/workspace/teams': typeof WorkspaceTeamsRoute
   '/workspace/views': typeof WorkspaceViewsRoute
+  '/teams/$teamSlug/calls': typeof TeamsTeamSlugCallsRoute
+  '/teams/$teamSlug/insights': typeof TeamsTeamSlugInsightsRoute
+  '/teams/$teamSlug/projects': typeof TeamsTeamSlugProjectsRoute
+  '/teams/$teamSlug/signals': typeof TeamsTeamSlugSignalsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -134,6 +166,10 @@ export interface FileRoutesById {
   '/workspace/signals': typeof WorkspaceSignalsRoute
   '/workspace/teams': typeof WorkspaceTeamsRoute
   '/workspace/views': typeof WorkspaceViewsRoute
+  '/teams/$teamSlug/calls': typeof TeamsTeamSlugCallsRoute
+  '/teams/$teamSlug/insights': typeof TeamsTeamSlugInsightsRoute
+  '/teams/$teamSlug/projects': typeof TeamsTeamSlugProjectsRoute
+  '/teams/$teamSlug/signals': typeof TeamsTeamSlugSignalsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -151,6 +187,10 @@ export interface FileRouteTypes {
     | '/workspace/signals'
     | '/workspace/teams'
     | '/workspace/views'
+    | '/teams/$teamSlug/calls'
+    | '/teams/$teamSlug/insights'
+    | '/teams/$teamSlug/projects'
+    | '/teams/$teamSlug/signals'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -166,6 +206,10 @@ export interface FileRouteTypes {
     | '/workspace/signals'
     | '/workspace/teams'
     | '/workspace/views'
+    | '/teams/$teamSlug/calls'
+    | '/teams/$teamSlug/insights'
+    | '/teams/$teamSlug/projects'
+    | '/teams/$teamSlug/signals'
   id:
     | '__root__'
     | '/'
@@ -181,6 +225,10 @@ export interface FileRouteTypes {
     | '/workspace/signals'
     | '/workspace/teams'
     | '/workspace/views'
+    | '/teams/$teamSlug/calls'
+    | '/teams/$teamSlug/insights'
+    | '/teams/$teamSlug/projects'
+    | '/teams/$teamSlug/signals'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -197,6 +245,10 @@ export interface RootRouteChildren {
   WorkspaceSignalsRoute: typeof WorkspaceSignalsRoute
   WorkspaceTeamsRoute: typeof WorkspaceTeamsRoute
   WorkspaceViewsRoute: typeof WorkspaceViewsRoute
+  TeamsTeamSlugCallsRoute: typeof TeamsTeamSlugCallsRoute
+  TeamsTeamSlugInsightsRoute: typeof TeamsTeamSlugInsightsRoute
+  TeamsTeamSlugProjectsRoute: typeof TeamsTeamSlugProjectsRoute
+  TeamsTeamSlugSignalsRoute: typeof TeamsTeamSlugSignalsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -292,6 +344,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceCallsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/teams/$teamSlug/signals': {
+      id: '/teams/$teamSlug/signals'
+      path: '/teams/$teamSlug/signals'
+      fullPath: '/teams/$teamSlug/signals'
+      preLoaderRoute: typeof TeamsTeamSlugSignalsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/teams/$teamSlug/projects': {
+      id: '/teams/$teamSlug/projects'
+      path: '/teams/$teamSlug/projects'
+      fullPath: '/teams/$teamSlug/projects'
+      preLoaderRoute: typeof TeamsTeamSlugProjectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/teams/$teamSlug/insights': {
+      id: '/teams/$teamSlug/insights'
+      path: '/teams/$teamSlug/insights'
+      fullPath: '/teams/$teamSlug/insights'
+      preLoaderRoute: typeof TeamsTeamSlugInsightsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/teams/$teamSlug/calls': {
+      id: '/teams/$teamSlug/calls'
+      path: '/teams/$teamSlug/calls'
+      fullPath: '/teams/$teamSlug/calls'
+      preLoaderRoute: typeof TeamsTeamSlugCallsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -309,6 +389,10 @@ const rootRouteChildren: RootRouteChildren = {
   WorkspaceSignalsRoute: WorkspaceSignalsRoute,
   WorkspaceTeamsRoute: WorkspaceTeamsRoute,
   WorkspaceViewsRoute: WorkspaceViewsRoute,
+  TeamsTeamSlugCallsRoute: TeamsTeamSlugCallsRoute,
+  TeamsTeamSlugInsightsRoute: TeamsTeamSlugInsightsRoute,
+  TeamsTeamSlugProjectsRoute: TeamsTeamSlugProjectsRoute,
+  TeamsTeamSlugSignalsRoute: TeamsTeamSlugSignalsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

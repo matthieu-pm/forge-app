@@ -11,8 +11,6 @@ import {
   FieldSeparator,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { HugeiconsIcon } from "@hugeicons/react"
-import { LayoutBottomIcon } from "@hugeicons/core-free-icons"
 
 function handleSubmit(event: FormEvent<HTMLFormElement>) {
   // The UI is in place first; Better Auth handlers will be wired next.
@@ -30,10 +28,10 @@ export function LoginForm({
           <div className="flex flex-col items-center gap-2 text-center">
             <div className="flex flex-col items-center gap-3 font-medium">
               <div className="flex size-8 items-center justify-center rounded-md">
-                <HugeiconsIcon
-                  icon={LayoutBottomIcon}
-                  strokeWidth={2}
-                  className="size-6"
+                <img
+                  src="/img/Logo%20Forge.png"
+                  alt="Forge"
+                  className="size-8 object-contain"
                 />
               </div>
               <span className="sr-only">Forge</span>

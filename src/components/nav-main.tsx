@@ -26,6 +26,14 @@ export function NavMain({
   items: AppNavItem[]
   pathname: string
 }) {
+  function renderNavLink(to: AppNavItem["to"]) {
+    return to.startsWith("/teams/") ? (
+      <a href={to} />
+    ) : (
+      <Link to={to as never} />
+    )
+  }
+
   return (
     <SidebarGroup>
       <SidebarGroupLabel>Navigation</SidebarGroupLabel>
@@ -39,9 +47,11 @@ export function NavMain({
             <SidebarMenuButton
               isActive={isNavItemActive(pathname, item)}
               tooltip={item.title}
-              render={<Link to={item.to} />}
+              render={renderNavLink(item.to)}
             >
-              <HugeiconsIcon icon={item.icon} strokeWidth={2} />
+              {item.icon ? (
+                <HugeiconsIcon icon={item.icon} strokeWidth={2} />
+              ) : null}
               <span>{item.title}</span>
             </SidebarMenuButton>
             {item.items?.length ? (
@@ -60,7 +70,7 @@ export function NavMain({
                       <SidebarMenuSubItem key={subItem.title}>
                         <SidebarMenuSubButton
                           isActive={pathname === subItem.to}
-                          render={<Link to={subItem.to} />}
+                          render={renderNavLink(subItem.to)}
                         >
                           <span>{subItem.title}</span>
                         </SidebarMenuSubButton>

@@ -1,21 +1,22 @@
 import type { ComponentProps } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
-  AddTeamIcon,
+  AirplayLineIcon,
+  Asteroid02Icon,
   Call02Icon,
   ChartRingIcon,
-  FileDiffIcon,
-  FileSignalIcon,
-  FolderDetailsIcon,
+  CubeIcon,
   FolderKanbanIcon,
-  GitBranchIcon,
-  GridViewIcon,
   InboxUnreadIcon,
-  RoboticIcon,
-  UserIcon,
+  ThreeDViewIcon,
+  UserGroup03Icon,
+  UserIdVerificationIcon,
 } from "@hugeicons/core-free-icons"
 
 type AppIcon = ComponentProps<typeof HugeiconsIcon>["icon"]
+type TeamSlug = "product" | "engineering" | "operations"
+type TeamSection = "projects" | "signals" | "calls" | "insights"
+type TeamPath = `/teams/${TeamSlug}/${TeamSection}`
 
 export type AppPath =
   | "/inbox"
@@ -29,17 +30,19 @@ export type AppPath =
   | "/workspace/teams"
   | "/workspace/members"
   | "/agent"
+  | TeamPath
 
 export type AppNavChild = {
   title: string
   to: AppPath
-  icon: AppIcon
+  icon?: AppIcon
+  items?: AppNavChild[]
 }
 
 export type AppNavItem = {
   title: string
   to: AppPath
-  icon: AppIcon
+  icon?: AppIcon
   items?: AppNavChild[]
 }
 
@@ -49,16 +52,46 @@ type PageMeta = {
   description: string
 }
 
+const teamDefinitions = [
+  { title: "Product", slug: "product" },
+  { title: "Engineering", slug: "engineering" },
+  { title: "Operations", slug: "operations" },
+] as const
+
+const teamSectionDefinitions = [
+  { title: "Projects", section: "projects", icon: CubeIcon },
+  { title: "Signals", section: "signals", icon: Asteroid02Icon },
+  { title: "Calls", section: "calls", icon: Call02Icon },
+  { title: "Insights", section: "insights", icon: ChartRingIcon },
+] as const
+
+function getTeamPath(slug: TeamSlug, section: TeamSection): TeamPath {
+  return `/teams/${slug}/${section}`
+}
+
 export const workspaceNav: AppNavChild[] = [
-  { title: "Initiatives", to: "/workspace/initiatives", icon: GitBranchIcon },
-  { title: "Projects", to: "/workspace/projects", icon: FolderDetailsIcon },
+  {
+    title: "Initiatives",
+    to: "/workspace/initiatives",
+    icon: AirplayLineIcon,
+  },
+  { title: "Projects", to: "/workspace/projects", icon: CubeIcon },
   { title: "Calls", to: "/workspace/calls", icon: Call02Icon },
-  { title: "Signals", to: "/workspace/signals", icon: FileSignalIcon },
+  { title: "Signals", to: "/workspace/signals", icon: Asteroid02Icon },
   { title: "Insights", to: "/workspace/insights", icon: ChartRingIcon },
-  { title: "Views", to: "/workspace/views", icon: GridViewIcon },
-  { title: "Teams", to: "/workspace/teams", icon: AddTeamIcon },
-  { title: "Members", to: "/workspace/members", icon: UserIcon },
+  { title: "Teams", to: "/workspace/teams", icon: UserIdVerificationIcon },
+  { title: "Members", to: "/workspace/members", icon: UserGroup03Icon },
 ]
+
+export const yourTeamsNav: AppNavChild[] = teamDefinitions.map((team) => ({
+  title: team.title,
+  to: getTeamPath(team.slug, "projects"),
+  items: teamSectionDefinitions.map((section) => ({
+    title: section.title,
+    to: getTeamPath(team.slug, section.section),
+    icon: section.icon,
+  })),
+}))
 
 export const appNav: AppNavItem[] = [
   {
@@ -69,7 +102,7 @@ export const appNav: AppNavItem[] = [
   {
     title: "My issues",
     to: "/my-issues",
-    icon: FileDiffIcon,
+    icon: ThreeDViewIcon,
   },
   {
     title: "Workspace",
@@ -78,13 +111,13 @@ export const appNav: AppNavItem[] = [
     items: workspaceNav,
   },
   {
-    title: "Agent",
-    to: "/agent",
-    icon: RoboticIcon,
+    title: "Your teams",
+    to: getTeamPath("product", "projects"),
+    items: yourTeamsNav,
   },
 ]
 
-const pageMetaByPath: Record<AppPath, PageMeta> = {
+const pageMetaByPath: Partial<Record<AppPath, PageMeta>> = {
   "/inbox": {
     eyebrow: "Queue",
     title: "Inbox",
@@ -154,6 +187,29 @@ const pageMetaByPath: Record<AppPath, PageMeta> = {
 }
 
 export function getPageMeta(pathname: string): PageMeta {
+  const teamMatch = pathname.match(
+    /^\/teams\/(product|engineering|operations)\/(projects|signals|calls|insights)$/
+  )
+
+  if (teamMatch) {
+    const [, teamSlug, teamSection] = teamMatch as [
+      string,
+      TeamSlug,
+      TeamSection,
+    ]
+    const team =
+      teamDefinitions.find((item) => item.slug === teamSlug)?.title ?? "Team"
+    const section =
+      teamSectionDefinitions.find((item) => item.section === teamSection)
+        ?.title ?? "Overview"
+
+    return {
+      eyebrow: "Your teams",
+      title: `${team} ${section}`,
+      description: `Track ${team.toLowerCase()} ${section.toLowerCase()} in a dedicated team workspace.`,
+    }
+  }
+
   return (
     pageMetaByPath[pathname as AppPath] ?? {
       eyebrow: "Forge",
@@ -167,10 +223,16 @@ export function getPageMeta(pathname: string): PageMeta {
 export function isNavItemActive(
   pathname: string,
   item: Pick<AppNavItem, "to" | "items">
-) {
+): boolean {
   if (pathname === item.to) {
     return true
   }
 
-  return item.items?.some((subItem) => subItem.to === pathname) ?? false
+  return (
+    item.items?.some(
+      (subItem) =>
+        pathname === subItem.to ||
+        (subItem.items ? isNavItemActive(pathname, subItem) : false)
+    ) ?? false
+  )
 }
