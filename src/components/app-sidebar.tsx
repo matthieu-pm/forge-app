@@ -43,9 +43,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   className="size-4"
                 />
               </div>
-              <div className="flex flex-col gap-0.5 leading-none">
+              <div className="leading-none">
                 <span className="text-base font-semibold">Forge</span>
-                <span className="text-sm">Issue operations</span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
