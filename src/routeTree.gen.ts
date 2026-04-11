@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as MyIssuesRouteImport } from './routes/my-issues'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as AgentRouteImport } from './routes/agent'
 import { Route as IndexRouteImport } from './routes/index'
@@ -25,6 +26,11 @@ import { Route as WorkspaceCallsRouteImport } from './routes/workspace/calls'
 const MyIssuesRoute = MyIssuesRouteImport.update({
   id: '/my-issues',
   path: '/my-issues',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InboxRoute = InboxRouteImport.update({
@@ -87,6 +93,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agent': typeof AgentRoute
   '/inbox': typeof InboxRoute
+  '/login': typeof LoginRoute
   '/my-issues': typeof MyIssuesRoute
   '/workspace/calls': typeof WorkspaceCallsRoute
   '/workspace/initiatives': typeof WorkspaceInitiativesRoute
@@ -101,6 +108,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agent': typeof AgentRoute
   '/inbox': typeof InboxRoute
+  '/login': typeof LoginRoute
   '/my-issues': typeof MyIssuesRoute
   '/workspace/calls': typeof WorkspaceCallsRoute
   '/workspace/initiatives': typeof WorkspaceInitiativesRoute
@@ -116,6 +124,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/agent': typeof AgentRoute
   '/inbox': typeof InboxRoute
+  '/login': typeof LoginRoute
   '/my-issues': typeof MyIssuesRoute
   '/workspace/calls': typeof WorkspaceCallsRoute
   '/workspace/initiatives': typeof WorkspaceInitiativesRoute
@@ -132,6 +141,7 @@ export interface FileRouteTypes {
     | '/'
     | '/agent'
     | '/inbox'
+    | '/login'
     | '/my-issues'
     | '/workspace/calls'
     | '/workspace/initiatives'
@@ -146,6 +156,7 @@ export interface FileRouteTypes {
     | '/'
     | '/agent'
     | '/inbox'
+    | '/login'
     | '/my-issues'
     | '/workspace/calls'
     | '/workspace/initiatives'
@@ -160,6 +171,7 @@ export interface FileRouteTypes {
     | '/'
     | '/agent'
     | '/inbox'
+    | '/login'
     | '/my-issues'
     | '/workspace/calls'
     | '/workspace/initiatives'
@@ -175,6 +187,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgentRoute: typeof AgentRoute
   InboxRoute: typeof InboxRoute
+  LoginRoute: typeof LoginRoute
   MyIssuesRoute: typeof MyIssuesRoute
   WorkspaceCallsRoute: typeof WorkspaceCallsRoute
   WorkspaceInitiativesRoute: typeof WorkspaceInitiativesRoute
@@ -193,6 +206,13 @@ declare module '@tanstack/react-router' {
       path: '/my-issues'
       fullPath: '/my-issues'
       preLoaderRoute: typeof MyIssuesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/inbox': {
@@ -279,6 +299,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgentRoute: AgentRoute,
   InboxRoute: InboxRoute,
+  LoginRoute: LoginRoute,
   MyIssuesRoute: MyIssuesRoute,
   WorkspaceCallsRoute: WorkspaceCallsRoute,
   WorkspaceInitiativesRoute: WorkspaceInitiativesRoute,
