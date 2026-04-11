@@ -9,38 +9,206 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as MyIssuesRouteImport } from './routes/my-issues'
+import { Route as InboxRouteImport } from './routes/inbox'
+import { Route as AgentRouteImport } from './routes/agent'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as WorkspaceViewsRouteImport } from './routes/workspace/views'
+import { Route as WorkspaceTeamsRouteImport } from './routes/workspace/teams'
+import { Route as WorkspaceSignalsRouteImport } from './routes/workspace/signals'
+import { Route as WorkspaceProjectsRouteImport } from './routes/workspace/projects'
+import { Route as WorkspaceMembersRouteImport } from './routes/workspace/members'
+import { Route as WorkspaceInsightsRouteImport } from './routes/workspace/insights'
+import { Route as WorkspaceInitiativesRouteImport } from './routes/workspace/initiatives'
+import { Route as WorkspaceCallsRouteImport } from './routes/workspace/calls'
 
+const MyIssuesRoute = MyIssuesRouteImport.update({
+  id: '/my-issues',
+  path: '/my-issues',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InboxRoute = InboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentRoute = AgentRouteImport.update({
+  id: '/agent',
+  path: '/agent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WorkspaceViewsRoute = WorkspaceViewsRouteImport.update({
+  id: '/workspace/views',
+  path: '/workspace/views',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceTeamsRoute = WorkspaceTeamsRouteImport.update({
+  id: '/workspace/teams',
+  path: '/workspace/teams',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceSignalsRoute = WorkspaceSignalsRouteImport.update({
+  id: '/workspace/signals',
+  path: '/workspace/signals',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceProjectsRoute = WorkspaceProjectsRouteImport.update({
+  id: '/workspace/projects',
+  path: '/workspace/projects',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceMembersRoute = WorkspaceMembersRouteImport.update({
+  id: '/workspace/members',
+  path: '/workspace/members',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceInsightsRoute = WorkspaceInsightsRouteImport.update({
+  id: '/workspace/insights',
+  path: '/workspace/insights',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceInitiativesRoute = WorkspaceInitiativesRouteImport.update({
+  id: '/workspace/initiatives',
+  path: '/workspace/initiatives',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceCallsRoute = WorkspaceCallsRouteImport.update({
+  id: '/workspace/calls',
+  path: '/workspace/calls',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/agent': typeof AgentRoute
+  '/inbox': typeof InboxRoute
+  '/my-issues': typeof MyIssuesRoute
+  '/workspace/calls': typeof WorkspaceCallsRoute
+  '/workspace/initiatives': typeof WorkspaceInitiativesRoute
+  '/workspace/insights': typeof WorkspaceInsightsRoute
+  '/workspace/members': typeof WorkspaceMembersRoute
+  '/workspace/projects': typeof WorkspaceProjectsRoute
+  '/workspace/signals': typeof WorkspaceSignalsRoute
+  '/workspace/teams': typeof WorkspaceTeamsRoute
+  '/workspace/views': typeof WorkspaceViewsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/agent': typeof AgentRoute
+  '/inbox': typeof InboxRoute
+  '/my-issues': typeof MyIssuesRoute
+  '/workspace/calls': typeof WorkspaceCallsRoute
+  '/workspace/initiatives': typeof WorkspaceInitiativesRoute
+  '/workspace/insights': typeof WorkspaceInsightsRoute
+  '/workspace/members': typeof WorkspaceMembersRoute
+  '/workspace/projects': typeof WorkspaceProjectsRoute
+  '/workspace/signals': typeof WorkspaceSignalsRoute
+  '/workspace/teams': typeof WorkspaceTeamsRoute
+  '/workspace/views': typeof WorkspaceViewsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/agent': typeof AgentRoute
+  '/inbox': typeof InboxRoute
+  '/my-issues': typeof MyIssuesRoute
+  '/workspace/calls': typeof WorkspaceCallsRoute
+  '/workspace/initiatives': typeof WorkspaceInitiativesRoute
+  '/workspace/insights': typeof WorkspaceInsightsRoute
+  '/workspace/members': typeof WorkspaceMembersRoute
+  '/workspace/projects': typeof WorkspaceProjectsRoute
+  '/workspace/signals': typeof WorkspaceSignalsRoute
+  '/workspace/teams': typeof WorkspaceTeamsRoute
+  '/workspace/views': typeof WorkspaceViewsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/agent'
+    | '/inbox'
+    | '/my-issues'
+    | '/workspace/calls'
+    | '/workspace/initiatives'
+    | '/workspace/insights'
+    | '/workspace/members'
+    | '/workspace/projects'
+    | '/workspace/signals'
+    | '/workspace/teams'
+    | '/workspace/views'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/agent'
+    | '/inbox'
+    | '/my-issues'
+    | '/workspace/calls'
+    | '/workspace/initiatives'
+    | '/workspace/insights'
+    | '/workspace/members'
+    | '/workspace/projects'
+    | '/workspace/signals'
+    | '/workspace/teams'
+    | '/workspace/views'
+  id:
+    | '__root__'
+    | '/'
+    | '/agent'
+    | '/inbox'
+    | '/my-issues'
+    | '/workspace/calls'
+    | '/workspace/initiatives'
+    | '/workspace/insights'
+    | '/workspace/members'
+    | '/workspace/projects'
+    | '/workspace/signals'
+    | '/workspace/teams'
+    | '/workspace/views'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AgentRoute: typeof AgentRoute
+  InboxRoute: typeof InboxRoute
+  MyIssuesRoute: typeof MyIssuesRoute
+  WorkspaceCallsRoute: typeof WorkspaceCallsRoute
+  WorkspaceInitiativesRoute: typeof WorkspaceInitiativesRoute
+  WorkspaceInsightsRoute: typeof WorkspaceInsightsRoute
+  WorkspaceMembersRoute: typeof WorkspaceMembersRoute
+  WorkspaceProjectsRoute: typeof WorkspaceProjectsRoute
+  WorkspaceSignalsRoute: typeof WorkspaceSignalsRoute
+  WorkspaceTeamsRoute: typeof WorkspaceTeamsRoute
+  WorkspaceViewsRoute: typeof WorkspaceViewsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/my-issues': {
+      id: '/my-issues'
+      path: '/my-issues'
+      fullPath: '/my-issues'
+      preLoaderRoute: typeof MyIssuesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inbox': {
+      id: '/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof InboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agent': {
+      id: '/agent'
+      path: '/agent'
+      fullPath: '/agent'
+      preLoaderRoute: typeof AgentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +216,78 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/workspace/views': {
+      id: '/workspace/views'
+      path: '/workspace/views'
+      fullPath: '/workspace/views'
+      preLoaderRoute: typeof WorkspaceViewsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/teams': {
+      id: '/workspace/teams'
+      path: '/workspace/teams'
+      fullPath: '/workspace/teams'
+      preLoaderRoute: typeof WorkspaceTeamsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/signals': {
+      id: '/workspace/signals'
+      path: '/workspace/signals'
+      fullPath: '/workspace/signals'
+      preLoaderRoute: typeof WorkspaceSignalsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/projects': {
+      id: '/workspace/projects'
+      path: '/workspace/projects'
+      fullPath: '/workspace/projects'
+      preLoaderRoute: typeof WorkspaceProjectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/members': {
+      id: '/workspace/members'
+      path: '/workspace/members'
+      fullPath: '/workspace/members'
+      preLoaderRoute: typeof WorkspaceMembersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/insights': {
+      id: '/workspace/insights'
+      path: '/workspace/insights'
+      fullPath: '/workspace/insights'
+      preLoaderRoute: typeof WorkspaceInsightsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/initiatives': {
+      id: '/workspace/initiatives'
+      path: '/workspace/initiatives'
+      fullPath: '/workspace/initiatives'
+      preLoaderRoute: typeof WorkspaceInitiativesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/calls': {
+      id: '/workspace/calls'
+      path: '/workspace/calls'
+      fullPath: '/workspace/calls'
+      preLoaderRoute: typeof WorkspaceCallsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AgentRoute: AgentRoute,
+  InboxRoute: InboxRoute,
+  MyIssuesRoute: MyIssuesRoute,
+  WorkspaceCallsRoute: WorkspaceCallsRoute,
+  WorkspaceInitiativesRoute: WorkspaceInitiativesRoute,
+  WorkspaceInsightsRoute: WorkspaceInsightsRoute,
+  WorkspaceMembersRoute: WorkspaceMembersRoute,
+  WorkspaceProjectsRoute: WorkspaceProjectsRoute,
+  WorkspaceSignalsRoute: WorkspaceSignalsRoute,
+  WorkspaceTeamsRoute: WorkspaceTeamsRoute,
+  WorkspaceViewsRoute: WorkspaceViewsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
