@@ -61,6 +61,11 @@ function RootLayout() {
     select: (state) => state.location.pathname,
   })
   const breadcrumbs = getBreadcrumbItems(pathname)
+  const shelllessPaths = new Set([
+    "/login",
+    "/signup",
+    "/onboarding/workspace",
+  ])
 
   function renderBreadcrumbLink(to: string) {
     return to.startsWith("/teams/") ? (
@@ -70,7 +75,7 @@ function RootLayout() {
     )
   }
 
-  if (pathname === "/login") {
+  if (shelllessPaths.has(pathname)) {
     return <Outlet />
   }
 

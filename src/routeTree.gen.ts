@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SignupRouteImport } from './routes/signup'
 import { Route as MyIssuesRouteImport } from './routes/my-issues'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as InboxRouteImport } from './routes/inbox'
@@ -23,11 +24,18 @@ import { Route as WorkspaceMembersRouteImport } from './routes/workspace/members
 import { Route as WorkspaceInsightsRouteImport } from './routes/workspace/insights'
 import { Route as WorkspaceInitiativesRouteImport } from './routes/workspace/initiatives'
 import { Route as WorkspaceCallsRouteImport } from './routes/workspace/calls'
+import { Route as OnboardingWorkspaceRouteImport } from './routes/onboarding/workspace'
 import { Route as TeamsTeamSlugSignalsRouteImport } from './routes/teams/$teamSlug/signals'
 import { Route as TeamsTeamSlugProjectsRouteImport } from './routes/teams/$teamSlug/projects'
 import { Route as TeamsTeamSlugInsightsRouteImport } from './routes/teams/$teamSlug/insights'
 import { Route as TeamsTeamSlugCallsRouteImport } from './routes/teams/$teamSlug/calls'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MyIssuesRoute = MyIssuesRouteImport.update({
   id: '/my-issues',
   path: '/my-issues',
@@ -98,6 +106,11 @@ const WorkspaceCallsRoute = WorkspaceCallsRouteImport.update({
   path: '/workspace/calls',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OnboardingWorkspaceRoute = OnboardingWorkspaceRouteImport.update({
+  id: '/onboarding/workspace',
+  path: '/onboarding/workspace',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TeamsTeamSlugSignalsRoute = TeamsTeamSlugSignalsRouteImport.update({
   id: '/teams/$teamSlug/signals',
   path: '/teams/$teamSlug/signals',
@@ -118,6 +131,11 @@ const TeamsTeamSlugCallsRoute = TeamsTeamSlugCallsRouteImport.update({
   path: '/teams/$teamSlug/calls',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -126,6 +144,8 @@ export interface FileRoutesByFullPath {
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
   '/my-issues': typeof MyIssuesRoute
+  '/signup': typeof SignupRoute
+  '/onboarding/workspace': typeof OnboardingWorkspaceRoute
   '/workspace/calls': typeof WorkspaceCallsRoute
   '/workspace/initiatives': typeof WorkspaceInitiativesRoute
   '/workspace/insights': typeof WorkspaceInsightsRoute
@@ -134,6 +154,7 @@ export interface FileRoutesByFullPath {
   '/workspace/signals': typeof WorkspaceSignalsRoute
   '/workspace/teams': typeof WorkspaceTeamsRoute
   '/workspace/views': typeof WorkspaceViewsRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/teams/$teamSlug/calls': typeof TeamsTeamSlugCallsRoute
   '/teams/$teamSlug/insights': typeof TeamsTeamSlugInsightsRoute
   '/teams/$teamSlug/projects': typeof TeamsTeamSlugProjectsRoute
@@ -146,6 +167,8 @@ export interface FileRoutesByTo {
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
   '/my-issues': typeof MyIssuesRoute
+  '/signup': typeof SignupRoute
+  '/onboarding/workspace': typeof OnboardingWorkspaceRoute
   '/workspace/calls': typeof WorkspaceCallsRoute
   '/workspace/initiatives': typeof WorkspaceInitiativesRoute
   '/workspace/insights': typeof WorkspaceInsightsRoute
@@ -154,6 +177,7 @@ export interface FileRoutesByTo {
   '/workspace/signals': typeof WorkspaceSignalsRoute
   '/workspace/teams': typeof WorkspaceTeamsRoute
   '/workspace/views': typeof WorkspaceViewsRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/teams/$teamSlug/calls': typeof TeamsTeamSlugCallsRoute
   '/teams/$teamSlug/insights': typeof TeamsTeamSlugInsightsRoute
   '/teams/$teamSlug/projects': typeof TeamsTeamSlugProjectsRoute
@@ -167,6 +191,8 @@ export interface FileRoutesById {
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
   '/my-issues': typeof MyIssuesRoute
+  '/signup': typeof SignupRoute
+  '/onboarding/workspace': typeof OnboardingWorkspaceRoute
   '/workspace/calls': typeof WorkspaceCallsRoute
   '/workspace/initiatives': typeof WorkspaceInitiativesRoute
   '/workspace/insights': typeof WorkspaceInsightsRoute
@@ -175,6 +201,7 @@ export interface FileRoutesById {
   '/workspace/signals': typeof WorkspaceSignalsRoute
   '/workspace/teams': typeof WorkspaceTeamsRoute
   '/workspace/views': typeof WorkspaceViewsRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/teams/$teamSlug/calls': typeof TeamsTeamSlugCallsRoute
   '/teams/$teamSlug/insights': typeof TeamsTeamSlugInsightsRoute
   '/teams/$teamSlug/projects': typeof TeamsTeamSlugProjectsRoute
@@ -189,6 +216,8 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/login'
     | '/my-issues'
+    | '/signup'
+    | '/onboarding/workspace'
     | '/workspace/calls'
     | '/workspace/initiatives'
     | '/workspace/insights'
@@ -197,6 +226,7 @@ export interface FileRouteTypes {
     | '/workspace/signals'
     | '/workspace/teams'
     | '/workspace/views'
+    | '/api/auth/$'
     | '/teams/$teamSlug/calls'
     | '/teams/$teamSlug/insights'
     | '/teams/$teamSlug/projects'
@@ -209,6 +239,8 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/login'
     | '/my-issues'
+    | '/signup'
+    | '/onboarding/workspace'
     | '/workspace/calls'
     | '/workspace/initiatives'
     | '/workspace/insights'
@@ -217,6 +249,7 @@ export interface FileRouteTypes {
     | '/workspace/signals'
     | '/workspace/teams'
     | '/workspace/views'
+    | '/api/auth/$'
     | '/teams/$teamSlug/calls'
     | '/teams/$teamSlug/insights'
     | '/teams/$teamSlug/projects'
@@ -229,6 +262,8 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/login'
     | '/my-issues'
+    | '/signup'
+    | '/onboarding/workspace'
     | '/workspace/calls'
     | '/workspace/initiatives'
     | '/workspace/insights'
@@ -237,6 +272,7 @@ export interface FileRouteTypes {
     | '/workspace/signals'
     | '/workspace/teams'
     | '/workspace/views'
+    | '/api/auth/$'
     | '/teams/$teamSlug/calls'
     | '/teams/$teamSlug/insights'
     | '/teams/$teamSlug/projects'
@@ -250,6 +286,8 @@ export interface RootRouteChildren {
   InboxRoute: typeof InboxRoute
   LoginRoute: typeof LoginRoute
   MyIssuesRoute: typeof MyIssuesRoute
+  SignupRoute: typeof SignupRoute
+  OnboardingWorkspaceRoute: typeof OnboardingWorkspaceRoute
   WorkspaceCallsRoute: typeof WorkspaceCallsRoute
   WorkspaceInitiativesRoute: typeof WorkspaceInitiativesRoute
   WorkspaceInsightsRoute: typeof WorkspaceInsightsRoute
@@ -258,6 +296,7 @@ export interface RootRouteChildren {
   WorkspaceSignalsRoute: typeof WorkspaceSignalsRoute
   WorkspaceTeamsRoute: typeof WorkspaceTeamsRoute
   WorkspaceViewsRoute: typeof WorkspaceViewsRoute
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   TeamsTeamSlugCallsRoute: typeof TeamsTeamSlugCallsRoute
   TeamsTeamSlugInsightsRoute: typeof TeamsTeamSlugInsightsRoute
   TeamsTeamSlugProjectsRoute: typeof TeamsTeamSlugProjectsRoute
@@ -266,6 +305,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/my-issues': {
       id: '/my-issues'
       path: '/my-issues'
@@ -364,6 +410,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceCallsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/onboarding/workspace': {
+      id: '/onboarding/workspace'
+      path: '/onboarding/workspace'
+      fullPath: '/onboarding/workspace'
+      preLoaderRoute: typeof OnboardingWorkspaceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/teams/$teamSlug/signals': {
       id: '/teams/$teamSlug/signals'
       path: '/teams/$teamSlug/signals'
@@ -392,6 +445,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TeamsTeamSlugCallsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -402,6 +462,8 @@ const rootRouteChildren: RootRouteChildren = {
   InboxRoute: InboxRoute,
   LoginRoute: LoginRoute,
   MyIssuesRoute: MyIssuesRoute,
+  SignupRoute: SignupRoute,
+  OnboardingWorkspaceRoute: OnboardingWorkspaceRoute,
   WorkspaceCallsRoute: WorkspaceCallsRoute,
   WorkspaceInitiativesRoute: WorkspaceInitiativesRoute,
   WorkspaceInsightsRoute: WorkspaceInsightsRoute,
@@ -410,6 +472,7 @@ const rootRouteChildren: RootRouteChildren = {
   WorkspaceSignalsRoute: WorkspaceSignalsRoute,
   WorkspaceTeamsRoute: WorkspaceTeamsRoute,
   WorkspaceViewsRoute: WorkspaceViewsRoute,
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
   TeamsTeamSlugCallsRoute: TeamsTeamSlugCallsRoute,
   TeamsTeamSlugInsightsRoute: TeamsTeamSlugInsightsRoute,
   TeamsTeamSlugProjectsRoute: TeamsTeamSlugProjectsRoute,
