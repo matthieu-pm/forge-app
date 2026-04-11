@@ -33,6 +33,7 @@ export type AppPath =
 export type AppNavChild = {
   title: string
   to: AppPath
+  icon: AppIcon
 }
 
 export type AppNavItem = {
@@ -49,14 +50,14 @@ type PageMeta = {
 }
 
 export const workspaceNav: AppNavChild[] = [
-  { title: "Initiatives", to: "/workspace/initiatives" },
-  { title: "Projects", to: "/workspace/projects" },
-  { title: "Calls", to: "/workspace/calls" },
-  { title: "Signals", to: "/workspace/signals" },
-  { title: "Insights", to: "/workspace/insights" },
-  { title: "Views", to: "/workspace/views" },
-  { title: "Teams", to: "/workspace/teams" },
-  { title: "Members", to: "/workspace/members" },
+  { title: "Initiatives", to: "/workspace/initiatives", icon: GitBranchIcon },
+  { title: "Projects", to: "/workspace/projects", icon: FolderDetailsIcon },
+  { title: "Calls", to: "/workspace/calls", icon: Call02Icon },
+  { title: "Signals", to: "/workspace/signals", icon: FileSignalIcon },
+  { title: "Insights", to: "/workspace/insights", icon: ChartRingIcon },
+  { title: "Views", to: "/workspace/views", icon: GridViewIcon },
+  { title: "Teams", to: "/workspace/teams", icon: AddTeamIcon },
+  { title: "Members", to: "/workspace/members", icon: UserIcon },
 ]
 
 export const appNav: AppNavItem[] = [
@@ -173,54 +174,3 @@ export function isNavItemActive(
 
   return item.items?.some((subItem) => subItem.to === pathname) ?? false
 }
-
-export const workspaceHighlights = [
-  {
-    title: "Shared context",
-    description:
-      "Space for saved views, linked projects, and the context everyone needs.",
-    icon: FolderDetailsIcon,
-  },
-  {
-    title: "Cross-team initiatives",
-    description:
-      "A clear way to connect strategic bets back to project-level execution.",
-    icon: GitBranchIcon,
-  },
-  {
-    title: "Operational signals",
-    description:
-      "Room for calls, signals, and insights without changing the shell again later.",
-    icon: FileSignalIcon,
-  },
-  {
-    title: "Team structure",
-    description:
-      "Dedicated pages for teams and members so the workspace can grow cleanly.",
-    icon: AddTeamIcon,
-  },
-  {
-    title: "Views library",
-    description:
-      "Custom saved views can live beside the rest of the workspace primitives.",
-    icon: GridViewIcon,
-  },
-  {
-    title: "Insight stream",
-    description:
-      "A landing spot for analytics and summaries as the product gets richer.",
-    icon: ChartRingIcon,
-  },
-  {
-    title: "Call queue",
-    description:
-      "A structured area for call review, prep, and follow-up workflows.",
-    icon: Call02Icon,
-  },
-  {
-    title: "Member directory",
-    description:
-      "People and ownership stay visible as the workspace becomes more collaborative.",
-    icon: UserIcon,
-  },
-]
