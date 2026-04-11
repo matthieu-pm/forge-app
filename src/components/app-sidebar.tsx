@@ -47,7 +47,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     return (
       <SidebarMenuSub
         className={
-          isNested ? "gap-0.5" : "mx-0 translate-x-0 border-l-0 px-0"
+          isNested ? "gap-0" : "mx-0 translate-x-0 border-l-0 px-0 gap-0"
         }
       >
         {items.map((item) =>
