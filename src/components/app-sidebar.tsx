@@ -27,6 +27,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
+  const primaryNav = appNav.filter(
+    (item) => item.title === "Inbox" || item.title === "My issues"
+  )
+  const workspaceSection = appNav.filter((item) => item.title === "Workspace")
+  const teamsSection = appNav.filter((item) => item.title === "Your teams")
 
   function renderNavLink(to: AppNavChild["to"]) {
     return to.startsWith("/teams/") ? (
@@ -42,7 +47,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     return (
       <SidebarMenuSub
         className={
-          isNested ? "gap-0.5" : undefined
+          isNested ? "gap-0.5" : "mx-0 translate-x-0 border-l-0 px-0"
         }
       >
         {items.map((item) =>
@@ -54,7 +59,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             >
               <SidebarMenuSubItem>
                 <SidebarMenuButton
-                  className="h-7 py-1 text-sm font-medium text-foreground/55 [&>svg]:size-4"
+                  className="h-7 py-1 text-sm font-medium [&>svg]:size-4"
                   isActive={false}
                   render={<CollapsibleTrigger />}
                 >
@@ -92,6 +97,58 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     )
   }
 
+  function renderRootItem(item: (typeof appNav)[number], teamsScrollable = false) {
+    return item.items?.length ? (
+      <Collapsible
+        key={item.title}
+        defaultOpen={isNavItemActive(pathname, item)}
+        className={
+          teamsScrollable
+            ? "group/collapsible flex min-h-0 flex-1 flex-col"
+            : "group/collapsible"
+        }
+      >
+        <SidebarMenuItem
+          className={teamsScrollable ? "flex min-h-0 flex-1 flex-col" : undefined}
+        >
+          <SidebarMenuButton
+            className="h-7 py-1 text-sm font-medium text-foreground/55"
+            isActive={false}
+            render={<CollapsibleTrigger />}
+          >
+            {item.icon ? (
+              <HugeiconsIcon icon={item.icon} strokeWidth={2} />
+            ) : null}
+            {item.title}
+            <HugeiconsIcon
+              icon={ArrowRight01Icon}
+              strokeWidth={2}
+              className="ml-auto transition-transform duration-200 group-aria-expanded/menu-button:rotate-90"
+            />
+          </SidebarMenuButton>
+          <CollapsibleContent className={teamsScrollable ? "min-h-0 flex-1" : undefined}>
+            <div
+              className={teamsScrollable ? "h-full min-h-0 overflow-y-auto pr-[1px]" : undefined}
+            >
+              {renderNavItems(item.items)}
+            </div>
+          </CollapsibleContent>
+        </SidebarMenuItem>
+      </Collapsible>
+    ) : (
+      <SidebarMenuItem key={item.title}>
+        <SidebarMenuButton
+          className="h-7 py-1 text-sm font-medium"
+          isActive={pathname === item.to}
+          render={renderNavLink(item.to)}
+        >
+          {item.icon ? <HugeiconsIcon icon={item.icon} strokeWidth={2} /> : null}
+          {item.title}
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    )
+  }
+
   return (
     <Sidebar {...props}>
       <SidebarHeader className="px-2 pt-3 pb-1">
@@ -115,73 +172,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup className="flex-1 min-h-0">
+        <SidebarGroup className="pb-0">
+          <SidebarMenu>{primaryNav.map((item) => renderRootItem(item))}</SidebarMenu>
+        </SidebarGroup>
+        <SidebarGroup className="pt-6 pb-0">
+          <SidebarMenu>
+            {workspaceSection.map((item) => renderRootItem(item))}
+          </SidebarMenu>
+        </SidebarGroup>
+        <SidebarGroup className="flex-1 min-h-0 pt-6">
           <SidebarMenu className="flex h-full min-h-0 flex-col">
-            {appNav.map((item) =>
-              item.items?.length ? (
-                <Collapsible
-                  key={item.title}
-                  defaultOpen={isNavItemActive(pathname, item)}
-                  className={
-                    item.title === "Your teams"
-                      ? "group/collapsible flex min-h-0 flex-1 flex-col"
-                      : "group/collapsible"
-                  }
-                >
-                  <SidebarMenuItem
-                    className={
-                      item.title === "Your teams"
-                        ? "flex min-h-0 flex-1 flex-col"
-                        : undefined
-                    }
-                  >
-                    <SidebarMenuButton
-                      className="h-7 py-1 text-sm font-medium text-foreground/55"
-                      isActive={false}
-                      render={<CollapsibleTrigger />}
-                    >
-                      {item.icon ? (
-                        <HugeiconsIcon icon={item.icon} strokeWidth={2} />
-                      ) : null}
-                      {item.title}
-                      <HugeiconsIcon
-                        icon={ArrowRight01Icon}
-                        strokeWidth={2}
-                        className="ml-auto transition-transform duration-200 group-aria-expanded/menu-button:rotate-90"
-                      />
-                    </SidebarMenuButton>
-                    <CollapsibleContent
-                      className={
-                        item.title === "Your teams" ? "min-h-0 flex-1" : undefined
-                      }
-                    >
-                      <div
-                        className={
-                          item.title === "Your teams"
-                            ? "h-full min-h-0 overflow-y-auto pr-[1px]"
-                            : undefined
-                        }
-                      >
-                        {renderNavItems(item.items)}
-                      </div>
-                    </CollapsibleContent>
-                  </SidebarMenuItem>
-                </Collapsible>
-              ) : (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    className="h-7 py-1 text-sm font-medium"
-                    isActive={pathname === item.to}
-                    render={renderNavLink(item.to)}
-                  >
-                    {item.icon ? (
-                      <HugeiconsIcon icon={item.icon} strokeWidth={2} />
-                    ) : null}
-                    {item.title}
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )
-            )}
+            {teamsSection.map((item) => renderRootItem(item, true))}
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
