@@ -4,9 +4,8 @@ import {
   AirplayLineIcon,
   Asteroid02Icon,
   Call02Icon,
-  ChartRingIcon,
+  CodepenIcon,
   CubeIcon,
-  FolderKanbanIcon,
   InboxUnreadIcon,
   ThreeDViewIcon,
   UserGroup03Icon,
@@ -67,7 +66,7 @@ const teamSectionDefinitions = [
   { title: "Projects", section: "projects", icon: CubeIcon },
   { title: "Signals", section: "signals", icon: Asteroid02Icon },
   { title: "Calls", section: "calls", icon: Call02Icon },
-  { title: "Insights", section: "insights", icon: ChartRingIcon },
+  { title: "Insights", section: "insights", icon: CodepenIcon },
 ] as const
 
 function getTeamPath(slug: TeamSlug, section: TeamSection): TeamPath {
@@ -83,7 +82,7 @@ export const workspaceNav: AppNavChild[] = [
   { title: "Projects", to: "/workspace/projects", icon: CubeIcon },
   { title: "Calls", to: "/workspace/calls", icon: Call02Icon },
   { title: "Signals", to: "/workspace/signals", icon: Asteroid02Icon },
-  { title: "Insights", to: "/workspace/insights", icon: ChartRingIcon },
+  { title: "Insights", to: "/workspace/insights", icon: CodepenIcon },
   { title: "Teams", to: "/workspace/teams", icon: UserIdVerificationIcon },
   { title: "Members", to: "/workspace/members", icon: UserGroup03Icon },
 ]
@@ -112,7 +111,6 @@ export const appNav: AppNavItem[] = [
   {
     title: "Workspace",
     to: "/workspace/initiatives",
-    icon: FolderKanbanIcon,
     items: workspaceNav,
   },
   {

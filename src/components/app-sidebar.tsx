@@ -40,7 +40,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const isNested = depth > 0
 
     return (
-      <SidebarMenuSub className={isNested ? "gap-0.5" : undefined}>
+      <SidebarMenuSub
+        className={
+          isNested ? "gap-0.5" : undefined
+        }
+      >
         {items.map((item) =>
           item.items?.length ? (
             <Collapsible
@@ -50,8 +54,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             >
               <SidebarMenuSubItem>
                 <SidebarMenuButton
-                  className="h-7 py-1 text-sm font-medium [&>svg]:size-4"
-                  isActive={isNavItemActive(pathname, item)}
+                  className="h-7 py-1 text-sm font-medium text-foreground/55 [&>svg]:size-4"
+                  isActive={false}
                   render={<CollapsibleTrigger />}
                 >
                   {item.icon ? (
@@ -72,7 +76,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           ) : (
             <SidebarMenuSubItem key={item.title}>
               <SidebarMenuButton
-                className="h-7 py-1 text-sm font-medium [&>svg]:size-4"
+                className="h-7 max-w-[calc(100%-0.75rem)] py-1 text-sm font-medium [&>svg]:size-4"
                 isActive={pathname === item.to}
                 render={renderNavLink(item.to)}
               >
@@ -132,8 +136,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     }
                   >
                     <SidebarMenuButton
-                      className="h-7 py-1 text-sm font-medium"
-                      isActive={isNavItemActive(pathname, item)}
+                      className="h-7 py-1 text-sm font-medium text-foreground/55"
+                      isActive={false}
                       render={<CollapsibleTrigger />}
                     >
                       {item.icon ? (
@@ -154,7 +158,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       <div
                         className={
                           item.title === "Your teams"
-                            ? "h-full min-h-0 overflow-y-auto pr-1"
+                            ? "h-full min-h-0 overflow-y-auto pr-[1px]"
                             : undefined
                         }
                       >
