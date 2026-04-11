@@ -19,3 +19,14 @@ To use the components in your app, import them as follows:
 ```tsx
 import { Button } from "@/components/ui/button";
 ```
+
+## Database
+
+This project uses Neon Postgres with Drizzle ORM.
+
+1. Copy the local database URL into `.env` as `DATABASE_URL`.
+1. Generate a migration with `bun run db:generate`.
+1. Apply schema changes with `bun run db:migrate` or `bun run db:push`.
+1. Open Drizzle Studio with `bun run db:studio`.
+
+The shared database client lives in `src/db/index.ts`, and the current schema is defined in `src/db/schema.ts`.
