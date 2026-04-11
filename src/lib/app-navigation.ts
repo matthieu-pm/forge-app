@@ -18,6 +18,7 @@ type TeamSection = "projects" | "signals" | "calls" | "insights"
 type TeamPath = `/teams/${TeamSlug}/${TeamSection}`
 
 export type AppPath =
+  | "/forge"
   | "/inbox"
   | "/my-issues"
   | "/workspace/initiatives"
@@ -35,6 +36,7 @@ export type AppNavChild = {
   title: string
   to: AppPath
   icon?: AppIcon
+  iconSrc?: string
   items?: AppNavChild[]
 }
 
@@ -42,6 +44,7 @@ export type AppNavItem = {
   title: string
   to: AppPath
   icon?: AppIcon
+  iconSrc?: string
   items?: AppNavChild[]
 }
 
@@ -99,6 +102,11 @@ export const yourTeamsNav: AppNavChild[] = teamDefinitions.map((team) => ({
 
 export const appNav: AppNavItem[] = [
   {
+    title: "Forge",
+    to: "/forge",
+    iconSrc: "/img/logo-forge-black.png",
+  },
+  {
     title: "Inbox",
     to: "/inbox",
     icon: InboxUnreadIcon,
@@ -121,6 +129,12 @@ export const appNav: AppNavItem[] = [
 ]
 
 const pageMetaByPath: Partial<Record<AppPath, PageMeta>> = {
+  "/forge": {
+    eyebrow: "Home",
+    title: "Forge",
+    description:
+      "Start from the Forge home view and jump into the workspaces, issues, and teams that matter next.",
+  },
   "/inbox": {
     eyebrow: "Queue",
     title: "Inbox",

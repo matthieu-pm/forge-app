@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as MyIssuesRouteImport } from './routes/my-issues'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as InboxRouteImport } from './routes/inbox'
+import { Route as ForgeRouteImport } from './routes/forge'
 import { Route as AgentRouteImport } from './routes/agent'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorkspaceViewsRouteImport } from './routes/workspace/views'
@@ -40,6 +41,11 @@ const LoginRoute = LoginRouteImport.update({
 const InboxRoute = InboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgeRoute = ForgeRouteImport.update({
+  id: '/forge',
+  path: '/forge',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AgentRoute = AgentRouteImport.update({
@@ -116,6 +122,7 @@ const TeamsTeamSlugCallsRoute = TeamsTeamSlugCallsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agent': typeof AgentRoute
+  '/forge': typeof ForgeRoute
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
   '/my-issues': typeof MyIssuesRoute
@@ -135,6 +142,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agent': typeof AgentRoute
+  '/forge': typeof ForgeRoute
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
   '/my-issues': typeof MyIssuesRoute
@@ -155,6 +163,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/agent': typeof AgentRoute
+  '/forge': typeof ForgeRoute
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
   '/my-issues': typeof MyIssuesRoute
@@ -176,6 +185,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/agent'
+    | '/forge'
     | '/inbox'
     | '/login'
     | '/my-issues'
@@ -195,6 +205,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/agent'
+    | '/forge'
     | '/inbox'
     | '/login'
     | '/my-issues'
@@ -214,6 +225,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/agent'
+    | '/forge'
     | '/inbox'
     | '/login'
     | '/my-issues'
@@ -234,6 +246,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgentRoute: typeof AgentRoute
+  ForgeRoute: typeof ForgeRoute
   InboxRoute: typeof InboxRoute
   LoginRoute: typeof LoginRoute
   MyIssuesRoute: typeof MyIssuesRoute
@@ -272,6 +285,13 @@ declare module '@tanstack/react-router' {
       path: '/inbox'
       fullPath: '/inbox'
       preLoaderRoute: typeof InboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forge': {
+      id: '/forge'
+      path: '/forge'
+      fullPath: '/forge'
+      preLoaderRoute: typeof ForgeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/agent': {
@@ -378,6 +398,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgentRoute: AgentRoute,
+  ForgeRoute: ForgeRoute,
   InboxRoute: InboxRoute,
   LoginRoute: LoginRoute,
   MyIssuesRoute: MyIssuesRoute,

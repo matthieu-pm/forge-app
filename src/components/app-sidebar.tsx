@@ -28,7 +28,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     select: (state) => state.location.pathname,
   })
   const primaryNav = appNav.filter(
-    (item) => item.title === "Inbox" || item.title === "My issues"
+    (item) =>
+      item.title === "Forge" ||
+      item.title === "Inbox" ||
+      item.title === "My issues"
   )
   const workspaceSection = appNav.filter((item) => item.title === "Workspace")
   const teamsSection = appNav.filter((item) => item.title === "Your teams")
@@ -39,6 +42,25 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     ) : (
       <Link to={to as never} />
     )
+  }
+
+  function renderItemIcon(item: Pick<AppNavChild, "icon" | "iconSrc" | "title">) {
+    if (item.iconSrc) {
+      return (
+        <img
+          src={item.iconSrc}
+          alt=""
+          aria-hidden="true"
+          className="size-4 shrink-0 object-contain"
+        />
+      )
+    }
+
+    if (item.icon) {
+      return <HugeiconsIcon icon={item.icon} strokeWidth={2} />
+    }
+
+    return null
   }
 
   function renderNavItems(items: AppNavChild[], depth = 0) {
@@ -63,9 +85,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   isActive={false}
                   render={<CollapsibleTrigger />}
                 >
-                  {item.icon ? (
-                    <HugeiconsIcon icon={item.icon} strokeWidth={2} />
-                  ) : null}
+                  {renderItemIcon(item)}
                   {item.title}
                   <HugeiconsIcon
                     icon={ArrowRight01Icon}
@@ -85,9 +105,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 isActive={pathname === item.to}
                 render={renderNavLink(item.to)}
               >
-                {item.icon ? (
-                  <HugeiconsIcon icon={item.icon} strokeWidth={2} />
-                ) : null}
+                {renderItemIcon(item)}
                 {item.title}
               </SidebarMenuButton>
             </SidebarMenuSubItem>
@@ -116,9 +134,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             isActive={false}
             render={<CollapsibleTrigger />}
           >
-            {item.icon ? (
-              <HugeiconsIcon icon={item.icon} strokeWidth={2} />
-            ) : null}
+            {renderItemIcon(item)}
             {item.title}
             <HugeiconsIcon
               icon={ArrowRight01Icon}
@@ -142,7 +158,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           isActive={pathname === item.to}
           render={renderNavLink(item.to)}
         >
-          {item.icon ? <HugeiconsIcon icon={item.icon} strokeWidth={2} /> : null}
+          {renderItemIcon(item)}
           {item.title}
         </SidebarMenuButton>
       </SidebarMenuItem>
