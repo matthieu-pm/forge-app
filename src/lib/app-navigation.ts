@@ -52,6 +52,11 @@ type PageMeta = {
   description: string
 }
 
+export type BreadcrumbItem = {
+  label: string
+  to?: string
+}
+
 const teamDefinitions = [
   { title: "Product", slug: "product" },
   { title: "Engineering", slug: "engineering" },
@@ -218,6 +223,52 @@ export function getPageMeta(pathname: string): PageMeta {
         "A focused workspace for triage, execution, and agent-assisted delivery.",
     }
   )
+}
+
+export function getBreadcrumbItems(pathname: string): BreadcrumbItem[] {
+  const teamMatch = pathname.match(
+    /^\/teams\/(product|engineering|operations)\/(projects|signals|calls|insights)$/
+  )
+
+  if (teamMatch) {
+    const [, teamSlug, teamSection] = teamMatch as [
+      string,
+      TeamSlug,
+      TeamSection,
+    ]
+    const team =
+      teamDefinitions.find((item) => item.slug === teamSlug)?.title ?? "Team"
+    const section =
+      teamSectionDefinitions.find((item) => item.section === teamSection)
+        ?.title ?? "Overview"
+
+    return [
+      { label: "Your teams", to: getTeamPath("product", "projects") },
+      { label: team, to: getTeamPath(teamSlug, "projects") },
+      { label: section },
+    ]
+  }
+
+  const rootItem = appNav.find(
+    (item) =>
+      pathname === item.to ||
+      item.items?.some((subItem) => pathname === subItem.to)
+  )
+
+  if (!rootItem) {
+    return [{ label: "Forge" }]
+  }
+
+  const childItem = rootItem.items?.find((item) => pathname === item.to)
+
+  if (!childItem) {
+    return [{ label: rootItem.title }]
+  }
+
+  return [
+    { label: rootItem.title, to: rootItem.to },
+    { label: childItem.title },
+  ]
 }
 
 export function isNavItemActive(

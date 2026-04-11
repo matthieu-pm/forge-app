@@ -1,5 +1,6 @@
 import {
   HeadContent,
+  Link,
   Outlet,
   Scripts,
   createRootRoute,
@@ -9,6 +10,15 @@ import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools"
 import { TanStackDevtools } from "@tanstack/react-devtools"
 
 import { AppSidebar } from "@/components/app-sidebar"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
+import { getBreadcrumbItems } from "@/lib/app-navigation"
 import {
   SidebarInset,
   SidebarProvider,
@@ -50,6 +60,15 @@ function RootLayout() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
+  const breadcrumbs = getBreadcrumbItems(pathname)
+
+  function renderBreadcrumbLink(to: string) {
+    return to.startsWith("/teams/") ? (
+      <a href={to} />
+    ) : (
+      <Link to={to as never} />
+    )
+  }
 
   if (pathname === "/login") {
     return <Outlet />
@@ -61,7 +80,28 @@ function RootLayout() {
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 px-4">
           <SidebarTrigger className="-ml-1" />
-          <div className="text-base font-semibold">Forge</div>
+          <Breadcrumb>
+            <BreadcrumbList className="text-xs">
+              {breadcrumbs.map((item, index) => {
+                const isLast = index === breadcrumbs.length - 1
+
+                return (
+                  <BreadcrumbItem key={`${item.label}-${index}`}>
+                    {item.to && !isLast ? (
+                      <BreadcrumbLink render={renderBreadcrumbLink(item.to)}>
+                        {item.label}
+                      </BreadcrumbLink>
+                    ) : (
+                      <BreadcrumbPage className="text-sm font-medium">
+                        {item.label}
+                      </BreadcrumbPage>
+                    )}
+                    {!isLast ? <BreadcrumbSeparator /> : null}
+                  </BreadcrumbItem>
+                )
+              })}
+            </BreadcrumbList>
+          </Breadcrumb>
         </header>
         <Outlet />
       </SidebarInset>
