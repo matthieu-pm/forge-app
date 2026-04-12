@@ -27,11 +27,7 @@ export function NavMain({
   pathname: string
 }) {
   function renderNavLink(to: AppNavItem["to"]) {
-    return to.startsWith("/teams/") ? (
-      <a href={to} />
-    ) : (
-      <Link to={to as never} />
-    )
+    return <Link to={to as never} />
   }
 
   return (

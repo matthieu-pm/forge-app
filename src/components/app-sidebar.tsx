@@ -118,11 +118,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   }
 
   function renderNavLink(to: AppNavChild["to"]) {
-    return to.startsWith("/teams/") ? (
-      <a href={to} />
-    ) : (
-      <Link to={to as never} />
-    )
+    return <Link to={to as never} />
   }
 
   function renderItemIcon(item: Pick<AppNavChild, "icon" | "iconSrc" | "title">) {
