@@ -27,6 +27,7 @@ import { Route as WorkspaceCallsRouteImport } from './routes/workspace/calls'
 import { Route as OnboardingWorkspaceRouteImport } from './routes/onboarding/workspace'
 import { Route as TeamsTeamSlugSignalsRouteImport } from './routes/teams/$teamSlug/signals'
 import { Route as TeamsTeamSlugProjectsRouteImport } from './routes/teams/$teamSlug/projects'
+import { Route as TeamsTeamSlugIssuesRouteImport } from './routes/teams/$teamSlug/issues'
 import { Route as TeamsTeamSlugInsightsRouteImport } from './routes/teams/$teamSlug/insights'
 import { Route as TeamsTeamSlugCallsRouteImport } from './routes/teams/$teamSlug/calls'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -121,6 +122,11 @@ const TeamsTeamSlugProjectsRoute = TeamsTeamSlugProjectsRouteImport.update({
   path: '/teams/$teamSlug/projects',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TeamsTeamSlugIssuesRoute = TeamsTeamSlugIssuesRouteImport.update({
+  id: '/teams/$teamSlug/issues',
+  path: '/teams/$teamSlug/issues',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TeamsTeamSlugInsightsRoute = TeamsTeamSlugInsightsRouteImport.update({
   id: '/teams/$teamSlug/insights',
   path: '/teams/$teamSlug/insights',
@@ -157,6 +163,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/teams/$teamSlug/calls': typeof TeamsTeamSlugCallsRoute
   '/teams/$teamSlug/insights': typeof TeamsTeamSlugInsightsRoute
+  '/teams/$teamSlug/issues': typeof TeamsTeamSlugIssuesRoute
   '/teams/$teamSlug/projects': typeof TeamsTeamSlugProjectsRoute
   '/teams/$teamSlug/signals': typeof TeamsTeamSlugSignalsRoute
 }
@@ -180,6 +187,7 @@ export interface FileRoutesByTo {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/teams/$teamSlug/calls': typeof TeamsTeamSlugCallsRoute
   '/teams/$teamSlug/insights': typeof TeamsTeamSlugInsightsRoute
+  '/teams/$teamSlug/issues': typeof TeamsTeamSlugIssuesRoute
   '/teams/$teamSlug/projects': typeof TeamsTeamSlugProjectsRoute
   '/teams/$teamSlug/signals': typeof TeamsTeamSlugSignalsRoute
 }
@@ -204,6 +212,7 @@ export interface FileRoutesById {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/teams/$teamSlug/calls': typeof TeamsTeamSlugCallsRoute
   '/teams/$teamSlug/insights': typeof TeamsTeamSlugInsightsRoute
+  '/teams/$teamSlug/issues': typeof TeamsTeamSlugIssuesRoute
   '/teams/$teamSlug/projects': typeof TeamsTeamSlugProjectsRoute
   '/teams/$teamSlug/signals': typeof TeamsTeamSlugSignalsRoute
 }
@@ -229,6 +238,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/teams/$teamSlug/calls'
     | '/teams/$teamSlug/insights'
+    | '/teams/$teamSlug/issues'
     | '/teams/$teamSlug/projects'
     | '/teams/$teamSlug/signals'
   fileRoutesByTo: FileRoutesByTo
@@ -252,6 +262,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/teams/$teamSlug/calls'
     | '/teams/$teamSlug/insights'
+    | '/teams/$teamSlug/issues'
     | '/teams/$teamSlug/projects'
     | '/teams/$teamSlug/signals'
   id:
@@ -275,6 +286,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/teams/$teamSlug/calls'
     | '/teams/$teamSlug/insights'
+    | '/teams/$teamSlug/issues'
     | '/teams/$teamSlug/projects'
     | '/teams/$teamSlug/signals'
   fileRoutesById: FileRoutesById
@@ -299,6 +311,7 @@ export interface RootRouteChildren {
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   TeamsTeamSlugCallsRoute: typeof TeamsTeamSlugCallsRoute
   TeamsTeamSlugInsightsRoute: typeof TeamsTeamSlugInsightsRoute
+  TeamsTeamSlugIssuesRoute: typeof TeamsTeamSlugIssuesRoute
   TeamsTeamSlugProjectsRoute: typeof TeamsTeamSlugProjectsRoute
   TeamsTeamSlugSignalsRoute: typeof TeamsTeamSlugSignalsRoute
 }
@@ -431,6 +444,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TeamsTeamSlugProjectsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/teams/$teamSlug/issues': {
+      id: '/teams/$teamSlug/issues'
+      path: '/teams/$teamSlug/issues'
+      fullPath: '/teams/$teamSlug/issues'
+      preLoaderRoute: typeof TeamsTeamSlugIssuesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/teams/$teamSlug/insights': {
       id: '/teams/$teamSlug/insights'
       path: '/teams/$teamSlug/insights'
@@ -475,6 +495,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   TeamsTeamSlugCallsRoute: TeamsTeamSlugCallsRoute,
   TeamsTeamSlugInsightsRoute: TeamsTeamSlugInsightsRoute,
+  TeamsTeamSlugIssuesRoute: TeamsTeamSlugIssuesRoute,
   TeamsTeamSlugProjectsRoute: TeamsTeamSlugProjectsRoute,
   TeamsTeamSlugSignalsRoute: TeamsTeamSlugSignalsRoute,
 }

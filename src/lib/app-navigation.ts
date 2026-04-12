@@ -4,17 +4,18 @@ import {
   AirplayLineIcon,
   Asteroid02Icon,
   Call02Icon,
+  CenterFocusIcon,
   CodepenIcon,
   CubeIcon,
   InboxUnreadIcon,
-  ThreeDViewIcon,
+  Ticket02Icon,
   UserGroup03Icon,
   UserIdVerificationIcon,
 } from "@hugeicons/core-free-icons"
 
 type AppIcon = ComponentProps<typeof HugeiconsIcon>["icon"]
 type TeamSlug = "product" | "engineering" | "operations"
-type TeamSection = "projects" | "signals" | "calls" | "insights"
+type TeamSection = "projects" | "issues" | "signals" | "calls" | "insights"
 type TeamPath = `/teams/${TeamSlug}/${TeamSection}`
 
 export type AppPath =
@@ -67,6 +68,7 @@ const teamDefinitions = [
 
 const teamSectionDefinitions = [
   { title: "Projects", section: "projects", icon: CubeIcon },
+  { title: "Issues", section: "issues", icon: Ticket02Icon },
   { title: "Signals", section: "signals", icon: Asteroid02Icon },
   { title: "Calls", section: "calls", icon: Call02Icon },
   { title: "Insights", section: "insights", icon: CodepenIcon },
@@ -114,7 +116,7 @@ export const appNav: AppNavItem[] = [
   {
     title: "My issues",
     to: "/my-issues",
-    icon: ThreeDViewIcon,
+    icon: CenterFocusIcon,
   },
   {
     title: "Workspace",
@@ -205,7 +207,7 @@ const pageMetaByPath: Partial<Record<AppPath, PageMeta>> = {
 
 export function getPageMeta(pathname: string): PageMeta {
   const teamMatch = pathname.match(
-    /^\/teams\/(product|engineering|operations)\/(projects|signals|calls|insights)$/
+    /^\/teams\/(product|engineering|operations)\/(projects|issues|signals|calls|insights)$/
   )
 
   if (teamMatch) {
@@ -239,7 +241,7 @@ export function getPageMeta(pathname: string): PageMeta {
 
 export function getBreadcrumbItems(pathname: string): BreadcrumbItem[] {
   const teamMatch = pathname.match(
-    /^\/teams\/(product|engineering|operations)\/(projects|signals|calls|insights)$/
+    /^\/teams\/(product|engineering|operations)\/(projects|issues|signals|calls|insights)$/
   )
 
   if (teamMatch) {
