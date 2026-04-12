@@ -150,7 +150,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     return (
       <SidebarMenuSub
         className={
-          isNested ? "gap-0" : "mx-0 translate-x-0 border-l-0 px-0 gap-0"
+          isNested ? "translate-x-0 gap-0" : "mx-0 translate-x-0 border-l-0 px-0 gap-0"
         }
       >
         {items.map((item) =>
@@ -160,7 +160,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               defaultOpen={isNavItemActive(pathname, item)}
               className="group/collapsible"
             >
-              <SidebarMenuSubItem>
+              <SidebarMenuSubItem className="w-full">
                 <SidebarMenuButton
                   className="h-7 py-1 text-sm font-medium [&>svg]:size-4"
                   isActive={false}
@@ -180,9 +180,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               </SidebarMenuSubItem>
             </Collapsible>
           ) : (
-            <SidebarMenuSubItem key={item.title}>
+            <SidebarMenuSubItem key={item.title} className="w-full">
               <SidebarMenuButton
-                className="h-7 max-w-[calc(100%-0.75rem)] py-1 text-sm font-medium [&>svg]:size-4"
+                className={
+                  depth > 0
+                    ? "h-7 w-full py-1 pr-3 text-sm font-medium [&>svg]:size-4"
+                    : "h-7 w-full py-1 text-sm font-medium [&>svg]:size-4"
+                }
                 isActive={pathname === item.to}
                 render={renderNavLink(item.to)}
               >
