@@ -5,10 +5,10 @@ import {
   Asteroid02Icon,
   Call02Icon,
   CenterFocusIcon,
+  ClipboardIcon,
   CodepenIcon,
   CubeIcon,
   InboxUnreadIcon,
-  Ticket02Icon,
   UserGroup03Icon,
   UserIdVerificationIcon,
 } from "@hugeicons/core-free-icons"
@@ -68,7 +68,7 @@ const teamDefinitions = [
 
 const teamSectionDefinitions = [
   { title: "Projects", section: "projects", icon: CubeIcon },
-  { title: "Issues", section: "issues", icon: Ticket02Icon },
+  { title: "Issues", section: "issues", icon: ClipboardIcon },
   { title: "Signals", section: "signals", icon: Asteroid02Icon },
   { title: "Calls", section: "calls", icon: Call02Icon },
   { title: "Insights", section: "insights", icon: CodepenIcon },
