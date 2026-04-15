@@ -19,7 +19,7 @@ export function ProjectsEmptyState() {
           <EmptyMedia variant="icon">
             <HugeiconsIcon icon={CubeIcon} strokeWidth={2} />
           </EmptyMedia>
-          <EmptyTitle>Projects</EmptyTitle>
+          <EmptyTitle className="text-3xl font-semibold">Projects</EmptyTitle>
           <EmptyDescription className="text-sm/relaxed">
             Projects are units of work that have a clear outcome or planned
             completion date.
