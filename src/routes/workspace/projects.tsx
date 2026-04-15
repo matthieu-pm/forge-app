@@ -64,14 +64,6 @@ function ProjectsPage() {
               <>
                 <Button
                   variant="ghost"
-                  size="icon-sm"
-                  aria-label="New project"
-                  className="border border-transparent bg-transparent hover:border-black hover:bg-transparent hover:text-foreground"
-                >
-                  <HugeiconsIcon icon={PlusSignIcon} strokeWidth={2} />
-                </Button>
-                <Button
-                  variant="ghost"
                   size="sm"
                   className="border border-transparent bg-transparent text-sm hover:border-black hover:bg-transparent hover:text-foreground"
                 >
@@ -88,6 +80,14 @@ function ProjectsPage() {
                 >
                   <HugeiconsIcon icon={Sorting03Icon} strokeWidth={2} />
                   Sort
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="New project"
+                  className="border border-transparent bg-transparent hover:border-black hover:bg-transparent hover:text-foreground"
+                >
+                  <HugeiconsIcon icon={PlusSignIcon} strokeWidth={2} />
                 </Button>
               </>
             ),
