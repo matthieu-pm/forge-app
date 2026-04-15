@@ -20,6 +20,10 @@ import {
 } from "@/components/ui/breadcrumb"
 import { getBreadcrumbItems } from "@/lib/app-navigation"
 import {
+  PageHeaderProvider,
+  usePageHeaderValue,
+} from "@/lib/page-header"
+import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
@@ -60,12 +64,32 @@ function RootLayout() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
-  const breadcrumbs = getBreadcrumbItems(pathname)
   const shelllessPaths = new Set([
     "/login",
     "/signup",
     "/onboarding/workspace",
   ])
+
+  if (shelllessPaths.has(pathname)) {
+    return <Outlet key={pathname} />
+  }
+
+  return (
+    <PageHeaderProvider>
+      <SidebarProvider>
+        <AppSidebar />
+        <SidebarInset>
+          <AppHeader pathname={pathname} />
+          <Outlet key={pathname} />
+        </SidebarInset>
+      </SidebarProvider>
+    </PageHeaderProvider>
+  )
+}
+
+function AppHeader({ pathname }: { pathname: string }) {
+  const breadcrumbs = getBreadcrumbItems(pathname)
+  const { inline, actions } = usePageHeaderValue()
 
   function renderBreadcrumbLink(to: string) {
     return to.startsWith("/teams/") ? (
@@ -75,42 +99,34 @@ function RootLayout() {
     )
   }
 
-  if (shelllessPaths.has(pathname)) {
-    return <Outlet />
-  }
-
   return (
-    <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset>
-        <header className="flex h-12 shrink-0 items-center gap-2 px-4">
-          <SidebarTrigger className="-ml-1" />
-          <Breadcrumb>
-            <BreadcrumbList className="text-sm">
-              {breadcrumbs.map((item, index) => {
-                const isLast = index === breadcrumbs.length - 1
+    <header className="flex h-12 shrink-0 items-center gap-3 px-4">
+      <SidebarTrigger className="-ml-1" />
+      <Breadcrumb>
+        <BreadcrumbList className="text-sm">
+          {breadcrumbs.map((item, index) => {
+            const isLast = index === breadcrumbs.length - 1
 
-                return (
-                  <BreadcrumbItem key={`${item.label}-${index}`}>
-                    {item.to && !isLast ? (
-                      <BreadcrumbLink render={renderBreadcrumbLink(item.to)}>
-                        {item.label}
-                      </BreadcrumbLink>
-                    ) : (
-                      <BreadcrumbPage className="text-sm font-medium">
-                        {item.label}
-                      </BreadcrumbPage>
-                    )}
-                    {!isLast ? <BreadcrumbSeparator /> : null}
-                  </BreadcrumbItem>
-                )
-              })}
-            </BreadcrumbList>
-          </Breadcrumb>
-        </header>
-        <Outlet />
-      </SidebarInset>
-    </SidebarProvider>
+            return (
+              <BreadcrumbItem key={`${item.label}-${index}`}>
+                {item.to && !isLast ? (
+                  <BreadcrumbLink render={renderBreadcrumbLink(item.to)}>
+                    {item.label}
+                  </BreadcrumbLink>
+                ) : (
+                  <BreadcrumbPage className="text-sm font-medium">
+                    {item.label}
+                  </BreadcrumbPage>
+                )}
+                {!isLast ? <BreadcrumbSeparator /> : null}
+              </BreadcrumbItem>
+            )
+          })}
+        </BreadcrumbList>
+      </Breadcrumb>
+      {inline}
+      {actions ? <div className="ml-auto flex items-center gap-1">{actions}</div> : null}
+    </header>
   )
 }
 

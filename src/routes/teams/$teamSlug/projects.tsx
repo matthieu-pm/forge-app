@@ -1,5 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, useRouterState } from "@tanstack/react-router"
 import { PagePlaceholder } from "@/components/page-placeholder"
+import { ProjectsEmptyState } from "@/components/projects-empty-state"
 import { getPageMeta } from "@/lib/app-navigation"
 import { protectedRouteBeforeLoad } from "@/lib/auth-state"
 
@@ -9,8 +10,15 @@ export const Route = createFileRoute("/teams/$teamSlug/projects")({
 })
 
 function TeamProjectsPage() {
-  const { teamSlug } = Route.useParams()
-  const pageMeta = getPageMeta(`/teams/${teamSlug}/projects`)
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  })
+  const isTeamProjectsRoute =
+    /^\/teams\/(product|engineering|operations)\/projects$/.test(pathname)
 
-  return <PagePlaceholder {...pageMeta} />
+  if (!isTeamProjectsRoute) {
+    return <PagePlaceholder {...getPageMeta(pathname)} />
+  }
+
+  return <ProjectsEmptyState />
 }
