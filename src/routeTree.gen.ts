@@ -22,9 +22,10 @@ import { Route as WorkspaceSignalsRouteImport } from './routes/workspace/signals
 import { Route as WorkspaceProjectsRouteImport } from './routes/workspace/projects'
 import { Route as WorkspaceMembersRouteImport } from './routes/workspace/members'
 import { Route as WorkspaceInsightsRouteImport } from './routes/workspace/insights'
-import { Route as WorkspaceInitiativesRouteImport } from './routes/workspace/initiatives'
 import { Route as WorkspaceCallsRouteImport } from './routes/workspace/calls'
 import { Route as OnboardingWorkspaceRouteImport } from './routes/onboarding/workspace'
+import { Route as WorkspaceInitiativesIndexRouteImport } from './routes/workspace/initiatives/index'
+import { Route as WorkspaceInitiativesInitiativeIdRouteImport } from './routes/workspace/initiatives/$initiativeId'
 import { Route as TeamsTeamSlugSignalsRouteImport } from './routes/teams/$teamSlug/signals'
 import { Route as TeamsTeamSlugProjectsRouteImport } from './routes/teams/$teamSlug/projects'
 import { Route as TeamsTeamSlugIssuesRouteImport } from './routes/teams/$teamSlug/issues'
@@ -97,11 +98,6 @@ const WorkspaceInsightsRoute = WorkspaceInsightsRouteImport.update({
   path: '/workspace/insights',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WorkspaceInitiativesRoute = WorkspaceInitiativesRouteImport.update({
-  id: '/workspace/initiatives',
-  path: '/workspace/initiatives',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const WorkspaceCallsRoute = WorkspaceCallsRouteImport.update({
   id: '/workspace/calls',
   path: '/workspace/calls',
@@ -112,6 +108,18 @@ const OnboardingWorkspaceRoute = OnboardingWorkspaceRouteImport.update({
   path: '/onboarding/workspace',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WorkspaceInitiativesIndexRoute =
+  WorkspaceInitiativesIndexRouteImport.update({
+    id: '/workspace/initiatives/',
+    path: '/workspace/initiatives/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const WorkspaceInitiativesInitiativeIdRoute =
+  WorkspaceInitiativesInitiativeIdRouteImport.update({
+    id: '/workspace/initiatives/$initiativeId',
+    path: '/workspace/initiatives/$initiativeId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const TeamsTeamSlugSignalsRoute = TeamsTeamSlugSignalsRouteImport.update({
   id: '/teams/$teamSlug/signals',
   path: '/teams/$teamSlug/signals',
@@ -153,7 +161,6 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/onboarding/workspace': typeof OnboardingWorkspaceRoute
   '/workspace/calls': typeof WorkspaceCallsRoute
-  '/workspace/initiatives': typeof WorkspaceInitiativesRoute
   '/workspace/insights': typeof WorkspaceInsightsRoute
   '/workspace/members': typeof WorkspaceMembersRoute
   '/workspace/projects': typeof WorkspaceProjectsRoute
@@ -166,6 +173,8 @@ export interface FileRoutesByFullPath {
   '/teams/$teamSlug/issues': typeof TeamsTeamSlugIssuesRoute
   '/teams/$teamSlug/projects': typeof TeamsTeamSlugProjectsRoute
   '/teams/$teamSlug/signals': typeof TeamsTeamSlugSignalsRoute
+  '/workspace/initiatives/$initiativeId': typeof WorkspaceInitiativesInitiativeIdRoute
+  '/workspace/initiatives/': typeof WorkspaceInitiativesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -177,7 +186,6 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/onboarding/workspace': typeof OnboardingWorkspaceRoute
   '/workspace/calls': typeof WorkspaceCallsRoute
-  '/workspace/initiatives': typeof WorkspaceInitiativesRoute
   '/workspace/insights': typeof WorkspaceInsightsRoute
   '/workspace/members': typeof WorkspaceMembersRoute
   '/workspace/projects': typeof WorkspaceProjectsRoute
@@ -190,6 +198,8 @@ export interface FileRoutesByTo {
   '/teams/$teamSlug/issues': typeof TeamsTeamSlugIssuesRoute
   '/teams/$teamSlug/projects': typeof TeamsTeamSlugProjectsRoute
   '/teams/$teamSlug/signals': typeof TeamsTeamSlugSignalsRoute
+  '/workspace/initiatives/$initiativeId': typeof WorkspaceInitiativesInitiativeIdRoute
+  '/workspace/initiatives': typeof WorkspaceInitiativesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -202,7 +212,6 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/onboarding/workspace': typeof OnboardingWorkspaceRoute
   '/workspace/calls': typeof WorkspaceCallsRoute
-  '/workspace/initiatives': typeof WorkspaceInitiativesRoute
   '/workspace/insights': typeof WorkspaceInsightsRoute
   '/workspace/members': typeof WorkspaceMembersRoute
   '/workspace/projects': typeof WorkspaceProjectsRoute
@@ -215,6 +224,8 @@ export interface FileRoutesById {
   '/teams/$teamSlug/issues': typeof TeamsTeamSlugIssuesRoute
   '/teams/$teamSlug/projects': typeof TeamsTeamSlugProjectsRoute
   '/teams/$teamSlug/signals': typeof TeamsTeamSlugSignalsRoute
+  '/workspace/initiatives/$initiativeId': typeof WorkspaceInitiativesInitiativeIdRoute
+  '/workspace/initiatives/': typeof WorkspaceInitiativesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -228,7 +239,6 @@ export interface FileRouteTypes {
     | '/signup'
     | '/onboarding/workspace'
     | '/workspace/calls'
-    | '/workspace/initiatives'
     | '/workspace/insights'
     | '/workspace/members'
     | '/workspace/projects'
@@ -241,6 +251,8 @@ export interface FileRouteTypes {
     | '/teams/$teamSlug/issues'
     | '/teams/$teamSlug/projects'
     | '/teams/$teamSlug/signals'
+    | '/workspace/initiatives/$initiativeId'
+    | '/workspace/initiatives/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -252,7 +264,6 @@ export interface FileRouteTypes {
     | '/signup'
     | '/onboarding/workspace'
     | '/workspace/calls'
-    | '/workspace/initiatives'
     | '/workspace/insights'
     | '/workspace/members'
     | '/workspace/projects'
@@ -265,6 +276,8 @@ export interface FileRouteTypes {
     | '/teams/$teamSlug/issues'
     | '/teams/$teamSlug/projects'
     | '/teams/$teamSlug/signals'
+    | '/workspace/initiatives/$initiativeId'
+    | '/workspace/initiatives'
   id:
     | '__root__'
     | '/'
@@ -276,7 +289,6 @@ export interface FileRouteTypes {
     | '/signup'
     | '/onboarding/workspace'
     | '/workspace/calls'
-    | '/workspace/initiatives'
     | '/workspace/insights'
     | '/workspace/members'
     | '/workspace/projects'
@@ -289,6 +301,8 @@ export interface FileRouteTypes {
     | '/teams/$teamSlug/issues'
     | '/teams/$teamSlug/projects'
     | '/teams/$teamSlug/signals'
+    | '/workspace/initiatives/$initiativeId'
+    | '/workspace/initiatives/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -301,7 +315,6 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   OnboardingWorkspaceRoute: typeof OnboardingWorkspaceRoute
   WorkspaceCallsRoute: typeof WorkspaceCallsRoute
-  WorkspaceInitiativesRoute: typeof WorkspaceInitiativesRoute
   WorkspaceInsightsRoute: typeof WorkspaceInsightsRoute
   WorkspaceMembersRoute: typeof WorkspaceMembersRoute
   WorkspaceProjectsRoute: typeof WorkspaceProjectsRoute
@@ -314,6 +327,8 @@ export interface RootRouteChildren {
   TeamsTeamSlugIssuesRoute: typeof TeamsTeamSlugIssuesRoute
   TeamsTeamSlugProjectsRoute: typeof TeamsTeamSlugProjectsRoute
   TeamsTeamSlugSignalsRoute: typeof TeamsTeamSlugSignalsRoute
+  WorkspaceInitiativesInitiativeIdRoute: typeof WorkspaceInitiativesInitiativeIdRoute
+  WorkspaceInitiativesIndexRoute: typeof WorkspaceInitiativesIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -409,13 +424,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceInsightsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/workspace/initiatives': {
-      id: '/workspace/initiatives'
-      path: '/workspace/initiatives'
-      fullPath: '/workspace/initiatives'
-      preLoaderRoute: typeof WorkspaceInitiativesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/workspace/calls': {
       id: '/workspace/calls'
       path: '/workspace/calls'
@@ -428,6 +436,20 @@ declare module '@tanstack/react-router' {
       path: '/onboarding/workspace'
       fullPath: '/onboarding/workspace'
       preLoaderRoute: typeof OnboardingWorkspaceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/initiatives/': {
+      id: '/workspace/initiatives/'
+      path: '/workspace/initiatives'
+      fullPath: '/workspace/initiatives/'
+      preLoaderRoute: typeof WorkspaceInitiativesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/initiatives/$initiativeId': {
+      id: '/workspace/initiatives/$initiativeId'
+      path: '/workspace/initiatives/$initiativeId'
+      fullPath: '/workspace/initiatives/$initiativeId'
+      preLoaderRoute: typeof WorkspaceInitiativesInitiativeIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/teams/$teamSlug/signals': {
@@ -485,7 +507,6 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   OnboardingWorkspaceRoute: OnboardingWorkspaceRoute,
   WorkspaceCallsRoute: WorkspaceCallsRoute,
-  WorkspaceInitiativesRoute: WorkspaceInitiativesRoute,
   WorkspaceInsightsRoute: WorkspaceInsightsRoute,
   WorkspaceMembersRoute: WorkspaceMembersRoute,
   WorkspaceProjectsRoute: WorkspaceProjectsRoute,
@@ -498,6 +519,8 @@ const rootRouteChildren: RootRouteChildren = {
   TeamsTeamSlugIssuesRoute: TeamsTeamSlugIssuesRoute,
   TeamsTeamSlugProjectsRoute: TeamsTeamSlugProjectsRoute,
   TeamsTeamSlugSignalsRoute: TeamsTeamSlugSignalsRoute,
+  WorkspaceInitiativesInitiativeIdRoute: WorkspaceInitiativesInitiativeIdRoute,
+  WorkspaceInitiativesIndexRoute: WorkspaceInitiativesIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

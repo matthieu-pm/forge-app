@@ -23,6 +23,7 @@ export type AppPath =
   | "/inbox"
   | "/my-issues"
   | "/workspace/initiatives"
+  | "/workspace/initiatives/$initiativeId"
   | "/workspace/projects"
   | "/workspace/calls"
   | "/workspace/signals"
@@ -240,6 +241,18 @@ export function getPageMeta(pathname: string): PageMeta {
 }
 
 export function getBreadcrumbItems(pathname: string): BreadcrumbItem[] {
+  const initiativeMatch = pathname.match(
+    /^\/workspace\/initiatives\/([^/]+)$/
+  )
+
+  if (initiativeMatch) {
+    return [
+      { label: "Workspace", to: "/workspace/initiatives" },
+      { label: "Initiatives", to: "/workspace/initiatives" },
+      { label: "Initiative" },
+    ]
+  }
+
   const teamMatch = pathname.match(
     /^\/teams\/(product|engineering|operations)\/(projects|issues|signals|calls|insights)$/
   )
