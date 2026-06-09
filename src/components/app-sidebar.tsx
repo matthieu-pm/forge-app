@@ -1,28 +1,34 @@
 "use client"
 
 import * as React from "react"
-import { Link, useRouter, useRouterState } from "@tanstack/react-router"
-import { appNav, isNavItemActive, type AppNavChild } from "@/lib/app-navigation"
-import { authClient } from "@/lib/auth-client"
-import { getAuthState } from "@/lib/auth-state"
-import type { WorkspaceSummary } from "@/lib/auth-types"
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible"
+  AccountSetting01Icon,
+  ArrowRight01Icon,
+  Building02Icon,
+  CrownIcon,
+  Logout03Icon,
+} from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Link, useRouter, useRouterState } from "@tanstack/react-router"
+
+import type { AppNavChild } from "@/lib/app-navigation"
+import type { WorkspaceSummary } from "@/lib/auth-types"
 import {
   Avatar,
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar"
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
@@ -37,8 +43,9 @@ import {
   SidebarMenuSubItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
-import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons"
+import { appNav, isNavItemActive } from "@/lib/app-navigation"
+import { authClient } from "@/lib/auth-client"
+import { getAuthState } from "@/lib/auth-state"
 
 function workspaceInitials(name: string) {
   return name
@@ -140,7 +147,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     return null
   }
 
-  function renderNavItems(items: AppNavChild[], depth = 0) {
+  function renderNavItems(items: Array<AppNavChild>, depth = 0) {
     const isNested = depth > 0
 
     return (
@@ -246,7 +253,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     ? "Loading workspace..."
     : workspace?.name || "Forge"
   const workspaceLogo = workspace?.logo || null
-  const workspaceEmail = sessionState.data?.user.email ?? ""
 
   return (
     <Sidebar {...props}>
@@ -255,10 +261,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <DropdownMenu>
               <SidebarMenuButton
-                className="h-7 py-1 text-xs font-medium text-foreground aria-expanded:border-black aria-expanded:bg-transparent aria-expanded:text-foreground"
+                className="h-8 px-2 py-1 text-sm font-medium text-sidebar-foreground aria-expanded:bg-sidebar-accent aria-expanded:text-sidebar-accent-foreground"
                 render={<DropdownMenuTrigger />}
               >
-                <Avatar className="size-4 after:hidden">
+                <Avatar className="size-5 after:hidden">
                   {workspaceLogo ? (
                     <AvatarImage src={workspaceLogo} alt={workspaceName} />
                   ) : null}
@@ -277,33 +283,55 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 align="start"
                 side="bottom"
                 sideOffset={8}
-                className="min-w-56 rounded-none"
+                className="w-60 min-w-60 p-1"
               >
                 <DropdownMenuGroup>
-                  <DropdownMenuLabel>
-                    <div className="flex flex-col gap-1">
-                      <span className="font-medium text-foreground">
-                        {workspaceName}
-                      </span>
-                      {workspaceEmail ? (
-                        <span className="text-muted-foreground">
-                          {workspaceEmail}
+                  <DropdownMenuLabel className="px-2 py-1">
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <Avatar className="size-5 after:hidden">
+                        {workspaceLogo ? (
+                          <AvatarImage src={workspaceLogo} alt={workspaceName} />
+                        ) : null}
+                        <AvatarFallback>{workspaceInitials(workspaceName)}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex min-w-0 flex-col gap-0.5">
+                        <span className="truncate text-sm font-semibold text-foreground">
+                          {workspaceName}
                         </span>
-                      ) : null}
+                      </div>
                     </div>
                   </DropdownMenuLabel>
                 </DropdownMenuGroup>
-                <DropdownMenuSeparator />
                 <DropdownMenuItem
+                  className="min-h-7 rounded-xl px-2 py-1 text-sm font-medium"
                   onClick={() => {
                     void router.navigate({
                       to: "/inbox",
                     })
                   }}
                 >
+                  <HugeiconsIcon icon={Building02Icon} strokeWidth={2} />
                   Open workspace
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => void handleSignOut()}>
+                <DropdownMenuItem
+                  className="min-h-7 rounded-xl px-2 py-1 text-sm font-medium"
+                  render={<a href="#settings" />}
+                >
+                  <HugeiconsIcon icon={AccountSetting01Icon} strokeWidth={2} />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="min-h-7 rounded-xl px-2 py-1 text-sm font-medium"
+                  render={<a href="#upgrade-plan" />}
+                >
+                  <HugeiconsIcon icon={CrownIcon} strokeWidth={2} />
+                  Upgrade plan
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="min-h-7 rounded-xl px-2 py-1 text-sm font-medium"
+                  onClick={() => void handleSignOut()}
+                >
+                  <HugeiconsIcon icon={Logout03Icon} strokeWidth={2} />
                   Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>
