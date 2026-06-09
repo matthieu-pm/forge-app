@@ -1,32 +1,52 @@
-# TanStack Start + shadcn/ui
+# Forge
 
-This is a template for a new TanStack Start project with React, TypeScript, and shadcn/ui.
+Forge is an issue tracking workspace for modern software teams. It brings together inbox triage, personal work, workspace-level planning, team views, and an early agent workspace in one TanStack Start app.
 
-## Adding components
+## Stack
 
-To add components to your app, run the following command:
+- TanStack Start, TanStack Router, React, and TypeScript
+- Tailwind CSS and shadcn/ui components
+- Better Auth with organization support
+- Neon Postgres with Drizzle ORM
+- Bun for package management and scripts
 
-```bash
-npx shadcn@latest add button
-```
+## App Areas
 
-This will place the ui components in the `components` directory.
+- `Inbox` for triage and incoming work.
+- `Forge` for the home workspace.
+- `My issues` for personal execution.
+- `Workspace` sections for initiatives, projects, calls, signals, insights, views, teams, and members.
+- `Your teams` views for product, engineering, and operations work.
+- `Agent` for agent-driven workflows and automation.
 
-## Using components
+## Getting Started
 
-To use the components in your app, import them as follows:
+1. Install dependencies with `bun install`.
+1. Copy `.env.example` to `.env`.
+1. Set `DATABASE_URL`, `BETTER_AUTH_URL`, and `BETTER_AUTH_SECRET`.
+1. Run the development server with `bun run dev`.
+1. Open `http://localhost:3000`.
 
-```tsx
-import { Button } from "@/components/ui/button";
-```
+## Scripts
+
+- `bun run dev` starts Vite on port 3000.
+- `bun run build` builds the app.
+- `bun run preview` previews the production build.
+- `bun run test` runs Vitest.
+- `bun run lint` runs ESLint.
+- `bun run typecheck` runs TypeScript without emitting files.
+- `bun run format` formats JavaScript and TypeScript files.
 
 ## Database
 
 This project uses Neon Postgres with Drizzle ORM.
 
-1. Copy the local database URL into `.env` as `DATABASE_URL`.
 1. Generate a migration with `bun run db:generate`.
 1. Apply schema changes with `bun run db:migrate` or `bun run db:push`.
 1. Open Drizzle Studio with `bun run db:studio`.
 
-The shared database client lives in `src/db/index.ts`, and the current schema is defined in `src/db/schema.ts`.
+The shared database client lives in `src/db/index.ts`. Application workspace schema lives in `src/db/schema.ts`, and auth schema lives in `src/db/auth-schema.ts`.
+
+## Recent UI Work
+
+The workspace menu in the sidebar has been updated to match the current Forge app styling. It now uses a compact rounded dropdown, shows the workspace identity without the account email, and includes actions for opening the workspace, settings, upgrading the plan, and signing out.
