@@ -303,7 +303,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </DropdownMenuLabel>
                 </DropdownMenuGroup>
                 <DropdownMenuItem
-                  className="min-h-7 rounded-xl px-2 py-1 text-sm font-medium"
+                  className="h-7 min-h-0 rounded-lg px-2 py-1 text-sm font-medium"
                   onClick={() => {
                     void router.navigate({
                       to: "/inbox",
@@ -311,24 +311,24 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   }}
                 >
                   <HugeiconsIcon icon={Building02Icon} strokeWidth={2} />
-                  Open workspace
+                  New workspace
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  className="min-h-7 rounded-xl px-2 py-1 text-sm font-medium"
+                  className="h-7 min-h-0 rounded-lg px-2 py-1 text-sm font-medium"
                   render={<a href="#settings" />}
                 >
                   <HugeiconsIcon icon={AccountSetting01Icon} strokeWidth={2} />
                   Settings
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  className="min-h-7 rounded-xl px-2 py-1 text-sm font-medium"
+                  className="h-7 min-h-0 rounded-lg px-2 py-1 text-sm font-medium"
                   render={<a href="#upgrade-plan" />}
                 >
                   <HugeiconsIcon icon={CrownIcon} strokeWidth={2} />
                   Upgrade plan
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  className="min-h-7 rounded-xl px-2 py-1 text-sm font-medium"
+                  className="h-7 min-h-0 rounded-lg px-2 py-1 text-sm font-medium"
                   onClick={() => void handleSignOut()}
                 >
                   <HugeiconsIcon icon={Logout03Icon} strokeWidth={2} />
