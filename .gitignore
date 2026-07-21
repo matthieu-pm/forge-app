@@ -9,6 +9,10 @@ count.txt
 .tanstack
 .wrangler
 .output
+out
+.electron-build
+.electron-cache
+test-results
 .vinxi
 __unconfig*
 todos.json

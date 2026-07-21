@@ -8,8 +8,13 @@ import {
 } from "@tanstack/react-router"
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools"
 import { TanStackDevtools } from "@tanstack/react-devtools"
+import { Fragment } from "react"
 
+import appCss from "../styles.css?url"
 import { AppSidebar } from "@/components/app-sidebar"
+import { DesktopTitleBar } from "@/components/desktop-title-bar"
+import { Toaster } from "@/components/ui/sonner"
+import { HostIntegration } from "@/host/host-integration"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -19,16 +24,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { getBreadcrumbItems } from "@/lib/app-navigation"
-import {
-  PageHeaderProvider,
-  usePageHeaderValue,
-} from "@/lib/page-header"
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar"
-import appCss from "../styles.css?url"
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 
 export const Route = createRootRoute({
   head: () => ({
@@ -64,32 +60,25 @@ function RootLayout() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
-  const shelllessPaths = new Set([
-    "/login",
-    "/signup",
-    "/onboarding/workspace",
-  ])
+  const shelllessPaths = new Set(["/login", "/signup", "/onboarding/workspace"])
 
   if (shelllessPaths.has(pathname)) {
     return <Outlet key={pathname} />
   }
 
   return (
-    <PageHeaderProvider>
-      <SidebarProvider>
-        <AppSidebar />
-        <SidebarInset>
-          <AppHeader pathname={pathname} />
-          <Outlet key={pathname} />
-        </SidebarInset>
-      </SidebarProvider>
-    </PageHeaderProvider>
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        <AppHeader pathname={pathname} />
+        <Outlet key={pathname} />
+      </SidebarInset>
+    </SidebarProvider>
   )
 }
 
 function AppHeader({ pathname }: { pathname: string }) {
   const breadcrumbs = getBreadcrumbItems(pathname)
-  const { inline, actions } = usePageHeaderValue()
 
   function renderBreadcrumbLink(to: string) {
     return to.startsWith("/teams/") ? (
@@ -101,43 +90,45 @@ function AppHeader({ pathname }: { pathname: string }) {
 
   return (
     <header className="flex h-12 shrink-0 items-center gap-3 px-4">
-      <SidebarTrigger className="-ml-1" />
       <Breadcrumb>
         <BreadcrumbList className="text-sm">
           {breadcrumbs.map((item, index) => {
             const isLast = index === breadcrumbs.length - 1
 
             return (
-              <BreadcrumbItem key={`${item.label}-${index}`}>
-                {item.to && !isLast ? (
-                  <BreadcrumbLink render={renderBreadcrumbLink(item.to)}>
-                    {item.label}
-                  </BreadcrumbLink>
-                ) : (
-                  <BreadcrumbPage className="text-sm font-medium">
-                    {item.label}
-                  </BreadcrumbPage>
-                )}
+              <Fragment key={`${item.label}-${index}`}>
+                <BreadcrumbItem>
+                  {item.to && !isLast ? (
+                    <BreadcrumbLink render={renderBreadcrumbLink(item.to)}>
+                      {item.label}
+                    </BreadcrumbLink>
+                  ) : (
+                    <BreadcrumbPage className="text-sm font-medium">
+                      {item.label}
+                    </BreadcrumbPage>
+                  )}
+                </BreadcrumbItem>
                 {!isLast ? <BreadcrumbSeparator /> : null}
-              </BreadcrumbItem>
+              </Fragment>
             )
           })}
         </BreadcrumbList>
       </Breadcrumb>
-      {inline}
-      {actions ? <div className="ml-auto flex items-center gap-1">{actions}</div> : null}
     </header>
   )
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
       <body>
+        <DesktopTitleBar />
         {children}
+        <HostIntegration />
+        <Toaster />
         <TanStackDevtools
           config={{
             position: "bottom-right",

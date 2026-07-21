@@ -9,6 +9,7 @@ Forge is an issue tracking workspace for modern software teams. It brings togeth
 - Better Auth with organization support
 - Neon Postgres with Drizzle ORM
 - Bun for package management and scripts
+- Electron Forge for the shared-renderer macOS app
 
 ## App Areas
 
@@ -33,6 +34,9 @@ Forge is an issue tracking workspace for modern software teams. It brings togeth
 - `bun run build` builds the app.
 - `bun run preview` previews the production build.
 - `bun run test` runs Vitest.
+- `bun run dev:desktop` runs that same web app inside Electron.
+- `bun run test:desktop` builds the shell and runs its Electron smoke test.
+- `bun run desktop:make` creates signed/notarized DMG and ZIP artifacts when release credentials are configured.
 - `bun run lint` runs ESLint.
 - `bun run typecheck` runs TypeScript without emitting files.
 - `bun run format` formats JavaScript and TypeScript files.
@@ -46,6 +50,10 @@ This project uses Neon Postgres with Drizzle ORM.
 1. Open Drizzle Studio with `bun run db:studio`.
 
 The shared database client lives in `src/db/index.ts`. Application workspace schema lives in `src/db/schema.ts`, and auth schema lives in `src/db/auth-schema.ts`.
+
+## macOS app
+
+The macOS client is a secure host around the same TanStack renderer used on the web. See [`desktop/README.md`](desktop/README.md) for architecture, local development, signing, updates, and release operations.
 
 ## Recent UI Work
 

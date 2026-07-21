@@ -1,0 +1,206 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1420" viewBox="0 0 1800 1420" role="img" aria-labelledby="title desc">
+  <title id="title">Forge product structure and feature flag map</title>
+  <desc id="desc">A layered map separating activation gates, product modules, integrations, operational controls, and implementation configuration.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1020"/>
+      <stop offset="1" stop-color="#12182a"/>
+    </linearGradient>
+    <linearGradient id="hero" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#8b5cf6"/>
+      <stop offset="1" stop-color="#22d3ee"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#020617" flood-opacity="0.48"/>
+    </filter>
+    <style>
+      .eyebrow { font: 700 14px Inter, ui-sans-serif, system-ui, sans-serif; letter-spacing: 2.5px; fill: #8b9bb8; }
+      .title { font: 750 40px Inter, ui-sans-serif, system-ui, sans-serif; fill: #f8fafc; }
+      .subtitle { font: 400 18px Inter, ui-sans-serif, system-ui, sans-serif; fill: #a9b5ca; }
+      .section { font: 700 17px Inter, ui-sans-serif, system-ui, sans-serif; letter-spacing: 1.6px; fill: #cbd5e1; }
+      .card-title { font: 700 20px Inter, ui-sans-serif, system-ui, sans-serif; fill: #f8fafc; }
+      .card-sub { font: 400 13px Inter, ui-sans-serif, system-ui, sans-serif; fill: #91a0b9; }
+      .flag { font: 500 14px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #dbeafe; }
+      .flag-small { font: 500 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #dbeafe; }
+      .meta-title { font: 700 16px Inter, ui-sans-serif, system-ui, sans-serif; fill: #f8fafc; }
+      .meta-copy { font: 400 14px Inter, ui-sans-serif, system-ui, sans-serif; fill: #a9b5ca; }
+      .chip { font: 650 13px Inter, ui-sans-serif, system-ui, sans-serif; fill: #dbeafe; }
+      .note { font: 500 14px Inter, ui-sans-serif, system-ui, sans-serif; fill: #a9b5ca; }
+    </style>
+  </defs>
+
+  <rect width="1800" height="1420" fill="url(#bg)"/>
+  <circle cx="1620" cy="50" r="360" fill="#22d3ee" opacity="0.035"/>
+  <circle cx="110" cy="720" r="420" fill="#8b5cf6" opacity="0.04"/>
+
+  <!-- Header -->
+  <g transform="translate(70 62)">
+    <rect x="0" y="3" width="46" height="46" rx="13" fill="url(#hero)"/>
+    <circle cx="15" cy="26" r="5" fill="#fff"/>
+    <circle cx="30" cy="16" r="5" fill="#fff"/>
+    <circle cx="31" cy="34" r="5" fill="#fff"/>
+    <path d="M18 24 L27 18 M18 28 L27 32" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+    <text x="64" y="20" class="eyebrow">FORGE · PRODUCT CONTROL PLANE</text>
+    <text x="64" y="61" class="title">Structure &amp; feature flags</text>
+    <text x="64" y="93" class="subtitle">Keep rollout, commercial access, permissions, and runtime behavior as separate concerns.</text>
+  </g>
+
+  <!-- Activation gates -->
+  <g transform="translate(70 190)">
+    <text x="0" y="0" class="section">01 · ACTIVATION GATES</text>
+    <rect x="0" y="24" width="1660" height="158" rx="24" fill="#111a2e" stroke="#26334c"/>
+    <g transform="translate(25 48)">
+      <rect width="355" height="110" rx="17" fill="#17223a" stroke="#8b5cf6" stroke-opacity="0.55"/>
+      <circle cx="28" cy="29" r="13" fill="#8b5cf6" opacity="0.2"/>
+      <path d="M22 29 l4 4 8-9" fill="none" stroke="#c4b5fd" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="51" y="34" class="meta-title">Entitlement</text>
+      <text x="20" y="66" class="meta-copy">Does the workspace plan include it?</text>
+      <text x="20" y="91" class="flag-small">entitlement.&lt;module&gt;</text>
+    </g>
+    <text x="399" y="116" class="title" font-size="25">∧</text>
+    <g transform="translate(435 48)">
+      <rect width="355" height="110" rx="17" fill="#17223a" stroke="#22d3ee" stroke-opacity="0.55"/>
+      <circle cx="28" cy="29" r="13" fill="#22d3ee" opacity="0.18"/>
+      <path d="M23 30 h10 M29 24 l6 6-6 6" fill="none" stroke="#67e8f9" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="51" y="34" class="meta-title">Rollout</text>
+      <text x="20" y="66" class="meta-copy">Is it released to this cohort?</text>
+      <text x="20" y="91" class="flag-small">rollout.&lt;capability&gt;</text>
+    </g>
+    <text x="809" y="116" class="title" font-size="25">∧</text>
+    <g transform="translate(845 48)">
+      <rect width="355" height="110" rx="17" fill="#17223a" stroke="#f59e0b" stroke-opacity="0.55"/>
+      <circle cx="28" cy="29" r="13" fill="#f59e0b" opacity="0.18"/>
+      <path d="M23 30 h10 M26 27 v-3 a3 3 0 0 1 6 0 v3" fill="none" stroke="#fcd34d" stroke-width="2.1" stroke-linecap="round"/>
+      <text x="51" y="34" class="meta-title">Permission</text>
+      <text x="20" y="66" class="meta-copy">May this user or agent do it?</text>
+      <text x="20" y="91" class="flag-small">permission.&lt;action&gt;</text>
+    </g>
+    <text x="1218" y="116" class="title" font-size="25">→</text>
+    <g transform="translate(1265 48)">
+      <rect width="370" height="110" rx="17" fill="#15302e" stroke="#34d399" stroke-opacity="0.65"/>
+      <text x="22" y="35" class="meta-title">Capability enabled</text>
+      <text x="22" y="66" class="meta-copy">Behavior comes from configuration,</text>
+      <text x="22" y="89" class="meta-copy">not from additional boolean flags.</text>
+    </g>
+  </g>
+
+  <!-- Product modules -->
+  <g transform="translate(70 422)">
+    <text x="0" y="0" class="section">02 · PRODUCT MODULES</text>
+
+    <!-- Row 1 -->
+    <g transform="translate(0 25)" filter="url(#shadow)">
+      <rect width="390" height="245" rx="22" fill="#111a2e" stroke="#7c3aed" stroke-width="1.5"/>
+      <rect width="7" height="245" rx="4" fill="#8b5cf6"/>
+      <text x="26" y="38" class="card-title">Workspace</text>
+      <text x="26" y="62" class="card-sub">Identity, membership &amp; governance</text>
+      <text x="26" y="98" class="flag">workspace.multiple_workspaces</text>
+      <text x="26" y="128" class="flag">workspace.sso</text>
+      <text x="26" y="158" class="flag">workspace.roles_permissions</text>
+      <text x="26" y="188" class="flag">workspace.audit_log</text>
+    </g>
+
+    <g transform="translate(420 25)" filter="url(#shadow)">
+      <rect width="390" height="245" rx="22" fill="#111a2e" stroke="#2563eb" stroke-width="1.5"/>
+      <rect width="7" height="245" rx="4" fill="#3b82f6"/>
+      <text x="26" y="38" class="card-title">Ticketing</text>
+      <text x="26" y="62" class="card-sub">Planning and work management</text>
+      <text x="26" y="98" class="flag">ticketing.projects</text>
+      <text x="26" y="128" class="flag">ticketing.issues</text>
+      <text x="26" y="158" class="flag">ticketing.teams</text>
+      <text x="26" y="188" class="flag">ticketing.initiatives</text>
+      <text x="26" y="218" class="flag">ticketing.saved_views</text>
+    </g>
+
+    <g transform="translate(840 25)" filter="url(#shadow)">
+      <rect width="390" height="245" rx="22" fill="#111a2e" stroke="#0891b2" stroke-width="1.5"/>
+      <rect width="7" height="245" rx="4" fill="#06b6d4"/>
+      <text x="26" y="38" class="card-title">Code</text>
+      <text x="26" y="62" class="card-sub">Repository knowledge and activity</text>
+      <text x="26" y="98" class="flag">code.repository_sync</text>
+      <text x="26" y="128" class="flag">code.git_history</text>
+      <text x="26" y="158" class="flag">code.pull_requests</text>
+      <text x="26" y="188" class="flag">code.coding_sessions</text>
+    </g>
+
+    <g transform="translate(1260 25)" filter="url(#shadow)">
+      <rect width="400" height="245" rx="22" fill="#111a2e" stroke="#0d9488" stroke-width="1.5"/>
+      <rect width="7" height="245" rx="4" fill="#14b8a6"/>
+      <text x="26" y="38" class="card-title">Signals</text>
+      <text x="26" y="62" class="card-sub">Product and feature usage</text>
+      <text x="26" y="98" class="flag">signals.ingestion_api</text>
+      <text x="26" y="128" class="flag">signals.provider_connectors</text>
+    </g>
+
+    <!-- Row 2 -->
+    <g transform="translate(0 300)" filter="url(#shadow)">
+      <rect width="390" height="275" rx="22" fill="#111a2e" stroke="#db2777" stroke-width="1.5"/>
+      <rect width="7" height="275" rx="4" fill="#ec4899"/>
+      <text x="26" y="38" class="card-title">Calls</text>
+      <text x="26" y="62" class="card-sub">Capture and meeting intelligence</text>
+      <text x="26" y="98" class="flag">calls.calendar_sync</text>
+      <text x="26" y="128" class="flag">calls.device_capture</text>
+      <text x="26" y="158" class="flag">calls.transcription</text>
+      <text x="26" y="188" class="flag">calls.transcript_processing</text>
+    </g>
+
+    <g transform="translate(420 300)" filter="url(#shadow)">
+      <rect width="390" height="275" rx="22" fill="#111a2e" stroke="#ea580c" stroke-width="1.5"/>
+      <rect width="7" height="275" rx="4" fill="#f97316"/>
+      <text x="26" y="38" class="card-title">Insights</text>
+      <text x="26" y="62" class="card-sub">Cross-source synthesis and triage</text>
+      <text x="26" y="98" class="flag">insights.scheduled_runs</text>
+      <text x="26" y="128" class="flag">insights.inbox</text>
+      <text x="26" y="158" class="flag">insights.model_selection</text>
+      <text x="26" y="188" class="flag">insights.byok</text>
+    </g>
+
+    <g transform="translate(840 300)" filter="url(#shadow)">
+      <rect width="820" height="275" rx="22" fill="#111a2e" stroke="#16a34a" stroke-width="1.5"/>
+      <rect width="7" height="275" rx="4" fill="#22c55e"/>
+      <text x="26" y="38" class="card-title">Agent platform</text>
+      <text x="26" y="62" class="card-sub">Execution layer — every tool is independently permissioned</text>
+      <text x="26" y="98" class="flag">agent.runtime</text>
+      <text x="26" y="128" class="flag">agent.mcp</text>
+      <text x="26" y="158" class="flag">agent.public_api</text>
+      <text x="26" y="188" class="flag">agent.cli</text>
+      <line x1="382" y1="90" x2="382" y2="232" stroke="#2b3a54"/>
+      <text x="410" y="98" class="flag">agent.tool.ticketing</text>
+      <text x="410" y="128" class="flag">agent.tool.codebase_read</text>
+      <text x="410" y="158" class="flag">agent.tool.codebase_write</text>
+      <text x="410" y="188" class="flag">agent.tool.calls</text>
+      <text x="410" y="218" class="flag">agent.tool.signals / insights</text>
+    </g>
+  </g>
+
+  <!-- Integrations -->
+  <g transform="translate(70 1050)">
+    <text x="0" y="0" class="section">03 · PROVIDER INTEGRATIONS</text>
+    <rect x="0" y="24" width="1660" height="105" rx="22" fill="#111a2e" stroke="#26334c"/>
+    <g transform="translate(24 51)">
+      <rect width="178" height="50" rx="25" fill="#17223a"/><text x="89" y="31" class="chip" text-anchor="middle">GitHub</text>
+      <rect x="194" width="178" height="50" rx="25" fill="#17223a"/><text x="283" y="31" class="chip" text-anchor="middle">GitLab</text>
+      <rect x="388" width="178" height="50" rx="25" fill="#17223a"/><text x="477" y="31" class="chip" text-anchor="middle">PostHog</text>
+      <rect x="582" width="178" height="50" rx="25" fill="#17223a"/><text x="671" y="31" class="chip" text-anchor="middle">Amplitude</text>
+      <rect x="776" width="178" height="50" rx="25" fill="#17223a"/><text x="865" y="31" class="chip" text-anchor="middle">Mixpanel</text>
+      <rect x="970" width="272" height="50" rx="25" fill="#17223a"/><text x="1106" y="31" class="chip" text-anchor="middle">Google Calendar</text>
+      <rect x="1258" width="353" height="50" rx="25" fill="#17223a"/><text x="1434" y="31" class="chip" text-anchor="middle">Microsoft Calendar</text>
+    </g>
+  </g>
+
+  <!-- Controls and configuration -->
+  <g transform="translate(70 1225)">
+    <text x="0" y="0" class="section">04 · OPERATIONAL CONTROLS &amp; CONFIGURATION</text>
+    <rect x="0" y="24" width="810" height="116" rx="22" fill="#111a2e" stroke="#ef4444" stroke-opacity="0.5"/>
+    <text x="24" y="56" class="meta-title">Emergency kill switches</text>
+    <text x="24" y="88" class="flag-small">kill_switch.recording</text>
+    <text x="275" y="88" class="flag-small">kill_switch.agent_writes</text>
+    <text x="560" y="88" class="flag-small">kill_switch.provider_sync</text>
+    <rect x="910" y="24" width="750" height="116" rx="22" fill="#111a2e" stroke="#64748b"/>
+    <text x="934" y="56" class="meta-title">Configuration — values, not feature flags</text>
+    <text x="934" y="85" class="note">Worker timeout · allowed models · retention · concurrency · retries</text>
+    <text x="934" y="111" class="note">provider credentials · database implementation · transcript language</text>
+  </g>
+
+  <text x="1730" y="1394" text-anchor="end" class="card-sub">Forge · proposed control-plane model · v1</text>
+</svg>

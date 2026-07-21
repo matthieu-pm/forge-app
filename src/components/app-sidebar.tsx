@@ -72,10 +72,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [workspace, setWorkspace] = React.useState<WorkspaceSummary | null>(null)
   const [isWorkspaceLoading, setIsWorkspaceLoading] = React.useState(false)
   const primaryNav = appNav.filter(
-    (item) =>
-      item.title === "Forge" ||
-      item.title === "Inbox" ||
-      item.title === "My issues"
+    (item) => item.title !== "Workspace" && item.title !== "Your teams"
   )
   const workspaceSection = appNav.filter((item) => item.title === "Workspace")
   const teamsSection = appNav.filter((item) => item.title === "Your teams")
@@ -159,7 +156,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         {items.map((item) =>
           item.items?.length ? (
             <Collapsible
-              key={item.title}
+              key={`${item.title}-${isNavItemActive(pathname, item) ? "active" : "idle"}`}
               defaultOpen={isNavItemActive(pathname, item)}
               className="group/collapsible"
             >
@@ -206,7 +203,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   function renderRootItem(item: (typeof appNav)[number], teamsScrollable = false) {
     return item.items?.length ? (
       <Collapsible
-        key={item.title}
+        key={`${item.title}-${isNavItemActive(pathname, item) ? "active" : "idle"}`}
         defaultOpen={isNavItemActive(pathname, item)}
         className={
           teamsScrollable
@@ -255,13 +252,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const workspaceLogo = workspace?.logo || null
 
   return (
-    <Sidebar {...props}>
+    <Sidebar variant="inset" {...props}>
       <SidebarHeader className="px-2 pt-3 pb-1">
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
               <SidebarMenuButton
-                className="h-8 px-2 py-1 text-sm font-medium text-sidebar-foreground aria-expanded:bg-sidebar-accent aria-expanded:text-sidebar-accent-foreground"
+                className="h-7 px-2 py-1 text-sm font-medium text-sidebar-foreground aria-expanded:bg-sidebar-accent aria-expanded:text-sidebar-accent-foreground"
                 render={<DropdownMenuTrigger />}
               >
                 <Avatar className="size-5 after:hidden">
@@ -283,12 +280,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 align="start"
                 side="bottom"
                 sideOffset={8}
-                className="w-60 min-w-60 p-1"
+                className="p-1"
               >
                 <DropdownMenuGroup>
                   <DropdownMenuLabel className="px-2 py-1">
-                    <div className="flex min-w-0 items-center gap-1.5">
-                      <Avatar className="size-5 after:hidden">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Avatar className="size-4 after:hidden">
                         {workspaceLogo ? (
                           <AvatarImage src={workspaceLogo} alt={workspaceName} />
                         ) : null}

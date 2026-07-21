@@ -8,14 +8,22 @@ import {
   ClipboardIcon,
   CodepenIcon,
   CubeIcon,
+  GitPullRequestArrowIcon,
   InboxUnreadIcon,
+  LayerIcon,
   UserGroup03Icon,
   UserIdVerificationIcon,
 } from "@hugeicons/core-free-icons"
 
 type AppIcon = ComponentProps<typeof HugeiconsIcon>["icon"]
 type TeamSlug = "product" | "engineering" | "operations"
-type TeamSection = "projects" | "issues" | "signals" | "calls" | "insights"
+type TeamSection =
+  | "projects"
+  | "views"
+  | "issues"
+  | "signals"
+  | "calls"
+  | "insights"
 type TeamPath = `/teams/${TeamSlug}/${TeamSection}`
 
 export type AppPath =
@@ -68,8 +76,9 @@ const teamDefinitions = [
 ] as const
 
 const teamSectionDefinitions = [
-  { title: "Projects", section: "projects", icon: CubeIcon },
   { title: "Issues", section: "issues", icon: ClipboardIcon },
+  { title: "Projects", section: "projects", icon: CubeIcon },
+  { title: "Views", section: "views", icon: LayerIcon },
   { title: "Signals", section: "signals", icon: Asteroid02Icon },
   { title: "Calls", section: "calls", icon: Call02Icon },
   { title: "Insights", section: "insights", icon: CodepenIcon },
@@ -86,9 +95,7 @@ export const workspaceNav: AppNavChild[] = [
     icon: AirplayLineIcon,
   },
   { title: "Projects", to: "/workspace/projects", icon: CubeIcon },
-  { title: "Signals", to: "/workspace/signals", icon: Asteroid02Icon },
-  { title: "Calls", to: "/workspace/calls", icon: Call02Icon },
-  { title: "Insights", to: "/workspace/insights", icon: CodepenIcon },
+  { title: "Views", to: "/workspace/views", icon: LayerIcon },
   { title: "Teams", to: "/workspace/teams", icon: UserIdVerificationIcon },
   { title: "Members", to: "/workspace/members", icon: UserGroup03Icon },
 ]
@@ -96,11 +103,18 @@ export const workspaceNav: AppNavChild[] = [
 export const yourTeamsNav: AppNavChild[] = teamDefinitions.map((team) => ({
   title: team.title,
   to: getTeamPath(team.slug, "projects"),
-  items: teamSectionDefinitions.map((section) => ({
-    title: section.title,
-    to: getTeamPath(team.slug, section.section),
-    icon: section.icon,
-  })),
+  items: teamSectionDefinitions
+    .filter(
+      (section) =>
+        section.section === "projects" ||
+        section.section === "views" ||
+        section.section === "issues"
+    )
+    .map((section) => ({
+      title: section.title,
+      to: getTeamPath(team.slug, section.section),
+      icon: section.icon,
+    })),
 }))
 
 export const appNav: AppNavItem[] = [
@@ -113,6 +127,21 @@ export const appNav: AppNavItem[] = [
     title: "Forge",
     to: "/forge",
     iconSrc: "/img/logo-forge-black.png",
+  },
+  {
+    title: "Calls",
+    to: "/workspace/calls",
+    icon: Call02Icon,
+  },
+  {
+    title: "Signals",
+    to: "/workspace/signals",
+    icon: Asteroid02Icon,
+  },
+  {
+    title: "Reviews",
+    to: "/workspace/insights",
+    icon: GitPullRequestArrowIcon,
   },
   {
     title: "My issues",
@@ -176,9 +205,9 @@ const pageMetaByPath: Partial<Record<AppPath, PageMeta>> = {
   },
   "/workspace/insights": {
     eyebrow: "Workspace",
-    title: "Insights",
+    title: "Reviews",
     description:
-      "Turn raw activity into patterns, summaries, and decision-ready observations.",
+      "Review proposed changes, coordinate feedback, and keep approvals moving.",
   },
   "/workspace/views": {
     eyebrow: "Workspace",
@@ -208,7 +237,7 @@ const pageMetaByPath: Partial<Record<AppPath, PageMeta>> = {
 
 export function getPageMeta(pathname: string): PageMeta {
   const teamMatch = pathname.match(
-    /^\/teams\/(product|engineering|operations)\/(projects|issues|signals|calls|insights)$/
+    /^\/teams\/(product|engineering|operations)\/(projects|views|issues|signals|calls|insights)$/
   )
 
   if (teamMatch) {
@@ -247,14 +276,13 @@ export function getBreadcrumbItems(pathname: string): BreadcrumbItem[] {
 
   if (initiativeMatch) {
     return [
-      { label: "Workspace", to: "/workspace/initiatives" },
       { label: "Initiatives", to: "/workspace/initiatives" },
       { label: "Initiative" },
     ]
   }
 
   const teamMatch = pathname.match(
-    /^\/teams\/(product|engineering|operations)\/(projects|issues|signals|calls|insights)$/
+    /^\/teams\/(product|engineering|operations)\/(projects|views|issues|signals|calls|insights)$/
   )
 
   if (teamMatch) {
@@ -270,7 +298,6 @@ export function getBreadcrumbItems(pathname: string): BreadcrumbItem[] {
         ?.title ?? "Overview"
 
     return [
-      { label: "Your teams", to: getTeamPath("product", "projects") },
       { label: team, to: getTeamPath(teamSlug, "projects") },
       { label: section },
     ]
@@ -292,10 +319,7 @@ export function getBreadcrumbItems(pathname: string): BreadcrumbItem[] {
     return [{ label: rootItem.title }]
   }
 
-  return [
-    { label: rootItem.title, to: rootItem.to },
-    { label: childItem.title },
-  ]
+  return [{ label: childItem.title }]
 }
 
 export function isNavItemActive(

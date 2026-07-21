@@ -1,9 +1,13 @@
 "use client"
 
-import { startTransition, useState } from "react"
+import { startTransition, useEffect, useState } from "react"
 import { Link, useNavigate, useRouter } from "@tanstack/react-router"
 import { cn } from "@/lib/utils"
 import { authClient } from "@/lib/auth-client"
+import {
+  beginDesktopAuthorizationRedirect,
+  desktopAuthorizationQuery,
+} from "@/lib/auth-session"
 import { Button } from "@/components/ui/button"
 import {
   Field,
@@ -17,32 +21,48 @@ type LoginFormProps = React.ComponentProps<"div"> & {
   redirectTo?: string
 }
 
-export function LoginForm({
-  className,
-  redirectTo,
-  ...props
-}: LoginFormProps) {
+export function LoginForm({ className, redirectTo, ...props }: LoginFormProps) {
   const navigate = useNavigate()
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const authorizationQuery =
+    typeof window === "undefined"
+      ? null
+      : desktopAuthorizationQuery(window.location.search)
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+
+    beginDesktopAuthorizationRedirect(
+      window.location.search,
+      authClient.ensureElectronRedirect
+    )
+  }, [])
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
     setIsSubmitting(true)
 
-    const { error: signInError } = await authClient.signIn.email({
-      email,
-      password,
-      rememberMe: true,
-    })
+    const { error: signInError } = await authClient.signIn.email(
+      {
+        email,
+        password,
+        rememberMe: true,
+      },
+      authorizationQuery ? { query: authorizationQuery } : undefined
+    )
 
     if (signInError) {
       setError(signInError.message ?? "Unable to sign in.")
       setIsSubmitting(false)
+      return
+    }
+
+    if (authorizationQuery) {
       return
     }
 

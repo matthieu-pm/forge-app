@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as MyIssuesRouteImport } from './routes/my-issues'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as InboxRouteImport } from './routes/inbox'
@@ -26,6 +27,7 @@ import { Route as WorkspaceCallsRouteImport } from './routes/workspace/calls'
 import { Route as OnboardingWorkspaceRouteImport } from './routes/onboarding/workspace'
 import { Route as WorkspaceInitiativesIndexRouteImport } from './routes/workspace/initiatives/index'
 import { Route as WorkspaceInitiativesInitiativeIdRouteImport } from './routes/workspace/initiatives/$initiativeId'
+import { Route as TeamsTeamSlugViewsRouteImport } from './routes/teams/$teamSlug/views'
 import { Route as TeamsTeamSlugSignalsRouteImport } from './routes/teams/$teamSlug/signals'
 import { Route as TeamsTeamSlugProjectsRouteImport } from './routes/teams/$teamSlug/projects'
 import { Route as TeamsTeamSlugIssuesRouteImport } from './routes/teams/$teamSlug/issues'
@@ -36,6 +38,11 @@ import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MyIssuesRoute = MyIssuesRouteImport.update({
@@ -120,6 +127,11 @@ const WorkspaceInitiativesInitiativeIdRoute =
     path: '/workspace/initiatives/$initiativeId',
     getParentRoute: () => rootRouteImport,
   } as any)
+const TeamsTeamSlugViewsRoute = TeamsTeamSlugViewsRouteImport.update({
+  id: '/teams/$teamSlug/views',
+  path: '/teams/$teamSlug/views',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TeamsTeamSlugSignalsRoute = TeamsTeamSlugSignalsRouteImport.update({
   id: '/teams/$teamSlug/signals',
   path: '/teams/$teamSlug/signals',
@@ -158,6 +170,7 @@ export interface FileRoutesByFullPath {
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
   '/my-issues': typeof MyIssuesRoute
+  '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/onboarding/workspace': typeof OnboardingWorkspaceRoute
   '/workspace/calls': typeof WorkspaceCallsRoute
@@ -173,6 +186,7 @@ export interface FileRoutesByFullPath {
   '/teams/$teamSlug/issues': typeof TeamsTeamSlugIssuesRoute
   '/teams/$teamSlug/projects': typeof TeamsTeamSlugProjectsRoute
   '/teams/$teamSlug/signals': typeof TeamsTeamSlugSignalsRoute
+  '/teams/$teamSlug/views': typeof TeamsTeamSlugViewsRoute
   '/workspace/initiatives/$initiativeId': typeof WorkspaceInitiativesInitiativeIdRoute
   '/workspace/initiatives/': typeof WorkspaceInitiativesIndexRoute
 }
@@ -183,6 +197,7 @@ export interface FileRoutesByTo {
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
   '/my-issues': typeof MyIssuesRoute
+  '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/onboarding/workspace': typeof OnboardingWorkspaceRoute
   '/workspace/calls': typeof WorkspaceCallsRoute
@@ -198,6 +213,7 @@ export interface FileRoutesByTo {
   '/teams/$teamSlug/issues': typeof TeamsTeamSlugIssuesRoute
   '/teams/$teamSlug/projects': typeof TeamsTeamSlugProjectsRoute
   '/teams/$teamSlug/signals': typeof TeamsTeamSlugSignalsRoute
+  '/teams/$teamSlug/views': typeof TeamsTeamSlugViewsRoute
   '/workspace/initiatives/$initiativeId': typeof WorkspaceInitiativesInitiativeIdRoute
   '/workspace/initiatives': typeof WorkspaceInitiativesIndexRoute
 }
@@ -209,6 +225,7 @@ export interface FileRoutesById {
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
   '/my-issues': typeof MyIssuesRoute
+  '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/onboarding/workspace': typeof OnboardingWorkspaceRoute
   '/workspace/calls': typeof WorkspaceCallsRoute
@@ -224,6 +241,7 @@ export interface FileRoutesById {
   '/teams/$teamSlug/issues': typeof TeamsTeamSlugIssuesRoute
   '/teams/$teamSlug/projects': typeof TeamsTeamSlugProjectsRoute
   '/teams/$teamSlug/signals': typeof TeamsTeamSlugSignalsRoute
+  '/teams/$teamSlug/views': typeof TeamsTeamSlugViewsRoute
   '/workspace/initiatives/$initiativeId': typeof WorkspaceInitiativesInitiativeIdRoute
   '/workspace/initiatives/': typeof WorkspaceInitiativesIndexRoute
 }
@@ -236,6 +254,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/login'
     | '/my-issues'
+    | '/settings'
     | '/signup'
     | '/onboarding/workspace'
     | '/workspace/calls'
@@ -251,6 +270,7 @@ export interface FileRouteTypes {
     | '/teams/$teamSlug/issues'
     | '/teams/$teamSlug/projects'
     | '/teams/$teamSlug/signals'
+    | '/teams/$teamSlug/views'
     | '/workspace/initiatives/$initiativeId'
     | '/workspace/initiatives/'
   fileRoutesByTo: FileRoutesByTo
@@ -261,6 +281,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/login'
     | '/my-issues'
+    | '/settings'
     | '/signup'
     | '/onboarding/workspace'
     | '/workspace/calls'
@@ -276,6 +297,7 @@ export interface FileRouteTypes {
     | '/teams/$teamSlug/issues'
     | '/teams/$teamSlug/projects'
     | '/teams/$teamSlug/signals'
+    | '/teams/$teamSlug/views'
     | '/workspace/initiatives/$initiativeId'
     | '/workspace/initiatives'
   id:
@@ -286,6 +308,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/login'
     | '/my-issues'
+    | '/settings'
     | '/signup'
     | '/onboarding/workspace'
     | '/workspace/calls'
@@ -301,6 +324,7 @@ export interface FileRouteTypes {
     | '/teams/$teamSlug/issues'
     | '/teams/$teamSlug/projects'
     | '/teams/$teamSlug/signals'
+    | '/teams/$teamSlug/views'
     | '/workspace/initiatives/$initiativeId'
     | '/workspace/initiatives/'
   fileRoutesById: FileRoutesById
@@ -312,6 +336,7 @@ export interface RootRouteChildren {
   InboxRoute: typeof InboxRoute
   LoginRoute: typeof LoginRoute
   MyIssuesRoute: typeof MyIssuesRoute
+  SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
   OnboardingWorkspaceRoute: typeof OnboardingWorkspaceRoute
   WorkspaceCallsRoute: typeof WorkspaceCallsRoute
@@ -327,6 +352,7 @@ export interface RootRouteChildren {
   TeamsTeamSlugIssuesRoute: typeof TeamsTeamSlugIssuesRoute
   TeamsTeamSlugProjectsRoute: typeof TeamsTeamSlugProjectsRoute
   TeamsTeamSlugSignalsRoute: typeof TeamsTeamSlugSignalsRoute
+  TeamsTeamSlugViewsRoute: typeof TeamsTeamSlugViewsRoute
   WorkspaceInitiativesInitiativeIdRoute: typeof WorkspaceInitiativesInitiativeIdRoute
   WorkspaceInitiativesIndexRoute: typeof WorkspaceInitiativesIndexRoute
 }
@@ -338,6 +364,13 @@ declare module '@tanstack/react-router' {
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/my-issues': {
@@ -452,6 +485,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceInitiativesInitiativeIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/teams/$teamSlug/views': {
+      id: '/teams/$teamSlug/views'
+      path: '/teams/$teamSlug/views'
+      fullPath: '/teams/$teamSlug/views'
+      preLoaderRoute: typeof TeamsTeamSlugViewsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/teams/$teamSlug/signals': {
       id: '/teams/$teamSlug/signals'
       path: '/teams/$teamSlug/signals'
@@ -504,6 +544,7 @@ const rootRouteChildren: RootRouteChildren = {
   InboxRoute: InboxRoute,
   LoginRoute: LoginRoute,
   MyIssuesRoute: MyIssuesRoute,
+  SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,
   OnboardingWorkspaceRoute: OnboardingWorkspaceRoute,
   WorkspaceCallsRoute: WorkspaceCallsRoute,
@@ -519,6 +560,7 @@ const rootRouteChildren: RootRouteChildren = {
   TeamsTeamSlugIssuesRoute: TeamsTeamSlugIssuesRoute,
   TeamsTeamSlugProjectsRoute: TeamsTeamSlugProjectsRoute,
   TeamsTeamSlugSignalsRoute: TeamsTeamSlugSignalsRoute,
+  TeamsTeamSlugViewsRoute: TeamsTeamSlugViewsRoute,
   WorkspaceInitiativesInitiativeIdRoute: WorkspaceInitiativesInitiativeIdRoute,
   WorkspaceInitiativesIndexRoute: WorkspaceInitiativesIndexRoute,
 }

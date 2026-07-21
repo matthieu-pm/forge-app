@@ -1,4 +1,5 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter"
+import { electron } from "@better-auth/electron"
 import { betterAuth } from "better-auth"
 import { organization } from "better-auth/plugins"
 import { tanstackStartCookies } from "better-auth/tanstack-start"
@@ -44,6 +45,7 @@ export const auth = betterAuth({
     enabled: true,
   },
   plugins: [
+    electron(),
     organization({
       organizationLimit: 1,
     }),
