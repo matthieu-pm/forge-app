@@ -13,6 +13,7 @@ import { useCallback, useEffect, useState } from "react"
 
 import type { AppNavChild } from "@/lib/app-navigation"
 import type { DesktopTabsState } from "@/lib/desktop-tabs"
+import type { SidebarState } from "@/lib/sidebar-events"
 import { Button } from "@/components/ui/button"
 import { getForgeHost } from "@/host/forge-host"
 import { appNav, getBreadcrumbItems } from "@/lib/app-navigation"
@@ -30,7 +31,6 @@ import {
 import {
   SIDEBAR_STATE_CHANGE_EVENT,
   SIDEBAR_TOGGLE_EVENT,
-  type SidebarState,
 } from "@/lib/sidebar-events"
 
 const STORAGE_KEY = "forge:desktop-tabs"
@@ -131,7 +131,11 @@ export function DesktopTitleBar() {
 }
 
 export function isDesktopTitleBarHidden(pathname: string) {
-  return pathname === "/login" || pathname === "/signup"
+  return (
+    pathname === "/login" ||
+    pathname === "/signup" ||
+    pathname === "/onboarding/workspace"
+  )
 }
 
 function DesktopTitleBarChrome() {

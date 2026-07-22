@@ -319,16 +319,16 @@ export function WorkspaceSetupForm({
                     </Button>
                   ) : null}
                 </div>
-                <FieldDescription className="mt-2">
-                  Upload a PNG, JPG, GIF, WebP, or SVG up to 2 MB.
-                </FieldDescription>
-                {logoFileName ? (
-                  <FieldDescription className="mt-1">
-                    Selected: {logoFileName}
-                  </FieldDescription>
-                ) : null}
               </div>
             </div>
+            <FieldDescription>
+              <span className="block">
+                Upload a PNG, JPG, GIF, WebP, or SVG up to 2 MB.
+              </span>
+              {logoFileName ? (
+                <span className="block">Selected: {logoFileName}</span>
+              ) : null}
+            </FieldDescription>
             {logoError ? (
               <FieldDescription className="text-destructive">
                 {logoError}

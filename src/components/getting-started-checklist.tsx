@@ -11,7 +11,7 @@ import {
   Progress03Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 import type { ComponentProps } from "react"
 import { Button } from "@/components/ui/button"
@@ -32,6 +32,8 @@ import {
 
 type ChecklistIcon = ComponentProps<typeof HugeiconsIcon>["icon"]
 
+const CHECKLIST_SEEN_STORAGE_KEY = "forge:getting-started-checklist-seen"
+
 const checklistSteps: Array<{ label: string; icon: ChecklistIcon }> = [
   { label: "Sync your codebase", icon: Github01Icon },
   { label: "Connect your app", icon: Blockchain05Icon },
@@ -46,6 +48,18 @@ export function GettingStartedChecklist() {
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(
     () => new Set()
   )
+
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(CHECKLIST_SEEN_STORAGE_KEY)) return
+
+      setOpen(true)
+      window.localStorage.setItem(CHECKLIST_SEEN_STORAGE_KEY, "true")
+    } catch {
+      // Keep the checklist usable when storage is unavailable.
+      setOpen(true)
+    }
+  }, [])
 
   function toggleStep(index: number) {
     setCompletedSteps((current) => {

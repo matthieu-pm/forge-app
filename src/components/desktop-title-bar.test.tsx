@@ -16,9 +16,12 @@ describe("TabIcon", () => {
 })
 
 describe("isDesktopTitleBarHidden", () => {
-  it.each(["/login", "/signup"])("hides the desktop chrome on %s", (path) => {
-    expect(isDesktopTitleBarHidden(path)).toBe(true)
-  })
+  it.each(["/login", "/signup", "/onboarding/workspace"])(
+    "hides the desktop chrome on %s",
+    (path) => {
+      expect(isDesktopTitleBarHidden(path)).toBe(true)
+    }
+  )
 
   it("keeps the desktop chrome on authenticated routes", () => {
     expect(isDesktopTitleBarHidden("/forge")).toBe(false)

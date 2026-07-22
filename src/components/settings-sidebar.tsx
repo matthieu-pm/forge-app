@@ -218,7 +218,7 @@ export function SettingsSidebar() {
                       {team.avatar ? (
                         <AvatarImage src={team.avatar} alt="" />
                       ) : null}
-                      <AvatarFallback className="rounded-md text-[8px] font-semibold">
+                      <AvatarFallback className="rounded-md text-[9px] font-semibold">
                         {teamInitials(team.name)}
                       </AvatarFallback>
                     </Avatar>
@@ -232,7 +232,13 @@ export function SettingsSidebar() {
                     type="button"
                     className="h-7 rounded-lg px-2 text-sm font-medium text-sidebar-foreground/70 [&>svg]:size-4"
                   >
-                    <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
+                    <span className="flex size-4 shrink-0 items-center justify-center">
+                      <HugeiconsIcon
+                        icon={Add01Icon}
+                        strokeWidth={2}
+                        className="size-4"
+                      />
+                    </span>
                     <span>Create a team</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
