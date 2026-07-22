@@ -49,7 +49,7 @@ import {
   isNavItemActive,
 } from "@/lib/app-navigation"
 import { authClient } from "@/lib/auth-client"
-import { getAuthState } from "@/lib/auth-state"
+import { getNavigationAuthState } from "@/lib/auth-state"
 import { listTeams } from "@/lib/team-state"
 import { getForgeHost } from "@/host/forge-host"
 import { getSidebarDisclosureKey } from "@/lib/sidebar-disclosure"
@@ -116,7 +116,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     let isCancelled = false
     setIsWorkspaceLoading(true)
 
-    void Promise.allSettled([getAuthState(), listTeams()])
+    void Promise.allSettled([getNavigationAuthState(), listTeams()])
       .then(([authStateResult, teamsResult]) => {
         if (isCancelled) {
           return

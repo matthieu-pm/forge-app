@@ -1,6 +1,7 @@
 import { notFound, redirect } from "@tanstack/react-router"
 import { createServerFn } from "@tanstack/react-start"
-import { getTeam } from "@/lib/team-state"
+import { createTimedRequestCache } from "@/lib/timed-request-cache"
+import { getTeamRouteState } from "@/lib/team-state"
 
 export const getAuthState = createServerFn({ method: "GET" }).handler(
   async () => {
@@ -12,6 +13,14 @@ export const getAuthState = createServerFn({ method: "GET" }).handler(
     return buildAuthState(getRequest())
   }
 )
+
+const getCachedClientAuthState = createTimedRequestCache(getAuthState, 5_000)
+
+export function getNavigationAuthState() {
+  return typeof window === "undefined"
+    ? getAuthState()
+    : getCachedClientAuthState()
+}
 
 function redirectTarget(pathname: string, search = "", hash = "") {
   return `${pathname}${search}${hash}`
@@ -69,7 +78,7 @@ export async function protectedRouteBeforeLoad({
     hash?: string
   }
 }) {
-  const authState = await getAuthState()
+  const authState = await getNavigationAuthState()
 
   if (!authState.session) {
     throw redirect({
@@ -102,13 +111,28 @@ export async function protectedTeamRouteBeforeLoad({
   }
   params: { teamSlug: string }
 }) {
-  await protectedRouteBeforeLoad({ location })
+  const state = await getTeamRouteState({ data: { slug: params.teamSlug } })
 
-  const team = await getTeam({ data: { slug: params.teamSlug } })
+  if (state.status === "unauthenticated") {
+    throw redirect({
+      to: "/login",
+      search: {
+        redirect: redirectTarget(
+          location.pathname,
+          location.searchStr,
+          location.hash
+        ),
+      },
+    })
+  }
 
-  if (!team) {
+  if (state.status === "no-workspace") {
+    throw redirect({ to: "/onboarding/workspace" })
+  }
+
+  if (state.status !== "ready") {
     throw notFound()
   }
 
-  return { team }
+  return { team: state.team }
 }

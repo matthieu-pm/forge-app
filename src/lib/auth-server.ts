@@ -174,6 +174,21 @@ export class WorkspaceAccessError extends Error {
   }
 }
 
+async function loadMembershipRole(workspaceId: string, userId: string) {
+  const memberRecords = await db
+    .select({ role: members.role })
+    .from(members)
+    .where(
+      and(
+        eq(members.organizationId, workspaceId),
+        eq(members.userId, userId)
+      )
+    )
+    .limit(1)
+
+  return memberRecords.at(0)?.role ?? null
+}
+
 export async function requireActiveWorkspaceMember(
   request: Request
 ): Promise<ActiveWorkspaceMember> {
@@ -183,32 +198,31 @@ export async function requireActiveWorkspaceMember(
     throw new WorkspaceAccessError("UNAUTHENTICATED")
   }
 
-  const workspace = await loadWorkspaceFromRequest(request, session)
+  const activeOrganizationId = session.session.activeOrganizationId ?? null
+  const [workspace, activeMembershipRole] = activeOrganizationId
+    ? await Promise.all([
+        loadWorkspaceFromRequest(request, session),
+        loadMembershipRole(activeOrganizationId, session.user.id),
+      ])
+    : [await loadWorkspaceFromRequest(request, session), null]
 
   if (!workspace) {
     throw new WorkspaceAccessError("NO_ACTIVE_WORKSPACE")
   }
 
-  const memberRecords = await db
-    .select({ role: members.role })
-    .from(members)
-    .where(
-      and(
-        eq(members.organizationId, workspace.id),
-        eq(members.userId, session.user.id)
-      )
-    )
-    .limit(1)
-  const member = memberRecords.at(0)
+  const role =
+    activeOrganizationId === workspace.id
+      ? activeMembershipRole
+      : await loadMembershipRole(workspace.id, session.user.id)
 
-  if (!member) {
+  if (!role) {
     throw new WorkspaceAccessError("FORBIDDEN")
   }
 
   return {
     userId: session.user.id,
     workspace,
-    role: member.role,
+    role,
   }
 }
 

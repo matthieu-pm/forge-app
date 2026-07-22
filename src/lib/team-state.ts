@@ -39,6 +39,20 @@ export const getTeam = createServerFn({ method: "GET" })
     return getTeamForRequest(getRequest(), data.slug)
   })
 
+export const getTeamRouteState = createServerFn({ method: "GET" })
+  .inputValidator((input: { slug: string }) => ({
+    slug: input.slug.trim().toLowerCase(),
+  }))
+  .handler(async ({ data }) => {
+    const [{ getRequest }, { getTeamRouteStateForRequest }] =
+      await Promise.all([
+        import("@tanstack/react-start/server"),
+        import("@/lib/team-server"),
+      ])
+
+    return getTeamRouteStateForRequest(getRequest(), data.slug)
+  })
+
 export const deleteTeam = createServerFn({ method: "POST" })
   .inputValidator(deleteTeamInputSchema)
   .handler(async ({ data }) => {

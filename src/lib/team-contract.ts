@@ -116,6 +116,12 @@ export type TeamSummary = {
   detailedHistoryEnabled: boolean
 }
 
+export type TeamRouteState =
+  | { status: "ready"; team: TeamSummary }
+  | {
+      status: "unauthenticated" | "no-workspace" | "forbidden" | "not-found"
+    }
+
 export type CreateTeamErrorCode =
   | "UNAUTHENTICATED"
   | "NO_ACTIVE_WORKSPACE"

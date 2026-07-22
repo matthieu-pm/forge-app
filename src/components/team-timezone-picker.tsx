@@ -56,33 +56,85 @@ function getTimezoneOffset(timeZone: string) {
   }
 }
 
-function createTimezoneOptions(): Array<TimezoneOption> {
-  return ["UTC", ...Intl.supportedValuesOf("timeZone")]
-    .map((id) => {
-      const offset = getTimezoneOffset(id)
-      const timezoneName =
-        id === "UTC"
-          ? "Coordinated Universal Time"
-          : (getTimeZoneName(id, "longGeneric") ?? id)
-      const city = id.replaceAll("_", " ").split("/").at(-1) ?? id
+function createTimezoneOption(id: string): TimezoneOption {
+  const offset = getTimezoneOffset(id)
+  const timezoneName =
+    id === "UTC"
+      ? "Coordinated Universal Time"
+      : (getTimeZoneName(id, "longGeneric") ?? id)
+  const city = id.replaceAll("_", " ").split("/").at(-1) ?? id
 
-      return {
-        id,
-        label: `${offset.label} – ${timezoneName} – ${city}`,
-        offsetMinutes: offset.minutes,
-      }
-    })
-    .sort(
-      (left, right) =>
-        left.offsetMinutes - right.offsetMinutes ||
-        left.label.localeCompare(right.label)
-    )
+  return {
+    id,
+    label: `${offset.label} – ${timezoneName} – ${city}`,
+    offsetMinutes: offset.minutes,
+  }
 }
 
-const timezoneOptions = createTimezoneOptions()
+const timezoneIds = ["UTC", ...Intl.supportedValuesOf("timeZone")]
+let cachedTimezoneOptions: Array<TimezoneOption> | undefined
+let timezoneOptionsPromise: Promise<Array<TimezoneOption>> | undefined
+
+function scheduleTimezoneWork(callback: (deadline: IdleDeadline) => void) {
+  if (typeof window.requestIdleCallback === "function") {
+    window.requestIdleCallback(callback, { timeout: 250 })
+    return
+  }
+
+  window.setTimeout(() => {
+    callback({
+      didTimeout: true,
+      timeRemaining: () => 6,
+    })
+  }, 0)
+}
+
+function loadTimezoneOptions() {
+  if (cachedTimezoneOptions) {
+    return Promise.resolve(cachedTimezoneOptions)
+  }
+
+  if (timezoneOptionsPromise) {
+    return timezoneOptionsPromise
+  }
+
+  timezoneOptionsPromise = new Promise((resolve) => {
+    const options: Array<TimezoneOption> = []
+    let index = 0
+
+    function buildChunk(deadline: IdleDeadline) {
+      const startedAt = performance.now()
+
+      do {
+        options.push(createTimezoneOption(timezoneIds[index]))
+        index += 1
+      } while (
+        index < timezoneIds.length &&
+        performance.now() - startedAt < 6 &&
+        (deadline.didTimeout || deadline.timeRemaining() > 1)
+      )
+
+      if (index < timezoneIds.length) {
+        scheduleTimezoneWork(buildChunk)
+        return
+      }
+
+      cachedTimezoneOptions = options.sort(
+        (left, right) =>
+          left.offsetMinutes - right.offsetMinutes ||
+          left.label.localeCompare(right.label)
+      )
+      resolve(cachedTimezoneOptions)
+    }
+
+    scheduleTimezoneWork(buildChunk)
+  })
+
+  return timezoneOptionsPromise
+}
+
 export const defaultTeamTimezone =
-  timezoneOptions.find((option) => option.id === "Europe/Paris")?.id ??
-  timezoneOptions[0].id
+  timezoneIds.find((id) => id === "Europe/Paris") ?? timezoneIds[0]
 
 export function TeamTimezonePicker({
   onValueChange,
@@ -93,14 +145,29 @@ export function TeamTimezonePicker({
 }) {
   const [open, setOpen] = React.useState(false)
   const [query, setQuery] = React.useState("")
+  const [timezoneOptions, setTimezoneOptions] = React.useState(
+    cachedTimezoneOptions
+  )
   const normalizedQuery = query.trim().toLocaleLowerCase()
-  const filteredTimezones = timezoneOptions.filter((item) =>
+  const filteredTimezones = (timezoneOptions ?? []).filter((item) =>
     `${item.label} ${item.id}`.toLocaleLowerCase().includes(normalizedQuery)
   )
-  const selectedTimezone =
-    timezoneOptions.find((item) => item.id === value) ??
-    timezoneOptions.find((item) => item.id === defaultTeamTimezone) ??
-    timezoneOptions[0]
+  const selectedTimezone = React.useMemo(
+    () => createTimezoneOption(value),
+    [value]
+  )
+
+  React.useEffect(() => {
+    let active = true
+
+    void loadTimezoneOptions().then((options) => {
+      if (active) setTimezoneOptions(options)
+    })
+
+    return () => {
+      active = false
+    }
+  }, [])
 
   function handleOpenChange(nextOpen: boolean) {
     setOpen(nextOpen)
@@ -151,7 +218,11 @@ export function TeamTimezonePicker({
         </div>
         <div className="max-h-64 overflow-y-auto overscroll-contain">
           <div className="p-1">
-            {filteredTimezones.length > 0 ? (
+            {!timezoneOptions ? (
+              <p className="px-2 py-6 text-center text-sm text-muted-foreground">
+                Loading timezones…
+              </p>
+            ) : filteredTimezones.length > 0 ? (
               filteredTimezones.map((item) => (
                 <button
                   key={item.id}

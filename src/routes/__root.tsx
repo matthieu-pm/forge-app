@@ -13,9 +13,11 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { Fragment } from "react"
 
 import appCss from "../styles.css?url"
+import type { TeamSummary } from "@/lib/team-contract"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SettingsSidebar } from "@/components/settings-sidebar"
 import { DesktopTitleBar } from "@/components/desktop-title-bar"
+import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { Button } from "@/components/ui/button"
 import { Toaster } from "@/components/ui/sonner"
 import { HostIntegration } from "@/host/host-integration"
@@ -139,6 +141,22 @@ function DesktopFooterActions() {
 }
 
 function AppHeader({ pathname }: { pathname: string }) {
+  const breadcrumbTeam = useRouterState({
+    select: (state) => {
+      if (!/^\/teams\/[^/]+\/(issues|projects|views)$/.test(pathname)) {
+        return undefined
+      }
+
+      for (let index = state.matches.length - 1; index >= 0; index -= 1) {
+        const team = (state.matches[index].context as { team?: TeamSummary })
+          .team
+        if (team) return team
+      }
+
+      return undefined
+    },
+  })
+
   if (pathname.startsWith("/settings/teams/")) {
     return null
   }
@@ -159,17 +177,29 @@ function AppHeader({ pathname }: { pathname: string }) {
         <BreadcrumbList className="text-sm">
           {breadcrumbs.map((item, index) => {
             const isLast = index === breadcrumbs.length - 1
+            const team = index === 0 ? breadcrumbTeam : undefined
+            const label = team ? (
+              <span className="inline-flex items-center gap-1.5">
+                <TeamSidebarIcon
+                  icon={team.icon}
+                  name={team.name}
+                />
+                <span>{item.label}</span>
+              </span>
+            ) : (
+              item.label
+            )
 
             return (
               <Fragment key={`${item.label}-${index}`}>
                 <BreadcrumbItem>
                   {item.to && !isLast ? (
                     <BreadcrumbLink render={renderBreadcrumbLink(item.to)}>
-                      {item.label}
+                      {label}
                     </BreadcrumbLink>
                   ) : (
                     <BreadcrumbPage className="text-sm font-medium">
-                      {item.label}
+                      {label}
                     </BreadcrumbPage>
                   )}
                 </BreadcrumbItem>

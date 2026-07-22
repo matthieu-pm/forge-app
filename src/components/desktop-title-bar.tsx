@@ -34,6 +34,7 @@ import {
   SIDEBAR_STATE_CHANGE_EVENT,
   SIDEBAR_TOGGLE_EVENT,
 } from "@/lib/sidebar-events"
+import { TEAM_LIST_CHANGED_EVENT } from "@/lib/team-events"
 import { listTeams } from "@/lib/team-state"
 
 const STORAGE_KEY = "forge:desktop-tabs"
@@ -41,6 +42,19 @@ const STORAGE_KEY = "forge:desktop-tabs"
 function getTabTitle(path: string) {
   const pathname = path.split(/[?#]/, 1)[0]
   return getBreadcrumbItems(pathname).at(-1)?.label ?? "Forge"
+}
+
+export function getTabTeamSlug(path: string) {
+  const pathname = path.split(/[?#]/, 1)[0]
+  const appTeamMatch = pathname.match(
+    /^\/teams\/([^/]+)\/(?:issues|projects|views)$/
+  )
+  if (appTeamMatch) return appTeamMatch[1]
+
+  const settingsTeamMatch = pathname.match(
+    /^\/settings\/teams\/(?!new(?:\/|$))([^/]+)(?:\/|$)/
+  )
+  return settingsTeamMatch?.[1]
 }
 
 function getTabNavigationItem(path: string): AppNavChild | undefined {
@@ -171,18 +185,24 @@ function DesktopTitleBarChrome() {
   useEffect(() => {
     let cancelled = false
 
-    void listTeams()
-      .then((teams) => {
-        if (!cancelled) setWorkspaceTeams(teams)
-      })
-      .catch(() => {
-        if (!cancelled) setWorkspaceTeams([])
-      })
+    function loadWorkspaceTeams() {
+      void listTeams()
+        .then((teams) => {
+          if (!cancelled) setWorkspaceTeams(teams)
+        })
+        .catch(() => {
+          if (!cancelled) setWorkspaceTeams([])
+        })
+    }
+
+    loadWorkspaceTeams()
+    window.addEventListener(TEAM_LIST_CHANGED_EVENT, loadWorkspaceTeams)
 
     return () => {
       cancelled = true
+      window.removeEventListener(TEAM_LIST_CHANGED_EVENT, loadWorkspaceTeams)
     }
-  }, [currentPath])
+  }, [])
 
   useEffect(() => {
     const handleSidebarStateChange = (event: Event) => {
@@ -215,30 +235,28 @@ function DesktopTitleBarChrome() {
 
   const closeTab = useCallback(
     (tabId: string) => {
-      setTabState((state) => {
-        const nextState = closeDesktopTab(state, tabId)
-        if (nextState !== state && state.activeTabId === tabId) {
-          const activeTab = getActiveDesktopTab(nextState)
-          navigate(getDesktopTabPath(activeTab))
-        }
-        return nextState
-      })
+      const nextState = closeDesktopTab(tabState, tabId)
+      setTabState(nextState)
+
+      if (nextState !== tabState && tabState.activeTabId === tabId) {
+        const activeTab = getActiveDesktopTab(nextState)
+        navigate(getDesktopTabPath(activeTab))
+      }
     },
-    [navigate]
+    [navigate, tabState]
   )
 
   const moveHistory = useCallback(
     (delta: -1 | 1) => {
-      setTabState((state) => {
-        const nextState = moveDesktopTabHistory(state, delta)
-        if (nextState !== state) {
-          const activeTab = getActiveDesktopTab(nextState)
-          navigate(getDesktopTabPath(activeTab))
-        }
-        return nextState
-      })
+      const nextState = moveDesktopTabHistory(tabState, delta)
+      setTabState(nextState)
+
+      if (nextState !== tabState) {
+        const activeTab = getActiveDesktopTab(nextState)
+        navigate(getDesktopTabPath(activeTab))
+      }
     },
-    [navigate]
+    [navigate, tabState]
   )
 
   useEffect(() => {
@@ -382,9 +400,7 @@ function DesktopTitleBarChrome() {
         {tabState.tabs.map((tab) => {
           const path = getDesktopTabPath(tab)
           const isActive = tab.id === tabState.activeTabId
-          const teamSlug = path
-            .split(/[?#]/, 1)[0]
-            .match(/^\/teams\/([^/]+)\/(issues|projects|views)$/)?.[1]
+          const teamSlug = getTabTeamSlug(path)
           const team = teamSlug
             ? workspaceTeams.find((item) => item.slug === teamSlug)
             : undefined

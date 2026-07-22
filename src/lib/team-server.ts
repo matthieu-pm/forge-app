@@ -7,6 +7,7 @@ import type {
   CreateTeamResult,
   DeleteTeamInput,
   DeleteTeamResult,
+  TeamRouteState,
   TeamSummary,
   UpdateTeamInput,
   UpdateTeamResult,
@@ -195,12 +196,16 @@ export async function getTeamForRequest(
   slug: string
 ): Promise<TeamSummary | null> {
   const actor = await requireActiveWorkspaceMember(request)
+  return findTeamInWorkspace(actor.workspace.id, slug)
+}
+
+async function findTeamInWorkspace(workspaceId: string, slug: string) {
   const matchingTeams = await db
     .select()
     .from(teams)
     .where(
       and(
-        eq(teams.workspaceId, actor.workspace.id),
+        eq(teams.workspaceId, workspaceId),
         eq(teams.slug, slug),
         isNull(teams.deletedAt)
       )
@@ -209,6 +214,33 @@ export async function getTeamForRequest(
   const team = matchingTeams.at(0)
 
   return team ? toTeamSummary(team) : null
+}
+
+export async function getTeamRouteStateForRequest(
+  request: Request,
+  slug: string
+): Promise<TeamRouteState> {
+  let actor
+
+  try {
+    actor = await requireActiveWorkspaceMember(request)
+  } catch (error) {
+    if (error instanceof WorkspaceAccessError) {
+      const statuses = {
+        UNAUTHENTICATED: "unauthenticated",
+        NO_ACTIVE_WORKSPACE: "no-workspace",
+        FORBIDDEN: "forbidden",
+      } as const
+
+      return { status: statuses[error.code] }
+    }
+
+    throw error
+  }
+
+  const team = await findTeamInWorkspace(actor.workspace.id, slug)
+
+  return team ? { status: "ready", team } : { status: "not-found" }
 }
 
 export async function deleteTeamForRequest(

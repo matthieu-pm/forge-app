@@ -8,8 +8,6 @@ import {
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useRouter } from "@tanstack/react-router"
-import emojiData from "emojibase-data/en/compact.json"
-import emojiShortcodes from "emojibase-data/en/shortcodes/emojibase.json"
 import { toast } from "sonner"
 import type { IconSvgElement } from "@hugeicons/react"
 
@@ -76,42 +74,13 @@ const emojiCategoryOrder = new Map<EmojiCategoryId, number>(
   emojiCategoryDefinitions.map((category, index) => [category.id, index])
 )
 
-const emojiChoices = emojiData
-  // Keep the main grid to canonical emoji. Many multi-person skin variants are
-  // ZWJ sequences that decompose into several visible glyphs on older system
-  // emoji fonts, which makes a single picker cell appear corrupted and overflow.
-  .flatMap((emoji) => {
-    const category =
-      emoji.group === undefined
-        ? undefined
-        : emojiCategoryByGroup.get(emoji.group)
-
-    return category ? [{ ...emoji, category }] : []
-  })
-  .sort(
-    (a, b) =>
-      (emojiCategoryOrder.get(a.category) ?? Number.MAX_SAFE_INTEGER) -
-        (emojiCategoryOrder.get(b.category) ?? Number.MAX_SAFE_INTEGER) ||
-      (a.order ?? Number.MAX_SAFE_INTEGER) -
-        (b.order ?? Number.MAX_SAFE_INTEGER)
-  )
-  .map((emoji) => {
-    const shortcodes = shortcodeList(emojiShortcodes[emoji.hexcode])
-    const fallbackShortcode = emoji.label
-      .toLocaleLowerCase()
-      .replace(/[^a-z0-9]+/g, "_")
-      .replace(/^_|_$/g, "")
-
-    return {
-      category: emoji.category,
-      emoji: emoji.unicode,
-      label: emoji.label,
-      search: [emoji.label, ...shortcodes, fallbackShortcode]
-        .join(" ")
-        .toLocaleLowerCase(),
-      shortcode: shortcodes[0] ?? fallbackShortcode,
-    }
-  })
+type EmojiChoice = {
+  category: EmojiCategoryId
+  emoji: string
+  label: string
+  search: string
+  shortcode: string
+}
 
 function FieldRow({
   children,
@@ -215,6 +184,10 @@ export function CreateTeamForm() {
   const [iconsLoading, setIconsLoading] = React.useState(false)
   const [visibleIconCount, setVisibleIconCount] = React.useState(100)
   const [emojiQuery, setEmojiQuery] = React.useState("")
+  const [emojiChoices, setEmojiChoices] = React.useState<Array<EmojiChoice>>(
+    []
+  )
+  const [emojisLoading, setEmojisLoading] = React.useState(false)
   const [visibleEmojiCount, setVisibleEmojiCount] = React.useState(100)
   const [timezone, setTimezone] = React.useState(defaultTeamTimezone)
   const [fieldErrors, setFieldErrors] = React.useState<{
@@ -248,7 +221,7 @@ export function CreateTeamForm() {
     return query
       ? emojiChoices.filter((emoji) => emoji.search.includes(query))
       : emojiChoices
-  }, [deferredEmojiQuery])
+  }, [deferredEmojiQuery, emojiChoices])
   const visibleEmojis = filteredEmojis.slice(0, visibleEmojiCount)
   const visibleEmojiCategories = emojiCategoryDefinitions
     .map((category) => ({
@@ -285,6 +258,64 @@ export function CreateTeamForm() {
       toast.error("The icon catalog could not be loaded.")
     } finally {
       setIconsLoading(false)
+    }
+  }
+
+  async function loadEmojiChoices() {
+    if (emojisLoading || emojiChoices.length > 0) {
+      return
+    }
+
+    setEmojisLoading(true)
+
+    try {
+      const [{ default: emojiData }, { default: emojiShortcodes }] =
+        await Promise.all([
+          import("emojibase-data/en/compact.json"),
+          import("emojibase-data/en/shortcodes/emojibase.json"),
+        ])
+      const choices = emojiData
+        // Keep the main grid to canonical emoji. Many multi-person skin
+        // variants are ZWJ sequences that can overflow on older emoji fonts.
+        .flatMap((emoji) => {
+          const category =
+            emoji.group === undefined
+              ? undefined
+              : emojiCategoryByGroup.get(emoji.group)
+
+          return category ? [{ ...emoji, category }] : []
+        })
+        .sort(
+          (a, b) =>
+            (emojiCategoryOrder.get(a.category) ?? Number.MAX_SAFE_INTEGER) -
+              (emojiCategoryOrder.get(b.category) ??
+                Number.MAX_SAFE_INTEGER) ||
+            (a.order ?? Number.MAX_SAFE_INTEGER) -
+              (b.order ?? Number.MAX_SAFE_INTEGER)
+        )
+        .map((emoji) => {
+          const shortcodes = shortcodeList(emojiShortcodes[emoji.hexcode])
+          const fallbackShortcode = emoji.label
+            .toLocaleLowerCase()
+            .replace(/[^a-z0-9]+/g, "_")
+            .replace(/^_|_$/g, "")
+
+          return {
+            category: emoji.category,
+            emoji: emoji.unicode,
+            label: emoji.label,
+            search: [emoji.label, ...shortcodes, fallbackShortcode]
+              .join(" ")
+              .toLocaleLowerCase(),
+            shortcode: shortcodes[0] ?? fallbackShortcode,
+          }
+        })
+
+      setEmojiChoices(choices)
+    } catch {
+      toast.error("The emoji catalog could not be loaded.")
+    } finally {
+      setEmojisLoading(false)
     }
   }
 
@@ -421,7 +452,13 @@ export function CreateTeamForm() {
                 sideOffset={6}
                 className="w-[292px] gap-0 overflow-hidden rounded-xl p-0"
               >
-                <Tabs defaultValue="icons" className="gap-0">
+                <Tabs
+                  defaultValue="icons"
+                  onValueChange={(value) => {
+                    if (value === "emojis") void loadEmojiChoices()
+                  }}
+                  className="gap-0"
+                >
                   <TabsList
                     variant="line"
                     className="h-9 w-full justify-start gap-4 border-b px-3"
@@ -509,6 +546,11 @@ export function CreateTeamForm() {
                       onScroll={handleEmojiGridScroll}
                       className="max-h-52 min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain px-2.5 pb-2.5"
                     >
+                      {emojisLoading ? (
+                        <p className="py-8 text-center text-xs text-muted-foreground">
+                          Loading emoji…
+                        </p>
+                      ) : null}
                       {visibleEmojiCategories.map((category) => (
                         <section key={category.id}>
                           <h3 className="pt-2.5 pb-1 text-xs font-medium text-muted-foreground">
