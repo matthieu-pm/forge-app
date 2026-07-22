@@ -14,6 +14,7 @@ import {
 } from "@hugeicons/core-free-icons"
 import type { HugeiconsIcon } from "@hugeicons/react"
 import type { ComponentProps } from "react"
+import type { TeamSummary } from "@/lib/team-contract"
 
 type AppIcon = ComponentProps<typeof HugeiconsIcon>["icon"]
 type TeamSlug = string
@@ -48,6 +49,7 @@ export type AppNavChild = {
   to: AppPath
   icon?: AppIcon
   iconSrc?: string
+  teamIcon?: TeamSummary["icon"]
   items?: Array<AppNavChild>
 }
 
@@ -96,11 +98,16 @@ export const workspaceNav: Array<AppNavChild> = [
 ]
 
 export function buildYourTeamsNav(
-  teams: ReadonlyArray<{ name: string; slug: string }>
+  teams: ReadonlyArray<{
+    name: string
+    slug: string
+    icon?: TeamSummary["icon"]
+  }>
 ): Array<AppNavChild> {
   return teams.map((team) => ({
     title: team.name,
     to: getTeamPath(team.slug, "projects"),
+    teamIcon: team.icon,
     items: teamSectionDefinitions
       .filter(
         (section) =>

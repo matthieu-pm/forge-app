@@ -341,7 +341,8 @@ export function CreateTeamForm() {
       // The query gives Vite a separate module identity so the full catalog stays
       // out of the initial application bundle and loads only with this picker.
       // @ts-expect-error Vite resolves package resource queries at build time.
-      const hugeicons = await import("@hugeicons/core-free-icons?catalog")
+      const catalogImport = import("@hugeicons/core-free-icons?catalog")
+      const hugeicons = await catalogImport
       const choices = Object.entries(hugeicons)
         .filter(
           (entry): entry is [string, IconSvgElement] =>
@@ -612,8 +613,20 @@ export function CreateTeamForm() {
               <Input
                 value={name}
                 onChange={(event) => {
-                  setName(event.target.value)
-                  setFieldErrors((errors) => ({ ...errors, name: undefined }))
+                  const nextName = event.target.value
+
+                  setName(nextName)
+                  setIdentifier(
+                    nextName
+                      .replace(/[^A-Za-z]/g, "")
+                      .slice(0, 3)
+                      .toUpperCase()
+                  )
+                  setFieldErrors((errors) => ({
+                    ...errors,
+                    identifier: undefined,
+                    name: undefined,
+                  }))
                 }}
                 placeholder="e.g. Engineering"
                 aria-label="Team name"

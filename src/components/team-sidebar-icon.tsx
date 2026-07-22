@@ -1,0 +1,97 @@
+"use client"
+
+import * as React from "react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import type { IconSvgElement } from "@hugeicons/react"
+import type { TeamSummary } from "@/lib/team-contract"
+
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+
+function teamInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase()
+}
+
+export function TeamSidebarIcon({
+  icon,
+  name,
+}: {
+  icon: TeamSummary["icon"]
+  name: string
+}) {
+  const [loadedIcon, setLoadedIcon] = React.useState<IconSvgElement | null>(
+    null
+  )
+
+  React.useEffect(() => {
+    if (icon.kind !== "icon") {
+      setLoadedIcon(null)
+      return
+    }
+
+    let cancelled = false
+
+    // @ts-expect-error Vite resolves package resource queries at build time.
+    void import("@hugeicons/core-free-icons?catalog")
+      .then((catalog) => {
+        const value = (catalog as Record<string, unknown>)[icon.value]
+
+        if (!Array.isArray(value)) {
+          throw new Error(`Icon not found: ${icon.value}`)
+        }
+
+        return value
+      })
+      .then((value) => {
+        if (!cancelled) {
+          setLoadedIcon(value as IconSvgElement)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setLoadedIcon(null)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [icon.kind, icon.value])
+
+  if (icon.kind === "emoji") {
+    return (
+      <span
+        aria-hidden="true"
+        className="flex size-4 shrink-0 items-center justify-center text-sm leading-none"
+      >
+        {icon.value}
+      </span>
+    )
+  }
+
+  if (loadedIcon) {
+    return (
+      <HugeiconsIcon
+        icon={loadedIcon}
+        strokeWidth={2}
+        className="size-4 shrink-0"
+        style={{ color: icon.color }}
+      />
+    )
+  }
+
+  return (
+    <Avatar className="size-4 rounded-md after:rounded-md">
+      <AvatarFallback
+        className="rounded-md text-[9px] font-semibold"
+        style={{ color: icon.color }}
+      >
+        {teamInitials(name)}
+      </AvatarFallback>
+    </Avatar>
+  )
+}

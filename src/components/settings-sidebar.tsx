@@ -37,8 +37,8 @@ import { Link, useRouterState } from "@tanstack/react-router"
 import type { ComponentProps } from "react"
 import type { TeamSummary } from "@/lib/team-contract"
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
+import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import {
   Sidebar,
   SidebarContent,
@@ -120,15 +120,6 @@ const settingsGroups: Array<SettingsGroup> = [
     ],
   },
 ]
-
-function teamInitials(name: string) {
-  return name
-    .split(/\s+/)
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase()
-}
 
 export function SettingsSidebar() {
   const pathname = useRouterState({
@@ -234,13 +225,7 @@ export function SettingsSidebar() {
                     type="button"
                     className="h-7 rounded-lg px-2 text-sm font-medium"
                   >
-                    <Avatar className="size-4 rounded-md after:rounded-md">
-                      <AvatarFallback className="rounded-md text-[9px] font-semibold">
-                        {team.icon.kind === "emoji"
-                          ? team.icon.value
-                          : teamInitials(team.name)}
-                      </AvatarFallback>
-                    </Avatar>
+                    <TeamSidebarIcon icon={team.icon} name={team.name} />
                     <span>{team.name}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

@@ -16,6 +16,7 @@ import type { WorkspaceSummary } from "@/lib/auth-types"
 import type { TeamSummary } from "@/lib/team-contract"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { GettingStartedChecklist } from "@/components/getting-started-checklist"
+import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import {
   Collapsible,
   CollapsibleContent,
@@ -78,7 +79,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     null
   )
   const [isWorkspaceLoading, setIsWorkspaceLoading] = React.useState(false)
-  const [workspaceTeams, setWorkspaceTeams] = React.useState<Array<TeamSummary>>([])
+  const [workspaceTeams, setWorkspaceTeams] = React.useState<
+    Array<TeamSummary>
+  >([])
   const primaryNav = appNav.filter(
     (item) => item.title !== "Workspace" && item.title !== "Your teams"
   )
@@ -157,8 +160,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   }
 
   function renderItemIcon(
-    item: Pick<AppNavChild, "icon" | "iconSrc" | "title">
+    item: Pick<AppNavChild, "icon" | "iconSrc" | "teamIcon" | "title">
   ) {
+    if (item.teamIcon) {
+      return <TeamSidebarIcon icon={item.teamIcon} name={item.title} />
+    }
+
     if (item.iconSrc) {
       return (
         <img
