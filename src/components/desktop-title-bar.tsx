@@ -3,6 +3,7 @@
 import {
   ArrowLeft02Icon,
   ArrowRight02Icon,
+  CustomizeIcon,
   SidebarLeftIcon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -37,6 +38,14 @@ function getTabTitle(path: string) {
 function getTabNavigationItem(path: string): AppNavChild | undefined {
   const pathname = path.split(/[?#]/, 1)[0]
 
+  if (pathname === "/settings") {
+    return {
+      title: "Preferences",
+      to: "/settings",
+      icon: CustomizeIcon,
+    }
+  }
+
   function findItem(items: Array<AppNavChild>): AppNavChild | undefined {
     for (const item of items) {
       const child = item.items ? findItem(item.items) : undefined
@@ -55,7 +64,7 @@ function getTabNavigationItem(path: string): AppNavChild | undefined {
   }
 }
 
-function TabIcon({ path }: { path: string }) {
+export function TabIcon({ path }: { path: string }) {
   const item = getTabNavigationItem(path)
 
   if (item?.icon) {

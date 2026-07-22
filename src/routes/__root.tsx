@@ -12,6 +12,7 @@ import { Fragment } from "react"
 
 import appCss from "../styles.css?url"
 import { AppSidebar } from "@/components/app-sidebar"
+import { SettingsSidebar } from "@/components/settings-sidebar"
 import { DesktopTitleBar } from "@/components/desktop-title-bar"
 import { Toaster } from "@/components/ui/sonner"
 import { HostIntegration } from "@/host/host-integration"
@@ -68,7 +69,7 @@ function RootLayout() {
 
   return (
     <SidebarProvider>
-      <AppSidebar />
+      {pathname === "/settings" ? <SettingsSidebar /> : <AppSidebar />}
       <SidebarInset>
         <AppHeader pathname={pathname} />
         <Outlet key={pathname} />

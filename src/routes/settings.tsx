@@ -11,9 +11,9 @@ export const Route = createFileRoute("/settings")({
 function SettingsPage() {
   return (
     <PagePlaceholder
-      eyebrow="Forge"
-      title="Settings"
-      description="Manage your Forge workspace and desktop preferences."
+      eyebrow="Settings"
+      title="Preferences"
+      description="Manage your personal Forge preferences."
     />
   )
 }

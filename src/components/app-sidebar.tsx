@@ -312,7 +312,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="h-7 min-h-0 rounded-lg px-2 py-1 text-sm font-medium"
-                  render={<a href="#settings" />}
+                  render={<Link to="/settings" />}
                 >
                   <HugeiconsIcon icon={AccountSetting01Icon} strokeWidth={2} />
                   Settings

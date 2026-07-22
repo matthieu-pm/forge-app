@@ -28,6 +28,7 @@ type TeamPath = `/teams/${TeamSlug}/${TeamSection}`
 
 export type AppPath =
   | "/forge"
+  | "/settings"
   | "/inbox"
   | "/my-issues"
   | "/workspace/initiatives"
@@ -270,6 +271,10 @@ export function getPageMeta(pathname: string): PageMeta {
 }
 
 export function getBreadcrumbItems(pathname: string): BreadcrumbItem[] {
+  if (pathname === "/settings") {
+    return [{ label: "Preferences" }]
+  }
+
   const initiativeMatch = pathname.match(
     /^\/workspace\/initiatives\/([^/]+)$/
   )

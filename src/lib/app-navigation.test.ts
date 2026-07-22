@@ -3,6 +3,12 @@ import { describe, expect, it } from "vitest"
 import { getBreadcrumbItems } from "./app-navigation"
 
 describe("getBreadcrumbItems", () => {
+  it("labels the settings landing page as preferences", () => {
+    expect(getBreadcrumbItems("/settings")).toEqual([
+      { label: "Preferences" },
+    ])
+  })
+
   it("omits the workspace wrapper from workspace pages", () => {
     expect(getBreadcrumbItems("/workspace/initiatives")).toEqual([
       { label: "Initiatives" },
