@@ -1,5 +1,3 @@
-import type { ComponentProps } from "react"
-import { HugeiconsIcon } from "@hugeicons/react"
 import {
   AirplayLineIcon,
   Asteroid02Icon,
@@ -14,9 +12,11 @@ import {
   UserGroup03Icon,
   UserIdVerificationIcon,
 } from "@hugeicons/core-free-icons"
+import type { HugeiconsIcon } from "@hugeicons/react"
+import type { ComponentProps } from "react"
 
 type AppIcon = ComponentProps<typeof HugeiconsIcon>["icon"]
-type TeamSlug = "product" | "engineering" | "operations"
+type TeamSlug = string
 type TeamSection =
   | "projects"
   | "views"
@@ -48,7 +48,7 @@ export type AppNavChild = {
   to: AppPath
   icon?: AppIcon
   iconSrc?: string
-  items?: AppNavChild[]
+  items?: Array<AppNavChild>
 }
 
 export type AppNavItem = {
@@ -56,7 +56,7 @@ export type AppNavItem = {
   to: AppPath
   icon?: AppIcon
   iconSrc?: string
-  items?: AppNavChild[]
+  items?: Array<AppNavChild>
 }
 
 type PageMeta = {
@@ -69,12 +69,6 @@ export type BreadcrumbItem = {
   label: string
   to?: string
 }
-
-const teamDefinitions = [
-  { title: "Product", slug: "product" },
-  { title: "Engineering", slug: "engineering" },
-  { title: "Operations", slug: "operations" },
-] as const
 
 const teamSectionDefinitions = [
   { title: "Issues", section: "issues", icon: ClipboardIcon },
@@ -89,7 +83,7 @@ function getTeamPath(slug: TeamSlug, section: TeamSection): TeamPath {
   return `/teams/${slug}/${section}`
 }
 
-export const workspaceNav: AppNavChild[] = [
+export const workspaceNav: Array<AppNavChild> = [
   {
     title: "Initiatives",
     to: "/workspace/initiatives",
@@ -101,24 +95,30 @@ export const workspaceNav: AppNavChild[] = [
   { title: "Members", to: "/workspace/members", icon: UserGroup03Icon },
 ]
 
-export const yourTeamsNav: AppNavChild[] = teamDefinitions.map((team) => ({
-  title: team.title,
-  to: getTeamPath(team.slug, "projects"),
-  items: teamSectionDefinitions
-    .filter(
-      (section) =>
-        section.section === "projects" ||
-        section.section === "views" ||
-        section.section === "issues"
-    )
-    .map((section) => ({
-      title: section.title,
-      to: getTeamPath(team.slug, section.section),
-      icon: section.icon,
-    })),
-}))
+export function buildYourTeamsNav(
+  teams: ReadonlyArray<{ name: string; slug: string }>
+): Array<AppNavChild> {
+  return teams.map((team) => ({
+    title: team.name,
+    to: getTeamPath(team.slug, "projects"),
+    items: teamSectionDefinitions
+      .filter(
+        (section) =>
+          section.section === "projects" ||
+          section.section === "views" ||
+          section.section === "issues"
+      )
+      .map((section) => ({
+        title: section.title,
+        to: getTeamPath(team.slug, section.section),
+        icon: section.icon,
+      })),
+  }))
+}
 
-export const appNav: AppNavItem[] = [
+export const yourTeamsNav: Array<AppNavChild> = []
+
+export const appNav: Array<AppNavItem> = [
   {
     title: "Inbox",
     to: "/inbox",
@@ -156,7 +156,7 @@ export const appNav: AppNavItem[] = [
   },
   {
     title: "Your teams",
-    to: getTeamPath("product", "projects"),
+    to: "/workspace/teams",
     items: yourTeamsNav,
   },
 ]
@@ -238,7 +238,7 @@ const pageMetaByPath: Partial<Record<AppPath, PageMeta>> = {
 
 export function getPageMeta(pathname: string): PageMeta {
   const teamMatch = pathname.match(
-    /^\/teams\/(product|engineering|operations)\/(projects|views|issues|signals|calls|insights)$/
+    /^\/teams\/([^/]+)\/(projects|views|issues|signals|calls|insights)$/
   )
 
   if (teamMatch) {
@@ -247,8 +247,7 @@ export function getPageMeta(pathname: string): PageMeta {
       TeamSlug,
       TeamSection,
     ]
-    const team =
-      teamDefinitions.find((item) => item.slug === teamSlug)?.title ?? "Team"
+    const team = teamTitleFromSlug(teamSlug)
     const section =
       teamSectionDefinitions.find((item) => item.section === teamSection)
         ?.title ?? "Overview"
@@ -270,7 +269,7 @@ export function getPageMeta(pathname: string): PageMeta {
   )
 }
 
-export function getBreadcrumbItems(pathname: string): BreadcrumbItem[] {
+export function getBreadcrumbItems(pathname: string): Array<BreadcrumbItem> {
   if (pathname === "/settings/teams/new") {
     return [{ label: "Create a new team" }]
   }
@@ -289,7 +288,7 @@ export function getBreadcrumbItems(pathname: string): BreadcrumbItem[] {
   }
 
   const teamMatch = pathname.match(
-    /^\/teams\/(product|engineering|operations)\/(projects|views|issues|signals|calls|insights)$/
+    /^\/teams\/([^/]+)\/(projects|views|issues|signals|calls|insights)$/
   )
 
   if (teamMatch) {
@@ -298,8 +297,7 @@ export function getBreadcrumbItems(pathname: string): BreadcrumbItem[] {
       TeamSlug,
       TeamSection,
     ]
-    const team =
-      teamDefinitions.find((item) => item.slug === teamSlug)?.title ?? "Team"
+    const team = teamTitleFromSlug(teamSlug)
     const section =
       teamSectionDefinitions.find((item) => item.section === teamSection)
         ?.title ?? "Overview"
@@ -327,6 +325,14 @@ export function getBreadcrumbItems(pathname: string): BreadcrumbItem[] {
   }
 
   return [{ label: childItem.title }]
+}
+
+function teamTitleFromSlug(slug: string) {
+  return slug
+    .split("-")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ")
 }
 
 export function isNavItemActive(

@@ -1,45 +1,71 @@
-import { relations } from "drizzle-orm"
-import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core"
+import { relations, sql } from "drizzle-orm"
+import {
+  check,
+  index,
+  pgTable,
+  text,
+  timestamp,
+  unique,
+  uuid,
+} from "drizzle-orm/pg-core"
 
-export const workspaces = pgTable("workspaces", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  slug: text("slug").notNull().unique(),
-  name: text("name").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-})
+import { organizations, users } from "./auth-schema"
 
-export const teams = pgTable("teams", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  workspaceId: uuid("workspace_id")
-    .notNull()
-    .references(() => workspaces.id, { onDelete: "cascade" }),
-  slug: text("slug").notNull().unique(),
-  name: text("name").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-})
-
-export const workspacesRelations = relations(workspaces, ({ many }) => ({
-  teams: many(teams),
-}))
+export const teams = pgTable(
+  "teams",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    slug: text("slug").notNull(),
+    identifier: text("identifier").notNull(),
+    name: text("name").notNull(),
+    iconKind: text("icon_kind").notNull(),
+    iconValue: text("icon_value").notNull(),
+    color: text("color").notNull(),
+    timezone: text("timezone").notNull(),
+    createdByUserId: text("created_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    workspaceIdIndex: index("teams_workspace_id_idx").on(table.workspaceId),
+    workspaceSlugUnique: unique("teams_workspace_slug_unique").on(
+      table.workspaceId,
+      table.slug
+    ),
+    workspaceIdentifierUnique: unique("teams_workspace_identifier_unique").on(
+      table.workspaceId,
+      table.identifier
+    ),
+    iconKindCheck: check(
+      "teams_icon_kind_check",
+      sql`${table.iconKind} in ('icon', 'emoji')`
+    ),
+    colorCheck: check(
+      "teams_color_check",
+      sql`${table.color} ~ '^#[0-9A-Fa-f]{6}$'`
+    ),
+  })
+)
 
 export const teamsRelations = relations(teams, ({ one }) => ({
-  workspace: one(workspaces, {
+  workspace: one(organizations, {
     fields: [teams.workspaceId],
-    references: [workspaces.id],
+    references: [organizations.id],
+  }),
+  createdBy: one(users, {
+    fields: [teams.createdByUserId],
+    references: [users.id],
   }),
 }))
 
-export type Workspace = typeof workspaces.$inferSelect
-export type NewWorkspace = typeof workspaces.$inferInsert
 export type Team = typeof teams.$inferSelect
 export type NewTeam = typeof teams.$inferInsert

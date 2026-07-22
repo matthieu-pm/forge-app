@@ -13,6 +13,7 @@ import { Link, useRouter, useRouterState } from "@tanstack/react-router"
 
 import type { AppNavChild } from "@/lib/app-navigation"
 import type { WorkspaceSummary } from "@/lib/auth-types"
+import type { TeamSummary } from "@/lib/team-contract"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { GettingStartedChecklist } from "@/components/getting-started-checklist"
 import {
@@ -41,9 +42,14 @@ import {
   SidebarMenuSubItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
-import { appNav, isNavItemActive } from "@/lib/app-navigation"
+import {
+  appNav,
+  buildYourTeamsNav,
+  isNavItemActive,
+} from "@/lib/app-navigation"
 import { authClient } from "@/lib/auth-client"
 import { getAuthState } from "@/lib/auth-state"
+import { listTeams } from "@/lib/team-state"
 import { getForgeHost } from "@/host/forge-host"
 
 function workspaceInitials(name: string) {
@@ -72,15 +78,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     null
   )
   const [isWorkspaceLoading, setIsWorkspaceLoading] = React.useState(false)
+  const [workspaceTeams, setWorkspaceTeams] = React.useState<Array<TeamSummary>>([])
   const primaryNav = appNav.filter(
     (item) => item.title !== "Workspace" && item.title !== "Your teams"
   )
   const workspaceSection = appNav.filter((item) => item.title === "Workspace")
-  const teamsSection = appNav.filter((item) => item.title === "Your teams")
+  const teamsSection = appNav
+    .filter((item) => item.title === "Your teams")
+    .map((item) => ({
+      ...item,
+      items: buildYourTeamsNav(workspaceTeams),
+    }))
 
   React.useEffect(() => {
     if (!sessionId) {
       setWorkspace(null)
+      setWorkspaceTeams([])
       setIsWorkspaceLoading(false)
       return
     }
@@ -88,13 +101,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     let isCancelled = false
     setIsWorkspaceLoading(true)
 
-    void getAuthState()
-      .then((authState) => {
+    void Promise.allSettled([getAuthState(), listTeams()])
+      .then(([authStateResult, teamsResult]) => {
         if (isCancelled) {
           return
         }
 
-        setWorkspace(authState.workspace)
+        setWorkspace(
+          authStateResult.status === "fulfilled"
+            ? authStateResult.value.workspace
+            : null
+        )
+        setWorkspaceTeams(
+          teamsResult.status === "fulfilled" ? teamsResult.value : []
+        )
         setIsWorkspaceLoading(false)
       })
       .catch(() => {
@@ -103,6 +123,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         }
 
         setWorkspace(null)
+        setWorkspaceTeams([])
         setIsWorkspaceLoading(false)
       })
 

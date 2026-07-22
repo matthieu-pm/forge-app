@@ -1,8 +1,12 @@
 import "@tanstack/react-start/server-only"
-import { auth } from "@/lib/auth"
+import { and, eq } from "drizzle-orm"
 import type { AuthState, WorkspaceSummary } from "@/lib/auth-types"
+import { auth } from "@/lib/auth"
+import { db, members } from "@/db"
 
-type SessionRecord = NonNullable<Awaited<ReturnType<typeof auth.api.getSession>>>
+type SessionRecord = NonNullable<
+  Awaited<ReturnType<typeof auth.api.getSession>>
+>
 
 type OrganizationCandidate = {
   id?: unknown
@@ -34,11 +38,14 @@ function toWorkspaceSummary(value: unknown): WorkspaceSummary | null {
   }
 }
 
-function extractOrganizations(value: unknown): WorkspaceSummary[] {
+function extractOrganizations(value: unknown): Array<WorkspaceSummary> {
   if (Array.isArray(value)) {
     return value
       .map((organization) => toWorkspaceSummary(organization))
-      .filter((organization): organization is WorkspaceSummary => organization !== null)
+      .filter(
+        (organization): organization is WorkspaceSummary =>
+          organization !== null
+      )
   }
 
   if (!value || typeof value !== "object") {
@@ -50,13 +57,19 @@ function extractOrganizations(value: unknown): WorkspaceSummary[] {
   if (Array.isArray(record.organizations)) {
     return record.organizations
       .map((organization) => toWorkspaceSummary(organization))
-      .filter((organization): organization is WorkspaceSummary => organization !== null)
+      .filter(
+        (organization): organization is WorkspaceSummary =>
+          organization !== null
+      )
   }
 
   if (Array.isArray(record.data)) {
     return record.data
       .map((organization) => toWorkspaceSummary(organization))
-      .filter((organization): organization is WorkspaceSummary => organization !== null)
+      .filter(
+        (organization): organization is WorkspaceSummary =>
+          organization !== null
+      )
   }
 
   return []
@@ -146,6 +159,59 @@ export async function getActiveWorkspace(request: Request) {
   return loadWorkspaceFromRequest(request, session)
 }
 
+export type ActiveWorkspaceMember = {
+  userId: string
+  workspace: WorkspaceSummary
+  role: string
+}
+
+export class WorkspaceAccessError extends Error {
+  constructor(
+    readonly code: "UNAUTHENTICATED" | "NO_ACTIVE_WORKSPACE" | "FORBIDDEN"
+  ) {
+    super(code)
+    this.name = "WorkspaceAccessError"
+  }
+}
+
+export async function requireActiveWorkspaceMember(
+  request: Request
+): Promise<ActiveWorkspaceMember> {
+  const session = await getSession(request)
+
+  if (!session) {
+    throw new WorkspaceAccessError("UNAUTHENTICATED")
+  }
+
+  const workspace = await loadWorkspaceFromRequest(request, session)
+
+  if (!workspace) {
+    throw new WorkspaceAccessError("NO_ACTIVE_WORKSPACE")
+  }
+
+  const memberRecords = await db
+    .select({ role: members.role })
+    .from(members)
+    .where(
+      and(
+        eq(members.organizationId, workspace.id),
+        eq(members.userId, session.user.id)
+      )
+    )
+    .limit(1)
+  const member = memberRecords.at(0)
+
+  if (!member) {
+    throw new WorkspaceAccessError("FORBIDDEN")
+  }
+
+  return {
+    userId: session.user.id,
+    workspace,
+    role: member.role,
+  }
+}
+
 export async function buildAuthState(request: Request): Promise<AuthState> {
   const session = await getSession(request)
 
@@ -161,7 +227,7 @@ export async function buildAuthState(request: Request): Promise<AuthState> {
     user: {
       id: session.user.id,
       email: session.user.email,
-      name: session.user.name ?? null,
+      name: session.user.name,
       image: session.user.image ?? null,
     },
     session: {

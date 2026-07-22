@@ -22,6 +22,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { TEAM_COLORS } from "@/lib/team-contract"
+import { createTeam } from "@/lib/team-state"
 import { cn } from "@/lib/utils"
 
 function iconLabel(exportName: string) {
@@ -48,13 +50,47 @@ function shortcodeList(value: string | Array<string> | undefined) {
   return value ? (Array.isArray(value) ? value : [value]) : []
 }
 
+const emojiCategoryDefinitions = [
+  { id: "smileys-people", label: "Smileys & People", groups: [0, 1] },
+  { id: "animals-nature", label: "Animals & Nature", groups: [3] },
+  { id: "food-drink", label: "Food & Drink", groups: [4] },
+  { id: "activity", label: "Activity", groups: [6] },
+  { id: "travel-places", label: "Travel & Places", groups: [5] },
+  { id: "objects", label: "Objects", groups: [7] },
+  { id: "symbols", label: "Symbols", groups: [8] },
+  { id: "flags", label: "Flags", groups: [9] },
+] as const
+
+type EmojiCategoryId = (typeof emojiCategoryDefinitions)[number]["id"]
+
+const emojiCategoryByGroup = new Map<number, EmojiCategoryId>(
+  emojiCategoryDefinitions.flatMap((category) =>
+    category.groups.map((group) => [group, category.id] as const)
+  )
+)
+
+const emojiCategoryOrder = new Map<EmojiCategoryId, number>(
+  emojiCategoryDefinitions.map((category, index) => [category.id, index])
+)
+
 const emojiChoices = emojiData
-  .filter((emoji) => emoji.group !== undefined)
-  .flatMap((emoji) => [emoji, ...(emoji.skins ?? [])])
+  // Keep the main grid to canonical emoji. Many multi-person skin variants are
+  // ZWJ sequences that decompose into several visible glyphs on older system
+  // emoji fonts, which makes a single picker cell appear corrupted and overflow.
+  .flatMap((emoji) => {
+    const category =
+      emoji.group === undefined
+        ? undefined
+        : emojiCategoryByGroup.get(emoji.group)
+
+    return category ? [{ ...emoji, category }] : []
+  })
   .sort(
     (a, b) =>
+      (emojiCategoryOrder.get(a.category) ?? Number.MAX_SAFE_INTEGER) -
+        (emojiCategoryOrder.get(b.category) ?? Number.MAX_SAFE_INTEGER) ||
       (a.order ?? Number.MAX_SAFE_INTEGER) -
-      (b.order ?? Number.MAX_SAFE_INTEGER)
+        (b.order ?? Number.MAX_SAFE_INTEGER)
   )
   .map((emoji) => {
     const shortcodes = shortcodeList(emojiShortcodes[emoji.hexcode])
@@ -64,6 +100,7 @@ const emojiChoices = emojiData
       .replace(/^_|_$/g, "")
 
     return {
+      category: emoji.category,
       emoji: emoji.unicode,
       label: emoji.label,
       search: [emoji.label, ...shortcodes, fallbackShortcode]
@@ -72,17 +109,6 @@ const emojiChoices = emojiData
       shortcode: shortcodes[0] ?? fallbackShortcode,
     }
   })
-
-const colorChoices = [
-  "#94a3b8",
-  "#818cf8",
-  "#38bdf8",
-  "#34d399",
-  "#facc15",
-  "#fb923c",
-  "#fb7185",
-  "#f472b6",
-]
 
 type TimezoneOption = {
   id: string
@@ -151,8 +177,6 @@ const timezoneOptions = createTimezoneOptions()
 const defaultTimezone =
   timezoneOptions.find((option) => option.id === "Europe/Paris") ??
   timezoneOptions[0]
-
-const teams = ["Product", "Engineering", "Operations"]
 
 function FieldRow({
   children,
@@ -246,7 +270,9 @@ export function CreateTeamForm() {
   const [identifier, setIdentifier] = React.useState("")
   const [selectedIcon, setSelectedIcon] = React.useState("UserGroup03Icon")
   const [selectedEmoji, setSelectedEmoji] = React.useState<string | null>(null)
-  const [selectedColor, setSelectedColor] = React.useState(colorChoices[0])
+  const [selectedColor, setSelectedColor] = React.useState<
+    (typeof TEAM_COLORS)[number]
+  >(TEAM_COLORS[0])
   const [iconQuery, setIconQuery] = React.useState("")
   const [iconChoices, setIconChoices] = React.useState<Array<IconChoice>>([
     defaultIconChoice,
@@ -255,10 +281,13 @@ export function CreateTeamForm() {
   const [visibleIconCount, setVisibleIconCount] = React.useState(100)
   const [emojiQuery, setEmojiQuery] = React.useState("")
   const [visibleEmojiCount, setVisibleEmojiCount] = React.useState(100)
-  const [timezone, setTimezone] = React.useState(defaultTimezone.label)
+  const [timezone, setTimezone] = React.useState(defaultTimezone.id)
   const [timezoneQuery, setTimezoneQuery] = React.useState("")
-  const [copyFrom, setCopyFrom] = React.useState<string | null>(null)
-  const [teamQuery, setTeamQuery] = React.useState("")
+  const [fieldErrors, setFieldErrors] = React.useState<{
+    name?: string
+    identifier?: string
+  }>({})
+  const [isSubmitting, setIsSubmitting] = React.useState(false)
 
   const activeIcon =
     iconChoices.find((choice) => choice.value === selectedIcon) ??
@@ -287,14 +316,19 @@ export function CreateTeamForm() {
       : emojiChoices
   }, [deferredEmojiQuery])
   const visibleEmojis = filteredEmojis.slice(0, visibleEmojiCount)
+  const visibleEmojiCategories = emojiCategoryDefinitions
+    .map((category) => ({
+      ...category,
+      emojis: visibleEmojis.filter((emoji) => emoji.category === category.id),
+    }))
+    .filter((category) => category.emojis.length > 0)
   const filteredTimezones = timezoneOptions.filter((item) =>
     `${item.label} ${item.id}`
       .toLocaleLowerCase()
       .includes(timezoneQuery.toLocaleLowerCase())
   )
-  const filteredTeams = teams.filter((team) =>
-    team.toLocaleLowerCase().includes(teamQuery.toLocaleLowerCase())
-  )
+  const selectedTimezone =
+    timezoneOptions.find((item) => item.id === timezone) ?? defaultTimezone
 
   async function loadIconChoices() {
     if (iconsLoading || iconChoices.length > 1) {
@@ -359,16 +393,55 @@ export function CreateTeamForm() {
     }
   }
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    setFieldErrors({})
 
     if (!name.trim() || !identifier.trim()) {
       toast.error("Add a team name and identifier to continue.")
       return
     }
 
-    toast.success(`${name.trim()} was created.`)
-    void router.navigate({ to: "/workspace/teams" })
+    if (!/^[A-Z][A-Z0-9]{0,4}$/.test(identifier)) {
+      const message = "Use 1–5 characters, starting with a letter."
+      setFieldErrors({ identifier: message })
+      toast.error(message)
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      const result = await createTeam({
+        data: {
+          name,
+          identifier,
+          icon: selectedEmoji
+            ? { kind: "emoji", value: selectedEmoji, color: selectedColor }
+            : { kind: "icon", value: selectedIcon, color: selectedColor },
+          timezone,
+        },
+      })
+
+      if (!result.ok) {
+        if (result.field) {
+          setFieldErrors({ [result.field]: result.message })
+        }
+        toast.error(result.message)
+        return
+      }
+
+      toast.success(`${result.team.name} was created.`)
+      await router.invalidate()
+      await router.navigate({
+        to: "/teams/$teamSlug/projects",
+        params: { teamSlug: result.team.slug },
+      })
+    } catch {
+      toast.error("The team could not be created. Try again.")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -419,7 +492,7 @@ export function CreateTeamForm() {
               <PopoverContent
                 align="start"
                 sideOffset={6}
-                className="w-[292px] gap-0 rounded-xl p-0"
+                className="w-[292px] gap-0 overflow-hidden rounded-xl p-0"
               >
                 <Tabs defaultValue="icons" className="gap-0">
                   <TabsList
@@ -435,7 +508,7 @@ export function CreateTeamForm() {
                   </TabsList>
                   <TabsContent value="icons" className="p-0">
                     <div className="flex items-center justify-between gap-1.5 p-2.5">
-                      {colorChoices.map((color) => (
+                      {TEAM_COLORS.map((color) => (
                         <button
                           key={color}
                           type="button"
@@ -462,11 +535,7 @@ export function CreateTeamForm() {
                       showIcon={false}
                       value={iconQuery}
                       onChange={handleIconQueryChange}
-                      placeholder={
-                        iconsLoading
-                          ? "Loading icons..."
-                          : `Search ${iconChoices.length.toLocaleString()} icons...`
-                      }
+                      placeholder="Search icons..."
                     />
                     <div
                       ref={iconGridRef}
@@ -506,60 +575,89 @@ export function CreateTeamForm() {
                       topSeparator={false}
                       value={emojiQuery}
                       onChange={handleEmojiQueryChange}
-                      placeholder="Search :emoji_name:..."
+                      placeholder="Search emoji..."
                     />
-                    <p className="px-2.5 pt-2.5 pb-1 text-xs font-medium text-muted-foreground">
-                      All emojis
-                    </p>
                     <div
                       ref={emojiGridRef}
                       onScroll={handleEmojiGridScroll}
-                      className="grid max-h-52 grid-cols-[repeat(10,1.5rem)] justify-between gap-0.5 overflow-y-auto px-2.5 pb-2.5"
+                      className="max-h-52 min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain px-2.5 pb-2.5"
                     >
-                      {visibleEmojis.map((emoji) => (
-                        <button
-                          key={`${emoji.emoji}-${emoji.shortcode}`}
-                          type="button"
-                          title={`:${emoji.shortcode}: — ${emoji.label}`}
-                          aria-label={`:${emoji.shortcode}: — ${emoji.label}`}
-                          onClick={() => setSelectedEmoji(emoji.emoji)}
-                          className="grid size-6 place-items-center rounded-md text-base leading-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                        >
-                          {emoji.emoji}
-                        </button>
+                      {visibleEmojiCategories.map((category) => (
+                        <section key={category.id}>
+                          <h3 className="pt-2.5 pb-1 text-xs font-medium text-muted-foreground">
+                            {category.label}
+                          </h3>
+                          <div className="grid min-w-0 grid-cols-[repeat(10,minmax(0,1.5rem))] justify-between gap-0.5">
+                            {category.emojis.map((emoji) => (
+                              <button
+                                key={`${emoji.emoji}-${emoji.shortcode}`}
+                                type="button"
+                                title={`:${emoji.shortcode}: — ${emoji.label}`}
+                                aria-label={`:${emoji.shortcode}: — ${emoji.label}`}
+                                onClick={() => setSelectedEmoji(emoji.emoji)}
+                                className="grid size-6 min-w-0 place-items-center overflow-hidden rounded-md text-base leading-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                              >
+                                {emoji.emoji}
+                              </button>
+                            ))}
+                          </div>
+                        </section>
                       ))}
                     </div>
                   </TabsContent>
                 </Tabs>
               </PopoverContent>
             </Popover>
-            <Input
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="e.g. Engineering"
-              aria-label="Team name"
-              className="h-8 w-44 rounded-lg bg-background/60"
-            />
+            <div className="w-44">
+              <Input
+                value={name}
+                onChange={(event) => {
+                  setName(event.target.value)
+                  setFieldErrors((errors) => ({ ...errors, name: undefined }))
+                }}
+                placeholder="e.g. Engineering"
+                aria-label="Team name"
+                aria-invalid={Boolean(fieldErrors.name)}
+                className="h-8 rounded-lg bg-background/60"
+              />
+              {fieldErrors.name ? (
+                <p className="mt-1 text-xs text-destructive">
+                  {fieldErrors.name}
+                </p>
+              ) : null}
+            </div>
           </FieldRow>
           <div className="border-t border-border/60">
             <FieldRow
               label="Identifier"
               description="Used to identify issues from this team (e.g. ENG-123)"
             >
-              <Input
-                value={identifier}
-                onChange={(event) =>
-                  setIdentifier(
-                    event.target.value
-                      .toUpperCase()
-                      .replace(/[^A-Z0-9]/g, "")
-                      .slice(0, 5)
-                  )
-                }
-                placeholder="e.g. ENG"
-                aria-label="Team identifier"
-                className="h-8 w-44 rounded-lg bg-background/60"
-              />
+              <div className="w-44">
+                <Input
+                  value={identifier}
+                  onChange={(event) => {
+                    setIdentifier(
+                      event.target.value
+                        .toUpperCase()
+                        .replace(/[^A-Z0-9]/g, "")
+                        .slice(0, 5)
+                    )
+                    setFieldErrors((errors) => ({
+                      ...errors,
+                      identifier: undefined,
+                    }))
+                  }}
+                  placeholder="e.g. ENG"
+                  aria-label="Team identifier"
+                  aria-invalid={Boolean(fieldErrors.identifier)}
+                  className="h-8 rounded-lg bg-background/60"
+                />
+                {fieldErrors.identifier ? (
+                  <p className="mt-1 text-xs text-destructive">
+                    {fieldErrors.identifier}
+                  </p>
+                ) : null}
+              </div>
             </FieldRow>
           </div>
           <div className="border-t border-border/60">
@@ -614,7 +712,9 @@ export function CreateTeamForm() {
                     />
                   }
                 >
-                  <span className="whitespace-nowrap">{timezone}</span>
+                  <span className="whitespace-nowrap">
+                    {selectedTimezone.label}
+                  </span>
                   <HugeiconsIcon
                     icon={ArrowDown01Icon}
                     strokeWidth={2}
@@ -639,13 +739,13 @@ export function CreateTeamForm() {
                         <button
                           key={item.id}
                           type="button"
-                          onClick={() => setTimezone(item.label)}
+                          onClick={() => setTimezone(item.id)}
                           className="flex min-h-8 w-full items-center justify-between gap-2 rounded-lg px-2 text-left text-sm hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                         >
                           <span className="whitespace-nowrap">
                             {item.label}
                           </span>
-                          {timezone === item.label ? (
+                          {timezone === item.id ? (
                             <HugeiconsIcon
                               icon={Tick02Icon}
                               strokeWidth={2}
@@ -669,60 +769,15 @@ export function CreateTeamForm() {
           </SectionHeading>
           <div className="rounded-2xl border border-border/70 bg-muted/35">
             <FieldRow label="Copy from team">
-              <Popover>
-                <PopoverTrigger
-                  render={
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      className="group min-w-28 rounded-lg font-normal"
-                    />
-                  }
-                >
-                  <span>{copyFrom ?? "Don’t copy"}</span>
-                  <HugeiconsIcon
-                    icon={ArrowDown01Icon}
-                    strokeWidth={2}
-                    className="size-3.5 shrink-0 transition-transform duration-200 ease-out group-data-popup-open:rotate-180 group-data-open:rotate-180"
-                  />
-                </PopoverTrigger>
-                <PopoverContent
-                  align="end"
-                  sideOffset={6}
-                  className="w-60 gap-0 rounded-xl p-0"
-                >
-                  <div className="border-b p-1">
-                    <SearchField
-                      value={teamQuery}
-                      onChange={setTeamQuery}
-                      placeholder="Select a team..."
-                    />
-                  </div>
-                  <div className="p-1">
-                    <button
-                      type="button"
-                      onClick={() => setCopyFrom(null)}
-                      className="flex h-8 w-full items-center rounded-lg px-2 text-sm hover:bg-accent"
-                    >
-                      Don’t copy
-                    </button>
-                    {filteredTeams.map((team) => (
-                      <button
-                        key={team}
-                        type="button"
-                        onClick={() => setCopyFrom(team)}
-                        className="flex h-8 w-full items-center justify-between rounded-lg px-2 text-sm hover:bg-accent"
-                      >
-                        <span>{team}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {team.slice(0, 3).toUpperCase()}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </PopoverContent>
-              </Popover>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled
+                className="rounded-lg font-normal"
+              >
+                Not available yet
+              </Button>
             </FieldRow>
           </div>
         </section>
@@ -731,9 +786,10 @@ export function CreateTeamForm() {
           <Button
             type="submit"
             size="sm"
+            disabled={isSubmitting}
             className="bg-[#1616E2] text-white hover:bg-[#1010C8]"
           >
-            Create team
+            {isSubmitting ? "Creating team..." : "Create team"}
           </Button>
         </div>
       </form>

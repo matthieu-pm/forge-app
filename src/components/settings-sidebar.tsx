@@ -35,8 +35,9 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Link, useRouterState } from "@tanstack/react-router"
 import type { ComponentProps } from "react"
+import type { TeamSummary } from "@/lib/team-contract"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import {
   Sidebar,
@@ -49,6 +50,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
+import { listTeams } from "@/lib/team-state"
 
 type SettingsIcon = ComponentProps<typeof HugeiconsIcon>["icon"]
 
@@ -119,12 +121,6 @@ const settingsGroups: Array<SettingsGroup> = [
   },
 ]
 
-const teams: Array<{ name: string; avatar: string | null }> = [
-  { name: "Product", avatar: null },
-  { name: "Engineering", avatar: null },
-  { name: "Operations", avatar: null },
-]
-
 function teamInitials(name: string) {
   return name
     .split(/\s+/)
@@ -139,6 +135,27 @@ export function SettingsSidebar() {
     select: (state) => state.location.pathname,
   })
   const [query, setQuery] = React.useState("")
+  const [teams, setTeams] = React.useState<Array<TeamSummary>>([])
+
+  React.useEffect(() => {
+    let cancelled = false
+
+    void listTeams()
+      .then((items) => {
+        if (!cancelled) {
+          setTeams(items)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setTeams([])
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
   const normalizedQuery = query.trim().toLocaleLowerCase()
   const visibleGroups = settingsGroups
     .map((group) => ({
@@ -218,11 +235,10 @@ export function SettingsSidebar() {
                     className="h-7 rounded-lg px-2 text-sm font-medium"
                   >
                     <Avatar className="size-4 rounded-md after:rounded-md">
-                      {team.avatar ? (
-                        <AvatarImage src={team.avatar} alt="" />
-                      ) : null}
                       <AvatarFallback className="rounded-md text-[9px] font-semibold">
-                        {teamInitials(team.name)}
+                        {team.icon.kind === "emoji"
+                          ? team.icon.value
+                          : teamInitials(team.name)}
                       </AvatarFallback>
                     </Avatar>
                     <span>{team.name}</span>

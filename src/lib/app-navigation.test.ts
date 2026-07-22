@@ -1,12 +1,10 @@
 import { describe, expect, it } from "vitest"
 
-import { getBreadcrumbItems } from "./app-navigation"
+import { buildYourTeamsNav, getBreadcrumbItems } from "./app-navigation"
 
 describe("getBreadcrumbItems", () => {
   it("labels the settings landing page as preferences", () => {
-    expect(getBreadcrumbItems("/settings")).toEqual([
-      { label: "Preferences" },
-    ])
+    expect(getBreadcrumbItems("/settings")).toEqual([{ label: "Preferences" }])
   })
 
   it("labels the create-team settings page", () => {
@@ -25,6 +23,29 @@ describe("getBreadcrumbItems", () => {
     expect(getBreadcrumbItems("/teams/product/insights")).toEqual([
       { label: "Product", to: "/teams/product/projects" },
       { label: "Insights" },
+    ])
+  })
+
+  it("supports teams loaded from the active workspace", () => {
+    expect(
+      buildYourTeamsNav([{ name: "Platform API", slug: "platform-api" }])
+    ).toMatchObject([
+      {
+        title: "Platform API",
+        to: "/teams/platform-api/projects",
+        items: [
+          { title: "Issues", to: "/teams/platform-api/issues" },
+          { title: "Projects", to: "/teams/platform-api/projects" },
+          { title: "Views", to: "/teams/platform-api/views" },
+        ],
+      },
+    ])
+  })
+
+  it("creates breadcrumbs for dynamic team slugs", () => {
+    expect(getBreadcrumbItems("/teams/platform-api/issues")).toEqual([
+      { label: "Platform Api", to: "/teams/platform-api/projects" },
+      { label: "Issues" },
     ])
   })
 
