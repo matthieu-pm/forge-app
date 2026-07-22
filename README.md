@@ -2,6 +2,8 @@
 
 Forge is an issue tracking workspace for modern software teams. It brings together inbox triage, personal work, workspace-level planning, team views, and an early agent workspace in one TanStack Start app.
 
+Current build: `v0.0.1`
+
 ## Stack
 
 - TanStack Start, TanStack Router, React, and TypeScript

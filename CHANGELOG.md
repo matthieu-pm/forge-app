@@ -2,6 +2,18 @@
 
 All notable changes to Forge will be documented in this file.
 
+## v0.0.1 - 2026-07-22
+
+### Added
+
+- Published the initial Forge build for web and macOS.
+- Added issue tracking across inbox, personal, workspace, and team views.
+- Added the early agent workspace for agent-driven workflows and automation.
+
+### Changed
+
+- Tagged the current build as `v0.0.1`.
+
 ## 2026-06-09
 
 ### Changed
