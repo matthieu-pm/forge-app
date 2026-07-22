@@ -163,7 +163,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarMenuSub
         className={
           isNested
-            ? "translate-x-0 gap-0"
+            ? "mx-0 box-border w-full self-stretch translate-x-0 gap-0 border-l-0 pr-0! pl-2!"
             : "mx-0 translate-x-0 gap-0 border-l-0 px-0"
         }
       >
@@ -172,15 +172,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <Collapsible
               key={`${item.title}-${isNavItemActive(pathname, item) ? "active" : "idle"}`}
               defaultOpen={isNavItemActive(pathname, item)}
-              className="group/collapsible"
+              className="group/collapsible w-full"
             >
               <SidebarMenuSubItem className="w-full">
                 <SidebarMenuButton
-                  className="h-7 py-1 text-sm font-medium [&>svg]:size-4"
+                  className="h-7 py-1 pl-2.5 text-sm font-medium [&>svg]:size-4"
                   isActive={false}
                   render={<CollapsibleTrigger />}
                 >
-                  {renderItemIcon(item)}
+                  {renderItemIcon(item) ?? (
+                    <Avatar className="size-4 rounded-md after:rounded-md">
+                      <AvatarFallback className="rounded-md text-[9px] font-semibold">
+                        {workspaceInitials(item.title)}
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
                   {item.title}
                   <HugeiconsIcon
                     icon={ArrowRight01Icon}
@@ -188,7 +194,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     className="ml-auto transition-transform duration-200 group-aria-expanded/menu-button:rotate-90"
                   />
                 </SidebarMenuButton>
-                <CollapsibleContent>
+                <CollapsibleContent className="w-full">
                   {renderNavItems(item.items, depth + 1)}
                 </CollapsibleContent>
               </SidebarMenuSubItem>
@@ -224,8 +230,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         defaultOpen={isNavItemActive(pathname, item)}
         className={
           teamsScrollable
-            ? "group/collapsible flex min-h-0 flex-1 flex-col"
-            : "group/collapsible"
+            ? "group/collapsible flex min-h-0 w-full flex-1 flex-col"
+            : "group/collapsible w-full"
         }
       >
         <SidebarMenuItem
@@ -247,9 +253,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             />
           </SidebarMenuButton>
           <CollapsibleContent
-            className={teamsScrollable ? "min-h-0 flex-1" : undefined}
+            className={teamsScrollable ? "min-h-0 w-full flex-1" : "w-full"}
           >
-            <div>{renderNavItems(item.items)}</div>
+            <div className="w-full">{renderNavItems(item.items)}</div>
           </CollapsibleContent>
         </SidebarMenuItem>
       </Collapsible>
