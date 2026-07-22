@@ -4,12 +4,17 @@ import { createWindowOptions, restoreVisibleBounds } from "./window-config"
 
 describe("createWindowOptions", () => {
   it("isolates and sandboxes the shared Forge renderer", () => {
-    const options = createWindowOptions("/app/preload.js", {
-      width: 1280,
-      height: 800,
-      x: 10,
-      y: 20,
-    })
+    const options = createWindowOptions(
+      "/app/preload.js",
+      {
+        width: 1280,
+        height: 800,
+        x: 10,
+        y: 20,
+      },
+      false,
+      "darwin"
+    )
 
     expect(options.webPreferences).toMatchObject({
       preload: "/app/preload.js",
@@ -22,6 +27,10 @@ describe("createWindowOptions", () => {
       devTools: false,
     })
     expect(options).toMatchObject({
+      backgroundColor: "#00000000",
+      transparent: true,
+      vibrancy: "sidebar",
+      visualEffectState: "followWindow",
       titleBarStyle: "hidden",
       width: 1280,
       height: 800,
@@ -37,6 +46,19 @@ describe("createWindowOptions", () => {
     const options = createWindowOptions("/app/preload.js", undefined, true)
 
     expect(options.webPreferences?.devTools).toBe(true)
+  })
+
+  it("keeps non-macOS windows opaque", () => {
+    const options = createWindowOptions(
+      "/app/preload.js",
+      undefined,
+      false,
+      "linux"
+    )
+
+    expect(options.backgroundColor).toBe("#ffffff")
+    expect(options.transparent).toBeUndefined()
+    expect(options.vibrancy).toBeUndefined()
   })
 })
 

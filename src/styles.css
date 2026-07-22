@@ -152,7 +152,7 @@ html[data-forge-host="macos"] .forge-desktop-titlebar {
     flex-shrink: 0;
     align-items: center;
     padding-left: 76px;
-    background: var(--sidebar);
+    background: transparent;
     color: var(--muted-foreground);
     user-select: none;
 }
@@ -293,11 +293,20 @@ html[data-forge-host="macos"] .min-h-svh {
     min-height: calc(100svh - 32px);
 }
 
+/* Reveal Electron's native macOS sidebar vibrancy beneath the app chrome. */
+html[data-forge-host="macos"],
+html[data-forge-host="macos"] body,
+html[data-forge-host="macos"] [data-slot="sidebar-wrapper"],
+html[data-forge-host="macos"] [data-slot="sidebar-inner"] {
+    background: transparent;
+}
+
 html[data-forge-host="macos"] [data-slot="sidebar-container"] {
     top: 32px;
     height: calc(100svh - 32px);
     padding-top: 3px;
-    padding-bottom: 32px;
+    /* Match the checklist edge to the inset panel's 1px outer shadow. */
+    padding-bottom: 31px;
 }
 
 html[data-forge-host="macos"] [data-slot="sidebar-inset"] {
@@ -315,7 +324,7 @@ html[data-forge-host="macos"] .forge-desktop-footer-actions {
     }
 
     html[data-forge-host="web"] [data-slot="sidebar-container"] {
-        padding-bottom: 32px;
+        padding-bottom: 31px;
     }
 
     html[data-forge-host="web"] .forge-desktop-footer-actions {
@@ -403,6 +412,19 @@ html[data-forge-host="macos"] .forge-desktop-footer-actions {
             rgb(59 130 246) 320deg,
             var(--sidebar-border) 360deg
         ) border-box;
+}
+
+.forge-getting-started-trigger[data-popup-open] {
+    background:
+        linear-gradient(var(--sidebar), var(--sidebar)) padding-box,
+        linear-gradient(rgb(59 130 246), rgb(59 130 246)) border-box;
+    animation: none;
+}
+
+.forge-getting-started-trigger[data-popup-open]:hover {
+    background:
+        linear-gradient(var(--sidebar-accent), var(--sidebar-accent)) padding-box,
+        linear-gradient(rgb(59 130 246), rgb(59 130 246)) border-box;
 }
 
 .forge-getting-started-trigger:focus-visible {

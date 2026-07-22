@@ -163,8 +163,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarMenuSub
         className={
           isNested
-            ? "mx-0 box-border w-full self-stretch translate-x-0 gap-0 border-l-0 pr-0! pl-2!"
-            : "mx-0 translate-x-0 gap-0 border-l-0 px-0"
+            ? "mx-0 box-border w-full translate-x-0 gap-px self-stretch border-l-0 pr-0! pl-2!"
+            : "mx-0 translate-x-0 gap-px border-l-0 px-0"
         }
       >
         {items.map((item) =>
@@ -372,7 +372,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup className="pb-0">
-          <SidebarMenu className="gap-0">
+          <SidebarMenu className="gap-px">
             {primaryNav.map((item) => renderRootItem(item))}
           </SidebarMenu>
         </SidebarGroup>

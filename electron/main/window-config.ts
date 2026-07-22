@@ -30,8 +30,21 @@ export function restoreVisibleBounds(
 export function createWindowOptions(
   preload: string,
   bounds?: Partial<Rectangle>,
-  development = false
+  development = false,
+  platform: NodeJS.Platform = process.platform
 ): BrowserWindowConstructorOptions {
+  const nativeBackground: BrowserWindowConstructorOptions =
+    platform === "darwin"
+      ? {
+          // Let macOS draw its native sidebar material through transparent web
+          // surfaces. Opaque renderer panels still cover the effect normally.
+          backgroundColor: "#00000000",
+          transparent: true,
+          vibrancy: "sidebar",
+          visualEffectState: "followWindow",
+        }
+      : { backgroundColor: "#ffffff" }
+
   return {
     width: bounds?.width ?? 1280,
     height: bounds?.height ?? 800,
@@ -39,7 +52,7 @@ export function createWindowOptions(
     y: bounds?.y,
     minWidth: 720,
     minHeight: 520,
-    backgroundColor: "#ffffff",
+    ...nativeBackground,
     titleBarStyle: "hidden",
     show: false,
     webPreferences: {
