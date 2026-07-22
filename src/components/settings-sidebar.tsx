@@ -163,7 +163,7 @@ export function SettingsSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        <div className="relative px-1">
+        <div className="relative">
           <HugeiconsIcon
             icon={Search01Icon}
             strokeWidth={2}
