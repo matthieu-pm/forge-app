@@ -45,7 +45,7 @@ function TeamsPage() {
           {teams.map((team, index) => (
             <Link
               key={team.id}
-              to="/teams/$teamSlug/projects"
+              to="/settings/teams/$teamSlug"
               params={{ teamSlug: team.slug }}
               className="flex items-center gap-3 bg-background px-4 py-3 transition-colors hover:bg-muted/50"
               style={

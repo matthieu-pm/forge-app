@@ -11,6 +11,14 @@ export const TEAM_COLORS = [
   "#f472b6",
 ] as const
 
+export const ESTIMATION_SCHEMES = [
+  "none",
+  "exponential",
+  "fibonacci",
+  "linear",
+  "tshirt",
+] as const
+
 function isTimeZone(value: string) {
   try {
     new Intl.DateTimeFormat("en", { timeZone: value }).format()
@@ -46,6 +54,51 @@ export const createTeamInputSchema = z.object({
 
 export type CreateTeamInput = z.infer<typeof createTeamInputSchema>
 
+export const deleteTeamInputSchema = z.object({
+  slug: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  confirmationName: z.string().trim().min(1).max(80),
+})
+
+export type DeleteTeamInput = z.infer<typeof deleteTeamInputSchema>
+
+const updateTeamSettingsSchema = z
+  .object({
+    name: z.string().trim().min(1).max(80).optional(),
+    identifier: z
+      .string()
+      .trim()
+      .transform((value) => value.toUpperCase())
+      .pipe(z.string().regex(/^[A-Z][A-Z0-9]{0,4}$/))
+      .optional(),
+    description: z.string().trim().max(500).optional(),
+    timezone: z
+      .string()
+      .trim()
+      .refine(isTimeZone, "Invalid timezone.")
+      .optional(),
+    estimationScheme: z.enum(ESTIMATION_SCHEMES).optional(),
+    issueEmailEnabled: z.boolean().optional(),
+    detailedHistoryEnabled: z.boolean().optional(),
+  })
+  .refine((settings) => Object.keys(settings).length > 0, {
+    message: "Choose at least one setting to update.",
+  })
+
+export const updateTeamInputSchema = z.object({
+  slug: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  settings: updateTeamSettingsSchema,
+})
+
+export type UpdateTeamInput = z.infer<typeof updateTeamInputSchema>
+
 export type TeamSummary = {
   id: string
   slug: string
@@ -57,6 +110,10 @@ export type TeamSummary = {
     color: string
   }
   timezone: string
+  description: string
+  estimationScheme: (typeof ESTIMATION_SCHEMES)[number]
+  issueEmailEnabled: boolean
+  detailedHistoryEnabled: boolean
 }
 
 export type CreateTeamErrorCode =
@@ -75,6 +132,38 @@ export type CreateTeamResult =
       code: CreateTeamErrorCode
       message: string
       field?: "name" | "identifier"
+    }
+
+export type DeleteTeamResult =
+  | {
+      ok: true
+      team: Pick<TeamSummary, "name" | "slug">
+      recoverableUntil: string
+    }
+  | {
+      ok: false
+      code:
+        | "UNAUTHENTICATED"
+        | "NO_ACTIVE_WORKSPACE"
+        | "FORBIDDEN"
+        | "TEAM_NOT_FOUND_OR_NAME_MISMATCH"
+        | "UNKNOWN"
+      message: string
+    }
+
+export type UpdateTeamResult =
+  | { ok: true; team: TeamSummary }
+  | {
+      ok: false
+      code:
+        | "UNAUTHENTICATED"
+        | "NO_ACTIVE_WORKSPACE"
+        | "FORBIDDEN"
+        | "IDENTIFIER_TAKEN"
+        | "TEAM_NOT_FOUND"
+        | "UNKNOWN"
+      message: string
+      field?: "identifier"
     }
 
 export function slugifyTeamName(value: string) {

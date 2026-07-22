@@ -6,6 +6,7 @@ import type { IconSvgElement } from "@hugeicons/react"
 import type { TeamSummary } from "@/lib/team-contract"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { cn } from "@/lib/utils"
 
 function teamInitials(name: string) {
   return name
@@ -17,9 +18,11 @@ function teamInitials(name: string) {
 }
 
 export function TeamSidebarIcon({
+  className,
   icon,
   name,
 }: {
+  className?: string
   icon: TeamSummary["icon"]
   name: string
 }) {
@@ -66,7 +69,10 @@ export function TeamSidebarIcon({
     return (
       <span
         aria-hidden="true"
-        className="flex size-4 shrink-0 items-center justify-center text-sm leading-none"
+        className={cn(
+          "flex size-4 shrink-0 items-center justify-center text-sm leading-none",
+          className
+        )}
       >
         {icon.value}
       </span>
@@ -78,14 +84,14 @@ export function TeamSidebarIcon({
       <HugeiconsIcon
         icon={loadedIcon}
         strokeWidth={2}
-        className="size-4 shrink-0"
+        className={cn("size-4 shrink-0", className)}
         style={{ color: icon.color }}
       />
     )
   }
 
   return (
-    <Avatar className="size-4 rounded-md after:rounded-md">
+    <Avatar className={cn("size-4 rounded-md after:rounded-md", className)}>
       <AvatarFallback
         className="rounded-md text-[9px] font-semibold"
         style={{ color: icon.color }}

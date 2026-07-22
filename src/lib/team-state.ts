@@ -1,6 +1,10 @@
 import { createServerFn } from "@tanstack/react-start"
 
-import { createTeamInputSchema } from "@/lib/team-contract"
+import {
+  createTeamInputSchema,
+  deleteTeamInputSchema,
+  updateTeamInputSchema,
+} from "@/lib/team-contract"
 
 export const createTeam = createServerFn({ method: "POST" })
   .inputValidator(createTeamInputSchema)
@@ -33,4 +37,26 @@ export const getTeam = createServerFn({ method: "GET" })
     ])
 
     return getTeamForRequest(getRequest(), data.slug)
+  })
+
+export const deleteTeam = createServerFn({ method: "POST" })
+  .inputValidator(deleteTeamInputSchema)
+  .handler(async ({ data }) => {
+    const [{ getRequest }, { deleteTeamForRequest }] = await Promise.all([
+      import("@tanstack/react-start/server"),
+      import("@/lib/team-server"),
+    ])
+
+    return deleteTeamForRequest(getRequest(), data)
+  })
+
+export const updateTeam = createServerFn({ method: "POST" })
+  .inputValidator(updateTeamInputSchema)
+  .handler(async ({ data }) => {
+    const [{ getRequest }, { updateTeamForRequest }] = await Promise.all([
+      import("@tanstack/react-start/server"),
+      import("@/lib/team-server"),
+    ])
+
+    return updateTeamForRequest(getRequest(), data)
   })

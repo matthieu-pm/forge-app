@@ -206,8 +206,7 @@ html[data-forge-host="macos"] .forge-desktop-tab {
     align-items: center;
     overflow: hidden;
     border: 1px solid color-mix(in oklab, var(--border) 52%, transparent);
-    border-radius: 32px;
-    corner-shape: squircle;
+    border-radius: 9999px;
     background: color-mix(in oklab, var(--sidebar-accent) 48%, transparent);
     color: color-mix(in oklab, var(--sidebar-foreground) 78%, transparent);
     transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;

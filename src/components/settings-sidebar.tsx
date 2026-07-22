@@ -51,6 +51,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { listTeams } from "@/lib/team-state"
+import { TEAM_LIST_CHANGED_EVENT } from "@/lib/team-events"
 
 type SettingsIcon = ComponentProps<typeof HugeiconsIcon>["icon"]
 
@@ -131,20 +132,22 @@ export function SettingsSidebar() {
   React.useEffect(() => {
     let cancelled = false
 
-    void listTeams()
-      .then((items) => {
-        if (!cancelled) {
-          setTeams(items)
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setTeams([])
-        }
-      })
+    function loadWorkspaceTeams() {
+      void listTeams()
+        .then((items) => {
+          if (!cancelled) setTeams(items)
+        })
+        .catch(() => {
+          if (!cancelled) setTeams([])
+        })
+    }
+
+    loadWorkspaceTeams()
+    window.addEventListener(TEAM_LIST_CHANGED_EVENT, loadWorkspaceTeams)
 
     return () => {
       cancelled = true
+      window.removeEventListener(TEAM_LIST_CHANGED_EVENT, loadWorkspaceTeams)
     }
   }, [])
   const normalizedQuery = query.trim().toLocaleLowerCase()
@@ -222,8 +225,17 @@ export function SettingsSidebar() {
               {visibleTeams.map((team) => (
                 <SidebarMenuItem key={team.name}>
                   <SidebarMenuButton
-                    type="button"
+                    isActive={
+                      pathname === `/settings/teams/${team.slug}` ||
+                      pathname.startsWith(`/settings/teams/${team.slug}/`)
+                    }
                     className="h-7 rounded-lg px-2 text-sm font-medium"
+                    render={
+                      <Link
+                        to="/settings/teams/$teamSlug"
+                        params={{ teamSlug: team.slug }}
+                      />
+                    }
                   >
                     <TeamSidebarIcon icon={team.icon} name={team.name} />
                     <span>{team.name}</span>

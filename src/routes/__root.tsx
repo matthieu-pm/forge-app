@@ -48,7 +48,8 @@ export const Route = createRootRoute({
       {
         rel: "icon",
         type: "image/png",
-        href: "/img/Logo%20Forge.png",
+        sizes: "512x512",
+        href: "/favicon.png?v=forge-512-20260722",
       },
       {
         rel: "stylesheet",
@@ -75,12 +76,13 @@ function RootLayout() {
     return <Outlet key={pathname} />
   }
 
+  const hasStandaloneTeamSettingsLayout =
+    pathname.startsWith("/settings/teams/")
+
   return (
     <SidebarProvider
       className={
-        pathname === "/settings/teams/new"
-          ? "forge-create-team-shell"
-          : undefined
+        hasStandaloneTeamSettingsLayout ? "forge-create-team-shell" : undefined
       }
     >
       {pathname.startsWith("/settings") ? <SettingsSidebar /> : <AppSidebar />}
@@ -137,7 +139,7 @@ function DesktopFooterActions() {
 }
 
 function AppHeader({ pathname }: { pathname: string }) {
-  if (pathname === "/settings/teams/new") {
+  if (pathname.startsWith("/settings/teams/")) {
     return null
   }
 

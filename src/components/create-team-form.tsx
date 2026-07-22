@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import {
-  ArrowDown01Icon,
   Search01Icon,
   Tick02Icon,
   UserGroup03Icon,
@@ -14,6 +13,10 @@ import emojiShortcodes from "emojibase-data/en/shortcodes/emojibase.json"
 import { toast } from "sonner"
 import type { IconSvgElement } from "@hugeicons/react"
 
+import {
+  TeamTimezonePicker,
+  defaultTeamTimezone,
+} from "@/components/team-timezone-picker"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -109,74 +112,6 @@ const emojiChoices = emojiData
       shortcode: shortcodes[0] ?? fallbackShortcode,
     }
   })
-
-type TimezoneOption = {
-  id: string
-  label: string
-  offsetMinutes: number
-}
-
-const timezoneReferenceDate = new Date()
-
-function getTimeZoneName(
-  timeZone: string,
-  timeZoneName: Intl.DateTimeFormatOptions["timeZoneName"]
-) {
-  return new Intl.DateTimeFormat("en-GB", {
-    hour: "2-digit",
-    timeZone,
-    timeZoneName,
-  })
-    .formatToParts(timezoneReferenceDate)
-    .find((part) => part.type === "timeZoneName")?.value
-}
-
-function getTimezoneOffset(timeZone: string) {
-  const rawOffset = getTimeZoneName(timeZone, "longOffset") ?? "GMT"
-  const normalizedOffset = rawOffset
-    .replace("GMT", "")
-    .replace(/^([+-])0/, "$1")
-
-  if (!normalizedOffset) {
-    return { label: "GMT+0:00", minutes: 0 }
-  }
-
-  const [hours = "0", minutes = "0"] = normalizedOffset.split(":")
-  const sign = hours.startsWith("-") ? -1 : 1
-
-  return {
-    label: `GMT${hours}:${minutes}`,
-    minutes: sign * (Math.abs(Number(hours)) * 60 + Number(minutes)),
-  }
-}
-
-function createTimezoneOptions(): Array<TimezoneOption> {
-  return ["UTC", ...Intl.supportedValuesOf("timeZone")]
-    .map((id) => {
-      const offset = getTimezoneOffset(id)
-      const timezoneName =
-        id === "UTC"
-          ? "Coordinated Universal Time"
-          : (getTimeZoneName(id, "longGeneric") ?? id)
-      const city = id.replaceAll("_", " ").split("/").at(-1) ?? id
-
-      return {
-        id,
-        label: `${offset.label} – ${timezoneName} – ${city}`,
-        offsetMinutes: offset.minutes,
-      }
-    })
-    .sort(
-      (left, right) =>
-        left.offsetMinutes - right.offsetMinutes ||
-        left.label.localeCompare(right.label)
-    )
-}
-
-const timezoneOptions = createTimezoneOptions()
-const defaultTimezone =
-  timezoneOptions.find((option) => option.id === "Europe/Paris") ??
-  timezoneOptions[0]
 
 function FieldRow({
   children,
@@ -281,8 +216,7 @@ export function CreateTeamForm() {
   const [visibleIconCount, setVisibleIconCount] = React.useState(100)
   const [emojiQuery, setEmojiQuery] = React.useState("")
   const [visibleEmojiCount, setVisibleEmojiCount] = React.useState(100)
-  const [timezone, setTimezone] = React.useState(defaultTimezone.id)
-  const [timezoneQuery, setTimezoneQuery] = React.useState("")
+  const [timezone, setTimezone] = React.useState(defaultTeamTimezone)
   const [fieldErrors, setFieldErrors] = React.useState<{
     name?: string
     identifier?: string
@@ -322,14 +256,6 @@ export function CreateTeamForm() {
       emojis: visibleEmojis.filter((emoji) => emoji.category === category.id),
     }))
     .filter((category) => category.emojis.length > 0)
-  const filteredTimezones = timezoneOptions.filter((item) =>
-    `${item.label} ${item.id}`
-      .toLocaleLowerCase()
-      .includes(timezoneQuery.toLocaleLowerCase())
-  )
-  const selectedTimezone =
-    timezoneOptions.find((item) => item.id === timezone) ?? defaultTimezone
-
   async function loadIconChoices() {
     if (iconsLoading || iconChoices.length > 1) {
       return
@@ -477,7 +403,7 @@ export function CreateTeamForm() {
                     variant="outline"
                     size="icon-sm"
                     aria-label="Choose team icon"
-                    className="rounded-lg bg-background/70"
+                    className="rounded-full bg-background/70"
                     style={{ color: selectedColor }}
                   />
                 }
@@ -631,7 +557,7 @@ export function CreateTeamForm() {
                 placeholder="e.g. Engineering"
                 aria-label="Team name"
                 aria-invalid={Boolean(fieldErrors.name)}
-                className="h-8 rounded-lg bg-background/60"
+                className="h-8 rounded-lg border-border/60 bg-background/60"
               />
               {fieldErrors.name ? (
                 <p className="mt-1 text-xs text-destructive">
@@ -663,7 +589,7 @@ export function CreateTeamForm() {
                   placeholder="e.g. ENG"
                   aria-label="Team identifier"
                   aria-invalid={Boolean(fieldErrors.identifier)}
-                  className="h-8 rounded-lg bg-background/60"
+                  className="h-8 rounded-lg border-border/60 bg-background/60"
                 />
                 {fieldErrors.identifier ? (
                   <p className="mt-1 text-xs text-destructive">
@@ -714,63 +640,10 @@ export function CreateTeamForm() {
           </SectionHeading>
           <div className="rounded-2xl border border-border/70 bg-muted/35">
             <FieldRow label="Timezone">
-              <Popover>
-                <PopoverTrigger
-                  render={
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      className="group rounded-lg font-normal"
-                    />
-                  }
-                >
-                  <span className="whitespace-nowrap">
-                    {selectedTimezone.label}
-                  </span>
-                  <HugeiconsIcon
-                    icon={ArrowDown01Icon}
-                    strokeWidth={2}
-                    className="size-3.5 shrink-0 transition-transform duration-200 ease-out group-data-popup-open:rotate-180 group-data-open:rotate-180"
-                  />
-                </PopoverTrigger>
-                <PopoverContent
-                  align="end"
-                  sideOffset={6}
-                  className="w-max max-w-[calc(100vw-2rem)] min-w-[310px] gap-0 rounded-xl p-0"
-                >
-                  <div className="border-b p-1">
-                    <SearchField
-                      value={timezoneQuery}
-                      onChange={setTimezoneQuery}
-                      placeholder="Search timezones..."
-                    />
-                  </div>
-                  <div className="max-h-64 overflow-y-auto overscroll-contain">
-                    <div className="p-1">
-                      {filteredTimezones.map((item) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => setTimezone(item.id)}
-                          className="flex min-h-8 w-full items-center justify-between gap-2 rounded-lg px-2 text-left text-sm hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                        >
-                          <span className="whitespace-nowrap">
-                            {item.label}
-                          </span>
-                          {timezone === item.id ? (
-                            <HugeiconsIcon
-                              icon={Tick02Icon}
-                              strokeWidth={2}
-                              className="size-3.5 shrink-0"
-                            />
-                          ) : null}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
+              <TeamTimezonePicker
+                value={timezone}
+                onValueChange={setTimezone}
+              />
             </FieldRow>
           </div>
         </section>

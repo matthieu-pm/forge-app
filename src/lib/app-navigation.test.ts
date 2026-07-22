@@ -13,6 +13,18 @@ describe("getBreadcrumbItems", () => {
     ])
   })
 
+  it("labels a team settings overview", () => {
+    expect(getBreadcrumbItems("/settings/teams/platform-api")).toEqual([
+      { label: "Overview" },
+    ])
+  })
+
+  it("labels team general settings", () => {
+    expect(getBreadcrumbItems("/settings/teams/platform-api/general")).toEqual([
+      { label: "General" },
+    ])
+  })
+
   it("omits the workspace wrapper from workspace pages", () => {
     expect(getBreadcrumbItems("/workspace/initiatives")).toEqual([
       { label: "Initiatives" },

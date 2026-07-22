@@ -52,6 +52,7 @@ import { authClient } from "@/lib/auth-client"
 import { getAuthState } from "@/lib/auth-state"
 import { listTeams } from "@/lib/team-state"
 import { getForgeHost } from "@/host/forge-host"
+import { getSidebarDisclosureKey } from "@/lib/sidebar-disclosure"
 
 function workspaceInitials(name: string) {
   return name
@@ -60,6 +61,17 @@ function workspaceInitials(name: string) {
     .join("")
     .slice(0, 2)
     .toUpperCase()
+}
+
+function PersistentCollapsible({
+  initiallyOpen,
+  ...props
+}: Omit<React.ComponentProps<typeof Collapsible>, "defaultOpen"> & {
+  initiallyOpen: boolean
+}) {
+  const [defaultOpen] = React.useState(initiallyOpen)
+
+  return <Collapsible defaultOpen={defaultOpen} {...props} />
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -197,9 +209,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       >
         {items.map((item) =>
           item.items?.length ? (
-            <Collapsible
-              key={`${item.title}-${isNavItemActive(pathname, item) ? "active" : "idle"}`}
-              defaultOpen={isNavItemActive(pathname, item)}
+            <PersistentCollapsible
+              key={getSidebarDisclosureKey(
+                item.title,
+                isNavItemActive(pathname, item)
+              )}
+              initiallyOpen={isNavItemActive(pathname, item)}
               className="group/collapsible w-full"
             >
               <SidebarMenuSubItem className="w-full">
@@ -226,7 +241,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   {renderNavItems(item.items, depth + 1)}
                 </CollapsibleContent>
               </SidebarMenuSubItem>
-            </Collapsible>
+            </PersistentCollapsible>
           ) : (
             <SidebarMenuSubItem key={item.title} className="w-full">
               <SidebarMenuButton
@@ -253,9 +268,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     teamsScrollable = false
   ) {
     return item.items?.length ? (
-      <Collapsible
-        key={`${item.title}-${isNavItemActive(pathname, item) ? "active" : "idle"}`}
-        defaultOpen={isNavItemActive(pathname, item)}
+      <PersistentCollapsible
+        key={getSidebarDisclosureKey(
+          item.title,
+          isNavItemActive(pathname, item)
+        )}
+        initiallyOpen={isNavItemActive(pathname, item)}
         className={
           teamsScrollable
             ? "group/collapsible flex min-h-0 w-full flex-1 flex-col"
@@ -286,7 +304,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <div className="w-full">{renderNavItems(item.items)}</div>
           </CollapsibleContent>
         </SidebarMenuItem>
-      </Collapsible>
+      </PersistentCollapsible>
     ) : (
       <SidebarMenuItem key={item.title}>
         <SidebarMenuButton

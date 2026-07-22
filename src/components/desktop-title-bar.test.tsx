@@ -13,6 +13,22 @@ describe("TabIcon", () => {
     expect(icon.tagName.toLowerCase()).toBe("svg")
     expect(icon.classList.contains("forge-desktop-tab-icon")).toBe(true)
   })
+
+  it("renders a team's configured emoji for a team tab", () => {
+    const { container } = render(
+      <TabIcon
+        path="/teams/product/issues"
+        team={{
+          name: "Product",
+          icon: { kind: "emoji", value: "🍎", color: "#fb7185" },
+        }}
+      />
+    )
+
+    const icon = container.querySelector(".forge-desktop-tab-icon")
+    expect(icon).not.toBeNull()
+    expect(icon?.textContent).toBe("🍎")
+  })
 })
 
 describe("isDesktopTitleBarHidden", () => {

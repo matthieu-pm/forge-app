@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest"
 
-import { createTeamInputSchema, slugifyTeamName } from "./team-contract"
+import {
+  createTeamInputSchema,
+  deleteTeamInputSchema,
+  slugifyTeamName,
+  updateTeamInputSchema,
+} from "./team-contract"
 
 describe("createTeamInputSchema", () => {
   const validInput = {
@@ -45,6 +50,59 @@ describe("createTeamInputSchema", () => {
         ...validInput,
         icon: { ...validInput.icon, color: "#000000" },
       })
+    ).toThrow()
+  })
+})
+
+describe("deleteTeamInputSchema", () => {
+  it("normalizes the team slug and confirmation name", () => {
+    expect(
+      deleteTeamInputSchema.parse({
+        slug: " Platform-API ",
+        confirmationName: " Platform API ",
+      })
+    ).toEqual({
+      slug: "platform-api",
+      confirmationName: "Platform API",
+    })
+  })
+
+  it("rejects malformed team slugs", () => {
+    expect(() =>
+      deleteTeamInputSchema.parse({
+        slug: "../platform-api",
+        confirmationName: "Platform API",
+      })
+    ).toThrow()
+  })
+})
+
+describe("updateTeamInputSchema", () => {
+  it("normalizes editable team settings", () => {
+    expect(
+      updateTeamInputSchema.parse({
+        slug: " Engineering ",
+        settings: {
+          name: " Platform ",
+          identifier: " plt ",
+          description: " Core systems ",
+          estimationScheme: "fibonacci",
+        },
+      })
+    ).toEqual({
+      slug: "engineering",
+      settings: {
+        name: "Platform",
+        identifier: "PLT",
+        description: "Core systems",
+        estimationScheme: "fibonacci",
+      },
+    })
+  })
+
+  it("rejects an empty settings patch", () => {
+    expect(() =>
+      updateTeamInputSchema.parse({ slug: "engineering", settings: {} })
     ).toThrow()
   })
 })

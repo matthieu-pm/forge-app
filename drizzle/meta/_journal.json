@@ -29,6 +29,20 @@
       "when": 1784721534127,
       "tag": "0003_motionless_bug",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1784729222035,
+      "tag": "0004_peaceful_wither",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1784732244800,
+      "tag": "0005_hard_betty_ross",
+      "breakpoints": true
     }
   ]
 }

@@ -281,6 +281,14 @@ export function getBreadcrumbItems(pathname: string): Array<BreadcrumbItem> {
     return [{ label: "Create a new team" }]
   }
 
+  if (/^\/settings\/teams\/[^/]+$/.test(pathname)) {
+    return [{ label: "Overview" }]
+  }
+
+  if (/^\/settings\/teams\/[^/]+\/general$/.test(pathname)) {
+    return [{ label: "General" }]
+  }
+
   if (pathname === "/settings") {
     return [{ label: "Preferences" }]
   }

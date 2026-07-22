@@ -1,11 +1,15 @@
 import "@tanstack/react-start/server-only"
 
-import { and, asc, eq } from "drizzle-orm"
+import { and, asc, eq, isNull } from "drizzle-orm"
 
 import type {
   CreateTeamInput,
   CreateTeamResult,
+  DeleteTeamInput,
+  DeleteTeamResult,
   TeamSummary,
+  UpdateTeamInput,
+  UpdateTeamResult,
 } from "@/lib/team-contract"
 import { db, teams } from "@/db"
 import {
@@ -14,7 +18,7 @@ import {
 } from "@/lib/auth-server"
 import { slugifyTeamName } from "@/lib/team-contract"
 
-function canCreateTeam(role: string) {
+function canManageTeams(role: string) {
   return role
     .split(",")
     .map((value) => value.trim())
@@ -33,6 +37,10 @@ function toTeamSummary(team: typeof teams.$inferSelect): TeamSummary {
       color: team.color,
     },
     timezone: team.timezone,
+    description: team.description,
+    estimationScheme: team.estimationScheme as TeamSummary["estimationScheme"],
+    issueEmailEnabled: team.issueEmailEnabled,
+    detailedHistoryEnabled: team.detailedHistoryEnabled,
   }
 }
 
@@ -51,14 +59,34 @@ function accessErrorResult(error: WorkspaceAccessError): CreateTeamResult {
 }
 
 function constraintName(error: unknown) {
-  if (!error || typeof error !== "object") {
-    return ""
+  const visited = new Set<object>()
+  const values: Array<string> = []
+  let candidate = error
+
+  while (
+    candidate &&
+    typeof candidate === "object" &&
+    !visited.has(candidate)
+  ) {
+    visited.add(candidate)
+    const current = candidate as {
+      cause?: unknown
+      constraint?: unknown
+      message?: unknown
+    }
+
+    if (typeof current.constraint === "string") {
+      values.push(current.constraint)
+    }
+
+    if (typeof current.message === "string") {
+      values.push(current.message)
+    }
+
+    candidate = current.cause
   }
 
-  const candidate = error as { constraint?: unknown; message?: unknown }
-  return [candidate.constraint, candidate.message]
-    .filter((value): value is string => typeof value === "string")
-    .join(" ")
+  return values.join(" ")
 }
 
 export async function createTeamForRequest(
@@ -77,7 +105,7 @@ export async function createTeamForRequest(
     throw error
   }
 
-  if (!canCreateTeam(actor.role)) {
+  if (!canManageTeams(actor.role)) {
     return {
       ok: false,
       code: "FORBIDDEN",
@@ -154,7 +182,9 @@ export async function listTeamsForRequest(
   const workspaceTeams = await db
     .select()
     .from(teams)
-    .where(eq(teams.workspaceId, actor.workspace.id))
+    .where(
+      and(eq(teams.workspaceId, actor.workspace.id), isNull(teams.deletedAt))
+    )
     .orderBy(asc(teams.name))
 
   return workspaceTeams.map(toTeamSummary)
@@ -168,9 +198,149 @@ export async function getTeamForRequest(
   const matchingTeams = await db
     .select()
     .from(teams)
-    .where(and(eq(teams.workspaceId, actor.workspace.id), eq(teams.slug, slug)))
+    .where(
+      and(
+        eq(teams.workspaceId, actor.workspace.id),
+        eq(teams.slug, slug),
+        isNull(teams.deletedAt)
+      )
+    )
     .limit(1)
   const team = matchingTeams.at(0)
 
   return team ? toTeamSummary(team) : null
+}
+
+export async function deleteTeamForRequest(
+  request: Request,
+  input: DeleteTeamInput
+): Promise<DeleteTeamResult> {
+  let actor
+
+  try {
+    actor = await requireActiveWorkspaceMember(request)
+  } catch (error) {
+    if (error instanceof WorkspaceAccessError) {
+      const messages = {
+        UNAUTHENTICATED: "Sign in before deleting a team.",
+        NO_ACTIVE_WORKSPACE: "Choose a workspace before deleting a team.",
+        FORBIDDEN: "You do not have access to this workspace.",
+      } as const
+
+      return {
+        ok: false,
+        code: error.code,
+        message: messages[error.code],
+      }
+    }
+
+    throw error
+  }
+
+  if (!canManageTeams(actor.role)) {
+    return {
+      ok: false,
+      code: "FORBIDDEN",
+      message: "Only workspace owners and admins can delete teams.",
+    }
+  }
+
+  const deletedAt = new Date()
+  const deletedTeams = await db
+    .update(teams)
+    .set({ deletedAt, updatedAt: deletedAt })
+    .where(
+      and(
+        eq(teams.workspaceId, actor.workspace.id),
+        eq(teams.slug, input.slug),
+        eq(teams.name, input.confirmationName),
+        isNull(teams.deletedAt)
+      )
+    )
+    .returning({ name: teams.name, slug: teams.slug })
+  const deletedTeam = deletedTeams.at(0)
+
+  if (!deletedTeam) {
+    return {
+      ok: false,
+      code: "TEAM_NOT_FOUND_OR_NAME_MISMATCH",
+      message: "The team name did not match, or the team no longer exists.",
+    }
+  }
+
+  const recoverableUntil = new Date(deletedAt)
+  recoverableUntil.setUTCDate(recoverableUntil.getUTCDate() + 30)
+
+  return {
+    ok: true,
+    team: deletedTeam,
+    recoverableUntil: recoverableUntil.toISOString(),
+  }
+}
+
+export async function updateTeamForRequest(
+  request: Request,
+  input: UpdateTeamInput
+): Promise<UpdateTeamResult> {
+  let actor
+
+  try {
+    actor = await requireActiveWorkspaceMember(request)
+  } catch (error) {
+    if (error instanceof WorkspaceAccessError) {
+      const messages = {
+        UNAUTHENTICATED: "Sign in before updating a team.",
+        NO_ACTIVE_WORKSPACE: "Choose a workspace before updating a team.",
+        FORBIDDEN: "You do not have access to this workspace.",
+      } as const
+
+      return { ok: false, code: error.code, message: messages[error.code] }
+    }
+
+    throw error
+  }
+
+  if (!canManageTeams(actor.role)) {
+    return {
+      ok: false,
+      code: "FORBIDDEN",
+      message: "Only workspace owners and admins can update teams.",
+    }
+  }
+
+  try {
+    const updatedTeams = await db
+      .update(teams)
+      .set({ ...input.settings, updatedAt: new Date() })
+      .where(
+        and(
+          eq(teams.workspaceId, actor.workspace.id),
+          eq(teams.slug, input.slug),
+          isNull(teams.deletedAt)
+        )
+      )
+      .returning()
+    const updatedTeam = updatedTeams.at(0)
+
+    if (!updatedTeam) {
+      return {
+        ok: false,
+        code: "TEAM_NOT_FOUND",
+        message: "The team no longer exists.",
+      }
+    }
+
+    return { ok: true, team: toTeamSummary(updatedTeam) }
+  } catch (error) {
+    if (constraintName(error).includes("teams_workspace_identifier_unique")) {
+      return {
+        ok: false,
+        code: "IDENTIFIER_TAKEN",
+        field: "identifier",
+        message: "This identifier is already used by another team.",
+      }
+    }
+
+    throw error
+  }
 }

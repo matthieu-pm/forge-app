@@ -1,5 +1,6 @@
 import { relations, sql } from "drizzle-orm"
 import {
+  boolean,
   check,
   index,
   pgTable,
@@ -25,6 +26,12 @@ export const teams = pgTable(
     iconValue: text("icon_value").notNull(),
     color: text("color").notNull(),
     timezone: text("timezone").notNull(),
+    description: text("description").default("").notNull(),
+    estimationScheme: text("estimation_scheme").default("none").notNull(),
+    issueEmailEnabled: boolean("issue_email_enabled").default(false).notNull(),
+    detailedHistoryEnabled: boolean("detailed_history_enabled")
+      .default(false)
+      .notNull(),
     createdByUserId: text("created_by_user_id")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
@@ -34,6 +41,7 @@ export const teams = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => ({
     workspaceIdIndex: index("teams_workspace_id_idx").on(table.workspaceId),
@@ -52,6 +60,10 @@ export const teams = pgTable(
     colorCheck: check(
       "teams_color_check",
       sql`${table.color} ~ '^#[0-9A-Fa-f]{6}$'`
+    ),
+    estimationSchemeCheck: check(
+      "teams_estimation_scheme_check",
+      sql`${table.estimationScheme} in ('none', 'exponential', 'fibonacci', 'linear', 'tshirt')`
     ),
   })
 )

@@ -14,6 +14,8 @@ import { useCallback, useEffect, useState } from "react"
 import type { AppNavChild } from "@/lib/app-navigation"
 import type { DesktopTabsState } from "@/lib/desktop-tabs"
 import type { SidebarState } from "@/lib/sidebar-events"
+import type { TeamSummary } from "@/lib/team-contract"
+import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { Button } from "@/components/ui/button"
 import { getForgeHost } from "@/host/forge-host"
 import { appNav, getBreadcrumbItems } from "@/lib/app-navigation"
@@ -32,6 +34,7 @@ import {
   SIDEBAR_STATE_CHANGE_EVENT,
   SIDEBAR_TOGGLE_EVENT,
 } from "@/lib/sidebar-events"
+import { listTeams } from "@/lib/team-state"
 
 const STORAGE_KEY = "forge:desktop-tabs"
 
@@ -69,7 +72,23 @@ function getTabNavigationItem(path: string): AppNavChild | undefined {
   }
 }
 
-export function TabIcon({ path }: { path: string }) {
+export function TabIcon({
+  path,
+  team,
+}: {
+  path: string
+  team?: Pick<TeamSummary, "icon" | "name">
+}) {
+  if (team) {
+    return (
+      <TeamSidebarIcon
+        icon={team.icon}
+        name={team.name}
+        className="forge-desktop-tab-icon"
+      />
+    )
+  }
+
   const item = getTabNavigationItem(path)
 
   if (item?.icon) {
@@ -147,6 +166,23 @@ function DesktopTitleBarChrome() {
     createDesktopTabs(currentPath)
   )
   const [sidebarState, setSidebarState] = useState<SidebarState>("expanded")
+  const [workspaceTeams, setWorkspaceTeams] = useState<Array<TeamSummary>>([])
+
+  useEffect(() => {
+    let cancelled = false
+
+    void listTeams()
+      .then((teams) => {
+        if (!cancelled) setWorkspaceTeams(teams)
+      })
+      .catch(() => {
+        if (!cancelled) setWorkspaceTeams([])
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [currentPath])
 
   useEffect(() => {
     const handleSidebarStateChange = (event: Event) => {
@@ -346,6 +382,12 @@ function DesktopTitleBarChrome() {
         {tabState.tabs.map((tab) => {
           const path = getDesktopTabPath(tab)
           const isActive = tab.id === tabState.activeTabId
+          const teamSlug = path
+            .split(/[?#]/, 1)[0]
+            .match(/^\/teams\/([^/]+)\/(issues|projects|views)$/)?.[1]
+          const team = teamSlug
+            ? workspaceTeams.find((item) => item.slug === teamSlug)
+            : undefined
           return (
             <div
               key={tab.id}
@@ -363,7 +405,7 @@ function DesktopTitleBarChrome() {
                   navigate(path)
                 }}
               >
-                <TabIcon path={path} />
+                <TabIcon path={path} team={team} />
                 <span>{getTabTitle(path)}</span>
               </button>
               {tabState.tabs.length > 1 ? (

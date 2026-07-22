@@ -57,7 +57,7 @@ if (!hasSingleInstanceLock) {
     if (process.platform === "darwin" && !app.isPackaged) {
       setDockIconSafely(
         app.dock,
-        join(process.cwd(), "desktop/assets/forge-icon.png")
+        join(app.getAppPath(), "desktop/assets/forge-icon.png")
       )
     }
 
