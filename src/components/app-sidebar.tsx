@@ -366,7 +366,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup className="pb-0">
-          <SidebarMenu>
+          <SidebarMenu className="gap-0">
             {primaryNav.map((item) => renderRootItem(item))}
           </SidebarMenu>
         </SidebarGroup>
