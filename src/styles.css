@@ -415,7 +415,7 @@ html[data-forge-host="macos"] .forge-desktop-footer-actions {
     width: 100%;
     align-items: center;
     gap: 8px;
-    border-radius: 8px;
+    border-radius: calc(var(--radius) * 1.4);
     padding: 4px 6px;
     color: var(--foreground);
     text-align: left;

@@ -82,7 +82,7 @@ export function GettingStartedChecklist() {
             {completedSteps.size}/{checklistSteps.length} steps completed
           </PopoverDescription>
 
-          <div className="absolute -top-1 -right-1 flex items-center gap-0.5">
+          <div className="absolute -top-0.5 -right-1 flex items-center gap-0.5">
             <DropdownMenu>
               <Button
                 type="button"

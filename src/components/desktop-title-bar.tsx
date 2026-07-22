@@ -4,6 +4,7 @@ import {
   ArrowLeft02Icon,
   ArrowRight02Icon,
   CustomizeIcon,
+  LayoutAlignLeftIcon,
   SidebarLeftIcon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -26,7 +27,11 @@ import {
   recordDesktopTabRoute,
   restoreDesktopTabs,
 } from "@/lib/desktop-tabs"
-import { SIDEBAR_TOGGLE_EVENT } from "@/lib/sidebar-events"
+import {
+  SIDEBAR_STATE_CHANGE_EVENT,
+  SIDEBAR_TOGGLE_EVENT,
+  type SidebarState,
+} from "@/lib/sidebar-events"
 
 const STORAGE_KEY = "forge:desktop-tabs"
 
@@ -137,6 +142,23 @@ function DesktopTitleBarChrome() {
   const [tabState, setTabState] = useState<DesktopTabsState>(() =>
     createDesktopTabs(currentPath)
   )
+  const [sidebarState, setSidebarState] = useState<SidebarState>("expanded")
+
+  useEffect(() => {
+    const handleSidebarStateChange = (event: Event) => {
+      setSidebarState((event as CustomEvent<SidebarState>).detail)
+    }
+
+    window.addEventListener(
+      SIDEBAR_STATE_CHANGE_EVENT,
+      handleSidebarStateChange
+    )
+    return () =>
+      window.removeEventListener(
+        SIDEBAR_STATE_CHANGE_EVENT,
+        handleSidebarStateChange
+      )
+  }, [])
 
   const navigate = useCallback(
     (path: string) => void router.navigate({ href: path }),
@@ -269,6 +291,25 @@ function DesktopTitleBarChrome() {
           type="button"
           variant="ghost"
           size="icon-xs"
+          data-state={sidebarState}
+          aria-label="Toggle sidebar"
+          title="Toggle sidebar"
+          onClick={() => window.dispatchEvent(new Event(SIDEBAR_TOGGLE_EVENT))}
+        >
+          <HugeiconsIcon
+            icon={
+              sidebarState === "collapsed"
+                ? LayoutAlignLeftIcon
+                : SidebarLeftIcon
+            }
+            strokeWidth={2}
+            className="size-4"
+          />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
           aria-label="Go back"
           title="Go back"
           disabled={!canGoBack}
@@ -291,20 +332,6 @@ function DesktopTitleBarChrome() {
         >
           <HugeiconsIcon
             icon={ArrowRight02Icon}
-            strokeWidth={2}
-            className="size-4"
-          />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          aria-label="Toggle sidebar"
-          title="Toggle sidebar"
-          onClick={() => window.dispatchEvent(new Event(SIDEBAR_TOGGLE_EVENT))}
-        >
-          <HugeiconsIcon
-            icon={SidebarLeftIcon}
             strokeWidth={2}
             className="size-4"
           />

@@ -7,7 +7,10 @@ import { cva, type VariantProps } from "class-variance-authority"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
-import { SIDEBAR_TOGGLE_EVENT } from "@/lib/sidebar-events"
+import {
+  SIDEBAR_STATE_CHANGE_EVENT,
+  SIDEBAR_TOGGLE_EVENT,
+} from "@/lib/sidebar-events"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
@@ -119,6 +122,12 @@ function SidebarProvider({
   // We add a state so that we can do data-state="expanded" or "collapsed".
   // This makes it easier to style the sidebar with Tailwind classes.
   const state = open ? "expanded" : "collapsed"
+
+  React.useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent(SIDEBAR_STATE_CHANGE_EVENT, { detail: state })
+    )
+  }, [state])
 
   const contextValue = React.useMemo<SidebarContextProps>(
     () => ({
