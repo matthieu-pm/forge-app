@@ -1,9 +1,13 @@
 "use client"
 
-import { startTransition, useState } from "react"
+import { startTransition, useEffect, useState } from "react"
 import { Link, useNavigate, useRouter } from "@tanstack/react-router"
 import { cn } from "@/lib/utils"
 import { authClient } from "@/lib/auth-client"
+import {
+  beginDesktopAuthorizationRedirect,
+  desktopAuthorizationQuery,
+} from "@/lib/auth-session"
 import { Button } from "@/components/ui/button"
 import {
   Field,
@@ -14,11 +18,15 @@ import {
 import { Input } from "@/components/ui/input"
 
 type SignupFormProps = React.ComponentProps<"div"> & {
+  alternateAction?: React.ReactNode
+  onDesktopAuthorizationCode?: (code: string) => void
   redirectTo?: string
 }
 
 export function SignupForm({
+  alternateAction,
   className,
+  onDesktopAuthorizationCode,
   redirectTo,
   ...props
 }: SignupFormProps) {
@@ -30,6 +38,19 @@ export function SignupForm({
   const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const authorizationQuery =
+    typeof window === "undefined"
+      ? null
+      : desktopAuthorizationQuery(window.location.search)
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+
+    beginDesktopAuthorizationRedirect(
+      window.location.search,
+      authClient.ensureElectronRedirect
+    )
+  }, [])
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -42,15 +63,26 @@ export function SignupForm({
 
     setIsSubmitting(true)
 
-    const { error: signupError } = await authClient.signUp.email({
-      name,
-      email,
-      password,
-    })
+    const { error: signupError } = await authClient.signUp.email(
+      {
+        name,
+        email,
+        password,
+      },
+      authorizationQuery ? { query: authorizationQuery } : undefined
+    )
 
     if (signupError) {
       setError(signupError.message ?? "Unable to create your account.")
       setIsSubmitting(false)
+      return
+    }
+
+    if (authorizationQuery) {
+      const authorizationCode = authClient.electron.getAuthorizationCode()
+      if (authorizationCode) {
+        onDesktopAuthorizationCode?.(authorizationCode)
+      }
       return
     }
 
@@ -140,16 +172,18 @@ export function SignupForm({
           </Field>
         </FieldGroup>
       </form>
-      <FieldDescription className="px-6 text-center">
-        Already have an account?{" "}
-        <Link
-          to="/login"
-          search={{ redirect: redirectTo }}
-          className="font-medium text-foreground underline underline-offset-4"
-        >
-          Sign in
-        </Link>
-      </FieldDescription>
+      {alternateAction ?? (
+        <FieldDescription className="px-6 text-center">
+          Already have an account?{" "}
+          <Link
+            to="/login"
+            search={{ redirect: redirectTo }}
+            className="font-medium text-foreground underline underline-offset-4"
+          >
+            Sign in
+          </Link>
+        </FieldDescription>
+      )}
     </div>
   )
 }

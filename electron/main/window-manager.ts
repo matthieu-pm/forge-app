@@ -135,6 +135,17 @@ export class WindowManager {
     }
   }
 
+  broadcastExcept(event: HostEvent, excludedWebContentsId: number) {
+    for (const window of this.#windows) {
+      if (
+        !window.isDestroyed() &&
+        window.webContents.id !== excludedWebContentsId
+      ) {
+        window.webContents.send("forge:host:event", event)
+      }
+    }
+  }
+
   sendToFocused(event: HostEvent) {
     this.getFocused()?.webContents.send("forge:host:event", event)
   }

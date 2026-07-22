@@ -18,10 +18,18 @@ import {
 import { Input } from "@/components/ui/input"
 
 type LoginFormProps = React.ComponentProps<"div"> & {
+  alternateAction?: React.ReactNode
+  onDesktopAuthorizationCode?: (code: string) => void
   redirectTo?: string
 }
 
-export function LoginForm({ className, redirectTo, ...props }: LoginFormProps) {
+export function LoginForm({
+  alternateAction,
+  className,
+  onDesktopAuthorizationCode,
+  redirectTo,
+  ...props
+}: LoginFormProps) {
   const navigate = useNavigate()
   const router = useRouter()
   const [email, setEmail] = useState("")
@@ -63,6 +71,10 @@ export function LoginForm({ className, redirectTo, ...props }: LoginFormProps) {
     }
 
     if (authorizationQuery) {
+      const authorizationCode = authClient.electron.getAuthorizationCode()
+      if (authorizationCode) {
+        onDesktopAuthorizationCode?.(authorizationCode)
+      }
       return
     }
 
@@ -130,16 +142,18 @@ export function LoginForm({ className, redirectTo, ...props }: LoginFormProps) {
           </Field>
         </FieldGroup>
       </form>
-      <FieldDescription className="px-6 text-center">
-        Don&apos;t have an account?{" "}
-        <Link
-          to="/signup"
-          search={{ redirect: redirectTo }}
-          className="font-medium text-foreground underline underline-offset-4"
-        >
-          Create one
-        </Link>
-      </FieldDescription>
+      {alternateAction ?? (
+        <FieldDescription className="px-6 text-center">
+          Don&apos;t have an account?{" "}
+          <Link
+            to="/signup"
+            search={{ redirect: redirectTo }}
+            className="font-medium text-foreground underline underline-offset-4"
+          >
+            Create one
+          </Link>
+        </FieldDescription>
+      )}
     </div>
   )
 }

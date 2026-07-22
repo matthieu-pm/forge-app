@@ -13,11 +13,8 @@ import { Link, useRouter, useRouterState } from "@tanstack/react-router"
 
 import type { AppNavChild } from "@/lib/app-navigation"
 import type { WorkspaceSummary } from "@/lib/auth-types"
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { GettingStartedChecklist } from "@/components/getting-started-checklist"
 import {
   Collapsible,
   CollapsibleContent,
@@ -34,6 +31,7 @@ import {
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarHeader,
   SidebarMenu,
@@ -46,6 +44,7 @@ import {
 import { appNav, isNavItemActive } from "@/lib/app-navigation"
 import { authClient } from "@/lib/auth-client"
 import { getAuthState } from "@/lib/auth-state"
+import { getForgeHost } from "@/host/forge-host"
 
 function workspaceInitials(name: string) {
   return name
@@ -69,7 +68,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         | { activeOrganizationId?: string | null }
         | undefined
     )?.activeOrganizationId ?? null
-  const [workspace, setWorkspace] = React.useState<WorkspaceSummary | null>(null)
+  const [workspace, setWorkspace] = React.useState<WorkspaceSummary | null>(
+    null
+  )
   const [isWorkspaceLoading, setIsWorkspaceLoading] = React.useState(false)
   const primaryNav = appNav.filter(
     (item) => item.title !== "Workspace" && item.title !== "Your teams"
@@ -111,7 +112,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   }, [activeOrganizationId, sessionId])
 
   async function handleSignOut() {
-    await authClient.signOut()
+    const host = getForgeHost()
+    const runtime = await host.getRuntime()
+    const shouldClearDesktopSession =
+      runtime.capabilities.includes("browser-auth")
+
+    await Promise.allSettled([
+      authClient.signOut(),
+      ...(shouldClearDesktopSession ? [host.signOut()] : []),
+    ])
+
     await router.invalidate()
     await router.navigate({
       to: "/login",
@@ -125,7 +135,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     return <Link to={to as never} />
   }
 
-  function renderItemIcon(item: Pick<AppNavChild, "icon" | "iconSrc" | "title">) {
+  function renderItemIcon(
+    item: Pick<AppNavChild, "icon" | "iconSrc" | "title">
+  ) {
     if (item.iconSrc) {
       return (
         <img
@@ -150,7 +162,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     return (
       <SidebarMenuSub
         className={
-          isNested ? "translate-x-0 gap-0" : "mx-0 translate-x-0 border-l-0 px-0 gap-0"
+          isNested
+            ? "translate-x-0 gap-0"
+            : "mx-0 translate-x-0 gap-0 border-l-0 px-0"
         }
       >
         {items.map((item) =>
@@ -200,7 +214,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     )
   }
 
-  function renderRootItem(item: (typeof appNav)[number], teamsScrollable = false) {
+  function renderRootItem(
+    item: (typeof appNav)[number],
+    teamsScrollable = false
+  ) {
     return item.items?.length ? (
       <Collapsible
         key={`${item.title}-${isNavItemActive(pathname, item) ? "active" : "idle"}`}
@@ -212,7 +229,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         }
       >
         <SidebarMenuItem
-          className={teamsScrollable ? "flex min-h-0 flex-1 flex-col" : undefined}
+          className={
+            teamsScrollable ? "flex min-h-0 flex-1 flex-col" : undefined
+          }
         >
           <SidebarMenuButton
             className="h-7 py-1 text-sm font-medium text-foreground/70"
@@ -227,7 +246,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               className="ml-auto transition-transform duration-200 group-aria-expanded/menu-button:rotate-90"
             />
           </SidebarMenuButton>
-          <CollapsibleContent className={teamsScrollable ? "min-h-0 flex-1" : undefined}>
+          <CollapsibleContent
+            className={teamsScrollable ? "min-h-0 flex-1" : undefined}
+          >
             <div>{renderNavItems(item.items)}</div>
           </CollapsibleContent>
         </SidebarMenuItem>
@@ -265,7 +286,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   {workspaceLogo ? (
                     <AvatarImage src={workspaceLogo} alt={workspaceName} />
                   ) : null}
-                  <AvatarFallback>{workspaceInitials(workspaceName)}</AvatarFallback>
+                  <AvatarFallback>
+                    {workspaceInitials(workspaceName)}
+                  </AvatarFallback>
                 </Avatar>
                 <span className="truncate text-sm font-medium">
                   {workspaceName}
@@ -287,9 +310,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <div className="flex min-w-0 items-center gap-2">
                       <Avatar className="size-4 after:hidden">
                         {workspaceLogo ? (
-                          <AvatarImage src={workspaceLogo} alt={workspaceName} />
+                          <AvatarImage
+                            src={workspaceLogo}
+                            alt={workspaceName}
+                          />
                         ) : null}
-                        <AvatarFallback>{workspaceInitials(workspaceName)}</AvatarFallback>
+                        <AvatarFallback>
+                          {workspaceInitials(workspaceName)}
+                        </AvatarFallback>
                       </Avatar>
                       <div className="flex min-w-0 flex-col gap-0.5">
                         <span className="truncate text-sm font-semibold text-foreground">
@@ -338,19 +366,24 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup className="pb-0">
-          <SidebarMenu>{primaryNav.map((item) => renderRootItem(item))}</SidebarMenu>
+          <SidebarMenu>
+            {primaryNav.map((item) => renderRootItem(item))}
+          </SidebarMenu>
         </SidebarGroup>
         <SidebarGroup className="pt-4 pb-0">
           <SidebarMenu>
             {workspaceSection.map((item) => renderRootItem(item))}
           </SidebarMenu>
         </SidebarGroup>
-        <SidebarGroup className="flex-1 min-h-0 pt-4">
+        <SidebarGroup className="min-h-0 flex-1 pt-4">
           <SidebarMenu className="flex h-full min-h-0 flex-col">
             {teamsSection.map((item) => renderRootItem(item, true))}
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter className="px-2 pt-1 pb-0">
+        <GettingStartedChecklist />
+      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   )

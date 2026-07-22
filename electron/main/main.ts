@@ -39,7 +39,7 @@ const hasSingleInstanceLock = app.requestSingleInstanceLock()
 if (!hasSingleInstanceLock) {
   app.quit()
 } else {
-  setupDesktopAuth(appOrigin, () => windows.getFocused())
+  const desktopAuth = setupDesktopAuth(appOrigin, () => windows.getFocused())
   app.setAsDefaultProtocolClient(productDeepLinkScheme)
 
   app.on("open-url", (event, url) => {
@@ -53,7 +53,7 @@ if (!hasSingleInstanceLock) {
     else windows.focusOrCreate()
   })
 
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
     if (process.platform === "darwin" && !app.isPackaged) {
       setDockIconSafely(
         app.dock,
@@ -62,7 +62,8 @@ if (!hasSingleInstanceLock) {
     }
 
     configureSessionSecurity(appOrigin)
-    registerHostBridge(windows, appOrigin)
+    await desktopAuth.restore(session.defaultSession)
+    registerHostBridge(windows, appOrigin, desktopAuth)
     const updater = configureUpdater(windows)
     installApplicationMenu(windows, updater.check)
 

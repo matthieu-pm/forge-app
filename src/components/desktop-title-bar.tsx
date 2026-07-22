@@ -116,6 +116,20 @@ function PlusIcon() {
 }
 
 export function DesktopTitleBar() {
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  })
+
+  if (isDesktopTitleBarHidden(pathname)) return null
+
+  return <DesktopTitleBarChrome />
+}
+
+export function isDesktopTitleBarHidden(pathname: string) {
+  return pathname === "/login" || pathname === "/signup"
+}
+
+function DesktopTitleBarChrome() {
   const router = useRouter()
   const currentPath = useRouterState({
     select: (state) => state.location.href,

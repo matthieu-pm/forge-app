@@ -25,6 +25,7 @@ import { Route as WorkspaceMembersRouteImport } from './routes/workspace/members
 import { Route as WorkspaceInsightsRouteImport } from './routes/workspace/insights'
 import { Route as WorkspaceCallsRouteImport } from './routes/workspace/calls'
 import { Route as OnboardingWorkspaceRouteImport } from './routes/onboarding/workspace'
+import { Route as AuthDesktopRouteImport } from './routes/auth/desktop'
 import { Route as WorkspaceInitiativesIndexRouteImport } from './routes/workspace/initiatives/index'
 import { Route as WorkspaceInitiativesInitiativeIdRouteImport } from './routes/workspace/initiatives/$initiativeId'
 import { Route as TeamsTeamSlugViewsRouteImport } from './routes/teams/$teamSlug/views'
@@ -115,6 +116,11 @@ const OnboardingWorkspaceRoute = OnboardingWorkspaceRouteImport.update({
   path: '/onboarding/workspace',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthDesktopRoute = AuthDesktopRouteImport.update({
+  id: '/auth/desktop',
+  path: '/auth/desktop',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WorkspaceInitiativesIndexRoute =
   WorkspaceInitiativesIndexRouteImport.update({
     id: '/workspace/initiatives/',
@@ -172,6 +178,7 @@ export interface FileRoutesByFullPath {
   '/my-issues': typeof MyIssuesRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/auth/desktop': typeof AuthDesktopRoute
   '/onboarding/workspace': typeof OnboardingWorkspaceRoute
   '/workspace/calls': typeof WorkspaceCallsRoute
   '/workspace/insights': typeof WorkspaceInsightsRoute
@@ -199,6 +206,7 @@ export interface FileRoutesByTo {
   '/my-issues': typeof MyIssuesRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/auth/desktop': typeof AuthDesktopRoute
   '/onboarding/workspace': typeof OnboardingWorkspaceRoute
   '/workspace/calls': typeof WorkspaceCallsRoute
   '/workspace/insights': typeof WorkspaceInsightsRoute
@@ -227,6 +235,7 @@ export interface FileRoutesById {
   '/my-issues': typeof MyIssuesRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/auth/desktop': typeof AuthDesktopRoute
   '/onboarding/workspace': typeof OnboardingWorkspaceRoute
   '/workspace/calls': typeof WorkspaceCallsRoute
   '/workspace/insights': typeof WorkspaceInsightsRoute
@@ -256,6 +265,7 @@ export interface FileRouteTypes {
     | '/my-issues'
     | '/settings'
     | '/signup'
+    | '/auth/desktop'
     | '/onboarding/workspace'
     | '/workspace/calls'
     | '/workspace/insights'
@@ -283,6 +293,7 @@ export interface FileRouteTypes {
     | '/my-issues'
     | '/settings'
     | '/signup'
+    | '/auth/desktop'
     | '/onboarding/workspace'
     | '/workspace/calls'
     | '/workspace/insights'
@@ -310,6 +321,7 @@ export interface FileRouteTypes {
     | '/my-issues'
     | '/settings'
     | '/signup'
+    | '/auth/desktop'
     | '/onboarding/workspace'
     | '/workspace/calls'
     | '/workspace/insights'
@@ -338,6 +350,7 @@ export interface RootRouteChildren {
   MyIssuesRoute: typeof MyIssuesRoute
   SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
+  AuthDesktopRoute: typeof AuthDesktopRoute
   OnboardingWorkspaceRoute: typeof OnboardingWorkspaceRoute
   WorkspaceCallsRoute: typeof WorkspaceCallsRoute
   WorkspaceInsightsRoute: typeof WorkspaceInsightsRoute
@@ -471,6 +484,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingWorkspaceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/desktop': {
+      id: '/auth/desktop'
+      path: '/auth/desktop'
+      fullPath: '/auth/desktop'
+      preLoaderRoute: typeof AuthDesktopRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/workspace/initiatives/': {
       id: '/workspace/initiatives/'
       path: '/workspace/initiatives'
@@ -546,6 +566,7 @@ const rootRouteChildren: RootRouteChildren = {
   MyIssuesRoute: MyIssuesRoute,
   SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,
+  AuthDesktopRoute: AuthDesktopRoute,
   OnboardingWorkspaceRoute: OnboardingWorkspaceRoute,
   WorkspaceCallsRoute: WorkspaceCallsRoute,
   WorkspaceInsightsRoute: WorkspaceInsightsRoute,

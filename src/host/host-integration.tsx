@@ -39,6 +39,37 @@ export function HostIntegration() {
 
       if (event.type === "update-ready") {
         toast.info(`Forge ${event.version} is ready to install.`)
+        return
+      }
+
+      if (event.type === "auth-ready") {
+        void host
+          .adoptAuthSession()
+          .then(({ returnTo }) => {
+            window.location.replace(returnTo)
+          })
+          .catch((error: unknown) => {
+            toast.error(
+              error instanceof Error
+                ? error.message
+                : "Forge could not finish signing you in."
+            )
+          })
+        return
+      }
+
+      if (event.type === "auth-session-adopted") {
+        window.location.replace(event.returnTo)
+        return
+      }
+
+      if (event.type === "auth-signed-out") {
+        window.location.replace("/login")
+        return
+      }
+
+      if (event.type === "auth-error") {
+        toast.error(event.message)
       }
     })
   }, [router])

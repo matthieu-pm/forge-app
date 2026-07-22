@@ -12,6 +12,21 @@ Forge desktop follows the same remote-renderer architecture used by products suc
 
 The packaged app always loads `FORGE_DESKTOP_APP_ORIGIN`, which must be the HTTPS origin serving the same build deployed to the web. Route, feature-flag, and API behavior therefore ship once and appear in both clients immediately. Native shell releases are needed only when the host contract changes.
 
+## Authentication
+
+Desktop authentication starts in the app and completes in the system browser at
+`/auth/desktop`. Better Auth binds the callback to the initiating app instance
+with S256 PKCE and the `com.forge.desktop` protocol. The main process exchanges
+the short-lived authorization code, stores its session in encrypted Electron
+storage, and adopts only the Better Auth cookies into the hosted renderer's
+cookie jar so server-rendered route guards see the same session.
+
+The hosted renderer selects this flow only when the shell reports the
+`browser-auth` capability. Older shells retain the web-form compatibility path.
+Logout clears both the main-process session and renderer cookies. If protocol
+activation fails, the browser exposes a connection code that can be pasted into
+the desktop prompt without exposing session cookies to renderer JavaScript.
+
 ## Development
 
 1. Configure the existing web variables in `.env`.

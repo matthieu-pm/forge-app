@@ -1,5 +1,7 @@
-import { Notification, app, ipcMain, shell } from "electron"
+import { BrowserWindow, Notification, app, ipcMain, shell } from "electron"
 import {
+  beginAuthSchema,
+  completeAuthSchema,
   desktopChannels,
   externalUrlSchema,
   notificationSchema,
@@ -14,8 +16,10 @@ import type {
   HostRuntime,
 } from "../../src/host/forge-host"
 import type { WindowManager } from "./window-manager"
+import type { DesktopAuth } from "./desktop-auth"
 
 const capabilities: Array<HostCapability> = [
+  "browser-auth",
   "deep-links",
   "dock-badge",
   "multi-window",
@@ -39,7 +43,11 @@ function assertTrustedSender(event: IpcMainInvokeEvent, appOrigin: string) {
   }
 }
 
-export function registerHostBridge(windows: WindowManager, appOrigin: string) {
+export function registerHostBridge(
+  windows: WindowManager,
+  appOrigin: string,
+  desktopAuth: DesktopAuth
+) {
   const trusted = <T>(
     handler: (event: IpcMainInvokeEvent, input: unknown) => T | Promise<T>
   ) => {
@@ -103,6 +111,52 @@ export function registerHostBridge(windows: WindowManager, appOrigin: string) {
     desktopChannels.openWindow,
     trusted((_event, input) => {
       windows.create(routePathSchema.parse(input))
+    })
+  )
+
+  ipcMain.handle(
+    desktopChannels.beginAuth,
+    trusted(async (event, input) => {
+      const window = BrowserWindow.fromWebContents(event.sender)
+      if (!window) {
+        throw new Error("Authentication must start from a Forge window.")
+      }
+
+      const { returnTo } = beginAuthSchema.parse(input)
+      await desktopAuth.begin(window, returnTo)
+    })
+  )
+
+  ipcMain.handle(
+    desktopChannels.completeAuth,
+    trusted(async (_event, input) => {
+      const { token } = completeAuthSchema.parse(input)
+      await desktopAuth.complete(token)
+    })
+  )
+
+  ipcMain.handle(
+    desktopChannels.adoptAuthSession,
+    trusted(async (event) => {
+      const window = BrowserWindow.fromWebContents(event.sender)
+      if (!window) {
+        throw new Error("Authentication must finish in a Forge window.")
+      }
+
+      const result = await desktopAuth.adopt(event.sender.session, window)
+      windows.broadcastExcept(
+        { type: "auth-session-adopted", returnTo: "/inbox" },
+        event.sender.id
+      )
+      return result
+    })
+  )
+
+  ipcMain.handle(
+    desktopChannels.signOut,
+    trusted(async (event) => {
+      await desktopAuth.signOut(event.sender.session)
+      windows.broadcast({ type: "auth-signed-out" })
     })
   )
 }

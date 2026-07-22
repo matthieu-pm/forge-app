@@ -29,6 +29,7 @@ export const auth = betterAuth({
   appName: "Forge",
   baseURL: betterAuthUrl,
   secret: betterAuthSecret,
+  trustedOrigins: ["com.forge.desktop:/"],
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: {

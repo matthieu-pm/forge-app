@@ -1,4 +1,5 @@
 export type HostCapability =
+  | "browser-auth"
   | "deep-links"
   | "dock-badge"
   | "multi-window"
@@ -31,6 +32,22 @@ export type HostEvent =
         | "tab-forward"
     }
   | { type: "update-ready"; version: string }
+  | { type: "auth-ready" }
+  | { type: "auth-session-adopted"; returnTo: string }
+  | { type: "auth-signed-out" }
+  | { type: "auth-error"; message: string }
+
+export type BeginAuthInput = {
+  returnTo?: string
+}
+
+export type CompleteAuthInput = {
+  token: string
+}
+
+export type AdoptAuthSessionResult = {
+  returnTo: string
+}
 
 export interface ForgeHost {
   getRuntime: () => Promise<HostRuntime>
@@ -38,6 +55,10 @@ export interface ForgeHost {
   setUnreadCount: (count: number) => Promise<void>
   showNotification: (input: ForgeNotification) => Promise<void>
   openWindow: (path: string) => Promise<void>
+  beginAuth: (input: BeginAuthInput) => Promise<void>
+  completeAuth: (input: CompleteAuthInput) => Promise<void>
+  adoptAuthSession: () => Promise<AdoptAuthSessionResult>
+  signOut: () => Promise<void>
   subscribe: (listener: (event: HostEvent) => void) => () => void
 }
 
@@ -75,6 +96,24 @@ const browserHost: ForgeHost = {
   },
   openWindow(path) {
     window.open(path, "_blank", "noopener,noreferrer")
+    return Promise.resolve()
+  },
+  beginAuth() {
+    return Promise.reject(
+      new Error("Browser authentication is only available in the desktop app.")
+    )
+  },
+  completeAuth() {
+    return Promise.reject(
+      new Error("Desktop authentication is unavailable in the browser.")
+    )
+  },
+  adoptAuthSession() {
+    return Promise.reject(
+      new Error("Desktop session adoption is unavailable in the browser.")
+    )
+  },
+  signOut() {
     return Promise.resolve()
   },
   subscribe() {

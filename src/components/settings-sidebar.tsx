@@ -174,7 +174,7 @@ export function SettingsSidebar() {
             onChange={(event) => setQuery(event.target.value)}
             aria-label="Search settings"
             placeholder="Search settings..."
-            className="h-8 rounded-lg border-0 bg-sidebar-accent pr-2 pl-8 text-sm shadow-none focus-visible:ring-2"
+            className="h-7 rounded-lg border-0 bg-sidebar-accent pr-2 pl-8 text-sm shadow-none focus-visible:ring-2"
           />
         </div>
       </SidebarHeader>

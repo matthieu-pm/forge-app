@@ -4,6 +4,7 @@ export default defineConfig({
   testDir: "./tests/electron",
   timeout: 30_000,
   use: {
+    baseURL: "http://localhost:3000",
     trace: "retain-on-failure",
   },
   webServer: {

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  beginAuthSchema,
+  completeAuthSchema,
   externalUrlSchema,
   notificationSchema,
   routePathSchema,
@@ -40,6 +42,31 @@ describe("desktop bridge input validation", () => {
     expect(routePathSchema.safeParse("//evil.test/path").success).toBe(false)
     expect(routePathSchema.safeParse("/workspace/../login").success).toBe(false)
     expect(routePathSchema.safeParse("/unknown").success).toBe(false)
+  })
+
+  it("accepts only safe desktop authentication return routes", () => {
+    expect(beginAuthSchema.parse({ returnTo: "/inbox?view=assigned" })).toEqual(
+      {
+        returnTo: "/inbox?view=assigned",
+      }
+    )
+    expect(beginAuthSchema.parse({})).toEqual({})
+    expect(
+      beginAuthSchema.safeParse({ returnTo: "https://evil.test" }).success
+    ).toBe(false)
+    expect(
+      beginAuthSchema.safeParse({ returnTo: "/workspace/../login" }).success
+    ).toBe(false)
+  })
+
+  it("accepts bounded manual authentication codes", () => {
+    expect(completeAuthSchema.parse({ token: "connection-code" })).toEqual({
+      token: "connection-code",
+    })
+    expect(completeAuthSchema.safeParse({ token: "" }).success).toBe(false)
+    expect(
+      completeAuthSchema.safeParse({ token: "x".repeat(2049) }).success
+    ).toBe(false)
   })
 
   it("requires bounded notification content and an optional safe route", () => {

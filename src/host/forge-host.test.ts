@@ -31,6 +31,10 @@ describe("createForgeHost", () => {
       setUnreadCount: vi.fn().mockResolvedValue(undefined),
       showNotification: vi.fn().mockResolvedValue(undefined),
       openWindow: vi.fn().mockResolvedValue(undefined),
+      beginAuth: vi.fn().mockResolvedValue(undefined),
+      completeAuth: vi.fn().mockResolvedValue(undefined),
+      adoptAuthSession: vi.fn().mockResolvedValue({ returnTo: "/inbox" }),
+      signOut: vi.fn().mockResolvedValue(undefined),
       subscribe: vi.fn((callback) => {
         callback(event)
         return unsubscribe
@@ -45,9 +49,11 @@ describe("createForgeHost", () => {
       capabilities: ["dock-badge", "deep-links"],
     })
     await host.setUnreadCount(3)
+    await host.beginAuth({ returnTo: "/inbox" })
     const stop = host.subscribe(listener)
 
     expect(bridge.setUnreadCount).toHaveBeenCalledWith(3)
+    expect(bridge.beginAuth).toHaveBeenCalledWith({ returnTo: "/inbox" })
     expect(listener).toHaveBeenCalledWith(event)
     expect(stop).toBe(unsubscribe)
   })

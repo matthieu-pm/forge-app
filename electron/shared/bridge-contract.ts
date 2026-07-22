@@ -60,11 +60,27 @@ export const notificationSchema = z
   })
   .strict()
 
+export const beginAuthSchema = z
+  .object({
+    returnTo: routePathSchema.optional(),
+  })
+  .strict()
+
+export const completeAuthSchema = z
+  .object({
+    token: z.string().min(1).max(2048),
+  })
+  .strict()
+
 export const desktopChannels = {
   getRuntime: "forge:host:get-runtime",
   openExternal: "forge:host:open-external",
   setUnreadCount: "forge:host:set-unread-count",
   showNotification: "forge:host:show-notification",
   openWindow: "forge:host:open-window",
+  beginAuth: "forge:auth:begin",
+  completeAuth: "forge:auth:complete",
+  adoptAuthSession: "forge:auth:adopt-session",
+  signOut: "forge:auth:sign-out",
   hostEvent: "forge:host:event",
 } as const
