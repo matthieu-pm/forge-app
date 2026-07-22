@@ -144,6 +144,21 @@
     gap: 2px;
 }
 
+.forge-create-team-shell {
+    height: 100svh;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.forge-create-team-shell [data-slot="sidebar-inset"] {
+    min-height: 0;
+    overflow: hidden;
+}
+
+html[data-forge-host="macos"] .forge-create-team-shell {
+    height: calc(100svh - 32px);
+}
+
 html[data-forge-host="macos"] .forge-desktop-titlebar {
     -webkit-app-region: drag;
     position: relative;
@@ -299,6 +314,19 @@ html[data-forge-host="macos"] body,
 html[data-forge-host="macos"] [data-slot="sidebar-wrapper"],
 html[data-forge-host="macos"] [data-slot="sidebar-inner"] {
     background: transparent;
+}
+
+html[data-forge-host="macos"] [data-slot="sidebar-menu-button"]:hover {
+    background: color-mix(in oklab, var(--sidebar-accent) 42%, transparent);
+}
+
+html[data-forge-host="macos"] [data-slot="sidebar-menu-button"]:is(
+        [data-active],
+        [data-open],
+        [aria-expanded="true"],
+        :active
+    ) {
+    background: color-mix(in oklab, var(--sidebar-accent) 58%, transparent);
 }
 
 html[data-forge-host="macos"] [data-slot="sidebar-container"] {

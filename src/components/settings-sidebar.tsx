@@ -33,7 +33,7 @@ import {
   WebProgrammingIcon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Link } from "@tanstack/react-router"
+import { Link, useRouterState } from "@tanstack/react-router"
 import type { ComponentProps } from "react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -135,6 +135,9 @@ function teamInitials(name: string) {
 }
 
 export function SettingsSidebar() {
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  })
   const [query, setQuery] = React.useState("")
   const normalizedQuery = query.trim().toLocaleLowerCase()
   const visibleGroups = settingsGroups
@@ -190,7 +193,7 @@ export function SettingsSidebar() {
                 <SidebarMenuItem key={`${group.label}-${item.label}`}>
                   <SidebarMenuButton
                     type="button"
-                    isActive={item.active}
+                    isActive={pathname === "/settings" && item.active}
                     className="h-7 rounded-lg px-2 text-sm font-medium [&>svg]:size-4"
                   >
                     <HugeiconsIcon icon={item.icon} strokeWidth={2} />
@@ -230,7 +233,9 @@ export function SettingsSidebar() {
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     type="button"
+                    isActive={pathname === "/settings/teams/new"}
                     className="h-7 rounded-lg px-2 text-sm font-medium text-sidebar-foreground/70 [&>svg]:size-4"
+                    render={<Link to="/settings/teams/new" />}
                   >
                     <span className="flex size-4 shrink-0 items-center justify-center">
                       <HugeiconsIcon

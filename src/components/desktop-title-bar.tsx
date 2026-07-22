@@ -43,7 +43,7 @@ function getTabTitle(path: string) {
 function getTabNavigationItem(path: string): AppNavChild | undefined {
   const pathname = path.split(/[?#]/, 1)[0]
 
-  if (pathname === "/settings") {
+  if (pathname.startsWith("/settings")) {
     return {
       title: "Preferences",
       to: "/settings",

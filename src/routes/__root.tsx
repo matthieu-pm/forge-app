@@ -76,8 +76,14 @@ function RootLayout() {
   }
 
   return (
-    <SidebarProvider>
-      {pathname === "/settings" ? <SettingsSidebar /> : <AppSidebar />}
+    <SidebarProvider
+      className={
+        pathname === "/settings/teams/new"
+          ? "forge-create-team-shell"
+          : undefined
+      }
+    >
+      {pathname.startsWith("/settings") ? <SettingsSidebar /> : <AppSidebar />}
       <SidebarInset>
         <AppHeader pathname={pathname} />
         <Outlet key={pathname} />
@@ -91,6 +97,7 @@ function DesktopFooterActions() {
   return (
     <div className="forge-desktop-footer-actions" aria-label="Forge actions">
       <Button
+        nativeButton={false}
         variant="ghost"
         size="xs"
         className="forge-ask-button text-muted-foreground hover:text-foreground"
@@ -130,6 +137,10 @@ function DesktopFooterActions() {
 }
 
 function AppHeader({ pathname }: { pathname: string }) {
+  if (pathname === "/settings/teams/new") {
+    return null
+  }
+
   const breadcrumbs = getBreadcrumbItems(pathname)
 
   function renderBreadcrumbLink(to: string) {

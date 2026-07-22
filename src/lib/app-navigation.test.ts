@@ -9,6 +9,12 @@ describe("getBreadcrumbItems", () => {
     ])
   })
 
+  it("labels the create-team settings page", () => {
+    expect(getBreadcrumbItems("/settings/teams/new")).toEqual([
+      { label: "Create a new team" },
+    ])
+  })
+
   it("omits the workspace wrapper from workspace pages", () => {
     expect(getBreadcrumbItems("/workspace/initiatives")).toEqual([
       { label: "Initiatives" },

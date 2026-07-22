@@ -271,13 +271,15 @@ export function getPageMeta(pathname: string): PageMeta {
 }
 
 export function getBreadcrumbItems(pathname: string): BreadcrumbItem[] {
+  if (pathname === "/settings/teams/new") {
+    return [{ label: "Create a new team" }]
+  }
+
   if (pathname === "/settings") {
     return [{ label: "Preferences" }]
   }
 
-  const initiativeMatch = pathname.match(
-    /^\/workspace\/initiatives\/([^/]+)$/
-  )
+  const initiativeMatch = pathname.match(/^\/workspace\/initiatives\/([^/]+)$/)
 
   if (initiativeMatch) {
     return [

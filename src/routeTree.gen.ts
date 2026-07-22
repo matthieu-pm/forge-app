@@ -34,6 +34,7 @@ import { Route as TeamsTeamSlugProjectsRouteImport } from './routes/teams/$teamS
 import { Route as TeamsTeamSlugIssuesRouteImport } from './routes/teams/$teamSlug/issues'
 import { Route as TeamsTeamSlugInsightsRouteImport } from './routes/teams/$teamSlug/insights'
 import { Route as TeamsTeamSlugCallsRouteImport } from './routes/teams/$teamSlug/calls'
+import { Route as SettingsTeamsNewRouteImport } from './routes/settings_.teams.new'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const SignupRoute = SignupRouteImport.update({
@@ -163,6 +164,11 @@ const TeamsTeamSlugCallsRoute = TeamsTeamSlugCallsRouteImport.update({
   path: '/teams/$teamSlug/calls',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsTeamsNewRoute = SettingsTeamsNewRouteImport.update({
+  id: '/settings_/teams/new',
+  path: '/settings/teams/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -188,6 +194,7 @@ export interface FileRoutesByFullPath {
   '/workspace/teams': typeof WorkspaceTeamsRoute
   '/workspace/views': typeof WorkspaceViewsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/settings/teams/new': typeof SettingsTeamsNewRoute
   '/teams/$teamSlug/calls': typeof TeamsTeamSlugCallsRoute
   '/teams/$teamSlug/insights': typeof TeamsTeamSlugInsightsRoute
   '/teams/$teamSlug/issues': typeof TeamsTeamSlugIssuesRoute
@@ -216,6 +223,7 @@ export interface FileRoutesByTo {
   '/workspace/teams': typeof WorkspaceTeamsRoute
   '/workspace/views': typeof WorkspaceViewsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/settings/teams/new': typeof SettingsTeamsNewRoute
   '/teams/$teamSlug/calls': typeof TeamsTeamSlugCallsRoute
   '/teams/$teamSlug/insights': typeof TeamsTeamSlugInsightsRoute
   '/teams/$teamSlug/issues': typeof TeamsTeamSlugIssuesRoute
@@ -245,6 +253,7 @@ export interface FileRoutesById {
   '/workspace/teams': typeof WorkspaceTeamsRoute
   '/workspace/views': typeof WorkspaceViewsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/settings_/teams/new': typeof SettingsTeamsNewRoute
   '/teams/$teamSlug/calls': typeof TeamsTeamSlugCallsRoute
   '/teams/$teamSlug/insights': typeof TeamsTeamSlugInsightsRoute
   '/teams/$teamSlug/issues': typeof TeamsTeamSlugIssuesRoute
@@ -275,6 +284,7 @@ export interface FileRouteTypes {
     | '/workspace/teams'
     | '/workspace/views'
     | '/api/auth/$'
+    | '/settings/teams/new'
     | '/teams/$teamSlug/calls'
     | '/teams/$teamSlug/insights'
     | '/teams/$teamSlug/issues'
@@ -303,6 +313,7 @@ export interface FileRouteTypes {
     | '/workspace/teams'
     | '/workspace/views'
     | '/api/auth/$'
+    | '/settings/teams/new'
     | '/teams/$teamSlug/calls'
     | '/teams/$teamSlug/insights'
     | '/teams/$teamSlug/issues'
@@ -331,6 +342,7 @@ export interface FileRouteTypes {
     | '/workspace/teams'
     | '/workspace/views'
     | '/api/auth/$'
+    | '/settings_/teams/new'
     | '/teams/$teamSlug/calls'
     | '/teams/$teamSlug/insights'
     | '/teams/$teamSlug/issues'
@@ -360,6 +372,7 @@ export interface RootRouteChildren {
   WorkspaceTeamsRoute: typeof WorkspaceTeamsRoute
   WorkspaceViewsRoute: typeof WorkspaceViewsRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  SettingsTeamsNewRoute: typeof SettingsTeamsNewRoute
   TeamsTeamSlugCallsRoute: typeof TeamsTeamSlugCallsRoute
   TeamsTeamSlugInsightsRoute: typeof TeamsTeamSlugInsightsRoute
   TeamsTeamSlugIssuesRoute: typeof TeamsTeamSlugIssuesRoute
@@ -547,6 +560,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TeamsTeamSlugCallsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings_/teams/new': {
+      id: '/settings_/teams/new'
+      path: '/settings/teams/new'
+      fullPath: '/settings/teams/new'
+      preLoaderRoute: typeof SettingsTeamsNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -576,6 +596,7 @@ const rootRouteChildren: RootRouteChildren = {
   WorkspaceTeamsRoute: WorkspaceTeamsRoute,
   WorkspaceViewsRoute: WorkspaceViewsRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  SettingsTeamsNewRoute: SettingsTeamsNewRoute,
   TeamsTeamSlugCallsRoute: TeamsTeamSlugCallsRoute,
   TeamsTeamSlugInsightsRoute: TeamsTeamSlugInsightsRoute,
   TeamsTeamSlugIssuesRoute: TeamsTeamSlugIssuesRoute,

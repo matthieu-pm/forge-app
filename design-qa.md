@@ -1,44 +1,61 @@
-# Design QA
+# Design QA — Create a new team
 
-## Reference
+## Result
 
-- Source of truth: user-provided `Electron Appshot 2026-07-21T21-44-23.599Z.png` plus the instruction to replace the Forge title with Back, Forward, and Sidebar icon controls in the macOS title bar.
-- State: Forge desktop app at `/inbox`, light appearance.
-- Viewport: 1224 × 768 captured output (1800 × 1130 renderer viewport).
+blocked
 
-## Implementation evidence
+## Evidence
 
-- Full-window capture: `/var/folders/j2/gzj18t_x2251dx_cnqdcscm80000gn/T/com.openai.sky.CUAService/Electron Screenshot 2026-07-21 at 11.52.58 PM.jpeg`
-- The macOS-only title bar is a 32 CSS-pixel draggable region, matching the original native title-bar footprint at the captured scale.
-- The fixed sidebar container and main application wrapper now share the same 32 CSS-pixel desktop content origin.
-- The title bar uses the application background and has no border, divider, or shadow.
-- The web renderer is unchanged because the title-bar region is enabled only by the macOS Electron host.
-- The title-bar controls use Hugeicons `ArrowLeft02Icon`, `ArrowRight02Icon`, and `SidebarLeftIcon` at the sidebar's 16 CSS-pixel icon size inside 24 CSS-pixel hit targets.
-- Back and Forward were verified across `/inbox` and `/forge`; the relocated Sidebar button was verified collapsing and restoring the sidebar.
+- Reference: `docs/audits/create-team-linear-reference.jpeg` (1223 × 768)
+- Implementation: `docs/audits/create-team-forge-implementation.jpeg` (1224 × 768)
+- Full side-by-side comparison: `docs/audits/create-team-comparison.jpeg`
+- Focused form comparison: `docs/audits/create-team-form-comparison.jpeg`
+- Interaction states:
+  - `docs/audits/create-team-icon-picker.jpeg`
+  - `docs/audits/create-team-timezone-picker.jpeg`
+  - `docs/audits/create-team-copy-picker.jpeg`
 
-## Visual comparison
+Both captures use the same desktop window size and the same default form state. The implementation intentionally uses Forge's light theme and existing component tokens while matching the Linear reference's hierarchy, geometry, density, and interaction model.
 
-- Layout and spacing: passed — the sidebar and main surface now begin on the same horizontal axis beneath the traffic-light region.
-- Typography and copy: passed — application typography and labels are unchanged.
-- Colors: passed — the title bar now uses the app shell's `--sidebar` token, producing one continuous chrome color across the title bar and surrounding shell.
-- Borders: passed — the native bottom separator is absent and no replacement border was introduced.
-- Images and icons: passed — the new title-bar controls use the requested `02` arrow variants and match the sidebar's 16-pixel size and foreground color.
-- Focused region, top-left chrome: passed — the text title is absent; the three larger icon controls sit after the traffic lights with clear spacing and no overlap.
-- Copy and content: passed — the unwanted Forge title was removed, while every icon button has an accessible label and native tooltip.
+## Required fidelity surfaces
 
-## Iteration history
+- Settings sidebar with active Create a team entry
+- Back affordance and centered page header
+- Three-row team identity card
+- Team access, timezone, and copy-settings sections
+- Bottom-aligned Create team action
+- Icon/emoji, timezone, and copy-team popovers
 
-1. The native light title bar matched the app color but retained the macOS separator.
-2. The first hidden-title-bar pass reserved only 22 CSS pixels, which was too short at this Retina window scale.
-3. The final pass reserves 32 CSS pixels, matching the native footprint and clearing all application controls without adding a separator.
-4. A later P2 alignment check found that the sidebar's fixed positioning still used `inset-y-0`, ignoring the document-flow title-bar offset while the main wrapper respected it.
-5. The sidebar container now uses `top: 32px` and `height: calc(100svh - 32px)` on macOS. The post-fix capture shows both app surfaces sharing the same top origin.
-6. A P2 color mismatch remained because the custom title bar used the pure page `--background` token while the app shell used the subtly tinted `--sidebar` token.
-7. The title bar now uses `--sidebar`; the final capture shows a continuous full-width shell color with the white main surface inset beneath it.
-8. A P2 desktop-control placement issue remained: the sidebar toggle lived in the page header and the title bar still displayed Forge text.
-9. The Forge title and page-header toggle were removed. Functional Back, Forward, and Sidebar controls were placed in a non-draggable title-bar control group.
-10. The initial arrow controls used the smaller `01` chevron variants. The final pass uses `ArrowLeft02Icon` and `ArrowRight02Icon`; all three controls match the sidebar's 16 CSS-pixel size and `--sidebar-foreground` color. Post-fix navigation and sidebar behavior passed.
+## Comparison findings
 
-## Final result
+- Page title, form width, card heights, section spacing, and CTA placement align with the reference at the target viewport.
+- The first pass exposed a P0 routing issue where the page rendered inside the settings placeholder. The route was detached from the settings layout and rechecked.
+- The next pass exposed overly compressed vertical rhythm. Row height, section spacing, top offset, and heading scale were adjusted and rechecked.
+- Final side-by-side review found no remaining P0, P1, or P2 visual issues.
+- Theme color differences are intentional: the implementation inherits Forge's current light desktop appearance rather than replacing the app-wide theme.
+- A later browser capture exposed a P2 shell overflow: the route-height wrapper plus the web inset margin allowed the whole page to move and hide the Back control.
+- The create-team route now uses a viewport-height, overflow-clipped shell; the inset and form canvas are also non-scrollable. Popover lists retain their own intentional scrolling.
+- Post-fix visual recapture is pending because the user asked that Computer Use not be used. This blocks the Product Design visual gate, but not the automated engineering checks.
 
-passed
+## Interaction QA
+
+- Icon picker opens and exposes icon/color choices.
+- Emoji tab opens and exposes searchable emoji choices.
+- Timezone picker opens with search and selectable timezone options.
+- Copy-settings picker opens with search, Don't copy, and existing team choices.
+- Name and identifier inputs expose accessible labels; identifier normalization and required-field validation are implemented.
+- Create team validates the form, reports success, and navigates back to the teams area.
+
+## Engineering checks
+
+- Typecheck: passed
+- Production build: passed
+- Targeted navigation/title-bar tests: passed
+- Targeted lint: passed
+- Diff whitespace check: passed
+- Authenticated Electron/Chromium rendering: passed
+- The isolated in-app browser preview redirects to sign-in because it does not share the Electron session; the authenticated desktop target was used for final visual and interaction evidence.
+
+## Current blocker
+
+The P2 page-scroll correction is implemented, but a post-fix screenshot of the authenticated Aside session is unavailable without Computer Use. Refreshing the page and confirming that a scroll gesture no longer moves the Back control will unblock the final visual gate.
