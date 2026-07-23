@@ -53,6 +53,7 @@ import { getNavigationAuthState } from "@/lib/auth-state"
 import { listTeams } from "@/lib/team-state"
 import { getForgeHost } from "@/host/forge-host"
 import { getSidebarDisclosureKey } from "@/lib/sidebar-disclosure"
+import { cn } from "@/lib/utils"
 
 function workspaceInitials(name: string) {
   return name
@@ -72,6 +73,21 @@ function PersistentCollapsible({
   const [defaultOpen] = React.useState(initiallyOpen)
 
   return <Collapsible defaultOpen={defaultOpen} {...props} />
+}
+
+function SidebarCollapsibleContent({
+  className,
+  ...props
+}: React.ComponentProps<typeof CollapsibleContent>) {
+  return (
+    <CollapsibleContent
+      className={cn(
+        "h-(--collapsible-panel-height) overflow-hidden transition-[height,opacity,translate] duration-200 ease-out data-ending-style:h-0 data-ending-style:-translate-y-1 data-ending-style:opacity-0 data-starting-style:h-0 data-starting-style:-translate-y-1 data-starting-style:opacity-0 motion-reduce:transition-none",
+        className
+      )}
+      {...props}
+    />
+  )
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -237,9 +253,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     className="ml-auto transition-transform duration-200 group-aria-expanded/menu-button:rotate-90"
                   />
                 </SidebarMenuButton>
-                <CollapsibleContent className="w-full">
+                <SidebarCollapsibleContent className="w-full">
                   {renderNavItems(item.items, depth + 1)}
-                </CollapsibleContent>
+                </SidebarCollapsibleContent>
               </SidebarMenuSubItem>
             </PersistentCollapsible>
           ) : (
@@ -298,11 +314,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               className="ml-auto transition-transform duration-200 group-aria-expanded/menu-button:rotate-90"
             />
           </SidebarMenuButton>
-          <CollapsibleContent
-            className={teamsScrollable ? "min-h-0 w-full flex-1" : "w-full"}
+          <SidebarCollapsibleContent
+            className={teamsScrollable ? "min-h-0 w-full" : "w-full"}
           >
             <div className="w-full">{renderNavItems(item.items)}</div>
-          </CollapsibleContent>
+          </SidebarCollapsibleContent>
         </SidebarMenuItem>
       </PersistentCollapsible>
     ) : (
