@@ -11,6 +11,7 @@ describe("personal preferences", () => {
   beforeEach(() => {
     window.localStorage.clear()
     document.documentElement.classList.remove("dark")
+    delete document.documentElement.dataset.forgeTheme
     delete document.documentElement.dataset.forgePointerCursors
     delete document.documentElement.dataset.forgeUnderlineLinks
     document.documentElement.style.removeProperty("font-size")
@@ -52,6 +53,7 @@ describe("personal preferences", () => {
     })
 
     expect(document.documentElement.classList.contains("dark")).toBe(true)
+    expect(document.documentElement.dataset.forgeTheme).toBe("dark")
     expect(document.documentElement.style.fontSize).toBe("17px")
     expect(document.documentElement.dataset.forgePointerCursors).toBe("true")
     expect(document.documentElement.dataset.forgeUnderlineLinks).toBe("true")
@@ -66,5 +68,18 @@ describe("personal preferences", () => {
     })
 
     expect(document.documentElement.classList.contains("dark")).toBe(false)
+    expect(document.documentElement.dataset.forgeTheme).toBe("light")
+  })
+
+  it("applies the selected palette for the active appearance", () => {
+    applyPersonalInterfacePreferences({
+      ...defaultPersonalPreferences,
+      interfaceTheme: "dark",
+      lightTheme: "paper",
+      darkTheme: "midnight",
+    })
+
+    expect(document.documentElement.classList.contains("dark")).toBe(true)
+    expect(document.documentElement.dataset.forgeTheme).toBe("midnight")
   })
 })

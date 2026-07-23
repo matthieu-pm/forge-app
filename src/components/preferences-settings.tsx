@@ -5,7 +5,11 @@ import { ArrowDown01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { toast } from "sonner"
 
-import type { PersonalPreferences } from "@/lib/personal-preferences"
+import type {
+  DarkTheme,
+  LightTheme,
+  PersonalPreferences,
+} from "@/lib/personal-preferences"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -23,6 +27,122 @@ import {
 } from "@/lib/personal-preferences"
 import { getForgeHost } from "@/host/forge-host"
 import { cn } from "@/lib/utils"
+
+type ThemePreviewPalette = {
+  accent: string
+  background: string
+  border: string
+  foreground: string
+  surface: string
+}
+
+const themePreviews = {
+  light: {
+    accent: "#737373",
+    background: "#f5f5f5",
+    border: "#d4d4d4",
+    foreground: "#171717",
+    surface: "#ffffff",
+  },
+  paper: {
+    accent: "#a16235",
+    background: "#f1eadc",
+    border: "#d8cbb7",
+    foreground: "#35291f",
+    surface: "#fffaf0",
+  },
+  dark: {
+    accent: "#a3a3a3",
+    background: "#171717",
+    border: "#404040",
+    foreground: "#fafafa",
+    surface: "#262626",
+  },
+  midnight: {
+    accent: "#60a5fa",
+    background: "#111827",
+    border: "#334155",
+    foreground: "#eff6ff",
+    surface: "#1e293b",
+  },
+  forest: {
+    accent: "#6ee7a5",
+    background: "#102019",
+    border: "#315746",
+    foreground: "#ecfdf5",
+    surface: "#1b3328",
+  },
+  plum: {
+    accent: "#d8b4fe",
+    background: "#211424",
+    border: "#58385f",
+    foreground: "#fdf4ff",
+    surface: "#35203a",
+  },
+} satisfies Record<LightTheme | DarkTheme, ThemePreviewPalette>
+
+const systemThemePreview: ThemePreviewPalette = {
+  accent: "#8b5cf6",
+  background: "linear-gradient(90deg, #f5f5f5 0 50%, #171717 50%)",
+  border: "#737373",
+  foreground: "#ffffff",
+  surface: "rgb(255 255 255 / 0.28)",
+}
+
+const lightThemeOptions: ReadonlyArray<{
+  label: string
+  preview: ThemePreviewPalette
+  value: LightTheme
+}> = [
+  { value: "light", label: "Light", preview: themePreviews.light },
+  { value: "paper", label: "Paper", preview: themePreviews.paper },
+]
+
+const darkThemeOptions: ReadonlyArray<{
+  label: string
+  preview: ThemePreviewPalette
+  value: DarkTheme
+}> = [
+  { value: "dark", label: "Dark", preview: themePreviews.dark },
+  {
+    value: "midnight",
+    label: "Midnight",
+    preview: themePreviews.midnight,
+  },
+  { value: "forest", label: "Forest", preview: themePreviews.forest },
+  { value: "plum", label: "Plum", preview: themePreviews.plum },
+]
+
+function ThemePreview({ palette }: { palette: ThemePreviewPalette }) {
+  return (
+    <span
+      aria-hidden="true"
+      data-slot="theme-preview"
+      className="relative flex h-[18px] w-7 shrink-0 items-center overflow-hidden rounded-[5px]"
+      style={{
+        background: palette.background,
+        boxShadow: `inset 0 0 0 1px ${palette.border}`,
+        color: palette.foreground,
+      }}
+    >
+      <span
+        className="absolute inset-y-[1px] left-[1px] w-1.5 rounded-l-[4px]"
+        style={{ background: palette.surface }}
+      />
+      <span
+        data-slot="theme-preview-label"
+        className="relative ml-[8px] text-[7px] leading-none font-semibold tracking-[-0.04em]"
+        style={{ color: palette.foreground }}
+      >
+        Aa
+      </span>
+      <span
+        className="absolute top-[3px] right-[3px] size-1 rounded-full"
+        style={{ background: palette.accent }}
+      />
+    </span>
+  )
+}
 
 function SettingsCard({
   children,
@@ -90,7 +210,11 @@ function PreferenceSelect<TValue extends string>({
 }: {
   ariaLabel: string
   onValueChange: (value: TValue) => void
-  options: ReadonlyArray<{ label: string; value: TValue }>
+  options: ReadonlyArray<{
+    label: string
+    preview?: ThemePreviewPalette
+    value: TValue
+  }>
   value: TValue
 }) {
   const selectedOption =
@@ -106,6 +230,9 @@ function PreferenceSelect<TValue extends string>({
         render={<DropdownMenuTrigger />}
         className="group rounded-lg font-normal"
       >
+        {selectedOption.preview ? (
+          <ThemePreview palette={selectedOption.preview} />
+        ) : null}
         <span>{selectedOption.label}</span>
         <HugeiconsIcon
           icon={ArrowDown01Icon}
@@ -124,6 +251,9 @@ function PreferenceSelect<TValue extends string>({
         >
           {options.map((option) => (
             <DropdownMenuRadioItem key={option.value} value={option.value}>
+              {option.preview ? (
+                <ThemePreview palette={option.preview} />
+              ) : null}
               {option.label}
             </DropdownMenuRadioItem>
           ))}
@@ -338,9 +468,21 @@ export function PreferencesSettings() {
                       updatePreference("interfaceTheme", value)
                     }
                     options={[
-                      { value: "system", label: "System preference" },
-                      { value: "light", label: "Light" },
-                      { value: "dark", label: "Dark" },
+                      {
+                        value: "system",
+                        label: "System preference",
+                        preview: systemThemePreview,
+                      },
+                      {
+                        value: "light",
+                        label: "Light",
+                        preview: themePreviews[preferences.lightTheme],
+                      },
+                      {
+                        value: "dark",
+                        label: "Dark",
+                        preview: themePreviews[preferences.darkTheme],
+                      },
                     ]}
                   />
                 </PreferenceRow>
@@ -354,7 +496,7 @@ export function PreferencesSettings() {
                     onValueChange={(value) =>
                       updatePreference("lightTheme", value)
                     }
-                    options={[{ value: "light", label: "Light" }]}
+                    options={lightThemeOptions}
                   />
                 </PreferenceRow>
                 <PreferenceRow
@@ -367,7 +509,7 @@ export function PreferencesSettings() {
                     onValueChange={(value) =>
                       updatePreference("darkTheme", value)
                     }
-                    options={[{ value: "dark", label: "Dark" }]}
+                    options={darkThemeOptions}
                   />
                 </PreferenceRow>
               </SettingsCard>

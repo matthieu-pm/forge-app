@@ -200,7 +200,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           src={item.iconSrc}
           alt=""
           aria-hidden="true"
-          className="size-4 shrink-0 object-contain"
+          className={cn(
+            "size-4 shrink-0 object-contain",
+            item.title === "Forge" && "dark:brightness-0 dark:invert"
+          )}
         />
       )
     }
