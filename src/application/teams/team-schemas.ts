@@ -74,6 +74,7 @@ export type DeleteTeamInput = z.infer<typeof deleteTeamInputSchema>
 
 export const updateTeamSettingsSchema = z
   .object({
+    icon: teamIconSchema.optional(),
     name: z.string().trim().min(1).max(80).optional(),
     identifier: z
       .string()

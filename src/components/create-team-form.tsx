@@ -1,86 +1,18 @@
 "use client"
 
 import * as React from "react"
-import {
-  Search01Icon,
-  Tick02Icon,
-  UserGroup03Icon,
-} from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
 import { useRouter } from "@tanstack/react-router"
 import { toast } from "sonner"
-import type { IconSvgElement } from "@hugeicons/react"
 
+import type { CreateTeamInput } from "@/lib/team-contract"
+import { TeamIconPicker } from "@/components/team-icon-picker"
 import {
   TeamTimezonePicker,
   defaultTeamTimezone,
 } from "@/components/team-timezone-picker"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { TEAM_COLORS } from "@/lib/team-contract"
 import { createTeam } from "@/lib/team-state"
-import { cn } from "@/lib/utils"
-
-function iconLabel(exportName: string) {
-  return exportName
-    .replace(/Icon$/, "")
-    .replace(/([a-z\d])([A-Z])/g, "$1 $2")
-    .replace(/([A-Z])([A-Z][a-z])/g, "$1 $2")
-    .replace(/([A-Za-z])(\d+)/g, "$1 $2")
-}
-
-type IconChoice = {
-  icon: IconSvgElement
-  label: string
-  value: string
-}
-
-const defaultIconChoice: IconChoice = {
-  icon: UserGroup03Icon,
-  label: "User Group 03",
-  value: "UserGroup03Icon",
-}
-
-function shortcodeList(value: string | Array<string> | undefined) {
-  return value ? (Array.isArray(value) ? value : [value]) : []
-}
-
-const emojiCategoryDefinitions = [
-  { id: "smileys-people", label: "Smileys & People", groups: [0, 1] },
-  { id: "animals-nature", label: "Animals & Nature", groups: [3] },
-  { id: "food-drink", label: "Food & Drink", groups: [4] },
-  { id: "activity", label: "Activity", groups: [6] },
-  { id: "travel-places", label: "Travel & Places", groups: [5] },
-  { id: "objects", label: "Objects", groups: [7] },
-  { id: "symbols", label: "Symbols", groups: [8] },
-  { id: "flags", label: "Flags", groups: [9] },
-] as const
-
-type EmojiCategoryId = (typeof emojiCategoryDefinitions)[number]["id"]
-
-const emojiCategoryByGroup = new Map<number, EmojiCategoryId>(
-  emojiCategoryDefinitions.flatMap((category) =>
-    category.groups.map((group) => [group, category.id] as const)
-  )
-)
-
-const emojiCategoryOrder = new Map<EmojiCategoryId, number>(
-  emojiCategoryDefinitions.map((category, index) => [category.id, index])
-)
-
-type EmojiChoice = {
-  category: EmojiCategoryId
-  emoji: string
-  label: string
-  search: string
-  shortcode: string
-}
 
 function FieldRow({
   children,
@@ -123,233 +55,21 @@ function SectionHeading({
   )
 }
 
-function SearchField({
-  separated = false,
-  showIcon = true,
-  topSeparator = true,
-  onChange,
-  placeholder,
-  value,
-}: {
-  separated?: boolean
-  showIcon?: boolean
-  topSeparator?: boolean
-  onChange: (value: string) => void
-  placeholder: string
-  value: string
-}) {
-  return (
-    <div
-      className={cn(
-        "relative",
-        separated && "border-b border-border/60 px-2.5",
-        separated && topSeparator && "border-t"
-      )}
-    >
-      {showIcon ? (
-        <HugeiconsIcon
-          icon={Search01Icon}
-          strokeWidth={2}
-          className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
-        />
-      ) : null}
-      <Input
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        className={cn(
-          "h-8 rounded-lg border-0 bg-transparent shadow-none focus-visible:ring-0",
-          showIcon ? "pl-8" : "px-0"
-        )}
-      />
-    </div>
-  )
-}
-
 export function CreateTeamForm() {
   const router = useRouter()
-  const iconGridRef = React.useRef<HTMLDivElement>(null)
-  const emojiGridRef = React.useRef<HTMLDivElement>(null)
   const [name, setName] = React.useState("")
   const [identifier, setIdentifier] = React.useState("")
-  const [selectedIcon, setSelectedIcon] = React.useState("UserGroup03Icon")
-  const [selectedEmoji, setSelectedEmoji] = React.useState<string | null>(null)
-  const [selectedColor, setSelectedColor] = React.useState<
-    (typeof TEAM_COLORS)[number]
-  >(TEAM_COLORS[0])
-  const [iconQuery, setIconQuery] = React.useState("")
-  const [iconChoices, setIconChoices] = React.useState<Array<IconChoice>>([
-    defaultIconChoice,
-  ])
-  const [iconsLoading, setIconsLoading] = React.useState(false)
-  const [visibleIconCount, setVisibleIconCount] = React.useState(100)
-  const [emojiQuery, setEmojiQuery] = React.useState("")
-  const [emojiChoices, setEmojiChoices] = React.useState<Array<EmojiChoice>>(
-    []
-  )
-  const [emojisLoading, setEmojisLoading] = React.useState(false)
-  const [visibleEmojiCount, setVisibleEmojiCount] = React.useState(100)
+  const [teamIcon, setTeamIcon] = React.useState<CreateTeamInput["icon"]>({
+    kind: "icon",
+    value: "UserGroup03Icon",
+    color: "#94a3b8",
+  })
   const [timezone, setTimezone] = React.useState(defaultTeamTimezone)
   const [fieldErrors, setFieldErrors] = React.useState<{
     name?: string
     identifier?: string
   }>({})
   const [isSubmitting, setIsSubmitting] = React.useState(false)
-
-  const activeIcon =
-    iconChoices.find((choice) => choice.value === selectedIcon) ??
-    iconChoices[0]
-  const deferredIconQuery = React.useDeferredValue(iconQuery)
-  const filteredIcons = React.useMemo(() => {
-    const query = deferredIconQuery.trim().toLocaleLowerCase()
-
-    return query
-      ? iconChoices.filter((choice) =>
-          `${choice.label} ${choice.value}`.toLocaleLowerCase().includes(query)
-        )
-      : iconChoices
-  }, [deferredIconQuery, iconChoices])
-  const visibleIcons = filteredIcons.slice(0, visibleIconCount)
-  const deferredEmojiQuery = React.useDeferredValue(emojiQuery)
-  const filteredEmojis = React.useMemo(() => {
-    const query = deferredEmojiQuery
-      .trim()
-      .toLocaleLowerCase()
-      .replace(/^:/, "")
-      .replace(/:$/, "")
-
-    return query
-      ? emojiChoices.filter((emoji) => emoji.search.includes(query))
-      : emojiChoices
-  }, [deferredEmojiQuery, emojiChoices])
-  const visibleEmojis = filteredEmojis.slice(0, visibleEmojiCount)
-  const visibleEmojiCategories = emojiCategoryDefinitions
-    .map((category) => ({
-      ...category,
-      emojis: visibleEmojis.filter((emoji) => emoji.category === category.id),
-    }))
-    .filter((category) => category.emojis.length > 0)
-  async function loadIconChoices() {
-    if (iconsLoading || iconChoices.length > 1) {
-      return
-    }
-
-    setIconsLoading(true)
-
-    try {
-      // The query gives Vite a separate module identity so the full catalog stays
-      // out of the initial application bundle and loads only with this picker.
-      // @ts-expect-error Vite resolves package resource queries at build time.
-      const catalogImport = import("@hugeicons/core-free-icons?catalog")
-      const hugeicons = await catalogImport
-      const choices = Object.entries(hugeicons)
-        .filter(
-          (entry): entry is [string, IconSvgElement] =>
-            entry[0].endsWith("Icon") && Array.isArray(entry[1])
-        )
-        .map(([value, icon]) => ({
-          icon,
-          label: iconLabel(value),
-          value,
-        }))
-
-      setIconChoices(choices)
-    } catch {
-      toast.error("The icon catalog could not be loaded.")
-    } finally {
-      setIconsLoading(false)
-    }
-  }
-
-  async function loadEmojiChoices() {
-    if (emojisLoading || emojiChoices.length > 0) {
-      return
-    }
-
-    setEmojisLoading(true)
-
-    try {
-      const [{ default: emojiData }, { default: emojiShortcodes }] =
-        await Promise.all([
-          import("emojibase-data/en/compact.json"),
-          import("emojibase-data/en/shortcodes/emojibase.json"),
-        ])
-      const choices = emojiData
-        // Keep the main grid to canonical emoji. Many multi-person skin
-        // variants are ZWJ sequences that can overflow on older emoji fonts.
-        .flatMap((emoji) => {
-          const category =
-            emoji.group === undefined
-              ? undefined
-              : emojiCategoryByGroup.get(emoji.group)
-
-          return category ? [{ ...emoji, category }] : []
-        })
-        .sort(
-          (a, b) =>
-            (emojiCategoryOrder.get(a.category) ?? Number.MAX_SAFE_INTEGER) -
-              (emojiCategoryOrder.get(b.category) ??
-                Number.MAX_SAFE_INTEGER) ||
-            (a.order ?? Number.MAX_SAFE_INTEGER) -
-              (b.order ?? Number.MAX_SAFE_INTEGER)
-        )
-        .map((emoji) => {
-          const shortcodes = shortcodeList(emojiShortcodes[emoji.hexcode])
-          const fallbackShortcode = emoji.label
-            .toLocaleLowerCase()
-            .replace(/[^a-z0-9]+/g, "_")
-            .replace(/^_|_$/g, "")
-
-          return {
-            category: emoji.category,
-            emoji: emoji.unicode,
-            label: emoji.label,
-            search: [emoji.label, ...shortcodes, fallbackShortcode]
-              .join(" ")
-              .toLocaleLowerCase(),
-            shortcode: shortcodes[0] ?? fallbackShortcode,
-          }
-        })
-
-      setEmojiChoices(choices)
-    } catch {
-      toast.error("The emoji catalog could not be loaded.")
-    } finally {
-      setEmojisLoading(false)
-    }
-  }
-
-  function handleIconQueryChange(value: string) {
-    setIconQuery(value)
-    setVisibleIconCount(100)
-    iconGridRef.current?.scrollTo({ top: 0 })
-  }
-
-  function handleIconGridScroll(event: React.UIEvent<HTMLDivElement>) {
-    const grid = event.currentTarget
-
-    if (grid.scrollHeight - grid.scrollTop - grid.clientHeight < 48) {
-      setVisibleIconCount((count) =>
-        Math.min(count + 100, filteredIcons.length)
-      )
-    }
-  }
-
-  function handleEmojiQueryChange(value: string) {
-    setEmojiQuery(value)
-    setVisibleEmojiCount(100)
-    emojiGridRef.current?.scrollTo({ top: 0 })
-  }
-
-  function handleEmojiGridScroll(event: React.UIEvent<HTMLDivElement>) {
-    const grid = event.currentTarget
-
-    if (grid.scrollHeight - grid.scrollTop - grid.clientHeight < 48) {
-      setVisibleEmojiCount((count) =>
-        Math.min(count + 100, filteredEmojis.length)
-      )
-    }
-  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -374,9 +94,7 @@ export function CreateTeamForm() {
         data: {
           name,
           identifier,
-          icon: selectedEmoji
-            ? { kind: "emoji", value: selectedEmoji, color: selectedColor }
-            : { kind: "icon", value: selectedIcon, color: selectedColor },
+          icon: teamIcon,
           timezone,
         },
       })
@@ -420,163 +138,11 @@ export function CreateTeamForm() {
 
         <div className="overflow-hidden rounded-2xl border border-border/70 bg-muted/35">
           <FieldRow label="Icon & Name">
-            <Popover
-              onOpenChange={(open) => {
-                if (open) {
-                  void loadIconChoices()
-                }
-              }}
-            >
-              <PopoverTrigger
-                render={
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon-sm"
-                    aria-label="Choose team icon"
-                    className="rounded-full bg-background/70"
-                    style={{ color: selectedColor }}
-                  />
-                }
-              >
-                {selectedEmoji ? (
-                  <span className="text-base leading-none">
-                    {selectedEmoji}
-                  </span>
-                ) : (
-                  <HugeiconsIcon icon={activeIcon.icon} strokeWidth={2} />
-                )}
-              </PopoverTrigger>
-              <PopoverContent
-                align="start"
-                sideOffset={6}
-                className="w-[292px] gap-0 overflow-hidden rounded-xl p-0"
-              >
-                <Tabs
-                  defaultValue="icons"
-                  onValueChange={(value) => {
-                    if (value === "emojis") void loadEmojiChoices()
-                  }}
-                  className="gap-0"
-                >
-                  <TabsList
-                    variant="line"
-                    className="h-9 w-full justify-start gap-4 border-b px-3"
-                  >
-                    <TabsTrigger value="icons" className="h-full px-0 text-xs">
-                      Icons
-                    </TabsTrigger>
-                    <TabsTrigger value="emojis" className="h-full px-0 text-xs">
-                      Emojis
-                    </TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="icons" className="p-0">
-                    <div className="flex items-center justify-between gap-1.5 p-2.5">
-                      {TEAM_COLORS.map((color) => (
-                        <button
-                          key={color}
-                          type="button"
-                          aria-label={`Use ${color}`}
-                          onClick={() => setSelectedColor(color)}
-                          className={cn(
-                            "grid size-6 place-items-center rounded-full ring-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                            selectedColor === color && "ring-2 ring-ring/50"
-                          )}
-                          style={{ backgroundColor: color }}
-                        >
-                          {selectedColor === color ? (
-                            <HugeiconsIcon
-                              icon={Tick02Icon}
-                              strokeWidth={2.5}
-                              className="size-3.5 text-white"
-                            />
-                          ) : null}
-                        </button>
-                      ))}
-                    </div>
-                    <SearchField
-                      separated
-                      showIcon={false}
-                      value={iconQuery}
-                      onChange={handleIconQueryChange}
-                      placeholder="Search icons..."
-                    />
-                    <div
-                      ref={iconGridRef}
-                      onScroll={handleIconGridScroll}
-                      className="grid max-h-52 grid-cols-[repeat(10,1.5rem)] justify-between gap-0.5 overflow-y-auto p-2.5"
-                    >
-                      {visibleIcons.map((choice) => (
-                        <button
-                          key={choice.value}
-                          type="button"
-                          title={choice.label}
-                          aria-label={choice.label}
-                          onClick={() => {
-                            setSelectedIcon(choice.value)
-                            setSelectedEmoji(null)
-                          }}
-                          className={cn(
-                            "grid size-6 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                            !selectedEmoji && selectedIcon === choice.value
-                              ? "bg-accent text-foreground"
-                              : undefined
-                          )}
-                        >
-                          <HugeiconsIcon
-                            icon={choice.icon}
-                            strokeWidth={2}
-                            className="size-4"
-                          />
-                        </button>
-                      ))}
-                    </div>
-                  </TabsContent>
-                  <TabsContent value="emojis" className="p-0">
-                    <SearchField
-                      separated
-                      showIcon={false}
-                      topSeparator={false}
-                      value={emojiQuery}
-                      onChange={handleEmojiQueryChange}
-                      placeholder="Search emoji..."
-                    />
-                    <div
-                      ref={emojiGridRef}
-                      onScroll={handleEmojiGridScroll}
-                      className="max-h-52 min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain px-2.5 pb-2.5"
-                    >
-                      {emojisLoading ? (
-                        <p className="py-8 text-center text-xs text-muted-foreground">
-                          Loading emoji…
-                        </p>
-                      ) : null}
-                      {visibleEmojiCategories.map((category) => (
-                        <section key={category.id}>
-                          <h3 className="pt-2.5 pb-1 text-xs font-medium text-muted-foreground">
-                            {category.label}
-                          </h3>
-                          <div className="grid min-w-0 grid-cols-[repeat(10,minmax(0,1.5rem))] justify-between gap-0.5">
-                            {category.emojis.map((emoji) => (
-                              <button
-                                key={`${emoji.emoji}-${emoji.shortcode}`}
-                                type="button"
-                                title={`:${emoji.shortcode}: — ${emoji.label}`}
-                                aria-label={`:${emoji.shortcode}: — ${emoji.label}`}
-                                onClick={() => setSelectedEmoji(emoji.emoji)}
-                                className="grid size-6 min-w-0 place-items-center overflow-hidden rounded-md text-base leading-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                              >
-                                {emoji.emoji}
-                              </button>
-                            ))}
-                          </div>
-                        </section>
-                      ))}
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </PopoverContent>
-            </Popover>
+            <TeamIconPicker
+              name={name || "New team"}
+              value={teamIcon}
+              onChange={setTeamIcon}
+            />
             <div className="w-44">
               <Input
                 value={name}

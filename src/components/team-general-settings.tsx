@@ -7,6 +7,7 @@ import { Link } from "@tanstack/react-router"
 import { toast } from "sonner"
 
 import type { TeamSummary, UpdateTeamInput } from "@/lib/team-contract"
+import { TeamIconPicker } from "@/components/team-icon-picker"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { TeamTimezonePicker } from "@/components/team-timezone-picker"
 import { Button } from "@/components/ui/button"
@@ -101,6 +102,7 @@ function SettingsCard({
 }
 
 export function TeamGeneralSettings({ team }: { team: TeamSummary }) {
+  const [icon, setIcon] = React.useState(team.icon)
   const [name, setName] = React.useState(team.name)
   const [identifier, setIdentifier] = React.useState(team.identifier)
   const [description, setDescription] = React.useState(team.description)
@@ -116,6 +118,7 @@ export function TeamGeneralSettings({ team }: { team: TeamSummary }) {
   )
   const [saveStatus, setSaveStatus] = React.useState<SaveStatus>("idle")
   const savedSettings = React.useRef({
+    icon: team.icon,
     name: team.name,
     identifier: team.identifier,
     description: team.description,
@@ -176,7 +179,7 @@ export function TeamGeneralSettings({ team }: { team: TeamSummary }) {
     estimationOptions[0]
 
   return (
-    <main className="min-h-0 flex-1 overflow-y-auto px-6 pt-2 pb-4">
+    <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-none px-6 pt-2 pb-4 [scrollbar-gutter:stable]">
       <div className="sticky top-0 z-20 -mx-6 -mt-2 px-6 pt-2 pb-2">
         <Link
           to="/settings/teams/$teamSlug"
@@ -188,7 +191,7 @@ export function TeamGeneralSettings({ team }: { team: TeamSummary }) {
             strokeWidth={2}
             className="size-3.5"
           />
-          <TeamSidebarIcon icon={team.icon} name={team.name} />
+          <TeamSidebarIcon icon={icon} name={team.name} />
           {name}
         </Link>
       </div>
@@ -214,16 +217,14 @@ export function TeamGeneralSettings({ team }: { team: TeamSummary }) {
 
             <SettingsCard>
               <FieldRow label="Icon & Name">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon-sm"
-                  aria-label="Choose team icon"
-                  onClick={() => toast.info("Icon editing is coming soon.")}
-                  className="rounded-full bg-background/70"
-                >
-                  <TeamSidebarIcon icon={team.icon} name={team.name} />
-                </Button>
+                <TeamIconPicker
+                  name={name}
+                  value={icon}
+                  onChange={(nextIcon) => {
+                    setIcon(nextIcon)
+                    void saveSettings({ icon: nextIcon })
+                  }}
+                />
                 <Input
                   value={name}
                   onChange={(event) => setName(event.target.value)}

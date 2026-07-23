@@ -317,7 +317,7 @@ export function TeamSettingsOverview({ team }: { team: TeamSummary }) {
 
   return (
     <>
-      <main className="min-h-0 flex-1 overflow-y-auto px-6 pt-12 pb-4">
+      <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-none px-6 pt-12 pb-4 [scrollbar-gutter:stable]">
         <div className="mx-auto w-full max-w-[640px] pb-16">
           <div className="space-y-12">
             <section className="space-y-5">

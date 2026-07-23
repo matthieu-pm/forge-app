@@ -83,6 +83,11 @@ describe("updateTeamInputSchema", () => {
       updateTeamInputSchema.parse({
         slug: " Engineering ",
         settings: {
+          icon: {
+            kind: "emoji",
+            value: "🛠️",
+            color: "#38bdf8",
+          },
           name: " Platform ",
           identifier: " plt ",
           description: " Core systems ",
@@ -92,6 +97,11 @@ describe("updateTeamInputSchema", () => {
     ).toEqual({
       slug: "engineering",
       settings: {
+        icon: {
+          kind: "emoji",
+          value: "🛠️",
+          color: "#38bdf8",
+        },
         name: "Platform",
         identifier: "PLT",
         description: "Core systems",

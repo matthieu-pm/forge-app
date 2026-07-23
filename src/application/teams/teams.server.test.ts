@@ -231,6 +231,22 @@ describe("Teams application module", () => {
       updateTeam(owner, { id: persistedTeam().id }, { description: "Core" })
     ).resolves.toMatchObject({ ok: true })
 
+    await updateTeam(owner, { id: persistedTeam().id }, {
+      icon: {
+        kind: "emoji",
+        value: "🛠️",
+        color: "#38bdf8",
+      },
+    })
+    expect(mocks.updateSet).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        iconKind: "emoji",
+        iconValue: "🛠️",
+        color: "#38bdf8",
+      })
+    )
+    expect(mocks.updateSet.mock.lastCall?.[0]).not.toHaveProperty("icon")
+
     mocks.returning.mockRejectedValue({
       constraint: "teams_workspace_identifier_unique",
     })

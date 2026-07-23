@@ -314,9 +314,20 @@ export async function updateTeam(
   }
 
   try {
+    const { icon, ...teamSettings } = settings
     const updatedTeams = await db
       .update(teams)
-      .set({ ...settings, updatedAt: new Date() })
+      .set({
+        ...teamSettings,
+        ...(icon
+          ? {
+              iconKind: icon.kind,
+              iconValue: icon.value,
+              color: icon.color,
+            }
+          : undefined),
+        updatedAt: new Date(),
+      })
       .where(
         and(
           eq(teams.workspaceId, actor.workspaceId),
