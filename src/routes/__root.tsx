@@ -89,7 +89,7 @@ function RootLayout() {
     >
       {pathname.startsWith("/settings") ? <SettingsSidebar /> : <AppSidebar />}
       <SidebarInset>
-        <AppHeader pathname={pathname} />
+        <AppHeader />
         <Outlet key={pathname} />
       </SidebarInset>
       <DesktopFooterActions />
@@ -140,20 +140,25 @@ function DesktopFooterActions() {
   )
 }
 
-function AppHeader({ pathname }: { pathname: string }) {
-  const breadcrumbTeam = useRouterState({
+function AppHeader() {
+  const { breadcrumbTeam, pathname } = useRouterState({
     select: (state) => {
-      if (!/^\/teams\/[^/]+\/(issues|projects|views)$/.test(pathname)) {
-        return undefined
+      const resolvedPathname =
+        state.resolvedLocation?.pathname ?? state.location.pathname
+
+      if (
+        !/^\/teams\/[^/]+\/(issues|projects|views)$/.test(resolvedPathname)
+      ) {
+        return { breadcrumbTeam: undefined, pathname: resolvedPathname }
       }
 
       for (let index = state.matches.length - 1; index >= 0; index -= 1) {
         const team = (state.matches[index].context as { team?: TeamSummary })
           .team
-        if (team) return team
+        if (team) return { breadcrumbTeam: team, pathname: resolvedPathname }
       }
 
-      return undefined
+      return { breadcrumbTeam: undefined, pathname: resolvedPathname }
     },
   })
 
