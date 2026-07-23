@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm"
 import {
   boolean,
   index,
+  integer,
   pgTable,
   text,
   timestamp,
@@ -22,28 +23,32 @@ export const users = pgTable("user", {
     .defaultNow(),
 })
 
-export const sessions = pgTable("session", {
-  id: text("id").primaryKey(),
-  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-  token: text("token").notNull().unique(),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  ipAddress: text("ip_address"),
-  userAgent: text("user_agent"),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  activeOrganizationId: text("active_organization_id").references(
-    () => organizations.id,
-    { onDelete: "set null" }
-  ),
-}, (table) => ({
-  userIdIndex: index("session_user_id_idx").on(table.userId),
-}))
+export const sessions = pgTable(
+  "session",
+  {
+    id: text("id").primaryKey(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    token: text("token").notNull().unique(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    activeOrganizationId: text("active_organization_id").references(
+      () => organizations.id,
+      { onDelete: "set null" }
+    ),
+  },
+  (table) => ({
+    userIdIndex: index("session_user_id_idx").on(table.userId),
+  })
+)
 
 export const accounts = pgTable(
   "account",
@@ -164,11 +169,57 @@ export const invitations = pgTable(
   })
 )
 
+export const apiKeys = pgTable(
+  "apikey",
+  {
+    id: text("id").primaryKey(),
+    configId: text("config_id").default("default").notNull(),
+    name: text("name"),
+    start: text("start"),
+    referenceId: text("reference_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    prefix: text("prefix"),
+    key: text("key").notNull().unique(),
+    refillInterval: integer("refill_interval"),
+    refillAmount: integer("refill_amount"),
+    lastRefillAt: timestamp("last_refill_at", { withTimezone: true }),
+    enabled: boolean("enabled").default(true).notNull(),
+    rateLimitEnabled: boolean("rate_limit_enabled").default(true).notNull(),
+    rateLimitTimeWindow: integer("rate_limit_time_window"),
+    rateLimitMax: integer("rate_limit_max"),
+    requestCount: integer("request_count").default(0).notNull(),
+    remaining: integer("remaining"),
+    lastRequest: timestamp("last_request", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    permissions: text("permissions"),
+    metadata: text("metadata"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    configIdIndex: index("apikey_config_id_idx").on(table.configId),
+    referenceIdIndex: index("apikey_reference_id_idx").on(table.referenceId),
+  })
+)
+
 export const usersRelations = relations(users, ({ many }) => ({
   accounts: many(accounts),
   sessions: many(sessions),
   memberships: many(members),
   invitationsSent: many(invitations),
+  apiKeys: many(apiKeys),
+}))
+
+export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
+  user: one(users, {
+    fields: [apiKeys.referenceId],
+    references: [users.id],
+  }),
 }))
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({

@@ -30,6 +30,7 @@ type TeamPath = `/teams/${TeamSlug}/${TeamSection}`
 export type AppPath =
   | "/forge"
   | "/settings"
+  | "/settings/api"
   | "/inbox"
   | "/my-issues"
   | "/workspace/initiatives"
@@ -291,6 +292,10 @@ export function getBreadcrumbItems(pathname: string): Array<BreadcrumbItem> {
 
   if (pathname === "/settings") {
     return [{ label: "Preferences" }]
+  }
+
+  if (pathname === "/settings/api") {
+    return [{ label: "API" }]
   }
 
   const initiativeMatch = pathname.match(/^\/workspace\/initiatives\/([^/]+)$/)

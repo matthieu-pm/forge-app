@@ -7,6 +7,10 @@ describe("getBreadcrumbItems", () => {
     expect(getBreadcrumbItems("/settings")).toEqual([{ label: "Preferences" }])
   })
 
+  it("labels public API settings", () => {
+    expect(getBreadcrumbItems("/settings/api")).toEqual([{ label: "API" }])
+  })
+
   it("labels the create-team settings page", () => {
     expect(getBreadcrumbItems("/settings/teams/new")).toEqual([
       { label: "Create a new team" },

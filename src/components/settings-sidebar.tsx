@@ -59,6 +59,7 @@ type SettingsItem = {
   label: string
   icon: SettingsIcon
   active?: boolean
+  to?: "/settings" | "/settings/api"
 }
 
 type SettingsGroup = {
@@ -70,7 +71,12 @@ const settingsGroups: Array<SettingsGroup> = [
   {
     label: "Personal",
     items: [
-      { label: "Preferences", icon: CustomizeIcon, active: true },
+      {
+        label: "Preferences",
+        icon: CustomizeIcon,
+        active: true,
+        to: "/settings",
+      },
       { label: "Profile", icon: AccountSetting02Icon },
       { label: "Notifications", icon: NotificationSquareIcon },
       { label: "Code and reviews", icon: ComputerTerminal01Icon },
@@ -114,7 +120,7 @@ const settingsGroups: Array<SettingsGroup> = [
       { label: "Teams", icon: IdentificationIcon },
       { label: "Members", icon: UserGroup03Icon },
       { label: "Security", icon: SecurityLockIcon },
-      { label: "API", icon: SourceCodeIcon },
+      { label: "API", icon: SourceCodeIcon, to: "/settings/api" },
       { label: "Applications", icon: WebProgrammingIcon },
       { label: "Billing", icon: CreditCardIcon },
       { label: "Import & Export", icon: ArrowLeftRightIcon },
@@ -203,8 +209,13 @@ export function SettingsSidebar() {
               {group.items.map((item) => (
                 <SidebarMenuItem key={`${group.label}-${item.label}`}>
                   <SidebarMenuButton
-                    type="button"
-                    isActive={pathname === "/settings" && item.active}
+                    type={item.to ? undefined : "button"}
+                    render={item.to ? <Link to={item.to} /> : undefined}
+                    isActive={
+                      item.to
+                        ? pathname === item.to
+                        : pathname === "/settings" && item.active
+                    }
                     className="h-7 rounded-lg px-2 text-sm font-medium [&>svg]:size-4"
                   >
                     <HugeiconsIcon icon={item.icon} strokeWidth={2} />

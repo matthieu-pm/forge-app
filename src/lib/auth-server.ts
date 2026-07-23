@@ -161,6 +161,7 @@ export async function getActiveWorkspace(request: Request) {
 
 export type ActiveWorkspaceMember = {
   userId: string
+  sessionId: string
   workspace: WorkspaceSummary
   role: string
 }
@@ -179,10 +180,7 @@ async function loadMembershipRole(workspaceId: string, userId: string) {
     .select({ role: members.role })
     .from(members)
     .where(
-      and(
-        eq(members.organizationId, workspaceId),
-        eq(members.userId, userId)
-      )
+      and(eq(members.organizationId, workspaceId), eq(members.userId, userId))
     )
     .limit(1)
 
@@ -221,6 +219,7 @@ export async function requireActiveWorkspaceMember(
 
   return {
     userId: session.user.id,
+    sessionId: session.session.id,
     workspace,
     role,
   }

@@ -9,6 +9,7 @@ Current build: `v0.0.1`
 - TanStack Start, TanStack Router, React, and TypeScript
 - Tailwind CSS and shadcn/ui components
 - Better Auth with organization support
+- Contract-first oRPC API with OpenAPI 3.1 documentation
 - Neon Postgres with Drizzle ORM
 - Bun for package management and scripts
 - Electron Forge for the shared-renderer macOS app
@@ -52,6 +53,19 @@ This project uses Neon Postgres with Drizzle ORM.
 1. Open Drizzle Studio with `bun run db:studio`.
 
 The shared database client lives in `src/db/index.ts`. Application workspace schema lives in `src/db/schema.ts`, and auth schema lives in `src/db/auth-schema.ts`.
+
+## Public API
+
+The public API is served from `/api/v1` when `PUBLIC_API_ENABLED=true`. In
+development and test environments it is enabled unless explicitly disabled.
+
+- Manage scoped credentials from `/settings/api`.
+- Send credentials as `Authorization: Bearer forge_…`.
+- Open the API reference at `/api/docs`.
+- Download the OpenAPI 3.1 document from `/api/openapi.json`.
+- Include an `Idempotency-Key` header when creating resources.
+
+See [`docs/public-api.md`](docs/public-api.md) for conventions and examples.
 
 ## macOS app
 

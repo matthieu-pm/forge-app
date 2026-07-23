@@ -4,7 +4,8 @@ import { resolve } from "node:path"
 import { getTableColumns } from "drizzle-orm"
 import { describe, expect, it } from "vitest"
 
-import { teams } from "./schema"
+import { apiKeys } from "./auth-schema"
+import { apiIdempotencyKeys, teams } from "./schema"
 
 type MigrationJournal = {
   entries: Array<{ idx: number }>
@@ -20,7 +21,7 @@ type MigrationSnapshot = {
 }
 
 describe("database migrations", () => {
-  it("keeps the latest teams migration snapshot aligned with the schema", () => {
+  it("keeps public API tables aligned with the latest migration snapshot", () => {
     const journalPath = resolve("drizzle/meta/_journal.json")
     const journal = JSON.parse(
       readFileSync(journalPath, "utf8")
@@ -35,13 +36,19 @@ describe("database migrations", () => {
     const snapshot = JSON.parse(
       readFileSync(snapshotPath, "utf8")
     ) as MigrationSnapshot
-    const migratedColumns = Object.keys(
-      snapshot.tables["public.teams"].columns
-    ).sort()
-    const schemaColumns = Object.values(getTableColumns(teams))
-      .map((column) => column.name)
-      .sort()
+    for (const [tableName, table] of [
+      ["teams", teams],
+      ["apikey", apiKeys],
+      ["api_idempotency_keys", apiIdempotencyKeys],
+    ] as const) {
+      const migratedColumns = Object.keys(
+        snapshot.tables[`public.${tableName}`].columns
+      ).sort()
+      const schemaColumns = Object.values(getTableColumns(table))
+        .map((column) => column.name)
+        .sort()
 
-    expect(migratedColumns).toEqual(schemaColumns)
+      expect(migratedColumns).toEqual(schemaColumns)
+    }
   })
 })
