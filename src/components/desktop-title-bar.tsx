@@ -35,6 +35,7 @@ import {
   SIDEBAR_TOGGLE_EVENT,
 } from "@/lib/sidebar-events"
 import { TEAM_LIST_CHANGED_EVENT } from "@/lib/team-events"
+import { getTeamFromRouteMatches } from "@/lib/team-route-match"
 import { listTeams } from "@/lib/team-state"
 
 const STORAGE_KEY = "forge:desktop-tabs"
@@ -173,8 +174,11 @@ export function isDesktopTitleBarHidden(pathname: string) {
 
 function DesktopTitleBarChrome() {
   const router = useRouter()
-  const currentPath = useRouterState({
-    select: (state) => state.location.href,
+  const { currentPath, resolvedTeam } = useRouterState({
+    select: (state) => ({
+      currentPath: state.resolvedLocation?.href ?? state.location.href,
+      resolvedTeam: getTeamFromRouteMatches(state.matches),
+    }),
   })
   const [tabState, setTabState] = useState<DesktopTabsState>(() =>
     createDesktopTabs(currentPath)
@@ -402,7 +406,9 @@ function DesktopTitleBarChrome() {
           const isActive = tab.id === tabState.activeTabId
           const teamSlug = getTabTeamSlug(path)
           const team = teamSlug
-            ? workspaceTeams.find((item) => item.slug === teamSlug)
+            ? resolvedTeam?.slug === teamSlug
+              ? resolvedTeam
+              : workspaceTeams.find((item) => item.slug === teamSlug)
             : undefined
           return (
             <div

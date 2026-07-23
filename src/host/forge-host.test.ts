@@ -29,6 +29,7 @@ describe("createForgeHost", () => {
       }),
       openExternal: vi.fn().mockResolvedValue(undefined),
       setUnreadCount: vi.fn().mockResolvedValue(undefined),
+      setThemeSource: vi.fn().mockResolvedValue(undefined),
       showNotification: vi.fn().mockResolvedValue(undefined),
       openWindow: vi.fn().mockResolvedValue(undefined),
       beginAuth: vi.fn().mockResolvedValue(undefined),
@@ -49,12 +50,40 @@ describe("createForgeHost", () => {
       capabilities: ["dock-badge", "deep-links"],
     })
     await host.setUnreadCount(3)
+    await host.setThemeSource("dark")
     await host.beginAuth({ returnTo: "/inbox" })
     const stop = host.subscribe(listener)
 
     expect(bridge.setUnreadCount).toHaveBeenCalledWith(3)
+    expect(bridge.setThemeSource).toHaveBeenCalledWith("dark")
     expect(bridge.beginAuth).toHaveBeenCalledWith({ returnTo: "/inbox" })
     expect(listener).toHaveBeenCalledWith(event)
     expect(stop).toBe(unsubscribe)
+  })
+
+  it("keeps older desktop preload bridges usable during development", async () => {
+    const legacyBridge = {
+      getRuntime: vi.fn().mockResolvedValue({
+        platform: "macos",
+        hostVersion: "1.0.0",
+        capabilities: [],
+      }),
+      openExternal: vi.fn().mockResolvedValue(undefined),
+      setUnreadCount: vi.fn().mockResolvedValue(undefined),
+      showNotification: vi.fn().mockResolvedValue(undefined),
+      openWindow: vi.fn().mockResolvedValue(undefined),
+      beginAuth: vi.fn().mockResolvedValue(undefined),
+      completeAuth: vi.fn().mockResolvedValue(undefined),
+      adoptAuthSession: vi.fn().mockResolvedValue({ returnTo: "/inbox" }),
+      signOut: vi.fn().mockResolvedValue(undefined),
+      subscribe: vi.fn(() => () => {}),
+    } as unknown as ForgeDesktopBridge
+
+    const host = createForgeHost(legacyBridge)
+
+    await expect(host.setThemeSource("dark")).resolves.toBeUndefined()
+    await expect(host.getRuntime()).resolves.toMatchObject({
+      platform: "macos",
+    })
   })
 })

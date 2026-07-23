@@ -1,4 +1,11 @@
-import { BrowserWindow, Notification, app, ipcMain, shell } from "electron"
+import {
+  BrowserWindow,
+  Notification,
+  app,
+  ipcMain,
+  nativeTheme,
+  shell,
+} from "electron"
 import {
   beginAuthSchema,
   completeAuthSchema,
@@ -6,8 +13,10 @@ import {
   externalUrlSchema,
   notificationSchema,
   routePathSchema,
+  themeSourceSchema,
   unreadCountSchema,
 } from "../shared/bridge-contract"
+import { configureAppAppearance } from "./appearance"
 import type { IpcMainInvokeEvent } from "electron"
 
 import type {
@@ -79,6 +88,13 @@ export function registerHostBridge(
     desktopChannels.setUnreadCount,
     trusted((_event, input) => {
       app.setBadgeCount(unreadCountSchema.parse(input))
+    })
+  )
+
+  ipcMain.handle(
+    desktopChannels.setThemeSource,
+    trusted((_event, input) => {
+      configureAppAppearance(nativeTheme, themeSourceSchema.parse(input))
     })
   )
 

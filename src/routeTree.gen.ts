@@ -24,6 +24,7 @@ import { Route as WorkspaceProjectsRouteImport } from './routes/workspace/projec
 import { Route as WorkspaceMembersRouteImport } from './routes/workspace/members'
 import { Route as WorkspaceInsightsRouteImport } from './routes/workspace/insights'
 import { Route as WorkspaceCallsRouteImport } from './routes/workspace/calls'
+import { Route as TeamsTeamSlugRouteImport } from './routes/teams/$teamSlug'
 import { Route as SettingsApiRouteImport } from './routes/settings.api'
 import { Route as OnboardingWorkspaceRouteImport } from './routes/onboarding/workspace'
 import { Route as AuthDesktopRouteImport } from './routes/auth/desktop'
@@ -119,6 +120,11 @@ const WorkspaceCallsRoute = WorkspaceCallsRouteImport.update({
   path: '/workspace/calls',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TeamsTeamSlugRoute = TeamsTeamSlugRouteImport.update({
+  id: '/teams/$teamSlug',
+  path: '/teams/$teamSlug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsApiRoute = SettingsApiRouteImport.update({
   id: '/api',
   path: '/api',
@@ -157,34 +163,34 @@ const WorkspaceInitiativesInitiativeIdRoute =
     getParentRoute: () => rootRouteImport,
   } as any)
 const TeamsTeamSlugViewsRoute = TeamsTeamSlugViewsRouteImport.update({
-  id: '/teams/$teamSlug/views',
-  path: '/teams/$teamSlug/views',
-  getParentRoute: () => rootRouteImport,
+  id: '/views',
+  path: '/views',
+  getParentRoute: () => TeamsTeamSlugRoute,
 } as any)
 const TeamsTeamSlugSignalsRoute = TeamsTeamSlugSignalsRouteImport.update({
-  id: '/teams/$teamSlug/signals',
-  path: '/teams/$teamSlug/signals',
-  getParentRoute: () => rootRouteImport,
+  id: '/signals',
+  path: '/signals',
+  getParentRoute: () => TeamsTeamSlugRoute,
 } as any)
 const TeamsTeamSlugProjectsRoute = TeamsTeamSlugProjectsRouteImport.update({
-  id: '/teams/$teamSlug/projects',
-  path: '/teams/$teamSlug/projects',
-  getParentRoute: () => rootRouteImport,
+  id: '/projects',
+  path: '/projects',
+  getParentRoute: () => TeamsTeamSlugRoute,
 } as any)
 const TeamsTeamSlugIssuesRoute = TeamsTeamSlugIssuesRouteImport.update({
-  id: '/teams/$teamSlug/issues',
-  path: '/teams/$teamSlug/issues',
-  getParentRoute: () => rootRouteImport,
+  id: '/issues',
+  path: '/issues',
+  getParentRoute: () => TeamsTeamSlugRoute,
 } as any)
 const TeamsTeamSlugInsightsRoute = TeamsTeamSlugInsightsRouteImport.update({
-  id: '/teams/$teamSlug/insights',
-  path: '/teams/$teamSlug/insights',
-  getParentRoute: () => rootRouteImport,
+  id: '/insights',
+  path: '/insights',
+  getParentRoute: () => TeamsTeamSlugRoute,
 } as any)
 const TeamsTeamSlugCallsRoute = TeamsTeamSlugCallsRouteImport.update({
-  id: '/teams/$teamSlug/calls',
-  path: '/teams/$teamSlug/calls',
-  getParentRoute: () => rootRouteImport,
+  id: '/calls',
+  path: '/calls',
+  getParentRoute: () => TeamsTeamSlugRoute,
 } as any)
 const SettingsTeamsNewRoute = SettingsTeamsNewRouteImport.update({
   id: '/settings_/teams/new',
@@ -233,6 +239,7 @@ export interface FileRoutesByFullPath {
   '/auth/desktop': typeof AuthDesktopRoute
   '/onboarding/workspace': typeof OnboardingWorkspaceRoute
   '/settings/api': typeof SettingsApiRoute
+  '/teams/$teamSlug': typeof TeamsTeamSlugRouteWithChildren
   '/workspace/calls': typeof WorkspaceCallsRoute
   '/workspace/insights': typeof WorkspaceInsightsRoute
   '/workspace/members': typeof WorkspaceMembersRoute
@@ -269,6 +276,7 @@ export interface FileRoutesByTo {
   '/auth/desktop': typeof AuthDesktopRoute
   '/onboarding/workspace': typeof OnboardingWorkspaceRoute
   '/settings/api': typeof SettingsApiRoute
+  '/teams/$teamSlug': typeof TeamsTeamSlugRouteWithChildren
   '/workspace/calls': typeof WorkspaceCallsRoute
   '/workspace/insights': typeof WorkspaceInsightsRoute
   '/workspace/members': typeof WorkspaceMembersRoute
@@ -305,6 +313,7 @@ export interface FileRoutesById {
   '/auth/desktop': typeof AuthDesktopRoute
   '/onboarding/workspace': typeof OnboardingWorkspaceRoute
   '/settings/api': typeof SettingsApiRoute
+  '/teams/$teamSlug': typeof TeamsTeamSlugRouteWithChildren
   '/workspace/calls': typeof WorkspaceCallsRoute
   '/workspace/insights': typeof WorkspaceInsightsRoute
   '/workspace/members': typeof WorkspaceMembersRoute
@@ -343,6 +352,7 @@ export interface FileRouteTypes {
     | '/auth/desktop'
     | '/onboarding/workspace'
     | '/settings/api'
+    | '/teams/$teamSlug'
     | '/workspace/calls'
     | '/workspace/insights'
     | '/workspace/members'
@@ -379,6 +389,7 @@ export interface FileRouteTypes {
     | '/auth/desktop'
     | '/onboarding/workspace'
     | '/settings/api'
+    | '/teams/$teamSlug'
     | '/workspace/calls'
     | '/workspace/insights'
     | '/workspace/members'
@@ -414,6 +425,7 @@ export interface FileRouteTypes {
     | '/auth/desktop'
     | '/onboarding/workspace'
     | '/settings/api'
+    | '/teams/$teamSlug'
     | '/workspace/calls'
     | '/workspace/insights'
     | '/workspace/members'
@@ -450,6 +462,7 @@ export interface RootRouteChildren {
   ApiOpenapiDotjsonRoute: typeof ApiOpenapiDotjsonRoute
   AuthDesktopRoute: typeof AuthDesktopRoute
   OnboardingWorkspaceRoute: typeof OnboardingWorkspaceRoute
+  TeamsTeamSlugRoute: typeof TeamsTeamSlugRouteWithChildren
   WorkspaceCallsRoute: typeof WorkspaceCallsRoute
   WorkspaceInsightsRoute: typeof WorkspaceInsightsRoute
   WorkspaceMembersRoute: typeof WorkspaceMembersRoute
@@ -461,12 +474,6 @@ export interface RootRouteChildren {
   ApiV1SplatRoute: typeof ApiV1SplatRoute
   SettingsTeamsTeamSlugRoute: typeof SettingsTeamsTeamSlugRouteWithChildren
   SettingsTeamsNewRoute: typeof SettingsTeamsNewRoute
-  TeamsTeamSlugCallsRoute: typeof TeamsTeamSlugCallsRoute
-  TeamsTeamSlugInsightsRoute: typeof TeamsTeamSlugInsightsRoute
-  TeamsTeamSlugIssuesRoute: typeof TeamsTeamSlugIssuesRoute
-  TeamsTeamSlugProjectsRoute: typeof TeamsTeamSlugProjectsRoute
-  TeamsTeamSlugSignalsRoute: typeof TeamsTeamSlugSignalsRoute
-  TeamsTeamSlugViewsRoute: typeof TeamsTeamSlugViewsRoute
   WorkspaceInitiativesInitiativeIdRoute: typeof WorkspaceInitiativesInitiativeIdRoute
   WorkspaceInitiativesIndexRoute: typeof WorkspaceInitiativesIndexRoute
 }
@@ -578,6 +585,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceCallsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/teams/$teamSlug': {
+      id: '/teams/$teamSlug'
+      path: '/teams/$teamSlug'
+      fullPath: '/teams/$teamSlug'
+      preLoaderRoute: typeof TeamsTeamSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings/api': {
       id: '/settings/api'
       path: '/api'
@@ -629,45 +643,45 @@ declare module '@tanstack/react-router' {
     }
     '/teams/$teamSlug/views': {
       id: '/teams/$teamSlug/views'
-      path: '/teams/$teamSlug/views'
+      path: '/views'
       fullPath: '/teams/$teamSlug/views'
       preLoaderRoute: typeof TeamsTeamSlugViewsRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof TeamsTeamSlugRoute
     }
     '/teams/$teamSlug/signals': {
       id: '/teams/$teamSlug/signals'
-      path: '/teams/$teamSlug/signals'
+      path: '/signals'
       fullPath: '/teams/$teamSlug/signals'
       preLoaderRoute: typeof TeamsTeamSlugSignalsRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof TeamsTeamSlugRoute
     }
     '/teams/$teamSlug/projects': {
       id: '/teams/$teamSlug/projects'
-      path: '/teams/$teamSlug/projects'
+      path: '/projects'
       fullPath: '/teams/$teamSlug/projects'
       preLoaderRoute: typeof TeamsTeamSlugProjectsRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof TeamsTeamSlugRoute
     }
     '/teams/$teamSlug/issues': {
       id: '/teams/$teamSlug/issues'
-      path: '/teams/$teamSlug/issues'
+      path: '/issues'
       fullPath: '/teams/$teamSlug/issues'
       preLoaderRoute: typeof TeamsTeamSlugIssuesRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof TeamsTeamSlugRoute
     }
     '/teams/$teamSlug/insights': {
       id: '/teams/$teamSlug/insights'
-      path: '/teams/$teamSlug/insights'
+      path: '/insights'
       fullPath: '/teams/$teamSlug/insights'
       preLoaderRoute: typeof TeamsTeamSlugInsightsRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof TeamsTeamSlugRoute
     }
     '/teams/$teamSlug/calls': {
       id: '/teams/$teamSlug/calls'
-      path: '/teams/$teamSlug/calls'
+      path: '/calls'
       fullPath: '/teams/$teamSlug/calls'
       preLoaderRoute: typeof TeamsTeamSlugCallsRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof TeamsTeamSlugRoute
     }
     '/settings_/teams/new': {
       id: '/settings_/teams/new'
@@ -726,6 +740,28 @@ const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
   SettingsRouteChildren,
 )
 
+interface TeamsTeamSlugRouteChildren {
+  TeamsTeamSlugCallsRoute: typeof TeamsTeamSlugCallsRoute
+  TeamsTeamSlugInsightsRoute: typeof TeamsTeamSlugInsightsRoute
+  TeamsTeamSlugIssuesRoute: typeof TeamsTeamSlugIssuesRoute
+  TeamsTeamSlugProjectsRoute: typeof TeamsTeamSlugProjectsRoute
+  TeamsTeamSlugSignalsRoute: typeof TeamsTeamSlugSignalsRoute
+  TeamsTeamSlugViewsRoute: typeof TeamsTeamSlugViewsRoute
+}
+
+const TeamsTeamSlugRouteChildren: TeamsTeamSlugRouteChildren = {
+  TeamsTeamSlugCallsRoute: TeamsTeamSlugCallsRoute,
+  TeamsTeamSlugInsightsRoute: TeamsTeamSlugInsightsRoute,
+  TeamsTeamSlugIssuesRoute: TeamsTeamSlugIssuesRoute,
+  TeamsTeamSlugProjectsRoute: TeamsTeamSlugProjectsRoute,
+  TeamsTeamSlugSignalsRoute: TeamsTeamSlugSignalsRoute,
+  TeamsTeamSlugViewsRoute: TeamsTeamSlugViewsRoute,
+}
+
+const TeamsTeamSlugRouteWithChildren = TeamsTeamSlugRoute._addFileChildren(
+  TeamsTeamSlugRouteChildren,
+)
+
 interface SettingsTeamsTeamSlugRouteChildren {
   SettingsTeamsTeamSlugGeneralRoute: typeof SettingsTeamsTeamSlugGeneralRoute
   SettingsTeamsTeamSlugIndexRoute: typeof SettingsTeamsTeamSlugIndexRoute
@@ -754,6 +790,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiOpenapiDotjsonRoute: ApiOpenapiDotjsonRoute,
   AuthDesktopRoute: AuthDesktopRoute,
   OnboardingWorkspaceRoute: OnboardingWorkspaceRoute,
+  TeamsTeamSlugRoute: TeamsTeamSlugRouteWithChildren,
   WorkspaceCallsRoute: WorkspaceCallsRoute,
   WorkspaceInsightsRoute: WorkspaceInsightsRoute,
   WorkspaceMembersRoute: WorkspaceMembersRoute,
@@ -765,12 +802,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiV1SplatRoute: ApiV1SplatRoute,
   SettingsTeamsTeamSlugRoute: SettingsTeamsTeamSlugRouteWithChildren,
   SettingsTeamsNewRoute: SettingsTeamsNewRoute,
-  TeamsTeamSlugCallsRoute: TeamsTeamSlugCallsRoute,
-  TeamsTeamSlugInsightsRoute: TeamsTeamSlugInsightsRoute,
-  TeamsTeamSlugIssuesRoute: TeamsTeamSlugIssuesRoute,
-  TeamsTeamSlugProjectsRoute: TeamsTeamSlugProjectsRoute,
-  TeamsTeamSlugSignalsRoute: TeamsTeamSlugSignalsRoute,
-  TeamsTeamSlugViewsRoute: TeamsTeamSlugViewsRoute,
   WorkspaceInitiativesInitiativeIdRoute: WorkspaceInitiativesInitiativeIdRoute,
   WorkspaceInitiativesIndexRoute: WorkspaceInitiativesIndexRoute,
 }

@@ -129,6 +129,15 @@
     }
 }
 
+html[data-forge-pointer-cursors="true"] :is(a, button, [role="button"], [role="option"], [role="switch"]) {
+    cursor: pointer;
+}
+
+html[data-forge-underline-links="true"] a:not([data-sidebar="menu-button"]) {
+    text-decoration-line: underline;
+    text-underline-offset: 0.18em;
+}
+
 .forge-desktop-titlebar {
     display: none;
 }
@@ -150,9 +159,24 @@
     overflow: hidden;
 }
 
+.forge-settings-shell {
+    height: 100svh;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.forge-settings-shell [data-slot="sidebar-inset"] {
+    min-height: 0;
+    overflow: hidden;
+}
+
 .forge-create-team-shell [data-slot="sidebar-inset"] {
     min-height: 0;
     overflow: hidden;
+}
+
+html[data-forge-host="macos"] .forge-settings-shell {
+    height: calc(100svh - 32px);
 }
 
 html[data-forge-host="macos"] .forge-create-team-shell {

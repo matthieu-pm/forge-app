@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
 
-import { PagePlaceholder } from "@/components/page-placeholder"
+import { PreferencesSettings } from "@/components/preferences-settings"
 import { protectedRouteBeforeLoad } from "@/lib/auth-state"
 
 export const Route = createFileRoute("/settings")({
@@ -9,11 +9,5 @@ export const Route = createFileRoute("/settings")({
 })
 
 function SettingsPage() {
-  return (
-    <PagePlaceholder
-      eyebrow="Settings"
-      title="Preferences"
-      description="Manage your personal Forge preferences."
-    />
-  )
+  return <PreferencesSettings />
 }

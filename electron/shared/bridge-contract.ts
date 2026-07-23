@@ -51,6 +51,8 @@ export const routePathSchema = z
 
 export const unreadCountSchema = z.number().int().min(0).max(9999)
 
+export const themeSourceSchema = z.enum(["system", "light", "dark"])
+
 export const notificationSchema = z
   .object({
     id: z.string().min(1).max(200),
@@ -76,6 +78,7 @@ export const desktopChannels = {
   getRuntime: "forge:host:get-runtime",
   openExternal: "forge:host:open-external",
   setUnreadCount: "forge:host:set-unread-count",
+  setThemeSource: "forge:host:set-theme-source",
   showNotification: "forge:host:show-notification",
   openWindow: "forge:host:open-window",
   beginAuth: "forge:auth:begin",

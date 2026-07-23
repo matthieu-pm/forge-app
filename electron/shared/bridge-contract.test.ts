@@ -6,6 +6,7 @@ import {
   externalUrlSchema,
   notificationSchema,
   routePathSchema,
+  themeSourceSchema,
   unreadCountSchema,
 } from "./bridge-contract"
 
@@ -16,6 +17,13 @@ describe("desktop bridge input validation", () => {
     expect(unreadCountSchema.safeParse(-1).success).toBe(false)
     expect(unreadCountSchema.safeParse(1.5).success).toBe(false)
     expect(unreadCountSchema.safeParse(10_000).success).toBe(false)
+  })
+
+  it("accepts only supported native theme sources", () => {
+    expect(themeSourceSchema.parse("system")).toBe("system")
+    expect(themeSourceSchema.parse("light")).toBe("light")
+    expect(themeSourceSchema.parse("dark")).toBe("dark")
+    expect(themeSourceSchema.safeParse("midnight").success).toBe(false)
   })
 
   it("accepts safe external URLs and rejects executable protocols", () => {

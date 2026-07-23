@@ -13,10 +13,10 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { Fragment } from "react"
 
 import appCss from "../styles.css?url"
-import type { TeamSummary } from "@/lib/team-contract"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SettingsSidebar } from "@/components/settings-sidebar"
 import { DesktopTitleBar } from "@/components/desktop-title-bar"
+import { PersonalPreferenceEffects } from "@/components/personal-preference-effects"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { Button } from "@/components/ui/button"
 import { Toaster } from "@/components/ui/sonner"
@@ -30,6 +30,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { getBreadcrumbItems } from "@/lib/app-navigation"
+import { getTeamFromRouteMatches } from "@/lib/team-route-match"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 
 export const Route = createRootRoute({
@@ -80,13 +81,19 @@ function RootLayout() {
 
   const hasStandaloneTeamSettingsLayout =
     pathname.startsWith("/settings/teams/")
+  const hasSettingsLayout = pathname.startsWith("/settings")
 
   return (
     <SidebarProvider
       className={
-        hasStandaloneTeamSettingsLayout ? "forge-create-team-shell" : undefined
+        hasStandaloneTeamSettingsLayout
+          ? "forge-create-team-shell forge-settings-shell"
+          : hasSettingsLayout
+            ? "forge-settings-shell"
+            : undefined
       }
     >
+      <PersonalPreferenceEffects />
       {pathname.startsWith("/settings") ? <SettingsSidebar /> : <AppSidebar />}
       <SidebarInset>
         <AppHeader />
@@ -152,13 +159,10 @@ function AppHeader() {
         return { breadcrumbTeam: undefined, pathname: resolvedPathname }
       }
 
-      for (let index = state.matches.length - 1; index >= 0; index -= 1) {
-        const team = (state.matches[index].context as { team?: TeamSummary })
-          .team
-        if (team) return { breadcrumbTeam: team, pathname: resolvedPathname }
+      return {
+        breadcrumbTeam: getTeamFromRouteMatches(state.matches),
+        pathname: resolvedPathname,
       }
-
-      return { breadcrumbTeam: undefined, pathname: resolvedPathname }
     },
   })
 

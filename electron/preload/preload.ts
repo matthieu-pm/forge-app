@@ -18,6 +18,8 @@ const bridge: ForgeDesktopBridge = {
     ipcRenderer.invoke(desktopChannels.openExternal, url),
   setUnreadCount: (count: number) =>
     ipcRenderer.invoke(desktopChannels.setUnreadCount, count),
+  setThemeSource: (source) =>
+    ipcRenderer.invoke(desktopChannels.setThemeSource, source),
   showNotification: (input: ForgeNotification) =>
     ipcRenderer.invoke(desktopChannels.showNotification, input),
   openWindow: (path: string) =>

@@ -19,6 +19,8 @@ export type ForgeNotification = {
   path?: string
 }
 
+export type HostThemeSource = "system" | "light" | "dark"
+
 export type HostEvent =
   | { type: "navigate"; path: string }
   | {
@@ -53,6 +55,7 @@ export interface ForgeHost {
   getRuntime: () => Promise<HostRuntime>
   openExternal: (url: string) => Promise<void>
   setUnreadCount: (count: number) => Promise<void>
+  setThemeSource: (source: HostThemeSource) => Promise<void>
   showNotification: (input: ForgeNotification) => Promise<void>
   openWindow: (path: string) => Promise<void>
   beginAuth: (input: BeginAuthInput) => Promise<void>
@@ -83,6 +86,9 @@ const browserHost: ForgeHost = {
     return Promise.resolve()
   },
   setUnreadCount() {
+    return Promise.resolve()
+  },
+  setThemeSource() {
     return Promise.resolve()
   },
   showNotification(input) {
@@ -122,7 +128,18 @@ const browserHost: ForgeHost = {
 }
 
 export function createForgeHost(bridge?: ForgeDesktopBridge): ForgeHost {
-  return bridge ?? browserHost
+  if (!bridge) {
+    return browserHost
+  }
+
+  if (typeof bridge.setThemeSource === "function") {
+    return bridge
+  }
+
+  return {
+    ...bridge,
+    setThemeSource: browserHost.setThemeSource,
+  }
 }
 
 export function getForgeHost(): ForgeHost {

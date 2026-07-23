@@ -2,6 +2,11 @@ type NativeThemeController = {
   themeSource: string
 }
 
-export function configureAppAppearance(theme: NativeThemeController) {
-  theme.themeSource = "light"
+export type AppThemeSource = "system" | "light" | "dark"
+
+export function configureAppAppearance(
+  theme: NativeThemeController,
+  source: AppThemeSource = "system"
+) {
+  theme.themeSource = source
 }
