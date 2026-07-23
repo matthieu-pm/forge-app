@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { protectedTeamRouteBeforeLoad } from "@/lib/auth-state"
+import {
+  protectedRouteBeforeLoad,
+  protectedTeamRouteBeforeLoad,
+  publicRouteBeforeLoad,
+} from "@/lib/auth-state"
 
 const mocks = vi.hoisted(() => ({
   getAuthState: vi.fn(),
@@ -19,7 +23,7 @@ vi.mock("@/lib/team-state", () => ({
   getTeamRouteState: mocks.getTeamRouteState,
 }))
 
-describe("protectedTeamRouteBeforeLoad", () => {
+describe("auth route guards", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.getAuthState.mockResolvedValue({
@@ -48,5 +52,19 @@ describe("protectedTeamRouteBeforeLoad", () => {
     expect(mocks.getTeamRouteState).toHaveBeenCalledOnce()
     expect(mocks.getAuthState).not.toHaveBeenCalled()
     expect(mocks.getTeam).not.toHaveBeenCalled()
+  })
+
+  it("reuses the login auth check when entering the protected workspace", async () => {
+    await expect(publicRouteBeforeLoad()).rejects.toBeDefined()
+
+    await protectedRouteBeforeLoad({
+      location: {
+        pathname: "/inbox",
+        searchStr: "",
+        hash: "",
+      },
+    })
+
+    expect(mocks.getAuthState).toHaveBeenCalledOnce()
   })
 })

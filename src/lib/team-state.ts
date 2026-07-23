@@ -17,7 +17,7 @@ export const createTeam = createServerFn({ method: "POST" })
     return createTeamForRequest(getRequest(), data)
   })
 
-export const listTeams = createServerFn({ method: "GET" }).handler(async () => {
+export const loadTeams = createServerFn({ method: "GET" }).handler(async () => {
   const [{ getRequest }, { listTeamsForRequest }] = await Promise.all([
     import("@tanstack/react-start/server"),
     import("@/lib/team-server"),
@@ -25,6 +25,28 @@ export const listTeams = createServerFn({ method: "GET" }).handler(async () => {
 
   return listTeamsForRequest(getRequest())
 })
+
+type TeamList = Awaited<ReturnType<typeof loadTeams>>
+
+let pendingClientTeamList: Promise<TeamList> | undefined
+
+export function listTeams(): Promise<TeamList> {
+  if (typeof window === "undefined") {
+    return loadTeams()
+  }
+
+  if (pendingClientTeamList) {
+    return pendingClientTeamList
+  }
+
+  const request = loadTeams().finally(() => {
+    if (pendingClientTeamList === request) {
+      pendingClientTeamList = undefined
+    }
+  })
+  pendingClientTeamList = request
+  return request
+}
 
 export const getTeam = createServerFn({ method: "GET" })
   .inputValidator((input: { slug: string }) => ({

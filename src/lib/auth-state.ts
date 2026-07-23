@@ -27,7 +27,7 @@ function redirectTarget(pathname: string, search = "", hash = "") {
 }
 
 export async function publicRouteBeforeLoad() {
-  const authState = await getAuthState()
+  const authState = await getNavigationAuthState()
 
   if (!authState.session) {
     return
