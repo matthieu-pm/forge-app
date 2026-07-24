@@ -1,8 +1,10 @@
 # Forge
 
-Forge is an issue tracking workspace for modern software teams. It brings together inbox triage, personal work, workspace-level planning, team views, and an early agent workspace in one TanStack Start app.
+Forge is an issue tracking and agent workspace for modern software teams. It
+brings together inbox triage, personal work, workspace planning, team views,
+and agent-driven workflows in one shared web and macOS product.
 
-Current build: `v0.0.1`
+Current build: `v0.1.0` (unreleased)
 
 ## Stack
 
@@ -11,33 +13,45 @@ Current build: `v0.0.1`
 - Better Auth with organization support
 - Contract-first oRPC API with OpenAPI 3.1 documentation
 - Neon Postgres with Drizzle ORM
+- An isolated EVE service for agent tools, code, and programmatic capabilities
 - Bun for package management and scripts
-- Electron Forge for the shared-renderer macOS app
+- Electron Forge with a local Codex model broker for the shared-renderer macOS app
 
 ## App Areas
 
 - `Inbox` for triage and incoming work.
-- `Forge` for the home workspace.
+- `Forge` for starting agent conversations from a centered composer.
+- `Ask Forge` for opening a compact agent chat over the current page.
 - `My issues` for personal execution.
 - `Workspace` sections for initiatives, projects, calls, signals, insights, views, teams, and members.
 - `Your teams` views for product, engineering, and operations work.
-- `Agent` for agent-driven workflows and automation.
+- Agent tabs for active conversations and searchable thread history.
 
 ## Getting Started
 
 1. Install dependencies with `bun install`.
+1. Install the isolated runtime dependencies with
+   `npm --prefix services/agent-runtime install`.
 1. Copy `.env.example` to `.env`.
 1. Set `DATABASE_URL`, `BETTER_AUTH_URL`, and `BETTER_AUTH_SECRET`.
 1. Run the development server with `bun run dev`.
 1. Open `http://localhost:3000`.
 
+On first launch, Forge creates the local agent secrets it needs in
+`.env.local`, with file permissions restricted to the current user. The web app
+starts on port 3000 and the EVE runtime starts on `127.0.0.1:2000`.
+
 ## Scripts
 
-- `bun run dev` starts Vite on port 3000.
+- `bun run dev` starts the web app and isolated agent runtime.
+- `bun run dev:web` starts only Vite on port 3000.
+- `bun run dev:agent` starts only the local EVE runtime on port 2000.
 - `bun run build` builds the app.
 - `bun run preview` previews the production build.
 - `bun run test` runs Vitest.
-- `bun run dev:desktop` runs that same web app inside Electron.
+- `bun run eval:agent` runs the agent runtime release evals.
+- `bun run agent:retention` removes expired agent attachments and artifacts.
+- `bun run dev:desktop` runs the shared web and agent stack inside Electron.
 - `bun run test:desktop` builds the shell and runs its Electron smoke test.
 - `bun run desktop:make` creates signed/notarized DMG and ZIP artifacts when release credentials are configured.
 - `bun run lint` runs ESLint.
@@ -54,6 +68,30 @@ This project uses Neon Postgres with Drizzle ORM.
 
 The shared database client lives in `src/db/index.ts`. Application workspace schema lives in `src/db/schema.ts`, and auth schema lives in `src/db/auth-schema.ts`.
 
+## Agent Platform
+
+Forge streams assistant text, tools, code, file operations, approvals, and
+artifacts as typed events into one transcript UI shared by web and macOS.
+Threads and runs are durable, so interrupted work can reconnect and resume from
+its last persisted cursor.
+
+Available model sources include Forge-managed OpenAI, bring-your-own API keys,
+custom OpenAI- and Anthropic-compatible endpoints, and a local Codex
+subscription in the macOS app. Manual selection supports each configured
+provider; `Auto` intentionally selects only eligible OpenAI models. Configure
+connections from `Settings → AI & Agents`.
+
+Forge capabilities remain behind the application authorization boundary.
+Material writes require explicit approval and use idempotency records so a
+resumed run cannot repeat the same mutation. Generated code runs in an isolated
+sandbox without Forge, model-provider, or database credentials.
+
+Agent feature flags, provider allowlists, token and time limits, concurrency,
+budgets, attachment limits, and retention controls are documented in
+[`.env.example`](.env.example). The runtime boundary and local commands are
+described in
+[`services/agent-runtime/README.md`](services/agent-runtime/README.md).
+
 ## Public API
 
 The public API is served from `/api/v1` when `PUBLIC_API_ENABLED=true`. In
@@ -69,8 +107,8 @@ See [`docs/public-api.md`](docs/public-api.md) for conventions and examples.
 
 ## macOS app
 
-The macOS client is a secure host around the same TanStack renderer used on the web. See [`desktop/README.md`](desktop/README.md) for architecture, local development, signing, updates, and release operations.
-
-## Recent UI Work
-
-The workspace menu in the sidebar has been updated to match the current Forge app styling. It now uses a compact rounded dropdown, shows the workspace identity without the account email, and includes actions for opening the workspace, settings, upgrading the plan, and signing out.
+The macOS client is a secure host around the same TanStack renderer used on the
+web. It also brokers the official local Codex app-server without extracting or
+copying Codex credentials into Forge. See
+[`desktop/README.md`](desktop/README.md) for architecture, local development,
+signing, updates, and release operations.
