@@ -17,3 +17,4 @@ test-results
 __unconfig*
 todos.json
 .claude/worktrees/
+.forge/

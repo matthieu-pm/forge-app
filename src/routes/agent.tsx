@@ -1,15 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { PagePlaceholder } from "@/components/page-placeholder"
-import { getPageMeta } from "@/lib/app-navigation"
+import { createFileRoute, redirect } from "@tanstack/react-router"
 import { protectedRouteBeforeLoad } from "@/lib/auth-state"
 
-const pageMeta = getPageMeta("/agent")
-
 export const Route = createFileRoute("/agent")({
-  beforeLoad: protectedRouteBeforeLoad,
-  component: AgentPage,
+  beforeLoad: async (context) => {
+    await protectedRouteBeforeLoad(context)
+    throw redirect({ to: "/forge" })
+  },
+  component: () => null,
 })
-
-function AgentPage() {
-  return <PagePlaceholder {...pageMeta} />
-}

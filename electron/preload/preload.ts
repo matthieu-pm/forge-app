@@ -7,6 +7,7 @@ import type {
   ForgeNotification,
   HostEvent,
   HostRuntime,
+  LocalAgentRuntime,
 } from "../../src/host/forge-host"
 
 setupRenderer()
@@ -29,6 +30,20 @@ const bridge: ForgeDesktopBridge = {
     ipcRenderer.invoke(desktopChannels.completeAuth, input),
   adoptAuthSession: () => ipcRenderer.invoke(desktopChannels.adoptAuthSession),
   signOut: () => ipcRenderer.invoke(desktopChannels.signOut),
+  listLocalRuntimes: () =>
+    ipcRenderer.invoke(desktopChannels.listLocalRuntimes) as Promise<
+      Array<LocalAgentRuntime>
+    >,
+  startLocalRuntimeLogin: (runtimeId) =>
+    ipcRenderer.invoke(desktopChannels.startLocalRuntimeLogin, runtimeId),
+  startLocalRuntimeRun: (input) =>
+    ipcRenderer.invoke(desktopChannels.startLocalRuntimeRun, input),
+  cancelLocalRuntimeRun: (runId) =>
+    ipcRenderer.invoke(desktopChannels.cancelLocalRuntimeRun, runId),
+  resolveLocalRuntimeApproval: (input) =>
+    ipcRenderer.invoke(desktopChannels.resolveLocalRuntimeApproval, input),
+  resolveLocalRuntimeToolCall: (input) =>
+    ipcRenderer.invoke(desktopChannels.resolveLocalRuntimeToolCall, input),
   subscribe: (listener: (event: HostEvent) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, event: HostEvent) => {
       listener(event)

@@ -1,0 +1,577 @@
+"use client"
+
+import * as React from "react"
+import {
+  Delete02Icon,
+  PencilEdit02Icon,
+  Upload01Icon,
+} from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { toast } from "sonner"
+
+import { authClient } from "@/lib/auth-client"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { cn } from "@/lib/utils"
+
+type EmailDialogStep = "entry" | "confirm"
+type LocalProfile = {
+  title: string
+  username: string
+}
+
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024
+
+function localProfileKey(userId: string) {
+  return `forge:profile:${userId}`
+}
+
+function getInitials(name: string) {
+  const initials = name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0].toUpperCase())
+    .join("")
+
+  return initials || "F"
+}
+
+function usernameFromEmail(email: string) {
+  return (
+    email
+      .split("@", 1)[0]
+      ?.toLocaleLowerCase()
+      .replace(/[^a-z0-9_-]/g, "")
+      .slice(0, 32) ?? ""
+  )
+}
+
+function readAvatar(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.addEventListener("load", () => resolve(String(reader.result)))
+    reader.addEventListener("error", () => reject(reader.error))
+    reader.readAsDataURL(file)
+  })
+}
+
+function SettingsCard({
+  children,
+  className,
+}: {
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <div
+      className={cn(
+        "overflow-hidden rounded-2xl border border-border/70 bg-muted/35",
+        className
+      )}
+    >
+      {children}
+    </div>
+  )
+}
+
+function ProfileRow({
+  children,
+  description,
+  label,
+}: {
+  children: React.ReactNode
+  description?: string
+  label: string
+}) {
+  return (
+    <div className="flex min-h-16 flex-col justify-center gap-2 px-4 py-2.5 not-first:border-t not-first:border-border/60 sm:flex-row sm:items-center sm:justify-between sm:gap-5">
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-foreground">{label}</p>
+        {description ? (
+          <p className="mt-0.5 text-xs leading-4 text-muted-foreground">
+            {description}
+          </p>
+        ) : null}
+      </div>
+      <div className="flex min-w-0 items-center sm:shrink-0">{children}</div>
+    </div>
+  )
+}
+
+export function ProfileSettings() {
+  const sessionState = authClient.useSession()
+  const sessionUser = sessionState.data?.user
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
+  const savedNameRef = React.useRef("")
+  const [name, setName] = React.useState("")
+  const [image, setImage] = React.useState<string | null>(null)
+  const [title, setTitle] = React.useState("")
+  const [username, setUsername] = React.useState("")
+  const [emailDialogOpen, setEmailDialogOpen] = React.useState(false)
+  const [emailDialogStep, setEmailDialogStep] =
+    React.useState<EmailDialogStep>("entry")
+  const [nextEmail, setNextEmail] = React.useState("")
+  const [emailError, setEmailError] = React.useState("")
+  const [isChangingEmail, setIsChangingEmail] = React.useState(false)
+  const [isSavingAvatar, setIsSavingAvatar] = React.useState(false)
+
+  React.useEffect(() => {
+    if (!sessionUser) return
+
+    const nextName = sessionUser.name
+    savedNameRef.current = nextName
+    setName(nextName)
+    setImage(sessionUser.image ?? null)
+
+    const fallbackProfile: LocalProfile = {
+      title: "",
+      username: usernameFromEmail(sessionUser.email),
+    }
+
+    try {
+      const stored = window.localStorage.getItem(
+        localProfileKey(sessionUser.id)
+      )
+      const profile = stored
+        ? ({ ...fallbackProfile, ...JSON.parse(stored) } as LocalProfile)
+        : fallbackProfile
+      setTitle(profile.title)
+      setUsername(profile.username)
+    } catch {
+      setTitle(fallbackProfile.title)
+      setUsername(fallbackProfile.username)
+    }
+  }, [
+    sessionUser?.email,
+    sessionUser?.id,
+    sessionUser?.image,
+    sessionUser?.name,
+  ])
+
+  function saveLocalProfile(nextProfile: LocalProfile) {
+    if (!sessionUser) return
+    window.localStorage.setItem(
+      localProfileKey(sessionUser.id),
+      JSON.stringify(nextProfile)
+    )
+  }
+
+  async function saveName() {
+    const nextName = name.trim()
+    if (!nextName) {
+      setName(savedNameRef.current)
+      toast.error("Full name cannot be empty.")
+      return
+    }
+
+    if (nextName === savedNameRef.current) return
+
+    const { error } = await authClient.updateUser({ name: nextName })
+    if (error) {
+      setName(savedNameRef.current)
+      toast.error(error.message ?? "Your name could not be updated.")
+      return
+    }
+
+    savedNameRef.current = nextName
+    setName(nextName)
+  }
+
+  function saveTitle() {
+    const nextTitle = title.trim().slice(0, 80)
+    setTitle(nextTitle)
+    saveLocalProfile({ title: nextTitle, username })
+  }
+
+  function saveUsername() {
+    const nextUsername = username
+      .trim()
+      .toLocaleLowerCase()
+      .replace(/\s+/g, "")
+      .slice(0, 32)
+    setUsername(nextUsername)
+    saveLocalProfile({ title, username: nextUsername })
+  }
+
+  async function updateAvatar(nextImage: string | null) {
+    const previousImage = image
+    setImage(nextImage)
+    setIsSavingAvatar(true)
+
+    const { error } = await authClient.updateUser({ image: nextImage })
+    setIsSavingAvatar(false)
+
+    if (error) {
+      setImage(previousImage)
+      toast.error(error.message ?? "Your profile picture could not be updated.")
+      return
+    }
+
+    toast.success(
+      nextImage ? "Profile picture updated." : "Profile picture removed."
+    )
+  }
+
+  async function handleAvatarFile(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    event.target.value = ""
+    if (!file) return
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Choose an image file.")
+      return
+    }
+
+    if (file.size > MAX_AVATAR_BYTES) {
+      toast.error("Choose an image smaller than 2 MB.")
+      return
+    }
+
+    try {
+      await updateAvatar(await readAvatar(file))
+    } catch {
+      toast.error("The selected image could not be read.")
+    }
+  }
+
+  function setEmailDialogState(open: boolean) {
+    setEmailDialogOpen(open)
+    if (!open) {
+      setEmailDialogStep("entry")
+      setNextEmail("")
+      setEmailError("")
+      setIsChangingEmail(false)
+    }
+  }
+
+  function reviewEmailChange(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const normalizedEmail = nextEmail.trim().toLocaleLowerCase()
+
+    if (
+      !normalizedEmail ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)
+    ) {
+      setEmailError("Enter a valid email address.")
+      return
+    }
+
+    if (normalizedEmail === sessionUser?.email.toLocaleLowerCase()) {
+      setEmailError("Enter an email address different from your current one.")
+      return
+    }
+
+    setNextEmail(normalizedEmail)
+    setEmailError("")
+    setEmailDialogStep("confirm")
+  }
+
+  async function sendEmailVerification() {
+    if (!nextEmail || isChangingEmail) return
+    setIsChangingEmail(true)
+
+    const { error } = await authClient.changeEmail({
+      newEmail: nextEmail,
+      callbackURL: window.location.href,
+    })
+
+    setIsChangingEmail(false)
+    if (error) {
+      toast.error(error.message ?? "The verification email could not be sent.")
+      return
+    }
+
+    setEmailDialogState(false)
+    toast.success("Verification email sent", {
+      description: `We sent a verification link to ${nextEmail}. Your email address will update after you confirm it.`,
+    })
+  }
+
+  const email = sessionUser?.email ?? "Loading…"
+  const avatarName = name || sessionUser?.name || email
+
+  return (
+    <main className="min-h-0 flex-1 overflow-y-auto px-6 pt-4 pb-4">
+      <div className="mx-auto w-full max-w-[640px] pb-16">
+        <div className="space-y-10">
+          <section className="space-y-5">
+            <h1 className="px-3 text-xl font-semibold tracking-tight text-foreground">
+              Profile
+            </h1>
+
+            <SettingsCard>
+              <ProfileRow label="Profile picture">
+                <DropdownMenu>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Change profile picture"
+                    disabled={!sessionUser || isSavingAvatar}
+                    render={<DropdownMenuTrigger />}
+                    className="rounded-full p-0"
+                  >
+                    <Avatar className="size-8">
+                      {image ? (
+                        <AvatarImage src={image} alt={avatarName} />
+                      ) : null}
+                      <AvatarFallback>{getInitials(avatarName)}</AvatarFallback>
+                    </Avatar>
+                  </Button>
+                  <DropdownMenuContent
+                    side="right"
+                    align="start"
+                    sideOffset={8}
+                    className="w-40"
+                  >
+                    <DropdownMenuItem
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <HugeiconsIcon icon={Upload01Icon} strokeWidth={2} />
+                      Change avatar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      variant="destructive"
+                      disabled={!image}
+                      onClick={() => void updateAvatar(null)}
+                    >
+                      <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
+                      Remove avatar
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  aria-label="Upload profile picture"
+                  onChange={handleAvatarFile}
+                />
+              </ProfileRow>
+
+              <ProfileRow label="Email">
+                <div className="flex min-w-0 items-center gap-1">
+                  <span className="max-w-64 truncate text-sm text-foreground">
+                    {email}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-label="Change email"
+                    disabled={!sessionUser}
+                    onClick={() => setEmailDialogState(true)}
+                    className="rounded-full text-muted-foreground"
+                  >
+                    <HugeiconsIcon icon={PencilEdit02Icon} strokeWidth={2} />
+                  </Button>
+                </div>
+              </ProfileRow>
+
+              <ProfileRow label="Full name">
+                <Input
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  onBlur={() => void saveName()}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") event.currentTarget.blur()
+                    if (event.key === "Escape") {
+                      setName(savedNameRef.current)
+                      event.currentTarget.blur()
+                    }
+                  }}
+                  aria-label="Full name"
+                  disabled={!sessionUser}
+                  maxLength={80}
+                  className="h-8 w-full rounded-lg border-border/60 bg-background/60 sm:w-64"
+                />
+              </ProfileRow>
+
+              <ProfileRow label="Title" description="Your job title or role">
+                <Input
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                  onBlur={saveTitle}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") event.currentTarget.blur()
+                  }}
+                  aria-label="Title"
+                  placeholder="e.g. Software engineer"
+                  maxLength={80}
+                  className="h-8 w-full rounded-lg border-border/60 bg-background/60 sm:w-64"
+                />
+              </ProfileRow>
+
+              <ProfileRow
+                label="Username"
+                description="One word, like a nickname or first name"
+              >
+                <Input
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  onBlur={saveUsername}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") event.currentTarget.blur()
+                  }}
+                  aria-label="Username"
+                  placeholder="username"
+                  maxLength={32}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  className="h-8 w-full rounded-lg border-border/60 bg-background/60 sm:w-64"
+                />
+              </ProfileRow>
+            </SettingsCard>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="px-3 text-sm font-semibold text-foreground">
+              Workspace access
+            </h2>
+            <SettingsCard>
+              <div className="flex min-h-16 flex-col justify-center gap-2 px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+                <span className="text-sm text-muted-foreground">
+                  Remove yourself from workspace
+                </span>
+                <TooltipProvider delay={350}>
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          aria-disabled="true"
+                          className="self-start rounded-lg px-2.5 text-muted-foreground opacity-60 sm:self-auto"
+                          onClick={(event) => event.preventDefault()}
+                        />
+                      }
+                    >
+                      Leave workspace
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Workspace requires at least one admin
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </SettingsCard>
+          </section>
+        </div>
+      </div>
+
+      <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogState}>
+        <DialogContent className="gap-5 sm:max-w-[440px]">
+          <DialogHeader>
+            <DialogTitle>Change email</DialogTitle>
+            <DialogDescription className="mt-2 leading-5">
+              {emailDialogStep === "entry" ? (
+                <>
+                  We&apos;ll send a verification link to your new email address.
+                  This change applies across every workspace you belong to.
+                </>
+              ) : (
+                <>
+                  A verification link will be sent to{" "}
+                  <span className="font-medium text-foreground">
+                    {nextEmail}
+                  </span>
+                  . Your current email stays active until you confirm the
+                  change.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {emailDialogStep === "entry" ? (
+            <form className="space-y-5" onSubmit={reviewEmailChange}>
+              <div className="space-y-2">
+                <label
+                  htmlFor="profile-new-email"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Enter the new email address you&apos;d like to use.
+                </label>
+                <Input
+                  id="profile-new-email"
+                  type="email"
+                  value={nextEmail}
+                  onChange={(event) => {
+                    setNextEmail(event.target.value)
+                    setEmailError("")
+                  }}
+                  placeholder="New email address"
+                  autoComplete="email"
+                  autoFocus
+                  aria-invalid={Boolean(emailError)}
+                  aria-describedby={
+                    emailError ? "profile-new-email-error" : undefined
+                  }
+                  className="h-9 rounded-lg border-border/80 bg-background/70"
+                />
+                {emailError ? (
+                  <p
+                    id="profile-new-email-error"
+                    className="text-xs text-destructive"
+                  >
+                    {emailError}
+                  </p>
+                ) : null}
+              </div>
+              <DialogFooter>
+                <DialogClose
+                  render={<Button type="button" variant="secondary" />}
+                >
+                  Cancel
+                </DialogClose>
+                <Button type="submit">Review email change</Button>
+              </DialogFooter>
+            </form>
+          ) : (
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setEmailDialogStep("entry")}
+              >
+                Back
+              </Button>
+              <Button
+                type="button"
+                disabled={isChangingEmail}
+                onClick={() => void sendEmailVerification()}
+              >
+                {isChangingEmail ? "Sending…" : "Send verification link"}
+              </Button>
+            </DialogFooter>
+          )}
+        </DialogContent>
+      </Dialog>
+    </main>
+  )
+}

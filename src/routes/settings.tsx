@@ -1,6 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router"
+import { Outlet, createFileRoute } from "@tanstack/react-router"
 
-import { PreferencesSettings } from "@/components/preferences-settings"
 import { protectedRouteBeforeLoad } from "@/lib/auth-state"
 
 export const Route = createFileRoute("/settings")({
@@ -9,5 +8,5 @@ export const Route = createFileRoute("/settings")({
 })
 
 function SettingsPage() {
-  return <PreferencesSettings />
+  return <Outlet />
 }

@@ -52,6 +52,89 @@ export const routePathSchema = z
 export const unreadCountSchema = z.number().int().min(0).max(9999)
 
 export const themeSourceSchema = z.enum(["system", "light", "dark"])
+export const localRuntimeIdSchema = z.enum(["codex"])
+export const localRuntimeRunIdSchema = z.string().uuid()
+
+const localRuntimeAttachmentSchema = z
+  .object({
+    id: z.string().uuid(),
+    name: z
+      .string()
+      .trim()
+      .min(1)
+      .max(200)
+      .refine(
+        (value) =>
+          !value.includes("/") &&
+          !value.includes("\\") &&
+          ![...value].some((character) => character.charCodeAt(0) <= 31),
+        "Attachment names must be plain file names."
+      ),
+    contentType: z.string().trim().min(1).max(255),
+    sizeBytes: z
+      .number()
+      .int()
+      .positive()
+      .max(5 * 1024 * 1024),
+    contentBase64: z
+      .string()
+      .min(1)
+      .max(7_000_000)
+      .regex(/^[a-z0-9+/]*={0,2}$/i),
+  })
+  .strict()
+
+export const startLocalRuntimeRunSchema = z
+  .object({
+    runtimeId: localRuntimeIdSchema,
+    runId: localRuntimeRunIdSchema,
+    runtimeSessionId: z.string().trim().min(1).max(255).nullable(),
+    modelId: z.string().trim().min(1).max(255),
+    reasoningEffort: z.enum([
+      "none",
+      "minimal",
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max",
+    ]),
+    message: z.string().trim().min(1).max(100_000),
+    attachments: z.array(localRuntimeAttachmentSchema).max(20),
+  })
+  .strict()
+  .refine(
+    (value) =>
+      value.attachments.reduce(
+        (total, attachment) => total + attachment.sizeBytes,
+        0
+      ) <=
+      20 * 1024 * 1024,
+    "Local runtime attachments exceed the per-turn size limit."
+  )
+
+export const resolveLocalRuntimeApprovalSchema = z
+  .object({
+    runId: localRuntimeRunIdSchema,
+    approvalId: z.string().uuid(),
+    decision: z.enum(["approved", "denied"]),
+  })
+  .strict()
+
+export const resolveLocalRuntimeToolCallSchema = z
+  .object({
+    runId: localRuntimeRunIdSchema,
+    requestId: z.string().uuid(),
+    success: z.boolean(),
+    output: z.unknown(),
+  })
+  .strict()
+  .refine(
+    (value) =>
+      new TextEncoder().encode(JSON.stringify(value.output)).byteLength <=
+      128 * 1024,
+    "Local tool output exceeds the IPC size limit."
+  )
 
 export const notificationSchema = z
   .object({
@@ -85,5 +168,11 @@ export const desktopChannels = {
   completeAuth: "forge:auth:complete",
   adoptAuthSession: "forge:auth:adopt-session",
   signOut: "forge:auth:sign-out",
+  listLocalRuntimes: "forge:models:list-local-runtimes",
+  startLocalRuntimeLogin: "forge:models:start-local-runtime-login",
+  startLocalRuntimeRun: "forge:models:start-local-runtime-run",
+  cancelLocalRuntimeRun: "forge:models:cancel-local-runtime-run",
+  resolveLocalRuntimeApproval: "forge:models:resolve-local-runtime-approval",
+  resolveLocalRuntimeToolCall: "forge:models:resolve-local-runtime-tool-call",
   hostEvent: "forge:host:event",
 } as const

@@ -62,6 +62,7 @@ test("runs the shared Forge renderer in the hardened desktop shell", async () =>
         "deep-links",
         "dock-badge",
         "multi-window",
+        "local-agent-runtimes",
         "native-notifications",
         "updates",
       ],

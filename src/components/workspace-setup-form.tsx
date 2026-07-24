@@ -24,7 +24,7 @@ const MAX_LOGO_SIZE_BYTES = 2 * 1024 * 1024
 function workspaceInitials(name: string) {
   return name
     .split(/\s+/)
-    .map((part) => part[0] ?? "")
+    .map((part) => part[0])
     .join("")
     .slice(0, 2)
     .toUpperCase() || "W"
@@ -116,16 +116,14 @@ export function WorkspaceSetupForm({
         return
       }
 
+      const response = data as {
+        status?: unknown
+        available?: unknown
+      }
       const available =
         typeof data === "boolean"
           ? data
-          : Boolean(
-              data &&
-                typeof data === "object" &&
-                (("status" in data && (data as { status?: unknown }).status) ||
-                  ("available" in data &&
-                    (data as { available?: unknown }).available))
-            )
+          : Boolean(response.status ?? response.available)
 
       setSlugState(available ? "available" : "unavailable")
       setSlugMessage(

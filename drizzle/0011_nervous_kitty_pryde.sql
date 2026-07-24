@@ -1,0 +1,1 @@
+ALTER TABLE "agent_artifacts" ADD CONSTRAINT "agent_artifacts_run_checksum_name_unique" UNIQUE("run_id","checksum","name");

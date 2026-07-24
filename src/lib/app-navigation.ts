@@ -30,7 +30,9 @@ type TeamPath = `/teams/${TeamSlug}/${TeamSection}`
 export type AppPath =
   | "/forge"
   | "/settings"
+  | "/settings/profile"
   | "/settings/api"
+  | "/settings/ai"
   | "/inbox"
   | "/my-issues"
   | "/workspace/initiatives"
@@ -176,6 +178,11 @@ const pageMetaByPath: Partial<Record<AppPath, PageMeta>> = {
     description:
       "Start from the Forge home view and jump into the workspaces, issues, and teams that matter next.",
   },
+  "/settings/ai": {
+    eyebrow: "Agent runtime",
+    title: "AI & Agents",
+    description: "Manage model providers and local agent runtimes.",
+  },
   "/inbox": {
     eyebrow: "Queue",
     title: "Inbox",
@@ -294,8 +301,16 @@ export function getBreadcrumbItems(pathname: string): Array<BreadcrumbItem> {
     return [{ label: "Preferences" }]
   }
 
+  if (pathname === "/settings/profile") {
+    return [{ label: "Profile" }]
+  }
+
   if (pathname === "/settings/api") {
     return [{ label: "API" }]
+  }
+
+  if (pathname === "/settings/ai") {
+    return [{ label: "AI & Agents" }]
   }
 
   const initiativeMatch = pathname.match(/^\/workspace\/initiatives\/([^/]+)$/)

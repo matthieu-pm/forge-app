@@ -1,61 +1,66 @@
-# Design QA — Create a new team
+# Agent history design QA
 
-## Result
+## Comparison target
 
-blocked
+- Source visual truth: `/var/folders/j2/gzj18t_x2251dx_cnqdcscm80000gn/T/com.openai.sky.CUAService/Linear Screenshot 2026-07-24 at 5.05.37 PM.jpeg`
+- Rendered implementation: `/var/folders/j2/gzj18t_x2251dx_cnqdcscm80000gn/T/com.openai.sky.CUAService/Electron Screenshot 2026-07-24 at 5.05.38 PM.jpeg`
+- State: desktop app, history open, populated history, light theme in Forge and dark theme in the Linear source.
+- Source pixels: 1224 × 768.
+- Implementation pixels: 1224 × 768.
+- CSS viewport: matching 1224 × 768 app windows.
+- Density normalization: equal pixel dimensions; both full-resolution captures were emitted together in the same comparison pass.
 
-## Evidence
+## Interaction verification
 
-- Reference: `docs/audits/create-team-linear-reference.jpeg` (1223 × 768)
-- Implementation: `docs/audits/create-team-forge-implementation.jpeg` (1224 × 768)
-- Full side-by-side comparison: `docs/audits/create-team-comparison.jpeg`
-- Focused form comparison: `docs/audits/create-team-form-comparison.jpeg`
-- Interaction states:
-  - `docs/audits/create-team-icon-picker.jpeg`
-  - `docs/audits/create-team-timezone-picker.jpeg`
-  - `docs/audits/create-team-copy-picker.jpeg`
-
-Both captures use the same desktop window size and the same default form state. The implementation intentionally uses Forge's light theme and existing component tokens while matching the Linear reference's hierarchy, geometry, density, and interaction model.
+- Opened and closed history from the persistent footer action.
+- Entered `profile` in the history search and confirmed the list filtered to the matching conversation.
+- Cleared the search and confirmed the complete list returned.
+- Existing coverage verifies selecting a history item reopens the conversation and preserves its transcript.
 
 ## Required fidelity surfaces
 
-- Settings sidebar with active Create a team entry
-- Back affordance and centered page header
-- Three-row team identity card
-- Team access, timezone, and copy-settings sections
-- Bottom-aligned Create team action
-- Icon/emoji, timezone, and copy-team popovers
+- Fonts and typography: Forge retains its existing app font and tokenized weights. Search text, group labels, row titles, and timestamps match the compact hierarchy of the source without uppercase transformation.
+- Spacing and layout rhythm: the history panel shares the chat bottom edge. Its visible width and height closely match the source, while 28 px rounded rows produce the requested denser list.
+- Colors and visual tokens: all foreground, muted, border, selection, failure, background, and shadow colors use Forge design-system tokens. Theme differences between the source and implementation are intentional.
+- Image quality and asset fidelity: the history panel has no bespoke raster assets. Existing Hugeicons are retained only for hover actions and active failure/running states.
+- Copy and content: the search placeholder is `Chat history`; date groups use sentence case; relative timestamps follow the source format.
 
-## Comparison findings
+## Full-view comparison evidence
 
-- Page title, form width, card heights, section spacing, and CTA placement align with the reference at the target viewport.
-- The first pass exposed a P0 routing issue where the page rendered inside the settings placeholder. The route was detached from the settings layout and rechecked.
-- The next pass exposed overly compressed vertical rhythm. Row height, section spacing, top offset, and heading scale were adjusted and rechecked.
-- Final side-by-side review found no remaining P0, P1, or P2 visual issues.
-- Theme color differences are intentional: the implementation inherits Forge's current light desktop appearance rather than replacing the app-wide theme.
-- A later browser capture exposed a P2 shell overflow: the route-height wrapper plus the web inset margin allowed the whole page to move and hide the Back control.
-- The create-team route now uses a viewport-height, overflow-clipped shell; the inset and form canvas are also non-scrollable. Popover lists retain their own intentional scrolling.
-- Post-fix visual recapture is pending because the user asked that Computer Use not be used. This blocks the Product Design visual gate, but not the automated engineering checks.
+The equal-size captures show the same bottom-right placement, compact panel proportions, integrated search header, dense grouped list, right-aligned timestamps, and persistent footer relationship. Forge intentionally keeps its own sidebar and page shell.
 
-## Interaction QA
+## Focused region comparison evidence
 
-- Icon picker opens and exposes icon/color choices.
-- Emoji tab opens and exposes searchable emoji choices.
-- Timezone picker opens with search and selectable timezone options.
-- Copy-settings picker opens with search, Don't copy, and existing team choices.
-- Name and identifier inputs expose accessible labels; identifier normalization and required-field validation are implemented.
-- Create team validates the form, reports success, and navigates back to the teams area.
+The bottom-right history regions were inspected at full screenshot resolution. The source panel is approximately 288 px wide and 325 px tall; Forge renders at approximately the same visible width and height. The search header, group labels, selected pill, row spacing, truncation, and timestamp alignment remain legible at this scale, so a separate enlarged crop was not needed.
 
-## Engineering checks
+## Findings
 
-- Typecheck: passed
-- Production build: passed
-- Targeted navigation/title-bar tests: passed
-- Targeted lint: passed
-- Diff whitespace check: passed
-- Authenticated Electron/Chromium rendering: passed
-- The isolated in-app browser preview redirects to sign-in because it does not share the Electron session; the authenticated desktop target was used for final visual and interaction evidence.
+- No actionable P0, P1, or P2 differences remain.
+- [P3] Forge uses its established fully rounded selected row and 16 px panel radius rather than Linear's subtler selection and tighter outer corners. This is intentional design-system alignment requested by the user.
 
-## Current blocker
+## Comparison history
 
-The P2 page-scroll correction is implemented, but a post-fix screenshot of the authenticated Aside session is unavailable without Computer Use. Refreshing the page and confirming that a scroll gesture no longer moves the Back control will unblock the final visual gate.
+1. Initial pass: P2 placement and density mismatch.
+   - Evidence: the old toolbar consumed vertical space, the panel sat 40 px above the chat edge, labels were uppercase, and rows were 40 px tall.
+   - Fix: removed the toolbar, moved search into the header, anchored the panel at `bottom: 0`, removed uppercase styling, and reduced rows to 28 px.
+2. Second pass: P2 proportion and search-treatment mismatch.
+   - Evidence: the panel was narrower and shorter than the source; the search appeared as an inset pill with a leading icon; neutral status dots added visual noise.
+   - Fix: matched the reference proportions, integrated the search field into the panel header, removed its icon, and reserved indicators for running, failed, or archived states.
+   - Post-fix evidence: the final equal-size captures show aligned bottom placement, nearly identical panel proportions, a clean search header, compact rounded rows, and source-like list density.
+
+## Implementation checklist
+
+- [x] Bottom-anchored desktop history panel
+- [x] Search-only header matching the reference structure
+- [x] Compact fully rounded history rows
+- [x] Sentence-case date labels
+- [x] Right-aligned relative timestamps
+- [x] Working search, open, rename, archive, and reopen behaviors
+- [x] Responsive mobile sheet retained
+- [x] Regression coverage for placement, search, and row styling
+
+## Follow-up polish
+
+- None required for this pass.
+
+final result: passed

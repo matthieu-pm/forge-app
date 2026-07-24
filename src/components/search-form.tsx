@@ -1,13 +1,13 @@
 "use client"
 
+import { HugeiconsIcon } from "@hugeicons/react"
+import { SearchIcon } from "@hugeicons/core-free-icons"
 import { Label } from "@/components/ui/label"
 import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarInput,
 } from "@/components/ui/sidebar"
-import { HugeiconsIcon } from "@hugeicons/react"
-import { SearchIcon } from "@hugeicons/core-free-icons"
 
 export function SearchForm({ ...props }: React.ComponentProps<"form">) {
   return (

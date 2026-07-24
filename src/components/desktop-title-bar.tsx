@@ -1,6 +1,7 @@
 "use client"
 
 import {
+  AccountSetting02Icon,
   ArrowLeft02Icon,
   ArrowRight02Icon,
   CustomizeIcon,
@@ -62,6 +63,14 @@ function getTabNavigationItem(path: string): AppNavChild | undefined {
   const pathname = path.split(/[?#]/, 1)[0]
 
   if (pathname.startsWith("/settings")) {
+    if (pathname === "/settings/profile") {
+      return {
+        title: "Profile",
+        to: "/settings/profile",
+        icon: AccountSetting02Icon,
+      }
+    }
+
     return {
       title: "Preferences",
       to: "/settings",

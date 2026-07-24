@@ -9,7 +9,11 @@ export default defineConfig({
   ],
   test: {
     environment: "jsdom",
-    exclude: [...configDefaults.exclude, "tests/electron/**"],
+    exclude: [
+      ...configDefaults.exclude,
+      "tests/electron/**",
+      "services/agent-runtime/**",
+    ],
     passWithNoTests: false,
     restoreMocks: true,
   },

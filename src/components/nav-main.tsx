@@ -1,10 +1,13 @@
 import { Link } from "@tanstack/react-router"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons"
+import type {AppNavItem} from "@/lib/app-navigation";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
-import { isNavItemActive, type AppNavItem } from "@/lib/app-navigation"
+import {  isNavItemActive } from "@/lib/app-navigation"
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -16,14 +19,12 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
-import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons"
 
 export function NavMain({
   items,
   pathname,
 }: {
-  items: AppNavItem[]
+  items: Array<AppNavItem>
   pathname: string
 }) {
   function renderNavLink(to: AppNavItem["to"]) {

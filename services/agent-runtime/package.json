@@ -1,0 +1,31 @@
+{
+  "name": "@forge/agent-runtime",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "dev": "eve dev --no-ui",
+    "build": "eve build",
+    "start": "eve start",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "eval": "node scripts/run-evals.mjs"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "4.0.19",
+    "@ai-sdk/openai": "4.0.19",
+    "ai": "7.0.36",
+    "eve": "0.27.1",
+    "jose": "6.2.3",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "microsandbox": "^0.5.10",
+    "typescript": "5.9.3",
+    "vitest": "4.1.10"
+  }
+}

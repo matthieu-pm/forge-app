@@ -1,8 +1,29 @@
 # Forge agent platform: final implementation plan
 
-Status: approved implementation plan  
-Date: 2026-07-23  
+Status: implemented and verified
+Date: 2026-07-23
 Scope: Forge web and macOS desktop
+
+Implementation evidence:
+[`agent-platform-completion-audit.md`](agent-platform-completion-audit.md)
+
+## 0. Recommendation
+
+Implement the platform now, but as vertical slices behind the coordinator, capability-gateway, model-registry, and canonical-event seams in this plan. Do not wait for every Forge domain to be complete.
+
+The first slice uses the mature teams application module and proves the difficult infrastructure—EVE, tools plus code, durable events, overlay chat, model routing, and security—without coupling the agent to unfinished issue/project internals. New domain capabilities can then be added as their application modules become ready.
+
+Do not start by adding every model provider or write tool. The dependency order is:
+
+1. contracts, persistence, authorization, and canonical events;
+2. shared overlay UI against a fake runtime;
+3. EVE read-only tool plus isolated code;
+4. OpenAI API-key execution and OpenAI-only Auto;
+5. programmatic `forge.call`, approvals, and one reversible write;
+6. Codex local subscription;
+7. additional API providers;
+8. eligible additional local runtimes; and
+9. production hardening and general availability.
 
 ## 1. Outcome
 
@@ -353,6 +374,8 @@ The broker:
 
 Codex ships first through app-server. Claude remains a local beta pending policy review. Gemini OAuth and Kimi membership remain blocked until the provider explicitly permits this product architecture. Grok consumer, Mistral Le Chat, and DeepSeek Chat are not bridged.
 
+Automatic local discovery means Forge checks only registered adapters and trusted executable locations. It does not scan the machine broadly, parse credential files, invoke a shell, or assume that an installed CLI grants embedding rights. Each adapter owns executable validation, version support, account status, model discovery, login, execution, cancellation, and normalized events.
+
 ## 6. Tools and programmatic code
 
 ### 6.1 Typed Forge tools
@@ -459,6 +482,17 @@ type ModelRef = {
 ```
 
 Manual selection pins a `ModelRef` for the next turn. Changing the picker does not mutate an in-flight run.
+
+The product rule is:
+
+| Mode | Eligible sources |
+|---|---|
+| Auto | Healthy OpenAI API connections, Forge-managed OpenAI, or Codex models explicitly marked Auto-compatible |
+| Manual API model | Any healthy configured API provider or compatible endpoint |
+| Manual local model | Any model reported by a supported, ready desktop runtime adapter |
+| Unknown arbitrary CLI | Never executed; Forge shows no models until a reviewed adapter exists |
+
+This resolves the apparent tension between “OpenAI-only models” and multi-provider BYOK: **Auto is OpenAI-only; manual selection includes every provider the user deliberately connects.**
 
 ### 7.2 OpenAI-only Auto
 
@@ -913,7 +947,9 @@ Map canonical events to dedicated renderers. Do not infer tool UI by parsing ass
 
 ### 11.9 Model selector
 
-Reuse the ported Atrium interaction:
+Reuse the Atrium component at
+`/Users/matthieu/Projects/atrium-ai-crm/atrium-crm/src/components/ai/composer-model-picker.tsx`,
+ported into Forge as `src/components/agent/composer-model-picker.tsx`. Preserve its interaction and animation model while replacing Atrium-specific routing, translations, icons, and model types with Forge abstractions:
 
 - compact view;
 - Advanced submenu;
@@ -932,6 +968,35 @@ Extend its data, not its interaction:
 - on web, mark desktop-only connections as unavailable with an `Open in desktop` explanation rather than pretending they can execute remotely.
 
 Add `/settings/ai` for model connections. Do not reuse `/settings/api`, which manages Forge public API credentials.
+
+### 11.10 shadcn component map
+
+The current TanStack Start project uses the `base-rhea`/Base primitive style, Tailwind v4, Geist, and Hugeicons. The required primitives are already installed, so the agent shell should compose them rather than introduce another UI kit.
+
+| Agent surface | Installed shadcn primitives |
+|---|---|
+| Composer | `InputGroup`, `InputGroupTextarea`, `InputGroupAddon`, `Button`, `Popover`, `Tooltip` |
+| Model selector | `Popover`, `Command`, `ScrollArea`, `Badge`, `Separator` |
+| Compact desktop chat | `Resizable`, `ScrollArea`, `Button`, `DropdownMenu`, `Tooltip` |
+| Narrow/mobile chat | `Sheet` with an accessible `SheetTitle` |
+| Maximized overlay | `Dialog` semantics and focus management, presented non-routing over the mounted content |
+| Transcript work groups | `Collapsible`, `Accordion`, `ScrollArea`, `Badge`, `Skeleton`, `Spinner` |
+| Approval | `AlertDialog` for consequential confirmation, `Alert`, `Button` |
+| History | `Popover` on desktop, `Sheet` on narrow layouts, `Command` for search |
+| Open-chat strip | accessible custom tab strip using `Button`/`Tooltip`; do not use content `Tabs` because each thread remains independently mounted |
+| Connection settings | `FieldGroup`, `Field`, `Select`, `Input`, `Switch`, `Card`, `AlertDialog`, `sonner` |
+| Empty/loading/error states | `Empty`, `Skeleton`, `Alert`, `Spinner`, `sonner` |
+
+Implementation rules from the selected shadcn setup:
+
+- use semantic theme tokens and existing variants;
+- use `FieldGroup`/`Field` for settings forms and `InputGroup` for composer controls;
+- place items inside their required groups;
+- give every Dialog, Sheet, and Drawer an accessible title;
+- use Hugeicons through the project icon abstraction;
+- use `gap-*`, `size-*`, `cn()`, and component variants instead of ad hoc styling;
+- use `AlertDialog` for deleting connections or confirming destructive approvals; and
+- verify component APIs with the project’s shadcn CLI before implementation or updates.
 
 ## 12. Streaming and transport
 

@@ -7,6 +7,16 @@ import tailwindcss from "@tailwindcss/vite"
 import { nitro } from "nitro/vite"
 
 const config = defineConfig({
+  server: {
+    watch: {
+      ignored: [
+        "**/.electron-build/**",
+        "**/.output/**",
+        "**/services/agent-runtime/.eve/**",
+        "**/services/agent-runtime/.output/**",
+      ],
+    },
+  },
   plugins: [
     devtools(),
     nitro(),

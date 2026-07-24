@@ -5,7 +5,10 @@ import {
   completeAuthSchema,
   externalUrlSchema,
   notificationSchema,
+  resolveLocalRuntimeApprovalSchema,
+  resolveLocalRuntimeToolCallSchema,
   routePathSchema,
+  startLocalRuntimeRunSchema,
   themeSourceSchema,
   unreadCountSchema,
 } from "./bridge-contract"
@@ -97,6 +100,61 @@ describe("desktop bridge input validation", () => {
         title: "Assigned to you",
         body: "FOR-123 needs your attention",
         path: "https://evil.test",
+      }).success
+    ).toBe(false)
+  })
+
+  it("validates local runtime starts without accepting filesystem paths", () => {
+    const input = {
+      runtimeId: "codex",
+      runId: "00000000-0000-4000-8000-000000000010",
+      runtimeSessionId: null,
+      modelId: "gpt-codex",
+      reasoningEffort: "high",
+      message: "Summarize this workspace",
+      attachments: [],
+    }
+    expect(startLocalRuntimeRunSchema.parse(input)).toEqual(input)
+    expect(
+      startLocalRuntimeRunSchema.safeParse({
+        ...input,
+        cwd: "/private",
+      }).success
+    ).toBe(false)
+  })
+
+  it("requires a run-bound UUID approval resolution", () => {
+    expect(
+      resolveLocalRuntimeApprovalSchema.parse({
+        runId: "00000000-0000-4000-8000-000000000010",
+        approvalId: "00000000-0000-4000-8000-000000000099",
+        decision: "denied",
+      })
+    ).toMatchObject({ decision: "denied" })
+    expect(
+      resolveLocalRuntimeApprovalSchema.safeParse({
+        runId: "not-a-run",
+        approvalId: "not-an-approval",
+        decision: "approved",
+      }).success
+    ).toBe(false)
+  })
+
+  it("bounds local runtime tool-call results", () => {
+    expect(
+      resolveLocalRuntimeToolCallSchema.parse({
+        runId: "00000000-0000-4000-8000-000000000010",
+        requestId: "00000000-0000-4000-8000-000000000099",
+        success: true,
+        output: { items: [] },
+      })
+    ).toMatchObject({ success: true })
+    expect(
+      resolveLocalRuntimeToolCallSchema.safeParse({
+        runId: "00000000-0000-4000-8000-000000000010",
+        requestId: "00000000-0000-4000-8000-000000000099",
+        success: true,
+        output: "x".repeat(128 * 1024),
       }).success
     ).toBe(false)
   })

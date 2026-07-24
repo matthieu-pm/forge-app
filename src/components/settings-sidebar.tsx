@@ -59,7 +59,7 @@ type SettingsItem = {
   label: string
   icon: SettingsIcon
   active?: boolean
-  to?: "/settings" | "/settings/api"
+  to?: "/settings" | "/settings/profile" | "/settings/api" | "/settings/ai"
 }
 
 type SettingsGroup = {
@@ -77,7 +77,11 @@ const settingsGroups: Array<SettingsGroup> = [
         active: true,
         to: "/settings",
       },
-      { label: "Profile", icon: AccountSetting02Icon },
+      {
+        label: "Profile",
+        icon: AccountSetting02Icon,
+        to: "/settings/profile",
+      },
       { label: "Notifications", icon: NotificationSquareIcon },
       { label: "Code and reviews", icon: ComputerTerminal01Icon },
       { label: "Security and access", icon: Key01Icon },
@@ -106,7 +110,7 @@ const settingsGroups: Array<SettingsGroup> = [
   {
     label: "Features",
     items: [
-      { label: "AI & Agents", icon: FlashIcon },
+      { label: "AI & Agents", icon: FlashIcon, to: "/settings/ai" },
       { label: "Signals", icon: Asteroid02Icon },
       { label: "Initiatives", icon: AirplayIcon },
       { label: "Emojis", icon: Monocle01Icon },

@@ -18,6 +18,12 @@ describe("TabIcon", () => {
     expect(icon.classList.contains("forge-desktop-tab-icon")).toBe(true)
   })
 
+  it("renders the profile settings icon for the Profile tab", () => {
+    const { container } = render(<TabIcon path="/settings/profile" />)
+
+    expect(container.querySelector(".forge-desktop-tab-icon")).not.toBeNull()
+  })
+
   it("renders a team's configured emoji for a team tab", () => {
     const { container } = render(
       <TabIcon

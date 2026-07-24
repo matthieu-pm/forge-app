@@ -11,6 +11,7 @@ import { configureSessionSecurity } from "./security"
 import { setupDesktopAuth } from "./desktop-auth"
 import { configureUpdater } from "./updater"
 import { WindowManager } from "./window-manager"
+import { ModelBroker } from "./model-broker/broker"
 
 app.setName("Forge")
 configureAppAppearance(nativeTheme)
@@ -40,6 +41,7 @@ if (!hasSingleInstanceLock) {
   app.quit()
 } else {
   const desktopAuth = setupDesktopAuth(appOrigin, () => windows.getFocused())
+  const modelBroker = new ModelBroker()
   app.setAsDefaultProtocolClient(productDeepLinkScheme)
 
   app.on("open-url", (event, url) => {
@@ -63,7 +65,7 @@ if (!hasSingleInstanceLock) {
 
     configureSessionSecurity(appOrigin)
     await desktopAuth.restore(session.defaultSession)
-    registerHostBridge(windows, appOrigin, desktopAuth)
+    registerHostBridge(windows, appOrigin, desktopAuth, modelBroker)
     const updater = configureUpdater(windows)
     installApplicationMenu(windows, updater.check)
 
@@ -87,6 +89,7 @@ if (!hasSingleInstanceLock) {
   })
 
   app.on("before-quit", () => {
+    modelBroker.stop()
     session.defaultSession.flushStorageData()
   })
 }

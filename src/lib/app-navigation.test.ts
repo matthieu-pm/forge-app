@@ -7,8 +7,20 @@ describe("getBreadcrumbItems", () => {
     expect(getBreadcrumbItems("/settings")).toEqual([{ label: "Preferences" }])
   })
 
+  it("labels profile settings", () => {
+    expect(getBreadcrumbItems("/settings/profile")).toEqual([
+      { label: "Profile" },
+    ])
+  })
+
   it("labels public API settings", () => {
     expect(getBreadcrumbItems("/settings/api")).toEqual([{ label: "API" }])
+  })
+
+  it("labels AI settings", () => {
+    expect(getBreadcrumbItems("/settings/ai")).toEqual([
+      { label: "AI & Agents" },
+    ])
   })
 
   it("labels the create-team settings page", () => {

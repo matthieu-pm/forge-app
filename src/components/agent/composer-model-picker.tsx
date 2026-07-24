@@ -29,150 +29,19 @@ import {
   getAgentReasoningEfforts,
 } from "@/lib/agent-models"
 import { cn } from "@/lib/utils"
+import { Badge } from "@/components/ui/badge"
 
-type PickerView = "compact" | "advanced" | "models" | "effort"
-type EffortDayPhase = "night" | "sunrise" | "day" | "sunset"
-
-const SKY_BACKGROUNDS: Record<EffortDayPhase, string> = {
-  night: "linear-gradient(110deg, #111827 0%, #312e81 52%, #172554 100%)",
-  sunrise: "linear-gradient(110deg, #4338ca 0%, #f97316 58%, #fde68a 100%)",
-  day: "linear-gradient(110deg, #38bdf8 0%, #60a5fa 58%, #2563eb 100%)",
-  sunset: "linear-gradient(110deg, #fb7185 0%, #f97316 45%, #6d28d9 100%)",
-}
-
-const SKY_STARS = [
-  { left: "8%", top: "28%", delay: 0 },
-  { left: "20%", top: "62%", delay: 0.35 },
-  { left: "35%", top: "22%", delay: 0.7 },
-  { left: "49%", top: "68%", delay: 0.2 },
-  { left: "64%", top: "30%", delay: 0.55 },
-  { left: "82%", top: "58%", delay: 0.9 },
-] as const
+type PickerView = "compact" | "advanced" | "models" | "effort" | "auto-source"
 
 const EFFORT_LABELS: Record<AgentReasoningEffortSelection, string> = {
   auto: "Auto",
-  light: "Light",
+  none: "None",
+  minimal: "Minimal",
+  low: "Low",
   medium: "Medium",
   high: "High",
-  extra_high: "xHigh",
+  xhigh: "xHigh",
   max: "Max",
-}
-
-function getEffortDayPhase(hour: number): EffortDayPhase {
-  if (hour < 6 || hour >= 21) return "night"
-  if (hour < 9) return "sunrise"
-  if (hour < 18) return "day"
-  return "sunset"
-}
-
-function useEffortDayPhase() {
-  const [phase, setPhase] = React.useState<EffortDayPhase | null>(null)
-
-  React.useEffect(() => {
-    const updatePhase = () => setPhase(getEffortDayPhase(new Date().getHours()))
-    updatePhase()
-    const timer = window.setInterval(updatePhase, 60_000)
-    return () => window.clearInterval(timer)
-  }, [])
-
-  return phase
-}
-
-function EffortSkyBackdrop({
-  phase,
-  reduceMotion,
-}: {
-  phase: EffortDayPhase | null
-  reduceMotion: boolean | null
-}) {
-  if (!phase) return null
-
-  const isNight = phase === "night"
-  const orbPosition =
-    phase === "sunrise"
-      ? { left: "16%", top: "56%" }
-      : phase === "sunset"
-        ? { left: "76%", top: "58%" }
-        : { left: "78%", top: "18%" }
-
-  return (
-    <motion.span
-      aria-hidden="true"
-      className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]"
-      style={{
-        backgroundImage: SKY_BACKGROUNDS[phase],
-        backgroundSize: "160% 100%",
-      }}
-      animate={
-        reduceMotion
-          ? undefined
-          : { backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }
-      }
-      transition={{ duration: 18, repeat: Infinity, ease: "linear" }}
-    >
-      {isNight ? (
-        SKY_STARS.map((star) => (
-          <motion.span
-            key={`${star.left}-${star.top}`}
-            className="absolute size-1 rounded-full bg-white shadow-[0_0_4px_rgba(255,255,255,0.9)]"
-            style={{ left: star.left, top: star.top }}
-            animate={
-              reduceMotion
-                ? undefined
-                : {
-                    opacity: [0.25, 1, 0.25],
-                    scale: [0.75, 1.15, 0.75],
-                  }
-            }
-            transition={{
-              duration: 2.2,
-              repeat: Infinity,
-              delay: star.delay,
-            }}
-          />
-        ))
-      ) : (
-        <>
-          <motion.span
-            className="absolute size-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-100 shadow-[0_0_12px_4px_rgba(253,230,138,0.6)]"
-            style={orbPosition}
-            animate={
-              reduceMotion
-                ? undefined
-                : { y: [0, -2, 0], scale: [0.96, 1.04, 0.96] }
-            }
-            transition={{
-              duration: 4.5,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-          />
-          {phase === "day" ? (
-            <motion.span
-              className="absolute top-[38%] left-[18%] h-1.5 w-8 rounded-full bg-white/45 blur-[0.5px]"
-              animate={reduceMotion ? undefined : { x: [-6, 9, -6] }}
-              transition={{
-                duration: 12,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
-            />
-          ) : null}
-        </>
-      )}
-      {isNight ? (
-        <motion.span
-          className="absolute top-[16%] right-[9%] size-4 rounded-full bg-slate-100 shadow-[0_0_10px_rgba(255,255,255,0.5)] after:absolute after:-top-0.5 after:-right-1 after:size-4 after:rounded-full after:bg-indigo-950 after:content-['']"
-          animate={reduceMotion ? undefined : { y: [0, -1.5, 0] }}
-          transition={{
-            duration: 5,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-        />
-      ) : null}
-    </motion.span>
-  )
 }
 
 function MenuRow({
@@ -238,8 +107,18 @@ function AgentModelOption({ model }: { model: AgentModelDefinition }) {
         className="size-4 shrink-0"
       />
       <span className="min-w-0 flex-1 truncate">{model.label}</span>
-      <span className="shrink-0 text-[10px] text-muted-foreground">
-        {model.sourceLabel}
+      <span className="flex shrink-0 items-center gap-1">
+        {model.billingMode !== "forge-managed" ? (
+          <span className="max-w-24 truncate text-[9px] text-muted-foreground">
+            {model.sourceLabel}
+          </span>
+        ) : null}
+        <Badge variant="outline" className="h-4 px-1 text-[9px] font-normal">
+          {model.billingMode === "subscription" ? "Subscription" : "API"}
+        </Badge>
+        <Badge variant="outline" className="h-4 px-1 text-[9px] font-normal">
+          {model.locality === "local-only" ? "Local" : "Cloud"}
+        </Badge>
       </span>
     </span>
   )
@@ -251,6 +130,8 @@ export function ComposerModelPicker({
   effort,
   onEffortChange,
   models,
+  preferredAutoConnectionId,
+  onPreferredAutoConnectionChange,
   disabled,
   side = "bottom",
   align = "start",
@@ -261,16 +142,52 @@ export function ComposerModelPicker({
   effort: AgentReasoningEffortSelection
   onEffortChange: (effort: AgentReasoningEffortSelection) => void
   models: Array<AgentModelDefinition>
+  preferredAutoConnectionId: string | null
+  onPreferredAutoConnectionChange: (connectionId: string | null) => void
   disabled?: boolean
   side?: "top" | "bottom"
   align?: "start" | "center" | "end"
   onOpenProviderSettings?: () => void
 }) {
   const reduceMotion = useReducedMotion()
-  const dayPhase = useEffortDayPhase()
   const [open, setOpen] = React.useState(false)
   const [view, setView] = React.useState<PickerView>("compact")
   const selectedModel = models.find((model) => model.id === value)
+  const autoAvailable = models.some(
+    (model) =>
+      model.provider === "openai" &&
+      model.executionKind === "forge-native" &&
+      !model.disabledReason &&
+      Boolean(model.modelId)
+  )
+  const modelGroups = React.useMemo(() => {
+    const groups = new Map<string, Array<AgentModelDefinition>>()
+    for (const model of [...models].sort(
+      (left, right) => right.priority - left.priority
+    )) {
+      const current = groups.get(model.providerLabel) ?? []
+      current.push(model)
+      groups.set(model.providerLabel, current)
+    }
+    return [...groups.entries()]
+  }, [models])
+  const autoSources = React.useMemo(() => {
+    const byConnection = new Map<string, AgentModelDefinition>()
+    for (const model of models) {
+      if (
+        model.provider === "openai" &&
+        model.executionKind === "forge-native" &&
+        model.connectionId &&
+        !model.disabledReason
+      ) {
+        byConnection.set(model.connectionId, model)
+      }
+    }
+    return [...byConnection.values()]
+  }, [models])
+  const preferredAutoSource = autoSources.find(
+    (model) => model.connectionId === preferredAutoConnectionId
+  )
   const selectedModelLabel =
     value === AUTO_AGENT_MODEL_SELECTION.id
       ? AUTO_AGENT_MODEL_SELECTION.label
@@ -278,13 +195,6 @@ export function ComposerModelPicker({
   const efforts = getAgentReasoningEfforts(value, models)
   const isAutoModel = value === AUTO_AGENT_MODEL_SELECTION.id
   const effortLabel = EFFORT_LABELS[effort]
-  const selectedEffortIndex = effort === "auto" ? -1 : efforts.indexOf(effort)
-  const atmosphereProgress =
-    selectedEffortIndex >= 0 ? (selectedEffortIndex + 1) / efforts.length : 0
-  const atmosphereWidth =
-    atmosphereProgress > 0
-      ? `calc(${atmosphereProgress * 100}% - ${atmosphereProgress * 4}px)`
-      : "0%"
 
   React.useEffect(() => {
     if (isAutoModel && effort !== "auto") {
@@ -308,10 +218,15 @@ export function ComposerModelPicker({
       if (modelId === AUTO_AGENT_MODEL_SELECTION.id) {
         onEffortChange("auto")
       } else if (effort === "auto") {
-        onEffortChange(DEFAULT_AGENT_REASONING_EFFORT)
+        const nextModel = models.find((model) => model.id === modelId)
+        onEffortChange(
+          nextModel?.reasoningEfforts.includes(DEFAULT_AGENT_REASONING_EFFORT)
+            ? DEFAULT_AGENT_REASONING_EFFORT
+            : (nextModel?.reasoningEfforts[0] ?? DEFAULT_AGENT_REASONING_EFFORT)
+        )
       }
     },
-    [effort, onEffortChange, onValueChange]
+    [effort, models, onEffortChange, onValueChange]
   )
 
   const handleOpenChange = React.useCallback(
@@ -343,7 +258,7 @@ export function ComposerModelPicker({
               <button
                 type="button"
                 onClick={() => setView("effort")}
-                className="flex h-7 w-full items-center gap-2 rounded-full bg-muted px-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                className="flex h-7 w-full items-center gap-2 rounded-full px-2 text-left outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50"
               >
                 <span className="flex items-center gap-1" aria-hidden="true">
                   {[0, 1, 2].map((index) => (
@@ -369,25 +284,14 @@ export function ComposerModelPicker({
             ) : (
               <>
                 <div
-                  className="relative isolate grid overflow-hidden rounded-full bg-muted p-0.5"
+                  className="grid rounded-full"
                   style={{
                     gridTemplateColumns: `repeat(${Math.max(efforts.length, 1)}, minmax(0, 1fr))`,
                   }}
                   role="radiogroup"
                   aria-label="Effort level"
                 >
-                  <motion.span
-                    aria-hidden="true"
-                    className="pointer-events-none absolute inset-y-0.5 left-0.5 z-0 overflow-hidden rounded-full"
-                    animate={{ width: atmosphereWidth }}
-                    transition={transition}
-                  >
-                    <EffortSkyBackdrop
-                      phase={dayPhase}
-                      reduceMotion={reduceMotion}
-                    />
-                  </motion.span>
-                  {efforts.map((level, index) => (
+                  {efforts.map((level) => (
                     <button
                       key={level}
                       type="button"
@@ -395,23 +299,14 @@ export function ComposerModelPicker({
                       aria-checked={level === effort}
                       aria-label={EFFORT_LABELS[level]}
                       onClick={() => onEffortChange(level)}
-                      className="relative z-10 flex h-6 items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                      className="flex h-6 items-center justify-center rounded-full outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50"
                     >
-                      {level === effort ? (
-                        <motion.span
-                          layoutId="composer-effort-thumb"
-                          className="absolute inset-0 rounded-full bg-background shadow-sm"
-                          transition={transition}
-                        />
-                      ) : null}
                       <span
                         className={cn(
-                          "relative size-1.5 rounded-full",
+                          "size-1.5 rounded-full",
                           level === effort
-                            ? "bg-foreground/55"
-                            : index < selectedEffortIndex
-                              ? "bg-white/85 shadow-[0_0_3px_rgba(255,255,255,0.5)]"
-                              : "bg-muted-foreground/55"
+                            ? "bg-foreground"
+                            : "bg-muted-foreground/55"
                         )}
                       />
                       <span className="sr-only">{EFFORT_LABELS[level]}</span>
@@ -461,6 +356,13 @@ export function ComposerModelPicker({
             value={effortLabel}
             onClick={() => setView("effort")}
           />
+          {isAutoModel && autoSources.length > 1 ? (
+            <MenuRow
+              label="Auto billing source"
+              value={preferredAutoSource?.sourceLabel ?? "Any OpenAI source"}
+              onClick={() => setView("auto-source")}
+            />
+          ) : null}
           <div className="my-1 h-px bg-border/70" />
           <MenuRow
             label="Providers and API keys"
@@ -478,6 +380,75 @@ export function ComposerModelPicker({
               onOpenProviderSettings?.()
             }}
           />
+        </div>
+      )
+    }
+
+    if (view === "auto-source") {
+      return (
+        <div>
+          <button
+            type="button"
+            onClick={() => setView("advanced")}
+            className="mb-0.5 flex h-7 items-center gap-1.5 rounded-md px-1.5 text-sm font-medium outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
+          >
+            <HugeiconsIcon
+              icon={ArrowLeft01Icon}
+              strokeWidth={2}
+              className="size-3.5"
+            />
+            Auto billing source
+          </button>
+          <div className="max-h-56 space-y-0.5 overflow-y-auto pr-0.5">
+            <button
+              type="button"
+              onClick={() => onPreferredAutoConnectionChange(null)}
+              className={cn(
+                "flex min-h-8 w-full items-center gap-2 rounded-md px-2 py-1 text-left text-sm outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40",
+                preferredAutoConnectionId === null && "bg-muted"
+              )}
+            >
+              <span className="min-w-0 flex-1">Any OpenAI source</span>
+              {preferredAutoConnectionId === null ? (
+                <HugeiconsIcon
+                  icon={Tick02Icon}
+                  strokeWidth={2}
+                  className="size-3.5"
+                />
+              ) : null}
+            </button>
+            {autoSources.map((source) => (
+              <button
+                key={source.connectionId}
+                type="button"
+                onClick={() =>
+                  onPreferredAutoConnectionChange(source.connectionId ?? null)
+                }
+                className={cn(
+                  "flex min-h-8 w-full items-center gap-2 rounded-md px-2 py-1 text-left text-sm outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40",
+                  preferredAutoConnectionId === source.connectionId &&
+                    "bg-muted"
+                )}
+              >
+                <span className="min-w-0 flex-1 truncate">
+                  {source.sourceLabel}
+                </span>
+                <Badge
+                  variant="outline"
+                  className="h-4 px-1 text-[9px] font-normal"
+                >
+                  Cloud
+                </Badge>
+                {preferredAutoConnectionId === source.connectionId ? (
+                  <HugeiconsIcon
+                    icon={Tick02Icon}
+                    strokeWidth={2}
+                    className="size-3.5"
+                  />
+                ) : null}
+              </button>
+            ))}
+          </div>
         </div>
       )
     }
@@ -502,14 +473,25 @@ export function ComposerModelPicker({
             <>
               <button
                 type="button"
+                disabled={!autoAvailable}
+                title={
+                  autoAvailable
+                    ? undefined
+                    : "Connect an OpenAI API source to use Auto."
+                }
                 onClick={() => selectModel(AUTO_AGENT_MODEL_SELECTION.id)}
                 className={cn(
-                  "flex h-7 w-full items-center gap-2 rounded-md px-2 text-left text-sm outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40",
+                  "flex min-h-7 w-full items-center gap-2 rounded-md px-2 py-1 text-left text-sm outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 disabled:cursor-not-allowed disabled:opacity-50",
                   value === AUTO_AGENT_MODEL_SELECTION.id && "bg-muted"
                 )}
               >
-                <span className="min-w-0 flex-1">
+                <span className="flex min-w-0 flex-1 flex-col">
                   <AutoModelOption />
+                  {!autoAvailable ? (
+                    <span className="truncate pl-6 text-[10px] text-muted-foreground">
+                      Connect an OpenAI API source
+                    </span>
+                  ) : null}
                 </span>
                 {value === AUTO_AGENT_MODEL_SELECTION.id ? (
                   <HugeiconsIcon
@@ -519,31 +501,53 @@ export function ComposerModelPicker({
                   />
                 ) : null}
               </button>
-              {models.map((model) => (
-                <button
-                  key={`${model.sourceLabel}:${model.id}`}
-                  type="button"
-                  onClick={() => selectModel(model.id)}
-                  className={cn(
-                    "flex h-7 w-full items-center gap-2 rounded-md px-2 text-left text-sm outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40",
-                    value === model.id && "bg-muted"
-                  )}
-                >
-                  <span className="min-w-0 flex-1">
-                    <AgentModelOption model={model} />
-                  </span>
-                  {value === model.id ? (
-                    <HugeiconsIcon
-                      icon={Tick02Icon}
-                      strokeWidth={2}
-                      className="size-3.5"
-                    />
-                  ) : null}
-                </button>
+              {modelGroups.map(([providerLabel, providerModels]) => (
+                <div key={providerLabel} className="pt-1">
+                  <p className="px-2 py-1 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+                    {providerLabel}
+                  </p>
+                  {providerModels.map((model) => (
+                    <button
+                      key={`${model.sourceLabel}:${model.id}`}
+                      type="button"
+                      disabled={Boolean(model.disabledReason)}
+                      title={model.disabledReason}
+                      aria-describedby={
+                        model.disabledReason
+                          ? `model-disabled-${model.id}`
+                          : undefined
+                      }
+                      onClick={() => selectModel(model.id)}
+                      className={cn(
+                        "flex min-h-7 w-full items-center gap-2 rounded-md px-2 py-1 text-left text-sm outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 disabled:cursor-not-allowed disabled:opacity-50",
+                        value === model.id && "bg-muted"
+                      )}
+                    >
+                      <span className="flex min-w-0 flex-1 flex-col">
+                        <AgentModelOption model={model} />
+                        {model.disabledReason ? (
+                          <span
+                            id={`model-disabled-${model.id}`}
+                            className="truncate pl-6 text-[10px] text-muted-foreground"
+                          >
+                            {model.disabledReason}
+                          </span>
+                        ) : null}
+                      </span>
+                      {value === model.id ? (
+                        <HugeiconsIcon
+                          icon={Tick02Icon}
+                          strokeWidth={2}
+                          className="size-3.5"
+                        />
+                      ) : null}
+                    </button>
+                  ))}
+                </div>
               ))}
             </>
           ) : isAutoModel ? (
-            <div className="rounded-md bg-muted px-2 py-2">
+            <div className="rounded-md px-2 py-2">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <span className="flex items-center gap-1" aria-hidden="true">
                   {[0, 1, 2].map((index) => (
@@ -570,10 +574,7 @@ export function ComposerModelPicker({
                 key={level}
                 type="button"
                 onClick={() => onEffortChange(level)}
-                className={cn(
-                  "flex h-7 w-full items-center gap-2 rounded-md px-2 text-left text-sm outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40",
-                  effort === level && "bg-muted"
-                )}
+                className="flex h-7 w-full items-center gap-2 rounded-md px-2 text-left text-sm outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
               >
                 <span className="min-w-0 flex-1 font-medium">
                   {EFFORT_LABELS[level]}
@@ -602,6 +603,7 @@ export function ComposerModelPicker({
             type="button"
             aria-label={`Model ${selectedModelLabel}, effort ${effortLabel}`}
             animate={{ minWidth: open ? 136 : 0 }}
+            style={{ minWidth: 0 }}
             transition={transition}
             className={cn(
               "flex h-7 max-w-full items-center gap-1 rounded-full border-0 bg-transparent px-1.5 text-sm font-medium transition-colors outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50",
@@ -611,19 +613,14 @@ export function ComposerModelPicker({
         }
       >
         <span className="min-w-0 shrink-0 truncate">{selectedModelLabel}</span>
-        <AnimatePresence initial={false}>
-          {open ? (
-            <motion.span
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: "auto" }}
-              exit={{ opacity: 0, width: 0 }}
-              transition={transition}
-              className="overflow-hidden whitespace-nowrap text-muted-foreground"
-            >
-              {effortLabel}
-            </motion.span>
-          ) : null}
-        </AnimatePresence>
+        <span
+          className={cn(
+            "overflow-hidden whitespace-nowrap text-muted-foreground transition-[max-width,opacity] duration-150",
+            open ? "max-w-20 opacity-100" : "max-w-0 opacity-0"
+          )}
+        >
+          {effortLabel}
+        </span>
         <motion.span
           animate={{ rotate: open ? 180 : 0 }}
           transition={transition}

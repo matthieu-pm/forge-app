@@ -9,7 +9,10 @@ export class ApplicationAccessError extends Error {
   }
 }
 
-function hasWorkspaceRole(actor: Actor, allowedRoles: ReadonlyArray<string>) {
+export function hasWorkspaceRole(
+  actor: Actor,
+  allowedRoles: ReadonlyArray<string>
+) {
   const roles = actor.workspaceRole
     .split(",")
     .map((role) => role.trim())

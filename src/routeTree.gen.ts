@@ -17,6 +17,7 @@ import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as ForgeRouteImport } from './routes/forge'
 import { Route as AgentRouteImport } from './routes/agent'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SettingsIndexRouteImport } from './routes/settings.index'
 import { Route as WorkspaceViewsRouteImport } from './routes/workspace/views'
 import { Route as WorkspaceTeamsRouteImport } from './routes/workspace/teams'
 import { Route as WorkspaceSignalsRouteImport } from './routes/workspace/signals'
@@ -25,7 +26,9 @@ import { Route as WorkspaceMembersRouteImport } from './routes/workspace/members
 import { Route as WorkspaceInsightsRouteImport } from './routes/workspace/insights'
 import { Route as WorkspaceCallsRouteImport } from './routes/workspace/calls'
 import { Route as TeamsTeamSlugRouteImport } from './routes/teams/$teamSlug'
+import { Route as SettingsProfileRouteImport } from './routes/settings.profile'
 import { Route as SettingsApiRouteImport } from './routes/settings.api'
+import { Route as SettingsAiRouteImport } from './routes/settings.ai'
 import { Route as OnboardingWorkspaceRouteImport } from './routes/onboarding/workspace'
 import { Route as AuthDesktopRouteImport } from './routes/auth/desktop'
 import { Route as ApiOpenapiDotjsonRouteImport } from './routes/api/openapi[.]json'
@@ -42,6 +45,7 @@ import { Route as SettingsTeamsNewRouteImport } from './routes/settings_.teams.n
 import { Route as SettingsTeamsTeamSlugRouteImport } from './routes/settings_.teams.$teamSlug'
 import { Route as ApiV1SplatRouteImport } from './routes/api/v1/$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiAgentSplatRouteImport } from './routes/api/agent/$'
 import { Route as SettingsTeamsTeamSlugIndexRouteImport } from './routes/settings_.teams.$teamSlug.index'
 import { Route as SettingsTeamsTeamSlugGeneralRouteImport } from './routes/settings_.teams.$teamSlug.general'
 
@@ -85,6 +89,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsIndexRoute = SettingsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const WorkspaceViewsRoute = WorkspaceViewsRouteImport.update({
   id: '/workspace/views',
   path: '/workspace/views',
@@ -125,9 +134,19 @@ const TeamsTeamSlugRoute = TeamsTeamSlugRouteImport.update({
   path: '/teams/$teamSlug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsProfileRoute = SettingsProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const SettingsApiRoute = SettingsApiRouteImport.update({
   id: '/api',
   path: '/api',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsAiRoute = SettingsAiRouteImport.update({
+  id: '/ai',
+  path: '/ai',
   getParentRoute: () => SettingsRoute,
 } as any)
 const OnboardingWorkspaceRoute = OnboardingWorkspaceRouteImport.update({
@@ -212,6 +231,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAgentSplatRoute = ApiAgentSplatRouteImport.update({
+  id: '/api/agent/$',
+  path: '/api/agent/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsTeamsTeamSlugIndexRoute =
   SettingsTeamsTeamSlugIndexRouteImport.update({
     id: '/',
@@ -238,7 +262,9 @@ export interface FileRoutesByFullPath {
   '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
   '/auth/desktop': typeof AuthDesktopRoute
   '/onboarding/workspace': typeof OnboardingWorkspaceRoute
+  '/settings/ai': typeof SettingsAiRoute
   '/settings/api': typeof SettingsApiRoute
+  '/settings/profile': typeof SettingsProfileRoute
   '/teams/$teamSlug': typeof TeamsTeamSlugRouteWithChildren
   '/workspace/calls': typeof WorkspaceCallsRoute
   '/workspace/insights': typeof WorkspaceInsightsRoute
@@ -247,6 +273,8 @@ export interface FileRoutesByFullPath {
   '/workspace/signals': typeof WorkspaceSignalsRoute
   '/workspace/teams': typeof WorkspaceTeamsRoute
   '/workspace/views': typeof WorkspaceViewsRoute
+  '/settings/': typeof SettingsIndexRoute
+  '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/v1/$': typeof ApiV1SplatRoute
   '/settings/teams/$teamSlug': typeof SettingsTeamsTeamSlugRouteWithChildren
@@ -269,13 +297,14 @@ export interface FileRoutesByTo {
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
   '/my-issues': typeof MyIssuesRoute
-  '/settings': typeof SettingsRouteWithChildren
   '/signup': typeof SignupRoute
   '/api/docs': typeof ApiDocsRoute
   '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
   '/auth/desktop': typeof AuthDesktopRoute
   '/onboarding/workspace': typeof OnboardingWorkspaceRoute
+  '/settings/ai': typeof SettingsAiRoute
   '/settings/api': typeof SettingsApiRoute
+  '/settings/profile': typeof SettingsProfileRoute
   '/teams/$teamSlug': typeof TeamsTeamSlugRouteWithChildren
   '/workspace/calls': typeof WorkspaceCallsRoute
   '/workspace/insights': typeof WorkspaceInsightsRoute
@@ -284,6 +313,8 @@ export interface FileRoutesByTo {
   '/workspace/signals': typeof WorkspaceSignalsRoute
   '/workspace/teams': typeof WorkspaceTeamsRoute
   '/workspace/views': typeof WorkspaceViewsRoute
+  '/settings': typeof SettingsIndexRoute
+  '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/v1/$': typeof ApiV1SplatRoute
   '/settings/teams/new': typeof SettingsTeamsNewRoute
@@ -312,7 +343,9 @@ export interface FileRoutesById {
   '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
   '/auth/desktop': typeof AuthDesktopRoute
   '/onboarding/workspace': typeof OnboardingWorkspaceRoute
+  '/settings/ai': typeof SettingsAiRoute
   '/settings/api': typeof SettingsApiRoute
+  '/settings/profile': typeof SettingsProfileRoute
   '/teams/$teamSlug': typeof TeamsTeamSlugRouteWithChildren
   '/workspace/calls': typeof WorkspaceCallsRoute
   '/workspace/insights': typeof WorkspaceInsightsRoute
@@ -321,6 +354,8 @@ export interface FileRoutesById {
   '/workspace/signals': typeof WorkspaceSignalsRoute
   '/workspace/teams': typeof WorkspaceTeamsRoute
   '/workspace/views': typeof WorkspaceViewsRoute
+  '/settings/': typeof SettingsIndexRoute
+  '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/v1/$': typeof ApiV1SplatRoute
   '/settings_/teams/$teamSlug': typeof SettingsTeamsTeamSlugRouteWithChildren
@@ -351,7 +386,9 @@ export interface FileRouteTypes {
     | '/api/openapi.json'
     | '/auth/desktop'
     | '/onboarding/workspace'
+    | '/settings/ai'
     | '/settings/api'
+    | '/settings/profile'
     | '/teams/$teamSlug'
     | '/workspace/calls'
     | '/workspace/insights'
@@ -360,6 +397,8 @@ export interface FileRouteTypes {
     | '/workspace/signals'
     | '/workspace/teams'
     | '/workspace/views'
+    | '/settings/'
+    | '/api/agent/$'
     | '/api/auth/$'
     | '/api/v1/$'
     | '/settings/teams/$teamSlug'
@@ -382,13 +421,14 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/login'
     | '/my-issues'
-    | '/settings'
     | '/signup'
     | '/api/docs'
     | '/api/openapi.json'
     | '/auth/desktop'
     | '/onboarding/workspace'
+    | '/settings/ai'
     | '/settings/api'
+    | '/settings/profile'
     | '/teams/$teamSlug'
     | '/workspace/calls'
     | '/workspace/insights'
@@ -397,6 +437,8 @@ export interface FileRouteTypes {
     | '/workspace/signals'
     | '/workspace/teams'
     | '/workspace/views'
+    | '/settings'
+    | '/api/agent/$'
     | '/api/auth/$'
     | '/api/v1/$'
     | '/settings/teams/new'
@@ -424,7 +466,9 @@ export interface FileRouteTypes {
     | '/api/openapi.json'
     | '/auth/desktop'
     | '/onboarding/workspace'
+    | '/settings/ai'
     | '/settings/api'
+    | '/settings/profile'
     | '/teams/$teamSlug'
     | '/workspace/calls'
     | '/workspace/insights'
@@ -433,6 +477,8 @@ export interface FileRouteTypes {
     | '/workspace/signals'
     | '/workspace/teams'
     | '/workspace/views'
+    | '/settings/'
+    | '/api/agent/$'
     | '/api/auth/$'
     | '/api/v1/$'
     | '/settings_/teams/$teamSlug'
@@ -470,6 +516,7 @@ export interface RootRouteChildren {
   WorkspaceSignalsRoute: typeof WorkspaceSignalsRoute
   WorkspaceTeamsRoute: typeof WorkspaceTeamsRoute
   WorkspaceViewsRoute: typeof WorkspaceViewsRoute
+  ApiAgentSplatRoute: typeof ApiAgentSplatRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiV1SplatRoute: typeof ApiV1SplatRoute
   SettingsTeamsTeamSlugRoute: typeof SettingsTeamsTeamSlugRouteWithChildren
@@ -536,6 +583,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/': {
+      id: '/settings/'
+      path: '/'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof SettingsIndexRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/workspace/views': {
       id: '/workspace/views'
       path: '/workspace/views'
@@ -592,11 +646,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TeamsTeamSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/profile': {
+      id: '/settings/profile'
+      path: '/profile'
+      fullPath: '/settings/profile'
+      preLoaderRoute: typeof SettingsProfileRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/api': {
       id: '/settings/api'
       path: '/api'
       fullPath: '/settings/api'
       preLoaderRoute: typeof SettingsApiRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/ai': {
+      id: '/settings/ai'
+      path: '/ai'
+      fullPath: '/settings/ai'
+      preLoaderRoute: typeof SettingsAiRouteImport
       parentRoute: typeof SettingsRoute
     }
     '/onboarding/workspace': {
@@ -711,6 +779,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/agent/$': {
+      id: '/api/agent/$'
+      path: '/api/agent/$'
+      fullPath: '/api/agent/$'
+      preLoaderRoute: typeof ApiAgentSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings_/teams/$teamSlug/': {
       id: '/settings_/teams/$teamSlug/'
       path: '/'
@@ -729,11 +804,17 @@ declare module '@tanstack/react-router' {
 }
 
 interface SettingsRouteChildren {
+  SettingsAiRoute: typeof SettingsAiRoute
   SettingsApiRoute: typeof SettingsApiRoute
+  SettingsProfileRoute: typeof SettingsProfileRoute
+  SettingsIndexRoute: typeof SettingsIndexRoute
 }
 
 const SettingsRouteChildren: SettingsRouteChildren = {
+  SettingsAiRoute: SettingsAiRoute,
   SettingsApiRoute: SettingsApiRoute,
+  SettingsProfileRoute: SettingsProfileRoute,
+  SettingsIndexRoute: SettingsIndexRoute,
 }
 
 const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
@@ -798,6 +879,7 @@ const rootRouteChildren: RootRouteChildren = {
   WorkspaceSignalsRoute: WorkspaceSignalsRoute,
   WorkspaceTeamsRoute: WorkspaceTeamsRoute,
   WorkspaceViewsRoute: WorkspaceViewsRoute,
+  ApiAgentSplatRoute: ApiAgentSplatRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiV1SplatRoute: ApiV1SplatRoute,
   SettingsTeamsTeamSlugRoute: SettingsTeamsTeamSlugRouteWithChildren,

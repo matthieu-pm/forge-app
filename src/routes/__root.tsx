@@ -8,17 +8,17 @@ import {
 } from "@tanstack/react-router"
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools"
 import { TanStackDevtools } from "@tanstack/react-devtools"
-import { Cursor02Icon, HistoryIcon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
 import { Fragment } from "react"
 
 import appCss from "../styles.css?url"
 import { AppSidebar } from "@/components/app-sidebar"
+import { AgentProvider, useAgent } from "@/components/agent/agent-provider"
+import { AgentFooterActions } from "@/components/agent/agent-footer-actions"
+import { AgentShell } from "@/components/agent/agent-shell"
 import { SettingsSidebar } from "@/components/settings-sidebar"
 import { DesktopTitleBar } from "@/components/desktop-title-bar"
 import { PersonalPreferenceEffects } from "@/components/personal-preference-effects"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
-import { Button } from "@/components/ui/button"
 import { Toaster } from "@/components/ui/sonner"
 import { HostIntegration } from "@/host/host-integration"
 import {
@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/breadcrumb"
 import { getBreadcrumbItems } from "@/lib/app-navigation"
 import { getTeamFromRouteMatches } from "@/lib/team-route-match"
+import { cn } from "@/lib/utils"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 
 export const Route = createRootRoute({
@@ -84,65 +85,64 @@ function RootLayout() {
   const hasSettingsLayout = pathname.startsWith("/settings")
 
   return (
-    <SidebarProvider
-      className={
-        hasStandaloneTeamSettingsLayout
-          ? "forge-create-team-shell forge-settings-shell"
-          : hasSettingsLayout
-            ? "forge-settings-shell"
-            : undefined
-      }
-    >
-      <PersonalPreferenceEffects />
-      {pathname.startsWith("/settings") ? <SettingsSidebar /> : <AppSidebar />}
-      <SidebarInset>
-        <AppHeader />
-        <Outlet key={pathname} />
-      </SidebarInset>
-      <DesktopFooterActions />
-    </SidebarProvider>
+    <AgentProvider>
+      <SidebarProvider
+        className={cn(
+          "relative",
+          hasStandaloneTeamSettingsLayout
+            ? "forge-create-team-shell forge-settings-shell"
+            : hasSettingsLayout
+              ? "forge-settings-shell"
+              : undefined
+        )}
+      >
+        <PersonalPreferenceEffects />
+        {pathname.startsWith("/settings") ? (
+          <SettingsSidebar />
+        ) : (
+          <AppSidebar />
+        )}
+        <AgentContentPane pathname={pathname} />
+        <div className="forge-agent-overlay-layer pointer-events-none absolute top-2 right-2 bottom-8 left-0 z-30 transition-[left] duration-200 ease-linear md:left-(--sidebar-width) md:peer-data-[collapsible=icon]:left-[calc(var(--sidebar-width-icon)+(--spacing(4)))] md:peer-data-[collapsible=offcanvas]:left-0">
+          <AgentShell />
+        </div>
+        <AgentFooterActions />
+      </SidebarProvider>
+    </AgentProvider>
   )
 }
 
-function DesktopFooterActions() {
+function AgentContentPane({ pathname }: { pathname: string }) {
+  const { surfaceMode } = useAgent()
+  const obscured = surfaceMode === "maximized"
+
   return (
-    <div className="forge-desktop-footer-actions" aria-label="Forge actions">
-      <Button
-        nativeButton={false}
-        variant="ghost"
-        size="xs"
-        className="forge-ask-button text-muted-foreground hover:text-foreground"
-        aria-label="Ask Forge"
-        render={<Link to="/agent" />}
-      >
-        <HugeiconsIcon icon={Cursor02Icon} strokeWidth={2} />
-        <span className="forge-rolling-label" aria-hidden="true">
-          {[..."Ask Forge"].map((character, index) => (
-            <span
-              key={`${character}-${index}`}
-              className="forge-rolling-letter"
-            >
-              <span
-                className="forge-rolling-letter-track"
-                style={{ transitionDelay: `${index * 35}ms` }}
-              >
-                <span>{character === " " ? "\u00a0" : character}</span>
-                <span>{character === " " ? "\u00a0" : character}</span>
-              </span>
-            </span>
-          ))}
-        </span>
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-xs"
-        className="text-muted-foreground hover:text-foreground"
-        aria-label="History"
-        title="History"
-      >
-        <HugeiconsIcon icon={HistoryIcon} strokeWidth={2} />
-      </Button>
+    <SidebarInset
+      className={cn(
+        "origin-center transition-transform duration-150 ease-out",
+        obscured && "scale-x-[0.98] scale-y-[0.99]"
+      )}
+    >
+      <AgentRouteContent pathname={pathname} obscured={obscured} />
+    </SidebarInset>
+  )
+}
+
+function AgentRouteContent({
+  pathname,
+  obscured,
+}: {
+  pathname: string
+  obscured: boolean
+}) {
+  return (
+    <div
+      className="relative flex min-h-0 flex-1 flex-col"
+      aria-hidden={obscured || undefined}
+      inert={obscured || undefined}
+    >
+      <AppHeader />
+      <Outlet key={pathname} />
     </div>
   )
 }
@@ -153,9 +153,7 @@ function AppHeader() {
       const resolvedPathname =
         state.resolvedLocation?.pathname ?? state.location.pathname
 
-      if (
-        !/^\/teams\/[^/]+\/(issues|projects|views)$/.test(resolvedPathname)
-      ) {
+      if (!/^\/teams\/[^/]+\/(issues|projects|views)$/.test(resolvedPathname)) {
         return { breadcrumbTeam: undefined, pathname: resolvedPathname }
       }
 
@@ -189,10 +187,7 @@ function AppHeader() {
             const team = index === 0 ? breadcrumbTeam : undefined
             const label = team ? (
               <span className="inline-flex items-center gap-1.5">
-                <TeamSidebarIcon
-                  icon={team.icon}
-                  name={team.name}
-                />
+                <TeamSidebarIcon icon={team.icon} name={team.name} />
                 <span>{item.label}</span>
               </span>
             ) : (

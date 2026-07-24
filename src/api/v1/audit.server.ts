@@ -18,7 +18,9 @@ export function writeApiAuditEvent({
   const credentialId =
     actor.authentication.kind === "apiKey"
       ? actor.authentication.credentialId
-      : actor.authentication.sessionId
+      : actor.authentication.kind === "session"
+        ? actor.authentication.sessionId
+        : actor.authentication.tokenId
 
   console.info(
     JSON.stringify({

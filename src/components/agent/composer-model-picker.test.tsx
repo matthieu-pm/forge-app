@@ -1,6 +1,6 @@
-import { fireEvent, render, screen } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { useState } from "react"
-import { describe, expect, test } from "vitest"
+import { afterEach, describe, expect, test } from "vitest"
 
 import type {
   AgentModelSelectionId,
@@ -20,11 +20,36 @@ function PickerHarness() {
       effort={effort}
       onEffortChange={setEffort}
       models={getAgentModels()}
+      preferredAutoConnectionId={null}
+      onPreferredAutoConnectionChange={() => {}}
+    />
+  )
+}
+
+function ManagedPickerHarness() {
+  const [model, setModel] = useState<AgentModelSelectionId>("auto")
+  const [effort, setEffort] = useState<AgentReasoningEffortSelection>("auto")
+  const managedModels = getAgentModels().map((item) => ({
+    ...item,
+    sourceLabel: "Forge managed",
+  }))
+
+  return (
+    <ComposerModelPicker
+      value={model}
+      onValueChange={setModel}
+      effort={effort}
+      onEffortChange={setEffort}
+      models={managedModels}
+      preferredAutoConnectionId={null}
+      onPreferredAutoConnectionChange={() => {}}
     />
   )
 }
 
 describe("ComposerModelPicker", () => {
+  afterEach(cleanup)
+
   test("opens the reused compact picker", async () => {
     render(<PickerHarness />)
 
@@ -36,5 +61,22 @@ describe("ComposerModelPicker", () => {
 
     expect(await screen.findByRole("button", { name: "Advanced" })).toBeTruthy()
     expect(screen.getByText("Adapts to request")).toBeTruthy()
+  })
+
+  test("shows friendly managed model names without the managed source label", async () => {
+    render(<ManagedPickerHarness />)
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Model Auto, effort Auto",
+      })
+    )
+    fireEvent.click(await screen.findByRole("button", { name: "Advanced" }))
+    const modelRow = (await screen.findByText("Model")).closest("button")
+    expect(modelRow).toBeTruthy()
+    fireEvent.click(modelRow!)
+
+    expect(await screen.findByText("GPT 5.6 Sol")).toBeTruthy()
+    expect(screen.queryByText("Forge managed")).toBeNull()
   })
 })

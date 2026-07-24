@@ -1,8 +1,10 @@
 export const AGENT_REASONING_EFFORTS = [
-  "light",
+  "none",
+  "minimal",
+  "low",
   "medium",
   "high",
-  "extra_high",
+  "xhigh",
   "max",
 ] as const
 
@@ -15,12 +17,22 @@ export const DEFAULT_AGENT_REASONING_EFFORT_SELECTION: AgentReasoningEffortSelec
 
 export type AgentModelDefinition = {
   id: string
+  connectionId?: string
+  executionKind?: "forge-native" | "external-agent"
+  modelId?: string
   label: string
   provider: string
   providerLabel: string
   sourceLabel: string
+  locality?: "local-only" | "server-capable"
+  billingMode?:
+    | "forge-managed"
+    | "subscription"
+    | "token-plan"
+    | "pay-as-you-go"
   priority: number
   reasoningEfforts: ReadonlyArray<AgentReasoningEffort>
+  disabledReason?: string
 }
 
 export type AgentModelSelectionId = string | "auto"
@@ -31,31 +43,61 @@ export const AUTO_AGENT_MODEL_SELECTION = {
   description: "Automatically chooses the best OpenAI model for the task.",
 } as const
 
+export function formatAgentModelLabel(displayName: string, modelId: string) {
+  const normalizedDisplayName = displayName.trim()
+  if (
+    normalizedDisplayName &&
+    normalizedDisplayName.toLocaleLowerCase() !==
+      modelId.trim().toLocaleLowerCase()
+  ) {
+    return normalizedDisplayName
+  }
+
+  return modelId
+    .split(/[-_:]+/)
+    .filter(Boolean)
+    .map((part) => {
+      if (part.toLocaleLowerCase() === "gpt") return "GPT"
+      if (/^\d+(?:\.\d+)*$/.test(part)) return part
+      return `${part.charAt(0).toLocaleUpperCase()}${part.slice(1)}`
+    })
+    .join(" ")
+}
+
 export const AGENT_MODELS: Array<AgentModelDefinition> = [
   {
     id: "gpt-5.6-sol",
+    modelId: "gpt-5.6-sol",
     label: "GPT 5.6 Sol",
     provider: "openai",
     providerLabel: "OpenAI",
     sourceLabel: "Forge",
+    locality: "server-capable",
+    billingMode: "forge-managed",
     priority: 300,
     reasoningEfforts: AGENT_REASONING_EFFORTS,
   },
   {
     id: "gpt-5.6-terra",
+    modelId: "gpt-5.6-terra",
     label: "GPT 5.6 Terra",
     provider: "openai",
     providerLabel: "OpenAI",
     sourceLabel: "Forge",
+    locality: "server-capable",
+    billingMode: "forge-managed",
     priority: 200,
     reasoningEfforts: AGENT_REASONING_EFFORTS,
   },
   {
     id: "gpt-5.6-luna",
+    modelId: "gpt-5.6-luna",
     label: "GPT 5.6 Luna",
     provider: "openai",
     providerLabel: "OpenAI",
     sourceLabel: "Forge",
+    locality: "server-capable",
+    billingMode: "forge-managed",
     priority: 100,
     reasoningEfforts: AGENT_REASONING_EFFORTS,
   },
@@ -72,12 +114,15 @@ export function getAgentReasoningEfforts(
   models: ReadonlyArray<AgentModelDefinition> = AGENT_MODELS
 ): ReadonlyArray<AgentReasoningEffort> {
   if (modelId === AUTO_AGENT_MODEL_SELECTION.id) {
-    const configuredEfforts = models.flatMap((model) => model.reasoningEfforts)
+    const configuredEfforts = models
+      .filter((model) => !model.disabledReason)
+      .flatMap((model) => model.reasoningEfforts)
 
     return AGENT_REASONING_EFFORTS.filter((effort) =>
       configuredEfforts.includes(effort)
     )
   }
 
-  return models.find((model) => model.id === modelId)?.reasoningEfforts ?? []
+  const model = models.find((candidate) => candidate.id === modelId)
+  return model && !model.disabledReason ? model.reasoningEfforts : []
 }

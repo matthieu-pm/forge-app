@@ -5,7 +5,18 @@ import { getTableColumns } from "drizzle-orm"
 import { describe, expect, it } from "vitest"
 
 import { apiKeys } from "./auth-schema"
-import { apiIdempotencyKeys, teams } from "./schema"
+import {
+  agentApprovals,
+  agentArtifacts,
+  agentEvents,
+  agentRuns,
+  agentThreads,
+  apiIdempotencyKeys,
+  modelCatalogEntries,
+  modelConnections,
+  teams,
+  threadModelPreferences,
+} from "./schema"
 
 type MigrationJournal = {
   entries: Array<{ idx: number }>
@@ -40,6 +51,14 @@ describe("database migrations", () => {
       ["teams", teams],
       ["apikey", apiKeys],
       ["api_idempotency_keys", apiIdempotencyKeys],
+      ["model_connections", modelConnections],
+      ["agent_threads", agentThreads],
+      ["agent_runs", agentRuns],
+      ["agent_events", agentEvents],
+      ["agent_approvals", agentApprovals],
+      ["agent_artifacts", agentArtifacts],
+      ["model_catalog_entries", modelCatalogEntries],
+      ["thread_model_preferences", threadModelPreferences],
     ] as const) {
       const migratedColumns = Object.keys(
         snapshot.tables[`public.${tableName}`].columns

@@ -11,8 +11,13 @@ import {
   completeAuthSchema,
   desktopChannels,
   externalUrlSchema,
+  localRuntimeIdSchema,
+  localRuntimeRunIdSchema,
   notificationSchema,
+  resolveLocalRuntimeApprovalSchema,
+  resolveLocalRuntimeToolCallSchema,
   routePathSchema,
+  startLocalRuntimeRunSchema,
   themeSourceSchema,
   unreadCountSchema,
 } from "../shared/bridge-contract"
@@ -26,17 +31,22 @@ import type {
 } from "../../src/host/forge-host"
 import type { WindowManager } from "./window-manager"
 import type { DesktopAuth } from "./desktop-auth"
+import type { ModelBroker } from "./model-broker/broker"
 
 const capabilities: Array<HostCapability> = [
   "browser-auth",
   "deep-links",
   "dock-badge",
   "multi-window",
+  "local-agent-runtimes",
   "native-notifications",
   "updates",
 ]
 
-function assertTrustedSender(event: IpcMainInvokeEvent, appOrigin: string) {
+export function assertTrustedSender(
+  event: IpcMainInvokeEvent,
+  appOrigin: string
+) {
   const frame = event.senderFrame
 
   if (!frame || frame !== event.sender.mainFrame) {
@@ -55,7 +65,8 @@ function assertTrustedSender(event: IpcMainInvokeEvent, appOrigin: string) {
 export function registerHostBridge(
   windows: WindowManager,
   appOrigin: string,
-  desktopAuth: DesktopAuth
+  desktopAuth: DesktopAuth,
+  modelBroker: ModelBroker
 ) {
   const trusted = <T>(
     handler: (event: IpcMainInvokeEvent, input: unknown) => T | Promise<T>
@@ -173,6 +184,58 @@ export function registerHostBridge(
     trusted(async (event) => {
       await desktopAuth.signOut(event.sender.session)
       windows.broadcast({ type: "auth-signed-out" })
+    })
+  )
+
+  ipcMain.handle(
+    desktopChannels.listLocalRuntimes,
+    trusted(async () => [await modelBroker.inspectCodex()])
+  )
+
+  ipcMain.handle(
+    desktopChannels.startLocalRuntimeLogin,
+    trusted(async (_event, input) => {
+      localRuntimeIdSchema.parse(input)
+      return modelBroker.startCodexLogin()
+    })
+  )
+
+  ipcMain.handle(
+    desktopChannels.startLocalRuntimeRun,
+    trusted(async (event, input) => {
+      const parsed = startLocalRuntimeRunSchema.parse(input)
+      return modelBroker.startCodexRun(parsed, (message) => {
+        if (event.sender.isDestroyed()) return
+        event.sender.send(desktopChannels.hostEvent, {
+          type: "local-agent-event",
+          message,
+        })
+      })
+    })
+  )
+
+  ipcMain.handle(
+    desktopChannels.cancelLocalRuntimeRun,
+    trusted(async (_event, input) => {
+      await modelBroker.cancelCodexRun(localRuntimeRunIdSchema.parse(input))
+    })
+  )
+
+  ipcMain.handle(
+    desktopChannels.resolveLocalRuntimeApproval,
+    trusted((_event, input) => {
+      modelBroker.resolveCodexApproval(
+        resolveLocalRuntimeApprovalSchema.parse(input)
+      )
+    })
+  )
+
+  ipcMain.handle(
+    desktopChannels.resolveLocalRuntimeToolCall,
+    trusted((_event, input) => {
+      modelBroker.resolveCodexToolCall(
+        resolveLocalRuntimeToolCallSchema.parse(input)
+      )
     })
   )
 }

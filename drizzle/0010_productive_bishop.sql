@@ -1,0 +1,6 @@
+ALTER TABLE "agent_capability_invocations" ADD COLUMN "approval_id" uuid NOT NULL;--> statement-breakpoint
+ALTER TABLE "agent_capability_invocations" ADD COLUMN "outcome" text;--> statement-breakpoint
+ALTER TABLE "agent_capability_invocations" ADD COLUMN "duration_ms" integer;--> statement-breakpoint
+ALTER TABLE "agent_capability_invocations" ADD CONSTRAINT "agent_capability_invocations_approval_id_agent_approvals_id_fk" FOREIGN KEY ("approval_id") REFERENCES "public"."agent_approvals"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "agent_capability_invocations" ADD CONSTRAINT "agent_capability_invocations_outcome_check" CHECK ("agent_capability_invocations"."outcome" is null or "agent_capability_invocations"."outcome" in ('succeeded', 'failed'));--> statement-breakpoint
+ALTER TABLE "agent_capability_invocations" ADD CONSTRAINT "agent_capability_invocations_duration_check" CHECK ("agent_capability_invocations"."duration_ms" is null or "agent_capability_invocations"."duration_ms" >= 0);
