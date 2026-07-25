@@ -57,7 +57,7 @@ describe("auth route guards", () => {
   it("reuses the login auth check when entering the protected workspace", async () => {
     await expect(publicRouteBeforeLoad()).rejects.toBeDefined()
 
-    await protectedRouteBeforeLoad({
+    const result = await protectedRouteBeforeLoad({
       location: {
         pathname: "/inbox",
         searchStr: "",
@@ -65,6 +65,16 @@ describe("auth route guards", () => {
       },
     })
 
+    expect(result).toEqual({
+      authState: {
+        session: {
+          id: "session-1",
+          activeOrganizationId: "workspace-1",
+        },
+        user: { id: "user-1" },
+        workspace: { id: "workspace-1" },
+      },
+    })
     expect(mocks.getAuthState).toHaveBeenCalledOnce()
   })
 })

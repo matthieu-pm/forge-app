@@ -24,6 +24,12 @@ describe("TabIcon", () => {
     expect(container.querySelector(".forge-desktop-tab-icon")).not.toBeNull()
   })
 
+  it("renders the security settings icon for the Security tab", () => {
+    const { container } = render(<TabIcon path="/settings/security" />)
+
+    expect(container.querySelector(".forge-desktop-tab-icon")).not.toBeNull()
+  })
+
   it("renders a team's configured emoji for a team tab", () => {
     const { container } = render(
       <TabIcon

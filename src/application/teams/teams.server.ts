@@ -52,6 +52,7 @@ export function toTeamSummary(team: typeof teams.$inferSelect): TeamSummary {
     estimationScheme: team.estimationScheme as TeamSummary["estimationScheme"],
     issueEmailEnabled: team.issueEmailEnabled,
     detailedHistoryEnabled: team.detailedHistoryEnabled,
+    createdAt: team.createdAt.toISOString(),
   }
 }
 

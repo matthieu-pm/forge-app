@@ -98,6 +98,8 @@ export async function protectedRouteBeforeLoad({
       to: "/onboarding/workspace",
     })
   }
+
+  return { authState }
 }
 
 export async function protectedTeamRouteBeforeLoad({

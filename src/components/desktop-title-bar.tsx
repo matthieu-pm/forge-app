@@ -4,8 +4,11 @@ import {
   AccountSetting02Icon,
   ArrowLeft02Icon,
   ArrowRight02Icon,
+  CreditCardIcon,
   CustomizeIcon,
+  IdentificationIcon,
   LayoutAlignLeftIcon,
+  SecurityLockIcon,
   SidebarLeftIcon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -63,6 +66,30 @@ function getTabNavigationItem(path: string): AppNavChild | undefined {
   const pathname = path.split(/[?#]/, 1)[0]
 
   if (pathname.startsWith("/settings")) {
+    if (pathname === "/settings/security") {
+      return {
+        title: "Security",
+        to: "/settings/security",
+        icon: SecurityLockIcon,
+      }
+    }
+
+    if (pathname === "/settings/billing") {
+      return {
+        title: "Billing",
+        to: "/settings/billing",
+        icon: CreditCardIcon,
+      }
+    }
+
+    if (pathname === "/settings/teams") {
+      return {
+        title: "Teams",
+        to: "/settings/teams",
+        icon: IdentificationIcon,
+      }
+    }
+
     if (pathname === "/settings/profile") {
       return {
         title: "Profile",

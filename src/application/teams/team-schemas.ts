@@ -118,6 +118,7 @@ export const teamSummarySchema = z
     estimationScheme: z.enum(ESTIMATION_SCHEMES),
     issueEmailEnabled: z.boolean(),
     detailedHistoryEnabled: z.boolean(),
+    createdAt: z.iso.datetime(),
   })
   .strict()
 

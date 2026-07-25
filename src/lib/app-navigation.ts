@@ -33,6 +33,12 @@ export type AppPath =
   | "/settings/profile"
   | "/settings/api"
   | "/settings/ai"
+  | "/settings/applications"
+  | "/settings/billing"
+  | "/settings/import-export"
+  | "/settings/security"
+  | "/settings/teams"
+  | "/settings/workspace"
   | "/inbox"
   | "/my-issues"
   | "/workspace/initiatives"
@@ -285,6 +291,10 @@ export function getPageMeta(pathname: string): PageMeta {
 }
 
 export function getBreadcrumbItems(pathname: string): Array<BreadcrumbItem> {
+  if (pathname === "/settings/teams") {
+    return [{ label: "Teams" }]
+  }
+
   if (pathname === "/settings/teams/new") {
     return [{ label: "Create a new team" }]
   }
@@ -311,6 +321,26 @@ export function getBreadcrumbItems(pathname: string): Array<BreadcrumbItem> {
 
   if (pathname === "/settings/ai") {
     return [{ label: "AI & Agents" }]
+  }
+
+  if (pathname === "/settings/security") {
+    return [{ label: "Security" }]
+  }
+
+  if (pathname === "/settings/billing") {
+    return [{ label: "Billing" }]
+  }
+
+  if (pathname === "/settings/applications") {
+    return [{ label: "Applications" }]
+  }
+
+  if (pathname === "/settings/workspace") {
+    return [{ label: "Workspace" }]
+  }
+
+  if (pathname === "/settings/import-export") {
+    return [{ label: "Import & export" }]
   }
 
   const initiativeMatch = pathname.match(/^\/workspace\/initiatives\/([^/]+)$/)

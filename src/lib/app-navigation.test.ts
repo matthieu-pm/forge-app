@@ -23,6 +23,34 @@ describe("getBreadcrumbItems", () => {
     ])
   })
 
+  it("labels security settings", () => {
+    expect(getBreadcrumbItems("/settings/security")).toEqual([
+      { label: "Security" },
+    ])
+  })
+
+  it("labels workspace settings", () => {
+    expect(getBreadcrumbItems("/settings/workspace")).toEqual([
+      { label: "Workspace" },
+    ])
+  })
+
+  it("labels billing settings", () => {
+    expect(getBreadcrumbItems("/settings/billing")).toEqual([
+      { label: "Billing" },
+    ])
+  })
+
+  it("labels application settings", () => {
+    expect(getBreadcrumbItems("/settings/applications")).toEqual([
+      { label: "Applications" },
+    ])
+  })
+
+  it("labels teams settings", () => {
+    expect(getBreadcrumbItems("/settings/teams")).toEqual([{ label: "Teams" }])
+  })
+
   it("labels the create-team settings page", () => {
     expect(getBreadcrumbItems("/settings/teams/new")).toEqual([
       { label: "Create a new team" },

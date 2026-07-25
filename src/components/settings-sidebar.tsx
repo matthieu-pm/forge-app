@@ -59,7 +59,17 @@ type SettingsItem = {
   label: string
   icon: SettingsIcon
   active?: boolean
-  to?: "/settings" | "/settings/profile" | "/settings/api" | "/settings/ai"
+  to?:
+    | "/settings"
+    | "/settings/profile"
+    | "/settings/api"
+    | "/settings/ai"
+    | "/settings/applications"
+    | "/settings/billing"
+    | "/settings/import-export"
+    | "/settings/security"
+    | "/settings/teams"
+    | "/settings/workspace"
 }
 
 type SettingsGroup = {
@@ -120,14 +130,38 @@ const settingsGroups: Array<SettingsGroup> = [
   {
     label: "Administration",
     items: [
-      { label: "Workspace", icon: Building02Icon },
-      { label: "Teams", icon: IdentificationIcon },
+      {
+        label: "Workspace",
+        icon: Building02Icon,
+        to: "/settings/workspace",
+      },
+      {
+        label: "Teams",
+        icon: IdentificationIcon,
+        to: "/settings/teams",
+      },
       { label: "Members", icon: UserGroup03Icon },
-      { label: "Security", icon: SecurityLockIcon },
+      {
+        label: "Security",
+        icon: SecurityLockIcon,
+        to: "/settings/security",
+      },
       { label: "API", icon: SourceCodeIcon, to: "/settings/api" },
-      { label: "Applications", icon: WebProgrammingIcon },
-      { label: "Billing", icon: CreditCardIcon },
-      { label: "Import & Export", icon: ArrowLeftRightIcon },
+      {
+        label: "Applications",
+        icon: WebProgrammingIcon,
+        to: "/settings/applications",
+      },
+      {
+        label: "Billing",
+        icon: CreditCardIcon,
+        to: "/settings/billing",
+      },
+      {
+        label: "Import & Export",
+        icon: ArrowLeftRightIcon,
+        to: "/settings/import-export",
+      },
     ],
   },
 ]

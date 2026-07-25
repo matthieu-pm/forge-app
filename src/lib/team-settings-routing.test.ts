@@ -13,7 +13,6 @@ vi.mock("@/lib/auth-state", () => ({
   publicRouteBeforeLoad: vi.fn(),
 }))
 
-
 type TestRoute = {
   options: {
     id?: string
@@ -28,25 +27,29 @@ type TestRoute = {
 describe("team settings routes", () => {
   it("keeps the team overview and general settings as sibling child routes", () => {
     const rootChildren = routeTree.children as unknown as Array<TestRoute>
-    const teamSettingsRoute = rootChildren.find(
-      (route) => route.options.id === "/settings_/teams/$teamSlug",
+    const teamsSettingsRoute = rootChildren.find(
+      (route) => route.options.id === "/settings_/teams"
+    )
+    const teamSettingsRoute = teamsSettingsRoute?.children?.find(
+      (route) => route.options.path === "/$teamSlug"
     )
 
     expect(
-      teamSettingsRoute?.children?.map((route) => route.options.path),
+      teamSettingsRoute?.children?.map((route) => route.options.path)
     ).toEqual(expect.arrayContaining(["/", "/general"]))
   })
 
   it("loads team access through the cached loader path", () => {
     const rootChildren = routeTree.children as unknown as Array<TestRoute>
-    const teamSettingsRoute = rootChildren.find(
-      (route) => route.options.id === "/settings_/teams/$teamSlug",
+    const teamsSettingsRoute = rootChildren.find(
+      (route) => route.options.id === "/settings_/teams"
+    )
+    const teamSettingsRoute = teamsSettingsRoute?.children?.find(
+      (route) => route.options.path === "/$teamSlug"
     )
 
     expect(teamSettingsRoute?.options.beforeLoad).toBeUndefined()
-    expect(teamSettingsRoute?.options.loader).toBe(
-      protectedTeamRouteBeforeLoad,
-    )
+    expect(teamSettingsRoute?.options.loader).toBe(protectedTeamRouteBeforeLoad)
     expect(teamSettingsRoute?.options.staleTime).toBe(30_000)
   })
 })

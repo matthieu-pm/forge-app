@@ -164,7 +164,10 @@ function AppHeader() {
     },
   })
 
-  if (pathname.startsWith("/settings/teams/")) {
+  if (
+    pathname === "/settings/teams" ||
+    pathname.startsWith("/settings/teams/")
+  ) {
     return null
   }
 

@@ -26,7 +26,13 @@ import { Route as WorkspaceMembersRouteImport } from './routes/workspace/members
 import { Route as WorkspaceInsightsRouteImport } from './routes/workspace/insights'
 import { Route as WorkspaceCallsRouteImport } from './routes/workspace/calls'
 import { Route as TeamsTeamSlugRouteImport } from './routes/teams/$teamSlug'
+import { Route as SettingsTeamsRouteImport } from './routes/settings_.teams'
+import { Route as SettingsWorkspaceRouteImport } from './routes/settings.workspace'
+import { Route as SettingsSecurityRouteImport } from './routes/settings.security'
 import { Route as SettingsProfileRouteImport } from './routes/settings.profile'
+import { Route as SettingsImportExportRouteImport } from './routes/settings.import-export'
+import { Route as SettingsBillingRouteImport } from './routes/settings.billing'
+import { Route as SettingsApplicationsRouteImport } from './routes/settings.applications'
 import { Route as SettingsApiRouteImport } from './routes/settings.api'
 import { Route as SettingsAiRouteImport } from './routes/settings.ai'
 import { Route as OnboardingWorkspaceRouteImport } from './routes/onboarding/workspace'
@@ -134,9 +140,39 @@ const TeamsTeamSlugRoute = TeamsTeamSlugRouteImport.update({
   path: '/teams/$teamSlug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsTeamsRoute = SettingsTeamsRouteImport.update({
+  id: '/settings_/teams',
+  path: '/settings/teams',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsWorkspaceRoute = SettingsWorkspaceRouteImport.update({
+  id: '/workspace',
+  path: '/workspace',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsSecurityRoute = SettingsSecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const SettingsProfileRoute = SettingsProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsImportExportRoute = SettingsImportExportRouteImport.update({
+  id: '/import-export',
+  path: '/import-export',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsBillingRoute = SettingsBillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsApplicationsRoute = SettingsApplicationsRouteImport.update({
+  id: '/applications',
+  path: '/applications',
   getParentRoute: () => SettingsRoute,
 } as any)
 const SettingsApiRoute = SettingsApiRouteImport.update({
@@ -212,14 +248,14 @@ const TeamsTeamSlugCallsRoute = TeamsTeamSlugCallsRouteImport.update({
   getParentRoute: () => TeamsTeamSlugRoute,
 } as any)
 const SettingsTeamsNewRoute = SettingsTeamsNewRouteImport.update({
-  id: '/settings_/teams/new',
-  path: '/settings/teams/new',
-  getParentRoute: () => rootRouteImport,
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => SettingsTeamsRoute,
 } as any)
 const SettingsTeamsTeamSlugRoute = SettingsTeamsTeamSlugRouteImport.update({
-  id: '/settings_/teams/$teamSlug',
-  path: '/settings/teams/$teamSlug',
-  getParentRoute: () => rootRouteImport,
+  id: '/$teamSlug',
+  path: '/$teamSlug',
+  getParentRoute: () => SettingsTeamsRoute,
 } as any)
 const ApiV1SplatRoute = ApiV1SplatRouteImport.update({
   id: '/api/v1/$',
@@ -264,7 +300,13 @@ export interface FileRoutesByFullPath {
   '/onboarding/workspace': typeof OnboardingWorkspaceRoute
   '/settings/ai': typeof SettingsAiRoute
   '/settings/api': typeof SettingsApiRoute
+  '/settings/applications': typeof SettingsApplicationsRoute
+  '/settings/billing': typeof SettingsBillingRoute
+  '/settings/import-export': typeof SettingsImportExportRoute
   '/settings/profile': typeof SettingsProfileRoute
+  '/settings/security': typeof SettingsSecurityRoute
+  '/settings/workspace': typeof SettingsWorkspaceRoute
+  '/settings/teams': typeof SettingsTeamsRouteWithChildren
   '/teams/$teamSlug': typeof TeamsTeamSlugRouteWithChildren
   '/workspace/calls': typeof WorkspaceCallsRoute
   '/workspace/insights': typeof WorkspaceInsightsRoute
@@ -304,7 +346,13 @@ export interface FileRoutesByTo {
   '/onboarding/workspace': typeof OnboardingWorkspaceRoute
   '/settings/ai': typeof SettingsAiRoute
   '/settings/api': typeof SettingsApiRoute
+  '/settings/applications': typeof SettingsApplicationsRoute
+  '/settings/billing': typeof SettingsBillingRoute
+  '/settings/import-export': typeof SettingsImportExportRoute
   '/settings/profile': typeof SettingsProfileRoute
+  '/settings/security': typeof SettingsSecurityRoute
+  '/settings/workspace': typeof SettingsWorkspaceRoute
+  '/settings/teams': typeof SettingsTeamsRouteWithChildren
   '/teams/$teamSlug': typeof TeamsTeamSlugRouteWithChildren
   '/workspace/calls': typeof WorkspaceCallsRoute
   '/workspace/insights': typeof WorkspaceInsightsRoute
@@ -345,7 +393,13 @@ export interface FileRoutesById {
   '/onboarding/workspace': typeof OnboardingWorkspaceRoute
   '/settings/ai': typeof SettingsAiRoute
   '/settings/api': typeof SettingsApiRoute
+  '/settings/applications': typeof SettingsApplicationsRoute
+  '/settings/billing': typeof SettingsBillingRoute
+  '/settings/import-export': typeof SettingsImportExportRoute
   '/settings/profile': typeof SettingsProfileRoute
+  '/settings/security': typeof SettingsSecurityRoute
+  '/settings/workspace': typeof SettingsWorkspaceRoute
+  '/settings_/teams': typeof SettingsTeamsRouteWithChildren
   '/teams/$teamSlug': typeof TeamsTeamSlugRouteWithChildren
   '/workspace/calls': typeof WorkspaceCallsRoute
   '/workspace/insights': typeof WorkspaceInsightsRoute
@@ -388,7 +442,13 @@ export interface FileRouteTypes {
     | '/onboarding/workspace'
     | '/settings/ai'
     | '/settings/api'
+    | '/settings/applications'
+    | '/settings/billing'
+    | '/settings/import-export'
     | '/settings/profile'
+    | '/settings/security'
+    | '/settings/workspace'
+    | '/settings/teams'
     | '/teams/$teamSlug'
     | '/workspace/calls'
     | '/workspace/insights'
@@ -428,7 +488,13 @@ export interface FileRouteTypes {
     | '/onboarding/workspace'
     | '/settings/ai'
     | '/settings/api'
+    | '/settings/applications'
+    | '/settings/billing'
+    | '/settings/import-export'
     | '/settings/profile'
+    | '/settings/security'
+    | '/settings/workspace'
+    | '/settings/teams'
     | '/teams/$teamSlug'
     | '/workspace/calls'
     | '/workspace/insights'
@@ -468,7 +534,13 @@ export interface FileRouteTypes {
     | '/onboarding/workspace'
     | '/settings/ai'
     | '/settings/api'
+    | '/settings/applications'
+    | '/settings/billing'
+    | '/settings/import-export'
     | '/settings/profile'
+    | '/settings/security'
+    | '/settings/workspace'
+    | '/settings_/teams'
     | '/teams/$teamSlug'
     | '/workspace/calls'
     | '/workspace/insights'
@@ -508,6 +580,7 @@ export interface RootRouteChildren {
   ApiOpenapiDotjsonRoute: typeof ApiOpenapiDotjsonRoute
   AuthDesktopRoute: typeof AuthDesktopRoute
   OnboardingWorkspaceRoute: typeof OnboardingWorkspaceRoute
+  SettingsTeamsRoute: typeof SettingsTeamsRouteWithChildren
   TeamsTeamSlugRoute: typeof TeamsTeamSlugRouteWithChildren
   WorkspaceCallsRoute: typeof WorkspaceCallsRoute
   WorkspaceInsightsRoute: typeof WorkspaceInsightsRoute
@@ -519,8 +592,6 @@ export interface RootRouteChildren {
   ApiAgentSplatRoute: typeof ApiAgentSplatRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiV1SplatRoute: typeof ApiV1SplatRoute
-  SettingsTeamsTeamSlugRoute: typeof SettingsTeamsTeamSlugRouteWithChildren
-  SettingsTeamsNewRoute: typeof SettingsTeamsNewRoute
   WorkspaceInitiativesInitiativeIdRoute: typeof WorkspaceInitiativesInitiativeIdRoute
   WorkspaceInitiativesIndexRoute: typeof WorkspaceInitiativesIndexRoute
 }
@@ -646,11 +717,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TeamsTeamSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings_/teams': {
+      id: '/settings_/teams'
+      path: '/settings/teams'
+      fullPath: '/settings/teams'
+      preLoaderRoute: typeof SettingsTeamsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/workspace': {
+      id: '/settings/workspace'
+      path: '/workspace'
+      fullPath: '/settings/workspace'
+      preLoaderRoute: typeof SettingsWorkspaceRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/security': {
+      id: '/settings/security'
+      path: '/security'
+      fullPath: '/settings/security'
+      preLoaderRoute: typeof SettingsSecurityRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/profile': {
       id: '/settings/profile'
       path: '/profile'
       fullPath: '/settings/profile'
       preLoaderRoute: typeof SettingsProfileRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/import-export': {
+      id: '/settings/import-export'
+      path: '/import-export'
+      fullPath: '/settings/import-export'
+      preLoaderRoute: typeof SettingsImportExportRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/billing': {
+      id: '/settings/billing'
+      path: '/billing'
+      fullPath: '/settings/billing'
+      preLoaderRoute: typeof SettingsBillingRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/applications': {
+      id: '/settings/applications'
+      path: '/applications'
+      fullPath: '/settings/applications'
+      preLoaderRoute: typeof SettingsApplicationsRouteImport
       parentRoute: typeof SettingsRoute
     }
     '/settings/api': {
@@ -753,17 +866,17 @@ declare module '@tanstack/react-router' {
     }
     '/settings_/teams/new': {
       id: '/settings_/teams/new'
-      path: '/settings/teams/new'
+      path: '/new'
       fullPath: '/settings/teams/new'
       preLoaderRoute: typeof SettingsTeamsNewRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof SettingsTeamsRoute
     }
     '/settings_/teams/$teamSlug': {
       id: '/settings_/teams/$teamSlug'
-      path: '/settings/teams/$teamSlug'
+      path: '/$teamSlug'
       fullPath: '/settings/teams/$teamSlug'
       preLoaderRoute: typeof SettingsTeamsTeamSlugRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof SettingsTeamsRoute
     }
     '/api/v1/$': {
       id: '/api/v1/$'
@@ -806,19 +919,58 @@ declare module '@tanstack/react-router' {
 interface SettingsRouteChildren {
   SettingsAiRoute: typeof SettingsAiRoute
   SettingsApiRoute: typeof SettingsApiRoute
+  SettingsApplicationsRoute: typeof SettingsApplicationsRoute
+  SettingsBillingRoute: typeof SettingsBillingRoute
+  SettingsImportExportRoute: typeof SettingsImportExportRoute
   SettingsProfileRoute: typeof SettingsProfileRoute
+  SettingsSecurityRoute: typeof SettingsSecurityRoute
+  SettingsWorkspaceRoute: typeof SettingsWorkspaceRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
 }
 
 const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsAiRoute: SettingsAiRoute,
   SettingsApiRoute: SettingsApiRoute,
+  SettingsApplicationsRoute: SettingsApplicationsRoute,
+  SettingsBillingRoute: SettingsBillingRoute,
+  SettingsImportExportRoute: SettingsImportExportRoute,
   SettingsProfileRoute: SettingsProfileRoute,
+  SettingsSecurityRoute: SettingsSecurityRoute,
+  SettingsWorkspaceRoute: SettingsWorkspaceRoute,
   SettingsIndexRoute: SettingsIndexRoute,
 }
 
 const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
   SettingsRouteChildren,
+)
+
+interface SettingsTeamsTeamSlugRouteChildren {
+  SettingsTeamsTeamSlugGeneralRoute: typeof SettingsTeamsTeamSlugGeneralRoute
+  SettingsTeamsTeamSlugIndexRoute: typeof SettingsTeamsTeamSlugIndexRoute
+}
+
+const SettingsTeamsTeamSlugRouteChildren: SettingsTeamsTeamSlugRouteChildren = {
+  SettingsTeamsTeamSlugGeneralRoute: SettingsTeamsTeamSlugGeneralRoute,
+  SettingsTeamsTeamSlugIndexRoute: SettingsTeamsTeamSlugIndexRoute,
+}
+
+const SettingsTeamsTeamSlugRouteWithChildren =
+  SettingsTeamsTeamSlugRoute._addFileChildren(
+    SettingsTeamsTeamSlugRouteChildren,
+  )
+
+interface SettingsTeamsRouteChildren {
+  SettingsTeamsTeamSlugRoute: typeof SettingsTeamsTeamSlugRouteWithChildren
+  SettingsTeamsNewRoute: typeof SettingsTeamsNewRoute
+}
+
+const SettingsTeamsRouteChildren: SettingsTeamsRouteChildren = {
+  SettingsTeamsTeamSlugRoute: SettingsTeamsTeamSlugRouteWithChildren,
+  SettingsTeamsNewRoute: SettingsTeamsNewRoute,
+}
+
+const SettingsTeamsRouteWithChildren = SettingsTeamsRoute._addFileChildren(
+  SettingsTeamsRouteChildren,
 )
 
 interface TeamsTeamSlugRouteChildren {
@@ -843,21 +995,6 @@ const TeamsTeamSlugRouteWithChildren = TeamsTeamSlugRoute._addFileChildren(
   TeamsTeamSlugRouteChildren,
 )
 
-interface SettingsTeamsTeamSlugRouteChildren {
-  SettingsTeamsTeamSlugGeneralRoute: typeof SettingsTeamsTeamSlugGeneralRoute
-  SettingsTeamsTeamSlugIndexRoute: typeof SettingsTeamsTeamSlugIndexRoute
-}
-
-const SettingsTeamsTeamSlugRouteChildren: SettingsTeamsTeamSlugRouteChildren = {
-  SettingsTeamsTeamSlugGeneralRoute: SettingsTeamsTeamSlugGeneralRoute,
-  SettingsTeamsTeamSlugIndexRoute: SettingsTeamsTeamSlugIndexRoute,
-}
-
-const SettingsTeamsTeamSlugRouteWithChildren =
-  SettingsTeamsTeamSlugRoute._addFileChildren(
-    SettingsTeamsTeamSlugRouteChildren,
-  )
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgentRoute: AgentRoute,
@@ -871,6 +1008,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiOpenapiDotjsonRoute: ApiOpenapiDotjsonRoute,
   AuthDesktopRoute: AuthDesktopRoute,
   OnboardingWorkspaceRoute: OnboardingWorkspaceRoute,
+  SettingsTeamsRoute: SettingsTeamsRouteWithChildren,
   TeamsTeamSlugRoute: TeamsTeamSlugRouteWithChildren,
   WorkspaceCallsRoute: WorkspaceCallsRoute,
   WorkspaceInsightsRoute: WorkspaceInsightsRoute,
@@ -882,8 +1020,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAgentSplatRoute: ApiAgentSplatRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiV1SplatRoute: ApiV1SplatRoute,
-  SettingsTeamsTeamSlugRoute: SettingsTeamsTeamSlugRouteWithChildren,
-  SettingsTeamsNewRoute: SettingsTeamsNewRoute,
   WorkspaceInitiativesInitiativeIdRoute: WorkspaceInitiativesInitiativeIdRoute,
   WorkspaceInitiativesIndexRoute: WorkspaceInitiativesIndexRoute,
 }
