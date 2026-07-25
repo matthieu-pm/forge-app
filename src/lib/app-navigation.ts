@@ -36,6 +36,7 @@ export type AppPath =
   | "/settings/applications"
   | "/settings/billing"
   | "/settings/import-export"
+  | "/settings/members"
   | "/settings/security"
   | "/settings/teams"
   | "/settings/workspace"
@@ -333,6 +334,10 @@ export function getBreadcrumbItems(pathname: string): Array<BreadcrumbItem> {
 
   if (pathname === "/settings/applications") {
     return [{ label: "Applications" }]
+  }
+
+  if (pathname === "/settings/members") {
+    return [{ label: "Members" }]
   }
 
   if (pathname === "/settings/workspace") {

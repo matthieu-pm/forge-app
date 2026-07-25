@@ -102,6 +102,33 @@ export async function protectedRouteBeforeLoad({
   return { authState }
 }
 
+export async function authenticatedRouteBeforeLoad({
+  location,
+}: {
+  location: {
+    pathname: string
+    searchStr?: string
+    hash?: string
+  }
+}) {
+  const authState = await getNavigationAuthState()
+
+  if (!authState.session) {
+    throw redirect({
+      to: "/login",
+      search: {
+        redirect: redirectTarget(
+          location.pathname,
+          location.searchStr,
+          location.hash
+        ),
+      },
+    })
+  }
+
+  return { authState }
+}
+
 export async function protectedTeamRouteBeforeLoad({
   location,
   params,

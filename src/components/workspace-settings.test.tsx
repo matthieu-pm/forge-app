@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 vi.mock("@tanstack/react-router", async () => {
@@ -42,9 +42,7 @@ describe("WorkspaceSettings", () => {
   it("uses settings buttons for region and enterprise actions", () => {
     render(<WorkspaceSettings workspace={workspace} />)
 
-    expect(
-      screen.getByRole("button", { name: "European Union" })
-    ).toBeTruthy()
+    expect(screen.getByRole("button", { name: "European Union" })).toBeTruthy()
 
     const enterpriseLinks = screen.getAllByRole("button", {
       name: "Available on Enterprise",
@@ -55,11 +53,20 @@ describe("WorkspaceSettings", () => {
     }
   })
 
-  it("exposes one workspace logo upload action", () => {
+  it("uses the shared avatar picker interaction", async () => {
     render(<WorkspaceSettings workspace={workspace} />)
 
+    fireEvent.click(
+      screen.getByRole("button", { name: "Change workspace avatar" })
+    )
+
     expect(
-      screen.getAllByRole("button", { name: "Upload workspace logo" })
-    ).toHaveLength(1)
+      await screen.findByRole("menuitem", { name: "Change avatar" })
+    ).toBeTruthy()
+    expect(
+      screen
+        .getByRole("menuitem", { name: "Remove avatar" })
+        .getAttribute("aria-disabled")
+    ).toBe("true")
   })
 })

@@ -7,6 +7,7 @@ import { getTeamFromRouteMatches } from "@/lib/team-route-match"
 vi.mock("@/lib/auth", () => ({ auth: {} }))
 
 vi.mock("@/lib/auth-state", () => ({
+  authenticatedRouteBeforeLoad: vi.fn(),
   getAuthState: vi.fn(),
   onboardingRouteBeforeLoad: vi.fn(),
   protectedRouteBeforeLoad: vi.fn(),

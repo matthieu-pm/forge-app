@@ -16,6 +16,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as ForgeRouteImport } from './routes/forge'
 import { Route as AgentRouteImport } from './routes/agent'
+import { Route as AcceptInvitationRouteImport } from './routes/accept-invitation'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings.index'
 import { Route as WorkspaceViewsRouteImport } from './routes/workspace/views'
@@ -30,6 +31,7 @@ import { Route as SettingsTeamsRouteImport } from './routes/settings_.teams'
 import { Route as SettingsWorkspaceRouteImport } from './routes/settings.workspace'
 import { Route as SettingsSecurityRouteImport } from './routes/settings.security'
 import { Route as SettingsProfileRouteImport } from './routes/settings.profile'
+import { Route as SettingsMembersRouteImport } from './routes/settings.members'
 import { Route as SettingsImportExportRouteImport } from './routes/settings.import-export'
 import { Route as SettingsBillingRouteImport } from './routes/settings.billing'
 import { Route as SettingsApplicationsRouteImport } from './routes/settings.applications'
@@ -88,6 +90,11 @@ const ForgeRoute = ForgeRouteImport.update({
 const AgentRoute = AgentRouteImport.update({
   id: '/agent',
   path: '/agent',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AcceptInvitationRoute = AcceptInvitationRouteImport.update({
+  id: '/accept-invitation',
+  path: '/accept-invitation',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -158,6 +165,11 @@ const SettingsSecurityRoute = SettingsSecurityRouteImport.update({
 const SettingsProfileRoute = SettingsProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsMembersRoute = SettingsMembersRouteImport.update({
+  id: '/members',
+  path: '/members',
   getParentRoute: () => SettingsRoute,
 } as any)
 const SettingsImportExportRoute = SettingsImportExportRouteImport.update({
@@ -287,6 +299,7 @@ const SettingsTeamsTeamSlugGeneralRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/accept-invitation': typeof AcceptInvitationRoute
   '/agent': typeof AgentRoute
   '/forge': typeof ForgeRoute
   '/inbox': typeof InboxRoute
@@ -303,6 +316,7 @@ export interface FileRoutesByFullPath {
   '/settings/applications': typeof SettingsApplicationsRoute
   '/settings/billing': typeof SettingsBillingRoute
   '/settings/import-export': typeof SettingsImportExportRoute
+  '/settings/members': typeof SettingsMembersRoute
   '/settings/profile': typeof SettingsProfileRoute
   '/settings/security': typeof SettingsSecurityRoute
   '/settings/workspace': typeof SettingsWorkspaceRoute
@@ -334,6 +348,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/accept-invitation': typeof AcceptInvitationRoute
   '/agent': typeof AgentRoute
   '/forge': typeof ForgeRoute
   '/inbox': typeof InboxRoute
@@ -349,6 +364,7 @@ export interface FileRoutesByTo {
   '/settings/applications': typeof SettingsApplicationsRoute
   '/settings/billing': typeof SettingsBillingRoute
   '/settings/import-export': typeof SettingsImportExportRoute
+  '/settings/members': typeof SettingsMembersRoute
   '/settings/profile': typeof SettingsProfileRoute
   '/settings/security': typeof SettingsSecurityRoute
   '/settings/workspace': typeof SettingsWorkspaceRoute
@@ -380,6 +396,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/accept-invitation': typeof AcceptInvitationRoute
   '/agent': typeof AgentRoute
   '/forge': typeof ForgeRoute
   '/inbox': typeof InboxRoute
@@ -396,6 +413,7 @@ export interface FileRoutesById {
   '/settings/applications': typeof SettingsApplicationsRoute
   '/settings/billing': typeof SettingsBillingRoute
   '/settings/import-export': typeof SettingsImportExportRoute
+  '/settings/members': typeof SettingsMembersRoute
   '/settings/profile': typeof SettingsProfileRoute
   '/settings/security': typeof SettingsSecurityRoute
   '/settings/workspace': typeof SettingsWorkspaceRoute
@@ -429,6 +447,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/accept-invitation'
     | '/agent'
     | '/forge'
     | '/inbox'
@@ -445,6 +464,7 @@ export interface FileRouteTypes {
     | '/settings/applications'
     | '/settings/billing'
     | '/settings/import-export'
+    | '/settings/members'
     | '/settings/profile'
     | '/settings/security'
     | '/settings/workspace'
@@ -476,6 +496,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/accept-invitation'
     | '/agent'
     | '/forge'
     | '/inbox'
@@ -491,6 +512,7 @@ export interface FileRouteTypes {
     | '/settings/applications'
     | '/settings/billing'
     | '/settings/import-export'
+    | '/settings/members'
     | '/settings/profile'
     | '/settings/security'
     | '/settings/workspace'
@@ -521,6 +543,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/accept-invitation'
     | '/agent'
     | '/forge'
     | '/inbox'
@@ -537,6 +560,7 @@ export interface FileRouteTypes {
     | '/settings/applications'
     | '/settings/billing'
     | '/settings/import-export'
+    | '/settings/members'
     | '/settings/profile'
     | '/settings/security'
     | '/settings/workspace'
@@ -569,6 +593,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AcceptInvitationRoute: typeof AcceptInvitationRoute
   AgentRoute: typeof AgentRoute
   ForgeRoute: typeof ForgeRoute
   InboxRoute: typeof InboxRoute
@@ -645,6 +670,13 @@ declare module '@tanstack/react-router' {
       path: '/agent'
       fullPath: '/agent'
       preLoaderRoute: typeof AgentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/accept-invitation': {
+      id: '/accept-invitation'
+      path: '/accept-invitation'
+      fullPath: '/accept-invitation'
+      preLoaderRoute: typeof AcceptInvitationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -743,6 +775,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/settings/profile'
       preLoaderRoute: typeof SettingsProfileRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/members': {
+      id: '/settings/members'
+      path: '/members'
+      fullPath: '/settings/members'
+      preLoaderRoute: typeof SettingsMembersRouteImport
       parentRoute: typeof SettingsRoute
     }
     '/settings/import-export': {
@@ -922,6 +961,7 @@ interface SettingsRouteChildren {
   SettingsApplicationsRoute: typeof SettingsApplicationsRoute
   SettingsBillingRoute: typeof SettingsBillingRoute
   SettingsImportExportRoute: typeof SettingsImportExportRoute
+  SettingsMembersRoute: typeof SettingsMembersRoute
   SettingsProfileRoute: typeof SettingsProfileRoute
   SettingsSecurityRoute: typeof SettingsSecurityRoute
   SettingsWorkspaceRoute: typeof SettingsWorkspaceRoute
@@ -934,6 +974,7 @@ const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsApplicationsRoute: SettingsApplicationsRoute,
   SettingsBillingRoute: SettingsBillingRoute,
   SettingsImportExportRoute: SettingsImportExportRoute,
+  SettingsMembersRoute: SettingsMembersRoute,
   SettingsProfileRoute: SettingsProfileRoute,
   SettingsSecurityRoute: SettingsSecurityRoute,
   SettingsWorkspaceRoute: SettingsWorkspaceRoute,
@@ -997,6 +1038,7 @@ const TeamsTeamSlugRouteWithChildren = TeamsTeamSlugRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AcceptInvitationRoute: AcceptInvitationRoute,
   AgentRoute: AgentRoute,
   ForgeRoute: ForgeRoute,
   InboxRoute: InboxRoute,

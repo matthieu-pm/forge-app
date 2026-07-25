@@ -10,6 +10,7 @@ import {
   LayoutAlignLeftIcon,
   SecurityLockIcon,
   SidebarLeftIcon,
+  UserGroup03Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useRouter, useRouterState } from "@tanstack/react-router"
@@ -87,6 +88,14 @@ function getTabNavigationItem(path: string): AppNavChild | undefined {
         title: "Teams",
         to: "/settings/teams",
         icon: IdentificationIcon,
+      }
+    }
+
+    if (pathname === "/settings/members") {
+      return {
+        title: "Members",
+        to: "/settings/members",
+        icon: UserGroup03Icon,
       }
     }
 

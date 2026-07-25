@@ -34,6 +34,9 @@ Current build: `v0.1.0` (unreleased)
    `npm --prefix services/agent-runtime install`.
 1. Copy `.env.example` to `.env`.
 1. Set `DATABASE_URL`, `BETTER_AUTH_URL`, and `BETTER_AUTH_SECRET`.
+1. To send verification and workspace-invitation emails, set
+   `RESEND_API_KEY` and `RESEND_FROM_EMAIL`. The sender must use a domain
+   verified in Resend outside local testing.
 1. Run the development server with `bun run dev`.
 1. Open `http://localhost:3000`.
 
@@ -45,6 +48,7 @@ starts on port 3000 and the EVE runtime starts on `127.0.0.1:2000`.
 
 - `bun run dev` starts the web app and isolated agent runtime.
 - `bun run dev:web` starts only Vite on port 3000.
+- `bun run email:dev` previews the React Email templates on port 3001.
 - `bun run dev:agent` starts only the local EVE runtime on port 2000.
 - `bun run build` builds the app.
 - `bun run preview` previews the production build.

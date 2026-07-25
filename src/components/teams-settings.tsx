@@ -48,7 +48,6 @@ import {
 } from "@/components/ui/table"
 import { TEAM_LIST_CHANGED_EVENT } from "@/lib/team-events"
 import { deleteTeam } from "@/lib/team-state"
-import { cn } from "@/lib/utils"
 
 type TeamStatus = "active" | "archived"
 type SortDirection = "asc" | "desc"
@@ -307,7 +306,7 @@ export function TeamsSettings({ teams }: { teams: Array<TeamSummary> }) {
                 onChange={(event) => setQuery(event.target.value)}
                 aria-label="Filter teams by name"
                 placeholder="Filter by name..."
-                className="h-8 rounded-lg border-border/50 bg-muted/45 pl-8 shadow-none"
+                className="box-border h-8 rounded-lg border-border/50 bg-muted/45 py-0 pl-8 shadow-none focus-visible:border-ring focus-visible:ring-0"
               />
             </div>
 
@@ -315,7 +314,7 @@ export function TeamsSettings({ teams }: { teams: Array<TeamSummary> }) {
               <Button
                 type="button"
                 variant="secondary"
-                size="sm"
+                size="default"
                 aria-label="Filter teams by status"
                 render={<DropdownMenuTrigger />}
                 className="rounded-lg px-2.5 font-normal"
@@ -343,7 +342,7 @@ export function TeamsSettings({ teams }: { teams: Array<TeamSummary> }) {
             </DropdownMenu>
 
             <Button
-              size="sm"
+              size="default"
               nativeButton={false}
               render={<Link to="/settings/teams/new" />}
               className="ml-auto rounded-lg bg-[#5E6AD2] px-3 text-white hover:bg-[#5360C8]"
@@ -419,101 +418,105 @@ export function TeamsSettings({ teams }: { teams: Array<TeamSummary> }) {
                   </TableCell>
                 </TableRow>
 
-                {visibleTeams.map((team, index) => (
-                  <TableRow
-                    key={team.id}
-                    className={cn(
-                      "group/row h-11 border-0 hover:bg-muted/45",
-                      index > 0 && "border-t border-transparent"
-                    )}
-                  >
-                    <TableCell className="rounded-l-xl px-3 py-0">
-                      <Link
-                        to="/settings/teams/$teamSlug"
-                        params={{ teamSlug: team.slug }}
-                        className="flex min-w-0 items-center gap-2 rounded-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                      >
-                        <TeamSidebarIcon
-                          icon={team.icon}
-                          name={team.name}
-                          className="size-4"
-                        />
-                        <span className="truncate text-sm font-medium text-foreground">
-                          {team.name}
-                        </span>
-                        <span className="shrink-0 text-xs text-muted-foreground">
-                          {team.identifier}
-                        </span>
-                      </Link>
-                    </TableCell>
-                    <TableCell className="px-2 py-0 text-xs text-muted-foreground">
-                      Workspace
-                    </TableCell>
-                    <TableCell className="px-2 py-0 text-xs text-muted-foreground">
-                      {team.memberCount ?? 1}
-                    </TableCell>
-                    <TableCell className="px-2 py-0 text-xs text-muted-foreground">
-                      {team.issueCount ?? 0}
-                    </TableCell>
-                    <TableCell className="px-2 py-0 text-xs text-muted-foreground">
-                      {formatCreatedAt(team.createdAt)}
-                    </TableCell>
-                    <TableCell className="rounded-r-xl px-1 py-0">
-                      <DropdownMenu>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-xs"
-                          aria-label={`Open ${team.name} menu`}
-                          render={<DropdownMenuTrigger />}
-                          className="rounded-md text-muted-foreground opacity-0 transition-opacity group-hover/row:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100"
+                {visibleTeams.map((team) => (
+                  <React.Fragment key={team.id}>
+                    <tr
+                      aria-hidden="true"
+                      className="pointer-events-none h-0.5"
+                    >
+                      <td colSpan={6} className="p-0" />
+                    </tr>
+                    <TableRow className="group/row h-11 border-0 hover:bg-muted/45">
+                      <TableCell className="rounded-l-xl px-3 py-0">
+                        <Link
+                          to="/settings/teams/$teamSlug"
+                          params={{ teamSlug: team.slug }}
+                          className="flex min-w-0 items-center gap-2 rounded-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                         >
-                          <HugeiconsIcon
-                            icon={MoreHorizontalIcon}
-                            strokeWidth={2}
+                          <TeamSidebarIcon
+                            icon={team.icon}
+                            name={team.name}
+                            className="size-4"
                           />
-                        </Button>
-                        <DropdownMenuContent align="end" className="min-w-44">
-                          <DropdownMenuItem
-                            render={
-                              <Link
-                                to="/settings/teams/$teamSlug"
-                                params={{ teamSlug: team.slug }}
+                          <span className="truncate text-sm font-medium text-foreground">
+                            {team.name}
+                          </span>
+                          <span className="shrink-0 text-xs text-muted-foreground">
+                            {team.identifier}
+                          </span>
+                        </Link>
+                      </TableCell>
+                      <TableCell className="px-2 py-0 text-xs text-muted-foreground">
+                        Workspace
+                      </TableCell>
+                      <TableCell className="px-2 py-0 text-xs text-muted-foreground">
+                        {team.memberCount ?? 1}
+                      </TableCell>
+                      <TableCell className="px-2 py-0 text-xs text-muted-foreground">
+                        {team.issueCount ?? 0}
+                      </TableCell>
+                      <TableCell className="px-2 py-0 text-xs text-muted-foreground">
+                        {formatCreatedAt(team.createdAt)}
+                      </TableCell>
+                      <TableCell className="rounded-r-xl px-1 py-0">
+                        <DropdownMenu>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-xs"
+                            aria-label={`Open ${team.name} menu`}
+                            render={<DropdownMenuTrigger />}
+                            className="rounded-md text-muted-foreground opacity-0 transition-opacity group-hover/row:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100"
+                          >
+                            <HugeiconsIcon
+                              icon={MoreHorizontalIcon}
+                              strokeWidth={2}
+                            />
+                          </Button>
+                          <DropdownMenuContent align="end" className="min-w-44">
+                            <DropdownMenuItem
+                              render={
+                                <Link
+                                  to="/settings/teams/$teamSlug"
+                                  params={{ teamSlug: team.slug }}
+                                />
+                              }
+                            >
+                              <HugeiconsIcon
+                                icon={Settings02Icon}
+                                strokeWidth={2}
                               />
-                            }
-                          >
-                            <HugeiconsIcon
-                              icon={Settings02Icon}
-                              strokeWidth={2}
-                            />
-                            Open team settings
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              toast.info("Leaving teams is not available yet.")
-                            }
-                          >
-                            <HugeiconsIcon
-                              icon={UserRemove01Icon}
-                              strokeWidth={2}
-                            />
-                            Leave team
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            variant="destructive"
-                            onClick={() => setPendingDeleteTeam(team)}
-                          >
-                            <HugeiconsIcon
-                              icon={Delete02Icon}
-                              strokeWidth={2}
-                            />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
+                              Open team settings
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                toast.info(
+                                  "Leaving teams is not available yet."
+                                )
+                              }
+                            >
+                              <HugeiconsIcon
+                                icon={UserRemove01Icon}
+                                strokeWidth={2}
+                              />
+                              Leave team
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onClick={() => setPendingDeleteTeam(team)}
+                            >
+                              <HugeiconsIcon
+                                icon={Delete02Icon}
+                                strokeWidth={2}
+                              />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  </React.Fragment>
                 ))}
               </TableBody>
             </Table>

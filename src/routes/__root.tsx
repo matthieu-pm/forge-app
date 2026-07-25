@@ -70,6 +70,7 @@ function RootLayout() {
     select: (state) => state.location.pathname,
   })
   const shelllessPaths = new Set([
+    "/accept-invitation",
     "/auth/desktop",
     "/login",
     "/signup",
@@ -164,10 +165,7 @@ function AppHeader() {
     },
   })
 
-  if (
-    pathname === "/settings/teams" ||
-    pathname.startsWith("/settings/teams/")
-  ) {
+  if (pathname.startsWith("/settings/teams/")) {
     return null
   }
 

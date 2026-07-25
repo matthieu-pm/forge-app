@@ -21,6 +21,10 @@ import {
   FORGE_API_KEY_PREFIX,
   MAX_API_KEY_EXPIRES_IN_DAYS,
 } from "@/application/api-keys/api-key-contract"
+import {
+  sendVerificationEmail,
+  sendWorkspaceInvitationEmail,
+} from "@/application/mail/auth-emails.server"
 
 const betterAuthUrl = process.env.BETTER_AUTH_URL
 const betterAuthSecret = process.env.BETTER_AUTH_SECRET
@@ -54,10 +58,37 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
+  emailVerification: {
+    expiresIn: 60 * 60,
+    sendVerificationEmail: async ({ user, url }) => {
+      await sendVerificationEmail({
+        email: user.email,
+        name: user.name || "there",
+        url,
+      })
+    },
+  },
+  user: {
+    changeEmail: {
+      enabled: true,
+    },
+  },
   plugins: [
     electron(),
     organization({
       organizationLimit: 1,
+      invitationExpiresIn: 60 * 60 * 48,
+      sendInvitationEmail: async (data) => {
+        await sendWorkspaceInvitationEmail({
+          id: data.id,
+          email: data.email,
+          role: data.role,
+          organizationName: data.organization.name,
+          inviterName: data.inviter.user.name || data.inviter.user.email,
+          inviterEmail: data.inviter.user.email,
+          appUrl: betterAuthUrl,
+        })
+      },
     }),
     apiKey({
       configId: FORGE_API_KEY_CONFIG_ID,

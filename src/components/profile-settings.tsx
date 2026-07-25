@@ -1,16 +1,13 @@
 "use client"
 
 import * as React from "react"
-import {
-  Delete02Icon,
-  PencilEdit02Icon,
-  Upload01Icon,
-} from "@hugeicons/core-free-icons"
+import { PencilEdit02Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { toast } from "sonner"
 
+import type { LocalProfile } from "@/lib/profile-state"
 import { authClient } from "@/lib/auth-client"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { AvatarPicker } from "@/components/avatar-picker"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -21,12 +18,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import {
   Tooltip,
@@ -34,19 +25,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { readLocalProfile, writeLocalProfile } from "@/lib/profile-state"
 import { cn } from "@/lib/utils"
 
 type EmailDialogStep = "entry" | "confirm"
-type LocalProfile = {
-  title: string
-  username: string
-}
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024
-
-function localProfileKey(userId: string) {
-  return `forge:profile:${userId}`
-}
 
 function getInitials(name: string) {
   const initials = name
@@ -57,16 +41,6 @@ function getInitials(name: string) {
     .join("")
 
   return initials || "F"
-}
-
-function usernameFromEmail(email: string) {
-  return (
-    email
-      .split("@", 1)[0]
-      ?.toLocaleLowerCase()
-      .replace(/[^a-z0-9_-]/g, "")
-      .slice(0, 32) ?? ""
-  )
 }
 
 function readAvatar(file: File) {
@@ -124,7 +98,6 @@ function ProfileRow({
 export function ProfileSettings() {
   const sessionState = authClient.useSession()
   const sessionUser = sessionState.data?.user
-  const fileInputRef = React.useRef<HTMLInputElement>(null)
   const savedNameRef = React.useRef("")
   const [name, setName] = React.useState("")
   const [image, setImage] = React.useState<string | null>(null)
@@ -146,24 +119,9 @@ export function ProfileSettings() {
     setName(nextName)
     setImage(sessionUser.image ?? null)
 
-    const fallbackProfile: LocalProfile = {
-      title: "",
-      username: usernameFromEmail(sessionUser.email),
-    }
-
-    try {
-      const stored = window.localStorage.getItem(
-        localProfileKey(sessionUser.id)
-      )
-      const profile = stored
-        ? ({ ...fallbackProfile, ...JSON.parse(stored) } as LocalProfile)
-        : fallbackProfile
-      setTitle(profile.title)
-      setUsername(profile.username)
-    } catch {
-      setTitle(fallbackProfile.title)
-      setUsername(fallbackProfile.username)
-    }
+    const profile = readLocalProfile(sessionUser.id, sessionUser.email)
+    setTitle(profile.title)
+    setUsername(profile.username)
   }, [
     sessionUser?.email,
     sessionUser?.id,
@@ -173,10 +131,7 @@ export function ProfileSettings() {
 
   function saveLocalProfile(nextProfile: LocalProfile) {
     if (!sessionUser) return
-    window.localStorage.setItem(
-      localProfileKey(sessionUser.id),
-      JSON.stringify(nextProfile)
-    )
+    writeLocalProfile(sessionUser.id, nextProfile)
   }
 
   async function saveName() {
@@ -324,52 +279,15 @@ export function ProfileSettings() {
 
             <SettingsCard>
               <ProfileRow label="Profile picture">
-                <DropdownMenu>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Change profile picture"
-                    disabled={!sessionUser || isSavingAvatar}
-                    render={<DropdownMenuTrigger />}
-                    className="rounded-full p-0"
-                  >
-                    <Avatar className="size-8">
-                      {image ? (
-                        <AvatarImage src={image} alt={avatarName} />
-                      ) : null}
-                      <AvatarFallback>{getInitials(avatarName)}</AvatarFallback>
-                    </Avatar>
-                  </Button>
-                  <DropdownMenuContent
-                    side="right"
-                    align="start"
-                    sideOffset={8}
-                    className="w-40"
-                  >
-                    <DropdownMenuItem
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      <HugeiconsIcon icon={Upload01Icon} strokeWidth={2} />
-                      Change avatar
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      variant="destructive"
-                      disabled={!image}
-                      onClick={() => void updateAvatar(null)}
-                    >
-                      <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
-                      Remove avatar
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="sr-only"
-                  aria-label="Upload profile picture"
-                  onChange={handleAvatarFile}
+                <AvatarPicker
+                  ariaLabel="Change profile picture"
+                  disabled={!sessionUser || isSavingAvatar}
+                  fallback={getInitials(avatarName)}
+                  image={image}
+                  imageAlt={avatarName}
+                  inputAriaLabel="Upload profile picture"
+                  onFileChange={handleAvatarFile}
+                  onRemove={() => void updateAvatar(null)}
                 />
               </ProfileRow>
 

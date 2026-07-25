@@ -1,16 +1,13 @@
 "use client"
 
 import * as React from "react"
-import {
-  ArrowDown01Icon,
-  Delete02Icon,
-  Upload01Icon,
-} from "@hugeicons/core-free-icons"
+import { ArrowDown01Icon, Delete02Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Link, useRouter } from "@tanstack/react-router"
 import { toast } from "sonner"
 
 import type { WorkspaceSummary } from "@/lib/auth-types"
+import { AvatarPicker } from "@/components/avatar-picker"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,7 +19,6 @@ import {
   AlertDialogMedia,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -37,7 +33,7 @@ import { cn } from "@/lib/utils"
 
 type SaveStatus = "idle" | "saving" | "saved" | "error"
 
-const MAX_LOGO_BYTES = 2 * 1024 * 1024
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024
 const fiscalMonthOptions = [
   "January",
   "February",
@@ -80,7 +76,7 @@ function normalizeSlug(value: string) {
     .slice(0, 48)
 }
 
-function readFileAsDataUrl(file: File) {
+function readAvatar(file: File) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader()
 
@@ -143,7 +139,7 @@ function SettingsRow({
   label: string
 }) {
   return (
-    <div className="flex min-h-16 items-center justify-between gap-5 px-4 py-2.5 not-first:border-t not-first:border-border/60 max-sm:items-start max-sm:flex-col max-sm:gap-3">
+    <div className="flex min-h-16 items-center justify-between gap-5 px-4 py-2.5 not-first:border-t not-first:border-border/60 max-sm:flex-col max-sm:items-start max-sm:gap-3">
       <div className="min-w-0">
         <p className="text-sm font-medium text-foreground">{label}</p>
         {description ? (
@@ -165,7 +161,6 @@ export function WorkspaceSettings({
   workspace: WorkspaceSummary
 }) {
   const router = useRouter()
-  const fileInputRef = React.useRef<HTMLInputElement | null>(null)
   const savedIdentity = React.useRef({
     name: workspace.name,
     slug: workspace.slug,
@@ -175,12 +170,12 @@ export function WorkspaceSettings({
   const [name, setName] = React.useState(workspace.name)
   const [slug, setSlug] = React.useState(workspace.slug)
   const [logo, setLogo] = React.useState(workspace.logo)
-  const [fiscalMonth, setFiscalMonth] =
-    React.useState<FiscalMonth>("January")
+  const [fiscalMonth, setFiscalMonth] = React.useState<FiscalMonth>("January")
   const [saveStatus, setSaveStatus] = React.useState<SaveStatus>("idle")
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
   const [confirmationName, setConfirmationName] = React.useState("")
   const [isDeleting, setIsDeleting] = React.useState(false)
+  const [isSavingAvatar, setIsSavingAvatar] = React.useState(false)
   const confirmationMatches = confirmationName.trim() === workspace.name
 
   React.useEffect(() => {
@@ -252,42 +247,48 @@ export function WorkspaceSettings({
     if (!didSave) setSlug(savedIdentity.current.slug)
   }
 
-  async function handleLogoChange(event: React.ChangeEvent<HTMLInputElement>) {
+  async function updateAvatar(nextLogo: string | null) {
+    const previousLogo = logo
+    setLogo(nextLogo)
+    setIsSavingAvatar(true)
+    const didSave = await saveWorkspace({ logo: nextLogo })
+    setIsSavingAvatar(false)
+
+    if (!didSave) {
+      setLogo(previousLogo)
+      return
+    }
+
+    toast.success(
+      nextLogo ? "Workspace avatar updated." : "Workspace avatar removed."
+    )
+  }
+
+  async function handleAvatarFile(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     event.target.value = ""
     if (!file) return
 
     if (!file.type.startsWith("image/")) {
-      toast.error("Choose an image file for the workspace logo.")
+      toast.error("Choose an image file.")
       return
     }
-    if (file.size > MAX_LOGO_BYTES) {
+    if (file.size > MAX_AVATAR_BYTES) {
       toast.error("Choose an image smaller than 2 MB.")
       return
     }
 
     try {
-      const nextLogo = await readFileAsDataUrl(file)
-      const previousLogo = logo
-      setLogo(nextLogo)
-      const didSave = await saveWorkspace({ logo: nextLogo })
-      if (!didSave) setLogo(previousLogo)
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "The workspace logo could not be loaded."
-      )
+      await updateAvatar(await readAvatar(file))
+    } catch {
+      toast.error("The selected image could not be read.")
     }
   }
 
   function updateFiscalMonth(value: string) {
     const nextMonth = value as FiscalMonth
     setFiscalMonth(nextMonth)
-    window.localStorage.setItem(
-      fiscalMonthStorageKey(workspace.id),
-      nextMonth
-    )
+    window.localStorage.setItem(fiscalMonthStorageKey(workspace.id), nextMonth)
     toast.success("Fiscal year settings updated.")
   }
 
@@ -351,38 +352,16 @@ export function WorkspaceSettings({
                   label="Logo"
                   description="Recommended size is 256×256px"
                 >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
-                    hidden
-                    onChange={(event) => void handleLogoChange(event)}
+                  <AvatarPicker
+                    ariaLabel="Change workspace avatar"
+                    disabled={isSavingAvatar}
+                    fallback={workspaceInitials(name)}
+                    image={logo}
+                    imageAlt={`${name} workspace avatar`}
+                    inputAriaLabel="Upload workspace avatar"
+                    onFileChange={handleAvatarFile}
+                    onRemove={() => void updateAvatar(null)}
                   />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    aria-label="Upload workspace logo"
-                    title="Upload workspace logo"
-                    className="rounded-lg bg-background/60"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <Avatar className="size-7 rounded-md after:rounded-md">
-                      {logo ? (
-                        <AvatarImage
-                          src={logo}
-                          alt=""
-                          className="rounded-md"
-                        />
-                      ) : null}
-                      <AvatarFallback className="rounded-md bg-gradient-to-br from-amber-300 via-orange-400 to-indigo-600 text-[10px] font-semibold text-white">
-                        {workspaceInitials(name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="sr-only">
-                      <HugeiconsIcon icon={Upload01Icon} strokeWidth={2} />
-                    </span>
-                  </Button>
                 </SettingsRow>
                 <SettingsRow label="Name">
                   <Input

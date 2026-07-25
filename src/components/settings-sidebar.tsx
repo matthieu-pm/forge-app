@@ -67,6 +67,7 @@ type SettingsItem = {
     | "/settings/applications"
     | "/settings/billing"
     | "/settings/import-export"
+    | "/settings/members"
     | "/settings/security"
     | "/settings/teams"
     | "/settings/workspace"
@@ -140,7 +141,11 @@ const settingsGroups: Array<SettingsGroup> = [
         icon: IdentificationIcon,
         to: "/settings/teams",
       },
-      { label: "Members", icon: UserGroup03Icon },
+      {
+        label: "Members",
+        icon: UserGroup03Icon,
+        to: "/settings/members",
+      },
       {
         label: "Security",
         icon: SecurityLockIcon,
