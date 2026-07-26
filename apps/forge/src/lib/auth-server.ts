@@ -13,6 +13,7 @@ type OrganizationCandidate = {
   name?: unknown
   slug?: unknown
   logo?: unknown
+  createdAt?: unknown
 }
 
 function toWorkspaceSummary(value: unknown): WorkspaceSummary | null {
@@ -38,14 +39,9 @@ function toWorkspaceSummary(value: unknown): WorkspaceSummary | null {
   }
 }
 
-function extractOrganizations(value: unknown): Array<WorkspaceSummary> {
+function organizationList(value: unknown): Array<unknown> {
   if (Array.isArray(value)) {
     return value
-      .map((organization) => toWorkspaceSummary(organization))
-      .filter(
-        (organization): organization is WorkspaceSummary =>
-          organization !== null
-      )
   }
 
   if (!value || typeof value !== "object") {
@@ -53,26 +49,52 @@ function extractOrganizations(value: unknown): Array<WorkspaceSummary> {
   }
 
   const record = value as Record<string, unknown>
-
   if (Array.isArray(record.organizations)) {
     return record.organizations
-      .map((organization) => toWorkspaceSummary(organization))
-      .filter(
-        (organization): organization is WorkspaceSummary =>
-          organization !== null
-      )
   }
 
-  if (Array.isArray(record.data)) {
-    return record.data
-      .map((organization) => toWorkspaceSummary(organization))
-      .filter(
-        (organization): organization is WorkspaceSummary =>
-          organization !== null
-      )
+  return Array.isArray(record.data) ? record.data : []
+}
+
+function organizationCreatedAt(value: unknown) {
+  if (!value || typeof value !== "object") {
+    return Number.MAX_SAFE_INTEGER
   }
 
-  return []
+  const createdAt = (value as OrganizationCandidate).createdAt
+  const timestamp =
+    createdAt instanceof Date
+      ? createdAt.getTime()
+      : typeof createdAt === "string"
+        ? Date.parse(createdAt)
+        : Number.NaN
+
+  return Number.isFinite(timestamp) ? timestamp : Number.MAX_SAFE_INTEGER
+}
+
+function extractOrganizations(value: unknown): Array<WorkspaceSummary> {
+  return organizationList(value)
+    .map((organization, index) => {
+      return {
+        workspace: toWorkspaceSummary(organization),
+        createdAt: organizationCreatedAt(organization),
+        index,
+      }
+    })
+    .filter(
+      (
+        organization
+      ): organization is {
+        workspace: WorkspaceSummary
+        createdAt: number
+        index: number
+      } => organization.workspace !== null
+    )
+    .sort(
+      (left, right) =>
+        left.createdAt - right.createdAt || left.index - right.index
+    )
+    .map((organization) => organization.workspace)
 }
 
 async function loadWorkspaceFromRequest(
@@ -81,6 +103,30 @@ async function loadWorkspaceFromRequest(
 ): Promise<WorkspaceSummary | null> {
   let organizationId = session.session.activeOrganizationId ?? null
 
+  if (organizationId) {
+    try {
+      const organization = await auth.api.getFullOrganization({
+        query: {
+          organizationId,
+        },
+        headers: request.headers,
+      })
+
+      return (
+        toWorkspaceSummary(organization) ??
+        (organization &&
+        typeof organization === "object" &&
+        "organization" in organization
+          ? toWorkspaceSummary(
+              (organization as { organization?: unknown }).organization
+            )
+          : null)
+      )
+    } catch {
+      organizationId = null
+    }
+  }
+
   if (!organizationId) {
     const organizations = extractOrganizations(
       await auth.api.listOrganizations({
@@ -88,49 +134,28 @@ async function loadWorkspaceFromRequest(
       })
     )
 
-    if (organizations.length === 1) {
-      organizationId = organizations[0].id
-
-      try {
-        await auth.api.setActiveOrganization({
-          body: {
-            organizationId,
-          },
-          headers: request.headers,
-        })
-      } catch {
-        // If Better Auth cannot persist the active org on this request, we still
-        // continue with the discovered single workspace so route guards behave
-        // correctly for this session.
-      }
+    const fallbackWorkspace = organizations.at(0)
+    if (!fallbackWorkspace) {
+      return null
     }
+
+    try {
+      await auth.api.setActiveOrganization({
+        body: {
+          organizationId: fallbackWorkspace.id,
+        },
+        headers: request.headers,
+      })
+    } catch {
+      // If Better Auth cannot persist the active org on this request, we still
+      // continue with the discovered workspace so route guards behave correctly
+      // for this session.
+    }
+
+    return fallbackWorkspace
   }
 
-  if (!organizationId) {
-    return null
-  }
-
-  try {
-    const organization = await auth.api.getFullOrganization({
-      query: {
-        organizationId,
-      },
-      headers: request.headers,
-    })
-
-    return (
-      toWorkspaceSummary(organization) ??
-      (organization &&
-      typeof organization === "object" &&
-      "organization" in organization
-        ? toWorkspaceSummary(
-            (organization as { organization?: unknown }).organization
-          )
-        : null)
-    )
-  } catch {
-    return null
-  }
+  return null
 }
 
 export async function getSession(request: Request) {
@@ -236,6 +261,8 @@ export async function buildAuthState(request: Request): Promise<AuthState> {
     }
   }
 
+  const workspace = await loadWorkspaceFromRequest(request, session)
+
   return {
     user: {
       id: session.user.id,
@@ -245,8 +272,9 @@ export async function buildAuthState(request: Request): Promise<AuthState> {
     },
     session: {
       id: session.session.id,
-      activeOrganizationId: session.session.activeOrganizationId ?? null,
+      activeOrganizationId:
+        workspace?.id ?? session.session.activeOrganizationId ?? null,
     },
-    workspace: await loadWorkspaceFromRequest(request, session),
+    workspace,
   }
 }

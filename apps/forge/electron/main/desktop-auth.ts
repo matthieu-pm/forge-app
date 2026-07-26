@@ -3,7 +3,7 @@ import { storage } from "@better-auth/electron/storage"
 import { createAuthClient } from "better-auth/client"
 import { BrowserWindow } from "electron"
 
-import { desktopAuthScheme } from "./runtime-config"
+import { desktopAuthorizationUrl } from "../shared/desktop-auth-protocol"
 import { replaceRendererAuthCookies } from "./auth-cookies"
 import type { Session } from "electron"
 
@@ -16,6 +16,7 @@ const electronAuthorizationState = Symbol.for("better-auth:electron")
 
 export function setupDesktopAuth(
   appOrigin: string,
+  authScheme: string,
   getWindow: () => BrowserWindow | null
 ) {
   const authClient = createAuthClient({
@@ -23,9 +24,9 @@ export function setupDesktopAuth(
     plugins: [
       electronClient({
         protocol: {
-          scheme: desktopAuthScheme,
+          scheme: authScheme,
         },
-        signInURL: new URL("/auth/desktop", appOrigin),
+        signInURL: desktopAuthorizationUrl(appOrigin, authScheme),
         storage: storage({
           projectName: "Forge",
           configName: "authentication",

@@ -21,7 +21,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import { TEAM_LIST_CHANGED_EVENT } from "@/lib/team-events"
+import { notifyTeamDirectoryChanged } from "@/lib/team-events"
 import { updateTeam } from "@/lib/team-state"
 import { cn } from "@/lib/utils"
 
@@ -145,7 +145,7 @@ export function TeamGeneralSettings({ team }: { team: TeamSummary }) {
       }
 
       Object.assign(savedSettings.current, settings)
-      window.dispatchEvent(new Event(TEAM_LIST_CHANGED_EVENT))
+      notifyTeamDirectoryChanged()
       if (sequence === saveSequence.current) {
         setSaveStatus("saved")
         window.setTimeout(() => {

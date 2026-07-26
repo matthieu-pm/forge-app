@@ -1,21 +1,30 @@
 import "@tanstack/react-start/server-only"
 
-import { and, asc, eq, gt, isNull, or } from "drizzle-orm"
+import { and, asc, eq, gt, isNotNull, isNull, or } from "drizzle-orm"
 
 import type { Actor } from "@/application/actor"
 import type {
   CreateTeamInput,
   CreateTeamResult,
   DeleteTeamResult,
+  LeaveTeamResult,
+  RestoreTeamResult,
+  TeamDirectory,
+  TeamLifecycle,
   TeamSummary,
   UpdateTeamInput,
   UpdateTeamResult,
 } from "@/application/teams/team-schemas"
-import { canManageTeams, requireTeamRead } from "@/application/authorization"
+import {
+  canManageTeams,
+  hasScope,
+  requireTeamRead,
+} from "@/application/authorization"
 import { slugifyTeamName } from "@/application/teams/team-schemas"
-import { db, teams } from "@/db"
+import { db, teamMembers, teams } from "@/db"
 
 export type TeamSelector = { id: string } | { slug: string }
+const TEAM_RECOVERY_WINDOW_MS = 30 * 24 * 60 * 60 * 1_000
 
 export type ListTeamsInput = {
   cursor?: string
@@ -49,6 +58,7 @@ export function toTeamSummary(team: typeof teams.$inferSelect): TeamSummary {
     },
     timezone: team.timezone,
     description: team.description,
+    visibility: team.visibility as TeamSummary["visibility"],
     estimationScheme: team.estimationScheme as TeamSummary["estimationScheme"],
     issueEmailEnabled: team.issueEmailEnabled,
     detailedHistoryEnabled: team.detailedHistoryEnabled,
@@ -142,21 +152,34 @@ export async function createTeam(
   }
 
   try {
-    const createdTeams = await db
-      .insert(teams)
-      .values({
-        workspaceId: actor.workspaceId,
-        slug,
-        identifier: input.identifier,
-        name: input.name,
-        iconKind: input.icon.kind,
-        iconValue: input.icon.value,
-        color: input.icon.color,
-        timezone: input.timezone,
-        createdByUserId: actor.userId,
-      })
-      .returning()
-    const createdTeam = createdTeams.at(0)
+    const createdTeam = await db.transaction(async (transaction) => {
+      const createdTeams = await transaction
+        .insert(teams)
+        .values({
+          workspaceId: actor.workspaceId,
+          slug,
+          identifier: input.identifier,
+          name: input.name,
+          iconKind: input.icon.kind,
+          iconValue: input.icon.value,
+          color: input.icon.color,
+          timezone: input.timezone,
+          createdByUserId: actor.userId,
+        })
+        .returning()
+      const team = createdTeams.at(0)
+
+      if (team) {
+        await transaction.insert(teamMembers).values({
+          workspaceId: actor.workspaceId,
+          teamId: team.id,
+          userId: actor.userId,
+          role: "member",
+        })
+      }
+
+      return team
+    })
 
     if (!createdTeam) {
       return {
@@ -189,6 +212,68 @@ export async function createTeam(
     }
 
     throw error
+  }
+}
+
+export async function getTeamDirectory(
+  actor: Actor,
+  lifecycle: TeamLifecycle
+): Promise<TeamDirectory> {
+  requireTeamRead(actor)
+
+  const recoveryCutoff = new Date(Date.now() - TEAM_RECOVERY_WINDOW_MS)
+  const workspaceTeams = await db.query.teams.findMany({
+    where: and(
+      eq(teams.workspaceId, actor.workspaceId),
+      lifecycle === "active"
+        ? isNull(teams.deletedAt)
+        : and(isNotNull(teams.deletedAt), gt(teams.deletedAt, recoveryCutoff))
+    ),
+    orderBy: [asc(teams.name), asc(teams.id)],
+    with: { members: true },
+  })
+  const canManage = canManageTeams(actor)
+  const visibleTeams = workspaceTeams.filter(
+    (team) =>
+      team.visibility === "workspace" ||
+      canManage ||
+      team.members.some((member) => member.userId === actor.userId)
+  )
+
+  return {
+    canCreateTeam: canManage,
+    items: visibleTeams.map((team) => {
+      const currentMembership = team.members.find(
+        (member) => member.userId === actor.userId
+      )
+      const leadCount = team.members.filter(
+        (member) => member.role === "lead"
+      ).length
+      const deletedAt = team.deletedAt
+      const recoverableUntil = deletedAt
+        ? new Date(deletedAt.getTime() + TEAM_RECOVERY_WINDOW_MS)
+        : null
+
+      return {
+        ...toTeamSummary(team),
+        lifecycle,
+        memberCount: team.members.length,
+        issueCount: null,
+        recoverableUntil: recoverableUntil?.toISOString() ?? null,
+        capabilities: {
+          canOpenSettings: lifecycle === "active",
+          canLeave:
+            lifecycle === "active" &&
+            Boolean(currentMembership) &&
+            (currentMembership?.role !== "lead" || leadCount > 1),
+          canDelete: lifecycle === "active" && canManage,
+          canRestore:
+            lifecycle === "archived" &&
+            canManage &&
+            Boolean(recoverableUntil && recoverableUntil > new Date()),
+        },
+      }
+    }),
   }
 }
 
@@ -231,6 +316,128 @@ export async function listTeams(
         ? encodeCursor({ id: lastTeam.id, name: lastTeam.name })
         : null,
   }
+}
+
+export async function restoreTeam(
+  actor: Actor,
+  selector: TeamSelector
+): Promise<RestoreTeamResult> {
+  if (!canManageTeams(actor)) {
+    return {
+      ok: false,
+      code: "FORBIDDEN",
+      message: "Only workspace owners and admins can restore teams.",
+    }
+  }
+
+  try {
+    const recoveryCutoff = new Date(Date.now() - TEAM_RECOVERY_WINDOW_MS)
+    const restoredTeams = await db
+      .update(teams)
+      .set({ deletedAt: null, updatedAt: new Date() })
+      .where(
+        and(
+          eq(teams.workspaceId, actor.workspaceId),
+          selectorCondition(selector),
+          isNotNull(teams.deletedAt),
+          gt(teams.deletedAt, recoveryCutoff)
+        )
+      )
+      .returning()
+    const restoredTeam = restoredTeams.at(0)
+
+    if (!restoredTeam) {
+      return {
+        ok: false,
+        code: "TEAM_NOT_FOUND",
+        message: "The archived team no longer exists.",
+      }
+    }
+
+    return { ok: true, team: toTeamSummary(restoredTeam) }
+  } catch (error) {
+    const constraint = constraintName(error)
+
+    if (
+      constraint.includes("teams_workspace_slug_unique") ||
+      constraint.includes("teams_workspace_identifier_unique")
+    ) {
+      return {
+        ok: false,
+        code: "RESTORE_CONFLICT",
+        message:
+          "Another active team now uses this name or identifier. Rename that team before restoring this one.",
+      }
+    }
+
+    throw error
+  }
+}
+
+export async function leaveTeam(
+  actor: Actor,
+  selector: TeamSelector
+): Promise<LeaveTeamResult> {
+  requireTeamRead(actor)
+  if (!hasScope(actor, "teams:write")) {
+    return {
+      ok: false,
+      code: "FORBIDDEN",
+      message: "The credential cannot change team memberships.",
+    }
+  }
+
+  const team = await db.query.teams.findFirst({
+    where: and(
+      eq(teams.workspaceId, actor.workspaceId),
+      selectorCondition(selector),
+      isNull(teams.deletedAt)
+    ),
+    with: { members: true },
+  })
+
+  if (!team) {
+    return {
+      ok: false,
+      code: "TEAM_NOT_FOUND",
+      message: "The team no longer exists.",
+    }
+  }
+
+  const membership = team.members.find(
+    (member) => member.userId === actor.userId
+  )
+
+  if (!membership) {
+    return {
+      ok: false,
+      code: "NOT_A_MEMBER",
+      message: "You are not a member of this team.",
+    }
+  }
+
+  if (
+    membership.role === "lead" &&
+    team.members.filter((member) => member.role === "lead").length === 1
+  ) {
+    return {
+      ok: false,
+      code: "LAST_LEAD",
+      message: "Assign another team lead before leaving this team.",
+    }
+  }
+
+  await db
+    .delete(teamMembers)
+    .where(
+      and(
+        eq(teamMembers.workspaceId, actor.workspaceId),
+        eq(teamMembers.teamId, team.id),
+        eq(teamMembers.userId, actor.userId)
+      )
+    )
+
+  return { ok: true, team: { name: team.name, slug: team.slug } }
 }
 
 export async function getTeam(
@@ -291,8 +498,9 @@ export async function archiveTeam(
     }
   }
 
-  const recoverableUntil = new Date(deletedAt)
-  recoverableUntil.setUTCDate(recoverableUntil.getUTCDate() + 30)
+  const recoverableUntil = new Date(
+    deletedAt.getTime() + TEAM_RECOVERY_WINDOW_MS
+  )
 
   return {
     ok: true,

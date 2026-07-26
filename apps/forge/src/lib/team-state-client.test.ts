@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { listTeams } from "@/lib/team-state"
 
 const mocks = vi.hoisted(() => ({
-  handlers: Array.from({ length: 6 }, () => vi.fn()),
+  handlers: Array.from({ length: 9 }, () => vi.fn()),
   nextHandler: 0,
 }))
 

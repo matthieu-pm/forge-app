@@ -1,14 +1,9 @@
 "use client"
 
-import { startTransition, useEffect, useMemo, useRef, useState } from "react"
-import { useNavigate, useRouter } from "@tanstack/react-router"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
 import { authClient } from "@/lib/auth-client"
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
   Field,
@@ -22,12 +17,14 @@ type SlugState = "idle" | "checking" | "available" | "unavailable"
 const MAX_LOGO_SIZE_BYTES = 2 * 1024 * 1024
 
 function workspaceInitials(name: string) {
-  return name
-    .split(/\s+/)
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase() || "W"
+  return (
+    name
+      .split(/\s+/)
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "W"
+  )
 }
 
 function slugifyWorkspaceName(value: string) {
@@ -64,8 +61,6 @@ export function WorkspaceSetupForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  const navigate = useNavigate()
-  const router = useRouter()
   const [name, setName] = useState("")
   const [slug, setSlug] = useState("")
   const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null)
@@ -102,9 +97,10 @@ export function WorkspaceSetupForm({
     setSlugMessage("Checking workspace slug...")
 
     const timeoutId = window.setTimeout(async () => {
-      const { data, error: slugError } = await authClient.organization.checkSlug({
-        slug: normalizedSlug,
-      })
+      const { data, error: slugError } =
+        await authClient.organization.checkSlug({
+          slug: normalizedSlug,
+        })
 
       if (slugCheckId.current !== currentCheck) {
         return
@@ -127,7 +123,9 @@ export function WorkspaceSetupForm({
 
       setSlugState(available ? "available" : "unavailable")
       setSlugMessage(
-        available ? "Workspace slug is available." : "Workspace slug is already taken."
+        available
+          ? "Workspace slug is available."
+          : "Workspace slug is already taken."
       )
     }, 300)
 
@@ -216,13 +214,7 @@ export function WorkspaceSetupForm({
       return
     }
 
-    await router.invalidate()
-
-    startTransition(() => {
-      void navigate({
-        to: "/inbox",
-      })
-    })
+    window.location.assign("/inbox")
   }
 
   return (
@@ -237,9 +229,9 @@ export function WorkspaceSetupForm({
                 className="size-8 object-contain"
               />
             </div>
-            <h1 className="text-xl font-bold">Create your workspace</h1>
+            <h1 className="text-xl font-bold">Create a workspace</h1>
             <FieldDescription>
-              This workspace becomes your home in Forge.
+              Set up a new place for your team in Forge.
             </FieldDescription>
           </div>
           <Field>

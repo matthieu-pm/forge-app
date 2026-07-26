@@ -6,6 +6,7 @@ import {
   ArrowUp01Icon,
   Delete02Icon,
   MoreHorizontalIcon,
+  RestoreBinIcon,
   Search01Icon,
   Settings02Icon,
   UserRemove01Icon,
@@ -14,7 +15,11 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { Link, useRouter } from "@tanstack/react-router"
 import { toast } from "sonner"
 
-import type { TeamSummary } from "@/lib/team-contract"
+import type {
+  TeamDirectory,
+  TeamDirectoryEntry,
+  TeamLifecycle,
+} from "@/lib/team-contract"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import {
   AlertDialog,
@@ -46,60 +51,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { TEAM_LIST_CHANGED_EVENT } from "@/lib/team-events"
-import { deleteTeam } from "@/lib/team-state"
+import { notifyTeamDirectoryChanged } from "@/lib/team-events"
+import { deleteTeam, leaveTeam, restoreTeam } from "@/lib/team-state"
 
-type TeamStatus = "active" | "archived"
 type SortDirection = "asc" | "desc"
 type SortField = "name" | "visibility" | "members" | "issues" | "createdAt"
-type TeamTableEntry = TeamSummary & {
-  issueCount?: number
-  isInitial?: boolean
-  memberCount?: number
-}
-
-const initialTeams: Array<TeamTableEntry> = [
-  {
-    id: "00000000-0000-4000-8000-000000000001",
-    slug: "atrium",
-    identifier: "ATM",
-    name: "Atrium",
-    icon: {
-      kind: "emoji",
-      value: "🏛️",
-      color: "#818cf8",
-    },
-    timezone: "Europe/Paris",
-    description: "",
-    estimationScheme: "none",
-    issueEmailEnabled: false,
-    detailedHistoryEnabled: false,
-    createdAt: "2025-03-23T20:39:31.000Z",
-    memberCount: 1,
-    issueCount: 77,
-    isInitial: true,
-  },
-  {
-    id: "00000000-0000-4000-8000-000000000002",
-    slug: "forge",
-    identifier: "FOR",
-    name: "Forge",
-    icon: {
-      kind: "icon",
-      value: "SparklesIcon",
-      color: "#94a3b8",
-    },
-    timezone: "Europe/Paris",
-    description: "",
-    estimationScheme: "none",
-    issueEmailEnabled: false,
-    detailedHistoryEnabled: false,
-    createdAt: "2026-07-22T11:59:22.000Z",
-    memberCount: 1,
-    issueCount: 17,
-    isInitial: true,
-  },
-]
 
 const sortLabels: Record<SortField, string> = {
   name: "Name",
@@ -123,18 +79,18 @@ function formatCreatedAt(value: string) {
   }).format(date)
 }
 
-function getSortValue(team: TeamTableEntry, field: SortField) {
+function getSortValue(team: TeamDirectoryEntry, field: SortField) {
   switch (field) {
     case "name":
       return team.name
     case "createdAt":
       return new Date(team.createdAt).getTime()
     case "visibility":
-      return "Workspace"
+      return team.visibility
     case "members":
-      return team.memberCount ?? 1
+      return team.memberCount
     case "issues":
-      return team.issueCount ?? 0
+      return team.issueCount ?? -1
   }
 }
 
@@ -168,37 +124,38 @@ function SortButton({
   )
 }
 
-export function TeamsSettings({ teams }: { teams: Array<TeamSummary> }) {
+export function TeamsSettings({
+  directory,
+  status,
+  onStatusChange,
+}: {
+  directory: TeamDirectory
+  status: TeamLifecycle
+  onStatusChange: (status: TeamLifecycle) => void
+}) {
   const router = useRouter()
   const [query, setQuery] = React.useState("")
-  const [status, setStatus] = React.useState<TeamStatus>("active")
   const [sortField, setSortField] = React.useState<SortField>("name")
   const [sortDirection, setSortDirection] = React.useState<SortDirection>("asc")
-  const [hiddenInitialTeamIds, setHiddenInitialTeamIds] = React.useState<
-    Array<string>
-  >([])
   const [pendingDeleteTeam, setPendingDeleteTeam] =
-    React.useState<TeamTableEntry | null>(null)
+    React.useState<TeamDirectoryEntry | null>(null)
   const [confirmationName, setConfirmationName] = React.useState("")
   const [isDeleting, setIsDeleting] = React.useState(false)
+  const [pendingActionTeamId, setPendingActionTeamId] = React.useState<
+    string | null
+  >(null)
   const confirmationMatches =
     confirmationName.trim() === pendingDeleteTeam?.name
 
   const visibleTeams = React.useMemo(() => {
-    if (status === "archived") return []
-
-    const availableTeams: Array<TeamTableEntry> =
-      teams.length > 0
-        ? teams
-        : initialTeams.filter((team) => !hiddenInitialTeamIds.includes(team.id))
     const normalizedQuery = query.trim().toLocaleLowerCase()
     const filtered = normalizedQuery
-      ? availableTeams.filter(
+      ? directory.items.filter(
           (team) =>
             team.name.toLocaleLowerCase().includes(normalizedQuery) ||
             team.identifier.toLocaleLowerCase().includes(normalizedQuery)
         )
-      : availableTeams
+      : directory.items
 
     return [...filtered].sort((left, right) => {
       const leftValue = getSortValue(left, sortField)
@@ -212,7 +169,7 @@ export function TeamsSettings({ teams }: { teams: Array<TeamSummary> }) {
 
       return sortDirection === "asc" ? comparison : -comparison
     })
-  }, [hiddenInitialTeamIds, query, sortDirection, sortField, status, teams])
+  }, [directory.items, query, sortDirection, sortField])
 
   function handleSort(field: SortField) {
     if (field === sortField) {
@@ -239,31 +196,23 @@ export function TeamsSettings({ teams }: { teams: Array<TeamSummary> }) {
     setIsDeleting(true)
 
     try {
-      if (pendingDeleteTeam.isInitial) {
-        setHiddenInitialTeamIds((current) => [...current, pendingDeleteTeam.id])
-        toast.success(`${pendingDeleteTeam.name} was deleted.`, {
-          description: "It can be restored for 30 days.",
-        })
-      } else {
-        const result = await deleteTeam({
-          data: {
-            slug: pendingDeleteTeam.slug,
-            confirmationName,
-          },
-        })
+      const result = await deleteTeam({
+        data: {
+          slug: pendingDeleteTeam.slug,
+          confirmationName,
+        },
+      })
 
-        if (!result.ok) {
-          toast.error(result.message)
-          return
-        }
-
-        toast.success(`${result.team.name} was deleted.`, {
-          description: "It can be restored for 30 days.",
-        })
-        window.dispatchEvent(new Event(TEAM_LIST_CHANGED_EVENT))
-        await router.invalidate()
+      if (!result.ok) {
+        toast.error(result.message)
+        return
       }
 
+      toast.success(`${result.team.name} was deleted.`, {
+        description: "It can be restored for 30 days.",
+      })
+      notifyTeamDirectoryChanged()
+      await router.invalidate()
       setPendingDeleteTeam(null)
       setConfirmationName("")
     } catch {
@@ -273,12 +222,56 @@ export function TeamsSettings({ teams }: { teams: Array<TeamSummary> }) {
     }
   }
 
+  async function handleRestoreTeam(team: TeamDirectoryEntry) {
+    if (pendingActionTeamId) return
+
+    setPendingActionTeamId(team.id)
+    try {
+      const result = await restoreTeam({ data: { slug: team.slug } })
+
+      if (!result.ok) {
+        toast.error(result.message)
+        return
+      }
+
+      toast.success(`${result.team.name} was restored.`)
+      notifyTeamDirectoryChanged()
+      await router.invalidate()
+    } catch {
+      toast.error("The team could not be restored. Try again.")
+    } finally {
+      setPendingActionTeamId(null)
+    }
+  }
+
+  async function handleLeaveTeam(team: TeamDirectoryEntry) {
+    if (pendingActionTeamId) return
+
+    setPendingActionTeamId(team.id)
+    try {
+      const result = await leaveTeam({ data: { slug: team.slug } })
+
+      if (!result.ok) {
+        toast.error(result.message)
+        return
+      }
+
+      toast.success(`You left ${result.team.name}.`)
+      notifyTeamDirectoryChanged()
+      await router.invalidate()
+    } catch {
+      toast.error("You could not leave the team. Try again.")
+    } finally {
+      setPendingActionTeamId(null)
+    }
+  }
+
   const emptyTitle =
     status === "archived"
       ? "No archived teams"
       : query.trim()
         ? "No matching teams"
-        : "No active teams"
+        : "No teams yet"
   const emptyDescription =
     status === "archived"
       ? "Teams you archive will appear here."
@@ -329,7 +322,9 @@ export function TeamsSettings({ teams }: { teams: Array<TeamSummary> }) {
               <DropdownMenuContent align="start" className="min-w-36">
                 <DropdownMenuRadioGroup
                   value={status}
-                  onValueChange={(value) => setStatus(value as TeamStatus)}
+                  onValueChange={(value) =>
+                    onStatusChange(value as TeamLifecycle)
+                  }
                 >
                   <DropdownMenuRadioItem value="active">
                     Active
@@ -341,14 +336,16 @@ export function TeamsSettings({ teams }: { teams: Array<TeamSummary> }) {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button
-              size="default"
-              nativeButton={false}
-              render={<Link to="/settings/teams/new" />}
-              className="ml-auto rounded-lg bg-[#5E6AD2] px-3 text-white hover:bg-[#5360C8]"
-            >
-              Create team
-            </Button>
+            {directory.canCreateTeam ? (
+              <Button
+                size="default"
+                nativeButton={false}
+                render={<Link to="/settings/teams/new" />}
+                className="ml-auto rounded-lg bg-[#5E6AD2] px-3 text-white hover:bg-[#5360C8]"
+              >
+                Create team
+              </Button>
+            ) : null}
           </div>
 
           <div className="mt-5">
@@ -428,92 +425,132 @@ export function TeamsSettings({ teams }: { teams: Array<TeamSummary> }) {
                     </tr>
                     <TableRow className="group/row h-11 border-0 hover:bg-muted/45">
                       <TableCell className="rounded-l-xl px-3 py-0">
-                        <Link
-                          to="/settings/teams/$teamSlug"
-                          params={{ teamSlug: team.slug }}
-                          className="flex min-w-0 items-center gap-2 rounded-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                        >
+                        <div className="flex min-w-0 items-center gap-2">
                           <TeamSidebarIcon
                             icon={team.icon}
                             name={team.name}
                             className="size-4"
                           />
-                          <span className="truncate text-sm font-medium text-foreground">
-                            {team.name}
-                          </span>
+                          {team.capabilities.canOpenSettings ? (
+                            <Link
+                              to="/settings/teams/$teamSlug"
+                              params={{ teamSlug: team.slug }}
+                              className="truncate rounded-md text-sm font-medium text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                            >
+                              {team.name}
+                            </Link>
+                          ) : (
+                            <span className="truncate text-sm font-medium text-foreground">
+                              {team.name}
+                            </span>
+                          )}
                           <span className="shrink-0 text-xs text-muted-foreground">
                             {team.identifier}
                           </span>
-                        </Link>
+                        </div>
                       </TableCell>
                       <TableCell className="px-2 py-0 text-xs text-muted-foreground">
-                        Workspace
+                        {team.visibility === "workspace"
+                          ? "Workspace"
+                          : "Private"}
                       </TableCell>
                       <TableCell className="px-2 py-0 text-xs text-muted-foreground">
-                        {team.memberCount ?? 1}
+                        {team.memberCount}
                       </TableCell>
                       <TableCell className="px-2 py-0 text-xs text-muted-foreground">
-                        {team.issueCount ?? 0}
+                        {team.issueCount ?? "—"}
                       </TableCell>
                       <TableCell className="px-2 py-0 text-xs text-muted-foreground">
                         {formatCreatedAt(team.createdAt)}
                       </TableCell>
                       <TableCell className="rounded-r-xl px-1 py-0">
-                        <DropdownMenu>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-xs"
-                            aria-label={`Open ${team.name} menu`}
-                            render={<DropdownMenuTrigger />}
-                            className="rounded-md text-muted-foreground opacity-0 transition-opacity group-hover/row:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100"
-                          >
-                            <HugeiconsIcon
-                              icon={MoreHorizontalIcon}
-                              strokeWidth={2}
-                            />
-                          </Button>
-                          <DropdownMenuContent align="end" className="min-w-44">
-                            <DropdownMenuItem
-                              render={
-                                <Link
-                                  to="/settings/teams/$teamSlug"
-                                  params={{ teamSlug: team.slug }}
-                                />
-                              }
+                        {team.capabilities.canOpenSettings ||
+                        team.capabilities.canLeave ||
+                        team.capabilities.canDelete ||
+                        team.capabilities.canRestore ? (
+                          <DropdownMenu>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-xs"
+                              aria-label={`Open ${team.name} menu`}
+                              render={<DropdownMenuTrigger />}
+                              className="rounded-md text-muted-foreground opacity-0 transition-opacity group-hover/row:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100"
                             >
                               <HugeiconsIcon
-                                icon={Settings02Icon}
+                                icon={MoreHorizontalIcon}
                                 strokeWidth={2}
                               />
-                              Open team settings
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                toast.info(
-                                  "Leaving teams is not available yet."
-                                )
-                              }
+                            </Button>
+                            <DropdownMenuContent
+                              align="end"
+                              className="min-w-44"
                             >
-                              <HugeiconsIcon
-                                icon={UserRemove01Icon}
-                                strokeWidth={2}
-                              />
-                              Leave team
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              variant="destructive"
-                              onClick={() => setPendingDeleteTeam(team)}
-                            >
-                              <HugeiconsIcon
-                                icon={Delete02Icon}
-                                strokeWidth={2}
-                              />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                              {team.capabilities.canOpenSettings ? (
+                                <DropdownMenuItem
+                                  render={
+                                    <Link
+                                      to="/settings/teams/$teamSlug"
+                                      params={{ teamSlug: team.slug }}
+                                    />
+                                  }
+                                >
+                                  <HugeiconsIcon
+                                    icon={Settings02Icon}
+                                    strokeWidth={2}
+                                  />
+                                  Open team settings
+                                </DropdownMenuItem>
+                              ) : null}
+                              {team.capabilities.canLeave ? (
+                                <DropdownMenuItem
+                                  disabled={pendingActionTeamId === team.id}
+                                  onClick={() => void handleLeaveTeam(team)}
+                                >
+                                  <HugeiconsIcon
+                                    icon={UserRemove01Icon}
+                                    strokeWidth={2}
+                                  />
+                                  Leave team
+                                </DropdownMenuItem>
+                              ) : null}
+                              {team.capabilities.canDelete &&
+                              (team.capabilities.canOpenSettings ||
+                                team.capabilities.canLeave) ? (
+                                <DropdownMenuSeparator />
+                              ) : null}
+                              {team.capabilities.canDelete ? (
+                                <DropdownMenuItem
+                                  variant="destructive"
+                                  onClick={() => {
+                                    window.setTimeout(
+                                      () => setPendingDeleteTeam(team),
+                                      0
+                                    )
+                                  }}
+                                >
+                                  <HugeiconsIcon
+                                    icon={Delete02Icon}
+                                    strokeWidth={2}
+                                  />
+                                  Delete
+                                </DropdownMenuItem>
+                              ) : null}
+                              {team.capabilities.canRestore ? (
+                                <DropdownMenuItem
+                                  disabled={pendingActionTeamId === team.id}
+                                  onClick={() => void handleRestoreTeam(team)}
+                                >
+                                  <HugeiconsIcon
+                                    icon={RestoreBinIcon}
+                                    strokeWidth={2}
+                                  />
+                                  Restore
+                                </DropdownMenuItem>
+                              ) : null}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        ) : null}
                       </TableCell>
                     </TableRow>
                   </React.Fragment>
@@ -529,6 +566,18 @@ export function TeamsSettings({ teams }: { teams: Array<TeamSummary> }) {
                 <p className="mt-1 max-w-sm text-sm text-muted-foreground">
                   {emptyDescription}
                 </p>
+                {status === "active" &&
+                !query.trim() &&
+                directory.canCreateTeam ? (
+                  <Button
+                    size="sm"
+                    nativeButton={false}
+                    render={<Link to="/settings/teams/new" />}
+                    className="mt-4 rounded-lg bg-[#5E6AD2] px-3 text-white hover:bg-[#5360C8]"
+                  >
+                    Create team
+                  </Button>
+                ) : null}
               </div>
             ) : null}
           </div>

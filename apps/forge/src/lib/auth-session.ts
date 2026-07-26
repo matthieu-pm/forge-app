@@ -1,3 +1,5 @@
+import { validateDesktopAuthScheme } from "../../electron/shared/desktop-auth-protocol"
+
 export type DesktopAuthorizationQuery = {
   client_id: "electron"
   state: string
@@ -27,6 +29,12 @@ export function desktopAuthorizationQuery(
     code_challenge: codeChallenge,
     code_challenge_method: "S256",
   }
+}
+
+export function desktopCallbackProtocol(search: string) {
+  return validateDesktopAuthScheme(
+    new URLSearchParams(search).get("callback_protocol")
+  )
 }
 
 export function beginDesktopAuthorizationRedirect(

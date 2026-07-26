@@ -6,7 +6,11 @@ import { setDockIconSafely } from "./dock-icon"
 import { registerHostBridge } from "./host-bridge"
 import { installApplicationMenu } from "./menu"
 import { routeFromDeepLink } from "./navigation-policy"
-import { productDeepLinkScheme, resolveAppOrigin } from "./runtime-config"
+import {
+  productDeepLinkScheme,
+  resolveAppOrigin,
+  resolveDesktopAuthScheme,
+} from "./runtime-config"
 import { configureSessionSecurity } from "./security"
 import { setupDesktopAuth } from "./desktop-auth"
 import { configureUpdater } from "./updater"
@@ -17,6 +21,7 @@ app.setName("Forge")
 configureAppAppearance(nativeTheme)
 
 const appOrigin = resolveAppOrigin(app.isPackaged)
+const desktopAuthScheme = resolveDesktopAuthScheme(app.isPackaged)
 const windows = new WindowManager(appOrigin, !app.isPackaged)
 const queuedRoutes: Array<string> = []
 
@@ -40,7 +45,9 @@ const hasSingleInstanceLock = app.requestSingleInstanceLock()
 if (!hasSingleInstanceLock) {
   app.quit()
 } else {
-  const desktopAuth = setupDesktopAuth(appOrigin, () => windows.getFocused())
+  const desktopAuth = setupDesktopAuth(appOrigin, desktopAuthScheme, () =>
+    windows.getFocused()
+  )
   const modelBroker = new ModelBroker()
   app.setAsDefaultProtocolClient(productDeepLinkScheme)
 

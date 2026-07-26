@@ -4,6 +4,10 @@ import { apiKey } from "@better-auth/api-key"
 import { betterAuth } from "better-auth"
 import { organization } from "better-auth/plugins"
 import { tanstackStartCookies } from "better-auth/tanstack-start"
+import {
+  desktopAuthScheme,
+  developmentDesktopAuthScheme,
+} from "../../electron/shared/desktop-auth-protocol"
 import { db } from "@/db"
 import {
   accounts,
@@ -43,7 +47,10 @@ export const auth = betterAuth({
   appName: "Forge",
   baseURL: betterAuthUrl,
   secret: betterAuthSecret,
-  trustedOrigins: ["com.forge.desktop:/"],
+  trustedOrigins: [
+    `${desktopAuthScheme}:/`,
+    `${developmentDesktopAuthScheme}:/`,
+  ],
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: {
@@ -82,7 +89,6 @@ export const auth = betterAuth({
   plugins: [
     electron(),
     organization({
-      organizationLimit: 1,
       invitationExpiresIn: 60 * 60 * 48,
       sendInvitationEmail: async (data) => {
         if (isInvitationWorkflowEnabled(data.organization.id)) {

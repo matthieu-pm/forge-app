@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { createTeam } from "@/lib/team-state"
+import { notifyTeamDirectoryChanged } from "@/lib/team-events"
 
 function FieldRow({
   children,
@@ -108,6 +109,7 @@ export function CreateTeamForm() {
       }
 
       toast.success(`${result.team.name} was created.`)
+      notifyTeamDirectoryChanged()
       await router.invalidate()
       await router.navigate({
         to: "/teams/$teamSlug/projects",

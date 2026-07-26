@@ -5,6 +5,11 @@ import type {
   CreateTeamResult,
   DeleteTeamInput,
   DeleteTeamResult,
+  LeaveTeamResult,
+  RestoreTeamResult,
+  TeamDirectory,
+  TeamLifecycle,
+  TeamMutationInput,
   TeamRouteState,
   TeamSummary,
   UpdateTeamInput,
@@ -14,7 +19,10 @@ import {
   archiveTeam,
   createTeam,
   getTeam,
+  getTeamDirectory,
+  leaveTeam,
   listTeams,
+  restoreTeam,
   updateTeam,
 } from "@/application/teams/teams.server"
 import { requireSessionActor } from "@/adapters/auth/session-actor.server"
@@ -61,6 +69,13 @@ export async function listTeamsForRequest(
   return items
 }
 
+export async function getTeamDirectoryForRequest(
+  request: Request,
+  lifecycle: TeamLifecycle
+): Promise<TeamDirectory> {
+  return getTeamDirectory(await requireSessionActor(request), lifecycle)
+}
+
 export async function getTeamForRequest(
   request: Request,
   slug: string
@@ -103,6 +118,40 @@ export async function deleteTeamForRequest(
   } catch (error) {
     if (error instanceof WorkspaceAccessError) {
       return accessResult(error, "deleting")
+    }
+
+    throw error
+  }
+}
+
+export async function restoreTeamForRequest(
+  request: Request,
+  input: TeamMutationInput
+): Promise<RestoreTeamResult> {
+  try {
+    return restoreTeam(await requireSessionActor(request), {
+      slug: input.slug,
+    })
+  } catch (error) {
+    if (error instanceof WorkspaceAccessError) {
+      return accessResult(error, "restoring")
+    }
+
+    throw error
+  }
+}
+
+export async function leaveTeamForRequest(
+  request: Request,
+  input: TeamMutationInput
+): Promise<LeaveTeamResult> {
+  try {
+    return leaveTeam(await requireSessionActor(request), {
+      slug: input.slug,
+    })
+  } catch (error) {
+    if (error instanceof WorkspaceAccessError) {
+      return accessResult(error, "leaving")
     }
 
     throw error

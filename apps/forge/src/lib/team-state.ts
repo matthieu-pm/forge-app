@@ -3,6 +3,8 @@ import { createServerFn } from "@tanstack/react-start"
 import {
   createTeamInputSchema,
   deleteTeamInputSchema,
+  teamLifecycleSchema,
+  teamMutationInputSchema,
   updateTeamInputSchema,
 } from "@/lib/team-contract"
 
@@ -25,6 +27,17 @@ export const loadTeams = createServerFn({ method: "GET" }).handler(async () => {
 
   return listTeamsForRequest(getRequest())
 })
+
+export const loadTeamDirectory = createServerFn({ method: "GET" })
+  .inputValidator(teamLifecycleSchema)
+  .handler(async ({ data }) => {
+    const [{ getRequest }, { getTeamDirectoryForRequest }] = await Promise.all([
+      import("@tanstack/react-start/server"),
+      import("@/lib/team-server"),
+    ])
+
+    return getTeamDirectoryForRequest(getRequest(), data)
+  })
 
 type TeamList = Awaited<ReturnType<typeof loadTeams>>
 
@@ -66,11 +79,9 @@ export const getTeamRouteState = createServerFn({ method: "GET" })
     slug: input.slug.trim().toLowerCase(),
   }))
   .handler(async ({ data }) => {
-    const [{ getRequest }, { getTeamRouteStateForRequest }] =
-      await Promise.all([
-        import("@tanstack/react-start/server"),
-        import("@/lib/team-server"),
-      ])
+    const [{ getRequest }, { getTeamRouteStateForRequest }] = await Promise.all(
+      [import("@tanstack/react-start/server"), import("@/lib/team-server")]
+    )
 
     return getTeamRouteStateForRequest(getRequest(), data.slug)
   })
@@ -84,6 +95,28 @@ export const deleteTeam = createServerFn({ method: "POST" })
     ])
 
     return deleteTeamForRequest(getRequest(), data)
+  })
+
+export const restoreTeam = createServerFn({ method: "POST" })
+  .inputValidator(teamMutationInputSchema)
+  .handler(async ({ data }) => {
+    const [{ getRequest }, { restoreTeamForRequest }] = await Promise.all([
+      import("@tanstack/react-start/server"),
+      import("@/lib/team-server"),
+    ])
+
+    return restoreTeamForRequest(getRequest(), data)
+  })
+
+export const leaveTeam = createServerFn({ method: "POST" })
+  .inputValidator(teamMutationInputSchema)
+  .handler(async ({ data }) => {
+    const [{ getRequest }, { leaveTeamForRequest }] = await Promise.all([
+      import("@tanstack/react-start/server"),
+      import("@/lib/team-server"),
+    ])
+
+    return leaveTeamForRequest(getRequest(), data)
   })
 
 export const updateTeam = createServerFn({ method: "POST" })

@@ -6,12 +6,17 @@ import {
   archiveTeam,
   createTeam,
   getTeam,
+  getTeamDirectory,
+  leaveTeam,
   listTeams,
+  restoreTeam,
   updateTeam,
 } from "@/application/teams/teams.server"
 
 const mocks = vi.hoisted(() => ({
   deleteWhere: vi.fn(),
+  directoryFindMany: vi.fn(),
+  directoryFindFirst: vi.fn(),
   insertValues: vi.fn(),
   returning: vi.fn(),
   selectLimit: vi.fn(),
@@ -20,6 +25,16 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/db", () => ({
   db: {
+    transaction: vi.fn((callback: (transaction: unknown) => unknown) =>
+      callback({
+        insert: () => ({
+          values: (values: unknown) => {
+            mocks.insertValues(values)
+            return { returning: mocks.returning }
+          },
+        }),
+      })
+    ),
     insert: vi.fn(() => ({
       values: (values: unknown) => {
         mocks.insertValues(values)
@@ -43,7 +58,14 @@ vi.mock("@/db", () => ({
       },
     })),
     delete: vi.fn(() => ({ where: mocks.deleteWhere })),
+    query: {
+      teams: {
+        findMany: mocks.directoryFindMany,
+        findFirst: mocks.directoryFindFirst,
+      },
+    },
   },
+  teamMembers: {},
   teams: {},
 }))
 
@@ -52,6 +74,7 @@ vi.mock("drizzle-orm", () => ({
   asc: vi.fn((column: unknown) => column),
   eq: vi.fn((column: unknown, value: unknown) => ({ column, value })),
   gt: vi.fn((column: unknown, value: unknown) => ({ column, value })),
+  isNotNull: vi.fn((column: unknown) => ({ column, isNotNull: true })),
   isNull: vi.fn((column: unknown) => ({ column, isNull: true })),
   or: vi.fn((...conditions: Array<unknown>) => conditions),
 }))
@@ -87,6 +110,7 @@ function persistedTeam(workspaceId = "workspace-1") {
     color: "#818cf8",
     timezone: "Europe/Paris",
     description: "",
+    visibility: "workspace",
     estimationScheme: "none",
     issueEmailEnabled: false,
     detailedHistoryEnabled: false,
@@ -101,6 +125,8 @@ describe("Teams application module", () => {
   beforeEach(() => {
     mocks.returning.mockResolvedValue([persistedTeam()])
     mocks.selectLimit.mockResolvedValue([persistedTeam()])
+    mocks.directoryFindMany.mockResolvedValue([])
+    mocks.directoryFindFirst.mockResolvedValue(undefined)
   })
 
   it.each(["owner", "admin", "owner,member"])(
@@ -167,7 +193,7 @@ describe("Teams application module", () => {
       expect.objectContaining({ workspaceId: "workspace-1" })
     )
     expect(mocks.insertValues).toHaveBeenNthCalledWith(
-      2,
+      3,
       expect.objectContaining({ workspaceId: "workspace-2" })
     )
   })
@@ -202,6 +228,87 @@ describe("Teams application module", () => {
     )
   })
 
+  it("builds the active directory from persisted visibility and memberships", async () => {
+    mocks.directoryFindMany.mockResolvedValue([
+      {
+        ...persistedTeam(),
+        visibility: "private",
+        members: [
+          {
+            id: "membership-1",
+            workspaceId: "workspace-1",
+            teamId: persistedTeam().id,
+            userId: "user-1",
+            role: "lead",
+            createdAt: new Date(),
+          },
+        ],
+      },
+    ])
+
+    await expect(getTeamDirectory(owner, "active")).resolves.toMatchObject({
+      canCreateTeam: true,
+      items: [
+        {
+          visibility: "private",
+          memberCount: 1,
+          issueCount: null,
+          lifecycle: "active",
+          capabilities: {
+            canOpenSettings: true,
+            canLeave: false,
+            canDelete: true,
+            canRestore: false,
+          },
+        },
+      ],
+    })
+  })
+
+  it("allows eligible members to leave and protects the last lead", async () => {
+    const membership = {
+      id: "membership-1",
+      workspaceId: "workspace-1",
+      teamId: persistedTeam().id,
+      userId: "user-1",
+      role: "member",
+      createdAt: new Date(),
+    }
+    mocks.directoryFindFirst.mockResolvedValue({
+      ...persistedTeam(),
+      members: [membership],
+    })
+
+    await expect(
+      leaveTeam({ ...owner, workspaceRole: "member" }, { slug: "engineering" })
+    ).resolves.toMatchObject({ ok: true })
+    expect(mocks.deleteWhere).toHaveBeenCalled()
+
+    mocks.directoryFindFirst.mockResolvedValue({
+      ...persistedTeam(),
+      members: [{ ...membership, role: "lead" }],
+    })
+    await expect(
+      leaveTeam(owner, { slug: "engineering" })
+    ).resolves.toMatchObject({ ok: false, code: "LAST_LEAD" })
+  })
+
+  it("restores archived teams and reports active-name conflicts", async () => {
+    mocks.returning.mockResolvedValue([
+      { ...persistedTeam(), deletedAt: new Date() },
+    ])
+    await expect(
+      restoreTeam(owner, { slug: "engineering" })
+    ).resolves.toMatchObject({ ok: true })
+
+    mocks.returning.mockRejectedValue({
+      constraint: "teams_workspace_slug_unique",
+    })
+    await expect(
+      restoreTeam(owner, { slug: "engineering" })
+    ).resolves.toMatchObject({ ok: false, code: "RESTORE_CONFLICT" })
+  })
+
   it("supports UI-confirmed and public ID archive operations", async () => {
     mocks.returning.mockResolvedValue([
       { name: "Engineering", slug: "engineering" },
@@ -231,13 +338,17 @@ describe("Teams application module", () => {
       updateTeam(owner, { id: persistedTeam().id }, { description: "Core" })
     ).resolves.toMatchObject({ ok: true })
 
-    await updateTeam(owner, { id: persistedTeam().id }, {
-      icon: {
-        kind: "emoji",
-        value: "🛠️",
-        color: "#38bdf8",
-      },
-    })
+    await updateTeam(
+      owner,
+      { id: persistedTeam().id },
+      {
+        icon: {
+          kind: "emoji",
+          value: "🛠️",
+          color: "#38bdf8",
+        },
+      }
+    )
     expect(mocks.updateSet).toHaveBeenLastCalledWith(
       expect.objectContaining({
         iconKind: "emoji",

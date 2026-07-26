@@ -1,6 +1,12 @@
 declare const __FORGE_DESKTOP_APP_ORIGIN__: string
 declare const __FORGE_DESKTOP_UPDATE_BASE_URL__: string
 
+export {
+  desktopAuthorizationUrl,
+  desktopAuthScheme,
+  resolveDesktopAuthScheme,
+} from "../shared/desktop-auth-protocol"
+
 const developmentOrigin = "http://localhost:3000"
 
 export function validateAppOrigin(value: string) {
@@ -49,5 +55,4 @@ export function resolveUpdateBaseUrl() {
   return value ? validateUpdateBaseUrl(value) : null
 }
 
-export const desktopAuthScheme = "com.forge.desktop"
 export const productDeepLinkScheme = "forge"

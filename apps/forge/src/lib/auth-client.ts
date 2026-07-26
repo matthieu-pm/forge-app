@@ -6,7 +6,13 @@ import {
   organizationClient,
 } from "better-auth/client/plugins"
 
+import { desktopCallbackProtocol } from "@/lib/auth-session"
 import { profileUserFields } from "@/lib/profile-fields"
+
+const desktopProtocol =
+  typeof window === "undefined"
+    ? desktopCallbackProtocol("")
+    : desktopCallbackProtocol(window.location.search)
 
 export const authClient = createAuthClient({
   plugins: [
@@ -16,7 +22,7 @@ export const authClient = createAuthClient({
     organizationClient(),
     apiKeyClient(),
     electronProxyClient({
-      protocol: "com.forge.desktop",
+      protocol: desktopProtocol,
     }),
   ],
 })

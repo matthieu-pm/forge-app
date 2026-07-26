@@ -10,12 +10,18 @@ const repositoryRoot = resolve(packageRoot, "../..")
 config({ path: resolve(repositoryRoot, ".env") })
 config({ path: resolve(repositoryRoot, ".env.local"), override: true })
 
-const { businessWorkflowRuns, db, desktopReleaseArtifacts, desktopReleases } =
-  await import("@/db")
+const {
+  businessWorkflowRuns,
+  db,
+  desktopReleaseArtifacts,
+  desktopReleases,
+  teams,
+} = await import("@/db")
 
 const now = new Date()
 const workflowCutoff = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1_000)
 const releaseCutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1_000)
+const teamCutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1_000)
 
 const deletedWorkflowRuns = await db
   .delete(businessWorkflowRuns)
@@ -36,6 +42,11 @@ const deletedWorkflowRuns = await db
     )
   )
   .returning({ id: businessWorkflowRuns.id })
+
+const permanentlyDeletedTeams = await db
+  .delete(teams)
+  .where(lt(teams.deletedAt, teamCutoff))
+  .returning({ id: teams.id })
 
 const newlyExpiringReleases = await db
   .update(desktopReleases)
@@ -120,7 +131,9 @@ console.log(
     event: "product.retention.sweep",
     deletedWorkflowRuns: deletedWorkflowRuns.length,
     expiredDesktopReleases,
+    permanentlyDeletedTeams: permanentlyDeletedTeams.length,
     workflowCutoff: workflowCutoff.toISOString(),
     releaseCutoff: releaseCutoff.toISOString(),
+    teamCutoff: teamCutoff.toISOString(),
   })
 )

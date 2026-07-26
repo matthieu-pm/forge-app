@@ -31,6 +31,7 @@ export const teams = pgTable(
     color: text("color").notNull(),
     timezone: text("timezone").notNull(),
     description: text("description").default("").notNull(),
+    visibility: text("visibility").default("workspace").notNull(),
     estimationScheme: text("estimation_scheme").default("none").notNull(),
     issueEmailEnabled: boolean("issue_email_enabled").default(false).notNull(),
     detailedHistoryEnabled: boolean("detailed_history_enabled")
@@ -49,13 +50,15 @@ export const teams = pgTable(
   },
   (table) => ({
     workspaceIdIndex: index("teams_workspace_id_idx").on(table.workspaceId),
-    workspaceSlugUnique: unique("teams_workspace_slug_unique").on(
+    workspaceSlugUnique: uniqueIndex("teams_workspace_slug_unique")
+      .on(table.workspaceId, table.slug)
+      .where(sql`${table.deletedAt} is null`),
+    workspaceIdentifierUnique: uniqueIndex("teams_workspace_identifier_unique")
+      .on(table.workspaceId, table.identifier)
+      .where(sql`${table.deletedAt} is null`),
+    workspaceLifecycleIndex: index("teams_workspace_lifecycle_idx").on(
       table.workspaceId,
-      table.slug
-    ),
-    workspaceIdentifierUnique: unique("teams_workspace_identifier_unique").on(
-      table.workspaceId,
-      table.identifier
+      table.deletedAt
     ),
     iconKindCheck: check(
       "teams_icon_kind_check",
@@ -69,10 +72,52 @@ export const teams = pgTable(
       "teams_estimation_scheme_check",
       sql`${table.estimationScheme} in ('none', 'exponential', 'fibonacci', 'linear', 'tshirt')`
     ),
+    visibilityCheck: check(
+      "teams_visibility_check",
+      sql`${table.visibility} in ('workspace', 'private')`
+    ),
   })
 )
 
-export const teamsRelations = relations(teams, ({ one }) => ({
+export const teamMembers = pgTable(
+  "team_members",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    teamId: uuid("team_id")
+      .notNull()
+      .references(() => teams.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    role: text("role").default("member").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    teamUserUnique: unique("team_members_team_user_unique").on(
+      table.teamId,
+      table.userId
+    ),
+    workspaceTeamIndex: index("team_members_workspace_team_idx").on(
+      table.workspaceId,
+      table.teamId
+    ),
+    workspaceUserIndex: index("team_members_workspace_user_idx").on(
+      table.workspaceId,
+      table.userId
+    ),
+    roleCheck: check(
+      "team_members_role_check",
+      sql`${table.role} in ('lead', 'member')`
+    ),
+  })
+)
+
+export const teamsRelations = relations(teams, ({ many, one }) => ({
   workspace: one(organizations, {
     fields: [teams.workspaceId],
     references: [organizations.id],
@@ -81,10 +126,28 @@ export const teamsRelations = relations(teams, ({ one }) => ({
     fields: [teams.createdByUserId],
     references: [users.id],
   }),
+  members: many(teamMembers),
+}))
+
+export const teamMembersRelations = relations(teamMembers, ({ one }) => ({
+  workspace: one(organizations, {
+    fields: [teamMembers.workspaceId],
+    references: [organizations.id],
+  }),
+  team: one(teams, {
+    fields: [teamMembers.teamId],
+    references: [teams.id],
+  }),
+  user: one(users, {
+    fields: [teamMembers.userId],
+    references: [users.id],
+  }),
 }))
 
 export type Team = typeof teams.$inferSelect
 export type NewTeam = typeof teams.$inferInsert
+export type TeamMember = typeof teamMembers.$inferSelect
+export type NewTeamMember = typeof teamMembers.$inferInsert
 
 export const apiIdempotencyKeys = pgTable(
   "api_idempotency_keys",

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest"
 import {
   beginDesktopAuthorizationRedirect,
   desktopAuthorizationQuery,
+  desktopCallbackProtocol,
 } from "./auth-session"
 
 describe("desktopAuthorizationQuery", () => {
@@ -50,5 +51,23 @@ describe("beginDesktopAuthorizationRedirect", () => {
       )
     ).toBe(false)
     expect(ensureElectronRedirect).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe("desktopCallbackProtocol", () => {
+  it("returns the initiating development app instead of the installed app", () => {
+    expect(
+      desktopCallbackProtocol(
+        "?client_id=electron&callback_protocol=com.forge.desktop.dev"
+      )
+    ).toBe("com.forge.desktop.dev")
+  })
+
+  it("does not redirect authorization codes to arbitrary protocols", () => {
+    expect(
+      desktopCallbackProtocol(
+        "?client_id=electron&callback_protocol=attacker.controlled"
+      )
+    ).toBe("com.forge.desktop")
   })
 })

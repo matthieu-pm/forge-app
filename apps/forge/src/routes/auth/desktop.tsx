@@ -23,6 +23,10 @@ export const Route = createFileRoute("/auth/desktop")({
       typeof search.code_challenge_method === "string"
         ? search.code_challenge_method
         : undefined,
+    callback_protocol:
+      typeof search.callback_protocol === "string"
+        ? search.callback_protocol
+        : undefined,
   }),
   component: DesktopAuthorizationPage,
 })

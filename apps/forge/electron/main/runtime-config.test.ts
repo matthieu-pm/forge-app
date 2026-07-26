@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest"
 
-import { validateAppOrigin, validateUpdateBaseUrl } from "./runtime-config"
+import {
+  desktopAuthScheme,
+  desktopAuthorizationUrl,
+  resolveDesktopAuthScheme,
+  validateAppOrigin,
+  validateUpdateBaseUrl,
+} from "./runtime-config"
 
 describe("desktop runtime URLs", () => {
   it("requires an exact HTTPS application origin", () => {
@@ -20,5 +26,18 @@ describe("desktop runtime URLs", () => {
     expect(() =>
       validateUpdateBaseUrl("https://updates.forge.com/desktop?channel=beta")
     ).toThrow()
+  })
+
+  it("isolates development authentication callbacks from installed builds", () => {
+    expect(resolveDesktopAuthScheme(false)).toBe("com.forge.desktop.dev")
+    expect(resolveDesktopAuthScheme(true)).toBe(desktopAuthScheme)
+    expect(
+      desktopAuthorizationUrl(
+        "http://localhost:3000",
+        resolveDesktopAuthScheme(false)
+      ).toString()
+    ).toBe(
+      "http://localhost:3000/auth/desktop?callback_protocol=com.forge.desktop.dev"
+    )
   })
 })

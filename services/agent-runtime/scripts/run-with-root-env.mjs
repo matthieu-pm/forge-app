@@ -1,35 +1,14 @@
 import { spawn } from "node:child_process"
-import { readFile } from "node:fs/promises"
-import { delimiter, resolve } from "node:path"
-import { parseEnv } from "node:util"
+import { resolve } from "node:path"
+
+import { createRootEnvironment } from "./root-environment.mjs"
 
 const serviceRoot = resolve(import.meta.dirname, "..")
 const repositoryRoot = resolve(serviceRoot, "../..")
-const runtimeEnvironment = { ...process.env }
-
-for (const [path, override] of [
-  [resolve(repositoryRoot, ".env"), false],
-  [resolve(repositoryRoot, ".env.local"), true],
-  [resolve(serviceRoot, ".env"), true],
-]) {
-  const source = await readFile(path, "utf8").catch(() => null)
-  if (!source) continue
-
-  for (const [name, value] of Object.entries(parseEnv(source))) {
-    if (override || runtimeEnvironment[name] === undefined) {
-      runtimeEnvironment[name] = value
-    }
-  }
-}
-
-runtimeEnvironment.FORGE_APP_ORIGIN ??= "http://127.0.0.1:3000"
-runtimeEnvironment.PATH = [
-  resolve(repositoryRoot, "node_modules/.bin"),
-  resolve(serviceRoot, "node_modules/.bin"),
-  runtimeEnvironment.PATH,
-]
-  .filter(Boolean)
-  .join(delimiter)
+const runtimeEnvironment = await createRootEnvironment({
+  repositoryRoot,
+  serviceRoot,
+})
 
 const [command, ...args] = process.argv.slice(2)
 if (!command) {

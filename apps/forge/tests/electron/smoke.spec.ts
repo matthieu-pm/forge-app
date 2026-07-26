@@ -44,6 +44,9 @@ test("runs the shared Forge renderer in the hardened desktop shell", async () =>
     const parsedBrowserAuthUrl = new URL(String(browserAuthUrl))
     expect(parsedBrowserAuthUrl.pathname).toBe("/auth/desktop")
     expect(parsedBrowserAuthUrl.searchParams.get("client_id")).toBe("electron")
+    expect(parsedBrowserAuthUrl.searchParams.get("callback_protocol")).toBe(
+      "com.forge.desktop.dev"
+    )
     expect(parsedBrowserAuthUrl.searchParams.get("state")).toBeTruthy()
     expect(parsedBrowserAuthUrl.searchParams.get("code_challenge")).toBeTruthy()
     expect(parsedBrowserAuthUrl.searchParams.get("code_challenge_method")).toBe(

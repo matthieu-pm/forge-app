@@ -72,6 +72,17 @@ export const deleteTeamInputSchema = z
 
 export type DeleteTeamInput = z.infer<typeof deleteTeamInputSchema>
 
+export const teamLifecycleSchema = z.enum(["active", "archived"])
+export type TeamLifecycle = z.infer<typeof teamLifecycleSchema>
+
+export const teamMutationInputSchema = z
+  .object({
+    slug: teamSlugSchema,
+  })
+  .strict()
+
+export type TeamMutationInput = z.infer<typeof teamMutationInputSchema>
+
 export const updateTeamSettingsSchema = z
   .object({
     icon: teamIconSchema.optional(),
@@ -115,6 +126,7 @@ export const teamSummarySchema = z
     icon: teamIconSchema,
     timezone: z.string(),
     description: z.string(),
+    visibility: z.enum(["workspace", "private"]),
     estimationScheme: z.enum(ESTIMATION_SCHEMES),
     issueEmailEnabled: z.boolean(),
     detailedHistoryEnabled: z.boolean(),
@@ -123,6 +135,32 @@ export const teamSummarySchema = z
   .strict()
 
 export type TeamSummary = z.infer<typeof teamSummarySchema>
+
+export const teamDirectoryEntrySchema = teamSummarySchema.extend({
+  lifecycle: teamLifecycleSchema,
+  memberCount: z.number().int().nonnegative(),
+  issueCount: z.number().int().nonnegative().nullable(),
+  recoverableUntil: z.iso.datetime().nullable(),
+  capabilities: z
+    .object({
+      canOpenSettings: z.boolean(),
+      canLeave: z.boolean(),
+      canDelete: z.boolean(),
+      canRestore: z.boolean(),
+    })
+    .strict(),
+})
+
+export type TeamDirectoryEntry = z.infer<typeof teamDirectoryEntrySchema>
+
+export const teamDirectorySchema = z
+  .object({
+    items: z.array(teamDirectoryEntrySchema),
+    canCreateTeam: z.boolean(),
+  })
+  .strict()
+
+export type TeamDirectory = z.infer<typeof teamDirectorySchema>
 
 export type TeamRouteState =
   | { status: "ready"; team: TeamSummary }
@@ -161,6 +199,35 @@ export type DeleteTeamResult =
         | "NO_ACTIVE_WORKSPACE"
         | "FORBIDDEN"
         | "TEAM_NOT_FOUND_OR_NAME_MISMATCH"
+        | "UNKNOWN"
+      message: string
+    }
+
+export type RestoreTeamResult =
+  | { ok: true; team: TeamSummary }
+  | {
+      ok: false
+      code:
+        | "UNAUTHENTICATED"
+        | "NO_ACTIVE_WORKSPACE"
+        | "FORBIDDEN"
+        | "TEAM_NOT_FOUND"
+        | "RESTORE_CONFLICT"
+        | "UNKNOWN"
+      message: string
+    }
+
+export type LeaveTeamResult =
+  | { ok: true; team: Pick<TeamSummary, "name" | "slug"> }
+  | {
+      ok: false
+      code:
+        | "UNAUTHENTICATED"
+        | "NO_ACTIVE_WORKSPACE"
+        | "FORBIDDEN"
+        | "TEAM_NOT_FOUND"
+        | "NOT_A_MEMBER"
+        | "LAST_LEAD"
         | "UNKNOWN"
       message: string
     }

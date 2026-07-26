@@ -18,6 +18,7 @@ import {
   desktopReleases,
   modelCatalogEntries,
   modelConnections,
+  teamMembers,
   teams,
   threadModelPreferences,
 } from "./schema"
@@ -53,6 +54,7 @@ describe("database migrations", () => {
     ) as MigrationSnapshot
     for (const [tableName, table] of [
       ["teams", teams],
+      ["team_members", teamMembers],
       ["apikey", apiKeys],
       ["api_idempotency_keys", apiIdempotencyKeys],
       ["business_workflow_runs", businessWorkflowRuns],

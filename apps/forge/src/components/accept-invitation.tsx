@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useNavigate, useRouter } from "@tanstack/react-router"
 import { authClient } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
 import {
@@ -22,8 +21,6 @@ type InvitationDetails = {
 }
 
 export function AcceptInvitation({ invitationId }: { invitationId?: string }) {
-  const navigate = useNavigate()
-  const router = useRouter()
   const [invitation, setInvitation] = useState<InvitationDetails | null>(null)
   const [error, setError] = useState<string | null>(
     invitationId ? null : "This invitation link is incomplete."
@@ -83,8 +80,7 @@ export function AcceptInvitation({ invitationId }: { invitationId?: string }) {
       return
     }
 
-    await router.invalidate()
-    void navigate({ href: "/inbox" })
+    window.location.assign("/inbox")
   }
 
   return (

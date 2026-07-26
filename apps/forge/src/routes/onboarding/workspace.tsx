@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { WorkspaceSetupForm } from "@/components/workspace-setup-form"
-import { onboardingRouteBeforeLoad } from "@/lib/auth-state"
+import { authenticatedRouteBeforeLoad } from "@/lib/auth-state"
 
 export const Route = createFileRoute("/onboarding/workspace")({
-  beforeLoad: onboardingRouteBeforeLoad,
+  beforeLoad: authenticatedRouteBeforeLoad,
   component: WorkspaceOnboardingPage,
 })
 

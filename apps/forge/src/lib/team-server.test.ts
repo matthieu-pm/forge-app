@@ -17,8 +17,11 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/application/teams/teams.server", () => ({
   archiveTeam: vi.fn(),
   createTeam: vi.fn(),
+  getTeamDirectory: vi.fn(),
   getTeam: vi.fn(),
+  leaveTeam: vi.fn(),
   listTeams: mocks.listTeams,
+  restoreTeam: vi.fn(),
   updateTeam: vi.fn(),
 }))
 

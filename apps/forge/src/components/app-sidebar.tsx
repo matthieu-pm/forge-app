@@ -3,13 +3,15 @@
 import * as React from "react"
 import {
   AccountSetting01Icon,
+  Add01Icon,
   ArrowRight01Icon,
-  Building02Icon,
   CrownIcon,
   Logout03Icon,
+  Tick02Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Link, useRouter, useRouterState } from "@tanstack/react-router"
+import { toast } from "sonner"
 
 import type { AppNavChild } from "@/lib/app-navigation"
 import type { WorkspaceSummary } from "@/lib/auth-types"
@@ -27,7 +29,7 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
@@ -50,6 +52,7 @@ import {
 } from "@/lib/app-navigation"
 import { authClient } from "@/lib/auth-client"
 import { getNavigationAuthState } from "@/lib/auth-state"
+import { TEAM_LIST_CHANGED_EVENT } from "@/lib/team-events"
 import { listTeams } from "@/lib/team-state"
 import { getForgeHost } from "@/host/forge-host"
 import { getSidebarDisclosureKey } from "@/lib/sidebar-disclosure"
@@ -62,6 +65,39 @@ function workspaceInitials(name: string) {
     .join("")
     .slice(0, 2)
     .toUpperCase()
+}
+
+function toWorkspaceSummaries(value: unknown): Array<WorkspaceSummary> {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value.flatMap((candidate) => {
+    if (
+      !candidate ||
+      typeof candidate !== "object" ||
+      !("id" in candidate) ||
+      !("name" in candidate) ||
+      !("slug" in candidate) ||
+      typeof candidate.id !== "string" ||
+      typeof candidate.name !== "string" ||
+      typeof candidate.slug !== "string"
+    ) {
+      return []
+    }
+
+    return [
+      {
+        id: candidate.id,
+        name: candidate.name,
+        slug: candidate.slug,
+        logo:
+          "logo" in candidate && typeof candidate.logo === "string"
+            ? candidate.logo
+            : null,
+      },
+    ]
+  })
 }
 
 function PersistentCollapsible({
@@ -106,7 +142,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [workspace, setWorkspace] = React.useState<WorkspaceSummary | null>(
     null
   )
+  const [workspaces, setWorkspaces] = React.useState<Array<WorkspaceSummary>>(
+    []
+  )
   const [isWorkspaceLoading, setIsWorkspaceLoading] = React.useState(false)
+  const [switchingWorkspaceId, setSwitchingWorkspaceId] = React.useState<
+    string | null
+  >(null)
   const [workspaceTeams, setWorkspaceTeams] = React.useState<
     Array<TeamSummary>
   >([])
@@ -124,6 +166,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   React.useEffect(() => {
     if (!sessionId) {
       setWorkspace(null)
+      setWorkspaces([])
       setWorkspaceTeams([])
       setIsWorkspaceLoading(false)
       return
@@ -132,16 +175,33 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     let isCancelled = false
     setIsWorkspaceLoading(true)
 
-    void Promise.allSettled([getNavigationAuthState(), listTeams()])
-      .then(([authStateResult, teamsResult]) => {
+    void Promise.allSettled([
+      getNavigationAuthState(),
+      listTeams(),
+      authClient.organization.list(),
+    ])
+      .then(([authStateResult, teamsResult, workspacesResult]) => {
         if (isCancelled) {
           return
         }
 
-        setWorkspace(
+        const activeWorkspace =
           authStateResult.status === "fulfilled"
             ? authStateResult.value.workspace
             : null
+        const availableWorkspaces =
+          workspacesResult.status === "fulfilled" &&
+          !workspacesResult.value.error
+            ? toWorkspaceSummaries(workspacesResult.value.data)
+            : []
+
+        setWorkspace(activeWorkspace)
+        setWorkspaces(
+          availableWorkspaces.length > 0
+            ? availableWorkspaces
+            : activeWorkspace
+              ? [activeWorkspace]
+              : []
         )
         setWorkspaceTeams(
           teamsResult.status === "fulfilled" ? teamsResult.value : []
@@ -154,6 +214,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         }
 
         setWorkspace(null)
+        setWorkspaces([])
         setWorkspaceTeams([])
         setIsWorkspaceLoading(false)
       })
@@ -162,6 +223,47 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       isCancelled = true
     }
   }, [activeOrganizationId, sessionId])
+
+  React.useEffect(() => {
+    if (!sessionId) return
+
+    let cancelled = false
+    function reloadTeams() {
+      void listTeams()
+        .then((items) => {
+          if (!cancelled) setWorkspaceTeams(items)
+        })
+        .catch(() => {
+          if (!cancelled) setWorkspaceTeams([])
+        })
+    }
+
+    window.addEventListener(TEAM_LIST_CHANGED_EVENT, reloadTeams)
+    return () => {
+      cancelled = true
+      window.removeEventListener(TEAM_LIST_CHANGED_EVENT, reloadTeams)
+    }
+  }, [activeOrganizationId, sessionId])
+
+  async function handleWorkspaceSwitch(nextWorkspace: WorkspaceSummary) {
+    if (nextWorkspace.id === workspace?.id || switchingWorkspaceId !== null) {
+      return
+    }
+
+    setSwitchingWorkspaceId(nextWorkspace.id)
+
+    const { error } = await authClient.organization.setActive({
+      organizationId: nextWorkspace.id,
+    })
+
+    if (error) {
+      setSwitchingWorkspaceId(null)
+      toast.error(error.message ?? `Could not switch to ${nextWorkspace.name}.`)
+      return
+    }
+
+    window.location.assign("/inbox")
+  }
 
   async function handleSignOut() {
     const host = getForgeHost()
@@ -374,39 +476,52 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 align="start"
                 side="bottom"
                 sideOffset={8}
-                className="p-1"
+                className="min-w-64 p-1"
               >
                 <DropdownMenuGroup>
-                  <DropdownMenuLabel className="px-2 py-1">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <Avatar className="size-4 after:hidden">
-                        {workspaceLogo ? (
-                          <AvatarImage
-                            src={workspaceLogo}
-                            alt={workspaceName}
+                  {workspaces.map((availableWorkspace) => {
+                    const isActive = availableWorkspace.id === workspace?.id
+                    const isSwitching =
+                      availableWorkspace.id === switchingWorkspaceId
+
+                    return (
+                      <DropdownMenuItem
+                        key={availableWorkspace.id}
+                        className="h-7 min-h-0 rounded-xl px-2 py-1 text-sm"
+                        disabled={switchingWorkspaceId !== null}
+                        aria-current={isActive ? "true" : undefined}
+                        onClick={() =>
+                          void handleWorkspaceSwitch(availableWorkspace)
+                        }
+                      >
+                        <Avatar className="size-4 after:hidden">
+                          {availableWorkspace.logo ? (
+                            <AvatarImage src={availableWorkspace.logo} alt="" />
+                          ) : null}
+                          <AvatarFallback className="text-[9px] font-semibold">
+                            {workspaceInitials(availableWorkspace.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="min-w-0 flex-1 truncate font-medium">
+                          {availableWorkspace.name}
+                        </span>
+                        {isActive || isSwitching ? (
+                          <HugeiconsIcon
+                            icon={Tick02Icon}
+                            strokeWidth={2}
+                            className="text-muted-foreground"
                           />
                         ) : null}
-                        <AvatarFallback>
-                          {workspaceInitials(workspaceName)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex min-w-0 flex-col gap-0.5">
-                        <span className="truncate text-sm font-semibold text-foreground">
-                          {workspaceName}
-                        </span>
-                      </div>
-                    </div>
-                  </DropdownMenuLabel>
+                      </DropdownMenuItem>
+                    )
+                  })}
                 </DropdownMenuGroup>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="h-7 min-h-0 rounded-xl px-2 py-1 text-sm font-medium"
-                  onClick={() => {
-                    void router.navigate({
-                      to: "/inbox",
-                    })
-                  }}
+                  render={<Link to="/onboarding/workspace" />}
                 >
-                  <HugeiconsIcon icon={Building02Icon} strokeWidth={2} />
+                  <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
                   New workspace
                 </DropdownMenuItem>
                 <DropdownMenuItem
