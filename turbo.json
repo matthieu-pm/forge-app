@@ -1,0 +1,103 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": [".env.example"],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"]
+    },
+    "@forge/app#build": {
+      "outputs": [".output/**"]
+    },
+    "@forge/agent-runtime#build": {
+      "outputs": [".output/**", ".eve/builds/**"]
+    },
+    "test": {
+      "outputs": []
+    },
+    "typecheck": {
+      "dependsOn": ["^typecheck"],
+      "outputs": []
+    },
+    "lint": {
+      "dependsOn": ["^lint"],
+      "outputs": []
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "preview": {
+      "cache": false,
+      "persistent": true
+    },
+    "desktop:host": {
+      "cache": false,
+      "persistent": true
+    },
+    "desktop:build": {
+      "dependsOn": ["^build"],
+      "outputs": [".electron-build/**"]
+    },
+    "desktop:start": {
+      "cache": false,
+      "persistent": true
+    },
+    "desktop:package": {
+      "cache": false,
+      "outputs": ["out/**"]
+    },
+    "desktop:make": {
+      "cache": false,
+      "outputs": ["out/**"]
+    },
+    "desktop:release:prepare": {
+      "cache": false,
+      "outputs": ["release-candidate/**"]
+    },
+    "desktop:validate": {
+      "cache": false
+    },
+    "desktop:release:upload": {
+      "cache": false
+    },
+    "desktop:release:promote": {
+      "cache": false
+    },
+    "desktop:release:pause": {
+      "cache": false
+    },
+    "test:desktop": {
+      "cache": false,
+      "outputs": ["test-results/**"]
+    },
+    "email:dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "db:generate": {
+      "cache": false
+    },
+    "db:migrate": {
+      "cache": false
+    },
+    "db:push": {
+      "cache": false
+    },
+    "db:studio": {
+      "cache": false,
+      "persistent": true
+    },
+    "agent:retention": {
+      "cache": false
+    },
+    "product:retention": {
+      "cache": false
+    },
+    "workflow:health": {
+      "cache": false
+    },
+    "eval": {
+      "cache": false
+    }
+  }
+}

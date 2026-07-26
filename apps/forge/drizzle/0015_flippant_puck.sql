@@ -1,0 +1,2 @@
+ALTER TABLE "desktop_releases" DROP CONSTRAINT "desktop_releases_state_check";--> statement-breakpoint
+ALTER TABLE "desktop_releases" ADD CONSTRAINT "desktop_releases_state_check" CHECK ("desktop_releases"."state" in ('draft', 'expiring', 'promoted', 'paused', 'superseded'));

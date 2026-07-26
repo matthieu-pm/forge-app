@@ -1,0 +1,190 @@
+default:
+  image: node:24-bookworm
+  interruptible: true
+  before_script:
+    - npm install --global bun@1.3.5
+    - bun --version
+    - node --version
+    - bun install --frozen-lockfile
+  cache:
+    key:
+      files:
+        - bun.lock
+    paths:
+      - .turbo/
+
+variables:
+  GIT_DEPTH: "0"
+  TURBO_TELEMETRY_DISABLED: "1"
+
+stages:
+  - validate
+  - eval
+  - maintenance
+  - package
+  - release
+
+workflow:
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "web"
+
+affected:
+  stage: validate
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+  script:
+    - bunx turbo run lint typecheck test build --affected --summarize
+  artifacts:
+    when: always
+    expire_in: 14 days
+    paths:
+      - .turbo/runs/
+
+full-graph:
+  stage: validate
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
+  script:
+    - bunx turbo run lint typecheck test build --summarize
+  artifacts:
+    when: always
+    expire_in: 14 days
+    paths:
+      - .turbo/runs/
+
+agent-fixture-evals:
+  stage: eval
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+      changes:
+        - services/agent-runtime/**/*
+        - bun.lock
+        - turbo.json
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  script:
+    - bunx turbo run eval --filter=@forge/agent-runtime
+
+agent-live-evals:
+  stage: eval
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_COMMIT_TAG
+      when: manual
+      allow_failure: false
+  script:
+    - test "${FORGE_ENABLE_LIVE_EVALS:-}" = "true"
+    - bun run --cwd services/agent-runtime eval:live
+
+product-retention:
+  stage: maintenance
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $FORGE_MAINTENANCE_SCHEDULE == "true"
+  script:
+    - bun run product:retention
+  environment:
+    name: production-maintenance
+
+workflow-health:
+  stage: maintenance
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $FORGE_MAINTENANCE_SCHEDULE == "true"
+  script:
+    - bun run workflow:health
+  environment:
+    name: production-maintenance
+
+release-macos:
+  stage: package
+  tags:
+    - macos
+    - $ARCH
+  parallel:
+    matrix:
+      - ARCH:
+          - arm64
+          - x64
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/ && $CI_COMMIT_REF_PROTECTED == "true"'
+  before_script:
+    - npm install --global bun@1.3.5
+    - bun install --frozen-lockfile
+  script:
+    - test -n "$APPLE_CERTIFICATE_BASE64"
+    - test -n "$APPLE_CERTIFICATE_PASSWORD"
+    - test -n "$KEYCHAIN_PASSWORD"
+    - certificate_path="$CI_PROJECT_DIR/.forge-release-certificate.p12"
+    - keychain_path="$CI_PROJECT_DIR/.forge-signing.keychain-db"
+    - printf '%s' "$APPLE_CERTIFICATE_BASE64" | base64 --decode > "$certificate_path"
+    - security create-keychain -p "$KEYCHAIN_PASSWORD" "$keychain_path"
+    - security set-keychain-settings -lut 21600 "$keychain_path"
+    - security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$keychain_path"
+    - security import "$certificate_path" -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$keychain_path"
+    - security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$keychain_path"
+    - security list-keychains -d user -s "$keychain_path"
+    - cd apps/forge
+    - bun pm pkg set "version=${CI_COMMIT_TAG#v}"
+    - bun run desktop:validate
+    - bun run test:desktop
+    - bun run desktop:make -- --arch "$ARCH"
+    - FORGE_PACKAGED_APP_PATH="$CI_PROJECT_DIR/apps/forge/out/Forge-darwin-$ARCH/Forge.app/Contents/MacOS/Forge" bun run test:desktop:packaged
+    - bun run desktop:release:prepare -- --arch "$ARCH"
+    - codesign --verify --deep --strict "out/Forge-darwin-$ARCH/Forge.app"
+    - xcrun stapler validate "out/Forge-darwin-$ARCH/Forge.app"
+    - dmg_path="release-candidate/darwin/$ARCH/Forge-${CI_COMMIT_TAG#v}-$ARCH.dmg"
+    - hdiutil verify "$dmg_path"
+    - mount_path="$CI_PROJECT_DIR/.forge-dmg-$ARCH"
+    - mkdir "$mount_path"
+    - hdiutil attach -readonly -nobrowse -mountpoint "$mount_path" "$dmg_path"
+    - codesign --verify --deep --strict "$mount_path/Forge.app"
+    - hdiutil detach "$mount_path"
+    - rmdir "$mount_path"
+  after_script:
+    - hdiutil detach "$CI_PROJECT_DIR/.forge-dmg-$ARCH" || true
+    - rmdir "$CI_PROJECT_DIR/.forge-dmg-$ARCH" || true
+    - security delete-keychain "$CI_PROJECT_DIR/.forge-signing.keychain-db" || true
+    - rm -f "$CI_PROJECT_DIR/.forge-release-certificate.p12"
+  artifacts:
+    expire_in: 30 days
+    paths:
+      - apps/forge/release-candidate/
+
+upload-desktop-draft:
+  stage: release
+  needs:
+    - job: release-macos
+      artifacts: true
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/ && $CI_COMMIT_REF_PROTECTED == "true"'
+  script:
+    - bun run --cwd apps/forge desktop:release:upload
+  environment:
+    name: desktop-release-draft
+
+promote-desktop-release:
+  stage: release
+  needs:
+    - upload-desktop-draft
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/ && $CI_COMMIT_REF_PROTECTED == "true"'
+      when: manual
+      allow_failure: false
+  script:
+    - bun run --cwd apps/forge desktop:release:promote
+  environment:
+    name: desktop-production
+
+pause-desktop-release:
+  stage: release
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/ && $CI_COMMIT_REF_PROTECTED == "true"'
+      when: manual
+      allow_failure: false
+  script:
+    - bun run --cwd apps/forge desktop:release:pause
+  environment:
+    name: desktop-production

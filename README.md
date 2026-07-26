@@ -14,7 +14,8 @@ Current build: `v0.1.0` (unreleased)
 - Contract-first oRPC API with OpenAPI 3.1 documentation
 - Neon Postgres with Drizzle ORM
 - An isolated EVE service for agent tools, code, and programmatic capabilities
-- Bun for package management and scripts
+- A Bun workspace and Turborepo task graph
+- Workflow SDK for application-owned durable business workflows
 - Electron Forge with a local Codex model broker for the shared-renderer macOS app
 
 ## App Areas
@@ -30,8 +31,6 @@ Current build: `v0.1.0` (unreleased)
 ## Getting Started
 
 1. Install dependencies with `bun install`.
-1. Install the isolated runtime dependencies with
-   `npm --prefix services/agent-runtime install`.
 1. Copy `.env.example` to `.env`.
 1. Set `DATABASE_URL`, `BETTER_AUTH_URL`, and `BETTER_AUTH_SECRET`.
 1. To send verification and workspace-invitation emails, set
@@ -47,14 +46,16 @@ starts on port 3000 and the EVE runtime starts on `127.0.0.1:2000`.
 ## Scripts
 
 - `bun run dev` starts the web app and isolated agent runtime.
-- `bun run dev:web` starts only Vite on port 3000.
+- `bun run dev:forge` starts only Forge on port 3000.
 - `bun run email:dev` previews the React Email templates on port 3001.
 - `bun run dev:agent` starts only the local EVE runtime on port 2000.
-- `bun run build` builds the app.
+- `bun run build` builds the workspace task graph.
 - `bun run preview` previews the production build.
 - `bun run test` runs Vitest.
 - `bun run eval:agent` runs the agent runtime release evals.
 - `bun run agent:retention` removes expired agent attachments and artifacts.
+- `bun run product:retention` removes 90-day workflow records and unpromoted
+  30-day desktop drafts.
 - `bun run dev:desktop` runs the shared web and agent stack inside Electron.
 - `bun run test:desktop` builds the shell and runs its Electron smoke test.
 - `bun run desktop:make` creates signed/notarized DMG and ZIP artifacts when release credentials are configured.
@@ -70,7 +71,9 @@ This project uses Neon Postgres with Drizzle ORM.
 1. Apply schema changes with `bun run db:migrate` or `bun run db:push`.
 1. Open Drizzle Studio with `bun run db:studio`.
 
-The shared database client lives in `src/db/index.ts`. Application workspace schema lives in `src/db/schema.ts`, and auth schema lives in `src/db/auth-schema.ts`.
+The shared database client lives in `apps/forge/src/db/index.ts`. Application
+workspace schema lives in `apps/forge/src/db/schema.ts`, and auth schema lives
+in `apps/forge/src/db/auth-schema.ts`.
 
 ## Agent Platform
 
@@ -114,5 +117,11 @@ See [`docs/public-api.md`](docs/public-api.md) for conventions and examples.
 The macOS client is a secure host around the same TanStack renderer used on the
 web. It also brokers the official local Codex app-server without extracting or
 copying Codex credentials into Forge. See
-[`desktop/README.md`](desktop/README.md) for architecture, local development,
-signing, updates, and release operations.
+[`apps/forge/desktop/README.md`](apps/forge/desktop/README.md) for architecture,
+local development, signing, updates, and release operations.
+
+## Operations
+
+- [Turborepo and cache policy](docs/operations/turborepo.md)
+- [Desktop releases](docs/operations/desktop-releases.md)
+- [Workflow SDK invitation lifecycle](docs/operations/workflows.md)

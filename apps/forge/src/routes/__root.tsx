@@ -1,0 +1,248 @@
+import {
+  HeadContent,
+  Link,
+  Outlet,
+  Scripts,
+  createRootRoute,
+  useRouterState,
+} from "@tanstack/react-router"
+import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools"
+import { TanStackDevtools } from "@tanstack/react-devtools"
+import { Fragment } from "react"
+
+import appCss from "../styles.css?url"
+import { AppSidebar } from "@/components/app-sidebar"
+import { AgentProvider, useAgent } from "@/components/agent/agent-provider"
+import { AgentFooterActions } from "@/components/agent/agent-footer-actions"
+import { AgentShell } from "@/components/agent/agent-shell"
+import { SettingsSidebar } from "@/components/settings-sidebar"
+import { DesktopTitleBar } from "@/components/desktop-title-bar"
+import { PersonalPreferenceEffects } from "@/components/personal-preference-effects"
+import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
+import { Toaster } from "@/components/ui/sonner"
+import { HostIntegration } from "@/host/host-integration"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
+import { getBreadcrumbItems } from "@/lib/app-navigation"
+import { getTeamFromRouteMatches } from "@/lib/team-route-match"
+import { cn } from "@/lib/utils"
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
+
+export const Route = createRootRoute({
+  head: () => ({
+    meta: [
+      {
+        charSet: "utf-8",
+      },
+      {
+        name: "viewport",
+        content: "width=device-width, initial-scale=1",
+      },
+      {
+        title: "Forge",
+      },
+    ],
+    links: [
+      {
+        rel: "icon",
+        type: "image/png",
+        sizes: "512x512",
+        href: "/favicon.png?v=forge-512-20260722",
+      },
+      {
+        rel: "stylesheet",
+        href: appCss,
+      },
+    ],
+  }),
+  component: RootLayout,
+  shellComponent: RootDocument,
+})
+
+function RootLayout() {
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  })
+  const shelllessPaths = new Set([
+    "/accept-invitation",
+    "/auth/desktop",
+    "/download",
+    "/login",
+    "/signup",
+    "/onboarding/workspace",
+  ])
+
+  if (shelllessPaths.has(pathname)) {
+    return <Outlet key={pathname} />
+  }
+
+  const hasStandaloneTeamSettingsLayout =
+    pathname.startsWith("/settings/teams/")
+  const hasSettingsLayout = pathname.startsWith("/settings")
+
+  return (
+    <AgentProvider>
+      <SidebarProvider
+        className={cn(
+          "relative",
+          hasStandaloneTeamSettingsLayout
+            ? "forge-create-team-shell forge-settings-shell"
+            : hasSettingsLayout
+              ? "forge-settings-shell"
+              : undefined
+        )}
+      >
+        <PersonalPreferenceEffects />
+        {pathname.startsWith("/settings") ? (
+          <SettingsSidebar />
+        ) : (
+          <AppSidebar />
+        )}
+        <AgentContentPane pathname={pathname} />
+        <div className="forge-agent-overlay-layer pointer-events-none absolute top-2 right-2 bottom-8 left-0 z-30 transition-[left] duration-200 ease-linear md:left-(--sidebar-width) md:peer-data-[collapsible=icon]:left-[calc(var(--sidebar-width-icon)+(--spacing(4)))] md:peer-data-[collapsible=offcanvas]:left-0">
+          <AgentShell />
+        </div>
+        <AgentFooterActions />
+      </SidebarProvider>
+    </AgentProvider>
+  )
+}
+
+function AgentContentPane({ pathname }: { pathname: string }) {
+  const { surfaceMode } = useAgent()
+  const obscured = surfaceMode === "maximized"
+
+  return (
+    <SidebarInset
+      className={cn(
+        "origin-center transition-transform duration-150 ease-out",
+        obscured && "scale-x-[0.98] scale-y-[0.99]"
+      )}
+    >
+      <AgentRouteContent pathname={pathname} obscured={obscured} />
+    </SidebarInset>
+  )
+}
+
+function AgentRouteContent({
+  pathname,
+  obscured,
+}: {
+  pathname: string
+  obscured: boolean
+}) {
+  return (
+    <div
+      className="relative flex min-h-0 flex-1 flex-col"
+      aria-hidden={obscured || undefined}
+      inert={obscured || undefined}
+    >
+      <AppHeader />
+      <Outlet key={pathname} />
+    </div>
+  )
+}
+
+function AppHeader() {
+  const { breadcrumbTeam, pathname } = useRouterState({
+    select: (state) => {
+      const resolvedPathname =
+        state.resolvedLocation?.pathname ?? state.location.pathname
+
+      if (!/^\/teams\/[^/]+\/(issues|projects|views)$/.test(resolvedPathname)) {
+        return { breadcrumbTeam: undefined, pathname: resolvedPathname }
+      }
+
+      return {
+        breadcrumbTeam: getTeamFromRouteMatches(state.matches),
+        pathname: resolvedPathname,
+      }
+    },
+  })
+
+  if (pathname.startsWith("/settings/teams/")) {
+    return null
+  }
+
+  const breadcrumbs = getBreadcrumbItems(pathname)
+
+  function renderBreadcrumbLink(to: string) {
+    return to.startsWith("/teams/") ? (
+      <a href={to} />
+    ) : (
+      <Link to={to as never} />
+    )
+  }
+
+  return (
+    <header className="flex h-12 shrink-0 items-center gap-3 px-4">
+      <Breadcrumb>
+        <BreadcrumbList className="text-sm">
+          {breadcrumbs.map((item, index) => {
+            const isLast = index === breadcrumbs.length - 1
+            const team = index === 0 ? breadcrumbTeam : undefined
+            const label = team ? (
+              <span className="inline-flex items-center gap-1.5">
+                <TeamSidebarIcon icon={team.icon} name={team.name} />
+                <span>{item.label}</span>
+              </span>
+            ) : (
+              item.label
+            )
+
+            return (
+              <Fragment key={`${item.label}-${index}`}>
+                <BreadcrumbItem>
+                  {item.to && !isLast ? (
+                    <BreadcrumbLink render={renderBreadcrumbLink(item.to)}>
+                      {label}
+                    </BreadcrumbLink>
+                  ) : (
+                    <BreadcrumbPage className="text-sm font-medium">
+                      {label}
+                    </BreadcrumbPage>
+                  )}
+                </BreadcrumbItem>
+                {!isLast ? <BreadcrumbSeparator /> : null}
+              </Fragment>
+            )
+          })}
+        </BreadcrumbList>
+      </Breadcrumb>
+    </header>
+  )
+}
+
+function RootDocument({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <HeadContent />
+      </head>
+      <body>
+        <DesktopTitleBar />
+        {children}
+        <HostIntegration />
+        <Toaster />
+        <TanStackDevtools
+          config={{
+            position: "bottom-left",
+          }}
+          plugins={[
+            {
+              name: "Tanstack Router",
+              render: <TanStackRouterDevtoolsPanel />,
+            },
+          ]}
+        />
+        <Scripts />
+      </body>
+    </html>
+  )
+}

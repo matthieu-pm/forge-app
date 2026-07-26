@@ -10,7 +10,9 @@ with deny-all network egress and receives no Forge or database credentials.
 
 Development:
 
-1. Copy `.env.example` to `.env` and provide the local secrets.
-2. Run `npm install`.
-3. Run `npm test`, `npm run typecheck`, and `npm run build`.
-4. Start with `npm run dev`.
+1. Run `bun install` once at the repository root.
+2. Put shared local settings in the root `.env.local`; use this package's
+   optional `.env` only for runtime-specific overrides.
+3. Run `bun run test`, `bun run typecheck`, and `bun run build` from this
+   directory, or use the root Turborepo commands.
+4. Start only EVE with `bun dev:agent` from the repository root.

@@ -18,3 +18,8 @@ __unconfig*
 todos.json
 .claude/worktrees/
 .forge/
+.turbo/
+.vite/
+.workflow-data/
+.workflow-vitest/
+release-candidate/
