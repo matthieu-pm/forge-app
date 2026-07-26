@@ -25,6 +25,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { profileTitleSchema, usernameSchema } from "@/lib/profile-fields"
 import { readLocalProfile, writeLocalProfile } from "@/lib/profile-state"
 import { cn } from "@/lib/utils"
 
@@ -99,6 +100,8 @@ export function ProfileSettings() {
   const sessionState = authClient.useSession()
   const sessionUser = sessionState.data?.user
   const savedNameRef = React.useRef("")
+  const savedTitleRef = React.useRef("")
+  const savedUsernameRef = React.useRef("")
   const [name, setName] = React.useState("")
   const [image, setImage] = React.useState<string | null>(null)
   const [title, setTitle] = React.useState("")
@@ -119,14 +122,20 @@ export function ProfileSettings() {
     setName(nextName)
     setImage(sessionUser.image ?? null)
 
-    const profile = readLocalProfile(sessionUser.id, sessionUser.email)
-    setTitle(profile.title)
-    setUsername(profile.username)
+    const legacyProfile = readLocalProfile(sessionUser.id, sessionUser.email)
+    const nextTitle = sessionUser.title ?? legacyProfile.title
+    const nextUsername = sessionUser.username ?? legacyProfile.username
+    savedTitleRef.current = nextTitle
+    savedUsernameRef.current = nextUsername
+    setTitle(nextTitle)
+    setUsername(nextUsername)
   }, [
     sessionUser?.email,
     sessionUser?.id,
     sessionUser?.image,
     sessionUser?.name,
+    sessionUser?.title,
+    sessionUser?.username,
   ])
 
   function saveLocalProfile(nextProfile: LocalProfile) {
@@ -155,19 +164,53 @@ export function ProfileSettings() {
     setName(nextName)
   }
 
-  function saveTitle() {
-    const nextTitle = title.trim().slice(0, 80)
+  async function saveTitle() {
+    const parsedTitle = profileTitleSchema.safeParse(title)
+    if (!parsedTitle.success) {
+      setTitle(savedTitleRef.current)
+      toast.error(parsedTitle.error.issues[0]?.message ?? "Invalid title.")
+      return
+    }
+
+    const nextTitle = parsedTitle.data
     setTitle(nextTitle)
+    if (nextTitle === savedTitleRef.current) return
+
+    const { error } = await authClient.updateUser({ title: nextTitle })
+    if (error) {
+      setTitle(savedTitleRef.current)
+      toast.error(error.message ?? "Your title could not be updated.")
+      return
+    }
+
+    savedTitleRef.current = nextTitle
     saveLocalProfile({ title: nextTitle, username })
   }
 
-  function saveUsername() {
-    const nextUsername = username
-      .trim()
-      .toLocaleLowerCase()
-      .replace(/\s+/g, "")
-      .slice(0, 32)
+  async function saveUsername() {
+    const parsedUsername = usernameSchema.safeParse(
+      username.trim().toLocaleLowerCase().replace(/\s+/g, "")
+    )
+    if (!parsedUsername.success) {
+      setUsername(savedUsernameRef.current)
+      toast.error(
+        parsedUsername.error.issues[0]?.message ?? "Invalid username."
+      )
+      return
+    }
+
+    const nextUsername = parsedUsername.data
     setUsername(nextUsername)
+    if (nextUsername === savedUsernameRef.current) return
+
+    const { error } = await authClient.updateUser({ username: nextUsername })
+    if (error) {
+      setUsername(savedUsernameRef.current)
+      toast.error(error.message ?? "Your username could not be updated.")
+      return
+    }
+
+    savedUsernameRef.current = nextUsername
     saveLocalProfile({ title, username: nextUsername })
   }
 
@@ -333,7 +376,7 @@ export function ProfileSettings() {
                 <Input
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
-                  onBlur={saveTitle}
+                  onBlur={() => void saveTitle()}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") event.currentTarget.blur()
                   }}
@@ -351,7 +394,7 @@ export function ProfileSettings() {
                 <Input
                   value={username}
                   onChange={(event) => setUsername(event.target.value)}
-                  onBlur={saveUsername}
+                  onBlur={() => void saveUsername()}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") event.currentTarget.blur()
                   }}

@@ -1,16 +1,19 @@
 import { createServerFn } from "@tanstack/react-start"
 
-import { inviteWorkspaceMemberInputSchema } from "@/lib/member-contract"
+import {
+  inviteWorkspaceMemberInputSchema,
+  manageWorkspaceAccessInputSchema,
+} from "@/lib/member-contract"
 
-export const listWorkspaceMembers = createServerFn({ method: "GET" }).handler(
+export const loadWorkspaceAccess = createServerFn({ method: "GET" }).handler(
   async () => {
-    const [{ getRequest }, { listWorkspaceMembersForRequest }] =
+    const [{ getRequest }, { getWorkspaceAccessForRequest }] =
       await Promise.all([
         import("@tanstack/react-start/server"),
         import("@/lib/member-server"),
       ])
 
-    return listWorkspaceMembersForRequest(getRequest())
+    return getWorkspaceAccessForRequest(getRequest())
   }
 )
 
@@ -24,4 +27,16 @@ export const inviteWorkspaceMember = createServerFn({ method: "POST" })
       ])
 
     return inviteWorkspaceMemberForRequest(getRequest(), data)
+  })
+
+export const manageWorkspaceAccess = createServerFn({ method: "POST" })
+  .inputValidator(manageWorkspaceAccessInputSchema)
+  .handler(async ({ data }) => {
+    const [{ getRequest }, { manageWorkspaceAccessForRequest }] =
+      await Promise.all([
+        import("@tanstack/react-start/server"),
+        import("@/lib/member-server"),
+      ])
+
+    return manageWorkspaceAccessForRequest(getRequest(), data)
   })

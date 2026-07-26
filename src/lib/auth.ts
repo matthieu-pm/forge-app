@@ -21,6 +21,7 @@ import {
   FORGE_API_KEY_PREFIX,
   MAX_API_KEY_EXPIRES_IN_DAYS,
 } from "@/application/api-keys/api-key-contract"
+import { profileUserFields } from "@/lib/profile-fields"
 import {
   sendVerificationEmail,
   sendWorkspaceInvitationEmail,
@@ -58,6 +59,15 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
+  user: {
+    additionalFields: profileUserFields,
+    changeEmail: {
+      enabled: true,
+    },
+  },
+  session: {
+    updateAge: 60,
+  },
   emailVerification: {
     expiresIn: 60 * 60,
     sendVerificationEmail: async ({ user, url }) => {
@@ -66,11 +76,6 @@ export const auth = betterAuth({
         name: user.name || "there",
         url,
       })
-    },
-  },
-  user: {
-    changeEmail: {
-      enabled: true,
     },
   },
   plugins: [

@@ -1,18 +1,20 @@
 import "@tanstack/react-start/server-only"
 
-import { and, eq, isNull, max } from "drizzle-orm"
+import { and, desc, eq, isNull, max } from "drizzle-orm"
 
 import type { Actor } from "@/application/actor"
-import type { WorkspaceMemberSummary } from "@/lib/member-contract"
-import { requireTeamRead } from "@/application/authorization"
-import { db, members, sessions, teams, users } from "@/db"
+import type { WorkspaceAccessSummary } from "@/lib/member-contract"
+import { hasWorkspaceRole, requireTeamRead } from "@/application/authorization"
+import { db, invitations, members, sessions, teams, users } from "@/db"
 
-export async function listWorkspaceMembers(
+const ONLINE_WINDOW_MS = 5 * 60 * 1000
+
+export async function getWorkspaceAccess(
   actor: Actor
-): Promise<Array<WorkspaceMemberSummary>> {
+): Promise<WorkspaceAccessSummary> {
   requireTeamRead(actor)
 
-  const [memberRows, workspaceTeams] = await Promise.all([
+  const [memberRows, invitationRows, workspaceTeams] = await Promise.all([
     db
       .select({
         id: members.id,
@@ -20,6 +22,8 @@ export async function listWorkspaceMembers(
         name: users.name,
         email: users.email,
         image: users.image,
+        username: users.username,
+        title: users.title,
         role: members.role,
         joinedAt: members.createdAt,
         lastSeenAt: max(sessions.updatedAt),
@@ -40,9 +44,27 @@ export async function listWorkspaceMembers(
         users.name,
         users.email,
         users.image,
+        users.username,
+        users.title,
         members.role,
         members.createdAt
       ),
+    db
+      .select({
+        id: invitations.id,
+        email: invitations.email,
+        role: invitations.role,
+        createdAt: invitations.createdAt,
+        expiresAt: invitations.expiresAt,
+      })
+      .from(invitations)
+      .where(
+        and(
+          eq(invitations.organizationId, actor.workspaceId),
+          eq(invitations.status, "pending")
+        )
+      )
+      .orderBy(desc(invitations.createdAt)),
     db
       .select({ id: teams.id })
       .from(teams)
@@ -51,11 +73,26 @@ export async function listWorkspaceMembers(
       ),
   ])
 
-  return memberRows.map((member) => ({
-    ...member,
-    joinedAt: member.joinedAt.toISOString(),
-    lastSeenAt: member.lastSeenAt?.toISOString() ?? null,
-    teamCount: workspaceTeams.length,
-    isOnline: member.userId === actor.userId,
-  }))
+  const now = Date.now()
+
+  return {
+    members: memberRows.map((member) => ({
+      ...member,
+      joinedAt: member.joinedAt.toISOString(),
+      lastSeenAt: member.lastSeenAt?.toISOString() ?? null,
+      teamCount: workspaceTeams.length,
+      isOnline:
+        member.lastSeenAt !== null &&
+        now - member.lastSeenAt.getTime() <= ONLINE_WINDOW_MS,
+    })),
+    invitations: invitationRows.map((invitation) => ({
+      ...invitation,
+      role: invitation.role ?? "member",
+      createdAt: invitation.createdAt.toISOString(),
+      expiresAt: invitation.expiresAt.toISOString(),
+      expired: invitation.expiresAt.getTime() <= now,
+    })),
+    currentUserId: actor.userId,
+    canManage: hasWorkspaceRole(actor, ["owner", "admin"]),
+  }
 }
