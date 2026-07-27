@@ -114,18 +114,22 @@ export function AgentChatPanel() {
   }, [events.length, surfaceMode])
 
   React.useEffect(() => {
-    if (narrow || surfaceMode !== "floating") return
+    if (narrow || surfaceMode === "closed") return
 
-    const closeOnOutsidePointer = (event: PointerEvent) => {
+    const handleOutsidePointer = (event: PointerEvent) => {
       if (!(event.target instanceof Node)) return
       if (panelRef.current?.contains(event.target)) return
-      closeSurface()
+      if (surfaceMode === "maximized") {
+        setSurfaceMode("floating")
+      } else {
+        closeSurface()
+      }
     }
 
-    document.addEventListener("pointerdown", closeOnOutsidePointer)
+    document.addEventListener("pointerdown", handleOutsidePointer)
     return () =>
-      document.removeEventListener("pointerdown", closeOnOutsidePointer)
-  }, [closeSurface, narrow, surfaceMode])
+      document.removeEventListener("pointerdown", handleOutsidePointer)
+  }, [closeSurface, narrow, setSurfaceMode, surfaceMode])
 
   React.useEffect(() => {
     if (surfaceMode !== "maximized") return

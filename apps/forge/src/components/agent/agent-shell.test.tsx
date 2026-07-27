@@ -256,6 +256,15 @@ function FloatingChatButton() {
   )
 }
 
+function MaximizedChatButton() {
+  const { newChat } = useAgent()
+  return (
+    <Button type="button" onClick={() => newChat("maximized")}>
+      Open maximized chat
+    </Button>
+  )
+}
+
 function RecoveryStatus() {
   const { eventsByThread, runningThreadIds } = useAgent()
   return (
@@ -458,6 +467,36 @@ describe("AgentShell", () => {
         screen.queryByRole("dialog", { name: "New Forge chat" })
       ).toBeNull()
     )
+  })
+
+  test("minimizes a maximized chat when the user clicks outside it", async () => {
+    const client = new FakeAgentClient()
+
+    render(
+      <AgentProvider client={client}>
+        <MaximizedChatButton />
+        <AgentShell />
+      </AgentProvider>
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Open maximized chat" }))
+    const dialog = await screen.findByRole("dialog", {
+      name: "New Forge chat",
+    })
+    expect(dialog.getAttribute("aria-modal")).toBe("true")
+
+    fireEvent.pointerDown(dialog)
+    expect(
+      screen.getByRole("button", { name: "Return to floating chat" })
+    ).toBeTruthy()
+
+    fireEvent.pointerDown(document.body)
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Maximize chat" })).toBeTruthy()
+    )
+    expect(
+      screen.getByRole("dialog", { name: "New Forge chat" })
+    ).toBeTruthy()
   })
 
   test("disables Auto dispatch until an OpenAI source is available", async () => {
