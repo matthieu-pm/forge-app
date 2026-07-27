@@ -136,9 +136,22 @@ export const teamSummarySchema = z
 
 export type TeamSummary = z.infer<typeof teamSummarySchema>
 
+export const teamDirectoryMemberSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    username: z.string(),
+    image: z.string().nullable(),
+  })
+  .strict()
+
+export type TeamDirectoryMember = z.infer<typeof teamDirectoryMemberSchema>
+
 export const teamDirectoryEntrySchema = teamSummarySchema.extend({
   lifecycle: teamLifecycleSchema,
+  isMember: z.boolean(),
   memberCount: z.number().int().nonnegative(),
+  memberPreviews: z.array(teamDirectoryMemberSchema).max(5),
   issueCount: z.number().int().nonnegative().nullable(),
   recoverableUntil: z.iso.datetime().nullable(),
   capabilities: z

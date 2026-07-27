@@ -122,6 +122,7 @@ function AgentContentPane({ pathname }: { pathname: string }) {
     <SidebarInset
       className={cn(
         "origin-center transition-transform duration-150 ease-out",
+        pathname === "/workspace/teams" && "overflow-hidden",
         obscured && "scale-x-[0.98] scale-y-[0.99]"
       )}
     >
@@ -166,7 +167,10 @@ function AppHeader() {
     },
   })
 
-  if (pathname.startsWith("/settings/teams/")) {
+  if (
+    pathname.startsWith("/settings/teams/") ||
+    pathname === "/workspace/teams"
+  ) {
     return null
   }
 

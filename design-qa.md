@@ -1,3 +1,133 @@
+# Workspace teams design QA
+
+## Latest member-avatar iteration
+
+- Source visual truth:
+  - `/var/folders/j2/gzj18t_x2251dx_cnqdcscm80000gn/T/codex-clipboard-bad983c1-d515-45e0-9709-23f6e231bcfe.png`
+  - `/var/folders/j2/gzj18t_x2251dx_cnqdcscm80000gn/T/codex-clipboard-7d2c5aa9-43d5-41b8-a796-a85ad368813e.png`
+  - `/var/folders/j2/gzj18t_x2251dx_cnqdcscm80000gn/T/codex-clipboard-4530a8f5-2bb8-48d6-a335-9e0b80254ff5.png`
+  - `/var/folders/j2/gzj18t_x2251dx_cnqdcscm80000gn/T/codex-clipboard-c6c4cbf8-bf05-4be3-88a2-8cd1401a02df.png`
+- Rendered implementation: unavailable; the in-app browser redirected the local workspace route to the sign-in screen.
+- Viewport: in-app browser desktop viewport.
+- Source pixels: 216 × 108, 1536 × 840, and 1067 × 242.
+- Implementation pixels, CSS size, and density normalization: unavailable because the authenticated component could not be rendered.
+- State: intended dark workspace team table, one-member and stacked-member states, plus avatar tooltip.
+- Browser interaction attempted: opened `http://127.0.0.1:3000/workspace/teams`; authentication redirected to the sign-in screen before the team table rendered.
+- Console errors checked: not applicable because the target route did not render.
+
+### Latest findings
+
+- [P2] Visual comparison is blocked by authentication.
+  - Location: local in-app browser preview.
+  - Evidence: the source avatar references opened successfully, but the implementation route rendered the sign-in screen.
+  - Impact: avatar size, overlap, tooltip placement, and row alignment cannot be compared against the references in a browser-rendered state.
+  - Fix: sign in to the local Forge preview in the in-app browser, recapture the team table and tooltip state, then complete the focused comparison.
+
+### Latest implementation checklist
+
+- [x] Return up to five real member previews per team.
+- [x] Render one 24 px avatar per preview with an overflow count.
+- [x] Link the stack to `/settings/teams/:teamSlug/members`.
+- [x] Show `Full name (username)` through the design-system tooltip.
+- [x] Cover the five-avatar cap, overflow, destination, and tooltip interaction with focused tests.
+- [ ] Capture the authenticated table and tooltip states.
+- [ ] Complete the browser-rendered focused comparison.
+
+### Latest comparison history
+
+1. Source inspection: the supplied references establish 24 px circular avatars, compact overlap, a `+N` overflow item, and a dark identity tooltip.
+2. Implementation: replaced numeric metadata with a linked avatar stack and added real server-backed member previews.
+3. Verification attempt: local route redirected to sign-in, so no implementation screenshot or valid side-by-side comparison could be produced.
+4. Alignment refinement: the latest crop establishes shared left edges beneath Membership, Members, and Active projects. Preserved the matching 112 px, 128 px, and 128 px column tracks and added equal-height flex alignment wrappers across every row cell.
+
+final result: blocked
+
+---
+
+## Comparison target
+
+- Source visual truth: `/Users/matthieu/Projects/forge-app/forge-app/docs/audits/workspace-teams-linear-reference.png`
+- Rendered implementation: `/Users/matthieu/Projects/forge-app/forge-app/docs/audits/workspace-teams-implementation.png`
+- Open-menu evidence: `/Users/matthieu/Projects/forge-app/forge-app/docs/audits/workspace-teams-menu.png`
+- Side-by-side comparison: `/Users/matthieu/Projects/forge-app/forge-app/docs/audits/workspace-teams-comparison.png`
+- State: dark desktop workspace, two joined teams, compact rows; both closed and open team-menu states checked.
+- Source pixels: 1224 × 768.
+- Implementation pixels: 1224 × 768.
+- CSS viewport: 1224 × 768.
+- Density normalization: equal pixel dimensions and matching viewport; no resampling was needed before the side-by-side comparison.
+
+## Interaction verification
+
+- Opened the team filter and selected `Joined teams`.
+- Opened display options and verified name/member ordering plus compact/comfortable density choices.
+- Opened a team action menu and verified Favorite, settings, Copy URL, archive, subscription, Slack notifications, and leave actions.
+- Verified create-team and team-project destinations expose stable links.
+- Checked the final browser console after a fresh render and interaction pass; no warnings or errors remained.
+
+## Required fidelity surfaces
+
+- Fonts and typography: passed. Forge retains its existing Geist typography with clear 12 px table labels, medium team names, muted identifiers, and restrained hierarchy.
+- Spacing and layout rhythm: passed. The 48 px page header, count/action row, full-width table, 32 px header, and 40 px compact team rows maintain a clear desktop rhythm.
+- Colors and visual tokens: passed. Background, row hover, divider, badge, muted foreground, focus, and menu colors use Forge's dark-theme tokens and stay visually aligned with the reference.
+- Image quality and asset fidelity: passed. The source contains no bespoke raster imagery. Team marks use persisted team icons and all interface symbols use the project's Hugeicons library.
+- Copy and content: passed. Name, Membership, Members, and Active projects appear in the same order; team names, identifiers, Joined badges, and contextual menu copy match the reference structure.
+- Responsiveness and accessibility: passed. Lower-priority columns collapse progressively, every icon-only control has an accessible name, table semantics are preserved, menus are keyboard-backed Base UI primitives, and focus styles remain visible.
+
+## Full-view comparison evidence
+
+The equal-size side-by-side capture shows the same narrow left navigation relationship, compact title row, two-team count, top-right filter/display controls, edge-to-edge four-column table, dense team rows, and large negative-space composition. Forge intentionally retains its own sidebar content rather than copying Linear's product shell wholesale.
+
+## Focused region comparison evidence
+
+The team table and open row-menu states were inspected at full 1224 × 768 resolution. Column alignment, row height, identifiers, Joined badges, member/project metadata, hover action placement, menu width, separators, and destructive leave treatment are all legible at 1:1 scale, so a separate enlarged crop was not needed.
+
+## Findings
+
+- No actionable P0, P1, or P2 differences remain.
+- [P3] Forge keeps a slightly roomier row-action menu than Linear. This is intentional alignment with the existing Forge component system.
+
+## Comparison history
+
+1. Initial visual pass: P2 compact-row density mismatch.
+   - Evidence: the first implementation rendered 40 px compact rows while the 1224 × 768 Linear source uses approximately 32 px rows.
+   - Fix: reduced compact rows to 32 px, kept 44 px as the explicit comfortable option, and tightened the filter/display buttons to 24 px.
+   - Post-fix evidence: `workspace-teams-comparison.png` shows matching two-row density and table height.
+2. Interaction pass: P2 link-button semantics warning.
+   - Evidence: the browser console reported that create-team links rendered through the Button primitive still declared native-button behavior.
+   - Fix: marked both link-backed create-team buttons with `nativeButton={false}`.
+   - Post-fix evidence: a fresh final browser tab rendered the closed and open-menu states with an empty warning/error console.
+3. User refinement: remove the card-like table treatment.
+   - Evidence: the table still had an outer border, rounded corners, and horizontal page gutters.
+   - Fix: removed the outer border and radius, stretched the populated table to the full content-pane width, and retained gutters only for the count and controls.
+4. User refinement: strengthen and align table labels.
+   - Evidence: 11 px column labels felt too small, and the Name column started 4 px left of the team counter.
+   - Fix: increased visible column labels to 12 px and aligned the Name header and team rows to the counter's 16 px left gutter.
+5. User refinement: increase row height and soften hover.
+   - Evidence: the 32 px team rows felt too compressed and the rectangular hover treatment was too rigid.
+   - Fix: increased compact rows to 40 px and comfortable rows to 48 px, then applied the hover surface to individual cells with rounded outer corners.
+6. User refinement: inset the row surface without shifting content.
+   - Evidence: the rounded hover surface still reached the table edges.
+   - Fix: added 4 px transparent outer gutters to the first and last cells and reduced their corresponding inner padding by 4 px, preserving the existing content alignment.
+
+## Implementation checklist
+
+- [x] Compact workspace team directory
+- [x] Real membership and member-count data
+- [x] Joined-team filtering and team ordering
+- [x] Compact and comfortable row densities
+- [x] Team-level settings and contextual actions
+- [x] Responsive column collapse
+- [x] Empty and permission-aware states
+- [x] Browser interaction and console verification
+
+## Follow-up polish
+
+- None required for this pass.
+
+final result: passed
+
+---
+
 # Agent history design QA
 
 ## Comparison target

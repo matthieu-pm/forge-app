@@ -234,7 +234,11 @@ export async function getTeamDirectory(
         : and(isNotNull(teams.deletedAt), gt(teams.deletedAt, recoveryCutoff))
     ),
     orderBy: [asc(teams.name), asc(teams.id)],
-    with: { members: true },
+    with: {
+      members: {
+        with: { user: true },
+      },
+    },
   })
   const canManage = canManageTeams(actor)
   const canCreateTeam =
@@ -264,7 +268,26 @@ export async function getTeamDirectory(
       return {
         ...toTeamSummary(team),
         lifecycle,
+        isMember: Boolean(currentMembership),
         memberCount: team.members.length,
+        memberPreviews: [...team.members]
+          .sort(
+            (left, right) =>
+              left.createdAt.getTime() - right.createdAt.getTime()
+          )
+          .slice(0, 5)
+          .map((member) => ({
+            id: member.user.id,
+            name: member.user.name,
+            username:
+              member.user.username ??
+              member.user.email
+                .split("@", 1)[0]
+                .toLocaleLowerCase()
+                .replace(/[^a-z0-9_-]/g, "")
+                .slice(0, 32),
+            image: member.user.image,
+          })),
         issueCount: null,
         recoverableUntil: recoverableUntil?.toISOString() ?? null,
         capabilities: {

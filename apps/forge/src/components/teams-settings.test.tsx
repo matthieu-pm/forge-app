@@ -57,7 +57,22 @@ function team(
     detailedHistoryEnabled: false,
     createdAt,
     lifecycle: "active",
+    isMember: true,
     memberCount: 2,
+    memberPreviews: [
+      {
+        id: "user-1",
+        name: "Ada Lovelace",
+        username: "ada",
+        image: null,
+      },
+      {
+        id: "user-2",
+        name: "Grace Hopper",
+        username: "grace",
+        image: null,
+      },
+    ],
     issueCount: null,
     recoverableUntil: null,
     capabilities: {

@@ -252,6 +252,13 @@ describe("Teams application module", () => {
             userId: "user-1",
             role: "lead",
             createdAt: new Date(),
+            user: {
+              id: "user-1",
+              name: "Ada Lovelace",
+              email: "ada@example.com",
+              image: "https://example.com/ada.png",
+              username: "ada",
+            },
           },
         ],
       },
@@ -262,7 +269,16 @@ describe("Teams application module", () => {
       items: [
         {
           visibility: "private",
+          isMember: true,
           memberCount: 1,
+          memberPreviews: [
+            {
+              id: "user-1",
+              name: "Ada Lovelace",
+              username: "ada",
+              image: "https://example.com/ada.png",
+            },
+          ],
           issueCount: null,
           lifecycle: "active",
           capabilities: {
