@@ -144,16 +144,16 @@ export async function promoteDesktopRelease(version: string) {
   const release = await requireCompleteRelease(version)
   const now = new Date()
 
-  await db.batch([
-    db
+  await db.transaction(async (transaction) => {
+    await transaction
       .update(desktopReleases)
       .set({ state: "superseded" })
-      .where(eq(desktopReleases.state, "promoted")),
-    db
+      .where(eq(desktopReleases.state, "promoted"))
+    await transaction
       .update(desktopReleases)
       .set({ state: "promoted", promotedAt: now })
-      .where(eq(desktopReleases.id, release.id)),
-  ])
+      .where(eq(desktopReleases.id, release.id))
+  })
 
   return {
     id: release.id,

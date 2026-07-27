@@ -50,6 +50,7 @@ export const routePathSchema = z
   .refine(isRoutePath, "Expected a canonical Forge route")
 
 export const unreadCountSchema = z.number().int().min(0).max(9999)
+export const clipboardTextSchema = z.string().max(1_000_000)
 
 export const themeSourceSchema = z.enum(["system", "light", "dark"])
 export const localRuntimeIdSchema = z.enum(["codex"])
@@ -159,6 +160,7 @@ export const completeAuthSchema = z
 
 export const desktopChannels = {
   getRuntime: "forge:host:get-runtime",
+  copyText: "forge:host:copy-text",
   openExternal: "forge:host:open-external",
   setUnreadCount: "forge:host:set-unread-count",
   setThemeSource: "forge:host:set-theme-source",

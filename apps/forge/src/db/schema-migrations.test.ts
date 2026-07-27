@@ -21,6 +21,10 @@ import {
   teamMembers,
   teams,
   threadModelPreferences,
+  workspaceApprovedDomains,
+  workspaceEntitlements,
+  workspaceSecurityAuditEvents,
+  workspaceSecuritySettings,
 } from "./schema"
 
 type MigrationJournal = {
@@ -69,6 +73,10 @@ describe("database migrations", () => {
       ["agent_artifacts", agentArtifacts],
       ["model_catalog_entries", modelCatalogEntries],
       ["thread_model_preferences", threadModelPreferences],
+      ["workspace_approved_domains", workspaceApprovedDomains],
+      ["workspace_entitlements", workspaceEntitlements],
+      ["workspace_security_audit_events", workspaceSecurityAuditEvents],
+      ["workspace_security_settings", workspaceSecuritySettings],
     ] as const) {
       const migratedColumns = Object.keys(
         snapshot.tables[`public.${tableName}`].columns

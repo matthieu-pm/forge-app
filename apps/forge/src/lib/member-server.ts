@@ -18,6 +18,7 @@ import {
   startInvitationWorkflow,
 } from "@/application/workflows/invitation-workflow-start.server"
 import { hasWorkspaceRole } from "@/application/authorization"
+import { assertWorkspaceActionAllowed } from "@/application/workspace-security/workspace-security.server"
 
 export async function getWorkspaceAccessForRequest(
   request: Request
@@ -32,6 +33,7 @@ export async function inviteWorkspaceMemberForRequest(
   const actor = await requireSessionActor(request)
 
   try {
+    await assertWorkspaceActionAllowed(actor, "members.invite")
     const invitation = await auth.api.createInvitation({
       headers: request.headers,
       body: {

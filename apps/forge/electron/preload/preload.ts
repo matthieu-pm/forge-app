@@ -13,6 +13,8 @@ import type {
 setupRenderer()
 
 const bridge: ForgeDesktopBridge = {
+  copyText: (value: string) =>
+    ipcRenderer.invoke(desktopChannels.copyText, value),
   getRuntime: () =>
     ipcRenderer.invoke(desktopChannels.getRuntime) as Promise<HostRuntime>,
   openExternal: (url: string) =>

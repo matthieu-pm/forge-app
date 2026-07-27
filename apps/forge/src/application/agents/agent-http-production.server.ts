@@ -19,6 +19,7 @@ import {
 } from "@/application/agents/model-router"
 import { resolveAgentControlPolicy } from "@/application/agents/agent-control-policy"
 import { getAgentDiagnostics } from "@/application/agents/agent-diagnostics.server"
+import { assertWorkspaceActionAllowed } from "@/application/workspace-security/workspace-security.server"
 import { DrizzleAgentEventStore } from "@/adapters/agents/drizzle-event-store.server"
 import { DrizzleAgentStore } from "@/adapters/agents/drizzle-agent-store.server"
 import { EveAgentRuntime } from "@/adapters/agents/eve-runtime.server"
@@ -102,6 +103,7 @@ const coordinator = new AgentCoordinator({
   preferences: new DrizzleThreadModelPreferenceStore(),
   controlPolicy: agentControls,
   attachments: forgeAttachmentService,
+  authorizeRun: (actor) => assertWorkspaceActionAllowed(actor, "agents.invoke"),
 })
 
 const handler = createAgentHttpHandler({

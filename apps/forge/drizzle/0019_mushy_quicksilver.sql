@@ -1,0 +1,3 @@
+DROP INDEX "workspace_approved_domains_domain_unique";--> statement-breakpoint
+CREATE UNIQUE INDEX "workspace_approved_domains_domain_unique" ON "workspace_approved_domains" USING btree ("domain") WHERE "workspace_approved_domains"."verified_at" is not null;--> statement-breakpoint
+ALTER TABLE "workspace_approved_domains" ADD CONSTRAINT "workspace_approved_domains_workspace_domain_unique" UNIQUE("workspace_id","domain");

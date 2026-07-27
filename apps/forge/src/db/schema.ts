@@ -16,6 +16,210 @@ import {
 
 import { apiKeys, organizations, users } from "./auth-schema"
 
+export const workspaceSecuritySettings = pgTable(
+  "workspace_security_settings",
+  {
+    workspaceId: text("workspace_id")
+      .primaryKey()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    version: integer("version").default(1).notNull(),
+    inviteLinksEnabled: boolean("invite_links_enabled").default(true).notNull(),
+    inviteLinkVersion: integer("invite_link_version").default(1).notNull(),
+    googleAuthenticationEnabled: boolean("google_authentication_enabled")
+      .default(true)
+      .notNull(),
+    emailPasskeyAuthenticationEnabled: boolean(
+      "email_passkey_authentication_enabled"
+    )
+      .default(true)
+      .notNull(),
+    invitationPolicy: text("invitation_policy")
+      .default("all-members")
+      .notNull(),
+    teamCreationPolicy: text("team_creation_policy")
+      .default("admins")
+      .notNull(),
+    workspaceLabelsPolicy: text("workspace_labels_policy")
+      .default("admins")
+      .notNull(),
+    workspaceTemplatesPolicy: text("workspace_templates_policy")
+      .default("admins")
+      .notNull(),
+    loopsPolicy: text("loops_policy").default("admins").notNull(),
+    apiKeyCreationPolicy: text("api_key_creation_policy")
+      .default("all-members")
+      .notNull(),
+    agentGuidancePolicy: text("agent_guidance_policy")
+      .default("admins")
+      .notNull(),
+    restrictFileUploads: boolean("restrict_file_uploads")
+      .default(false)
+      .notNull(),
+    allowedUploadTypes: jsonb("allowed_upload_types")
+      .$type<Array<string>>()
+      .default([])
+      .notNull(),
+    reviewThirdPartyApplications: boolean("review_third_party_applications")
+      .default(false)
+      .notNull(),
+    reduceSupportPii: boolean("reduce_support_pii").default(false).notNull(),
+    blockGuestAgentAccess: boolean("block_guest_agent_access")
+      .default(false)
+      .notNull(),
+    shareAiUsageData: boolean("share_ai_usage_data").default(false).notNull(),
+    agentWebSearchEnabled: boolean("agent_web_search_enabled")
+      .default(false)
+      .notNull(),
+    externalLoopSourcesEnabled: boolean("external_loop_sources_enabled")
+      .default(false)
+      .notNull(),
+    mcpServersEnabled: boolean("mcp_servers_enabled").default(false).notNull(),
+    hipaaEnabled: boolean("hipaa_enabled").default(false).notNull(),
+    updatedByUserId: text("updated_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    versionCheck: check(
+      "workspace_security_settings_version_check",
+      sql`${table.version} > 0 and ${table.inviteLinkVersion} > 0`
+    ),
+    invitationPolicyCheck: check(
+      "workspace_security_settings_invitation_policy_check",
+      sql`${table.invitationPolicy} in ('all-members', 'admins')`
+    ),
+    teamCreationPolicyCheck: check(
+      "workspace_security_settings_team_creation_policy_check",
+      sql`${table.teamCreationPolicy} in ('all-members', 'admins')`
+    ),
+    labelsPolicyCheck: check(
+      "workspace_security_settings_labels_policy_check",
+      sql`${table.workspaceLabelsPolicy} in ('all-members', 'admins')`
+    ),
+    templatesPolicyCheck: check(
+      "workspace_security_settings_templates_policy_check",
+      sql`${table.workspaceTemplatesPolicy} in ('all-members', 'admins')`
+    ),
+    loopsPolicyCheck: check(
+      "workspace_security_settings_loops_policy_check",
+      sql`${table.loopsPolicy} in ('all-members', 'admins')`
+    ),
+    apiKeyPolicyCheck: check(
+      "workspace_security_settings_api_key_policy_check",
+      sql`${table.apiKeyCreationPolicy} in ('all-members', 'admins')`
+    ),
+    agentGuidancePolicyCheck: check(
+      "workspace_security_settings_agent_guidance_policy_check",
+      sql`${table.agentGuidancePolicy} in ('all-members', 'admins')`
+    ),
+  })
+)
+
+export const workspaceApprovedDomains = pgTable(
+  "workspace_approved_domains",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    domain: text("domain").notNull(),
+    source: text("source").default("manual").notNull(),
+    verifiedAt: timestamp("verified_at", { withTimezone: true }),
+    verificationCode: text("verification_code"),
+    verificationExpiresAt: timestamp("verification_expires_at", {
+      withTimezone: true,
+    }),
+    addedByUserId: text("added_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    workspaceIndex: index("workspace_approved_domains_workspace_idx").on(
+      table.workspaceId
+    ),
+    workspaceDomainUnique: unique(
+      "workspace_approved_domains_workspace_domain_unique"
+    ).on(table.workspaceId, table.domain),
+    domainUnique: uniqueIndex("workspace_approved_domains_domain_unique")
+      .on(table.domain)
+      .where(sql`${table.verifiedAt} is not null`),
+    sourceCheck: check(
+      "workspace_approved_domains_source_check",
+      sql`${table.source} in ('manual', 'sso')`
+    ),
+  })
+)
+
+export const workspaceEntitlements = pgTable(
+  "workspace_entitlements",
+  {
+    workspaceId: text("workspace_id")
+      .primaryKey()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    plan: text("plan").default("free").notNull(),
+    status: text("status").default("active").notNull(),
+    featureOverrides: jsonb("feature_overrides")
+      .$type<Record<string, boolean>>()
+      .default({})
+      .notNull(),
+    source: text("source").default("internal").notNull(),
+    sourceReference: text("source_reference"),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    planCheck: check(
+      "workspace_entitlements_plan_check",
+      sql`${table.plan} in ('free', 'basic', 'business', 'enterprise')`
+    ),
+    statusCheck: check(
+      "workspace_entitlements_status_check",
+      sql`${table.status} in ('active', 'trialing', 'past_due', 'canceled')`
+    ),
+  })
+)
+
+export const workspaceSecurityAuditEvents = pgTable(
+  "workspace_security_audit_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    actorUserId: text("actor_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    action: text("action").notNull(),
+    target: text("target"),
+    outcome: text("outcome").notNull(),
+    before: jsonb("before").$type<Record<string, unknown> | null>(),
+    after: jsonb("after").$type<Record<string, unknown> | null>(),
+    requestId: text("request_id"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    workspaceCreatedIndex: index(
+      "workspace_security_audit_events_workspace_created_idx"
+    ).on(table.workspaceId, table.createdAt),
+    outcomeCheck: check(
+      "workspace_security_audit_events_outcome_check",
+      sql`${table.outcome} in ('succeeded', 'rejected')`
+    ),
+  })
+)
+
 export const teams = pgTable(
   "teams",
   {

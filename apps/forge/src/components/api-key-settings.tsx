@@ -37,8 +37,10 @@ import { Spinner } from "@/components/ui/spinner"
 import {
   createWorkspaceApiKey,
   listWorkspaceApiKeys,
+  loadWorkspaceApiKeyPolicy,
   revokeWorkspaceApiKey,
 } from "@/lib/api-key-state"
+import { mutateWorkspaceSecurity } from "@/lib/security-state"
 
 const availableScopes: ReadonlyArray<{
   scope: ApiScope
@@ -136,9 +138,11 @@ function EmptyResourceCard({
 }
 
 function ApiKeyPolicySelect({
+  disabled = false,
   onValueChange,
   value,
 }: {
+  disabled?: boolean
   onValueChange: (value: ApiKeyPolicy) => void
   value: ApiKeyPolicy
 }) {
@@ -152,6 +156,7 @@ function ApiKeyPolicySelect({
         variant="secondary"
         size="sm"
         aria-label="API key creation"
+        disabled={disabled}
         render={<DropdownMenuTrigger />}
         className="group rounded-lg font-normal"
       >
@@ -190,10 +195,21 @@ export function ApiKeySettings() {
   const [createDialogOpen, setCreateDialogOpen] = React.useState(false)
   const [apiKeyPolicy, setApiKeyPolicy] =
     React.useState<ApiKeyPolicy>("all-members")
+  const [policyVersion, setPolicyVersion] = React.useState(1)
+  const [canCreateKey, setCanCreateKey] = React.useState(false)
+  const [canManagePolicy, setCanManagePolicy] = React.useState(false)
 
   const loadKeys = React.useCallback(async () => {
     try {
-      setKeys(await listWorkspaceApiKeys())
+      const [nextKeys, policy] = await Promise.all([
+        listWorkspaceApiKeys(),
+        loadWorkspaceApiKeyPolicy(),
+      ])
+      setKeys(nextKeys)
+      setApiKeyPolicy(policy.policy)
+      setPolicyVersion(policy.version)
+      setCanCreateKey(policy.canCreate)
+      setCanManagePolicy(policy.canManage)
     } catch {
       toast.error("API keys could not be loaded.")
     } finally {
@@ -224,7 +240,8 @@ export function ApiKeySettings() {
 
   async function createKey(event: React.FormEvent) {
     event.preventDefault()
-    if (!name.trim() || scopes.length === 0 || submitting) return
+    if (!canCreateKey || !name.trim() || scopes.length === 0 || submitting)
+      return
 
     setSubmitting(true)
     try {
@@ -265,6 +282,33 @@ export function ApiKeySettings() {
     if (!newSecret) return
     await navigator.clipboard.writeText(newSecret)
     toast.success("API key copied.")
+  }
+
+  async function changeApiKeyPolicy(value: ApiKeyPolicy) {
+    if (!canManagePolicy) return
+    try {
+      const result = await mutateWorkspaceSecurity({
+        data: {
+          type: "set-policy",
+          key: "apiKeyCreationPolicy",
+          value,
+          expectedVersion: policyVersion,
+        },
+      })
+      if (!result.ok) {
+        toast.error(result.message)
+        return
+      }
+      setApiKeyPolicy(result.snapshot.settings.apiKeyCreationPolicy)
+      setPolicyVersion(result.snapshot.version)
+      setCanCreateKey(
+        result.snapshot.settings.apiKeyCreationPolicy === "all-members" ||
+          result.snapshot.canManage
+      )
+      toast.success("API key creation policy updated.")
+    } catch {
+      toast.error("The API key creation policy could not be updated.")
+    }
   }
 
   return (
@@ -335,8 +379,9 @@ export function ApiKeySettings() {
                     </p>
                   </div>
                   <ApiKeyPolicySelect
+                    disabled={!canManagePolicy}
                     value={apiKeyPolicy}
-                    onValueChange={setApiKeyPolicy}
+                    onValueChange={(value) => void changeApiKeyPolicy(value)}
                   />
                 </div>
               </div>
@@ -357,6 +402,7 @@ export function ApiKeySettings() {
                       variant="ghost"
                       size="sm"
                       className="shrink-0 self-end rounded-lg font-normal sm:self-auto"
+                      disabled={!canCreateKey}
                       onClick={() => setDialogState(true)}
                     >
                       <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
@@ -375,6 +421,7 @@ export function ApiKeySettings() {
                         variant="ghost"
                         size="sm"
                         className="rounded-lg font-normal"
+                        disabled={!canCreateKey}
                         onClick={() => setDialogState(true)}
                       >
                         <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
@@ -516,7 +563,12 @@ export function ApiKeySettings() {
               <DialogFooter showCloseButton>
                 <Button
                   type="submit"
-                  disabled={!name.trim() || scopes.length === 0 || submitting}
+                  disabled={
+                    !canCreateKey ||
+                    !name.trim() ||
+                    scopes.length === 0 ||
+                    submitting
+                  }
                 >
                   {submitting ? (
                     <Spinner data-icon="inline-start" />

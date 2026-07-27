@@ -21,6 +21,7 @@ import {
   requireTeamRead,
 } from "@/application/authorization"
 import { slugifyTeamName } from "@/application/teams/team-schemas"
+import { canWorkspaceAction } from "@/application/workspace-security/workspace-security.server"
 import { db, teamMembers, teams } from "@/db"
 
 export type TeamSelector = { id: string } | { slug: string }
@@ -132,7 +133,10 @@ export async function createTeam(
   actor: Actor,
   input: CreateTeamInput
 ): Promise<CreateTeamResult> {
-  if (!canManageTeams(actor)) {
+  if (
+    !hasScope(actor, "teams:write") ||
+    !(await canWorkspaceAction(actor, "teams.create"))
+  ) {
     return {
       ok: false,
       code: "FORBIDDEN",
@@ -233,6 +237,9 @@ export async function getTeamDirectory(
     with: { members: true },
   })
   const canManage = canManageTeams(actor)
+  const canCreateTeam =
+    hasScope(actor, "teams:write") &&
+    (await canWorkspaceAction(actor, "teams.create"))
   const visibleTeams = workspaceTeams.filter(
     (team) =>
       team.visibility === "workspace" ||
@@ -241,7 +248,7 @@ export async function getTeamDirectory(
   )
 
   return {
-    canCreateTeam: canManage,
+    canCreateTeam,
     items: visibleTeams.map((team) => {
       const currentMembership = team.members.find(
         (member) => member.userId === actor.userId

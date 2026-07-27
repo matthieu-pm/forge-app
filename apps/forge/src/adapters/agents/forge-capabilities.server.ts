@@ -34,6 +34,7 @@ import { DrizzleAgentArtifactStore } from "@/adapters/agents/drizzle-artifact-st
 import { LocalArtifactBlobStore } from "@/adapters/agents/local-artifact-blob-store.server"
 import { resolveAgentControlPolicy } from "@/application/agents/agent-control-policy"
 import { AgentAttachmentService } from "@/application/agents/attachment-service.server"
+import { assertWorkspaceUploadAllowed } from "@/application/workspace-security/workspace-security.server"
 import { DrizzleAgentAttachmentStore } from "@/adapters/agents/drizzle-attachment-store.server"
 
 const listTeamsInputSchema = z
@@ -189,6 +190,7 @@ export const forgeArtifactService = new AgentArtifactService({
 export const forgeAttachmentService = new AgentAttachmentService({
   metadata: new DrizzleAgentAttachmentStore(),
   blobs: artifactBlobs,
+  authorizeUpload: assertWorkspaceUploadAllowed,
 })
 const createArtifactCapability = defineCapability({
   descriptor: {
@@ -222,14 +224,7 @@ const createArtifactCapability = defineCapability({
         sizeBytes: { type: "integer", minimum: 0 },
         checksum: { type: "string" },
       },
-      required: [
-        "id",
-        "runId",
-        "name",
-        "contentType",
-        "sizeBytes",
-        "checksum",
-      ],
+      required: ["id", "runId", "name", "contentType", "sizeBytes", "checksum"],
     },
     maxResultBytes: 32 * 1024,
   },

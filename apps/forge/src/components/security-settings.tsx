@@ -14,6 +14,12 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { Link } from "@tanstack/react-router"
 import { toast } from "sonner"
 
+import type {
+  SecurityBooleanSetting,
+  SecurityPolicySetting,
+  WorkspaceSecurityCommand,
+  WorkspaceSecuritySnapshot,
+} from "@/application/workspace-security/security-contract"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -33,10 +39,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import { Spinner } from "@/components/ui/spinner"
 import { Switch } from "@/components/ui/switch"
+import {
+  loadWorkspaceSecurity,
+  mutateWorkspaceSecurity,
+} from "@/lib/security-state"
+import { copyTextToClipboard } from "@/lib/copy-to-clipboard"
 import { cn } from "@/lib/utils"
-
-const SECURITY_STORAGE_KEY = "forge:workspace-security"
 
 type SecurityPreferences = {
   allowExternalLoopSources: boolean
@@ -50,66 +60,31 @@ type SecurityPreferences = {
   modifyAgentGuidance: "all-members" | "admins"
 }
 
-type StoredSecuritySettings = {
-  domains: Array<string>
-  inviteToken: string
-  preferences: SecurityPreferences
-}
+const BOOLEAN_SETTING_BY_PREFERENCE = {
+  allowExternalLoopSources: "externalLoopSourcesEnabled",
+  allowMcpServers: "mcpServersEnabled",
+  emailPasskeyAuthentication: "emailPasskeyAuthenticationEnabled",
+  googleAuthentication: "googleAuthenticationEnabled",
+  improveAiFeatures: "shareAiUsageData",
+  inviteLinks: "inviteLinksEnabled",
+  agentWebSearch: "agentWebSearchEnabled",
+} as const satisfies Partial<
+  Record<keyof SecurityPreferences, SecurityBooleanSetting>
+>
 
-const defaultPreferences: SecurityPreferences = {
-  allowExternalLoopSources: false,
-  allowMcpServers: false,
-  emailPasskeyAuthentication: true,
-  googleAuthentication: true,
-  improveAiFeatures: false,
-  inviteLinks: true,
-  agentWebSearch: false,
-  apiKeyCreation: "all-members",
-  modifyAgentGuidance: "admins",
-}
+const POLICY_SETTING_BY_PREFERENCE = {
+  apiKeyCreation: "apiKeyCreationPolicy",
+  modifyAgentGuidance: "agentGuidancePolicy",
+} as const satisfies Partial<
+  Record<keyof SecurityPreferences, SecurityPolicySetting>
+>
 
-const defaultSettings: StoredSecuritySettings = {
-  domains: ["humancrm.fr"],
-  inviteToken: "7b93a9a6ac736287d9cdb3d774206a81",
-  preferences: defaultPreferences,
-}
-
-function createInviteToken() {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID().replaceAll("-", "")
-  }
-
-  return `${Date.now().toString(16)}${Math.random().toString(16).slice(2)}`.slice(
-    0,
-    32
-  )
-}
-
-function loadSecuritySettings(): StoredSecuritySettings {
-  try {
-    const stored = window.localStorage.getItem(SECURITY_STORAGE_KEY)
-    if (!stored) return defaultSettings
-
-    const parsed = JSON.parse(stored) as Partial<StoredSecuritySettings>
-    return {
-      domains: Array.isArray(parsed.domains)
-        ? parsed.domains.filter(
-            (domain): domain is string => typeof domain === "string"
-          )
-        : defaultSettings.domains,
-      inviteToken:
-        typeof parsed.inviteToken === "string"
-          ? parsed.inviteToken
-          : defaultSettings.inviteToken,
-      preferences: {
-        ...defaultPreferences,
-        ...(parsed.preferences ?? {}),
-      },
-    }
-  } catch {
-    return defaultSettings
-  }
-}
+type SecurityCommandWithoutVersion =
+  WorkspaceSecurityCommand extends infer TCommand
+    ? TCommand extends { expectedVersion: number }
+      ? Omit<TCommand, "expectedVersion">
+      : never
+    : never
 
 function SettingsCard({
   children,
@@ -211,11 +186,13 @@ function Availability({ plan }: { plan: "Basic" | "Business" | "Enterprise" }) {
 
 function SettingsSelect<TValue extends string>({
   ariaLabel,
+  disabled = false,
   onValueChange,
   options,
   value,
 }: {
   ariaLabel: string
+  disabled?: boolean
   onValueChange: (value: TValue) => void
   options: ReadonlyArray<{ label: string; value: TValue }>
   value: TValue
@@ -230,6 +207,7 @@ function SettingsSelect<TValue extends string>({
         variant="secondary"
         size="sm"
         aria-label={ariaLabel}
+        disabled={disabled}
         render={<DropdownMenuTrigger />}
         className="group rounded-lg font-normal"
       >
@@ -256,35 +234,85 @@ function SettingsSelect<TValue extends string>({
   )
 }
 
-export function SecuritySettings() {
-  const [settings, setSettings] =
-    React.useState<StoredSecuritySettings>(defaultSettings)
+export function SecuritySettings({
+  initialSnapshot,
+}: {
+  initialSnapshot: WorkspaceSecuritySnapshot
+}) {
+  const [snapshot, setSnapshot] = React.useState(initialSnapshot)
   const [domainDialogOpen, setDomainDialogOpen] = React.useState(false)
   const [newDomain, setNewDomain] = React.useState("")
   const [domainError, setDomainError] = React.useState("")
+  const [pendingAction, setPendingAction] = React.useState<string | null>(null)
 
-  React.useEffect(() => {
-    setSettings(loadSecuritySettings())
-  }, [])
+  const preferences: SecurityPreferences = {
+    allowExternalLoopSources: snapshot.settings.externalLoopSourcesEnabled,
+    allowMcpServers: snapshot.settings.mcpServersEnabled,
+    emailPasskeyAuthentication:
+      snapshot.settings.emailPasskeyAuthenticationEnabled,
+    googleAuthentication: snapshot.settings.googleAuthenticationEnabled,
+    improveAiFeatures: snapshot.settings.shareAiUsageData,
+    inviteLinks: snapshot.settings.inviteLinksEnabled,
+    agentWebSearch: snapshot.settings.agentWebSearchEnabled,
+    apiKeyCreation: snapshot.settings.apiKeyCreationPolicy,
+    modifyAgentGuidance: snapshot.settings.agentGuidancePolicy,
+  }
+  const settings = {
+    domains: snapshot.domains.map((domain) => domain.domain),
+    preferences,
+  }
 
-  function updateSettings(
-    update: (current: StoredSecuritySettings) => StoredSecuritySettings
+  async function runCommand(
+    command: SecurityCommandWithoutVersion,
+    successMessage?: string
   ) {
-    setSettings((current) => {
-      const next = update(current)
-      window.localStorage.setItem(SECURITY_STORAGE_KEY, JSON.stringify(next))
-      return next
-    })
+    if (pendingAction) return false
+    setPendingAction(command.type)
+    try {
+      const result = await mutateWorkspaceSecurity({
+        data: {
+          ...command,
+          expectedVersion: snapshot.version,
+        } as WorkspaceSecurityCommand,
+      })
+      if (!result.ok) {
+        if (result.code === "CONFLICT") {
+          setSnapshot(await loadWorkspaceSecurity())
+        }
+        toast.error(result.message)
+        return false
+      }
+      setSnapshot(result.snapshot)
+      if (successMessage) toast.success(successMessage)
+      return true
+    } catch {
+      toast.error("Security settings could not be updated.")
+      return false
+    } finally {
+      setPendingAction(null)
+    }
   }
 
   function updatePreference<TKey extends keyof SecurityPreferences>(
     key: TKey,
     value: SecurityPreferences[TKey]
   ) {
-    updateSettings((current) => ({
-      ...current,
-      preferences: { ...current.preferences, [key]: value },
-    }))
+    if (typeof value === "boolean") {
+      const setting = BOOLEAN_SETTING_BY_PREFERENCE[
+        key as keyof typeof BOOLEAN_SETTING_BY_PREFERENCE
+      ] as SecurityBooleanSetting | undefined
+      if (setting) {
+        void runCommand({ type: "set-boolean", key: setting, value })
+      }
+      return
+    }
+
+    const setting = POLICY_SETTING_BY_PREFERENCE[
+      key as keyof typeof POLICY_SETTING_BY_PREFERENCE
+    ] as SecurityPolicySetting | undefined
+    if (setting) {
+      void runCommand({ type: "set-policy", key: setting, value })
+    }
   }
 
   function handleDomainDialogOpenChange(open: boolean) {
@@ -295,64 +323,54 @@ export function SecuritySettings() {
     }
   }
 
-  function addDomain(event: React.FormEvent<HTMLFormElement>) {
+  async function addDomain(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const normalizedDomain = newDomain
-      .trim()
-      .toLocaleLowerCase()
-      .replace(/^https?:\/\//, "")
-      .replace(/\/.*$/, "")
-
-    if (
-      !/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/i.test(
-        normalizedDomain
-      )
-    ) {
-      setDomainError("Enter a valid email domain, such as example.com.")
-      return
-    }
-
+    const normalizedDomain = newDomain.trim().toLocaleLowerCase()
     if (settings.domains.includes(normalizedDomain)) {
       setDomainError("This domain is already approved.")
       return
     }
 
-    updateSettings((current) => ({
-      ...current,
-      domains: [...current.domains, normalizedDomain],
-    }))
-    handleDomainDialogOpenChange(false)
-    toast.success(`${normalizedDomain} approved.`)
+    const added = await runCommand(
+      { type: "add-domain", domain: normalizedDomain },
+      `${normalizedDomain} approved.`
+    )
+    if (added) handleDomainDialogOpenChange(false)
   }
 
-  function removeDomain(domain: string) {
-    updateSettings((current) => ({
-      ...current,
-      domains: current.domains.filter((item) => item !== domain),
-    }))
-    toast.success(`${domain} removed.`)
+  async function removeDomain(domain: string) {
+    const record = snapshot.domains.find(
+      (candidate) => candidate.domain === domain
+    )
+    if (!record) return
+    await runCommand(
+      { type: "remove-domain", domainId: record.id },
+      `${domain} removed.`
+    )
+  }
+
+  async function verifyDomain(domainId: string) {
+    await runCommand(
+      { type: "verify-domain", domainId },
+      "Email domain verified."
+    )
   }
 
   async function copyInviteLink() {
-    const inviteLink = `https://forge.app/atriumcrm/join/${settings.inviteToken}?s=5`
-
+    if (!snapshot.inviteLink) return
     try {
-      await navigator.clipboard.writeText(inviteLink)
+      await copyTextToClipboard(snapshot.inviteLink)
       toast.success("Invite link copied.")
     } catch {
       toast.error("The invite link could not be copied.")
     }
   }
 
-  function resetInviteLink() {
-    updateSettings((current) => ({
-      ...current,
-      inviteToken: createInviteToken(),
-    }))
-    toast.success("Invite link reset.")
+  async function resetInviteLink() {
+    await runCommand({ type: "reset-invite-link" }, "Invite link reset.")
   }
 
-  const inviteLink = `https://forge.app/atriumcrm/join/${settings.inviteToken}?s=5`
+  const inviteLink = snapshot.inviteLink ?? ""
 
   return (
     <>
@@ -376,6 +394,7 @@ export function SecuritySettings() {
                   >
                     <Switch
                       checked={settings.preferences.inviteLinks}
+                      disabled={pendingAction !== null}
                       onCheckedChange={(checked) =>
                         updatePreference("inviteLinks", checked)
                       }
@@ -399,7 +418,7 @@ export function SecuritySettings() {
                         title="Reset invite link"
                         disabled={!settings.preferences.inviteLinks}
                         className="absolute top-1/2 right-1.5 -translate-y-1/2 rounded-md text-muted-foreground"
-                        onClick={resetInviteLink}
+                        onClick={() => void resetInviteLink()}
                       >
                         <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} />
                       </Button>
@@ -457,48 +476,85 @@ export function SecuritySettings() {
                       <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
                     </Button>
                   </div>
-                  {settings.domains.map((domain) => (
-                    <div
-                      key={domain}
-                      className="flex min-h-16 items-center gap-3 border-t border-border/60 px-4 py-2.5"
-                    >
-                      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-background/70 text-muted-foreground ring-1 ring-border/60">
-                        <HugeiconsIcon icon={AtIcon} strokeWidth={2} />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{domain}</p>
-                        <p className="text-xs text-muted-foreground">
-                          Added Mar 23, 2025
-                        </p>
-                      </div>
-                      <DropdownMenu>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label={`Open ${domain} menu`}
-                          render={<DropdownMenuTrigger />}
-                          className="rounded-lg text-muted-foreground"
-                        >
-                          <HugeiconsIcon
-                            icon={MoreHorizontalIcon}
-                            strokeWidth={2}
-                          />
-                        </Button>
-                        <DropdownMenuContent align="end" sideOffset={6}>
-                          <DropdownMenuItem
-                            variant="destructive"
-                            onClick={() => removeDomain(domain)}
+                  {snapshot.domains.map((domain) => (
+                    <React.Fragment key={domain.id}>
+                      <div className="flex min-h-16 items-center gap-3 border-t border-border/60 px-4 py-2.5">
+                        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-background/70 text-muted-foreground ring-1 ring-border/60">
+                          <HugeiconsIcon icon={AtIcon} strokeWidth={2} />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">
+                            {domain.domain}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {domain.verifiedAt
+                              ? domain.source === "sso"
+                                ? "Domain added through SSO"
+                                : "Verified"
+                              : "Pending DNS verification"}{" "}
+                            · Added{" "}
+                            {new Intl.DateTimeFormat(undefined, {
+                              dateStyle: "medium",
+                            }).format(new Date(domain.createdAt))}
+                          </p>
+                        </div>
+                        <DropdownMenu>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={`Open ${domain.domain} menu`}
+                            render={<DropdownMenuTrigger />}
+                            className="rounded-lg text-muted-foreground"
                           >
                             <HugeiconsIcon
-                              icon={Delete02Icon}
+                              icon={MoreHorizontalIcon}
                               strokeWidth={2}
                             />
-                            Remove domain
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
+                          </Button>
+                          <DropdownMenuContent align="end" sideOffset={6}>
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onClick={() => void removeDomain(domain.domain)}
+                            >
+                              <HugeiconsIcon
+                                icon={Delete02Icon}
+                                strokeWidth={2}
+                              />
+                              Remove domain
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      {!domain.verifiedAt && domain.verificationCode ? (
+                        <div className="space-y-2 border-t border-border/60 bg-background/25 px-4 py-3">
+                          <p className="text-xs leading-4 text-muted-foreground">
+                            Add this value as a DNS TXT record for{" "}
+                            <span className="font-medium text-foreground">
+                              {domain.domain}
+                            </span>
+                            , then verify it here.
+                          </p>
+                          <div className="flex gap-2">
+                            <Input
+                              readOnly
+                              aria-label={`${domain.domain} DNS verification value`}
+                              value={domain.verificationCode}
+                              className="h-8 min-w-0 bg-background/60 font-mono text-xs"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={pendingAction !== null}
+                              onClick={() => void verifyDomain(domain.id)}
+                            >
+                              Verify
+                            </Button>
+                          </div>
+                        </div>
+                      ) : null}
+                    </React.Fragment>
                   ))}
                 </SettingsCard>
               </div>
@@ -515,6 +571,7 @@ export function SecuritySettings() {
                   >
                     <Switch
                       checked={settings.preferences.googleAuthentication}
+                      disabled={pendingAction !== null}
                       onCheckedChange={(checked) =>
                         updatePreference("googleAuthentication", checked)
                       }
@@ -527,6 +584,7 @@ export function SecuritySettings() {
                   >
                     <Switch
                       checked={settings.preferences.emailPasskeyAuthentication}
+                      disabled={pendingAction !== null}
                       onCheckedChange={(checked) =>
                         updatePreference("emailPasskeyAuthentication", checked)
                       }
@@ -537,7 +595,19 @@ export function SecuritySettings() {
                     label="SAML & SCIM"
                     description="Manage logins via an identity provider's SSO"
                   >
-                    <Availability plan="Enterprise" />
+                    {snapshot.entitlements["saml-scim"] ? (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        disabled
+                        className="rounded-lg font-normal"
+                      >
+                        Setup required
+                      </Button>
+                    ) : (
+                      <Availability plan="Enterprise" />
+                    )}
                   </SettingsRow>
                 </SettingsCard>
               </div>
@@ -550,31 +620,126 @@ export function SecuritySettings() {
                     label="New user invitations"
                     description="Who can invite new members to the workspace"
                   >
-                    <Availability plan="Basic" />
+                    {snapshot.entitlements["restrict-invitations"] ? (
+                      <SettingsSelect
+                        ariaLabel="New user invitations"
+                        disabled={pendingAction !== null}
+                        value={snapshot.settings.invitationPolicy}
+                        onValueChange={(value) =>
+                          void runCommand({
+                            type: "set-policy",
+                            key: "invitationPolicy",
+                            value,
+                          })
+                        }
+                        options={[
+                          { value: "all-members", label: "All members" },
+                          { value: "admins", label: "Only admins" },
+                        ]}
+                      />
+                    ) : (
+                      <Availability plan="Basic" />
+                    )}
                   </SettingsRow>
                   <SettingsRow
                     label="Team creation"
                     description="Who can create new teams"
                   >
-                    <Availability plan="Business" />
+                    {snapshot.entitlements["team-creation-policy"] ? (
+                      <SettingsSelect
+                        ariaLabel="Team creation"
+                        disabled={pendingAction !== null}
+                        value={snapshot.settings.teamCreationPolicy}
+                        onValueChange={(value) =>
+                          void runCommand({
+                            type: "set-policy",
+                            key: "teamCreationPolicy",
+                            value,
+                          })
+                        }
+                        options={[
+                          { value: "all-members", label: "All members" },
+                          { value: "admins", label: "Only admins" },
+                        ]}
+                      />
+                    ) : (
+                      <Availability plan="Business" />
+                    )}
                   </SettingsRow>
                   <SettingsRow
                     label="Manage workspace labels"
                     description="Who can create, update, and delete workspace labels"
                   >
-                    <Availability plan="Business" />
+                    {snapshot.entitlements["workspace-label-policy"] ? (
+                      <SettingsSelect
+                        ariaLabel="Manage workspace labels"
+                        disabled={pendingAction !== null}
+                        value={snapshot.settings.workspaceLabelsPolicy}
+                        onValueChange={(value) =>
+                          void runCommand({
+                            type: "set-policy",
+                            key: "workspaceLabelsPolicy",
+                            value,
+                          })
+                        }
+                        options={[
+                          { value: "all-members", label: "All members" },
+                          { value: "admins", label: "Only admins" },
+                        ]}
+                      />
+                    ) : (
+                      <Availability plan="Business" />
+                    )}
                   </SettingsRow>
                   <SettingsRow
                     label="Manage workspace templates"
                     description="Who can manage workspace templates"
                   >
-                    <Availability plan="Business" />
+                    {snapshot.entitlements["workspace-template-policy"] ? (
+                      <SettingsSelect
+                        ariaLabel="Manage workspace templates"
+                        disabled={pendingAction !== null}
+                        value={snapshot.settings.workspaceTemplatesPolicy}
+                        onValueChange={(value) =>
+                          void runCommand({
+                            type: "set-policy",
+                            key: "workspaceTemplatesPolicy",
+                            value,
+                          })
+                        }
+                        options={[
+                          { value: "all-members", label: "All members" },
+                          { value: "admins", label: "Only admins" },
+                        ]}
+                      />
+                    ) : (
+                      <Availability plan="Business" />
+                    )}
                   </SettingsRow>
                   <SettingsRow
                     label="Manage loops"
                     description="Who can create, update, and delete workspace loops"
                   >
-                    <Availability plan="Business" />
+                    {snapshot.entitlements["loop-management-policy"] ? (
+                      <SettingsSelect
+                        ariaLabel="Manage loops"
+                        disabled={pendingAction !== null}
+                        value={snapshot.settings.loopsPolicy}
+                        onValueChange={(value) =>
+                          void runCommand({
+                            type: "set-policy",
+                            key: "loopsPolicy",
+                            value,
+                          })
+                        }
+                        options={[
+                          { value: "all-members", label: "All members" },
+                          { value: "admins", label: "Only admins" },
+                        ]}
+                      />
+                    ) : (
+                      <Availability plan="Business" />
+                    )}
                   </SettingsRow>
                   <SettingsRow
                     label="API key creation"
@@ -582,6 +747,7 @@ export function SecuritySettings() {
                   >
                     <SettingsSelect
                       ariaLabel="API key creation"
+                      disabled={pendingAction !== null}
                       value={settings.preferences.apiKeyCreation}
                       onValueChange={(value) =>
                         updatePreference("apiKeyCreation", value)
@@ -598,6 +764,7 @@ export function SecuritySettings() {
                   >
                     <SettingsSelect
                       ariaLabel="Modify agent guidance"
+                      disabled={pendingAction !== null}
                       value={settings.preferences.modifyAgentGuidance}
                       onValueChange={(value) =>
                         updatePreference("modifyAgentGuidance", value)
@@ -617,7 +784,22 @@ export function SecuritySettings() {
                   />
                   <SettingsCard>
                     <SettingsRow label="Restrict file uploads">
-                      <Availability plan="Enterprise" />
+                      {snapshot.entitlements["file-upload-restrictions"] ? (
+                        <Switch
+                          checked={snapshot.settings.restrictFileUploads}
+                          disabled={pendingAction !== null}
+                          onCheckedChange={(value) =>
+                            void runCommand({
+                              type: "set-boolean",
+                              key: "restrictFileUploads",
+                              value,
+                            })
+                          }
+                          aria-label="Restrict file uploads"
+                        />
+                      ) : (
+                        <Availability plan="Enterprise" />
+                      )}
                     </SettingsRow>
                   </SettingsCard>
                 </div>
@@ -643,19 +825,64 @@ export function SecuritySettings() {
                     </>
                   }
                 >
-                  <Availability plan="Enterprise" />
+                  {snapshot.entitlements["application-approvals"] ? (
+                    <Switch
+                      checked={snapshot.settings.reviewThirdPartyApplications}
+                      disabled={pendingAction !== null}
+                      onCheckedChange={(value) =>
+                        void runCommand({
+                          type: "set-boolean",
+                          key: "reviewThirdPartyApplications",
+                          value,
+                        })
+                      }
+                      aria-label="Review third-party applications"
+                    />
+                  ) : (
+                    <Availability plan="Enterprise" />
+                  )}
                 </SettingsRow>
                 <SettingsRow
                   label="Reduce personal information from support integrations"
                   description="Personal information from support integrations won't be stored"
                 >
-                  <Availability plan="Enterprise" />
+                  {snapshot.entitlements["support-pii-reduction"] ? (
+                    <Switch
+                      checked={snapshot.settings.reduceSupportPii}
+                      disabled={pendingAction !== null}
+                      onCheckedChange={(value) =>
+                        void runCommand({
+                          type: "set-boolean",
+                          key: "reduceSupportPii",
+                          value,
+                        })
+                      }
+                      aria-label="Reduce personal information from support integrations"
+                    />
+                  ) : (
+                    <Availability plan="Enterprise" />
+                  )}
                 </SettingsRow>
                 <SettingsRow
                   label="Prevent guests from interacting with agents in the workspace"
                   description="Restrict agent invocation to full workspace members only"
                 >
-                  <Availability plan="Basic" />
+                  {snapshot.entitlements["restrict-guest-agents"] ? (
+                    <Switch
+                      checked={snapshot.settings.blockGuestAgentAccess}
+                      disabled={pendingAction !== null}
+                      onCheckedChange={(value) =>
+                        void runCommand({
+                          type: "set-boolean",
+                          key: "blockGuestAgentAccess",
+                          value,
+                        })
+                      }
+                      aria-label="Prevent guests from interacting with agents"
+                    />
+                  ) : (
+                    <Availability plan="Basic" />
+                  )}
                 </SettingsRow>
               </SettingsCard>
             </Section>
@@ -668,6 +895,7 @@ export function SecuritySettings() {
                 >
                   <Switch
                     checked={settings.preferences.improveAiFeatures}
+                    disabled={pendingAction !== null}
                     onCheckedChange={(checked) =>
                       updatePreference("improveAiFeatures", checked)
                     }
@@ -680,6 +908,7 @@ export function SecuritySettings() {
                 >
                   <Switch
                     checked={settings.preferences.agentWebSearch}
+                    disabled={pendingAction !== null}
                     onCheckedChange={(checked) =>
                       updatePreference("agentWebSearch", checked)
                     }
@@ -697,6 +926,7 @@ export function SecuritySettings() {
                 >
                   <Switch
                     checked={settings.preferences.allowExternalLoopSources}
+                    disabled={pendingAction !== null}
                     onCheckedChange={(checked) =>
                       updatePreference("allowExternalLoopSources", checked)
                     }
@@ -714,6 +944,7 @@ export function SecuritySettings() {
                 >
                   <Switch
                     checked={settings.preferences.allowMcpServers}
+                    disabled={pendingAction !== null}
                     onCheckedChange={(checked) =>
                       updatePreference("allowMcpServers", checked)
                     }
@@ -729,7 +960,22 @@ export function SecuritySettings() {
                   label="HIPAA compliance"
                   description="Enable privacy and security measures to ensure that Protected Health Information (PHI) is appropriately safeguarded"
                 >
-                  <Availability plan="Enterprise" />
+                  {snapshot.entitlements.hipaa ? (
+                    <Switch
+                      checked={snapshot.settings.hipaaEnabled}
+                      disabled={pendingAction !== null}
+                      onCheckedChange={(value) =>
+                        void runCommand({
+                          type: "set-boolean",
+                          key: "hipaaEnabled",
+                          value,
+                        })
+                      }
+                      aria-label="HIPAA compliance"
+                    />
+                  ) : (
+                    <Availability plan="Enterprise" />
+                  )}
                 </SettingsRow>
               </SettingsCard>
             </Section>
@@ -787,7 +1033,12 @@ export function SecuritySettings() {
               <DialogClose render={<Button type="button" variant="outline" />}>
                 Cancel
               </DialogClose>
-              <Button type="submit">Add domain</Button>
+              <Button type="submit" disabled={pendingAction !== null}>
+                {pendingAction === "add-domain" ? (
+                  <Spinner data-icon="inline-start" />
+                ) : null}
+                {pendingAction === "add-domain" ? "Adding…" : "Add domain"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

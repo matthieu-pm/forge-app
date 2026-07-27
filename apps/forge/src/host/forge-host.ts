@@ -167,6 +167,7 @@ export interface ForgeDesktopBridge extends Omit<
   | "resolveLocalRuntimeApproval"
   | "resolveLocalRuntimeToolCall"
 > {
+  copyText?: (value: string) => Promise<void>
   listLocalRuntimes?: ForgeHost["listLocalRuntimes"]
   startLocalRuntimeLogin?: ForgeHost["startLocalRuntimeLogin"]
   startLocalRuntimeRun?: ForgeHost["startLocalRuntimeRun"]

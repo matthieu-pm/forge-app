@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => ({
   returning: vi.fn(),
   selectLimit: vi.fn(),
   updateSet: vi.fn(),
+  canWorkspaceAction: vi.fn(),
 }))
 
 vi.mock("@/db", () => ({
@@ -79,6 +80,10 @@ vi.mock("drizzle-orm", () => ({
   or: vi.fn((...conditions: Array<unknown>) => conditions),
 }))
 
+vi.mock("@/application/workspace-security/workspace-security.server", () => ({
+  canWorkspaceAction: mocks.canWorkspaceAction,
+}))
+
 const owner: Actor = {
   userId: "user-1",
   workspaceId: "workspace-1",
@@ -123,6 +128,12 @@ function persistedTeam(workspaceId = "workspace-1") {
 
 describe("Teams application module", () => {
   beforeEach(() => {
+    mocks.canWorkspaceAction.mockImplementation((actor: Actor) =>
+      Promise.resolve(
+        actor.workspaceRole.includes("owner") ||
+          actor.workspaceRole.includes("admin")
+      )
+    )
     mocks.returning.mockResolvedValue([persistedTeam()])
     mocks.selectLimit.mockResolvedValue([persistedTeam()])
     mocks.directoryFindMany.mockResolvedValue([])

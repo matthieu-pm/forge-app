@@ -230,6 +230,7 @@ type CoordinatorDependencies = {
   preferences?: ThreadModelPreferenceStore
   controlPolicy?: AgentControlPolicy
   attachments?: Pick<AgentAttachmentService, "resolve">
+  authorizeRun?: (actor: Actor) => Promise<void>
 }
 
 export class AgentCoordinator {
@@ -266,6 +267,7 @@ export class AgentCoordinator {
     input: CreateAgentThreadInput
   ): Promise<AgentThreadRecord> {
     requireAgentRun(actor)
+    await this.dependencies.authorizeRun?.(actor)
     const createdAt = this.now()
 
     return this.dependencies.store.createThread({
@@ -420,6 +422,7 @@ export class AgentCoordinator {
     input: StartAgentTurnInput
   ): Promise<AgentRunSession> {
     requireAgentRun(actor)
+    await this.dependencies.authorizeRun?.(actor)
     const thread = await this.requireOwnedThread(actor, input.threadId)
     if (thread.status === "archived") {
       throw new AgentCoordinatorError(
@@ -590,6 +593,7 @@ export class AgentCoordinator {
 
   async prepareLocalTurn(actor: Actor, input: StartLocalAgentTurnInput) {
     requireAgentRun(actor)
+    await this.dependencies.authorizeRun?.(actor)
     const existingThread = await this.requireOwnedThread(actor, input.threadId)
     if (existingThread.status === "archived") {
       throw new AgentCoordinatorError(

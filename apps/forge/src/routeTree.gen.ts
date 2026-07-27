@@ -39,6 +39,7 @@ import { Route as SettingsApplicationsRouteImport } from './routes/settings.appl
 import { Route as SettingsApiRouteImport } from './routes/settings.api'
 import { Route as SettingsAiRouteImport } from './routes/settings.ai'
 import { Route as OnboardingWorkspaceRouteImport } from './routes/onboarding/workspace'
+import { Route as JoinTokenRouteImport } from './routes/join.$token'
 import { Route as AuthDesktopRouteImport } from './routes/auth/desktop'
 import { Route as ApiOpenapiDotjsonRouteImport } from './routes/api/openapi[.]json'
 import { Route as ApiDocsRouteImport } from './routes/api/docs'
@@ -212,6 +213,11 @@ const OnboardingWorkspaceRoute = OnboardingWorkspaceRouteImport.update({
   path: '/onboarding/workspace',
   getParentRoute: () => rootRouteImport,
 } as any)
+const JoinTokenRoute = JoinTokenRouteImport.update({
+  id: '/join/$token',
+  path: '/join/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthDesktopRoute = AuthDesktopRouteImport.update({
   id: '/auth/desktop',
   path: '/auth/desktop',
@@ -345,6 +351,7 @@ export interface FileRoutesByFullPath {
   '/api/docs': typeof ApiDocsRoute
   '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
   '/auth/desktop': typeof AuthDesktopRoute
+  '/join/$token': typeof JoinTokenRoute
   '/onboarding/workspace': typeof OnboardingWorkspaceRoute
   '/settings/ai': typeof SettingsAiRoute
   '/settings/api': typeof SettingsApiRoute
@@ -398,6 +405,7 @@ export interface FileRoutesByTo {
   '/api/docs': typeof ApiDocsRoute
   '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
   '/auth/desktop': typeof AuthDesktopRoute
+  '/join/$token': typeof JoinTokenRoute
   '/onboarding/workspace': typeof OnboardingWorkspaceRoute
   '/settings/ai': typeof SettingsAiRoute
   '/settings/api': typeof SettingsApiRoute
@@ -452,6 +460,7 @@ export interface FileRoutesById {
   '/api/docs': typeof ApiDocsRoute
   '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
   '/auth/desktop': typeof AuthDesktopRoute
+  '/join/$token': typeof JoinTokenRoute
   '/onboarding/workspace': typeof OnboardingWorkspaceRoute
   '/settings/ai': typeof SettingsAiRoute
   '/settings/api': typeof SettingsApiRoute
@@ -508,6 +517,7 @@ export interface FileRouteTypes {
     | '/api/docs'
     | '/api/openapi.json'
     | '/auth/desktop'
+    | '/join/$token'
     | '/onboarding/workspace'
     | '/settings/ai'
     | '/settings/api'
@@ -561,6 +571,7 @@ export interface FileRouteTypes {
     | '/api/docs'
     | '/api/openapi.json'
     | '/auth/desktop'
+    | '/join/$token'
     | '/onboarding/workspace'
     | '/settings/ai'
     | '/settings/api'
@@ -614,6 +625,7 @@ export interface FileRouteTypes {
     | '/api/docs'
     | '/api/openapi.json'
     | '/auth/desktop'
+    | '/join/$token'
     | '/onboarding/workspace'
     | '/settings/ai'
     | '/settings/api'
@@ -669,6 +681,7 @@ export interface RootRouteChildren {
   ApiDocsRoute: typeof ApiDocsRoute
   ApiOpenapiDotjsonRoute: typeof ApiOpenapiDotjsonRoute
   AuthDesktopRoute: typeof AuthDesktopRoute
+  JoinTokenRoute: typeof JoinTokenRoute
   OnboardingWorkspaceRoute: typeof OnboardingWorkspaceRoute
   SettingsTeamsRoute: typeof SettingsTeamsRouteWithChildren
   TeamsTeamSlugRoute: typeof TeamsTeamSlugRouteWithChildren
@@ -898,6 +911,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding/workspace'
       fullPath: '/onboarding/workspace'
       preLoaderRoute: typeof OnboardingWorkspaceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/join/$token': {
+      id: '/join/$token'
+      path: '/join/$token'
+      fullPath: '/join/$token'
+      preLoaderRoute: typeof JoinTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/desktop': {
@@ -1170,6 +1190,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDocsRoute: ApiDocsRoute,
   ApiOpenapiDotjsonRoute: ApiOpenapiDotjsonRoute,
   AuthDesktopRoute: AuthDesktopRoute,
+  JoinTokenRoute: JoinTokenRoute,
   OnboardingWorkspaceRoute: OnboardingWorkspaceRoute,
   SettingsTeamsRoute: SettingsTeamsRouteWithChildren,
   TeamsTeamSlugRoute: TeamsTeamSlugRouteWithChildren,

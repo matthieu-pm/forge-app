@@ -28,6 +28,9 @@ export const createWorkspaceApiKey = createServerFn({ method: "POST" })
         import("@/lib/auth"),
       ])
     const actor = await requireSessionActor(getRequest())
+    const { assertWorkspaceActionAllowed } =
+      await import("@/application/workspace-security/workspace-security.server")
+    await assertWorkspaceActionAllowed(actor, "api-keys.create")
     const created = await auth.api.createApiKey({
       body: {
         configId: FORGE_API_KEY_CONFIG_ID,
@@ -87,6 +90,21 @@ export const listWorkspaceApiKeys = createServerFn({ method: "GET" }).handler(
       )
   }
 )
+
+export const loadWorkspaceApiKeyPolicy = createServerFn({
+  method: "GET",
+}).handler(async () => {
+  const [
+    { getRequest },
+    { requireSessionActor },
+    { getWorkspaceApiKeyPolicy },
+  ] = await Promise.all([
+    import("@tanstack/react-start/server"),
+    import("@/adapters/auth/session-actor.server"),
+    import("@/application/workspace-security/workspace-security.server"),
+  ])
+  return getWorkspaceApiKeyPolicy(await requireSessionActor(getRequest()))
+})
 
 export const revokeWorkspaceApiKey = createServerFn({ method: "POST" })
   .inputValidator(deleteApiKeyInputSchema)

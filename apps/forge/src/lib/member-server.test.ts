@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   requireSessionActor: vi.fn(),
   retryInvitationWorkflow: vi.fn(),
   startInvitationWorkflow: vi.fn(),
+  assertWorkspaceActionAllowed: vi.fn(),
 }))
 
 vi.mock("@/application/workspaces/members.server", () => ({
@@ -37,6 +38,10 @@ vi.mock("@/application/workflows/workflow-feature-flags.server", () => ({
 vi.mock("@/application/workflows/invitation-workflow-start.server", () => ({
   retryInvitationWorkflow: mocks.retryInvitationWorkflow,
   startInvitationWorkflow: mocks.startInvitationWorkflow,
+}))
+
+vi.mock("@/application/workspace-security/workspace-security.server", () => ({
+  assertWorkspaceActionAllowed: mocks.assertWorkspaceActionAllowed,
 }))
 
 const request = new Request("https://forge.test/settings/members")

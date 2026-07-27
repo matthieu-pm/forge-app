@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
+import type { ApprovedDomainWorkspace } from "@/application/workspace-security/workspace-join-contract"
 import { cn } from "@/lib/utils"
 import { authClient } from "@/lib/auth-client"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -12,6 +13,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { acceptApprovedDomainWorkspace } from "@/lib/workspace-join-state"
 
 type SlugState = "idle" | "checking" | "available" | "unavailable"
 const MAX_LOGO_SIZE_BYTES = 2 * 1024 * 1024
@@ -59,8 +61,11 @@ function readFileAsDataUrl(file: File) {
 
 export function WorkspaceSetupForm({
   className,
+  eligibleWorkspace,
   ...props
-}: React.ComponentProps<"div">) {
+}: React.ComponentProps<"div"> & {
+  eligibleWorkspace?: ApprovedDomainWorkspace | null
+}) {
   const [name, setName] = useState("")
   const [slug, setSlug] = useState("")
   const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null)
@@ -71,6 +76,7 @@ export function WorkspaceSetupForm({
   const [slugMessage, setSlugMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isJoining, setIsJoining] = useState(false)
   const slugCheckId = useRef(0)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -217,8 +223,47 @@ export function WorkspaceSetupForm({
     window.location.assign("/inbox")
   }
 
+  async function joinEligibleWorkspace() {
+    if (!eligibleWorkspace || isJoining) return
+    setError(null)
+    setIsJoining(true)
+    try {
+      await acceptApprovedDomainWorkspace({
+        data: { workspaceId: eligibleWorkspace.workspaceId },
+      })
+      window.location.assign("/inbox")
+    } catch (joinError) {
+      setError(
+        joinError instanceof Error
+          ? joinError.message
+          : "The workspace could not be joined."
+      )
+      setIsJoining(false)
+    }
+  }
+
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
+      {eligibleWorkspace ? (
+        <div className="rounded-2xl border bg-muted/30 p-4">
+          <p className="text-sm font-medium">
+            Join {eligibleWorkspace.workspaceName}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Your verified @{eligibleWorkspace.domain} address is approved for
+            this workspace.
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            className="mt-3"
+            disabled={isJoining}
+            onClick={() => void joinEligibleWorkspace()}
+          >
+            {isJoining ? "Joining…" : "Join workspace"}
+          </Button>
+        </div>
+      ) : null}
       <form onSubmit={handleSubmit}>
         <FieldGroup>
           <div className="flex flex-col items-center gap-2 text-center">

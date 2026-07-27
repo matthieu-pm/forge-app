@@ -76,6 +76,7 @@ export class AgentAttachmentService {
       now?: () => Date
       maxAttachmentBytes?: number
       maxTurnBytes?: number
+      authorizeUpload?: (actor: Actor, contentType: string) => Promise<void>
     }
   ) {
     this.#id = dependencies.id ?? randomUUID
@@ -85,6 +86,7 @@ export class AgentAttachmentService {
   async upload(actor: Actor, rawInput: CreateAgentAttachmentInput) {
     requireAgentRun(actor)
     const input = createAgentAttachmentInputSchema.parse(rawInput)
+    await this.dependencies.authorizeUpload?.(actor, input.contentType)
     const content = decodeBase64(input.contentBase64)
     const maxBytes =
       this.dependencies.maxAttachmentBytes ??

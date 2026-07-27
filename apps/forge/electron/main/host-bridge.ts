@@ -2,12 +2,14 @@ import {
   BrowserWindow,
   Notification,
   app,
+  clipboard,
   ipcMain,
   nativeTheme,
   shell,
 } from "electron"
 import {
   beginAuthSchema,
+  clipboardTextSchema,
   completeAuthSchema,
   desktopChannels,
   externalUrlSchema,
@@ -86,6 +88,13 @@ export function registerHostBridge(
         capabilities,
       })
     )
+  )
+
+  ipcMain.handle(
+    desktopChannels.copyText,
+    trusted((_event, input) => {
+      clipboard.writeText(clipboardTextSchema.parse(input))
+    })
   )
 
   ipcMain.handle(

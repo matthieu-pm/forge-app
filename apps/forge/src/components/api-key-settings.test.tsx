@@ -5,15 +5,25 @@ import { ApiKeySettings } from "./api-key-settings"
 
 const apiKeyMocks = vi.hoisted(() => ({
   createWorkspaceApiKey: vi.fn(),
+  loadWorkspaceApiKeyPolicy: vi.fn(),
   listWorkspaceApiKeys: vi.fn(),
   revokeWorkspaceApiKey: vi.fn(),
 }))
 
 vi.mock("@/lib/api-key-state", () => apiKeyMocks)
+vi.mock("@/lib/security-state", () => ({
+  mutateWorkspaceSecurity: vi.fn(),
+}))
 
 describe("ApiKeySettings", () => {
   beforeEach(() => {
     apiKeyMocks.listWorkspaceApiKeys.mockResolvedValue([])
+    apiKeyMocks.loadWorkspaceApiKeyPolicy.mockResolvedValue({
+      version: 1,
+      policy: "all-members",
+      canCreate: true,
+      canManage: true,
+    })
   })
 
   it("renders the reference sections and opens the API key flow", async () => {

@@ -1,5 +1,5 @@
-import { neon } from "@neondatabase/serverless"
-import { drizzle } from "drizzle-orm/neon-http"
+import { Pool } from "@neondatabase/serverless"
+import { drizzle } from "drizzle-orm/neon-serverless"
 import * as appSchema from "./schema"
 import * as authSchema from "./auth-schema"
 
@@ -9,7 +9,7 @@ if (!databaseUrl) {
   throw new Error("DATABASE_URL is required to initialize the database client.")
 }
 
-const client = neon(databaseUrl)
+const client = new Pool({ connectionString: databaseUrl })
 
 export const schema = {
   ...appSchema,

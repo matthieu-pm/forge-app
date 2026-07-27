@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   beginAuthSchema,
+  clipboardTextSchema,
   completeAuthSchema,
   externalUrlSchema,
   notificationSchema,
@@ -14,6 +15,13 @@ import {
 } from "./bridge-contract"
 
 describe("desktop bridge input validation", () => {
+  it("bounds clipboard text sent to the native host", () => {
+    expect(clipboardTextSchema.parse("invite-link")).toBe("invite-link")
+    expect(clipboardTextSchema.safeParse("x".repeat(1_000_001)).success).toBe(
+      false
+    )
+  })
+
   it("accepts bounded unread counts", () => {
     expect(unreadCountSchema.parse(0)).toBe(0)
     expect(unreadCountSchema.parse(42)).toBe(42)
