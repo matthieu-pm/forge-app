@@ -124,7 +124,7 @@ release-macos:
     - security set-keychain-settings -lut 21600 "$keychain_path"
     - security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$keychain_path"
     - security import "$certificate_path" -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$keychain_path"
-    - security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$keychain_path"
+    - 'security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$keychain_path"'
     - security list-keychains -d user -s "$keychain_path"
     - cd apps/forge
     - bun pm pkg set "version=${CI_COMMIT_TAG#v}"
