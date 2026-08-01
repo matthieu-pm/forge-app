@@ -124,6 +124,9 @@ describe("AiSettings local subscriptions", () => {
     ).toContain("motion-safe:animate-ping")
     expect(screen.queryByText("Connected")).toBeNull()
     expect(screen.queryByText("Subscription · Local")).toBeNull()
+    expect(
+      screen.getByText("Provider-managed credentials").className
+    ).toContain("mt-0.5")
     expect(retryButton.textContent).toContain("Retry")
     expect(retryButton.querySelector("svg")).toBeNull()
   })
@@ -189,6 +192,9 @@ describe("AiSettings local subscriptions", () => {
       name: "Workspace",
     })
     expect(within(personalConnections).getByText("Anthropic API")).toBeTruthy()
+    expect(
+      within(personalConnections).getByText(/anthropic · 11 models/).className
+    ).toContain("mt-0.5")
     expect(within(personalConnections).queryByText("OpenAI API")).toBeNull()
     expect(within(workspaceConnections).getByText("OpenAI API")).toBeTruthy()
     expect(within(workspaceConnections).queryByText("Anthropic API")).toBeNull()
@@ -217,6 +223,57 @@ describe("AiSettings local subscriptions", () => {
     expect(retryButton.className).toContain("w-14")
     expect(deleteButton.className).toContain("size-7")
     expect(deleteButton.className).toContain("hover:bg-muted")
+  })
+
+  it("uses a borderless mark for every supported provider", async () => {
+    mocks.features.agent_model_connections = true
+    const providers = [
+      "openai",
+      "anthropic",
+      "google",
+      "minimax",
+      "mistral",
+      "xai",
+      "deepseek",
+      "kimi",
+      "custom-openai",
+      "custom-anthropic",
+    ] as const
+    mocks.listModelConnections.mockResolvedValue(
+      providers.map((provider, index) => ({
+        id: `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+        workspaceId: "workspace-1",
+        userId: "user-1",
+        scope: "personal",
+        provider,
+        kind: "api-key",
+        executionKind: "forge-native",
+        locality: "cloud",
+        billingMode: "api",
+        credentialOwner: "user",
+        displayName: `${provider} API`,
+        maskedCredentialSuffix: null,
+        endpointUrl: null,
+        status: "ready",
+        statusReason: null,
+        discoveredAt: null,
+        lastHealthCheckedAt: null,
+        createdAt: "2026-07-24T00:00:00.000Z",
+        updatedAt: "2026-07-24T00:00:00.000Z",
+        modelCount: 1,
+      }))
+    )
+
+    render(<AiSettings />)
+
+    await screen.findByText("google API")
+    for (const provider of providers) {
+      const logo = document.querySelector(
+        `svg[data-provider-logo="${provider}"]`
+      )
+      expect(logo).toBeTruthy()
+      expect(logo?.parentElement?.className).not.toContain("border")
+    }
   })
 
   it("keeps Forge-managed infrastructure out of user settings", async () => {
