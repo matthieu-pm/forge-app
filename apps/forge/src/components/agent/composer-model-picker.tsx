@@ -70,7 +70,7 @@ function MenuRow({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="group flex h-7 w-full items-center gap-2 rounded-md px-2 text-left text-sm font-medium transition-colors outline-none hover:bg-muted focus-visible:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 disabled:cursor-not-allowed disabled:opacity-55"
+      className="group flex h-7 w-full items-center gap-2 rounded-full px-2 text-left text-sm font-medium transition-colors outline-none hover:bg-muted focus-visible:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 disabled:cursor-not-allowed disabled:opacity-55"
     >
       <span className="min-w-0 flex-1 truncate">{label}</span>
       {value ? (
@@ -147,21 +147,67 @@ function AgentModelOption({ model }: { model: AgentModelDefinition }) {
       />
       <span className="min-w-0 flex-1 truncate">{model.label}</span>
       <span className="flex shrink-0 items-center gap-1">
-        {model.billingMode !== "forge-managed" ? (
+        {model.billingMode !== "forge-managed" &&
+        model.billingMode !== "subscription" ? (
           <span className="max-w-24 truncate text-[9px] text-muted-foreground">
             {model.sourceLabel}
           </span>
         ) : null}
-        <ModelAttributeIcon
-          label={model.billingMode === "subscription" ? "Subscription" : "API"}
-          type={model.billingMode === "subscription" ? "subscription" : "api"}
-        />
+        {model.billingMode !== "forge-managed" ? (
+          <ModelAttributeIcon
+            label={
+              model.billingMode === "subscription" ? "Subscription" : "API"
+            }
+            type={model.billingMode === "subscription" ? "subscription" : "api"}
+          />
+        ) : null}
         <ModelAttributeIcon
           label={model.locality === "local-only" ? "Local" : "Cloud"}
           type={model.locality === "local-only" ? "local" : "cloud"}
         />
       </span>
     </span>
+  )
+}
+
+function ModelOptionRow({
+  model,
+  selected,
+  onSelect,
+}: {
+  model: AgentModelDefinition
+  selected: boolean
+  onSelect: () => void
+}) {
+  return (
+    <button
+      type="button"
+      disabled={Boolean(model.disabledReason)}
+      title={model.disabledReason}
+      aria-describedby={
+        model.disabledReason ? `model-disabled-${model.id}` : undefined
+      }
+      onClick={onSelect}
+      className={cn(
+        "flex min-h-7 w-full items-center gap-2 rounded-full px-2 py-1 text-left text-sm outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 disabled:cursor-not-allowed disabled:opacity-50",
+        selected && "bg-muted"
+      )}
+    >
+      <span className="flex min-w-0 flex-1 flex-col">
+        <AgentModelOption model={model} />
+        {model.disabledReason ? (
+          <span
+            id={`model-disabled-${model.id}`}
+            className="truncate pl-6 text-[10px] text-muted-foreground"
+          >
+            {model.disabledReason}
+          </span>
+        ) : null}
+      </span>
+      {selected ? (
+        <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} className="size-3.5" />
+      ) : null}
+    </button>
   )
 }
 
@@ -202,15 +248,30 @@ export function ComposerModelPicker({
       Boolean(model.modelId)
   )
   const modelGroups = React.useMemo(() => {
-    const groups = new Map<string, Array<AgentModelDefinition>>()
-    for (const model of [...models].sort(
+    const sortedModels = [...models].sort(
       (left, right) => right.priority - left.priority
-    )) {
-      const current = groups.get(model.providerLabel) ?? []
-      current.push(model)
-      groups.set(model.providerLabel, current)
+    )
+    return {
+      forge: sortedModels.filter(
+        (model) => model.billingMode === "forge-managed"
+      ),
+      connected: [
+        {
+          label: "Subscriptions",
+          models: sortedModels.filter(
+            (model) => model.billingMode === "subscription"
+          ),
+        },
+        {
+          label: "API usage",
+          models: sortedModels.filter(
+            (model) =>
+              model.billingMode !== "forge-managed" &&
+              model.billingMode !== "subscription"
+          ),
+        },
+      ].filter((group) => group.models.length > 0),
     }
-    return [...groups.entries()]
   }, [models])
   const autoSources = React.useMemo(() => {
     const byConnection = new Map<string, AgentModelDefinition>()
@@ -378,7 +439,7 @@ export function ComposerModelPicker({
           <button
             type="button"
             onClick={() => setView("compact")}
-            className="mb-0.5 flex h-7 items-center gap-1.5 rounded-md px-1.5 text-sm font-medium outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
+            className="mb-0.5 flex h-7 items-center gap-1.5 rounded-full pr-2.5 pl-1.5 text-sm font-medium outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
           >
             <HugeiconsIcon
               icon={ArrowLeft01Icon}
@@ -431,7 +492,7 @@ export function ComposerModelPicker({
           <button
             type="button"
             onClick={() => setView("advanced")}
-            className="mb-0.5 flex h-7 items-center gap-1.5 rounded-md px-1.5 text-sm font-medium outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
+            className="mb-0.5 flex h-7 items-center gap-1.5 rounded-full pr-2.5 pl-1.5 text-sm font-medium outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
           >
             <HugeiconsIcon
               icon={ArrowLeft01Icon}
@@ -445,7 +506,7 @@ export function ComposerModelPicker({
               type="button"
               onClick={() => onPreferredAutoConnectionChange(null)}
               className={cn(
-                "flex min-h-8 w-full items-center gap-2 rounded-md px-2 py-1 text-left text-sm outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40",
+                "flex min-h-8 w-full items-center gap-2 rounded-full px-2 py-1 text-left text-sm outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40",
                 preferredAutoConnectionId === null && "bg-muted"
               )}
             >
@@ -466,7 +527,7 @@ export function ComposerModelPicker({
                   onPreferredAutoConnectionChange(source.connectionId ?? null)
                 }
                 className={cn(
-                  "flex min-h-8 w-full items-center gap-2 rounded-md px-2 py-1 text-left text-sm outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40",
+                  "flex min-h-8 w-full items-center gap-2 rounded-full px-2 py-1 text-left text-sm outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40",
                   preferredAutoConnectionId === source.connectionId &&
                     "bg-muted"
                 )}
@@ -495,7 +556,7 @@ export function ComposerModelPicker({
         <button
           type="button"
           onClick={() => setView("advanced")}
-          className="mb-0.5 flex h-7 items-center gap-1.5 rounded-md px-1.5 text-sm font-medium outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
+          className="mb-0.5 flex h-7 items-center gap-1.5 rounded-full pr-2.5 pl-1.5 text-sm font-medium outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
         >
           <HugeiconsIcon
             icon={ArrowLeft01Icon}
@@ -517,7 +578,7 @@ export function ComposerModelPicker({
                 }
                 onClick={() => selectModel(AUTO_AGENT_MODEL_SELECTION.id)}
                 className={cn(
-                  "flex min-h-7 w-full items-center gap-2 rounded-md px-2 py-1 text-left text-sm outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 disabled:cursor-not-allowed disabled:opacity-50",
+                  "flex min-h-7 w-full items-center gap-2 rounded-full px-2 py-1 text-left text-sm outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 disabled:cursor-not-allowed disabled:opacity-50",
                   value === AUTO_AGENT_MODEL_SELECTION.id && "bg-muted"
                 )}
               >
@@ -537,53 +598,32 @@ export function ComposerModelPicker({
                   />
                 ) : null}
               </button>
-              {modelGroups.map(([providerLabel, providerModels]) => (
-                <div key={providerLabel} className="pt-1">
-                  <p className="px-2 py-1 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
-                    {providerLabel}
+              {modelGroups.forge.map((model) => (
+                <ModelOptionRow
+                  key={`${model.sourceLabel}:${model.id}`}
+                  model={model}
+                  selected={value === model.id}
+                  onSelect={() => selectModel(model.id)}
+                />
+              ))}
+              {modelGroups.connected.map((group) => (
+                <div key={group.label} className="pt-1">
+                  <p className="px-2 py-1 text-[10px] font-medium text-muted-foreground">
+                    {group.label}
                   </p>
-                  {providerModels.map((model) => (
-                    <button
+                  {group.models.map((model) => (
+                    <ModelOptionRow
                       key={`${model.sourceLabel}:${model.id}`}
-                      type="button"
-                      disabled={Boolean(model.disabledReason)}
-                      title={model.disabledReason}
-                      aria-describedby={
-                        model.disabledReason
-                          ? `model-disabled-${model.id}`
-                          : undefined
-                      }
-                      onClick={() => selectModel(model.id)}
-                      className={cn(
-                        "flex min-h-7 w-full items-center gap-2 rounded-md px-2 py-1 text-left text-sm outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 disabled:cursor-not-allowed disabled:opacity-50",
-                        value === model.id && "bg-muted"
-                      )}
-                    >
-                      <span className="flex min-w-0 flex-1 flex-col">
-                        <AgentModelOption model={model} />
-                        {model.disabledReason ? (
-                          <span
-                            id={`model-disabled-${model.id}`}
-                            className="truncate pl-6 text-[10px] text-muted-foreground"
-                          >
-                            {model.disabledReason}
-                          </span>
-                        ) : null}
-                      </span>
-                      {value === model.id ? (
-                        <HugeiconsIcon
-                          icon={Tick02Icon}
-                          strokeWidth={2}
-                          className="size-3.5"
-                        />
-                      ) : null}
-                    </button>
+                      model={model}
+                      selected={value === model.id}
+                      onSelect={() => selectModel(model.id)}
+                    />
                   ))}
                 </div>
               ))}
             </>
           ) : isAutoModel ? (
-            <div className="rounded-md px-2 py-2">
+            <div className="rounded-full px-2 py-2">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <span className="flex items-center gap-1" aria-hidden="true">
                   {[0, 1, 2].map((index) => (
@@ -610,7 +650,7 @@ export function ComposerModelPicker({
                 key={level}
                 type="button"
                 onClick={() => onEffortChange(level)}
-                className="flex h-7 w-full items-center gap-2 rounded-md px-2 text-left text-sm outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
+                className="flex h-7 w-full items-center gap-2 rounded-full px-2 text-left text-sm outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
               >
                 <span className="min-w-0 flex-1 font-medium">
                   {EFFORT_LABELS[level]}
@@ -674,7 +714,7 @@ export function ComposerModelPicker({
         align={align}
         side={side}
         sideOffset={8}
-        className="w-[min(15rem,calc(100vw-1.5rem))] gap-0 overflow-hidden rounded-xl border border-border/70 p-1.5 shadow-lg [perspective:800px]"
+        className="w-[min(15rem,calc(100vw-1.5rem))] gap-0 overflow-hidden rounded-2xl border border-border/70 p-1.5 shadow-md ring-0 [perspective:800px]"
       >
         <motion.div layout transition={transition}>
           <AnimatePresence mode="wait" initial={false}>
