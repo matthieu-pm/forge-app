@@ -2,6 +2,7 @@
 
 import { AgentComposer } from "@/components/agent/agent-composer"
 import { useAgent } from "@/components/agent/agent-provider"
+import { ForgeLogo } from "@/components/forge-logo"
 import { Button } from "@/components/ui/button"
 
 const SUGGESTIONS = [
@@ -25,11 +26,7 @@ export function ForgeAgentHome() {
     <div className="flex min-h-0 flex-1 items-center justify-center px-5 pb-24">
       <div className="w-full max-w-2xl">
         <div className="mb-7 text-center">
-          <img
-            src="/img/forge-icon.svg"
-            alt=""
-            className="mx-auto mb-4 size-10 opacity-90"
-          />
+          <ForgeLogo className="mx-auto mb-4 block size-10 opacity-90" />
           <h1 className="text-xl font-medium tracking-tight">
             What can Forge help with?
           </h1>
@@ -38,7 +35,7 @@ export function ForgeAgentHome() {
           maximizeOnSend
           autoFocus
           placeholder="Ask Forge…"
-          className="shadow-[0_24px_70px_-38px_rgba(0,0,0,0.65)]"
+          className="shadow-[0_14px_40px_-30px_rgba(0,0,0,0.3)]"
         />
         <div className="mt-3 flex flex-wrap justify-center gap-1.5">
           {SUGGESTIONS.map((suggestion) => (

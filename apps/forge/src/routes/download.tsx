@@ -32,7 +32,11 @@ function DownloadPage() {
             href="/"
             className="inline-flex items-center gap-3 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4"
           >
-            <img src="/favicon.png" alt="" className="size-8 rounded-lg" />
+            <img
+              src="/img/forge-app-icon-black.svg"
+              alt=""
+              className="size-8 rounded-lg"
+            />
             <span className="text-sm font-semibold tracking-[-0.02em]">
               Forge
             </span>

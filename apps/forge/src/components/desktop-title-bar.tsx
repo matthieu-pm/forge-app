@@ -21,6 +21,7 @@ import type { DesktopTabsState } from "@/lib/desktop-tabs"
 import type { SidebarState } from "@/lib/sidebar-events"
 import type { TeamSummary } from "@/lib/team-contract"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
+import { ForgeLogo } from "@/components/forge-logo"
 import { Button } from "@/components/ui/button"
 import { getForgeHost } from "@/host/forge-host"
 import { appNav, getBreadcrumbItems } from "@/lib/app-navigation"
@@ -161,14 +162,18 @@ export function TabIcon({
     )
   }
 
-  return (
-    <img
-      src={item?.iconSrc ?? "/img/logo-forge-128px-nobg.png"}
-      alt=""
-      aria-hidden="true"
-      className="forge-desktop-tab-icon"
-    />
-  )
+  if (item?.iconSrc && item.title !== "Forge") {
+    return (
+      <img
+        src={item.iconSrc}
+        alt=""
+        aria-hidden="true"
+        className="forge-desktop-tab-icon"
+      />
+    )
+  }
+
+  return <ForgeLogo className="forge-desktop-tab-icon" />
 }
 
 function CloseIcon() {

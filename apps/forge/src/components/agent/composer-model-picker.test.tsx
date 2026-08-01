@@ -154,6 +154,13 @@ describe("ComposerModelPicker", () => {
     expect(advanced.className).toContain("rounded-full")
     expect(screen.getByText("Adapts to request")).toBeTruthy()
     const picker = document.querySelector('[data-slot="popover-content"]')
+    const divider = picker?.querySelector(".h-px")
+    const effortPanel =
+      screen.getByText("Effort level").parentElement?.parentElement
+    expect(divider?.className).toContain("-mx-1.5")
+    expect(effortPanel?.className).toContain("pb-0")
+    expect(effortPanel?.className).toContain("pl-1.5")
+    expect(effortPanel?.className).toContain("pr-2")
     expect(picker?.className).toContain("rounded-2xl")
     expect(picker?.className).toContain("border-border/70")
     expect(picker?.className).toContain("shadow-md")
@@ -232,6 +239,8 @@ describe("ComposerModelPicker", () => {
     const apiUsage = pickerQueries.getByText("API usage")
     expect(subscriptions.className).not.toContain("uppercase")
     expect(apiUsage.className).not.toContain("uppercase")
+    expect(subscriptions.className).toContain("text-xs")
+    expect(apiUsage.className).toContain("text-xs")
     expect(pickerQueries.queryByText("OpenAI")).toBeNull()
     expect(pickerQueries.queryByText("Anthropic")).toBeNull()
   })

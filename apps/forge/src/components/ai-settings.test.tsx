@@ -4,6 +4,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -13,6 +14,7 @@ import type { LocalAgentRuntime } from "@/host/forge-host"
 const mocks = vi.hoisted(() => ({
   listLocalRuntimes: vi.fn(),
   listModelConnections: vi.fn(),
+  refreshModelConnection: vi.fn(),
   toastError: vi.fn(),
   toastSuccess: vi.fn(),
   features: {
@@ -52,7 +54,7 @@ vi.mock("@/lib/model-connection-client", () => ({
   createModelConnection: vi.fn(),
   deleteModelConnection: vi.fn(),
   listModelConnections: mocks.listModelConnections,
-  refreshModelConnection: vi.fn(),
+  refreshModelConnection: mocks.refreshModelConnection,
 }))
 
 const brokenCodex: LocalAgentRuntime = {
@@ -73,6 +75,7 @@ describe("AiSettings local subscriptions", () => {
   beforeEach(() => {
     mocks.listLocalRuntimes.mockReset().mockResolvedValue([brokenCodex])
     mocks.listModelConnections.mockReset().mockResolvedValue([])
+    mocks.refreshModelConnection.mockReset()
     mocks.toastError.mockReset()
     mocks.toastSuccess.mockReset()
     mocks.features.agent_model_connections = false
@@ -114,8 +117,106 @@ describe("AiSettings local subscriptions", () => {
       name: "Retry Codex",
     })
 
+    const connectedDot = screen.getByRole("img", { name: "Connected" })
+    expect(connectedDot).toBeTruthy()
+    expect(
+      connectedDot.querySelector('[aria-hidden="true"]')?.className
+    ).toContain("motion-safe:animate-ping")
+    expect(screen.queryByText("Connected")).toBeNull()
+    expect(screen.queryByText("Subscription · Local")).toBeNull()
     expect(retryButton.textContent).toContain("Retry")
     expect(retryButton.querySelector("svg")).toBeNull()
+  })
+
+  it("uses a ready dot and a text retry button for API connections", async () => {
+    mocks.features.agent_model_connections = true
+    mocks.listModelConnections.mockResolvedValue([
+      {
+        id: "00000000-0000-4000-8000-000000000002",
+        workspaceId: "workspace-1",
+        userId: "user-1",
+        scope: "personal",
+        provider: "anthropic",
+        kind: "api-key",
+        executionKind: "forge-native",
+        locality: "cloud",
+        billingMode: "api",
+        credentialOwner: "user",
+        displayName: "Anthropic API",
+        maskedCredentialSuffix: "IwAA",
+        endpointUrl: null,
+        status: "ready",
+        statusReason: null,
+        discoveredAt: null,
+        lastHealthCheckedAt: null,
+        createdAt: "2026-07-24T00:00:00.000Z",
+        updatedAt: "2026-07-24T00:00:00.000Z",
+        modelCount: 11,
+      },
+      {
+        id: "00000000-0000-4000-8000-000000000003",
+        workspaceId: "workspace-1",
+        userId: null,
+        scope: "workspace",
+        provider: "openai",
+        kind: "api-key",
+        executionKind: "forge-native",
+        locality: "cloud",
+        billingMode: "api",
+        credentialOwner: "workspace",
+        displayName: "OpenAI API",
+        maskedCredentialSuffix: "o4oA",
+        endpointUrl: null,
+        status: "ready",
+        statusReason: null,
+        discoveredAt: null,
+        lastHealthCheckedAt: null,
+        createdAt: "2026-07-24T00:00:00.000Z",
+        updatedAt: "2026-07-24T00:00:00.000Z",
+        modelCount: 98,
+      },
+    ])
+
+    render(<AiSettings />)
+
+    expect(await screen.findAllByRole("img", { name: "Ready" })).toHaveLength(2)
+    expect(screen.queryByText("ready")).toBeNull()
+
+    const personalConnections = screen.getByRole("region", {
+      name: "Personal",
+    })
+    const workspaceConnections = screen.getByRole("region", {
+      name: "Workspace",
+    })
+    expect(within(personalConnections).getByText("Anthropic API")).toBeTruthy()
+    expect(within(personalConnections).queryByText("OpenAI API")).toBeNull()
+    expect(within(workspaceConnections).getByText("OpenAI API")).toBeTruthy()
+    expect(within(workspaceConnections).queryByText("Anthropic API")).toBeNull()
+
+    const anthropicLogo = personalConnections.querySelector(
+      'svg[data-provider-logo="anthropic"]'
+    )
+    const openAiLogo = workspaceConnections.querySelector(
+      'svg[data-provider-logo="openai"]'
+    )
+    expect(anthropicLogo).toBeTruthy()
+    expect(openAiLogo).toBeTruthy()
+    expect(anthropicLogo?.parentElement?.className).not.toContain("border")
+    expect(openAiLogo?.parentElement?.className).not.toContain("border")
+
+    const retryButton = screen.getByRole("button", {
+      name: "Retry Anthropic API",
+    })
+    expect(retryButton.textContent).toBe("Retry")
+    expect(retryButton.querySelector("svg")).toBeNull()
+
+    const deleteButton = screen.getByRole("button", {
+      name: "Remove Anthropic API",
+    })
+    expect(retryButton.className).toContain("h-7")
+    expect(retryButton.className).toContain("w-14")
+    expect(deleteButton.className).toContain("size-7")
+    expect(deleteButton.className).toContain("hover:bg-muted")
   })
 
   it("keeps Forge-managed infrastructure out of user settings", async () => {
@@ -147,9 +248,8 @@ describe("AiSettings local subscriptions", () => {
 
     render(<AiSettings />)
 
-    expect(
-      await screen.findByText("No model providers connected yet.")
-    ).toBeTruthy()
+    expect(await screen.findByText("No personal connections yet.")).toBeTruthy()
+    expect(screen.getByText("No workspace connections yet.")).toBeTruthy()
     expect(screen.queryByText("Forge managed OpenAI")).toBeNull()
   })
 

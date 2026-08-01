@@ -1,19 +1,14 @@
 {
-  "short_name": "TanStack App",
-  "name": "Create TanStack App Sample",
+  "short_name": "Forge",
+  "name": "Forge",
   "icons": [
     {
-      "src": "favicon.ico",
-      "sizes": "256x256",
-      "type": "image/x-icon"
+      "src": "/img/forge-app-icon-black.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
     },
     {
-      "src": "logo192.png",
-      "type": "image/png",
-      "sizes": "192x192"
-    },
-    {
-      "src": "logo512.png",
+      "src": "/favicon.png",
       "type": "image/png",
       "sizes": "512x512"
     }

@@ -51,9 +51,21 @@ export const Route = createRootRoute({
     links: [
       {
         rel: "icon",
+        type: "image/svg+xml",
+        href: "/img/forge-app-icon-black.svg",
+        media: "(prefers-color-scheme: light)",
+      },
+      {
+        rel: "icon",
+        type: "image/svg+xml",
+        href: "/img/forge-app-icon-white.svg",
+        media: "(prefers-color-scheme: dark)",
+      },
+      {
+        rel: "icon",
         type: "image/png",
         sizes: "512x512",
-        href: "/favicon.png?v=forge-512-20260722",
+        href: "/favicon.png?v=forge-512-20260801",
       },
       {
         rel: "stylesheet",

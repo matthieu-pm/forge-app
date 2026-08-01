@@ -22,6 +22,7 @@ import type {
   AgentModelSelectionId,
   AgentReasoningEffortSelection,
 } from "@/lib/agent-models"
+import { ForgeLogo } from "@/components/forge-logo"
 import {
   Popover,
   PopoverContent,
@@ -90,13 +91,7 @@ function MenuRow({
 function AutoModelOption() {
   return (
     <span className="flex min-w-0 items-center gap-2">
-      <img
-        src="/img/forge-icon.svg"
-        alt=""
-        width={16}
-        height={16}
-        className="size-4 shrink-0 object-contain"
-      />
+      <ForgeLogo className="size-4" />
       <span>{AUTO_AGENT_MODEL_SELECTION.label}</span>
     </span>
   )
@@ -350,8 +345,8 @@ export function ComposerModelPicker({
       return (
         <div className="space-y-1">
           <MenuRow label="Advanced" onClick={() => setView("advanced")} />
-          <div className="h-px bg-border/70" />
-          <div className="px-2 pt-0.5 pb-1.5">
+          <div className="-mx-1.5 h-px bg-border/70" />
+          <div className="pt-0.5 pr-2 pb-0 pl-1.5">
             <div className="mb-1.5 flex items-center justify-between text-xs">
               <span className="font-medium">Effort level</span>
               <span className="text-muted-foreground">{effortLabel}</span>
@@ -465,9 +460,9 @@ export function ComposerModelPicker({
               onClick={() => setView("auto-source")}
             />
           ) : null}
-          <div className="my-1 h-px bg-border/70" />
+          <div className="-mx-1.5 my-1 h-px bg-border/70" />
           <MenuRow
-            label="Providers and API keys"
+            label="Providers"
             value="Settings"
             icon={
               <HugeiconsIcon
@@ -608,7 +603,7 @@ export function ComposerModelPicker({
               ))}
               {modelGroups.connected.map((group) => (
                 <div key={group.label} className="pt-1">
-                  <p className="px-2 py-1 text-[10px] font-medium text-muted-foreground">
+                  <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
                     {group.label}
                   </p>
                   {group.models.map((model) => (
@@ -682,7 +677,7 @@ export function ComposerModelPicker({
             style={{ minWidth: 0 }}
             transition={transition}
             className={cn(
-              "flex h-7 max-w-full items-center gap-1 rounded-full border-0 bg-transparent px-1.5 text-sm font-medium transition-colors outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50",
+              "flex h-7 max-w-full items-center gap-1 rounded-full border-0 bg-transparent pr-1 pl-1.5 text-sm font-medium transition-colors outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50",
               open && "bg-muted"
             )}
           />

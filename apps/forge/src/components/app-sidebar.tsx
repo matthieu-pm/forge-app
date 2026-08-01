@@ -304,7 +304,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           aria-hidden="true"
           className={cn(
             "size-4 shrink-0 object-contain",
-            item.title === "Forge" && "dark:brightness-0 dark:invert"
+            item.title === "Forge" && "-translate-x-px dark:invert"
           )}
         />
       )

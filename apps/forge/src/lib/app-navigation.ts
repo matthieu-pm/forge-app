@@ -144,7 +144,7 @@ export const appNav: Array<AppNavItem> = [
   {
     title: "Forge",
     to: "/forge",
-    iconSrc: "/img/logo-forge-black.png",
+    iconSrc: "/img/forge-logo-black.svg",
   },
   {
     title: "Calls",

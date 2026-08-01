@@ -111,7 +111,7 @@ export function AgentComposer({
       ) : null}
       <InputGroup
         className={cn(
-          "h-auto flex-col items-stretch rounded-2xl border-border/80 bg-card shadow-[0_18px_50px_-32px_rgba(0,0,0,0.55)]",
+          "h-auto flex-col items-stretch rounded-[30px] border-border/80 bg-card shadow-[0_18px_50px_-32px_rgba(0,0,0,0.55)] [corner-shape:squircle]",
           className
         )}
       >
