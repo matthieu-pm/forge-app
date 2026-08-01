@@ -469,6 +469,32 @@ describe("AgentShell", () => {
     )
   })
 
+  test("keeps a floating new chat open while using the portalled model picker", async () => {
+    const client = new FakeAgentClient()
+
+    render(
+      <AgentProvider client={client}>
+        <FloatingChatButton />
+        <AgentShell />
+      </AgentProvider>
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Open floating chat" }))
+    const dialog = await screen.findByRole("dialog", {
+      name: "New Forge chat",
+    })
+    fireEvent.click(
+      within(dialog).getByRole("button", {
+        name: "Model Auto, effort Auto",
+      })
+    )
+
+    const advanced = await screen.findByRole("button", { name: "Advanced" })
+    fireEvent.pointerDown(advanced)
+
+    expect(screen.getByRole("dialog", { name: "New Forge chat" })).toBeTruthy()
+  })
+
   test("minimizes a maximized chat when the user clicks outside it", async () => {
     const client = new FakeAgentClient()
 
@@ -494,9 +520,7 @@ describe("AgentShell", () => {
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Maximize chat" })).toBeTruthy()
     )
-    expect(
-      screen.getByRole("dialog", { name: "New Forge chat" })
-    ).toBeTruthy()
+    expect(screen.getByRole("dialog", { name: "New Forge chat" })).toBeTruthy()
   })
 
   test("disables Auto dispatch until an OpenAI source is available", async () => {

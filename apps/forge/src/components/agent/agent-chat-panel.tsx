@@ -119,6 +119,12 @@ export function AgentChatPanel() {
     const handleOutsidePointer = (event: PointerEvent) => {
       if (!(event.target instanceof Node)) return
       if (panelRef.current?.contains(event.target)) return
+      if (
+        event.target instanceof Element &&
+        event.target.closest("[data-agent-surface-portal]")
+      ) {
+        return
+      }
       if (surfaceMode === "maximized") {
         setSurfaceMode("floating")
       } else {

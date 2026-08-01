@@ -2,11 +2,15 @@
 
 import * as React from "react"
 import {
+  ApiGatewayIcon,
   ArrowDown01Icon,
   ArrowLeft01Icon,
   ArrowRight01Icon,
   ArtificialIntelligence04Icon,
   ChatGptIcon,
+  CloudIcon,
+  ComputerProgramming01Icon,
+  Crown02Icon,
   SecurityLockIcon,
   Tick02Icon,
 } from "@hugeicons/core-free-icons"
@@ -24,12 +28,16 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import {
   AUTO_AGENT_MODEL_SELECTION,
   DEFAULT_AGENT_REASONING_EFFORT,
   getAgentReasoningEfforts,
 } from "@/lib/agent-models"
 import { cn } from "@/lib/utils"
-import { Badge } from "@/components/ui/badge"
 
 type PickerView = "compact" | "advanced" | "models" | "effort" | "auto-source"
 
@@ -94,6 +102,37 @@ function AutoModelOption() {
   )
 }
 
+function ModelAttributeIcon({
+  label,
+  type,
+}: {
+  label: string
+  type: "api" | "subscription" | "local" | "cloud"
+}) {
+  const icon = {
+    api: ApiGatewayIcon,
+    subscription: Crown02Icon,
+    local: ComputerProgramming01Icon,
+    cloud: CloudIcon,
+  }[type]
+
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <span
+            aria-label={label}
+            className="inline-flex size-4 items-center justify-center text-muted-foreground"
+          />
+        }
+      >
+        <HugeiconsIcon icon={icon} strokeWidth={1.8} className="size-3.5" />
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  )
+}
+
 function AgentModelOption({ model }: { model: AgentModelDefinition }) {
   return (
     <span className="flex min-w-0 items-center gap-2">
@@ -113,12 +152,14 @@ function AgentModelOption({ model }: { model: AgentModelDefinition }) {
             {model.sourceLabel}
           </span>
         ) : null}
-        <Badge variant="outline" className="h-4 px-1 text-[9px] font-normal">
-          {model.billingMode === "subscription" ? "Subscription" : "API"}
-        </Badge>
-        <Badge variant="outline" className="h-4 px-1 text-[9px] font-normal">
-          {model.locality === "local-only" ? "Local" : "Cloud"}
-        </Badge>
+        <ModelAttributeIcon
+          label={model.billingMode === "subscription" ? "Subscription" : "API"}
+          type={model.billingMode === "subscription" ? "subscription" : "api"}
+        />
+        <ModelAttributeIcon
+          label={model.locality === "local-only" ? "Local" : "Cloud"}
+          type={model.locality === "local-only" ? "local" : "cloud"}
+        />
       </span>
     </span>
   )
@@ -433,12 +474,7 @@ export function ComposerModelPicker({
                 <span className="min-w-0 flex-1 truncate">
                   {source.sourceLabel}
                 </span>
-                <Badge
-                  variant="outline"
-                  className="h-4 px-1 text-[9px] font-normal"
-                >
-                  Cloud
-                </Badge>
+                <ModelAttributeIcon label="Cloud" type="cloud" />
                 {preferredAutoConnectionId === source.connectionId ? (
                   <HugeiconsIcon
                     icon={Tick02Icon}
@@ -634,6 +670,7 @@ export function ComposerModelPicker({
         </motion.span>
       </PopoverTrigger>
       <PopoverContent
+        data-agent-surface-portal
         align={align}
         side={side}
         sideOffset={8}

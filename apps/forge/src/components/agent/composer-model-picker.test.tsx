@@ -79,4 +79,23 @@ describe("ComposerModelPicker", () => {
     expect(await screen.findByText("GPT 5.6 Sol")).toBeTruthy()
     expect(screen.queryByText("Forge managed")).toBeNull()
   })
+
+  test("uses hover-labeled icons for model source attributes", async () => {
+    render(<ManagedPickerHarness />)
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Model Auto, effort Auto",
+      })
+    )
+    fireEvent.click(await screen.findByRole("button", { name: "Advanced" }))
+    fireEvent.click((await screen.findByText("Model")).closest("button")!)
+
+    const apiIcon = (await screen.findAllByLabelText("API"))[0]
+    const cloudIcon = (await screen.findAllByLabelText("Cloud"))[0]
+    expect(screen.queryByText("API")).toBeNull()
+    expect(screen.queryByText("Cloud")).toBeNull()
+    expect(apiIcon.dataset.slot).toBe("tooltip-trigger")
+    expect(cloudIcon.dataset.slot).toBe("tooltip-trigger")
+  })
 })
