@@ -325,8 +325,8 @@ export function ComposerModelPicker({
         <div className="space-y-1">
           <MenuRow label="Advanced" onClick={() => setView("advanced")} />
           <div className="-mx-1.5 h-px bg-border/70" />
-          <div className="pt-0.5 pr-2 pb-0 pl-1.5">
-            <div className="mb-1.5 flex items-center justify-between text-xs">
+          <div className="pt-0.5 pb-0">
+            <div className="mb-1.5 flex items-center justify-between px-2 text-xs">
               <span className="font-medium">Effort level</span>
               <span className="text-muted-foreground">{effortLabel}</span>
             </div>
@@ -358,7 +358,7 @@ export function ComposerModelPicker({
                 </span>
               </button>
             ) : (
-              <>
+              <div className="px-2">
                 <div
                   className="grid rounded-full"
                   style={{
@@ -400,7 +400,7 @@ export function ComposerModelPicker({
                     <span key={level}>{EFFORT_LABELS[level]}</span>
                   ))}
                 </div>
-              </>
+              </div>
             )}
           </div>
         </div>
@@ -585,7 +585,7 @@ export function ComposerModelPicker({
             style={{ minWidth: 0 }}
             transition={transition}
             className={cn(
-              "flex h-7 max-w-full items-center gap-1 rounded-full border-0 bg-transparent pr-1 pl-1.5 text-sm font-medium transition-colors outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50",
+              "flex h-7 max-w-full items-center gap-1 rounded-full border-0 bg-transparent px-2.5 text-sm font-medium transition-colors outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50",
               open && "bg-muted"
             )}
           />

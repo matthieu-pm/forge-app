@@ -134,11 +134,11 @@ describe("ComposerModelPicker", () => {
   test("opens the reused compact picker", async () => {
     render(<PickerHarness />)
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "Model Auto, effort Auto",
-      })
-    )
+    const trigger = screen.getByRole("button", {
+      name: "Model Auto, effort Auto",
+    })
+    expect(trigger.className).toContain("px-2.5")
+    fireEvent.click(trigger)
 
     const advanced = await screen.findByRole("button", { name: "Advanced" })
     expect(advanced.className).toContain("rounded-full")
@@ -147,10 +147,14 @@ describe("ComposerModelPicker", () => {
     const divider = picker?.querySelector(".h-px")
     const effortPanel =
       screen.getByText("Effort level").parentElement?.parentElement
+    const autoButton = screen.getByRole("button", {
+      name: /Auto.*Adapts to request/,
+    })
     expect(divider?.className).toContain("-mx-1.5")
     expect(effortPanel?.className).toContain("pb-0")
-    expect(effortPanel?.className).toContain("pl-1.5")
-    expect(effortPanel?.className).toContain("pr-2")
+    expect(effortPanel?.className).not.toContain("pl-1.5")
+    expect(effortPanel?.className).not.toContain("pr-2")
+    expect(autoButton.className).toContain("w-full")
     expect(picker?.className).toContain("rounded-2xl")
     expect(picker?.className).toContain("border-border/70")
     expect(picker?.className).toContain("shadow-md")
