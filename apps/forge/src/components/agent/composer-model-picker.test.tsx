@@ -26,8 +26,6 @@ function PickerHarness() {
       effort={effort}
       onEffortChange={setEffort}
       models={getAgentModels()}
-      preferredAutoConnectionId={null}
-      onPreferredAutoConnectionChange={() => {}}
     />
   )
 }
@@ -47,8 +45,6 @@ function ManagedPickerHarness() {
       effort={effort}
       onEffortChange={setEffort}
       models={managedModels}
-      preferredAutoConnectionId={null}
-      onPreferredAutoConnectionChange={() => {}}
     />
   )
 }
@@ -70,8 +66,6 @@ function SubscriptionPickerHarness() {
       effort={effort}
       onEffortChange={setEffort}
       models={subscriptionModels}
-      preferredAutoConnectionId={null}
-      onPreferredAutoConnectionChange={() => {}}
     />
   )
 }
@@ -92,8 +86,6 @@ function ApiPickerHarness() {
       effort={effort}
       onEffortChange={setEffort}
       models={apiModels}
-      preferredAutoConnectionId={null}
-      onPreferredAutoConnectionChange={() => {}}
     />
   )
 }
@@ -132,8 +124,6 @@ function GroupedPickerHarness() {
       effort={effort}
       onEffortChange={setEffort}
       models={[...forgeModels, ...connectedModels]}
-      preferredAutoConnectionId={null}
-      onPreferredAutoConnectionChange={() => {}}
     />
   )
 }
@@ -168,6 +158,8 @@ describe("ComposerModelPicker", () => {
 
     fireEvent.click(advanced)
     await screen.findByText("Model")
+    expect(screen.queryByText("Auto billing source")).toBeNull()
+    expect(screen.queryByText("Any OpenAI source")).toBeNull()
     const backButton = screen
       .getAllByRole("button", { name: "Advanced" })
       .find((button) => button.className.includes("pl-1.5"))

@@ -73,8 +73,6 @@ export function AgentComposer({
     models,
     modelSelection,
     setModelSelection,
-    autoConnectionId,
-    setAutoConnectionId,
     effort,
     setEffort,
     sendMessage,
@@ -194,8 +192,6 @@ export function AgentComposer({
                 effort={effort}
                 onEffortChange={setEffort}
                 models={models}
-                preferredAutoConnectionId={autoConnectionId}
-                onPreferredAutoConnectionChange={setAutoConnectionId}
                 disabled={busy}
                 side="top"
                 onOpenProviderSettings={() =>

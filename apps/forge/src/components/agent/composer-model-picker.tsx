@@ -40,7 +40,7 @@ import {
 } from "@/lib/agent-models"
 import { cn } from "@/lib/utils"
 
-type PickerView = "compact" | "advanced" | "models" | "effort" | "auto-source"
+type PickerView = "compact" | "advanced" | "models" | "effort"
 
 const EFFORT_LABELS: Record<AgentReasoningEffortSelection, string> = {
   auto: "Auto",
@@ -212,8 +212,6 @@ export function ComposerModelPicker({
   effort,
   onEffortChange,
   models,
-  preferredAutoConnectionId,
-  onPreferredAutoConnectionChange,
   disabled,
   side = "bottom",
   align = "start",
@@ -224,8 +222,6 @@ export function ComposerModelPicker({
   effort: AgentReasoningEffortSelection
   onEffortChange: (effort: AgentReasoningEffortSelection) => void
   models: Array<AgentModelDefinition>
-  preferredAutoConnectionId: string | null
-  onPreferredAutoConnectionChange: (connectionId: string | null) => void
   disabled?: boolean
   side?: "top" | "bottom"
   align?: "start" | "center" | "end"
@@ -268,23 +264,6 @@ export function ComposerModelPicker({
       ].filter((group) => group.models.length > 0),
     }
   }, [models])
-  const autoSources = React.useMemo(() => {
-    const byConnection = new Map<string, AgentModelDefinition>()
-    for (const model of models) {
-      if (
-        model.provider === "openai" &&
-        model.executionKind === "forge-native" &&
-        model.connectionId &&
-        !model.disabledReason
-      ) {
-        byConnection.set(model.connectionId, model)
-      }
-    }
-    return [...byConnection.values()]
-  }, [models])
-  const preferredAutoSource = autoSources.find(
-    (model) => model.connectionId === preferredAutoConnectionId
-  )
   const selectedModelLabel =
     value === AUTO_AGENT_MODEL_SELECTION.id
       ? AUTO_AGENT_MODEL_SELECTION.label
@@ -453,13 +432,6 @@ export function ComposerModelPicker({
             value={effortLabel}
             onClick={() => setView("effort")}
           />
-          {isAutoModel && autoSources.length > 1 ? (
-            <MenuRow
-              label="Auto billing source"
-              value={preferredAutoSource?.sourceLabel ?? "Any OpenAI source"}
-              onClick={() => setView("auto-source")}
-            />
-          ) : null}
           <div className="-mx-1.5 my-1 h-px bg-border/70" />
           <MenuRow
             label="Providers"
@@ -477,70 +449,6 @@ export function ComposerModelPicker({
               onOpenProviderSettings?.()
             }}
           />
-        </div>
-      )
-    }
-
-    if (view === "auto-source") {
-      return (
-        <div>
-          <button
-            type="button"
-            onClick={() => setView("advanced")}
-            className="mb-0.5 flex h-7 items-center gap-1.5 rounded-full pr-2.5 pl-1.5 text-sm font-medium outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
-          >
-            <HugeiconsIcon
-              icon={ArrowLeft01Icon}
-              strokeWidth={2}
-              className="size-3.5"
-            />
-            Auto billing source
-          </button>
-          <div className="max-h-56 space-y-0.5 overflow-y-auto pr-0.5">
-            <button
-              type="button"
-              onClick={() => onPreferredAutoConnectionChange(null)}
-              className={cn(
-                "flex min-h-8 w-full items-center gap-2 rounded-full px-2 py-1 text-left text-sm outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40",
-                preferredAutoConnectionId === null && "bg-muted"
-              )}
-            >
-              <span className="min-w-0 flex-1">Any OpenAI source</span>
-              {preferredAutoConnectionId === null ? (
-                <HugeiconsIcon
-                  icon={Tick02Icon}
-                  strokeWidth={2}
-                  className="size-3.5"
-                />
-              ) : null}
-            </button>
-            {autoSources.map((source) => (
-              <button
-                key={source.connectionId}
-                type="button"
-                onClick={() =>
-                  onPreferredAutoConnectionChange(source.connectionId ?? null)
-                }
-                className={cn(
-                  "flex min-h-8 w-full items-center gap-2 rounded-full px-2 py-1 text-left text-sm outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40",
-                  preferredAutoConnectionId === source.connectionId &&
-                    "bg-muted"
-                )}
-              >
-                <span className="min-w-0 flex-1 truncate">
-                  {source.sourceLabel}
-                </span>
-                <ModelAttributeIcon label="Cloud" type="cloud" />
-                {preferredAutoConnectionId === source.connectionId ? (
-                  <HugeiconsIcon
-                    icon={Tick02Icon}
-                    strokeWidth={2}
-                    className="size-3.5"
-                  />
-                ) : null}
-              </button>
-            ))}
-          </div>
         </div>
       )
     }
