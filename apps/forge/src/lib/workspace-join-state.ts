@@ -4,7 +4,7 @@ import { z } from "zod"
 import { workspaceInviteTokenSchema } from "@/application/workspace-security/workspace-join-contract"
 
 export const loadWorkspaceInvite = createServerFn({ method: "GET" })
-  .inputValidator(workspaceInviteTokenSchema)
+  .validator(workspaceInviteTokenSchema)
   .handler(async ({ data }) => {
     const [{ getRequest }, { previewWorkspaceInviteForRequest }] =
       await Promise.all([
@@ -15,7 +15,7 @@ export const loadWorkspaceInvite = createServerFn({ method: "GET" })
   })
 
 export const acceptWorkspaceInviteLink = createServerFn({ method: "POST" })
-  .inputValidator(workspaceInviteTokenSchema)
+  .validator(workspaceInviteTokenSchema)
   .handler(async ({ data }) => {
     const [{ getRequest }, { joinWorkspaceInviteForRequest }] =
       await Promise.all([
@@ -37,7 +37,7 @@ export const loadApprovedDomainWorkspace = createServerFn({
 })
 
 export const acceptApprovedDomainWorkspace = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ workspaceId: z.string().min(1) }).strict())
+  .validator(z.object({ workspaceId: z.string().min(1) }).strict())
   .handler(async ({ data }) => {
     const [{ getRequest }, { joinApprovedDomainWorkspaceForRequest }] =
       await Promise.all([

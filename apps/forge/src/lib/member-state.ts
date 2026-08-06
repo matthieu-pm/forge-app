@@ -19,7 +19,7 @@ export const loadWorkspaceAccess = createServerFn({ method: "GET" }).handler(
 )
 
 export const inviteWorkspaceMember = createServerFn({ method: "POST" })
-  .inputValidator(inviteWorkspaceMemberInputSchema)
+  .validator(inviteWorkspaceMemberInputSchema)
   .handler(async ({ data }) => {
     const [{ getRequest }, { inviteWorkspaceMemberForRequest }] =
       await Promise.all([
@@ -31,7 +31,7 @@ export const inviteWorkspaceMember = createServerFn({ method: "POST" })
   })
 
 export const manageWorkspaceAccess = createServerFn({ method: "POST" })
-  .inputValidator(manageWorkspaceAccessInputSchema)
+  .validator(manageWorkspaceAccessInputSchema)
   .handler(async ({ data }) => {
     const [{ getRequest }, { manageWorkspaceAccessForRequest }] =
       await Promise.all([
@@ -43,7 +43,7 @@ export const manageWorkspaceAccess = createServerFn({ method: "POST" })
   })
 
 export const retryInvitationDelivery = createServerFn({ method: "POST" })
-  .inputValidator(retryInvitationDeliveryInputSchema)
+  .validator(retryInvitationDeliveryInputSchema)
   .handler(async ({ data }) => {
     const [{ getRequest }, { retryInvitationDeliveryForRequest }] =
       await Promise.all([

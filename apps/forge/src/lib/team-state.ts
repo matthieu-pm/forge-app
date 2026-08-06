@@ -9,7 +9,7 @@ import {
 } from "@/lib/team-contract"
 
 export const createTeam = createServerFn({ method: "POST" })
-  .inputValidator(createTeamInputSchema)
+  .validator(createTeamInputSchema)
   .handler(async ({ data }) => {
     const [{ getRequest }, { createTeamForRequest }] = await Promise.all([
       import("@tanstack/react-start/server"),
@@ -29,7 +29,7 @@ export const loadTeams = createServerFn({ method: "GET" }).handler(async () => {
 })
 
 export const loadTeamDirectory = createServerFn({ method: "GET" })
-  .inputValidator(teamLifecycleSchema)
+  .validator(teamLifecycleSchema)
   .handler(async ({ data }) => {
     const [{ getRequest }, { getTeamDirectoryForRequest }] = await Promise.all([
       import("@tanstack/react-start/server"),
@@ -62,7 +62,7 @@ export function listTeams(): Promise<TeamList> {
 }
 
 export const getTeam = createServerFn({ method: "GET" })
-  .inputValidator((input: { slug: string }) => ({
+  .validator((input: { slug: string }) => ({
     slug: input.slug.trim().toLowerCase(),
   }))
   .handler(async ({ data }) => {
@@ -75,7 +75,7 @@ export const getTeam = createServerFn({ method: "GET" })
   })
 
 export const getTeamRouteState = createServerFn({ method: "GET" })
-  .inputValidator((input: { slug: string }) => ({
+  .validator((input: { slug: string }) => ({
     slug: input.slug.trim().toLowerCase(),
   }))
   .handler(async ({ data }) => {
@@ -87,7 +87,7 @@ export const getTeamRouteState = createServerFn({ method: "GET" })
   })
 
 export const deleteTeam = createServerFn({ method: "POST" })
-  .inputValidator(deleteTeamInputSchema)
+  .validator(deleteTeamInputSchema)
   .handler(async ({ data }) => {
     const [{ getRequest }, { deleteTeamForRequest }] = await Promise.all([
       import("@tanstack/react-start/server"),
@@ -98,7 +98,7 @@ export const deleteTeam = createServerFn({ method: "POST" })
   })
 
 export const restoreTeam = createServerFn({ method: "POST" })
-  .inputValidator(teamMutationInputSchema)
+  .validator(teamMutationInputSchema)
   .handler(async ({ data }) => {
     const [{ getRequest }, { restoreTeamForRequest }] = await Promise.all([
       import("@tanstack/react-start/server"),
@@ -109,7 +109,7 @@ export const restoreTeam = createServerFn({ method: "POST" })
   })
 
 export const leaveTeam = createServerFn({ method: "POST" })
-  .inputValidator(teamMutationInputSchema)
+  .validator(teamMutationInputSchema)
   .handler(async ({ data }) => {
     const [{ getRequest }, { leaveTeamForRequest }] = await Promise.all([
       import("@tanstack/react-start/server"),
@@ -120,7 +120,7 @@ export const leaveTeam = createServerFn({ method: "POST" })
   })
 
 export const updateTeam = createServerFn({ method: "POST" })
-  .inputValidator(updateTeamInputSchema)
+  .validator(updateTeamInputSchema)
   .handler(async ({ data }) => {
     const [{ getRequest }, { updateTeamForRequest }] = await Promise.all([
       import("@tanstack/react-start/server"),

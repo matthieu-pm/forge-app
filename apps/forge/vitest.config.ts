@@ -1,13 +1,11 @@
 import { configDefaults, defineConfig } from "vitest/config"
-import viteTsConfigPaths from "vite-tsconfig-paths"
 
 export default defineConfig({
-  plugins: [
-    viteTsConfigPaths({
-      projects: ["./tsconfig.json"],
-    }),
-  ],
+  resolve: {
+    tsconfigPaths: true,
+  },
   test: {
+    clearMocks: true,
     environment: "jsdom",
     exclude: [
       ...configDefaults.exclude,

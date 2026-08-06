@@ -8,7 +8,8 @@
     "packages/*"
   ],
   "overrides": {
-    "jose": "6.2.3"
+    "jose": "6.2.8",
+    "vite": "8.2.1"
   },
   "scripts": {
     "prepare:local": "bun apps/forge/scripts/ensure-local-agent-secrets.ts",
@@ -43,8 +44,8 @@
     "eval:agent": "turbo run eval --filter=@forge/agent-runtime"
   },
   "devDependencies": {
-    "prettier": "^3.8.1",
-    "prettier-plugin-tailwindcss": "^0.7.2",
-    "turbo": "2.10.7"
+    "prettier": "^3.9.6",
+    "prettier-plugin-tailwindcss": "^0.8.1",
+    "turbo": "2.10.8"
   }
 }

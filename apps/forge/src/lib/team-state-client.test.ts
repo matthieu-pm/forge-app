@@ -11,7 +11,7 @@ vi.mock("@tanstack/react-start", () => ({
   createServerFn: () => {
     const handler = mocks.handlers[mocks.nextHandler++]
     const builder = {
-      inputValidator: () => builder,
+      validator: () => builder,
       handler: () => handler,
     }
 

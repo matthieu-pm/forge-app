@@ -3,7 +3,6 @@ import { defineConfig, loadEnv } from "vite"
 import { devtools } from "@tanstack/devtools-vite"
 import { tanstackStart } from "@tanstack/react-start/plugin/vite"
 import viteReact from "@vitejs/plugin-react"
-import viteTsConfigPaths from "vite-tsconfig-paths"
 import tailwindcss from "@tailwindcss/vite"
 import { nitro } from "nitro/vite"
 import { workflow } from "workflow/vite"
@@ -24,6 +23,9 @@ const config = defineConfig(({ mode }) => {
     preview: {
       port: Number(process.env.FORGE_PRERENDER_PORT ?? 3100),
     },
+    resolve: {
+      tsconfigPaths: true,
+    },
     server: {
       watch: {
         ignored: ["**/.electron-build/**", "**/.output/**"],
@@ -34,10 +36,6 @@ const config = defineConfig(({ mode }) => {
       devtools(),
       nitro({
         traceDeps: ["@vercel/oidc*", "@vercel/cli-config*", "xdg-app-paths*"],
-      }),
-      // this is the plugin that enables path aliases
-      viteTsConfigPaths({
-        projects: ["./tsconfig.json"],
       }),
       tailwindcss(),
       tanstackStart({

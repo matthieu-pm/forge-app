@@ -15,7 +15,7 @@ export const loadWorkspaceSecurity = createServerFn({ method: "GET" }).handler(
 )
 
 export const mutateWorkspaceSecurity = createServerFn({ method: "POST" })
-  .inputValidator(workspaceSecurityCommandSchema)
+  .validator(workspaceSecurityCommandSchema)
   .handler(async ({ data }) => {
     const [{ getRequest }, { executeWorkspaceSecurityForRequest }] =
       await Promise.all([

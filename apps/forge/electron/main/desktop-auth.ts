@@ -5,6 +5,7 @@ import { BrowserWindow } from "electron"
 
 import { desktopAuthorizationUrl } from "../shared/desktop-auth-protocol"
 import { replaceRendererAuthCookies } from "./auth-cookies"
+import type { BetterAuthClientPlugin } from "better-auth/client"
 import type { Session } from "electron"
 
 type PendingAuthorization = {
@@ -19,34 +20,34 @@ export function setupDesktopAuth(
   authScheme: string,
   getWindow: () => BrowserWindow | null
 ) {
+  const desktopPlugin = electronClient({
+    protocol: {
+      scheme: authScheme,
+    },
+    signInURL: desktopAuthorizationUrl(appOrigin, authScheme),
+    storage: storage({
+      projectName: "Forge",
+      configName: "authentication",
+    }),
+    storagePrefix: "forge",
+    sanitizeUser: (user) => ({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      emailVerified: user.emailVerified,
+      image: user.image,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    }),
+    userImageProxy: {
+      enabled: true,
+      maxSize: 5 * 1024 * 1024,
+    },
+  }) as ReturnType<typeof electronClient> & BetterAuthClientPlugin
+
   const authClient = createAuthClient({
     baseURL: appOrigin,
-    plugins: [
-      electronClient({
-        protocol: {
-          scheme: authScheme,
-        },
-        signInURL: desktopAuthorizationUrl(appOrigin, authScheme),
-        storage: storage({
-          projectName: "Forge",
-          configName: "authentication",
-        }),
-        storagePrefix: "forge",
-        sanitizeUser: (user) => ({
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          emailVerified: user.emailVerified,
-          image: user.image,
-          createdAt: user.createdAt,
-          updatedAt: user.updatedAt,
-        }),
-        userImageProxy: {
-          enabled: true,
-          maxSize: 5 * 1024 * 1024,
-        },
-      }),
-    ],
+    plugins: [desktopPlugin],
   })
 
   let pendingAuthorization: PendingAuthorization | null = null

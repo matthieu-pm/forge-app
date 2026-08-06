@@ -9,98 +9,63 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SignupRouteImport } from './routes/signup'
-import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as MyIssuesRouteImport } from './routes/my-issues'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as InboxRouteImport } from './routes/inbox'
-import { Route as ForgeRouteImport } from './routes/forge'
-import { Route as DownloadRouteImport } from './routes/download'
-import { Route as AgentRouteImport } from './routes/agent'
-import { Route as AcceptInvitationRouteImport } from './routes/accept-invitation'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as SettingsIndexRouteImport } from './routes/settings.index'
-import { Route as WorkspaceViewsRouteImport } from './routes/workspace/views'
-import { Route as WorkspaceTeamsRouteImport } from './routes/workspace/teams'
-import { Route as WorkspaceSignalsRouteImport } from './routes/workspace/signals'
-import { Route as WorkspaceProjectsRouteImport } from './routes/workspace/projects'
-import { Route as WorkspaceMembersRouteImport } from './routes/workspace/members'
-import { Route as WorkspaceInsightsRouteImport } from './routes/workspace/insights'
-import { Route as WorkspaceCallsRouteImport } from './routes/workspace/calls'
-import { Route as TeamsTeamSlugRouteImport } from './routes/teams/$teamSlug'
-import { Route as SettingsTeamsRouteImport } from './routes/settings_.teams'
-import { Route as SettingsWorkspaceRouteImport } from './routes/settings.workspace'
-import { Route as SettingsSecurityRouteImport } from './routes/settings.security'
-import { Route as SettingsProfileRouteImport } from './routes/settings.profile'
-import { Route as SettingsMembersRouteImport } from './routes/settings.members'
-import { Route as SettingsImportExportRouteImport } from './routes/settings.import-export'
-import { Route as SettingsBillingRouteImport } from './routes/settings.billing'
-import { Route as SettingsApplicationsRouteImport } from './routes/settings.applications'
-import { Route as SettingsApiRouteImport } from './routes/settings.api'
-import { Route as SettingsAiRouteImport } from './routes/settings.ai'
-import { Route as OnboardingWorkspaceRouteImport } from './routes/onboarding/workspace'
-import { Route as JoinTokenRouteImport } from './routes/join.$token'
-import { Route as AuthDesktopRouteImport } from './routes/auth/desktop'
-import { Route as ApiOpenapiDotjsonRouteImport } from './routes/api/openapi[.]json'
+import { Route as AcceptInvitationRouteImport } from './routes/accept-invitation'
+import { Route as AgentRouteImport } from './routes/agent'
+import { Route as DownloadRouteImport } from './routes/download'
+import { Route as ForgeRouteImport } from './routes/forge'
+import { Route as InboxRouteImport } from './routes/inbox'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as MyIssuesRouteImport } from './routes/my-issues'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SignupRouteImport } from './routes/signup'
 import { Route as ApiDocsRouteImport } from './routes/api/docs'
+import { Route as ApiOpenapiDotjsonRouteImport } from './routes/api/openapi[.]json'
+import { Route as AuthDesktopRouteImport } from './routes/auth/desktop'
+import { Route as JoinTokenRouteImport } from './routes/join.$token'
+import { Route as OnboardingWorkspaceRouteImport } from './routes/onboarding/workspace'
+import { Route as SettingsIndexRouteImport } from './routes/settings.index'
+import { Route as SettingsAiRouteImport } from './routes/settings.ai'
+import { Route as SettingsApiRouteImport } from './routes/settings.api'
+import { Route as SettingsApplicationsRouteImport } from './routes/settings.applications'
+import { Route as SettingsBillingRouteImport } from './routes/settings.billing'
+import { Route as SettingsImportExportRouteImport } from './routes/settings.import-export'
+import { Route as SettingsMembersRouteImport } from './routes/settings.members'
+import { Route as SettingsProfileRouteImport } from './routes/settings.profile'
+import { Route as SettingsSecurityRouteImport } from './routes/settings.security'
+import { Route as SettingsWorkspaceRouteImport } from './routes/settings.workspace'
+import { Route as SettingsTeamsRouteImport } from './routes/settings_.teams'
+import { Route as TeamsTeamSlugRouteImport } from './routes/teams/$teamSlug'
+import { Route as WorkspaceCallsRouteImport } from './routes/workspace/calls'
+import { Route as WorkspaceInsightsRouteImport } from './routes/workspace/insights'
+import { Route as WorkspaceMembersRouteImport } from './routes/workspace/members'
+import { Route as WorkspaceProjectsRouteImport } from './routes/workspace/projects'
+import { Route as WorkspaceSignalsRouteImport } from './routes/workspace/signals'
+import { Route as WorkspaceTeamsRouteImport } from './routes/workspace/teams'
+import { Route as WorkspaceViewsRouteImport } from './routes/workspace/views'
+import { Route as ApiAgentSplatRouteImport } from './routes/api/agent/$'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiV1SplatRouteImport } from './routes/api/v1/$'
+import { Route as SettingsTeamsTeamSlugRouteImport } from './routes/settings_.teams.$teamSlug'
+import { Route as SettingsTeamsNewRouteImport } from './routes/settings_.teams.new'
+import { Route as TeamsTeamSlugCallsRouteImport } from './routes/teams/$teamSlug/calls'
+import { Route as TeamsTeamSlugInsightsRouteImport } from './routes/teams/$teamSlug/insights'
+import { Route as TeamsTeamSlugIssuesRouteImport } from './routes/teams/$teamSlug/issues'
+import { Route as TeamsTeamSlugProjectsRouteImport } from './routes/teams/$teamSlug/projects'
+import { Route as TeamsTeamSlugSignalsRouteImport } from './routes/teams/$teamSlug/signals'
+import { Route as TeamsTeamSlugViewsRouteImport } from './routes/teams/$teamSlug/views'
 import { Route as WorkspaceInitiativesIndexRouteImport } from './routes/workspace/initiatives/index'
 import { Route as WorkspaceInitiativesInitiativeIdRouteImport } from './routes/workspace/initiatives/$initiativeId'
-import { Route as TeamsTeamSlugViewsRouteImport } from './routes/teams/$teamSlug/views'
-import { Route as TeamsTeamSlugSignalsRouteImport } from './routes/teams/$teamSlug/signals'
-import { Route as TeamsTeamSlugProjectsRouteImport } from './routes/teams/$teamSlug/projects'
-import { Route as TeamsTeamSlugIssuesRouteImport } from './routes/teams/$teamSlug/issues'
-import { Route as TeamsTeamSlugInsightsRouteImport } from './routes/teams/$teamSlug/insights'
-import { Route as TeamsTeamSlugCallsRouteImport } from './routes/teams/$teamSlug/calls'
-import { Route as SettingsTeamsNewRouteImport } from './routes/settings_.teams.new'
-import { Route as SettingsTeamsTeamSlugRouteImport } from './routes/settings_.teams.$teamSlug'
-import { Route as ApiV1SplatRouteImport } from './routes/api/v1/$'
-import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
-import { Route as ApiAgentSplatRouteImport } from './routes/api/agent/$'
+import { Route as ApiInternalDesktopReleasesRouteImport } from './routes/api/internal/desktop/releases'
 import { Route as SettingsTeamsTeamSlugIndexRouteImport } from './routes/settings_.teams.$teamSlug.index'
 import { Route as SettingsTeamsTeamSlugGeneralRouteImport } from './routes/settings_.teams.$teamSlug.general'
-import { Route as ApiInternalDesktopReleasesRouteImport } from './routes/api/internal/desktop/releases'
 import { Route as ApiDesktopUpdatesDarwinArchRouteImport } from './routes/api/desktop/updates/darwin/$arch'
-import { Route as ApiInternalDesktopReleasesVersionPromoteRouteImport } from './routes/api/internal/desktop/releases/$version/promote'
 import { Route as ApiInternalDesktopReleasesVersionPauseRouteImport } from './routes/api/internal/desktop/releases/$version/pause'
+import { Route as ApiInternalDesktopReleasesVersionPromoteRouteImport } from './routes/api/internal/desktop/releases/$version/promote'
 
-const SignupRoute = SignupRouteImport.update({
-  id: '/signup',
-  path: '/signup',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MyIssuesRoute = MyIssuesRouteImport.update({
-  id: '/my-issues',
-  path: '/my-issues',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const InboxRoute = InboxRouteImport.update({
-  id: '/inbox',
-  path: '/inbox',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ForgeRoute = ForgeRouteImport.update({
-  id: '/forge',
-  path: '/forge',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DownloadRoute = DownloadRouteImport.update({
-  id: '/download',
-  path: '/download',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AgentRoute = AgentRouteImport.update({
-  id: '/agent',
-  path: '/agent',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AcceptInvitationRoute = AcceptInvitationRouteImport.update({
@@ -108,119 +73,49 @@ const AcceptInvitationRoute = AcceptInvitationRouteImport.update({
   path: '/accept-invitation',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AgentRoute = AgentRouteImport.update({
+  id: '/agent',
+  path: '/agent',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SettingsIndexRoute = SettingsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const WorkspaceViewsRoute = WorkspaceViewsRouteImport.update({
-  id: '/workspace/views',
-  path: '/workspace/views',
+const DownloadRoute = DownloadRouteImport.update({
+  id: '/download',
+  path: '/download',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WorkspaceTeamsRoute = WorkspaceTeamsRouteImport.update({
-  id: '/workspace/teams',
-  path: '/workspace/teams',
+const ForgeRoute = ForgeRouteImport.update({
+  id: '/forge',
+  path: '/forge',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WorkspaceSignalsRoute = WorkspaceSignalsRouteImport.update({
-  id: '/workspace/signals',
-  path: '/workspace/signals',
+const InboxRoute = InboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WorkspaceProjectsRoute = WorkspaceProjectsRouteImport.update({
-  id: '/workspace/projects',
-  path: '/workspace/projects',
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WorkspaceMembersRoute = WorkspaceMembersRouteImport.update({
-  id: '/workspace/members',
-  path: '/workspace/members',
+const MyIssuesRoute = MyIssuesRouteImport.update({
+  id: '/my-issues',
+  path: '/my-issues',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WorkspaceInsightsRoute = WorkspaceInsightsRouteImport.update({
-  id: '/workspace/insights',
-  path: '/workspace/insights',
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WorkspaceCallsRoute = WorkspaceCallsRouteImport.update({
-  id: '/workspace/calls',
-  path: '/workspace/calls',
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TeamsTeamSlugRoute = TeamsTeamSlugRouteImport.update({
-  id: '/teams/$teamSlug',
-  path: '/teams/$teamSlug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SettingsTeamsRoute = SettingsTeamsRouteImport.update({
-  id: '/settings_/teams',
-  path: '/settings/teams',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SettingsWorkspaceRoute = SettingsWorkspaceRouteImport.update({
-  id: '/workspace',
-  path: '/workspace',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const SettingsSecurityRoute = SettingsSecurityRouteImport.update({
-  id: '/security',
-  path: '/security',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const SettingsProfileRoute = SettingsProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const SettingsMembersRoute = SettingsMembersRouteImport.update({
-  id: '/members',
-  path: '/members',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const SettingsImportExportRoute = SettingsImportExportRouteImport.update({
-  id: '/import-export',
-  path: '/import-export',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const SettingsBillingRoute = SettingsBillingRouteImport.update({
-  id: '/billing',
-  path: '/billing',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const SettingsApplicationsRoute = SettingsApplicationsRouteImport.update({
-  id: '/applications',
-  path: '/applications',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const SettingsApiRoute = SettingsApiRouteImport.update({
-  id: '/api',
-  path: '/api',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const SettingsAiRoute = SettingsAiRouteImport.update({
-  id: '/ai',
-  path: '/ai',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const OnboardingWorkspaceRoute = OnboardingWorkspaceRouteImport.update({
-  id: '/onboarding/workspace',
-  path: '/onboarding/workspace',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const JoinTokenRoute = JoinTokenRouteImport.update({
-  id: '/join/$token',
-  path: '/join/$token',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthDesktopRoute = AuthDesktopRouteImport.update({
-  id: '/auth/desktop',
-  path: '/auth/desktop',
+const ApiDocsRoute = ApiDocsRouteImport.update({
+  id: '/api/docs',
+  path: '/api/docs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiOpenapiDotjsonRoute = ApiOpenapiDotjsonRouteImport.update({
@@ -228,10 +123,170 @@ const ApiOpenapiDotjsonRoute = ApiOpenapiDotjsonRouteImport.update({
   path: '/api/openapi.json',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiDocsRoute = ApiDocsRouteImport.update({
-  id: '/api/docs',
-  path: '/api/docs',
+const AuthDesktopRoute = AuthDesktopRouteImport.update({
+  id: '/auth/desktop',
+  path: '/auth/desktop',
   getParentRoute: () => rootRouteImport,
+} as any)
+const JoinTokenRoute = JoinTokenRouteImport.update({
+  id: '/join/$token',
+  path: '/join/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingWorkspaceRoute = OnboardingWorkspaceRouteImport.update({
+  id: '/onboarding/workspace',
+  path: '/onboarding/workspace',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsIndexRoute = SettingsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsAiRoute = SettingsAiRouteImport.update({
+  id: '/ai',
+  path: '/ai',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsApiRoute = SettingsApiRouteImport.update({
+  id: '/api',
+  path: '/api',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsApplicationsRoute = SettingsApplicationsRouteImport.update({
+  id: '/applications',
+  path: '/applications',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsBillingRoute = SettingsBillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsImportExportRoute = SettingsImportExportRouteImport.update({
+  id: '/import-export',
+  path: '/import-export',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsMembersRoute = SettingsMembersRouteImport.update({
+  id: '/members',
+  path: '/members',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsProfileRoute = SettingsProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsSecurityRoute = SettingsSecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsWorkspaceRoute = SettingsWorkspaceRouteImport.update({
+  id: '/workspace',
+  path: '/workspace',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsTeamsRoute = SettingsTeamsRouteImport.update({
+  id: '/settings_/teams',
+  path: '/settings/teams',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TeamsTeamSlugRoute = TeamsTeamSlugRouteImport.update({
+  id: '/teams/$teamSlug',
+  path: '/teams/$teamSlug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceCallsRoute = WorkspaceCallsRouteImport.update({
+  id: '/workspace/calls',
+  path: '/workspace/calls',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceInsightsRoute = WorkspaceInsightsRouteImport.update({
+  id: '/workspace/insights',
+  path: '/workspace/insights',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceMembersRoute = WorkspaceMembersRouteImport.update({
+  id: '/workspace/members',
+  path: '/workspace/members',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceProjectsRoute = WorkspaceProjectsRouteImport.update({
+  id: '/workspace/projects',
+  path: '/workspace/projects',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceSignalsRoute = WorkspaceSignalsRouteImport.update({
+  id: '/workspace/signals',
+  path: '/workspace/signals',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceTeamsRoute = WorkspaceTeamsRouteImport.update({
+  id: '/workspace/teams',
+  path: '/workspace/teams',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceViewsRoute = WorkspaceViewsRouteImport.update({
+  id: '/workspace/views',
+  path: '/workspace/views',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgentSplatRoute = ApiAgentSplatRouteImport.update({
+  id: '/api/agent/$',
+  path: '/api/agent/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1SplatRoute = ApiV1SplatRouteImport.update({
+  id: '/api/v1/$',
+  path: '/api/v1/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsTeamsTeamSlugRoute = SettingsTeamsTeamSlugRouteImport.update({
+  id: '/$teamSlug',
+  path: '/$teamSlug',
+  getParentRoute: () => SettingsTeamsRoute,
+} as any)
+const SettingsTeamsNewRoute = SettingsTeamsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => SettingsTeamsRoute,
+} as any)
+const TeamsTeamSlugCallsRoute = TeamsTeamSlugCallsRouteImport.update({
+  id: '/calls',
+  path: '/calls',
+  getParentRoute: () => TeamsTeamSlugRoute,
+} as any)
+const TeamsTeamSlugInsightsRoute = TeamsTeamSlugInsightsRouteImport.update({
+  id: '/insights',
+  path: '/insights',
+  getParentRoute: () => TeamsTeamSlugRoute,
+} as any)
+const TeamsTeamSlugIssuesRoute = TeamsTeamSlugIssuesRouteImport.update({
+  id: '/issues',
+  path: '/issues',
+  getParentRoute: () => TeamsTeamSlugRoute,
+} as any)
+const TeamsTeamSlugProjectsRoute = TeamsTeamSlugProjectsRouteImport.update({
+  id: '/projects',
+  path: '/projects',
+  getParentRoute: () => TeamsTeamSlugRoute,
+} as any)
+const TeamsTeamSlugSignalsRoute = TeamsTeamSlugSignalsRouteImport.update({
+  id: '/signals',
+  path: '/signals',
+  getParentRoute: () => TeamsTeamSlugRoute,
+} as any)
+const TeamsTeamSlugViewsRoute = TeamsTeamSlugViewsRouteImport.update({
+  id: '/views',
+  path: '/views',
+  getParentRoute: () => TeamsTeamSlugRoute,
 } as any)
 const WorkspaceInitiativesIndexRoute =
   WorkspaceInitiativesIndexRouteImport.update({
@@ -245,61 +300,12 @@ const WorkspaceInitiativesInitiativeIdRoute =
     path: '/workspace/initiatives/$initiativeId',
     getParentRoute: () => rootRouteImport,
   } as any)
-const TeamsTeamSlugViewsRoute = TeamsTeamSlugViewsRouteImport.update({
-  id: '/views',
-  path: '/views',
-  getParentRoute: () => TeamsTeamSlugRoute,
-} as any)
-const TeamsTeamSlugSignalsRoute = TeamsTeamSlugSignalsRouteImport.update({
-  id: '/signals',
-  path: '/signals',
-  getParentRoute: () => TeamsTeamSlugRoute,
-} as any)
-const TeamsTeamSlugProjectsRoute = TeamsTeamSlugProjectsRouteImport.update({
-  id: '/projects',
-  path: '/projects',
-  getParentRoute: () => TeamsTeamSlugRoute,
-} as any)
-const TeamsTeamSlugIssuesRoute = TeamsTeamSlugIssuesRouteImport.update({
-  id: '/issues',
-  path: '/issues',
-  getParentRoute: () => TeamsTeamSlugRoute,
-} as any)
-const TeamsTeamSlugInsightsRoute = TeamsTeamSlugInsightsRouteImport.update({
-  id: '/insights',
-  path: '/insights',
-  getParentRoute: () => TeamsTeamSlugRoute,
-} as any)
-const TeamsTeamSlugCallsRoute = TeamsTeamSlugCallsRouteImport.update({
-  id: '/calls',
-  path: '/calls',
-  getParentRoute: () => TeamsTeamSlugRoute,
-} as any)
-const SettingsTeamsNewRoute = SettingsTeamsNewRouteImport.update({
-  id: '/new',
-  path: '/new',
-  getParentRoute: () => SettingsTeamsRoute,
-} as any)
-const SettingsTeamsTeamSlugRoute = SettingsTeamsTeamSlugRouteImport.update({
-  id: '/$teamSlug',
-  path: '/$teamSlug',
-  getParentRoute: () => SettingsTeamsRoute,
-} as any)
-const ApiV1SplatRoute = ApiV1SplatRouteImport.update({
-  id: '/api/v1/$',
-  path: '/api/v1/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
-  id: '/api/auth/$',
-  path: '/api/auth/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAgentSplatRoute = ApiAgentSplatRouteImport.update({
-  id: '/api/agent/$',
-  path: '/api/agent/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
+const ApiInternalDesktopReleasesRoute =
+  ApiInternalDesktopReleasesRouteImport.update({
+    id: '/api/internal/desktop/releases',
+    path: '/api/internal/desktop/releases',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const SettingsTeamsTeamSlugIndexRoute =
   SettingsTeamsTeamSlugIndexRouteImport.update({
     id: '/',
@@ -312,28 +318,22 @@ const SettingsTeamsTeamSlugGeneralRoute =
     path: '/general',
     getParentRoute: () => SettingsTeamsTeamSlugRoute,
   } as any)
-const ApiInternalDesktopReleasesRoute =
-  ApiInternalDesktopReleasesRouteImport.update({
-    id: '/api/internal/desktop/releases',
-    path: '/api/internal/desktop/releases',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const ApiDesktopUpdatesDarwinArchRoute =
   ApiDesktopUpdatesDarwinArchRouteImport.update({
     id: '/api/desktop/updates/darwin/$arch',
     path: '/api/desktop/updates/darwin/$arch',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiInternalDesktopReleasesVersionPromoteRoute =
-  ApiInternalDesktopReleasesVersionPromoteRouteImport.update({
-    id: '/$version/promote',
-    path: '/$version/promote',
-    getParentRoute: () => ApiInternalDesktopReleasesRoute,
-  } as any)
 const ApiInternalDesktopReleasesVersionPauseRoute =
   ApiInternalDesktopReleasesVersionPauseRouteImport.update({
     id: '/$version/pause',
     path: '/$version/pause',
+    getParentRoute: () => ApiInternalDesktopReleasesRoute,
+  } as any)
+const ApiInternalDesktopReleasesVersionPromoteRoute =
+  ApiInternalDesktopReleasesVersionPromoteRouteImport.update({
+    id: '/$version/promote',
+    path: '/$version/promote',
     getParentRoute: () => ApiInternalDesktopReleasesRoute,
   } as any)
 
@@ -703,60 +703,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/signup': {
-      id: '/signup'
-      path: '/signup'
-      fullPath: '/signup'
-      preLoaderRoute: typeof SignupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/my-issues': {
-      id: '/my-issues'
-      path: '/my-issues'
-      fullPath: '/my-issues'
-      preLoaderRoute: typeof MyIssuesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/inbox': {
-      id: '/inbox'
-      path: '/inbox'
-      fullPath: '/inbox'
-      preLoaderRoute: typeof InboxRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/forge': {
-      id: '/forge'
-      path: '/forge'
-      fullPath: '/forge'
-      preLoaderRoute: typeof ForgeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/download': {
-      id: '/download'
-      path: '/download'
-      fullPath: '/download'
-      preLoaderRoute: typeof DownloadRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/agent': {
-      id: '/agent'
-      path: '/agent'
-      fullPath: '/agent'
-      preLoaderRoute: typeof AgentRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/accept-invitation': {
@@ -766,165 +717,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AcceptInvitationRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/agent': {
+      id: '/agent'
+      path: '/agent'
+      fullPath: '/agent'
+      preLoaderRoute: typeof AgentRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/settings/': {
-      id: '/settings/'
-      path: '/'
-      fullPath: '/settings/'
-      preLoaderRoute: typeof SettingsIndexRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/workspace/views': {
-      id: '/workspace/views'
-      path: '/workspace/views'
-      fullPath: '/workspace/views'
-      preLoaderRoute: typeof WorkspaceViewsRouteImport
+    '/download': {
+      id: '/download'
+      path: '/download'
+      fullPath: '/download'
+      preLoaderRoute: typeof DownloadRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/workspace/teams': {
-      id: '/workspace/teams'
-      path: '/workspace/teams'
-      fullPath: '/workspace/teams'
-      preLoaderRoute: typeof WorkspaceTeamsRouteImport
+    '/forge': {
+      id: '/forge'
+      path: '/forge'
+      fullPath: '/forge'
+      preLoaderRoute: typeof ForgeRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/workspace/signals': {
-      id: '/workspace/signals'
-      path: '/workspace/signals'
-      fullPath: '/workspace/signals'
-      preLoaderRoute: typeof WorkspaceSignalsRouteImport
+    '/inbox': {
+      id: '/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof InboxRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/workspace/projects': {
-      id: '/workspace/projects'
-      path: '/workspace/projects'
-      fullPath: '/workspace/projects'
-      preLoaderRoute: typeof WorkspaceProjectsRouteImport
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/workspace/members': {
-      id: '/workspace/members'
-      path: '/workspace/members'
-      fullPath: '/workspace/members'
-      preLoaderRoute: typeof WorkspaceMembersRouteImport
+    '/my-issues': {
+      id: '/my-issues'
+      path: '/my-issues'
+      fullPath: '/my-issues'
+      preLoaderRoute: typeof MyIssuesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/workspace/insights': {
-      id: '/workspace/insights'
-      path: '/workspace/insights'
-      fullPath: '/workspace/insights'
-      preLoaderRoute: typeof WorkspaceInsightsRouteImport
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/workspace/calls': {
-      id: '/workspace/calls'
-      path: '/workspace/calls'
-      fullPath: '/workspace/calls'
-      preLoaderRoute: typeof WorkspaceCallsRouteImport
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/teams/$teamSlug': {
-      id: '/teams/$teamSlug'
-      path: '/teams/$teamSlug'
-      fullPath: '/teams/$teamSlug'
-      preLoaderRoute: typeof TeamsTeamSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings_/teams': {
-      id: '/settings_/teams'
-      path: '/settings/teams'
-      fullPath: '/settings/teams'
-      preLoaderRoute: typeof SettingsTeamsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings/workspace': {
-      id: '/settings/workspace'
-      path: '/workspace'
-      fullPath: '/settings/workspace'
-      preLoaderRoute: typeof SettingsWorkspaceRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/security': {
-      id: '/settings/security'
-      path: '/security'
-      fullPath: '/settings/security'
-      preLoaderRoute: typeof SettingsSecurityRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/profile': {
-      id: '/settings/profile'
-      path: '/profile'
-      fullPath: '/settings/profile'
-      preLoaderRoute: typeof SettingsProfileRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/members': {
-      id: '/settings/members'
-      path: '/members'
-      fullPath: '/settings/members'
-      preLoaderRoute: typeof SettingsMembersRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/import-export': {
-      id: '/settings/import-export'
-      path: '/import-export'
-      fullPath: '/settings/import-export'
-      preLoaderRoute: typeof SettingsImportExportRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/billing': {
-      id: '/settings/billing'
-      path: '/billing'
-      fullPath: '/settings/billing'
-      preLoaderRoute: typeof SettingsBillingRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/applications': {
-      id: '/settings/applications'
-      path: '/applications'
-      fullPath: '/settings/applications'
-      preLoaderRoute: typeof SettingsApplicationsRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/api': {
-      id: '/settings/api'
-      path: '/api'
-      fullPath: '/settings/api'
-      preLoaderRoute: typeof SettingsApiRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/ai': {
-      id: '/settings/ai'
-      path: '/ai'
-      fullPath: '/settings/ai'
-      preLoaderRoute: typeof SettingsAiRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/onboarding/workspace': {
-      id: '/onboarding/workspace'
-      path: '/onboarding/workspace'
-      fullPath: '/onboarding/workspace'
-      preLoaderRoute: typeof OnboardingWorkspaceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/join/$token': {
-      id: '/join/$token'
-      path: '/join/$token'
-      fullPath: '/join/$token'
-      preLoaderRoute: typeof JoinTokenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth/desktop': {
-      id: '/auth/desktop'
-      path: '/auth/desktop'
-      fullPath: '/auth/desktop'
-      preLoaderRoute: typeof AuthDesktopRouteImport
+    '/api/docs': {
+      id: '/api/docs'
+      path: '/api/docs'
+      fullPath: '/api/docs'
+      preLoaderRoute: typeof ApiDocsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/openapi.json': {
@@ -934,12 +787,236 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiOpenapiDotjsonRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/docs': {
-      id: '/api/docs'
-      path: '/api/docs'
-      fullPath: '/api/docs'
-      preLoaderRoute: typeof ApiDocsRouteImport
+    '/auth/desktop': {
+      id: '/auth/desktop'
+      path: '/auth/desktop'
+      fullPath: '/auth/desktop'
+      preLoaderRoute: typeof AuthDesktopRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/join/$token': {
+      id: '/join/$token'
+      path: '/join/$token'
+      fullPath: '/join/$token'
+      preLoaderRoute: typeof JoinTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding/workspace': {
+      id: '/onboarding/workspace'
+      path: '/onboarding/workspace'
+      fullPath: '/onboarding/workspace'
+      preLoaderRoute: typeof OnboardingWorkspaceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/': {
+      id: '/settings/'
+      path: '/'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof SettingsIndexRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/ai': {
+      id: '/settings/ai'
+      path: '/ai'
+      fullPath: '/settings/ai'
+      preLoaderRoute: typeof SettingsAiRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/api': {
+      id: '/settings/api'
+      path: '/api'
+      fullPath: '/settings/api'
+      preLoaderRoute: typeof SettingsApiRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/applications': {
+      id: '/settings/applications'
+      path: '/applications'
+      fullPath: '/settings/applications'
+      preLoaderRoute: typeof SettingsApplicationsRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/billing': {
+      id: '/settings/billing'
+      path: '/billing'
+      fullPath: '/settings/billing'
+      preLoaderRoute: typeof SettingsBillingRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/import-export': {
+      id: '/settings/import-export'
+      path: '/import-export'
+      fullPath: '/settings/import-export'
+      preLoaderRoute: typeof SettingsImportExportRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/members': {
+      id: '/settings/members'
+      path: '/members'
+      fullPath: '/settings/members'
+      preLoaderRoute: typeof SettingsMembersRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/profile': {
+      id: '/settings/profile'
+      path: '/profile'
+      fullPath: '/settings/profile'
+      preLoaderRoute: typeof SettingsProfileRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/security': {
+      id: '/settings/security'
+      path: '/security'
+      fullPath: '/settings/security'
+      preLoaderRoute: typeof SettingsSecurityRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/workspace': {
+      id: '/settings/workspace'
+      path: '/workspace'
+      fullPath: '/settings/workspace'
+      preLoaderRoute: typeof SettingsWorkspaceRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings_/teams': {
+      id: '/settings_/teams'
+      path: '/settings/teams'
+      fullPath: '/settings/teams'
+      preLoaderRoute: typeof SettingsTeamsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/teams/$teamSlug': {
+      id: '/teams/$teamSlug'
+      path: '/teams/$teamSlug'
+      fullPath: '/teams/$teamSlug'
+      preLoaderRoute: typeof TeamsTeamSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/calls': {
+      id: '/workspace/calls'
+      path: '/workspace/calls'
+      fullPath: '/workspace/calls'
+      preLoaderRoute: typeof WorkspaceCallsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/insights': {
+      id: '/workspace/insights'
+      path: '/workspace/insights'
+      fullPath: '/workspace/insights'
+      preLoaderRoute: typeof WorkspaceInsightsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/members': {
+      id: '/workspace/members'
+      path: '/workspace/members'
+      fullPath: '/workspace/members'
+      preLoaderRoute: typeof WorkspaceMembersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/projects': {
+      id: '/workspace/projects'
+      path: '/workspace/projects'
+      fullPath: '/workspace/projects'
+      preLoaderRoute: typeof WorkspaceProjectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/signals': {
+      id: '/workspace/signals'
+      path: '/workspace/signals'
+      fullPath: '/workspace/signals'
+      preLoaderRoute: typeof WorkspaceSignalsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/teams': {
+      id: '/workspace/teams'
+      path: '/workspace/teams'
+      fullPath: '/workspace/teams'
+      preLoaderRoute: typeof WorkspaceTeamsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/views': {
+      id: '/workspace/views'
+      path: '/workspace/views'
+      fullPath: '/workspace/views'
+      preLoaderRoute: typeof WorkspaceViewsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agent/$': {
+      id: '/api/agent/$'
+      path: '/api/agent/$'
+      fullPath: '/api/agent/$'
+      preLoaderRoute: typeof ApiAgentSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/$': {
+      id: '/api/v1/$'
+      path: '/api/v1/$'
+      fullPath: '/api/v1/$'
+      preLoaderRoute: typeof ApiV1SplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings_/teams/$teamSlug': {
+      id: '/settings_/teams/$teamSlug'
+      path: '/$teamSlug'
+      fullPath: '/settings/teams/$teamSlug'
+      preLoaderRoute: typeof SettingsTeamsTeamSlugRouteImport
+      parentRoute: typeof SettingsTeamsRoute
+    }
+    '/settings_/teams/new': {
+      id: '/settings_/teams/new'
+      path: '/new'
+      fullPath: '/settings/teams/new'
+      preLoaderRoute: typeof SettingsTeamsNewRouteImport
+      parentRoute: typeof SettingsTeamsRoute
+    }
+    '/teams/$teamSlug/calls': {
+      id: '/teams/$teamSlug/calls'
+      path: '/calls'
+      fullPath: '/teams/$teamSlug/calls'
+      preLoaderRoute: typeof TeamsTeamSlugCallsRouteImport
+      parentRoute: typeof TeamsTeamSlugRoute
+    }
+    '/teams/$teamSlug/insights': {
+      id: '/teams/$teamSlug/insights'
+      path: '/insights'
+      fullPath: '/teams/$teamSlug/insights'
+      preLoaderRoute: typeof TeamsTeamSlugInsightsRouteImport
+      parentRoute: typeof TeamsTeamSlugRoute
+    }
+    '/teams/$teamSlug/issues': {
+      id: '/teams/$teamSlug/issues'
+      path: '/issues'
+      fullPath: '/teams/$teamSlug/issues'
+      preLoaderRoute: typeof TeamsTeamSlugIssuesRouteImport
+      parentRoute: typeof TeamsTeamSlugRoute
+    }
+    '/teams/$teamSlug/projects': {
+      id: '/teams/$teamSlug/projects'
+      path: '/projects'
+      fullPath: '/teams/$teamSlug/projects'
+      preLoaderRoute: typeof TeamsTeamSlugProjectsRouteImport
+      parentRoute: typeof TeamsTeamSlugRoute
+    }
+    '/teams/$teamSlug/signals': {
+      id: '/teams/$teamSlug/signals'
+      path: '/signals'
+      fullPath: '/teams/$teamSlug/signals'
+      preLoaderRoute: typeof TeamsTeamSlugSignalsRouteImport
+      parentRoute: typeof TeamsTeamSlugRoute
+    }
+    '/teams/$teamSlug/views': {
+      id: '/teams/$teamSlug/views'
+      path: '/views'
+      fullPath: '/teams/$teamSlug/views'
+      preLoaderRoute: typeof TeamsTeamSlugViewsRouteImport
+      parentRoute: typeof TeamsTeamSlugRoute
     }
     '/workspace/initiatives/': {
       id: '/workspace/initiatives/'
@@ -955,81 +1032,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceInitiativesInitiativeIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/teams/$teamSlug/views': {
-      id: '/teams/$teamSlug/views'
-      path: '/views'
-      fullPath: '/teams/$teamSlug/views'
-      preLoaderRoute: typeof TeamsTeamSlugViewsRouteImport
-      parentRoute: typeof TeamsTeamSlugRoute
-    }
-    '/teams/$teamSlug/signals': {
-      id: '/teams/$teamSlug/signals'
-      path: '/signals'
-      fullPath: '/teams/$teamSlug/signals'
-      preLoaderRoute: typeof TeamsTeamSlugSignalsRouteImport
-      parentRoute: typeof TeamsTeamSlugRoute
-    }
-    '/teams/$teamSlug/projects': {
-      id: '/teams/$teamSlug/projects'
-      path: '/projects'
-      fullPath: '/teams/$teamSlug/projects'
-      preLoaderRoute: typeof TeamsTeamSlugProjectsRouteImport
-      parentRoute: typeof TeamsTeamSlugRoute
-    }
-    '/teams/$teamSlug/issues': {
-      id: '/teams/$teamSlug/issues'
-      path: '/issues'
-      fullPath: '/teams/$teamSlug/issues'
-      preLoaderRoute: typeof TeamsTeamSlugIssuesRouteImport
-      parentRoute: typeof TeamsTeamSlugRoute
-    }
-    '/teams/$teamSlug/insights': {
-      id: '/teams/$teamSlug/insights'
-      path: '/insights'
-      fullPath: '/teams/$teamSlug/insights'
-      preLoaderRoute: typeof TeamsTeamSlugInsightsRouteImport
-      parentRoute: typeof TeamsTeamSlugRoute
-    }
-    '/teams/$teamSlug/calls': {
-      id: '/teams/$teamSlug/calls'
-      path: '/calls'
-      fullPath: '/teams/$teamSlug/calls'
-      preLoaderRoute: typeof TeamsTeamSlugCallsRouteImport
-      parentRoute: typeof TeamsTeamSlugRoute
-    }
-    '/settings_/teams/new': {
-      id: '/settings_/teams/new'
-      path: '/new'
-      fullPath: '/settings/teams/new'
-      preLoaderRoute: typeof SettingsTeamsNewRouteImport
-      parentRoute: typeof SettingsTeamsRoute
-    }
-    '/settings_/teams/$teamSlug': {
-      id: '/settings_/teams/$teamSlug'
-      path: '/$teamSlug'
-      fullPath: '/settings/teams/$teamSlug'
-      preLoaderRoute: typeof SettingsTeamsTeamSlugRouteImport
-      parentRoute: typeof SettingsTeamsRoute
-    }
-    '/api/v1/$': {
-      id: '/api/v1/$'
-      path: '/api/v1/$'
-      fullPath: '/api/v1/$'
-      preLoaderRoute: typeof ApiV1SplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/auth/$': {
-      id: '/api/auth/$'
-      path: '/api/auth/$'
-      fullPath: '/api/auth/$'
-      preLoaderRoute: typeof ApiAuthSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/agent/$': {
-      id: '/api/agent/$'
-      path: '/api/agent/$'
-      fullPath: '/api/agent/$'
-      preLoaderRoute: typeof ApiAgentSplatRouteImport
+    '/api/internal/desktop/releases': {
+      id: '/api/internal/desktop/releases'
+      path: '/api/internal/desktop/releases'
+      fullPath: '/api/internal/desktop/releases'
+      preLoaderRoute: typeof ApiInternalDesktopReleasesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings_/teams/$teamSlug/': {
@@ -1046,13 +1053,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsTeamsTeamSlugGeneralRouteImport
       parentRoute: typeof SettingsTeamsTeamSlugRoute
     }
-    '/api/internal/desktop/releases': {
-      id: '/api/internal/desktop/releases'
-      path: '/api/internal/desktop/releases'
-      fullPath: '/api/internal/desktop/releases'
-      preLoaderRoute: typeof ApiInternalDesktopReleasesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/desktop/updates/darwin/$arch': {
       id: '/api/desktop/updates/darwin/$arch'
       path: '/api/desktop/updates/darwin/$arch'
@@ -1060,18 +1060,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDesktopUpdatesDarwinArchRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/internal/desktop/releases/$version/promote': {
-      id: '/api/internal/desktop/releases/$version/promote'
-      path: '/$version/promote'
-      fullPath: '/api/internal/desktop/releases/$version/promote'
-      preLoaderRoute: typeof ApiInternalDesktopReleasesVersionPromoteRouteImport
-      parentRoute: typeof ApiInternalDesktopReleasesRoute
-    }
     '/api/internal/desktop/releases/$version/pause': {
       id: '/api/internal/desktop/releases/$version/pause'
       path: '/$version/pause'
       fullPath: '/api/internal/desktop/releases/$version/pause'
       preLoaderRoute: typeof ApiInternalDesktopReleasesVersionPauseRouteImport
+      parentRoute: typeof ApiInternalDesktopReleasesRoute
+    }
+    '/api/internal/desktop/releases/$version/promote': {
+      id: '/api/internal/desktop/releases/$version/promote'
+      path: '/$version/promote'
+      fullPath: '/api/internal/desktop/releases/$version/promote'
+      preLoaderRoute: typeof ApiInternalDesktopReleasesVersionPromoteRouteImport
       parentRoute: typeof ApiInternalDesktopReleasesRoute
     }
   }

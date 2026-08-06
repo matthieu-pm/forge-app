@@ -16,16 +16,16 @@
     "eval:live": "eve eval --strict"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "4.0.19",
-    "@ai-sdk/openai": "4.0.19",
-    "ai": "7.0.36",
-    "eve": "0.27.1",
-    "jose": "6.2.3",
+    "@ai-sdk/anthropic": "4.0.33",
+    "@ai-sdk/openai": "4.0.33",
+    "ai": "7.0.55",
+    "eve": "0.31.0",
+    "jose": "6.2.8",
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "@types/node": "24.10.1",
-    "microsandbox": "^0.5.10",
+    "@types/node": "26.1.2",
+    "microsandbox": "^0.6.8",
     "typescript": "5.9.3",
     "vitest": "4.1.10"
   }

@@ -19,7 +19,7 @@ function workspaceIdFromMetadata(metadata: unknown) {
 }
 
 export const createWorkspaceApiKey = createServerFn({ method: "POST" })
-  .inputValidator(createApiKeyInputSchema)
+  .validator(createApiKeyInputSchema)
   .handler(async ({ data }) => {
     const [{ getRequest }, { requireSessionActor }, { auth }] =
       await Promise.all([
@@ -107,7 +107,7 @@ export const loadWorkspaceApiKeyPolicy = createServerFn({
 })
 
 export const revokeWorkspaceApiKey = createServerFn({ method: "POST" })
-  .inputValidator(deleteApiKeyInputSchema)
+  .validator(deleteApiKeyInputSchema)
   .handler(async ({ data }) => {
     const [{ getRequest }, { requireSessionActor }, { auth }] =
       await Promise.all([

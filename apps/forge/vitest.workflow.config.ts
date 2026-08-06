@@ -1,17 +1,16 @@
 import { workflow } from "@workflow/vitest"
 import viteReact from "@vitejs/plugin-react"
 import { defineConfig } from "vitest/config"
-import viteTsConfigPaths from "vite-tsconfig-paths"
 
 export default defineConfig({
+  resolve: {
+    tsconfigPaths: true,
+  },
   plugins: [
     workflow({
       rootDir: import.meta.dirname,
     }),
     viteReact(),
-    viteTsConfigPaths({
-      projects: ["./tsconfig.json"],
-    }),
   ],
   test: {
     environment: "node",
