@@ -135,6 +135,71 @@ describe("EVE runtime adapter", () => {
     })
   })
 
+  it("starts a new session when EVE omits the continuation token from the delivery response", async () => {
+    const stream = [
+      {
+        type: "message.completed",
+        data: {
+          message: "Done",
+          finishReason: "stop",
+          sequence: 1,
+          stepIndex: 0,
+          turnId: "turn-1",
+        },
+      },
+      {
+        type: "session.waiting",
+        data: { continuationToken: "eve:next", sequence: 2 },
+      },
+    ]
+      .map((event) => JSON.stringify(event))
+      .join("\n")
+      .concat("\n")
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        Response.json(
+          {
+            ok: true,
+            sessionId: "ses_1",
+          },
+          { status: 202 }
+        )
+      )
+      .mockResolvedValueOnce(new Response(stream))
+    const checkpoints: Array<string> = []
+    const runtime = new EveAgentRuntime({
+      baseUrl: "http://eve.test",
+      channelSecret: "channel-secret-that-is-at-least-thirty-two-characters",
+      fetcher,
+    })
+
+    const events = await collect(
+      runtime.start(
+        runtimeInput((checkpoint) => {
+          checkpoints.push(checkpoint)
+          return Promise.resolve()
+        })
+      )
+    )
+
+    expect(events).toEqual([
+      expect.objectContaining({
+        type: "assistant.message",
+        payload: expect.objectContaining({ content: "Done" }),
+      }),
+    ])
+    expect(checkpoints).not.toHaveLength(0)
+    const finalCheckpoint = JSON.parse(
+      Buffer.from(checkpoints.at(-1) ?? "", "base64url").toString("utf8")
+    )
+    expect(finalCheckpoint).toMatchObject({
+      sessionId: "ses_1",
+      continuationToken: "eve:next",
+      streamIndex: 2,
+    })
+  })
+
   it("keeps every streamed assistant chunk when EVE repeats data.sequence", async () => {
     const stream = [
       {
@@ -399,6 +464,38 @@ describe("EVE runtime adapter", () => {
     )
   })
 
+  it("rejects approval resumption when the cursor has no continuation token", async () => {
+    const fetcher = vi.fn<typeof fetch>()
+    const runtime = new EveAgentRuntime({
+      baseUrl: "http://eve.test",
+      channelSecret: "channel-secret-that-is-at-least-thirty-two-characters",
+      fetcher,
+    })
+    const base = runtimeInput(() => Promise.resolve())
+    const cursor = Buffer.from(
+      JSON.stringify({
+        sessionId: "ses_1",
+        streamIndex: 7,
+      }),
+      "utf8"
+    ).toString("base64url")
+    const input: ResumeRuntimeRunInput = {
+      threadId: base.threadId,
+      runId: base.runId,
+      identity: base.identity,
+      model: base.model,
+      reasoningEffort: base.reasoningEffort,
+      runtimeSessionId: cursor,
+      inputResponses: [{ requestId: "eve-request-1", optionId: "approve" }],
+      checkpointRuntimeSession: () => Promise.resolve(),
+    }
+
+    await expect(collect(runtime.resume(input))).rejects.toThrow(
+      "EVE approval resume requires a durable continuation token."
+    )
+    expect(fetcher).not.toHaveBeenCalled()
+  })
+
   it("reconnects from a durable stream cursor without replaying session input", async () => {
     const stream = `${JSON.stringify({
       type: "message.completed",
@@ -450,6 +547,54 @@ describe("EVE runtime adapter", () => {
       new URL("http://eve.test/eve/v1/session/ses_1/stream?startIndex=8")
     )
     expect(fetcher.mock.calls[0]?.[1]).not.toHaveProperty("method", "POST")
+  })
+
+  it("reconnects to an active session before EVE issues a continuation token", async () => {
+    const stream = `${JSON.stringify({
+      type: "message.completed",
+      data: {
+        message: "Recovered",
+        finishReason: "stop",
+        sequence: 1,
+        stepIndex: 0,
+        turnId: "turn-1",
+      },
+    })}\n`
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(stream))
+    const runtime = new EveAgentRuntime({
+      baseUrl: "http://eve.test",
+      channelSecret: "channel-secret-that-is-at-least-thirty-two-characters",
+      fetcher,
+    })
+    const base = runtimeInput(() => Promise.resolve())
+    const cursor = Buffer.from(
+      JSON.stringify({
+        sessionId: "ses_1",
+        streamIndex: 0,
+      }),
+      "utf8"
+    ).toString("base64url")
+    const input: ReconnectRuntimeRunInput = {
+      threadId: base.threadId,
+      runId: base.runId,
+      identity: base.identity,
+      model: base.model,
+      reasoningEffort: base.reasoningEffort,
+      runtimeSessionId: cursor,
+      checkpointRuntimeSession: () => Promise.resolve(),
+    }
+
+    const events = await collect(runtime.reconnect(input))
+
+    expect(events).toEqual([
+      expect.objectContaining({
+        type: "assistant.message",
+        payload: expect.objectContaining({ content: "Recovered" }),
+      }),
+    ])
+    expect(fetcher.mock.calls[0]?.[0]).toEqual(
+      new URL("http://eve.test/eve/v1/session/ses_1/stream?startIndex=0")
+    )
   })
 
   it("cancels with fresh channel authorization after an adapter restart", async () => {

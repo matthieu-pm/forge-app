@@ -24,7 +24,7 @@ const sessionResponseSchema = z.object({
 
 const runtimeCursorSchema = z.object({
   sessionId: z.string().min(1),
-  continuationToken: z.string().min(1),
+  continuationToken: z.string().min(1).optional(),
   streamIndex: z.number().int().nonnegative(),
 })
 
@@ -201,8 +201,10 @@ export class EveAgentRuntime implements AgentRuntime {
   ): AsyncIterable<RuntimeEvent> {
     const channelToken = await this.createChannelToken(input)
     const previous = decodeCursor(input.runtimeSessionId)
-    if ("inputResponses" in payload && !previous) {
-      throw new Error("EVE approval resume requires a durable session cursor.")
+    if ("inputResponses" in payload && !previous?.continuationToken) {
+      throw new Error(
+        "EVE approval resume requires a durable continuation token."
+      )
     }
     const path = previous
       ? `/eve/v1/session/${encodeURIComponent(previous.sessionId)}`
@@ -214,7 +216,9 @@ export class EveAgentRuntime implements AgentRuntime {
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        ...(previous ? { continuationToken: previous.continuationToken } : {}),
+        ...(previous?.continuationToken
+          ? { continuationToken: previous.continuationToken }
+          : {}),
         ...payload,
       }),
       signal: AbortSignal.timeout(30_000),
@@ -227,14 +231,9 @@ export class EveAgentRuntime implements AgentRuntime {
     const started = sessionResponseSchema.parse(await response.json())
     const continuationToken =
       started.continuationToken ?? previous?.continuationToken
-    if (!continuationToken) {
-      throw new Error(
-        "EVE did not provide a continuation token for the new session."
-      )
-    }
     const cursor: RuntimeCursor = {
       sessionId: started.sessionId,
-      continuationToken,
+      ...(continuationToken ? { continuationToken } : {}),
       streamIndex: previous?.streamIndex ?? 0,
     }
     this.activeRuns.set(input.runId, { cursor, channelToken })
