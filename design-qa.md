@@ -125,7 +125,6 @@ The team table and open row-menu states were inspected at full 1224 × 768 resol
 - None required for this pass.
 
 final result: passed
-
 ---
 
 # Agent history design QA
@@ -288,5 +287,63 @@ final result: passed
 ## Remaining issues
 
 - None at P0, P1, P2, or P3.
+
+final result: passed
+
+---
+
+# Model selector design QA
+
+- Source visual truth: `/var/folders/j2/gzj18t_x2251dx_cnqdcscm80000gn/T/codex-clipboard-c680f1b0-2d80-4394-b0ae-ac6f756c5f1d.png`
+- Implementation evidence: inline Computer Use capture of the running Electron app at `http://localhost:3000/forge`, 2026-09-17
+- Viewport: Electron window, 1224 x 768 screenshot; selector rendered at its 320px responsive maximum width
+- Source pixels: 510 x 190; density metadata unavailable
+- Implementation pixels: full-window 1224 x 768 capture; focused selector compared in place
+- CSS size and normalization: the source is an isolated component crop while the implementation is an in-product capture. The comparison normalized by component proportions and interaction state rather than assuming an unknown source density.
+- State: GPT 5.6 Sol, Medium effort, model selector open, light product theme
+
+## Full-view comparison evidence
+
+The implementation preserves the reference hierarchy: lightning icon on the left, centered effort with a forward affordance, model name directly beneath, reset on the right, and a single full-width segmented slider below. The selector remains anchored to the composer and does not obscure its send or attachment actions.
+
+## Focused region comparison evidence
+
+A focused comparison was necessary because the selector occupies a small part of the full app capture. The focused review checked the header alignment, large pill track, blue selected range, white thumb, evenly spaced markers, corner radius, and spacing between the header and track.
+
+## Required fidelity surfaces
+
+- Fonts and typography: Geist is retained to match the product. Size, weight, hierarchy, truncation, and line height follow the reference composition; the effort is the most prominent label and the model is secondary.
+- Spacing and layout rhythm: the three-column header, centered labels, large-radius container, and full-width track match the reference proportions. Responsive width is capped and constrained to the viewport.
+- Colors and visual tokens: blue communicates the active range and selected effort. Background, border, and muted colors intentionally use the current Forge theme instead of forcing the reference's dark theme.
+- Image quality and asset fidelity: no raster assets are present. Lightning, chevron, and reset use the project's Hugeicons library rather than approximated glyphs.
+- Copy and content: the live effort and model names match product state. Reset has an explicit accessible label and tooltip.
+
+## Comparison history
+
+### Pass 1
+
+- [P1] The slider track rendered as a thin line because the shared slider's horizontal height selector overrode the local height.
+- Fix: applied the height through the component's horizontal-state selector so the track becomes the large pill shown in the reference.
+
+### Pass 2
+
+- Post-fix evidence: the Electron capture shows the full-height blue/gray pill, white thumb, centered Medium label, GPT 5.6 Sol subtitle, and working reset action.
+- No actionable P0, P1, or P2 differences remain.
+
+## Findings
+
+No blocking fidelity issues remain. The light surface is an intentional adaptation to the active Forge theme.
+
+## Follow-up polish
+
+- [P3] A separate dark-theme capture could confirm the exact tonal match to the supplied dark reference.
+
+## Implementation checklist
+
+- [x] Reference composition reproduced in the existing picker.
+- [x] Slider supports pointer and keyboard interaction.
+- [x] Current value and reset state update immediately.
+- [x] Advanced model/provider navigation remains available.
+- [x] Focused, full, type, lint, and formatting checks pass.
 
 final result: passed

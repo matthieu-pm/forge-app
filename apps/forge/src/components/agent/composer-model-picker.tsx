@@ -11,6 +11,8 @@ import {
   CloudIcon,
   ComputerProgramming01Icon,
   Crown02Icon,
+  FlashIcon,
+  RefreshIcon,
   SecurityLockIcon,
   Tick02Icon,
 } from "@hugeicons/core-free-icons"
@@ -20,6 +22,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import type {
   AgentModelDefinition,
   AgentModelSelectionId,
+  AgentReasoningEffort,
   AgentReasoningEffortSelection,
 } from "@/lib/agent-models"
 import { ForgeLogo } from "@/components/forge-logo"
@@ -33,6 +36,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { Slider } from "@/components/ui/slider"
 import {
   AUTO_AGENT_MODEL_SELECTION,
   DEFAULT_AGENT_REASONING_EFFORT,
@@ -51,6 +55,73 @@ const EFFORT_LABELS: Record<AgentReasoningEffortSelection, string> = {
   high: "High",
   xhigh: "xHigh",
   max: "Max",
+}
+
+function EffortSlider({
+  efforts,
+  effort,
+  onEffortChange,
+}: {
+  efforts: ReadonlyArray<AgentReasoningEffort>
+  effort: AgentReasoningEffortSelection
+  onEffortChange: (effort: AgentReasoningEffortSelection) => void
+}) {
+  if (efforts.length === 0) return null
+
+  const selectedIndex = Math.max(
+    0,
+    effort === "auto" ? -1 : efforts.indexOf(effort)
+  )
+  const maxIndex = Math.max(efforts.length - 1, 1)
+  const firstEffort = efforts[0]
+
+  const selectIndex = (nextValue: number | ReadonlyArray<number>) => {
+    const rawIndex = Array.isArray(nextValue) ? nextValue[0] : nextValue
+    onEffortChange(efforts[Math.round(rawIndex ?? 0)])
+  }
+
+  return (
+    <div className="px-1 pb-1">
+      <div className="relative h-12">
+        <Slider
+          value={selectedIndex}
+          min={0}
+          max={maxIndex}
+          step={1}
+          disabled={efforts.length < 2}
+          onValueChange={selectIndex}
+          getAriaLabel={() => "Effort level"}
+          getAriaValueText={(_, value) =>
+            EFFORT_LABELS[efforts[Math.round(value)] ?? firstEffort]
+          }
+          className="absolute inset-0"
+          controlClassName="h-12"
+          trackClassName="data-horizontal:h-12 border border-border/70 bg-muted"
+          indicatorClassName="bg-blue-500"
+          thumbClassName="size-11 bg-background shadow-md ring-1 ring-black/5 hover:ring-4 hover:ring-blue-500/15 focus-visible:ring-4 focus-visible:ring-blue-500/25 dark:bg-white"
+        />
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-6 top-1/2 z-10 -translate-y-1/2"
+        >
+          {efforts.map((level, index) => (
+            <span
+              key={level}
+              className={cn(
+                "absolute size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full",
+                index < selectedIndex
+                  ? "bg-blue-200/80"
+                  : "bg-muted-foreground/55"
+              )}
+              style={{
+                left: `${(index / Math.max(efforts.length - 1, 1)) * 100}%`,
+              }}
+            />
+          ))}
+        </span>
+      </div>
+    </div>
+  )
 }
 
 function MenuRow({
@@ -271,6 +342,9 @@ export function ComposerModelPicker({
   const efforts = getAgentReasoningEfforts(value, models)
   const isAutoModel = value === AUTO_AGENT_MODEL_SELECTION.id
   const effortLabel = EFFORT_LABELS[effort]
+  const defaultEffort = efforts.includes(DEFAULT_AGENT_REASONING_EFFORT)
+    ? DEFAULT_AGENT_REASONING_EFFORT
+    : (efforts.at(0) ?? DEFAULT_AGENT_REASONING_EFFORT)
 
   React.useEffect(() => {
     if (isAutoModel && effort !== "auto") {
@@ -322,87 +396,66 @@ export function ComposerModelPicker({
   const content = (() => {
     if (view === "compact") {
       return (
-        <div className="space-y-1">
-          <MenuRow label="Advanced" onClick={() => setView("advanced")} />
-          <div className="-mx-1.5 h-px bg-border/70" />
-          <div className="pt-0.5 pb-0">
-            <div className="mb-1.5 flex items-center justify-between px-2 text-xs">
-              <span className="font-medium">Effort level</span>
-              <span className="text-muted-foreground">{effortLabel}</span>
-            </div>
-            {isAutoModel ? (
-              <button
-                type="button"
-                onClick={() => setView("effort")}
-                className="flex h-7 w-full items-center gap-2 rounded-full px-2 text-left outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50"
-              >
-                <span className="flex items-center gap-1" aria-hidden="true">
-                  {[0, 1, 2].map((index) => (
-                    <motion.span
-                      key={index}
-                      className="size-1.5 rounded-full bg-muted-foreground"
-                      animate={
-                        reduceMotion ? undefined : { opacity: [0.35, 1, 0.35] }
-                      }
-                      transition={{
-                        duration: 1.6,
-                        repeat: Infinity,
-                        delay: index * 0.18,
-                      }}
-                    />
-                  ))}
-                </span>
-                <span className="text-xs font-medium">Auto</span>
-                <span className="ml-auto text-[10px] text-muted-foreground">
-                  Adapts to request
-                </span>
-              </button>
-            ) : (
-              <div className="px-2">
-                <div
-                  className="grid rounded-full"
-                  style={{
-                    gridTemplateColumns: `repeat(${Math.max(efforts.length, 1)}, minmax(0, 1fr))`,
-                  }}
-                  role="radiogroup"
-                  aria-label="Effort level"
-                >
-                  {efforts.map((level) => (
-                    <button
-                      key={level}
-                      type="button"
-                      role="radio"
-                      aria-checked={level === effort}
-                      aria-label={EFFORT_LABELS[level]}
-                      onClick={() => onEffortChange(level)}
-                      className="flex h-6 items-center justify-center rounded-full outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50"
-                    >
-                      <span
-                        className={cn(
-                          "size-1.5 rounded-full",
-                          level === effort
-                            ? "bg-foreground"
-                            : "bg-muted-foreground/55"
-                        )}
-                      />
-                      <span className="sr-only">{EFFORT_LABELS[level]}</span>
-                    </button>
-                  ))}
-                </div>
-                <div
-                  className="mt-0.5 grid text-center text-[9px] leading-3 text-muted-foreground"
-                  style={{
-                    gridTemplateColumns: `repeat(${Math.max(efforts.length, 1)}, minmax(0, 1fr))`,
-                  }}
-                  aria-hidden="true"
-                >
-                  {efforts.map((level) => (
-                    <span key={level}>{EFFORT_LABELS[level]}</span>
-                  ))}
-                </div>
-              </div>
-            )}
+        <div className="px-1 pt-1 pb-0.5">
+          <div className="grid grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-start pb-3">
+            <span
+              className="flex size-9 items-center justify-center text-muted-foreground"
+              aria-hidden="true"
+            >
+              <HugeiconsIcon
+                icon={FlashIcon}
+                strokeWidth={1.7}
+                className="size-5"
+              />
+            </span>
+            <button
+              type="button"
+              onClick={() => setView("advanced")}
+              aria-label="Open model and effort settings"
+              className="group flex min-w-0 flex-col items-center rounded-xl px-2 py-0.5 outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
+            >
+              <span className="flex items-center gap-1 text-base font-medium text-blue-500">
+                {effortLabel}
+                <HugeiconsIcon
+                  icon={ArrowRight01Icon}
+                  strokeWidth={2}
+                  className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5"
+                />
+              </span>
+              <span className="max-w-full truncate text-sm text-muted-foreground">
+                {selectedModelLabel}
+              </span>
+            </button>
+            <button
+              type="button"
+              aria-label={`Reset effort to ${EFFORT_LABELS[defaultEffort]}`}
+              title="Reset effort"
+              disabled={isAutoModel || effort === defaultEffort}
+              onClick={() => onEffortChange(defaultEffort)}
+              className="flex size-9 items-center justify-center rounded-full text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-35"
+            >
+              <HugeiconsIcon
+                icon={RefreshIcon}
+                strokeWidth={1.7}
+                className="size-5"
+              />
+            </button>
           </div>
+          {isAutoModel ? (
+            <button
+              type="button"
+              onClick={() => setView("effort")}
+              className="flex h-12 w-full items-center justify-center rounded-full border border-border/70 bg-muted text-sm font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
+            >
+              Adapts effort to each request
+            </button>
+          ) : (
+            <EffortSlider
+              efforts={efforts}
+              effort={effort}
+              onEffortChange={onEffortChange}
+            />
+          )}
         </div>
       )
     }
@@ -548,25 +601,17 @@ export function ComposerModelPicker({
               </p>
             </div>
           ) : (
-            efforts.map((level) => (
-              <button
-                key={level}
-                type="button"
-                onClick={() => onEffortChange(level)}
-                className="flex h-7 w-full items-center gap-2 rounded-full px-2 text-left text-sm outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
-              >
-                <span className="min-w-0 flex-1 font-medium">
-                  {EFFORT_LABELS[level]}
-                </span>
-                {effort === level ? (
-                  <HugeiconsIcon
-                    icon={Tick02Icon}
-                    strokeWidth={2}
-                    className="size-3.5"
-                  />
-                ) : null}
-              </button>
-            ))
+            <div className="pt-1.5">
+              <div className="mb-1 flex items-center justify-between px-2 text-xs">
+                <span className="font-medium">Effort level</span>
+                <span className="text-muted-foreground">{effortLabel}</span>
+              </div>
+              <EffortSlider
+                efforts={efforts}
+                effort={effort}
+                onEffortChange={onEffortChange}
+              />
+            </div>
           )}
         </div>
       </div>
@@ -617,7 +662,7 @@ export function ComposerModelPicker({
         align={align}
         side={side}
         sideOffset={8}
-        className="w-[min(15rem,calc(100vw-1.5rem))] gap-0 overflow-hidden rounded-2xl border border-border/70 p-1.5 shadow-md ring-0 [perspective:800px]"
+        className="w-[min(20rem,calc(100vw-1.5rem))] gap-0 overflow-hidden rounded-[1.75rem] border border-border/70 p-1.5 shadow-md ring-0 [perspective:800px]"
       >
         <motion.div layout transition={transition}>
           <AnimatePresence mode="wait" initial={false}>

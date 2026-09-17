@@ -489,8 +489,10 @@ describe("AgentShell", () => {
       })
     )
 
-    const advanced = await screen.findByRole("button", { name: "Advanced" })
-    fireEvent.pointerDown(advanced)
+    const settings = await screen.findByRole("button", {
+      name: "Open model and effort settings",
+    })
+    fireEvent.pointerDown(settings)
 
     expect(screen.getByRole("dialog", { name: "New Forge chat" })).toBeTruthy()
   })

@@ -30,6 +30,21 @@ function PickerHarness() {
   )
 }
 
+function ManualPickerHarness() {
+  const [model, setModel] = useState<AgentModelSelectionId>("gpt-5.6-sol")
+  const [effort, setEffort] = useState<AgentReasoningEffortSelection>("xhigh")
+
+  return (
+    <ComposerModelPicker
+      value={model}
+      onValueChange={setModel}
+      effort={effort}
+      onEffortChange={setEffort}
+      models={getAgentModels()}
+    />
+  )
+}
+
 function ManagedPickerHarness() {
   const [model, setModel] = useState<AgentModelSelectionId>("auto")
   const [effort, setEffort] = useState<AgentReasoningEffortSelection>("auto")
@@ -140,27 +155,23 @@ describe("ComposerModelPicker", () => {
     expect(trigger.className).toContain("px-2.5")
     fireEvent.click(trigger)
 
-    const advanced = await screen.findByRole("button", { name: "Advanced" })
-    expect(advanced.className).toContain("rounded-full")
-    expect(screen.getByText("Adapts to request")).toBeTruthy()
-    const picker = document.querySelector('[data-slot="popover-content"]')
-    const divider = picker?.querySelector(".h-px")
-    const effortPanel =
-      screen.getByText("Effort level").parentElement?.parentElement
-    const autoButton = screen.getByRole("button", {
-      name: /Auto.*Adapts to request/,
+    const settings = await screen.findByRole("button", {
+      name: "Open model and effort settings",
     })
-    expect(divider?.className).toContain("-mx-1.5")
-    expect(effortPanel?.className).toContain("pb-0")
-    expect(effortPanel?.className).not.toContain("pl-1.5")
-    expect(effortPanel?.className).not.toContain("pr-2")
+    expect(settings.className).toContain("rounded-xl")
+    expect(screen.getByText("Adapts effort to each request")).toBeTruthy()
+    const picker = document.querySelector('[data-slot="popover-content"]')
+    const autoButton = screen.getByRole("button", {
+      name: "Adapts effort to each request",
+    })
     expect(autoButton.className).toContain("w-full")
-    expect(picker?.className).toContain("rounded-2xl")
+    expect(picker?.className).toContain("w-[min(20rem")
+    expect(picker?.className).toContain("rounded-[1.75rem]")
     expect(picker?.className).toContain("border-border/70")
     expect(picker?.className).toContain("shadow-md")
     expect(picker?.className).toContain("ring-0")
 
-    fireEvent.click(advanced)
+    fireEvent.click(settings)
     await screen.findByText("Model")
     expect(screen.queryByText("Auto billing source")).toBeNull()
     expect(screen.queryByText("Any OpenAI source")).toBeNull()
@@ -168,6 +179,47 @@ describe("ComposerModelPicker", () => {
       .getAllByRole("button", { name: "Advanced" })
       .find((button) => button.className.includes("pl-1.5"))
     expect(backButton?.className).toContain("pr-2.5")
+  })
+
+  test("uses a discrete accessible slider for effort selection", () => {
+    render(<ManualPickerHarness />)
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Model GPT 5.6 Sol, effort xHigh",
+      })
+    )
+
+    expect(document.querySelector('[data-slot="slider"]')).toBeTruthy()
+    const slider = document.querySelector<HTMLInputElement>(
+      'input[type="range"][aria-label="Effort level"]'
+    )
+    expect(slider).toBeTruthy()
+    if (!slider) throw new Error("Expected the effort slider to render")
+    expect(slider.getAttribute("aria-label")).toBe("Effort level")
+    expect(slider.getAttribute("aria-valuetext")).toBe("xHigh")
+    expect(slider.getAttribute("max")).toBe("6")
+    expect(screen.queryByText("None")).toBeNull()
+    expect(screen.queryByText("Max")).toBeNull()
+
+    fireEvent.change(slider, { target: { value: "4" } })
+
+    expect(
+      screen.getByRole("button", {
+        name: "Model GPT 5.6 Sol, effort High",
+      })
+    ).toBeTruthy()
+    expect(slider.getAttribute("aria-valuetext")).toBe("High")
+    expect(screen.queryByRole("radio")).toBeNull()
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Reset effort to Medium" })
+    )
+    expect(
+      screen.getByRole("button", {
+        name: "Model GPT 5.6 Sol, effort Medium",
+      })
+    ).toBeTruthy()
   })
 
   test("shows friendly managed model names without the managed source label", async () => {
@@ -178,7 +230,11 @@ describe("ComposerModelPicker", () => {
         name: "Model Auto, effort Auto",
       })
     )
-    fireEvent.click(await screen.findByRole("button", { name: "Advanced" }))
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Open model and effort settings",
+      })
+    )
     const modelRow = (await screen.findByText("Model")).closest("button")
     expect(modelRow).toBeTruthy()
     fireEvent.click(modelRow!)
@@ -195,7 +251,11 @@ describe("ComposerModelPicker", () => {
         name: "Model Auto, effort Auto",
       })
     )
-    fireEvent.click(await screen.findByRole("button", { name: "Advanced" }))
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Open model and effort settings",
+      })
+    )
     fireEvent.click((await screen.findByText("Model")).closest("button")!)
 
     const apiIcon = (await screen.findAllByLabelText("API"))[0]
@@ -214,7 +274,11 @@ describe("ComposerModelPicker", () => {
         name: "Model Auto, effort Auto",
       })
     )
-    fireEvent.click(await screen.findByRole("button", { name: "Advanced" }))
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Open model and effort settings",
+      })
+    )
     fireEvent.click((await screen.findByText("Model")).closest("button")!)
     await screen.findByText("GPT 5.6 Sol")
 
@@ -249,7 +313,11 @@ describe("ComposerModelPicker", () => {
         name: "Model Auto, effort Auto",
       })
     )
-    fireEvent.click(await screen.findByRole("button", { name: "Advanced" }))
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Open model and effort settings",
+      })
+    )
     fireEvent.click((await screen.findByText("Model")).closest("button")!)
 
     expect(screen.queryByText("Codex subscription")).toBeNull()
