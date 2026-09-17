@@ -158,15 +158,15 @@ describe("ComposerModelPicker", () => {
     const settings = await screen.findByRole("button", {
       name: "Open model and effort settings",
     })
-    expect(settings.className).toContain("rounded-xl")
+    expect(settings.className).toContain("rounded-lg")
     expect(screen.getByText("Adapts effort to each request")).toBeTruthy()
     const picker = document.querySelector('[data-slot="popover-content"]')
     const autoButton = screen.getByRole("button", {
       name: "Adapts effort to each request",
     })
     expect(autoButton.className).toContain("w-full")
-    expect(picker?.className).toContain("w-[min(20rem")
-    expect(picker?.className).toContain("rounded-[1.75rem]")
+    expect(picker?.className).toContain("w-[min(16rem")
+    expect(picker?.className).toContain("rounded-2xl")
     expect(picker?.className).toContain("border-border/70")
     expect(picker?.className).toContain("shadow-md")
     expect(picker?.className).toContain("ring-0")

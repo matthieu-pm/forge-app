@@ -296,7 +296,7 @@ final result: passed
 
 - Source visual truth: `/var/folders/j2/gzj18t_x2251dx_cnqdcscm80000gn/T/codex-clipboard-c680f1b0-2d80-4394-b0ae-ac6f756c5f1d.png`
 - Implementation evidence: inline Computer Use capture of the running Electron app at `http://localhost:3000/forge`, 2026-09-17
-- Viewport: Electron window, 1224 x 768 screenshot; selector rendered at its 320px responsive maximum width
+- Viewport: Electron window, 1224 x 768 screenshot; selector rendered at its 256px responsive maximum width
 - Source pixels: 510 x 190; density metadata unavailable
 - Implementation pixels: full-window 1224 x 768 capture; focused selector compared in place
 - CSS size and normalization: the source is an isolated component crop while the implementation is an in-product capture. The comparison normalized by component proportions and interaction state rather than assuming an unknown source density.
@@ -328,6 +328,18 @@ A focused comparison was necessary because the selector occupies a small part of
 ### Pass 2
 
 - Post-fix evidence: the Electron capture shows the full-height blue/gray pill, white thumb, centered Medium label, GPT 5.6 Sol subtitle, and working reset action.
+
+### Pass 3
+
+- [P1] The first full-height implementation treated the reference pixels as CSS pixels, making the selector, track, thumb, and icons visibly oversized in the composer.
+- Fix: normalized the reference as an approximately 2x-density crop, reducing the popover from 320px to 256px, the track from 48px to 24px, the thumb from 44px to 28px, and the supporting icons and type proportionally.
+- Post-fix evidence: the Electron capture shows the compact selector aligned with the composer controls while retaining the reference hierarchy and stepped-slider interaction.
+
+### Pass 4
+
+- [P2] The compact card still gave the effort label more visual weight than intended.
+- Fix: reduced the effort label from 16px to 14px without changing the model label or slider geometry.
+- Post-fix evidence: the latest Electron capture shows a quieter header hierarchy with the effort label still readable and primary.
 - No actionable P0, P1, or P2 differences remain.
 
 ## Findings

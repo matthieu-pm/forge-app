@@ -81,8 +81,8 @@ function EffortSlider({
   }
 
   return (
-    <div className="px-1 pb-1">
-      <div className="relative h-12">
+    <div className="px-1 pb-0.5">
+      <div className="relative h-7">
         <Slider
           value={selectedIndex}
           min={0}
@@ -95,20 +95,20 @@ function EffortSlider({
             EFFORT_LABELS[efforts[Math.round(value)] ?? firstEffort]
           }
           className="absolute inset-0"
-          controlClassName="h-12"
-          trackClassName="data-horizontal:h-12 border border-border/70 bg-muted"
+          controlClassName="h-7"
+          trackClassName="data-horizontal:h-6 border border-border/70 bg-muted"
           indicatorClassName="bg-blue-500"
-          thumbClassName="size-11 bg-background shadow-md ring-1 ring-black/5 hover:ring-4 hover:ring-blue-500/15 focus-visible:ring-4 focus-visible:ring-blue-500/25 dark:bg-white"
+          thumbClassName="size-7 bg-background shadow-sm ring-1 ring-black/5 hover:ring-4 hover:ring-blue-500/15 focus-visible:ring-4 focus-visible:ring-blue-500/25 dark:bg-white"
         />
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-6 top-1/2 z-10 -translate-y-1/2"
+          className="pointer-events-none absolute inset-x-4 top-1/2 z-10 -translate-y-1/2"
         >
           {efforts.map((level, index) => (
             <span
               key={level}
               className={cn(
-                "absolute size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full",
+                "absolute size-1 -translate-x-1/2 -translate-y-1/2 rounded-full",
                 index < selectedIndex
                   ? "bg-blue-200/80"
                   : "bg-muted-foreground/55"
@@ -396,25 +396,25 @@ export function ComposerModelPicker({
   const content = (() => {
     if (view === "compact") {
       return (
-        <div className="px-1 pt-1 pb-0.5">
-          <div className="grid grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-start pb-3">
+        <div className="px-0.5 pt-0.5 pb-0.5">
+          <div className="grid grid-cols-[2rem_minmax(0,1fr)_2rem] items-start pb-2">
             <span
-              className="flex size-9 items-center justify-center text-muted-foreground"
+              className="flex size-8 items-center justify-center text-muted-foreground"
               aria-hidden="true"
             >
               <HugeiconsIcon
                 icon={FlashIcon}
                 strokeWidth={1.7}
-                className="size-5"
+                className="size-4"
               />
             </span>
             <button
               type="button"
               onClick={() => setView("advanced")}
               aria-label="Open model and effort settings"
-              className="group flex min-w-0 flex-col items-center rounded-xl px-2 py-0.5 outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
+              className="group flex min-w-0 flex-col items-center rounded-lg px-2 outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
             >
-              <span className="flex items-center gap-1 text-base font-medium text-blue-500">
+              <span className="flex items-center gap-1 text-sm font-medium text-blue-500">
                 {effortLabel}
                 <HugeiconsIcon
                   icon={ArrowRight01Icon}
@@ -422,7 +422,7 @@ export function ComposerModelPicker({
                   className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5"
                 />
               </span>
-              <span className="max-w-full truncate text-sm text-muted-foreground">
+              <span className="max-w-full truncate text-xs text-muted-foreground">
                 {selectedModelLabel}
               </span>
             </button>
@@ -432,12 +432,12 @@ export function ComposerModelPicker({
               title="Reset effort"
               disabled={isAutoModel || effort === defaultEffort}
               onClick={() => onEffortChange(defaultEffort)}
-              className="flex size-9 items-center justify-center rounded-full text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-35"
+              className="flex size-8 items-center justify-center rounded-full text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-35"
             >
               <HugeiconsIcon
                 icon={RefreshIcon}
                 strokeWidth={1.7}
-                className="size-5"
+                className="size-4"
               />
             </button>
           </div>
@@ -445,7 +445,7 @@ export function ComposerModelPicker({
             <button
               type="button"
               onClick={() => setView("effort")}
-              className="flex h-12 w-full items-center justify-center rounded-full border border-border/70 bg-muted text-sm font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
+              className="flex h-7 w-full items-center justify-center rounded-full border border-border/70 bg-muted text-xs font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
             >
               Adapts effort to each request
             </button>
@@ -662,7 +662,7 @@ export function ComposerModelPicker({
         align={align}
         side={side}
         sideOffset={8}
-        className="w-[min(20rem,calc(100vw-1.5rem))] gap-0 overflow-hidden rounded-[1.75rem] border border-border/70 p-1.5 shadow-md ring-0 [perspective:800px]"
+        className="w-[min(16rem,calc(100vw-1.5rem))] gap-0 overflow-hidden rounded-2xl border border-border/70 p-1.5 shadow-md ring-0 [perspective:800px]"
       >
         <motion.div layout transition={transition}>
           <AnimatePresence mode="wait" initial={false}>
