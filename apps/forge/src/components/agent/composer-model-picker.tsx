@@ -66,6 +66,8 @@ function EffortSlider({
   effort: AgentReasoningEffortSelection
   onEffortChange: (effort: AgentReasoningEffortSelection) => void
 }) {
+  const [animateStep, setAnimateStep] = React.useState(false)
+
   if (efforts.length === 0) return null
 
   const selectedIndex = Math.max(
@@ -75,8 +77,12 @@ function EffortSlider({
   const maxIndex = Math.max(efforts.length - 1, 1)
   const firstEffort = efforts[0]
 
-  const selectIndex = (nextValue: number | ReadonlyArray<number>) => {
+  const selectIndex = (
+    nextValue: number | ReadonlyArray<number>,
+    eventDetails: { reason: string }
+  ) => {
     const rawIndex = Array.isArray(nextValue) ? nextValue[0] : nextValue
+    setAnimateStep(eventDetails.reason === "track-press")
     onEffortChange(efforts[Math.round(rawIndex ?? 0)])
   }
 
@@ -97,12 +103,20 @@ function EffortSlider({
           className="absolute inset-0"
           controlClassName="h-7"
           trackClassName="data-horizontal:h-6 border border-border/70 bg-muted"
-          indicatorClassName="bg-blue-500"
-          thumbClassName="size-7 bg-background shadow-sm ring-1 ring-black/5 hover:ring-4 hover:ring-blue-500/15 focus-visible:ring-4 focus-visible:ring-blue-500/25 dark:bg-white"
+          indicatorClassName={cn(
+            "bg-blue-500 motion-reduce:transition-none",
+            animateStep &&
+              "transition-[width] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]"
+          )}
+          thumbClassName={cn(
+            "size-7 bg-background shadow-sm ring-1 ring-black/5 motion-reduce:transition-none hover:ring-4 hover:ring-blue-500/15 focus-visible:ring-4 focus-visible:ring-blue-500/25 dark:bg-white",
+            animateStep &&
+              "transition-[inset-inline-start,color,box-shadow] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]"
+          )}
         />
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-4 top-1/2 z-10 -translate-y-1/2"
+          className="pointer-events-none absolute inset-x-3.5 top-1/2 z-10 -translate-y-1/2"
         >
           {efforts.map((level, index) => (
             <span

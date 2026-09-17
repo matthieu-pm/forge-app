@@ -15,6 +15,14 @@ export const DEFAULT_AGENT_REASONING_EFFORT: AgentReasoningEffort = "medium"
 export const DEFAULT_AGENT_REASONING_EFFORT_SELECTION: AgentReasoningEffortSelection =
   "auto"
 
+const FORGE_REASONING_EFFORTS = [
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+] as const satisfies ReadonlyArray<AgentReasoningEffort>
+
 export type AgentModelDefinition = {
   id: string
   connectionId?: string
@@ -72,7 +80,7 @@ export const AGENT_MODELS: Array<AgentModelDefinition> = [
     locality: "server-capable",
     billingMode: "forge-managed",
     priority: 400,
-    reasoningEfforts: ["low", "medium", "high", "xhigh", "max"],
+    reasoningEfforts: FORGE_REASONING_EFFORTS,
   },
   {
     id: "gpt-5.6-sol",
@@ -84,7 +92,7 @@ export const AGENT_MODELS: Array<AgentModelDefinition> = [
     locality: "server-capable",
     billingMode: "forge-managed",
     priority: 300,
-    reasoningEfforts: AGENT_REASONING_EFFORTS,
+    reasoningEfforts: FORGE_REASONING_EFFORTS,
   },
   {
     id: "gpt-5.6-terra",
@@ -96,7 +104,7 @@ export const AGENT_MODELS: Array<AgentModelDefinition> = [
     locality: "server-capable",
     billingMode: "forge-managed",
     priority: 200,
-    reasoningEfforts: AGENT_REASONING_EFFORTS,
+    reasoningEfforts: FORGE_REASONING_EFFORTS,
   },
   {
     id: "gpt-5.6-luna",
@@ -108,7 +116,7 @@ export const AGENT_MODELS: Array<AgentModelDefinition> = [
     locality: "server-capable",
     billingMode: "forge-managed",
     priority: 100,
-    reasoningEfforts: AGENT_REASONING_EFFORTS,
+    reasoningEfforts: FORGE_REASONING_EFFORTS,
   },
 ]
 

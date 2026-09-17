@@ -2,7 +2,6 @@ import { describe, expect, test } from "vitest"
 
 import {
   AGENT_MODELS,
-  AGENT_REASONING_EFFORTS,
   formatAgentModelLabel,
   getAgentModels,
   getAgentReasoningEfforts,
@@ -29,7 +28,25 @@ describe("agent models", () => {
   })
 
   test("exposes the configured effort range for Auto", () => {
-    expect(getAgentReasoningEfforts("auto")).toEqual(AGENT_REASONING_EFFORTS)
+    expect(getAgentReasoningEfforts("auto")).toEqual([
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max",
+    ])
+  })
+
+  test("omits None and Minimal for GPT 5.6 models", () => {
+    for (const modelId of ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"]) {
+      expect(getAgentReasoningEfforts(modelId)).toEqual([
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max",
+      ])
+    }
   })
 
   test("returns no effort options for an unavailable model", () => {

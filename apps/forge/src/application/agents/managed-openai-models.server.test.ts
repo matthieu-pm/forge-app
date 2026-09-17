@@ -56,11 +56,13 @@ describe("Forge-managed OpenAI models", () => {
         connectionId,
         modelId: "gpt-5.6-luna",
         billingMode: "forge-managed",
+        supportedReasoningEfforts: ["low", "medium", "high", "xhigh", "max"],
       }),
       expect.objectContaining({
         connectionId,
         modelId: "gpt-5.6-sol",
         billingMode: "forge-managed",
+        supportedReasoningEfforts: ["low", "medium", "high", "xhigh", "max"],
       }),
     ])
     expect(JSON.stringify(models)).not.toContain("server-secret")

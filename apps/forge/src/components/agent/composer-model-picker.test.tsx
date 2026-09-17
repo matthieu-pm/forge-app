@@ -198,11 +198,11 @@ describe("ComposerModelPicker", () => {
     if (!slider) throw new Error("Expected the effort slider to render")
     expect(slider.getAttribute("aria-label")).toBe("Effort level")
     expect(slider.getAttribute("aria-valuetext")).toBe("xHigh")
-    expect(slider.getAttribute("max")).toBe("6")
+    expect(slider.getAttribute("max")).toBe("4")
     expect(screen.queryByText("None")).toBeNull()
     expect(screen.queryByText("Max")).toBeNull()
 
-    fireEvent.change(slider, { target: { value: "4" } })
+    fireEvent.change(slider, { target: { value: "2" } })
 
     expect(
       screen.getByRole("button", {

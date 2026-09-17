@@ -99,10 +99,7 @@ export function listManagedOpenAIModels(
     inputModalities: ["text"],
     supportsTools: true,
     supportsCode: true,
-    supportedReasoningEfforts:
-      modelId === "gpt-6-astra"
-        ? ["low", "medium", "high", "xhigh", "max"]
-        : ["none", "minimal", "low", "medium", "high", "xhigh", "max"],
+    supportedReasoningEfforts: ["low", "medium", "high", "xhigh", "max"],
     contextWindowTokens: null,
     status: "available",
   }))
