@@ -117,11 +117,13 @@ function toPickerModel(model: ModelCatalogEntry): AgentModelDefinition {
     sourceLabel: model.sourceLabel,
     locality: model.locality,
     billingMode: model.billingMode,
-    priority: model.modelId.includes("sol")
-      ? 300
-      : model.modelId.includes("terra")
-        ? 200
-        : 100,
+    priority: model.modelId.includes("astra")
+      ? 400
+      : model.modelId.includes("sol")
+        ? 300
+        : model.modelId.includes("terra")
+          ? 200
+          : 100,
     reasoningEfforts: model.supportedReasoningEfforts,
     disabledReason: !model.supportsTools
       ? "This model does not support the Forge tool loop."

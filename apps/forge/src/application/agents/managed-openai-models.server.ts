@@ -5,7 +5,12 @@ import { createHash } from "node:crypto"
 import type { Actor } from "@/application/actor"
 import type { ModelCatalogEntry } from "@/application/agents/model-contract"
 
-const DEFAULT_MODELS = ["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol"] as const
+const DEFAULT_MODELS = [
+  "gpt-6-astra",
+  "gpt-5.6-luna",
+  "gpt-5.6-terra",
+  "gpt-5.6-sol",
+] as const
 
 type ManagedOpenAIConnection = {
   id: string
@@ -94,15 +99,10 @@ export function listManagedOpenAIModels(
     inputModalities: ["text"],
     supportsTools: true,
     supportsCode: true,
-    supportedReasoningEfforts: [
-      "none",
-      "minimal",
-      "low",
-      "medium",
-      "high",
-      "xhigh",
-      "max",
-    ],
+    supportedReasoningEfforts:
+      modelId === "gpt-6-astra"
+        ? ["low", "medium", "high", "xhigh", "max"]
+        : ["none", "minimal", "low", "medium", "high", "xhigh", "max"],
     contextWindowTokens: null,
     status: "available",
   }))

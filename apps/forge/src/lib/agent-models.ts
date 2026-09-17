@@ -26,10 +26,7 @@ export type AgentModelDefinition = {
   sourceLabel: string
   locality?: "local-only" | "server-capable"
   billingMode?:
-    | "forge-managed"
-    | "subscription"
-    | "token-plan"
-    | "pay-as-you-go"
+    "forge-managed" | "subscription" | "token-plan" | "pay-as-you-go"
   priority: number
   reasoningEfforts: ReadonlyArray<AgentReasoningEffort>
   disabledReason?: string
@@ -65,6 +62,18 @@ export function formatAgentModelLabel(displayName: string, modelId: string) {
 }
 
 export const AGENT_MODELS: Array<AgentModelDefinition> = [
+  {
+    id: "gpt-6-astra",
+    modelId: "gpt-6-astra",
+    label: "GPT 6 Astra",
+    provider: "openai",
+    providerLabel: "OpenAI",
+    sourceLabel: "Forge",
+    locality: "server-capable",
+    billingMode: "forge-managed",
+    priority: 400,
+    reasoningEfforts: ["low", "medium", "high", "xhigh", "max"],
+  },
   {
     id: "gpt-5.6-sol",
     modelId: "gpt-5.6-sol",

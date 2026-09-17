@@ -212,12 +212,10 @@ describe("ComposerModelPicker", () => {
     expect(slider.getAttribute("aria-valuetext")).toBe("High")
     expect(screen.queryByRole("radio")).toBeNull()
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "Reset effort to Medium" })
-    )
+    fireEvent.click(screen.getByRole("button", { name: "Switch to Auto" }))
     expect(
       screen.getByRole("button", {
-        name: "Model GPT 5.6 Sol, effort Medium",
+        name: "Model Auto, effort Auto",
       })
     ).toBeTruthy()
   })
@@ -321,7 +319,7 @@ describe("ComposerModelPicker", () => {
     fireEvent.click((await screen.findByText("Model")).closest("button")!)
 
     expect(screen.queryByText("Codex subscription")).toBeNull()
-    expect((await screen.findAllByLabelText("Subscription")).length).toBe(3)
-    expect((await screen.findAllByLabelText("Local")).length).toBe(3)
+    expect((await screen.findAllByLabelText("Subscription")).length).toBe(4)
+    expect((await screen.findAllByLabelText("Local")).length).toBe(4)
   })
 })

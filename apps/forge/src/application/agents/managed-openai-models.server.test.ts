@@ -4,11 +4,26 @@ import { describe, expect, it, vi } from "vitest"
 
 import {
   ensureManagedOpenAIModels,
+  listManagedOpenAIModels,
   managedOpenAIApiKeyFor,
   managedOpenAIConnectionIdForWorkspace,
 } from "@/application/agents/managed-openai-models.server"
 
 describe("Forge-managed OpenAI models", () => {
+  it("includes GPT 6 Astra in the default managed catalog", () => {
+    const models = listManagedOpenAIModels(
+      "00000000-0000-4000-8000-000000000001",
+      { OPENAI_API_KEY: "server-secret" }
+    )
+
+    expect(models[0]).toEqual(
+      expect.objectContaining({
+        modelId: "gpt-6-astra",
+        supportedReasoningEfforts: ["low", "medium", "high", "xhigh", "max"],
+      })
+    )
+  })
+
   it("provisions a workspace-owned connection before exposing models", async () => {
     const ensureConnection = vi.fn().mockResolvedValue(undefined)
 

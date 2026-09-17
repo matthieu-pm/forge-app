@@ -12,7 +12,7 @@ import {
   ComputerProgramming01Icon,
   Crown02Icon,
   FlashIcon,
-  RefreshIcon,
+  Refresh01Icon,
   SecurityLockIcon,
   Tick02Icon,
 } from "@hugeicons/core-free-icons"
@@ -342,9 +342,6 @@ export function ComposerModelPicker({
   const efforts = getAgentReasoningEfforts(value, models)
   const isAutoModel = value === AUTO_AGENT_MODEL_SELECTION.id
   const effortLabel = EFFORT_LABELS[effort]
-  const defaultEffort = efforts.includes(DEFAULT_AGENT_REASONING_EFFORT)
-    ? DEFAULT_AGENT_REASONING_EFFORT
-    : (efforts.at(0) ?? DEFAULT_AGENT_REASONING_EFFORT)
 
   React.useEffect(() => {
     if (isAutoModel && effort !== "auto") {
@@ -428,14 +425,14 @@ export function ComposerModelPicker({
             </button>
             <button
               type="button"
-              aria-label={`Reset effort to ${EFFORT_LABELS[defaultEffort]}`}
-              title="Reset effort"
-              disabled={isAutoModel || effort === defaultEffort}
-              onClick={() => onEffortChange(defaultEffort)}
+              aria-label="Switch to Auto"
+              title="Switch to Auto"
+              disabled={isAutoModel}
+              onClick={() => selectModel(AUTO_AGENT_MODEL_SELECTION.id)}
               className="flex size-8 items-center justify-center rounded-full text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-35"
             >
               <HugeiconsIcon
-                icon={RefreshIcon}
+                icon={Refresh01Icon}
                 strokeWidth={1.7}
                 className="size-4"
               />
