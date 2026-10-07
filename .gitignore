@@ -23,3 +23,5 @@ todos.json
 .workflow-data/
 .workflow-vitest/
 release-candidate/
+.vercel
+.env*.local

@@ -1,8 +1,46 @@
-import { readFile } from "node:fs/promises"
+import { access, readFile } from "node:fs/promises"
 import { resolve } from "node:path"
 
-const serverEntry = resolve(import.meta.dirname, "../.output/server/index.mjs")
-const source = await readFile(serverEntry, "utf8")
+const vercelBuild =
+  process.env.VERCEL === "1" || process.env.NITRO_PRESET === "vercel"
+let source: string
+if (vercelBuild) {
+  const output = resolve(import.meta.dirname, "../.vercel/output")
+  const config = JSON.parse(
+    await readFile(resolve(output, "config.json"), "utf8")
+  )
+  for (const route of ["flow", "step"]) {
+    const destination = `/.well-known/workflow/v1/${route}`
+    if (
+      !config.routes.some(
+        (entry: { dest?: string }) => entry.dest === destination
+      )
+    ) {
+      throw new Error(
+        `The Vercel build is missing the Workflow route: ${destination}`
+      )
+    }
+    const directory = resolve(
+      output,
+      `functions/.well-known/workflow/v1/${route}.func`
+    )
+    const functionConfig = JSON.parse(
+      await readFile(resolve(directory, ".vc-config.json"), "utf8")
+    )
+    await access(resolve(directory, functionConfig.handler))
+  }
+  source =
+    JSON.stringify(config) +
+    (await readFile(
+      resolve(output, "diagnostics/workflows-manifest.json"),
+      "utf8"
+    ))
+} else {
+  source = await readFile(
+    resolve(import.meta.dirname, "../.output/server/index.mjs"),
+    "utf8"
+  )
+}
 const requiredMarkers = [
   "/.well-known/workflow/v1/flow",
   "/.well-known/workflow/v1/step",
