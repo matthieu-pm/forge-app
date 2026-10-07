@@ -46,4 +46,3 @@ export class LocalArtifactBlobStore implements AgentArtifactBlobStore {
     await rm(this.#path(reference), { force: true })
   }
 }
-

@@ -55,4 +55,3 @@ export class DrizzleThreadModelPreferenceStore
     return toRecord(preference)
   }
 }
-

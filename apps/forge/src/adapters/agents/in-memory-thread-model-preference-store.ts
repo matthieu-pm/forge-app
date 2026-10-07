@@ -17,4 +17,3 @@ export class InMemoryThreadModelPreferenceStore
     return Promise.resolve(input)
   }
 }
-
