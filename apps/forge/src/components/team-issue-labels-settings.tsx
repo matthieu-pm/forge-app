@@ -19,6 +19,7 @@ import type {
   TeamLabelDirectory,
   TeamLabelGroup,
 } from "@/lib/team-labels"
+import type { NewTeamLabelRowHandle } from "@/components/new-team-label-row"
 import {
   LABEL_COLORS,
   initialTeamLabels,
@@ -27,6 +28,7 @@ import {
   teamLabelsStorageKey,
 } from "@/lib/team-labels"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
+import { NewTeamLabelRow } from "@/components/new-team-label-row"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -67,6 +69,8 @@ type Columns = {
 }
 const focusClass =
   "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+const labelRowClass =
+  "h-11 border-0 bg-transparent hover:bg-transparent data-[state=selected]:bg-transparent [&>td]:transition-colors [&>td]:duration-100 [&>td:first-child]:rounded-l-[8px] [&>td:last-child]:rounded-r-[8px] hover:[&>td]:bg-muted/30 data-[state=selected]:[&>td]:bg-muted/50"
 
 function lastApplied(value: string | null) {
   if (!value) return "Never"
@@ -87,6 +91,9 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
     created: true,
   })
   const [editor, setEditor] = React.useState<Editor | null>(null)
+  const [newLabel, setNewLabel] = React.useState<TeamLabel | null>(null)
+  const newLabelRow = React.useRef<NewTeamLabelRowHandle>(null)
+  const newLabelButton = React.useRef<HTMLButtonElement>(null)
   const storageKey = teamLabelsStorageKey(team.id)
 
   React.useEffect(() => {
@@ -133,14 +140,68 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
           (filter === "used" ? label.issues > 0 : label.issues === 0))
     )
     .sort((a, b) => (ascending ? 1 : -1) * a.name.localeCompare(b.name))
-  const columnCount = 1 + Object.values(columns).filter(Boolean).length
+  const showNewLabel =
+    newLabel !== null &&
+    (!directory.labels.some((label) => label.id === newLabel.id) ||
+      visible.some((label) => label.id === newLabel.id))
+  const columnCount = 3 + Object.values(columns).filter(Boolean).length
   const sections = [
-    { group: null, labels: visible.filter((label) => !label.groupId) },
+    {
+      group: null,
+      labels: visible.filter(
+        (label) => !label.groupId && label.id !== newLabel?.id
+      ),
+    },
     ...directory.groups.map((group) => ({
       group,
       labels: visible.filter((label) => label.groupId === group.id),
     })),
   ]
+
+  function startNewLabel() {
+    if (newLabelRow.current && !newLabelRow.current.finish()) return
+    setQuery("")
+    setFilter("all")
+    setNewLabel({
+      id: crypto.randomUUID(),
+      name: "",
+      description: "",
+      color: "#eb5757",
+      groupId: null,
+      issues: 0,
+      lastApplied: null,
+      createdAt: new Date().toISOString(),
+    })
+  }
+
+  function saveNewLabel(label: TeamLabel) {
+    if (
+      directory.labels.some(
+        (item) =>
+          item.id !== label.id &&
+          item.name.toLocaleLowerCase() === label.name.toLocaleLowerCase()
+      )
+    ) {
+      return "A label with this name already exists."
+    }
+    if (
+      !save({
+        ...directory,
+        labels: [
+          ...directory.labels.filter((item) => item.id !== label.id),
+          label,
+        ],
+      })
+    ) {
+      return "Could not save. Please try again."
+    }
+    setNewLabel(label)
+  }
+
+  function closeNewLabel() {
+    setNewLabel(null)
+    newLabelButton.current?.focus()
+  }
 
   function submit(values: {
     name: string
@@ -195,12 +256,10 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
     setEditor(null)
   }
 
-  function remove() {
-    if (!editor?.item) return
+  function remove(kind: Editor["kind"], id: string) {
     const previous = directory
-    const id = editor.item.id
     const next =
-      editor.kind === "label"
+      kind === "label"
         ? {
             ...directory,
             labels: directory.labels.filter((label) => label.id !== id),
@@ -214,7 +273,9 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
           }
     if (save(next)) {
       setEditor(null)
-      toast.success(`${editor.kind === "label" ? "Label" : "Group"} deleted.`, {
+      if (newLabel?.id === id) closeNewLabel()
+      toast.success(`${kind === "label" ? "Label" : "Group"} deleted.`, {
+        duration: 10000,
         action: {
           label: "Undo",
           onClick: () => {
@@ -224,7 +285,7 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
                 stored ? parseTeamLabels(stored) : next,
                 previous,
                 id,
-                editor.kind
+                kind
               )
               if (restored) save(restored)
               else
@@ -276,8 +337,9 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
               New group
             </Button>
             <Button
+              ref={newLabelButton}
               className="h-8 rounded-full bg-[#5E6AD2] px-3 font-normal text-white hover:bg-[#5360C8]"
-              onClick={() => setEditor({ kind: "label" })}
+              onClick={startNewLabel}
             >
               New label
             </Button>
@@ -372,13 +434,16 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <div className="px-5 sm:px-8 lg:px-14">
+        <div className="px-5 sm:px-8 lg:px-14 [&>[data-slot=table-container]]:-ml-4 [&>[data-slot=table-container]]:w-[calc(100%+2rem)] sm:[&>[data-slot=table-container]]:-ml-10 sm:[&>[data-slot=table-container]]:w-[calc(100%+5rem)]">
           <Table
-            className="min-w-[1000px] table-fixed"
+            className="min-w-[1000px] table-fixed border-separate border-spacing-0"
             aria-label="Team issue labels"
           >
             <TableHeader className="[&_tr]:border-b-0">
               <TableRow className="border-0 hover:bg-transparent">
+                <TableHead className="w-8 p-0 sm:w-10">
+                  <span className="sr-only">Selection</span>
+                </TableHead>
                 <TableHead
                   scope="col"
                   aria-sort={ascending ? "ascending" : "descending"}
@@ -430,15 +495,36 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
                     Created
                   </TableHead>
                 )}
+                <TableHead className="w-10 p-0">
+                  <span className="sr-only">Actions</span>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
+              {newLabel && showNewLabel && (
+                <NewTeamLabelRow
+                  key={newLabel.id}
+                  ref={newLabelRow}
+                  label={newLabel}
+                  columns={columns}
+                  rowClassName={labelRowClass}
+                  saved={directory.labels.some(
+                    (label) => label.id === newLabel.id
+                  )}
+                  onSave={saveNewLabel}
+                  onClose={closeNewLabel}
+                  onDelete={() => remove("label", newLabel.id)}
+                />
+              )}
               {sections.map(({ group, labels }) => (
                 <React.Fragment key={group?.id ?? "ungrouped"}>
                   {group &&
                     (labels.length > 0 || (!query && filter === "all")) && (
-                      <TableRow className="h-10 border-0 hover:bg-muted/20">
-                        <TableCell colSpan={columnCount} className="px-0 py-0">
+                      <TableRow className={`${labelRowClass} h-10`}>
+                        <TableCell
+                          colSpan={columnCount}
+                          className="py-0 pl-4 sm:pl-10"
+                        >
                           <button
                             type="button"
                             onClick={() =>
@@ -461,10 +547,8 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
                       </TableRow>
                     )}
                   {labels.map((label) => (
-                    <TableRow
-                      key={label.id}
-                      className="h-11 border-0 hover:bg-muted/20"
-                    >
+                    <TableRow key={label.id} className={labelRowClass}>
+                      <TableCell className="p-0" />
                       <TableCell className="px-0 py-0">
                         <button
                           type="button"
@@ -505,13 +589,14 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
                           {format(new Date(label.createdAt), "MMM d")}
                         </TableCell>
                       )}
+                      <TableCell className="p-0" />
                     </TableRow>
                   ))}
                 </React.Fragment>
               ))}
             </TableBody>
           </Table>
-          {visible.length === 0 && (
+          {visible.length === 0 && !showNewLabel && (
             <p
               role="status"
               className="py-10 text-center text-sm text-muted-foreground"
@@ -544,7 +629,9 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
               editor={editor}
               groups={directory.groups}
               onSubmit={submit}
-              onDelete={remove}
+              onDelete={() => {
+                if (editor.item) remove(editor.kind, editor.item.id)
+              }}
             />
           )}
         </DialogContent>
