@@ -48,7 +48,7 @@ type SettingItem = {
   description: string
   icon: SettingsIcon
   label: string
-  section?: "general"
+  section?: "general" | "labels"
   value?: string
 }
 
@@ -78,7 +78,7 @@ const issueItems: Array<SettingItem> = [
     label: "Issue labels",
     description: "Labels available to this team's issues",
     icon: Tag01Icon,
-    value: "None",
+    section: "labels",
   },
   {
     label: "Templates",
@@ -214,7 +214,11 @@ function SettingsCard({
         return item.section && teamSlug ? (
           <Link
             key={item.label}
-            to="/settings/teams/$teamSlug/general"
+            to={
+              item.section === "labels"
+                ? "/settings/teams/$teamSlug/labels"
+                : "/settings/teams/$teamSlug/general"
+            }
             params={{ teamSlug }}
             className={className}
           >
@@ -338,7 +342,7 @@ export function TeamSettingsOverview({ team }: { team: TeamSummary }) {
             </section>
 
             <SettingsSection title="Issues, projects, and docs">
-              <SettingsCard items={issueItems} />
+              <SettingsCard items={issueItems} teamSlug={team.slug} />
             </SettingsSection>
 
             <SettingsSection title="Workflow">

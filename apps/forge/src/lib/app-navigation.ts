@@ -292,6 +292,10 @@ export function getPageMeta(pathname: string): PageMeta {
 }
 
 export function getBreadcrumbItems(pathname: string): Array<BreadcrumbItem> {
+  if (/^\/settings\/teams\/[^/]+\/labels$/.test(pathname)) {
+    return [{ label: "Issue labels" }]
+  }
+
   if (pathname === "/settings/teams") {
     return [{ label: "Teams" }]
   }

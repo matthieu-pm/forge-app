@@ -59,6 +59,7 @@ import { Route as WorkspaceInitiativesInitiativeIdRouteImport } from './routes/w
 import { Route as ApiInternalDesktopReleasesRouteImport } from './routes/api/internal/desktop/releases'
 import { Route as SettingsTeamsTeamSlugIndexRouteImport } from './routes/settings_.teams.$teamSlug.index'
 import { Route as SettingsTeamsTeamSlugGeneralRouteImport } from './routes/settings_.teams.$teamSlug.general'
+import { Route as SettingsTeamsTeamSlugLabelsRouteImport } from './routes/settings_.teams.$teamSlug.labels'
 import { Route as ApiDesktopUpdatesDarwinArchRouteImport } from './routes/api/desktop/updates/darwin/$arch'
 import { Route as ApiInternalDesktopReleasesVersionPauseRouteImport } from './routes/api/internal/desktop/releases/$version/pause'
 import { Route as ApiInternalDesktopReleasesVersionPromoteRouteImport } from './routes/api/internal/desktop/releases/$version/promote'
@@ -318,6 +319,12 @@ const SettingsTeamsTeamSlugGeneralRoute =
     path: '/general',
     getParentRoute: () => SettingsTeamsTeamSlugRoute,
   } as any)
+const SettingsTeamsTeamSlugLabelsRoute =
+  SettingsTeamsTeamSlugLabelsRouteImport.update({
+    id: '/labels',
+    path: '/labels',
+    getParentRoute: () => SettingsTeamsTeamSlugRoute,
+  } as any)
 const ApiDesktopUpdatesDarwinArchRoute =
   ApiDesktopUpdatesDarwinArchRouteImport.update({
     id: '/api/desktop/updates/darwin/$arch',
@@ -387,6 +394,7 @@ export interface FileRoutesByFullPath {
   '/workspace/initiatives/': typeof WorkspaceInitiativesIndexRoute
   '/api/internal/desktop/releases': typeof ApiInternalDesktopReleasesRouteWithChildren
   '/settings/teams/$teamSlug/general': typeof SettingsTeamsTeamSlugGeneralRoute
+  '/settings/teams/$teamSlug/labels': typeof SettingsTeamsTeamSlugLabelsRoute
   '/settings/teams/$teamSlug/': typeof SettingsTeamsTeamSlugIndexRoute
   '/api/desktop/updates/darwin/$arch': typeof ApiDesktopUpdatesDarwinArchRoute
   '/api/internal/desktop/releases/$version/pause': typeof ApiInternalDesktopReleasesVersionPauseRoute
@@ -440,6 +448,7 @@ export interface FileRoutesByTo {
   '/workspace/initiatives': typeof WorkspaceInitiativesIndexRoute
   '/api/internal/desktop/releases': typeof ApiInternalDesktopReleasesRouteWithChildren
   '/settings/teams/$teamSlug/general': typeof SettingsTeamsTeamSlugGeneralRoute
+  '/settings/teams/$teamSlug/labels': typeof SettingsTeamsTeamSlugLabelsRoute
   '/settings/teams/$teamSlug': typeof SettingsTeamsTeamSlugIndexRoute
   '/api/desktop/updates/darwin/$arch': typeof ApiDesktopUpdatesDarwinArchRoute
   '/api/internal/desktop/releases/$version/pause': typeof ApiInternalDesktopReleasesVersionPauseRoute
@@ -496,6 +505,7 @@ export interface FileRoutesById {
   '/workspace/initiatives/': typeof WorkspaceInitiativesIndexRoute
   '/api/internal/desktop/releases': typeof ApiInternalDesktopReleasesRouteWithChildren
   '/settings_/teams/$teamSlug/general': typeof SettingsTeamsTeamSlugGeneralRoute
+  '/settings_/teams/$teamSlug/labels': typeof SettingsTeamsTeamSlugLabelsRoute
   '/settings_/teams/$teamSlug/': typeof SettingsTeamsTeamSlugIndexRoute
   '/api/desktop/updates/darwin/$arch': typeof ApiDesktopUpdatesDarwinArchRoute
   '/api/internal/desktop/releases/$version/pause': typeof ApiInternalDesktopReleasesVersionPauseRoute
@@ -553,6 +563,7 @@ export interface FileRouteTypes {
     | '/workspace/initiatives/'
     | '/api/internal/desktop/releases'
     | '/settings/teams/$teamSlug/general'
+    | '/settings/teams/$teamSlug/labels'
     | '/settings/teams/$teamSlug/'
     | '/api/desktop/updates/darwin/$arch'
     | '/api/internal/desktop/releases/$version/pause'
@@ -606,6 +617,7 @@ export interface FileRouteTypes {
     | '/workspace/initiatives'
     | '/api/internal/desktop/releases'
     | '/settings/teams/$teamSlug/general'
+    | '/settings/teams/$teamSlug/labels'
     | '/settings/teams/$teamSlug'
     | '/api/desktop/updates/darwin/$arch'
     | '/api/internal/desktop/releases/$version/pause'
@@ -661,6 +673,7 @@ export interface FileRouteTypes {
     | '/workspace/initiatives/'
     | '/api/internal/desktop/releases'
     | '/settings_/teams/$teamSlug/general'
+    | '/settings_/teams/$teamSlug/labels'
     | '/settings_/teams/$teamSlug/'
     | '/api/desktop/updates/darwin/$arch'
     | '/api/internal/desktop/releases/$version/pause'
@@ -1053,6 +1066,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsTeamsTeamSlugGeneralRouteImport
       parentRoute: typeof SettingsTeamsTeamSlugRoute
     }
+    '/settings_/teams/$teamSlug/labels': {
+      id: '/settings_/teams/$teamSlug/labels'
+      path: '/labels'
+      fullPath: '/settings/teams/$teamSlug/labels'
+      preLoaderRoute: typeof SettingsTeamsTeamSlugLabelsRouteImport
+      parentRoute: typeof SettingsTeamsTeamSlugRoute
+    }
     '/api/desktop/updates/darwin/$arch': {
       id: '/api/desktop/updates/darwin/$arch'
       path: '/api/desktop/updates/darwin/$arch'
@@ -1109,11 +1129,13 @@ const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
 
 interface SettingsTeamsTeamSlugRouteChildren {
   SettingsTeamsTeamSlugGeneralRoute: typeof SettingsTeamsTeamSlugGeneralRoute
+  SettingsTeamsTeamSlugLabelsRoute: typeof SettingsTeamsTeamSlugLabelsRoute
   SettingsTeamsTeamSlugIndexRoute: typeof SettingsTeamsTeamSlugIndexRoute
 }
 
 const SettingsTeamsTeamSlugRouteChildren: SettingsTeamsTeamSlugRouteChildren = {
   SettingsTeamsTeamSlugGeneralRoute: SettingsTeamsTeamSlugGeneralRoute,
+  SettingsTeamsTeamSlugLabelsRoute: SettingsTeamsTeamSlugLabelsRoute,
   SettingsTeamsTeamSlugIndexRoute: SettingsTeamsTeamSlugIndexRoute,
 }
 
