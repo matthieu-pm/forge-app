@@ -1,18 +1,23 @@
+import { mkdir } from "node:fs/promises"
+import { join } from "node:path"
+
 import { z } from "zod"
 
 import { JsonLineProcess } from "../process-supervisor"
+import type { ChatGPTConnection } from "../chatgpt-connection"
 import type { RpcId, RpcMessage } from "../process-supervisor"
 
-type CodexTransport = Pick<
-  JsonLineProcess,
-  | "request"
-  | "notify"
-  | "subscribe"
-  | "subscribeRequests"
-  | "respond"
-  | "reject"
-  | "stop"
->
+type CodexTransport = Partial<Pick<JsonLineProcess, "setChatGPTToken">> &
+  Pick<
+    JsonLineProcess,
+    | "request"
+    | "notify"
+    | "subscribe"
+    | "subscribeRequests"
+    | "respond"
+    | "reject"
+    | "stop"
+  >
 
 const accountResponseSchema = z
   .object({
@@ -94,13 +99,7 @@ const turnResponseSchema = z
   .passthrough()
 
 export type CodexReasoningEffort =
-  | "none"
-  | "minimal"
-  | "low"
-  | "medium"
-  | "high"
-  | "xhigh"
-  | "max"
+  "none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max"
 
 export type CodexRuntimeSnapshot = {
   account: {
@@ -164,21 +163,61 @@ export class CodexAppServer {
   readonly #process: CodexTransport
   #initialized = false
 
-  constructor(executablePath: string, cwd: string, transport?: CodexTransport) {
+  constructor(
+    executablePath: string,
+    private readonly cwd: string,
+    transport?: CodexTransport,
+    private readonly chatGPT?: Pick<
+      ChatGPTConnection,
+      "profile" | "models" | "accessToken" | "login" | "cancelLogin"
+    >
+  ) {
     this.#process =
       transport ??
       new JsonLineProcess(
         executablePath,
-        ["app-server", "--listen", "stdio://"],
-        cwd
+        [
+          "app-server",
+          "--listen",
+          "stdio://",
+          ...(chatGPT
+            ? [
+                "-c",
+                'model_provider="openai_chatgpt_plan"',
+                "-c",
+                'model_providers.openai_chatgpt_plan.name="ChatGPT plan"',
+                "-c",
+                'model_providers.openai_chatgpt_plan.base_url="https://api.openai.com/v1"',
+                "-c",
+                'model_providers.openai_chatgpt_plan.env_key="ACCESS_TOKEN"',
+                "-c",
+                'model_providers.openai_chatgpt_plan.wire_api="responses"',
+                "-c",
+                "model_providers.openai_chatgpt_plan.requires_openai_auth=false",
+                "-c",
+                "model_providers.openai_chatgpt_plan.supports_websockets=false",
+                "-c",
+                "disable_response_storage=true",
+              ]
+            : []),
+        ],
+        chatGPT ? join(cwd, "chatgpt-codex") : cwd
       )
   }
 
   async initialize() {
+    if (this.chatGPT) {
+      await mkdir(join(this.cwd, "chatgpt-codex"), {
+        recursive: true,
+        mode: 0o700,
+      })
+      if (this.#process.setChatGPTToken?.(await this.chatGPT.accessToken()))
+        this.#initialized = false
+    }
     if (this.#initialized) return
     await this.#process.request("initialize", {
       clientInfo: {
-        name: "forge",
+        name: this.chatGPT ? "Forge" : "forge",
         title: "Forge",
         version: "0.1.0",
       },
@@ -192,6 +231,14 @@ export class CodexAppServer {
   }
 
   async snapshot(): Promise<CodexRuntimeSnapshot> {
+    if (this.chatGPT) {
+      const profile = await this.chatGPT.profile()
+      if (!profile?.planEnabled) return { account: null, models: [] }
+      return {
+        account: { email: profile.email, planType: "ChatGPT plan" },
+        models: await this.chatGPT.models(),
+      }
+    }
     await this.initialize()
     const account = accountResponseSchema.parse(
       await this.#process.request("account/read", { refreshToken: false })
@@ -235,6 +282,7 @@ export class CodexAppServer {
   }
 
   async startChatGptLogin() {
+    if (this.chatGPT) return this.chatGPT.login()
     await this.initialize()
     return loginResponseSchema.parse(
       await this.#process.request("account/login/start", {
@@ -320,6 +368,7 @@ export class CodexAppServer {
   }
 
   stop() {
+    this.chatGPT?.cancelLogin()
     this.#process.stop()
     this.#initialized = false
   }

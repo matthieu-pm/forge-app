@@ -87,7 +87,7 @@ describe("AiSettings local subscriptions", () => {
     expect(await screen.findByText("Needs repair")).toBeTruthy()
     expect(screen.queryByText("repair-required")).toBeNull()
     expect(
-      document.querySelector('img[src="/img/codex-logo.png"]')
+      document.querySelector('svg[data-provider-logo="openai"]')
     ).toBeTruthy()
 
     fireEvent.click(
@@ -127,7 +127,7 @@ describe("AiSettings local subscriptions", () => {
     expect(
       screen.getByText("Provider-managed credentials").className
     ).toContain("mt-0.5")
-    expect(retryButton.textContent).toContain("Retry")
+    expect(retryButton.textContent).toContain("Refresh models")
     expect(retryButton.querySelector("svg")).toBeNull()
   })
 

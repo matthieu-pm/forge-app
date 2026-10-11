@@ -160,3 +160,41 @@ describe("CodexAppServer", () => {
     })
   })
 })
+
+describe("ChatGPT plan model discovery", () => {
+  it("uses the signed-in account catalog rather than Codex's cached models", async () => {
+    const fake = transport(() => {
+      throw new Error("No Codex RPC should be used for account model discovery")
+    })
+    const chatGPT = {
+      profile: vi
+        .fn()
+        .mockResolvedValue({ email: "person@example.test", planEnabled: true }),
+      models: vi
+        .fn()
+        .mockResolvedValue([
+          {
+            id: "account-model",
+            displayName: "Account model",
+            supportedReasoningEfforts: ["high"],
+            contextWindowTokens: null,
+          },
+        ]),
+      accessToken: vi.fn(),
+      login: vi.fn(),
+      cancelLogin: vi.fn(),
+    }
+    const server = new CodexAppServer("codex", "/tmp", fake, chatGPT)
+    expect(await server.snapshot()).toMatchObject({
+      account: { email: "person@example.test" },
+      models: [{ id: "account-model" }],
+    })
+    expect(fake.request).not.toHaveBeenCalled()
+    chatGPT.profile.mockResolvedValue({
+      email: "person@example.test",
+      planEnabled: false,
+    })
+    expect(await server.snapshot()).toEqual({ account: null, models: [] })
+    expect(chatGPT.models).toHaveBeenCalledTimes(1)
+  })
+})

@@ -32,6 +32,8 @@ import {
   sendWorkspaceInvitationEmail,
 } from "@/application/mail/auth-emails.server"
 
+import { chatGPTAuth } from "@/lib/chatgpt-auth.server"
+
 const betterAuthUrl = process.env.BETTER_AUTH_URL
 const betterAuthSecret = process.env.BETTER_AUTH_SECRET
 
@@ -64,6 +66,7 @@ export const auth = betterAuth({
       invitation: invitations,
     },
   }),
+  account: { accountLinking: { enabled: true, disableImplicitLinking: true } },
   emailAndPassword: {
     enabled: true,
   },
@@ -88,6 +91,7 @@ export const auth = betterAuth({
   },
   plugins: [
     electron(),
+    chatGPTAuth(),
     organization({
       invitationExpiresIn: 60 * 60 * 48,
       sendInvitationEmail: async (data) => {

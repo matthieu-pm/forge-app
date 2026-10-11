@@ -8,6 +8,7 @@ import {
   beginDesktopAuthorizationRedirect,
   desktopAuthorizationQuery,
 } from "@/lib/auth-session"
+import { ChatGPTSignIn } from "@/components/chatgpt-sign-in"
 import { Button } from "@/components/ui/button"
 import {
   Field,
@@ -103,10 +104,9 @@ export function LoginForm({
               <span className="sr-only">Forge</span>
             </div>
             <h1 className="text-xl font-bold">Sign in to Forge</h1>
-            <FieldDescription>
-              Use your email and password to continue.
-            </FieldDescription>
+            <FieldDescription>Choose how you want to sign in.</FieldDescription>
           </div>
+          <ChatGPTSignIn redirectTo={redirectTo} />
           <Field>
             <FieldLabel htmlFor="email">Email</FieldLabel>
             <Input

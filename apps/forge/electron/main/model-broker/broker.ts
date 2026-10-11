@@ -4,6 +4,7 @@ import { join } from "node:path"
 import { app } from "electron"
 import { z } from "zod"
 
+import { ChatGPTConnection } from "./chatgpt-connection"
 import { CodexAppServer } from "./adapters/codex-app-server"
 import {
   CodexEventNormalizer,
@@ -20,7 +21,7 @@ import type { DiscoveredCli } from "./cli-discovery"
 export const localRuntimeSnapshotSchema = z
   .object({
     id: z.literal("codex"),
-    label: z.literal("Codex"),
+    label: z.literal("ChatGPT"),
     status: z.enum([
       "ready",
       "login-required",
@@ -111,7 +112,13 @@ export class ModelBroker {
     this.#userDataPath = options.userDataPath ?? (() => app.getPath("userData"))
     this.#createCodex =
       options.createCodex ??
-      ((executablePath, cwd) => new CodexAppServer(executablePath, cwd))
+      ((executablePath, cwd) =>
+        new CodexAppServer(
+          executablePath,
+          cwd,
+          undefined,
+          new ChatGPTConnection(cwd)
+        ))
     this.#id = options.id ?? randomUUID
     this.#now = options.now ?? Date.now
   }
@@ -292,7 +299,7 @@ export class ModelBroker {
     if (!discovered) {
       return {
         id: "codex",
-        label: "Codex",
+        label: "ChatGPT",
         status: "unavailable",
         statusReason: "Codex CLI was not found in a trusted location.",
         accountLabel: null,
@@ -311,9 +318,9 @@ export class ModelBroker {
       if (!snapshot.account) {
         return {
           id: "codex",
-          label: "Codex",
+          label: "ChatGPT",
           status: "login-required",
-          statusReason: "Sign in through the official Codex login flow.",
+          statusReason: "Continue with ChatGPT to connect your plan.",
           accountLabel: null,
           billingMode: "subscription",
           locality: "local-only",
@@ -322,7 +329,7 @@ export class ModelBroker {
       }
       return {
         id: "codex",
-        label: "Codex",
+        label: "ChatGPT",
         status: "ready",
         statusReason: null,
         accountLabel:
@@ -341,10 +348,10 @@ export class ModelBroker {
       this.#resetCodex()
       return {
         id: "codex",
-        label: "Codex",
+        label: "ChatGPT",
         status: "repair-required",
         statusReason:
-          "Codex could not start. Reinstall or update the Codex CLI, then try again.",
+          "ChatGPT could not connect. Sign in again, or update the Codex CLI and retry.",
         accountLabel: null,
         billingMode: "subscription",
         locality: "local-only",
@@ -354,6 +361,10 @@ export class ModelBroker {
   }
 
   async startCodexLogin() {
+    if (this.#runs.size > 0)
+      throw new Error(
+        "Wait for your current ChatGPT runs to finish before signing in again."
+      )
     const discovered = await this.#discoverCodex()
     if (!discovered) throw new Error("Codex CLI is not installed.")
     this.#codex ??= this.#createCodex(

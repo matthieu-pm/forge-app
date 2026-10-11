@@ -6,6 +6,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { toast } from "sonner"
 
 import type { LocalProfile } from "@/lib/profile-state"
+import { ChatGPTSignIn } from "@/components/chatgpt-sign-in"
 import { authClient } from "@/lib/auth-client"
 import { AvatarPicker } from "@/components/avatar-picker"
 import { Button } from "@/components/ui/button"
@@ -409,6 +410,8 @@ export function ProfileSettings() {
               </ProfileRow>
             </SettingsCard>
           </section>
+
+          <ChatGPTSignIn linkAccount redirectTo="/settings/profile" />
 
           <section className="space-y-3">
             <h2 className="px-3 text-sm font-semibold text-foreground">

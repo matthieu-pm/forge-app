@@ -8,6 +8,7 @@ import {
   beginDesktopAuthorizationRedirect,
   desktopAuthorizationQuery,
 } from "@/lib/auth-session"
+import { ChatGPTSignIn } from "@/components/chatgpt-sign-in"
 import { Button } from "@/components/ui/button"
 import {
   Field,
@@ -115,6 +116,7 @@ export function SignupForm({
               Start with your account, then set up your workspace.
             </FieldDescription>
           </div>
+          <ChatGPTSignIn redirectTo={redirectTo} />
           <Field>
             <FieldLabel htmlFor="name">Name</FieldLabel>
             <Input

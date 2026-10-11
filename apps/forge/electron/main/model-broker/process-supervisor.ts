@@ -61,6 +61,7 @@ export function terminateProcessTree(
 }
 
 export class JsonLineProcess {
+  #chatGPTToken: string | null = null
   #child: ChildProcessWithoutNullStreams | null = null
   #nextId = 1
   #pending = new Map<
@@ -91,12 +92,24 @@ export class JsonLineProcess {
     this.#maxLineBytes = options.maxLineBytes ?? DEFAULT_MAX_LINE_BYTES
   }
 
+  setChatGPTToken(token: string) {
+    if (token === this.#chatGPTToken) return false
+    this.stop()
+    this.#chatGPTToken = token
+    return true
+  }
+
   start() {
     if (this.#child) return
     const child = spawn(this.executablePath, this.arguments_, {
       cwd: this.cwd,
       detached: process.platform !== "win32",
-      env: sanitizedProcessEnvironment(this.executablePath),
+      env: {
+        ...sanitizedProcessEnvironment(this.executablePath),
+        ...(this.#chatGPTToken
+          ? { ACCESS_TOKEN: this.#chatGPTToken, CODEX_HOME: this.cwd }
+          : {}),
+      },
       shell: false,
       stdio: ["pipe", "pipe", "pipe"],
       windowsHide: true,
@@ -108,6 +121,7 @@ export class JsonLineProcess {
     })
     child.once("error", (error) => this.#failAll(error))
     child.once("exit", (code, signal) => {
+      if (this.#child !== child) return
       const detail = this.#stderr
         ? "The local runtime reported an error."
         : `The local runtime exited (${code ?? signal ?? "unknown"}).`
@@ -250,6 +264,7 @@ export class JsonLineProcess {
     const child = this.#child
     if (!child) return
     this.#child = null
+    this.#failAll(new Error("The local runtime was stopped."))
     child.stdin.end()
     terminateProcessTree(child, "SIGTERM")
     const timer = setTimeout(() => {

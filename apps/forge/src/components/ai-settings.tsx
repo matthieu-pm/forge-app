@@ -428,7 +428,9 @@ export function AiSettings() {
           await host.openExternal(parsed.href)
         }
       }
-      toast.success("Continue sign-in in the provider window.")
+      toast.success(
+        "ChatGPT connected. Your available models have been refreshed."
+      )
       window.dispatchEvent(new Event(MODEL_CONNECTIONS_CHANGED_EVENT))
     } catch (error) {
       toast.error(
@@ -456,10 +458,10 @@ export function AiSettings() {
       {features.agent_codex_local ? (
         <section className="flex flex-col gap-3">
           <div>
-            <h2 className="text-sm font-semibold">Local subscriptions</h2>
+            <h2 className="text-sm font-semibold">ChatGPT plan</h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              Forge uses official local runtime protocols and never reads CLI
-              credential files.
+              Continue with ChatGPT to use your plan in Forge Desktop. Your
+              credentials stay encrypted on this device.
             </p>
           </div>
           <div className="overflow-hidden rounded-2xl border border-border/70 bg-muted/25">
@@ -469,10 +471,10 @@ export function AiSettings() {
                   <HugeiconsIcon icon={SecurityLockIcon} strokeWidth={2} />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">Desktop subscriptions</p>
+                  <p className="text-sm font-medium">Use your ChatGPT plan</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Open Forge Desktop to detect Codex and other supported local
-                    runtimes.
+                    Open Forge Desktop to connect ChatGPT and see the models
+                    available with your plan.
                   </p>
                 </div>
                 <Badge variant="outline">Desktop only</Badge>
@@ -492,12 +494,7 @@ export function AiSettings() {
                       : "flex items-center gap-3 border-t border-border/60 px-4 py-3"
                   }
                 >
-                  <img
-                    src="/img/codex-logo.png"
-                    alt=""
-                    className="size-9 shrink-0 object-contain"
-                    draggable={false}
-                  />
+                  <ConnectionProviderIcon provider="openai" />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <p className="truncate text-sm font-medium">
@@ -520,7 +517,34 @@ export function AiSettings() {
                         : ""}
                     </p>
                   </div>
-                  {runtime.status === "login-required" ? (
+                  {runtime.status === "repair-required" ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      aria-label={`Retry ${runtime.label}`}
+                      disabled={localAction === runtime.id}
+                      onClick={() => void retryLocalRuntime(runtime)}
+                    >
+                      Retry
+                    </Button>
+                  ) : null}
+                  {runtime.status === "ready" ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        void host.openExternal(
+                          "https://chatgpt.com/settings/usage"
+                        )
+                      }
+                    >
+                      Manage usage
+                    </Button>
+                  ) : null}
+                  {runtime.status === "login-required" ||
+                  runtime.status === "repair-required" ? (
                     <Button
                       type="button"
                       variant="outline"
@@ -531,7 +555,7 @@ export function AiSettings() {
                       {localAction === runtime.id ? (
                         <Spinner data-icon="inline-start" />
                       ) : null}
-                      Sign in
+                      Continue with ChatGPT
                     </Button>
                   ) : runtime.status === "ready" ? (
                     <Button
@@ -545,7 +569,7 @@ export function AiSettings() {
                       {localAction === runtime.id ? (
                         <Spinner data-icon="inline-start" />
                       ) : null}
-                      Retry
+                      Refresh models
                     </Button>
                   ) : (
                     <Button
