@@ -191,8 +191,10 @@ function quoteCsv(value: string | number) {
 
 export function MembersSettings({
   access,
+  initialInviteOpen = false,
 }: {
   access: WorkspaceAccessSummary
+  initialInviteOpen?: boolean
 }) {
   const router = useRouter()
   const { members, invitations, canManage, currentUserId } = access
@@ -200,7 +202,7 @@ export function MembersSettings({
   const [filter, setFilter] = React.useState<MemberFilter>("all")
   const [sortField, setSortField] = React.useState<SortField>("name")
   const [sortDirection, setSortDirection] = React.useState<SortDirection>("asc")
-  const [inviteOpen, setInviteOpen] = React.useState(false)
+  const [inviteOpen, setInviteOpen] = React.useState(initialInviteOpen && canManage)
   const [inviteEmail, setInviteEmail] = React.useState("")
   const [inviteRole, setInviteRole] = React.useState<"admin" | "member">(
     "member"

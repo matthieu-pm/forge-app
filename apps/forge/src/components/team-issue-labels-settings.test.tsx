@@ -1,9 +1,21 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { toast } from "sonner"
 import { TeamIssueLabelsSettings } from "./team-issue-labels-settings"
-import type { ReactNode } from "react"
+import type { MouseEvent, ReactNode } from "react"
 import type { TeamSummary } from "@/lib/team-contract"
-import { parseTeamLabels, teamLabelsStorageKey } from "@/lib/team-labels"
+import {
+  parseTeamLabels,
+  teamLabelsStorageKey,
+  workspaceLabelsStorageKey,
+} from "@/lib/team-labels"
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ children }: { children: ReactNode }) => <a>{children}</a>,
@@ -36,6 +48,15 @@ function start() {
 }
 
 beforeEach(() => {
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+  )
+  Element.prototype.scrollIntoView = vi.fn()
   window.localStorage.clear()
 })
 afterEach(() => {
@@ -70,7 +91,7 @@ describe("inline new team label", () => {
     })
     fireEvent.click(
       screen.getByRole("button", {
-        name: "Add label description...",
+        name: "Edit description for Launch",
       })
     )
     const description = screen.getByRole("textbox", {
@@ -138,4 +159,341 @@ describe("inline new team label", () => {
     )
     expect(name.value).toBe("Keep me")
   })
+})
+
+describe("saved team label rows", () => {
+  it("edits saved names and descriptions inline, retaining usage metadata after remount", () => {
+    const view = render(<TeamIssueLabelsSettings team={team} />)
+    fireEvent.click(
+      screen.getByRole("button", { name: "Edit label name Desktop" })
+    )
+    const name = screen.getByRole("textbox", { name: "Label name" })
+    expect(screen.queryByRole("dialog")).toBeNull()
+    fireEvent.change(name, { target: { value: "Desktop app" } })
+    fireEvent.keyDown(name, { key: "Enter" })
+    fireEvent.click(
+      screen.getByRole("button", { name: "Edit description for Desktop app" })
+    )
+    const description = screen.getByRole("textbox", {
+      name: "Label description",
+    })
+    fireEvent.change(description, {
+      target: { value: "Native desktop integrations" },
+    })
+    fireEvent.blur(description)
+    expect(savedLabels().find((label) => label.id === "desktop")).toMatchObject(
+      {
+        name: "Desktop app",
+        description: "Native desktop integrations",
+        issues: 4,
+        lastApplied: "2026-07-23T12:00:00Z",
+        createdAt: "2026-07-23T12:00:00Z",
+      }
+    )
+    view.unmount()
+    render(<TeamIssueLabelsSettings team={team} />)
+    expect(
+      screen.getByRole("button", { name: "Edit label name Desktop app" })
+    ).toBeTruthy()
+    expect(
+      screen.getByRole("button", { name: "Actions for Desktop app" })
+    ).toBeTruthy()
+    expect(
+      screen.getByRole("checkbox", { name: "Select label Desktop app" })
+    ).toBeTruthy()
+  })
+
+  it("uses the dot solely as a color picker without entering a name editor or selecting the row", () => {
+    render(<TeamIssueLabelsSettings team={team} />)
+    fireEvent.click(
+      screen.getByRole("button", { name: "Change color for Desktop" })
+    )
+    expect(screen.queryByRole("textbox", { name: "Label name" })).toBeNull()
+    fireEvent.click(screen.getByRole("button", { name: "Green" }))
+    expect(savedLabels().find((label) => label.id === "desktop")?.color).toBe(
+      "#4cb782"
+    )
+    expect(
+      screen
+        .getByRole("checkbox", { name: "Select label Desktop" })
+        .getAttribute("aria-checked")
+    ).toBe("false")
+  })
+
+  it("cancels edits on saved rows without deleting the row or persisting changes", () => {
+    render(<TeamIssueLabelsSettings team={team} />)
+    fireEvent.click(
+      screen.getByRole("button", { name: "Edit label name Desktop" })
+    )
+    const name = screen.getByRole("textbox", { name: "Label name" })
+    fireEvent.change(name, { target: { value: "Cancel me" } })
+    fireEvent.keyDown(name, { key: "Escape" })
+    expect(
+      screen.getByRole("button", { name: "Edit label name Desktop" })
+    ).toBeTruthy()
+    fireEvent.click(
+      screen.getByRole("button", { name: "Edit description for Desktop" })
+    )
+    const description = screen.getByRole("textbox", {
+      name: "Label description",
+    })
+    fireEvent.change(description, {
+      target: { value: "Cancelled description" },
+    })
+    fireEvent.keyDown(description, { key: "Escape" })
+    expect(
+      screen.getByRole("button", { name: "Edit description for Desktop" })
+        .textContent
+    ).toBe("Electron desktop application behavior and native integrations.")
+    expect(window.localStorage.getItem(storageKey)).toBeNull()
+    fireEvent.click(
+      screen.getByRole("button", { name: "Edit label name Desktop" })
+    )
+    const next = screen.getByRole("textbox", { name: "Label name" })
+    fireEvent.change(next, { target: { value: "Desktop app" } })
+    fireEvent.keyDown(next, { key: "Enter" })
+    expect(savedLabels().find((label) => label.id === "desktop")?.name).toBe(
+      "Desktop app"
+    )
+  })
+
+  it("deletes selected labels together and Undo preserves labels created afterward", () => {
+    render(<TeamIssueLabelsSettings team={team} />)
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "Select label Desktop" })
+    )
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "Select label Preferences" })
+    )
+    expect(screen.getByRole("status").textContent).toBe("2 selected")
+    fireEvent.click(
+      screen.getByRole("button", { name: "Open label command menu" })
+    )
+    fireEvent.click(screen.getByRole("option", { name: "Delete labels..." }))
+    expect(savedLabels()).toHaveLength(0)
+    const options = vi
+      .mocked(toast.success)
+      .mock.calls.find((call) => call[0] === "2 labels deleted.")![1]!
+    const undo = options.action as {
+      onClick: (event: MouseEvent<HTMLButtonElement>) => void
+    }
+    const name = start()
+    fireEvent.change(name, { target: { value: "Launch" } })
+    fireEvent.keyDown(name, { key: "Enter" })
+    act(() => {
+      undo.onClick({} as MouseEvent<HTMLButtonElement>)
+    })
+    expect(
+      savedLabels()
+        .map((label) => label.name)
+        .sort()
+    ).toEqual(["Desktop", "Launch", "Preferences"])
+  })
+
+  it("exposes inline editing and deletion from each row's action menu", () => {
+    render(<TeamIssueLabelsSettings team={team} />)
+    fireEvent.click(screen.getByRole("button", { name: "Actions for Desktop" }))
+    fireEvent.click(screen.getByRole("menuitem", { name: "Edit label name" }))
+    expect(screen.getByRole("textbox", { name: "Label name" })).toBeTruthy()
+    expect(screen.queryByRole("dialog")).toBeNull()
+    fireEvent.keyDown(screen.getByRole("textbox", { name: "Label name" }), {
+      key: "Escape",
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Actions for Desktop" }))
+    fireEvent.click(screen.getByRole("menuitem", { name: "Delete" }))
+    expect(savedLabels().map((label) => label.name)).toEqual(["Preferences"])
+  })
+
+  it("retains selected rows when a bulk deletion cannot be saved", async () => {
+    render(<TeamIssueLabelsSettings team={team} />)
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "Select label Desktop" })
+    )
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("quota")
+    })
+    fireEvent.click(
+      screen.getByRole("button", { name: "Open label command menu" })
+    )
+    fireEvent.click(screen.getByRole("option", { name: "Delete labels..." }))
+    fireEvent.keyDown(
+      screen.getByRole("combobox", { name: "Search label commands" }),
+      { key: "Escape" }
+    )
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+    expect(
+      screen.getByRole("button", { name: "Edit label name Desktop" })
+    ).toBeTruthy()
+    expect(screen.getByRole("status").textContent).toBe("1 selected")
+  })
+})
+
+describe("label selection commands", () => {
+  function selectBoth() {
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "Select label Desktop" })
+    )
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "Select label Preferences" })
+    )
+  }
+  function command(name: string) {
+    fireEvent.click(
+      screen.getByRole("button", { name: "Open label command menu" })
+    )
+    fireEvent.click(screen.getByRole("option", { name }))
+  }
+
+  it("shows a floating bar and all five commands, and filters by search", async () => {
+    render(<TeamIssueLabelsSettings team={team} />)
+    selectBoth()
+    expect(
+      screen.getByRole("toolbar", { name: "Selected label actions" })
+    ).toBeTruthy()
+    fireEvent.click(
+      screen.getByRole("button", { name: "Open label command menu" })
+    )
+    expect(screen.getAllByRole("option")).toHaveLength(5)
+    fireEvent.change(
+      screen.getByRole("combobox", { name: "Search label commands" }),
+      { target: { value: "delete" } }
+    )
+    await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(1))
+    expect(
+      screen.getByRole("option", { name: "Delete labels..." })
+    ).toBeTruthy()
+  })
+
+  it("favorites selected labels and clears selection without changing data", () => {
+    render(<TeamIssueLabelsSettings team={team} />)
+    selectBoth()
+    command("Favorite labels")
+    expect(savedLabels().every((label) => label.favorite)).toBe(true)
+    expect(screen.getByRole("status").textContent).toBe("2 selected")
+    fireEvent.click(screen.getByRole("button", { name: "Clear selected" }))
+    expect(screen.queryByRole("toolbar")).toBeNull()
+    expect(savedLabels()).toHaveLength(2)
+  })
+
+  it("archives selected labels and makes them recoverable from the archived filter", () => {
+    render(<TeamIssueLabelsSettings team={team} />)
+    selectBoth()
+    command("Archive labels...")
+    expect(savedLabels().every((label) => label.archived)).toBe(true)
+    expect(
+      screen.queryByRole("button", { name: "Edit label name Desktop" })
+    ).toBeNull()
+    fireEvent.click(screen.getByRole("button", { name: "Filter labels" }))
+    fireEvent.click(
+      screen.getByRole("menuitemradio", { name: "Archived labels" })
+    )
+    selectBoth()
+    command("Unarchive labels...")
+    expect(savedLabels().every((label) => !label.archived)).toBe(true)
+  })
+
+  it("merges into the chosen label and can undo the merge", () => {
+    render(<TeamIssueLabelsSettings team={team} />)
+    selectBoth()
+    command("Merge labels...")
+    fireEvent.click(screen.getByRole("option", { name: "Desktop" }))
+    expect(savedLabels()).toHaveLength(1)
+    expect(savedLabels()[0]).toMatchObject({ id: "desktop", issues: 21 })
+    const options = vi
+      .mocked(toast.success)
+      .mock.calls.find((call) => call[0] === "Labels merged.")![1]!
+    const undo = options.action as {
+      onClick: (event: MouseEvent<HTMLButtonElement>) => void
+    }
+    act(() => undo.onClick({} as MouseEvent<HTMLButtonElement>))
+    expect(
+      savedLabels()
+        .map((label) => label.issues)
+        .sort((a, b) => a - b)
+    ).toEqual([4, 17])
+  })
+
+  it("moves labels to the workspace view and back to the team", () => {
+    render(<TeamIssueLabelsSettings team={team} />)
+    selectBoth()
+    command("Move labels to workspace...")
+    expect(savedLabels()).toHaveLength(0)
+    expect(
+      parseTeamLabels(window.localStorage.getItem(workspaceLabelsStorageKey)!)
+        .labels
+    ).toHaveLength(2)
+    fireEvent.click(
+      screen.getByRole("button", { name: "Manage workspace labels" })
+    )
+    expect(
+      screen.getByRole("heading", { name: "Workspace issue labels" })
+    ).toBeTruthy()
+    selectBoth()
+    command("Move labels to team...")
+    expect(savedLabels()).toHaveLength(2)
+    expect(
+      parseTeamLabels(window.localStorage.getItem(workspaceLabelsStorageKey)!)
+        .labels
+    ).toHaveLength(0)
+    fireEvent.click(screen.getByRole("button", { name: "Back to team labels" }))
+    expect(
+      screen.getByRole("button", { name: "Edit label name Desktop" })
+    ).toBeTruthy()
+  })
+
+  it("rolls back the workspace copy when saving the source fails", async () => {
+    render(<TeamIssueLabelsSettings team={team} />)
+    selectBoth()
+    const original = Storage.prototype.setItem
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (
+      this: Storage,
+      key,
+      value
+    ) {
+      if (key === storageKey) throw new Error("quota")
+      original.call(this, key, value)
+    })
+    command("Move labels to workspace...")
+    expect(window.localStorage.getItem(workspaceLabelsStorageKey)).toBeNull()
+    fireEvent.keyDown(
+      screen.getByRole("combobox", { name: "Search label commands" }),
+      { key: "Escape" }
+    )
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+    expect(
+      screen.getByRole("button", { name: "Edit label name Desktop" })
+    ).toBeTruthy()
+    expect(screen.getByRole("status").textContent).toBe("2 selected")
+  })
+})
+
+it("keeps the workspace view when undoing an earlier team deletion", () => {
+  render(<TeamIssueLabelsSettings team={team} />)
+  fireEvent.click(
+    screen.getByRole("checkbox", { name: "Select label Desktop" })
+  )
+  fireEvent.click(
+    screen.getByRole("button", { name: "Open label command menu" })
+  )
+  fireEvent.click(screen.getByRole("option", { name: "Delete labels..." }))
+  const options = vi
+    .mocked(toast.success)
+    .mock.calls.find((call) => call[0] === "Label deleted.")![1]!
+  const undo = options.action as {
+    onClick: (event: MouseEvent<HTMLButtonElement>) => void
+  }
+  fireEvent.click(
+    screen.getByRole("button", { name: "Manage workspace labels" })
+  )
+  act(() => undo.onClick({} as MouseEvent<HTMLButtonElement>))
+  expect(
+    screen.getByRole("heading", { name: "Workspace issue labels" })
+  ).toBeTruthy()
+  expect(
+    screen.queryByRole("button", { name: "Edit label name Desktop" })
+  ).toBeNull()
+  fireEvent.click(screen.getByRole("button", { name: "Back to team labels" }))
+  expect(
+    screen.getByRole("button", { name: "Edit label name Desktop" })
+  ).toBeTruthy()
 })

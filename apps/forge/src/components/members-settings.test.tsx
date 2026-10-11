@@ -171,6 +171,13 @@ describe("MembersSettings", () => {
     expect(screen.getByLabelText("Email address")).toBeTruthy()
     expect(screen.getByLabelText("Role")).toBeTruthy()
   })
+  it("opens invitations directly from the team picker shortcut", () => {
+    render(<MembersSettings access={access} initialInviteOpen />)
+    expect(
+      screen.getByRole("heading", { name: "Invite a workspace member" })
+    ).toBeTruthy()
+    expect(screen.getByLabelText("Email address")).toBeTruthy()
+  })
 
   it("shows the partial-success retry toaster after enqueue exhaustion", async () => {
     const businessRunId = "d07e1242-b665-4c43-974f-a9459a1c12e4"

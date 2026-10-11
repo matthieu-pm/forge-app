@@ -26,7 +26,7 @@ type TestRoute = {
 }
 
 describe("team settings routes", () => {
-  it("keeps the team overview, general, and labels settings as sibling child routes", () => {
+  it("keeps the team overview, general, and member settings as sibling child routes", () => {
     const rootChildren = routeTree.children as unknown as Array<TestRoute>
     const teamsSettingsRoute = rootChildren.find(
       (route) => route.options.id === "/settings_/teams"
@@ -37,7 +37,7 @@ describe("team settings routes", () => {
 
     expect(
       teamSettingsRoute?.children?.map((route) => route.options.path)
-    ).toEqual(expect.arrayContaining(["/", "/general", "/labels"]))
+    ).toEqual(expect.arrayContaining(["/", "/general", "/members", "/labels"]))
   })
 
   it("loads team access through the cached loader path", () => {

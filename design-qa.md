@@ -359,3 +359,13 @@ No blocking fidelity issues remain. The light surface is an intentional adaptati
 - [x] Focused, full, type, lint, and formatting checks pass.
 
 final result: passed
+
+
+## Team label selection and inline editing — October 11, 2026
+
+- Saved rows retain inline name/description editors, a separate color picker, selection checkbox, and trailing edit/delete menu after reload. Hover corners remain 8 px with the expanded row width.
+- Selected rows form a continuous purple block. A bottom floating bar opens a searchable keyboard-accessible command menu with Favorite, Move to workspace, Merge, Archive, and Delete. Escape restores focus to Actions and retains selection; Clear selected dismisses the bar.
+- Favorite/archive metadata remains backward compatible with existing saved labels. Archive recovery uses the Archived labels filter. Workspace moves preserve labels in a shared browser-local workspace view; a failed source write rolls back the destination copy. Merge and deletion offer Undo without replacing unrelated later edits. These actions remain browser-local; no server label CRUD or live issue associations were added.
+- Verified the authenticated Testing route at the normal desktop viewport and at 390 × 844. The mobile command popup stays within the viewport, and the table scrolls without widening the document.
+- Evidence: `labels-floating-selection-bar.png`, `labels-selection-command-menu.png`, and `labels-selection-mobile.png` under `/Users/matthieu/.codex/visualizations/2026/10/10/01a1261a-7373-7dd0-915d-bf2cdd1b43ca/`. Temporary QA labels are removed after verification.
+- Validation: 24 focused label tests, app typecheck, targeted ESLint, production build, and `git diff --check`.

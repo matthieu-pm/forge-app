@@ -1,10 +1,16 @@
 "use client"
 
 import * as React from "react"
-import { format } from "date-fns"
+import { format, formatDistanceToNowStrict } from "date-fns"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { MoreHorizontalIcon, Tick02Icon } from "@hugeicons/core-free-icons"
-import type { TeamLabel } from "@/lib/team-labels"
+import {
+  Delete02Icon,
+  MoreHorizontalIcon,
+  PencilEdit02Icon,
+  StarIcon,
+  Tick02Icon,
+} from "@hugeicons/core-free-icons"
+import type { TeamLabel, TeamLabelGroup } from "@/lib/team-labels"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -17,6 +23,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { TableCell, TableRow } from "@/components/ui/table"
@@ -37,7 +47,7 @@ const focusClass =
 const inputClass =
   "h-7 rounded-md border-border/50 bg-muted/40 px-1.5 shadow-none focus-visible:border-border focus-visible:ring-1 dark:bg-muted/40"
 
-export type NewTeamLabelRowHandle = { finish: () => boolean }
+export type TeamLabelRowHandle = { finish: () => boolean }
 type Columns = {
   description: boolean
   issues: boolean
@@ -45,21 +55,29 @@ type Columns = {
   created: boolean
 }
 
-export function NewTeamLabelRow({
+export function TeamLabelRow({
   ref,
   label,
   columns,
   rowClassName,
   saved,
+  selected,
+  onSelectedChange,
+  groups,
+  isNewRow = false,
   onSave,
   onClose,
   onDelete,
 }: {
-  ref?: React.Ref<NewTeamLabelRowHandle>
+  ref?: React.Ref<TeamLabelRowHandle>
   label: TeamLabel
   columns: Columns
   rowClassName: string
   saved: boolean
+  selected: boolean
+  onSelectedChange: (selected: boolean) => void
+  groups: Array<TeamLabelGroup>
+  isNewRow?: boolean
   onSave: (label: TeamLabel) => string | undefined
   onClose: () => void
   onDelete: () => void
@@ -67,21 +85,44 @@ export function NewTeamLabelRow({
   const [name, setName] = React.useState(label.name)
   const [description, setDescription] = React.useState(label.description)
   const [color, setColor] = React.useState(label.color)
-  const [editingName, setEditingName] = React.useState(true)
+  const [editingName, setEditingName] = React.useState(!saved)
   const [editingDescription, setEditingDescription] = React.useState(false)
-  const [selected, setSelected] = React.useState(false)
   const [error, setError] = React.useState("")
   const [colorOpen, setColorOpen] = React.useState(false)
   const [customColor, setCustomColor] = React.useState(false)
   const [customHex, setCustomHex] = React.useState(color)
   const nameInput = React.useRef<HTMLInputElement>(null)
+  const nameButton = React.useRef<HTMLButtonElement>(null)
+  const restoreFocus = React.useRef<"name" | "description" | null>(null)
   const descriptionButton = React.useRef<HTMLButtonElement>(null)
   const cancelled = React.useRef(false)
+  const committed = React.useRef(label)
   const errorId = React.useId()
+
+  React.useEffect(() => {
+    if (!saved) return
+    committed.current = label
+    if (!editingName) setName(label.name)
+    if (!editingDescription) setDescription(label.description)
+    setColor(label.color)
+  }, [label, saved, editingName, editingDescription])
+
+  React.useLayoutEffect(() => {
+    if (restoreFocus.current === "name" && !editingName) {
+      restoreFocus.current = null
+      nameButton.current?.focus()
+    } else if (restoreFocus.current === "description" && !editingDescription) {
+      restoreFocus.current = null
+      descriptionButton.current?.focus()
+    }
+  }, [editingName, editingDescription])
 
   function commit(next = { name, description, color }) {
     if (cancelled.current) return false
-    if (!next.name.trim()) return false
+    if (!next.name.trim()) {
+      if (saved) setError("A label name is required.")
+      return false
+    }
     const failure = onSave({
       ...label,
       ...next,
@@ -90,6 +131,12 @@ export function NewTeamLabelRow({
     })
     setError(failure ?? "")
     if (failure) return false
+    committed.current = {
+      ...label,
+      ...next,
+      name: next.name.trim(),
+      description: next.description.trim(),
+    }
     setName(next.name.trim())
     setDescription(next.description.trim())
     return true
@@ -97,11 +144,22 @@ export function NewTeamLabelRow({
 
   function cancel() {
     cancelled.current = true
-    onClose()
+    if (!saved) {
+      onClose()
+      return
+    }
+    restoreFocus.current = editingName ? "name" : "description"
+    setName(committed.current.name)
+    setDescription(committed.current.description)
+    setColor(committed.current.color)
+    setError("")
+    setEditingName(false)
+    setEditingDescription(false)
   }
 
   React.useImperativeHandle(ref, () => ({
     finish() {
+      cancelled.current = false
       if (commit()) return true
       setEditingName(true)
       nameInput.current?.focus()
@@ -109,7 +167,13 @@ export function NewTeamLabelRow({
     },
   }))
 
+  function editName() {
+    cancelled.current = false
+    setEditingName(true)
+  }
+
   function changeColor(value: string) {
+    cancelled.current = false
     if (name.trim() && !commit({ name, description, color: value })) return
     setColor(value)
     setColorOpen(false)
@@ -118,15 +182,17 @@ export function NewTeamLabelRow({
   return (
     <>
       <TableRow
-        className={rowClassName}
+        className={`${rowClassName} group/label`}
         data-state={selected ? "selected" : undefined}
       >
         <TableCell className="p-0 sm:pl-2">
           <Checkbox
-            aria-label="Select new label"
+            aria-label={
+              saved ? `Select label ${label.name}` : "Select new label"
+            }
             checked={selected}
-            onCheckedChange={setSelected}
-            className="size-3.5 rounded-[3px] border-muted-foreground/50 bg-transparent dark:bg-transparent"
+            onCheckedChange={onSelectedChange}
+            className={`size-3.5 rounded-[3px] border-muted-foreground/50 bg-transparent dark:bg-transparent data-checked:border-[#5e6ad2] data-checked:bg-[#5e6ad2] data-checked:text-white dark:data-checked:bg-[#5e6ad2] ${selected || !saved ? "" : "opacity-0 group-focus-within/label:opacity-100 group-hover/label:opacity-100 max-sm:opacity-100"}`}
           />
         </TableCell>
         <TableCell className="px-0 py-0">
@@ -139,7 +205,11 @@ export function NewTeamLabelRow({
               }}
             >
               <PopoverTrigger
-                aria-label="Change label color"
+                aria-label={
+                  saved
+                    ? `Change color for ${label.name}`
+                    : "Change label color"
+                }
                 className={`-ml-2 flex size-6 shrink-0 items-center justify-center rounded-md hover:bg-muted/60 ${focusClass}`}
               >
                 <span
@@ -262,14 +332,25 @@ export function NewTeamLabelRow({
                 className={`${inputClass} w-[150px] max-w-[calc(100%-2rem)]`}
               />
             ) : (
-              <button
-                type="button"
-                aria-label={`Edit label name ${name}`}
-                onClick={() => setEditingName(true)}
-                className={`truncate rounded-sm px-1.5 py-1 text-sm ${focusClass}`}
-              >
-                {name}
-              </button>
+              <>
+                <button
+                  type="button"
+                  ref={nameButton}
+                  aria-label={`Edit label name ${name}`}
+                  onClick={editName}
+                  className={`truncate rounded-sm px-1.5 py-1 text-sm ${focusClass}`}
+                >
+                  {name}
+                </button>
+                {label.favorite && (
+                  <HugeiconsIcon
+                    icon={StarIcon}
+                    strokeWidth={1.5}
+                    className="size-3 text-yellow-400"
+                    aria-label="Favorite label"
+                  />
+                )}
+              </>
             )}
           </div>
         </TableCell>
@@ -290,7 +371,10 @@ export function NewTeamLabelRow({
                   if (event.nativeEvent.isComposing) return
                   if (event.key === "Enter") {
                     event.preventDefault()
-                    if (commit()) setEditingDescription(false)
+                    if (commit()) {
+                      restoreFocus.current = "description"
+                      setEditingDescription(false)
+                    }
                   }
                   if (event.key === "Escape") {
                     event.preventDefault()
@@ -304,7 +388,13 @@ export function NewTeamLabelRow({
               <button
                 ref={descriptionButton}
                 type="button"
-                onClick={() => setEditingDescription(true)}
+                aria-label={
+                  saved ? `Edit description for ${label.name}` : undefined
+                }
+                onClick={() => {
+                  cancelled.current = false
+                  setEditingDescription(true)
+                }}
                 className={`max-w-full truncate rounded-sm py-1 text-left text-sm ${description ? "text-foreground/90" : "text-muted-foreground/50"} ${focusClass}`}
                 title={description || undefined}
               >
@@ -313,8 +403,19 @@ export function NewTeamLabelRow({
             )}
           </TableCell>
         )}
-        {columns.issues && <TableCell className="px-0" />}
-        {columns.lastApplied && <TableCell className="px-0" />}
+        {columns.issues && (
+          <TableCell className="px-0 text-xs text-muted-foreground">
+            {!isNewRow && label.issues}
+          </TableCell>
+        )}
+        {columns.lastApplied && (
+          <TableCell className="px-0 text-xs text-muted-foreground">
+            {!isNewRow &&
+              (label.lastApplied
+                ? `${formatDistanceToNowStrict(new Date(label.lastApplied), { roundingMethod: "floor" }).replace(/ months?$/, "mo")} ago`
+                : "Never")}
+          </TableCell>
+        )}
         {columns.created && (
           <TableCell className="px-0 text-xs text-muted-foreground">
             {format(new Date(label.createdAt), "MMM d")}
@@ -325,9 +426,11 @@ export function NewTeamLabelRow({
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-label="New label options"
+              aria-label={
+                saved ? `Actions for ${label.name}` : "New label options"
+              }
               render={<DropdownMenuTrigger />}
-              className="size-7 rounded-md text-muted-foreground"
+              className={`size-7 rounded-md text-muted-foreground ${selected || !saved ? "" : "opacity-0 group-focus-within/label:opacity-100 group-hover/label:opacity-100 data-popup-open:opacity-100 max-sm:opacity-100"}`}
             >
               <HugeiconsIcon
                 icon={MoreHorizontalIcon}
@@ -335,23 +438,64 @@ export function NewTeamLabelRow({
                 className="size-4"
               />
             </Button>
-            <DropdownMenuContent align="end" className="min-w-36">
-              <DropdownMenuItem
-                disabled={!name.trim()}
-                onClick={() => {
-                  if (commit()) {
-                    setEditingName(false)
-                    setEditingDescription(false)
-                  }
-                }}
-              >
-                Save label
-              </DropdownMenuItem>
+            <DropdownMenuContent align="end" className="min-w-48 rounded-xl">
+              {saved ? (
+                <>
+                  <DropdownMenuItem onClick={editName}>
+                    <HugeiconsIcon icon={PencilEdit02Icon} strokeWidth={1.5} />
+                    Edit label name
+                  </DropdownMenuItem>
+                  {groups.length > 0 && (
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>
+                        Move to group
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent>
+                        {[{ id: null, name: "No group" }, ...groups].map(
+                          (group) => (
+                            <DropdownMenuItem
+                              key={group.id ?? "none"}
+                              onClick={() => {
+                                const failure = onSave({
+                                  ...committed.current,
+                                  groupId: group.id,
+                                })
+                                setError(failure ?? "")
+                                if (!failure)
+                                  committed.current = {
+                                    ...committed.current,
+                                    groupId: group.id,
+                                  }
+                              }}
+                            >
+                              {group.name}
+                            </DropdownMenuItem>
+                          )
+                        )}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                  )}
+                  <DropdownMenuSeparator />
+                </>
+              ) : (
+                <DropdownMenuItem
+                  disabled={!name.trim()}
+                  onClick={() => {
+                    if (commit()) {
+                      setEditingName(false)
+                      setEditingDescription(false)
+                    }
+                  }}
+                >
+                  Save label
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 variant="destructive"
                 onClick={saved ? onDelete : cancel}
               >
-                {saved ? "Delete label" : "Discard label"}
+                <HugeiconsIcon icon={Delete02Icon} strokeWidth={1.5} />
+                {saved ? "Delete" : "Discard label"}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

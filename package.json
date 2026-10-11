@@ -8,7 +8,6 @@
     "packages/*"
   ],
   "overrides": {
-    "jose": "6.2.8",
     "vite": "8.2.1"
   },
   "scripts": {

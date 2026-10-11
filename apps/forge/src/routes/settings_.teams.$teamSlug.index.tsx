@@ -7,9 +7,13 @@ export const Route = createFileRoute("/settings_/teams/$teamSlug/")({
 })
 
 const teamSettingsRoute = getRouteApi("/settings_/teams/$teamSlug")
+const teamsSettingsRoute = getRouteApi("/settings_/teams")
 
 function TeamSettingsPage() {
   const { team } = teamSettingsRoute.useLoaderData()
+  const directory = teamsSettingsRoute.useLoaderData()
+  const memberCount =
+    directory.items.find((item) => item.id === team.id)?.memberCount ?? 0
 
-  return <TeamSettingsOverview team={team} />
+  return <TeamSettingsOverview team={team} memberCount={memberCount} />
 }

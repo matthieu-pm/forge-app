@@ -11,7 +11,6 @@ import {
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Link } from "@tanstack/react-router"
-import { format, formatDistanceToNowStrict } from "date-fns"
 import { toast } from "sonner"
 import type { TeamSummary } from "@/lib/team-contract"
 import type {
@@ -19,16 +18,19 @@ import type {
   TeamLabelDirectory,
   TeamLabelGroup,
 } from "@/lib/team-labels"
-import type { NewTeamLabelRowHandle } from "@/components/new-team-label-row"
+import type { TeamLabelRowHandle } from "@/components/team-label-row"
 import {
   LABEL_COLORS,
   initialTeamLabels,
+  mergeTeamLabels,
   parseTeamLabels,
   restoreTeamLabelDeletion,
   teamLabelsStorageKey,
+  workspaceLabelsStorageKey,
 } from "@/lib/team-labels"
+import { LabelSelectionActions } from "@/components/label-selection-actions"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
-import { NewTeamLabelRow } from "@/components/new-team-label-row"
+import { TeamLabelRow } from "@/components/team-label-row"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -70,14 +72,11 @@ type Columns = {
 const focusClass =
   "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
 const labelRowClass =
-  "h-11 border-0 bg-transparent hover:bg-transparent data-[state=selected]:bg-transparent [&>td]:transition-colors [&>td]:duration-100 [&>td:first-child]:rounded-l-[8px] [&>td:last-child]:rounded-r-[8px] hover:[&>td]:bg-muted/30 data-[state=selected]:[&>td]:bg-muted/50"
-
-function lastApplied(value: string | null) {
-  if (!value) return "Never"
-  return `${formatDistanceToNowStrict(new Date(value), { roundingMethod: "floor" }).replace(/ months?$/, "mo")} ago`
-}
+  "h-11 border-0 bg-transparent hover:bg-transparent data-[state=selected]:bg-transparent [&>td]:transition-colors [&>td]:duration-100 [&>td:first-child]:rounded-l-[8px] [&>td:last-child]:rounded-r-[8px] hover:[&>td]:bg-muted/30 data-[state=selected]:[&>td]:bg-[#5e6ad2]/20 [&[data-state=selected]+tr[data-state=selected]>td:first-child]:rounded-tl-none [&[data-state=selected]+tr[data-state=selected]>td:last-child]:rounded-tr-none [&[data-state=selected]:has(+tr[data-state=selected])>td:first-child]:rounded-bl-none [&[data-state=selected]:has(+tr[data-state=selected])>td:last-child]:rounded-br-none"
 
 export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
+  const [workspaceView, setWorkspaceView] = React.useState(false)
+  const [workspaceCount, setWorkspaceCount] = React.useState(0)
   const [directory, setDirectory] = React.useState(() =>
     initialTeamLabels(team.slug)
   )
@@ -92,16 +91,25 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
   })
   const [editor, setEditor] = React.useState<Editor | null>(null)
   const [newLabel, setNewLabel] = React.useState<TeamLabel | null>(null)
-  const newLabelRow = React.useRef<NewTeamLabelRowHandle>(null)
+  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(
+    () => new Set()
+  )
+  const newLabelRow = React.useRef<TeamLabelRowHandle>(null)
   const newLabelButton = React.useRef<HTMLButtonElement>(null)
-  const storageKey = teamLabelsStorageKey(team.id)
+  const teamStorageKey = teamLabelsStorageKey(team.id)
+  const storageKey = workspaceView ? workspaceLabelsStorageKey : teamStorageKey
+
+  const activeStorageKey = React.useRef(storageKey)
 
   React.useEffect(() => {
+    activeStorageKey.current = storageKey
     function load() {
       try {
         const saved = window.localStorage.getItem(storageKey)
         setDirectory(
-          saved ? parseTeamLabels(saved) : initialTeamLabels(team.slug)
+          saved
+            ? parseTeamLabels(saved)
+            : initialTeamLabels(workspaceView ? "" : team.slug)
         )
       } catch {
         toast.error(
@@ -109,18 +117,39 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
         )
       }
     }
+    function loadWorkspaceCount() {
+      try {
+        const saved = window.localStorage.getItem(workspaceLabelsStorageKey)
+        setWorkspaceCount(
+          saved
+            ? parseTeamLabels(saved).labels.filter((label) => !label.archived)
+                .length
+            : 0
+        )
+      } catch {
+        toast.error("Workspace labels could not be loaded.")
+      }
+    }
     load()
+    loadWorkspaceCount()
     function onStorage(event: StorageEvent) {
       if (event.key === storageKey) load()
+      if (event.key === workspaceLabelsStorageKey) loadWorkspaceCount()
     }
     window.addEventListener("storage", onStorage)
     return () => window.removeEventListener("storage", onStorage)
-  }, [storageKey, team.slug])
+  }, [storageKey, team.slug, workspaceView])
 
-  function save(next: TeamLabelDirectory) {
+  function save(next: TeamLabelDirectory, key = storageKey) {
     try {
-      window.localStorage.setItem(storageKey, JSON.stringify(next))
-      setDirectory(next)
+      window.localStorage.setItem(key, JSON.stringify(next))
+      if (activeStorageKey.current === key) {
+        setDirectory(next)
+        const updated = next.labels.find((label) => label.id === newLabel?.id)
+        if (updated) setNewLabel(updated)
+      }
+      if (key === workspaceLabelsStorageKey)
+        setWorkspaceCount(next.labels.filter((label) => !label.archived).length)
       return true
     } catch {
       toast.error(
@@ -136,8 +165,14 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
         label.name
           .toLocaleLowerCase()
           .includes(query.trim().toLocaleLowerCase()) &&
+        (filter === "archived" ? !!label.archived : !label.archived) &&
         (filter === "all" ||
-          (filter === "used" ? label.issues > 0 : label.issues === 0))
+          filter === "archived" ||
+          (filter === "favorites"
+            ? !!label.favorite
+            : filter === "used"
+              ? label.issues > 0
+              : label.issues === 0))
     )
     .sort((a, b) => (ascending ? 1 : -1) * a.name.localeCompare(b.name))
   const showNewLabel =
@@ -154,7 +189,9 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
     },
     ...directory.groups.map((group) => ({
       group,
-      labels: visible.filter((label) => label.groupId === group.id),
+      labels: visible.filter(
+        (label) => label.groupId === group.id && label.id !== newLabel?.id
+      ),
     })),
   ]
 
@@ -174,7 +211,7 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
     })
   }
 
-  function saveNewLabel(label: TeamLabel) {
+  function saveLabel(label: TeamLabel) {
     if (
       directory.labels.some(
         (item) =>
@@ -195,7 +232,10 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
     ) {
       return "Could not save. Please try again."
     }
-    setNewLabel(label)
+    if (newLabel?.id === label.id) {
+      if (label.groupId !== newLabel.groupId) closeNewLabel()
+      else setNewLabel(label)
+    }
   }
 
   function closeNewLabel() {
@@ -256,25 +296,252 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
     setEditor(null)
   }
 
-  function remove(kind: Editor["kind"], id: string) {
+  const selectedLabels = directory.labels.filter((label) =>
+    selectedIds.has(label.id)
+  )
+
+  function selectLabel(id: string, selected: boolean) {
+    setSelectedIds((current) => {
+      const next = new Set(current)
+      if (selected) next.add(id)
+      else next.delete(id)
+      return next
+    })
+  }
+
+  function removeLabels(ids: Array<string>) {
     const previous = directory
-    const next =
-      kind === "label"
-        ? {
-            ...directory,
-            labels: directory.labels.filter((label) => label.id !== id),
+    const removedIds = new Set(ids)
+    const next = {
+      ...directory,
+      labels: directory.labels.filter((label) => !removedIds.has(label.id)),
+    }
+    if (!save(next)) return false
+    setSelectedIds(
+      (current) => new Set([...current].filter((id) => !removedIds.has(id)))
+    )
+    if (newLabel && removedIds.has(newLabel.id)) closeNewLabel()
+    toast.success(
+      ids.length === 1 ? "Label deleted." : `${ids.length} labels deleted.`,
+      {
+        duration: 10000,
+        action: {
+          label: "Undo",
+          onClick: () => {
+            try {
+              const stored = window.localStorage.getItem(storageKey)
+              let restored = stored ? parseTeamLabels(stored) : next
+              for (const id of ids) {
+                const result = restoreTeamLabelDeletion(
+                  restored,
+                  previous,
+                  id,
+                  "label"
+                )
+                if (!result) {
+                  toast.error(
+                    "An item with this name already exists. Rename it before restoring."
+                  )
+                  return
+                }
+                restored = result
+              }
+              save(restored)
+            } catch {
+              toast.error(
+                "The deleted labels could not be restored. Try again."
+              )
+            }
+          },
+        },
+      }
+    )
+    return true
+  }
+
+  function toggleSelected(field: "favorite" | "archived") {
+    const value = !selectedLabels.every((label) => label[field])
+    if (
+      !save({
+        ...directory,
+        labels: directory.labels.map((label) =>
+          selectedIds.has(label.id) ? { ...label, [field]: value } : label
+        ),
+      })
+    )
+      return false
+    if (field === "archived") setSelectedIds(new Set())
+    toast.success(
+      field === "favorite"
+        ? value
+          ? "Labels favorited."
+          : "Favorites removed."
+        : value
+          ? "Labels archived."
+          : "Labels unarchived."
+    )
+    return true
+  }
+
+  function moveSelected() {
+    const destinationKey = workspaceView
+      ? teamStorageKey
+      : workspaceLabelsStorageKey
+    let original: string | null = null
+    let wroteDestination = false
+    try {
+      original = window.localStorage.getItem(destinationKey)
+      const destination = original
+        ? parseTeamLabels(original)
+        : initialTeamLabels(workspaceView ? team.slug : "")
+      if (
+        selectedLabels.some((label) =>
+          destination.labels.some(
+            (other) =>
+              other.id === label.id ||
+              other.name.toLocaleLowerCase() === label.name.toLocaleLowerCase()
+          )
+        )
+      ) {
+        toast.error("A label with this name already exists in the destination.")
+        return false
+      }
+      const nextDestination = {
+        ...destination,
+        labels: [
+          ...destination.labels,
+          ...selectedLabels.map((label) => ({ ...label, groupId: null })),
+        ],
+      }
+      const next = {
+        ...directory,
+        labels: directory.labels.filter((label) => !selectedIds.has(label.id)),
+      }
+      window.localStorage.setItem(
+        destinationKey,
+        JSON.stringify(nextDestination)
+      )
+      wroteDestination = true
+      window.localStorage.setItem(storageKey, JSON.stringify(next))
+      setDirectory(next)
+      setWorkspaceCount(
+        (workspaceView ? next : nextDestination).labels.filter(
+          (label) => !label.archived
+        ).length
+      )
+      setSelectedIds(new Set())
+      if (newLabel && selectedIds.has(newLabel.id)) closeNewLabel()
+      toast.success(
+        workspaceView ? "Labels moved to team." : "Labels moved to workspace."
+      )
+      return true
+    } catch {
+      if (wroteDestination) {
+        try {
+          if (original === null) window.localStorage.removeItem(destinationKey)
+          else window.localStorage.setItem(destinationKey, original)
+        } catch {
+          toast.error(
+            "The destination copy was preserved. Reload before trying again."
+          )
+          return false
+        }
+      }
+      toast.error("Labels could not be moved. Try again.")
+      return false
+    }
+  }
+
+  function mergeSelected(targetId: string) {
+    const previous = directory
+    const ids = selectedLabels.map((label) => label.id)
+    const next = mergeTeamLabels(directory, ids, targetId)
+    if (!next || !save(next)) return false
+    setSelectedIds(new Set())
+    if (newLabel && ids.includes(newLabel.id)) closeNewLabel()
+    toast.success("Labels merged.", {
+      duration: 10000,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          try {
+            const stored = window.localStorage.getItem(storageKey)
+            let restored = stored ? parseTeamLabels(stored) : next
+            for (const id of ids.filter(
+              (candidateId) => candidateId !== targetId
+            )) {
+              const result = restoreTeamLabelDeletion(
+                restored,
+                previous,
+                id,
+                "label"
+              )
+              if (!result) {
+                toast.error(
+                  "A label with this name already exists. Rename it before restoring."
+                )
+                return
+              }
+              restored = result
+            }
+            const original = previous.labels.find(
+              (label) => label.id === targetId
+            )!
+            const merged = next.labels.find((label) => label.id === targetId)!
+            restored.labels = restored.labels.map((label) =>
+              label.id === targetId
+                ? {
+                    ...label,
+                    issues: Math.max(
+                      0,
+                      label.issues - merged.issues + original.issues
+                    ),
+                    favorite:
+                      label.favorite === merged.favorite
+                        ? original.favorite
+                        : label.favorite,
+                    lastApplied:
+                      label.lastApplied === merged.lastApplied
+                        ? original.lastApplied
+                        : label.lastApplied,
+                  }
+                : label
+            )
+            save(restored)
+          } catch {
+            toast.error("The merge could not be undone. Try again.")
           }
-        : {
-            ...directory,
-            groups: directory.groups.filter((group) => group.id !== id),
-            labels: directory.labels.map((label) =>
-              label.groupId === id ? { ...label, groupId: null } : label
-            ),
-          }
+        },
+      },
+    })
+    return true
+  }
+
+  function switchScope(workspace: boolean) {
+    setNewLabel(null)
+    setSelectedIds(new Set())
+    setQuery("")
+    setFilter("all")
+    setWorkspaceView(workspace)
+  }
+
+  function remove(kind: Editor["kind"], id: string) {
+    if (kind === "label") {
+      removeLabels([id])
+      return
+    }
+    const previous = directory
+    const next = {
+      ...directory,
+      groups: directory.groups.filter((group) => group.id !== id),
+      labels: directory.labels.map((label) =>
+        label.groupId === id ? { ...label, groupId: null } : label
+      ),
+    }
     if (save(next)) {
       setEditor(null)
       if (newLabel?.id === id) closeNewLabel()
-      toast.success(`${kind === "label" ? "Label" : "Group"} deleted.`, {
+      toast.success("Group deleted.", {
         duration: 10000,
         action: {
           label: "Undo",
@@ -326,9 +593,18 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
         </div>
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border/40 px-5 pt-4 pb-3 sm:px-8 lg:px-14">
           <h1 className="text-2xl font-medium tracking-tight text-foreground">
-            Team issue labels
+            {workspaceView ? "Workspace issue labels" : "Team issue labels"}
           </h1>
           <div className="flex shrink-0 items-center gap-2">
+            {workspaceView && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => switchScope(false)}
+              >
+                Back to team labels
+              </Button>
+            )}
             <Button
               variant="secondary"
               className="h-8 rounded-full px-3 font-normal"
@@ -376,19 +652,25 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
             </Button>
             <DropdownMenuContent align="end" className="min-w-44">
               <DropdownMenuGroup>
-                <DropdownMenuLabel>Issues</DropdownMenuLabel>
+                <DropdownMenuLabel>Labels</DropdownMenuLabel>
                 <DropdownMenuRadioGroup
                   value={filter}
                   onValueChange={setFilter}
                 >
-                  <DropdownMenuRadioItem value="all">
+                  <DropdownMenuRadioItem value="all" closeOnClick>
                     All labels
                   </DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="used">
+                  <DropdownMenuRadioItem value="used" closeOnClick>
                     Applied to issues
                   </DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="unused">
+                  <DropdownMenuRadioItem value="unused" closeOnClick>
                     Unused labels
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="favorites" closeOnClick>
+                    Favorite labels
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="archived" closeOnClick>
+                    Archived labels
                   </DropdownMenuRadioItem>
                 </DropdownMenuRadioGroup>
               </DropdownMenuGroup>
@@ -437,7 +719,9 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
         <div className="px-5 sm:px-8 lg:px-14 [&>[data-slot=table-container]]:-ml-4 [&>[data-slot=table-container]]:w-[calc(100%+2rem)] sm:[&>[data-slot=table-container]]:-ml-10 sm:[&>[data-slot=table-container]]:w-[calc(100%+5rem)]">
           <Table
             className="min-w-[1000px] table-fixed border-separate border-spacing-0"
-            aria-label="Team issue labels"
+            aria-label={
+              workspaceView ? "Workspace issue labels" : "Team issue labels"
+            }
           >
             <TableHeader className="[&_tr]:border-b-0">
               <TableRow className="border-0 hover:bg-transparent">
@@ -502,16 +786,22 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
             </TableHeader>
             <TableBody>
               {newLabel && showNewLabel && (
-                <NewTeamLabelRow
+                <TeamLabelRow
                   key={newLabel.id}
                   ref={newLabelRow}
                   label={newLabel}
                   columns={columns}
                   rowClassName={labelRowClass}
+                  isNewRow
+                  groups={directory.groups}
+                  selected={selectedIds.has(newLabel.id)}
+                  onSelectedChange={(selected) =>
+                    selectLabel(newLabel.id, selected)
+                  }
                   saved={directory.labels.some(
                     (label) => label.id === newLabel.id
                   )}
-                  onSave={saveNewLabel}
+                  onSave={saveLabel}
                   onClose={closeNewLabel}
                   onDelete={() => remove("label", newLabel.id)}
                 />
@@ -547,50 +837,21 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
                       </TableRow>
                     )}
                   {labels.map((label) => (
-                    <TableRow key={label.id} className={labelRowClass}>
-                      <TableCell className="p-0" />
-                      <TableCell className="px-0 py-0">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setEditor({ kind: "label", item: label })
-                          }
-                          aria-label={`Edit label ${label.name}`}
-                          className={`flex min-h-11 w-full items-center gap-4 rounded-md pr-3 text-left text-sm ${focusClass}`}
-                        >
-                          <span
-                            className="ml-0.5 size-2 shrink-0 rounded-full"
-                            style={{ backgroundColor: label.color }}
-                            aria-hidden="true"
-                          />
-                          <span className="truncate">{label.name}</span>
-                        </button>
-                      </TableCell>
-                      {columns.description && (
-                        <TableCell
-                          className="truncate px-0 pr-5 text-sm text-foreground/90"
-                          title={label.description}
-                        >
-                          {label.description}
-                        </TableCell>
-                      )}
-                      {columns.issues && (
-                        <TableCell className="px-0 text-xs text-muted-foreground">
-                          {label.issues}
-                        </TableCell>
-                      )}
-                      {columns.lastApplied && (
-                        <TableCell className="px-0 text-xs text-muted-foreground">
-                          {lastApplied(label.lastApplied)}
-                        </TableCell>
-                      )}
-                      {columns.created && (
-                        <TableCell className="px-0 text-xs text-muted-foreground">
-                          {format(new Date(label.createdAt), "MMM d")}
-                        </TableCell>
-                      )}
-                      <TableCell className="p-0" />
-                    </TableRow>
+                    <TeamLabelRow
+                      key={label.id}
+                      label={label}
+                      columns={columns}
+                      rowClassName={labelRowClass}
+                      saved
+                      groups={directory.groups}
+                      selected={selectedIds.has(label.id)}
+                      onSelectedChange={(selected) =>
+                        selectLabel(label.id, selected)
+                      }
+                      onSave={saveLabel}
+                      onClose={() => {}}
+                      onDelete={() => remove("label", label.id)}
+                    />
                   ))}
                 </React.Fragment>
               ))}
@@ -603,18 +864,42 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
             >
               {query || filter !== "all"
                 ? "No labels match your filters."
-                : "No team labels yet. Create a label to get started."}
+                : workspaceView
+                  ? "No workspace labels yet. Create a label to get started."
+                  : "No team labels yet. Create a label to get started."}
             </p>
           )}
-          {directory.inheritedCount > 0 && (
+          {!workspaceView && (
             <p className="mt-10 text-center text-xs text-muted-foreground">
-              <span className="mr-1.5 text-foreground/90">
-                {directory.inheritedCount} labels
-              </span>
-              inherited from workspace
+              <button
+                type="button"
+                aria-label="Manage workspace labels"
+                onClick={() => switchScope(true)}
+                className={`mr-1.5 rounded-sm text-foreground/90 hover:underline ${focusClass}`}
+              >
+                {directory.inheritedCount + workspaceCount > 0
+                  ? `${directory.inheritedCount + workspaceCount} labels`
+                  : "Manage workspace labels"}
+              </button>
+              {directory.inheritedCount + workspaceCount > 0 &&
+                "inherited from workspace"}
             </p>
           )}
         </div>
+        {selectedLabels.length > 0 && (
+          <LabelSelectionActions
+            labels={selectedLabels}
+            workspace={workspaceView}
+            onClear={() => setSelectedIds(new Set())}
+            onFavorite={() => toggleSelected("favorite")}
+            onMove={moveSelected}
+            onMerge={mergeSelected}
+            onArchive={() => toggleSelected("archived")}
+            onDelete={() =>
+              removeLabels(selectedLabels.map((label) => label.id))
+            }
+          />
+        )}
       </main>
       <Dialog
         open={editor !== null}

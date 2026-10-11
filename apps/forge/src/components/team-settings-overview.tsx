@@ -48,7 +48,7 @@ type SettingItem = {
   description: string
   icon: SettingsIcon
   label: string
-  section?: "general" | "labels"
+  section?: "general" | "members" | "labels"
   value?: string
 }
 
@@ -63,7 +63,7 @@ const overviewItems: Array<SettingItem> = [
     label: "Members",
     description: "Manage team members",
     icon: UserGroup03Icon,
-    value: "1 member",
+    section: "members",
   },
   {
     label: "Slack notifications",
@@ -215,9 +215,11 @@ function SettingsCard({
           <Link
             key={item.label}
             to={
-              item.section === "labels"
-                ? "/settings/teams/$teamSlug/labels"
-                : "/settings/teams/$teamSlug/general"
+              item.section === "members"
+                ? "/settings/teams/$teamSlug/members"
+                : item.section === "labels"
+                  ? "/settings/teams/$teamSlug/labels"
+                  : "/settings/teams/$teamSlug/general"
             }
             params={{ teamSlug }}
             className={className}
@@ -273,7 +275,13 @@ function DangerRow({
   )
 }
 
-export function TeamSettingsOverview({ team }: { team: TeamSummary }) {
+export function TeamSettingsOverview({
+  team,
+  memberCount,
+}: {
+  team: TeamSummary
+  memberCount: number
+}) {
   const router = useRouter()
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
   const [confirmationName, setConfirmationName] = React.useState("")
@@ -338,7 +346,17 @@ export function TeamSettingsOverview({ team }: { team: TeamSummary }) {
                   Accessible to all workspace members
                 </p>
               </div>
-              <SettingsCard items={overviewItems} teamSlug={team.slug} />
+              <SettingsCard
+                items={overviewItems.map((item) =>
+                  item.section === "members"
+                    ? {
+                        ...item,
+                        value: `${memberCount} ${memberCount === 1 ? "member" : "members"}`,
+                      }
+                    : item
+                )}
+                teamSlug={team.slug}
+              />
             </section>
 
             <SettingsSection title="Issues, projects, and docs">

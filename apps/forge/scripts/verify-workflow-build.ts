@@ -1,5 +1,7 @@
-import { access, readFile } from "node:fs/promises"
+import { spawnSync } from "node:child_process"
+import { access, readFile, readdir } from "node:fs/promises"
 import { resolve } from "node:path"
+import { pathToFileURL } from "node:url"
 
 const vercelBuild =
   process.env.VERCEL === "1" || process.env.NITRO_PRESET === "vercel"
@@ -9,6 +11,40 @@ if (vercelBuild) {
   const config = JSON.parse(
     await readFile(resolve(output, "config.json"), "utf8")
   )
+  // Exercise the shipped CommonJS dependencies under Vercel's stricter loader.
+  // A global jose 6 override breaks @vercel/oidc's require("jose") at runtime.
+  const tracedVercelPackages = resolve(
+    output,
+    "functions/__server.func/node_modules/.nf3/@vercel"
+  )
+  const oidcPackages = (await readdir(tracedVercelPackages)).filter((name) =>
+    name.startsWith("oidc@")
+  )
+  if (oidcPackages.length === 0) {
+    throw new Error("The Vercel build is missing its traced OIDC dependencies.")
+  }
+  for (const name of oidcPackages) {
+    const entry = pathToFileURL(
+      resolve(tracedVercelPackages, name, "dist/index.js")
+    ).href
+    const result = spawnSync(
+      "node",
+      [
+        "--no-experimental-require-module",
+        "--input-type=module",
+        "--eval",
+        "await import(process.argv[1])",
+        entry,
+      ],
+      { encoding: "utf8" }
+    )
+    if (result.error || result.status !== 0) {
+      throw new Error(
+        `The packaged ${name} failed to load: ${result.error?.message ?? result.stderr}`
+      )
+    }
+  }
+  console.log("Verified packaged Vercel OIDC dependencies under Node.js.")
   for (const route of ["flow", "step"]) {
     const destination = `/.well-known/workflow/v1/${route}`
     if (

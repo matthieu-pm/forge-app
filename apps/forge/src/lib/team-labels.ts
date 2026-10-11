@@ -20,6 +20,8 @@ const labelSchema = z.object({
   issues: z.number().int().nonnegative(),
   lastApplied: z.iso.datetime().nullable(),
   createdAt: z.iso.datetime(),
+  favorite: z.boolean().optional(),
+  archived: z.boolean().optional(),
 })
 const directorySchema = z.object({
   version: z.literal(1),
@@ -136,5 +138,33 @@ export function restoreTeamLabelDeletion(
         ? { ...label, groupId: id }
         : label
     ),
+  }
+}
+
+export const workspaceLabelsStorageKey = "forge:workspace-issue-labels:v1"
+
+export function mergeTeamLabels(
+  directory: TeamLabelDirectory,
+  ids: Array<string>,
+  targetId: string
+): TeamLabelDirectory | null {
+  const selected = directory.labels.filter((label) => ids.includes(label.id))
+  const target = selected.find((label) => label.id === targetId)
+  if (!target || selected.length < 2) return null
+  const appliedDates = selected
+    .map((label) => label.lastApplied)
+    .filter((date): date is string => date !== null)
+    .sort()
+  return {
+    ...directory,
+    labels: [
+      ...directory.labels.filter((label) => !ids.includes(label.id)),
+      {
+        ...target,
+        issues: selected.reduce((sum, label) => sum + label.issues, 0),
+        lastApplied: appliedDates.at(-1) ?? null,
+        favorite: selected.some((label) => label.favorite),
+      },
+    ],
   }
 }
