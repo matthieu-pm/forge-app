@@ -10,6 +10,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { toast } from "sonner"
 import type { IconSvgElement } from "@hugeicons/react"
 
+import type { EmojiChoice } from "@/lib/emoji-catalog"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -21,6 +22,10 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TEAM_COLORS } from "@/lib/team-contract"
 import { cn } from "@/lib/utils"
+import {
+  buildEmojiChoices,
+  emojiCategoryDefinitions,
+} from "@/lib/emoji-catalog"
 
 export type PickerIcon = {
   kind: "icon" | "emoji"
@@ -34,42 +39,13 @@ type IconChoice = {
   value: string
 }
 
-type EmojiCategoryId = (typeof emojiCategoryDefinitions)[number]["id"]
-
-type EmojiChoice = {
-  category: EmojiCategoryId
-  emoji: string
-  label: string
-  search: string
-  shortcode: string
-}
-
 const defaultIconChoice: IconChoice = {
   icon: UserGroup03Icon,
   label: "User Group 03",
   value: "UserGroup03Icon",
 }
 
-const emojiCategoryDefinitions = [
-  { id: "smileys-people", label: "Smileys & People", groups: [0, 1] },
-  { id: "animals-nature", label: "Animals & Nature", groups: [3] },
-  { id: "food-drink", label: "Food & Drink", groups: [4] },
-  { id: "activity", label: "Activity", groups: [6] },
-  { id: "travel-places", label: "Travel & Places", groups: [5] },
-  { id: "objects", label: "Objects", groups: [7] },
-  { id: "symbols", label: "Symbols", groups: [8] },
-  { id: "flags", label: "Flags", groups: [9] },
-] as const
-
-const emojiCategoryByGroup = new Map<number, EmojiCategoryId>(
-  emojiCategoryDefinitions.flatMap((category) =>
-    category.groups.map((group) => [group, category.id] as const)
-  )
-)
-
-const emojiCategoryOrder = new Map<EmojiCategoryId, number>(
-  emojiCategoryDefinitions.map((category, index) => [category.id, index])
-)
+const CATALOG_PAGE_SIZE = 168
 
 function iconLabel(exportName: string) {
   return exportName
@@ -77,10 +53,6 @@ function iconLabel(exportName: string) {
     .replace(/([a-z\d])([A-Z])/g, "$1 $2")
     .replace(/([A-Z])([A-Z][a-z])/g, "$1 $2")
     .replace(/([A-Za-z])(\d+)/g, "$1 $2")
-}
-
-function shortcodeList(value: string | Array<string> | undefined) {
-  return value ? (Array.isArray(value) ? value : [value]) : []
 }
 
 function SearchField({
@@ -134,11 +106,13 @@ export function TeamIconPicker<T extends PickerIcon>({
     defaultIconChoice,
   ])
   const [iconsLoading, setIconsLoading] = React.useState(false)
-  const [visibleIconCount, setVisibleIconCount] = React.useState(100)
+  const [visibleIconCount, setVisibleIconCount] =
+    React.useState(CATALOG_PAGE_SIZE)
   const [emojiQuery, setEmojiQuery] = React.useState("")
   const [emojiChoices, setEmojiChoices] = React.useState<Array<EmojiChoice>>([])
   const [emojisLoading, setEmojisLoading] = React.useState(false)
-  const [visibleEmojiCount, setVisibleEmojiCount] = React.useState(100)
+  const [visibleEmojiCount, setVisibleEmojiCount] =
+    React.useState(CATALOG_PAGE_SIZE)
   const selectedIcon =
     value.kind === "icon" ? value.value : defaultIconChoice.value
   const activeIcon = iconChoices.find((choice) => choice.value === selectedIcon)
@@ -212,39 +186,7 @@ export function TeamIconPicker<T extends PickerIcon>({
           import("emojibase-data/en/compact.json"),
           import("emojibase-data/en/shortcodes/emojibase.json"),
         ])
-      const choices = emojiData
-        .flatMap((emoji) => {
-          const category =
-            emoji.group === undefined
-              ? undefined
-              : emojiCategoryByGroup.get(emoji.group)
-
-          return category ? [{ ...emoji, category }] : []
-        })
-        .sort(
-          (a, b) =>
-            (emojiCategoryOrder.get(a.category) ?? Number.MAX_SAFE_INTEGER) -
-              (emojiCategoryOrder.get(b.category) ?? Number.MAX_SAFE_INTEGER) ||
-            (a.order ?? Number.MAX_SAFE_INTEGER) -
-              (b.order ?? Number.MAX_SAFE_INTEGER)
-        )
-        .map((emoji) => {
-          const shortcodes = shortcodeList(emojiShortcodes[emoji.hexcode])
-          const fallbackShortcode = emoji.label
-            .toLocaleLowerCase()
-            .replace(/[^a-z0-9]+/g, "_")
-            .replace(/^_|_$/g, "")
-
-          return {
-            category: emoji.category,
-            emoji: emoji.unicode,
-            label: emoji.label,
-            search: [emoji.label, ...shortcodes, fallbackShortcode]
-              .join(" ")
-              .toLocaleLowerCase(),
-            shortcode: shortcodes[0] ?? fallbackShortcode,
-          }
-        })
+      const choices = buildEmojiChoices(emojiData, emojiShortcodes)
 
       setEmojiChoices(choices)
     } catch {
@@ -256,13 +198,13 @@ export function TeamIconPicker<T extends PickerIcon>({
 
   function handleIconQueryChange(query: string) {
     setIconQuery(query)
-    setVisibleIconCount(100)
+    setVisibleIconCount(CATALOG_PAGE_SIZE)
     iconGridRef.current?.scrollTo({ top: 0 })
   }
 
   function handleEmojiQueryChange(query: string) {
     setEmojiQuery(query)
-    setVisibleEmojiCount(100)
+    setVisibleEmojiCount(CATALOG_PAGE_SIZE)
     emojiGridRef.current?.scrollTo({ top: 0 })
   }
 
@@ -299,7 +241,7 @@ export function TeamIconPicker<T extends PickerIcon>({
       <PopoverContent
         align="start"
         sideOffset={6}
-        className="w-[412px] gap-0 overflow-hidden rounded-xl p-0"
+        className="w-[320px] max-w-[calc(100vw-24px)] gap-0 overflow-hidden rounded-xl p-0"
       >
         <Tabs
           defaultValue={value.kind === "emoji" ? "emojis" : "icons"}
@@ -311,17 +253,23 @@ export function TeamIconPicker<T extends PickerIcon>({
         >
           <TabsList
             variant="line"
-            className="h-9 w-full justify-start gap-4 border-b px-3"
+            className="h-8 w-full justify-start gap-4 border-b px-3"
           >
-            <TabsTrigger value="icons" className="h-full px-0 text-xs">
+            <TabsTrigger
+              value="icons"
+              className="h-full flex-none px-0 text-xs"
+            >
               Icons
             </TabsTrigger>
-            <TabsTrigger value="emojis" className="h-full px-0 text-xs">
+            <TabsTrigger
+              value="emojis"
+              className="h-full flex-none px-0 text-xs"
+            >
               Emojis
             </TabsTrigger>
           </TabsList>
           <TabsContent value="icons" className="p-0">
-            <div className="flex items-center justify-between gap-1.5 p-2.5">
+            <div className="flex items-center gap-2 px-3 py-2.5">
               {TEAM_COLORS.map((color) => (
                 <button
                   key={color}
@@ -329,7 +277,7 @@ export function TeamIconPicker<T extends PickerIcon>({
                   aria-label={`Use ${color}`}
                   onClick={() => emitChange({ ...value, color })}
                   className={cn(
-                    "grid size-6 place-items-center rounded-full ring-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    "grid size-4.5 shrink-0 place-items-center rounded-full ring-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     value.color === color && "ring-2 ring-ring/50"
                   )}
                   style={{ backgroundColor: color }}
@@ -338,14 +286,14 @@ export function TeamIconPicker<T extends PickerIcon>({
                     <HugeiconsIcon
                       icon={Tick02Icon}
                       strokeWidth={2.5}
-                      className="size-3.5 text-white"
+                      className="size-3 text-white"
                     />
                   ) : null}
                 </button>
               ))}
               {label !== "Choose team icon" && (
                 <label
-                  className="relative size-6 cursor-pointer overflow-hidden rounded-full bg-[conic-gradient(red,yellow,lime,cyan,blue,magenta,red)]"
+                  className="relative size-4.5 shrink-0 cursor-pointer overflow-hidden rounded-full bg-[conic-gradient(red,yellow,lime,cyan,blue,magenta,red)]"
                   title="Custom color"
                 >
                   <input
@@ -374,12 +322,17 @@ export function TeamIconPicker<T extends PickerIcon>({
                   48
                 ) {
                   setVisibleIconCount((count) =>
-                    Math.min(count + 100, filteredIcons.length)
+                    Math.min(count + CATALOG_PAGE_SIZE, filteredIcons.length)
                   )
                 }
               }}
-              className="grid max-h-72 grid-cols-[repeat(14,1.5rem)] justify-between gap-0.5 overflow-y-auto p-2.5"
+              className="grid max-h-60 grid-cols-[repeat(12,minmax(0,1fr))] gap-0.5 overflow-y-auto overscroll-contain p-2.5"
             >
+              {iconsLoading && (
+                <p className="col-span-full py-6 text-center text-xs text-muted-foreground">
+                  Loading icons…
+                </p>
+              )}
               {!iconsLoading && !visibleIcons.length && (
                 <p className="col-span-full py-6 text-center text-xs text-muted-foreground">
                   No matching icons.
@@ -400,7 +353,7 @@ export function TeamIconPicker<T extends PickerIcon>({
                     setOpen(false)
                   }}
                   className={cn(
-                    "grid size-6 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                    "grid size-6 w-full place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                     value.kind === "icon" && value.value === choice.value
                       ? "bg-accent text-foreground"
                       : undefined
@@ -413,6 +366,20 @@ export function TeamIconPicker<T extends PickerIcon>({
                   />
                 </button>
               ))}
+
+              {visibleIcons.length < filteredIcons.length && (
+                <button
+                  type="button"
+                  className="col-span-full rounded-md py-2 text-xs text-muted-foreground hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+                  onClick={() =>
+                    setVisibleIconCount((count) =>
+                      Math.min(count + CATALOG_PAGE_SIZE, filteredIcons.length)
+                    )
+                  }
+                >
+                  Show more icons
+                </button>
+              )}
             </div>
           </TabsContent>
           <TabsContent value="emojis" className="p-0">
@@ -431,11 +398,11 @@ export function TeamIconPicker<T extends PickerIcon>({
                   48
                 ) {
                   setVisibleEmojiCount((count) =>
-                    Math.min(count + 100, filteredEmojis.length)
+                    Math.min(count + CATALOG_PAGE_SIZE, filteredEmojis.length)
                   )
                 }
               }}
-              className="max-h-72 min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain px-2.5 pb-2.5"
+              className="max-h-60 min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain px-2.5 pb-2.5"
             >
               {emojisLoading ? (
                 <p className="py-8 text-center text-xs text-muted-foreground">
@@ -452,7 +419,7 @@ export function TeamIconPicker<T extends PickerIcon>({
                   <h3 className="pt-2.5 pb-1 text-xs font-medium text-muted-foreground">
                     {category.label}
                   </h3>
-                  <div className="grid min-w-0 grid-cols-[repeat(14,minmax(0,1.5rem))] justify-between gap-0.5">
+                  <div className="grid min-w-0 grid-cols-[repeat(12,minmax(0,1fr))] gap-0.5">
                     {category.emojis.map((emoji) => (
                       <button
                         key={`${emoji.emoji}-${emoji.shortcode}`}
@@ -467,7 +434,7 @@ export function TeamIconPicker<T extends PickerIcon>({
                           })
                           setOpen(false)
                         }}
-                        className="grid size-6 min-w-0 place-items-center overflow-hidden rounded-md text-base leading-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                        className="grid size-6 w-full min-w-0 place-items-center overflow-hidden rounded-md text-base leading-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                       >
                         {emoji.emoji}
                       </button>
@@ -475,6 +442,19 @@ export function TeamIconPicker<T extends PickerIcon>({
                   </div>
                 </section>
               ))}
+              {visibleEmojis.length < filteredEmojis.length && (
+                <button
+                  type="button"
+                  className="w-full rounded-md py-2 text-xs text-muted-foreground hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+                  onClick={() =>
+                    setVisibleEmojiCount((count) =>
+                      Math.min(count + CATALOG_PAGE_SIZE, filteredEmojis.length)
+                    )
+                  }
+                >
+                  Show more emoji
+                </button>
+              )}
             </div>
           </TabsContent>
         </Tabs>
