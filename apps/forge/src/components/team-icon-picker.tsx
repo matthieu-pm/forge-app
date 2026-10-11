@@ -10,7 +10,6 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { toast } from "sonner"
 import type { IconSvgElement } from "@hugeicons/react"
 
-import type { TeamSummary } from "@/lib/team-contract"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -23,7 +22,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TEAM_COLORS } from "@/lib/team-contract"
 import { cn } from "@/lib/utils"
 
-type TeamIcon = TeamSummary["icon"]
+export type PickerIcon = {
+  kind: "icon" | "emoji"
+  value: string
+  color: string
+}
 
 type IconChoice = {
   icon: IconSvgElement
@@ -98,11 +101,7 @@ function SearchField({
         topSeparator && "border-t"
       )}
     >
-      <HugeiconsIcon
-        icon={Search01Icon}
-        strokeWidth={2}
-        className="sr-only"
-      />
+      <HugeiconsIcon icon={Search01Icon} strokeWidth={2} className="sr-only" />
       <Input
         value={value}
         onChange={(event) => onChange(event.target.value)}
@@ -113,15 +112,21 @@ function SearchField({
   )
 }
 
-export function TeamIconPicker({
+export function TeamIconPicker<T extends PickerIcon>({
   name,
   onChange,
   value,
+  label = "Choose team icon",
+  className,
 }: {
   name: string
-  onChange: (value: TeamIcon) => void
-  value: TeamIcon
+  label?: string
+  className?: string
+  onChange: (value: T) => void
+  value: T
 }) {
+  const emitChange = (next: PickerIcon) => onChange(next as T)
+  const [open, setOpen] = React.useState(false)
   const iconGridRef = React.useRef<HTMLDivElement>(null)
   const emojiGridRef = React.useRef<HTMLDivElement>(null)
   const [iconQuery, setIconQuery] = React.useState("")
@@ -136,9 +141,7 @@ export function TeamIconPicker({
   const [visibleEmojiCount, setVisibleEmojiCount] = React.useState(100)
   const selectedIcon =
     value.kind === "icon" ? value.value : defaultIconChoice.value
-  const activeIcon = iconChoices.find(
-    (choice) => choice.value === selectedIcon
-  )
+  const activeIcon = iconChoices.find((choice) => choice.value === selectedIcon)
   const deferredIconQuery = React.useDeferredValue(iconQuery)
   const filteredIcons = React.useMemo(() => {
     const query = deferredIconQuery.trim().toLocaleLowerCase()
@@ -221,8 +224,7 @@ export function TeamIconPicker({
         .sort(
           (a, b) =>
             (emojiCategoryOrder.get(a.category) ?? Number.MAX_SAFE_INTEGER) -
-              (emojiCategoryOrder.get(b.category) ??
-                Number.MAX_SAFE_INTEGER) ||
+              (emojiCategoryOrder.get(b.category) ?? Number.MAX_SAFE_INTEGER) ||
             (a.order ?? Number.MAX_SAFE_INTEGER) -
               (b.order ?? Number.MAX_SAFE_INTEGER)
         )
@@ -266,8 +268,10 @@ export function TeamIconPicker({
 
   return (
     <Popover
-      onOpenChange={(open) => {
-        if (!open) return
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen)
+        if (!nextOpen) return
         if (value.kind === "emoji") void loadEmojiChoices()
         else void loadIconChoices()
       }}
@@ -278,8 +282,8 @@ export function TeamIconPicker({
             type="button"
             variant="outline"
             size="icon-sm"
-            aria-label="Choose team icon"
-            className="rounded-full bg-background/70"
+            aria-label={label}
+            className={cn("rounded-full bg-background/70", className)}
             style={{ color: value.color }}
           />
         }
@@ -295,7 +299,7 @@ export function TeamIconPicker({
       <PopoverContent
         align="start"
         sideOffset={6}
-        className="w-[292px] gap-0 overflow-hidden rounded-xl p-0"
+        className="w-[412px] gap-0 overflow-hidden rounded-xl p-0"
       >
         <Tabs
           defaultValue={value.kind === "emoji" ? "emojis" : "icons"}
@@ -323,7 +327,7 @@ export function TeamIconPicker({
                   key={color}
                   type="button"
                   aria-label={`Use ${color}`}
-                  onClick={() => onChange({ ...value, color })}
+                  onClick={() => emitChange({ ...value, color })}
                   className={cn(
                     "grid size-6 place-items-center rounded-full ring-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     value.color === color && "ring-2 ring-ring/50"
@@ -339,6 +343,22 @@ export function TeamIconPicker({
                   ) : null}
                 </button>
               ))}
+              {label !== "Choose team icon" && (
+                <label
+                  className="relative size-6 cursor-pointer overflow-hidden rounded-full bg-[conic-gradient(red,yellow,lime,cyan,blue,magenta,red)]"
+                  title="Custom color"
+                >
+                  <input
+                    type="color"
+                    aria-label="Custom icon color"
+                    value={value.color}
+                    onChange={(event) =>
+                      emitChange({ ...value, color: event.target.value })
+                    }
+                    className="absolute inset-0 size-full cursor-pointer opacity-0"
+                  />
+                </label>
+              )}
             </div>
             <SearchField
               value={iconQuery}
@@ -358,21 +378,27 @@ export function TeamIconPicker({
                   )
                 }
               }}
-              className="grid max-h-52 grid-cols-[repeat(10,1.5rem)] justify-between gap-0.5 overflow-y-auto p-2.5"
+              className="grid max-h-72 grid-cols-[repeat(14,1.5rem)] justify-between gap-0.5 overflow-y-auto p-2.5"
             >
+              {!iconsLoading && !visibleIcons.length && (
+                <p className="col-span-full py-6 text-center text-xs text-muted-foreground">
+                  No matching icons.
+                </p>
+              )}
               {visibleIcons.map((choice) => (
                 <button
                   key={choice.value}
                   type="button"
                   title={choice.label}
                   aria-label={choice.label}
-                  onClick={() =>
-                    onChange({
+                  onClick={() => {
+                    emitChange({
                       kind: "icon",
                       value: choice.value,
                       color: value.color,
                     })
-                  }
+                    setOpen(false)
+                  }}
                   className={cn(
                     "grid size-6 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                     value.kind === "icon" && value.value === choice.value
@@ -409,32 +435,38 @@ export function TeamIconPicker({
                   )
                 }
               }}
-              className="max-h-52 min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain px-2.5 pb-2.5"
+              className="max-h-72 min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain px-2.5 pb-2.5"
             >
               {emojisLoading ? (
                 <p className="py-8 text-center text-xs text-muted-foreground">
                   Loading emoji…
                 </p>
               ) : null}
+              {!emojisLoading && !visibleEmojis.length && (
+                <p className="py-6 text-center text-xs text-muted-foreground">
+                  No matching emoji.
+                </p>
+              )}
               {visibleEmojiCategories.map((category) => (
                 <section key={category.id}>
                   <h3 className="pt-2.5 pb-1 text-xs font-medium text-muted-foreground">
                     {category.label}
                   </h3>
-                  <div className="grid min-w-0 grid-cols-[repeat(10,minmax(0,1.5rem))] justify-between gap-0.5">
+                  <div className="grid min-w-0 grid-cols-[repeat(14,minmax(0,1.5rem))] justify-between gap-0.5">
                     {category.emojis.map((emoji) => (
                       <button
                         key={`${emoji.emoji}-${emoji.shortcode}`}
                         type="button"
                         title={`:${emoji.shortcode}: — ${emoji.label}`}
                         aria-label={`:${emoji.shortcode}: — ${emoji.label}`}
-                        onClick={() =>
-                          onChange({
+                        onClick={() => {
+                          emitChange({
                             kind: "emoji",
                             value: emoji.emoji,
                             color: value.color,
                           })
-                        }
+                          setOpen(false)
+                        }}
                         className="grid size-6 min-w-0 place-items-center overflow-hidden rounded-md text-base leading-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                       >
                         {emoji.emoji}

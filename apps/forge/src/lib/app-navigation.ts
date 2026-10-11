@@ -19,12 +19,7 @@ import type { TeamSummary } from "@/lib/team-contract"
 type AppIcon = ComponentProps<typeof HugeiconsIcon>["icon"]
 type TeamSlug = string
 type TeamSection =
-  | "projects"
-  | "views"
-  | "issues"
-  | "signals"
-  | "calls"
-  | "insights"
+  "projects" | "views" | "issues" | "signals" | "calls" | "insights"
 type TeamPath = `/teams/${TeamSlug}/${TeamSection}`
 
 export type AppPath =
@@ -292,6 +287,19 @@ export function getPageMeta(pathname: string): PageMeta {
 }
 
 export function getBreadcrumbItems(pathname: string): Array<BreadcrumbItem> {
+  const templateMatch =
+    /^\/settings\/teams\/[^/]+\/templates(?:\/(issue|project|document)\/([^/]+))?\/?$/.exec(
+      pathname
+    )
+  if (templateMatch)
+    return [
+      {
+        label: templateMatch[1]
+          ? `${templateMatch[2] === "new" ? "New" : "Edit"} ${templateMatch[1]} template`
+          : "Templates",
+      },
+    ]
+
   if (/^\/settings\/teams\/[^/]+\/members$/.test(pathname)) {
     return [{ label: "Team members" }]
   }

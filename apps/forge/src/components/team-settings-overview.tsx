@@ -48,7 +48,7 @@ type SettingItem = {
   description: string
   icon: SettingsIcon
   label: string
-  section?: "general" | "members" | "labels"
+  section?: "general" | "members" | "labels" | "templates"
   value?: string
 }
 
@@ -84,7 +84,7 @@ const issueItems: Array<SettingItem> = [
     label: "Templates",
     description: "Pre-filled templates for issues, documents, and projects",
     icon: FilePasteIcon,
-    value: "None",
+    section: "templates",
   },
   {
     label: "Recurring issues",
@@ -215,11 +215,13 @@ function SettingsCard({
           <Link
             key={item.label}
             to={
-              item.section === "members"
-                ? "/settings/teams/$teamSlug/members"
-                : item.section === "labels"
-                  ? "/settings/teams/$teamSlug/labels"
-                  : "/settings/teams/$teamSlug/general"
+              item.section === "templates"
+                ? "/settings/teams/$teamSlug/templates"
+                : item.section === "members"
+                  ? "/settings/teams/$teamSlug/members"
+                  : item.section === "labels"
+                    ? "/settings/teams/$teamSlug/labels"
+                    : "/settings/teams/$teamSlug/general"
             }
             params={{ teamSlug }}
             className={className}
@@ -329,7 +331,7 @@ export function TeamSettingsOverview({
 
   return (
     <>
-      <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-none px-6 pt-12 pb-4 [scrollbar-gutter:stable]">
+      <main className="min-h-0 flex-1 [scrollbar-gutter:stable] overflow-y-auto overscroll-y-none px-6 pt-12 pb-4">
         <div className="mx-auto w-full max-w-[640px] pb-16">
           <div className="space-y-12">
             <section className="space-y-5">

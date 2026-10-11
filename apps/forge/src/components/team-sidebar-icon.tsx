@@ -3,7 +3,7 @@
 import * as React from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import type { IconSvgElement } from "@hugeicons/react"
-import type { TeamSummary } from "@/lib/team-contract"
+import type { PickerIcon } from "@/components/team-icon-picker"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
@@ -23,7 +23,7 @@ export function TeamSidebarIcon({
   name,
 }: {
   className?: string
-  icon: TeamSummary["icon"]
+  icon: PickerIcon
   name: string
 }) {
   const [loadedIcon, setLoadedIcon] = React.useState<IconSvgElement | null>(

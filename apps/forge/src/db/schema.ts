@@ -15,6 +15,7 @@ import {
 } from "drizzle-orm/pg-core"
 
 import { apiKeys, organizations, users } from "./auth-schema"
+import type { TemplateDraft } from "@/lib/template-contract"
 
 export const workspaceSecuritySettings = pgTable(
   "workspace_security_settings",
@@ -1266,3 +1267,52 @@ export type NewBusinessWorkflowRun = typeof businessWorkflowRuns.$inferInsert
 export type BusinessWorkflowEffect = typeof businessWorkflowEffects.$inferSelect
 export type NewBusinessWorkflowEffect =
   typeof businessWorkflowEffects.$inferInsert
+
+export const teamTemplates = pgTable(
+  "team_templates",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    teamId: uuid("team_id")
+      .notNull()
+      .references(() => teams.id, { onDelete: "cascade" }),
+    payload: jsonb("payload").$type<TemplateDraft>().notNull(),
+    createdByUserId: text("created_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    teamIndex: index("team_templates_team_idx").on(
+      table.workspaceId,
+      table.teamId
+    ),
+  })
+)
+
+export const teamTemplateDefaults = pgTable(
+  "team_template_defaults",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    teamId: uuid("team_id")
+      .notNull()
+      .references(() => teams.id, { onDelete: "cascade" }),
+    audience: text("audience").notNull(),
+    templateId: uuid("template_id").references(() => teamTemplates.id, {
+      onDelete: "set null",
+    }),
+  },
+  (table) => ({
+    audienceUnique: uniqueIndex("team_template_defaults_audience_unique").on(
+      table.teamId,
+      table.audience
+    ),
+  })
+)
