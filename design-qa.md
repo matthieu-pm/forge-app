@@ -693,3 +693,19 @@ final result: passed
 - Increased macOS tabs from 26px to 30px, centered with 9px above and below in the 48px title bar.
 - Increased tab content horizontal padding from 7px to 11px and close-button trailing space from 3px to 7px.
 - Verified the updated tabs in the running native app; diff check passed. Screenshot: `/tmp/forge-taller-tabs.png`.
+
+## 2026-10-12 — Upcoming and numbered cycle pages
+- Added nested Upcoming navigation beneath enabled teams' Cycles links. Added numbered cycle routes and dynamic tab/breadcrumb titles; Cycle 1 and Upcoming share the same cycle issues, while later cycles remain separate.
+- Replaced the schedule preview header with the supplied timeline layout: full clickable rows, date markers, cooldown intervals, Upcoming/Planned badges, and live scope counts. Capacity remains unavailable for populated cycles because no estimation model exists yet.
+- Detail pages reproduce the supplied empty-state text/illustration and support local issue creation/editing, Board/List views, status filtering, and a details panel. Local records are validated and scoped by team and scheduled start date; server issue synchronization and persistent historical cycle identities are not implemented. The existing rolling schedule remains in use.
+- Validation: 30 focused tests passed across navigation, settings, and issue flows (including cycle separation, persistence, corrupted storage and failed saves). Typecheck, scoped ESLint, production build/Workflow verification and diff checks passed.
+- Native QA: restarted development Vite and Electron after a stale renderer refresh, inspected the final timeline and clicked Cycle 2 to verify the numbered route, tab, breadcrumb and empty state. No sample issues were written into the user's team. Populated-board behavior was verified in component tests; mobile rendering was not visually verified.
+- Screenshot: `.forge/upcoming-cycle-qa/native-timeline.png`.
+
+## Team Triage — 2026-10-12
+- Added a team-scoped Triage route and live sidebar visibility tied to the existing team enable setting; disabled direct routes point back to settings.
+- Matched the supplied split-pane layout, compact queue header, empty-state illustration, display popover, and responsibility dialog while preserving the Forge shell.
+- Implemented local issue creation/editing, text/priority/due-date filters, ordering, snooze visibility, and property toggles. Responsibility preferences are shared with Settings; automatic notification/assignment execution remains unavailable and is disclosed in the dialog.
+- Local storage validates issues and settings, preserves corrupt values, keeps teams isolated, and retains unsaved drafts after write failures.
+- Native QA: enabled Testing temporarily, confirmed sidebar navigation and the page, opened Display options and responsibility settings, then restored the original disabled setting. Screenshot: `.forge/triage-qa/native-triage.png`. No sample issues were written to the real team.
+- Validation: 35 focused tests passed, TypeScript passed, scoped ESLint and diff whitespace checks passed. Narrow layouts stack queue/details; mobile rendering was not separately inspected.

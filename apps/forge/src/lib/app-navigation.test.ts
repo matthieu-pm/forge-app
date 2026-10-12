@@ -19,6 +19,14 @@ describe("getBreadcrumbItems", () => {
       "Projects",
       "Views",
     ])
+    expect(
+      nav[0].items?.find((item) => item.title === "Cycles")?.items
+    ).toEqual([{ title: "Upcoming", to: "/teams/product/cycle/upcoming" }])
+    expect(getBreadcrumbItems("/teams/product/cycle/upcoming")).toEqual([
+      { label: "Product", to: "/teams/product/projects" },
+      { label: "Cycles", to: "/teams/product/cycles" },
+      { label: "Cycle 1" },
+    ])
     expect(getBreadcrumbItems("/teams/product/cycles")).toEqual([
       { label: "Product", to: "/teams/product/projects" },
       { label: "Cycles" },

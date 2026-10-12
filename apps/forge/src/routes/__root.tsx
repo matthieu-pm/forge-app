@@ -159,7 +159,7 @@ function AgentRouteContent({
       aria-hidden={obscured || undefined}
       inert={obscured || undefined}
     >
-      <AppHeader />
+      {!/^\/teams\/[^/]+\/triage$/.test(pathname) && <AppHeader />}
       <Outlet key={pathname} />
     </div>
   )

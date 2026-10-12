@@ -63,17 +63,16 @@ describe("team triage settings", () => {
     expect(enable().getAttribute("aria-checked")).toBe("false")
     fail.mockRestore()
   })
-  it("explains trial availability and links to the existing billing and AI pages", () => {
+  it("opens the shared responsibility settings when triage is enabled", () => {
     render(<TeamTriageSettings team={team} />)
-    expect(
-      screen.getByRole("link", { name: "View settings" }).getAttribute("href")
-    ).toBe("/settings/ai")
-    fireEvent.click(screen.getByRole("button", { name: "Start free trial" }))
+    fireEvent.click(enable())
+    fireEvent.click(screen.getByRole("button", { name: "Configure" }))
+    fireEvent.change(screen.getByRole("combobox", { name: "Action" }), {
+      target: { value: "assign" },
+    })
+    expect(saved().action).toBe("assign")
     expect(screen.getByRole("dialog").textContent).toContain(
-      "Business trials aren’t available in Forge yet"
+      "not connected yet"
     )
-    expect(
-      screen.getByRole("link", { name: "View billing" }).getAttribute("href")
-    ).toBe("/settings/billing")
   })
 })

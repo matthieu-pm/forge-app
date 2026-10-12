@@ -54,6 +54,7 @@ import { authClient } from "@/lib/auth-client"
 import { getNavigationAuthState } from "@/lib/auth-state"
 import { TEAM_LIST_CHANGED_EVENT } from "@/lib/team-events"
 import { listTeams } from "@/lib/team-state"
+import { useEnabledTeamTriage } from "@/lib/team-triage"
 import { useEnabledTeamCycles } from "@/lib/team-cycles"
 import { getForgeHost } from "@/host/forge-host"
 import { getSidebarDisclosureKey } from "@/lib/sidebar-disclosure"
@@ -155,6 +156,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const enabledCycleTeams = useEnabledTeamCycles(
     workspaceTeams.map((team) => team.id)
   )
+  const enabledTriageTeams = useEnabledTeamTriage(
+    workspaceTeams.map((team) => team.id)
+  )
   const primaryNav = appNav.filter(
     (item) => item.title !== "Workspace" && item.title !== "Your teams"
   )
@@ -167,6 +171,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         workspaceTeams.map((team) => ({
           ...team,
           cyclesEnabled: enabledCycleTeams.has(team.id),
+          triageEnabled: enabledTriageTeams.has(team.id),
         }))
       ),
     }))
@@ -337,7 +342,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         }
       >
         {items.map((item) =>
-          item.items?.length ? (
+          item.items?.length && depth === 0 ? (
             <PersistentCollapsible
               key={getSidebarDisclosureKey(
                 item.title,
@@ -385,6 +390,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 {renderItemIcon(item)}
                 {item.title}
               </SidebarMenuButton>
+              {item.items?.length ? (
+                <div className="ml-3 border-l border-border/60 pl-1">
+                  {renderNavItems(item.items, depth + 1)}
+                </div>
+              ) : null}
             </SidebarMenuSubItem>
           )
         )}

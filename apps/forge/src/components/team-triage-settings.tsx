@@ -13,6 +13,7 @@ import type { ReactNode } from "react"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamTriageSettings as TriagePreferences } from "@/lib/team-triage"
 import { useTeamTriage } from "@/lib/team-triage"
+import { TriageResponsibilityDialog } from "@/components/triage-responsibility-dialog"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
@@ -109,9 +110,8 @@ function DocsLink({ topic }: { topic: "triage" | "triage-intelligence" }) {
 
 export function TeamTriageSettings({ team }: { team: TeamSummary }) {
   const { settings, ready, error, update } = useTeamTriage(team.id)
-  const [dialog, setDialog] = React.useState<
-    "trial" | "loops" | "sales" | null
-  >(null)
+  const [dialog, setDialog] = React.useState<"loops" | null>(null)
+  const [responsibilityOpen, setResponsibilityOpen] = React.useState(false)
   const disabled = !ready || !!error
   function save(patch: Partial<TriagePreferences>) {
     if (!update(patch))
@@ -185,25 +185,16 @@ export function TeamTriageSettings({ team }: { team: TeamSummary }) {
                     triage
                   </p>
                   <p className="mt-0.5 text-xs leading-[18px] text-muted-foreground">
-                    Available on the Business plan. Access Triage
-                    responsibility, and all other Business features, for 30 days
-                    with a free trial. For questions,{" "}
-                    <button
-                      type="button"
-                      className={textLinkClass}
-                      onClick={() => setDialog("sales")}
-                    >
-                      contact our sales team
-                    </button>
-                    .
+                    Configure the action for new triage issues.
                   </p>
                 </div>
                 <Button
                   variant="secondary"
                   className="h-8 shrink-0 rounded-full px-3 font-normal"
-                  onClick={() => setDialog("trial")}
+                  disabled={disabled || !settings.enabled}
+                  onClick={() => setResponsibilityOpen(true)}
                 >
-                  Start free trial
+                  Configure
                 </Button>
               </div>
             </section>
@@ -275,41 +266,24 @@ export function TeamTriageSettings({ team }: { team: TeamSummary }) {
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>
-              {dialog === "loops"
-                ? "Loops"
-                : dialog === "sales"
-                  ? "Contact sales"
-                  : "Triage responsibility"}
-            </DialogTitle>
+            <DialogTitle>Loops</DialogTitle>
             <DialogDescription>
-              {dialog === "loops"
-                ? `No loops are configured for ${team.name}.`
-                : dialog === "sales"
-                  ? "Business plan enquiries"
-                  : "Manage how incoming issues and requests are assigned to your team."}
+              No loops are configured for {team.name}.
             </DialogDescription>
           </DialogHeader>
           <p className="text-sm leading-6 text-muted-foreground">
-            {dialog === "loops"
-              ? "Loops for triage aren’t available in Forge yet."
-              : dialog === "sales"
-                ? "Sales contact isn’t available yet. You can review the current plan options in Billing."
-                : "Business trials aren’t available in Forge yet. You can review the current plan options in Billing."}
+            Loops for triage aren’t available in Forge yet.
           </p>
           <DialogFooter>
             <DialogClose render={<Button variant="ghost" />}>Close</DialogClose>
-            {dialog !== "loops" && (
-              <Link
-                to="/settings/billing"
-                className={`inline-flex h-8 items-center justify-center rounded-full bg-secondary px-3 text-sm hover:bg-secondary/80 ${focusClass}`}
-              >
-                View billing
-              </Link>
-            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <TriageResponsibilityDialog
+        teamId={team.id}
+        open={responsibilityOpen}
+        onOpenChange={setResponsibilityOpen}
+      />
     </main>
   )
 }

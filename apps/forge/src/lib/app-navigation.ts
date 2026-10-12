@@ -20,7 +20,14 @@ import type { TeamSummary } from "@/lib/team-contract"
 type AppIcon = ComponentProps<typeof HugeiconsIcon>["icon"]
 type TeamSlug = string
 type TeamSection =
-  "projects" | "views" | "issues" | "cycles" | "signals" | "calls" | "insights"
+  | "projects"
+  | "views"
+  | "issues"
+  | "triage"
+  | "cycles"
+  | "signals"
+  | "calls"
+  | "insights"
 type TeamPath = `/teams/${TeamSlug}/${TeamSection}`
 
 export type AppPath =
@@ -60,6 +67,8 @@ export type AppPath =
   | "/workspace/members"
   | "/agent"
   | TeamPath
+  | `/teams/${string}/cycle/upcoming`
+  | `/teams/${string}/cycle/${number}`
 
 export type AppNavChild = {
   title: string
@@ -90,6 +99,7 @@ export type BreadcrumbItem = {
 }
 
 const teamSectionDefinitions = [
+  { title: "Triage", section: "triage", icon: InboxUnreadIcon },
   { title: "Issues", section: "issues", icon: ClipboardIcon },
   { title: "Cycles", section: "cycles", icon: Clock05Icon },
   { title: "Projects", section: "projects", icon: CubeIcon },
@@ -121,6 +131,7 @@ export function buildYourTeamsNav(
     slug: string
     icon?: TeamSummary["icon"]
     cyclesEnabled?: boolean
+    triageEnabled?: boolean
   }>
 ): Array<AppNavChild> {
   return teams.map((team) => ({
@@ -133,12 +144,23 @@ export function buildYourTeamsNav(
           section.section === "projects" ||
           section.section === "views" ||
           (section.section === "cycles" && team.cyclesEnabled === true) ||
+          (section.section === "triage" && team.triageEnabled === true) ||
           section.section === "issues"
       )
       .map((section) => ({
         title: section.title,
         to: getTeamPath(team.slug, section.section),
         icon: section.icon,
+        ...(section.section === "cycles"
+          ? {
+              items: [
+                {
+                  title: "Upcoming",
+                  to: `/teams/${team.slug}/cycle/upcoming` as AppPath,
+                },
+              ],
+            }
+          : {}),
       })),
   }))
 }
@@ -270,7 +292,7 @@ const pageMetaByPath: Partial<Record<AppPath, PageMeta>> = {
 
 export function getPageMeta(pathname: string): PageMeta {
   const teamMatch = pathname.match(
-    /^\/teams\/([^/]+)\/(projects|views|issues|cycles|signals|calls|insights)$/
+    /^\/teams\/([^/]+)\/(projects|views|issues|triage|cycles|signals|calls|insights)$/
   )
 
   if (teamMatch) {
@@ -501,6 +523,20 @@ export function getBreadcrumbItems(pathname: string): Array<BreadcrumbItem> {
     return [{ label: "Import & export" }]
   }
 
+  const upcomingCycleMatch = pathname.match(
+    /^\/teams\/([^/]+)\/cycle\/(upcoming|[1-9]\d*)$/
+  )
+  if (upcomingCycleMatch) {
+    const slug = upcomingCycleMatch[1]
+    return [
+      { label: teamTitleFromSlug(slug), to: getTeamPath(slug, "projects") },
+      { label: "Cycles", to: getTeamPath(slug, "cycles") },
+      {
+        label: `Cycle ${upcomingCycleMatch[2] === "upcoming" ? 1 : upcomingCycleMatch[2]}`,
+      },
+    ]
+  }
+
   const initiativeMatch = pathname.match(/^\/workspace\/initiatives\/([^/]+)$/)
 
   if (initiativeMatch) {
@@ -511,7 +547,7 @@ export function getBreadcrumbItems(pathname: string): Array<BreadcrumbItem> {
   }
 
   const teamMatch = pathname.match(
-    /^\/teams\/([^/]+)\/(projects|views|issues|cycles|signals|calls|insights)$/
+    /^\/teams\/([^/]+)\/(projects|views|issues|triage|cycles|signals|calls|insights)$/
   )
 
   if (teamMatch) {

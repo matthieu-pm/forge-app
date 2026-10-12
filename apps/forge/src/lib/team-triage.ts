@@ -4,6 +4,7 @@ import { z } from "zod"
 const triageSchema = z.object({
   enabled: z.boolean(),
   requirePriority: z.boolean(),
+  action: z.enum(["none", "notify", "assign"]).optional(),
 })
 export type TeamTriageSettings = z.infer<typeof triageSchema>
 export const teamTriageStorageKey = (teamId: string) =>
@@ -15,6 +16,32 @@ export const initialTeamTriage = (): TeamTriageSettings => ({
 export const parseTeamTriage = (raw: string) =>
   triageSchema.parse(JSON.parse(raw))
 const changeEvent = "forge:team-triage-changed"
+
+export function useEnabledTeamTriage(teamIds: ReadonlyArray<string>) {
+  const snapshot = React.useSyncExternalStore(
+    React.useCallback((notify) => {
+      window.addEventListener("storage", notify)
+      window.addEventListener(changeEvent, notify)
+      return () => {
+        window.removeEventListener("storage", notify)
+        window.removeEventListener(changeEvent, notify)
+      }
+    }, []),
+    () =>
+      JSON.stringify(
+        teamIds.filter((id) => {
+          try {
+            const raw = window.localStorage.getItem(teamTriageStorageKey(id))
+            return raw !== null && parseTeamTriage(raw).enabled
+          } catch {
+            return false
+          }
+        })
+      ),
+    () => "[]"
+  )
+  return React.useMemo(() => new Set<string>(JSON.parse(snapshot)), [snapshot])
+}
 
 export function useTeamTriage(teamId: string) {
   const [settings, setSettings] = React.useState(initialTeamTriage)
@@ -51,7 +78,11 @@ export function useTeamTriage(teamId: string) {
   function update(patch: Partial<TeamTriageSettings>) {
     if (!ready || error) return false
     try {
-      const next = { ...settings, ...patch }
+      const latest = window.localStorage.getItem(storageKey)
+      const next = triageSchema.parse({
+        ...(latest ? parseTeamTriage(latest) : settings),
+        ...patch,
+      })
       window.localStorage.setItem(storageKey, JSON.stringify(next))
       setSettings(next)
       window.dispatchEvent(new CustomEvent(changeEvent, { detail: storageKey }))

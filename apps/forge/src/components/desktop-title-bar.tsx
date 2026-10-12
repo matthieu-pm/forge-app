@@ -54,7 +54,7 @@ function getTabTitle(path: string) {
 export function getTabTeamSlug(path: string) {
   const pathname = path.split(/[?#]/, 1)[0]
   const appTeamMatch = pathname.match(
-    /^\/teams\/([^/]+)\/(?:issues|projects|views)$/
+    /^\/teams\/([^/]+)\/(?:issues|projects|views|triage|cycles|cycle\/(?:upcoming|[1-9]\d*))$/
   )
   if (appTeamMatch) return appTeamMatch[1]
 
