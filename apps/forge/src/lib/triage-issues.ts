@@ -8,7 +8,31 @@ export const triagePriorities = [
   "Medium",
   "Low",
 ] as const
-const schema = z.object({
+export const triageDraftSchema = z.object({
+  title: z.string().max(240),
+  description: z.string().max(10000),
+  priority: z.enum(triagePriorities),
+  dueDate: z.string().regex(/^$|^\d{4}-\d{2}-\d{2}$/),
+  assignee: z.string().max(200).optional(),
+  project: z.string().max(200).optional(),
+  labels: z.string().max(1000).optional(),
+  templateName: z.string().max(200).optional(),
+  attachments: z
+    .array(
+      z.object({
+        name: z.string().max(255),
+        data: z
+          .string()
+          .max(2800000)
+          .regex(/^data:[a-zA-Z0-9.+/-]*;base64,[a-zA-Z0-9+/=]*$/),
+      })
+    )
+    .max(5)
+    .optional(),
+})
+export const triageDraftKey = (teamId: string) =>
+  `forge:triage-draft:v1:${teamId}`
+const schema = triageDraftSchema.extend({
   id: z.string().min(1),
   number: z.number().int().positive(),
   title: z.string().trim().min(1).max(240),
@@ -19,10 +43,7 @@ const schema = z.object({
   createdAt: z.string().datetime(),
 })
 export type TriageIssue = z.infer<typeof schema>
-export type TriageDraft = Pick<
-  TriageIssue,
-  "title" | "description" | "priority" | "dueDate"
->
+export type TriageDraft = z.infer<typeof triageDraftSchema>
 export const triageIssuesKey = (teamId: string) =>
   `forge:triage-issues:v1:${teamId}`
 export const parseTriageIssues = (raw: string) =>

@@ -4,6 +4,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
   within,
 } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
@@ -16,13 +17,28 @@ import {
   teamTriageStorageKey,
   useEnabledTeamTriage,
 } from "@/lib/team-triage"
-import { parseTriageIssues, triageIssuesKey } from "@/lib/triage-issues"
+import {
+  parseTriageIssues,
+  triageDraftKey,
+  triageIssuesKey,
+} from "@/lib/triage-issues"
+import { emptyTemplate } from "@/lib/template-contract"
+import { loadTemplates } from "@/lib/template-state"
 import { buildYourTeamsNav } from "@/lib/app-navigation"
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ children, to }: { children: ReactNode; to: string }) => (
     <a href={to}>{children}</a>
   ),
+}))
+vi.mock("@/lib/template-state", () => ({
+  loadTemplates: vi.fn().mockResolvedValue({
+    templates: [],
+    defaults: { members: null, nonMembers: null },
+    teams: [],
+    members: [],
+    canManage: true,
+  }),
 }))
 const team = {
   id: "triage-test",
@@ -181,5 +197,151 @@ describe("team triage", () => {
     expect(
       parseTriageIssues(localStorage.getItem(triageIssuesKey(team.id))!)
     ).toHaveLength(1)
+  })
+  it("restores a saved draft after remount and clears it after creation", () => {
+    const view = render(<TeamTriage team={team} />)
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Create triage issue" })[0]
+    )
+    fireEvent.change(screen.getByRole("textbox", { name: "Issue title" }), {
+      target: { value: "Resume this" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Save as draft" }))
+    expect(localStorage.getItem(triageIssuesKey(team.id))).toBeNull()
+    expect(
+      JSON.parse(localStorage.getItem(triageDraftKey(team.id))!).title
+    ).toBe("Resume this")
+    view.unmount()
+    render(<TeamTriage team={team} />)
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Create triage issue" })[0]
+    )
+    expect(
+      screen.getByRole<HTMLInputElement>("textbox", { name: "Issue title" })
+        .value
+    ).toBe("Resume this")
+    fireEvent.click(screen.getByRole("button", { name: "Create issue" }))
+    expect(localStorage.getItem(triageDraftKey(team.id))).toBeNull()
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Create triage issue" })[0]
+    )
+    expect(
+      screen.getByRole<HTMLInputElement>("textbox", { name: "Issue title" })
+        .value
+    ).toBe("")
+  })
+  it("creates consecutive issues without closing the composer", () => {
+    render(<TeamTriage team={team} />)
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Create triage issue" })[0]
+    )
+    fireEvent.click(screen.getByRole("switch", { name: "Create more" }))
+    fireEvent.change(screen.getByRole("textbox", { name: "Issue title" }), {
+      target: { value: "First request" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Create issue" }))
+    expect(
+      screen.getByRole<HTMLInputElement>("textbox", { name: "Issue title" })
+        .value
+    ).toBe("")
+    fireEvent.change(screen.getByRole("textbox", { name: "Issue title" }), {
+      target: { value: "Second request" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Create issue" }))
+    expect(
+      parseTriageIssues(localStorage.getItem(triageIssuesKey(team.id))!).map(
+        (issue) => issue.title
+      )
+    ).toEqual(["First request", "Second request"])
+  })
+  it("preserves unreadable drafts when saving fails", () => {
+    localStorage.setItem(triageDraftKey(team.id), "corrupt draft")
+    render(<TeamTriage team={team} />)
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Create triage issue" })[0]
+    )
+    fireEvent.change(screen.getByRole("textbox", { name: "Issue title" }), {
+      target: { value: "Keep this too" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Save as draft" }))
+    expect(localStorage.getItem(triageDraftKey(team.id))).toBe("corrupt draft")
+    expect(
+      within(screen.getByRole("dialog")).getByRole("alert").textContent
+    ).toContain("preserved")
+  })
+  it("applies a team template and persists properties and attachments", async () => {
+    const template = emptyTemplate("issue")
+    template.name = "Bug report"
+    template.title = "Investigate bug"
+    template.content = {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "Reproduction steps" }],
+        },
+      ],
+    }
+    template.properties.priority = "High"
+    template.properties.project = "Website"
+    template.properties.labels = ["Bug"]
+    template.properties.assignee = "member-1"
+    vi.mocked(loadTemplates).mockResolvedValueOnce({
+      templates: [
+        {
+          id: "template-1",
+          payload: template,
+          createdBy: "member-1",
+          createdAt: "",
+          updatedAt: "",
+        },
+      ],
+      defaults: { members: null, nonMembers: null },
+      teams: [team],
+      members: [{ id: "member-1", name: "Alex", image: null }],
+      canManage: true,
+    })
+    render(<TeamTriage team={team} />)
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Create triage issue" })[0]
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Apply template" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Bug report" }))
+    expect(
+      screen.getByRole<HTMLInputElement>("textbox", { name: "Issue title" })
+        .value
+    ).toBe("Investigate bug")
+    expect(
+      screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Description" })
+        .value
+    ).toBe("Reproduction steps")
+    fireEvent.change(screen.getByLabelText("Issue attachments"), {
+      target: {
+        files: [new File(["example"], "example.txt", { type: "text/plain" })],
+      },
+    })
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Remove example.txt" })
+      ).toBeTruthy()
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Create issue" }))
+    const [issue] = parseTriageIssues(
+      localStorage.getItem(triageIssuesKey(team.id))!
+    )
+    expect(issue).toMatchObject({
+      priority: "High",
+      project: "Website",
+      labels: "Bug",
+      assignee: "member-1",
+      templateName: "Bug report",
+    })
+    expect(issue.attachments?.[0]).toMatchObject({
+      name: "example.txt",
+      data: "data:text/plain;base64,ZXhhbXBsZQ==",
+    })
+    expect(
+      screen.getByRole("link", { name: "example.txt" }).getAttribute("download")
+    ).toBe("example.txt")
   })
 })

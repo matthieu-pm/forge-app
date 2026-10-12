@@ -11,25 +11,24 @@ import {
 } from "@hugeicons/core-free-icons"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TriageDraft, TriageIssue } from "@/lib/triage-issues"
-import { triagePriorities, useTriageIssues } from "@/lib/triage-issues"
+import {
+  triageDraftKey,
+  triageDraftSchema,
+  triagePriorities,
+  useTriageIssues,
+} from "@/lib/triage-issues"
 import { useTeamTriage } from "@/lib/team-triage"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { TriageResponsibilityDialog } from "@/components/triage-responsibility-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
+import { TriageIssueComposer } from "@/components/triage-issue-composer"
 import { Switch } from "@/components/ui/switch"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@/components/ui/dialog"
 
 const selectClass = "h-8 rounded-lg border border-border bg-muted px-2 text-xs"
 const emptyDraft = (): TriageDraft => ({
@@ -125,9 +124,25 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
     })
   const selected = visible.find((issue) => issue.id === selectedId)
   function openEditor(issue?: TriageIssue) {
-    setDraft(issue ?? emptyDraft())
-    setEditingId(issue?.id)
     setSaveError(null)
+    if (issue) setDraft(issue)
+    else {
+      try {
+        const raw = localStorage.getItem(triageDraftKey(team.id))
+        setDraft(
+          raw
+            ? triageDraftSchema.parse(JSON.parse(raw))
+            : editingId
+              ? emptyDraft()
+              : draft
+        )
+      } catch {
+        setSaveError(
+          "Your saved draft could not be loaded. It has been preserved."
+        )
+      }
+    }
+    setEditingId(issue?.id)
     setEditor(true)
   }
   function toggleSnooze(issue: TriageIssue) {
@@ -407,6 +422,43 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
             <p className="mt-5 text-sm whitespace-pre-wrap text-muted-foreground">
               {selected.description || "No description"}
             </p>
+            {(selected.project || selected.labels || selected.dueDate) && (
+              <dl className="mt-5 flex flex-wrap gap-5 text-xs text-muted-foreground">
+                {selected.project && (
+                  <div>
+                    <dt>Project</dt>
+                    <dd className="mt-1 text-foreground">{selected.project}</dd>
+                  </div>
+                )}
+                {selected.labels && (
+                  <div>
+                    <dt>Labels</dt>
+                    <dd className="mt-1 text-foreground">{selected.labels}</dd>
+                  </div>
+                )}
+                {selected.dueDate && (
+                  <div>
+                    <dt>Due date</dt>
+                    <dd className="mt-1 text-foreground">{selected.dueDate}</dd>
+                  </div>
+                )}
+              </dl>
+            )}
+            {!!selected.attachments?.length && (
+              <ul className="mt-5 space-y-2">
+                {selected.attachments.map((file, index) => (
+                  <li key={`${file.name}-${index}`}>
+                    <a
+                      className="text-xs underline underline-offset-4"
+                      href={file.data}
+                      download={file.name}
+                    >
+                      {file.name}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <span className="text-xs text-muted-foreground">
                 {selected.priority}
@@ -459,90 +511,29 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
         open={responsibility}
         onOpenChange={setResponsibility}
       />
-      <Dialog open={editor} onOpenChange={setEditor}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogTitle>
-            {editingId ? "Edit triage issue" : "Create triage issue"}
-          </DialogTitle>
-          <DialogDescription>{team.name} · Triage</DialogDescription>
-          <form
-            className="space-y-4"
-            onSubmit={(event) => {
-              event.preventDefault()
-              try {
-                const issue = save(draft, editingId)
-                setSelectedId(issue.id)
-                setEditor(false)
-                setSaveError(null)
-              } catch {
-                setSaveError(
-                  "The issue could not be saved. Your draft is still here. Please try again."
-                )
-              }
-            }}
-          >
-            <Input
-              required
-              maxLength={240}
-              autoFocus
-              aria-label="Issue title"
-              placeholder="Issue title"
-              value={draft.title}
-              onChange={(event) =>
-                setDraft({ ...draft, title: event.target.value })
-              }
-            />
-            <Textarea
-              maxLength={10000}
-              aria-label="Description"
-              placeholder="Add a description…"
-              value={draft.description}
-              onChange={(event) =>
-                setDraft({ ...draft, description: event.target.value })
-              }
-            />
-            <div className="flex flex-wrap gap-4">
-              <label className="flex flex-col gap-2 text-xs">
-                Priority
-                <select
-                  className={selectClass}
-                  value={draft.priority}
-                  onChange={(event) =>
-                    setDraft({
-                      ...draft,
-                      priority: event.target.value as TriageDraft["priority"],
-                    })
-                  }
-                >
-                  {triagePriorities.map((value) => (
-                    <option key={value}>{value}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex flex-col gap-2 text-xs">
-                Due date
-                <Input
-                  type="date"
-                  value={draft.dueDate}
-                  onChange={(event) =>
-                    setDraft({ ...draft, dueDate: event.target.value })
-                  }
-                />
-              </label>
-            </div>
-            {saveError && (
-              <p role="alert" className="text-xs text-destructive">
-                {saveError}
-              </p>
-            )}
-            <div className="flex justify-end">
-              <Button type="submit" disabled={!draft.title.trim()}>
-                {editingId ? "Save issue" : "Create issue"}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <TriageIssueComposer
+        team={team}
+        open={editor}
+        onOpenChange={setEditor}
+        draft={draft}
+        onDraftChange={setDraft}
+        editing={!!editingId}
+        error={saveError}
+        onError={setSaveError}
+        onSave={() => {
+          try {
+            const issue = save(draft, editingId)
+            setSelectedId(issue.id)
+            setSaveError(null)
+            return true
+          } catch {
+            setSaveError(
+              "The issue could not be saved. Your draft is still here. Please try again."
+            )
+            return false
+          }
+        }}
+      />
     </main>
   )
 }
