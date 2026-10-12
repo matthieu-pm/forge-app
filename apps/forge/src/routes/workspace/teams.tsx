@@ -4,12 +4,13 @@ import * as React from "react"
 import {
   Add01Icon,
   Archive01Icon,
+  Cancel01Icon,
   Copy01Icon,
+  CubeIcon,
   FavouriteIcon,
-  FilterHorizontalIcon,
-  Folder01Icon,
   MoreHorizontalIcon,
   NotificationSquareIcon,
+  Search01Icon,
   Settings02Icon,
   SlackIcon,
   Sorting01Icon,
@@ -21,6 +22,10 @@ import { Link, createFileRoute, useRouter } from "@tanstack/react-router"
 import { toast } from "sonner"
 
 import type { TeamDirectoryEntry } from "@/lib/team-contract"
+import type {
+  TeamOrdering,
+  TeamProperty,
+} from "@/components/team-directory-controls"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import {
   Avatar,
@@ -34,9 +39,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
@@ -55,17 +61,21 @@ import {
 } from "@/components/ui/tooltip"
 import { protectedRouteBeforeLoad } from "@/lib/auth-state"
 import { notifyTeamDirectoryChanged } from "@/lib/team-events"
-import { leaveTeam, loadTeamDirectory } from "@/lib/team-state"
+import { joinTeam, leaveTeam, loadTeamDirectory } from "@/lib/team-state"
+
+import {
+  TeamDirectoryDisplay,
+  TeamDirectoryFilters,
+  defaultTeamProperties,
+  emptyTeamFilters,
+  matchesTeamFilters,
+} from "@/components/team-directory-controls"
 
 export const Route = createFileRoute("/workspace/teams")({
   beforeLoad: protectedRouteBeforeLoad,
   loader: () => loadTeamDirectory({ data: "active" }),
   component: TeamsPage,
 })
-
-type MembershipFilter = "all" | "joined"
-type SortOrder = "name" | "members"
-type TableDensity = "compact" | "comfortable"
 
 function memberInitials(name: string) {
   return (
@@ -91,37 +101,63 @@ export function WorkspaceTeams({
   directory: Awaited<ReturnType<typeof loadTeamDirectory>>
 }) {
   const router = useRouter()
-  const [membershipFilter, setMembershipFilter] =
-    React.useState<MembershipFilter>("all")
-  const [sortOrder, setSortOrder] = React.useState<SortOrder>("name")
-  const [density, setDensity] = React.useState<TableDensity>("compact")
-  const [favoriteTeamIds, setFavoriteTeamIds] = React.useState<Set<string>>(
-    () => new Set()
+  const [filters, setFilters] = React.useState(emptyTeamFilters)
+  const [properties, setProperties] = React.useState<Array<TeamProperty>>(
+    defaultTeamProperties
   )
-  const [subscribedTeamIds, setSubscribedTeamIds] = React.useState<Set<string>>(
+  const [query, setQuery] = React.useState("")
+  const [descending, setDescending] = React.useState(false)
+  const [sortOrder, setSortOrder] = React.useState<TeamOrdering>("name")
+  const [favoriteTeamIds, setFavoriteTeamIds] = React.useState<Set<string>>(
     () => new Set()
   )
   const [pendingTeamId, setPendingTeamId] = React.useState<string | null>(null)
 
   const visibleTeams = React.useMemo(() => {
-    const filtered =
-      membershipFilter === "joined"
-        ? directory.items.filter((team) => team.isMember)
-        : directory.items
+    const search = query.trim().toLocaleLowerCase()
+    const filtered = directory.items.filter(
+      (team) =>
+        matchesTeamFilters(team, filters) &&
+        (!search ||
+          `${team.name} ${team.identifier} ${team.description}`
+            .toLocaleLowerCase()
+            .includes(search))
+    )
 
     return [...filtered].sort((left, right) => {
-      if (sortOrder === "members") {
-        return (
-          right.memberCount - left.memberCount ||
-          left.name.localeCompare(right.name)
-        )
-      }
-
-      return left.name.localeCompare(right.name, undefined, {
-        sensitivity: "base",
-      })
+      const comparison =
+        sortOrder === "members"
+          ? left.memberCount - right.memberCount
+          : sortOrder === "created"
+            ? Date.parse(left.createdAt) - Date.parse(right.createdAt)
+            : left.name.localeCompare(right.name, undefined, {
+                sensitivity: "base",
+              })
+      return (
+        (descending ? -1 : 1) *
+        (comparison || left.name.localeCompare(right.name))
+      )
     })
-  }, [directory.items, membershipFilter, sortOrder])
+  }, [directory.items, filters, sortOrder, query, descending])
+
+  async function handleJoinTeam(team: TeamDirectoryEntry) {
+    if (pendingTeamId) return
+    setPendingTeamId(team.id)
+    try {
+      const result = await joinTeam({ data: { slug: team.slug } })
+      if (!result.ok) {
+        toast.error(result.message)
+        return
+      }
+      toast.success(`You joined ${result.team.name}.`)
+      notifyTeamDirectoryChanged()
+      await router.invalidate()
+    } catch {
+      toast.error("You could not join the team. Try again.")
+    } finally {
+      setPendingTeamId(null)
+    }
+  }
 
   function toggleSetValue(
     setValue: React.Dispatch<React.SetStateAction<Set<string>>>,
@@ -171,7 +207,7 @@ export function WorkspaceTeams({
   return (
     <TooltipProvider delay={350}>
       <main className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
-        <header className="flex h-12 shrink-0 items-center justify-between border-b border-border/55 px-4">
+        <header className="flex h-11 shrink-0 items-center justify-between border-b border-border/55 px-4">
           <div className="flex min-w-0 items-center gap-1">
             <h1 className="truncate text-sm font-medium text-foreground">
               Teams
@@ -199,96 +235,66 @@ export function WorkspaceTeams({
           {directory.canCreateTeam ? (
             <Button
               variant="ghost"
-              size="icon-xs"
+              size="sm"
               nativeButton={false}
               aria-label="Create team"
               render={<Link to="/settings/teams/new" />}
               className="rounded-md text-muted-foreground"
             >
               <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
+              New team
             </Button>
           ) : null}
         </header>
 
         <section
-          className="min-h-0 flex-1 overflow-y-auto py-3"
+          className="min-h-0 flex-1 overflow-y-auto"
           aria-labelledby="team-directory-title"
         >
-          <div className="mb-3 flex items-center justify-between gap-4 px-4">
-            <p
-              id="team-directory-title"
-              className="text-xs font-medium text-muted-foreground"
-            >
-              {visibleTeams.length}{" "}
-              {visibleTeams.length === 1 ? "team" : "teams"}
-            </p>
-
-            <div className="flex items-center gap-1">
-              <DropdownMenu>
+          <div className="flex min-h-11 shrink-0 flex-wrap items-center gap-1 px-4 py-1.5">
+            <div className="flex min-w-0 flex-1 items-center gap-2 text-muted-foreground">
+              <HugeiconsIcon
+                icon={Search01Icon}
+                className="size-3.5 shrink-0"
+                strokeWidth={1.7}
+              />
+              <input
+                aria-label="Find teams"
+                placeholder="Find teams…"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                className="h-8 w-full max-w-sm min-w-0 rounded-sm bg-transparent text-[13px] text-foreground outline-none placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-ring"
+              />
+              {query && (
                 <Button
-                  type="button"
                   variant="ghost"
                   size="icon-xs"
-                  aria-label="Filter teams"
-                  render={<DropdownMenuTrigger />}
-                  className="rounded-full border border-border/60 text-muted-foreground shadow-xs"
+                  aria-label="Clear search"
+                  onClick={() => setQuery("")}
                 >
-                  <HugeiconsIcon icon={FilterHorizontalIcon} strokeWidth={2} />
+                  <HugeiconsIcon icon={Cancel01Icon} />
                 </Button>
-                <DropdownMenuContent align="end" className="min-w-44">
-                  <DropdownMenuRadioGroup
-                    value={membershipFilter}
-                    onValueChange={(value) =>
-                      setMembershipFilter(value as MembershipFilter)
-                    }
-                  >
-                    <DropdownMenuRadioItem value="all">
-                      All teams
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="joined">
-                      Joined teams
-                    </DropdownMenuRadioItem>
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              )}
+              <p id="team-directory-title" role="status" className="sr-only">
+                {visibleTeams.length}{" "}
+                {visibleTeams.length === 1 ? "team" : "teams"}
+              </p>
+            </div>
 
-              <DropdownMenu>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  aria-label="Team list display options"
-                  render={<DropdownMenuTrigger />}
-                  className="rounded-full border border-border/60 text-muted-foreground shadow-xs"
-                >
-                  <HugeiconsIcon icon={Sorting01Icon} strokeWidth={2} />
-                </Button>
-                <DropdownMenuContent align="end" className="min-w-48">
-                  <DropdownMenuRadioGroup
-                    value={sortOrder}
-                    onValueChange={(value) => setSortOrder(value as SortOrder)}
-                  >
-                    <DropdownMenuRadioItem value="name">
-                      Order by name
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="members">
-                      Order by members
-                    </DropdownMenuRadioItem>
-                  </DropdownMenuRadioGroup>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuRadioGroup
-                    value={density}
-                    onValueChange={(value) => setDensity(value as TableDensity)}
-                  >
-                    <DropdownMenuRadioItem value="compact">
-                      Compact rows
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="comfortable">
-                      Comfortable rows
-                    </DropdownMenuRadioItem>
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
+            <div className="contents">
+              <TeamDirectoryFilters
+                teams={directory.items}
+                value={filters}
+                onChange={setFilters}
+              />
+              <TeamDirectoryDisplay
+                ordering={sortOrder}
+                descending={descending}
+                properties={properties}
+                onOrdering={setSortOrder}
+                onDirection={() => setDescending(!descending)}
+                onProperties={setProperties}
+              />
             </div>
           </div>
 
@@ -296,19 +302,68 @@ export function WorkspaceTeams({
             <div className="w-full overflow-hidden">
               <Table className="table-fixed">
                 <TableHeader>
-                  <TableRow className="border-border/45 bg-muted/20 hover:bg-muted/20">
-                    <TableHead className="h-8 w-auto px-4 text-xs font-medium text-muted-foreground">
-                      Name
+                  <TableRow className="border-border/45 hover:bg-transparent">
+                    <TableHead
+                      aria-sort={
+                        sortOrder === "name"
+                          ? descending
+                            ? "descending"
+                            : "ascending"
+                          : "none"
+                      }
+                      className="h-8 w-auto px-4 text-xs font-normal text-muted-foreground xl:w-[21%]"
+                    >
+                      <button
+                        type="button"
+                        aria-label="Order by Name"
+                        onClick={() => {
+                          setSortOrder("name")
+                          setDescending(
+                            sortOrder === "name" ? !descending : false
+                          )
+                        }}
+                        className="group inline-flex items-center gap-1 rounded-sm focus-visible:outline-2 focus-visible:outline-ring"
+                      >
+                        Name
+                        <HugeiconsIcon
+                          icon={Sorting01Icon}
+                          className="size-3 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"
+                        />
+                      </button>
                     </TableHead>
-                    <TableHead className="hidden h-8 w-28 px-2 text-xs font-medium text-muted-foreground sm:table-cell">
-                      Membership
+                    <TableHead className="hidden h-8 px-2 text-xs font-normal text-muted-foreground xl:table-cell">
+                      Description
                     </TableHead>
-                    <TableHead className="hidden h-8 w-32 px-2 text-xs font-medium text-muted-foreground md:table-cell">
-                      Members
-                    </TableHead>
-                    <TableHead className="hidden h-8 w-32 px-2 text-xs font-medium text-muted-foreground lg:table-cell">
-                      Active projects
-                    </TableHead>
+                    {properties.includes("Membership") && (
+                      <TableHead className="hidden h-8 w-24 px-2 text-xs font-normal text-muted-foreground sm:table-cell">
+                        Membership
+                      </TableHead>
+                    )}
+                    {properties.includes("Members") && (
+                      <TableHead className="hidden h-8 w-32 px-2 text-xs font-normal text-muted-foreground md:table-cell">
+                        Members
+                      </TableHead>
+                    )}
+                    {properties.includes("Cycle") && (
+                      <TableHead className="hidden h-8 w-20 px-2 text-xs font-normal text-muted-foreground lg:table-cell">
+                        Cycle
+                      </TableHead>
+                    )}
+                    {properties.includes("Projects") && (
+                      <TableHead className="hidden h-8 w-32 px-2 text-xs font-normal text-muted-foreground lg:table-cell">
+                        Active projects
+                      </TableHead>
+                    )}
+                    {(["Owners", "Created", "Updated"] as const)
+                      .filter((property) => properties.includes(property))
+                      .map((property) => (
+                        <TableHead
+                          key={property}
+                          className="hidden h-8 w-28 px-2 text-xs font-normal text-muted-foreground md:table-cell"
+                        >
+                          {property}
+                        </TableHead>
+                      ))}
                     <TableHead className="h-8 w-10 px-1">
                       <span className="sr-only">Actions</span>
                     </TableHead>
@@ -318,18 +373,12 @@ export function WorkspaceTeams({
                 <TableBody>
                   {visibleTeams.map((team) => {
                     const isFavorite = favoriteTeamIds.has(team.id)
-                    const isSubscribed = subscribedTeamIds.has(team.id)
-                    const rowContentHeight =
-                      density === "compact" ? "h-10" : "h-12"
+                    const rowContentHeight = "h-12"
 
                     return (
                       <TableRow
                         key={team.id}
-                        className={
-                          density === "compact"
-                            ? "group/team-row h-10 border-border/35 hover:bg-transparent"
-                            : "group/team-row h-12 border-border/35 hover:bg-transparent"
-                        }
+                        className="group/team-row h-12 border-0 hover:bg-transparent"
                       >
                         <TableCell className="rounded-l-lg border-l-4 border-transparent bg-clip-padding py-0 pr-4 pl-3 transition-colors group-hover/team-row:bg-muted/50">
                           <Link
@@ -341,14 +390,16 @@ export function WorkspaceTeams({
                             <TeamSidebarIcon
                               icon={team.icon}
                               name={team.name}
-                              className="size-4.5"
+                              className="size-4"
                             />
-                            <span className="min-w-0 truncate text-xs font-medium text-foreground">
+                            <span className="min-w-0 truncate text-[13px] font-normal text-foreground">
                               {team.name}
                             </span>
-                            <span className="shrink-0 text-[11px] text-muted-foreground/75">
-                              {team.identifier}
-                            </span>
+                            {properties.includes("ID") && (
+                              <span className="shrink-0 text-[13px] text-muted-foreground/60">
+                                {team.identifier}
+                              </span>
+                            )}
                             {isFavorite ? (
                               <HugeiconsIcon
                                 icon={FavouriteIcon}
@@ -360,107 +411,178 @@ export function WorkspaceTeams({
                           </Link>
                         </TableCell>
 
-                        <TableCell className="hidden px-2 py-0 transition-colors group-hover/team-row:bg-muted/50 sm:table-cell">
+                        <TableCell className="hidden px-2 py-0 transition-colors group-hover/team-row:bg-muted/50 xl:table-cell">
                           <div
-                            className={`flex items-center ${rowContentHeight}`}
+                            title={team.description || undefined}
+                            className={`flex min-w-0 items-center text-[13px] text-muted-foreground ${rowContentHeight}`}
                           >
-                            {team.isMember ? (
-                              <span className="inline-flex h-5 items-center gap-1 rounded-md border border-border/50 bg-muted/35 px-1.5 text-[11px] text-muted-foreground">
-                                <HugeiconsIcon
-                                  icon={Tick02Icon}
-                                  strokeWidth={2}
-                                  className="size-3"
-                                />
-                                Joined
-                              </span>
-                            ) : (
-                              <span className="text-[11px] text-muted-foreground/60">
-                                —
-                              </span>
-                            )}
+                            <span className="truncate">{team.description}</span>
                           </div>
                         </TableCell>
 
-                        <TableCell className="hidden px-2 py-0 transition-colors group-hover/team-row:bg-muted/50 md:table-cell">
-                          <div
-                            className={`flex items-center ${rowContentHeight}`}
-                          >
-                            {team.memberPreviews.length ? (
-                              <a
-                                href={`/settings/teams/${team.slug}/members`}
-                                aria-label={`Manage ${team.name} members`}
-                                className="inline-flex rounded-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
-                              >
-                                <AvatarGroup className="-space-x-1.5">
-                                  {team.memberPreviews.map((member) => (
-                                    <Tooltip key={member.id}>
-                                      <TooltipTrigger
-                                        render={
-                                          <span
-                                            className="relative rounded-full hover:z-10"
-                                            data-member-avatar={member.id}
-                                          />
-                                        }
-                                      >
-                                        <Avatar size="sm" className="size-6">
-                                          {member.image ? (
-                                            <AvatarImage
-                                              src={member.image}
-                                              alt=""
-                                            />
-                                          ) : null}
-                                          <AvatarFallback
-                                            aria-hidden="true"
-                                            className="text-[10px] font-medium"
-                                          >
-                                            {memberInitials(member.name)}
-                                          </AvatarFallback>
-                                        </Avatar>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        {member.name} ({member.username})
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  ))}
-                                  {team.memberCount >
-                                  team.memberPreviews.length ? (
-                                    <AvatarGroupCount className="size-6 text-[10px] font-medium">
-                                      +
-                                      {team.memberCount -
-                                        team.memberPreviews.length}
-                                    </AvatarGroupCount>
-                                  ) : null}
-                                </AvatarGroup>
-                              </a>
-                            ) : (
-                              <span
-                                className="text-[11px] text-muted-foreground/60"
-                                aria-label="No members"
-                              >
-                                —
-                              </span>
-                            )}
-                          </div>
-                        </TableCell>
-
-                        <TableCell className="hidden px-2 py-0 transition-colors group-hover/team-row:bg-muted/50 lg:table-cell">
-                          <div
-                            className={`flex items-center ${rowContentHeight}`}
-                          >
-                            <span
-                              className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground"
-                              aria-label="0 active projects"
+                        {properties.includes("Membership") && (
+                          <TableCell className="hidden px-2 py-0 transition-colors group-hover/team-row:bg-muted/50 sm:table-cell">
+                            <div
+                              className={`flex items-center ${rowContentHeight}`}
                             >
-                              <HugeiconsIcon
-                                icon={Folder01Icon}
-                                strokeWidth={2}
-                                className="size-3.5"
-                              />
-                              0
-                            </span>
-                          </div>
-                        </TableCell>
+                              {team.isMember ? (
+                                <span className="inline-flex h-5 items-center gap-1 rounded-sm border border-border/50 px-1 text-xs text-muted-foreground">
+                                  <HugeiconsIcon
+                                    icon={Tick02Icon}
+                                    strokeWidth={2}
+                                    className="size-3"
+                                  />
+                                  Joined
+                                </span>
+                              ) : (
+                                <span className="sr-only">Not joined</span>
+                              )}
+                            </div>
+                          </TableCell>
+                        )}
 
+                        {properties.includes("Members") && (
+                          <TableCell className="hidden px-2 py-0 transition-colors group-hover/team-row:bg-muted/50 md:table-cell">
+                            <div
+                              className={`flex items-center ${rowContentHeight}`}
+                            >
+                              {team.memberPreviews.length ? (
+                                <a
+                                  href={`/settings/teams/${team.slug}/members`}
+                                  aria-label={`Manage ${team.name} members`}
+                                  className="inline-flex rounded-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                                >
+                                  <AvatarGroup className="-space-x-1.5">
+                                    {team.memberPreviews.map((member) => (
+                                      <Tooltip key={member.id}>
+                                        <TooltipTrigger
+                                          render={
+                                            <span
+                                              className="relative rounded-full hover:z-10"
+                                              data-member-avatar={member.id}
+                                            />
+                                          }
+                                        >
+                                          <Avatar size="sm" className="size-5">
+                                            {member.image ? (
+                                              <AvatarImage
+                                                src={member.image}
+                                                alt=""
+                                              />
+                                            ) : null}
+                                            <AvatarFallback
+                                              aria-hidden="true"
+                                              className="text-[10px] font-medium"
+                                            >
+                                              {memberInitials(member.name)}
+                                            </AvatarFallback>
+                                          </Avatar>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          {member.name} ({member.username})
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    ))}
+                                    {team.memberCount >
+                                    team.memberPreviews.length ? (
+                                      <AvatarGroupCount className="size-5 text-[10px] font-medium">
+                                        +
+                                        {team.memberCount -
+                                          team.memberPreviews.length}
+                                      </AvatarGroupCount>
+                                    ) : null}
+                                  </AvatarGroup>
+                                </a>
+                              ) : (
+                                <span
+                                  className="text-[11px] text-muted-foreground/60"
+                                  aria-label="No members"
+                                >
+                                  —
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
+                        )}
+
+                        {properties.includes("Cycle") && (
+                          <TableCell className="hidden px-2 py-0 transition-colors group-hover/team-row:bg-muted/50 lg:table-cell">
+                            <div
+                              className={`flex items-center ${rowContentHeight}`}
+                            >
+                              <span className="sr-only">No active cycle</span>
+                            </div>
+                          </TableCell>
+                        )}
+
+                        {properties.includes("Projects") && (
+                          <TableCell className="hidden px-2 py-0 transition-colors group-hover/team-row:bg-muted/50 lg:table-cell">
+                            <div
+                              className={`flex items-center ${rowContentHeight}`}
+                            >
+                              <Link
+                                to="/teams/$teamSlug/projects"
+                                params={{ teamSlug: team.slug }}
+                                className="inline-flex items-center gap-1.5 rounded-sm text-xs text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring"
+                                aria-label={`Open ${team.name} active projects`}
+                                title="Active project counts are not available yet"
+                              >
+                                <HugeiconsIcon
+                                  icon={CubeIcon}
+                                  strokeWidth={2}
+                                  className="size-3.5"
+                                />
+                                <span aria-label="Count unavailable">—</span>
+                              </Link>
+                            </div>
+                          </TableCell>
+                        )}
+
+                        {(["Owners", "Created", "Updated"] as const)
+                          .filter((property) => properties.includes(property))
+                          .map((property) => (
+                            <TableCell
+                              key={property}
+                              className="hidden px-2 py-0 text-xs text-muted-foreground group-hover/team-row:bg-muted/50 md:table-cell"
+                            >
+                              {property === "Owners" ? (
+                                <span
+                                  className="block truncate"
+                                  title={team.owners
+                                    ?.map((owner) => owner.name)
+                                    .join(", ")}
+                                >
+                                  {team.owners
+                                    ?.map((owner) => owner.name)
+                                    .join(", ") || "—"}
+                                </span>
+                              ) : (
+                                <time
+                                  dateTime={
+                                    property === "Created"
+                                      ? team.createdAt
+                                      : team.updatedAt
+                                  }
+                                >
+                                  {(
+                                    property === "Created"
+                                      ? team.createdAt
+                                      : team.updatedAt
+                                  )
+                                    ? new Date(
+                                        (property === "Created"
+                                          ? team.createdAt
+                                          : team.updatedAt)!
+                                      ).toLocaleDateString(undefined, {
+                                        month: "short",
+                                        day: "numeric",
+                                        year: "numeric",
+                                      })
+                                    : "—"}
+                                </time>
+                              )}
+                            </TableCell>
+                          ))}
                         <TableCell className="rounded-r-lg border-r-4 border-transparent bg-clip-padding py-0 pr-0 pl-1 transition-colors group-hover/team-row:bg-muted/50">
                           <div
                             className={`flex items-center justify-center ${rowContentHeight}`}
@@ -482,8 +604,20 @@ export function WorkspaceTeams({
                               <DropdownMenuContent
                                 align="end"
                                 sideOffset={6}
-                                className="min-w-56"
+                                className="w-[248px] rounded-xl [&_[role=menuitem]]:min-h-8 [&_[role=menuitem]]:text-[13px]"
                               >
+                                {!team.isMember && (
+                                  <DropdownMenuItem
+                                    disabled={pendingTeamId === team.id}
+                                    onClick={() => void handleJoinTeam(team)}
+                                  >
+                                    <HugeiconsIcon
+                                      icon={Add01Icon}
+                                      strokeWidth={2}
+                                    />
+                                    Join team
+                                  </DropdownMenuItem>
+                                )}
                                 <DropdownMenuItem
                                   onClick={() => {
                                     toggleSetValue(setFavoriteTeamIds, team.id)
@@ -500,6 +634,7 @@ export function WorkspaceTeams({
                                   />
                                   {isFavorite ? "Remove favorite" : "Favorite"}
                                 </DropdownMenuItem>
+                                <DropdownMenuSeparator />
                                 {team.capabilities.canOpenSettings ? (
                                   <DropdownMenuItem
                                     render={
@@ -540,29 +675,25 @@ export function WorkspaceTeams({
                                   Open archive
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    toggleSetValue(
-                                      setSubscribedTeamIds,
-                                      team.id
-                                    )
-                                    toast.success(
-                                      isSubscribed
-                                        ? `Notifications muted for ${team.name}.`
-                                        : `Subscribed to ${team.name}.`
-                                    )
-                                  }}
-                                >
-                                  <HugeiconsIcon
-                                    icon={NotificationSquareIcon}
-                                    strokeWidth={2}
-                                  />
-                                  {isSubscribed ? "Unsubscribe" : "Subscribe"}
-                                </DropdownMenuItem>
+                                <DropdownMenuSub>
+                                  <DropdownMenuSubTrigger>
+                                    <HugeiconsIcon
+                                      icon={NotificationSquareIcon}
+                                      strokeWidth={2}
+                                    />
+                                    Subscribe
+                                  </DropdownMenuSubTrigger>
+                                  <DropdownMenuSubContent className="w-56 rounded-xl">
+                                    <p className="p-2 text-xs text-muted-foreground">
+                                      Team notification subscriptions are not
+                                      available yet.
+                                    </p>
+                                  </DropdownMenuSubContent>
+                                </DropdownMenuSub>
                                 <DropdownMenuItem
                                   onClick={() =>
                                     toast.info(
-                                      "Slack notifications can be configured from workspace applications."
+                                      "Slack notifications are not available yet."
                                     )
                                   }
                                 >
@@ -601,16 +732,22 @@ export function WorkspaceTeams({
           ) : (
             <div className="mx-4 flex min-h-52 flex-col items-center justify-center rounded-lg border border-dashed border-border/60 px-6 text-center">
               <h2 className="text-sm font-semibold text-foreground">
-                {membershipFilter === "joined"
-                  ? "No joined teams"
-                  : "No teams yet"}
+                {query.trim()
+                  ? "No teams found"
+                  : filters.rules.length > 0
+                    ? "No matching teams"
+                    : "No teams yet"}
               </h2>
               <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-                {membershipFilter === "joined"
-                  ? "Teams you join will appear here."
-                  : "Create a team to organize issues, projects, and views."}
+                {query.trim()
+                  ? "Try a different name, identifier, or description."
+                  : filters.rules.length > 0
+                    ? "Try changing or clearing your filters."
+                    : "Create a team to organize issues, projects, and views."}
               </p>
-              {directory.canCreateTeam && membershipFilter === "all" ? (
+              {directory.canCreateTeam &&
+              filters.rules.length === 0 &&
+              !query.trim() ? (
                 <Button
                   size="sm"
                   nativeButton={false}

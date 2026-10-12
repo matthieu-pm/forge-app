@@ -129,3 +129,17 @@ export const updateTeam = createServerFn({ method: "POST" })
 
     return updateTeamForRequest(getRequest(), data)
   })
+
+export const joinTeam = createServerFn({ method: "POST" })
+  .validator(teamMutationInputSchema)
+  .handler(async ({ data }) => {
+    const [{ getRequest }, { requireSessionActor }, application] =
+      await Promise.all([
+        import("@tanstack/react-start/server"),
+        import("@/adapters/auth/session-actor.server"),
+        import("@/application/teams/teams.server"),
+      ])
+    return application.joinTeam(await requireSessionActor(getRequest()), {
+      slug: data.slug,
+    })
+  })

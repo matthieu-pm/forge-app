@@ -152,6 +152,9 @@ export const teamDirectoryEntrySchema = teamSummarySchema.extend({
   isMember: z.boolean(),
   memberCount: z.number().int().nonnegative(),
   memberPreviews: z.array(teamDirectoryMemberSchema).max(5),
+  directoryMembers: z.array(teamDirectoryMemberSchema).optional(),
+  owners: z.array(teamDirectoryMemberSchema).optional(),
+  updatedAt: z.iso.datetime().optional(),
   issueCount: z.number().int().nonnegative().nullable(),
   recoverableUntil: z.iso.datetime().nullable(),
   capabilities: z

@@ -265,29 +265,35 @@ export async function getTeamDirectory(
         ? new Date(deletedAt.getTime() + TEAM_RECOVERY_WINDOW_MS)
         : null
 
+      const memberDetails = (member: (typeof team.members)[number]) => ({
+        id: member.user.id,
+        name: member.user.name,
+        username:
+          member.user.username ??
+          member.user.email
+            .split("@", 1)[0]
+            .toLocaleLowerCase()
+            .replace(/[^a-z0-9_-]/g, "")
+            .slice(0, 32),
+        image: member.user.image,
+      })
       return {
         ...toTeamSummary(team),
         lifecycle,
         isMember: Boolean(currentMembership),
         memberCount: team.members.length,
+        directoryMembers: team.members.map(memberDetails),
+        owners: team.members
+          .filter((member) => member.role === "lead")
+          .map(memberDetails),
+        updatedAt: team.updatedAt.toISOString(),
         memberPreviews: [...team.members]
           .sort(
             (left, right) =>
               left.createdAt.getTime() - right.createdAt.getTime()
           )
           .slice(0, 5)
-          .map((member) => ({
-            id: member.user.id,
-            name: member.user.name,
-            username:
-              member.user.username ??
-              member.user.email
-                .split("@", 1)[0]
-                .toLocaleLowerCase()
-                .replace(/[^a-z0-9_-]/g, "")
-                .slice(0, 32),
-            image: member.user.image,
-          })),
+          .map(memberDetails),
         issueCount: null,
         recoverableUntil: recoverableUntil?.toISOString() ?? null,
         capabilities: {
@@ -402,6 +408,47 @@ export async function restoreTeam(
 
     throw error
   }
+}
+
+export async function joinTeam(
+  actor: Actor,
+  selector: TeamSelector
+): Promise<
+  | { ok: true; team: { name: string; slug: string } }
+  | { ok: false; message: string }
+> {
+  requireTeamRead(actor)
+  if (!hasScope(actor, "teams:write"))
+    return {
+      ok: false,
+      message: "The credential cannot change team memberships.",
+    }
+  const team = await db.query.teams.findFirst({
+    where: and(
+      eq(teams.workspaceId, actor.workspaceId),
+      selectorCondition(selector),
+      isNull(teams.deletedAt)
+    ),
+    with: { members: true },
+  })
+  if (!team) return { ok: false, message: "The team no longer exists." }
+  if (team.members.some((member) => member.userId === actor.userId))
+    return { ok: true, team: { name: team.name, slug: team.slug } }
+  if (team.visibility === "private" && !canManageTeams(actor))
+    return {
+      ok: false,
+      message: "Ask a workspace admin to add you to this private team.",
+    }
+  await db
+    .insert(teamMembers)
+    .values({
+      workspaceId: actor.workspaceId,
+      teamId: team.id,
+      userId: actor.userId,
+      role: "member",
+    })
+    .onConflictDoNothing({ target: [teamMembers.teamId, teamMembers.userId] })
+  return { ok: true, team: { name: team.name, slug: team.slug } }
 }
 
 export async function leaveTeam(

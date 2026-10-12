@@ -1,11 +1,19 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { WorkspaceTeams } from "./teams"
 import type { TeamDirectory, TeamDirectoryEntry } from "@/lib/team-contract"
+import { matchesTeamFilters } from "@/components/team-directory-controls"
 
 const mocks = vi.hoisted(() => ({
   leaveTeam: vi.fn(),
+  joinTeam: vi.fn(),
   loadTeamDirectory: vi.fn(),
 }))
 
@@ -111,13 +119,6 @@ describe("WorkspaceTeams", () => {
     const atriumLink = screen.getByRole("link", {
       name: "Open Atrium projects",
     })
-    const atriumRow = atriumLink.closest("tr")
-    const atriumCells = atriumRow?.querySelectorAll("td")
-    const firstCell = atriumCells?.item(0)
-    const lastCell = atriumCells
-      ? atriumCells.item(atriumCells.length - 1)
-      : undefined
-
     expect(atriumLink.getAttribute("href")).toBe("/teams/atrium/projects")
     expect(
       screen
@@ -130,32 +131,74 @@ describe("WorkspaceTeams", () => {
         .querySelectorAll("[data-member-avatar]")
     ).toHaveLength(5)
     expect(screen.getByText("+2")).not.toBeNull()
-    expect(atriumRow?.className).toContain("h-10")
-    for (const cellIndex of [1, 2, 3, 4]) {
-      expect(
-        atriumCells?.item(cellIndex).firstElementChild?.className
-      ).toContain("h-10")
-      expect(
-        atriumCells?.item(cellIndex).firstElementChild?.className
-      ).toContain("items-center")
-    }
-    expect(firstCell?.className).toContain("rounded-l-lg")
-    expect(firstCell?.className).toContain("border-l-4")
-    expect(firstCell?.className).toContain("pl-3")
-    expect(lastCell?.className).toContain("rounded-r-lg")
-    expect(lastCell?.className).toContain("border-r-4")
-    expect(lastCell?.className).toContain("pr-0")
+    expect(
+      screen.getByRole("columnheader", { name: "Description" })
+    ).not.toBeNull()
+    expect(screen.getByRole("columnheader", { name: "Cycle" })).not.toBeNull()
+    expect(
+      screen
+        .getByRole("link", { name: "Open Atrium active projects" })
+        .getAttribute("href")
+    ).toBe("/teams/atrium/projects")
   })
 
-  it("filters the list to teams the current user joined", () => {
+  it("filters the list to teams the current user joined", async () => {
     render(<WorkspaceTeams directory={directory} />)
 
     fireEvent.click(screen.getByRole("button", { name: "Filter teams" }))
-    fireEvent.click(screen.getByRole("menuitemradio", { name: "Joined teams" }))
+    fireEvent.click(screen.getByRole("menuitem", { name: "Members" }))
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Current user" })
+    )
 
     expect(screen.getByText("1 team")).not.toBeNull()
     expect(screen.getByText("Atrium")).not.toBeNull()
     expect(screen.queryByText("Forge")).toBeNull()
+  })
+
+  it("searches by identifier and description, combines membership, and clears search", async () => {
+    render(
+      <WorkspaceTeams
+        directory={{
+          ...directory,
+          items: directory.items.map((item) => ({
+            ...item,
+            description: item.name === "Forge" ? "Product engineering" : "",
+          })),
+        }}
+      />
+    )
+    const input = screen.getByRole("textbox", { name: "Find teams" })
+    fireEvent.change(input, { target: { value: "  atm  " } })
+    expect(screen.getByText("Atrium")).not.toBeNull()
+    expect(screen.queryByText("Forge")).toBeNull()
+    fireEvent.change(input, { target: { value: "engineering" } })
+    expect(screen.getByText("Forge")).not.toBeNull()
+    fireEvent.click(screen.getByRole("button", { name: "Filter teams" }))
+    fireEvent.click(screen.getByRole("menuitem", { name: "Members" }))
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Current user" })
+    )
+    expect(screen.getByText("No teams found")).not.toBeNull()
+    fireEvent.click(screen.getByRole("button", { name: "Clear search" }))
+    expect(screen.getByText("Atrium")).not.toBeNull()
+  })
+
+  it("reverses name ordering without mutating the directory", () => {
+    render(<WorkspaceTeams directory={directory} />)
+    const nameLinks = () =>
+      screen
+        .getAllByRole("link", { name: /^Open (Atrium|Forge) projects$/ })
+        .map((link) => link.textContent)
+    expect(nameLinks()[0]).toContain("Atrium")
+    fireEvent.click(screen.getByRole("button", { name: "Order by Name" }))
+    expect(nameLinks()[0]).toContain("Forge")
+    expect(
+      screen
+        .getByRole("columnheader", { name: "Name" })
+        .getAttribute("aria-sort")
+    ).toBe("descending")
+    expect(directory.items[0].name).toBe("Forge")
   })
 
   it("shows a member identity tooltip when an avatar is hovered", async () => {
@@ -193,5 +236,119 @@ describe("WorkspaceTeams", () => {
       })
     ).not.toBeNull()
     expect(screen.getByRole("menuitem", { name: "Leave team…" })).not.toBeNull()
+  })
+  it("changes columns and reverses member ordering from display options", () => {
+    render(<WorkspaceTeams directory={directory} />)
+    fireEvent.click(
+      screen.getByRole("button", { name: "Team list display options" })
+    )
+    for (const name of ["ID", "Membership", "Projects"])
+      fireEvent.click(screen.getByRole("button", { name }))
+    expect(screen.queryByText("ATM")).toBeNull()
+    expect(
+      screen.queryByRole("columnheader", { name: "Membership" })
+    ).toBeNull()
+    expect(
+      screen.queryByRole("link", { name: "Open Atrium active projects" })
+    ).toBeNull()
+    fireEvent.click(screen.getByRole("button", { name: "Owners" }))
+    expect(screen.getByRole("columnheader", { name: "Owners" })).not.toBeNull()
+    fireEvent.change(screen.getByRole("combobox", { name: "View ordering" }), {
+      target: { value: "members" },
+    })
+    const rows = () =>
+      screen.getAllByRole("link", { name: /^Open (Atrium|Forge) projects$/ })
+    expect(rows()[0].textContent).toContain("Forge")
+    fireEvent.click(screen.getByRole("button", { name: "Direction" }))
+    expect(rows()[0].textContent).toContain("Atrium")
+  })
+
+  it("joins a team through its row menu", async () => {
+    mocks.joinTeam.mockResolvedValue({
+      ok: true,
+      team: { name: "Forge", slug: "forge" },
+    })
+    render(<WorkspaceTeams directory={directory} />)
+    fireEvent.click(screen.getByRole("button", { name: "Open Forge menu" }))
+    fireEvent.click(screen.getByRole("menuitem", { name: "Join team" }))
+    await waitFor(() =>
+      expect(mocks.joinTeam).toHaveBeenCalledWith({ data: { slug: "forge" } })
+    )
+  })
+  it("applies advanced filters only on confirmation and clears them from the toolbar", async () => {
+    render(<WorkspaceTeams directory={directory} />)
+    fireEvent.click(screen.getByRole("button", { name: "Filter teams" }))
+    fireEvent.click(screen.getByRole("menuitem", { name: "Advanced filter" }))
+    const value = await screen.findByRole("textbox", { name: "Filter value" })
+    fireEvent.change(value, { target: { value: "forge" } })
+    fireEvent.click(screen.getByRole("button", { name: "Apply filters" }))
+    expect(
+      screen.queryByRole("link", { name: "Open Atrium projects" })
+    ).toBeNull()
+    expect(
+      screen.getByRole("link", { name: "Open Forge projects" })
+    ).not.toBeNull()
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }))
+    expect(
+      screen.getByRole("link", { name: "Open Atrium projects" })
+    ).not.toBeNull()
+  })
+
+  it("matches full member lists, owners, visibility and creation dates with all/any logic", () => {
+    const entry = {
+      ...directory.items[0],
+      visibility: "private" as const,
+      directoryMembers: [
+        ...directory.items[0].memberPreviews,
+        { id: "hidden-member", name: "Zoe", username: "zoe", image: null },
+      ],
+      owners: [{ id: "lead", name: "Ada", username: "ada", image: null }],
+    }
+    const rules = [
+      {
+        id: "a",
+        field: "members" as const,
+        operator: "is" as const,
+        value: "hidden-member",
+      },
+      {
+        id: "b",
+        field: "owners" as const,
+        operator: "is" as const,
+        value: "lead",
+      },
+      {
+        id: "c",
+        field: "private" as const,
+        operator: "is" as const,
+        value: "true",
+      },
+      {
+        id: "d",
+        field: "created" as const,
+        operator: "before" as const,
+        value: "2026-08-01",
+      },
+    ]
+    expect(matchesTeamFilters(entry, { match: "all", rules })).toBe(true)
+    const wrongMember = { ...rules[0], value: "missing" }
+    expect(
+      matchesTeamFilters(entry, {
+        match: "all",
+        rules: [...rules, wrongMember],
+      })
+    ).toBe(false)
+    expect(
+      matchesTeamFilters(entry, {
+        match: "any",
+        rules: [wrongMember, rules[1]],
+      })
+    ).toBe(true)
+    expect(
+      matchesTeamFilters(entry, {
+        match: "all",
+        rules: [{ ...wrongMember, operator: "isNot" }],
+      })
+    ).toBe(true)
   })
 })

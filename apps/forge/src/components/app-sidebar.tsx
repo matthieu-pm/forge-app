@@ -391,7 +391,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 {item.title}
               </SidebarMenuButton>
               {item.items?.length ? (
-                <div className="ml-3 border-l border-border/60 pl-1">
+                <div className="relative pl-[17px] before:absolute before:inset-y-0 before:left-4.5 before:border-l before:border-border/60">
                   {renderNavItems(item.items, depth + 1)}
                 </div>
               ) : null}

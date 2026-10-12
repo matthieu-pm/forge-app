@@ -7,6 +7,7 @@ import {
   createTeam,
   getTeam,
   getTeamDirectory,
+  joinTeam,
   leaveTeam,
   listTeams,
   restoreTeam,
@@ -31,7 +32,10 @@ vi.mock("@/db", () => ({
         insert: () => ({
           values: (values: unknown) => {
             mocks.insertValues(values)
-            return { returning: mocks.returning }
+            return {
+              returning: mocks.returning,
+              onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
+            }
           },
         }),
       })
@@ -39,7 +43,10 @@ vi.mock("@/db", () => ({
     insert: vi.fn(() => ({
       values: (values: unknown) => {
         mocks.insertValues(values)
-        return { returning: mocks.returning }
+        return {
+          returning: mocks.returning,
+          onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
+        }
       },
     })),
     select: vi.fn(() => ({
@@ -290,6 +297,66 @@ describe("Teams application module", () => {
         },
       ],
     })
+  })
+
+  it("joins a public team in the actor workspace and makes repeated joins idempotent", async () => {
+    mocks.directoryFindFirst.mockResolvedValue({
+      ...persistedTeam(),
+      members: [],
+    })
+    expect(
+      await joinTeam(
+        { ...owner, workspaceRole: "member" },
+        { slug: "engineering" }
+      )
+    ).toMatchObject({ ok: true })
+    expect(mocks.directoryFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.arrayContaining([
+          expect.objectContaining({ value: "workspace-1" }),
+        ]),
+      })
+    )
+    expect(mocks.insertValues).toHaveBeenCalledWith({
+      workspaceId: owner.workspaceId,
+      teamId: persistedTeam().id,
+      userId: owner.userId,
+      role: "member",
+    })
+    mocks.insertValues.mockClear()
+    mocks.directoryFindFirst.mockResolvedValue({
+      ...persistedTeam(),
+      members: [{ userId: owner.userId }],
+    })
+    expect(await joinTeam(owner, { slug: "engineering" })).toMatchObject({
+      ok: true,
+    })
+    expect(mocks.insertValues).not.toHaveBeenCalled()
+  })
+
+  it("rejects private-team joins for non-admins, missing teams, and read-only credentials", async () => {
+    mocks.directoryFindFirst.mockResolvedValue({
+      ...persistedTeam(),
+      visibility: "private",
+      members: [],
+    })
+    expect(
+      await joinTeam(
+        { ...owner, workspaceRole: "member" },
+        { slug: "engineering" }
+      )
+    ).toMatchObject({ ok: false })
+    mocks.directoryFindFirst.mockResolvedValue(undefined)
+    expect(await joinTeam(owner, { slug: "missing" })).toMatchObject({
+      ok: false,
+    })
+    expect(
+      await joinTeam(
+        { ...owner, scopes: ["teams:read"] },
+        { slug: "engineering" }
+      )
+    ).toMatchObject({ ok: false })
+    expect(mocks.insertValues).not.toHaveBeenCalled()
   })
 
   it("allows eligible members to leave and protects the last lead", async () => {
