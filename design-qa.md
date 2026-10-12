@@ -418,3 +418,25 @@ Evidence: `docs/audits/recurring-issues/desktop-empty.png`, `desktop-new.png`, `
 Validation: nine targeted suites / 41 tests passed, including calendar validity, team timezone defaults, permissions, foreign workspace/team/member rejection, stale-save/delete handling and timestamp precision. Production build and Workflow handler verification passed; scoped ESLint, TypeScript and diff whitespace checks passed. React review checked module-level components, lazy draft initialization, synchronous event capture, cleanup of keyboard listeners, duplicate-save prevention and disabled/read-only controls.
 
 Boundary: this is saved schedule configuration and UI. Forge issue routes still use placeholders; there is no issue instance scheduler or automatic issue creation yet. Desktop Electron displayed a blank surface, so authenticated rendered verification used the in-app browser. A pre-existing TanStack devtools runtime warning was observed, with no recurring-issue UI failure.
+
+## Team workflows and automations — 2026-10-12
+
+- Reference: the two supplied Linear screenshots, covering PR automations, branch-specific rules, parent/sub-issue/stale auto-close settings, automatic archiving, and issue ordering. Uses Forge's existing settings shell, 640 px content width, typography, theme tokens, Select, Switch, and Dialog controls. The status glyph is now shared with Issue statuses.
+- Route: `/settings/teams/$teamSlug/workflows`; connected to the Workflow card in the team overview and the app breadcrumb. The overview's current team slug is passed through. A router integration test clicks the overview link and renders the actual workflows component for a non-default team slug.
+- Browser evidence: `.forge/workflows-qa/desktop.png`, `desktop-lower.png`, `mobile.png`, `mobile-menu.png`, `mobile-lower.png`, and `mobile-light.png`. Isolated component preview at 1440 × 1100 and 390 × 844, DPR 1. The complete authenticated settings shell was not captured; full app authentication remains unverified.
+- Verified in Chromium: all PR selectors (including No action), branch creation/rename/independent overrides/removal/Undo, parent and child switches, stale switch and dependent controls, duration selectors, ordering, reload persistence, focused branch input, Escape returning focus from a select, light theme and reduced-motion mode. No browser page errors or document/main horizontal overflow.
+- Targeted suites passed: 31 tests covering workflows, statuses, overview navigation, route hierarchy, and breadcrumbs. Includes corrupt-data preservation, persistence failure behavior, team isolation, renamed/removed status references, branch duplication, and default rule copying. Typecheck, targeted ESLint, production build, and diff whitespace checks passed.
+- Persistence is versioned local storage per team, matching Issue statuses. These controls configure the UI; GitHub webhooks and automatic changes to issues, cycles, and projects are not implemented. The sole canceled status remains disabled in the stale-status selector, matching the reference; teams with multiple canceled statuses can select one.
+- No actionable UI-polish findings in inspected states. Approve for the verified component scope. Full authenticated navigation, physical touch-device behavior, and slow-motion animation inspection remain unverified.
+
+### Add branch refinement — 2026-10-12
+
+- Replaced the branch dialog with the supplied reference's inline card: branch icon, focused `branch name` input, Use regex checkbox, cancel and submit icon buttons. Add branch is visibly disabled while an editor is open. The same inline editor preserves matching mode when editing a saved rule.
+- Added persisted `useRegex` with a false default for older saved branches. Regex mode validates syntax before saving; literal names retain their existing validation. Duplicate checks and removal/Undo distinguish literal from regex patterns.
+- At 390 px, actions wrap onto a second line so the input remains usable. Browser evidence: `.forge/workflows-qa/inline-branch-desktop.png` and `inline-branch-mobile.png`.
+- Chromium verified initial focus, disabled Add branch, absence of a modal, invalid-regex errors, Enter to submit, reload persistence, editing with the saved regex checkbox, Escape/cancel, and focus restoration. No browser errors or horizontal overflow. Seven workflow tests plus two overview navigation tests pass; typecheck and targeted lint pass. Verification is still an isolated component preview rather than the authenticated shell.
+
+### Fixed team navigation — 2026-10-12
+
+- Moved the workflows page's team navigation outside the content scroll pane. The header retains its 48 px height; only settings content scrolls.
+- Chromium verification at 1440 × 900 and 390 × 844: scrolled settings to the bottom (710 px / 1338 px), team link stayed at y=10 px, document scroll remained 0, and the final settings section was visible. Evidence: `.forge/workflows-qa/fixed-team-1440.png` and `fixed-team-390.png`. Targeted lint, typecheck and diff checks passed.

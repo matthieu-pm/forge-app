@@ -53,6 +53,7 @@ type SettingItem = {
     | "members"
     | "labels"
     | "templates"
+    | "workflows"
     | "statuses"
     | "recurring-issues"
   value?: string
@@ -111,6 +112,7 @@ const workflowItems: Array<SettingItem> = [
     label: "Workflows & automations",
     description: "Manage issue automations, git workflows and other workflows",
     icon: WorkflowSquare03Icon,
+    section: "workflows",
   },
   {
     label: "Triage",
@@ -223,15 +225,17 @@ function SettingsCard({
             to={
               item.section === "recurring-issues"
                 ? "/settings/teams/$teamSlug/recurring-issues"
-                : item.section === "statuses"
-                  ? "/settings/teams/$teamSlug/statuses"
-                  : item.section === "templates"
-                    ? "/settings/teams/$teamSlug/templates"
-                    : item.section === "members"
-                      ? "/settings/teams/$teamSlug/members"
-                      : item.section === "labels"
-                        ? "/settings/teams/$teamSlug/labels"
-                        : "/settings/teams/$teamSlug/general"
+                : item.section === "workflows"
+                  ? "/settings/teams/$teamSlug/workflows"
+                  : item.section === "statuses"
+                    ? "/settings/teams/$teamSlug/statuses"
+                    : item.section === "templates"
+                      ? "/settings/teams/$teamSlug/templates"
+                      : item.section === "members"
+                        ? "/settings/teams/$teamSlug/members"
+                        : item.section === "labels"
+                          ? "/settings/teams/$teamSlug/labels"
+                          : "/settings/teams/$teamSlug/general"
             }
             params={{ teamSlug }}
             className={className}

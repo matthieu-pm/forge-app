@@ -64,6 +64,7 @@ import { Route as SettingsTeamsTeamSlugMembersRouteImport } from './routes/setti
 import { Route as SettingsTeamsTeamSlugRecurringIssuesRouteImport } from './routes/settings_.teams.$teamSlug.recurring-issues'
 import { Route as SettingsTeamsTeamSlugStatusesRouteImport } from './routes/settings_.teams.$teamSlug.statuses'
 import { Route as SettingsTeamsTeamSlugTemplatesRouteImport } from './routes/settings_.teams.$teamSlug.templates'
+import { Route as SettingsTeamsTeamSlugWorkflowsRouteImport } from './routes/settings_.teams.$teamSlug.workflows'
 import { Route as ApiDesktopUpdatesDarwinArchRouteImport } from './routes/api/desktop/updates/darwin/$arch'
 import { Route as SettingsTeamsTeamSlugRecurringIssuesIndexRouteImport } from './routes/settings_.teams.$teamSlug.recurring-issues.index'
 import { Route as SettingsTeamsTeamSlugRecurringIssuesRecurringIdRouteImport } from './routes/settings_.teams.$teamSlug.recurring-issues.$recurringId'
@@ -357,6 +358,12 @@ const SettingsTeamsTeamSlugTemplatesRoute =
     path: '/templates',
     getParentRoute: () => SettingsTeamsTeamSlugRoute,
   } as any)
+const SettingsTeamsTeamSlugWorkflowsRoute =
+  SettingsTeamsTeamSlugWorkflowsRouteImport.update({
+    id: '/workflows',
+    path: '/workflows',
+    getParentRoute: () => SettingsTeamsTeamSlugRoute,
+  } as any)
 const ApiDesktopUpdatesDarwinArchRoute =
   ApiDesktopUpdatesDarwinArchRouteImport.update({
     id: '/api/desktop/updates/darwin/$arch',
@@ -455,6 +462,7 @@ export interface FileRoutesByFullPath {
   '/settings/teams/$teamSlug/recurring-issues': typeof SettingsTeamsTeamSlugRecurringIssuesRouteWithChildren
   '/settings/teams/$teamSlug/statuses': typeof SettingsTeamsTeamSlugStatusesRoute
   '/settings/teams/$teamSlug/templates': typeof SettingsTeamsTeamSlugTemplatesRouteWithChildren
+  '/settings/teams/$teamSlug/workflows': typeof SettingsTeamsTeamSlugWorkflowsRoute
   '/settings/teams/$teamSlug/': typeof SettingsTeamsTeamSlugIndexRoute
   '/api/desktop/updates/darwin/$arch': typeof ApiDesktopUpdatesDarwinArchRoute
   '/settings/teams/$teamSlug/recurring-issues/$recurringId': typeof SettingsTeamsTeamSlugRecurringIssuesRecurringIdRoute
@@ -515,6 +523,7 @@ export interface FileRoutesByTo {
   '/settings/teams/$teamSlug/labels': typeof SettingsTeamsTeamSlugLabelsRoute
   '/settings/teams/$teamSlug/members': typeof SettingsTeamsTeamSlugMembersRoute
   '/settings/teams/$teamSlug/statuses': typeof SettingsTeamsTeamSlugStatusesRoute
+  '/settings/teams/$teamSlug/workflows': typeof SettingsTeamsTeamSlugWorkflowsRoute
   '/settings/teams/$teamSlug': typeof SettingsTeamsTeamSlugIndexRoute
   '/api/desktop/updates/darwin/$arch': typeof ApiDesktopUpdatesDarwinArchRoute
   '/settings/teams/$teamSlug/recurring-issues/$recurringId': typeof SettingsTeamsTeamSlugRecurringIssuesRecurringIdRoute
@@ -580,6 +589,7 @@ export interface FileRoutesById {
   '/settings_/teams/$teamSlug/recurring-issues': typeof SettingsTeamsTeamSlugRecurringIssuesRouteWithChildren
   '/settings_/teams/$teamSlug/statuses': typeof SettingsTeamsTeamSlugStatusesRoute
   '/settings_/teams/$teamSlug/templates': typeof SettingsTeamsTeamSlugTemplatesRouteWithChildren
+  '/settings_/teams/$teamSlug/workflows': typeof SettingsTeamsTeamSlugWorkflowsRoute
   '/settings_/teams/$teamSlug/': typeof SettingsTeamsTeamSlugIndexRoute
   '/api/desktop/updates/darwin/$arch': typeof ApiDesktopUpdatesDarwinArchRoute
   '/settings_/teams/$teamSlug/recurring-issues/$recurringId': typeof SettingsTeamsTeamSlugRecurringIssuesRecurringIdRoute
@@ -646,6 +656,7 @@ export interface FileRouteTypes {
     | '/settings/teams/$teamSlug/recurring-issues'
     | '/settings/teams/$teamSlug/statuses'
     | '/settings/teams/$teamSlug/templates'
+    | '/settings/teams/$teamSlug/workflows'
     | '/settings/teams/$teamSlug/'
     | '/api/desktop/updates/darwin/$arch'
     | '/settings/teams/$teamSlug/recurring-issues/$recurringId'
@@ -706,6 +717,7 @@ export interface FileRouteTypes {
     | '/settings/teams/$teamSlug/labels'
     | '/settings/teams/$teamSlug/members'
     | '/settings/teams/$teamSlug/statuses'
+    | '/settings/teams/$teamSlug/workflows'
     | '/settings/teams/$teamSlug'
     | '/api/desktop/updates/darwin/$arch'
     | '/settings/teams/$teamSlug/recurring-issues/$recurringId'
@@ -770,6 +782,7 @@ export interface FileRouteTypes {
     | '/settings_/teams/$teamSlug/recurring-issues'
     | '/settings_/teams/$teamSlug/statuses'
     | '/settings_/teams/$teamSlug/templates'
+    | '/settings_/teams/$teamSlug/workflows'
     | '/settings_/teams/$teamSlug/'
     | '/api/desktop/updates/darwin/$arch'
     | '/settings_/teams/$teamSlug/recurring-issues/$recurringId'
@@ -1201,6 +1214,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsTeamsTeamSlugTemplatesRouteImport
       parentRoute: typeof SettingsTeamsTeamSlugRoute
     }
+    '/settings_/teams/$teamSlug/workflows': {
+      id: '/settings_/teams/$teamSlug/workflows'
+      path: '/workflows'
+      fullPath: '/settings/teams/$teamSlug/workflows'
+      preLoaderRoute: typeof SettingsTeamsTeamSlugWorkflowsRouteImport
+      parentRoute: typeof SettingsTeamsTeamSlugRoute
+    }
     '/api/desktop/updates/darwin/$arch': {
       id: '/api/desktop/updates/darwin/$arch'
       path: '/api/desktop/updates/darwin/$arch'
@@ -1326,6 +1346,7 @@ interface SettingsTeamsTeamSlugRouteChildren {
   SettingsTeamsTeamSlugRecurringIssuesRoute: typeof SettingsTeamsTeamSlugRecurringIssuesRouteWithChildren
   SettingsTeamsTeamSlugStatusesRoute: typeof SettingsTeamsTeamSlugStatusesRoute
   SettingsTeamsTeamSlugTemplatesRoute: typeof SettingsTeamsTeamSlugTemplatesRouteWithChildren
+  SettingsTeamsTeamSlugWorkflowsRoute: typeof SettingsTeamsTeamSlugWorkflowsRoute
   SettingsTeamsTeamSlugIndexRoute: typeof SettingsTeamsTeamSlugIndexRoute
 }
 
@@ -1338,6 +1359,7 @@ const SettingsTeamsTeamSlugRouteChildren: SettingsTeamsTeamSlugRouteChildren = {
   SettingsTeamsTeamSlugStatusesRoute: SettingsTeamsTeamSlugStatusesRoute,
   SettingsTeamsTeamSlugTemplatesRoute:
     SettingsTeamsTeamSlugTemplatesRouteWithChildren,
+  SettingsTeamsTeamSlugWorkflowsRoute: SettingsTeamsTeamSlugWorkflowsRoute,
   SettingsTeamsTeamSlugIndexRoute: SettingsTeamsTeamSlugIndexRoute,
 }
 

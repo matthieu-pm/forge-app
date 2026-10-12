@@ -320,6 +320,10 @@ export function getBreadcrumbItems(pathname: string): Array<BreadcrumbItem> {
     return [{ label: "Issue labels" }]
   }
 
+  if (/^\/settings\/teams\/[^/]+\/workflows$/.test(pathname)) {
+    return [{ label: "Workflows & automations" }]
+  }
+
   if (/^\/settings\/teams\/[^/]+\/statuses$/.test(pathname)) {
     return [{ label: "Issue statuses" }]
   }

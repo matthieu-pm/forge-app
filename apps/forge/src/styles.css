@@ -361,8 +361,8 @@ html[data-forge-host="macos"] .forge-desktop-tab {
   -webkit-app-region: no-drag;
   display: flex;
   min-width: 96px;
-  max-width: 260px;
-  flex: 1 1 190px;
+  max-width: 210px;
+  flex: 1 1 155px;
   height: 26px;
   align-items: center;
   overflow: hidden;

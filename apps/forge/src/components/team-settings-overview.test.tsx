@@ -15,6 +15,7 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { TeamSettingsOverview } from "./team-settings-overview"
+import { TeamWorkflowsSettings } from "./team-workflows-settings"
 import { TeamIssueStatusesSettings } from "./team-issue-statuses-settings"
 import type { TeamSummary } from "@/lib/team-contract"
 
@@ -38,41 +39,52 @@ const team: TeamSummary = {
 afterEach(cleanup)
 
 describe("team settings workflow navigation", () => {
-  it("opens issue statuses for the current team from the overview", async () => {
-    vi.spyOn(window, "scrollTo").mockImplementation(() => {})
-    const root = createRootRoute()
-    const overview = createRoute({
-      getParentRoute: () => root,
-      path: "/settings/teams/$teamSlug",
-      component: () => <TeamSettingsOverview team={team} memberCount={1} />,
-    })
-    const statuses = createRoute({
-      getParentRoute: () => root,
-      path: "/settings/teams/$teamSlug/statuses",
-      component: () => <TeamIssueStatusesSettings team={team} />,
-    })
-    const router = createRouter({
-      routeTree: root.addChildren([overview, statuses]),
-      history: createMemoryHistory({
-        initialEntries: ["/settings/teams/platform-api"],
-      }),
-    })
-    render(<RouterProvider router={router} />)
+  it.each([
+    ["statuses", "Issue statuses"],
+    ["workflows", "Workflows & automations"],
+  ])(
+    "opens %s for the current team from the overview",
+    async (section, title) => {
+      vi.spyOn(window, "scrollTo").mockImplementation(() => {})
+      const root = createRootRoute()
+      const overview = createRoute({
+        getParentRoute: () => root,
+        path: "/settings/teams/$teamSlug",
+        component: () => <TeamSettingsOverview team={team} memberCount={1} />,
+      })
+      const statuses = createRoute({
+        getParentRoute: () => root,
+        path: `/settings/teams/$teamSlug/${section}`,
+        component: () =>
+          section === "statuses" ? (
+            <TeamIssueStatusesSettings team={team} />
+          ) : (
+            <TeamWorkflowsSettings team={team} />
+          ),
+      })
+      const router = createRouter({
+        routeTree: root.addChildren([overview, statuses]),
+        history: createMemoryHistory({
+          initialEntries: ["/settings/teams/platform-api"],
+        }),
+      })
+      render(<RouterProvider router={router} />)
 
-    const link = await screen.findByRole("link", { name: /Issue statuses/ })
-    expect(link.getAttribute("href")).toBe(
-      "/settings/teams/platform-api/statuses"
-    )
-    fireEvent.click(link)
-
-    await screen.findByRole("heading", { name: "Issue statuses" })
-    await waitFor(() =>
-      expect(router.state.location.pathname).toBe(
-        "/settings/teams/platform-api/statuses"
+      const link = await screen.findByRole("link", { name: new RegExp(title) })
+      expect(link.getAttribute("href")).toBe(
+        `/settings/teams/platform-api/${section}`
       )
-    )
-    expect(
-      screen.getByRole("button", { name: "Create status in Backlog" })
-    ).toBeTruthy()
-  })
+      fireEvent.click(link)
+
+      await screen.findByRole("heading", { name: title })
+      await waitFor(() =>
+        expect(router.state.location.pathname).toBe(
+          `/settings/teams/platform-api/${section}`
+        )
+      )
+      expect(
+        screen.getByRole("link", { name: "Back to Platform API settings" })
+      ).toBeTruthy()
+    }
+  )
 })
