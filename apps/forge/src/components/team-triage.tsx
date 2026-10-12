@@ -4,7 +4,6 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Add01Icon,
   ArrowUpDownIcon,
-  FilterHorizontalIcon,
   Settings02Icon,
   StarIcon,
   UserGroup03Icon,
@@ -14,14 +13,14 @@ import type { TriageDraft, TriageIssue } from "@/lib/triage-issues"
 import {
   triageDraftKey,
   triageDraftSchema,
-  triagePriorities,
   useTriageIssues,
 } from "@/lib/triage-issues"
 import { useTeamTriage } from "@/lib/team-triage"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { TriageResponsibilityDialog } from "@/components/triage-responsibility-dialog"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { TriageFilterChips, TriageFilters } from "@/components/triage-filters"
+import { emptyTriageFilters, matchesTriageFilters } from "@/lib/triage-filters"
 import { TriageIssueComposer } from "@/components/triage-issue-composer"
 import { Switch } from "@/components/ui/switch"
 import {
@@ -84,9 +83,7 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
   const { issues, error, save } = useTriageIssues(team.id)
   const [responsibility, setResponsibility] = useState(false)
   const [favorite, setFavorite] = useState(false)
-  const [query, setQuery] = useState("")
-  const [priority, setPriority] = useState("")
-  const [due, setDue] = useState("")
+  const [filters, setFilters] = useState(emptyTriageFilters)
   const [ordering, setOrdering] = useState("added")
   const [descending, setDescending] = useState(true)
   const [showSnoozed, setShowSnoozed] = useState(false)
@@ -100,13 +97,7 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
   const visible = issues
     .filter(
       (issue) =>
-        (showSnoozed || !issue.snoozed) &&
-        (!priority || issue.priority === priority) &&
-        (!query ||
-          `${issue.title} ${issue.description}`
-            .toLowerCase()
-            .includes(query.toLowerCase())) &&
-        (!due || (due === "none" ? !issue.dueDate : !!issue.dueDate))
+        (showSnoozed || !issue.snoozed) && matchesTriageFilters(issue, filters)
     )
     .sort((a, b) => {
       const result =
@@ -223,71 +214,12 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
             >
               <HugeiconsIcon icon={UserGroup03Icon} />
             </Button>
-            <Popover>
-              <PopoverTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="Add filter"
-                    title="Add filter"
-                    className={query || priority || due ? "text-primary" : ""}
-                  />
-                }
-              >
-                <HugeiconsIcon icon={FilterHorizontalIcon} />
-              </PopoverTrigger>
-              <PopoverContent
-                align="start"
-                className="w-64 gap-3 rounded-xl p-3"
-              >
-                <Input
-                  autoFocus
-                  aria-label="Filter triage issues"
-                  placeholder="Filter issues…"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                />
-                <label className="flex items-center justify-between gap-2 text-xs">
-                  Priority
-                  <select
-                    aria-label="Filter by priority"
-                    className={selectClass}
-                    value={priority}
-                    onChange={(event) => setPriority(event.target.value)}
-                  >
-                    <option value="">All priorities</option>
-                    {triagePriorities.map((value) => (
-                      <option key={value}>{value}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="flex items-center justify-between gap-2 text-xs">
-                  Due date
-                  <select
-                    aria-label="Filter by due date"
-                    className={selectClass}
-                    value={due}
-                    onChange={(event) => setDue(event.target.value)}
-                  >
-                    <option value="">Any</option>
-                    <option value="set">Has due date</option>
-                    <option value="none">No due date</option>
-                  </select>
-                </label>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setQuery("")
-                    setPriority("")
-                    setDue("")
-                  }}
-                >
-                  Clear filters
-                </Button>
-              </PopoverContent>
-            </Popover>
+            <TriageFilters
+              team={team}
+              issues={issues}
+              value={filters}
+              onChange={setFilters}
+            />
             <Popover>
               <PopoverTrigger
                 render={
@@ -370,6 +302,7 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
             </Popover>
           </div>
         </header>
+        <TriageFilterChips value={filters} onChange={setFilters} />
         <div className="max-h-56 overflow-y-auto md:max-h-none md:flex-1">
           {visible.map((issue) => (
             <button

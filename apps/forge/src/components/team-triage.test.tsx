@@ -187,10 +187,8 @@ describe("team triage", () => {
     render(<TeamTriage team={team} />)
     create("Low urgency")
     fireEvent.click(screen.getByRole("button", { name: "Add filter" }))
-    fireEvent.change(
-      await screen.findByRole("combobox", { name: "Filter by priority" }),
-      { target: { value: "Urgent" } }
-    )
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Priority" }))
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Urgent" }))
     expect(
       screen.queryByRole("button", { name: "Open PRO-T1 Low urgency" })
     ).toBeNull()
