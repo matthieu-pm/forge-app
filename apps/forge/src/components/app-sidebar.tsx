@@ -54,6 +54,7 @@ import { authClient } from "@/lib/auth-client"
 import { getNavigationAuthState } from "@/lib/auth-state"
 import { TEAM_LIST_CHANGED_EVENT } from "@/lib/team-events"
 import { listTeams } from "@/lib/team-state"
+import { useEnabledTeamCycles } from "@/lib/team-cycles"
 import { getForgeHost } from "@/host/forge-host"
 import { getSidebarDisclosureKey } from "@/lib/sidebar-disclosure"
 import { cn } from "@/lib/utils"
@@ -136,8 +137,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const activeOrganizationId =
     (
       sessionState.data?.session as
-        | { activeOrganizationId?: string | null }
-        | undefined
+        { activeOrganizationId?: string | null } | undefined
     )?.activeOrganizationId ?? null
   const [workspace, setWorkspace] = React.useState<WorkspaceSummary | null>(
     null
@@ -152,6 +152,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [workspaceTeams, setWorkspaceTeams] = React.useState<
     Array<TeamSummary>
   >([])
+  const enabledCycleTeams = useEnabledTeamCycles(
+    workspaceTeams.map((team) => team.id)
+  )
   const primaryNav = appNav.filter(
     (item) => item.title !== "Workspace" && item.title !== "Your teams"
   )
@@ -160,7 +163,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     .filter((item) => item.title === "Your teams")
     .map((item) => ({
       ...item,
-      items: buildYourTeamsNav(workspaceTeams),
+      items: buildYourTeamsNav(
+        workspaceTeams.map((team) => ({
+          ...team,
+          cyclesEnabled: enabledCycleTeams.has(team.id),
+        }))
+      ),
     }))
 
   React.useEffect(() => {

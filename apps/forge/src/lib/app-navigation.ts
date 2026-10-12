@@ -4,6 +4,7 @@ import {
   Call02Icon,
   CenterFocusIcon,
   ClipboardIcon,
+  Clock05Icon,
   CodepenIcon,
   CubeIcon,
   GitPullRequestArrowIcon,
@@ -19,23 +20,31 @@ import type { TeamSummary } from "@/lib/team-contract"
 type AppIcon = ComponentProps<typeof HugeiconsIcon>["icon"]
 type TeamSlug = string
 type TeamSection =
-  "projects" | "views" | "issues" | "signals" | "calls" | "insights"
+  "projects" | "views" | "issues" | "cycles" | "signals" | "calls" | "insights"
 type TeamPath = `/teams/${TeamSlug}/${TeamSection}`
 
 export type AppPath =
   | "/forge"
   | "/settings"
   | "/settings/profile"
+  | "/settings/issue-labels"
+  | "/settings/project-statuses"
+  | "/settings/project-updates"
   | "/settings/notifications"
   | "/settings/account/security"
+  | "/settings/account/connections"
+  | "/settings/account/agents"
   | "/settings/code-and-reviews"
   | "/settings/api"
   | "/settings/ai"
+  | "/settings/emojis"
+  | "/settings/integrations"
   | "/settings/applications"
   | "/settings/billing"
   | "/settings/import-export"
   | "/settings/members"
   | "/settings/security"
+  | "/settings/sla"
   | "/settings/teams"
   | "/settings/workspace"
   | "/inbox"
@@ -82,6 +91,7 @@ export type BreadcrumbItem = {
 
 const teamSectionDefinitions = [
   { title: "Issues", section: "issues", icon: ClipboardIcon },
+  { title: "Cycles", section: "cycles", icon: Clock05Icon },
   { title: "Projects", section: "projects", icon: CubeIcon },
   { title: "Views", section: "views", icon: LayerIcon },
   { title: "Signals", section: "signals", icon: Asteroid02Icon },
@@ -110,6 +120,7 @@ export function buildYourTeamsNav(
     name: string
     slug: string
     icon?: TeamSummary["icon"]
+    cyclesEnabled?: boolean
   }>
 ): Array<AppNavChild> {
   return teams.map((team) => ({
@@ -121,6 +132,7 @@ export function buildYourTeamsNav(
         (section) =>
           section.section === "projects" ||
           section.section === "views" ||
+          (section.section === "cycles" && team.cyclesEnabled === true) ||
           section.section === "issues"
       )
       .map((section) => ({
@@ -258,7 +270,7 @@ const pageMetaByPath: Partial<Record<AppPath, PageMeta>> = {
 
 export function getPageMeta(pathname: string): PageMeta {
   const teamMatch = pathname.match(
-    /^\/teams\/([^/]+)\/(projects|views|issues|signals|calls|insights)$/
+    /^\/teams\/([^/]+)\/(projects|views|issues|cycles|signals|calls|insights)$/
   )
 
   if (teamMatch) {
@@ -302,6 +314,28 @@ export function getBreadcrumbItems(pathname: string): Array<BreadcrumbItem> {
           : "Recurring issues",
       },
     ]
+  if (pathname === "/settings/initiatives") return [{ label: "Initiatives" }]
+  if (pathname === "/settings/initiative-labels")
+    return [{ label: "Initiative labels" }]
+  if (pathname === "/settings/project-labels")
+    return [{ label: "Project labels" }]
+
+  if (pathname === "/settings/project-updates") return [{ label: "Updates" }]
+
+  if (pathname === "/settings/project-templates")
+    return [{ label: "Project templates" }]
+
+  if (pathname === "/settings/issue-templates")
+    return [{ label: "Issue templates" }]
+  const workspaceTemplateMatch =
+    /^\/settings\/templates\/(issue|project)\/([^/]+)$/.exec(pathname)
+  if (workspaceTemplateMatch)
+    return [
+      {
+        label: `${workspaceTemplateMatch[2] === "new" ? "New" : "Edit"} ${workspaceTemplateMatch[1]} template`,
+      },
+    ]
+
   const templateMatch =
     /^\/settings\/teams\/[^/]+\/templates(?:\/(issue|project|document)\/([^/]+))?\/?$/.exec(
       pathname
@@ -405,12 +439,34 @@ export function getBreadcrumbItems(pathname: string): Array<BreadcrumbItem> {
     return [{ label: "Code & reviews" }]
   }
 
+  if (pathname === "/settings/emojis") {
+    return [{ label: "Emojis", to: "/settings/emojis" }]
+  }
+
+  if (pathname === "/settings/integrations") {
+    return [{ label: "Integrations" }]
+  }
+
+  if (pathname === "/settings/issue-labels") return [{ label: "Issue labels" }]
+
+  if (pathname === "/settings/project-statuses") return [{ label: "Statuses" }]
+
+  if (pathname === "/settings/sla") return [{ label: "SLAs" }]
+
   if (pathname === "/settings/profile") {
     return [{ label: "Profile" }]
   }
 
   if (pathname === "/settings/account/security") {
     return [{ label: "Security & access" }]
+  }
+
+  if (pathname === "/settings/account/connections") {
+    return [{ label: "Connected accounts" }]
+  }
+
+  if (pathname === "/settings/account/agents") {
+    return [{ label: "Agent personalization" }]
   }
 
   if (pathname === "/settings/api") {
@@ -455,7 +511,7 @@ export function getBreadcrumbItems(pathname: string): Array<BreadcrumbItem> {
   }
 
   const teamMatch = pathname.match(
-    /^\/teams\/([^/]+)\/(projects|views|issues|signals|calls|insights)$/
+    /^\/teams\/([^/]+)\/(projects|views|issues|cycles|signals|calls|insights)$/
   )
 
   if (teamMatch) {

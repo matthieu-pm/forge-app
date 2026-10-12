@@ -146,7 +146,7 @@ function Section({
   title: string
 }) {
   return (
-    <section className="space-y-5">
+    <section id={title === "MCP Servers" ? "forge-agent-mcp-servers" : undefined} className="space-y-5 scroll-mt-8">
       <h2 className="px-3 text-sm font-semibold text-foreground">{title}</h2>
       {children}
     </section>

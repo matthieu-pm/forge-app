@@ -30,11 +30,22 @@ import { Route as SettingsApiRouteImport } from './routes/settings.api'
 import { Route as SettingsApplicationsRouteImport } from './routes/settings.applications'
 import { Route as SettingsBillingRouteImport } from './routes/settings.billing'
 import { Route as SettingsCodeAndReviewsRouteImport } from './routes/settings.code-and-reviews'
+import { Route as SettingsEmojisRouteImport } from './routes/settings.emojis'
 import { Route as SettingsImportExportRouteImport } from './routes/settings.import-export'
+import { Route as SettingsInitiativeLabelsRouteImport } from './routes/settings.initiative-labels'
+import { Route as SettingsInitiativesRouteImport } from './routes/settings.initiatives'
+import { Route as SettingsIntegrationsRouteImport } from './routes/settings.integrations'
+import { Route as SettingsIssueLabelsRouteImport } from './routes/settings.issue-labels'
+import { Route as SettingsIssueTemplatesRouteImport } from './routes/settings.issue-templates'
 import { Route as SettingsMembersRouteImport } from './routes/settings.members'
 import { Route as SettingsNotificationsRouteImport } from './routes/settings.notifications'
 import { Route as SettingsProfileRouteImport } from './routes/settings.profile'
+import { Route as SettingsProjectLabelsRouteImport } from './routes/settings.project-labels'
+import { Route as SettingsProjectStatusesRouteImport } from './routes/settings.project-statuses'
+import { Route as SettingsProjectTemplatesRouteImport } from './routes/settings.project-templates'
+import { Route as SettingsProjectUpdatesRouteImport } from './routes/settings.project-updates'
 import { Route as SettingsSecurityRouteImport } from './routes/settings.security'
+import { Route as SettingsSlaRouteImport } from './routes/settings.sla'
 import { Route as SettingsWorkspaceRouteImport } from './routes/settings.workspace'
 import { Route as SettingsTeamsRouteImport } from './routes/settings_.teams'
 import { Route as TeamsTeamSlugRouteImport } from './routes/teams/$teamSlug'
@@ -48,12 +59,15 @@ import { Route as WorkspaceViewsRouteImport } from './routes/workspace/views'
 import { Route as ApiAgentSplatRouteImport } from './routes/api/agent/$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiV1SplatRouteImport } from './routes/api/v1/$'
+import { Route as SettingsAccountAgentsRouteImport } from './routes/settings.account.agents'
+import { Route as SettingsAccountConnectionsRouteImport } from './routes/settings.account.connections'
 import { Route as SettingsAccountSecurityRouteImport } from './routes/settings.account.security'
 import { Route as SettingsNotificationsIndexRouteImport } from './routes/settings.notifications.index'
 import { Route as SettingsNotificationsChannelRouteImport } from './routes/settings.notifications.$channel'
 import { Route as SettingsTeamsTeamSlugRouteImport } from './routes/settings_.teams.$teamSlug'
 import { Route as SettingsTeamsNewRouteImport } from './routes/settings_.teams.new'
 import { Route as TeamsTeamSlugCallsRouteImport } from './routes/teams/$teamSlug/calls'
+import { Route as TeamsTeamSlugCyclesRouteImport } from './routes/teams/$teamSlug/cycles'
 import { Route as TeamsTeamSlugInsightsRouteImport } from './routes/teams/$teamSlug/insights'
 import { Route as TeamsTeamSlugIssuesRouteImport } from './routes/teams/$teamSlug/issues'
 import { Route as TeamsTeamSlugProjectsRouteImport } from './routes/teams/$teamSlug/projects'
@@ -62,6 +76,8 @@ import { Route as TeamsTeamSlugViewsRouteImport } from './routes/teams/$teamSlug
 import { Route as WorkspaceInitiativesIndexRouteImport } from './routes/workspace/initiatives/index'
 import { Route as WorkspaceInitiativesInitiativeIdRouteImport } from './routes/workspace/initiatives/$initiativeId'
 import { Route as ApiInternalDesktopReleasesRouteImport } from './routes/api/internal/desktop/releases'
+import { Route as SettingsTemplatesIssueTemplateIdRouteImport } from './routes/settings.templates.issue.$templateId'
+import { Route as SettingsTemplatesProjectTemplateIdRouteImport } from './routes/settings.templates.project.$templateId'
 import { Route as SettingsTeamsTeamSlugIndexRouteImport } from './routes/settings_.teams.$teamSlug.index'
 import { Route as SettingsTeamsTeamSlugAgentSkillsRouteImport } from './routes/settings_.teams.$teamSlug.agent-skills'
 import { Route as SettingsTeamsTeamSlugAgentsRouteImport } from './routes/settings_.teams.$teamSlug.agents'
@@ -192,9 +208,40 @@ const SettingsCodeAndReviewsRoute = SettingsCodeAndReviewsRouteImport.update({
   path: '/code-and-reviews',
   getParentRoute: () => SettingsRoute,
 } as any)
+const SettingsEmojisRoute = SettingsEmojisRouteImport.update({
+  id: '/emojis',
+  path: '/emojis',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const SettingsImportExportRoute = SettingsImportExportRouteImport.update({
   id: '/import-export',
   path: '/import-export',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsInitiativeLabelsRoute =
+  SettingsInitiativeLabelsRouteImport.update({
+    id: '/initiative-labels',
+    path: '/initiative-labels',
+    getParentRoute: () => SettingsRoute,
+  } as any)
+const SettingsInitiativesRoute = SettingsInitiativesRouteImport.update({
+  id: '/initiatives',
+  path: '/initiatives',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsIntegrationsRoute = SettingsIntegrationsRouteImport.update({
+  id: '/integrations',
+  path: '/integrations',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsIssueLabelsRoute = SettingsIssueLabelsRouteImport.update({
+  id: '/issue-labels',
+  path: '/issue-labels',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsIssueTemplatesRoute = SettingsIssueTemplatesRouteImport.update({
+  id: '/issue-templates',
+  path: '/issue-templates',
   getParentRoute: () => SettingsRoute,
 } as any)
 const SettingsMembersRoute = SettingsMembersRouteImport.update({
@@ -212,9 +259,35 @@ const SettingsProfileRoute = SettingsProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => SettingsRoute,
 } as any)
+const SettingsProjectLabelsRoute = SettingsProjectLabelsRouteImport.update({
+  id: '/project-labels',
+  path: '/project-labels',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsProjectStatusesRoute = SettingsProjectStatusesRouteImport.update({
+  id: '/project-statuses',
+  path: '/project-statuses',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsProjectTemplatesRoute =
+  SettingsProjectTemplatesRouteImport.update({
+    id: '/project-templates',
+    path: '/project-templates',
+    getParentRoute: () => SettingsRoute,
+  } as any)
+const SettingsProjectUpdatesRoute = SettingsProjectUpdatesRouteImport.update({
+  id: '/project-updates',
+  path: '/project-updates',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const SettingsSecurityRoute = SettingsSecurityRouteImport.update({
   id: '/security',
   path: '/security',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsSlaRoute = SettingsSlaRouteImport.update({
+  id: '/sla',
+  path: '/sla',
   getParentRoute: () => SettingsRoute,
 } as any)
 const SettingsWorkspaceRoute = SettingsWorkspaceRouteImport.update({
@@ -282,6 +355,17 @@ const ApiV1SplatRoute = ApiV1SplatRouteImport.update({
   path: '/api/v1/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsAccountAgentsRoute = SettingsAccountAgentsRouteImport.update({
+  id: '/account/agents',
+  path: '/account/agents',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsAccountConnectionsRoute =
+  SettingsAccountConnectionsRouteImport.update({
+    id: '/account/connections',
+    path: '/account/connections',
+    getParentRoute: () => SettingsRoute,
+  } as any)
 const SettingsAccountSecurityRoute = SettingsAccountSecurityRouteImport.update({
   id: '/account/security',
   path: '/account/security',
@@ -312,6 +396,11 @@ const SettingsTeamsNewRoute = SettingsTeamsNewRouteImport.update({
 const TeamsTeamSlugCallsRoute = TeamsTeamSlugCallsRouteImport.update({
   id: '/calls',
   path: '/calls',
+  getParentRoute: () => TeamsTeamSlugRoute,
+} as any)
+const TeamsTeamSlugCyclesRoute = TeamsTeamSlugCyclesRouteImport.update({
+  id: '/cycles',
+  path: '/cycles',
   getParentRoute: () => TeamsTeamSlugRoute,
 } as any)
 const TeamsTeamSlugInsightsRoute = TeamsTeamSlugInsightsRouteImport.update({
@@ -356,6 +445,18 @@ const ApiInternalDesktopReleasesRoute =
     id: '/api/internal/desktop/releases',
     path: '/api/internal/desktop/releases',
     getParentRoute: () => rootRouteImport,
+  } as any)
+const SettingsTemplatesIssueTemplateIdRoute =
+  SettingsTemplatesIssueTemplateIdRouteImport.update({
+    id: '/templates/issue/$templateId',
+    path: '/templates/issue/$templateId',
+    getParentRoute: () => SettingsRoute,
+  } as any)
+const SettingsTemplatesProjectTemplateIdRoute =
+  SettingsTemplatesProjectTemplateIdRouteImport.update({
+    id: '/templates/project/$templateId',
+    path: '/templates/project/$templateId',
+    getParentRoute: () => SettingsRoute,
   } as any)
 const SettingsTeamsTeamSlugIndexRoute =
   SettingsTeamsTeamSlugIndexRouteImport.update({
@@ -523,11 +624,22 @@ export interface FileRoutesByFullPath {
   '/settings/applications': typeof SettingsApplicationsRoute
   '/settings/billing': typeof SettingsBillingRoute
   '/settings/code-and-reviews': typeof SettingsCodeAndReviewsRoute
+  '/settings/emojis': typeof SettingsEmojisRoute
   '/settings/import-export': typeof SettingsImportExportRoute
+  '/settings/initiative-labels': typeof SettingsInitiativeLabelsRoute
+  '/settings/initiatives': typeof SettingsInitiativesRoute
+  '/settings/integrations': typeof SettingsIntegrationsRoute
+  '/settings/issue-labels': typeof SettingsIssueLabelsRoute
+  '/settings/issue-templates': typeof SettingsIssueTemplatesRoute
   '/settings/members': typeof SettingsMembersRoute
   '/settings/notifications': typeof SettingsNotificationsRouteWithChildren
   '/settings/profile': typeof SettingsProfileRoute
+  '/settings/project-labels': typeof SettingsProjectLabelsRoute
+  '/settings/project-statuses': typeof SettingsProjectStatusesRoute
+  '/settings/project-templates': typeof SettingsProjectTemplatesRoute
+  '/settings/project-updates': typeof SettingsProjectUpdatesRoute
   '/settings/security': typeof SettingsSecurityRoute
+  '/settings/sla': typeof SettingsSlaRoute
   '/settings/workspace': typeof SettingsWorkspaceRoute
   '/settings/teams': typeof SettingsTeamsRouteWithChildren
   '/teams/$teamSlug': typeof TeamsTeamSlugRouteWithChildren
@@ -542,11 +654,14 @@ export interface FileRoutesByFullPath {
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/v1/$': typeof ApiV1SplatRoute
+  '/settings/account/agents': typeof SettingsAccountAgentsRoute
+  '/settings/account/connections': typeof SettingsAccountConnectionsRoute
   '/settings/account/security': typeof SettingsAccountSecurityRoute
   '/settings/notifications/$channel': typeof SettingsNotificationsChannelRoute
   '/settings/teams/$teamSlug': typeof SettingsTeamsTeamSlugRouteWithChildren
   '/settings/teams/new': typeof SettingsTeamsNewRoute
   '/teams/$teamSlug/calls': typeof TeamsTeamSlugCallsRoute
+  '/teams/$teamSlug/cycles': typeof TeamsTeamSlugCyclesRoute
   '/teams/$teamSlug/insights': typeof TeamsTeamSlugInsightsRoute
   '/teams/$teamSlug/issues': typeof TeamsTeamSlugIssuesRoute
   '/teams/$teamSlug/projects': typeof TeamsTeamSlugProjectsRoute
@@ -556,6 +671,8 @@ export interface FileRoutesByFullPath {
   '/settings/notifications/': typeof SettingsNotificationsIndexRoute
   '/workspace/initiatives/': typeof WorkspaceInitiativesIndexRoute
   '/api/internal/desktop/releases': typeof ApiInternalDesktopReleasesRouteWithChildren
+  '/settings/templates/issue/$templateId': typeof SettingsTemplatesIssueTemplateIdRoute
+  '/settings/templates/project/$templateId': typeof SettingsTemplatesProjectTemplateIdRoute
   '/settings/teams/$teamSlug/agent-skills': typeof SettingsTeamsTeamSlugAgentSkillsRouteWithChildren
   '/settings/teams/$teamSlug/agents': typeof SettingsTeamsTeamSlugAgentsRoute
   '/settings/teams/$teamSlug/cycles': typeof SettingsTeamsTeamSlugCyclesRoute
@@ -601,10 +718,21 @@ export interface FileRoutesByTo {
   '/settings/applications': typeof SettingsApplicationsRoute
   '/settings/billing': typeof SettingsBillingRoute
   '/settings/code-and-reviews': typeof SettingsCodeAndReviewsRoute
+  '/settings/emojis': typeof SettingsEmojisRoute
   '/settings/import-export': typeof SettingsImportExportRoute
+  '/settings/initiative-labels': typeof SettingsInitiativeLabelsRoute
+  '/settings/initiatives': typeof SettingsInitiativesRoute
+  '/settings/integrations': typeof SettingsIntegrationsRoute
+  '/settings/issue-labels': typeof SettingsIssueLabelsRoute
+  '/settings/issue-templates': typeof SettingsIssueTemplatesRoute
   '/settings/members': typeof SettingsMembersRoute
   '/settings/profile': typeof SettingsProfileRoute
+  '/settings/project-labels': typeof SettingsProjectLabelsRoute
+  '/settings/project-statuses': typeof SettingsProjectStatusesRoute
+  '/settings/project-templates': typeof SettingsProjectTemplatesRoute
+  '/settings/project-updates': typeof SettingsProjectUpdatesRoute
   '/settings/security': typeof SettingsSecurityRoute
+  '/settings/sla': typeof SettingsSlaRoute
   '/settings/workspace': typeof SettingsWorkspaceRoute
   '/settings/teams': typeof SettingsTeamsRouteWithChildren
   '/teams/$teamSlug': typeof TeamsTeamSlugRouteWithChildren
@@ -619,10 +747,13 @@ export interface FileRoutesByTo {
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/v1/$': typeof ApiV1SplatRoute
+  '/settings/account/agents': typeof SettingsAccountAgentsRoute
+  '/settings/account/connections': typeof SettingsAccountConnectionsRoute
   '/settings/account/security': typeof SettingsAccountSecurityRoute
   '/settings/notifications/$channel': typeof SettingsNotificationsChannelRoute
   '/settings/teams/new': typeof SettingsTeamsNewRoute
   '/teams/$teamSlug/calls': typeof TeamsTeamSlugCallsRoute
+  '/teams/$teamSlug/cycles': typeof TeamsTeamSlugCyclesRoute
   '/teams/$teamSlug/insights': typeof TeamsTeamSlugInsightsRoute
   '/teams/$teamSlug/issues': typeof TeamsTeamSlugIssuesRoute
   '/teams/$teamSlug/projects': typeof TeamsTeamSlugProjectsRoute
@@ -632,6 +763,8 @@ export interface FileRoutesByTo {
   '/settings/notifications': typeof SettingsNotificationsIndexRoute
   '/workspace/initiatives': typeof WorkspaceInitiativesIndexRoute
   '/api/internal/desktop/releases': typeof ApiInternalDesktopReleasesRouteWithChildren
+  '/settings/templates/issue/$templateId': typeof SettingsTemplatesIssueTemplateIdRoute
+  '/settings/templates/project/$templateId': typeof SettingsTemplatesProjectTemplateIdRoute
   '/settings/teams/$teamSlug/agents': typeof SettingsTeamsTeamSlugAgentsRoute
   '/settings/teams/$teamSlug/cycles': typeof SettingsTeamsTeamSlugCyclesRoute
   '/settings/teams/$teamSlug/general': typeof SettingsTeamsTeamSlugGeneralRoute
@@ -676,11 +809,22 @@ export interface FileRoutesById {
   '/settings/applications': typeof SettingsApplicationsRoute
   '/settings/billing': typeof SettingsBillingRoute
   '/settings/code-and-reviews': typeof SettingsCodeAndReviewsRoute
+  '/settings/emojis': typeof SettingsEmojisRoute
   '/settings/import-export': typeof SettingsImportExportRoute
+  '/settings/initiative-labels': typeof SettingsInitiativeLabelsRoute
+  '/settings/initiatives': typeof SettingsInitiativesRoute
+  '/settings/integrations': typeof SettingsIntegrationsRoute
+  '/settings/issue-labels': typeof SettingsIssueLabelsRoute
+  '/settings/issue-templates': typeof SettingsIssueTemplatesRoute
   '/settings/members': typeof SettingsMembersRoute
   '/settings/notifications': typeof SettingsNotificationsRouteWithChildren
   '/settings/profile': typeof SettingsProfileRoute
+  '/settings/project-labels': typeof SettingsProjectLabelsRoute
+  '/settings/project-statuses': typeof SettingsProjectStatusesRoute
+  '/settings/project-templates': typeof SettingsProjectTemplatesRoute
+  '/settings/project-updates': typeof SettingsProjectUpdatesRoute
   '/settings/security': typeof SettingsSecurityRoute
+  '/settings/sla': typeof SettingsSlaRoute
   '/settings/workspace': typeof SettingsWorkspaceRoute
   '/settings_/teams': typeof SettingsTeamsRouteWithChildren
   '/teams/$teamSlug': typeof TeamsTeamSlugRouteWithChildren
@@ -695,11 +839,14 @@ export interface FileRoutesById {
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/v1/$': typeof ApiV1SplatRoute
+  '/settings/account/agents': typeof SettingsAccountAgentsRoute
+  '/settings/account/connections': typeof SettingsAccountConnectionsRoute
   '/settings/account/security': typeof SettingsAccountSecurityRoute
   '/settings/notifications/$channel': typeof SettingsNotificationsChannelRoute
   '/settings_/teams/$teamSlug': typeof SettingsTeamsTeamSlugRouteWithChildren
   '/settings_/teams/new': typeof SettingsTeamsNewRoute
   '/teams/$teamSlug/calls': typeof TeamsTeamSlugCallsRoute
+  '/teams/$teamSlug/cycles': typeof TeamsTeamSlugCyclesRoute
   '/teams/$teamSlug/insights': typeof TeamsTeamSlugInsightsRoute
   '/teams/$teamSlug/issues': typeof TeamsTeamSlugIssuesRoute
   '/teams/$teamSlug/projects': typeof TeamsTeamSlugProjectsRoute
@@ -709,6 +856,8 @@ export interface FileRoutesById {
   '/settings/notifications/': typeof SettingsNotificationsIndexRoute
   '/workspace/initiatives/': typeof WorkspaceInitiativesIndexRoute
   '/api/internal/desktop/releases': typeof ApiInternalDesktopReleasesRouteWithChildren
+  '/settings/templates/issue/$templateId': typeof SettingsTemplatesIssueTemplateIdRoute
+  '/settings/templates/project/$templateId': typeof SettingsTemplatesProjectTemplateIdRoute
   '/settings_/teams/$teamSlug/agent-skills': typeof SettingsTeamsTeamSlugAgentSkillsRouteWithChildren
   '/settings_/teams/$teamSlug/agents': typeof SettingsTeamsTeamSlugAgentsRoute
   '/settings_/teams/$teamSlug/cycles': typeof SettingsTeamsTeamSlugCyclesRoute
@@ -757,11 +906,22 @@ export interface FileRouteTypes {
     | '/settings/applications'
     | '/settings/billing'
     | '/settings/code-and-reviews'
+    | '/settings/emojis'
     | '/settings/import-export'
+    | '/settings/initiative-labels'
+    | '/settings/initiatives'
+    | '/settings/integrations'
+    | '/settings/issue-labels'
+    | '/settings/issue-templates'
     | '/settings/members'
     | '/settings/notifications'
     | '/settings/profile'
+    | '/settings/project-labels'
+    | '/settings/project-statuses'
+    | '/settings/project-templates'
+    | '/settings/project-updates'
     | '/settings/security'
+    | '/settings/sla'
     | '/settings/workspace'
     | '/settings/teams'
     | '/teams/$teamSlug'
@@ -776,11 +936,14 @@ export interface FileRouteTypes {
     | '/api/agent/$'
     | '/api/auth/$'
     | '/api/v1/$'
+    | '/settings/account/agents'
+    | '/settings/account/connections'
     | '/settings/account/security'
     | '/settings/notifications/$channel'
     | '/settings/teams/$teamSlug'
     | '/settings/teams/new'
     | '/teams/$teamSlug/calls'
+    | '/teams/$teamSlug/cycles'
     | '/teams/$teamSlug/insights'
     | '/teams/$teamSlug/issues'
     | '/teams/$teamSlug/projects'
@@ -790,6 +953,8 @@ export interface FileRouteTypes {
     | '/settings/notifications/'
     | '/workspace/initiatives/'
     | '/api/internal/desktop/releases'
+    | '/settings/templates/issue/$templateId'
+    | '/settings/templates/project/$templateId'
     | '/settings/teams/$teamSlug/agent-skills'
     | '/settings/teams/$teamSlug/agents'
     | '/settings/teams/$teamSlug/cycles'
@@ -835,10 +1000,21 @@ export interface FileRouteTypes {
     | '/settings/applications'
     | '/settings/billing'
     | '/settings/code-and-reviews'
+    | '/settings/emojis'
     | '/settings/import-export'
+    | '/settings/initiative-labels'
+    | '/settings/initiatives'
+    | '/settings/integrations'
+    | '/settings/issue-labels'
+    | '/settings/issue-templates'
     | '/settings/members'
     | '/settings/profile'
+    | '/settings/project-labels'
+    | '/settings/project-statuses'
+    | '/settings/project-templates'
+    | '/settings/project-updates'
     | '/settings/security'
+    | '/settings/sla'
     | '/settings/workspace'
     | '/settings/teams'
     | '/teams/$teamSlug'
@@ -853,10 +1029,13 @@ export interface FileRouteTypes {
     | '/api/agent/$'
     | '/api/auth/$'
     | '/api/v1/$'
+    | '/settings/account/agents'
+    | '/settings/account/connections'
     | '/settings/account/security'
     | '/settings/notifications/$channel'
     | '/settings/teams/new'
     | '/teams/$teamSlug/calls'
+    | '/teams/$teamSlug/cycles'
     | '/teams/$teamSlug/insights'
     | '/teams/$teamSlug/issues'
     | '/teams/$teamSlug/projects'
@@ -866,6 +1045,8 @@ export interface FileRouteTypes {
     | '/settings/notifications'
     | '/workspace/initiatives'
     | '/api/internal/desktop/releases'
+    | '/settings/templates/issue/$templateId'
+    | '/settings/templates/project/$templateId'
     | '/settings/teams/$teamSlug/agents'
     | '/settings/teams/$teamSlug/cycles'
     | '/settings/teams/$teamSlug/general'
@@ -909,11 +1090,22 @@ export interface FileRouteTypes {
     | '/settings/applications'
     | '/settings/billing'
     | '/settings/code-and-reviews'
+    | '/settings/emojis'
     | '/settings/import-export'
+    | '/settings/initiative-labels'
+    | '/settings/initiatives'
+    | '/settings/integrations'
+    | '/settings/issue-labels'
+    | '/settings/issue-templates'
     | '/settings/members'
     | '/settings/notifications'
     | '/settings/profile'
+    | '/settings/project-labels'
+    | '/settings/project-statuses'
+    | '/settings/project-templates'
+    | '/settings/project-updates'
     | '/settings/security'
+    | '/settings/sla'
     | '/settings/workspace'
     | '/settings_/teams'
     | '/teams/$teamSlug'
@@ -928,11 +1120,14 @@ export interface FileRouteTypes {
     | '/api/agent/$'
     | '/api/auth/$'
     | '/api/v1/$'
+    | '/settings/account/agents'
+    | '/settings/account/connections'
     | '/settings/account/security'
     | '/settings/notifications/$channel'
     | '/settings_/teams/$teamSlug'
     | '/settings_/teams/new'
     | '/teams/$teamSlug/calls'
+    | '/teams/$teamSlug/cycles'
     | '/teams/$teamSlug/insights'
     | '/teams/$teamSlug/issues'
     | '/teams/$teamSlug/projects'
@@ -942,6 +1137,8 @@ export interface FileRouteTypes {
     | '/settings/notifications/'
     | '/workspace/initiatives/'
     | '/api/internal/desktop/releases'
+    | '/settings/templates/issue/$templateId'
+    | '/settings/templates/project/$templateId'
     | '/settings_/teams/$teamSlug/agent-skills'
     | '/settings_/teams/$teamSlug/agents'
     | '/settings_/teams/$teamSlug/cycles'
@@ -1151,11 +1348,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsCodeAndReviewsRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/settings/emojis': {
+      id: '/settings/emojis'
+      path: '/emojis'
+      fullPath: '/settings/emojis'
+      preLoaderRoute: typeof SettingsEmojisRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/import-export': {
       id: '/settings/import-export'
       path: '/import-export'
       fullPath: '/settings/import-export'
       preLoaderRoute: typeof SettingsImportExportRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/initiative-labels': {
+      id: '/settings/initiative-labels'
+      path: '/initiative-labels'
+      fullPath: '/settings/initiative-labels'
+      preLoaderRoute: typeof SettingsInitiativeLabelsRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/initiatives': {
+      id: '/settings/initiatives'
+      path: '/initiatives'
+      fullPath: '/settings/initiatives'
+      preLoaderRoute: typeof SettingsInitiativesRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/integrations': {
+      id: '/settings/integrations'
+      path: '/integrations'
+      fullPath: '/settings/integrations'
+      preLoaderRoute: typeof SettingsIntegrationsRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/issue-labels': {
+      id: '/settings/issue-labels'
+      path: '/issue-labels'
+      fullPath: '/settings/issue-labels'
+      preLoaderRoute: typeof SettingsIssueLabelsRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/issue-templates': {
+      id: '/settings/issue-templates'
+      path: '/issue-templates'
+      fullPath: '/settings/issue-templates'
+      preLoaderRoute: typeof SettingsIssueTemplatesRouteImport
       parentRoute: typeof SettingsRoute
     }
     '/settings/members': {
@@ -1179,11 +1418,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsProfileRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/settings/project-labels': {
+      id: '/settings/project-labels'
+      path: '/project-labels'
+      fullPath: '/settings/project-labels'
+      preLoaderRoute: typeof SettingsProjectLabelsRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/project-statuses': {
+      id: '/settings/project-statuses'
+      path: '/project-statuses'
+      fullPath: '/settings/project-statuses'
+      preLoaderRoute: typeof SettingsProjectStatusesRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/project-templates': {
+      id: '/settings/project-templates'
+      path: '/project-templates'
+      fullPath: '/settings/project-templates'
+      preLoaderRoute: typeof SettingsProjectTemplatesRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/project-updates': {
+      id: '/settings/project-updates'
+      path: '/project-updates'
+      fullPath: '/settings/project-updates'
+      preLoaderRoute: typeof SettingsProjectUpdatesRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/security': {
       id: '/settings/security'
       path: '/security'
       fullPath: '/settings/security'
       preLoaderRoute: typeof SettingsSecurityRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/sla': {
+      id: '/settings/sla'
+      path: '/sla'
+      fullPath: '/settings/sla'
+      preLoaderRoute: typeof SettingsSlaRouteImport
       parentRoute: typeof SettingsRoute
     }
     '/settings/workspace': {
@@ -1277,6 +1551,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiV1SplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/account/agents': {
+      id: '/settings/account/agents'
+      path: '/account/agents'
+      fullPath: '/settings/account/agents'
+      preLoaderRoute: typeof SettingsAccountAgentsRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/account/connections': {
+      id: '/settings/account/connections'
+      path: '/account/connections'
+      fullPath: '/settings/account/connections'
+      preLoaderRoute: typeof SettingsAccountConnectionsRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/account/security': {
       id: '/settings/account/security'
       path: '/account/security'
@@ -1317,6 +1605,13 @@ declare module '@tanstack/react-router' {
       path: '/calls'
       fullPath: '/teams/$teamSlug/calls'
       preLoaderRoute: typeof TeamsTeamSlugCallsRouteImport
+      parentRoute: typeof TeamsTeamSlugRoute
+    }
+    '/teams/$teamSlug/cycles': {
+      id: '/teams/$teamSlug/cycles'
+      path: '/cycles'
+      fullPath: '/teams/$teamSlug/cycles'
+      preLoaderRoute: typeof TeamsTeamSlugCyclesRouteImport
       parentRoute: typeof TeamsTeamSlugRoute
     }
     '/teams/$teamSlug/insights': {
@@ -1374,6 +1669,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/internal/desktop/releases'
       preLoaderRoute: typeof ApiInternalDesktopReleasesRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/settings/templates/issue/$templateId': {
+      id: '/settings/templates/issue/$templateId'
+      path: '/templates/issue/$templateId'
+      fullPath: '/settings/templates/issue/$templateId'
+      preLoaderRoute: typeof SettingsTemplatesIssueTemplateIdRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/templates/project/$templateId': {
+      id: '/settings/templates/project/$templateId'
+      path: '/templates/project/$templateId'
+      fullPath: '/settings/templates/project/$templateId'
+      preLoaderRoute: typeof SettingsTemplatesProjectTemplateIdRouteImport
+      parentRoute: typeof SettingsRoute
     }
     '/settings_/teams/$teamSlug/': {
       id: '/settings_/teams/$teamSlug/'
@@ -1567,14 +1876,29 @@ interface SettingsRouteChildren {
   SettingsApplicationsRoute: typeof SettingsApplicationsRoute
   SettingsBillingRoute: typeof SettingsBillingRoute
   SettingsCodeAndReviewsRoute: typeof SettingsCodeAndReviewsRoute
+  SettingsEmojisRoute: typeof SettingsEmojisRoute
   SettingsImportExportRoute: typeof SettingsImportExportRoute
+  SettingsInitiativeLabelsRoute: typeof SettingsInitiativeLabelsRoute
+  SettingsInitiativesRoute: typeof SettingsInitiativesRoute
+  SettingsIntegrationsRoute: typeof SettingsIntegrationsRoute
+  SettingsIssueLabelsRoute: typeof SettingsIssueLabelsRoute
+  SettingsIssueTemplatesRoute: typeof SettingsIssueTemplatesRoute
   SettingsMembersRoute: typeof SettingsMembersRoute
   SettingsNotificationsRoute: typeof SettingsNotificationsRouteWithChildren
   SettingsProfileRoute: typeof SettingsProfileRoute
+  SettingsProjectLabelsRoute: typeof SettingsProjectLabelsRoute
+  SettingsProjectStatusesRoute: typeof SettingsProjectStatusesRoute
+  SettingsProjectTemplatesRoute: typeof SettingsProjectTemplatesRoute
+  SettingsProjectUpdatesRoute: typeof SettingsProjectUpdatesRoute
   SettingsSecurityRoute: typeof SettingsSecurityRoute
+  SettingsSlaRoute: typeof SettingsSlaRoute
   SettingsWorkspaceRoute: typeof SettingsWorkspaceRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
+  SettingsAccountAgentsRoute: typeof SettingsAccountAgentsRoute
+  SettingsAccountConnectionsRoute: typeof SettingsAccountConnectionsRoute
   SettingsAccountSecurityRoute: typeof SettingsAccountSecurityRoute
+  SettingsTemplatesIssueTemplateIdRoute: typeof SettingsTemplatesIssueTemplateIdRoute
+  SettingsTemplatesProjectTemplateIdRoute: typeof SettingsTemplatesProjectTemplateIdRoute
 }
 
 const SettingsRouteChildren: SettingsRouteChildren = {
@@ -1583,14 +1907,30 @@ const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsApplicationsRoute: SettingsApplicationsRoute,
   SettingsBillingRoute: SettingsBillingRoute,
   SettingsCodeAndReviewsRoute: SettingsCodeAndReviewsRoute,
+  SettingsEmojisRoute: SettingsEmojisRoute,
   SettingsImportExportRoute: SettingsImportExportRoute,
+  SettingsInitiativeLabelsRoute: SettingsInitiativeLabelsRoute,
+  SettingsInitiativesRoute: SettingsInitiativesRoute,
+  SettingsIntegrationsRoute: SettingsIntegrationsRoute,
+  SettingsIssueLabelsRoute: SettingsIssueLabelsRoute,
+  SettingsIssueTemplatesRoute: SettingsIssueTemplatesRoute,
   SettingsMembersRoute: SettingsMembersRoute,
   SettingsNotificationsRoute: SettingsNotificationsRouteWithChildren,
   SettingsProfileRoute: SettingsProfileRoute,
+  SettingsProjectLabelsRoute: SettingsProjectLabelsRoute,
+  SettingsProjectStatusesRoute: SettingsProjectStatusesRoute,
+  SettingsProjectTemplatesRoute: SettingsProjectTemplatesRoute,
+  SettingsProjectUpdatesRoute: SettingsProjectUpdatesRoute,
   SettingsSecurityRoute: SettingsSecurityRoute,
+  SettingsSlaRoute: SettingsSlaRoute,
   SettingsWorkspaceRoute: SettingsWorkspaceRoute,
   SettingsIndexRoute: SettingsIndexRoute,
+  SettingsAccountAgentsRoute: SettingsAccountAgentsRoute,
+  SettingsAccountConnectionsRoute: SettingsAccountConnectionsRoute,
   SettingsAccountSecurityRoute: SettingsAccountSecurityRoute,
+  SettingsTemplatesIssueTemplateIdRoute: SettingsTemplatesIssueTemplateIdRoute,
+  SettingsTemplatesProjectTemplateIdRoute:
+    SettingsTemplatesProjectTemplateIdRoute,
 }
 
 const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
@@ -1712,6 +2052,7 @@ const SettingsTeamsRouteWithChildren = SettingsTeamsRoute._addFileChildren(
 
 interface TeamsTeamSlugRouteChildren {
   TeamsTeamSlugCallsRoute: typeof TeamsTeamSlugCallsRoute
+  TeamsTeamSlugCyclesRoute: typeof TeamsTeamSlugCyclesRoute
   TeamsTeamSlugInsightsRoute: typeof TeamsTeamSlugInsightsRoute
   TeamsTeamSlugIssuesRoute: typeof TeamsTeamSlugIssuesRoute
   TeamsTeamSlugProjectsRoute: typeof TeamsTeamSlugProjectsRoute
@@ -1721,6 +2062,7 @@ interface TeamsTeamSlugRouteChildren {
 
 const TeamsTeamSlugRouteChildren: TeamsTeamSlugRouteChildren = {
   TeamsTeamSlugCallsRoute: TeamsTeamSlugCallsRoute,
+  TeamsTeamSlugCyclesRoute: TeamsTeamSlugCyclesRoute,
   TeamsTeamSlugInsightsRoute: TeamsTeamSlugInsightsRoute,
   TeamsTeamSlugIssuesRoute: TeamsTeamSlugIssuesRoute,
   TeamsTeamSlugProjectsRoute: TeamsTeamSlugProjectsRoute,

@@ -125,6 +125,40 @@ The team table and open row-menu states were inspected at full 1224 × 768 resol
 - None required for this pass.
 
 final result: passed
+
+## Integrations settings — 2026-10-12
+
+- Added the protected `/settings/integrations` route, Features sidebar destination, and Integrations breadcrumb while preserving the existing Forge settings shell.
+- Matched the supplied Linear catalog structure with a centered 720px column, 48px search control, enabled carousel, featured integration panel and tabs, responsive three-column category cards, expandable categories, and one-column mobile layout.
+- Search, featured-tab switching, enabled-card management links, catalog expansion, and detail dialogs are wired. Disabled integrations state clearly that connection setup is unavailable and do not perform external account changes.
+- Replaced generic glyphs with 56 locally stored brand assets. Full-color vectors come from the SVG Logos collection where available; Simple Icons supplies additional optimized brand vectors; small remaining brands use downloaded official-site favicons. SVGs were processed with multipass SVGO and raster fallbacks were resized to 64px. The complete local logo set is 122,560 bytes and all 56 files return HTTP 200 from the preview server.
+- Rendered verification covered the desktop layout, the 390×844 mobile layout, filtering, dialogs, featured tabs, and real-logo rendering. A fresh browser session reported no warnings or errors.
+- Five focused component tests, targeted ESLint, full TypeScript, production build with protected Workflow handler verification, route HTTP 200, and `git diff --check` pass.
+
+final result: passed
+
+## Project updates settings — 2026-10-12
+
+Source visual truth: the three supplied Linear attachments named `Linear Appshot 2026-10-12T17-06-44.938Z.png`, `Linear Appshot 2026-10-12T17-06-59.112Z.png`, and `Linear Appshot 2026-10-12T17-07-08.620Z.png`, plus the three supplied dark-mode mockups for read, edit, and open-menu states. Source attachments were displayed at 1987 × 1248 after conversation resizing. Implementation evidence: Codex in-app Browser captures of `http://127.0.0.1:4319/` in this thread at the default 1280 × 720 CSS viewport and at 390 × 844 CSS pixels. The implementation used device scale 1. The focused comparisons covered the update-schedule card, schedule menu, Slack row, and narrow edit state.
+
+**Findings and comparison history**
+- [P2, resolved] The first narrow-screen edit layout put the 210px schedule control and both action buttons on one row. This was too dense and risked overflow. The edit card now wraps to a full-width selector and right-aligned action row below 640px; the 390 × 844 post-fix capture showed no horizontal overflow.
+- No actionable P0/P1/P2 desktop differences remain. The implementation preserves the reference's centered 688px content column, title and helper hierarchy, 56px schedule surface, 72px Slack surface, section rhythm, rounded menus, selected option indicator, and read/edit/open states inside the existing Forge theme.
+- [P3, accepted] Forge's existing Geist type and neutral component tokens differ slightly from Linear's surrounding shell and active button tint. Existing product tokens and reusable controls were retained intentionally.
+
+**Required fidelity surfaces**
+- Fonts and typography: existing Forge Geist; 24px page heading, 14px section and helper copy, compact 12px secondary row copy, and reference line wrapping verified.
+- Spacing and layout rhythm: 688px desktop content width, responsive 20px page gutters, 36px first-section spacing, 48px section gap, compact card heights, and menu width verified.
+- Colors and visual tokens: existing dark Forge background, muted cards, foreground hierarchy, emerald connection dot, and product focus styles retained.
+- Image quality and assets: no raster imagery was required. Slack, information, dropdown, and selected-state marks use existing icon-library components; no placeholder art was added.
+- Copy and content: reference title, descriptions, channel name, cadence options, action labels, and documentation URL retained.
+
+**Interactions and checks**
+- Edit, Cancel, nine-option schedule menu, Save, workspace-scoped persistence, reload persistence, and Slack management menu were verified in the in-app Browser. The clean final browser run reported no console errors.
+- Four focused tests cover initial content, editing/cancel, cadence save, and workspace isolation. Targeted ESLint, full TypeScript, production build with protected Workflow verification, and repository whitespace checks passed.
+- The Slack row mirrors the supplied connected state and routes management to the existing Applications settings page; no new Slack backend or credential flow was invented.
+
+final result: passed
 ---
 
 # Agent history design QA
@@ -543,3 +577,119 @@ Preferences persist on this device, consistent with the existing personal prefer
 - Source/implementation comparison complete; no actionable P0/P1/P2 desktop findings remain.
 
 final result: passed
+
+## Connected accounts — 2026-10-12
+
+- Added protected `/settings/account/connections`, the Personal sidebar link, and its breadcrumb.
+- Matched the reference’s 640px column, separate Slack/Google Calendar/Notion cards, two-row GitHub card, and MCP card with a 48px gap. Provider actions wrap below the text on narrow screens; the GitHub row uses the signed-in workspace’s actual name.
+- Personal provider OAuth connections are not implemented in the current Forge backend. Connect actions explain availability without fabricating connection state, storing tokens, or granting access. The MCP row now links directly to the existing Agent personalization page and its workspace MCP settings section.
+- Rendered layout, provider ordering, active sidebar state, workspace name, and Slack dialog verified in Forge Desktop. All four provider dialog flows, clean close behavior, and the MCP navigation target passed six focused tests.
+- In-app browser reload/navigation repeatedly timed out. The desktop was being navigated during the remaining checks, so mobile visual verification and a final screenshot capture remain unverified.
+- Six focused tests, targeted ESLint, production build (including protected Workflow verification), and diff check pass. The latest full-project typecheck reports two unrelated optional-icon errors in `templates/template-editor.tsx` and `templates/template-items.tsx`. Their ongoing edits were preserved.
+- GitHub brand glyph source: Simple Icons, `https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/github.svg`.
+
+## Agent personalization settings — 2026-10-12
+
+- Route: `/settings/account/agents`; the existing Personal sidebar and desktop tab title now link to this authenticated page.
+- Source: user-supplied Linear Agent personalization screenshot, saved as `docs/audits/agent-personalization/source-user-1.png` (1987 × 1248 input pixels). Desktop implementation: `desktop-final.png` (3600 × 2260 pixels, 1800 × 1130 CSS pixels). `comparison-final.png` normalizes both images to the same CSS dimensions and compares their 640px content columns together; `desktop-final-css.png` retains the surrounding Forge shell.
+- Visual result: passed for the supplied desktop empty state. Guidance textarea height, section spacing, card geometry, text hierarchy, plus action, and Configure action match the reference within the existing Forge shell. Forge branding/fonts/shell are intentionally retained. The Skills description reflects the currently implemented manual “Use in chat” action instead of claiming automatic skill selection or slash-command invocation.
+- Verified in component tests: guidance save on blur; storage failure retains the draft; cross-tab guidance conflicts retain both the draft and the saved record; personal skill creation, revision-aware editing, unsaved-change confirmation, deletion confirmation, and insertion into the existing chat draft; MCP disabled/enabled states, failure, retry, and Configure destination. Store tests cover account isolation, stale writes, corrupted-data preservation, and whitespace validation. Nine focused tests passed.
+- Actual authenticated desktop page and disabled MCP policy were captured. Additional desktop interaction checks could not be completed: the shared native window changed during other work, native clicks subsequently did not activate the editor, and isolated IAB navigation timed out. Mobile rendering remains unverified. These are verification limits; no simulated screenshot or sign-in redirect is presented as page proof.
+- Typecheck, scoped ESLint, production build including protected Workflow handler verification, and `git diff --check` passed.
+- Implementation boundary: guidance and skills are validated, account-scoped local storage on this device, consistent with existing team skill storage. Skills can be explicitly inserted into the agent composer. Applying guidance automatically to runtime responses, selecting skills automatically, slash invocation, and cross-device/server sync are not implemented. MCP access is read from the real workspace security snapshot; Configure links to the real MCP section, with no access changes made during QA.
+
+## Workspace issue labels — 2026-10-12
+
+- Added `/settings/issue-labels`, the Issues sidebar entry, and breadcrumb by reusing the team labels implementation. The workspace view shows expandable colored groups, nested labels with tree guides, standalone labels, Rules/usage/date columns, creation, search, sorting, display options, group selection, inline editing, menus, and Undo. The supplied group names and visible Direction children seed only an unsaved directory; existing saved data, including an empty directory, takes precedence.
+- Matched the supplied compact table layout using the existing Forge font, tokens, and shell. Root-level dots and group icon centers are aligned exactly (both x=70 in the 1280px preview); root label and group text share an origin, and children are indented 28px. Increased the chevron-to-icon separation by 8px while reserving room for the selection checkbox. Group name, icon, and noninteractive row space toggle expansion; Enter activates the name button. Selection, description editing, and action menus keep their separate behavior.
+- Real-component browser preview verified collapse/expand, row-space clicks, keyboard activation, searching collapsed groups, group creation, nested label creation and persistence after reload, deletion with Undo, empty-group guidance, and standalone label alignment. Temporary QA rows were removed. Captures: `.forge/labels-qa/desktop.png` (1280x900, includes temporary standalone test label for alignment evidence) and `.forge/labels-qa/mobile.png` (390x844). The narrow table scrolls horizontally within its container; document width remained 390px.
+- Three focused suites / 47 tests passed, including group/name/row toggling and event isolation, persisted group membership, selection, existing team behavior, parsing, and navigation. TypeScript, scoped ESLint, formatting checks, production build with Workflow handler verification, and whitespace checks passed.
+- Persistence remains browser-local sample data, following the existing labels implementation. Group usage/date values in the supplied example are fixtures; live issue usage, Rules editing, and server synchronization are not implemented. Invalid saved data surfaces a load error and is not overwritten.
+- Full authenticated-shell rendering could not be validated: localhost:3000 showed only the settings shell on multiple routes, including existing Preferences, alongside a TanStack devtools `path.endsWith is not a function` error. Visual/interaction evidence is from an isolated Vite preview rendering the actual component and styles, not a claim of authenticated end-to-end verification. No unrelated shell fix was included.
+
+final result: component verification passed; authenticated-shell verification blocked as described above
+
+### Label group chevron alignment correction — 2026-10-12
+
+Centered the four-dot group glyph within its 12px box using explicit 3px grid tracks and centered content. The prior automatic tracks placed the visible dots 1.414px above the chevron center. Rendered measurements now match exactly for collapsed Design (y=215) and expanded Direction (y=259). Existing chevron spacing and row behavior are unchanged. Component preview evidence: `.forge/labels-qa/chevron-alignment.png`. Scoped ESLint and whitespace checks passed.
+
+## SLAs settings — 2026-10-12
+
+- Added the protected `/settings/sla` route, active Issues sidebar entry, generated route registration, and `SLAs` breadcrumb.
+- Matched both supplied Linear states inside the existing Forge shell: centered 688px content, reference copy and Docs link, compact rounded settings surface, gated Automation rules section, and existing Forge button, switch, select, dialog, input, and icon components.
+- Disabled is the clean default. Enabling SLAs reveals the Work week control and the five supplied initial priority rules: Urgent adds 24 hours, High adds 1 week, and Medium, Low, and No priority remove the SLA.
+- Enablement, work week, and automation rules persist per workspace in validated local storage. Add, edit, and delete rule actions are wired; failed writes preserve the visible state and surface an error toast.
+- Rendered source/implementation comparison covered disabled and enabled layouts plus the add-rule dialog in an isolated Forge preview. The shared authenticated desktop window was concurrently in use by other settings-page QA, so no claim of authenticated end-to-end or mobile rendering is made.
+- Four focused component tests passed, covering disabled defaults, the enabled reference state, rule creation persistence, and workspace isolation. Targeted ESLint, full TypeScript, the production build with protected Workflow verification, and the repository whitespace check passed.
+
+final result: passed
+
+## Project labels — 2026-10-12
+
+- Added `/settings/project-labels`, connected the Projects → Labels sidebar item, and named the page in desktop navigation. Reuses `TeamIssueLabelsSettings`, `TeamLabelRow`, `LabelGroupRow`, editor, color picker, filters, column controls, and bulk actions via an entity variant. The usage column and display option say Projects.
+- Reference fixture contains collapsed Design, Development, Marketing, Operations, Product Management, and Sales groups with the supplied colors, counts, and dates. These are sample metadata rather than live project usage. Project labels use their own versioned local-storage key; issue-label data is unchanged.
+- Three targeted suites / 48 tests passed. Added coverage for the six groups, project-specific column, creating a group and child label with the shared controls, persistence after remount, and isolation from workspace issue labels. Typecheck, scoped ESLint, production build with Workflow handler verification, and whitespace checks passed.
+- Attempted current-route browser verification, but the in-app browser timed out during navigation again. No new rendered screenshot or authenticated visual verification is claimed. The shared issue-label components retain their previously inspected layout and interactions.
+
+## Workspace Project templates — 2026-10-12
+
+- Added `/settings/project-templates` and `/settings/templates/project/$templateId`, the Projects → Templates sidebar destination and active editor state, and list/editor breadcrumbs. The protected routes use the existing authenticated template directory. Workspace issue and project lists filter by kind, so templates cannot appear in the wrong list.
+- Matched the supplied empty list and new-template screenshots within the Forge shell: centered 640px list, reference description and Docs link, rounded empty card and New template action; 750px editor with template name, icon, project name/summary, property chips, rich description, milestones, issues, visibility, Cancel, and Create/Save. The shared editor now returns workspace project templates to the correct list.
+- Extended the existing database-backed workspace template service to accept projects while retaining workspace/creator derivation, management permissions, accessible-team/member validation, duplicate-name checks by kind, and revision-aware edits. The visibility picker defaults to Workspace and offers accessible teams; visibility is stored as template metadata following the existing template model. Deletion requires confirmation. Failed saves retain the draft. Project labels use the separate project-label directory rather than issue labels.
+- Fixed a shared rich-editor initialization issue: changing editability now suppresses the content-update event, so opening a blank editor does not mark the template as changed. A regression test covers initialization and editability changes.
+- Actual authenticated localhost browser rendering inspected at the default 1506x1034 desktop viewport and 390x844 mobile viewport. Captures in `/Users/matthieu/.codex/visualizations/2026/10/10/01a1261a-7373-7dd0-915d-bf2cdd1b43ca`: `project-template-editor.png`, `project-template-editor-final.png`, `project-templates-mobile.png`, `project-template-editor-mobile.png`. Mobile document width is exactly 390px. Verified list-to-editor navigation, Workspace/Testing visibility choices, draft name/title editing, milestone creation, and discard confirmation returning to the list. No live test templates were saved or deleted; save/edit/delete persistence was exercised through component and application-service tests with database mocks.
+- Six focused suites / 33 tests passed, covering project create/edit/error/confirmation/permissions, milestones and unsaved drafts, project-label isolation, workspace service validation, issue-template regression, shared controls/items, and rich content. Scoped ESLint, formatting, and whitespace checks pass. Final full-project TypeScript and production build with protected Workflow verification pass. A temporary concurrent Project statuses import error resolved when its component arrived; that independent work was preserved. The final browser check showed Cancel on a fresh blank template changing the URL to the list without prompting to discard changes. That final client navigation remained pending; a subsequent reload timed out, so the settled list was not revalidated after the initialization correction. The list and editor had both rendered successfully earlier, and the correction has focused regression coverage.
+
+## Initiatives settings and labels — 2026-10-12
+
+- Added `/settings/initiatives` and `/settings/initiative-labels`, settings sidebar navigation, and desktop breadcrumb titles.
+- Matched the supplied hierarchy, copy, cards, enabled/disabled states, schedule editor, and label empty-state illustration. Initiative labels reuse the shared labels table/editor/group/filter controls with separate storage.
+- Settings and labels are local preferences, not server-driven initiative access control or a reminder scheduler. Slack broadcasting is unavailable; the page shows Connect and an explanatory dialog instead of claiming a live connection.
+- Verified 53 targeted tests, typecheck, focused ESLint, production build, and `git diff --check`.
+- CUA rendered both components in the isolated `.forge/initiatives-qa` preview; checked toggling, disabled controls, schedule editor, and labels empty state. Full app route showed only its shell and then timed out on reload, with a TanStack devtools error logged. Authenticated route rendering remains unverified. Labels screenshot: `.forge/initiatives-qa/labels.png`.
+
+## Global typography weight refinement — 2026-10-12
+
+- Softened the shared Tailwind font-weight tokens by 50 points: Medium 500 → 450, Semibold 600 → 550, Bold 700 → 650. Geist Variable supports the intermediate weights. Regular text stays at 400. Existing sizes, line heights, and semantic emphasis remain in place.
+- Desktop tab labels, checklist rows, thinking text, and template rich-editor headings/summary now use the same tokens instead of literal 500/600 declarations. Native `b`/`strong` emphasis uses the shared Bold token. Brand glyphs and email templates are outside this page typography adjustment.
+- Formatting, production build including protected Workflow verification, and `git diff --check` pass. Both the compiled production CSS and the running localhost development stylesheet contain 450/550/650.
+- Rendered verification limitation: the existing in-app browser still reported the previous stylesheet before refresh; refresh and rebinding then timed out. The native app could be inspected but computed weights were unavailable there. No stale screenshot is presented as proof of the new weights; current rendered typography remains unverified.
+
+## Custom emojis settings and shared picker — 2026-10-12
+
+- Added the protected `/settings/emojis` route, Features sidebar destination, and breadcrumb. Preserved the shared shell and matched the supplied title, search/upload toolbar, sortable Name/Source/Added table, row hover removal action, and illustrated empty state.
+- Upload previews the selected image and offers an editable shortcode derived from its filename. PNG, JPEG, GIF, and WebP inputs up to 2 MiB are normalized to a still PNG at most 128px per side. Invalid uploads, duplicate names, and failed saves retain a readable error. Removal uses a confirmation dialog; removed emojis disappear from the picker and existing references render a placeholder.
+- Added database-backed workspace emoji storage and migration 0024; migration applied successfully. Authenticated server functions derive workspace and creator from the session, enforce workspace upload policy, reject guests/API-key actors, and restrict removal to the creator or workspace administrators. The workspace-keyed provider refreshes on focus and shares uploads/removals with all existing TeamIconPicker consumers. Stable references fit the existing icon contract; shared icon rendering displays custom images.
+- Real-component CUA preview verified empty state, actual file decoding and resized preview, upload/name editing, populated row, shortcode search, custom picker selection/rendering, reload, no-match search, and confirmed removal returning to empty state. At 390x844, the document remained 390px wide while the table scrolled internally. Captures: `.forge/emojis-qa/empty.png`, `.forge/emojis-qa/picker.png`, and `.forge/emojis-qa/mobile.png`. The isolated preview uses a local fixture service; live authenticated database CRUD was not exercised through the browser.
+- Six focused suites / 34 tests passed, covering upload/picker/removal behavior, duplicate and failed writes, workspace provider isolation, server authorization/scoping, input validation, standard picker/catalog regressions, and navigation. Targeted ESLint and whitespace checks pass. Production build including protected Workflow handler verification passes. Full TypeScript reports errors only in the concurrently developed `project-statuses-settings.test.tsx`; no emoji implementation or test errors remain.
+- Full authenticated localhost route verification was blocked by the existing navigation timeout. Preview evidence is not a claim of authenticated end-to-end verification. No production deployment was performed.
+
+## 2026-10-12 — Conditional team Cycles navigation
+- Connected the main sidebar to the existing per-team Cycles preference. Cycles appears between Issues and Projects only when enabled; same-tab and cross-tab changes update the menu.
+- Added a protected team Cycles route with an upcoming schedule preview using configured duration, cooldown, start weekday, and future count. This is a schedule preview, not persisted issue-cycle membership or the reference's full filter/detail UI.
+- Validation: 25 focused tests passed (navigation, settings toggles, persistence, cross-tab changes, team isolation, corrupt preferences, schedule rendering); app typecheck, focused ESLint, production build, and diff check passed.
+- Browser: real AppSidebar, TeamCyclesSettings, and TeamCycles rendered in an isolated Vite harness with mock auth/team data; verified enable adds link, disable removes it, enabled schedule renders. Screenshot: `.forge/cycles-qa/cycles.png`.
+- Full app route verification remains limited: localhost:3000/teams/forge/cycles rendered the shell/breadcrumb but no route body, matching the pre-existing local behavior observed in prior settings work.
+
+## 2026-10-12 — macOS title-bar alignment
+- Increased the macOS top strip to 48px and centered the 26px tabs with 11px above and below. Sidebar toggle and history controls share the 24px vertical centerline.
+- Positioned native traffic lights at x=24/y=17 to align the first button with the main sidebar icon/avatar inset and center 14px buttons on that same line.
+- Updated sidebar/settings shell heights and panel/overlay top offsets together; browser styles and footer spacing remain unchanged.
+- Validation: 21 existing window configuration/title-bar/tab tests passed; Electron main and preload builds passed; git diff --check passed.
+- Visually inspected the updated renderer spacing in the native Electron development window. Native traffic-light relocation awaits a new window/relaunch of the rebuilt shell; the existing window was left open to preserve its active settings edit.
+
+## Project statuses settings — 2026-10-12
+
+- Route: `/settings/project-statuses`; Projects → Statuses navigates to the authenticated settings page. The tab/breadcrumb uses “Statuses”; the page heading uses “Project statuses”.
+- Target: supplied Linear desktop screenshot, `docs/audits/project-statuses/source-user-1.png` (1987 × 1248 pixels). Implementation: authenticated Forge desktop `desktop-final.png` (3600 × 2260 pixels, 1800 × 1130 CSS pixels), normalized to `desktop-final-css.png`. `comparison-final.png` compares both 640px content columns at the same CSS density and idle state.
+- Final result: passed for the supplied desktop layout and core settings interactions. Fixed stages, group headers, 60px status rows, 34px icon tiles, compact plus actions, rounded card, typography, and spacing follow the reference within the existing Forge shell. Hugeicons provide the workflow symbols; the outlined completed/canceled symbols are a remaining P3 library difference. Reference project counts are intentionally omitted because Forge’s Projects page is currently a placeholder, rather than inventing project usage.
+- Rendered desktop QA: opened the add form; verified nine compact 18px color swatches in a 256px picker and its custom hex input; selected Red; attempted the existing “To do” name and observed the duplicate-name error; canceled the unsaved form; opened the Backlog menu and verified disabled Move up/Move down/Delete with the last-status explanation; opened Edit from that menu and canceled. Fixed the desktop input flex basis and anchored the color picker to the start of its trigger. The corrected form/picker is captured in `desktop-color-picker-final.png` and `color-picker-detail.png`; the menu and duplicate error are in `desktop-menu.png` and `desktop-validation.png`. No QA status was persisted in the live desktop workspace.
+- Eleven focused tests passed: workspace isolation, validated unique names/colors, within-group ordering, deleting/restoring at the original position, stale-save protection, quota failure preserving drafts, corrupted-data preservation, component create/recolor/reorder/delete/restore, duplicate validation, cancellation, and disabled last-status deletion. Scoped ESLint, full app typecheck, production build/Workflow verification, and diff checks passed. Mobile rendering remains unverified because isolated IAB navigation did not respond; controls wrap at narrow widths, but source inspection is not represented as mobile proof.
+- Runtime restart: at the user’s request, restarted the web and desktop apps. A concurrent shared-navigation change had briefly imported nonexistent `CycleIcon`; the source now uses `Clock05Icon`. Restarted Vite after this correction to clear the stale failed SSR module. Verified successful HTTP requests and the actual signed-in desktop Inbox, then navigated to Project statuses and exercised its controls. Web session: 61599, `http://localhost:3000`; desktop session: 74654. Both were left running.
+- Implementation boundary: status settings are validated, versioned local storage scoped to the workspace on this device. Deleted statuses remain recoverable through Undo and the persistent Deleted statuses list. Server sync, live project usage counts, and applying statuses to project records are not implemented. View projects links navigate to the existing unfiltered Projects route.
+
+## 2026-10-12 — Native tab sizing follow-up
+- Rebuilt and fully restarted the Electron development app to load the native traffic-light placement; the user confirmed the result.
+- Increased macOS tabs from 26px to 30px, centered with 9px above and below in the 48px title bar.
+- Increased tab content horizontal padding from 7px to 11px and close-button trailing space from 3px to 7px.
+- Verified the updated tabs in the running native app; diff check passed. Screenshot: `/tmp/forge-taller-tabs.png`.

@@ -42,6 +42,9 @@ export function createWindowOptions(
           transparent: true,
           vibrancy: "sidebar",
           visualEffectState: "followWindow",
+          // Align with the sidebar's 24px icon inset and the renderer's
+          // 48px title bar (14px native buttons centered at y=24).
+          trafficLightPosition: { x: 24, y: 17 },
         }
       : { backgroundColor: "#ffffff" }
 

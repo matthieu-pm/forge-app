@@ -53,6 +53,7 @@ type Columns = {
   issues: boolean
   lastApplied: boolean
   created: boolean
+  rules?: boolean
 }
 
 export function TeamLabelRow({
@@ -65,6 +66,9 @@ export function TeamLabelRow({
   onSelectedChange,
   groups,
   isNewRow = false,
+  nested = false,
+  lastInGroup = false,
+  workspaceStyle = false,
   onSave,
   onClose,
   onDelete,
@@ -78,6 +82,9 @@ export function TeamLabelRow({
   onSelectedChange: (selected: boolean) => void
   groups: Array<TeamLabelGroup>
   isNewRow?: boolean
+  nested?: boolean
+  lastInGroup?: boolean
+  workspaceStyle?: boolean
   onSave: (label: TeamLabel) => string | undefined
   onClose: () => void
   onDelete: () => void
@@ -196,7 +203,15 @@ export function TeamLabelRow({
           />
         </TableCell>
         <TableCell className="px-0 py-0">
-          <div className="flex min-h-11 items-center gap-2">
+          <div
+            className={`relative flex min-h-11 items-center ${workspaceStyle ? "gap-2.5" : "gap-2"} ${nested ? "pl-7" : ""}`}
+          >
+            {nested && (
+              <span
+                aria-hidden="true"
+                className={`pointer-events-none absolute top-0 left-1.5 w-3 border-l border-border/60 ${lastInGroup ? "h-6 rounded-bl-lg border-b" : "h-full after:absolute after:top-1/2 after:w-3 after:border-t after:border-border/60"}`}
+              />
+            )}
             <Popover
               open={colorOpen}
               onOpenChange={(open) => {
@@ -210,7 +225,7 @@ export function TeamLabelRow({
                     ? `Change color for ${label.name}`
                     : "Change label color"
                 }
-                className={`-ml-2 flex size-6 shrink-0 items-center justify-center rounded-md hover:bg-muted/60 ${focusClass}`}
+                className={`${workspaceStyle ? "-ml-1.5" : "-ml-2"} flex size-6 shrink-0 items-center justify-center rounded-md hover:bg-muted/60 ${focusClass}`}
               >
                 <span
                   className="size-2 rounded-full"
@@ -329,7 +344,7 @@ export function TeamLabelRow({
                     cancel()
                   }
                 }}
-                className={`${inputClass} w-[150px] max-w-[calc(100%-2rem)]`}
+                className={`${inputClass} ${workspaceStyle ? "-ml-1.5" : ""} w-[150px] max-w-[calc(100%-2rem)]`}
               />
             ) : (
               <>
@@ -338,7 +353,7 @@ export function TeamLabelRow({
                   ref={nameButton}
                   aria-label={`Edit label name ${name}`}
                   onClick={editName}
-                  className={`truncate rounded-sm px-1.5 py-1 text-sm ${focusClass}`}
+                  className={`${workspaceStyle ? "-ml-1.5" : ""} truncate rounded-sm px-1.5 py-1 text-sm ${focusClass}`}
                 >
                   {name}
                 </button>
@@ -395,7 +410,7 @@ export function TeamLabelRow({
                   cancelled.current = false
                   setEditingDescription(true)
                 }}
-                className={`max-w-full truncate rounded-sm py-1 text-left text-sm ${description ? "text-foreground/90" : "text-muted-foreground/50"} ${focusClass}`}
+                className={`max-w-full truncate rounded-sm py-1 text-left text-sm ${description ? "text-foreground/90" : workspaceStyle ? "text-muted-foreground/50 opacity-0 group-focus-within/label:opacity-100 group-hover/label:opacity-100" : "text-muted-foreground/50"} ${focusClass}`}
                 title={description || undefined}
               >
                 {description || "Add label description..."}
@@ -403,22 +418,32 @@ export function TeamLabelRow({
             )}
           </TableCell>
         )}
+        {columns.rules && <TableCell className="px-0" />}
         {columns.issues && (
           <TableCell className="px-0 text-xs text-muted-foreground">
-            {!isNewRow && label.issues}
+            {!isNewRow && (workspaceStyle ? label.issues || "" : label.issues)}
           </TableCell>
         )}
         {columns.lastApplied && (
           <TableCell className="px-0 text-xs text-muted-foreground">
             {!isNewRow &&
               (label.lastApplied
-                ? `${formatDistanceToNowStrict(new Date(label.lastApplied), { roundingMethod: "floor" }).replace(/ months?$/, "mo")} ago`
-                : "Never")}
+                ? `${formatDistanceToNowStrict(new Date(label.lastApplied), {
+                    roundingMethod: "floor",
+                  })
+                    .replace(/ months?$/, "mo")
+                    .replace(/ years?$/, workspaceStyle ? "y" : " year")} ago`
+                : workspaceStyle
+                  ? ""
+                  : "Never")}
           </TableCell>
         )}
         {columns.created && (
           <TableCell className="px-0 text-xs text-muted-foreground">
-            {format(new Date(label.createdAt), "MMM d")}
+            {format(
+              new Date(label.createdAt),
+              workspaceStyle ? "MMM yyyy" : "MMM d"
+            )}
           </TableCell>
         )}
         <TableCell className="p-0 pr-2 text-right">

@@ -1,13 +1,17 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { TeamCyclesSettings } from "./team-cycles-settings"
+import { TeamCycles } from "./team-cycles"
 import type { ReactNode } from "react"
 import type { TeamSummary } from "@/lib/team-contract"
 import {
+  initialTeamCycles,
   nextCycleStart,
   parseTeamCycles,
   teamCyclesStorageKey,
+  useEnabledTeamCycles,
 } from "@/lib/team-cycles"
+import { buildYourTeamsNav } from "@/lib/app-navigation"
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ children, to }: { children: ReactNode; to: string }) => (
@@ -29,6 +33,95 @@ afterEach(cleanup)
 const enable = () => screen.getByRole("switch", { name: "Enable cycles" })
 const priority = () => screen.getByRole("switch", { name: "Started issues" })
 describe("team cycles settings", () => {
+  it("updates team navigation on toggle, reload, and cross-tab changes", () => {
+    function Navigation({ ids = [team.id, "other"] }: { ids?: Array<string> }) {
+      const enabled = useEnabledTeamCycles(ids)
+      return (
+        <nav>
+          {buildYourTeamsNav(
+            ids.map((id) => ({
+              name: id,
+              slug: id,
+              cyclesEnabled: enabled.has(id),
+            }))
+          ).flatMap((item) =>
+            item.items
+              ?.filter((child) => child.title === "Cycles")
+              .map((child) => (
+                <a key={child.to} href={child.to}>
+                  {item.title} cycles
+                </a>
+              ))
+          )}
+        </nav>
+      )
+    }
+    const view = render(
+      <>
+        <TeamCyclesSettings team={team} />
+        <Navigation />
+      </>
+    )
+    expect(screen.queryByRole("link", { name: `${team.id} cycles` })).toBeNull()
+    fireEvent.click(enable())
+    expect(
+      screen
+        .getByRole("link", { name: `${team.id} cycles` })
+        .getAttribute("href")
+    ).toBe(`/teams/${team.id}/cycles`)
+    expect(screen.queryByRole("link", { name: "other cycles" })).toBeNull()
+    fireEvent.click(enable())
+    expect(screen.queryByRole("link", { name: `${team.id} cycles` })).toBeNull()
+    fireEvent.click(enable())
+    view.unmount()
+    const restored = render(<Navigation />)
+    expect(screen.getByRole("link", { name: `${team.id} cycles` })).toBeTruthy()
+    act(() => {
+      localStorage.setItem(
+        key,
+        JSON.stringify({ ...initialTeamCycles(), enabled: false })
+      )
+      localStorage.setItem(
+        teamCyclesStorageKey("other"),
+        JSON.stringify({ ...initialTeamCycles(), enabled: true })
+      )
+      window.dispatchEvent(new StorageEvent("storage", { key }))
+    })
+    expect(screen.queryByRole("link", { name: `${team.id} cycles` })).toBeNull()
+    expect(screen.getByRole("link", { name: "other cycles" })).toBeTruthy()
+    restored.rerender(<Navigation ids={[team.id]} />)
+    expect(screen.queryByRole("link", { name: "other cycles" })).toBeNull()
+    act(() => {
+      localStorage.setItem(key, "corrupt")
+      window.dispatchEvent(new StorageEvent("storage", { key }))
+    })
+    expect(screen.queryByRole("link", { name: `${team.id} cycles` })).toBeNull()
+    expect(localStorage.getItem(key)).toBe("corrupt")
+  })
+
+  it("opens a schedule using the enabled team's preferences", () => {
+    localStorage.setItem(
+      key,
+      JSON.stringify({
+        ...initialTeamCycles(),
+        enabled: true,
+        futureCycles: 3,
+        cooldown: 1,
+      })
+    )
+    render(<TeamCycles team={team} />)
+    expect(
+      screen.getByRole("list", { name: "Upcoming cycle schedule" }).children
+    ).toHaveLength(3)
+    expect(screen.getAllByText("1 week cooldown")).toHaveLength(2)
+    act(() => {
+      localStorage.removeItem(key)
+      window.dispatchEvent(new StorageEvent("storage", { key }))
+    })
+    expect(screen.getByText("Cycles are disabled")).toBeTruthy()
+    expect(screen.queryByRole("list")).toBeNull()
+  })
+
   it("gates automation behind cycles and preserves its choice across disable and reload", () => {
     const view = render(<TeamCyclesSettings team={team} />)
     expect(priority().getAttribute("aria-disabled")).toBe("true")

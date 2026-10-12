@@ -21,15 +21,21 @@ import type {
 import type { TeamLabelRowHandle } from "@/components/team-label-row"
 import {
   LABEL_COLORS,
+  initialInitiativeLabels,
+  initialProjectLabels,
   initialTeamLabels,
+  initialWorkspaceLabels,
+  initiativeLabelsStorageKey,
   mergeTeamLabels,
   parseTeamLabels,
+  projectLabelsStorageKey,
   restoreTeamLabelDeletion,
   teamLabelsStorageKey,
   workspaceLabelsStorageKey,
 } from "@/lib/team-labels"
 import { LabelSelectionActions } from "@/components/label-selection-actions"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
+import { LabelGroupRow } from "@/components/label-group-row"
 import { TeamLabelRow } from "@/components/team-label-row"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -68,18 +74,52 @@ type Columns = {
   issues: boolean
   lastApplied: boolean
   created: boolean
+  rules?: boolean
 }
 const focusClass =
   "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
 const labelRowClass =
   "h-11 border-0 bg-transparent hover:bg-transparent data-[state=selected]:bg-transparent [&>td]:transition-colors [&>td]:duration-100 [&>td:first-child]:rounded-l-[8px] [&>td:last-child]:rounded-r-[8px] hover:[&>td]:bg-muted/30 data-[state=selected]:[&>td]:bg-[#5e6ad2]/20 [&[data-state=selected]+tr[data-state=selected]>td:first-child]:rounded-tl-none [&[data-state=selected]+tr[data-state=selected]>td:last-child]:rounded-tr-none [&[data-state=selected]:has(+tr[data-state=selected])>td:first-child]:rounded-bl-none [&[data-state=selected]:has(+tr[data-state=selected])>td:last-child]:rounded-br-none"
 
-export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
-  const [workspaceView, setWorkspaceView] = React.useState(false)
+export function TeamIssueLabelsSettings({
+  team,
+  entity = "issue",
+}: {
+  team?: TeamSummary
+  entity?: "issue" | "project" | "initiative"
+}) {
+  const projectLabels = entity === "project"
+  const initiativeLabels = entity === "initiative"
+  const entityTitle = initiativeLabels
+    ? "Initiative labels"
+    : projectLabels
+      ? "Project labels"
+      : "Issue labels"
+  const usageTitle = initiativeLabels
+    ? "Initiatives"
+    : projectLabels
+      ? "Projects"
+      : "Issues"
+  const sharedStorageKey = initiativeLabels
+    ? initiativeLabelsStorageKey
+    : projectLabels
+      ? projectLabelsStorageKey
+      : workspaceLabelsStorageKey
+  const initialSharedLabels = initiativeLabels
+    ? initialInitiativeLabels
+    : projectLabels
+      ? initialProjectLabels
+      : initialWorkspaceLabels
+  const standalone = !team
+  const [workspaceView, setWorkspaceView] = React.useState(standalone)
+  const [expandedGroups, setExpandedGroups] = React.useState<Set<string>>(
+    () => new Set(entity !== "issue" ? [] : ["direction"])
+  )
   const [workspaceCount, setWorkspaceCount] = React.useState(0)
   const [directory, setDirectory] = React.useState(() =>
-    initialTeamLabels(team.slug)
+    team ? initialTeamLabels(team.slug) : initialSharedLabels()
   )
+  const [loadError, setLoadError] = React.useState(false)
   const [query, setQuery] = React.useState("")
   const [filter, setFilter] = React.useState("all")
   const [ascending, setAscending] = React.useState(true)
@@ -88,6 +128,7 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
     issues: true,
     lastApplied: true,
     created: true,
+    rules: standalone,
   })
   const [editor, setEditor] = React.useState<Editor | null>(null)
   const [newLabel, setNewLabel] = React.useState<TeamLabel | null>(null)
@@ -96,8 +137,8 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
   )
   const newLabelRow = React.useRef<TeamLabelRowHandle>(null)
   const newLabelButton = React.useRef<HTMLButtonElement>(null)
-  const teamStorageKey = teamLabelsStorageKey(team.id)
-  const storageKey = workspaceView ? workspaceLabelsStorageKey : teamStorageKey
+  const teamStorageKey = team ? teamLabelsStorageKey(team.id) : sharedStorageKey
+  const storageKey = workspaceView ? sharedStorageKey : teamStorageKey
 
   const activeStorageKey = React.useRef(storageKey)
 
@@ -106,12 +147,16 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
     function load() {
       try {
         const saved = window.localStorage.getItem(storageKey)
+        setLoadError(false)
         setDirectory(
           saved
             ? parseTeamLabels(saved)
-            : initialTeamLabels(workspaceView ? "" : team.slug)
+            : workspaceView
+              ? initialSharedLabels()
+              : initialTeamLabels(team?.slug ?? "")
         )
       } catch {
+        setLoadError(true)
         toast.error(
           "Saved labels could not be loaded. Your saved data has been preserved."
         )
@@ -119,7 +164,7 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
     }
     function loadWorkspaceCount() {
       try {
-        const saved = window.localStorage.getItem(workspaceLabelsStorageKey)
+        const saved = window.localStorage.getItem(sharedStorageKey)
         setWorkspaceCount(
           saved
             ? parseTeamLabels(saved).labels.filter((label) => !label.archived)
@@ -134,13 +179,20 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
     loadWorkspaceCount()
     function onStorage(event: StorageEvent) {
       if (event.key === storageKey) load()
-      if (event.key === workspaceLabelsStorageKey) loadWorkspaceCount()
+      if (event.key === sharedStorageKey) loadWorkspaceCount()
     }
     window.addEventListener("storage", onStorage)
     return () => window.removeEventListener("storage", onStorage)
-  }, [storageKey, team.slug, workspaceView])
+  }, [
+    storageKey,
+    team?.slug,
+    workspaceView,
+    initialSharedLabels,
+    sharedStorageKey,
+  ])
 
   function save(next: TeamLabelDirectory, key = storageKey) {
+    if (loadError) return false
     try {
       window.localStorage.setItem(key, JSON.stringify(next))
       if (activeStorageKey.current === key) {
@@ -148,7 +200,7 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
         const updated = next.labels.find((label) => label.id === newLabel?.id)
         if (updated) setNewLabel(updated)
       }
-      if (key === workspaceLabelsStorageKey)
+      if (key === sharedStorageKey)
         setWorkspaceCount(next.labels.filter((label) => !label.archived).length)
       return true
     } catch {
@@ -162,9 +214,16 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
   const visible = directory.labels
     .filter(
       (label) =>
-        label.name
+        (label.name
           .toLocaleLowerCase()
-          .includes(query.trim().toLocaleLowerCase()) &&
+          .includes(query.trim().toLocaleLowerCase()) ||
+          directory.groups.some(
+            (group) =>
+              group.id === label.groupId &&
+              group.name
+                .toLocaleLowerCase()
+                .includes(query.trim().toLocaleLowerCase())
+          )) &&
         (filter === "archived" ? !!label.archived : !label.archived) &&
         (filter === "all" ||
           filter === "archived" ||
@@ -179,32 +238,36 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
     newLabel !== null &&
     (!directory.labels.some((label) => label.id === newLabel.id) ||
       visible.some((label) => label.id === newLabel.id))
-  const columnCount = 3 + Object.values(columns).filter(Boolean).length
   const sections = [
-    {
-      group: null,
-      labels: visible.filter(
-        (label) => !label.groupId && label.id !== newLabel?.id
-      ),
-    },
+    ...visible
+      .filter((label) => !label.groupId && label.id !== newLabel?.id)
+      .map((label) => ({
+        key: label.id,
+        name: label.name,
+        group: null,
+        labels: [label],
+      })),
     ...directory.groups.map((group) => ({
+      key: group.id,
+      name: group.name,
       group,
       labels: visible.filter(
         (label) => label.groupId === group.id && label.id !== newLabel?.id
       ),
     })),
-  ]
+  ].sort((a, b) => (ascending ? 1 : -1) * a.name.localeCompare(b.name))
 
-  function startNewLabel() {
+  function startNewLabel(groupId: string | null = null) {
     if (newLabelRow.current && !newLabelRow.current.finish()) return
     setQuery("")
     setFilter("all")
+    if (groupId) setExpandedGroups((current) => new Set([...current, groupId]))
     setNewLabel({
       id: crypto.randomUUID(),
       name: "",
       description: "",
       color: "#eb5757",
-      groupId: null,
+      groupId,
       issues: 0,
       lastApplied: null,
       createdAt: new Date().toISOString(),
@@ -282,6 +345,8 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
             groups: [
               ...directory.groups.filter((item) => item.id !== id),
               {
+                ...editor.item,
+                createdAt: editor.item?.createdAt ?? new Date().toISOString(),
                 id,
                 name: values.name,
                 description: values.description,
@@ -384,9 +449,8 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
   }
 
   function moveSelected() {
-    const destinationKey = workspaceView
-      ? teamStorageKey
-      : workspaceLabelsStorageKey
+    if (!team || loadError) return false
+    const destinationKey = workspaceView ? teamStorageKey : sharedStorageKey
     let original: string | null = null
     let wroteDestination = false
     try {
@@ -570,33 +634,45 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
 
   return (
     <>
-      <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-none pb-8">
-        <div className="flex h-12 items-center px-4">
-          <Link
-            to="/settings/teams/$teamSlug"
-            params={{ teamSlug: team.slug }}
-            aria-label={`Back to ${team.name} settings`}
-            className={`inline-flex min-w-0 items-center gap-2 rounded-md py-1 text-sm text-muted-foreground hover:text-foreground ${focusClass}`}
-          >
-            <HugeiconsIcon
-              icon={ArrowLeft01Icon}
-              strokeWidth={1.5}
-              className="size-4"
-            />
-            <TeamSidebarIcon
-              icon={team.icon}
-              name={team.name}
-              className="size-4"
-            />
-            <span className="truncate">{team.name}</span>
-          </Link>
-        </div>
+      <main className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-none pb-8">
+        {loadError && (
+          <p role="alert" className="px-5 py-3 text-sm text-destructive">
+            Saved labels could not be loaded. Your data has been preserved.
+            Reload to try again.
+          </p>
+        )}
+        {team && (
+          <div className="flex h-12 items-center px-4">
+            <Link
+              to="/settings/teams/$teamSlug"
+              params={{ teamSlug: team.slug }}
+              aria-label={`Back to ${team.name} settings`}
+              className={`inline-flex min-w-0 items-center gap-2 rounded-md py-1 text-sm text-muted-foreground hover:text-foreground ${focusClass}`}
+            >
+              <HugeiconsIcon
+                icon={ArrowLeft01Icon}
+                strokeWidth={1.5}
+                className="size-4"
+              />
+              <TeamSidebarIcon
+                icon={team.icon}
+                name={team.name}
+                className="size-4"
+              />
+              <span className="truncate">{team.name}</span>
+            </Link>
+          </div>
+        )}
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border/40 px-5 pt-4 pb-3 sm:px-8 lg:px-14">
           <h1 className="text-2xl font-medium tracking-tight text-foreground">
-            {workspaceView ? "Workspace issue labels" : "Team issue labels"}
+            {standalone
+              ? entityTitle
+              : workspaceView
+                ? "Workspace issue labels"
+                : "Team issue labels"}
           </h1>
           <div className="flex shrink-0 items-center gap-2">
-            {workspaceView && (
+            {workspaceView && team && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -615,7 +691,7 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
             <Button
               ref={newLabelButton}
               className="h-8 rounded-full bg-[#5E6AD2] px-3 font-normal text-white hover:bg-[#5360C8]"
-              onClick={startNewLabel}
+              onClick={() => startNewLabel()}
             >
               New label
             </Button>
@@ -696,7 +772,8 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
                 {(
                   Object.entries({
                     description: "Description",
-                    issues: "Issues",
+                    ...(standalone ? { rules: "Rules" } : {}),
+                    issues: usageTitle,
                     lastApplied: "Last applied",
                     created: "Created",
                   }) as Array<[keyof Columns, string]>
@@ -716,183 +793,289 @@ export function TeamIssueLabelsSettings({ team }: { team: TeamSummary }) {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <div className="px-5 sm:px-8 lg:px-14 [&>[data-slot=table-container]]:-ml-4 [&>[data-slot=table-container]]:w-[calc(100%+2rem)] sm:[&>[data-slot=table-container]]:-ml-10 sm:[&>[data-slot=table-container]]:w-[calc(100%+5rem)]">
-          <Table
-            className="min-w-[1000px] table-fixed border-separate border-spacing-0"
-            aria-label={
-              workspaceView ? "Workspace issue labels" : "Team issue labels"
-            }
+        {initiativeLabels &&
+        directory.labels.length === 0 &&
+        directory.groups.length === 0 &&
+        !newLabel ? (
+          <div
+            role="status"
+            className="flex min-h-64 flex-1 flex-col items-center justify-center gap-5 pb-12 text-sm text-muted-foreground"
           >
-            <TableHeader className="[&_tr]:border-b-0">
-              <TableRow className="border-0 hover:bg-transparent">
-                <TableHead className="w-8 p-0 sm:w-10">
-                  <span className="sr-only">Selection</span>
-                </TableHead>
-                <TableHead
-                  scope="col"
-                  aria-sort={ascending ? "ascending" : "descending"}
-                  className="h-8 w-[32.5%] px-0 text-xs font-normal text-muted-foreground"
-                >
-                  <button
-                    type="button"
-                    aria-label={`Sort by name ${ascending ? "descending" : "ascending"}`}
-                    onClick={() => setAscending((current) => !current)}
-                    className={`inline-flex items-center gap-1 rounded-sm py-1 hover:text-foreground ${focusClass}`}
-                  >
-                    Name{" "}
-                    <HugeiconsIcon
-                      icon={ascending ? ArrowDown02Icon : ArrowUp02Icon}
-                      strokeWidth={1.5}
-                      className="size-3"
-                    />
-                  </button>
-                </TableHead>
-                {columns.description && (
-                  <TableHead
-                    scope="col"
-                    className="h-8 px-0 text-xs font-normal text-muted-foreground"
-                  >
-                    Description
-                  </TableHead>
-                )}
-                {columns.issues && (
-                  <TableHead
-                    scope="col"
-                    className="h-8 w-[5.3%] px-0 text-xs font-normal text-muted-foreground"
-                  >
-                    Issues
-                  </TableHead>
-                )}
-                {columns.lastApplied && (
-                  <TableHead
-                    scope="col"
-                    className="h-8 w-[7.2%] px-0 text-xs font-normal text-muted-foreground"
-                  >
-                    Last applied
-                  </TableHead>
-                )}
-                {columns.created && (
-                  <TableHead
-                    scope="col"
-                    className="h-8 w-[6.2%] px-0 text-xs font-normal text-muted-foreground"
-                  >
-                    Created
-                  </TableHead>
-                )}
-                <TableHead className="w-10 p-0">
-                  <span className="sr-only">Actions</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {newLabel && showNewLabel && (
-                <TeamLabelRow
-                  key={newLabel.id}
-                  ref={newLabelRow}
-                  label={newLabel}
-                  columns={columns}
-                  rowClassName={labelRowClass}
-                  isNewRow
-                  groups={directory.groups}
-                  selected={selectedIds.has(newLabel.id)}
-                  onSelectedChange={(selected) =>
-                    selectLabel(newLabel.id, selected)
-                  }
-                  saved={directory.labels.some(
-                    (label) => label.id === newLabel.id
-                  )}
-                  onSave={saveLabel}
-                  onClose={closeNewLabel}
-                  onDelete={() => remove("label", newLabel.id)}
-                />
-              )}
-              {sections.map(({ group, labels }) => (
-                <React.Fragment key={group?.id ?? "ungrouped"}>
-                  {group &&
-                    (labels.length > 0 || (!query && filter === "all")) && (
-                      <TableRow className={`${labelRowClass} h-10`}>
-                        <TableCell
-                          colSpan={columnCount}
-                          className="py-0 pl-4 sm:pl-10"
-                        >
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setEditor({ kind: "group", item: group })
-                            }
-                            className={`flex items-center gap-3 rounded-md py-2 text-sm font-medium ${focusClass}`}
-                            aria-label={`Edit group ${group.name}`}
-                          >
-                            <span
-                              className="size-2 shrink-0 rounded-full"
-                              style={{ backgroundColor: group.color }}
-                              aria-hidden="true"
-                            />
-                            {group.name}
-                            <span className="text-xs font-normal text-muted-foreground">
-                              {labels.length}
-                            </span>
-                          </button>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  {labels.map((label) => (
-                    <TeamLabelRow
-                      key={label.id}
-                      label={label}
-                      columns={columns}
-                      rowClassName={labelRowClass}
-                      saved
-                      groups={directory.groups}
-                      selected={selectedIds.has(label.id)}
-                      onSelectedChange={(selected) =>
-                        selectLabel(label.id, selected)
-                      }
-                      onSave={saveLabel}
-                      onClose={() => {}}
-                      onDelete={() => remove("label", label.id)}
-                    />
-                  ))}
-                </React.Fragment>
-              ))}
-            </TableBody>
-          </Table>
-          {visible.length === 0 && !showNewLabel && (
-            <p
-              role="status"
-              className="py-10 text-center text-sm text-muted-foreground"
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 140 100"
+              className="h-24 w-32"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
             >
-              {query || filter !== "all"
-                ? "No labels match your filters."
-                : workspaceView
-                  ? "No workspace labels yet. Create a label to get started."
-                  : "No team labels yet. Create a label to get started."}
-            </p>
-          )}
-          {!workspaceView && (
-            <p className="mt-10 text-center text-xs text-muted-foreground">
-              <button
-                type="button"
-                aria-label="Manage workspace labels"
-                onClick={() => switchScope(true)}
-                className={`mr-1.5 rounded-sm text-foreground/90 hover:underline ${focusClass}`}
-              >
-                {directory.inheritedCount + workspaceCount > 0
-                  ? `${directory.inheritedCount + workspaceCount} labels`
-                  : "Manage workspace labels"}
-              </button>
-              {directory.inheritedCount + workspaceCount > 0 &&
-                "inherited from workspace"}
-            </p>
-          )}
-        </div>
+              <g transform="rotate(20 70 50)">
+                <ellipse
+                  cx="70"
+                  cy="50"
+                  rx="62"
+                  ry="39"
+                  strokeDasharray="4 5"
+                  opacity=".7"
+                />
+                {[
+                  [-17, -12],
+                  [17, -12],
+                  [-17, 12],
+                  [17, 12],
+                ].map(([x, y], i) => (
+                  <g key={i} transform={`translate(${70 + x} ${50 + y})`}>
+                    <ellipse cy="3" rx="11" ry="8" />
+                    <ellipse rx="11" ry="7" fill="var(--background)" />
+                  </g>
+                ))}
+              </g>
+            </svg>
+            No labels found
+          </div>
+        ) : (
+          <div className="px-5 sm:px-8 lg:px-14 [&>[data-slot=table-container]]:-ml-4 [&>[data-slot=table-container]]:w-[calc(100%+2rem)] sm:[&>[data-slot=table-container]]:-ml-10 sm:[&>[data-slot=table-container]]:w-[calc(100%+5rem)]">
+            <Table
+              className="min-w-[1000px] table-fixed border-separate border-spacing-0"
+              aria-label={
+                entity !== "issue"
+                  ? entityTitle
+                  : workspaceView
+                    ? "Workspace issue labels"
+                    : "Team issue labels"
+              }
+            >
+              <TableHeader className="[&_tr]:border-b-0">
+                <TableRow className="border-0 hover:bg-transparent">
+                  <TableHead className="w-10 p-0 sm:w-12">
+                    <span className="sr-only">Selection</span>
+                  </TableHead>
+                  <TableHead
+                    scope="col"
+                    aria-sort={ascending ? "ascending" : "descending"}
+                    className="h-8 w-[32.5%] px-0 text-xs font-normal text-muted-foreground"
+                  >
+                    <button
+                      type="button"
+                      aria-label={`Sort by name ${ascending ? "descending" : "ascending"}`}
+                      onClick={() => setAscending((current) => !current)}
+                      className={`inline-flex items-center gap-1 rounded-sm py-1 hover:text-foreground ${focusClass}`}
+                    >
+                      Name{" "}
+                      <HugeiconsIcon
+                        icon={ascending ? ArrowDown02Icon : ArrowUp02Icon}
+                        strokeWidth={1.5}
+                        className="size-3"
+                      />
+                    </button>
+                  </TableHead>
+                  {columns.description && (
+                    <TableHead
+                      scope="col"
+                      className="h-8 px-0 text-xs font-normal text-muted-foreground"
+                    >
+                      Description
+                    </TableHead>
+                  )}
+                  {columns.rules && (
+                    <TableHead
+                      scope="col"
+                      className="h-8 w-[5.3%] px-0 text-xs font-normal text-muted-foreground"
+                    >
+                      Rules
+                    </TableHead>
+                  )}
+                  {columns.issues && (
+                    <TableHead
+                      scope="col"
+                      className="h-8 w-[5.3%] px-0 text-xs font-normal text-muted-foreground"
+                    >
+                      {usageTitle}
+                    </TableHead>
+                  )}
+                  {columns.lastApplied && (
+                    <TableHead
+                      scope="col"
+                      className="h-8 w-[7.2%] px-0 text-xs font-normal text-muted-foreground"
+                    >
+                      Last applied
+                    </TableHead>
+                  )}
+                  {columns.created && (
+                    <TableHead
+                      scope="col"
+                      className="h-8 w-[6.2%] px-0 text-xs font-normal text-muted-foreground"
+                    >
+                      Created
+                    </TableHead>
+                  )}
+                  <TableHead className="w-10 p-0">
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {newLabel && showNewLabel && (
+                  <TeamLabelRow
+                    key={newLabel.id}
+                    ref={newLabelRow}
+                    label={newLabel}
+                    columns={columns}
+                    rowClassName={labelRowClass}
+                    isNewRow
+                    workspaceStyle={standalone}
+                    groups={directory.groups}
+                    selected={selectedIds.has(newLabel.id)}
+                    onSelectedChange={(selected) =>
+                      selectLabel(newLabel.id, selected)
+                    }
+                    saved={directory.labels.some(
+                      (label) => label.id === newLabel.id
+                    )}
+                    onSave={saveLabel}
+                    onClose={closeNewLabel}
+                    onDelete={() => remove("label", newLabel.id)}
+                  />
+                )}
+                {sections.map(({ key, group, labels }) => (
+                  <React.Fragment key={key}>
+                    {group &&
+                      (labels.length > 0 ||
+                        (!query && filter === "all") ||
+                        (filter === "all" &&
+                          group.name
+                            .toLocaleLowerCase()
+                            .includes(query.trim().toLocaleLowerCase()))) && (
+                        <LabelGroupRow
+                          group={group}
+                          labels={directory.labels.filter(
+                            (label) =>
+                              label.groupId === group.id && !label.archived
+                          )}
+                          columns={columns}
+                          rowClassName={labelRowClass}
+                          expanded={!!query || expandedGroups.has(group.id)}
+                          selectedIds={selectedIds}
+                          onSelect={(checked) =>
+                            setSelectedIds((current) => {
+                              const next = new Set(current)
+                              labels.forEach((label) =>
+                                checked
+                                  ? next.add(label.id)
+                                  : next.delete(label.id)
+                              )
+                              return next
+                            })
+                          }
+                          onToggle={() =>
+                            setExpandedGroups((current) => {
+                              const next = new Set(current)
+                              if (next.has(group.id)) next.delete(group.id)
+                              else next.add(group.id)
+                              return next
+                            })
+                          }
+                          onEdit={() =>
+                            setEditor({ kind: "group", item: group })
+                          }
+                          onCreate={() => startNewLabel(group.id)}
+                          onDelete={() => remove("group", group.id)}
+                        />
+                      )}
+                    {group &&
+                      labels.length === 0 &&
+                      expandedGroups.has(group.id) &&
+                      !query &&
+                      filter === "all" && (
+                        <TableRow className="border-0 hover:bg-transparent">
+                          <TableCell
+                            colSpan={
+                              3 + Object.values(columns).filter(Boolean).length
+                            }
+                            className="h-11 pl-16 text-xs text-muted-foreground"
+                          >
+                            No labels in this group.{" "}
+                            <button
+                              type="button"
+                              onClick={() => startNewLabel(group.id)}
+                              className={`rounded-sm text-foreground hover:underline ${focusClass}`}
+                            >
+                              Create label
+                            </button>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    {(!group || !!query || expandedGroups.has(group.id)) &&
+                      labels.map((label, index) => (
+                        <TeamLabelRow
+                          key={label.id}
+                          label={label}
+                          nested={!!group}
+                          lastInGroup={index === labels.length - 1}
+                          workspaceStyle={standalone}
+                          columns={columns}
+                          rowClassName={labelRowClass}
+                          saved
+                          groups={directory.groups}
+                          selected={selectedIds.has(label.id)}
+                          onSelectedChange={(selected) =>
+                            selectLabel(label.id, selected)
+                          }
+                          onSave={saveLabel}
+                          onClose={() => {}}
+                          onDelete={() => remove("label", label.id)}
+                        />
+                      ))}
+                  </React.Fragment>
+                ))}
+              </TableBody>
+            </Table>
+            {visible.length === 0 &&
+              !showNewLabel &&
+              !sections.some(
+                (section) =>
+                  section.group &&
+                  filter === "all" &&
+                  section.group.name
+                    .toLocaleLowerCase()
+                    .includes(query.trim().toLocaleLowerCase())
+              ) && (
+                <p
+                  role="status"
+                  className="py-10 text-center text-sm text-muted-foreground"
+                >
+                  {query || filter !== "all"
+                    ? "No labels match your filters."
+                    : workspaceView
+                      ? "No workspace labels yet. Create a label to get started."
+                      : "No team labels yet. Create a label to get started."}
+                </p>
+              )}
+            {!workspaceView && (
+              <p className="mt-10 text-center text-xs text-muted-foreground">
+                <button
+                  type="button"
+                  aria-label="Manage workspace labels"
+                  onClick={() => switchScope(true)}
+                  className={`mr-1.5 rounded-sm text-foreground/90 hover:underline ${focusClass}`}
+                >
+                  {directory.inheritedCount + workspaceCount > 0
+                    ? `${directory.inheritedCount + workspaceCount} labels`
+                    : "Manage workspace labels"}
+                </button>
+                {directory.inheritedCount + workspaceCount > 0 &&
+                  "inherited from workspace"}
+              </p>
+            )}
+          </div>
+        )}
         {selectedLabels.length > 0 && (
           <LabelSelectionActions
             labels={selectedLabels}
             workspace={workspaceView}
             onClear={() => setSelectedIds(new Set())}
             onFavorite={() => toggleSelected("favorite")}
-            onMove={moveSelected}
+            onMove={team ? moveSelected : undefined}
             onMerge={mergeSelected}
             onArchive={() => toggleSelected("archived")}
             onDelete={() =>
@@ -975,8 +1158,8 @@ function LabelEditor({
         </DialogTitle>
         <DialogDescription>
           {editor.kind === "label"
-            ? "Organize your team's issues with a label."
-            : "Group related labels to keep your team organized."}
+            ? "Organize issues with a label."
+            : "Keep related labels together in a group."}
         </DialogDescription>
       </DialogHeader>
       <div className="space-y-2">

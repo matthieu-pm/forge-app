@@ -25,6 +25,7 @@ vi.mock("@/application/teams/teams.server", () => ({
 vi.mock("drizzle-orm", () => ({
   eq: (column: unknown, value: unknown) => ({ column, value }),
   and: (...conditions: Array<unknown>) => conditions,
+  isNull: (column: unknown) => ({ column, isNull: true }),
   desc: (column: unknown) => column,
 }))
 vi.mock("@/db", () => ({
@@ -196,5 +197,97 @@ describe("Team template authorization and writes", () => {
         templateId: "project",
       })
     ).rejects.toThrow(/eligible/)
+  })
+})
+
+describe("Workspace issue templates", () => {
+  it("saves without a team and derives workspace from actor", async () => {
+    await saveTemplate(owner, {
+      payload: { ...emptyTemplate("issue"), name: "Workspace bug" },
+    })
+    expect(mocks.values).toHaveBeenCalledWith(
+      expect.objectContaining({ teamId: null, workspaceId: owner.workspaceId })
+    )
+  })
+  it("rejects foreign teams and unsupported workspace template kinds", async () => {
+    await expect(
+      saveTemplate(owner, {
+        payload: {
+          ...emptyTemplate("issue"),
+          name: "Bad",
+          properties: {
+            ...emptyTemplate("issue").properties,
+            teamIds: ["foreign"],
+          },
+        },
+      })
+    ).rejects.toThrow(/workspace/)
+    await expect(
+      saveTemplate(owner, {
+        payload: { ...emptyTemplate("document"), name: "Bad" },
+      })
+    ).rejects.toThrow(/Only workspace issue and project/)
+  })
+  it("requires management permissions and scopes deletion to workspace-only rows", async () => {
+    await expect(
+      saveTemplate(
+        { ...owner, workspaceRole: "member" },
+        { payload: { ...emptyTemplate("issue"), name: "Bad" } }
+      )
+    ).rejects.toThrow(/owners and admins/)
+    await deleteTemplate(owner, { id: "workspace-template" })
+    expect(mocks.deleteWhere).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        { column: "workspace", value: owner.workspaceId },
+        { column: "team", isNull: true },
+      ])
+    )
+  })
+})
+
+describe("Workspace project templates", () => {
+  it("persists the project content and properties in workspace scope", async () => {
+    const project = {
+      ...emptyTemplate("project"),
+      name: "Launch plan",
+      title: "New launch",
+      summary: "Launch a product",
+      milestones: [{ id: "kickoff", title: "Kickoff", content: null }],
+      properties: {
+        ...emptyTemplate("project").properties,
+        teamIds: [teamId],
+        lead: "owner",
+      },
+    }
+    await saveTemplate(owner, { payload: project })
+    expect(mocks.values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        teamId: null,
+        workspaceId: owner.workspaceId,
+        payload: project,
+      })
+    )
+  })
+  it("validates project visibility against accessible teams", async () => {
+    const project = {
+      ...emptyTemplate("project"),
+      name: "Team launch",
+      visibility: teamId,
+    }
+    await saveTemplate(owner, { payload: project })
+    await expect(
+      saveTemplate(owner, { payload: { ...project, visibility: "foreign" } })
+    ).rejects.toThrow(/workspace/)
+  })
+  it("keeps project and issue template names separate and blocks duplicate project names", async () => {
+    mocks.duplicates.mockResolvedValue([
+      { id: "issue", payload: { ...payload, name: "Launch" } },
+    ])
+    const project = { ...emptyTemplate("project"), name: "Launch" }
+    await saveTemplate(owner, { payload: project })
+    mocks.duplicates.mockResolvedValue([{ id: "project", payload: project }])
+    await expect(saveTemplate(owner, { payload: project })).rejects.toThrow(
+      /already exists/
+    )
   })
 })

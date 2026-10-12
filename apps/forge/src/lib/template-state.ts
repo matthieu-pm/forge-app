@@ -3,7 +3,7 @@ import {
   defaultTemplateSchema,
   deleteTemplateSchema,
   saveTemplateSchema,
-  templateQuerySchema,
+  templateScopeSchema,
 } from "@/lib/template-contract"
 
 const dependencies = createServerOnlyFn(async () => {
@@ -16,7 +16,7 @@ const dependencies = createServerOnlyFn(async () => {
   return { actor: await requireSessionActor(getRequest()), application }
 })
 export const loadTemplates = createServerFn({ method: "GET" })
-  .validator(templateQuerySchema)
+  .validator(templateScopeSchema)
   .handler(async ({ data }) => {
     const { actor, application } = await dependencies()
     return application.loadDirectory(actor, data.slug)

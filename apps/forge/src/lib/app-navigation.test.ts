@@ -3,6 +3,27 @@ import { describe, expect, it } from "vitest"
 import { buildYourTeamsNav, getBreadcrumbItems } from "./app-navigation"
 
 describe("getBreadcrumbItems", () => {
+  it("places enabled cycles between issues and projects for that team only", () => {
+    const nav = buildYourTeamsNav([
+      { name: "Product", slug: "product", cyclesEnabled: true },
+      { name: "Design", slug: "design", cyclesEnabled: false },
+    ])
+    expect(nav[0].items?.map((item) => item.title)).toEqual([
+      "Issues",
+      "Cycles",
+      "Projects",
+      "Views",
+    ])
+    expect(nav[1].items?.map((item) => item.title)).toEqual([
+      "Issues",
+      "Projects",
+      "Views",
+    ])
+    expect(getBreadcrumbItems("/teams/product/cycles")).toEqual([
+      { label: "Product", to: "/teams/product/projects" },
+      { label: "Cycles" },
+    ])
+  })
   it("labels the settings landing page as preferences", () => {
     expect(getBreadcrumbItems("/settings")).toEqual([{ label: "Preferences" }])
   })

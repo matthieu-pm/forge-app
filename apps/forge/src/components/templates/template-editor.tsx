@@ -45,17 +45,19 @@ export function TemplateEditor({
   directory,
   saved,
   form = false,
+  workspace = false,
 }: {
   kind: TemplateKind
-  team: TeamSummary
+  team?: TeamSummary
   directory: TemplateDirectory
   saved?: SavedTemplate
   form?: boolean
+  workspace?: boolean
 }) {
   const [draft, setDraft] = React.useState<TemplateDraft>(
     () =>
       saved?.payload ?? {
-        ...emptyTemplate(kind, team.id),
+        ...emptyTemplate(kind, workspace ? undefined : team?.id),
         issueType: form ? "form" : "standard",
       }
   )
@@ -84,9 +86,18 @@ export function TemplateEditor({
     value: TemplateDraft[TKey]
   ) => setDraft((current) => ({ ...current, [key]: value }))
   function cancel() {
+    if (workspace) {
+      void navigate({
+        to:
+          kind === "project"
+            ? "/settings/project-templates"
+            : "/settings/issue-templates",
+      })
+      return
+    }
     void navigate({
       to: "/settings/teams/$teamSlug/templates",
-      params: { teamSlug: team.slug },
+      params: { teamSlug: team?.slug ?? "" },
     })
   }
   async function save() {
@@ -111,7 +122,7 @@ export function TemplateEditor({
     try {
       await saveTemplate({
         data: {
-          slug: team.slug,
+          slug: workspace ? undefined : team?.slug,
           id: saved?.id,
           updatedAt: saved?.updatedAt,
           payload: parsed.data,
@@ -194,32 +205,61 @@ export function TemplateEditor({
           <Picker
             label="Template visibility"
             value={draft.visibility}
-            options={directory.teams.map((t) => ({
-              value: t.id,
-              label: t.name,
-              icon: <TeamSidebarIcon icon={t.icon} name={t.name} />,
-            }))}
+            options={[
+              ...(workspace
+                ? [
+                    {
+                      value: "",
+                      label: "Workspace",
+                      icon: <Glyph name="workspace" />,
+                    },
+                  ]
+                : []),
+              ...directory.teams.map((t) => ({
+                value: t.id,
+                label: t.name,
+                icon: <TeamSidebarIcon icon={t.icon} name={t.name} />,
+              })),
+            ]}
             onChange={(value) =>
-              patch("visibility", typeof value === "string" ? value : team.id)
+              patch(
+                "visibility",
+                typeof value === "string" ? value : (team?.id ?? "")
+              )
             }
             className="mr-0 h-8 px-3"
           >
-            <TeamSidebarIcon
-              icon={
-                (directory.teams.find((t) => t.id === draft.visibility) ?? team)
-                  .icon
-              }
-              name={team.name}
-            />
+            {workspace && !draft.visibility ? (
+              <Glyph name="workspace" />
+            ) : (
+              <TeamSidebarIcon
+                icon={
+                  (
+                    directory.teams.find((t) => t.id === draft.visibility) ??
+                    team
+                  )?.icon ?? {
+                    kind: "icon",
+                    value: "UserGroup03Icon",
+                    color: "#94a3b8",
+                  }
+                }
+                name={team?.name ?? "Team"}
+              />
+            )}
             {directory.teams.find((t) => t.id === draft.visibility)?.name ??
-              team.name}
+              team?.name ??
+              (workspace && !draft.visibility ? "Workspace" : "Team")}
           </Picker>
         </>
       )}
     </SaveFooter>
   )
   return (
-    <TemplateShell team={team}>
+    <TemplateShell
+      team={team}
+      workspace={workspace}
+      workspaceKind={kind === "project" ? "project" : "issue"}
+    >
       <div className="mx-auto w-full max-w-[750px] pt-4 pb-12">
         {!directory.canManage && (
           <p className="mb-4 rounded-lg bg-muted p-3 text-xs text-muted-foreground">
@@ -281,6 +321,7 @@ export function TemplateEditor({
               <Properties
                 team={team}
                 directory={directory}
+                workspace={workspace}
                 value={draft.properties}
                 onChange={(value) => patch("properties", value)}
               />

@@ -162,6 +162,20 @@
       "when": 1791753051231,
       "tag": "0022_recurring_issue_revision_precision",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1791823960655,
+      "tag": "0023_flippant_leo",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1791825274715,
+      "tag": "0024_chubby_penance",
+      "breakpoints": true
     }
   ]
 }

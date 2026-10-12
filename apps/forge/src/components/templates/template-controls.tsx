@@ -4,6 +4,7 @@ import {
   Add01Icon,
   ArrowDown01Icon,
   ArrowLeft01Icon,
+  Building02Icon,
   Cancel01Icon,
   CubeIcon,
   File01Icon,
@@ -26,6 +27,7 @@ import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import {
   initialTeamLabels,
   parseTeamLabels,
+  projectLabelsStorageKey,
   teamLabelsStorageKey,
   workspaceLabelsStorageKey,
 } from "@/lib/team-labels"
@@ -56,6 +58,7 @@ export const glyphs = {
   check: Tick02Icon,
   close: Cancel01Icon,
   add: Add01Icon,
+  workspace: Building02Icon,
 }
 export function Glyph({
   name,
@@ -141,28 +144,42 @@ export function TemplateShell({
   children,
   overview = false,
   section = "templates",
+  workspace = false,
+  workspaceKind = "issue",
 }: {
-  team: TeamSummary
+  team?: TeamSummary
   children: ReactNode
   overview?: boolean
+  workspace?: boolean
+  workspaceKind?: "issue" | "project"
   section?: "templates" | "recurring-issues"
 }) {
   return (
-    <main className="h-full min-h-0 flex-1 overflow-y-auto">
-      <div className="p-5">
+    <main className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="flex h-12 shrink-0 items-center px-4">
         <Link
           to={
-            overview
-              ? "/settings/teams/$teamSlug"
-              : section === "recurring-issues"
-                ? "/settings/teams/$teamSlug/recurring-issues"
-                : "/settings/teams/$teamSlug/templates"
+            workspace
+              ? workspaceKind === "project"
+                ? "/settings/project-templates"
+                : "/settings/issue-templates"
+              : overview
+                ? "/settings/teams/$teamSlug"
+                : section === "recurring-issues"
+                  ? "/settings/teams/$teamSlug/recurring-issues"
+                  : "/settings/teams/$teamSlug/templates"
           }
-          params={{ teamSlug: team.slug }}
+          params={{ teamSlug: team?.slug ?? "" }}
           className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
         >
           <Glyph name="back" />
-          {overview ? (
+          {workspace ? (
+            workspaceKind === "project" ? (
+              "Project templates"
+            ) : (
+              "Issue templates"
+            )
+          ) : overview && team ? (
             <>
               <TeamSidebarIcon icon={team.icon} name={team.name} />
               {team.name}
@@ -174,7 +191,9 @@ export function TemplateShell({
           )}
         </Link>
       </div>
-      {children}
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 sm:px-6">
+        {children}
+      </div>
     </main>
   )
 }
@@ -374,19 +393,25 @@ function personIcon(name: string, image: string | null) {
     </span>
   )
 }
-export function useTemplateLabels(team: TeamSummary) {
-  const [directory, setDirectory] = React.useState<TeamLabelDirectory>(() =>
-    initialTeamLabels(team.slug)
-  )
+export function useTemplateLabels(team?: TeamSummary, project = false) {
+  const [directory, setDirectory] = React.useState<TeamLabelDirectory>(() => {
+    const initial = initialTeamLabels(team?.slug ?? "")
+    return project ? { ...initial, labels: [], groups: [] } : initial
+  })
   React.useEffect(() => {
     function load() {
-      const base = initialTeamLabels(team.slug)
-      let local = base
+      const base = initialTeamLabels(team?.slug ?? "")
+      let local = team && !project ? base : { ...base, labels: [], groups: [] }
       let workspace: TeamLabelDirectory = { ...base, labels: [], groups: [] }
       try {
-        const saved = localStorage.getItem(teamLabelsStorageKey(team.id))
+        const saved =
+          team && !project
+            ? localStorage.getItem(teamLabelsStorageKey(team.id))
+            : null
         if (saved) local = parseTeamLabels(saved)
-        const shared = localStorage.getItem(workspaceLabelsStorageKey)
+        const shared = localStorage.getItem(
+          project ? projectLabelsStorageKey : workspaceLabelsStorageKey
+        )
         if (shared) workspace = parseTeamLabels(shared)
       } catch {
         /* Keep the valid initial directory. */
@@ -400,14 +425,15 @@ export function useTemplateLabels(team: TeamSummary) {
     load()
     window.addEventListener("storage", load)
     return () => window.removeEventListener("storage", load)
-  }, [team.id, team.slug])
+  }, [team?.id, team?.slug, project])
   return directory.labels
     .filter((l) => !l.archived)
     .map((l) => ({
       value: l.id,
       label: l.name,
       group:
-        directory.groups.find((g) => g.id === l.groupId)?.name ?? "Team labels",
+        directory.groups.find((g) => g.id === l.groupId)?.name ??
+        (project ? "Project labels" : "Team labels"),
       icon: (
         <span
           aria-hidden
@@ -424,14 +450,16 @@ export function Properties({
   team,
   project = false,
   showTeam = true,
+  workspace = false,
   children,
 }: {
   value: TemplateProperties
   onChange: (value: TemplateProperties) => void
   directory: TemplateDirectory
-  team: TeamSummary
+  team?: TeamSummary
   project?: boolean
   showTeam?: boolean
+  workspace?: boolean
   children?: ReactNode
 }) {
   const rootRef = React.useRef<HTMLDivElement>(null)
@@ -490,7 +518,10 @@ export function Properties({
     document.addEventListener("keydown", shortcut)
     return () => document.removeEventListener("keydown", shortcut)
   }, [project])
-  const labels = useTemplateLabels(team)
+  const labels = useTemplateLabels(
+    directory.teams.find((t) => t.id === value.teamIds[0]) ?? team,
+    project
+  )
   const patch = (
     key: keyof TemplateProperties,
     selected: string | Array<string> | null
@@ -537,20 +568,34 @@ export function Properties({
       shortcut={project ? "P then T" : undefined}
       multiple={project}
       value={project ? value.teamIds : value.teamIds[0]}
-      options={teamChoices}
+      options={
+        workspace
+          ? [{ value: "", label: "No team" }, ...teamChoices]
+          : teamChoices
+      }
       onChange={(selected) =>
         patch(
           "teamIds",
           Array.isArray(selected)
             ? selected.length
               ? selected
-              : [team.id]
-            : [selected ?? team.id]
+              : team
+                ? [team.id]
+                : []
+            : selected
+              ? [selected]
+              : team
+                ? [team.id]
+                : []
         )
       }
     >
-      <TeamSidebarIcon icon={selectedTeam.icon} name={selectedTeam.name} />
-      {selectedTeam.name}
+      {selectedTeam ? (
+        <TeamSidebarIcon icon={selectedTeam.icon} name={selectedTeam.name} />
+      ) : (
+        <Glyph name="person" />
+      )}
+      {selectedTeam?.name ?? "Team"}
       {value.teamIds.length > 1 && ` +${value.teamIds.length - 1}`}
     </Picker>
   )
@@ -561,17 +606,19 @@ export function Properties({
       className="flex flex-wrap items-center gap-1.5"
     >
       {!project && showTeam && teamPicker}
-      <Picker
-        label="Change status"
-        placeholder="Change status..."
-        shortcut={project ? "P then S" : "S"}
-        value={value.status}
-        options={statusChoices}
-        onChange={(selected) => patch("status", selected ?? "Backlog")}
-      >
-        <StatusIcon status={value.status} />
-        {value.status}
-      </Picker>
+      {(!workspace || value.teamIds.length > 0) && (
+        <Picker
+          label="Change status"
+          placeholder="Change status..."
+          shortcut={project ? "P then S" : "S"}
+          value={value.status}
+          options={statusChoices}
+          onChange={(selected) => patch("status", selected ?? "Backlog")}
+        >
+          <StatusIcon status={value.status} />
+          {value.status}
+        </Picker>
+      )}
       <Picker
         label="Change priority"
         placeholder={project ? "Change priority..." : "Set priority to..."}
@@ -645,6 +692,23 @@ export function Properties({
         >
           <Glyph name="project" />
           {value.project ?? "Project"}
+        </Picker>
+      )}
+      {workspace && (
+        <Picker
+          label="Change estimate"
+          value={value.estimate ?? null}
+          options={[
+            { value: "", label: "No estimate" },
+            ...["1", "2", "3", "5", "8", "13"].map((estimate) => ({
+              value: estimate,
+              label: estimate,
+            })),
+          ]}
+          onChange={(selected) => patch("estimate", selected)}
+        >
+          <span aria-hidden>△</span>
+          {value.estimate ?? "Estimate"}
         </Picker>
       )}
       <Picker

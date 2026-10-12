@@ -13,19 +13,19 @@
 }
 .template-prose h1 {
   font-size: 26px;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   line-height: 1.3;
   margin-top: 24px;
 }
 .template-prose h2 {
   font-size: 21px;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   line-height: 1.3;
   margin-top: 20px;
 }
 .template-prose h3 {
   font-size: 17px;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   margin-top: 18px;
 }
 .template-prose .is-editor-empty:first-child::before {
@@ -153,7 +153,7 @@
   padding-top: 10px;
 }
 .template-prose summary {
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   cursor: text;
   list-style: none;
 }

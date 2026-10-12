@@ -25,7 +25,12 @@ export const saveRecurringIssue = createServerFn({ method: "POST" })
     return application.saveRecurringIssue(actor, data)
   })
 export const deleteRecurringIssue = createServerFn({ method: "POST" })
-  .validator(deleteTemplateSchema.extend({ updatedAt: z.string().datetime() }))
+  .validator(
+    deleteTemplateSchema.extend({
+      slug: z.string().min(1),
+      updatedAt: z.string().datetime(),
+    })
+  )
   .handler(async ({ data }) => {
     const { actor, application } = await dependencies()
     return application.deleteRecurringIssue(actor, data)

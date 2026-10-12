@@ -30,7 +30,7 @@ export function ItemComposer({
   initial,
   subIssue = false,
 }: {
-  team: TeamSummary
+  team?: TeamSummary
   directory: TemplateDirectory
   onCancel: () => void
   onAdd: (item: TemplateItem, createMore: boolean) => void
@@ -42,7 +42,7 @@ export function ItemComposer({
     initial?.content ?? null
   )
   const [properties, setProperties] = React.useState(
-    initial?.properties ?? emptyProperties(team.id)
+    initial?.properties ?? emptyProperties(team?.id)
   )
   const [createMore, setCreateMore] = React.useState(false)
   const [editorKey, setEditorKey] = React.useState(0)
@@ -206,7 +206,7 @@ export function IssueItems({
 }: {
   items: Array<TemplateItem>
   onChange: (items: Array<TemplateItem>) => void
-  team: TeamSummary
+  team?: TeamSummary
   directory: TemplateDirectory
   creating: boolean
   onCreatingChange: (value: boolean) => void
@@ -257,23 +257,25 @@ export function IssueItems({
                           directory.teams.find(
                             (t) => t.id === item.properties.teamIds[0]
                           ) ?? team
-                        ).icon
+                        )?.icon ?? {
+                          kind: "icon",
+                          value: "UserGroup03Icon",
+                          color: "#94a3b8",
+                        }
                       }
                       name={
                         (
                           directory.teams.find(
                             (t) => t.id === item.properties.teamIds[0]
                           ) ?? team
-                        ).name
+                        )?.name ?? "Team"
                       }
                     />
-                    {
-                      (
-                        directory.teams.find(
-                          (t) => t.id === item.properties.teamIds[0]
-                        ) ?? team
-                      ).identifier
-                    }
+                    {(
+                      directory.teams.find(
+                        (t) => t.id === item.properties.teamIds[0]
+                      ) ?? team
+                    )?.identifier ?? "Team"}
                   </span>
                   <Picker
                     label={`Assign ${item.title}`}

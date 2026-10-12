@@ -5,6 +5,12 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@theme {
+  --font-weight-medium: 450;
+  --font-weight-semibold: 550;
+  --font-weight-bold: 650;
+}
+
 @theme inline {
   --font-heading: var(--font-sans);
   --font-sans: "Geist Variable", sans-serif;
@@ -263,6 +269,10 @@
   html {
     @apply font-sans;
   }
+  b,
+  strong {
+    font-weight: var(--font-weight-bold);
+  }
 }
 
 html[data-forge-pointer-cursors="true"]
@@ -312,22 +322,26 @@ html[data-forge-underline-links="true"] a:not([data-sidebar="menu-button"]) {
   overflow: hidden;
 }
 
+html[data-forge-host="macos"] {
+  --forge-desktop-titlebar-height: 48px;
+}
+
 html[data-forge-host="macos"] .forge-settings-shell {
-  height: calc(100svh - 32px);
+  height: calc(100svh - var(--forge-desktop-titlebar-height));
 }
 
 html[data-forge-host="macos"] .forge-create-team-shell {
-  height: calc(100svh - 32px);
+  height: calc(100svh - var(--forge-desktop-titlebar-height));
 }
 
 html[data-forge-host="macos"] .forge-desktop-titlebar {
   -webkit-app-region: drag;
   position: relative;
   display: flex;
-  height: 32px;
+  height: var(--forge-desktop-titlebar-height);
   flex-shrink: 0;
   align-items: center;
-  padding-left: 76px;
+  padding-left: 100px;
   background: transparent;
   color: var(--muted-foreground);
   user-select: none;
@@ -349,7 +363,7 @@ html[data-forge-host="macos"] .forge-desktop-titlebar-controls button:disabled {
 html[data-forge-host="macos"] .forge-desktop-tabs {
   -webkit-app-region: drag;
   position: absolute;
-  inset: 3px 8px 3px 16rem;
+  inset: 9px 8px 9px 16rem;
   display: flex;
   min-width: 0;
   align-items: center;
@@ -363,7 +377,7 @@ html[data-forge-host="macos"] .forge-desktop-tab {
   min-width: 96px;
   max-width: 210px;
   flex: 1 1 155px;
-  height: 26px;
+  height: 30px;
   align-items: center;
   overflow: hidden;
   border: 1px solid color-mix(in oklab, var(--border) 52%, transparent);
@@ -395,10 +409,10 @@ html[data-forge-host="macos"] .forge-desktop-tab-target {
   height: 100%;
   align-items: center;
   gap: 7px;
-  padding: 0 7px;
+  padding: 0 11px;
   text-align: left;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   outline: none;
 }
 
@@ -426,7 +440,7 @@ html[data-forge-host="macos"] .forge-desktop-tab-close {
   width: 20px;
   height: 20px;
   flex: 0 0 auto;
-  margin-right: 3px;
+  margin-right: 7px;
   place-items: center;
   border-radius: 5px;
   opacity: 0;
@@ -470,7 +484,7 @@ html[data-forge-host="macos"] .forge-desktop-titlebar-controls button {
 
 html[data-forge-host="macos"] [data-slot="sidebar-wrapper"],
 html[data-forge-host="macos"] .min-h-svh {
-  min-height: calc(100svh - 32px);
+  min-height: calc(100svh - var(--forge-desktop-titlebar-height));
 }
 
 /* Reveal Electron's native macOS sidebar vibrancy beneath the app chrome. */
@@ -496,20 +510,20 @@ html[data-forge-host="macos"]
 }
 
 html[data-forge-host="macos"] [data-slot="sidebar-container"] {
-  top: 32px;
-  height: calc(100svh - 32px);
-  padding-top: 3px;
+  top: var(--forge-desktop-titlebar-height);
+  height: calc(100svh - var(--forge-desktop-titlebar-height));
+  padding-top: 0;
   /* Match the checklist edge to the inset panel's 1px outer shadow. */
   padding-bottom: 31px;
 }
 
 html[data-forge-host="macos"] [data-slot="sidebar-inset"] {
-  margin-top: 3px;
+  margin-top: 0;
   margin-bottom: 32px;
 }
 
 html[data-forge-host="macos"] .forge-agent-overlay-layer {
-  top: 3px;
+  top: 0;
   bottom: 32px;
 }
 
@@ -643,7 +657,7 @@ html[data-forge-host="macos"] .forge-desktop-footer-actions {
   color: var(--foreground);
   text-align: left;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   outline: none;
   transition:
     background-color 120ms ease,
@@ -687,7 +701,7 @@ html[data-forge-host="macos"] .forge-desktop-footer-actions {
 .forge-thinking-shimmer {
   color: var(--muted-foreground);
   font-family: inherit;
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   letter-spacing: inherit;
   background-image: linear-gradient(
     90deg,

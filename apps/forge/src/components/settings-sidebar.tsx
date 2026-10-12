@@ -62,16 +62,28 @@ type SettingsItem = {
   to?:
     | "/settings"
     | "/settings/profile"
+    | "/settings/issue-labels"
+    | "/settings/project-labels"
+    | "/settings/initiatives"
+    | "/settings/project-statuses"
+    | "/settings/project-updates"
+    | "/settings/issue-templates"
+    | "/settings/project-templates"
     | "/settings/account/security"
+    | "/settings/account/connections"
+    | "/settings/account/agents"
     | "/settings/code-and-reviews"
     | "/settings/notifications"
     | "/settings/api"
     | "/settings/ai"
+    | "/settings/emojis"
+    | "/settings/integrations"
     | "/settings/applications"
     | "/settings/billing"
     | "/settings/import-export"
     | "/settings/members"
     | "/settings/security"
+    | "/settings/sla"
     | "/settings/teams"
     | "/settings/workspace"
 }
@@ -111,26 +123,50 @@ const settingsGroups: Array<SettingsGroup> = [
         icon: Key01Icon,
         to: "/settings/account/security",
       },
-      { label: "Connected accounts", icon: ChipIcon },
-      { label: "Agent personalization", icon: Cursor02Icon },
+      {
+        label: "Connected accounts",
+        icon: ChipIcon,
+        to: "/settings/account/connections",
+      },
+      {
+        label: "Agent personalization",
+        icon: Cursor02Icon,
+        to: "/settings/account/agents",
+      },
       { label: "Calls and transcripts", icon: Call02Icon },
     ],
   },
   {
     label: "Issues",
     items: [
-      { label: "Labels", icon: Tag01Icon },
-      { label: "Templates", icon: FilePasteIcon },
-      { label: "SLAs", icon: Fire03Icon },
+      { label: "Labels", icon: Tag01Icon, to: "/settings/issue-labels" },
+      {
+        label: "Templates",
+        icon: FilePasteIcon,
+        to: "/settings/issue-templates",
+      },
+      { label: "SLAs", icon: Fire03Icon, to: "/settings/sla" },
     ],
   },
   {
     label: "Projects",
     items: [
-      { label: "Labels", icon: Tag01Icon },
-      { label: "Templates", icon: FilePasteIcon },
-      { label: "Statuses", icon: Progress03Icon },
-      { label: "Updates", icon: SquareActivity },
+      { label: "Labels", icon: Tag01Icon, to: "/settings/project-labels" },
+      {
+        label: "Templates",
+        icon: FilePasteIcon,
+        to: "/settings/project-templates",
+      },
+      {
+        label: "Statuses",
+        icon: Progress03Icon,
+        to: "/settings/project-statuses",
+      },
+      {
+        label: "Updates",
+        icon: SquareActivity,
+        to: "/settings/project-updates",
+      },
     ],
   },
   {
@@ -138,9 +174,13 @@ const settingsGroups: Array<SettingsGroup> = [
     items: [
       { label: "AI & Agents", icon: FlashIcon, to: "/settings/ai" },
       { label: "Signals", icon: Asteroid02Icon },
-      { label: "Initiatives", icon: AirplayIcon },
-      { label: "Emojis", icon: Monocle01Icon },
-      { label: "Integrations", icon: MenuSquareIcon },
+      { label: "Initiatives", icon: AirplayIcon, to: "/settings/initiatives" },
+      { label: "Emojis", icon: Monocle01Icon, to: "/settings/emojis" },
+      {
+        label: "Integrations",
+        icon: MenuSquareIcon,
+        to: "/settings/integrations",
+      },
     ],
   },
   {
@@ -272,6 +312,16 @@ export function SettingsSidebar() {
                     isActive={
                       item.to
                         ? pathname === item.to ||
+                          (item.to === "/settings/issue-templates" &&
+                            pathname.startsWith(
+                              "/settings/templates/issue/"
+                            )) ||
+                          (item.to === "/settings/project-templates" &&
+                            pathname.startsWith(
+                              "/settings/templates/project/"
+                            )) ||
+                          (item.to === "/settings/initiatives" &&
+                            pathname === "/settings/initiative-labels") ||
                           (item.to === "/settings/notifications" &&
                             pathname.startsWith(`${item.to}/`))
                         : pathname === "/settings" && item.active

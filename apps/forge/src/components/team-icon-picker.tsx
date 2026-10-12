@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/popover"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TEAM_COLORS } from "@/lib/team-contract"
+import { useCustomEmojis } from "@/components/custom-emoji-provider"
+import { EmojiGlyph } from "@/components/custom-emoji"
 import { cn } from "@/lib/utils"
 import {
   buildEmojiChoices,
@@ -97,6 +99,11 @@ export function TeamIconPicker<T extends PickerIcon>({
   onChange: (value: T) => void
   value: T
 }) {
+  const {
+    emojis: customEmojis,
+    error: customEmojiError,
+    refresh: refreshCustomEmojis,
+  } = useCustomEmojis()
   const emitChange = (next: PickerIcon) => onChange(next as T)
   const [open, setOpen] = React.useState(false)
   const [activeTab, setActiveTab] = React.useState(
@@ -142,6 +149,13 @@ export function TeamIconPicker<T extends PickerIcon>({
       ? emojiChoices.filter((emoji) => emoji.search.includes(query))
       : emojiChoices
   }, [deferredEmojiQuery, emojiChoices])
+  const customQuery = deferredEmojiQuery
+    .trim()
+    .toLowerCase()
+    .replace(/^:|:$/g, "")
+  const visibleCustomEmojis = customEmojis.filter((emoji) =>
+    emoji.name.includes(customQuery)
+  )
   const visibleEmojis = filteredEmojis.slice(0, visibleEmojiCount)
   const visibleEmojiCategories = emojiCategoryDefinitions
     .map((category) => ({
@@ -235,7 +249,9 @@ export function TeamIconPicker<T extends PickerIcon>({
         }
       >
         {value.kind === "emoji" ? (
-          <span className="text-base leading-none">{value.value}</span>
+          <span className="flex size-4 items-center justify-center text-base leading-none">
+            <EmojiGlyph value={value.value} />
+          </span>
         ) : activeIcon ? (
           <HugeiconsIcon icon={activeIcon.icon} strokeWidth={2} />
         ) : (
@@ -414,10 +430,54 @@ export function TeamIconPicker<T extends PickerIcon>({
                   Loading emoji…
                 </p>
               ) : null}
-              {!emojisLoading && !visibleEmojis.length && (
-                <p className="py-6 text-center text-xs text-muted-foreground">
-                  No matching emoji.
-                </p>
+              {!emojisLoading &&
+                !visibleEmojis.length &&
+                !visibleCustomEmojis.length && (
+                  <p className="py-6 text-center text-xs text-muted-foreground">
+                    No matching emoji.
+                  </p>
+                )}
+              {customEmojiError && (
+                <button
+                  type="button"
+                  className="w-full py-2 text-xs text-muted-foreground"
+                  onClick={() => void refreshCustomEmojis()}
+                >
+                  Custom emojis unavailable. Retry
+                </button>
+              )}
+              {visibleCustomEmojis.length > 0 && (
+                <section>
+                  <h3 className="pt-2.5 pb-1 text-xs font-medium text-muted-foreground">
+                    Custom
+                  </h3>
+                  <div className="grid min-w-0 grid-cols-[repeat(12,minmax(0,1fr))] gap-0.5">
+                    {visibleCustomEmojis.map((emoji) => (
+                      <button
+                        key={emoji.id}
+                        type="button"
+                        title={`:${emoji.name}:`}
+                        aria-label={`:${emoji.name}:`}
+                        onClick={() => {
+                          emitChange({
+                            kind: "emoji",
+                            value: emoji.value,
+                            color: value.color,
+                          })
+                          setOpen(false)
+                        }}
+                        className="grid size-6 w-full place-items-center rounded-md hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                      >
+                        <img
+                          src={emoji.image}
+                          alt=""
+                          className="size-4 object-contain"
+                          draggable={false}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </section>
               )}
               {visibleEmojiCategories.map((category) => (
                 <section key={category.id}>

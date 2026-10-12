@@ -471,7 +471,7 @@ export function RichEditor({
   })
   slashRef.current = { slash, active }
   React.useEffect(() => {
-    editor?.setEditable(editable)
+    editor?.setEditable(editable, false)
   }, [editor, editable])
   React.useEffect(() => {
     if (editorRef) editorRef.current = editor

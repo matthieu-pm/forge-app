@@ -115,6 +115,7 @@ const documentSchema = z
 export const propertiesSchema = z.object({
   teamIds: z.array(z.string().uuid()).max(100),
   status: z.string().max(50),
+  estimate: z.string().max(30).nullable().optional(),
   priority: z.enum(["No priority", "Urgent", "High", "Medium", "Low"]),
   assignee: z.string().nullable(),
   lead: z.string().nullable(),
@@ -212,7 +213,8 @@ export type TemplateDirectory = {
 export const templateQuerySchema = z.object({
   slug: z.string().min(1).max(100),
 })
-export const saveTemplateSchema = templateQuerySchema
+export const templateScopeSchema = templateQuerySchema.partial()
+export const saveTemplateSchema = templateScopeSchema
   .extend({
     id: z.string().uuid().optional(),
     updatedAt: z.string().optional(),
@@ -222,16 +224,16 @@ export const saveTemplateSchema = templateQuerySchema
     (input) => JSON.stringify(input.payload).length <= 8_000_000,
     "Template content is too large. Use smaller attachments."
   )
-export const deleteTemplateSchema = templateQuerySchema.extend({
+export const deleteTemplateSchema = templateScopeSchema.extend({
   id: z.string().uuid(),
 })
 export const defaultTemplateSchema = templateQuerySchema.extend({
   audience: z.enum(["members", "nonMembers"]),
   templateId: z.string().uuid().nullable(),
 })
-export function emptyProperties(teamId: string): TemplateProperties {
+export function emptyProperties(teamId?: string): TemplateProperties {
   return {
-    teamIds: [teamId],
+    teamIds: teamId ? [teamId] : [],
     status: "Backlog",
     priority: "No priority",
     assignee: null,
@@ -245,7 +247,7 @@ export function emptyProperties(teamId: string): TemplateProperties {
 }
 export function emptyTemplate(
   kind: TemplateKind,
-  teamId: string
+  teamId?: string
 ): TemplateDraft {
   return {
     name: "",
@@ -260,7 +262,7 @@ export function emptyTemplate(
     summary: "",
     content: null,
     properties: emptyProperties(teamId),
-    visibility: teamId,
+    visibility: teamId ?? "",
     milestones: [],
     issues: [],
     subIssues: [],

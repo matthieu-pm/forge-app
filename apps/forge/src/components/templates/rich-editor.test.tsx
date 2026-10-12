@@ -27,6 +27,31 @@ function editor() {
   return new Editor({ extensions: richEditorExtensions, content: "<p></p>" })
 }
 describe("Rich template content", () => {
+  it("does not report content changes when initializing or changing editability", async () => {
+    const changed = vi.fn()
+    const ref = { current: null as Editor | null }
+    const { rerender } = render(
+      <RichEditor
+        value={null}
+        onChange={changed}
+        editorRef={ref}
+        label="Brief"
+      />
+    )
+    await waitFor(() => expect(ref.current).not.toBeNull())
+    expect(changed).not.toHaveBeenCalled()
+    rerender(
+      <RichEditor
+        value={null}
+        onChange={changed}
+        editorRef={ref}
+        label="Brief"
+        editable={false}
+      />
+    )
+    await waitFor(() => expect(ref.current!.isEditable).toBe(false))
+    expect(changed).not.toHaveBeenCalled()
+  })
   it("filters slash commands, selects with Enter, and keeps focus in the document", async () => {
     const ref = { current: null as Editor | null }
     render(

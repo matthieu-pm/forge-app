@@ -6,6 +6,7 @@ import type { IconSvgElement } from "@hugeicons/react"
 import type { PickerIcon } from "@/components/team-icon-picker"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { EmojiGlyph } from "@/components/custom-emoji"
 import { cn } from "@/lib/utils"
 
 function teamInitials(name: string) {
@@ -44,7 +45,7 @@ export function TeamSidebarIcon({
         const value = (catalog as Record<string, unknown>)[icon.value]
 
         if (!Array.isArray(value)) {
-          throw new Error(`Icon not found: ${icon.value}`)
+          throw new Error(`Icon not found: $<EmojiGlyph value={icon.value} />`)
         }
 
         return value
@@ -74,7 +75,7 @@ export function TeamSidebarIcon({
           className
         )}
       >
-        {icon.value}
+        <EmojiGlyph value={icon.value} />
       </span>
     )
   }

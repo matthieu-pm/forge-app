@@ -1277,7 +1277,6 @@ export const teamTemplates = pgTable(
       .notNull()
       .references(() => organizations.id, { onDelete: "cascade" }),
     teamId: uuid("team_id")
-      .notNull()
       .references(() => teams.id, { onDelete: "cascade" }),
     payload: jsonb("payload").$type<TemplateDraft>().notNull(),
     createdByUserId: text("created_by_user_id")
@@ -1347,3 +1346,17 @@ export const teamRecurringIssues = pgTable(
     ),
   })
 )
+
+export const workspaceEmojis = pgTable("workspace_emojis", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: text("workspace_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  image: text("image").notNull(),
+  createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+}, (table) => [
+  uniqueIndex("workspace_emojis_active_name_unique").on(table.workspaceId, table.name).where(sql`${table.deletedAt} is null`),
+  check("workspace_emojis_name_check", sql`${table.name} ~ '^[a-z0-9][a-z0-9_-]{0,63}$'`),
+  check("workspace_emojis_image_size_check", sql`length(${table.image}) <= 350000`),
+])

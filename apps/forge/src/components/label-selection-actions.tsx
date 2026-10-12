@@ -42,7 +42,7 @@ export function LabelSelectionActions({
   workspace: boolean
   onClear: () => void
   onFavorite: () => boolean
-  onMove: () => boolean
+  onMove?: () => boolean
   onMerge: (targetId: string) => boolean
   onArchive: () => boolean
   onDelete: () => boolean
@@ -205,20 +205,25 @@ export function LabelSelectionActions({
                         ? "Remove favorite labels"
                         : "Favorite labels"}
                     </CommandItem>
-                    <CommandItem
-                      value={
-                        workspace
-                          ? "Move labels to team"
-                          : "Move labels to workspace"
-                      }
-                      onSelect={() => run(onMove)}
-                      className="min-h-11 rounded-md! px-3"
-                    >
-                      <HugeiconsIcon icon={Building02Icon} strokeWidth={1.5} />
-                      {workspace
-                        ? "Move labels to team..."
-                        : "Move labels to workspace..."}
-                    </CommandItem>
+                    {onMove && (
+                      <CommandItem
+                        value={
+                          workspace
+                            ? "Move labels to team"
+                            : "Move labels to workspace"
+                        }
+                        onSelect={() => run(onMove)}
+                        className="min-h-11 rounded-md! px-3"
+                      >
+                        <HugeiconsIcon
+                          icon={Building02Icon}
+                          strokeWidth={1.5}
+                        />
+                        {workspace
+                          ? "Move labels to team..."
+                          : "Move labels to workspace..."}
+                      </CommandItem>
+                    )}
                     <CommandItem
                       value="Merge labels"
                       disabled={labels.length < 2}

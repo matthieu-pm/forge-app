@@ -17,6 +17,7 @@ import { AgentFooterActions } from "@/components/agent/agent-footer-actions"
 import { AgentShell } from "@/components/agent/agent-shell"
 import { SettingsSidebar } from "@/components/settings-sidebar"
 import { DesktopTitleBar } from "@/components/desktop-title-bar"
+import { WorkspaceEmojiProvider } from "@/components/custom-emoji-provider"
 import { PersonalPreferenceEffects } from "@/components/personal-preference-effects"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { Toaster } from "@/components/ui/sonner"
@@ -99,30 +100,32 @@ function RootLayout() {
   const hasSettingsLayout = pathname.startsWith("/settings")
 
   return (
-    <AgentProvider>
-      <SidebarProvider
-        className={cn(
-          "relative",
-          hasStandaloneTeamSettingsLayout
-            ? "forge-create-team-shell forge-settings-shell"
-            : hasSettingsLayout
-              ? "forge-settings-shell"
-              : undefined
-        )}
-      >
-        <PersonalPreferenceEffects />
-        {pathname.startsWith("/settings") ? (
-          <SettingsSidebar />
-        ) : (
-          <AppSidebar />
-        )}
-        <AgentContentPane pathname={pathname} />
-        <div className="forge-agent-overlay-layer pointer-events-none absolute top-2 right-2 bottom-8 left-0 z-30 transition-[left] duration-200 ease-linear md:left-(--sidebar-width) md:peer-data-[collapsible=icon]:left-[calc(var(--sidebar-width-icon)+(--spacing(4)))] md:peer-data-[collapsible=offcanvas]:left-0">
-          <AgentShell />
-        </div>
-        <AgentFooterActions />
-      </SidebarProvider>
-    </AgentProvider>
+    <WorkspaceEmojiProvider>
+      <AgentProvider>
+        <SidebarProvider
+          className={cn(
+            "relative",
+            hasStandaloneTeamSettingsLayout
+              ? "forge-create-team-shell forge-settings-shell"
+              : hasSettingsLayout
+                ? "forge-settings-shell"
+                : undefined
+          )}
+        >
+          <PersonalPreferenceEffects />
+          {pathname.startsWith("/settings") ? (
+            <SettingsSidebar />
+          ) : (
+            <AppSidebar />
+          )}
+          <AgentContentPane pathname={pathname} />
+          <div className="forge-agent-overlay-layer pointer-events-none absolute top-2 right-2 bottom-8 left-0 z-30 transition-[left] duration-200 ease-linear md:left-(--sidebar-width) md:peer-data-[collapsible=icon]:left-[calc(var(--sidebar-width-icon)+(--spacing(4)))] md:peer-data-[collapsible=offcanvas]:left-0">
+            <AgentShell />
+          </div>
+          <AgentFooterActions />
+        </SidebarProvider>
+      </AgentProvider>
+    </WorkspaceEmojiProvider>
   )
 }
 

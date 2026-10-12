@@ -1,5 +1,5 @@
 import "@tanstack/react-start/server-only"
-import { and, desc, eq } from "drizzle-orm"
+import { and, desc, eq, isNull } from "drizzle-orm"
 import type { Actor } from "@/application/actor"
 import type { TemplateDirectory, TemplateDraft } from "@/lib/template-contract"
 import {
@@ -10,13 +10,14 @@ import {
 import { db, members, teamTemplateDefaults, teamTemplates, users } from "@/db"
 import { getTeamDirectory } from "@/application/teams/teams.server"
 
-async function scope(actor: Actor, slug: string, write = false) {
+async function scope(actor: Actor, slug: string | undefined, write = false) {
   requireTeamRead(actor)
   if (write && !canManageTeams(actor))
     throw new ApplicationAccessError(
-      "Only workspace owners and admins can manage team templates."
+      "Only workspace owners and admins can manage templates."
     )
   const directory = await getTeamDirectory(actor, "active")
+  if (!slug) return { team: null, directory }
   const team = directory.items.find((item) => item.slug === slug)
   if (!team)
     throw new ApplicationAccessError("You do not have access to this team.")
@@ -24,7 +25,7 @@ async function scope(actor: Actor, slug: string, write = false) {
 }
 export async function loadDirectory(
   actor: Actor,
-  slug: string
+  slug?: string
 ): Promise<TemplateDirectory> {
   const { team, directory } = await scope(actor, slug)
   const [records, defaults, people] = await Promise.all([
@@ -35,14 +36,18 @@ export async function loadDirectory(
       .where(
         and(
           eq(teamTemplates.workspaceId, actor.workspaceId),
-          eq(teamTemplates.teamId, team.id)
+          team
+            ? eq(teamTemplates.teamId, team.id)
+            : isNull(teamTemplates.teamId)
         )
       )
       .orderBy(desc(teamTemplates.createdAt)),
-    db
-      .select()
-      .from(teamTemplateDefaults)
-      .where(eq(teamTemplateDefaults.teamId, team.id)),
+    team
+      ? db
+          .select()
+          .from(teamTemplateDefaults)
+          .where(eq(teamTemplateDefaults.teamId, team.id))
+      : Promise.resolve([]),
     db.query.members.findMany({
       where: eq(members.organizationId, actor.workspaceId),
       with: { user: true },
@@ -74,13 +79,15 @@ export async function loadDirectory(
 export async function saveTemplate(
   actor: Actor,
   input: {
-    slug: string
+    slug?: string
     id?: string
     updatedAt?: string
     payload: TemplateDraft
   }
 ) {
   const { team, directory } = await scope(actor, input.slug, true)
+  if (!team && !["issue", "project"].includes(input.payload.kind))
+    throw new Error("Only workspace issue and project templates are supported.")
   const allowedTeams = new Set(directory.items.map((t) => t.id))
   const people = await db.query.members.findMany({
     where: eq(members.organizationId, actor.workspaceId),
@@ -92,10 +99,14 @@ export async function saveTemplate(
     ...input.payload.subIssues.map((i) => i.properties),
   ]
   if (
-    !allowedTeams.has(input.payload.visibility) ||
+    (team
+      ? !allowedTeams.has(input.payload.visibility)
+      : input.payload.visibility !== "" &&
+        (input.payload.kind !== "project" ||
+          !allowedTeams.has(input.payload.visibility))) ||
     properties.some(
       (p) =>
-        !p.teamIds.length ||
+        (team && !p.teamIds.length) ||
         p.teamIds.some((id) => !allowedTeams.has(id)) ||
         [p.assignee, p.lead, ...p.members].some(
           (id) => id !== null && !allowedPeople.has(id)
@@ -110,7 +121,9 @@ export async function saveTemplate(
         where: and(
           eq(teamTemplates.id, input.id),
           eq(teamTemplates.workspaceId, actor.workspaceId),
-          eq(teamTemplates.teamId, team.id)
+          team
+            ? eq(teamTemplates.teamId, team.id)
+            : isNull(teamTemplates.teamId)
         ),
       })
     : null
@@ -131,7 +144,7 @@ export async function saveTemplate(
     .where(
       and(
         eq(teamTemplates.workspaceId, actor.workspaceId),
-        eq(teamTemplates.teamId, team.id)
+        team ? eq(teamTemplates.teamId, team.id) : isNull(teamTemplates.teamId)
       )
     )
   if (
@@ -166,16 +179,17 @@ export async function saveTemplate(
     .insert(teamTemplates)
     .values({
       workspaceId: actor.workspaceId,
-      teamId: team.id,
+      teamId: team?.id ?? null,
       payload: input.payload,
       createdByUserId: actor.userId,
+      updatedAt: new Date(),
     })
     .returning({ id: teamTemplates.id })
   return saved
 }
 export async function deleteTemplate(
   actor: Actor,
-  input: { slug: string; id: string }
+  input: { slug?: string; id: string }
 ) {
   const { team } = await scope(actor, input.slug, true)
   await db
@@ -184,7 +198,7 @@ export async function deleteTemplate(
       and(
         eq(teamTemplates.id, input.id),
         eq(teamTemplates.workspaceId, actor.workspaceId),
-        eq(teamTemplates.teamId, team.id)
+        team ? eq(teamTemplates.teamId, team.id) : isNull(teamTemplates.teamId)
       )
     )
   return { ok: true }
@@ -198,6 +212,7 @@ export async function setDefault(
   }
 ) {
   const { team } = await scope(actor, input.slug, true)
+  if (!team) throw new ApplicationAccessError("Choose a team for defaults.")
   if (input.templateId) {
     const template = await db.query.teamTemplates.findFirst({
       where: and(

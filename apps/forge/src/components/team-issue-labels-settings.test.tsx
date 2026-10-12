@@ -13,6 +13,7 @@ import type { MouseEvent, ReactNode } from "react"
 import type { TeamSummary } from "@/lib/team-contract"
 import {
   parseTeamLabels,
+  projectLabelsStorageKey,
   teamLabelsStorageKey,
   workspaceLabelsStorageKey,
 } from "@/lib/team-labels"
@@ -496,4 +497,215 @@ it("keeps the workspace view when undoing an earlier team deletion", () => {
   expect(
     screen.getByRole("button", { name: "Edit label name Desktop" })
   ).toBeTruthy()
+})
+
+describe("workspace label hierarchy", () => {
+  it("shows groups and expands or collapses their nested labels", () => {
+    render(<TeamIssueLabelsSettings />)
+    expect(screen.getByRole("heading", { name: "Issue labels" })).toBeDefined()
+    expect(screen.getAllByRole("button", { name: /^Labels in / })).toHaveLength(
+      8
+    )
+    expect(screen.getByRole("columnheader", { name: "Rules" })).toBeDefined()
+    fireEvent.click(
+      screen.getByRole("button", { name: "Collapse group Direction" })
+    )
+    expect(
+      screen.queryByRole("button", { name: "Edit label name CEO Office" })
+    ).toBeNull()
+    fireEvent.click(
+      screen.getByRole("button", { name: "Expand group Direction" })
+    )
+    expect(
+      screen.getByRole("button", { name: "Edit label name CEO Office" })
+    ).toBeDefined()
+  })
+
+  it("toggles from the group name and row without intercepting selection or editing", async () => {
+    render(<TeamIssueLabelsSettings />)
+    const name = screen.getByRole("button", { name: "Labels in Direction" })
+    fireEvent.click(name)
+    expect(name.getAttribute("aria-expanded")).toBe("false")
+    fireEvent.click(name.closest("tr")!.querySelectorAll("td")[3])
+    expect(name.getAttribute("aria-expanded")).toBe("true")
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "Select labels in Direction" })
+    )
+    expect(name.getAttribute("aria-expanded")).toBe("true")
+    fireEvent.click(
+      screen.getByRole("button", { name: "Edit description for Direction" })
+    )
+    expect(screen.getByRole("dialog")).toBeDefined()
+    expect(name.getAttribute("aria-expanded")).toBe("true")
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+    fireEvent.click(
+      screen.getByRole("button", { name: "Actions for group Direction" })
+    )
+    expect(
+      await screen.findByRole("menuitem", { name: "Edit group" })
+    ).toBeDefined()
+    expect(name.getAttribute("aria-expanded")).toBe("true")
+  })
+
+  it("searches collapsed groups and reveals matching children", () => {
+    render(<TeamIssueLabelsSettings />)
+    fireEvent.click(
+      screen.getByRole("button", { name: "Collapse group Direction" })
+    )
+    fireEvent.change(
+      screen.getByRole("textbox", { name: "Filter labels by name" }),
+      { target: { value: "CEO" } }
+    )
+    expect(
+      screen.getByRole("button", { name: "Labels in Direction" })
+    ).toBeDefined()
+    expect(
+      screen.getByRole("button", { name: "Edit label name CEO Office" })
+    ).toBeDefined()
+    expect(screen.queryByRole("button", { name: "Labels in Tech" })).toBeNull()
+    fireEvent.change(
+      screen.getByRole("textbox", { name: "Filter labels by name" }),
+      { target: { value: "Direction" } }
+    )
+    expect(
+      screen.getAllByRole("button", { name: /^Edit label name / })
+    ).toHaveLength(4)
+    fireEvent.change(
+      screen.getByRole("textbox", { name: "Filter labels by name" }),
+      { target: { value: "no-match-test" } }
+    )
+    expect(screen.getByRole("status").textContent).toBe(
+      "No labels match your filters."
+    )
+  })
+
+  it("creates a group and a nested label in the workspace directory", async () => {
+    const view = render(<TeamIssueLabelsSettings />)
+    fireEvent.click(screen.getByRole("button", { name: /^New group$/ }))
+    fireEvent.change(screen.getByRole("textbox", { name: /^Name$/ }), {
+      target: { value: "Launch" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Create group" }))
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+    fireEvent.click(
+      screen.getByRole("button", { name: "Actions for group Launch" })
+    )
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "New label in group" })
+    )
+    const input = screen.getByRole("textbox", { name: "Label name" })
+    fireEvent.change(input, { target: { value: "Release" } })
+    fireEvent.keyDown(input, { key: "Enter" })
+    const stored = parseTeamLabels(
+      localStorage.getItem(workspaceLabelsStorageKey)!
+    )
+    expect(
+      stored.labels.find((label) => label.name === "Release")?.groupId
+    ).toBe(stored.groups.find((group) => group.name === "Launch")?.id)
+    expect(localStorage.getItem(storageKey)).toBeNull()
+    view.unmount()
+    render(<TeamIssueLabelsSettings />)
+    fireEvent.click(screen.getByRole("button", { name: "Expand group Launch" }))
+    expect(
+      screen.getByRole("button", { name: "Edit label name Release" })
+    ).toBeDefined()
+  })
+
+  it("selects a group's labels and leaves saved empty workspace data empty", () => {
+    const view = render(<TeamIssueLabelsSettings />)
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "Select labels in Direction" })
+    )
+    expect(
+      screen
+        .getByRole("checkbox", { name: "Select label CEO Office" })
+        .getAttribute("aria-checked")
+    ).toBe("true")
+    expect(
+      screen.getByRole("toolbar", { name: "Selected label actions" })
+    ).toBeDefined()
+    view.unmount()
+    localStorage.setItem(
+      workspaceLabelsStorageKey,
+      JSON.stringify({ version: 1, groups: [], labels: [], inheritedCount: 0 })
+    )
+    render(<TeamIssueLabelsSettings />)
+    expect(screen.getByRole("status").textContent).toContain(
+      "No workspace labels yet"
+    )
+    expect(
+      screen.queryByRole("button", { name: "Labels in Direction" })
+    ).toBeNull()
+  })
+})
+
+describe("project labels using shared label controls", () => {
+  it("renders the project reference groups and persists edits without changing issue labels", async () => {
+    const issueData = JSON.stringify({
+      version: 1,
+      labels: [],
+      groups: [],
+      inheritedCount: 0,
+    })
+    localStorage.setItem(workspaceLabelsStorageKey, issueData)
+    const view = render(<TeamIssueLabelsSettings entity="project" />)
+    expect(
+      screen.getByRole("heading", { name: "Project labels" })
+    ).toBeDefined()
+    expect(screen.getByRole("columnheader", { name: "Projects" })).toBeDefined()
+    expect(screen.queryByRole("columnheader", { name: "Issues" })).toBeNull()
+    expect(
+      screen.getAllByRole("button", { name: /^Expand group / })
+    ).toHaveLength(6)
+    fireEvent.click(screen.getByRole("button", { name: "New group" }))
+    fireEvent.change(screen.getByRole("textbox", { name: /^Name$/ }), {
+      target: { value: "Roadmap" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Create group" }))
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+    fireEvent.click(
+      screen.getByRole("button", { name: "Actions for group Roadmap" })
+    )
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "New label in group" })
+    )
+    const input = screen.getByRole("textbox", { name: "Label name" })
+    fireEvent.change(input, { target: { value: "Next quarter" } })
+    fireEvent.keyDown(input, { key: "Enter" })
+    const saved = parseTeamLabels(
+      localStorage.getItem(projectLabelsStorageKey)!
+    )
+    expect(saved.labels[0].groupId).toBe(
+      saved.groups.find((group) => group.name === "Roadmap")?.id
+    )
+    expect(localStorage.getItem(workspaceLabelsStorageKey)).toBe(issueData)
+    view.unmount()
+    render(<TeamIssueLabelsSettings entity="project" />)
+    fireEvent.click(
+      screen.getByRole("button", { name: "Expand group Roadmap" })
+    )
+    expect(
+      screen.getByRole("button", { name: "Edit label name Next quarter" })
+    ).toBeDefined()
+  })
+})
+
+it("starts initiative labels empty and saves without changing issue or project labels", () => {
+  const initiativeKey = "forge:workspace-initiative-labels:v1"
+  render(<TeamIssueLabelsSettings entity="initiative" />)
+  expect(
+    screen.getByRole("heading", { name: "Initiative labels" })
+  ).toBeTruthy()
+  expect(screen.getByText("No labels found")).toBeTruthy()
+  expect(screen.queryByRole("table")).toBeNull()
+  const name = start()
+  fireEvent.change(name, { target: { value: "Strategic" } })
+  fireEvent.keyDown(name, { key: "Enter" })
+  expect(
+    parseTeamLabels(localStorage.getItem(initiativeKey)!).labels[0].name
+  ).toBe("Strategic")
+  expect(localStorage.getItem(workspaceLabelsStorageKey)).toBeNull()
+  expect(localStorage.getItem(projectLabelsStorageKey)).toBeNull()
+  expect(screen.queryByText("No labels found")).toBeNull()
 })

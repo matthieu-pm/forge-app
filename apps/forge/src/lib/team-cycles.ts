@@ -28,6 +28,34 @@ export const parseTeamCycles = (raw: string) =>
   cyclesSchema.parse(JSON.parse(raw))
 const changeEvent = "forge:team-cycles-changed"
 
+// Read the same preferences as the settings page, including changes made in
+// another tab. Invalid or inaccessible preferences never enable navigation.
+export function useEnabledTeamCycles(teamIds: ReadonlyArray<string>) {
+  const snapshot = React.useSyncExternalStore(
+    React.useCallback((notify) => {
+      window.addEventListener("storage", notify)
+      window.addEventListener(changeEvent, notify)
+      return () => {
+        window.removeEventListener("storage", notify)
+        window.removeEventListener(changeEvent, notify)
+      }
+    }, []),
+    () =>
+      JSON.stringify(
+        teamIds.filter((id) => {
+          try {
+            const raw = window.localStorage.getItem(teamCyclesStorageKey(id))
+            return raw !== null && parseTeamCycles(raw).enabled
+          } catch {
+            return false
+          }
+        })
+      ),
+    () => "[]"
+  )
+  return React.useMemo(() => new Set<string>(JSON.parse(snapshot)), [snapshot])
+}
+
 export function useTeamCycles(teamId: string) {
   const [settings, setSettings] = React.useState(initialTeamCycles)
   const [ready, setReady] = React.useState(false)
