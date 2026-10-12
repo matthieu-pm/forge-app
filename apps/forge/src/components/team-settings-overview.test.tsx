@@ -15,6 +15,8 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { TeamSettingsOverview } from "./team-settings-overview"
+import { TeamCyclesSettings } from "./team-cycles-settings"
+import { TeamTriageSettings } from "./team-triage-settings"
 import { TeamWorkflowsSettings } from "./team-workflows-settings"
 import { TeamIssueStatusesSettings } from "./team-issue-statuses-settings"
 import type { TeamSummary } from "@/lib/team-contract"
@@ -42,6 +44,8 @@ describe("team settings workflow navigation", () => {
   it.each([
     ["statuses", "Issue statuses"],
     ["workflows", "Workflows & automations"],
+    ["triage", "Triage"],
+    ["cycles", "Cycles"],
   ])(
     "opens %s for the current team from the overview",
     async (section, title) => {
@@ -58,6 +62,10 @@ describe("team settings workflow navigation", () => {
         component: () =>
           section === "statuses" ? (
             <TeamIssueStatusesSettings team={team} />
+          ) : section === "cycles" ? (
+            <TeamCyclesSettings team={team} />
+          ) : section === "triage" ? (
+            <TeamTriageSettings team={team} />
           ) : (
             <TeamWorkflowsSettings team={team} />
           ),

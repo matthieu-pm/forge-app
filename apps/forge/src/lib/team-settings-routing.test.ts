@@ -45,6 +45,8 @@ describe("team settings routes", () => {
         "/labels",
         "/statuses",
         "/workflows",
+        "/triage",
+        "/cycles",
         "/recurring-issues",
       ])
     )

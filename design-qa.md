@@ -440,3 +440,27 @@ Boundary: this is saved schedule configuration and UI. Forge issue routes still 
 
 - Moved the workflows page's team navigation outside the content scroll pane. The header retains its 48 px height; only settings content scrolls.
 - Chromium verification at 1440 × 900 and 390 × 844: scrolled settings to the bottom (710 px / 1338 px), team link stayed at y=10 px, document scroll remained 0, and the final settings section was visible. Evidence: `.forge/workflows-qa/fixed-team-1440.png` and `fixed-team-390.png`. Targeted lint, typecheck and diff checks passed.
+
+## Team triage — 2026-10-12
+
+- Implemented `/settings/teams/$teamSlug/triage` from the supplied Linear reference: triage switches, responsibility/trial card, Loops row, and dimmed Triage Intelligence section. Uses existing Forge components and theme tokens. The overview links to Triage and shows the saved On/Off state; desktop breadcrumb names the page.
+- The team navigation is outside the scroll pane. Chromium verified desktop 1440×900 and mobile 390×844: stable header position, document scroll 0, final section visible, and no horizontal document overflow. Visually inspected desktop 1440×1100 and mobile top/bottom captures. Light/reduced-motion capture also generated.
+- Verified toggle dependency, preference retention when triage is disabled, persistence after reload, availability dialogs, and billing/AI/documentation link targets. No browser page errors. Evidence in ignored `.forge/triage-qa/`: `desktop.png`, `enabled.png`, `mobile.png`, `mobile-lower.png`, `light-mobile.png`.
+- Four targeted suites / 26 tests passed, including triage persistence/error handling/team isolation, overview navigation to the actual component, route hierarchy, and navigation helpers. Typecheck, scoped ESLint, production build including protected Workflow handler verification, and diff whitespace checks passed.
+- Scope: per-team local settings only; no server triage intake/prioritization enforcement. Business trials, sales contact, and triage Loops are unavailable and their controls explain this without pretending to activate a service. Billing and AI link to existing settings routes. Browser verification used an isolated preview of the real component; full authenticated shell navigation and physical touch-device behavior remain unverified.
+
+## Team cycles — 2026-10-12
+
+- Implemented `/settings/teams/$teamSlug/cycles` from the supplied enabled/disabled references, retaining the settings shell, fixed team header, theme tokens and 640 px card width. The team overview links to Cycles and reflects its saved On/Off state.
+- Enable cycles reveals duration, cooldown, weekday and future-cycle selectors. Disabling preserves selections and disables/dims automation controls. Start-date text is calculated from the next selected weekday. Preferences use validated, versioned browser-local storage per team; corrupt saved data is preserved and editing disabled, and failed writes retain the previous value with an error toast.
+- Authenticated Testing-team browser verification: default disabled state, enabling, all four selectors, weekday/date updates, automation preference changes, reload persistence, keyboard Space/Enter/Escape and restored selector focus, overview/back navigation and Off state. Desktop at 1800 × 1130 and mobile at 390 × 844. The mobile document and both main elements measured 390 px wide; weekday menu stays within the viewport. Original default values restored after QA.
+- Evidence: `.forge/cycles-qa/desktop-enabled.png`, `desktop-disabled.png`, and `mobile-menu.png`. No actionable UI-polish findings in inspected states. Approve for verified scope; physical touch devices, light theme and slow-motion inspection were not verified. Reduced-motion overrides were checked in source.
+- Validation: 27 focused tests passed (cycles, overview navigation, route hierarchy and navigation labels), app typecheck, targeted ESLint, production build including Workflow handler verification, and diff whitespace check. React review covered module-level components, effect cleanup, validated storage, accessible labels/descriptions and disabled controls.
+- Scope: settings UI and browser-local preferences. No cycle scheduler, server persistence, issue movement, carryover or velocity metrics are implemented.
+
+## Team agents empty state — 2026-10-12
+
+- Created `/settings/teams/$teamSlug/agents` with the reference title, exact description, Docs link and single integration empty-state card. Reuses the fixed team header, centered 640 px card width and existing theme tokens. Linked Team agents from the overview and added its navigation label.
+- Authenticated Testing-team verification: desktop 1280 × 720, mobile 390 × 844, back/overview navigation and integrations action. Mobile document width is 390 px. Evidence: `.forge/team-agents-qa/desktop.png` and `mobile.png`.
+- Integrations remains an existing unimplemented settings destination, so the inline action displays “Agent integrations are coming soon.” No agent list, configuration, or backend changes were added. The Docs link uses the exact supplied reference destination.
+- Typecheck, scoped ESLint, 23 existing navigation/overview/routing tests, production build with Workflow verification, and diff whitespace checks passed. No new tests added for this static empty state. No actionable UI-polish findings in inspected states; light theme and physical touch devices not verified.

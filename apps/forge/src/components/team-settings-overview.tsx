@@ -40,6 +40,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { deleteTeam } from "@/lib/team-state"
+import { useTeamCycles } from "@/lib/team-cycles"
+import { useTeamTriage } from "@/lib/team-triage"
 import { cn } from "@/lib/utils"
 
 type SettingsIcon = ComponentProps<typeof HugeiconsIcon>["icon"]
@@ -54,6 +56,9 @@ type SettingItem = {
     | "labels"
     | "templates"
     | "workflows"
+    | "triage"
+    | "cycles"
+    | "agents"
     | "statuses"
     | "recurring-issues"
   value?: string
@@ -118,13 +123,13 @@ const workflowItems: Array<SettingItem> = [
     label: "Triage",
     description: "Streamline how you handle requests from outside your team",
     icon: InboxCheckIcon,
-    value: "Off",
+    section: "triage",
   },
   {
     label: "Cycles",
     description: "Focus your team over short, time-boxed windows",
     icon: Clock04Icon,
-    value: "Off",
+    section: "cycles",
   },
 ]
 
@@ -133,6 +138,7 @@ const agentItems: Array<SettingItem> = [
     label: "Team agents",
     description: "Add guidance for how agents should operate within this team",
     icon: Cursor02Icon,
+    section: "agents",
   },
   {
     label: "Agent skills",
@@ -225,17 +231,23 @@ function SettingsCard({
             to={
               item.section === "recurring-issues"
                 ? "/settings/teams/$teamSlug/recurring-issues"
-                : item.section === "workflows"
-                  ? "/settings/teams/$teamSlug/workflows"
-                  : item.section === "statuses"
-                    ? "/settings/teams/$teamSlug/statuses"
-                    : item.section === "templates"
-                      ? "/settings/teams/$teamSlug/templates"
-                      : item.section === "members"
-                        ? "/settings/teams/$teamSlug/members"
-                        : item.section === "labels"
-                          ? "/settings/teams/$teamSlug/labels"
-                          : "/settings/teams/$teamSlug/general"
+                : item.section === "agents"
+                  ? "/settings/teams/$teamSlug/agents"
+                  : item.section === "cycles"
+                    ? "/settings/teams/$teamSlug/cycles"
+                    : item.section === "triage"
+                      ? "/settings/teams/$teamSlug/triage"
+                      : item.section === "workflows"
+                        ? "/settings/teams/$teamSlug/workflows"
+                        : item.section === "statuses"
+                          ? "/settings/teams/$teamSlug/statuses"
+                          : item.section === "templates"
+                            ? "/settings/teams/$teamSlug/templates"
+                            : item.section === "members"
+                              ? "/settings/teams/$teamSlug/members"
+                              : item.section === "labels"
+                                ? "/settings/teams/$teamSlug/labels"
+                                : "/settings/teams/$teamSlug/general"
             }
             params={{ teamSlug }}
             className={className}
@@ -299,6 +311,8 @@ export function TeamSettingsOverview({
   memberCount: number
 }) {
   const router = useRouter()
+  const triage = useTeamTriage(team.id)
+  const cycles = useTeamCycles(team.id)
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
   const [confirmationName, setConfirmationName] = React.useState("")
   const [isDeleting, setIsDeleting] = React.useState(false)
@@ -380,11 +394,36 @@ export function TeamSettingsOverview({
             </SettingsSection>
 
             <SettingsSection title="Workflow">
-              <SettingsCard items={workflowItems} teamSlug={team.slug} />
+              <SettingsCard
+                items={workflowItems.map((item) =>
+                  item.section === "triage"
+                    ? {
+                        ...item,
+                        value:
+                          triage.ready && !triage.error
+                            ? triage.settings.enabled
+                              ? "On"
+                              : "Off"
+                            : undefined,
+                      }
+                    : item.section === "cycles"
+                      ? {
+                          ...item,
+                          value:
+                            cycles.ready && !cycles.error
+                              ? cycles.settings.enabled
+                                ? "On"
+                                : "Off"
+                              : undefined,
+                        }
+                      : item
+                )}
+                teamSlug={team.slug}
+              />
             </SettingsSection>
 
             <SettingsSection title="AI & Agents">
-              <SettingsCard items={agentItems} />
+              <SettingsCard items={agentItems} teamSlug={team.slug} />
             </SettingsSection>
 
             <SettingsSection
