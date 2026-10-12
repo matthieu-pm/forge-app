@@ -59,6 +59,7 @@ type SettingItem = {
     | "triage"
     | "cycles"
     | "agents"
+    | "agent-skills"
     | "statuses"
     | "recurring-issues"
   value?: string
@@ -143,6 +144,7 @@ const agentItems: Array<SettingItem> = [
   {
     label: "Agent skills",
     description: "Agent skills shared with this team",
+    section: "agent-skills",
     icon: AiMagicIcon,
   },
   {
@@ -231,23 +233,25 @@ function SettingsCard({
             to={
               item.section === "recurring-issues"
                 ? "/settings/teams/$teamSlug/recurring-issues"
-                : item.section === "agents"
-                  ? "/settings/teams/$teamSlug/agents"
-                  : item.section === "cycles"
-                    ? "/settings/teams/$teamSlug/cycles"
-                    : item.section === "triage"
-                      ? "/settings/teams/$teamSlug/triage"
-                      : item.section === "workflows"
-                        ? "/settings/teams/$teamSlug/workflows"
-                        : item.section === "statuses"
-                          ? "/settings/teams/$teamSlug/statuses"
-                          : item.section === "templates"
-                            ? "/settings/teams/$teamSlug/templates"
-                            : item.section === "members"
-                              ? "/settings/teams/$teamSlug/members"
-                              : item.section === "labels"
-                                ? "/settings/teams/$teamSlug/labels"
-                                : "/settings/teams/$teamSlug/general"
+                : item.section === "agent-skills"
+                  ? "/settings/teams/$teamSlug/agent-skills"
+                  : item.section === "agents"
+                    ? "/settings/teams/$teamSlug/agents"
+                    : item.section === "cycles"
+                      ? "/settings/teams/$teamSlug/cycles"
+                      : item.section === "triage"
+                        ? "/settings/teams/$teamSlug/triage"
+                        : item.section === "workflows"
+                          ? "/settings/teams/$teamSlug/workflows"
+                          : item.section === "statuses"
+                            ? "/settings/teams/$teamSlug/statuses"
+                            : item.section === "templates"
+                              ? "/settings/teams/$teamSlug/templates"
+                              : item.section === "members"
+                                ? "/settings/teams/$teamSlug/members"
+                                : item.section === "labels"
+                                  ? "/settings/teams/$teamSlug/labels"
+                                  : "/settings/teams/$teamSlug/general"
             }
             params={{ teamSlug }}
             className={className}

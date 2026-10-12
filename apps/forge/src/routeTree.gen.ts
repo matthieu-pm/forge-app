@@ -58,6 +58,7 @@ import { Route as WorkspaceInitiativesIndexRouteImport } from './routes/workspac
 import { Route as WorkspaceInitiativesInitiativeIdRouteImport } from './routes/workspace/initiatives/$initiativeId'
 import { Route as ApiInternalDesktopReleasesRouteImport } from './routes/api/internal/desktop/releases'
 import { Route as SettingsTeamsTeamSlugIndexRouteImport } from './routes/settings_.teams.$teamSlug.index'
+import { Route as SettingsTeamsTeamSlugAgentSkillsRouteImport } from './routes/settings_.teams.$teamSlug.agent-skills'
 import { Route as SettingsTeamsTeamSlugAgentsRouteImport } from './routes/settings_.teams.$teamSlug.agents'
 import { Route as SettingsTeamsTeamSlugCyclesRouteImport } from './routes/settings_.teams.$teamSlug.cycles'
 import { Route as SettingsTeamsTeamSlugGeneralRouteImport } from './routes/settings_.teams.$teamSlug.general'
@@ -69,6 +70,9 @@ import { Route as SettingsTeamsTeamSlugTemplatesRouteImport } from './routes/set
 import { Route as SettingsTeamsTeamSlugTriageRouteImport } from './routes/settings_.teams.$teamSlug.triage'
 import { Route as SettingsTeamsTeamSlugWorkflowsRouteImport } from './routes/settings_.teams.$teamSlug.workflows'
 import { Route as ApiDesktopUpdatesDarwinArchRouteImport } from './routes/api/desktop/updates/darwin/$arch'
+import { Route as SettingsTeamsTeamSlugAgentSkillsIndexRouteImport } from './routes/settings_.teams.$teamSlug.agent-skills.index'
+import { Route as SettingsTeamsTeamSlugAgentSkillsSkillIdRouteImport } from './routes/settings_.teams.$teamSlug.agent-skills.$skillId'
+import { Route as SettingsTeamsTeamSlugAgentSkillsNewRouteImport } from './routes/settings_.teams.$teamSlug.agent-skills.new'
 import { Route as SettingsTeamsTeamSlugRecurringIssuesIndexRouteImport } from './routes/settings_.teams.$teamSlug.recurring-issues.index'
 import { Route as SettingsTeamsTeamSlugRecurringIssuesRecurringIdRouteImport } from './routes/settings_.teams.$teamSlug.recurring-issues.$recurringId'
 import { Route as SettingsTeamsTeamSlugTemplatesIndexRouteImport } from './routes/settings_.teams.$teamSlug.templates.index'
@@ -325,6 +329,12 @@ const SettingsTeamsTeamSlugIndexRoute =
     path: '/',
     getParentRoute: () => SettingsTeamsTeamSlugRoute,
   } as any)
+const SettingsTeamsTeamSlugAgentSkillsRoute =
+  SettingsTeamsTeamSlugAgentSkillsRouteImport.update({
+    id: '/agent-skills',
+    path: '/agent-skills',
+    getParentRoute: () => SettingsTeamsTeamSlugRoute,
+  } as any)
 const SettingsTeamsTeamSlugAgentsRoute =
   SettingsTeamsTeamSlugAgentsRouteImport.update({
     id: '/agents',
@@ -390,6 +400,24 @@ const ApiDesktopUpdatesDarwinArchRoute =
     id: '/api/desktop/updates/darwin/$arch',
     path: '/api/desktop/updates/darwin/$arch',
     getParentRoute: () => rootRouteImport,
+  } as any)
+const SettingsTeamsTeamSlugAgentSkillsIndexRoute =
+  SettingsTeamsTeamSlugAgentSkillsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => SettingsTeamsTeamSlugAgentSkillsRoute,
+  } as any)
+const SettingsTeamsTeamSlugAgentSkillsSkillIdRoute =
+  SettingsTeamsTeamSlugAgentSkillsSkillIdRouteImport.update({
+    id: '/$skillId',
+    path: '/$skillId',
+    getParentRoute: () => SettingsTeamsTeamSlugAgentSkillsRoute,
+  } as any)
+const SettingsTeamsTeamSlugAgentSkillsNewRoute =
+  SettingsTeamsTeamSlugAgentSkillsNewRouteImport.update({
+    id: '/new',
+    path: '/new',
+    getParentRoute: () => SettingsTeamsTeamSlugAgentSkillsRoute,
   } as any)
 const SettingsTeamsTeamSlugRecurringIssuesIndexRoute =
   SettingsTeamsTeamSlugRecurringIssuesIndexRouteImport.update({
@@ -477,6 +505,7 @@ export interface FileRoutesByFullPath {
   '/workspace/initiatives/$initiativeId': typeof WorkspaceInitiativesInitiativeIdRoute
   '/workspace/initiatives/': typeof WorkspaceInitiativesIndexRoute
   '/api/internal/desktop/releases': typeof ApiInternalDesktopReleasesRouteWithChildren
+  '/settings/teams/$teamSlug/agent-skills': typeof SettingsTeamsTeamSlugAgentSkillsRouteWithChildren
   '/settings/teams/$teamSlug/agents': typeof SettingsTeamsTeamSlugAgentsRoute
   '/settings/teams/$teamSlug/cycles': typeof SettingsTeamsTeamSlugCyclesRoute
   '/settings/teams/$teamSlug/general': typeof SettingsTeamsTeamSlugGeneralRoute
@@ -489,7 +518,10 @@ export interface FileRoutesByFullPath {
   '/settings/teams/$teamSlug/workflows': typeof SettingsTeamsTeamSlugWorkflowsRoute
   '/settings/teams/$teamSlug/': typeof SettingsTeamsTeamSlugIndexRoute
   '/api/desktop/updates/darwin/$arch': typeof ApiDesktopUpdatesDarwinArchRoute
+  '/settings/teams/$teamSlug/agent-skills/$skillId': typeof SettingsTeamsTeamSlugAgentSkillsSkillIdRoute
+  '/settings/teams/$teamSlug/agent-skills/new': typeof SettingsTeamsTeamSlugAgentSkillsNewRoute
   '/settings/teams/$teamSlug/recurring-issues/$recurringId': typeof SettingsTeamsTeamSlugRecurringIssuesRecurringIdRoute
+  '/settings/teams/$teamSlug/agent-skills/': typeof SettingsTeamsTeamSlugAgentSkillsIndexRoute
   '/settings/teams/$teamSlug/recurring-issues/': typeof SettingsTeamsTeamSlugRecurringIssuesIndexRoute
   '/settings/teams/$teamSlug/templates/': typeof SettingsTeamsTeamSlugTemplatesIndexRoute
   '/api/internal/desktop/releases/$version/pause': typeof ApiInternalDesktopReleasesVersionPauseRoute
@@ -553,7 +585,10 @@ export interface FileRoutesByTo {
   '/settings/teams/$teamSlug/workflows': typeof SettingsTeamsTeamSlugWorkflowsRoute
   '/settings/teams/$teamSlug': typeof SettingsTeamsTeamSlugIndexRoute
   '/api/desktop/updates/darwin/$arch': typeof ApiDesktopUpdatesDarwinArchRoute
+  '/settings/teams/$teamSlug/agent-skills/$skillId': typeof SettingsTeamsTeamSlugAgentSkillsSkillIdRoute
+  '/settings/teams/$teamSlug/agent-skills/new': typeof SettingsTeamsTeamSlugAgentSkillsNewRoute
   '/settings/teams/$teamSlug/recurring-issues/$recurringId': typeof SettingsTeamsTeamSlugRecurringIssuesRecurringIdRoute
+  '/settings/teams/$teamSlug/agent-skills': typeof SettingsTeamsTeamSlugAgentSkillsIndexRoute
   '/settings/teams/$teamSlug/recurring-issues': typeof SettingsTeamsTeamSlugRecurringIssuesIndexRoute
   '/settings/teams/$teamSlug/templates': typeof SettingsTeamsTeamSlugTemplatesIndexRoute
   '/api/internal/desktop/releases/$version/pause': typeof ApiInternalDesktopReleasesVersionPauseRoute
@@ -610,6 +645,7 @@ export interface FileRoutesById {
   '/workspace/initiatives/$initiativeId': typeof WorkspaceInitiativesInitiativeIdRoute
   '/workspace/initiatives/': typeof WorkspaceInitiativesIndexRoute
   '/api/internal/desktop/releases': typeof ApiInternalDesktopReleasesRouteWithChildren
+  '/settings_/teams/$teamSlug/agent-skills': typeof SettingsTeamsTeamSlugAgentSkillsRouteWithChildren
   '/settings_/teams/$teamSlug/agents': typeof SettingsTeamsTeamSlugAgentsRoute
   '/settings_/teams/$teamSlug/cycles': typeof SettingsTeamsTeamSlugCyclesRoute
   '/settings_/teams/$teamSlug/general': typeof SettingsTeamsTeamSlugGeneralRoute
@@ -622,7 +658,10 @@ export interface FileRoutesById {
   '/settings_/teams/$teamSlug/workflows': typeof SettingsTeamsTeamSlugWorkflowsRoute
   '/settings_/teams/$teamSlug/': typeof SettingsTeamsTeamSlugIndexRoute
   '/api/desktop/updates/darwin/$arch': typeof ApiDesktopUpdatesDarwinArchRoute
+  '/settings_/teams/$teamSlug/agent-skills/$skillId': typeof SettingsTeamsTeamSlugAgentSkillsSkillIdRoute
+  '/settings_/teams/$teamSlug/agent-skills/new': typeof SettingsTeamsTeamSlugAgentSkillsNewRoute
   '/settings_/teams/$teamSlug/recurring-issues/$recurringId': typeof SettingsTeamsTeamSlugRecurringIssuesRecurringIdRoute
+  '/settings_/teams/$teamSlug/agent-skills/': typeof SettingsTeamsTeamSlugAgentSkillsIndexRoute
   '/settings_/teams/$teamSlug/recurring-issues/': typeof SettingsTeamsTeamSlugRecurringIssuesIndexRoute
   '/settings_/teams/$teamSlug/templates/': typeof SettingsTeamsTeamSlugTemplatesIndexRoute
   '/api/internal/desktop/releases/$version/pause': typeof ApiInternalDesktopReleasesVersionPauseRoute
@@ -680,6 +719,7 @@ export interface FileRouteTypes {
     | '/workspace/initiatives/$initiativeId'
     | '/workspace/initiatives/'
     | '/api/internal/desktop/releases'
+    | '/settings/teams/$teamSlug/agent-skills'
     | '/settings/teams/$teamSlug/agents'
     | '/settings/teams/$teamSlug/cycles'
     | '/settings/teams/$teamSlug/general'
@@ -692,7 +732,10 @@ export interface FileRouteTypes {
     | '/settings/teams/$teamSlug/workflows'
     | '/settings/teams/$teamSlug/'
     | '/api/desktop/updates/darwin/$arch'
+    | '/settings/teams/$teamSlug/agent-skills/$skillId'
+    | '/settings/teams/$teamSlug/agent-skills/new'
     | '/settings/teams/$teamSlug/recurring-issues/$recurringId'
+    | '/settings/teams/$teamSlug/agent-skills/'
     | '/settings/teams/$teamSlug/recurring-issues/'
     | '/settings/teams/$teamSlug/templates/'
     | '/api/internal/desktop/releases/$version/pause'
@@ -756,7 +799,10 @@ export interface FileRouteTypes {
     | '/settings/teams/$teamSlug/workflows'
     | '/settings/teams/$teamSlug'
     | '/api/desktop/updates/darwin/$arch'
+    | '/settings/teams/$teamSlug/agent-skills/$skillId'
+    | '/settings/teams/$teamSlug/agent-skills/new'
     | '/settings/teams/$teamSlug/recurring-issues/$recurringId'
+    | '/settings/teams/$teamSlug/agent-skills'
     | '/settings/teams/$teamSlug/recurring-issues'
     | '/settings/teams/$teamSlug/templates'
     | '/api/internal/desktop/releases/$version/pause'
@@ -812,6 +858,7 @@ export interface FileRouteTypes {
     | '/workspace/initiatives/$initiativeId'
     | '/workspace/initiatives/'
     | '/api/internal/desktop/releases'
+    | '/settings_/teams/$teamSlug/agent-skills'
     | '/settings_/teams/$teamSlug/agents'
     | '/settings_/teams/$teamSlug/cycles'
     | '/settings_/teams/$teamSlug/general'
@@ -824,7 +871,10 @@ export interface FileRouteTypes {
     | '/settings_/teams/$teamSlug/workflows'
     | '/settings_/teams/$teamSlug/'
     | '/api/desktop/updates/darwin/$arch'
+    | '/settings_/teams/$teamSlug/agent-skills/$skillId'
+    | '/settings_/teams/$teamSlug/agent-skills/new'
     | '/settings_/teams/$teamSlug/recurring-issues/$recurringId'
+    | '/settings_/teams/$teamSlug/agent-skills/'
     | '/settings_/teams/$teamSlug/recurring-issues/'
     | '/settings_/teams/$teamSlug/templates/'
     | '/api/internal/desktop/releases/$version/pause'
@@ -1211,6 +1261,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsTeamsTeamSlugIndexRouteImport
       parentRoute: typeof SettingsTeamsTeamSlugRoute
     }
+    '/settings_/teams/$teamSlug/agent-skills': {
+      id: '/settings_/teams/$teamSlug/agent-skills'
+      path: '/agent-skills'
+      fullPath: '/settings/teams/$teamSlug/agent-skills'
+      preLoaderRoute: typeof SettingsTeamsTeamSlugAgentSkillsRouteImport
+      parentRoute: typeof SettingsTeamsTeamSlugRoute
+    }
     '/settings_/teams/$teamSlug/agents': {
       id: '/settings_/teams/$teamSlug/agents'
       path: '/agents'
@@ -1288,6 +1345,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDesktopUpdatesDarwinArchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings_/teams/$teamSlug/agent-skills/': {
+      id: '/settings_/teams/$teamSlug/agent-skills/'
+      path: '/'
+      fullPath: '/settings/teams/$teamSlug/agent-skills/'
+      preLoaderRoute: typeof SettingsTeamsTeamSlugAgentSkillsIndexRouteImport
+      parentRoute: typeof SettingsTeamsTeamSlugAgentSkillsRoute
+    }
+    '/settings_/teams/$teamSlug/agent-skills/$skillId': {
+      id: '/settings_/teams/$teamSlug/agent-skills/$skillId'
+      path: '/$skillId'
+      fullPath: '/settings/teams/$teamSlug/agent-skills/$skillId'
+      preLoaderRoute: typeof SettingsTeamsTeamSlugAgentSkillsSkillIdRouteImport
+      parentRoute: typeof SettingsTeamsTeamSlugAgentSkillsRoute
+    }
+    '/settings_/teams/$teamSlug/agent-skills/new': {
+      id: '/settings_/teams/$teamSlug/agent-skills/new'
+      path: '/new'
+      fullPath: '/settings/teams/$teamSlug/agent-skills/new'
+      preLoaderRoute: typeof SettingsTeamsTeamSlugAgentSkillsNewRouteImport
+      parentRoute: typeof SettingsTeamsTeamSlugAgentSkillsRoute
+    }
     '/settings_/teams/$teamSlug/recurring-issues/': {
       id: '/settings_/teams/$teamSlug/recurring-issues/'
       path: '/'
@@ -1363,6 +1441,27 @@ const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
   SettingsRouteChildren,
 )
 
+interface SettingsTeamsTeamSlugAgentSkillsRouteChildren {
+  SettingsTeamsTeamSlugAgentSkillsSkillIdRoute: typeof SettingsTeamsTeamSlugAgentSkillsSkillIdRoute
+  SettingsTeamsTeamSlugAgentSkillsNewRoute: typeof SettingsTeamsTeamSlugAgentSkillsNewRoute
+  SettingsTeamsTeamSlugAgentSkillsIndexRoute: typeof SettingsTeamsTeamSlugAgentSkillsIndexRoute
+}
+
+const SettingsTeamsTeamSlugAgentSkillsRouteChildren: SettingsTeamsTeamSlugAgentSkillsRouteChildren =
+  {
+    SettingsTeamsTeamSlugAgentSkillsSkillIdRoute:
+      SettingsTeamsTeamSlugAgentSkillsSkillIdRoute,
+    SettingsTeamsTeamSlugAgentSkillsNewRoute:
+      SettingsTeamsTeamSlugAgentSkillsNewRoute,
+    SettingsTeamsTeamSlugAgentSkillsIndexRoute:
+      SettingsTeamsTeamSlugAgentSkillsIndexRoute,
+  }
+
+const SettingsTeamsTeamSlugAgentSkillsRouteWithChildren =
+  SettingsTeamsTeamSlugAgentSkillsRoute._addFileChildren(
+    SettingsTeamsTeamSlugAgentSkillsRouteChildren,
+  )
+
 interface SettingsTeamsTeamSlugRecurringIssuesRouteChildren {
   SettingsTeamsTeamSlugRecurringIssuesRecurringIdRoute: typeof SettingsTeamsTeamSlugRecurringIssuesRecurringIdRoute
   SettingsTeamsTeamSlugRecurringIssuesIndexRoute: typeof SettingsTeamsTeamSlugRecurringIssuesIndexRoute
@@ -1400,6 +1499,7 @@ const SettingsTeamsTeamSlugTemplatesRouteWithChildren =
   )
 
 interface SettingsTeamsTeamSlugRouteChildren {
+  SettingsTeamsTeamSlugAgentSkillsRoute: typeof SettingsTeamsTeamSlugAgentSkillsRouteWithChildren
   SettingsTeamsTeamSlugAgentsRoute: typeof SettingsTeamsTeamSlugAgentsRoute
   SettingsTeamsTeamSlugCyclesRoute: typeof SettingsTeamsTeamSlugCyclesRoute
   SettingsTeamsTeamSlugGeneralRoute: typeof SettingsTeamsTeamSlugGeneralRoute
@@ -1414,6 +1514,8 @@ interface SettingsTeamsTeamSlugRouteChildren {
 }
 
 const SettingsTeamsTeamSlugRouteChildren: SettingsTeamsTeamSlugRouteChildren = {
+  SettingsTeamsTeamSlugAgentSkillsRoute:
+    SettingsTeamsTeamSlugAgentSkillsRouteWithChildren,
   SettingsTeamsTeamSlugAgentsRoute: SettingsTeamsTeamSlugAgentsRoute,
   SettingsTeamsTeamSlugCyclesRoute: SettingsTeamsTeamSlugCyclesRoute,
   SettingsTeamsTeamSlugGeneralRoute: SettingsTeamsTeamSlugGeneralRoute,

@@ -320,6 +320,21 @@ export function getBreadcrumbItems(pathname: string): Array<BreadcrumbItem> {
     return [{ label: "Issue labels" }]
   }
 
+  const skillMatch = pathname.match(
+    /^\/settings\/teams\/[^/]+\/agent-skills(?:\/([^/]+))?\/?$/
+  )
+  if (skillMatch) {
+    return [
+      {
+        label: skillMatch[1]
+          ? skillMatch[1] === "new"
+            ? "New skill"
+            : "Edit skill"
+          : "Agent skills",
+      },
+    ]
+  }
+
   if (/^\/settings\/teams\/[^/]+\/agents$/.test(pathname)) {
     return [{ label: "Team agents" }]
   }

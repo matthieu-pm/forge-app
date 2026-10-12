@@ -14,6 +14,7 @@ import {
 } from "@tanstack/react-router"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import { TeamAgentSkillsSettings } from "./team-agent-skills-settings"
 import { TeamSettingsOverview } from "./team-settings-overview"
 import { TeamCyclesSettings } from "./team-cycles-settings"
 import { TeamTriageSettings } from "./team-triage-settings"
@@ -22,6 +23,9 @@ import { TeamIssueStatusesSettings } from "./team-issue-statuses-settings"
 import type { TeamSummary } from "@/lib/team-contract"
 
 vi.mock("@/lib/team-state", () => ({ deleteTeam: vi.fn() }))
+vi.mock("@/components/agent/agent-provider", () => ({
+  useAgent: () => ({ draft: "", setDraft: vi.fn(), openComposer: vi.fn() }),
+}))
 
 const team: TeamSummary = {
   id: "statuses-navigation-team",
@@ -46,6 +50,7 @@ describe("team settings workflow navigation", () => {
     ["workflows", "Workflows & automations"],
     ["triage", "Triage"],
     ["cycles", "Cycles"],
+    ["agent-skills", "Agent skills"],
   ])(
     "opens %s for the current team from the overview",
     async (section, title) => {
@@ -62,6 +67,8 @@ describe("team settings workflow navigation", () => {
         component: () =>
           section === "statuses" ? (
             <TeamIssueStatusesSettings team={team} />
+          ) : section === "agent-skills" ? (
+            <TeamAgentSkillsSettings team={team} teams={[team]} />
           ) : section === "cycles" ? (
             <TeamCyclesSettings team={team} />
           ) : section === "triage" ? (
