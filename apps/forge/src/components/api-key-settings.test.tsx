@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ApiKeySettings } from "./api-key-settings"
 
@@ -16,6 +16,8 @@ vi.mock("@/lib/security-state", () => ({
 }))
 
 describe("ApiKeySettings", () => {
+  afterEach(cleanup)
+
   beforeEach(() => {
     apiKeyMocks.listWorkspaceApiKeys.mockResolvedValue([])
     apiKeyMocks.loadWorkspaceApiKeyPolicy.mockResolvedValue({

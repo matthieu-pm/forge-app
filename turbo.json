@@ -6,6 +6,7 @@
       "dependsOn": ["^build"]
     },
     "@forge/app#build": {
+      "env": ["DATABASE_URL", "BETTER_AUTH_URL", "BETTER_AUTH_SECRET"],
       "outputs": [".output/**"]
     },
     "@forge/agent-runtime#build": {

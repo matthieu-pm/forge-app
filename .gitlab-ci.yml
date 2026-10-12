@@ -32,7 +32,16 @@ workflow:
     - if: $CI_PIPELINE_SOURCE == "schedule"
     - if: $CI_PIPELINE_SOURCE == "web"
 
+.validation-build:
+  # SPA prerendering loads the server modules, but does not query the database.
+  # These values are only for validation; never use them for deployed services.
+  variables:
+    DATABASE_URL: "postgresql://forge:forge@127.0.0.1:1/forge_ci"
+    BETTER_AUTH_URL: "http://localhost:3100"
+    BETTER_AUTH_SECRET: "forge-ci-prerender-only-not-a-runtime-secret"
+
 affected:
+  extends: .validation-build
   stage: validate
   rules:
     - if: $CI_MERGE_REQUEST_IID
@@ -45,6 +54,7 @@ affected:
       - .turbo/runs/
 
 full-graph:
+  extends: .validation-build
   stage: validate
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

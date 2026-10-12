@@ -25,3 +25,4 @@ todos.json
 release-candidate/
 .vercel
 .env*.local
+.neon

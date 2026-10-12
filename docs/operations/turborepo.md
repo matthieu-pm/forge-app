@@ -21,6 +21,16 @@ protected manual tag gate.
 Use `turbo run lint typecheck test build --dry=json` to inspect package
 selection and `--summarize` in CI to explain cache misses.
 
+Validation jobs provide dummy `DATABASE_URL`, `BETTER_AUTH_URL`, and
+`BETTER_AUTH_SECRET` values because SPA prerendering imports the database and
+authentication modules when it starts the preview server. Prerendering only
+renders the SPA shell and must not query the database. The dummy database uses
+an unused loopback port so accidental queries fail instead of reaching a real
+service. These values are scoped to validation jobs, not maintenance or release
+jobs, and must never configure a deployed server. The Forge build explicitly
+declares these variables in Turbo so strict environment filtering preserves
+them and changes invalidate the build cache.
+
 ## Cache boundary
 
 Remote cache is intentionally disabled until a production artifact and
