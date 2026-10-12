@@ -60,6 +60,8 @@ type SettingItem = {
     | "cycles"
     | "agents"
     | "agent-skills"
+    | "project-updates"
+    | "thread-summaries"
     | "statuses"
     | "recurring-issues"
   value?: string
@@ -152,11 +154,13 @@ const agentItems: Array<SettingItem> = [
     description:
       "Automatically generate updates using recent activity and defined rules",
     icon: SquareActivity,
+    section: "project-updates",
   },
   {
     label: "Resolved thread summaries",
     description: "Automatically generate summaries for resolved threads",
     icon: Summation01Icon,
+    section: "thread-summaries",
   },
 ]
 
@@ -233,25 +237,29 @@ function SettingsCard({
             to={
               item.section === "recurring-issues"
                 ? "/settings/teams/$teamSlug/recurring-issues"
-                : item.section === "agent-skills"
-                  ? "/settings/teams/$teamSlug/agent-skills"
-                  : item.section === "agents"
-                    ? "/settings/teams/$teamSlug/agents"
-                    : item.section === "cycles"
-                      ? "/settings/teams/$teamSlug/cycles"
-                      : item.section === "triage"
-                        ? "/settings/teams/$teamSlug/triage"
-                        : item.section === "workflows"
-                          ? "/settings/teams/$teamSlug/workflows"
-                          : item.section === "statuses"
-                            ? "/settings/teams/$teamSlug/statuses"
-                            : item.section === "templates"
-                              ? "/settings/teams/$teamSlug/templates"
-                              : item.section === "members"
-                                ? "/settings/teams/$teamSlug/members"
-                                : item.section === "labels"
-                                  ? "/settings/teams/$teamSlug/labels"
-                                  : "/settings/teams/$teamSlug/general"
+                : item.section === "thread-summaries"
+                  ? "/settings/teams/$teamSlug/ai/summaries"
+                  : item.section === "project-updates"
+                    ? "/settings/teams/$teamSlug/ai/updates"
+                    : item.section === "agent-skills"
+                      ? "/settings/teams/$teamSlug/agent-skills"
+                      : item.section === "agents"
+                        ? "/settings/teams/$teamSlug/agents"
+                        : item.section === "cycles"
+                          ? "/settings/teams/$teamSlug/cycles"
+                          : item.section === "triage"
+                            ? "/settings/teams/$teamSlug/triage"
+                            : item.section === "workflows"
+                              ? "/settings/teams/$teamSlug/workflows"
+                              : item.section === "statuses"
+                                ? "/settings/teams/$teamSlug/statuses"
+                                : item.section === "templates"
+                                  ? "/settings/teams/$teamSlug/templates"
+                                  : item.section === "members"
+                                    ? "/settings/teams/$teamSlug/members"
+                                    : item.section === "labels"
+                                      ? "/settings/teams/$teamSlug/labels"
+                                      : "/settings/teams/$teamSlug/general"
             }
             params={{ teamSlug }}
             className={className}

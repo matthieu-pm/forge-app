@@ -29,8 +29,10 @@ import { Route as SettingsAiRouteImport } from './routes/settings.ai'
 import { Route as SettingsApiRouteImport } from './routes/settings.api'
 import { Route as SettingsApplicationsRouteImport } from './routes/settings.applications'
 import { Route as SettingsBillingRouteImport } from './routes/settings.billing'
+import { Route as SettingsCodeAndReviewsRouteImport } from './routes/settings.code-and-reviews'
 import { Route as SettingsImportExportRouteImport } from './routes/settings.import-export'
 import { Route as SettingsMembersRouteImport } from './routes/settings.members'
+import { Route as SettingsNotificationsRouteImport } from './routes/settings.notifications'
 import { Route as SettingsProfileRouteImport } from './routes/settings.profile'
 import { Route as SettingsSecurityRouteImport } from './routes/settings.security'
 import { Route as SettingsWorkspaceRouteImport } from './routes/settings.workspace'
@@ -46,6 +48,9 @@ import { Route as WorkspaceViewsRouteImport } from './routes/workspace/views'
 import { Route as ApiAgentSplatRouteImport } from './routes/api/agent/$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiV1SplatRouteImport } from './routes/api/v1/$'
+import { Route as SettingsAccountSecurityRouteImport } from './routes/settings.account.security'
+import { Route as SettingsNotificationsIndexRouteImport } from './routes/settings.notifications.index'
+import { Route as SettingsNotificationsChannelRouteImport } from './routes/settings.notifications.$channel'
 import { Route as SettingsTeamsTeamSlugRouteImport } from './routes/settings_.teams.$teamSlug'
 import { Route as SettingsTeamsNewRouteImport } from './routes/settings_.teams.new'
 import { Route as TeamsTeamSlugCallsRouteImport } from './routes/teams/$teamSlug/calls'
@@ -73,6 +78,8 @@ import { Route as ApiDesktopUpdatesDarwinArchRouteImport } from './routes/api/de
 import { Route as SettingsTeamsTeamSlugAgentSkillsIndexRouteImport } from './routes/settings_.teams.$teamSlug.agent-skills.index'
 import { Route as SettingsTeamsTeamSlugAgentSkillsSkillIdRouteImport } from './routes/settings_.teams.$teamSlug.agent-skills.$skillId'
 import { Route as SettingsTeamsTeamSlugAgentSkillsNewRouteImport } from './routes/settings_.teams.$teamSlug.agent-skills.new'
+import { Route as SettingsTeamsTeamSlugAiSummariesRouteImport } from './routes/settings_.teams.$teamSlug.ai.summaries'
+import { Route as SettingsTeamsTeamSlugAiUpdatesRouteImport } from './routes/settings_.teams.$teamSlug.ai.updates'
 import { Route as SettingsTeamsTeamSlugRecurringIssuesIndexRouteImport } from './routes/settings_.teams.$teamSlug.recurring-issues.index'
 import { Route as SettingsTeamsTeamSlugRecurringIssuesRecurringIdRouteImport } from './routes/settings_.teams.$teamSlug.recurring-issues.$recurringId'
 import { Route as SettingsTeamsTeamSlugTemplatesIndexRouteImport } from './routes/settings_.teams.$teamSlug.templates.index'
@@ -180,6 +187,11 @@ const SettingsBillingRoute = SettingsBillingRouteImport.update({
   path: '/billing',
   getParentRoute: () => SettingsRoute,
 } as any)
+const SettingsCodeAndReviewsRoute = SettingsCodeAndReviewsRouteImport.update({
+  id: '/code-and-reviews',
+  path: '/code-and-reviews',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const SettingsImportExportRoute = SettingsImportExportRouteImport.update({
   id: '/import-export',
   path: '/import-export',
@@ -188,6 +200,11 @@ const SettingsImportExportRoute = SettingsImportExportRouteImport.update({
 const SettingsMembersRoute = SettingsMembersRouteImport.update({
   id: '/members',
   path: '/members',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsNotificationsRoute = SettingsNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
   getParentRoute: () => SettingsRoute,
 } as any)
 const SettingsProfileRoute = SettingsProfileRouteImport.update({
@@ -265,6 +282,23 @@ const ApiV1SplatRoute = ApiV1SplatRouteImport.update({
   path: '/api/v1/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsAccountSecurityRoute = SettingsAccountSecurityRouteImport.update({
+  id: '/account/security',
+  path: '/account/security',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsNotificationsIndexRoute =
+  SettingsNotificationsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => SettingsNotificationsRoute,
+  } as any)
+const SettingsNotificationsChannelRoute =
+  SettingsNotificationsChannelRouteImport.update({
+    id: '/$channel',
+    path: '/$channel',
+    getParentRoute: () => SettingsNotificationsRoute,
+  } as any)
 const SettingsTeamsTeamSlugRoute = SettingsTeamsTeamSlugRouteImport.update({
   id: '/$teamSlug',
   path: '/$teamSlug',
@@ -419,6 +453,18 @@ const SettingsTeamsTeamSlugAgentSkillsNewRoute =
     path: '/new',
     getParentRoute: () => SettingsTeamsTeamSlugAgentSkillsRoute,
   } as any)
+const SettingsTeamsTeamSlugAiSummariesRoute =
+  SettingsTeamsTeamSlugAiSummariesRouteImport.update({
+    id: '/ai/summaries',
+    path: '/ai/summaries',
+    getParentRoute: () => SettingsTeamsTeamSlugRoute,
+  } as any)
+const SettingsTeamsTeamSlugAiUpdatesRoute =
+  SettingsTeamsTeamSlugAiUpdatesRouteImport.update({
+    id: '/ai/updates',
+    path: '/ai/updates',
+    getParentRoute: () => SettingsTeamsTeamSlugRoute,
+  } as any)
 const SettingsTeamsTeamSlugRecurringIssuesIndexRoute =
   SettingsTeamsTeamSlugRecurringIssuesIndexRouteImport.update({
     id: '/',
@@ -476,8 +522,10 @@ export interface FileRoutesByFullPath {
   '/settings/api': typeof SettingsApiRoute
   '/settings/applications': typeof SettingsApplicationsRoute
   '/settings/billing': typeof SettingsBillingRoute
+  '/settings/code-and-reviews': typeof SettingsCodeAndReviewsRoute
   '/settings/import-export': typeof SettingsImportExportRoute
   '/settings/members': typeof SettingsMembersRoute
+  '/settings/notifications': typeof SettingsNotificationsRouteWithChildren
   '/settings/profile': typeof SettingsProfileRoute
   '/settings/security': typeof SettingsSecurityRoute
   '/settings/workspace': typeof SettingsWorkspaceRoute
@@ -494,6 +542,8 @@ export interface FileRoutesByFullPath {
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/v1/$': typeof ApiV1SplatRoute
+  '/settings/account/security': typeof SettingsAccountSecurityRoute
+  '/settings/notifications/$channel': typeof SettingsNotificationsChannelRoute
   '/settings/teams/$teamSlug': typeof SettingsTeamsTeamSlugRouteWithChildren
   '/settings/teams/new': typeof SettingsTeamsNewRoute
   '/teams/$teamSlug/calls': typeof TeamsTeamSlugCallsRoute
@@ -503,6 +553,7 @@ export interface FileRoutesByFullPath {
   '/teams/$teamSlug/signals': typeof TeamsTeamSlugSignalsRoute
   '/teams/$teamSlug/views': typeof TeamsTeamSlugViewsRoute
   '/workspace/initiatives/$initiativeId': typeof WorkspaceInitiativesInitiativeIdRoute
+  '/settings/notifications/': typeof SettingsNotificationsIndexRoute
   '/workspace/initiatives/': typeof WorkspaceInitiativesIndexRoute
   '/api/internal/desktop/releases': typeof ApiInternalDesktopReleasesRouteWithChildren
   '/settings/teams/$teamSlug/agent-skills': typeof SettingsTeamsTeamSlugAgentSkillsRouteWithChildren
@@ -520,6 +571,8 @@ export interface FileRoutesByFullPath {
   '/api/desktop/updates/darwin/$arch': typeof ApiDesktopUpdatesDarwinArchRoute
   '/settings/teams/$teamSlug/agent-skills/$skillId': typeof SettingsTeamsTeamSlugAgentSkillsSkillIdRoute
   '/settings/teams/$teamSlug/agent-skills/new': typeof SettingsTeamsTeamSlugAgentSkillsNewRoute
+  '/settings/teams/$teamSlug/ai/summaries': typeof SettingsTeamsTeamSlugAiSummariesRoute
+  '/settings/teams/$teamSlug/ai/updates': typeof SettingsTeamsTeamSlugAiUpdatesRoute
   '/settings/teams/$teamSlug/recurring-issues/$recurringId': typeof SettingsTeamsTeamSlugRecurringIssuesRecurringIdRoute
   '/settings/teams/$teamSlug/agent-skills/': typeof SettingsTeamsTeamSlugAgentSkillsIndexRoute
   '/settings/teams/$teamSlug/recurring-issues/': typeof SettingsTeamsTeamSlugRecurringIssuesIndexRoute
@@ -547,6 +600,7 @@ export interface FileRoutesByTo {
   '/settings/api': typeof SettingsApiRoute
   '/settings/applications': typeof SettingsApplicationsRoute
   '/settings/billing': typeof SettingsBillingRoute
+  '/settings/code-and-reviews': typeof SettingsCodeAndReviewsRoute
   '/settings/import-export': typeof SettingsImportExportRoute
   '/settings/members': typeof SettingsMembersRoute
   '/settings/profile': typeof SettingsProfileRoute
@@ -565,6 +619,8 @@ export interface FileRoutesByTo {
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/v1/$': typeof ApiV1SplatRoute
+  '/settings/account/security': typeof SettingsAccountSecurityRoute
+  '/settings/notifications/$channel': typeof SettingsNotificationsChannelRoute
   '/settings/teams/new': typeof SettingsTeamsNewRoute
   '/teams/$teamSlug/calls': typeof TeamsTeamSlugCallsRoute
   '/teams/$teamSlug/insights': typeof TeamsTeamSlugInsightsRoute
@@ -573,6 +629,7 @@ export interface FileRoutesByTo {
   '/teams/$teamSlug/signals': typeof TeamsTeamSlugSignalsRoute
   '/teams/$teamSlug/views': typeof TeamsTeamSlugViewsRoute
   '/workspace/initiatives/$initiativeId': typeof WorkspaceInitiativesInitiativeIdRoute
+  '/settings/notifications': typeof SettingsNotificationsIndexRoute
   '/workspace/initiatives': typeof WorkspaceInitiativesIndexRoute
   '/api/internal/desktop/releases': typeof ApiInternalDesktopReleasesRouteWithChildren
   '/settings/teams/$teamSlug/agents': typeof SettingsTeamsTeamSlugAgentsRoute
@@ -587,6 +644,8 @@ export interface FileRoutesByTo {
   '/api/desktop/updates/darwin/$arch': typeof ApiDesktopUpdatesDarwinArchRoute
   '/settings/teams/$teamSlug/agent-skills/$skillId': typeof SettingsTeamsTeamSlugAgentSkillsSkillIdRoute
   '/settings/teams/$teamSlug/agent-skills/new': typeof SettingsTeamsTeamSlugAgentSkillsNewRoute
+  '/settings/teams/$teamSlug/ai/summaries': typeof SettingsTeamsTeamSlugAiSummariesRoute
+  '/settings/teams/$teamSlug/ai/updates': typeof SettingsTeamsTeamSlugAiUpdatesRoute
   '/settings/teams/$teamSlug/recurring-issues/$recurringId': typeof SettingsTeamsTeamSlugRecurringIssuesRecurringIdRoute
   '/settings/teams/$teamSlug/agent-skills': typeof SettingsTeamsTeamSlugAgentSkillsIndexRoute
   '/settings/teams/$teamSlug/recurring-issues': typeof SettingsTeamsTeamSlugRecurringIssuesIndexRoute
@@ -616,8 +675,10 @@ export interface FileRoutesById {
   '/settings/api': typeof SettingsApiRoute
   '/settings/applications': typeof SettingsApplicationsRoute
   '/settings/billing': typeof SettingsBillingRoute
+  '/settings/code-and-reviews': typeof SettingsCodeAndReviewsRoute
   '/settings/import-export': typeof SettingsImportExportRoute
   '/settings/members': typeof SettingsMembersRoute
+  '/settings/notifications': typeof SettingsNotificationsRouteWithChildren
   '/settings/profile': typeof SettingsProfileRoute
   '/settings/security': typeof SettingsSecurityRoute
   '/settings/workspace': typeof SettingsWorkspaceRoute
@@ -634,6 +695,8 @@ export interface FileRoutesById {
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/v1/$': typeof ApiV1SplatRoute
+  '/settings/account/security': typeof SettingsAccountSecurityRoute
+  '/settings/notifications/$channel': typeof SettingsNotificationsChannelRoute
   '/settings_/teams/$teamSlug': typeof SettingsTeamsTeamSlugRouteWithChildren
   '/settings_/teams/new': typeof SettingsTeamsNewRoute
   '/teams/$teamSlug/calls': typeof TeamsTeamSlugCallsRoute
@@ -643,6 +706,7 @@ export interface FileRoutesById {
   '/teams/$teamSlug/signals': typeof TeamsTeamSlugSignalsRoute
   '/teams/$teamSlug/views': typeof TeamsTeamSlugViewsRoute
   '/workspace/initiatives/$initiativeId': typeof WorkspaceInitiativesInitiativeIdRoute
+  '/settings/notifications/': typeof SettingsNotificationsIndexRoute
   '/workspace/initiatives/': typeof WorkspaceInitiativesIndexRoute
   '/api/internal/desktop/releases': typeof ApiInternalDesktopReleasesRouteWithChildren
   '/settings_/teams/$teamSlug/agent-skills': typeof SettingsTeamsTeamSlugAgentSkillsRouteWithChildren
@@ -660,6 +724,8 @@ export interface FileRoutesById {
   '/api/desktop/updates/darwin/$arch': typeof ApiDesktopUpdatesDarwinArchRoute
   '/settings_/teams/$teamSlug/agent-skills/$skillId': typeof SettingsTeamsTeamSlugAgentSkillsSkillIdRoute
   '/settings_/teams/$teamSlug/agent-skills/new': typeof SettingsTeamsTeamSlugAgentSkillsNewRoute
+  '/settings_/teams/$teamSlug/ai/summaries': typeof SettingsTeamsTeamSlugAiSummariesRoute
+  '/settings_/teams/$teamSlug/ai/updates': typeof SettingsTeamsTeamSlugAiUpdatesRoute
   '/settings_/teams/$teamSlug/recurring-issues/$recurringId': typeof SettingsTeamsTeamSlugRecurringIssuesRecurringIdRoute
   '/settings_/teams/$teamSlug/agent-skills/': typeof SettingsTeamsTeamSlugAgentSkillsIndexRoute
   '/settings_/teams/$teamSlug/recurring-issues/': typeof SettingsTeamsTeamSlugRecurringIssuesIndexRoute
@@ -690,8 +756,10 @@ export interface FileRouteTypes {
     | '/settings/api'
     | '/settings/applications'
     | '/settings/billing'
+    | '/settings/code-and-reviews'
     | '/settings/import-export'
     | '/settings/members'
+    | '/settings/notifications'
     | '/settings/profile'
     | '/settings/security'
     | '/settings/workspace'
@@ -708,6 +776,8 @@ export interface FileRouteTypes {
     | '/api/agent/$'
     | '/api/auth/$'
     | '/api/v1/$'
+    | '/settings/account/security'
+    | '/settings/notifications/$channel'
     | '/settings/teams/$teamSlug'
     | '/settings/teams/new'
     | '/teams/$teamSlug/calls'
@@ -717,6 +787,7 @@ export interface FileRouteTypes {
     | '/teams/$teamSlug/signals'
     | '/teams/$teamSlug/views'
     | '/workspace/initiatives/$initiativeId'
+    | '/settings/notifications/'
     | '/workspace/initiatives/'
     | '/api/internal/desktop/releases'
     | '/settings/teams/$teamSlug/agent-skills'
@@ -734,6 +805,8 @@ export interface FileRouteTypes {
     | '/api/desktop/updates/darwin/$arch'
     | '/settings/teams/$teamSlug/agent-skills/$skillId'
     | '/settings/teams/$teamSlug/agent-skills/new'
+    | '/settings/teams/$teamSlug/ai/summaries'
+    | '/settings/teams/$teamSlug/ai/updates'
     | '/settings/teams/$teamSlug/recurring-issues/$recurringId'
     | '/settings/teams/$teamSlug/agent-skills/'
     | '/settings/teams/$teamSlug/recurring-issues/'
@@ -761,6 +834,7 @@ export interface FileRouteTypes {
     | '/settings/api'
     | '/settings/applications'
     | '/settings/billing'
+    | '/settings/code-and-reviews'
     | '/settings/import-export'
     | '/settings/members'
     | '/settings/profile'
@@ -779,6 +853,8 @@ export interface FileRouteTypes {
     | '/api/agent/$'
     | '/api/auth/$'
     | '/api/v1/$'
+    | '/settings/account/security'
+    | '/settings/notifications/$channel'
     | '/settings/teams/new'
     | '/teams/$teamSlug/calls'
     | '/teams/$teamSlug/insights'
@@ -787,6 +863,7 @@ export interface FileRouteTypes {
     | '/teams/$teamSlug/signals'
     | '/teams/$teamSlug/views'
     | '/workspace/initiatives/$initiativeId'
+    | '/settings/notifications'
     | '/workspace/initiatives'
     | '/api/internal/desktop/releases'
     | '/settings/teams/$teamSlug/agents'
@@ -801,6 +878,8 @@ export interface FileRouteTypes {
     | '/api/desktop/updates/darwin/$arch'
     | '/settings/teams/$teamSlug/agent-skills/$skillId'
     | '/settings/teams/$teamSlug/agent-skills/new'
+    | '/settings/teams/$teamSlug/ai/summaries'
+    | '/settings/teams/$teamSlug/ai/updates'
     | '/settings/teams/$teamSlug/recurring-issues/$recurringId'
     | '/settings/teams/$teamSlug/agent-skills'
     | '/settings/teams/$teamSlug/recurring-issues'
@@ -829,8 +908,10 @@ export interface FileRouteTypes {
     | '/settings/api'
     | '/settings/applications'
     | '/settings/billing'
+    | '/settings/code-and-reviews'
     | '/settings/import-export'
     | '/settings/members'
+    | '/settings/notifications'
     | '/settings/profile'
     | '/settings/security'
     | '/settings/workspace'
@@ -847,6 +928,8 @@ export interface FileRouteTypes {
     | '/api/agent/$'
     | '/api/auth/$'
     | '/api/v1/$'
+    | '/settings/account/security'
+    | '/settings/notifications/$channel'
     | '/settings_/teams/$teamSlug'
     | '/settings_/teams/new'
     | '/teams/$teamSlug/calls'
@@ -856,6 +939,7 @@ export interface FileRouteTypes {
     | '/teams/$teamSlug/signals'
     | '/teams/$teamSlug/views'
     | '/workspace/initiatives/$initiativeId'
+    | '/settings/notifications/'
     | '/workspace/initiatives/'
     | '/api/internal/desktop/releases'
     | '/settings_/teams/$teamSlug/agent-skills'
@@ -873,6 +957,8 @@ export interface FileRouteTypes {
     | '/api/desktop/updates/darwin/$arch'
     | '/settings_/teams/$teamSlug/agent-skills/$skillId'
     | '/settings_/teams/$teamSlug/agent-skills/new'
+    | '/settings_/teams/$teamSlug/ai/summaries'
+    | '/settings_/teams/$teamSlug/ai/updates'
     | '/settings_/teams/$teamSlug/recurring-issues/$recurringId'
     | '/settings_/teams/$teamSlug/agent-skills/'
     | '/settings_/teams/$teamSlug/recurring-issues/'
@@ -1058,6 +1144,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsBillingRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/settings/code-and-reviews': {
+      id: '/settings/code-and-reviews'
+      path: '/code-and-reviews'
+      fullPath: '/settings/code-and-reviews'
+      preLoaderRoute: typeof SettingsCodeAndReviewsRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/import-export': {
       id: '/settings/import-export'
       path: '/import-export'
@@ -1070,6 +1163,13 @@ declare module '@tanstack/react-router' {
       path: '/members'
       fullPath: '/settings/members'
       preLoaderRoute: typeof SettingsMembersRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/notifications': {
+      id: '/settings/notifications'
+      path: '/notifications'
+      fullPath: '/settings/notifications'
+      preLoaderRoute: typeof SettingsNotificationsRouteImport
       parentRoute: typeof SettingsRoute
     }
     '/settings/profile': {
@@ -1176,6 +1276,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/v1/$'
       preLoaderRoute: typeof ApiV1SplatRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/settings/account/security': {
+      id: '/settings/account/security'
+      path: '/account/security'
+      fullPath: '/settings/account/security'
+      preLoaderRoute: typeof SettingsAccountSecurityRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/notifications/': {
+      id: '/settings/notifications/'
+      path: '/'
+      fullPath: '/settings/notifications/'
+      preLoaderRoute: typeof SettingsNotificationsIndexRouteImport
+      parentRoute: typeof SettingsNotificationsRoute
+    }
+    '/settings/notifications/$channel': {
+      id: '/settings/notifications/$channel'
+      path: '/$channel'
+      fullPath: '/settings/notifications/$channel'
+      preLoaderRoute: typeof SettingsNotificationsChannelRouteImport
+      parentRoute: typeof SettingsNotificationsRoute
     }
     '/settings_/teams/$teamSlug': {
       id: '/settings_/teams/$teamSlug'
@@ -1366,6 +1487,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsTeamsTeamSlugAgentSkillsNewRouteImport
       parentRoute: typeof SettingsTeamsTeamSlugAgentSkillsRoute
     }
+    '/settings_/teams/$teamSlug/ai/summaries': {
+      id: '/settings_/teams/$teamSlug/ai/summaries'
+      path: '/ai/summaries'
+      fullPath: '/settings/teams/$teamSlug/ai/summaries'
+      preLoaderRoute: typeof SettingsTeamsTeamSlugAiSummariesRouteImport
+      parentRoute: typeof SettingsTeamsTeamSlugRoute
+    }
+    '/settings_/teams/$teamSlug/ai/updates': {
+      id: '/settings_/teams/$teamSlug/ai/updates'
+      path: '/ai/updates'
+      fullPath: '/settings/teams/$teamSlug/ai/updates'
+      preLoaderRoute: typeof SettingsTeamsTeamSlugAiUpdatesRouteImport
+      parentRoute: typeof SettingsTeamsTeamSlugRoute
+    }
     '/settings_/teams/$teamSlug/recurring-issues/': {
       id: '/settings_/teams/$teamSlug/recurring-issues/'
       path: '/'
@@ -1411,17 +1546,35 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface SettingsNotificationsRouteChildren {
+  SettingsNotificationsChannelRoute: typeof SettingsNotificationsChannelRoute
+  SettingsNotificationsIndexRoute: typeof SettingsNotificationsIndexRoute
+}
+
+const SettingsNotificationsRouteChildren: SettingsNotificationsRouteChildren = {
+  SettingsNotificationsChannelRoute: SettingsNotificationsChannelRoute,
+  SettingsNotificationsIndexRoute: SettingsNotificationsIndexRoute,
+}
+
+const SettingsNotificationsRouteWithChildren =
+  SettingsNotificationsRoute._addFileChildren(
+    SettingsNotificationsRouteChildren,
+  )
+
 interface SettingsRouteChildren {
   SettingsAiRoute: typeof SettingsAiRoute
   SettingsApiRoute: typeof SettingsApiRoute
   SettingsApplicationsRoute: typeof SettingsApplicationsRoute
   SettingsBillingRoute: typeof SettingsBillingRoute
+  SettingsCodeAndReviewsRoute: typeof SettingsCodeAndReviewsRoute
   SettingsImportExportRoute: typeof SettingsImportExportRoute
   SettingsMembersRoute: typeof SettingsMembersRoute
+  SettingsNotificationsRoute: typeof SettingsNotificationsRouteWithChildren
   SettingsProfileRoute: typeof SettingsProfileRoute
   SettingsSecurityRoute: typeof SettingsSecurityRoute
   SettingsWorkspaceRoute: typeof SettingsWorkspaceRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
+  SettingsAccountSecurityRoute: typeof SettingsAccountSecurityRoute
 }
 
 const SettingsRouteChildren: SettingsRouteChildren = {
@@ -1429,12 +1582,15 @@ const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsApiRoute: SettingsApiRoute,
   SettingsApplicationsRoute: SettingsApplicationsRoute,
   SettingsBillingRoute: SettingsBillingRoute,
+  SettingsCodeAndReviewsRoute: SettingsCodeAndReviewsRoute,
   SettingsImportExportRoute: SettingsImportExportRoute,
   SettingsMembersRoute: SettingsMembersRoute,
+  SettingsNotificationsRoute: SettingsNotificationsRouteWithChildren,
   SettingsProfileRoute: SettingsProfileRoute,
   SettingsSecurityRoute: SettingsSecurityRoute,
   SettingsWorkspaceRoute: SettingsWorkspaceRoute,
   SettingsIndexRoute: SettingsIndexRoute,
+  SettingsAccountSecurityRoute: SettingsAccountSecurityRoute,
 }
 
 const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
@@ -1511,6 +1667,8 @@ interface SettingsTeamsTeamSlugRouteChildren {
   SettingsTeamsTeamSlugTriageRoute: typeof SettingsTeamsTeamSlugTriageRoute
   SettingsTeamsTeamSlugWorkflowsRoute: typeof SettingsTeamsTeamSlugWorkflowsRoute
   SettingsTeamsTeamSlugIndexRoute: typeof SettingsTeamsTeamSlugIndexRoute
+  SettingsTeamsTeamSlugAiSummariesRoute: typeof SettingsTeamsTeamSlugAiSummariesRoute
+  SettingsTeamsTeamSlugAiUpdatesRoute: typeof SettingsTeamsTeamSlugAiUpdatesRoute
 }
 
 const SettingsTeamsTeamSlugRouteChildren: SettingsTeamsTeamSlugRouteChildren = {
@@ -1529,6 +1687,8 @@ const SettingsTeamsTeamSlugRouteChildren: SettingsTeamsTeamSlugRouteChildren = {
   SettingsTeamsTeamSlugTriageRoute: SettingsTeamsTeamSlugTriageRoute,
   SettingsTeamsTeamSlugWorkflowsRoute: SettingsTeamsTeamSlugWorkflowsRoute,
   SettingsTeamsTeamSlugIndexRoute: SettingsTeamsTeamSlugIndexRoute,
+  SettingsTeamsTeamSlugAiSummariesRoute: SettingsTeamsTeamSlugAiSummariesRoute,
+  SettingsTeamsTeamSlugAiUpdatesRoute: SettingsTeamsTeamSlugAiUpdatesRoute,
 }
 
 const SettingsTeamsTeamSlugRouteWithChildren =

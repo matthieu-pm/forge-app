@@ -48,6 +48,7 @@ describe("team settings routes", () => {
         "/triage",
         "/cycles",
         "/agent-skills",
+        "/ai/summaries",
         "/recurring-issues",
       ])
     )

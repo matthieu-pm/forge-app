@@ -7,6 +7,12 @@ describe("getBreadcrumbItems", () => {
     expect(getBreadcrumbItems("/settings")).toEqual([{ label: "Preferences" }])
   })
 
+  it("labels code review settings", () => {
+    expect(getBreadcrumbItems("/settings/code-and-reviews")).toEqual([
+      { label: "Code & reviews" },
+    ])
+  })
+
   it("labels profile settings", () => {
     expect(getBreadcrumbItems("/settings/profile")).toEqual([
       { label: "Profile" },

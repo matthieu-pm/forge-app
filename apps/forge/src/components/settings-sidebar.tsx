@@ -62,6 +62,9 @@ type SettingsItem = {
   to?:
     | "/settings"
     | "/settings/profile"
+    | "/settings/account/security"
+    | "/settings/code-and-reviews"
+    | "/settings/notifications"
     | "/settings/api"
     | "/settings/ai"
     | "/settings/applications"
@@ -93,9 +96,21 @@ const settingsGroups: Array<SettingsGroup> = [
         icon: AccountSetting02Icon,
         to: "/settings/profile",
       },
-      { label: "Notifications", icon: NotificationSquareIcon },
-      { label: "Code and reviews", icon: ComputerTerminal01Icon },
-      { label: "Security and access", icon: Key01Icon },
+      {
+        label: "Notifications",
+        icon: NotificationSquareIcon,
+        to: "/settings/notifications",
+      },
+      {
+        label: "Code & reviews",
+        icon: ComputerTerminal01Icon,
+        to: "/settings/code-and-reviews",
+      },
+      {
+        label: "Security & access",
+        icon: Key01Icon,
+        to: "/settings/account/security",
+      },
       { label: "Connected accounts", icon: ChipIcon },
       { label: "Agent personalization", icon: Cursor02Icon },
       { label: "Calls and transcripts", icon: Call02Icon },
@@ -256,7 +271,9 @@ export function SettingsSidebar() {
                     render={item.to ? <Link to={item.to} /> : undefined}
                     isActive={
                       item.to
-                        ? pathname === item.to
+                        ? pathname === item.to ||
+                          (item.to === "/settings/notifications" &&
+                            pathname.startsWith(`${item.to}/`))
                         : pathname === "/settings" && item.active
                     }
                     className="h-7 rounded-lg px-2 text-sm font-medium [&>svg]:size-4"

@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ApiKeySettings } from "./api-key-settings"
@@ -26,6 +32,15 @@ describe("ApiKeySettings", () => {
       canCreate: true,
       canManage: true,
     })
+  })
+
+  it("opens key creation directly when entered from account security", async () => {
+    render(<ApiKeySettings createOnLoad />)
+    expect(screen.getByRole("dialog", { name: "New API key" })).toBeTruthy()
+    await waitFor(() =>
+      expect(apiKeyMocks.loadWorkspaceApiKeyPolicy).toHaveBeenCalled()
+    )
+    expect(apiKeyMocks.createWorkspaceApiKey).not.toHaveBeenCalled()
   })
 
   it("renders the reference sections and opens the API key flow", async () => {

@@ -26,6 +26,9 @@ export type AppPath =
   | "/forge"
   | "/settings"
   | "/settings/profile"
+  | "/settings/notifications"
+  | "/settings/account/security"
+  | "/settings/code-and-reviews"
   | "/settings/api"
   | "/settings/ai"
   | "/settings/applications"
@@ -320,6 +323,14 @@ export function getBreadcrumbItems(pathname: string): Array<BreadcrumbItem> {
     return [{ label: "Issue labels" }]
   }
 
+  if (/^\/settings\/teams\/[^/]+\/ai\/updates$/.test(pathname)) {
+    return [{ label: "Project updates" }]
+  }
+
+  if (/^\/settings\/teams\/[^/]+\/ai\/summaries$/.test(pathname)) {
+    return [{ label: "Resolved thread summaries" }]
+  }
+
   const skillMatch = pathname.match(
     /^\/settings\/teams\/[^/]+\/agent-skills(?:\/([^/]+))?\/?$/
   )
@@ -375,8 +386,31 @@ export function getBreadcrumbItems(pathname: string): Array<BreadcrumbItem> {
     return [{ label: "Preferences" }]
   }
 
+  if (
+    pathname === "/settings/notifications" ||
+    pathname.startsWith("/settings/notifications/")
+  ) {
+    const channel = pathname.split("/")[3]
+    const titles: Record<string, string> = {
+      priority: "Priority notifications",
+      desktop: "Desktop notifications",
+      mobile: "Mobile notifications",
+      email: "Email notifications",
+      slack: "Slack notifications",
+    }
+    return [{ label: titles[channel] ?? "Notifications" }]
+  }
+
+  if (pathname === "/settings/code-and-reviews") {
+    return [{ label: "Code & reviews" }]
+  }
+
   if (pathname === "/settings/profile") {
     return [{ label: "Profile" }]
+  }
+
+  if (pathname === "/settings/account/security") {
+    return [{ label: "Security & access" }]
   }
 
   if (pathname === "/settings/api") {

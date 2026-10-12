@@ -473,3 +473,73 @@ Boundary: this is saved schedule configuration and UI. Forge issue routes still 
 - Authenticated Testing-team QA at 1280 × 720 and 390 × 844: empty state, create validation, creation, menu layout, edit/save/reload, copied URL, unsaved Keep editing/Discard, chat insertion, delete Cancel/confirm, and overview/back navigation. Mobile document width equals 390 px. Only one accessible team exists, so the No other teams submenu was inspected; cross-team moves are covered by data tests, not browser QA. Temporary test skill and inserted composer draft were removed.
 - Evidence: `.forge/agent-skills-qa/desktop-empty.png`, `desktop-editor.png`, `desktop-menu.png`, `mobile-menu.png`, `mobile-empty.png`, `use-in-chat.png`. No actionable UI-polish findings in inspected states. Light mode, physical touch devices and slow-motion inspection not verified. Existing TanStack devtools `path.endsWith` error appears in development logs; no skill flow failures observed.
 - Validation: 28 focused tests across persistence, overview navigation, route hierarchy and app navigation; TypeScript, scoped ESLint, production build with Workflow handler verification and diff whitespace checks pass. React review checked stable module-level components, cleanup of storage listeners, explicit event handlers, accessible controls and initial editor snapshots for conflict detection.
+
+## Team project updates guidance — 2026-10-12
+
+- Implemented `/settings/teams/$teamSlug/ai/updates` from the supplied reference: fixed team link, title, exact description and a 640 × 180 px optional guidance field. Connected the Project updates overview row and navigation label.
+- Guidance automatically persists on edit in versioned local storage per team. Empty guidance clears the value. Invalid stored data is preserved and editing disabled; failed writes retain the draft, offer Retry, and guard navigation/unload until saved or discarded. This is settings UI and browser-local guidance; automatic update generation is not connected.
+- Authenticated browser QA at 1280 × 720 and 390 × 844 verified empty state, multiline entry, reload persistence, clear, and overview/back navigation. Mobile document width equals the 390 px viewport. Restored the test team's initial empty guidance. Evidence: `.forge/project-updates-qa/desktop.png` and `mobile.png`.
+- Typecheck, scoped ESLint, 24 existing overview/navigation/routing tests, production build with Workflow handler verification and diff checks passed. No new tests added for this narrow page. Failure handling reviewed in source; storage failure/corruption, light theme and physical touch devices not exercised in browser. No actionable UI-polish findings in inspected states.
+
+## Resolved thread summaries — 2026-10-12
+
+- Added `/settings/teams/$teamSlug/ai/summaries` and the AI & Agents overview link/breadcrumb, matching both supplied references. Fixed team header, centered 640 px card, exact title/subtitle/description, muted Business availability state, and purple enabled-by-default Business switch. At narrow widths the upgrade link wraps below the description; the Business switch stays beside it.
+- Eligibility reads existing workspace entitlements on the server: active/trialing Business and Enterprise show the switch, other plans show the Billing link. Team access is checked first; owners/admins and team members may edit, others see a disabled switch. The preference is currently local storage per team, not a server setting, and no thread-summary generation is implemented.
+- Chromium component preview at 1440×900 and 390×844 verified free/Business/read-only states, keyboard toggling, reload persistence, billing/team links, no horizontal overflow, and fixed header during short-viewport scrolling. No page errors. Visually inspected `.forge/summaries-qa/business-desktop.png` and `free-mobile.png`; other state captures in the same ignored directory. Full authenticated shell and live paid-workspace behavior were not verified.
+- Four targeted suites / 34 tests passed: plan/trial eligibility, team permission checks, inaccessible-team rejection, actual overview link navigation, route hierarchy, existing navigation cases. Typecheck, scoped ESLint, production build/Workflow handler validation, and diff whitespace checks passed.
+
+## Personal notifications settings — 2026-10-12
+
+- Added `/settings/notifications` and priority/Desktop/Mobile/Email/Slack detail routes. Connected the Personal sidebar and retained its selected state on detail pages. The overview follows the supplied Inbox, Push notifications, Changelog, Marketing, and Other updates sections with matching default states, compact controls, inset dividers, and the existing Forge shell/theme.
+- Priority configuration is gated by Priority inbox. Delivery-channel rows open editable type selections, with enable/disable, Select all/Clear, preserved selections, and live summaries. Detail type names are inferred because only the overview was supplied. Copy uses Forge in place of Linear.
+- Preferences are versioned and stored per signed-in user in this browser. Writes merge with current storage, mounted views synchronize, malformed saved data is preserved, and failed writes keep prior values. These are local preference controls; inbox prioritization, sidebar announcements, actual delivery, browser permissions, newsletters, and Slack integration are not connected to these values.
+- Focused component/data/navigation verification: 26 tests pass, including priority gating, accessible checkbox labels, disable/re-enable retention, summary changes, update toggles, user isolation, synchronization, corrupt storage, and failed writes. Production build and protected Workflow verification passed. React review checked module-level components, event-handler writes and storage-listener cleanup.
+- Rendered QA remains unverified: the authenticated preview initially showed only the settings shell; subsequent reload, tab reconnection and a fresh tab timed out in browser control. A named route layout replaced the directly assigned Outlet; fresh visual confirmation could not be obtained. No desktop/mobile screenshots or visual-pass claim are recorded for this page.
+- Final scoped lint and diff whitespace checks pass. The final workspace typecheck is blocked by concurrent, unrelated `account-security-settings.test.tsx` errors at lines 100, 121, and 138 (`exact` is not a supported Testing Library role option); no notification-file type errors were reported.
+
+## Personal Security & access — 2026-10-12
+
+- Added `/settings/account/security`, distinct from workspace `/settings/security`, and connected the Personal sidebar entry and breadcrumb.
+- Matched the reference’s 640px content column, 64px card rows, muted surfaces, green current-session indicator, and section spacing. Existing Forge shell and theme remain in use.
+- Session list, individual revocation, all-other-session revocation, and logout use Better Auth. Tokens are never rendered. Confirmation precedes session mutations; failed mutations keep the original rows.
+- The live desktop session required a recent sign-in (`SESSION_NOT_FRESH`). Verified the explanatory state and cancellable sign-in confirmation. The normal session-list and revocation states are covered by focused tests; no real user sessions were revoked during QA.
+- Personal API keys use the existing authenticated API-key summary/policy service. New API key opens Forge’s existing scoped creation dialog. Verified that dialog in the desktop app without creating a credential.
+- Passkeys, signing keys, and personal OAuth approval are not configured in the current auth schema. Availability dialogs and an honest empty application state avoid inventing security credentials or approved apps.
+- Desktop UI and passkey availability dialog verified in Forge Desktop. Screenshot: `security-access-desktop.png` in this chat’s visualization directory. In-app browser reload/navigation timed out, so mobile browser verification was not completed.
+- Focused tests: 13 passed across account security, session display, and existing API-key creation. Targeted ESLint, typecheck, production build, and diff check passed.
+
+
+## Personal Code & reviews — 2026-10-12
+
+Source visual truth: the two supplied Linear screenshots, preserved in `docs/audits/code-reviews/source-user-1.png` and `source-user-2.png`. Implementation: authenticated Forge desktop at `/settings/code-and-reviews`, `desktop-top-final.png` and `desktop-bottom-final.png`. Source attachments were resized to 1987×1248 in the conversation; desktop captures are 3600×2260 at a 1800×1130 CSS window / 2× density. Both were normalized to 1800×1130 for comparison. The source's supplied bottom scroll position and implementation's native scroll position differ slightly; matching card content is compared independently of that offset.
+
+Full-view evidence: `comparison-full.png`. Focused content evidence: `comparison-top-final.png` and `comparison-bottom-final.png`. Comparison excludes deliberate existing Forge shell differences (desktop tabs, sidebar, breadcrumb and selected user theme).
+
+**Findings and comparison history**
+- [P2, resolved] Initial rows were taller than the reference, and content began about 8 CSS pixels too high. Reduced row and linked-row padding to 12px, retained 64px minimum rows, and raised the page's top padding to 24px. Final evidence preserves the 640px content width, 12px cards, inset separators, 48px section spacing and reference density.
+- [P2, resolved] The existing Switch component's dark-theme thumb was nearly invisible against the track. Scoped thumb colors to this page and used the reference purple for editable switches and gray for gated controls. Final comparison shows both positions clearly.
+- [P2, resolved] Initial card surfaces were too dark. Adjusted this page's muted surface opacity, with dimmer surfaces for gated sections.
+- [P3, accepted] Hugeicons' GitHub outline differs from Linear's filled mark; it remains a real library icon. Geist and the user's existing Forge theme differ slightly from Linear's font and surrounding shell; existing product tokens are preserved.
+
+**Required fidelity surfaces**
+- Fonts/typography: existing Geist; 24px heading, 15px section headings, 13px labels and 12px helper text. Hierarchy, wrapping and compact control labels checked in the focused comparisons.
+- Spacing/layout rhythm: centered 640px content, compact rows and reference card/section ordering; corrected vertical differences above.
+- Colors/tokens: existing Forge page/shell tokens retained; card tones, inactive opacity, gray disabled tracks and purple active tracks checked.
+- Image quality/assets: no raster imagery required; real Hugeicons supply GitHub, arrow and chevron icons. No approximated brand art added.
+- Copy/content: reference setting labels and descriptions retained, with product name changed to Forge and accessible Option key text.
+
+**Interactions and checks**
+Authenticated Electron QA verified sidebar navigation, GitHub access explanation dialog, attachment format menu, branch-copy switch, coding-tool checkboxes, theme menu and light syntax preview, dialog dismissal, and preference persistence after reload. QA preference changes were restored to the initial defaults. Storage is validated and scoped to signed-in user ID; failed writes keep the previous visible value. React review checked module-level components, stable option lists, hydration-safe loading, guarded controls, accessible names and state, and immutable updates.
+
+Three targeted suites / 25 tests passed (including user isolation, corrupted-storage recovery, save failure, disabled GitHub controls, saved toggles, coding tools and navigation). Scoped ESLint, full TypeScript, production build with Workflow handler verification, and diff whitespace checks passed.
+
+**Boundaries and residual verification gaps**
+Preferences persist on this device, consistent with the existing personal preferences pattern. The page does not connect GitHub, enable review notifications, upload signing keys, or execute downstream branch/status/tool behavior; its access dialog states that GitHub code access is unavailable. Theme and external-tool selections are saved configuration for future consumers. Mobile rendered verification and browser console inspection could not be completed: in-app CDP navigation/focus repeatedly timed out and Chrome automation was unavailable. Desktop rendered QA used the authenticated Electron app instead. No claim of mobile verification is made.
+
+**Implementation checklist**
+- Route, sidebar entry and breadcrumb connected.
+- Reference sections and gated controls implemented.
+- Working dialogs, selections and per-user local persistence verified.
+- Source/implementation comparison complete; no actionable P0/P1/P2 desktop findings remain.
+
+final result: passed

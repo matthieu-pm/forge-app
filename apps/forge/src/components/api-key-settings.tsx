@@ -185,14 +185,18 @@ function ApiKeyPolicySelect({
   )
 }
 
-export function ApiKeySettings() {
+export function ApiKeySettings({
+  createOnLoad = false,
+}: {
+  createOnLoad?: boolean
+}) {
   const [keys, setKeys] = React.useState<Array<ApiKeySummary>>([])
   const [name, setName] = React.useState("")
   const [scopes, setScopes] = React.useState<Array<ApiScope>>(["teams:read"])
   const [newSecret, setNewSecret] = React.useState<string | null>(null)
   const [loading, setLoading] = React.useState(true)
   const [submitting, setSubmitting] = React.useState(false)
-  const [createDialogOpen, setCreateDialogOpen] = React.useState(false)
+  const [createDialogOpen, setCreateDialogOpen] = React.useState(createOnLoad)
   const [apiKeyPolicy, setApiKeyPolicy] =
     React.useState<ApiKeyPolicy>("all-members")
   const [policyVersion, setPolicyVersion] = React.useState(1)

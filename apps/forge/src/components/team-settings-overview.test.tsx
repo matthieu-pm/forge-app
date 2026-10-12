@@ -17,6 +17,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { TeamAgentSkillsSettings } from "./team-agent-skills-settings"
 import { TeamSettingsOverview } from "./team-settings-overview"
 import { TeamCyclesSettings } from "./team-cycles-settings"
+import { TeamThreadSummariesSettings } from "./team-thread-summaries-settings"
 import { TeamTriageSettings } from "./team-triage-settings"
 import { TeamWorkflowsSettings } from "./team-workflows-settings"
 import { TeamIssueStatusesSettings } from "./team-issue-statuses-settings"
@@ -51,6 +52,7 @@ describe("team settings workflow navigation", () => {
     ["triage", "Triage"],
     ["cycles", "Cycles"],
     ["agent-skills", "Agent skills"],
+    ["ai/summaries", "Resolved thread summaries"],
   ])(
     "opens %s for the current team from the overview",
     async (section, title) => {
@@ -65,7 +67,13 @@ describe("team settings workflow navigation", () => {
         getParentRoute: () => root,
         path: `/settings/teams/$teamSlug/${section}`,
         component: () =>
-          section === "statuses" ? (
+          section === "ai/summaries" ? (
+            <TeamThreadSummariesSettings
+              team={team}
+              available={false}
+              canManage={false}
+            />
+          ) : section === "statuses" ? (
             <TeamIssueStatusesSettings team={team} />
           ) : section === "agent-skills" ? (
             <TeamAgentSkillsSettings team={team} teams={[team]} />
