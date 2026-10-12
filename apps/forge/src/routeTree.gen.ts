@@ -61,8 +61,12 @@ import { Route as SettingsTeamsTeamSlugIndexRouteImport } from './routes/setting
 import { Route as SettingsTeamsTeamSlugGeneralRouteImport } from './routes/settings_.teams.$teamSlug.general'
 import { Route as SettingsTeamsTeamSlugLabelsRouteImport } from './routes/settings_.teams.$teamSlug.labels'
 import { Route as SettingsTeamsTeamSlugMembersRouteImport } from './routes/settings_.teams.$teamSlug.members'
+import { Route as SettingsTeamsTeamSlugRecurringIssuesRouteImport } from './routes/settings_.teams.$teamSlug.recurring-issues'
+import { Route as SettingsTeamsTeamSlugStatusesRouteImport } from './routes/settings_.teams.$teamSlug.statuses'
 import { Route as SettingsTeamsTeamSlugTemplatesRouteImport } from './routes/settings_.teams.$teamSlug.templates'
 import { Route as ApiDesktopUpdatesDarwinArchRouteImport } from './routes/api/desktop/updates/darwin/$arch'
+import { Route as SettingsTeamsTeamSlugRecurringIssuesIndexRouteImport } from './routes/settings_.teams.$teamSlug.recurring-issues.index'
+import { Route as SettingsTeamsTeamSlugRecurringIssuesRecurringIdRouteImport } from './routes/settings_.teams.$teamSlug.recurring-issues.$recurringId'
 import { Route as SettingsTeamsTeamSlugTemplatesIndexRouteImport } from './routes/settings_.teams.$teamSlug.templates.index'
 import { Route as ApiInternalDesktopReleasesVersionPauseRouteImport } from './routes/api/internal/desktop/releases/$version/pause'
 import { Route as ApiInternalDesktopReleasesVersionPromoteRouteImport } from './routes/api/internal/desktop/releases/$version/promote'
@@ -335,6 +339,18 @@ const SettingsTeamsTeamSlugMembersRoute =
     path: '/members',
     getParentRoute: () => SettingsTeamsTeamSlugRoute,
   } as any)
+const SettingsTeamsTeamSlugRecurringIssuesRoute =
+  SettingsTeamsTeamSlugRecurringIssuesRouteImport.update({
+    id: '/recurring-issues',
+    path: '/recurring-issues',
+    getParentRoute: () => SettingsTeamsTeamSlugRoute,
+  } as any)
+const SettingsTeamsTeamSlugStatusesRoute =
+  SettingsTeamsTeamSlugStatusesRouteImport.update({
+    id: '/statuses',
+    path: '/statuses',
+    getParentRoute: () => SettingsTeamsTeamSlugRoute,
+  } as any)
 const SettingsTeamsTeamSlugTemplatesRoute =
   SettingsTeamsTeamSlugTemplatesRouteImport.update({
     id: '/templates',
@@ -346,6 +362,18 @@ const ApiDesktopUpdatesDarwinArchRoute =
     id: '/api/desktop/updates/darwin/$arch',
     path: '/api/desktop/updates/darwin/$arch',
     getParentRoute: () => rootRouteImport,
+  } as any)
+const SettingsTeamsTeamSlugRecurringIssuesIndexRoute =
+  SettingsTeamsTeamSlugRecurringIssuesIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => SettingsTeamsTeamSlugRecurringIssuesRoute,
+  } as any)
+const SettingsTeamsTeamSlugRecurringIssuesRecurringIdRoute =
+  SettingsTeamsTeamSlugRecurringIssuesRecurringIdRouteImport.update({
+    id: '/$recurringId',
+    path: '/$recurringId',
+    getParentRoute: () => SettingsTeamsTeamSlugRecurringIssuesRoute,
   } as any)
 const SettingsTeamsTeamSlugTemplatesIndexRoute =
   SettingsTeamsTeamSlugTemplatesIndexRouteImport.update({
@@ -424,9 +452,13 @@ export interface FileRoutesByFullPath {
   '/settings/teams/$teamSlug/general': typeof SettingsTeamsTeamSlugGeneralRoute
   '/settings/teams/$teamSlug/labels': typeof SettingsTeamsTeamSlugLabelsRoute
   '/settings/teams/$teamSlug/members': typeof SettingsTeamsTeamSlugMembersRoute
+  '/settings/teams/$teamSlug/recurring-issues': typeof SettingsTeamsTeamSlugRecurringIssuesRouteWithChildren
+  '/settings/teams/$teamSlug/statuses': typeof SettingsTeamsTeamSlugStatusesRoute
   '/settings/teams/$teamSlug/templates': typeof SettingsTeamsTeamSlugTemplatesRouteWithChildren
   '/settings/teams/$teamSlug/': typeof SettingsTeamsTeamSlugIndexRoute
   '/api/desktop/updates/darwin/$arch': typeof ApiDesktopUpdatesDarwinArchRoute
+  '/settings/teams/$teamSlug/recurring-issues/$recurringId': typeof SettingsTeamsTeamSlugRecurringIssuesRecurringIdRoute
+  '/settings/teams/$teamSlug/recurring-issues/': typeof SettingsTeamsTeamSlugRecurringIssuesIndexRoute
   '/settings/teams/$teamSlug/templates/': typeof SettingsTeamsTeamSlugTemplatesIndexRoute
   '/api/internal/desktop/releases/$version/pause': typeof ApiInternalDesktopReleasesVersionPauseRoute
   '/api/internal/desktop/releases/$version/promote': typeof ApiInternalDesktopReleasesVersionPromoteRoute
@@ -482,8 +514,11 @@ export interface FileRoutesByTo {
   '/settings/teams/$teamSlug/general': typeof SettingsTeamsTeamSlugGeneralRoute
   '/settings/teams/$teamSlug/labels': typeof SettingsTeamsTeamSlugLabelsRoute
   '/settings/teams/$teamSlug/members': typeof SettingsTeamsTeamSlugMembersRoute
+  '/settings/teams/$teamSlug/statuses': typeof SettingsTeamsTeamSlugStatusesRoute
   '/settings/teams/$teamSlug': typeof SettingsTeamsTeamSlugIndexRoute
   '/api/desktop/updates/darwin/$arch': typeof ApiDesktopUpdatesDarwinArchRoute
+  '/settings/teams/$teamSlug/recurring-issues/$recurringId': typeof SettingsTeamsTeamSlugRecurringIssuesRecurringIdRoute
+  '/settings/teams/$teamSlug/recurring-issues': typeof SettingsTeamsTeamSlugRecurringIssuesIndexRoute
   '/settings/teams/$teamSlug/templates': typeof SettingsTeamsTeamSlugTemplatesIndexRoute
   '/api/internal/desktop/releases/$version/pause': typeof ApiInternalDesktopReleasesVersionPauseRoute
   '/api/internal/desktop/releases/$version/promote': typeof ApiInternalDesktopReleasesVersionPromoteRoute
@@ -542,9 +577,13 @@ export interface FileRoutesById {
   '/settings_/teams/$teamSlug/general': typeof SettingsTeamsTeamSlugGeneralRoute
   '/settings_/teams/$teamSlug/labels': typeof SettingsTeamsTeamSlugLabelsRoute
   '/settings_/teams/$teamSlug/members': typeof SettingsTeamsTeamSlugMembersRoute
+  '/settings_/teams/$teamSlug/recurring-issues': typeof SettingsTeamsTeamSlugRecurringIssuesRouteWithChildren
+  '/settings_/teams/$teamSlug/statuses': typeof SettingsTeamsTeamSlugStatusesRoute
   '/settings_/teams/$teamSlug/templates': typeof SettingsTeamsTeamSlugTemplatesRouteWithChildren
   '/settings_/teams/$teamSlug/': typeof SettingsTeamsTeamSlugIndexRoute
   '/api/desktop/updates/darwin/$arch': typeof ApiDesktopUpdatesDarwinArchRoute
+  '/settings_/teams/$teamSlug/recurring-issues/$recurringId': typeof SettingsTeamsTeamSlugRecurringIssuesRecurringIdRoute
+  '/settings_/teams/$teamSlug/recurring-issues/': typeof SettingsTeamsTeamSlugRecurringIssuesIndexRoute
   '/settings_/teams/$teamSlug/templates/': typeof SettingsTeamsTeamSlugTemplatesIndexRoute
   '/api/internal/desktop/releases/$version/pause': typeof ApiInternalDesktopReleasesVersionPauseRoute
   '/api/internal/desktop/releases/$version/promote': typeof ApiInternalDesktopReleasesVersionPromoteRoute
@@ -604,9 +643,13 @@ export interface FileRouteTypes {
     | '/settings/teams/$teamSlug/general'
     | '/settings/teams/$teamSlug/labels'
     | '/settings/teams/$teamSlug/members'
+    | '/settings/teams/$teamSlug/recurring-issues'
+    | '/settings/teams/$teamSlug/statuses'
     | '/settings/teams/$teamSlug/templates'
     | '/settings/teams/$teamSlug/'
     | '/api/desktop/updates/darwin/$arch'
+    | '/settings/teams/$teamSlug/recurring-issues/$recurringId'
+    | '/settings/teams/$teamSlug/recurring-issues/'
     | '/settings/teams/$teamSlug/templates/'
     | '/api/internal/desktop/releases/$version/pause'
     | '/api/internal/desktop/releases/$version/promote'
@@ -662,8 +705,11 @@ export interface FileRouteTypes {
     | '/settings/teams/$teamSlug/general'
     | '/settings/teams/$teamSlug/labels'
     | '/settings/teams/$teamSlug/members'
+    | '/settings/teams/$teamSlug/statuses'
     | '/settings/teams/$teamSlug'
     | '/api/desktop/updates/darwin/$arch'
+    | '/settings/teams/$teamSlug/recurring-issues/$recurringId'
+    | '/settings/teams/$teamSlug/recurring-issues'
     | '/settings/teams/$teamSlug/templates'
     | '/api/internal/desktop/releases/$version/pause'
     | '/api/internal/desktop/releases/$version/promote'
@@ -721,9 +767,13 @@ export interface FileRouteTypes {
     | '/settings_/teams/$teamSlug/general'
     | '/settings_/teams/$teamSlug/labels'
     | '/settings_/teams/$teamSlug/members'
+    | '/settings_/teams/$teamSlug/recurring-issues'
+    | '/settings_/teams/$teamSlug/statuses'
     | '/settings_/teams/$teamSlug/templates'
     | '/settings_/teams/$teamSlug/'
     | '/api/desktop/updates/darwin/$arch'
+    | '/settings_/teams/$teamSlug/recurring-issues/$recurringId'
+    | '/settings_/teams/$teamSlug/recurring-issues/'
     | '/settings_/teams/$teamSlug/templates/'
     | '/api/internal/desktop/releases/$version/pause'
     | '/api/internal/desktop/releases/$version/promote'
@@ -1130,6 +1180,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsTeamsTeamSlugMembersRouteImport
       parentRoute: typeof SettingsTeamsTeamSlugRoute
     }
+    '/settings_/teams/$teamSlug/recurring-issues': {
+      id: '/settings_/teams/$teamSlug/recurring-issues'
+      path: '/recurring-issues'
+      fullPath: '/settings/teams/$teamSlug/recurring-issues'
+      preLoaderRoute: typeof SettingsTeamsTeamSlugRecurringIssuesRouteImport
+      parentRoute: typeof SettingsTeamsTeamSlugRoute
+    }
+    '/settings_/teams/$teamSlug/statuses': {
+      id: '/settings_/teams/$teamSlug/statuses'
+      path: '/statuses'
+      fullPath: '/settings/teams/$teamSlug/statuses'
+      preLoaderRoute: typeof SettingsTeamsTeamSlugStatusesRouteImport
+      parentRoute: typeof SettingsTeamsTeamSlugRoute
+    }
     '/settings_/teams/$teamSlug/templates': {
       id: '/settings_/teams/$teamSlug/templates'
       path: '/templates'
@@ -1143,6 +1207,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/desktop/updates/darwin/$arch'
       preLoaderRoute: typeof ApiDesktopUpdatesDarwinArchRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/settings_/teams/$teamSlug/recurring-issues/': {
+      id: '/settings_/teams/$teamSlug/recurring-issues/'
+      path: '/'
+      fullPath: '/settings/teams/$teamSlug/recurring-issues/'
+      preLoaderRoute: typeof SettingsTeamsTeamSlugRecurringIssuesIndexRouteImport
+      parentRoute: typeof SettingsTeamsTeamSlugRecurringIssuesRoute
+    }
+    '/settings_/teams/$teamSlug/recurring-issues/$recurringId': {
+      id: '/settings_/teams/$teamSlug/recurring-issues/$recurringId'
+      path: '/$recurringId'
+      fullPath: '/settings/teams/$teamSlug/recurring-issues/$recurringId'
+      preLoaderRoute: typeof SettingsTeamsTeamSlugRecurringIssuesRecurringIdRouteImport
+      parentRoute: typeof SettingsTeamsTeamSlugRecurringIssuesRoute
     }
     '/settings_/teams/$teamSlug/templates/': {
       id: '/settings_/teams/$teamSlug/templates/'
@@ -1205,6 +1283,24 @@ const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
   SettingsRouteChildren,
 )
 
+interface SettingsTeamsTeamSlugRecurringIssuesRouteChildren {
+  SettingsTeamsTeamSlugRecurringIssuesRecurringIdRoute: typeof SettingsTeamsTeamSlugRecurringIssuesRecurringIdRoute
+  SettingsTeamsTeamSlugRecurringIssuesIndexRoute: typeof SettingsTeamsTeamSlugRecurringIssuesIndexRoute
+}
+
+const SettingsTeamsTeamSlugRecurringIssuesRouteChildren: SettingsTeamsTeamSlugRecurringIssuesRouteChildren =
+  {
+    SettingsTeamsTeamSlugRecurringIssuesRecurringIdRoute:
+      SettingsTeamsTeamSlugRecurringIssuesRecurringIdRoute,
+    SettingsTeamsTeamSlugRecurringIssuesIndexRoute:
+      SettingsTeamsTeamSlugRecurringIssuesIndexRoute,
+  }
+
+const SettingsTeamsTeamSlugRecurringIssuesRouteWithChildren =
+  SettingsTeamsTeamSlugRecurringIssuesRoute._addFileChildren(
+    SettingsTeamsTeamSlugRecurringIssuesRouteChildren,
+  )
+
 interface SettingsTeamsTeamSlugTemplatesRouteChildren {
   SettingsTeamsTeamSlugTemplatesIndexRoute: typeof SettingsTeamsTeamSlugTemplatesIndexRoute
   SettingsTeamsTeamSlugTemplatesKindTemplateIdRoute: typeof SettingsTeamsTeamSlugTemplatesKindTemplateIdRoute
@@ -1227,6 +1323,8 @@ interface SettingsTeamsTeamSlugRouteChildren {
   SettingsTeamsTeamSlugGeneralRoute: typeof SettingsTeamsTeamSlugGeneralRoute
   SettingsTeamsTeamSlugLabelsRoute: typeof SettingsTeamsTeamSlugLabelsRoute
   SettingsTeamsTeamSlugMembersRoute: typeof SettingsTeamsTeamSlugMembersRoute
+  SettingsTeamsTeamSlugRecurringIssuesRoute: typeof SettingsTeamsTeamSlugRecurringIssuesRouteWithChildren
+  SettingsTeamsTeamSlugStatusesRoute: typeof SettingsTeamsTeamSlugStatusesRoute
   SettingsTeamsTeamSlugTemplatesRoute: typeof SettingsTeamsTeamSlugTemplatesRouteWithChildren
   SettingsTeamsTeamSlugIndexRoute: typeof SettingsTeamsTeamSlugIndexRoute
 }
@@ -1235,6 +1333,9 @@ const SettingsTeamsTeamSlugRouteChildren: SettingsTeamsTeamSlugRouteChildren = {
   SettingsTeamsTeamSlugGeneralRoute: SettingsTeamsTeamSlugGeneralRoute,
   SettingsTeamsTeamSlugLabelsRoute: SettingsTeamsTeamSlugLabelsRoute,
   SettingsTeamsTeamSlugMembersRoute: SettingsTeamsTeamSlugMembersRoute,
+  SettingsTeamsTeamSlugRecurringIssuesRoute:
+    SettingsTeamsTeamSlugRecurringIssuesRouteWithChildren,
+  SettingsTeamsTeamSlugStatusesRoute: SettingsTeamsTeamSlugStatusesRoute,
   SettingsTeamsTeamSlugTemplatesRoute:
     SettingsTeamsTeamSlugTemplatesRouteWithChildren,
   SettingsTeamsTeamSlugIndexRoute: SettingsTeamsTeamSlugIndexRoute,

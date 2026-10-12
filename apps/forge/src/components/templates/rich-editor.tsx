@@ -379,6 +379,7 @@ export function RichEditor({
   label = "Description",
   className,
   editorRef,
+  editable = true,
 }: {
   value: JSONContent | null
   onChange: (value: JSONContent) => void
@@ -386,6 +387,7 @@ export function RichEditor({
   label?: string
   className?: string
   editorRef?: React.RefObject<Editor | null>
+  editable?: boolean
 }) {
   const [slash, setSlash] = React.useState<SlashState | null>(null)
   const [active, setActive] = React.useState(0)
@@ -401,6 +403,7 @@ export function RichEditor({
   updateRef.current = onChange
   const editor = useEditor({
     immediatelyRender: false,
+    editable,
     extensions: [
       ...richEditorExtensions,
       Placeholder.configure({ placeholder }),
@@ -468,6 +471,9 @@ export function RichEditor({
   })
   slashRef.current = { slash, active }
   React.useEffect(() => {
+    editor?.setEditable(editable)
+  }, [editor, editable])
+  React.useEffect(() => {
     if (editorRef) editorRef.current = editor
     return () => {
       if (editorRef) editorRef.current = null
@@ -512,7 +518,7 @@ export function RichEditor({
           event.target.value = ""
         }}
       />
-      {editor && (
+      {editor && editable && (
         <BubbleMenu editor={editor}>
           <div className="flex gap-1 rounded-lg border border-border bg-popover p-1 shadow-lg">
             {(

@@ -48,7 +48,13 @@ type SettingItem = {
   description: string
   icon: SettingsIcon
   label: string
-  section?: "general" | "members" | "labels" | "templates"
+  section?:
+    | "general"
+    | "members"
+    | "labels"
+    | "templates"
+    | "statuses"
+    | "recurring-issues"
   value?: string
 }
 
@@ -90,7 +96,7 @@ const issueItems: Array<SettingItem> = [
     label: "Recurring issues",
     description: "Automatically create issues on a schedule",
     icon: Calendar03Icon,
-    value: "None",
+    section: "recurring-issues",
   },
 ]
 
@@ -99,7 +105,7 @@ const workflowItems: Array<SettingItem> = [
     label: "Issue statuses",
     description: "Customize the statuses issues go through",
     icon: Progress03Icon,
-    value: "7 statuses",
+    section: "statuses",
   },
   {
     label: "Workflows & automations",
@@ -215,13 +221,17 @@ function SettingsCard({
           <Link
             key={item.label}
             to={
-              item.section === "templates"
-                ? "/settings/teams/$teamSlug/templates"
-                : item.section === "members"
-                  ? "/settings/teams/$teamSlug/members"
-                  : item.section === "labels"
-                    ? "/settings/teams/$teamSlug/labels"
-                    : "/settings/teams/$teamSlug/general"
+              item.section === "recurring-issues"
+                ? "/settings/teams/$teamSlug/recurring-issues"
+                : item.section === "statuses"
+                  ? "/settings/teams/$teamSlug/statuses"
+                  : item.section === "templates"
+                    ? "/settings/teams/$teamSlug/templates"
+                    : item.section === "members"
+                      ? "/settings/teams/$teamSlug/members"
+                      : item.section === "labels"
+                        ? "/settings/teams/$teamSlug/labels"
+                        : "/settings/teams/$teamSlug/general"
             }
             params={{ teamSlug }}
             className={className}

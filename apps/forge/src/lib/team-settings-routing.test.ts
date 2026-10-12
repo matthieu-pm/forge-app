@@ -37,7 +37,16 @@ describe("team settings routes", () => {
 
     expect(
       teamSettingsRoute?.children?.map((route) => route.options.path)
-    ).toEqual(expect.arrayContaining(["/", "/general", "/members", "/labels"]))
+    ).toEqual(
+      expect.arrayContaining([
+        "/",
+        "/general",
+        "/members",
+        "/labels",
+        "/statuses",
+        "/recurring-issues",
+      ])
+    )
   })
 
   it("loads team access through the cached loader path", () => {

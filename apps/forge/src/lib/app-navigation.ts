@@ -287,6 +287,18 @@ export function getPageMeta(pathname: string): PageMeta {
 }
 
 export function getBreadcrumbItems(pathname: string): Array<BreadcrumbItem> {
+  const recurringMatch =
+    /^\/settings\/teams\/[^/]+\/recurring-issues(?:\/([^/]+))?\/?$/.exec(
+      pathname
+    )
+  if (recurringMatch)
+    return [
+      {
+        label: recurringMatch[1]
+          ? `${recurringMatch[1] === "new" ? "New" : "Edit"} recurring issue`
+          : "Recurring issues",
+      },
+    ]
   const templateMatch =
     /^\/settings\/teams\/[^/]+\/templates(?:\/(issue|project|document)\/([^/]+))?\/?$/.exec(
       pathname
@@ -306,6 +318,10 @@ export function getBreadcrumbItems(pathname: string): Array<BreadcrumbItem> {
 
   if (/^\/settings\/teams\/[^/]+\/labels$/.test(pathname)) {
     return [{ label: "Issue labels" }]
+  }
+
+  if (/^\/settings\/teams\/[^/]+\/statuses$/.test(pathname)) {
+    return [{ label: "Issue statuses" }]
   }
 
   if (pathname === "/settings/teams") {

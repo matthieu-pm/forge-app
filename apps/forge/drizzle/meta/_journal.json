@@ -148,6 +148,20 @@
       "when": 1791748923675,
       "tag": "0020_last_gateway",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791752566207,
+      "tag": "0021_team_recurring_issues",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1791753051231,
+      "tag": "0022_recurring_issue_revision_precision",
+      "breakpoints": true
     }
   ]
 }

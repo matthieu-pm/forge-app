@@ -389,3 +389,32 @@ final result: passed
 - Emoji data now includes all 3,979 Unicode entries from the installed Emojibase dataset, including nested skin-tone variants and components. Search accepts Unicode, names, tags, and shortcode aliases.
 - Authenticated Electron verification confirmed the compact palette, icon pagination growing from 169 to 337 rendered grid items including the fallback button, a Zzz icon search, emoji pagination, all six waving-hand variants, and Unicode search. Existing team settings were retained.
 - Validation: 15 focused picker/editor/control tests, app typecheck, targeted ESLint, production build with protected Workflow handler verification, and diff checks passed.
+
+## Team issue statuses — 2026-10-11
+
+- Reference: the five supplied Linear issue-status screenshots. Retained Forge's settings shell, theme tokens and typography; implemented a centered 640 px card with six workflow groups, tinted status icons, compact rows, inline creation/editing, a color palette/custom hex editor, and row menus.
+- Route: `/settings/teams/$teamSlug/statuses`, linked from the team's workflow settings and named in the app breadcrumbs.
+- Browser evidence (isolated production component preview): `.forge/status-qa/desktop.png`, `color.png`, `menu.png`, `mobile.png`, `mobile-color.png`, and `light-mobile.png`. Desktop viewport 1440 × 1000, mobile 390 × 844, DPR 1. These verify the page component, not the surrounding authenticated shell. The reference's full desktop-app pixels were not treated as CSS pixels.
+- Verified in Chromium: creation, editing, preset/custom colors, default selection, persistence after reload, deletion/Undo, menu-based reordering, native drag reordering within a group, focused editor entry, Escape/cancel focus return, nested popover Escape, dark/light rendering, mobile editor and color picker, and no mobile document overflow. Reduced-motion styling is present; a full slow-motion animation audit and physical touch-device testing were not performed.
+- Five component/data tests cover duplicate names, trimmed names, cancel, remount persistence, default/last-status protection, corrupt-data preservation, failed-save draft retention, team isolation, and persisted workflow invariants. Routing/navigation suites also pass (24 tests total).
+- Typecheck, targeted ESLint, production build and diff whitespace checks passed. The authenticated application route redirects an unauthenticated browser to login with the intended return URL; authenticated end-to-end navigation remains unverified.
+- Storage scope: versioned, validated local storage per team, consistent with team labels. No server workflow CRUD, live issue counts, or issue reassignment integration exists yet. Duplicate is fixed; default statuses and the final status in a group cannot be deleted. Corrupt saved data is preserved with editing disabled.
+
+| Severity | Location | Before | After | Why |
+| --- | --- | --- | --- | --- |
+| Resolved | Status editor | Replacing a row detached its original menu trigger | Restore focus to the mounted trigger after save/cancel | Preserve keyboard continuity |
+
+No actionable UI-polish findings in inspected states. Approve for the verified component scope; authenticated shell and physical touch-device behavior remain unverified.
+
+
+## Team recurring issues — 2026-10-11
+
+Implemented the reference list and new/edit editor at `/settings/teams/$teamSlug/recurring-issues`. The team overview links to the list. Schedules are persisted in the database with actor-derived workspace/team authorization, owner/admin writes, validation and optimistic revision protection. Migration 0021 creates the schedule table; 0022 restricts timestamps to millisecond precision so database defaults round-trip through JavaScript Dates without false stale-save conflicts.
+
+Authenticated browser QA used the Testing team at 1800×1130 and 390×844. Verified empty/new pages, title validation, checklist slash command, Todo/High/assignee menus, searchable emoji selection, sub-issue creation, save/reopen of rich content and properties, date changes to October 21 and a three-month cadence, unsaved-change Keep editing/Discard, and delete confirmation/cancel. The temporary QA record was removed after verification. Both mobile editor and list measured document width 390px at a 390px viewport. The 320px icon picker fits and reopens its selected emoji tab; tabs now use controlled state to avoid Base UI default-value warnings.
+
+Evidence: `docs/audits/recurring-issues/desktop-empty.png`, `desktop-new.png`, `desktop-edit.png`, `desktop-list.png`, `mobile-list.png`, `mobile-picker.png`.
+
+Validation: nine targeted suites / 41 tests passed, including calendar validity, team timezone defaults, permissions, foreign workspace/team/member rejection, stale-save/delete handling and timestamp precision. Production build and Workflow handler verification passed; scoped ESLint, TypeScript and diff whitespace checks passed. React review checked module-level components, lazy draft initialization, synchronous event capture, cleanup of keyboard listeners, duplicate-save prevention and disabled/read-only controls.
+
+Boundary: this is saved schedule configuration and UI. Forge issue routes still use placeholders; there is no issue instance scheduler or automatic issue creation yet. Desktop Electron displayed a blank surface, so authenticated rendered verification used the in-app browser. A pre-existing TanStack devtools runtime warning was observed, with no recurring-issue UI failure.

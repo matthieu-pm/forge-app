@@ -140,10 +140,12 @@ export function TemplateShell({
   team,
   children,
   overview = false,
+  section = "templates",
 }: {
   team: TeamSummary
   children: ReactNode
   overview?: boolean
+  section?: "templates" | "recurring-issues"
 }) {
   return (
     <main className="h-full min-h-0 flex-1 overflow-y-auto">
@@ -152,7 +154,9 @@ export function TemplateShell({
           to={
             overview
               ? "/settings/teams/$teamSlug"
-              : "/settings/teams/$teamSlug/templates"
+              : section === "recurring-issues"
+                ? "/settings/teams/$teamSlug/recurring-issues"
+                : "/settings/teams/$teamSlug/templates"
           }
           params={{ teamSlug: team.slug }}
           className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
@@ -163,6 +167,8 @@ export function TemplateShell({
               <TeamSidebarIcon icon={team.icon} name={team.name} />
               {team.name}
             </>
+          ) : section === "recurring-issues" ? (
+            "Recurring issues"
           ) : (
             "Team templates"
           )}
@@ -417,6 +423,7 @@ export function Properties({
   directory,
   team,
   project = false,
+  showTeam = true,
   children,
 }: {
   value: TemplateProperties
@@ -424,6 +431,7 @@ export function Properties({
   directory: TemplateDirectory
   team: TeamSummary
   project?: boolean
+  showTeam?: boolean
   children?: ReactNode
 }) {
   const rootRef = React.useRef<HTMLDivElement>(null)
@@ -552,7 +560,7 @@ export function Properties({
       data-template-properties
       className="flex flex-wrap items-center gap-1.5"
     >
-      {!project && teamPicker}
+      {!project && showTeam && teamPicker}
       <Picker
         label="Change status"
         placeholder="Change status..."

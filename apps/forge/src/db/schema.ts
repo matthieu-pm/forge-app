@@ -16,6 +16,7 @@ import {
 
 import { apiKeys, organizations, users } from "./auth-schema"
 import type { TemplateDraft } from "@/lib/template-contract"
+import type { RecurringIssueDraft } from "@/lib/recurring-issue-contract"
 
 export const workspaceSecuritySettings = pgTable(
   "workspace_security_settings",
@@ -1313,6 +1314,36 @@ export const teamTemplateDefaults = pgTable(
     audienceUnique: uniqueIndex("team_template_defaults_audience_unique").on(
       table.teamId,
       table.audience
+    ),
+  })
+)
+
+// Schedule configuration only. Instance generation belongs to the future issue domain.
+export const teamRecurringIssues = pgTable(
+  "team_recurring_issues",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    teamId: uuid("team_id")
+      .notNull()
+      .references(() => teams.id, { onDelete: "cascade" }),
+    payload: jsonb("payload").$type<RecurringIssueDraft>().notNull(),
+    createdByUserId: text("created_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true, precision: 3 })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, precision: 3 })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    teamIndex: index("team_recurring_issues_team_idx").on(
+      table.workspaceId,
+      table.teamId
     ),
   })
 )

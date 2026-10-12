@@ -99,6 +99,9 @@ export function TeamIconPicker<T extends PickerIcon>({
 }) {
   const emitChange = (next: PickerIcon) => onChange(next as T)
   const [open, setOpen] = React.useState(false)
+  const [activeTab, setActiveTab] = React.useState(
+    value.kind === "emoji" ? "emojis" : "icons"
+  )
   const iconGridRef = React.useRef<HTMLDivElement>(null)
   const emojiGridRef = React.useRef<HTMLDivElement>(null)
   const [iconQuery, setIconQuery] = React.useState("")
@@ -214,6 +217,7 @@ export function TeamIconPicker<T extends PickerIcon>({
       onOpenChange={(nextOpen) => {
         setOpen(nextOpen)
         if (!nextOpen) return
+        setActiveTab(value.kind === "emoji" ? "emojis" : "icons")
         if (value.kind === "emoji") void loadEmojiChoices()
         else void loadIconChoices()
       }}
@@ -244,8 +248,9 @@ export function TeamIconPicker<T extends PickerIcon>({
         className="w-[320px] max-w-[calc(100vw-24px)] gap-0 overflow-hidden rounded-xl p-0"
       >
         <Tabs
-          defaultValue={value.kind === "emoji" ? "emojis" : "icons"}
+          value={activeTab}
           onValueChange={(tab) => {
+            setActiveTab(tab as string)
             if (tab === "emojis") void loadEmojiChoices()
             else void loadIconChoices()
           }}

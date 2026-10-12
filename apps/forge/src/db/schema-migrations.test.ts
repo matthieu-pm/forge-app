@@ -19,6 +19,7 @@ import {
   modelCatalogEntries,
   modelConnections,
   teamMembers,
+  teamRecurringIssues,
   teams,
   threadModelPreferences,
   workspaceApprovedDomains,
@@ -41,6 +42,12 @@ type MigrationSnapshot = {
 }
 
 describe("database migrations", () => {
+  it("keeps recurring issue revisions at JavaScript millisecond precision", () => {
+    const columns = getTableColumns(teamRecurringIssues)
+    expect(columns.updatedAt.getSQLType()).toBe("timestamp (3) with time zone")
+    expect(columns.createdAt.getSQLType()).toBe("timestamp (3) with time zone")
+  })
+
   it("keeps public API tables aligned with the latest migration snapshot", () => {
     const journalPath = resolve("drizzle/meta/_journal.json")
     const journal = JSON.parse(
@@ -59,6 +66,7 @@ describe("database migrations", () => {
     for (const [tableName, table] of [
       ["teams", teams],
       ["team_members", teamMembers],
+      ["team_recurring_issues", teamRecurringIssues],
       ["apikey", apiKeys],
       ["api_idempotency_keys", apiIdempotencyKeys],
       ["business_workflow_runs", businessWorkflowRuns],
