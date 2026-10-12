@@ -376,7 +376,7 @@ export function TeamSettingsOverview({
             </SettingsSection>
 
             <SettingsSection title="Workflow">
-              <SettingsCard items={workflowItems} />
+              <SettingsCard items={workflowItems} teamSlug={team.slug} />
             </SettingsSection>
 
             <SettingsSection title="AI & Agents">
