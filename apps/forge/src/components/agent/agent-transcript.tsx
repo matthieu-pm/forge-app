@@ -15,6 +15,7 @@ import {
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import * as React from "react"
+import { Link } from "@tanstack/react-router"
 import ReactMarkdown from "react-markdown"
 import rehypeSanitize from "rehype-sanitize"
 
@@ -477,11 +478,22 @@ function SafeMarkdown({ children }: { children: string }) {
       components={{
         a: ({ href, children: linkChildren }) => {
           const safeHref = safeLink(href)
-          return safeHref ? (
+          const internalAppPath =
+            safeHref?.startsWith("/") &&
+            !safeHref.startsWith("//") &&
+            !safeHref.startsWith("/api/")
+          return safeHref && internalAppPath ? (
+            <Link
+              to={safeHref as never}
+              className="font-medium underline underline-offset-2"
+            >
+              {linkChildren}
+            </Link>
+          ) : safeHref ? (
             <a
               href={safeHref}
-              target={safeHref.startsWith("/") ? undefined : "_blank"}
-              rel={safeHref.startsWith("/") ? undefined : "noreferrer noopener"}
+              target={safeHref.startsWith("#") ? undefined : "_blank"}
+              rel={safeHref.startsWith("#") ? undefined : "noreferrer noopener"}
               className="font-medium underline underline-offset-2"
             >
               {linkChildren}

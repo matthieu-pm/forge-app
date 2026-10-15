@@ -14,7 +14,7 @@ import { Link, useRouter, useRouterState } from "@tanstack/react-router"
 import { toast } from "sonner"
 
 import type { AppNavChild } from "@/lib/app-navigation"
-import type { WorkspaceSummary } from "@/lib/auth-types"
+import type { AuthState, WorkspaceSummary } from "@/lib/auth-types"
 import type { TeamSummary } from "@/lib/team-contract"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { GettingStartedChecklist } from "@/components/getting-started-checklist"
@@ -133,6 +133,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
+  const navigationWorkspace = useRouterState({
+    select: (state) => {
+      for (const match of state.matches) {
+        const context = match.context as { authState?: AuthState }
+        if (context.authState?.workspace) return context.authState.workspace
+      }
+      return null
+    },
+  })
   const sessionState = authClient.useSession()
   const sessionId = sessionState.data?.session.id ?? null
   const activeOrganizationId =
@@ -140,9 +149,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       sessionState.data?.session as
         { activeOrganizationId?: string | null } | undefined
     )?.activeOrganizationId ?? null
-  const [workspace, setWorkspace] = React.useState<WorkspaceSummary | null>(
-    null
-  )
+  const [loadedWorkspace, setWorkspace] =
+    React.useState<WorkspaceSummary | null>(null)
+  const workspace = navigationWorkspace ?? loadedWorkspace
   const [workspaces, setWorkspaces] = React.useState<Array<WorkspaceSummary>>(
     []
   )
@@ -458,9 +467,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     )
   }
 
-  const workspaceName = isWorkspaceLoading
-    ? "Loading workspace..."
-    : workspace?.name || "Forge"
+  const workspaceName =
+    workspace?.name || (isWorkspaceLoading ? "Loading workspace..." : "Forge")
   const workspaceLogo = workspace?.logo || null
 
   return (

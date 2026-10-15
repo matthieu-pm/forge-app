@@ -2,7 +2,7 @@ import "@tanstack/react-start/server-only"
 import { and, eq } from "drizzle-orm"
 import type { AuthState, WorkspaceSummary } from "@/lib/auth-types"
 import { auth } from "@/lib/auth"
-import { db, members } from "@/db"
+import { db, members, organizations } from "@/db"
 
 type SessionRecord = NonNullable<
   Awaited<ReturnType<typeof auth.api.getSession>>
@@ -97,65 +97,66 @@ function extractOrganizations(value: unknown): Array<WorkspaceSummary> {
     .map((organization) => organization.workspace)
 }
 
+type WorkspaceMembership = { workspace: WorkspaceSummary; role: string }
+
+async function loadWorkspaceMembership(
+  workspaceId: string,
+  userId: string
+): Promise<WorkspaceMembership | null> {
+  // Route guards and API authorization need a summary, not the member directory.
+  const records = await db
+    .select({
+      id: organizations.id,
+      name: organizations.name,
+      slug: organizations.slug,
+      logo: organizations.logo,
+      role: members.role,
+    })
+    .from(organizations)
+    .innerJoin(members, eq(members.organizationId, organizations.id))
+    .where(and(eq(organizations.id, workspaceId), eq(members.userId, userId)))
+    .limit(1)
+
+  const record = records.at(0)
+  if (!record) return null
+  const { role, ...workspace } = record
+  return { workspace, role }
+}
+
 async function loadWorkspaceFromRequest(
   request: Request,
   session: SessionRecord
-): Promise<WorkspaceSummary | null> {
-  let organizationId = session.session.activeOrganizationId ?? null
-
+): Promise<WorkspaceMembership | null> {
+  const organizationId = session.session.activeOrganizationId
   if (organizationId) {
-    try {
-      const organization = await auth.api.getFullOrganization({
-        query: {
-          organizationId,
-        },
-        headers: request.headers,
-      })
-
-      return (
-        toWorkspaceSummary(organization) ??
-        (organization &&
-        typeof organization === "object" &&
-        "organization" in organization
-          ? toWorkspaceSummary(
-              (organization as { organization?: unknown }).organization
-            )
-          : null)
-      )
-    } catch {
-      organizationId = null
-    }
-  }
-
-  if (!organizationId) {
-    const organizations = extractOrganizations(
-      await auth.api.listOrganizations({
-        headers: request.headers,
-      })
+    const membership = await loadWorkspaceMembership(
+      organizationId,
+      session.user.id
     )
-
-    const fallbackWorkspace = organizations.at(0)
-    if (!fallbackWorkspace) {
-      return null
-    }
-
-    try {
-      await auth.api.setActiveOrganization({
-        body: {
-          organizationId: fallbackWorkspace.id,
-        },
-        headers: request.headers,
-      })
-    } catch {
-      // If Better Auth cannot persist the active org on this request, we still
-      // continue with the discovered workspace so route guards behave correctly
-      // for this session.
-    }
-
-    return fallbackWorkspace
+    if (membership) return membership
   }
 
-  return null
+  const workspaces = extractOrganizations(
+    await auth.api.listOrganizations({ headers: request.headers })
+  )
+  const fallbackWorkspace = workspaces.at(0)
+  if (!fallbackWorkspace) return null
+
+  const membership = await loadWorkspaceMembership(
+    fallbackWorkspace.id,
+    session.user.id
+  )
+  if (!membership) return null
+
+  try {
+    await auth.api.setActiveOrganization({
+      body: { organizationId: fallbackWorkspace.id },
+      headers: request.headers,
+    })
+  } catch {
+    // The verified membership remains usable if this request cannot persist it.
+  }
+  return membership
 }
 
 export async function getSession(request: Request) {
@@ -181,7 +182,7 @@ export async function getActiveWorkspace(request: Request) {
     return null
   }
 
-  return loadWorkspaceFromRequest(request, session)
+  return (await loadWorkspaceFromRequest(request, session))?.workspace ?? null
 }
 
 export type ActiveWorkspaceMember = {
@@ -200,18 +201,6 @@ export class WorkspaceAccessError extends Error {
   }
 }
 
-async function loadMembershipRole(workspaceId: string, userId: string) {
-  const memberRecords = await db
-    .select({ role: members.role })
-    .from(members)
-    .where(
-      and(eq(members.organizationId, workspaceId), eq(members.userId, userId))
-    )
-    .limit(1)
-
-  return memberRecords.at(0)?.role ?? null
-}
-
 export async function requireActiveWorkspaceMember(
   request: Request
 ): Promise<ActiveWorkspaceMember> {
@@ -221,26 +210,12 @@ export async function requireActiveWorkspaceMember(
     throw new WorkspaceAccessError("UNAUTHENTICATED")
   }
 
-  const activeOrganizationId = session.session.activeOrganizationId ?? null
-  const [workspace, activeMembershipRole] = activeOrganizationId
-    ? await Promise.all([
-        loadWorkspaceFromRequest(request, session),
-        loadMembershipRole(activeOrganizationId, session.user.id),
-      ])
-    : [await loadWorkspaceFromRequest(request, session), null]
-
-  if (!workspace) {
+  const membership = await loadWorkspaceFromRequest(request, session)
+  if (!membership) {
     throw new WorkspaceAccessError("NO_ACTIVE_WORKSPACE")
   }
-
-  const role =
-    activeOrganizationId === workspace.id
-      ? activeMembershipRole
-      : await loadMembershipRole(workspace.id, session.user.id)
-
-  if (!role) {
-    throw new WorkspaceAccessError("FORBIDDEN")
-  }
+  const { workspace, role } = membership
+  if (!role) throw new WorkspaceAccessError("FORBIDDEN")
 
   return {
     userId: session.user.id,
@@ -261,7 +236,8 @@ export async function buildAuthState(request: Request): Promise<AuthState> {
     }
   }
 
-  const workspace = await loadWorkspaceFromRequest(request, session)
+  const workspace =
+    (await loadWorkspaceFromRequest(request, session))?.workspace ?? null
 
   return {
     user: {

@@ -447,8 +447,9 @@ export function WorkspaceTeams({
                               className={`flex items-center ${rowContentHeight}`}
                             >
                               {team.memberPreviews.length ? (
-                                <a
-                                  href={`/teams/${team.slug}/members`}
+                                <Link
+                                  to="/teams/$teamSlug/members"
+                                  params={{ teamSlug: team.slug }}
                                   aria-label={`Manage ${team.name} members`}
                                   className="inline-flex rounded-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
                                 >
@@ -492,7 +493,7 @@ export function WorkspaceTeams({
                                       </AvatarGroupCount>
                                     ) : null}
                                   </AvatarGroup>
-                                </a>
+                                </Link>
                               ) : (
                                 <span
                                   className="text-[11px] text-muted-foreground/60"

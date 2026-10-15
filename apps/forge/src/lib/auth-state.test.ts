@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
+  getNavigationAuthState,
+  invalidateNavigationAuthState,
   protectedRouteBeforeLoad,
   protectedTeamRouteBeforeLoad,
   publicRouteBeforeLoad,
@@ -26,6 +28,7 @@ vi.mock("@/lib/team-state", () => ({
 describe("auth route guards", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    invalidateNavigationAuthState()
     mocks.getAuthState.mockResolvedValue({
       session: { id: "session-1", activeOrganizationId: "workspace-1" },
       user: { id: "user-1" },
@@ -76,5 +79,23 @@ describe("auth route guards", () => {
       },
     })
     expect(mocks.getAuthState).toHaveBeenCalledOnce()
+  })
+
+  it("shares navigation state beyond five seconds and reloads after invalidation", async () => {
+    vi.useFakeTimers()
+    try {
+      await getNavigationAuthState()
+      vi.advanceTimersByTime(6_000)
+      await getNavigationAuthState()
+      expect(mocks.getAuthState).toHaveBeenCalledOnce()
+      invalidateNavigationAuthState()
+      await getNavigationAuthState()
+      expect(mocks.getAuthState).toHaveBeenCalledTimes(2)
+      vi.advanceTimersByTime(30_001)
+      await getNavigationAuthState()
+      expect(mocks.getAuthState).toHaveBeenCalledTimes(3)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

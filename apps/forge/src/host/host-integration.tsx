@@ -6,9 +6,14 @@ import { toast } from "sonner"
 
 import { getForgeHost } from "./forge-host"
 import { resolveHostPlatform } from "./host-platform"
+import { invalidateNavigationAuthState } from "@/lib/auth-state"
+import { authClient } from "@/lib/auth-client"
 
 export function HostIntegration() {
   const router = useRouter()
+  // Better Auth renews aging sessions through a background POST on all pages,
+  // including settings pages that do not mount the app sidebar.
+  authClient.useSession()
 
   useEffect(() => {
     const host = getForgeHost()
@@ -26,7 +31,8 @@ export function HostIntegration() {
       )
     })
 
-    return host.subscribe((event) => {
+    window.addEventListener("focus", invalidateNavigationAuthState)
+    const unsubscribe = host.subscribe((event) => {
       if (event.type === "navigate") {
         void router.navigate({ href: event.path })
         return
@@ -72,6 +78,10 @@ export function HostIntegration() {
         toast.error(event.message)
       }
     })
+    return () => {
+      unsubscribe()
+      window.removeEventListener("focus", invalidateNavigationAuthState)
+    }
   }, [router])
 
   return null

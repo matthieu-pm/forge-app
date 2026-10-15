@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { routeTree } from "@/routeTree.gen"
-import { protectedTeamRouteBeforeLoad } from "@/lib/auth-state"
+import {
+  protectedRouteBeforeLoad,
+  protectedTeamRouteBeforeLoad,
+} from "@/lib/auth-state"
 import { getTeamFromRouteMatches } from "@/lib/team-route-match"
 
 vi.mock("@/lib/auth", () => ({ auth: {} }))
@@ -36,12 +39,15 @@ describe("team app routes", () => {
     expect(teamRoute?.options.beforeLoad).toBeUndefined()
     expect(teamRoute?.options.loader).toBe(protectedTeamRouteBeforeLoad)
     expect(teamRoute?.options.staleTime).toBe(30_000)
-    expect(teamRoute?.children).toHaveLength(6)
-    expect(
-      teamRoute?.children?.every(
-        (route) => route.options.beforeLoad === undefined
-      )
-    ).toBe(true)
+    const assertNoRepeatedAccessCheck = (route: TestRoute) => {
+      // Child routes may validate parameters, but must reuse parent access.
+      expect(route.options.beforeLoad).not.toBe(protectedTeamRouteBeforeLoad)
+      expect(route.options.beforeLoad).not.toBe(protectedRouteBeforeLoad)
+      expect(route.options.loader).not.toBe(protectedTeamRouteBeforeLoad)
+      route.children?.forEach(assertNoRepeatedAccessCheck)
+    }
+    expect(teamRoute?.children?.length).toBeGreaterThan(0)
+    teamRoute?.children?.forEach(assertNoRepeatedAccessCheck)
   })
 
   it("prefers loader team data while supporting existing route context", () => {
@@ -54,8 +60,8 @@ describe("team app routes", () => {
         { loaderData: { team: loaderTeam } },
       ])
     ).toBe(loaderTeam)
-    expect(
-      getTeamFromRouteMatches([{ context: { team: contextTeam } }])
-    ).toBe(contextTeam)
+    expect(getTeamFromRouteMatches([{ context: { team: contextTeam } }])).toBe(
+      contextTeam
+    )
   })
 })

@@ -14,7 +14,13 @@ export const getAuthState = createServerFn({ method: "GET" }).handler(
   }
 )
 
-const getCachedClientAuthState = createTimedRequestCache(getAuthState, 5_000)
+// This cache only drives navigation; every protected server request still
+// checks the current session and membership independently.
+const getCachedClientAuthState = createTimedRequestCache(getAuthState, 30_000)
+
+export function invalidateNavigationAuthState() {
+  getCachedClientAuthState.clear()
+}
 
 export function getNavigationAuthState() {
   return typeof window === "undefined"

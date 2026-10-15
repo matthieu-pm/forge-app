@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useNavigate } from "@tanstack/react-router"
 import {
   ArrowUp02Icon,
   Cancel01Icon,
@@ -67,6 +68,7 @@ export function AgentComposer({
   placeholder?: string
   className?: string
 }) {
+  const navigate = useNavigate()
   const {
     draft,
     setDraft,
@@ -195,7 +197,7 @@ export function AgentComposer({
                 disabled={busy}
                 side="top"
                 onOpenProviderSettings={() =>
-                  window.location.assign("/settings/ai")
+                  void navigate({ to: "/settings/ai" })
                 }
               />
             ) : null}

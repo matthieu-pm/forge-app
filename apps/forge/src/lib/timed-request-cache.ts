@@ -1,11 +1,11 @@
 export function createTimedRequestCache<T>(
   load: () => Promise<T>,
   ttlMs: number,
-  now: () => number = Date.now,
+  now: () => number = () => Date.now()
 ) {
   let cached: { expiresAt: number; request: Promise<T> } | undefined
 
-  return function loadCached() {
+  function loadCached() {
     const currentTime = now()
     if (cached && currentTime < cached.expiresAt) {
       return cached.request
@@ -18,4 +18,10 @@ export function createTimedRequestCache<T>(
     cached = { expiresAt: currentTime + ttlMs, request }
     return request
   }
+
+  return Object.assign(loadCached, {
+    clear: () => {
+      cached = undefined
+    },
+  })
 }

@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { Link } from "@tanstack/react-router"
 import {
   ArrowDown01Icon,
   InformationCircleIcon,
@@ -245,7 +246,7 @@ export function ProjectUpdatesSettings({
               </Button>
               <DropdownMenuContent align="end" sideOffset={6} className="min-w-48">
                 <DropdownMenuItem
-                  render={<a href="/settings/applications" />}
+                  render={<Link to="/settings/applications" />}
                 >
                   Manage in Applications
                 </DropdownMenuItem>

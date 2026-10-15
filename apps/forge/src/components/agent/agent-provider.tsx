@@ -209,9 +209,11 @@ function attachmentContentType(file: File) {
 export function AgentProvider({
   children,
   client: providedClient,
+  deferModelSources = false,
 }: {
   children: React.ReactNode
   client?: AgentClient
+  deferModelSources?: boolean
 }) {
   const fallbackClient = React.useMemo(() => {
     const http = new HttpAgentClient()
@@ -260,6 +262,40 @@ export function AgentProvider({
     DEFAULT_AGENT_FEATURE_FLAGS
   )
   const [modelSourcesLoaded, setModelSourcesLoaded] = React.useState(false)
+  const featureFlagsRequest = React.useRef<Promise<AgentFeatureFlags> | null>(
+    null
+  )
+  const modelSourcesRequest = React.useRef<Promise<
+    Array<AgentModelDefinition>
+  > | null>(null)
+  const ensureModelSources = React.useCallback(() => {
+    if (modelSourcesRequest.current) return modelSourcesRequest.current
+    const request = (async () => {
+      const flags = await (featureFlagsRequest.current ??=
+        client.getFeatureFlags())
+      const [catalog, runtimes] = await Promise.all([
+        flags.agent_model_connections
+          ? client.listModels()
+          : Promise.resolve([]),
+        flags.agent_codex_local
+          ? getForgeHost().listLocalRuntimes()
+          : Promise.resolve([]),
+      ])
+      setModelCatalog(catalog)
+      setLocalRuntimes(runtimes)
+      setModelSourcesLoaded(true)
+      return [
+        ...catalog.map(toPickerModel),
+        ...runtimes.flatMap(toLocalPickerModels),
+      ]
+    })().catch((loadError: unknown) => {
+      if (modelSourcesRequest.current === request)
+        modelSourcesRequest.current = null
+      throw loadError
+    })
+    modelSourcesRequest.current = request
+    return request
+  }, [client])
   const activeThreadIdRef = React.useRef(activeThreadId)
   const surfaceModeRef = React.useRef(surfaceMode)
   const recoveringThreadIdsRef = React.useRef(new Set<string>())
@@ -448,24 +484,14 @@ export function AgentProvider({
       }
     }
 
-    const host = getForgeHost()
-    void client
-      .getFeatureFlags()
+    void (featureFlagsRequest.current ??= client.getFeatureFlags())
       .then(async (nextFeatures) => {
         setFeatures(nextFeatures)
-        const [nextThreads, nextModels, nextLocalRuntimes] = await Promise.all([
-          nextFeatures.agent_ui ? client.listThreads() : Promise.resolve([]),
-          nextFeatures.agent_model_connections
-            ? client.listModels()
-            : Promise.resolve([]),
-          nextFeatures.agent_codex_local
-            ? host.listLocalRuntimes()
-            : Promise.resolve([]),
-        ])
+        // Keep thread recovery active even when no composer is visible.
+        const nextThreads = nextFeatures.agent_ui
+          ? await client.listThreads()
+          : []
         setThreads(nextThreads)
-        setModelCatalog(nextModels)
-        setLocalRuntimes(nextLocalRuntimes)
-        setModelSourcesLoaded(true)
       })
       .catch(() => {
         setError("Forge Agent is not available yet.")
@@ -473,24 +499,19 @@ export function AgentProvider({
   }, [client])
 
   React.useEffect(() => {
+    if (deferModelSources && surfaceMode === "closed") return
+    void ensureModelSources().catch(() => {
+      setError("The model catalog could not be loaded.")
+    })
+  }, [deferModelSources, surfaceMode, ensureModelSources])
+
+  React.useEffect(() => {
     const refreshCatalog = () => {
-      const host = getForgeHost()
-      void Promise.all([
-        features.agent_model_connections
-          ? client.listModels()
-          : Promise.resolve([]),
-        features.agent_codex_local
-          ? host.listLocalRuntimes()
-          : Promise.resolve([]),
-      ])
-        .then(([nextModels, nextLocalRuntimes]) => {
-          setModelCatalog(nextModels)
-          setLocalRuntimes(nextLocalRuntimes)
-          setModelSourcesLoaded(true)
-        })
-        .catch(() => {
-          setError("The model catalog could not be refreshed.")
-        })
+      if (!modelSourcesRequest.current) return
+      modelSourcesRequest.current = null
+      void ensureModelSources().catch(() => {
+        setError("The model catalog could not be refreshed.")
+      })
     }
     window.addEventListener(MODEL_CONNECTIONS_CHANGED_EVENT, refreshCatalog)
     return () =>
@@ -498,7 +519,7 @@ export function AgentProvider({
         MODEL_CONNECTIONS_CHANGED_EVENT,
         refreshCatalog
       )
-  }, [client, features.agent_codex_local, features.agent_model_connections])
+  }, [ensureModelSources])
 
   React.useEffect(() => {
     for (const thread of threads) {
@@ -666,11 +687,12 @@ export function AgentProvider({
       setSurfaceMode(mode)
       setHistoryOpen(false)
       try {
-        const [events, preference] = await Promise.all([
+        const [events, preference, availableModels] = await Promise.all([
           eventsByThread[threadId]
             ? Promise.resolve(eventsByThread[threadId])
             : client.replayThread(threadId),
           client.getThreadModelPreference(threadId),
+          ensureModelSources(),
         ])
         if (!eventsByThread[threadId]) {
           setEventsByThread((current) => ({
@@ -680,7 +702,7 @@ export function AgentProvider({
         }
         const selected =
           preference.mode === "manual"
-            ? models.find(
+            ? availableModels.find(
                 (model) =>
                   model.connectionId === preference.selectedConnectionId &&
                   model.modelId === preference.selectedModelId
@@ -708,7 +730,7 @@ export function AgentProvider({
         setError("The conversation could not be loaded.")
       }
     },
-    [addOpenThread, client, eventsByThread, models]
+    [addOpenThread, client, eventsByThread, ensureModelSources]
   )
 
   const closeThread = React.useCallback(

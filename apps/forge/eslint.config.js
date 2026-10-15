@@ -8,6 +8,7 @@ export default [
       ".claude/worktrees/**",
       ".electron-build/**",
       ".output/**",
+      ".vercel/**",
       ".workflow-vitest/**",
       "src/components/ui/**",
       "services/agent-runtime/.eve/**",

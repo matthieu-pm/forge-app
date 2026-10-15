@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router"
+import { Link, createFileRoute } from "@tanstack/react-router"
 
 import { loadPromotedDesktopRelease } from "@/lib/desktop-release-state"
 
@@ -28,8 +28,8 @@ function DownloadPage() {
       />
       <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-7 sm:px-10 lg:px-14">
         <header className="flex items-center justify-between border-b border-[#171714]/20 pb-5">
-          <a
-            href="/"
+          <Link
+            to="/"
             className="inline-flex items-center gap-3 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4"
           >
             <img
@@ -40,7 +40,7 @@ function DownloadPage() {
             <span className="text-sm font-semibold tracking-[-0.02em]">
               Forge
             </span>
-          </a>
+          </Link>
           <span className="font-mono text-[10px] tracking-[0.2em] text-[#171714]/55 uppercase">
             macOS distribution
           </span>

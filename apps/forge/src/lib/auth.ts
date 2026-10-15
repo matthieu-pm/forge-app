@@ -9,16 +9,7 @@ import {
   developmentDesktopAuthScheme,
 } from "../../electron/shared/desktop-auth-protocol"
 import { db } from "@/db"
-import {
-  accounts,
-  apiKeys,
-  invitations,
-  members,
-  organizations,
-  sessions,
-  users,
-  verifications,
-} from "@/db/auth-schema"
+import * as authSchema from "@/db/auth-schema"
 import {
   DEFAULT_API_KEY_EXPIRES_IN_DAYS,
   FORGE_API_KEY_CONFIG_ID,
@@ -49,6 +40,8 @@ export const auth = betterAuth({
   appName: "Forge",
   baseURL: betterAuthUrl,
   secret: betterAuthSecret,
+  // Keep session validation database-backed, but fetch its user in the same query.
+  experimental: { joins: true },
   trustedOrigins: [
     `${desktopAuthScheme}:/`,
     `${developmentDesktopAuthScheme}:/`,
@@ -56,14 +49,15 @@ export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: {
-      user: users,
-      session: sessions,
-      account: accounts,
-      verification: verifications,
-      apikey: apiKeys,
-      organization: organizations,
-      member: members,
-      invitation: invitations,
+      ...authSchema,
+      user: authSchema.users,
+      session: authSchema.sessions,
+      account: authSchema.accounts,
+      verification: authSchema.verifications,
+      apikey: authSchema.apiKeys,
+      organization: authSchema.organizations,
+      member: authSchema.members,
+      invitation: authSchema.invitations,
     },
   }),
   account: { accountLinking: { enabled: true, disableImplicitLinking: true } },
@@ -78,6 +72,7 @@ export const auth = betterAuth({
   },
   session: {
     updateAge: 60,
+    deferSessionRefresh: true,
   },
   emailVerification: {
     expiresIn: 60 * 60,

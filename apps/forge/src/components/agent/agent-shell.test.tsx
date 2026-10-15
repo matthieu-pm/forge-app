@@ -8,6 +8,7 @@ import {
 } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest"
 
+import type * as ReactRouter from "@tanstack/react-router"
 import type { AgentThreadRecord } from "@/application/agents/agent-store"
 import type {
   CreateAgentThreadInput,
@@ -27,6 +28,11 @@ import { AgentShell } from "@/components/agent/agent-shell"
 import { AgentTranscript } from "@/components/agent/agent-transcript"
 import { Button } from "@/components/ui/button"
 import { DEFAULT_AGENT_FEATURE_FLAGS } from "@/application/agents/agent-feature-flags"
+
+vi.mock("@tanstack/react-router", async (importOriginal) => ({
+  ...(await importOriginal<typeof ReactRouter>()),
+  useNavigate: () => vi.fn(),
+}))
 
 const THREAD_ID = "10000000-0000-4000-8000-000000000001"
 const RUN_ID = "20000000-0000-4000-8000-000000000001"
@@ -315,6 +321,24 @@ describe("AgentShell", () => {
     await waitFor(() =>
       expect(screen.queryByRole("button", { name: "Forge skills" })).toBeNull()
     )
+  })
+
+  test("defers model discovery until Ask Forge opens while retaining thread recovery", async () => {
+    const client = new FakeAgentClient()
+    const listModels = vi.spyOn(client, "listModels")
+    const listThreads = vi.spyOn(client, "listThreads")
+    render(
+      <AgentProvider client={client} deferModelSources>
+        <AgentFooterActions />
+        <AgentShell />
+      </AgentProvider>
+    )
+    await waitFor(() => expect(listThreads).toHaveBeenCalledOnce())
+    expect(listModels).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole("button", { name: "Ask Forge" }))
+    await waitFor(() => expect(listModels).toHaveBeenCalledOnce())
+    expect(await screen.findByPlaceholderText("Reply…")).toBeTruthy()
+    expect(listThreads).toHaveBeenCalledOnce()
   })
 
   test("submitting from Forge home opens a maximized overlay without navigation", async () => {

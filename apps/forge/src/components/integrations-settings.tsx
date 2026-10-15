@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { Link } from "@tanstack/react-router"
 import {
   ArrowLeft01Icon,
   ArrowRight01Icon,
@@ -468,7 +469,7 @@ export function IntegrationsSettings() {
             {selectedIntegration?.enabled ? (
               <Button
                 type="button"
-                render={<a href="/settings/applications" />}
+                render={<Link to="/settings/applications" />}
               >
                 Manage
                 <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} />

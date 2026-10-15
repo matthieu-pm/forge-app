@@ -31,4 +31,25 @@ describe("createTimedRequestCache", () => {
     await expect(loadCached()).resolves.toBe("ready")
     expect(load).toHaveBeenCalledTimes(2)
   })
+
+  it("invalidates an in-flight request without letting it replace the next identity", async () => {
+    let finishOld!: (value: string) => void
+    const load = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise<string>((resolve) => {
+            finishOld = resolve
+          })
+      )
+      .mockResolvedValue("new workspace")
+    const cached = createTimedRequestCache(load, 30_000)
+    const old = cached()
+    cached.clear()
+    await expect(cached()).resolves.toBe("new workspace")
+    finishOld("old workspace")
+    await old
+    await expect(cached()).resolves.toBe("new workspace")
+    expect(load).toHaveBeenCalledTimes(2)
+  })
 })

@@ -2,6 +2,7 @@
 import * as React from "react"
 import { useRouterState } from "@tanstack/react-router"
 import type { CustomEmoji, CustomEmojiInput } from "@/lib/custom-emoji-contract"
+import { authClient } from "@/lib/auth-client"
 import {
   listCustomEmojis,
   removeCustomEmoji,
@@ -30,32 +31,55 @@ const CustomEmojiContext = React.createContext({
 })
 export const useCustomEmojis = () => React.useContext(CustomEmojiContext)
 
+type EmojiState = {
+  workspaceId: string | null
+  emojis: Array<CustomEmoji>
+  loading: boolean
+  error: string
+}
+
 export function CustomEmojiProvider({
   children,
   api = service,
+  workspaceId = "default",
 }: {
   children: React.ReactNode
   api?: EmojiService
+  workspaceId?: string | null
 }) {
-  const [emojis, setEmojis] = React.useState(empty)
-  const [loading, setLoading] = React.useState(true)
-  const [error, setError] = React.useState("")
+  const [state, setState] = React.useState<EmojiState>({
+    workspaceId,
+    emojis: empty,
+    loading: workspaceId !== null,
+    error: "",
+  })
   const generation = React.useRef(0)
   const refresh = React.useCallback(async () => {
     const request = ++generation.current
-    setLoading(true)
+    if (workspaceId === null) {
+      setState({ workspaceId, emojis: empty, loading: false, error: "" })
+      return
+    }
+    setState((previous) => ({
+      workspaceId,
+      emojis: previous.workspaceId === workspaceId ? previous.emojis : empty,
+      loading: true,
+      error: "",
+    }))
     try {
       const next = await api.list()
       if (request !== generation.current) return
-      setEmojis(next)
-      setError("")
+      setState({ workspaceId, emojis: next, loading: false, error: "" })
     } catch {
-      if (request === generation.current)
-        setError("Emojis could not be loaded. Try again.")
-    } finally {
-      if (request === generation.current) setLoading(false)
+      if (request === generation.current) {
+        setState((previous) => ({
+          ...previous,
+          loading: false,
+          error: "Emojis could not be loaded. Try again.",
+        }))
+      }
     }
-  }, [api])
+  }, [api, workspaceId])
   React.useEffect(() => {
     void refresh()
     const onFocus = () => {
@@ -69,24 +93,29 @@ export function CustomEmojiProvider({
   }, [refresh])
   const upload = React.useCallback(
     async (input: CustomEmojiInput) => {
+      if (workspaceId === null) throw new Error("Choose a workspace first.")
+      const request = ++generation.current
       const next = await api.upload(input)
-      generation.current++
-      setEmojis(next)
-      setError("")
-      setLoading(false)
+      if (request !== generation.current) return
+      setState({ workspaceId, emojis: next, loading: false, error: "" })
     },
-    [api]
+    [api, workspaceId]
   )
   const remove = React.useCallback(
     async (id: string) => {
+      if (workspaceId === null) throw new Error("Choose a workspace first.")
+      const request = ++generation.current
       const next = await api.remove(id)
-      generation.current++
-      setEmojis(next)
-      setError("")
-      setLoading(false)
+      if (request !== generation.current) return
+      setState({ workspaceId, emojis: next, loading: false, error: "" })
     },
-    [api]
+    [api, workspaceId]
   )
+  // Hide the previous workspace's data immediately, before the refresh effect.
+  const emojis = state.workspaceId === workspaceId ? state.emojis : empty
+  const loading =
+    state.workspaceId === workspaceId ? state.loading : workspaceId !== null
+  const error = state.workspaceId === workspaceId ? state.error : ""
   const value = React.useMemo(
     () => ({ emojis, loading, error, refresh, upload, remove }),
     [emojis, loading, error, refresh, upload, remove]
@@ -103,7 +132,8 @@ export function WorkspaceEmojiProvider({
 }: {
   children: React.ReactNode
 }) {
-  const workspaceId = useRouterState({
+  const session = authClient.useSession()
+  const routeWorkspaceId = useRouterState({
     select: (state) => {
       for (const match of state.matches) {
         const context = match.context as {
@@ -114,9 +144,12 @@ export function WorkspaceEmojiProvider({
       return null
     },
   })
-  return workspaceId ? (
-    <CustomEmojiProvider key={workspaceId}>{children}</CustomEmojiProvider>
-  ) : (
-    children
+  const workspaceId =
+    routeWorkspaceId ?? session.data?.session.activeOrganizationId ?? null
+  // Keep the shell mounted even when a team route has no authState context.
+  return (
+    <CustomEmojiProvider workspaceId={workspaceId}>
+      {children}
+    </CustomEmojiProvider>
   )
 }

@@ -8,7 +8,7 @@ import {
 } from "@tanstack/react-router"
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools"
 import { TanStackDevtools } from "@tanstack/react-devtools"
-import { Fragment } from "react"
+import { Activity, Fragment } from "react"
 
 import appCss from "../styles.css?url"
 import { AppSidebar } from "@/components/app-sidebar"
@@ -101,7 +101,7 @@ function RootLayout() {
 
   return (
     <WorkspaceEmojiProvider>
-      <AgentProvider>
+      <AgentProvider deferModelSources={pathname !== "/forge"}>
         <SidebarProvider
           className={cn(
             "relative",
@@ -113,11 +113,12 @@ function RootLayout() {
           )}
         >
           <PersonalPreferenceEffects />
-          {pathname.startsWith("/settings") ? (
-            <SettingsSidebar />
-          ) : (
+          <Activity mode={hasSettingsLayout ? "hidden" : "visible"}>
             <AppSidebar />
-          )}
+          </Activity>
+          <Activity mode={hasSettingsLayout ? "visible" : "hidden"}>
+            <SettingsSidebar />
+          </Activity>
           <AgentContentPane pathname={pathname} />
           <div className="forge-agent-overlay-layer pointer-events-none absolute top-2 right-2 bottom-8 left-0 z-30 transition-[left] duration-200 ease-linear md:left-(--sidebar-width) md:peer-data-[collapsible=icon]:left-[calc(var(--sidebar-width-icon)+(--spacing(4)))] md:peer-data-[collapsible=offcanvas]:left-0">
             <AgentShell />
@@ -194,11 +195,7 @@ function AppHeader() {
   const breadcrumbs = getBreadcrumbItems(pathname)
 
   function renderBreadcrumbLink(to: string) {
-    return to.startsWith("/teams/") ? (
-      <a href={to} />
-    ) : (
-      <Link to={to as never} />
-    )
+    return <Link to={to as never} />
   }
 
   return (

@@ -1,13 +1,13 @@
 import { Link } from "@tanstack/react-router"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons"
-import type {AppNavItem} from "@/lib/app-navigation";
+import type { AppNavItem } from "@/lib/app-navigation"
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
-import {  isNavItemActive } from "@/lib/app-navigation"
+import { isNavItemActive } from "@/lib/app-navigation"
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -37,7 +37,7 @@ export function NavMain({
       <SidebarMenu>
         {items.map((item) => (
           <Collapsible
-            key={`${item.title}-${isNavItemActive(pathname, item) ? "active" : "idle"}`}
+            key={item.title}
             defaultOpen={isNavItemActive(pathname, item)}
             render={<SidebarMenuItem />}
           >
