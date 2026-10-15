@@ -8,6 +8,7 @@ import {
   CodepenIcon,
   CubeIcon,
   GitPullRequestArrowIcon,
+  Home01Icon,
   InboxUnreadIcon,
   LayerIcon,
   UserGroup03Icon,
@@ -20,6 +21,10 @@ import type { TeamSummary } from "@/lib/team-contract"
 type AppIcon = ComponentProps<typeof HugeiconsIcon>["icon"]
 type TeamSlug = string
 type TeamSection =
+  | "overview"
+  | "documents"
+  | "loops"
+  | "members"
   | "projects"
   | "views"
   | "issues"
@@ -99,6 +104,7 @@ export type BreadcrumbItem = {
 }
 
 const teamSectionDefinitions = [
+  { title: "Home", section: "overview", icon: Home01Icon },
   { title: "Triage", section: "triage", icon: InboxUnreadIcon },
   { title: "Issues", section: "issues", icon: ClipboardIcon },
   { title: "Cycles", section: "cycles", icon: Clock05Icon },
@@ -136,11 +142,12 @@ export function buildYourTeamsNav(
 ): Array<AppNavChild> {
   return teams.map((team) => ({
     title: team.name,
-    to: getTeamPath(team.slug, "projects"),
+    to: getTeamPath(team.slug, "overview"),
     teamIcon: team.icon,
     items: teamSectionDefinitions
       .filter(
         (section) =>
+          section.section === "overview" ||
           section.section === "projects" ||
           section.section === "views" ||
           (section.section === "cycles" && team.cyclesEnabled === true) ||
@@ -324,6 +331,17 @@ export function getPageMeta(pathname: string): PageMeta {
 }
 
 export function getBreadcrumbItems(pathname: string): Array<BreadcrumbItem> {
+  const homeMatch =
+    /^\/teams\/([^/]+)\/(overview|documents|loops|members)$/.exec(pathname)
+  if (homeMatch)
+    return [
+      {
+        label:
+          homeMatch[2] === "overview"
+            ? teamTitleFromSlug(homeMatch[1])
+            : homeMatch[2][0].toUpperCase() + homeMatch[2].slice(1),
+      },
+    ]
   const recurringMatch =
     /^\/settings\/teams\/[^/]+\/recurring-issues(?:\/([^/]+))?\/?$/.exec(
       pathname
@@ -598,6 +616,14 @@ export function isNavItemActive(
   pathname: string,
   item: Pick<AppNavItem, "to" | "items">
 ): boolean {
+  if (
+    item.to.endsWith("/overview") &&
+    ["overview", "documents", "loops", "members"].some(
+      (section) => pathname === item.to.replace(/overview$/, section)
+    )
+  )
+    return true
+
   if (pathname === item.to) {
     return true
   }
@@ -605,7 +631,7 @@ export function isNavItemActive(
   return (
     item.items?.some(
       (subItem) =>
-        pathname === subItem.to ||
+        isNavItemActive(pathname, { to: subItem.to }) ||
         (subItem.items ? isNavItemActive(pathname, subItem) : false)
     ) ?? false
   )

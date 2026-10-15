@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest"
 
-import { buildYourTeamsNav, getBreadcrumbItems } from "./app-navigation"
+import {
+  buildYourTeamsNav,
+  getBreadcrumbItems,
+  isNavItemActive,
+} from "./app-navigation"
 
 describe("getBreadcrumbItems", () => {
   it("places enabled cycles between issues and projects for that team only", () => {
@@ -9,12 +13,14 @@ describe("getBreadcrumbItems", () => {
       { name: "Design", slug: "design", cyclesEnabled: false },
     ])
     expect(nav[0].items?.map((item) => item.title)).toEqual([
+      "Home",
       "Issues",
       "Cycles",
       "Projects",
       "Views",
     ])
     expect(nav[1].items?.map((item) => item.title)).toEqual([
+      "Home",
       "Issues",
       "Projects",
       "Views",
@@ -123,8 +129,9 @@ describe("getBreadcrumbItems", () => {
     ).toMatchObject([
       {
         title: "Platform API",
-        to: "/teams/platform-api/projects",
+        to: "/teams/platform-api/overview",
         items: [
+          { title: "Home", to: "/teams/platform-api/overview" },
           { title: "Issues", to: "/teams/platform-api/issues" },
           { title: "Projects", to: "/teams/platform-api/projects" },
           { title: "Views", to: "/teams/platform-api/views" },
@@ -146,4 +153,15 @@ describe("getBreadcrumbItems", () => {
       { label: "Initiative" },
     ])
   })
+})
+
+it("keeps Home selected across its tabs only for the same team", () => {
+  const nav = buildYourTeamsNav([{ name: "Product", slug: "product" }])[0]
+  const home = nav.items![0]
+  for (const tab of ["overview", "documents", "loops", "members"]) {
+    expect(isNavItemActive(`/teams/product/${tab}`, home)).toBe(true)
+    expect(isNavItemActive(`/teams/product/${tab}`, nav)).toBe(true)
+    expect(isNavItemActive(`/teams/other/${tab}`, home)).toBe(false)
+  }
+  expect(isNavItemActive("/teams/product/issues", home)).toBe(false)
 })

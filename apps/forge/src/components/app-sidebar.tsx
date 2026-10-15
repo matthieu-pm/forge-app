@@ -384,7 +384,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     ? "h-7 w-full py-1 pr-3 text-sm font-medium [&>svg]:size-4"
                     : "h-7 w-full py-1 text-sm font-medium [&>svg]:size-4"
                 }
-                isActive={pathname === item.to}
+                isActive={isNavItemActive(pathname, item)}
                 render={renderNavLink(item.to)}
               >
                 {renderItemIcon(item)}
@@ -448,7 +448,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarMenuItem key={item.title}>
         <SidebarMenuButton
           className="h-7 py-1 text-sm font-medium"
-          isActive={pathname === item.to}
+          isActive={isNavItemActive(pathname, item)}
           render={renderNavLink(item.to)}
         >
           {renderItemIcon(item)}

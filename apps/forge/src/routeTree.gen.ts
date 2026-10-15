@@ -68,8 +68,12 @@ import { Route as SettingsTeamsTeamSlugRouteImport } from './routes/settings_.te
 import { Route as SettingsTeamsNewRouteImport } from './routes/settings_.teams.new'
 import { Route as TeamsTeamSlugCallsRouteImport } from './routes/teams/$teamSlug/calls'
 import { Route as TeamsTeamSlugCyclesRouteImport } from './routes/teams/$teamSlug/cycles'
+import { Route as TeamsTeamSlugDocumentsRouteImport } from './routes/teams/$teamSlug/documents'
 import { Route as TeamsTeamSlugInsightsRouteImport } from './routes/teams/$teamSlug/insights'
 import { Route as TeamsTeamSlugIssuesRouteImport } from './routes/teams/$teamSlug/issues'
+import { Route as TeamsTeamSlugLoopsRouteImport } from './routes/teams/$teamSlug/loops'
+import { Route as TeamsTeamSlugMembersRouteImport } from './routes/teams/$teamSlug/members'
+import { Route as TeamsTeamSlugOverviewRouteImport } from './routes/teams/$teamSlug/overview'
 import { Route as TeamsTeamSlugProjectsRouteImport } from './routes/teams/$teamSlug/projects'
 import { Route as TeamsTeamSlugSignalsRouteImport } from './routes/teams/$teamSlug/signals'
 import { Route as TeamsTeamSlugTriageRouteImport } from './routes/teams/$teamSlug/triage'
@@ -406,6 +410,11 @@ const TeamsTeamSlugCyclesRoute = TeamsTeamSlugCyclesRouteImport.update({
   path: '/cycles',
   getParentRoute: () => TeamsTeamSlugRoute,
 } as any)
+const TeamsTeamSlugDocumentsRoute = TeamsTeamSlugDocumentsRouteImport.update({
+  id: '/documents',
+  path: '/documents',
+  getParentRoute: () => TeamsTeamSlugRoute,
+} as any)
 const TeamsTeamSlugInsightsRoute = TeamsTeamSlugInsightsRouteImport.update({
   id: '/insights',
   path: '/insights',
@@ -414,6 +423,21 @@ const TeamsTeamSlugInsightsRoute = TeamsTeamSlugInsightsRouteImport.update({
 const TeamsTeamSlugIssuesRoute = TeamsTeamSlugIssuesRouteImport.update({
   id: '/issues',
   path: '/issues',
+  getParentRoute: () => TeamsTeamSlugRoute,
+} as any)
+const TeamsTeamSlugLoopsRoute = TeamsTeamSlugLoopsRouteImport.update({
+  id: '/loops',
+  path: '/loops',
+  getParentRoute: () => TeamsTeamSlugRoute,
+} as any)
+const TeamsTeamSlugMembersRoute = TeamsTeamSlugMembersRouteImport.update({
+  id: '/members',
+  path: '/members',
+  getParentRoute: () => TeamsTeamSlugRoute,
+} as any)
+const TeamsTeamSlugOverviewRoute = TeamsTeamSlugOverviewRouteImport.update({
+  id: '/overview',
+  path: '/overview',
   getParentRoute: () => TeamsTeamSlugRoute,
 } as any)
 const TeamsTeamSlugProjectsRoute = TeamsTeamSlugProjectsRouteImport.update({
@@ -682,8 +706,12 @@ export interface FileRoutesByFullPath {
   '/settings/teams/new': typeof SettingsTeamsNewRoute
   '/teams/$teamSlug/calls': typeof TeamsTeamSlugCallsRoute
   '/teams/$teamSlug/cycles': typeof TeamsTeamSlugCyclesRoute
+  '/teams/$teamSlug/documents': typeof TeamsTeamSlugDocumentsRoute
   '/teams/$teamSlug/insights': typeof TeamsTeamSlugInsightsRoute
   '/teams/$teamSlug/issues': typeof TeamsTeamSlugIssuesRoute
+  '/teams/$teamSlug/loops': typeof TeamsTeamSlugLoopsRoute
+  '/teams/$teamSlug/members': typeof TeamsTeamSlugMembersRoute
+  '/teams/$teamSlug/overview': typeof TeamsTeamSlugOverviewRoute
   '/teams/$teamSlug/projects': typeof TeamsTeamSlugProjectsRoute
   '/teams/$teamSlug/signals': typeof TeamsTeamSlugSignalsRoute
   '/teams/$teamSlug/triage': typeof TeamsTeamSlugTriageRoute
@@ -777,8 +805,12 @@ export interface FileRoutesByTo {
   '/settings/teams/new': typeof SettingsTeamsNewRoute
   '/teams/$teamSlug/calls': typeof TeamsTeamSlugCallsRoute
   '/teams/$teamSlug/cycles': typeof TeamsTeamSlugCyclesRoute
+  '/teams/$teamSlug/documents': typeof TeamsTeamSlugDocumentsRoute
   '/teams/$teamSlug/insights': typeof TeamsTeamSlugInsightsRoute
   '/teams/$teamSlug/issues': typeof TeamsTeamSlugIssuesRoute
+  '/teams/$teamSlug/loops': typeof TeamsTeamSlugLoopsRoute
+  '/teams/$teamSlug/members': typeof TeamsTeamSlugMembersRoute
+  '/teams/$teamSlug/overview': typeof TeamsTeamSlugOverviewRoute
   '/teams/$teamSlug/projects': typeof TeamsTeamSlugProjectsRoute
   '/teams/$teamSlug/signals': typeof TeamsTeamSlugSignalsRoute
   '/teams/$teamSlug/triage': typeof TeamsTeamSlugTriageRoute
@@ -873,8 +905,12 @@ export interface FileRoutesById {
   '/settings_/teams/new': typeof SettingsTeamsNewRoute
   '/teams/$teamSlug/calls': typeof TeamsTeamSlugCallsRoute
   '/teams/$teamSlug/cycles': typeof TeamsTeamSlugCyclesRoute
+  '/teams/$teamSlug/documents': typeof TeamsTeamSlugDocumentsRoute
   '/teams/$teamSlug/insights': typeof TeamsTeamSlugInsightsRoute
   '/teams/$teamSlug/issues': typeof TeamsTeamSlugIssuesRoute
+  '/teams/$teamSlug/loops': typeof TeamsTeamSlugLoopsRoute
+  '/teams/$teamSlug/members': typeof TeamsTeamSlugMembersRoute
+  '/teams/$teamSlug/overview': typeof TeamsTeamSlugOverviewRoute
   '/teams/$teamSlug/projects': typeof TeamsTeamSlugProjectsRoute
   '/teams/$teamSlug/signals': typeof TeamsTeamSlugSignalsRoute
   '/teams/$teamSlug/triage': typeof TeamsTeamSlugTriageRoute
@@ -973,8 +1009,12 @@ export interface FileRouteTypes {
     | '/settings/teams/new'
     | '/teams/$teamSlug/calls'
     | '/teams/$teamSlug/cycles'
+    | '/teams/$teamSlug/documents'
     | '/teams/$teamSlug/insights'
     | '/teams/$teamSlug/issues'
+    | '/teams/$teamSlug/loops'
+    | '/teams/$teamSlug/members'
+    | '/teams/$teamSlug/overview'
     | '/teams/$teamSlug/projects'
     | '/teams/$teamSlug/signals'
     | '/teams/$teamSlug/triage'
@@ -1068,8 +1108,12 @@ export interface FileRouteTypes {
     | '/settings/teams/new'
     | '/teams/$teamSlug/calls'
     | '/teams/$teamSlug/cycles'
+    | '/teams/$teamSlug/documents'
     | '/teams/$teamSlug/insights'
     | '/teams/$teamSlug/issues'
+    | '/teams/$teamSlug/loops'
+    | '/teams/$teamSlug/members'
+    | '/teams/$teamSlug/overview'
     | '/teams/$teamSlug/projects'
     | '/teams/$teamSlug/signals'
     | '/teams/$teamSlug/triage'
@@ -1163,8 +1207,12 @@ export interface FileRouteTypes {
     | '/settings_/teams/new'
     | '/teams/$teamSlug/calls'
     | '/teams/$teamSlug/cycles'
+    | '/teams/$teamSlug/documents'
     | '/teams/$teamSlug/insights'
     | '/teams/$teamSlug/issues'
+    | '/teams/$teamSlug/loops'
+    | '/teams/$teamSlug/members'
+    | '/teams/$teamSlug/overview'
     | '/teams/$teamSlug/projects'
     | '/teams/$teamSlug/signals'
     | '/teams/$teamSlug/triage'
@@ -1652,6 +1700,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TeamsTeamSlugCyclesRouteImport
       parentRoute: typeof TeamsTeamSlugRoute
     }
+    '/teams/$teamSlug/documents': {
+      id: '/teams/$teamSlug/documents'
+      path: '/documents'
+      fullPath: '/teams/$teamSlug/documents'
+      preLoaderRoute: typeof TeamsTeamSlugDocumentsRouteImport
+      parentRoute: typeof TeamsTeamSlugRoute
+    }
     '/teams/$teamSlug/insights': {
       id: '/teams/$teamSlug/insights'
       path: '/insights'
@@ -1664,6 +1719,27 @@ declare module '@tanstack/react-router' {
       path: '/issues'
       fullPath: '/teams/$teamSlug/issues'
       preLoaderRoute: typeof TeamsTeamSlugIssuesRouteImport
+      parentRoute: typeof TeamsTeamSlugRoute
+    }
+    '/teams/$teamSlug/loops': {
+      id: '/teams/$teamSlug/loops'
+      path: '/loops'
+      fullPath: '/teams/$teamSlug/loops'
+      preLoaderRoute: typeof TeamsTeamSlugLoopsRouteImport
+      parentRoute: typeof TeamsTeamSlugRoute
+    }
+    '/teams/$teamSlug/members': {
+      id: '/teams/$teamSlug/members'
+      path: '/members'
+      fullPath: '/teams/$teamSlug/members'
+      preLoaderRoute: typeof TeamsTeamSlugMembersRouteImport
+      parentRoute: typeof TeamsTeamSlugRoute
+    }
+    '/teams/$teamSlug/overview': {
+      id: '/teams/$teamSlug/overview'
+      path: '/overview'
+      fullPath: '/teams/$teamSlug/overview'
+      preLoaderRoute: typeof TeamsTeamSlugOverviewRouteImport
       parentRoute: typeof TeamsTeamSlugRoute
     }
     '/teams/$teamSlug/projects': {
@@ -2112,8 +2188,12 @@ const SettingsTeamsRouteWithChildren = SettingsTeamsRoute._addFileChildren(
 interface TeamsTeamSlugRouteChildren {
   TeamsTeamSlugCallsRoute: typeof TeamsTeamSlugCallsRoute
   TeamsTeamSlugCyclesRoute: typeof TeamsTeamSlugCyclesRoute
+  TeamsTeamSlugDocumentsRoute: typeof TeamsTeamSlugDocumentsRoute
   TeamsTeamSlugInsightsRoute: typeof TeamsTeamSlugInsightsRoute
   TeamsTeamSlugIssuesRoute: typeof TeamsTeamSlugIssuesRoute
+  TeamsTeamSlugLoopsRoute: typeof TeamsTeamSlugLoopsRoute
+  TeamsTeamSlugMembersRoute: typeof TeamsTeamSlugMembersRoute
+  TeamsTeamSlugOverviewRoute: typeof TeamsTeamSlugOverviewRoute
   TeamsTeamSlugProjectsRoute: typeof TeamsTeamSlugProjectsRoute
   TeamsTeamSlugSignalsRoute: typeof TeamsTeamSlugSignalsRoute
   TeamsTeamSlugTriageRoute: typeof TeamsTeamSlugTriageRoute
@@ -2125,8 +2205,12 @@ interface TeamsTeamSlugRouteChildren {
 const TeamsTeamSlugRouteChildren: TeamsTeamSlugRouteChildren = {
   TeamsTeamSlugCallsRoute: TeamsTeamSlugCallsRoute,
   TeamsTeamSlugCyclesRoute: TeamsTeamSlugCyclesRoute,
+  TeamsTeamSlugDocumentsRoute: TeamsTeamSlugDocumentsRoute,
   TeamsTeamSlugInsightsRoute: TeamsTeamSlugInsightsRoute,
   TeamsTeamSlugIssuesRoute: TeamsTeamSlugIssuesRoute,
+  TeamsTeamSlugLoopsRoute: TeamsTeamSlugLoopsRoute,
+  TeamsTeamSlugMembersRoute: TeamsTeamSlugMembersRoute,
+  TeamsTeamSlugOverviewRoute: TeamsTeamSlugOverviewRoute,
   TeamsTeamSlugProjectsRoute: TeamsTeamSlugProjectsRoute,
   TeamsTeamSlugSignalsRoute: TeamsTeamSlugSignalsRoute,
   TeamsTeamSlugTriageRoute: TeamsTeamSlugTriageRoute,

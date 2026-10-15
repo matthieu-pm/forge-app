@@ -117,14 +117,14 @@ describe("WorkspaceTeams", () => {
       screen.getByRole("columnheader", { name: "Membership" })
     ).not.toBeNull()
     const atriumLink = screen.getByRole("link", {
-      name: "Open Atrium projects",
+      name: "Open Atrium overview",
     })
-    expect(atriumLink.getAttribute("href")).toBe("/teams/atrium/projects")
+    expect(atriumLink.getAttribute("href")).toBe("/teams/atrium/overview")
     expect(
       screen
         .getByRole("link", { name: "Manage Atrium members" })
         .getAttribute("href")
-    ).toBe("/settings/teams/atrium/members")
+    ).toBe("/teams/atrium/members")
     expect(
       screen
         .getByRole("link", { name: "Manage Atrium members" })
@@ -188,7 +188,7 @@ describe("WorkspaceTeams", () => {
     render(<WorkspaceTeams directory={directory} />)
     const nameLinks = () =>
       screen
-        .getAllByRole("link", { name: /^Open (Atrium|Forge) projects$/ })
+        .getAllByRole("link", { name: /^Open (Atrium|Forge) overview$/ })
         .map((link) => link.textContent)
     expect(nameLinks()[0]).toContain("Atrium")
     fireEvent.click(screen.getByRole("button", { name: "Order by Name" }))
@@ -257,7 +257,7 @@ describe("WorkspaceTeams", () => {
       target: { value: "members" },
     })
     const rows = () =>
-      screen.getAllByRole("link", { name: /^Open (Atrium|Forge) projects$/ })
+      screen.getAllByRole("link", { name: /^Open (Atrium|Forge) overview$/ })
     expect(rows()[0].textContent).toContain("Forge")
     fireEvent.click(screen.getByRole("button", { name: "Direction" }))
     expect(rows()[0].textContent).toContain("Atrium")
@@ -283,14 +283,14 @@ describe("WorkspaceTeams", () => {
     fireEvent.change(value, { target: { value: "forge" } })
     fireEvent.click(screen.getByRole("button", { name: "Apply filters" }))
     expect(
-      screen.queryByRole("link", { name: "Open Atrium projects" })
+      screen.queryByRole("link", { name: "Open Atrium overview" })
     ).toBeNull()
     expect(
-      screen.getByRole("link", { name: "Open Forge projects" })
+      screen.getByRole("link", { name: "Open Forge overview" })
     ).not.toBeNull()
     fireEvent.click(screen.getByRole("button", { name: "Clear filters" }))
     expect(
-      screen.getByRole("link", { name: "Open Atrium projects" })
+      screen.getByRole("link", { name: "Open Atrium overview" })
     ).not.toBeNull()
   })
 

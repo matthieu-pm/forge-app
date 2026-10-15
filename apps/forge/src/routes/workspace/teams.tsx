@@ -172,7 +172,7 @@ export function WorkspaceTeams({
   }
 
   async function copyTeamUrl(team: TeamDirectoryEntry) {
-    const url = new URL(`/teams/${team.slug}/projects`, window.location.origin)
+    const url = new URL(`/teams/${team.slug}/overview`, window.location.origin)
 
     try {
       await navigator.clipboard.writeText(url.toString())
@@ -382,9 +382,9 @@ export function WorkspaceTeams({
                       >
                         <TableCell className="rounded-l-lg border-l-4 border-transparent bg-clip-padding py-0 pr-4 pl-3 transition-colors group-hover/team-row:bg-muted/50">
                           <Link
-                            to="/teams/$teamSlug/projects"
+                            to="/teams/$teamSlug/overview"
                             params={{ teamSlug: team.slug }}
-                            aria-label={`Open ${team.name} projects`}
+                            aria-label={`Open ${team.name} overview`}
                             className={`flex min-w-0 items-center gap-2 rounded-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${rowContentHeight}`}
                           >
                             <TeamSidebarIcon
@@ -448,7 +448,7 @@ export function WorkspaceTeams({
                             >
                               {team.memberPreviews.length ? (
                                 <a
-                                  href={`/settings/teams/${team.slug}/members`}
+                                  href={`/teams/${team.slug}/members`}
                                   aria-label={`Manage ${team.name} members`}
                                   className="inline-flex rounded-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
                                 >
