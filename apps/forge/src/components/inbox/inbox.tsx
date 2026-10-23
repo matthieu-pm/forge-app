@@ -649,6 +649,7 @@ export function Inbox({ scope }: { scope: InboxScope }) {
             <header className="flex h-12 shrink-0 items-center gap-1 border-b border-border/40 px-4">
               <IconButton
                 label="Back to inbox"
+                className="rounded-lg text-muted-foreground md:hidden"
                 icon={ArrowLeft01Icon}
                 onClick={() => {
                   setSelectedId(null)
@@ -656,7 +657,7 @@ export function Inbox({ scope }: { scope: InboxScope }) {
                 }}
               />
               {selected.issue && (
-                <span className="ml-2 truncate text-xs text-muted-foreground">
+                <span className="ml-2 truncate text-xs text-muted-foreground md:ml-0">
                   {selected.issue.identifier}
                 </span>
               )}
