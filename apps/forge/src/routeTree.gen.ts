@@ -46,6 +46,7 @@ import { Route as SettingsProjectStatusesRouteImport } from './routes/settings.p
 import { Route as SettingsProjectTemplatesRouteImport } from './routes/settings.project-templates'
 import { Route as SettingsProjectUpdatesRouteImport } from './routes/settings.project-updates'
 import { Route as SettingsSecurityRouteImport } from './routes/settings.security'
+import { Route as SettingsSignalsRouteImport } from './routes/settings.signals'
 import { Route as SettingsSlaRouteImport } from './routes/settings.sla'
 import { Route as SettingsWorkspaceRouteImport } from './routes/settings.workspace'
 import { Route as SettingsTeamsRouteImport } from './routes/settings_.teams'
@@ -297,6 +298,11 @@ const SettingsProjectUpdatesRoute = SettingsProjectUpdatesRouteImport.update({
 const SettingsSecurityRoute = SettingsSecurityRouteImport.update({
   id: '/security',
   path: '/security',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsSignalsRoute = SettingsSignalsRouteImport.update({
+  id: '/signals',
+  path: '/signals',
   getParentRoute: () => SettingsRoute,
 } as any)
 const SettingsSlaRoute = SettingsSlaRouteImport.update({
@@ -691,6 +697,7 @@ export interface FileRoutesByFullPath {
   '/settings/project-templates': typeof SettingsProjectTemplatesRoute
   '/settings/project-updates': typeof SettingsProjectUpdatesRoute
   '/settings/security': typeof SettingsSecurityRoute
+  '/settings/signals': typeof SettingsSignalsRoute
   '/settings/sla': typeof SettingsSlaRoute
   '/settings/workspace': typeof SettingsWorkspaceRoute
   '/settings/teams': typeof SettingsTeamsRouteWithChildren
@@ -792,6 +799,7 @@ export interface FileRoutesByTo {
   '/settings/project-templates': typeof SettingsProjectTemplatesRoute
   '/settings/project-updates': typeof SettingsProjectUpdatesRoute
   '/settings/security': typeof SettingsSecurityRoute
+  '/settings/signals': typeof SettingsSignalsRoute
   '/settings/sla': typeof SettingsSlaRoute
   '/settings/workspace': typeof SettingsWorkspaceRoute
   '/settings/teams': typeof SettingsTeamsRouteWithChildren
@@ -892,6 +900,7 @@ export interface FileRoutesById {
   '/settings/project-templates': typeof SettingsProjectTemplatesRoute
   '/settings/project-updates': typeof SettingsProjectUpdatesRoute
   '/settings/security': typeof SettingsSecurityRoute
+  '/settings/signals': typeof SettingsSignalsRoute
   '/settings/sla': typeof SettingsSlaRoute
   '/settings/workspace': typeof SettingsWorkspaceRoute
   '/settings_/teams': typeof SettingsTeamsRouteWithChildren
@@ -997,6 +1006,7 @@ export interface FileRouteTypes {
     | '/settings/project-templates'
     | '/settings/project-updates'
     | '/settings/security'
+    | '/settings/signals'
     | '/settings/sla'
     | '/settings/workspace'
     | '/settings/teams'
@@ -1098,6 +1108,7 @@ export interface FileRouteTypes {
     | '/settings/project-templates'
     | '/settings/project-updates'
     | '/settings/security'
+    | '/settings/signals'
     | '/settings/sla'
     | '/settings/workspace'
     | '/settings/teams'
@@ -1197,6 +1208,7 @@ export interface FileRouteTypes {
     | '/settings/project-templates'
     | '/settings/project-updates'
     | '/settings/security'
+    | '/settings/signals'
     | '/settings/sla'
     | '/settings/workspace'
     | '/settings_/teams'
@@ -1557,6 +1569,13 @@ declare module '@tanstack/react-router' {
       path: '/security'
       fullPath: '/settings/security'
       preLoaderRoute: typeof SettingsSecurityRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/signals': {
+      id: '/settings/signals'
+      path: '/signals'
+      fullPath: '/settings/signals'
+      preLoaderRoute: typeof SettingsSignalsRouteImport
       parentRoute: typeof SettingsRoute
     }
     '/settings/sla': {
@@ -2047,6 +2066,7 @@ interface SettingsRouteChildren {
   SettingsProjectTemplatesRoute: typeof SettingsProjectTemplatesRoute
   SettingsProjectUpdatesRoute: typeof SettingsProjectUpdatesRoute
   SettingsSecurityRoute: typeof SettingsSecurityRoute
+  SettingsSignalsRoute: typeof SettingsSignalsRoute
   SettingsSlaRoute: typeof SettingsSlaRoute
   SettingsWorkspaceRoute: typeof SettingsWorkspaceRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
@@ -2079,6 +2099,7 @@ const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsProjectTemplatesRoute: SettingsProjectTemplatesRoute,
   SettingsProjectUpdatesRoute: SettingsProjectUpdatesRoute,
   SettingsSecurityRoute: SettingsSecurityRoute,
+  SettingsSignalsRoute: SettingsSignalsRoute,
   SettingsSlaRoute: SettingsSlaRoute,
   SettingsWorkspaceRoute: SettingsWorkspaceRoute,
   SettingsIndexRoute: SettingsIndexRoute,

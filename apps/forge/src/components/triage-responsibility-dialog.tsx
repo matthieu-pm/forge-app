@@ -1,5 +1,6 @@
 import { useState } from "react"
 import type { TeamTriageSettings } from "@/lib/team-triage"
+import { OptionSelect } from "@/components/ui/option-select"
 import { useTeamTriage } from "@/lib/team-triage"
 import {
   Dialog,
@@ -35,15 +36,15 @@ export function TriageResponsibilityDialog({
               When a new issue is added to triage, take the following action
             </p>
           </div>
-          <select
+          <OptionSelect
             aria-label="Action"
             className="h-8 rounded-lg border border-border bg-muted px-3 text-xs"
             disabled={!ready || !!error}
             value={settings.action ?? "none"}
-            onChange={(event) =>
+            onValueChange={(nextValue) =>
               setSaveError(
                 !update({
-                  action: event.target.value as TeamTriageSettings["action"],
+                  action: nextValue as TeamTriageSettings["action"],
                 })
               )
             }
@@ -51,7 +52,7 @@ export function TriageResponsibilityDialog({
             <option value="none">No action</option>
             <option value="notify">Notify</option>
             <option value="assign">Assign</option>
-          </select>
+          </OptionSelect>
         </div>
         {settings.action && settings.action !== "none" && (
           <p className="text-xs text-muted-foreground">

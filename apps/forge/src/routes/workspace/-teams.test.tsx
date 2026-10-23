@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { WorkspaceTeams } from "./teams"
 import type { TeamDirectory, TeamDirectoryEntry } from "@/lib/team-contract"
+import { selectOption } from "@/test-utils/select-option"
 import { matchesTeamFilters } from "@/components/team-directory-controls"
 
 const mocks = vi.hoisted(() => ({
@@ -253,9 +254,7 @@ describe("WorkspaceTeams", () => {
     ).toBeNull()
     fireEvent.click(screen.getByRole("button", { name: "Owners" }))
     expect(screen.getByRole("columnheader", { name: "Owners" })).not.toBeNull()
-    fireEvent.change(screen.getByRole("combobox", { name: "View ordering" }), {
-      target: { value: "members" },
-    })
+    selectOption(screen.getByRole("combobox", { name: "View ordering" }), "Members")
     const rows = () =>
       screen.getAllByRole("link", { name: /^Open (Atrium|Forge) overview$/ })
     expect(rows()[0].textContent).toContain("Forge")

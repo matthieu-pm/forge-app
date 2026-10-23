@@ -182,7 +182,7 @@ describe("team home workflows", () => {
     })
     await waitFor(() => expect(template.hasAttribute("disabled")).toBe(false))
     fireEvent.click(template)
-    expect(screen.getByLabelText<HTMLSelectElement>("Loop trigger").value).toBe(
+    expect(screen.getByRole("combobox", { name: "Loop trigger" }).textContent).toBe(
       "Weekly schedule"
     )
     fireEvent.change(screen.getByLabelText("Loop name"), {

@@ -1,4 +1,3 @@
-"use client"
 
 import * as React from "react"
 import {
@@ -20,6 +19,7 @@ import type {
   TeamDirectoryEntry,
   TeamLifecycle,
 } from "@/lib/team-contract"
+import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import {
   AlertDialog,
@@ -53,6 +53,8 @@ import {
 } from "@/components/ui/table"
 import { notifyTeamDirectoryChanged } from "@/lib/team-events"
 import { deleteTeam, leaveTeam, restoreTeam } from "@/lib/team-state"
+
+"use client"
 
 type SortDirection = "asc" | "desc"
 type SortField = "name" | "visibility" | "members" | "issues" | "createdAt"
@@ -313,11 +315,7 @@ export function TeamsSettings({
                 className="rounded-lg px-2.5 font-normal"
               >
                 {status === "active" ? "Active" : "Archived"}
-                <HugeiconsIcon
-                  icon={ArrowDown01Icon}
-                  strokeWidth={2}
-                  className="size-3.5"
-                />
+                <DropdownChevron className="size-3.5" />
               </Button>
               <DropdownMenuContent align="start" className="min-w-36">
                 <DropdownMenuRadioGroup

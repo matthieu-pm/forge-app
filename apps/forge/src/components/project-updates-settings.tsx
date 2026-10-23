@@ -1,9 +1,7 @@
-"use client"
 
 import * as React from "react"
 import { Link } from "@tanstack/react-router"
 import {
-  ArrowDown01Icon,
   InformationCircleIcon,
   SlackIcon,
 } from "@hugeicons/core-free-icons"
@@ -13,6 +11,7 @@ import type {
   ProjectUpdateSchedule,
   ProjectUpdatesSettings as ProjectUpdatesSettingsValue,
 } from "@/lib/project-updates-settings"
+import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -33,6 +32,8 @@ import {
   readProjectUpdatesSettings,
   writeProjectUpdatesSettings,
 } from "@/lib/project-updates-settings"
+
+"use client"
 
 const scheduleOptions: ReadonlyArray<{
   value: ProjectUpdateSchedule
@@ -238,11 +239,7 @@ export function ProjectUpdatesSettings({
               >
                 <span className="size-1.5 rounded-full bg-emerald-500" />
                 Connected
-                <HugeiconsIcon
-                  icon={ArrowDown01Icon}
-                  strokeWidth={1.75}
-                  className="size-3"
-                />
+                <DropdownChevron className="size-3" />
               </Button>
               <DropdownMenuContent align="end" sideOffset={6} className="min-w-48">
                 <DropdownMenuItem

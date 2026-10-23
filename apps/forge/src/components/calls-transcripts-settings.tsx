@@ -1,7 +1,6 @@
 import * as React from "react"
-import { ArrowDown01Icon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
 import type { CallPreferences } from "@/lib/call-preferences"
+import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 import {
   defaultCallPreferences,
   readCallPreferences,
@@ -91,7 +90,7 @@ function SettingSelect<T extends string>({
         }
       >
         {options.find((option) => option.value === value)?.label}
-        <HugeiconsIcon icon={ArrowDown01Icon} className="size-3" />
+        <DropdownChevron className="size-3" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-40">
         <DropdownMenuRadioGroup

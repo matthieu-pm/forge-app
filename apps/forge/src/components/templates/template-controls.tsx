@@ -23,6 +23,7 @@ import type {
 } from "@/lib/template-contract"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamLabelDirectory } from "@/lib/team-labels"
+import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import {
   initialTeamLabels,
@@ -67,6 +68,7 @@ export function Glyph({
   name: keyof typeof glyphs
   className?: string
 }) {
+  if (name === "down") return <DropdownChevron className={className} />
   return (
     <HugeiconsIcon
       icon={glyphs[name]}

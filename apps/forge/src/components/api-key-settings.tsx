@@ -1,9 +1,7 @@
-"use client"
 
 import * as React from "react"
 import {
   Add01Icon,
-  ArrowDown01Icon,
   Copy01Icon,
   Delete02Icon,
   Key01Icon,
@@ -13,6 +11,7 @@ import { toast } from "sonner"
 
 import type { ApiScope } from "@/application/actor"
 import type { ApiKeySummary } from "@/application/api-keys/api-key-contract"
+import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 import { DEFAULT_API_KEY_EXPIRES_IN_DAYS } from "@/application/api-keys/api-key-contract"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -41,6 +40,8 @@ import {
   revokeWorkspaceApiKey,
 } from "@/lib/api-key-state"
 import { mutateWorkspaceSecurity } from "@/lib/security-state"
+
+"use client"
 
 const availableScopes: ReadonlyArray<{
   scope: ApiScope
@@ -161,11 +162,7 @@ function ApiKeyPolicySelect({
         className="group rounded-lg font-normal"
       >
         {selected.label}
-        <HugeiconsIcon
-          icon={ArrowDown01Icon}
-          strokeWidth={2}
-          className="size-3.5 transition-transform duration-200 ease-out group-aria-expanded:rotate-180 group-data-popup-open:rotate-180 group-data-open:rotate-180"
-        />
+        <DropdownChevron className="size-3.5" />
       </Button>
       <DropdownMenuContent align="end" sideOffset={6} className="w-36">
         <DropdownMenuRadioGroup

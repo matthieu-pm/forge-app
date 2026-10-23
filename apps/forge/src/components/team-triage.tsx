@@ -10,6 +10,7 @@ import {
 } from "@hugeicons/core-free-icons"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TriageDraft, TriageIssue } from "@/lib/triage-issues"
+import { OptionSelect } from "@/components/ui/option-select"
 import {
   triageDraftKey,
   triageDraftSchema,
@@ -251,16 +252,16 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
                   >
                     <HugeiconsIcon icon={ArrowUpDownIcon} />
                   </Button>
-                  <select
+                  <OptionSelect
                     aria-label="View ordering"
                     className={selectClass}
                     value={ordering}
-                    onChange={(event) => setOrdering(event.target.value)}
+                    onValueChange={(nextValue) => setOrdering(nextValue)}
                   >
                     <option value="added">Added to triage</option>
                     <option value="priority">Priority</option>
                     <option value="due">Due date</option>
-                  </select>
+                  </OptionSelect>
                 </div>
                 <div className="flex items-center justify-between border-b border-border/50 p-4 text-xs text-muted-foreground">
                   Show snoozed

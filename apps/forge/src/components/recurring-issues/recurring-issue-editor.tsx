@@ -7,6 +7,7 @@ import type {
   RecurringIssueDraft,
   SavedRecurringIssue,
 } from "@/lib/recurring-issue-contract"
+import { OptionSelect } from "@/components/ui/option-select"
 import {
   emptyRecurringIssue,
   recurrenceUnitSchema,
@@ -326,19 +327,15 @@ function ScheduleSelect({
 }) {
   return (
     <div className="relative">
-      <select
+      <OptionSelect
         disabled={disabled}
         aria-label={label}
         value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="h-8 appearance-none rounded-lg border border-border/60 bg-muted/40 py-1 pr-7 pl-2 text-xs focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        onValueChange={(nextValue) => onChange(nextValue)}
+        className="h-8 rounded-lg border border-border/60 bg-muted/40 px-2.5 py-1 text-xs focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       >
         {children}
-      </select>
-      <Glyph
-        name="down"
-        className="pointer-events-none absolute top-2.5 right-2 size-3 text-muted-foreground"
-      />
+      </OptionSelect>
     </div>
   )
 }

@@ -1,4 +1,3 @@
-"use client"
 
 import * as React from "react"
 import {
@@ -19,6 +18,7 @@ import type {
   TeamLabelGroup,
 } from "@/lib/team-labels"
 import type { TeamLabelRowHandle } from "@/components/team-label-row"
+import { OptionSelect } from "@/components/ui/option-select"
 import {
   LABEL_COLORS,
   initialInitiativeLabels,
@@ -66,6 +66,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+
+"use client"
 
 type Editor =
   { kind: "label"; item?: TeamLabel } | { kind: "group"; item?: TeamLabelGroup }
@@ -1225,10 +1227,10 @@ function LabelEditor({
           <label htmlFor={`${prefix}-group`} className="text-sm font-medium">
             Group
           </label>
-          <select
+          <OptionSelect
             id={`${prefix}-group`}
             value={groupId}
-            onChange={(event) => setGroupId(event.target.value)}
+            onValueChange={(nextValue) => setGroupId(nextValue)}
             className={`h-9 w-full rounded-lg border border-input bg-background px-3 text-sm ${focusClass}`}
           >
             <option value="">No group</option>
@@ -1237,7 +1239,7 @@ function LabelEditor({
                 {group.name}
               </option>
             ))}
-          </select>
+          </OptionSelect>
         </div>
       )}
       {error && (

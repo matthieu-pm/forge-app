@@ -4,6 +4,7 @@ import type { JSONContent } from "@tiptap/core"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import type { TriageDraft } from "@/lib/triage-issues"
+import { OptionSelect } from "@/components/ui/option-select"
 import { loadTemplates } from "@/lib/template-state"
 import {
   triageDraftKey,
@@ -413,12 +414,12 @@ export function TriageIssueComposer({
               content={
                 <label className="space-y-2 text-xs">
                   Priority
-                  <select
+                  <OptionSelect
                     aria-label="Priority"
                     value={draft.priority}
-                    onChange={(event) =>
+                    onValueChange={(nextValue) =>
                       update({
-                        priority: event.target.value as TriageDraft["priority"],
+                        priority: nextValue as TriageDraft["priority"],
                       })
                     }
                     className="mt-2 h-8 w-full rounded-lg border bg-background px-2"
@@ -426,7 +427,7 @@ export function TriageIssueComposer({
                     {triagePriorities.map((priority) => (
                       <option key={priority}>{priority}</option>
                     ))}
-                  </select>
+                  </OptionSelect>
                 </label>
               }
             >
@@ -445,11 +446,11 @@ export function TriageIssueComposer({
                 ) : (
                   <label className="text-xs">
                     Assignee
-                    <select
+                    <OptionSelect
                       aria-label="Assignee"
                       value={draft.assignee ?? ""}
-                      onChange={(event) =>
-                        update({ assignee: event.target.value })
+                      onValueChange={(nextValue) =>
+                        update({ assignee: nextValue })
                       }
                       className="mt-2 h-8 w-full rounded-lg border bg-background px-2"
                     >
@@ -459,7 +460,7 @@ export function TriageIssueComposer({
                           {member.name}
                         </option>
                       ))}
-                    </select>
+                    </OptionSelect>
                   </label>
                 )
               }

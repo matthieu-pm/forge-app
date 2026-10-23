@@ -1,14 +1,13 @@
-"use client"
 
 import * as React from "react"
 import {
-  ArrowDown01Icon,
   ArrowRight01Icon,
   ArrowUpRight01Icon,
   Github01Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { toast } from "sonner"
+import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -19,6 +18,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
+
+"use client"
 
 type ImportSource = "Asana" | "Shortcut" | "GitHub" | "Jira" | "Linear"
 type PrivateTeamSelection = "None" | "All private teams"
@@ -269,11 +270,7 @@ export function ImportExportSettings() {
                     className="group rounded-lg font-normal"
                   >
                     <span>{privateTeams}</span>
-                    <HugeiconsIcon
-                      icon={ArrowDown01Icon}
-                      strokeWidth={2}
-                      className="size-3.5 transition-transform duration-200 group-aria-expanded:rotate-180 group-data-popup-open:rotate-180"
-                    />
+                    <DropdownChevron className="size-3.5" />
                   </Button>
                   <DropdownMenuContent
                     align="end"

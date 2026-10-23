@@ -74,6 +74,7 @@ type SettingsItem = {
     | "/settings/account/agents"
     | "/settings/code-and-reviews"
     | "/settings/calls-and-transcripts"
+    | "/settings/signals"
     | "/settings/notifications"
     | "/settings/api"
     | "/settings/ai"
@@ -178,7 +179,7 @@ const settingsGroups: Array<SettingsGroup> = [
     label: "Features",
     items: [
       { label: "AI & Agents", icon: FlashIcon, to: "/settings/ai" },
-      { label: "Signals", icon: Asteroid02Icon },
+      { label: "Signals", icon: Asteroid02Icon, to: "/settings/signals" },
       { label: "Initiatives", icon: AirplayIcon, to: "/settings/initiatives" },
       { label: "Emojis", icon: Monocle01Icon, to: "/settings/emojis" },
       {

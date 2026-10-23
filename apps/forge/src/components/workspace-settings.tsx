@@ -1,12 +1,12 @@
-"use client"
 
 import * as React from "react"
-import { ArrowDown01Icon, Delete02Icon } from "@hugeicons/core-free-icons"
+import { Delete02Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Link, useRouter } from "@tanstack/react-router"
 import { toast } from "sonner"
 
 import type { WorkspaceSummary } from "@/lib/auth-types"
+import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 import { AvatarPicker } from "@/components/avatar-picker"
 import {
   AlertDialog,
@@ -30,6 +30,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { authClient } from "@/lib/auth-client"
 import { cn } from "@/lib/utils"
+
+"use client"
 
 type SaveStatus = "idle" | "saving" | "saved" | "error"
 
@@ -426,11 +428,7 @@ export function WorkspaceSettings({
                       className="group rounded-lg font-normal"
                     >
                       <span>{fiscalMonth}</span>
-                      <HugeiconsIcon
-                        icon={ArrowDown01Icon}
-                        strokeWidth={2}
-                        className="size-3.5 transition-transform duration-200 group-aria-expanded:rotate-180"
-                      />
+                      <DropdownChevron className="size-3.5" />
                     </Button>
                     <DropdownMenuContent
                       align="end"

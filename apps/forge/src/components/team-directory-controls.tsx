@@ -10,6 +10,7 @@ import {
   UserGroup03Icon,
 } from "@hugeicons/core-free-icons"
 import type { TeamDirectoryEntry } from "@/lib/team-contract"
+import { OptionSelect } from "@/components/ui/option-select"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -179,16 +180,16 @@ export function TeamDirectoryDisplay({
               className={descending ? "rotate-180" : ""}
             />
           </Button>
-          <select
+          <OptionSelect
             aria-label="View ordering"
             value={ordering}
-            onChange={(event) => onOrdering(event.target.value as TeamOrdering)}
+            onValueChange={(nextValue) => onOrdering(nextValue as TeamOrdering)}
             className={selectClass}
           >
             <option value="name">Name</option>
             <option value="members">Members</option>
             <option value="created">Created</option>
-          </select>
+          </OptionSelect>
         </div>
         <div className="p-4">
           <p className="mb-2 text-xs text-muted-foreground">
@@ -514,37 +515,36 @@ export function TeamDirectoryFilters({
           </DialogDescription>
           <label className="flex items-center gap-2 text-sm">
             Match
-            <select
+            <OptionSelect
               aria-label="Match conditions"
               className={selectClass}
               value={draft.match}
-              onChange={(event) =>
+              onValueChange={(nextValue) =>
                 setDraft({
                   ...draft,
-                  match: event.target.value as "all" | "any",
+                  match: nextValue as "all" | "any",
                 })
               }
             >
               <option value="all">All conditions</option>
               <option value="any">Any condition</option>
-            </select>
+            </OptionSelect>
           </label>
           <div className="max-h-[50vh] space-y-2 overflow-auto">
             {draft.rules.map((rule) => (
               <div key={rule.id} className="flex flex-wrap gap-2">
-                <select
+                <OptionSelect
                   aria-label="Filter field"
                   className={selectClass}
                   value={rule.field}
-                  onChange={(event) =>
+                  onValueChange={(nextValue) =>
                     setDraft({
                       ...draft,
                       rules: draft.rules.map((item) =>
                         item.id === rule.id
                           ? {
                               ...rule,
-                              field: event.target
-                                .value as TeamFilterRule["field"],
+                              field: nextValue as TeamFilterRule["field"],
                               operator: "is",
                               value: "",
                             }
@@ -558,20 +558,19 @@ export function TeamDirectoryFilters({
                       {label}
                     </option>
                   ))}
-                </select>
-                <select
+                </OptionSelect>
+                <OptionSelect
                   aria-label="Filter operator"
                   className={selectClass}
                   value={rule.operator}
-                  onChange={(event) =>
+                  onValueChange={(nextValue) =>
                     setDraft({
                       ...draft,
                       rules: draft.rules.map((item) =>
                         item.id === rule.id
                           ? {
                               ...rule,
-                              operator: event.target
-                                .value as TeamFilterRule["operator"],
+                              operator: nextValue as TeamFilterRule["operator"],
                             }
                           : item
                       ),
@@ -591,20 +590,20 @@ export function TeamDirectoryFilters({
                       {operator === "isNot" ? "is not" : operator}
                     </option>
                   ))}
-                </select>
+                </OptionSelect>
                 {rule.field === "private" ||
                 rule.field === "members" ||
                 rule.field === "owners" ? (
-                  <select
+                  <OptionSelect
                     aria-label="Filter value"
                     className={`${selectClass} flex-1`}
                     value={rule.value}
-                    onChange={(event) =>
+                    onValueChange={(nextValue) =>
                       setDraft({
                         ...draft,
                         rules: draft.rules.map((item) =>
                           item.id === rule.id
-                            ? { ...rule, value: event.target.value }
+                            ? { ...rule, value: nextValue }
                             : item
                         ),
                       })
@@ -629,7 +628,7 @@ export function TeamDirectoryFilters({
                         ))}
                       </>
                     )}
-                  </select>
+                  </OptionSelect>
                 ) : (
                   <input
                     aria-label="Filter value"

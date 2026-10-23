@@ -105,6 +105,7 @@ function RootLayout() {
         <SidebarProvider
           className={cn(
             "relative",
+            pathname === "/inbox" && "forge-inbox-shell",
             hasStandaloneTeamSettingsLayout
               ? "forge-create-team-shell forge-settings-shell"
               : hasSettingsLayout
@@ -160,9 +161,10 @@ function AgentRouteContent({
       aria-hidden={obscured || undefined}
       inert={obscured || undefined}
     >
-      {!/^\/teams\/[^/]+\/(triage|overview|documents|loops|members)$/.test(
-        pathname
-      ) && <AppHeader />}
+      {pathname !== "/inbox" &&
+        !/^\/teams\/[^/]+\/(triage|overview|documents|loops|members)$/.test(
+          pathname
+        ) && <AppHeader />}
       <Outlet key={pathname} />
     </div>
   )

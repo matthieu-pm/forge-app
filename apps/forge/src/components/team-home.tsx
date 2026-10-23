@@ -1,4 +1,3 @@
-"use client"
 
 import * as React from "react"
 import {
@@ -28,6 +27,7 @@ import { toast } from "sonner"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamMemberDirectory } from "@/lib/team-member-contract"
 import type { HomeStore, TeamResource } from "@/lib/team-home-state"
+import { OptionSelect } from "@/components/ui/option-select"
 import { removeHomeSection, safeResourceUrl } from "@/lib/team-home-state"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { TeamIconPicker } from "@/components/team-icon-picker"
@@ -60,6 +60,8 @@ import { notifyTeamDirectoryChanged } from "@/lib/team-events"
 import { useTeamTriage } from "@/lib/team-triage"
 import { useTeamCycles } from "@/lib/team-cycles"
 import { cn } from "@/lib/utils"
+
+"use client"
 
 export const homePill =
   "h-7 rounded-full bg-muted/55 px-2.5 text-xs font-normal text-muted-foreground shadow-[0_0_0_1px_var(--border)] hover:bg-muted hover:text-foreground"
@@ -374,11 +376,11 @@ export function ResourceEditor({
           )}
           <label className="flex items-center gap-3 text-sm text-muted-foreground">
             Section
-            <select
+            <OptionSelect
               aria-label="Resource section"
               className="h-8 rounded-lg bg-muted px-2 text-foreground"
               value={sectionId}
-              onChange={(e) => setSectionId(e.target.value)}
+              onValueChange={(nextValue) => setSectionId(nextValue)}
             >
               <option value="">Team resources</option>
               {store.state.sections.map((s) => (
@@ -386,7 +388,7 @@ export function ResourceEditor({
                   {s.name}
                 </option>
               ))}
-            </select>
+            </OptionSelect>
           </label>
           {validation && (
             <p role="alert" className="text-sm text-destructive">

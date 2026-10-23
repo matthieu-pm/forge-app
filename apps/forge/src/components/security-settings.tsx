@@ -1,9 +1,7 @@
-"use client"
 
 import * as React from "react"
 import {
   Add01Icon,
-  ArrowDown01Icon,
   AtIcon,
   Copy01Icon,
   Delete02Icon,
@@ -20,6 +18,7 @@ import type {
   WorkspaceSecurityCommand,
   WorkspaceSecuritySnapshot,
 } from "@/application/workspace-security/security-contract"
+import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -47,6 +46,8 @@ import {
 } from "@/lib/security-state"
 import { copyTextToClipboard } from "@/lib/copy-to-clipboard"
 import { cn } from "@/lib/utils"
+
+"use client"
 
 type SecurityPreferences = {
   allowExternalLoopSources: boolean
@@ -212,11 +213,7 @@ function SettingsSelect<TValue extends string>({
         className="group rounded-lg font-normal"
       >
         <span>{selectedOption.label}</span>
-        <HugeiconsIcon
-          icon={ArrowDown01Icon}
-          strokeWidth={2}
-          className="size-3.5 transition-transform duration-200 group-aria-expanded:rotate-180"
-        />
+        <DropdownChevron className="size-3.5" />
       </Button>
       <DropdownMenuContent align="end" sideOffset={6}>
         <DropdownMenuRadioGroup

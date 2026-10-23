@@ -1,12 +1,11 @@
-"use client"
 
 import * as React from "react"
 import {
-  ArrowDown01Icon,
   Search01Icon,
   Tick02Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,6 +14,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+
+"use client"
 
 type TimezoneOption = {
   id: string
@@ -189,11 +190,7 @@ export function TeamTimezonePicker({
         <span className="truncate whitespace-nowrap">
           {selectedTimezone.label}
         </span>
-        <HugeiconsIcon
-          icon={ArrowDown01Icon}
-          strokeWidth={2}
-          className="size-3.5 shrink-0 transition-transform duration-200 ease-out group-data-popup-open:rotate-180 group-data-open:rotate-180"
-        />
+        <DropdownChevron className="size-3.5" />
       </PopoverTrigger>
       <PopoverContent
         align="end"

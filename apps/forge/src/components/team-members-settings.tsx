@@ -1,9 +1,7 @@
-"use client"
 
 import * as React from "react"
 import {
   Add01Icon,
-  ArrowDown01Icon,
   ArrowDown02Icon,
   ArrowLeft01Icon,
   ArrowUp02Icon,
@@ -19,6 +17,7 @@ import { toast } from "sonner"
 
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamMemberDirectory } from "@/lib/team-member-contract"
+import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 import {
   HomeIcon,
   HomeIconButton,
@@ -65,6 +64,8 @@ import { notifyTeamDirectoryChanged } from "@/lib/team-events"
 import { teamMemberRole, teamMembersCsv } from "@/lib/team-member-contract"
 import { addTeamMembers } from "@/lib/team-member-state"
 import { cn } from "@/lib/utils"
+
+"use client"
 
 function initials(name: string) {
   return name
@@ -476,11 +477,7 @@ export function TeamMembersSettings({
                   className="h-8 rounded-lg px-2.5 font-normal"
                 >
                   {role}
-                  <HugeiconsIcon
-                    icon={ArrowDown01Icon}
-                    strokeWidth={1.5}
-                    className="size-3.5"
-                  />
+                  <DropdownChevron className="size-3.5" />
                 </Button>
                 <DropdownMenuContent align="start">
                   <DropdownMenuRadioGroup value={role} onValueChange={setRole}>
@@ -595,11 +592,7 @@ export function TeamMembersSettings({
                         .join(", ")
                     : "Select members..."}
                 </span>
-                <HugeiconsIcon
-                  icon={ArrowDown01Icon}
-                  strokeWidth={1.5}
-                  className="size-3.5"
-                />
+                <DropdownChevron className="size-3.5" />
               </PopoverTrigger>
               <PopoverContent
                 align="start"

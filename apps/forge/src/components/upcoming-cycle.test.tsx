@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { UpcomingCycle } from "./upcoming-cycle"
 import type { ReactNode } from "react"
 import type { TeamSummary } from "@/lib/team-contract"
+import { selectOption } from "@/test-utils/select-option"
 import { cycleIssuesKey, parseCycleIssues } from "@/lib/cycle-issues"
 import { initialTeamCycles, teamCyclesStorageKey } from "@/lib/team-cycles"
 
@@ -65,18 +66,13 @@ describe("upcoming cycle", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Open PRO-1 Plan launch" })
     )
-    fireEvent.change(screen.getByRole("combobox", { name: "Status" }), {
-      target: { value: "done" },
-    })
+    selectOption(screen.getByRole("combobox", { name: "Status" }), "Done")
     fireEvent.click(screen.getByRole("button", { name: "Save issue" }))
     const done = screen.getByRole("region", { name: "Done" })
     expect(
       within(done).getByRole("button", { name: "Open PRO-1 Plan launch" })
     ).toBeTruthy()
-    fireEvent.change(
-      screen.getByRole("combobox", { name: "Filter by status" }),
-      { target: { value: "todo" } }
-    )
+    selectOption(screen.getByRole("combobox", { name: "Filter by status" }), "Todo")
     expect(screen.getByText("No issues match this filter.")).toBeTruthy()
     expect(
       parseCycleIssues(localStorage.getItem(cycleIssuesKey(team.id))!)[0].status

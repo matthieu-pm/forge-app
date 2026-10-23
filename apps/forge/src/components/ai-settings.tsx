@@ -1,10 +1,8 @@
-"use client"
 
 import * as React from "react"
 import {
   Add01Icon,
   ApiIcon,
-  ArrowDown01Icon,
   Delete02Icon,
   SecurityLockIcon,
 } from "@hugeicons/core-free-icons"
@@ -16,6 +14,7 @@ import type {
   ModelProvider,
 } from "@/application/agents/model-connection-contract"
 import type { HostRuntime, LocalAgentRuntime } from "@/host/forge-host"
+import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -49,6 +48,8 @@ import {
   useAgent,
 } from "@/components/agent/agent-provider"
 import { isAgentProviderEnabled } from "@/application/agents/agent-feature-flags"
+
+"use client"
 
 const PROVIDERS: ReadonlyArray<{
   id: ModelProvider
@@ -140,11 +141,7 @@ function SettingsSelect<TValue extends string>({
           className="group w-full justify-between rounded-2xl bg-input/50 px-2.5 font-medium text-foreground hover:bg-input/50 aria-expanded:bg-input/50 aria-expanded:text-foreground"
         >
           <span>{selectedOption?.label ?? value}</span>
-          <HugeiconsIcon
-            icon={ArrowDown01Icon}
-            strokeWidth={2}
-            className="size-3.5 transition-transform duration-200 ease-out group-aria-expanded:rotate-180 group-data-popup-open:rotate-180 group-data-open:rotate-180"
-          />
+          <DropdownChevron className="size-3.5" />
         </Button>
         <DropdownMenuContent
           align="start"

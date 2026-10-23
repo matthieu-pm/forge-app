@@ -1,12 +1,12 @@
-"use client"
 
 import * as React from "react"
-import { ArrowDown01Icon, ArrowLeft01Icon } from "@hugeicons/core-free-icons"
+import { ArrowLeft01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Link } from "@tanstack/react-router"
 import { toast } from "sonner"
 
 import type { TeamSummary, UpdateTeamInput } from "@/lib/team-contract"
+import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 import { TeamIconPicker } from "@/components/team-icon-picker"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { TeamTimezonePicker } from "@/components/team-timezone-picker"
@@ -24,6 +24,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { notifyTeamDirectoryChanged } from "@/lib/team-events"
 import { updateTeam } from "@/lib/team-state"
 import { cn } from "@/lib/utils"
+
+"use client"
 
 type TeamSettings = UpdateTeamInput["settings"]
 type SaveStatus = "idle" | "saving" | "saved" | "error"
@@ -306,11 +308,7 @@ export function TeamGeneralSettings({ team }: { team: TeamSummary }) {
                     className="group rounded-lg font-normal"
                   >
                     <span>{selectedEstimation.label}</span>
-                    <HugeiconsIcon
-                      icon={ArrowDown01Icon}
-                      strokeWidth={2}
-                      className="size-3.5 transition-transform duration-200 ease-out group-aria-expanded:rotate-180"
-                    />
+                    <DropdownChevron className="size-3.5" />
                   </Button>
                   <DropdownMenuContent
                     align="end"

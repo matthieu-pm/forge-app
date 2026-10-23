@@ -4,6 +4,7 @@ import { addWeeks, format } from "date-fns"
 import { toast } from "sonner"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { CycleIssue, CycleIssueDraft } from "@/lib/cycle-issues"
+import { OptionSelect } from "@/components/ui/option-select"
 import { useCycleIssues } from "@/lib/cycle-issues"
 import { nextCycleStart, useTeamCycles } from "@/lib/team-cycles"
 import {
@@ -152,11 +153,11 @@ export function UpcomingCycle({
         <div className="flex items-center gap-2">
           {issues.length > 0 && (
             <>
-              <select
+              <OptionSelect
                 aria-label="Filter by status"
                 className={selectClass}
                 value={filter}
-                onChange={(event) => setFilter(event.target.value)}
+                onValueChange={(nextValue) => setFilter(nextValue)}
               >
                 <option value="">All statuses</option>
                 {groups.map((status) => (
@@ -164,16 +165,16 @@ export function UpcomingCycle({
                     {status.name}
                   </option>
                 ))}
-              </select>
-              <select
+              </OptionSelect>
+              <OptionSelect
                 aria-label="Display options"
                 className={selectClass}
                 value={view}
-                onChange={(event) => setView(event.target.value)}
+                onValueChange={(nextValue) => setView(nextValue)}
               >
                 <option value="board">Board</option>
                 <option value="list">List</option>
-              </select>
+              </OptionSelect>
               <Button
                 variant="ghost"
                 size="sm"
@@ -450,12 +451,12 @@ export function UpcomingCycle({
               }
             />
             <div className="flex gap-2">
-              <select
+              <OptionSelect
                 aria-label="Status"
                 className={selectClass}
                 value={draft.status}
-                onChange={(event) =>
-                  setDraft({ ...draft, status: event.target.value })
+                onValueChange={(nextValue) =>
+                  setDraft({ ...draft, status: nextValue })
                 }
               >
                 {statuses.map((status) => (
@@ -463,15 +464,15 @@ export function UpcomingCycle({
                     {status.name}
                   </option>
                 ))}
-              </select>
-              <select
+              </OptionSelect>
+              <OptionSelect
                 aria-label="Priority"
                 className={selectClass}
                 value={draft.priority}
-                onChange={(event) =>
+                onValueChange={(nextValue) =>
                   setDraft({
                     ...draft,
-                    priority: event.target.value as CycleIssue["priority"],
+                    priority: nextValue as CycleIssue["priority"],
                   })
                 }
               >
@@ -480,7 +481,7 @@ export function UpcomingCycle({
                     <option key={priority}>{priority}</option>
                   )
                 )}
-              </select>
+              </OptionSelect>
             </div>
             {saveError && (
               <p role="alert" className="text-sm text-destructive">

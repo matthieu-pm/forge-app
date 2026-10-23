@@ -1,4 +1,3 @@
-"use client"
 import * as React from "react"
 import {
   Add01Icon,
@@ -9,6 +8,7 @@ import {
 } from "@hugeicons/core-free-icons"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamResource } from "@/lib/team-home-state"
+import { OptionSelect } from "@/components/ui/option-select"
 import { useTeamHome } from "@/lib/team-home-state"
 import {
   HomeIcon,
@@ -32,6 +32,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+
+"use client"
 
 export function TeamDocuments({ team }: { team: TeamSummary }) {
   const store = useTeamHome(team.id)
@@ -106,15 +108,15 @@ export function TeamDocuments({ team }: { team: TeamSummary }) {
             <PopoverContent align="end" className="w-64">
               <label className="flex items-center justify-between text-sm">
                 Ordering
-                <select
+                <OptionSelect
                   aria-label="Document ordering"
                   value={sort}
-                  onChange={(e) => setSort(e.target.value)}
+                  onValueChange={(nextValue) => setSort(nextValue)}
                   className="rounded-md bg-muted p-1"
                 >
                   <option value="updated">Updated</option>
                   <option value="name">Name</option>
-                </select>
+                </OptionSelect>
               </label>
               <label className="mt-3 flex items-center gap-2 text-sm">
                 <input

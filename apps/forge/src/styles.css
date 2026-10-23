@@ -306,13 +306,15 @@ html[data-forge-underline-links="true"] a:not([data-sidebar="menu-button"]) {
   overflow: hidden;
 }
 
-.forge-settings-shell {
+.forge-settings-shell,
+.forge-inbox-shell {
   height: 100svh;
   min-height: 0;
   overflow: hidden;
 }
 
-.forge-settings-shell [data-slot="sidebar-inset"] {
+.forge-settings-shell [data-slot="sidebar-inset"],
+.forge-inbox-shell [data-slot="sidebar-inset"] {
   min-height: 0;
   overflow: hidden;
 }
@@ -326,7 +328,8 @@ html[data-forge-host="macos"] {
   --forge-desktop-titlebar-height: 48px;
 }
 
-html[data-forge-host="macos"] .forge-settings-shell {
+html[data-forge-host="macos"] .forge-settings-shell,
+html[data-forge-host="macos"] .forge-inbox-shell {
   height: calc(100svh - var(--forge-desktop-titlebar-height));
 }
 
@@ -732,5 +735,22 @@ html[data-forge-host="macos"] .forge-desktop-footer-actions {
     animation: none;
     background: none;
     -webkit-text-fill-color: currentColor;
+  }
+}
+
+.forge-dropdown-chevron {
+  pointer-events: none;
+  flex-shrink: 0;
+  align-self: center;
+  transition: transform 150ms ease-out;
+}
+
+[aria-expanded="true"] > .forge-dropdown-chevron {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .forge-dropdown-chevron {
+    transition: none;
   }
 }

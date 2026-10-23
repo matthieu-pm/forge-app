@@ -1,4 +1,3 @@
-"use client"
 import * as React from "react"
 import {
   ArrowUp02Icon,
@@ -12,6 +11,7 @@ import {
 } from "@hugeicons/core-free-icons"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { LoopDraft } from "@/lib/team-home-state"
+import { OptionSelect } from "@/components/ui/option-select"
 import { useTeamHome } from "@/lib/team-home-state"
 import {
   HomeIcon,
@@ -37,6 +37,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+
+"use client"
 
 export const loopTemplates = [
   {
@@ -272,11 +274,11 @@ export function TeamLoops({ team }: { team: TeamSummary }) {
               </label>
               <label className="block text-sm">
                 Trigger
-                <select
+                <OptionSelect
                   aria-label="Loop trigger"
                   value={draft.trigger}
-                  onChange={(e) =>
-                    setDraft({ ...draft, trigger: e.target.value })
+                  onValueChange={(nextValue) =>
+                    setDraft({ ...draft, trigger: nextValue })
                   }
                   className="mt-2 block h-9 w-full rounded-lg bg-muted px-2"
                 >
@@ -289,7 +291,7 @@ export function TeamLoops({ team }: { team: TeamSummary }) {
                   ].map((value) => (
                     <option key={value}>{value}</option>
                   ))}
-                </select>
+                </OptionSelect>
               </label>
               <label className="block text-sm">
                 Instructions

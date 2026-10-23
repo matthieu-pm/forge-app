@@ -1,6 +1,5 @@
 import * as React from "react"
 import {
-  ArrowDown01Icon,
   ArrowRight01Icon,
   ArrowUpRight01Icon,
   GithubIcon,
@@ -8,6 +7,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 import { toast } from "sonner"
 import type { CodeReviewPreferences } from "@/lib/code-review-preferences"
+import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 import {
   defaultCodeReviewPreferences,
   readCodeReviewPreferences,
@@ -144,7 +144,7 @@ function SettingSelect<TValue extends string>({
       >
         {github && <HugeiconsIcon icon={GithubIcon} className="size-3.5" />}{" "}
         {options.find((option) => option.value === value)?.label}
-        <HugeiconsIcon icon={ArrowDown01Icon} className="size-3" />
+        <DropdownChevron className="size-3" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-36">
         <DropdownMenuRadioGroup

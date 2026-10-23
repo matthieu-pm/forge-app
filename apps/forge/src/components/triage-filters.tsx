@@ -24,6 +24,7 @@ import type {
   TriageFilter,
   TriageFilterState,
 } from "@/lib/triage-filters"
+import { OptionSelect } from "@/components/ui/option-select"
 import {
   emptyTriageFilters,
   fieldOperators,
@@ -541,20 +542,20 @@ export function TriageFilters({
           </DialogDescription>
           <div className="flex items-center gap-2 text-sm">
             Match
-            <select
+            <OptionSelect
               aria-label="Match conditions"
               className={selectClass}
               value={draft.match}
-              onChange={(event) =>
+              onValueChange={(nextValue) =>
                 setDraft({
                   ...draft,
-                  match: event.target.value as "all" | "any",
+                  match: nextValue as "all" | "any",
                 })
               }
             >
               <option value="all">all</option>
               <option value="any">any</option>
-            </select>
+            </OptionSelect>
             conditions
           </div>
           <div className="max-h-[45vh] space-y-2 overflow-y-auto">
@@ -563,12 +564,12 @@ export function TriageFilters({
                 key={rule.id}
                 className="flex flex-wrap items-center gap-2 rounded-xl bg-muted/50 p-2"
               >
-                <select
+                <OptionSelect
                   aria-label={`Filter ${index + 1} field`}
                   className={selectClass}
                   value={rule.field}
-                  onChange={(event) => {
-                    const field = event.target.value as FilterField
+                  onValueChange={(nextValue) => {
+                    const field = nextValue as FilterField
                     updateRule(rule.id, { ...newRule(field), id: rule.id })
                   }}
                 >
@@ -577,14 +578,14 @@ export function TriageFilters({
                       {label}
                     </option>
                   ))}
-                </select>
-                <select
+                </OptionSelect>
+                <OptionSelect
                   aria-label={`Filter ${index + 1} operator`}
                   className={selectClass}
                   value={rule.operator}
-                  onChange={(event) =>
+                  onValueChange={(nextValue) =>
                     updateRule(rule.id, {
-                      operator: event.target.value as FilterOperator,
+                      operator: nextValue as FilterOperator,
                     })
                   }
                 >
@@ -593,15 +594,15 @@ export function TriageFilters({
                       {operatorLabels[operator]}
                     </option>
                   ))}
-                </select>
+                </OptionSelect>
                 {needsFilterValue(rule.operator) &&
                   (rule.field === "priority" || rule.field === "assignee" ? (
-                    <select
+                    <OptionSelect
                       aria-label={`Filter ${index + 1} value`}
                       className={`${selectClass} flex-1`}
                       value={rule.value}
-                      onChange={(event) =>
-                        updateRule(rule.id, { value: event.target.value })
+                      onValueChange={(nextValue) =>
+                        updateRule(rule.id, { value: nextValue })
                       }
                     >
                       <option value="">Choose…</option>
@@ -610,7 +611,7 @@ export function TriageFilters({
                           {option.name}
                         </option>
                       ))}
-                    </select>
+                    </OptionSelect>
                   ) : (
                     <input
                       required
