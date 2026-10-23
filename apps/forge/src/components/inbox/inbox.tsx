@@ -608,36 +608,44 @@ export function Inbox({ scope }: { scope: InboxScope }) {
             )}
           </div>
         )}
-        <footer className="flex h-10 shrink-0 items-center justify-between px-4 text-[11px] text-muted-foreground">
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <button
-                  className="rounded px-1 py-1 text-[11px] hover:bg-muted"
-                  aria-label="Inbox views"
-                >
-                  {preferences.priorityEnabled &&
-                  preferences.badgeCount === "none"
-                    ? "Inbox views"
-                    : unreadCount
-                      ? `${unreadCount} unread`
-                      : "All caught up"}
-                </button>
-              }
-            />
-            <DropdownMenuContent className="w-40 rounded-xl" side="top">
-              {(["inbox", "snoozed", "deleted"] as const).map((item) => (
-                <DropdownMenuItem
-                  key={item}
-                  className="rounded-md text-xs"
-                  onClick={() => changeView(item)}
-                >
-                  {item[0].toUpperCase() + item.slice(1)}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </footer>
+        {(unreadCount > 0 ||
+          view !== "inbox" ||
+          state.entries.some(
+            (entry) =>
+              entry.deleted ||
+              (entry.snoozedUntil !== null && entry.snoozedUntil > now)
+          )) && (
+          <footer className="flex h-10 shrink-0 items-center justify-between px-4 text-[11px] text-muted-foreground">
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <button
+                    className="rounded px-1 py-1 text-[11px] hover:bg-muted"
+                    aria-label="Inbox views"
+                  >
+                    {preferences.priorityEnabled &&
+                    preferences.badgeCount === "none"
+                      ? "Inbox views"
+                      : unreadCount
+                        ? `${unreadCount} unread`
+                        : "Inbox views"}
+                  </button>
+                }
+              />
+              <DropdownMenuContent className="w-40 rounded-xl" side="top">
+                {(["inbox", "snoozed", "deleted"] as const).map((item) => (
+                  <DropdownMenuItem
+                    key={item}
+                    className="rounded-md text-xs"
+                    onClick={() => changeView(item)}
+                  >
+                    {item[0].toUpperCase() + item.slice(1)}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </footer>
+        )}
       </section>
       <section
         aria-label="Notification details"
