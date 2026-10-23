@@ -161,10 +161,6 @@ export function Inbox({ scope }: { scope: InboxScope }) {
   const priorityUnread = unreadEntries.filter((entry) =>
     isPriorityEntry(entry, preferences)
   ).length
-  const unreadCount =
-    preferences.priorityEnabled && preferences.badgeCount === "priority"
-      ? priorityUnread
-      : unreadEntries.length
   function deleteAll(readOnly = false) {
     const ids = state.entries
       .filter((entry) => !entry.deleted && (!readOnly || !entry.unread))
@@ -608,8 +604,7 @@ export function Inbox({ scope }: { scope: InboxScope }) {
             )}
           </div>
         )}
-        {(unreadCount > 0 ||
-          view !== "inbox" ||
+        {(view !== "inbox" ||
           state.entries.some(
             (entry) =>
               entry.deleted ||
@@ -623,12 +618,7 @@ export function Inbox({ scope }: { scope: InboxScope }) {
                     className="rounded px-1 py-1 text-[11px] hover:bg-muted"
                     aria-label="Inbox views"
                   >
-                    {preferences.priorityEnabled &&
-                    preferences.badgeCount === "none"
-                      ? "Inbox views"
-                      : unreadCount
-                        ? `${unreadCount} unread`
-                        : "Inbox views"}
+                    Inbox views
                   </button>
                 }
               />
