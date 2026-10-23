@@ -13,6 +13,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { Link, useRouter, useRouterState } from "@tanstack/react-router"
 import { toast } from "sonner"
 
+import type { MenuRootActions } from "@base-ui/react/menu"
 import type { AppNavChild } from "@/lib/app-navigation"
 import type { AuthState, WorkspaceSummary } from "@/lib/auth-types"
 import type { TeamSummary } from "@/lib/team-contract"
@@ -130,6 +131,7 @@ function SidebarCollapsibleContent({
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const router = useRouter()
+  const workspaceMenuActions = React.useRef<MenuRootActions>(null)
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
@@ -307,6 +309,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     })
   }
 
+  function closeWorkspaceMenuForNavigation() {
+    workspaceMenuActions.current?.close()
+    // Activity hides this sidebar on settings routes and stops its effects,
+    // so remove the portal before its exit animation can be interrupted.
+    workspaceMenuActions.current?.unmount()
+  }
+
   function renderNavLink(to: AppNavChild["to"]) {
     return <Link to={to as never} />
   }
@@ -476,7 +485,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader className="px-2 pt-3 pb-1">
         <SidebarMenu>
           <SidebarMenuItem>
-            <DropdownMenu>
+            <DropdownMenu actionsRef={workspaceMenuActions}>
               <SidebarMenuButton
                 className="h-7 px-2 py-1 text-sm font-medium text-sidebar-foreground aria-expanded:bg-sidebar-accent aria-expanded:text-sidebar-accent-foreground"
                 render={<DropdownMenuTrigger />}
@@ -546,6 +555,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <DropdownMenuItem
                   className="h-7 min-h-0 rounded-xl px-2 py-1 text-sm font-medium"
                   render={<Link to="/onboarding/workspace" />}
+                  onClick={closeWorkspaceMenuForNavigation}
                 >
                   <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
                   New workspace
@@ -553,6 +563,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <DropdownMenuItem
                   className="h-7 min-h-0 rounded-xl px-2 py-1 text-sm font-medium"
                   render={<Link to="/settings" />}
+                  onClick={closeWorkspaceMenuForNavigation}
                 >
                   <HugeiconsIcon icon={AccountSetting01Icon} strokeWidth={2} />
                   Settings

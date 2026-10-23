@@ -29,6 +29,7 @@ import { Route as SettingsAiRouteImport } from './routes/settings.ai'
 import { Route as SettingsApiRouteImport } from './routes/settings.api'
 import { Route as SettingsApplicationsRouteImport } from './routes/settings.applications'
 import { Route as SettingsBillingRouteImport } from './routes/settings.billing'
+import { Route as SettingsCallsAndTranscriptsRouteImport } from './routes/settings.calls-and-transcripts'
 import { Route as SettingsCodeAndReviewsRouteImport } from './routes/settings.code-and-reviews'
 import { Route as SettingsEmojisRouteImport } from './routes/settings.emojis'
 import { Route as SettingsImportExportRouteImport } from './routes/settings.import-export'
@@ -210,6 +211,12 @@ const SettingsBillingRoute = SettingsBillingRouteImport.update({
   path: '/billing',
   getParentRoute: () => SettingsRoute,
 } as any)
+const SettingsCallsAndTranscriptsRoute =
+  SettingsCallsAndTranscriptsRouteImport.update({
+    id: '/calls-and-transcripts',
+    path: '/calls-and-transcripts',
+    getParentRoute: () => SettingsRoute,
+  } as any)
 const SettingsCodeAndReviewsRoute = SettingsCodeAndReviewsRouteImport.update({
   id: '/code-and-reviews',
   path: '/code-and-reviews',
@@ -667,6 +674,7 @@ export interface FileRoutesByFullPath {
   '/settings/api': typeof SettingsApiRoute
   '/settings/applications': typeof SettingsApplicationsRoute
   '/settings/billing': typeof SettingsBillingRoute
+  '/settings/calls-and-transcripts': typeof SettingsCallsAndTranscriptsRoute
   '/settings/code-and-reviews': typeof SettingsCodeAndReviewsRoute
   '/settings/emojis': typeof SettingsEmojisRoute
   '/settings/import-export': typeof SettingsImportExportRoute
@@ -768,6 +776,7 @@ export interface FileRoutesByTo {
   '/settings/api': typeof SettingsApiRoute
   '/settings/applications': typeof SettingsApplicationsRoute
   '/settings/billing': typeof SettingsBillingRoute
+  '/settings/calls-and-transcripts': typeof SettingsCallsAndTranscriptsRoute
   '/settings/code-and-reviews': typeof SettingsCodeAndReviewsRoute
   '/settings/emojis': typeof SettingsEmojisRoute
   '/settings/import-export': typeof SettingsImportExportRoute
@@ -866,6 +875,7 @@ export interface FileRoutesById {
   '/settings/api': typeof SettingsApiRoute
   '/settings/applications': typeof SettingsApplicationsRoute
   '/settings/billing': typeof SettingsBillingRoute
+  '/settings/calls-and-transcripts': typeof SettingsCallsAndTranscriptsRoute
   '/settings/code-and-reviews': typeof SettingsCodeAndReviewsRoute
   '/settings/emojis': typeof SettingsEmojisRoute
   '/settings/import-export': typeof SettingsImportExportRoute
@@ -970,6 +980,7 @@ export interface FileRouteTypes {
     | '/settings/api'
     | '/settings/applications'
     | '/settings/billing'
+    | '/settings/calls-and-transcripts'
     | '/settings/code-and-reviews'
     | '/settings/emojis'
     | '/settings/import-export'
@@ -1071,6 +1082,7 @@ export interface FileRouteTypes {
     | '/settings/api'
     | '/settings/applications'
     | '/settings/billing'
+    | '/settings/calls-and-transcripts'
     | '/settings/code-and-reviews'
     | '/settings/emojis'
     | '/settings/import-export'
@@ -1168,6 +1180,7 @@ export interface FileRouteTypes {
     | '/settings/api'
     | '/settings/applications'
     | '/settings/billing'
+    | '/settings/calls-and-transcripts'
     | '/settings/code-and-reviews'
     | '/settings/emojis'
     | '/settings/import-export'
@@ -1425,6 +1438,13 @@ declare module '@tanstack/react-router' {
       path: '/billing'
       fullPath: '/settings/billing'
       preLoaderRoute: typeof SettingsBillingRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/calls-and-transcripts': {
+      id: '/settings/calls-and-transcripts'
+      path: '/calls-and-transcripts'
+      fullPath: '/settings/calls-and-transcripts'
+      preLoaderRoute: typeof SettingsCallsAndTranscriptsRouteImport
       parentRoute: typeof SettingsRoute
     }
     '/settings/code-and-reviews': {
@@ -2010,6 +2030,7 @@ interface SettingsRouteChildren {
   SettingsApiRoute: typeof SettingsApiRoute
   SettingsApplicationsRoute: typeof SettingsApplicationsRoute
   SettingsBillingRoute: typeof SettingsBillingRoute
+  SettingsCallsAndTranscriptsRoute: typeof SettingsCallsAndTranscriptsRoute
   SettingsCodeAndReviewsRoute: typeof SettingsCodeAndReviewsRoute
   SettingsEmojisRoute: typeof SettingsEmojisRoute
   SettingsImportExportRoute: typeof SettingsImportExportRoute
@@ -2041,6 +2062,7 @@ const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsApiRoute: SettingsApiRoute,
   SettingsApplicationsRoute: SettingsApplicationsRoute,
   SettingsBillingRoute: SettingsBillingRoute,
+  SettingsCallsAndTranscriptsRoute: SettingsCallsAndTranscriptsRoute,
   SettingsCodeAndReviewsRoute: SettingsCodeAndReviewsRoute,
   SettingsEmojisRoute: SettingsEmojisRoute,
   SettingsImportExportRoute: SettingsImportExportRoute,

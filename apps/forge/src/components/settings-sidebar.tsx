@@ -73,6 +73,7 @@ type SettingsItem = {
     | "/settings/account/connections"
     | "/settings/account/agents"
     | "/settings/code-and-reviews"
+    | "/settings/calls-and-transcripts"
     | "/settings/notifications"
     | "/settings/api"
     | "/settings/ai"
@@ -133,7 +134,11 @@ const settingsGroups: Array<SettingsGroup> = [
         icon: Cursor02Icon,
         to: "/settings/account/agents",
       },
-      { label: "Calls and transcripts", icon: Call02Icon },
+      {
+        label: "Calls and transcripts",
+        icon: Call02Icon,
+        to: "/settings/calls-and-transcripts",
+      },
     ],
   },
   {

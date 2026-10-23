@@ -47,6 +47,7 @@ export type AppPath =
   | "/settings/account/connections"
   | "/settings/account/agents"
   | "/settings/code-and-reviews"
+  | "/settings/calls-and-transcripts"
   | "/settings/api"
   | "/settings/ai"
   | "/settings/emojis"
@@ -477,6 +478,9 @@ export function getBreadcrumbItems(pathname: string): Array<BreadcrumbItem> {
 
   if (pathname === "/settings/code-and-reviews") {
     return [{ label: "Code & reviews" }]
+  }
+  if (pathname === "/settings/calls-and-transcripts") {
+    return [{ label: "Calls and transcripts" }]
   }
 
   if (pathname === "/settings/emojis") {
