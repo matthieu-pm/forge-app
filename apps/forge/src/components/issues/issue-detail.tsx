@@ -7,6 +7,7 @@ import {
   IssuePicker,
   PriorityMark,
   StatusMark,
+  issuePropertyControl,
 } from "./issue-controls"
 import { InlineIssueProperties } from "./issue-list"
 import type { Editor, JSONContent } from "@tiptap/core"
@@ -991,8 +992,8 @@ export function IssueDetail({
           </DropdownMenuContent>
         </DropdownMenu>
       </header>
-      <div className="relative min-h-0 flex-1 overflow-y-auto">
-        <div className="sticky top-0 z-10 ml-auto flex w-fit gap-1 bg-background/90 px-3 py-2 dark:bg-[#111]/90">
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="z-10 ml-auto flex w-fit shrink-0 gap-1 bg-background/90 px-3 py-2 dark:bg-[#111]/90">
           {(
             [
               {
@@ -1063,8 +1064,11 @@ export function IssueDetail({
             </DropdownMenu>
           </div>
         </div>
-        <div className="mx-auto grid max-w-[1100px] grid-cols-1 gap-12 px-6 pt-6 pb-16 md:grid-cols-[minmax(0,1fr)_210px] md:px-12 xl:grid-cols-[minmax(0,1fr)_210px] xl:gap-16">
-          <article className="min-w-0">
+        <div className="mx-auto grid min-h-0 w-full max-w-[1100px] flex-1 grid-cols-1 gap-12 overflow-y-auto overscroll-y-contain px-6 pt-6 md:grid-cols-[minmax(0,1fr)_210px] md:grid-rows-1 md:overflow-hidden md:px-12 xl:grid-cols-[minmax(0,1fr)_210px] xl:gap-16">
+          <article
+            aria-label="Issue content"
+            className="min-w-0 pb-16 md:min-h-0 md:overflow-y-auto md:overscroll-y-contain"
+          >
             <input
               aria-label="Issue title"
               value={title}
@@ -1563,8 +1567,13 @@ export function IssueDetail({
               </div>
             </section>
           </article>
-          <aside aria-label="Properties" className="pb-8 text-[13px]">
-            <h2 className="mb-3 text-xs text-muted-foreground">Properties</h2>
+          <aside
+            aria-label="Properties"
+            className="pb-8 text-[13px] md:min-h-0 md:overflow-y-auto md:overscroll-y-contain"
+          >
+            <h2 className="mb-3 px-2 text-xs text-muted-foreground">
+              Properties
+            </h2>
             <div className="flex flex-col items-start gap-1">
               {(["status", "priority", "assignee"] as const).map((property) => (
                 <div key={property} className="contents">
@@ -1605,10 +1614,10 @@ export function IssueDetail({
                             )
                           }
                         }}
-                        className="bg-transparent text-[13px] text-muted-foreground"
+                        className={issuePropertyControl}
                       >
                         <TeamSidebarIcon icon={team.icon} name={team.name} />
-                        {team.name}
+                        <span className="truncate">{team.name}</span>
                       </IssuePicker>
                       <Link
                         to="/teams/$teamSlug/overview"
@@ -1623,7 +1632,9 @@ export function IssueDetail({
                 </div>
               ))}
             </div>
-            <h2 className="mt-8 mb-3 text-xs text-muted-foreground">Labels</h2>
+            <h2 className="mt-8 mb-3 px-2 text-xs text-muted-foreground">
+              Labels
+            </h2>
             <IssuePicker
               label="Add labels"
               shortcut="L"
@@ -1631,12 +1642,14 @@ export function IssueDetail({
               value={issue.labels ?? ""}
               options={labels.map((value) => ({ value, label: value }))}
               onChange={(value) => patch({ labels: value })}
-              className="bg-transparent text-[13px] text-muted-foreground"
+              className={issuePropertyControl}
             >
-              <IssueIcon name="label" />
-              {issue.labels || "Add label"}
+              <IssueIcon name="label" className="size-4" />
+              <span className="truncate">{issue.labels || "Add label"}</span>
             </IssuePicker>
-            <h2 className="mt-8 mb-3 text-xs text-muted-foreground">Project</h2>
+            <h2 className="mt-8 mb-3 px-2 text-xs text-muted-foreground">
+              Project
+            </h2>
             <IssuePicker
               label="Add to project"
               shortcut="⇧ P"
@@ -1647,10 +1660,12 @@ export function IssueDetail({
               ]}
               onChange={(project) => patch({ project })}
               allowCreate
-              className="bg-transparent text-[13px] text-muted-foreground"
+              className={issuePropertyControl}
             >
-              <IssueIcon name="project" />
-              {issue.project || "Add to project"}
+              <IssueIcon name="project" className="size-4" />
+              <span className="truncate">
+                {issue.project || "Add to project"}
+              </span>
             </IssuePicker>
             {issue.dueDate && (
               <p className="mt-6 text-xs text-muted-foreground">

@@ -307,14 +307,16 @@ html[data-forge-underline-links="true"] a:not([data-sidebar="menu-button"]) {
 }
 
 .forge-settings-shell,
-.forge-inbox-shell {
+.forge-inbox-shell,
+.forge-issues-shell {
   height: 100svh;
   min-height: 0;
   overflow: hidden;
 }
 
 .forge-settings-shell [data-slot="sidebar-inset"],
-.forge-inbox-shell [data-slot="sidebar-inset"] {
+.forge-inbox-shell [data-slot="sidebar-inset"],
+.forge-issues-shell [data-slot="sidebar-inset"] {
   min-height: 0;
   overflow: hidden;
 }
@@ -329,7 +331,8 @@ html[data-forge-host="macos"] {
 }
 
 html[data-forge-host="macos"] .forge-settings-shell,
-html[data-forge-host="macos"] .forge-inbox-shell {
+html[data-forge-host="macos"] .forge-inbox-shell,
+html[data-forge-host="macos"] .forge-issues-shell {
   height: calc(100svh - var(--forge-desktop-titlebar-height));
 }
 

@@ -827,3 +827,21 @@ Browser verification: measured all six Properties buttons, opened and dismissed 
 Validation: 108 tests passed across 13 focused issue, home, navigation, triage, inbox, template, and settings suites. TypeScript and scoped ESLint passed (two existing optional-chain warnings in inbox); whitespace diff check passed. Mobile layout was not separately rendered for this sizing refinement.
 
 Final result: passed.
+
+## Fixed issue frame with internal scrolling — 2026-10-24
+
+Constrained the Issues route shell and sidebar inset to the viewport, using the existing inbox/settings containment pattern and preserving the macOS titlebar height adjustment. The issue detail body remains the scroll container beneath its fixed breadcrumb header. Added vertical overscroll containment so reaching its end does not scroll the surrounding page.
+
+Browser verification on TES-9: document height now equals the 1034px viewport (previously 1073px). Scrolling the content to its end changed its scroll position to 39.5px while document scroll remained 0 and both the content frame and breadcrumb header stayed at y=8px. Evidence: `docs/qa/team-issues/inner-scroll.png`. The fixture's content was unchanged. TypeScript, scoped ESLint, 17 focused issue/navigation tests, and whitespace diff check passed. Native macOS titlebar behavior was preserved in CSS but not separately exercised in Electron for this refinement.
+
+Final result: passed.
+
+## Fixed properties and aligned controls — 2026-10-24
+
+Separated the desktop issue article into its own scrolling column. The breadcrumb header, toolbar, and Properties panel now stay stationary while the title, description, sub-issues, and discussion scroll. Properties retain independent overflow access if the viewport is too short; the existing stacked narrow-screen layout remains available.
+
+Aligned all property controls with a shared style, 16px leading icon slots, 8px icon-to-text spacing, and matching heading inset. Long values truncate within the panel. Browser measurements confirm all six buttons are 28px high, all icon slots start at x=1177, and all labels start at x=1201; section headings start at the same x=1177 as the icons. Scrolling the article changed its scroll offset to 39.5px while Properties remained at y=120, its scroll offset remained zero, and document scroll stayed zero. Scrolling back restored the article to zero without moving Properties. Evidence: `docs/qa/team-issues/fixed-properties.png`.
+
+TypeScript, scoped ESLint, 17 focused issue/navigation tests, and whitespace diff check passed. Desktop behavior was rendered; the stacked mobile layout was not separately exercised for this change.
+
+Final result: passed.

@@ -107,6 +107,8 @@ export function IssueIcon({
   )
 }
 export const issueChip = "gap-1 rounded-full px-2 text-xs font-normal"
+export const issuePropertyControl =
+  "max-w-full gap-2 border-0 bg-transparent text-[13px] text-muted-foreground"
 export const issuePrimary =
   "rounded-full bg-[#5e6ad2] px-3 text-xs text-white hover:bg-[#6e79e1]"
 export function StatusMark({

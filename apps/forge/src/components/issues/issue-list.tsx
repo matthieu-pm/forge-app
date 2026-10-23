@@ -6,6 +6,7 @@ import {
   IssuePicker,
   PriorityMark,
   StatusMark,
+  issuePropertyControl,
 } from "./issue-controls"
 import type { IssueDisplay, IssueDraft, TeamIssue } from "@/lib/team-issues"
 import type { TeamStatus } from "@/lib/team-statuses"
@@ -86,6 +87,7 @@ export function InlineIssueProperties({
       onChange={(next) => onUpdate(issue, { [property]: next })}
       className={cn(
         "bg-transparent text-muted-foreground hover:bg-foreground/10",
+        emptyLabels && issuePropertyControl,
         emptyLabels &&
           "text-[13px] transition-colors duration-150 hover:bg-muted active:translate-y-0 motion-reduce:transition-none",
         compact && "size-6 p-0"
@@ -102,21 +104,32 @@ export function InlineIssueProperties({
         ) : undefined
       }
     >
-      {property === "status" ? (
-        <StatusMark id={issue.status} statuses={statuses} />
-      ) : property === "priority" ? (
-        <PriorityMark priority={issue.priority} />
-      ) : (
-        <AssigneeMark name={assignee} image={assignedMember?.image} />
+      <span
+        className={
+          emptyLabels
+            ? "flex size-4 shrink-0 items-center justify-center"
+            : "contents"
+        }
+      >
+        {property === "status" ? (
+          <StatusMark id={issue.status} statuses={statuses} />
+        ) : property === "priority" ? (
+          <PriorityMark priority={issue.priority} />
+        ) : (
+          <AssigneeMark name={assignee} image={assignedMember?.image} />
+        )}
+      </span>
+      {!compact && (
+        <span className="truncate">
+          {property === "status"
+            ? status?.name
+            : property === "priority"
+              ? emptyLabels && issue.priority === "No priority"
+                ? "Set priority"
+                : issue.priority
+              : assignee || (emptyLabels ? "Assign" : "Unassigned")}
+        </span>
       )}
-      {!compact &&
-        (property === "status"
-          ? status?.name
-          : property === "priority"
-            ? emptyLabels && issue.priority === "No priority"
-              ? "Set priority"
-              : issue.priority
-            : assignee || (emptyLabels ? "Assign" : "Unassigned"))}
     </IssuePicker>
   )
 }

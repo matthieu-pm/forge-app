@@ -106,6 +106,7 @@ function RootLayout() {
           className={cn(
             "relative",
             pathname === "/inbox" && "forge-inbox-shell",
+            /^\/teams\/[^/]+\/issues$/.test(pathname) && "forge-issues-shell",
             hasStandaloneTeamSettingsLayout
               ? "forge-create-team-shell forge-settings-shell"
               : hasSettingsLayout
