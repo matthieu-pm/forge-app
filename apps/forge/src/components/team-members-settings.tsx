@@ -1,4 +1,3 @@
-
 import * as React from "react"
 import {
   Add01Icon,
@@ -65,7 +64,9 @@ import { teamMemberRole, teamMembersCsv } from "@/lib/team-member-contract"
 import { addTeamMembers } from "@/lib/team-member-state"
 import { cn } from "@/lib/utils"
 
-"use client"
+;
+
+("use client")
 
 function initials(name: string) {
   return name
@@ -474,7 +475,8 @@ export function TeamMembersSettings({
                   variant="secondary"
                   aria-label="Filter team members by role"
                   render={<DropdownMenuTrigger />}
-                  className="h-8 rounded-lg px-2.5 font-normal"
+                  size="default"
+                  className="rounded-lg px-2.5 font-normal"
                 >
                   {role}
                   <DropdownChevron className="size-3.5" />
@@ -495,14 +497,16 @@ export function TeamMembersSettings({
                 <Button
                   variant="secondary"
                   onClick={exportCsv}
-                  className="h-8 rounded-full px-3 font-normal"
+                  size="default"
+                  className="rounded-full px-3 font-normal"
                 >
                   Export CSV
                 </Button>
                 {directory.canManage ? (
                   <Button
                     onClick={() => setAddOpen(true)}
-                    className="h-8 rounded-full bg-[#5E6AD2] px-3 font-normal text-white hover:bg-[#5360C8]"
+                    size="default"
+                    className="rounded-full bg-[#5E6AD2] px-3 font-normal text-white hover:bg-[#5360C8]"
                   >
                     Add a member
                   </Button>

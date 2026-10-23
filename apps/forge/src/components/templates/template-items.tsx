@@ -179,14 +179,16 @@ export function ItemComposer({
         <Button
           type="button"
           variant="ghost"
-          className="h-6 rounded-full px-2 text-xs"
+          size="sm"
+          className="rounded-full px-2 text-xs"
           onClick={onCancel}
         >
           Cancel
         </Button>
         <Button
           type="button"
-          className="h-6 rounded-full bg-[#5e6ad2] px-2 text-xs text-white hover:bg-[#5360c8]"
+          size="sm"
+          className="rounded-full bg-[#5e6ad2] px-2 text-xs text-white hover:bg-[#5360c8]"
           onClick={add}
         >
           {initial ? "Save issue" : subIssue ? "Add sub-issue" : "Add issue"}
@@ -460,7 +462,8 @@ export function Milestones({
               <Button
                 type="button"
                 variant="secondary"
-                className="h-6 rounded-full px-2 text-xs"
+                size="sm"
+                className="rounded-full px-2 text-xs"
                 onClick={() => {
                   reset()
                   onCreatingChange(false)
@@ -470,7 +473,8 @@ export function Milestones({
               </Button>
               <Button
                 type="button"
-                className="h-6 rounded-full bg-[#5e6ad2] px-2 text-xs text-white hover:bg-[#5360c8]"
+                size="sm"
+                className="rounded-full bg-[#5e6ad2] px-2 text-xs text-white hover:bg-[#5360c8]"
                 onClick={() => {
                   if (!title.trim()) {
                     toast.error("Give the milestone a name.")

@@ -138,7 +138,8 @@ function SettingSelect<TValue extends string>({
             variant="secondary"
             disabled={disabled}
             aria-label={label}
-            className="h-7 gap-1.5 rounded-lg border border-border/50 px-2.5 text-xs font-normal"
+            size="sm"
+            className="gap-1.5 rounded-lg border border-border/50 px-2.5 text-xs font-normal"
           />
         }
       >
@@ -218,7 +219,8 @@ export function CodeReviewsSettings({ userId }: { userId: string }) {
             <Button
               onClick={() => setDialog("access")}
               aria-label="Add code access to GitHub integration"
-              className="h-8 gap-1.5 rounded-full bg-[#5e6ad2] px-3 text-xs text-white hover:bg-[#5360c8]"
+              size="default"
+              className="gap-1.5 rounded-full bg-[#5e6ad2] px-3 text-xs text-white hover:bg-[#5360c8]"
             >
               <HugeiconsIcon icon={GithubIcon} className="size-3.5" />
               Enable code access
@@ -302,7 +304,8 @@ export function CodeReviewsSettings({ userId }: { userId: string }) {
               <Button
                 variant="ghost"
                 disabled
-                className="h-7 px-2 text-xs"
+                size="sm"
+                className="px-2 text-xs"
                 title="Enable code access to configure this setting"
               >
                 Add key

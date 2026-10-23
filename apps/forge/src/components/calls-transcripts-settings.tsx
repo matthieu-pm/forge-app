@@ -85,7 +85,8 @@ function SettingSelect<T extends string>({
             variant="secondary"
             aria-label={label}
             disabled={disabled}
-            className="h-7 gap-1.5 rounded-lg border border-border/50 px-2.5 text-xs font-normal"
+            size="sm"
+            className="gap-1.5 rounded-lg border border-border/50 px-2.5 text-xs font-normal"
           />
         }
       >

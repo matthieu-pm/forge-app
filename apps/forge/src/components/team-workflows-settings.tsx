@@ -424,7 +424,8 @@ export function TeamWorkflowsSettings({ team }: { team: TeamSummary }) {
                 </div>
                 <Button
                   variant="secondary"
-                  className="h-8 shrink-0 rounded-full px-3 font-normal disabled:opacity-40"
+                  size="default"
+                  className="shrink-0 rounded-full px-3 font-normal disabled:opacity-40"
                   disabled={disabled || editorOpen}
                   onClick={(event) => {
                     branchReturnFocus.current = event.currentTarget

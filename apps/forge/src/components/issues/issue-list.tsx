@@ -87,7 +87,7 @@ export function InlineIssueProperties({
       className={cn(
         "bg-transparent text-muted-foreground hover:bg-foreground/10",
         emptyLabels &&
-          "h-7 text-[13px] transition-colors duration-150 hover:bg-muted active:translate-y-0 motion-reduce:transition-none",
+          "text-[13px] transition-colors duration-150 hover:bg-muted active:translate-y-0 motion-reduce:transition-none",
         compact && "size-6 p-0"
       )}
       footer={
@@ -437,8 +437,8 @@ export function IssueRows({
             >
               <Button
                 variant="ghost"
-                size="icon-xs"
-                className={cn(!board && "h-6 w-3.5 shrink-0 p-0")}
+                size="icon-sm"
+                className={cn(!board && "w-3.5 shrink-0 p-0")}
                 aria-label={`${collapsed.includes(name) ? "Expand" : "Collapse"} ${name} group`}
                 onClick={() =>
                   setCollapsed(

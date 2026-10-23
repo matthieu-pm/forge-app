@@ -148,7 +148,7 @@ export function IssueFilters({
         value: item,
         label:
           field === "creator"
-            ? members.find((member) => member.id === item)?.name ?? item
+            ? (members.find((member) => member.id === item)?.name ?? item)
             : item,
       }))
   }
@@ -436,7 +436,7 @@ export function IssueFilters({
                   {message}
                 </p>
               )}
-              <Button className={issuePrimary} onClick={suggest}>
+              <Button size="sm" className={issuePrimary} onClick={suggest}>
                 Review filters
               </Button>
             </>
@@ -590,6 +590,7 @@ export function IssueFilters({
                   Add condition
                 </Button>
                 <Button
+                  size="sm"
                   className={issuePrimary}
                   disabled={draft.rules.some(
                     (rule) =>

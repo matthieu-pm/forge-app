@@ -138,9 +138,9 @@ export function TeamTemplates({
                       <Button
                         type="button"
                         variant="ghost"
-                        size="sm"
+                        size="default"
                         disabled={busy}
-                        className="h-8 rounded-full px-3 text-xs font-normal"
+                        className="rounded-full px-3 text-xs font-normal"
                         aria-label={`New ${kind} template`}
                         onClick={() =>
                           kind === "issue"

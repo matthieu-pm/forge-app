@@ -379,8 +379,8 @@ export function InboxFilterChips({
       )}
       <Button
         variant="ghost"
-        size="xs"
-        className="ml-auto h-6 text-xs text-muted-foreground"
+        size="sm"
+        className="ml-auto text-xs text-muted-foreground"
         onClick={() => onChange(emptyInboxFilters())}
       >
         Clear

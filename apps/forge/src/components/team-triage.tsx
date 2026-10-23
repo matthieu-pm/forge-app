@@ -284,7 +284,7 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
                           properties.includes(property) ? "secondary" : "ghost"
                         }
                         size="sm"
-                        className="h-6 rounded-full px-2 text-xs"
+                        className="rounded-full px-2 text-xs"
                         aria-pressed={properties.includes(property)}
                         onClick={() =>
                           setProperties(
@@ -431,7 +431,7 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
             <Button
               variant="secondary"
               size="sm"
-              className="mt-1 h-7 rounded-full px-3 text-xs font-normal"
+              className="mt-1 rounded-full px-3 text-xs font-normal"
               onClick={() => openEditor()}
             >
               <HugeiconsIcon icon={Add01Icon} className="size-3" />

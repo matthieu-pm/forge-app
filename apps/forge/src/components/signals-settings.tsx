@@ -1,8 +1,5 @@
 import * as React from "react"
-import {
-  Add01Icon,
-  Asteroid02Icon,
-} from "@hugeicons/core-free-icons"
+import { Add01Icon, Asteroid02Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import type { SignalEvent, SignalPreferences } from "@/lib/signal-preferences"
 import { DropdownChevron } from "@/components/ui/dropdown-chevron"
@@ -156,7 +153,8 @@ function SettingSelect<T extends string>({
             variant="secondary"
             aria-label={label}
             disabled={disabled}
-            className="h-7 gap-1.5 rounded-lg border border-border/50 px-2.5 text-xs font-normal"
+            size="sm"
+            className="gap-1.5 rounded-lg border border-border/50 px-2.5 text-xs font-normal"
           />
         }
       >
@@ -498,7 +496,8 @@ export function SignalsSettings({
                 type="button"
                 variant="secondary"
                 disabled={captureDisabled || preferences.events.length >= 100}
-                className="h-7 gap-1.5 rounded-lg border border-border/50 px-2.5 text-xs font-normal"
+                size="sm"
+                className="gap-1.5 rounded-lg border border-border/50 px-2.5 text-xs font-normal"
                 onClick={() =>
                   setEditingEvent({
                     id: crypto.randomUUID(),
@@ -536,7 +535,8 @@ export function SignalsSettings({
                   <Button
                     type="button"
                     variant="ghost"
-                    className="h-7 px-2 text-xs"
+                    size="sm"
+                    className="px-2 text-xs"
                     disabled={captureDisabled}
                     aria-label={`Edit ${event.name}`}
                     onClick={() => setEditingEvent(event)}

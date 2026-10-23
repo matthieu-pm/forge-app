@@ -227,7 +227,8 @@ export function InitiativesSettings({ workspaceId }: { workspaceId: string }) {
                   <p className="text-sm">{scheduleLabel(settings.schedule)}</p>
                   <Button
                     variant="secondary"
-                    className="h-6 rounded-full px-2 text-xs font-normal"
+                    size="sm"
+                    className="rounded-full px-2 text-xs font-normal"
                     disabled={disabled}
                     onClick={() => {
                       setDraft(settings.schedule)
@@ -269,7 +270,8 @@ export function InitiativesSettings({ workspaceId }: { workspaceId: string }) {
                 variant="ghost"
                 disabled={disabled}
                 onClick={() => setSlackOpen(true)}
-                className="h-8 rounded-full px-2 font-normal"
+                size="default"
+                className="rounded-full px-2 font-normal"
               >
                 Connect
               </Button>

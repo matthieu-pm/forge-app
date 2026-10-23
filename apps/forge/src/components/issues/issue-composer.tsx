@@ -329,6 +329,7 @@ export function IssueComposer({
             <div className="flex items-center gap-1">
               {hasContent && !issueId && (
                 <Button
+                  size="sm"
                   type="button"
                   variant="secondary"
                   className={issueChip}
@@ -385,6 +386,7 @@ export function IssueComposer({
               <IssueIcon name="spark" />
               <span>Quick suggestions</span>
               <Button
+                size="sm"
                 type="button"
                 variant="ghost"
                 className={cn(issueChip, "border border-dashed border-border")}
@@ -443,7 +445,9 @@ export function IssueComposer({
                 ...members.map((member) => ({
                   value: member.id,
                   label: member.name,
-                  icon: <AssigneeMark name={member.name} image={member.image} />,
+                  icon: (
+                    <AssigneeMark name={member.name} image={member.image} />
+                  ),
                 })),
               ]}
               onChange={(value) => update({ assignee: value })}
@@ -550,8 +554,9 @@ export function IssueComposer({
                         type="button"
                         key={action.id}
                         variant="ghost"
+                        size="default"
                         className={cn(
-                          "h-8 justify-start rounded-md px-2 text-xs font-normal",
+                          "justify-start rounded-md px-2 text-xs font-normal",
                           action.id === "sub" &&
                             "mt-1 border-t border-border/50"
                         )}
@@ -570,7 +575,8 @@ export function IssueComposer({
                     <Button
                       type="button"
                       variant="ghost"
-                      className="h-6 px-0 text-xs"
+                      size="sm"
+                      className="px-0 text-xs"
                       onClick={() => setExtra("")}
                     >
                       Back
@@ -641,6 +647,7 @@ export function IssueComposer({
                           className="h-8 w-full rounded-lg border border-border bg-transparent px-2 text-xs"
                         />
                         <Button
+                          size="sm"
                           type="button"
                           className={issuePrimary}
                           onClick={addLink}
@@ -659,6 +666,7 @@ export function IssueComposer({
                           className="h-8 w-full rounded-lg border border-border bg-transparent px-2 text-xs"
                         />
                         <Button
+                          size="sm"
                           type="button"
                           className={issuePrimary}
                           disabled={!subTitle.trim()}
@@ -679,6 +687,7 @@ export function IssueComposer({
             </Popover>
             {draft.dueDate && (
               <Button
+                size="sm"
                 type="button"
                 variant="secondary"
                 className={issueChip}
@@ -693,6 +702,7 @@ export function IssueComposer({
             )}
             {draft.recurrence && (
               <Button
+                size="sm"
                 type="button"
                 variant="secondary"
                 className={issueChip}
@@ -820,6 +830,7 @@ export function IssueComposer({
                 />
               )}
               <Button
+                size="sm"
                 type="submit"
                 className={issuePrimary}
                 disabled={attaching}
@@ -849,6 +860,7 @@ export function IssueComposer({
                 Discard
               </Button>
               <Button
+                size="sm"
                 className={issuePrimary}
                 onClick={issueId ? submit : saveDraft}
               >

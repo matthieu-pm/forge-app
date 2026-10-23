@@ -29,7 +29,7 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { Input } from "@/components/ui/input"
 
-const chip = "h-6 max-w-44 gap-1 rounded-full px-2 text-xs font-normal"
+const chip = "max-w-44 gap-1 rounded-full px-2 text-xs font-normal"
 const field =
   "w-full rounded-md border-0 bg-transparent px-1.5 outline-none placeholder:text-muted-foreground"
 function Property({
@@ -46,6 +46,7 @@ function Property({
       <PopoverTrigger
         render={
           <Button
+            size="sm"
             type="button"
             variant="secondary"
             className={chip}
@@ -280,6 +281,7 @@ export function TriageIssueComposer({
                 <PopoverTrigger
                   render={
                     <Button
+                      size="sm"
                       type="button"
                       variant="secondary"
                       className={chip}
@@ -339,6 +341,7 @@ export function TriageIssueComposer({
             <div className="ml-auto flex shrink-0 items-center gap-1">
               {!editing && (
                 <Button
+                  size="sm"
                   type="button"
                   variant="secondary"
                   className={chip}

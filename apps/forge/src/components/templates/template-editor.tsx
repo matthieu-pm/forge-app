@@ -331,7 +331,7 @@ export function TemplateEditor({
                     <button
                       type="button"
                       aria-label="More default properties"
-                      className="grid size-6 place-items-center rounded-full text-muted-foreground hover:bg-muted"
+                      className="grid size-7 place-items-center rounded-full text-muted-foreground hover:bg-muted"
                     />
                   }
                 >
@@ -414,7 +414,7 @@ export function TemplateEditor({
                     type="button"
                     aria-label="Add project issue"
                     onClick={() => setIssueCreating(true)}
-                    className="inline-flex h-6 items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-2 text-xs text-muted-foreground hover:bg-muted"
+                    className="inline-flex h-7 items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-2 text-xs text-muted-foreground hover:bg-muted"
                   >
                     <Glyph name="document" />
                     {draft.issues.length

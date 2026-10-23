@@ -443,7 +443,8 @@ export function TeamIssues({
           {store.drafts.length > 0 && (
             <Button
               variant="ghost"
-              className="h-6 px-2 text-xs text-muted-foreground"
+              size="sm"
+              className="px-2 text-xs text-muted-foreground"
               onClick={() => setDraftsOpen(true)}
             >
               Drafts <span>{store.drafts.length}</span>
@@ -496,7 +497,8 @@ export function TeamIssues({
           </Popover>
           <Button
             variant="ghost"
-            className="h-8 w-auto gap-1.5 px-3 text-xs text-muted-foreground"
+            size="default"
+            className="w-auto gap-1.5 px-3 text-xs text-muted-foreground"
             onClick={() => openNew()}
           >
             <IssueIcon name="add" />
@@ -582,7 +584,8 @@ export function TeamIssues({
             <Button
               key={rule.id}
               variant="secondary"
-              className="h-6 max-w-full gap-1 rounded-md px-2 text-[11px]"
+              size="sm"
+              className="max-w-full gap-1 rounded-md px-2 text-[11px]"
               aria-label={`Remove ${issueFields[rule.field]} filter`}
               onClick={() =>
                 changeFilters({
@@ -604,7 +607,8 @@ export function TeamIssues({
           ))}
           <Button
             variant="ghost"
-            className="h-6 px-2 text-[11px]"
+            size="sm"
+            className="px-2 text-[11px]"
             onClick={() => changeFilters(emptyIssueFilters())}
           >
             Clear filters
@@ -655,13 +659,18 @@ export function TeamIssues({
                 <div className="mt-6 flex flex-wrap gap-2">
                   {isFiltered ? (
                     <Button
+                      size="sm"
                       className={issuePrimary}
                       onClick={() => changeFilters(emptyIssueFilters())}
                     >
                       Clear filters
                     </Button>
                   ) : (
-                    <Button className={issuePrimary} onClick={() => openNew()}>
+                    <Button
+                      size="sm"
+                      className={issuePrimary}
+                      onClick={() => openNew()}
+                    >
                       Create new issue{" "}
                       <kbd className="rounded border border-white/25 px-1 text-[10px] font-normal">
                         C
@@ -670,7 +679,8 @@ export function TeamIssues({
                   )}
                   <Button
                     variant="secondary"
-                    className="h-7 rounded-full px-3 text-xs font-normal"
+                    size="sm"
+                    className="rounded-full px-3 text-xs font-normal"
                     nativeButton={false}
                     role="link"
                     render={
@@ -737,6 +747,7 @@ export function TeamIssues({
             {selectedVisible.length} selected
           </span>
           <Button
+            size="sm"
             variant="secondary"
             className={issueChip}
             onClick={() =>
@@ -750,6 +761,7 @@ export function TeamIssues({
             <span className="hidden sm:inline">Move to Backlog</span>
           </Button>
           <Button
+            size="sm"
             variant="secondary"
             className={issueChip}
             onClick={() => setCommands(true)}
@@ -943,7 +955,7 @@ export function TeamIssues({
               </p>
             )}
             <div className="mt-4 flex justify-end">
-              <Button type="submit" className={issuePrimary}>
+              <Button size="sm" type="submit" className={issuePrimary}>
                 Create view
               </Button>
             </div>
@@ -1002,6 +1014,7 @@ export function TeamIssues({
               Assignee
             </IssuePicker>
             <Button
+              size="sm"
               variant="secondary"
               className={issueChip}
               onClick={() =>

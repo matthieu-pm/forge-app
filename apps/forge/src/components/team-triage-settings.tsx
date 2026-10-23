@@ -190,7 +190,8 @@ export function TeamTriageSettings({ team }: { team: TeamSummary }) {
                 </div>
                 <Button
                   variant="secondary"
-                  className="h-8 shrink-0 rounded-full px-3 font-normal"
+                  size="default"
+                  className="shrink-0 rounded-full px-3 font-normal"
                   disabled={disabled || !settings.enabled}
                   onClick={() => setResponsibilityOpen(true)}
                 >

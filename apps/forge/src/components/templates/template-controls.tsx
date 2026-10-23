@@ -274,7 +274,7 @@ export function Picker({
           <button
             type="button"
             className={cn(
-              "inline-flex h-6 shrink-0 items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50",
+              "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50",
               selected.length > 0 && "text-foreground",
               className
             )}
@@ -749,7 +749,7 @@ function DependencyPicker({
         render={
           <button
             type="button"
-            className="inline-flex h-6 items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-2 text-xs text-muted-foreground hover:bg-muted"
+            className="inline-flex h-7 items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-2 text-xs text-muted-foreground hover:bg-muted"
           />
         }
       >
@@ -837,7 +837,8 @@ export function SaveFooter({
       <Button
         type="button"
         variant="secondary"
-        className="h-8 rounded-full border border-border/60 px-3 text-xs"
+        size="default"
+        className="rounded-full border border-border/60 px-3 text-xs"
         onClick={onCancel}
         disabled={saving}
       >
@@ -845,7 +846,8 @@ export function SaveFooter({
       </Button>
       <Button
         type="button"
-        className="h-8 rounded-full bg-[#5e6ad2] px-3 text-xs text-white hover:bg-[#5360c8]"
+        size="default"
+        className="rounded-full bg-[#5e6ad2] px-3 text-xs text-white hover:bg-[#5360c8]"
         onClick={onSave}
         disabled={saving || !canSave}
       >

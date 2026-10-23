@@ -96,7 +96,7 @@ export function LabelSelectionActions({
             size="sm"
             onClick={openMenu}
             aria-label="Open label command menu"
-            className="h-7 gap-1.5 rounded-full px-2.5 text-xs font-normal"
+            className="gap-1.5 rounded-full px-2.5 text-xs font-normal"
           >
             <HugeiconsIcon
               icon={CommandIcon}
@@ -147,7 +147,7 @@ export function LabelSelectionActions({
                       setMerging(false)
                       setSearch("")
                     }}
-                    className="h-6 text-xs"
+                    className="text-xs"
                   >
                     Back to commands
                   </Button>

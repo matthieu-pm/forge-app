@@ -33,7 +33,7 @@ export function FormBuilder({
           type="button"
           size="sm"
           variant="ghost"
-          className="h-7 text-xs"
+          className="text-xs"
           onClick={() => setPreview(!preview)}
         >
           {preview ? "Edit fields" : "Preview form"}
@@ -184,7 +184,7 @@ export function FormBuilder({
             type="button"
             variant="ghost"
             size="sm"
-            className="h-7 rounded-full text-xs"
+            className="rounded-full text-xs"
             onClick={() =>
               onChange([
                 ...fields,

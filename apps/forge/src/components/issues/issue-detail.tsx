@@ -1216,7 +1216,8 @@ export function IssueDetail({
               ) : (
                 <Button
                   variant="ghost"
-                  className="h-7 px-1 text-xs text-muted-foreground"
+                  size="sm"
+                  className="px-1 text-xs text-muted-foreground"
                   onClick={() => setSubOpen(true)}
                 >
                   <IssueIcon name="add" />
@@ -1456,14 +1457,16 @@ export function IssueDetail({
                     </label>
                     <Button
                       variant="ghost"
-                      className="ml-auto h-7 text-xs"
+                      size="sm"
+                      className="ml-auto text-xs"
                       onClick={() => setSubOpen(false)}
                     >
                       Cancel
                     </Button>
                     <Button
                       variant="secondary"
-                      className="h-7 text-xs"
+                      size="sm"
+                      className="text-xs"
                       disabled={!childDraft.title.trim()}
                       onClick={createChild}
                     >
@@ -1481,7 +1484,8 @@ export function IssueDetail({
                 <h2 className="text-sm font-medium">Activity</h2>
                 <Button
                   variant="ghost"
-                  className="ml-auto h-6 px-1 text-xs text-muted-foreground"
+                  size="sm"
+                  className="ml-auto px-1 text-xs text-muted-foreground"
                   aria-label={
                     subscribers.includes(userId)
                       ? "Unsubscribe from issue"
@@ -1601,7 +1605,7 @@ export function IssueDetail({
                             )
                           }
                         }}
-                        className="bg-transparent"
+                        className="bg-transparent text-[13px] text-muted-foreground"
                       >
                         <TeamSidebarIcon icon={team.icon} name={team.name} />
                         {team.name}
@@ -1610,7 +1614,7 @@ export function IssueDetail({
                         to="/teams/$teamSlug/overview"
                         params={{ teamSlug: team.slug }}
                         aria-label="Open team overview"
-                        className="flex size-6 items-center justify-center"
+                        className="flex size-7 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                       >
                         <IssueIcon name="expand" />
                       </Link>
@@ -1622,11 +1626,12 @@ export function IssueDetail({
             <h2 className="mt-8 mb-3 text-xs text-muted-foreground">Labels</h2>
             <IssuePicker
               label="Add labels"
+              shortcut="L"
               multiple
               value={issue.labels ?? ""}
               options={labels.map((value) => ({ value, label: value }))}
               onChange={(value) => patch({ labels: value })}
-              className="bg-transparent"
+              className="bg-transparent text-[13px] text-muted-foreground"
             >
               <IssueIcon name="label" />
               {issue.labels || "Add label"}
@@ -1634,6 +1639,7 @@ export function IssueDetail({
             <h2 className="mt-8 mb-3 text-xs text-muted-foreground">Project</h2>
             <IssuePicker
               label="Add to project"
+              shortcut="⇧ P"
               value={issue.project ?? ""}
               options={[
                 { value: "", label: "No project" },
@@ -1641,7 +1647,7 @@ export function IssueDetail({
               ]}
               onChange={(project) => patch({ project })}
               allowCreate
-              className="bg-transparent"
+              className="bg-transparent text-[13px] text-muted-foreground"
             >
               <IssueIcon name="project" />
               {issue.project || "Add to project"}

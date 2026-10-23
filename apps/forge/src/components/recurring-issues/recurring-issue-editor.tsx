@@ -199,7 +199,7 @@ export function RecurringIssueEditor({
                 type="button"
                 aria-label="Add sub-issue"
                 onClick={() => setSubIssueCreating(true)}
-                className="inline-flex h-6 items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                className="inline-flex h-7 items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               >
                 <Glyph name="dependency" />
                 Sub-issues
@@ -263,7 +263,8 @@ export function RecurringIssueEditor({
               variant="secondary"
               onClick={cancel}
               disabled={saving}
-              className="h-8 rounded-full border border-border/60 px-3 text-xs"
+              size="default"
+              className="rounded-full border border-border/60 px-3 text-xs"
             >
               Cancel
             </Button>
@@ -271,7 +272,8 @@ export function RecurringIssueEditor({
               type="button"
               onClick={() => void save()}
               disabled={saving || !directory.canManage}
-              className="h-8 rounded-full bg-[#5e6ad2] px-3 text-xs text-white hover:bg-[#5360c8]"
+              size="default"
+              className="rounded-full bg-[#5e6ad2] px-3 text-xs text-white hover:bg-[#5360c8]"
             >
               {saving ? "Saving…" : saved ? "Save changes" : "Create"}
             </Button>

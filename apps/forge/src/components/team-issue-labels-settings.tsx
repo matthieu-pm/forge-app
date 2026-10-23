@@ -1,4 +1,3 @@
-
 import * as React from "react"
 import {
   ArrowDown02Icon,
@@ -67,7 +66,9 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
-"use client"
+;
+
+("use client")
 
 type Editor =
   { kind: "label"; item?: TeamLabel } | { kind: "group"; item?: TeamLabelGroup }
@@ -685,14 +686,16 @@ export function TeamIssueLabelsSettings({
             )}
             <Button
               variant="secondary"
-              className="h-8 rounded-full px-3 font-normal"
+              size="default"
+              className="rounded-full px-3 font-normal"
               onClick={() => setEditor({ kind: "group" })}
             >
               New group
             </Button>
             <Button
               ref={newLabelButton}
-              className="h-8 rounded-full bg-[#5E6AD2] px-3 font-normal text-white hover:bg-[#5360C8]"
+              size="default"
+              className="rounded-full bg-[#5E6AD2] px-3 font-normal text-white hover:bg-[#5360C8]"
               onClick={() => startNewLabel()}
             >
               New label

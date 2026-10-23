@@ -432,7 +432,7 @@ export function Inbox({ scope }: { scope: InboxScope }) {
                 size="sm"
                 aria-pressed={priorityTab === category}
                 className={cn(
-                  "h-7 rounded-full px-3 text-xs text-muted-foreground",
+                  "rounded-full px-3 text-xs text-muted-foreground",
                   priorityTab === category && "bg-muted text-foreground"
                 )}
                 onClick={() => {
@@ -804,7 +804,7 @@ export function Inbox({ scope }: { scope: InboxScope }) {
           {actionError}
           <Button
             variant="ghost"
-            size="xs"
+            size="sm"
             className="ml-auto"
             onClick={() => setActionError(null)}
           >

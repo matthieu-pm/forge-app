@@ -106,9 +106,9 @@ export function IssueIcon({
     />
   )
 }
-export const issueChip = "h-6 gap-1 rounded-full px-2 text-xs font-normal"
+export const issueChip = "gap-1 rounded-full px-2 text-xs font-normal"
 export const issuePrimary =
-  "h-7 rounded-full bg-[#5e6ad2] px-3 text-xs text-white hover:bg-[#6e79e1]"
+  "rounded-full bg-[#5e6ad2] px-3 text-xs text-white hover:bg-[#6e79e1]"
 export function StatusMark({
   id,
   statuses,
@@ -236,6 +236,7 @@ export function IssuePicker({
             <Button
               type="button"
               variant="secondary"
+              size="sm"
               aria-label={label}
               className={cn(issueChip, className)}
             />
@@ -444,8 +445,9 @@ export function IssueDisplayMenu({
                 role="tab"
                 aria-selected={value.layout === layout}
                 variant="secondary"
+                size="sm"
                 className={cn(
-                  "h-7 text-xs font-normal",
+                  "text-xs font-normal",
                   value.layout === layout &&
                     "bg-foreground/15 ring-1 ring-foreground/10"
                 )}
@@ -492,6 +494,7 @@ export function IssueDisplayMenu({
                   </Button>
                 )}
                 <OptionSelect
+                  size="sm"
                   aria-label={
                     key === "group"
                       ? "Grouping"
@@ -501,7 +504,7 @@ export function IssueDisplayMenu({
                   }
                   value={value[key]}
                   onValueChange={(next) => update({ [key]: next })}
-                  className="w-[128px] rounded-lg border-0 bg-secondary py-0 text-xs data-[size=default]:h-6"
+                  className="w-[128px] rounded-lg border-0 bg-secondary py-0 text-xs"
                 >
                   {(key === "order"
                     ? [
@@ -541,12 +544,13 @@ export function IssueDisplayMenu({
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               Nested sub-issues
               <OptionSelect
+                size="sm"
                 aria-label="Nested sub-issues"
                 value={value.nested}
                 onValueChange={(next) =>
                   update({ nested: next as IssueDisplay["nested"] })
                 }
-                className="w-[128px] rounded-lg border-0 bg-secondary py-0 data-[size=default]:h-6"
+                className="w-[128px] rounded-lg border-0 bg-secondary py-0"
               >
                 <option>Show matching</option>
                 <option>Show all</option>
@@ -569,6 +573,7 @@ export function IssueDisplayMenu({
           <div className="flex flex-wrap gap-1">
             {properties.map((property) => (
               <Button
+                size="sm"
                 key={property}
                 variant="secondary"
                 aria-pressed={value.properties.includes(property)}
@@ -593,12 +598,18 @@ export function IssueDisplayMenu({
           </div>
         </div>
         <div className="flex justify-end gap-1 border-t border-border/50 px-3 py-1.5">
-          <Button variant="ghost" className="h-6 text-xs" onClick={onReset}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs"
+            onClick={onReset}
+          >
             Reset
           </Button>
           <Button
             variant="ghost"
-            className="h-6 text-xs text-[#7d87f5]"
+            size="sm"
+            className="text-xs text-[#7d87f5]"
             title="Save this browser’s default for this team"
             onClick={onSaveDefault}
           >

@@ -705,8 +705,8 @@ export function TriageFilterChips({
           <Button
             key={rule.id}
             variant="secondary"
-            size="xs"
-            className="h-6 max-w-full gap-1 rounded-md text-[11px] font-normal"
+            size="sm"
+            className="max-w-full gap-1 rounded-md text-[11px] font-normal"
             aria-label={`Remove filter: ${label}`}
             title={label}
             onClick={() =>
@@ -723,8 +723,8 @@ export function TriageFilterChips({
       })}
       <Button
         variant="ghost"
-        size="xs"
-        className="h-6 text-[11px]"
+        size="sm"
+        className="text-[11px]"
         onClick={() => onChange(emptyTriageFilters())}
       >
         Clear filters

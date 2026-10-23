@@ -33,7 +33,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-"use client"
+;
+
+("use client")
 
 export function TeamDocuments({ team }: { team: TeamSummary }) {
   const store = useTeamHome(team.id)
@@ -169,7 +171,8 @@ export function TeamDocuments({ team }: { team: TeamSummary }) {
               <Button
                 onClick={create}
                 disabled={!!store.error}
-                className="mt-4 h-7 rounded-full bg-[#5E6AD2] px-3 text-xs font-normal text-white hover:bg-[#5360C8]"
+                size="sm"
+                className="mt-4 rounded-full bg-[#5E6AD2] px-3 text-xs font-normal text-white hover:bg-[#5360C8]"
               >
                 Create document
               </Button>

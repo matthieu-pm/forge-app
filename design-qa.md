@@ -815,3 +815,15 @@ Replaced toolbar and issue/comment action popovers with the existing dropdown-me
 Verified team home still renders, navigated back to the issue page, opened the menu by click and ArrowDown, closed with Escape, opened and dismissed tool configuration, and captured a keyboard-focus tooltip with shortcut. Evidence: `docs/qa/team-issues/toolbar-team-home.png`, `toolbar-polish.png`, and `toolbar-tooltip.png`. TypeScript, ESLint (including the normally ignored new UI component), and 23 focused home/navigation/issue tests pass. Reduced-motion classes retained; slow-motion playback and mobile layout were not separately checked for this small refinement.
 
 Final result: passed.
+
+## Button height consistency — 2026-10-24
+
+Standardized compact text controls on the shared Button `sm` size (28px), with regular form actions on `default` (32px). Removed per-screen height overrides from issue actions, filters, inbox, settings, template editors, and related controls. Issue chip/primary styles now defer to the shared size rather than overriding its height. Template and recurring property triggers use the same 28px compact height. The Button exposes its semantic size through `data-size` for inspection.
+
+The issue Properties panel previously mixed 24px/12px-text team, label, and project buttons with 28px/13px-text status, priority, and assignee buttons. All six now measure 28px with 13px text and matching horizontal padding; the adjacent team navigation control also has a 28px hit area. Label/project hints include their existing keyboard shortcuts.
+
+Browser verification: measured all six Properties buttons, opened and dismissed the team picker, checked team-home actions and triage composer property triggers at 28px, and checked label settings action buttons at 32px and compact icon controls at 28px. Evidence: `docs/qa/team-issues/button-heights.png`. No issue content or settings were changed during verification. Small embedded dismissal/disclosure icons retain their existing purpose-specific sizes.
+
+Validation: 108 tests passed across 13 focused issue, home, navigation, triage, inbox, template, and settings suites. TypeScript and scoped ESLint passed (two existing optional-chain warnings in inbox); whitespace diff check passed. Mobile layout was not separately rendered for this sizing refinement.
+
+Final result: passed.

@@ -74,7 +74,7 @@ export function BillingSettings() {
 
   return (
     <>
-      <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-none px-6 pt-4 pb-4 [scrollbar-gutter:stable]">
+      <main className="min-h-0 flex-1 [scrollbar-gutter:stable] overflow-y-auto overscroll-y-none px-6 pt-4 pb-4">
         <div className="mx-auto w-full max-w-[640px] pb-16">
           <div className="space-y-8">
             <header className="flex items-end justify-between gap-6 px-3">
@@ -99,7 +99,7 @@ export function BillingSettings() {
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="h-7 rounded-lg px-2 text-xs text-muted-foreground hover:text-foreground"
+                className="rounded-lg px-2 text-xs text-muted-foreground hover:text-foreground"
                 onClick={() => setPlansOpen(true)}
               >
                 All plans

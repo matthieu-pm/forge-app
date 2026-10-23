@@ -26,7 +26,7 @@ export function AgentFooterActions() {
       <Button
         type="button"
         variant="ghost"
-        size="xs"
+        size="sm"
         className="forge-ask-button shrink-0 text-muted-foreground hover:text-foreground"
         aria-label="Ask Forge"
         aria-pressed={working}
