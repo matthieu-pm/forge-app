@@ -144,7 +144,13 @@ export function IssueFilters({
       ),
     ]
       .sort()
-      .map((item) => ({ value: item, label: item }))
+      .map((item) => ({
+        value: item,
+        label:
+          field === "creator"
+            ? members.find((member) => member.id === item)?.name ?? item
+            : item,
+      }))
   }
   function apply(
     field: IssueField,

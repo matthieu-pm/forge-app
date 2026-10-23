@@ -12,6 +12,7 @@ import type { TeamStatus } from "@/lib/team-statuses"
 import { issueGroupValue, issuePriorities } from "@/lib/team-issues"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { authClient } from "@/lib/auth-client"
 
 type Members = Array<{ id: string; name: string; image?: string | null }>
 export function InlineIssueProperties({
@@ -107,6 +108,13 @@ function dateLabel(value: string) {
     value.includes("T") ? value : `${value}T12:00:00`
   ).toLocaleDateString(undefined, { month: "short", day: "numeric" })
 }
+function durationLabel(value: string) {
+  const seconds = Math.max(0, Math.floor((Date.now() - Date.parse(value)) / 1000))
+  if (seconds < 60) return `${seconds}s`
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`
+  return `${Math.floor(seconds / 86400)}d`
+}
 export function IssueRows({
   issues,
   allIssues,
@@ -135,6 +143,7 @@ export function IssueRows({
   onCreate: (patch?: Partial<IssueDraft>) => void
 }) {
   const [collapsed, setCollapsed] = useState<Array<string>>([])
+  const { data: session } = authClient.useSession()
   const board = display.layout === "board"
   const groups = new Map<string, Array<TeamIssue>>()
   if (display.showEmpty) {
@@ -187,6 +196,12 @@ export function IssueRows({
   }
   const props = display.properties
   function renderIssue(issue: TeamIssue, depth = 0) {
+    const creator =
+      issue.creator === "You"
+        ? session?.user
+        : members.find(
+            (member) => member.id === issue.creator || member.name === issue.creator
+          )
     return (
       <div
         key={issue.id}
@@ -211,7 +226,7 @@ export function IssueRows({
           aria-label={`Select ${identifier}-${issue.number}`}
           checked={selected.includes(issue.id)}
           onChange={() => onSelect(issue.id)}
-          className="size-3.5 shrink-0 accent-[#5e6ad2] dark:[color-scheme:dark]"
+          className="size-3.5 shrink-0 accent-[#5e6ad2] opacity-0 checked:opacity-100 group-hover/issue:opacity-100 group-focus-within/issue:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 dark:[color-scheme:dark]"
         />
         {props.includes("Priority") && (
           <InlineIssueProperties
@@ -242,6 +257,14 @@ export function IssueRows({
             property="status"
             compact
           />
+        )}
+        {props.includes("Time in status") && (
+          <span
+            className="mr-3 shrink-0 text-xs text-muted-foreground tabular-nums"
+            title={`In status since ${new Date(issue.statusChangedAt).toLocaleString()}`}
+          >
+            {durationLabel(issue.statusChangedAt)}
+          </span>
         )}
         <button
           onClick={() => onOpen(issue)}
@@ -274,20 +297,6 @@ export function IssueRows({
             <IssueIcon name="link" />
           </span>
         )}
-        {props.includes("Creator") && (
-          <span className="text-xs text-muted-foreground">{issue.creator}</span>
-        )}
-        {props.includes("Time in status") && (
-          <span className="text-xs text-muted-foreground">
-            {Math.max(
-              0,
-              Math.floor(
-                (Date.now() - Date.parse(issue.statusChangedAt)) / 86400000
-              )
-            )}
-            d
-          </span>
-        )}
         {props.includes("Due date") && issue.dueDate && (
           <time
             className="text-xs text-muted-foreground"
@@ -307,11 +316,24 @@ export function IssueRows({
             compact
           />
         )}
+        {props.includes("Creator") && (
+          <span
+            className="flex size-6 shrink-0 items-center justify-center"
+            role="img"
+            aria-label={`Created by ${creator?.name ?? issue.creator}`}
+            title={`Created by ${creator?.name ?? issue.creator}`}
+          >
+            <AssigneeMark
+              name={creator?.name ?? issue.creator}
+              image={creator?.image}
+            />
+          </span>
+        )}
         {props.includes("Created") && (
           <time
             dateTime={issue.createdAt}
             title={`Created ${new Date(issue.createdAt).toLocaleString()}`}
-            className="ml-3 shrink-0 text-xs text-muted-foreground"
+            className="ml-3 w-14 shrink-0 text-center text-xs text-muted-foreground tabular-nums"
           >
             {dateLabel(issue.createdAt)}
           </time>
@@ -320,7 +342,7 @@ export function IssueRows({
           <time
             dateTime={issue.updatedAt}
             title={`Updated ${new Date(issue.updatedAt).toLocaleString()}`}
-            className="text-xs text-muted-foreground"
+            className="ml-2 w-14 shrink-0 text-center text-xs text-muted-foreground tabular-nums"
           >
             {dateLabel(issue.updatedAt)}
           </time>

@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/popover"
 import { OptionSelect } from "@/components/ui/option-select"
 import { cn } from "@/lib/utils"
+import { authClient } from "@/lib/auth-client"
 
 export function IssueComposer({
   team,
@@ -61,6 +62,7 @@ export function IssueComposer({
   onDraftSaved: () => void
 }) {
   const [targetTeam, setTargetTeam] = useState(team)
+  const { data: session } = authClient.useSession()
   const [draft, setDraft] = useState(initial)
   const [statuses, setStatuses] = useState(initialTeamStatuses().statuses)
   const [error, setError] = useState("")
@@ -126,6 +128,7 @@ export function IssueComposer({
       const issue = saveTeamIssue(targetTeam.id, draft, {
         id: issueId,
         draftId,
+        creator: session?.user.id,
       })
       onSaved(issue, targetTeam)
       if (createMore && !issueId) {
