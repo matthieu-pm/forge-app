@@ -11,8 +11,9 @@ import {
   issuePrimary,
 } from "./issue-controls"
 import { IssueComposer } from "./issue-composer"
+import { IssueDetail } from "./issue-detail"
 import { IssueFilters } from "./issue-filters"
-import { InlineIssueProperties, IssueRows } from "./issue-list"
+import { IssueRows } from "./issue-list"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import type { IssueDraft, IssueStore, TeamIssue } from "@/lib/team-issues"
@@ -259,10 +260,15 @@ export function TeamIssues({
           `${issue.title}: ${statuses.find((status) => status.id === patch.status)?.name ?? patch.status}`
         )
       setError("")
+      return true
     } catch {
       setError(
         "The issue could not be updated. Your existing data has been preserved."
       )
+      toast.error(
+        "The issue could not be saved. Existing data has been preserved."
+      )
+      return false
     }
   }
   function bulk(patch: Partial<IssueDraft>) {
@@ -339,6 +345,10 @@ export function TeamIssues({
           ))
       )
         return
+      if (search.issue) {
+        if (event.key === "Escape") onNavigate({ view: search.view })
+        return
+      }
       if (
         event.key.toLowerCase() === "c" &&
         !event.ctrlKey &&
@@ -376,10 +386,28 @@ export function TeamIssues({
   })
   const copyState = emptyCopy[scope]
   const isFiltered = filters.rules.length > 0
+  if (current)
+    return (
+      <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background md:rounded-2xl dark:bg-[#111111]">
+        <IssueDetail
+          key={current.id}
+          team={team}
+          issue={current}
+          issues={store.issues}
+          statuses={statuses}
+          directory={directory}
+          labels={labels}
+          projects={projects}
+          onUpdate={updateIssue}
+          onOpen={openIssue}
+          onBack={() => onNavigate({ view: search.view })}
+        />
+      </main>
+    )
   return (
     <main
       aria-label={`${team.name} issues`}
-      className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background dark:bg-[#111111]"
+      className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background md:rounded-2xl dark:bg-[#111111]"
     >
       <header className="flex h-11 shrink-0 items-center gap-2 border-b border-border/40 px-4">
         <Link
@@ -468,7 +496,7 @@ export function TeamIssues({
           </Popover>
           <Button
             variant="ghost"
-            className="h-7 gap-1.5 px-0 text-xs text-muted-foreground"
+            className="h-8 w-auto gap-1.5 px-3 text-xs text-muted-foreground"
             onClick={() => openNew()}
           >
             <IssueIcon name="add" />
@@ -667,7 +695,7 @@ export function TeamIssues({
               members={members}
               display={display}
               selected={selectedVisible}
-              focusedId={details ? current?.id : undefined}
+              focusedId={undefined}
               onSelect={(id) =>
                 setSelected(
                   selected.includes(id)
@@ -687,11 +715,7 @@ export function TeamIssues({
             className="absolute inset-0 z-10 flex min-h-0 flex-col overflow-y-auto border-l border-border/50 bg-background p-3 md:static md:w-[min(38%,420px)] md:shrink-0"
           >
             <div className="mb-3 flex items-center justify-between rounded-lg border border-border/40 bg-muted/50 p-3 text-xs text-muted-foreground">
-              <span>
-                {current
-                  ? `${team.identifier}-${current.number}`
-                  : "No issue details"}
-              </span>
+              <span>No issue details</span>
               <Button
                 variant="ghost"
                 size="icon-xs"
@@ -701,113 +725,6 @@ export function TeamIssues({
                 <IssueIcon name="close" />
               </Button>
             </div>
-            {current && (
-              <>
-                <h2 className="mb-3 text-lg font-semibold">{current.title}</h2>
-                <p className="mb-5 text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground">
-                  {current.description || "No description"}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {(["status", "priority", "assignee"] as const).map(
-                    (property) => (
-                      <InlineIssueProperties
-                        key={property}
-                        property={property}
-                        issue={current}
-                        statuses={statuses}
-                        members={members}
-                        onUpdate={updateIssue}
-                      />
-                    )
-                  )}
-                </div>
-                {current.labels && (
-                  <p className="mt-4 text-xs text-muted-foreground">
-                    Labels: {current.labels}
-                  </p>
-                )}
-                {current.project && (
-                  <p className="mt-3 text-xs text-muted-foreground">
-                    Project: {current.project}
-                  </p>
-                )}
-                {current.dueDate && (
-                  <p className="mt-3 text-xs text-muted-foreground">
-                    Due {current.dueDate}
-                  </p>
-                )}
-                {current.recurrence && (
-                  <p className="mt-3 text-xs text-muted-foreground">
-                    Repeats {current.recurrence} after completion
-                  </p>
-                )}
-                <div className="mt-5 space-y-2">
-                  {current.links.map((link, index) => (
-                    <a
-                      key={index}
-                      href={link.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center gap-2 text-xs text-[#7d87f5]"
-                    >
-                      <IssueIcon name="link" />
-                      {link.title}
-                    </a>
-                  ))}
-                  {current.attachments?.map((attachment, index) => (
-                    <a
-                      key={index}
-                      href={attachment.data}
-                      download={attachment.name}
-                      className="flex items-center gap-2 text-xs text-[#7d87f5]"
-                    >
-                      <IssueIcon name="attach" />
-                      {attachment.name}
-                    </a>
-                  ))}
-                  {store.issues
-                    .filter((issue) => issue.parentId === current.id)
-                    .map((issue) => (
-                      <button
-                        key={issue.id}
-                        className="flex w-full items-center gap-2 rounded-lg bg-muted/50 p-2 text-left text-xs"
-                        onClick={() => openIssue(issue)}
-                      >
-                        <StatusMark id={issue.status} statuses={statuses} />
-                        {issue.title}
-                      </button>
-                    ))}
-                </div>
-                <div className="mt-5 flex gap-2">
-                  <Button
-                    variant="secondary"
-                    className="text-xs"
-                    onClick={() =>
-                      setEditor({
-                        draft: current,
-                        id: current.id,
-                        key: crypto.randomUUID(),
-                      })
-                    }
-                  >
-                    Edit issue
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    className="text-xs"
-                    onClick={() => openNew({ parentId: current.id })}
-                  >
-                    <IssueIcon name="add" />
-                    Sub-issue
-                  </Button>
-                </div>
-                <div className="mt-5 border-t border-border/50 pt-3 text-xs text-muted-foreground">
-                  Created by {current.creator}
-                  <br />
-                  {new Date(current.createdAt).toLocaleString()}
-                </div>
-              </>
-            )}
           </aside>
         )}
       </div>

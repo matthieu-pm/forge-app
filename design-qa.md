@@ -789,3 +789,29 @@ Issues, drafts, preferences, and custom views persist per team in versioned brow
 - [x] Preserve the existing Forge shell and client-side navigation.
 
 final result: passed for the reference-driven local Issues implementation, with the explicit integration and coverage boundaries above.
+
+## Created issue page — 2026-10-23
+
+Source: the supplied Linear issue-detail screenshots and accessibility snapshots, plus read-only native capture `docs/qa/team-issues/issue-detail-linear-reference.png`. Final local capture: `docs/qa/team-issues/issue-detail.png`.
+
+Implemented the full issue view reached from an issue row or creation confirmation. The existing Forge shell stays mounted. The issue header has breadcrumbs, favorite and issue options; the content column contains inline title and rich description editing, attachment actions, reactions, inline sub-issues with completion counts, activity, threaded comments and replies. Properties occupy the right column. Copy URL/ID/branch/prompt controls and coding-tool prompt preferences are functional. Property and copy keyboard shortcuts are available.
+
+Visual comparison: the dark canvas, restrained header, centered content column, separate right properties rail, compact reaction and child rows, activity divider, comment surfaces, and compact reply field follow the supplied references. Content-dependent media height follows the uploaded image; no sample HYPEBEAST image is inserted into real issues. Source and local viewport dimensions differ (native source 3600×2260 physical pixels, local 1506×1034); spacing was compared relative to the app content area. This is an adaptation inside Forge, not a reproduction of Linear's native window chrome.
+
+Browser verification: created TES-9 as a verification fixture; opened the full page; saved description changes; submitted a comment and threaded reply; added a reaction and subscription; created a child and changed it to Done, updating the completion count to 1/1; uploaded, cropped and removed a test image; copied TES-9 to clipboard; reloaded and verified saved state. All display-property and list changes from previous iterations remain available on the list. Comment author controls include editing and recoverable deletion, and child selection supports removing the parent relationship.
+
+Data checks: 37 tests pass across issue persistence and navigation. New tests cover legacy discussion defaults, preservation across property changes, parent/descendant team moves with unique destination numbering, and rollback when the source write fails. ESLint, TypeScript and production build pass. An invalid icon import was corrected and the page reloaded. Earlier hot-reload messages and the existing TanStack devtools `path.endsWith` error are recorded separately from page behavior.
+
+Boundaries: all issue changes remain in the existing per-team browser store. Coding-tool configuration changes the copied prompt; it does not launch external applications. Image crop trims equal margins. Project choices use existing locally referenced projects with an option to enter another name. Light mode, narrow-screen layouts, external clipboard-image support and every emoji were not separately exercised.
+
+Final result: passed for the supplied desktop issue-detail workflow.
+
+## Issue toolbar and surface polish — 2026-10-23
+
+Compared team home and issue detail at the same 1506×1034 browser viewport. Extracted the existing home icon action and hint styling into `ui/action-icon-button.tsx`; home re-exports its existing public component name. Issue actions now share the 28px circular button, 16px icon, hover/focus states, 450ms tooltip delay, popover-colored hint and shadow. Copy hints and menu items include keyboard shortcuts. Property hints are suppressed while their picker is open.
+
+Replaced toolbar and issue/comment action popovers with the existing dropdown-menu primitive: menu items highlight with keyboard navigation, Escape closes the menu, and selecting Configure coding tools closes the menu before opening the dialog. The prompt action and chooser form a split control. Added rounded clipping to both issue list and detail content: browser computed radius 18px with overflow hidden, matching the sidebar inset radius.
+
+Verified team home still renders, navigated back to the issue page, opened the menu by click and ArrowDown, closed with Escape, opened and dismissed tool configuration, and captured a keyboard-focus tooltip with shortcut. Evidence: `docs/qa/team-issues/toolbar-team-home.png`, `toolbar-polish.png`, and `toolbar-tooltip.png`. TypeScript, ESLint (including the normally ignored new UI component), and 23 focused home/navigation/issue tests pass. Reduced-motion classes retained; slow-motion playback and mobile layout were not separately checked for this small refinement.
+
+Final result: passed.

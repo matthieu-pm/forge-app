@@ -22,6 +22,7 @@ export function InlineIssueProperties({
   onUpdate,
   property,
   compact = false,
+  emptyLabels = false,
 }: {
   issue: TeamIssue
   statuses: Array<TeamStatus>
@@ -29,6 +30,7 @@ export function InlineIssueProperties({
   onUpdate: (issue: TeamIssue, patch: Partial<IssueDraft>) => void
   property: "status" | "priority" | "assignee"
   compact?: boolean
+  emptyLabels?: boolean
 }) {
   const label =
     property === "status"
@@ -42,6 +44,15 @@ export function InlineIssueProperties({
   return (
     <IssuePicker
       label={`${label} for ${issue.title}`}
+      shortcut={
+        emptyLabels
+          ? property === "status"
+            ? "S"
+            : property === "priority"
+              ? "P"
+              : "A"
+          : undefined
+      }
       placeholder={`${label}…`}
       value={issue[property] ?? ""}
       options={
@@ -66,13 +77,17 @@ export function InlineIssueProperties({
                 ...members.map((member) => ({
                   value: member.id,
                   label: member.name,
-                  icon: <AssigneeMark name={member.name} image={member.image} />,
+                  icon: (
+                    <AssigneeMark name={member.name} image={member.image} />
+                  ),
                 })),
               ]
       }
       onChange={(next) => onUpdate(issue, { [property]: next })}
       className={cn(
         "bg-transparent text-muted-foreground hover:bg-foreground/10",
+        emptyLabels &&
+          "h-7 text-[13px] transition-colors duration-150 hover:bg-muted active:translate-y-0 motion-reduce:transition-none",
         compact && "size-6 p-0"
       )}
       footer={
@@ -98,8 +113,10 @@ export function InlineIssueProperties({
         (property === "status"
           ? status?.name
           : property === "priority"
-            ? issue.priority
-            : assignee || "Unassigned")}
+            ? emptyLabels && issue.priority === "No priority"
+              ? "Set priority"
+              : issue.priority
+            : assignee || (emptyLabels ? "Assign" : "Unassigned"))}
     </IssuePicker>
   )
 }
@@ -109,7 +126,10 @@ function dateLabel(value: string) {
   ).toLocaleDateString(undefined, { month: "short", day: "numeric" })
 }
 function durationLabel(value: string) {
-  const seconds = Math.max(0, Math.floor((Date.now() - Date.parse(value)) / 1000))
+  const seconds = Math.max(
+    0,
+    Math.floor((Date.now() - Date.parse(value)) / 1000)
+  )
   if (seconds < 60) return `${seconds}s`
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m`
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`
@@ -200,7 +220,8 @@ export function IssueRows({
       issue.creator === "You"
         ? session?.user
         : members.find(
-            (member) => member.id === issue.creator || member.name === issue.creator
+            (member) =>
+              member.id === issue.creator || member.name === issue.creator
           )
     return (
       <div
@@ -226,7 +247,7 @@ export function IssueRows({
           aria-label={`Select ${identifier}-${issue.number}`}
           checked={selected.includes(issue.id)}
           onChange={() => onSelect(issue.id)}
-          className="size-3.5 shrink-0 accent-[#5e6ad2] opacity-0 checked:opacity-100 group-hover/issue:opacity-100 group-focus-within/issue:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 dark:[color-scheme:dark]"
+          className="size-3.5 shrink-0 accent-[#5e6ad2] opacity-0 group-focus-within/issue:opacity-100 group-hover/issue:opacity-100 checked:opacity-100 focus-visible:opacity-100 dark:[color-scheme:dark] pointer-coarse:opacity-100"
         />
         {props.includes("Priority") && (
           <InlineIssueProperties
@@ -240,7 +261,10 @@ export function IssueRows({
         )}
         {props.includes("ID") && (
           <span className="inline-grid shrink-0 text-xs text-muted-foreground tabular-nums">
-            <span aria-hidden="true" className="invisible col-start-1 row-start-1">
+            <span
+              aria-hidden="true"
+              className="invisible col-start-1 row-start-1"
+            >
               {identifier}-999
             </span>
             <span className="col-start-1 row-start-1">
@@ -440,7 +464,12 @@ export function IssueRows({
                 </span>
               )}
               <h2 className={board ? "font-medium" : "font-normal"}>{name}</h2>
-              <span className={cn("text-xs text-muted-foreground", !board && "ml-1")}>
+              <span
+                className={cn(
+                  "text-xs text-muted-foreground",
+                  !board && "ml-1"
+                )}
+              >
                 {items.length}
               </span>
               <Button

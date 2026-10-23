@@ -4,6 +4,7 @@ import {
   Add01Icon,
   AlertSquareIcon,
   ArrowDown01Icon,
+  ArrowUp01Icon,
   ArrowUpDownIcon,
   Calendar03Icon,
   Cancel01Icon,
@@ -13,6 +14,7 @@ import {
   CubeIcon,
   File01Icon,
   FilterHorizontalIcon,
+  GitBranchIcon,
   Layers01Icon,
   LayoutGridIcon,
   Link01Icon,
@@ -28,6 +30,7 @@ import {
   SignalLow02Icon,
   SignalMedium02Icon,
   SlidersHorizontalIcon,
+  SmilePlusIcon,
   StarIcon,
   Tag01Icon,
   Tick02Icon,
@@ -47,11 +50,16 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { OptionSelect } from "@/components/ui/option-select"
 import { IssueStatusIcon } from "@/components/issue-status-icon"
+import { ActionHint } from "@/components/ui/action-icon-button"
 import { cn } from "@/lib/utils"
 
 const icons = {
   add: Add01Icon,
   down: ArrowDown01Icon,
+  up: ArrowUp01Icon,
+  branch: GitBranchIcon,
+  prompt: ZapIcon,
+  reaction: SmilePlusIcon,
   sort: ArrowUpDownIcon,
   date: Calendar03Icon,
   close: Cancel01Icon,
@@ -142,10 +150,7 @@ export function AssigneeMark({
   image?: string | null
 }) {
   return name ? (
-    <Avatar
-      aria-hidden="true"
-      className="size-4"
-    >
+    <Avatar aria-hidden="true" className="size-4">
       <AvatarImage src={image ?? undefined} alt="" />
       <AvatarFallback className="bg-emerald-600 text-[8px] font-medium text-white">
         {name
@@ -162,6 +167,7 @@ export function AssigneeMark({
 export type PickerOption = { value: string; label: string; icon?: ReactNode }
 export function IssuePicker({
   label,
+  shortcut,
   placeholder,
   value,
   options,
@@ -175,6 +181,7 @@ export function IssuePicker({
   onOpenChange: controlledChange,
 }: {
   label: string
+  shortcut?: string
   placeholder?: string
   value: string
   options: Array<PickerOption>
@@ -219,19 +226,24 @@ export function IssuePicker({
         if (next) setSearch("")
       }}
     >
-      <PopoverTrigger
-        render={
-          <Button
-            type="button"
-            variant="secondary"
-            aria-label={label}
-            title={label}
-            className={cn(issueChip, className)}
-          />
-        }
+      <ActionHint
+        label={label.replace(/ for .*/, "")}
+        shortcut={shortcut}
+        disabled={open}
       >
-        {children}
-      </PopoverTrigger>
+        <PopoverTrigger
+          render={
+            <Button
+              type="button"
+              variant="secondary"
+              aria-label={label}
+              className={cn(issueChip, className)}
+            />
+          }
+        >
+          {children}
+        </PopoverTrigger>
+      </ActionHint>
       <PopoverContent
         align="start"
         className="issue-menu w-52 gap-0 rounded-xl p-1"

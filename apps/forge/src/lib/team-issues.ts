@@ -114,6 +114,21 @@ const linkSchema = z.object({
     .url()
     .refine((url) => /^https?:\/\//i.test(url), "Use an http or https link."),
 })
+const reactionSchema = z.object({
+  emoji: z.string(),
+  users: z.array(z.string()),
+})
+const commentSchema = z.object({
+  id: z.string(),
+  parentId: z.string().default(""),
+  author: z.string(),
+  body: z.string().max(10000),
+  createdAt: z.string().datetime(),
+  edited: z.boolean().default(false),
+  deleted: z.boolean().default(false),
+  attachments: triageDraftSchema.shape.attachments,
+  reactions: z.array(reactionSchema).default([]),
+})
 export const issueDraftSchema = triageDraftSchema.extend({
   status: z.string().min(1),
   parentId: z.string().default(""),
@@ -125,6 +140,20 @@ export const issueDraftSchema = triageDraftSchema.extend({
   subscribers: z.string().default(""),
   milestone: z.string().default(""),
   autoClosed: z.boolean().default(false),
+  descriptionDoc: z.record(z.string(), z.unknown()).nullable().default(null),
+  reactions: z.array(reactionSchema).default([]),
+  comments: z.array(commentSchema).default([]),
+  activity: z
+    .array(
+      z.object({
+        id: z.string(),
+        author: z.string(),
+        text: z.string(),
+        createdAt: z.string(),
+      })
+    )
+    .default([]),
+  favorite: z.boolean().default(false),
 })
 export type IssueDraft = z.infer<typeof issueDraftSchema>
 export const blankIssueDraft = (status = "todo"): IssueDraft =>
@@ -238,6 +267,8 @@ export function saveTeamIssue(
       statusChangedAt:
         previous?.status === draft.status ? previous.statusChangedAt : now,
       creator: previous?.creator ?? options.creator ?? "You",
+      subscribers:
+        previous?.subscribers ?? (draft.subscribers || options.creator || ""),
       suggestedLabel: /bug|broken|error|crash|test issue/i.test(
         `${draft.title} ${draft.description}`
       )
@@ -245,6 +276,26 @@ export function saveTeamIssue(
         : "",
       completedAt: completed ? (previous?.completedAt ?? now) : null,
       recurrenceSpawned: previous?.recurrenceSpawned ?? false,
+      activity: previous
+        ? [
+            ...previous.activity,
+            ...(
+              ["status", "priority", "assignee", "labels", "project"] as const
+            )
+              .filter(
+                (field) => (previous[field] ?? "") !== (draft[field] ?? "")
+              )
+              .map((field) => ({
+                id: crypto.randomUUID(),
+                author: options.creator ?? "You",
+                createdAt: now,
+                text:
+                  field === "status"
+                    ? `changed status to ${status.name}`
+                    : `updated ${field}`,
+              })),
+          ]
+        : draft.activity,
     })
     let nextNumber = options.id ? store.nextNumber : store.nextNumber + 1
     const children = draft.subIssues.map((title) =>
@@ -282,6 +333,61 @@ export function saveTeamIssue(
   })
   return saved!
 }
+export function moveTeamIssue(
+  sourceId: string,
+  targetId: string,
+  issueId: string
+) {
+  if (sourceId === targetId) return
+  const source = readIssueStore(sourceId)
+  const root = source.issues.find((issue) => issue.id === issueId)
+  if (!root) throw new Error("Issue no longer exists")
+  const ids = new Set([issueId])
+  let size = 0
+  while (size !== ids.size) {
+    size = ids.size
+    source.issues.forEach((issue) => {
+      if (ids.has(issue.parentId)) ids.add(issue.id)
+    })
+  }
+  const before = readIssueStore(targetId)
+  const fromStatuses = getIssueStatuses(sourceId)
+  const toStatuses = getIssueStatuses(targetId)
+  writeIssueStore(targetId, (target) => {
+    if (target.issues.some((issue) => ids.has(issue.id)))
+      throw new Error("Issue already exists in that team")
+    const moved = source.issues
+      .filter((issue) => ids.has(issue.id))
+      .map((issue, index) => {
+        const from = fromStatuses.find((status) => status.id === issue.status)
+        const nextStatus =
+          toStatuses.find((status) => status.name === from?.name) ??
+          toStatuses.find((status) => status.group === from?.group) ??
+          toStatuses[0]
+        return {
+          ...issue,
+          parentId: issue.id === issueId ? "" : issue.parentId,
+          number: target.nextNumber + index,
+          status: nextStatus.id,
+        }
+      })
+    return {
+      ...target,
+      issues: [...target.issues, ...moved],
+      nextNumber: target.nextNumber + moved.length,
+    }
+  })
+  try {
+    writeIssueStore(sourceId, (store) => ({
+      ...store,
+      issues: store.issues.filter((issue) => !ids.has(issue.id)),
+    }))
+  } catch (error) {
+    writeIssueStore(targetId, () => before)
+    throw error
+  }
+}
+
 export function spawnRecurringIssues(
   store: IssueStore,
   statuses: Array<TeamStatus>,
@@ -317,6 +423,10 @@ export function spawnRecurringIssues(
       dueDate: date.toISOString().slice(0, 10),
       completedAt: null,
       recurrenceSpawned: false,
+      comments: [],
+      reactions: [],
+      activity: [],
+      favorite: false,
       createdAt: now,
       updatedAt: now,
       statusChangedAt: now,

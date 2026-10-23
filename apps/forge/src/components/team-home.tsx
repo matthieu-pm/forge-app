@@ -1,3 +1,4 @@
+"use client"
 
 import * as React from "react"
 import {
@@ -34,10 +35,9 @@ import { TeamIconPicker } from "@/components/team-icon-picker"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+  ActionHint as HomeHint,
+  ActionIconButton as HomeIconButton,
+} from "@/components/ui/action-icon-button"
 import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -61,7 +61,7 @@ import { useTeamTriage } from "@/lib/team-triage"
 import { useTeamCycles } from "@/lib/team-cycles"
 import { cn } from "@/lib/utils"
 
-"use client"
+export { ActionIconButton as HomeIconButton } from "@/components/ui/action-icon-button"
 
 export const homePill =
   "h-7 rounded-full bg-muted/55 px-2.5 text-xs font-normal text-muted-foreground shadow-[0_0_0_1px_var(--border)] hover:bg-muted hover:text-foreground"
@@ -89,52 +89,6 @@ const homeShortcut =
   homeFocus
 const revealChevron =
   "size-3 text-muted-foreground opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none"
-function HomeHint({
-  label,
-  children,
-}: {
-  label: string
-  children: React.ReactElement
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger delay={450} render={children} />
-      <TooltipContent
-        side="bottom"
-        sideOffset={6}
-        className="rounded-lg border border-border bg-popover px-2 py-1.5 text-xs text-popover-foreground shadow-md motion-reduce:animate-none [&>div]:hidden [&>svg]:hidden"
-      >
-        {label}
-      </TooltipContent>
-    </Tooltip>
-  )
-}
-export function HomeIconButton({
-  label,
-  icon,
-  className,
-  ...props
-}: React.ComponentProps<typeof Button> & {
-  label: string
-  icon: React.ComponentProps<typeof HugeiconsIcon>["icon"]
-}) {
-  return (
-    <HomeHint label={label}>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label={label}
-        className={cn(
-          "rounded-full transition-colors duration-150 active:translate-y-0 data-popup-open:bg-muted motion-reduce:transition-none",
-          className
-        )}
-        {...props}
-      >
-        <HomeIcon icon={icon} />
-      </Button>
-    </HomeHint>
-  )
-}
 export function homeSave(
   store: HomeStore,
   reducer: Parameters<HomeStore["update"]>[0],

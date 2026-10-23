@@ -5,6 +5,7 @@ import {
   emptyIssueFilters,
   initialIssueStore,
   matchesIssueFilters,
+  moveTeamIssue,
   parseIssueStore,
   readIssueStore,
   saveIssueDraft,
@@ -168,5 +169,70 @@ describe("team issues", () => {
   it("keeps teams isolated", () => {
     saveTeamIssue(team, { ...blankIssueDraft(), title: "Private to this team" })
     expect(readIssueStore("another-team").issues).toEqual([])
+  })
+  it("preserves discussion and rich content through property edits and legacy migration", () => {
+    const original = saveTeamIssue(team, {
+      ...blankIssueDraft(),
+      title: "Discussion",
+      descriptionDoc: { type: "doc", content: [] },
+      reactions: [{ emoji: "👍", users: ["member"] }],
+      comments: [
+        {
+          id: "comment",
+          parentId: "",
+          author: "member",
+          body: "Review",
+          createdAt: new Date().toISOString(),
+          edited: false,
+          deleted: false,
+          reactions: [],
+        },
+      ],
+    })
+    const edited = saveTeamIssue(
+      team,
+      { ...original, priority: "High" },
+      { id: original.id }
+    )
+    expect(edited.comments).toEqual(original.comments)
+    expect(edited.reactions).toEqual(original.reactions)
+    expect(edited.descriptionDoc).toEqual(original.descriptionDoc)
+    expect(edited.activity[0].text).toBe("updated priority")
+    const legacy = JSON.parse(JSON.stringify(readIssueStore(team)))
+    delete legacy.issues[0].comments
+    delete legacy.issues[0].reactions
+    expect(parseIssueStore(JSON.stringify(legacy)).issues[0].comments).toEqual(
+      []
+    )
+  })
+  it("moves parent and descendants together without losing discussion or colliding numbers", () => {
+    const parent = saveTeamIssue(team, {
+      ...blankIssueDraft(),
+      title: "Move",
+      subIssues: ["Child"],
+    })
+    saveTeamIssue("target", { ...blankIssueDraft(), title: "Existing" })
+    moveTeamIssue(team, "target", parent.id)
+    expect(readIssueStore(team).issues).toHaveLength(0)
+    const target = readIssueStore("target")
+    expect(target.issues.map((issue) => issue.number)).toEqual([1, 2, 3])
+    expect(target.issues[2].parentId).toBe(parent.id)
+  })
+  it("rolls back a team move if the source write fails", () => {
+    const issue = saveTeamIssue(team, {
+      ...blankIssueDraft(),
+      title: "Safe move",
+    })
+    const setItem = Storage.prototype.setItem
+    const spy = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(function (this: Storage, key, value) {
+        if (key === teamIssuesKey(team)) throw new Error("quota")
+        setItem.call(this, key, value)
+      })
+    expect(() => moveTeamIssue(team, "target", issue.id)).toThrow()
+    spy.mockRestore()
+    expect(readIssueStore(team).issues[0].id).toBe(issue.id)
+    expect(readIssueStore("target").issues).toHaveLength(0)
   })
 })
