@@ -742,3 +742,50 @@ final result: passed
 - Refined Overview shortcuts and the grouped member preview into compact hover/focus pills with reserved-space chevrons, delayed dark tooltips, pressed feedback, and explicit focus rings. Add members and section/resource actions reveal on hover or focus, and remain available on touch. Section Add resources stays quiet until hover/open; icon controls retain their open-menu background.
 - Inline name and description fields now show edit affordances. Escape restores the original value without triggering a blur save. Enter and blur retain the existing save behavior. Internal shortcuts now use client-side navigation.
 - Validation: six Home interaction tests, scoped lint, typecheck, and diff whitespace checks passed. Native Electron QA confirmed resource menu opening and Escape focus restoration, member focus/reveal, and the Connect channel tooltip/chevron. Screenshot: `apps/forge/.forge/team-home-qa/shortcut-focus.png`. No team data was changed; pointer-hover and touch states were implemented in CSS but not separately exercised with automation.
+
+## Team Issues — 2026-10-23
+
+### Comparison target and evidence
+
+- Source authority: the user's 11 empty-state/composer/filter/display screenshots and six populated-state screenshots, with their accessibility trees. A fresh read-only capture of the same Linear Test team is saved at `docs/qa/team-issues/linear-reference.png`.
+- Implementation: `http://localhost:3000/teams/testing/issues?view=all`. Captures in `docs/qa/team-issues/`: `empty.png`, `populated.png`, `priority.png`, `display.png`, and `composer.png`.
+- Source: 3600 × 2260 physical pixels, approximately 1800 × 1130 logical pixels at 2× density. Implementation: 885 × 1034 for the composer/display pass and 1506 × 1034 for the final empty/list/picker pass, captured at 1×. The browser panel widened during the session. Comparisons account for the different viewport widths and Linear's native top bar; they are not a pixel-diff or a claim of identical full-frame geometry.
+- Inspected the source and rendered implementation together, focusing on the issue header/tabs, grouped row, selected toolbar, composer, property picker, and display menu. Live source has the supplied Todo issue; implementation uses a clearly named local QA issue in Backlog, assigned with High priority, plus a saved draft and Review queue view. The supplied selected-row screenshot is the authority for the selection state.
+
+### Findings and iteration
+
+1. [P2, fixed] The first empty-state illustration used flat colored status glyphs. Replaced it with a generated raster sprite depicting the reference's four stacked status tokens, with active/backlog/all variants. The second generated version removed noisy transparency and broad filled rims. Final evidence: `empty.png`.
+2. [P2, fixed] Shared select sizes overrode compact display heights and truncated “Show matching.” Scoped the selectors to 24 px height and 128 px width. Final evidence: `display.png`; grouping and layout controls remain accessible Base UI selects.
+3. [P2, fixed] Switch thumbs inherited a dark checked color; used a white thumb and compact 24 × 16 control. The composer switch precedes its label, as in the source. Final evidence: `display.png` and composer runtime check.
+4. [P2, fixed] Assigned issues initially retained a generic person icon, and priority used a flag. Added member initials and library signal-strength/urgent icons. Final evidence: `populated.png`, `priority.png`.
+5. [P2, fixed] The external documentation link triggered Base UI's native-button warning. Declared the non-native link semantics explicitly. No new issue-page runtime warnings after correction; an existing TanStack devtools `path.endsWith` error still occurs on full reload and was already present on Inbox before this work.
+6. [P3, accepted] Forge retains its own sidebar, workspace/team icon, Geist typography, and shared menu styling. The generated illustration is a faithful stylistic adaptation, not Linear's original art; the backlog sprite uses solid rather than dotted top rings. These differences do not change the observed workflows.
+
+### Required fidelity surfaces
+
+- Typography: compact 12–13 px controls, 13 px rows, medium headings, and the prominent composer title follow the hierarchy. Existing Forge Geist is retained. Text wrapping was checked at both observed desktop widths.
+- Spacing/layout: 44 px header, pill navigation, compact grouped rows, 750 px composer maximum width, 300 px display panel, lower centered selection bar, and the centered empty-state content match the reference structure. Forge's native/browser shell geometry remains unchanged.
+- Colors/tokens: issue canvas uses #111111 in dark mode, purple creation/selection accents, muted metadata, subtle group surfaces, and readable focus/selection states. Existing shared surfaces and semantic workflow status colors are retained.
+- Image quality: generated PNG status-token artwork is clean at its displayed 96 × 82 region; Hugeicons and the existing status component supply interface icons. Team icons remain the actual workspace configuration.
+- Copy/content: source empty-state copy, tabs, filter category names, display properties, composer actions, inline menus, creation toast, and selection actions are represented. “Ask Forge” replaces “Ask Linear.” Local-only behavior is disclosed in the notification/default/AI helper UI.
+
+### Behavior verified
+
+- Browser: create an issue with description and priority; show creation confirmation; change status inline and observe regrouping; assign an actual member; select the issue and move it to Backlog; verify scope tabs; switch List/Board and reload; apply a nonmatching priority filter and clear it; save a custom view; open details; save an unfinished draft through the close confirmation; reopen it, add an http(s) reference, and resave; use a numbered priority shortcut and verify the selected result.
+- Automated: issue numbering/children/draft consumption, scope transitions, filter all/any semantics, ordering, view serialization, recurrence and month-end handling, corrupt storage/write-failure preservation, and team isolation; existing app navigation regression suite.
+- Validation: focused tests, TypeScript, scoped ESLint, production build including protected Workflow handler verification, and whitespace diff check.
+- Implemented but not separately exercised in the browser: file uploads, board drag/drop, recurring completion, deep sub-issue trees, every advanced filter combination, create-more, and cross-tab notification preferences. Recurrence/storage logic is covered by unit tests. Mobile breakpoints were not separately rendered.
+
+### Data and integration boundaries
+
+Issues, drafts, preferences, and custom views persist per team in versioned browser storage, matching the existing local triage/cycle feature pattern. Team membership and assignment choices use the existing authenticated directory. There is no new server-backed issue sync, external notification delivery, or scheduled recurrence service. A recurring successor is created when its predecessor completes. AI filter is an explicitly labeled local query helper; Ask Forge opens the existing agent composer without submitting a message. Invite and assign opens the existing member settings. Attachments are bounded to five files / 2 MB in local storage.
+
+### Implementation checklist
+
+- [x] Empty and populated scopes; creation/drafts/editing; inline status/priority/assignee controls.
+- [x] Filters and advanced conditions; persistent display options; custom views; details panel.
+- [x] Selection/bulk updates; board grouping/drag handling; links/due dates/recurrence/sub-issues/attachments.
+- [x] Validation failures preserve data; keyboard and semantic control checks; rendered browser proof.
+- [x] Preserve the existing Forge shell and client-side navigation.
+
+final result: passed for the reference-driven local Issues implementation, with the explicit integration and coverage boundaries above.

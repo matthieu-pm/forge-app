@@ -162,7 +162,7 @@ function AgentRouteContent({
       inert={obscured || undefined}
     >
       {pathname !== "/inbox" &&
-        !/^\/teams\/[^/]+\/(triage|overview|documents|loops|members)$/.test(
+        !/^\/teams\/[^/]+\/(triage|overview|documents|loops|members|issues)$/.test(
           pathname
         ) && <AppHeader />}
       <Outlet key={pathname} />
