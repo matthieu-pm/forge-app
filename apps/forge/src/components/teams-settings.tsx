@@ -1,4 +1,3 @@
-
 import * as React from "react"
 import {
   ArrowDown01Icon,
@@ -54,7 +53,9 @@ import {
 import { notifyTeamDirectoryChanged } from "@/lib/team-events"
 import { deleteTeam, leaveTeam, restoreTeam } from "@/lib/team-state"
 
-"use client"
+;
+
+("use client")
 
 type SortDirection = "asc" | "desc"
 type SortField = "name" | "visibility" | "members" | "issues" | "createdAt"
@@ -285,7 +286,7 @@ export function TeamsSettings({
     <>
       <main className="min-h-0 flex-1 overflow-y-auto px-5 py-7 sm:px-8 lg:px-10 lg:py-9">
         <div className="w-full">
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">
+          <h1 className="forge-page-header text-xl font-semibold tracking-tight text-foreground">
             Teams
           </h1>
 

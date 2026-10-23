@@ -345,7 +345,7 @@ export function TeamIssueStatusesSettings({ team }: { team: TeamSummary }) {
 
   return (
     <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-none pb-12">
-      <div className="flex h-12 items-center px-4">
+      <div className="forge-page-back flex h-12 items-center px-4">
         <Link
           to="/settings/teams/$teamSlug"
           params={{ teamSlug: team.slug }}
@@ -366,7 +366,7 @@ export function TeamIssueStatusesSettings({ team }: { team: TeamSummary }) {
         </Link>
       </div>
       <div className="mx-auto w-full max-w-[688px] px-4 pt-5 sm:px-6">
-        <header className="px-3 pb-8">
+        <header className="forge-page-header px-3 pb-8">
           <h1 className="text-2xl font-medium tracking-tight">
             Issue statuses
           </h1>

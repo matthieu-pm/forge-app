@@ -216,7 +216,7 @@ export function UpcomingCycle({
           </Link>
         </div>
       ) : (
-        <div className="flex min-h-0 flex-1 flex-col overflow-auto lg:flex-row">
+        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-auto overscroll-contain lg:grid-cols-[minmax(0,1fr)_auto]">
           {issues.length === 0 ? (
             <div className="flex min-h-96 flex-1 items-center justify-center px-6 pb-16">
               <div className="w-full max-w-[350px]">
@@ -253,7 +253,7 @@ export function UpcomingCycle({
               </div>
             </div>
           ) : (
-            <div className="min-w-0 flex-1 overflow-auto px-5 pb-6">
+            <div className="min-w-0 px-5 pb-6">
               {visible.length === 0 ? (
                 <div className="py-16 text-center text-sm text-muted-foreground">
                   <p>No issues match this filter.</p>
@@ -375,7 +375,7 @@ export function UpcomingCycle({
           {details && (
             <aside
               aria-label="Cycle details"
-              className="mx-5 mb-5 h-fit rounded-xl border border-border/60 bg-muted/30 p-4 lg:w-72 lg:shrink-0"
+              className="mx-5 mb-5 h-fit rounded-xl border border-border/60 bg-muted/30 p-4 lg:sticky lg:top-0 lg:max-h-[calc(100svh-160px)] lg:w-72 lg:self-start lg:overflow-y-auto"
             >
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>{cycleNumber === 1 ? "Upcoming" : "Planned"}</span>

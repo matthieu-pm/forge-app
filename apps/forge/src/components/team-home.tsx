@@ -880,7 +880,7 @@ export function TeamOverview({
             </form>
           )}
         </div>
-        <aside className="pt-3 text-sm">
+        <aside className="pt-3 text-sm md:sticky md:top-7 md:max-h-[calc(100svh-160px)] md:self-start md:overflow-y-auto md:overscroll-y-contain">
           <h2 className="text-muted-foreground">Members</h2>
           <div className="group/members mt-3 flex items-center gap-1">
             <HomeHint label="View members">

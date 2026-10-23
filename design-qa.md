@@ -845,3 +845,20 @@ Aligned all property controls with a shared style, 16px leading icon slots, 8px 
 TypeScript, scoped ESLint, 17 focused issue/navigation tests, and whitespace diff check passed. Desktop behavior was rendered; the stacked mobile layout was not separately exercised for this change.
 
 Final result: passed.
+
+
+## Shared fixed frame and attachment interactions — 2026-10-24
+
+Applied viewport containment to the authenticated app shell and an inner route viewport, retaining the existing macOS titlebar adjustment. Breadcrumbs stay outside route scrolling. Settings page headings and back navigation remain pinned, with opaque coverage over the scroll container padding. Long member and label tables scroll below their controls. Team-home and cycle side panels remain anchored on desktop, with overflow access for shorter viewports.
+
+Moved the issue scrollbar from the narrow article to the full-width pane below the toolbar. Properties stays sticky beside the article. Browser measurements at 1744×1034: the scroll pane and rounded frame both end at x=1736; scrolling to 721px leaves document scroll at zero, the issue header at y=8, and Properties at y=120. The article has visible overflow and no independent scrollbar. At 1280×720, Notifications and General settings scroll internally while their navigation and page headers remain pinned; General was verified again after fixing content showing through the padding above its header.
+
+Extracted attachment interactions into issue-attachments.tsx. Images have selection outlines, pointer and keyboard resize handles, persistent widths, a hover toolbar with shared tooltips, overflow and right-click menus, preview, equal-edge crop, downloads, named format export, image and stable-link clipboard actions, and recoverable deletion with persistent inline Undo. Narrow images use the compact menu. Image comments open below the attachment and support the existing replies, reactions, editing, resolve/reopen, and Activity discussion. Stable IDs preserve attachment/thread relationships across edits, including legacy stored comments.
+
+Browser verification on TES-9: resized and reloaded the image, previewed crop without changing the supplied image, opened both menus, copied its stable URL, confirmed a PNG clipboard payload, and downloaded forge-attachment-export-qa.jpg as an actual 3840×2160 JPEG. Created and replied to an image thread, resolved it, and verified persistence. Deleted and restored the image through persistent Undo after the toast disappeared; original image data, width, and thread association remain intact. Browser clipboard writing and converted downloads were adjusted to preserve the browser user gesture. Screenshot evidence: docs/qa/team-issues/attachment-thread.png, pane-edge-scroll.png, and settings-scroll.png.
+
+Validation: 797 tests across 152 standard suites plus 4 workflow tests across 2 suites passed. TypeScript, scoped ESLint, production build, protected Workflow build verification, and whitespace diff checks passed. Five pre-existing settings lint warnings remain outside the changes. An accidental invocation of Bun's native test runner was stopped because these tests require the configured Vitest environment; the configured test command passed afterward.
+
+Boundaries: data remains in the existing per-team browser store with its attachment size/count limits. Crop trims equal margins. Desktop browser behavior was verified; mobile stacking and the packaged Electron app were not separately exercised. No deployment or commit was made.
+
+Final result: passed for the shared desktop scrolling layout and supplied attachment workflow.

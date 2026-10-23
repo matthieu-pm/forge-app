@@ -203,7 +203,7 @@ export function CodeReviewsSettings({ userId }: { userId: string }) {
   return (
     <main className="min-h-0 flex-1 overflow-y-auto px-5 pt-6 pb-16">
       <div className="mx-auto w-full max-w-[640px]">
-        <header className="mb-8 px-4">
+        <header className="forge-page-header mb-8 px-4">
           <h1 className="text-2xl font-medium tracking-tight">
             Code &amp; reviews
           </h1>

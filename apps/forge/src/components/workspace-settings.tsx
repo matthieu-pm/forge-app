@@ -1,4 +1,3 @@
-
 import * as React from "react"
 import { Delete02Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -31,7 +30,9 @@ import { Input } from "@/components/ui/input"
 import { authClient } from "@/lib/auth-client"
 import { cn } from "@/lib/utils"
 
-"use client"
+;
+
+("use client")
 
 type SaveStatus = "idle" | "saving" | "saved" | "error"
 
@@ -329,10 +330,10 @@ export function WorkspaceSettings({
 
   return (
     <>
-      <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-none px-6 pt-4 pb-4 [scrollbar-gutter:stable]">
+      <main className="min-h-0 flex-1 [scrollbar-gutter:stable] overflow-y-auto overscroll-y-none px-6 pt-4 pb-4">
         <div className="mx-auto w-full max-w-[640px] pb-16">
           <div className="space-y-12">
-            <div className="flex items-center justify-between gap-4 px-3">
+            <div className="forge-page-header flex items-center justify-between gap-4 px-3">
               <h1 className="text-xl font-semibold tracking-tight text-foreground">
                 Workspace
               </h1>

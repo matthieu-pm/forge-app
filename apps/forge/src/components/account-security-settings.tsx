@@ -249,7 +249,7 @@ export function AccountSecuritySettings() {
         className="min-h-0 flex-1 [scrollbar-gutter:stable] overflow-y-auto overscroll-y-none px-4 pt-6 pb-6 sm:px-6 sm:pt-4"
       >
         <div className="mx-auto w-full max-w-[640px] pb-16">
-          <h1 className="mb-9 px-4 text-2xl font-semibold tracking-tight">
+          <h1 className="forge-page-header mb-9 px-4 text-2xl font-semibold tracking-tight">
             Security &amp; access
           </h1>
           <div className="space-y-12">

@@ -121,6 +121,8 @@ const reactionSchema = z.object({
 const commentSchema = z.object({
   id: z.string(),
   parentId: z.string().default(""),
+  attachmentId: z.string().default(""),
+  resolved: z.boolean().default(false),
   author: z.string(),
   body: z.string().max(10000),
   createdAt: z.string().datetime(),

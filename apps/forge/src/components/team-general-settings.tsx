@@ -1,4 +1,3 @@
-
 import * as React from "react"
 import { ArrowLeft01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -25,7 +24,9 @@ import { notifyTeamDirectoryChanged } from "@/lib/team-events"
 import { updateTeam } from "@/lib/team-state"
 import { cn } from "@/lib/utils"
 
-"use client"
+;
+
+("use client")
 
 type TeamSettings = UpdateTeamInput["settings"]
 type SaveStatus = "idle" | "saving" | "saved" | "error"
@@ -181,8 +182,8 @@ export function TeamGeneralSettings({ team }: { team: TeamSummary }) {
     estimationOptions[0]
 
   return (
-    <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-none px-6 pt-2 pb-4 [scrollbar-gutter:stable]">
-      <div className="sticky top-0 z-20 -mx-6 -mt-2 px-6 pt-2 pb-2">
+    <main className="min-h-0 flex-1 [scrollbar-gutter:stable] overflow-y-auto overscroll-y-none px-6 pt-2 pb-4">
+      <div className="forge-page-back -mx-6 -mt-2 flex h-12 shrink-0 items-center px-6">
         <Link
           to="/settings/teams/$teamSlug"
           params={{ teamSlug: team.slug }}
@@ -200,23 +201,22 @@ export function TeamGeneralSettings({ team }: { team: TeamSummary }) {
 
       <div className="mx-auto w-full max-w-[640px] pb-16">
         <div className="mt-8 space-y-12">
+          <div className="forge-page-header -mb-7 flex items-center justify-between gap-4 px-3">
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">
+              General
+            </h1>
+            <span
+              aria-live="polite"
+              className={cn(
+                "text-xs text-muted-foreground transition-opacity",
+                !saveStatusLabel && "opacity-0",
+                saveStatus === "error" && "text-destructive"
+              )}
+            >
+              {saveStatusLabel || "Saved"}
+            </span>
+          </div>
           <section className="space-y-5">
-            <div className="flex items-center justify-between gap-4 px-3">
-              <h1 className="text-xl font-semibold tracking-tight text-foreground">
-                General
-              </h1>
-              <span
-                aria-live="polite"
-                className={cn(
-                  "text-xs text-muted-foreground transition-opacity",
-                  !saveStatusLabel && "opacity-0",
-                  saveStatus === "error" && "text-destructive"
-                )}
-              >
-                {saveStatusLabel || "Saved"}
-              </span>
-            </div>
-
             <SettingsCard>
               <FieldRow label="Icon & Name">
                 <TeamIconPicker

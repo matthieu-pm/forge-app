@@ -1,4 +1,3 @@
-
 import * as React from "react"
 import { toast } from "sonner"
 
@@ -26,7 +25,9 @@ import {
 import { getForgeHost } from "@/host/forge-host"
 import { cn } from "@/lib/utils"
 
-"use client"
+;
+
+("use client")
 
 type ThemePreviewPalette = {
   accent: string
@@ -298,7 +299,7 @@ export function PreferencesSettings() {
     <main className="min-h-0 flex-1 overflow-y-auto px-6 pt-4 pb-4">
       <div className="mx-auto w-full max-w-[640px] pb-16">
         <div className="space-y-10">
-          <h1 className="px-3 text-xl font-semibold tracking-tight text-foreground">
+          <h1 className="forge-page-header px-3 text-xl font-semibold tracking-tight text-foreground">
             Preferences
           </h1>
 

@@ -10,6 +10,7 @@ import {
   issuePropertyControl,
 } from "./issue-controls"
 import { InlineIssueProperties } from "./issue-list"
+import { Attachments, attachmentId } from "./issue-attachments"
 import type { Editor, JSONContent } from "@tiptap/core"
 import type { IssueDraft, TeamIssue } from "@/lib/team-issues"
 import type { TeamStatus } from "@/lib/team-statuses"
@@ -88,7 +89,11 @@ async function readFiles(files: FileList): Promise<Array<Attachment>> {
         new Promise<Attachment>((resolve, reject) => {
           const reader = new FileReader()
           reader.onload = () =>
-            resolve({ name: file.name, data: String(reader.result) })
+            resolve({
+              id: crypto.randomUUID(),
+              name: file.name,
+              data: String(reader.result),
+            })
           reader.onerror = () =>
             reject(new Error("The file could not be read."))
           reader.readAsDataURL(file)
@@ -214,238 +219,17 @@ function Reactions({
     </div>
   )
 }
-function Attachments({
-  items,
-  onChange,
-  onComment,
-}: {
-  items: Array<Attachment>
-  onChange: (items: Array<Attachment>) => void
-  onComment?: (name: string) => void
-}) {
-  const [view, setView] = useState<Attachment>()
-  const [crop, setCrop] = useState<Attachment>()
-  const [inset, setInset] = useState(10)
-  async function applyCrop() {
-    if (!crop) return
-    const source = new Image()
-    source.src = crop.data
-    await source.decode()
-    const canvas = document.createElement("canvas")
-    const margin = inset / 100
-    canvas.width = Math.round(source.naturalWidth * (1 - margin * 2))
-    canvas.height = Math.round(source.naturalHeight * (1 - margin * 2))
-    canvas
-      .getContext("2d")
-      ?.drawImage(
-        source,
-        source.naturalWidth * margin,
-        source.naturalHeight * margin,
-        canvas.width,
-        canvas.height,
-        0,
-        0,
-        canvas.width,
-        canvas.height
-      )
-    onChange(
-      items.map((item) =>
-        item === crop ? { ...item, data: canvas.toDataURL("image/png") } : item
-      )
-    )
-    setCrop(undefined)
-  }
-  return (
-    <>
-      {items.map((item, index) => (
-        <figure
-          key={index}
-          tabIndex={0}
-          className="group/media relative my-5 rounded-lg outline-none focus-within:ring-2 focus-within:ring-[#5e6ad2] hover:ring-1 hover:ring-border"
-        >
-          {item.data.startsWith("data:image/") ? (
-            <img
-              src={item.data}
-              alt={item.name}
-              className="mx-auto max-h-[430px] max-w-full rounded-lg object-contain"
-            />
-          ) : (
-            <a
-              href={item.data}
-              download={item.name}
-              className="flex items-center gap-2 rounded-lg bg-muted p-3 text-sm"
-            >
-              <IssueIcon name="file" />
-              {item.name}
-            </a>
-          )}
-          <div className="absolute top-2 right-2 flex rounded-full border border-border bg-popover p-1 opacity-0 group-focus-within/media:opacity-100 group-hover/media:opacity-100">
-            {item.data.startsWith("data:image/") && (
-              <>
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  aria-label={`View ${item.name}`}
-                  title="View image"
-                  onClick={() => setView(item)}
-                >
-                  <IssueIcon name="expand" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  aria-label={`Crop ${item.name}`}
-                  title="Crop image"
-                  onClick={() => {
-                    setCrop(item)
-                    setInset(10)
-                  }}
-                >
-                  <IssueIcon name="settings" />
-                </Button>
-              </>
-            )}
-            <a
-              href={item.data}
-              download={item.name}
-              aria-label={`Download ${item.name}`}
-              title="Download"
-              className="flex size-6 items-center justify-center"
-            >
-              <IssueIcon name="down" />
-            </a>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              aria-label={`Copy ${item.name}`}
-              title="Copy file"
-              onClick={() => {
-                if (item.data.startsWith("data:image/")) {
-                  void fetch(item.data)
-                    .then((r) => r.blob())
-                    .then(async (blob) => {
-                      const image = new Image()
-                      image.src = URL.createObjectURL(blob)
-                      await image.decode()
-                      const canvas = document.createElement("canvas")
-                      canvas.width = image.width
-                      canvas.height = image.height
-                      canvas.getContext("2d")?.drawImage(image, 0, 0)
-                      URL.revokeObjectURL(image.src)
-                      canvas.toBlob((png) => {
-                        if (png)
-                          void navigator.clipboard
-                            .write([new ClipboardItem({ "image/png": png })])
-                            .then(
-                              () => toast.success("Image copied"),
-                              () => toast.error("Image copy unavailable")
-                            )
-                      })
-                    })
-                    .catch(() => toast.error("Image copy unavailable"))
-                } else void copy(item.data)
-              }}
-            >
-              <IssueIcon name="copy" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              aria-label={`Copy link to ${item.name}`}
-              onClick={() =>
-                void copy(`${location.href.split("#")[0]}#attachment-${index}`)
-              }
-            >
-              <IssueIcon name="link" />
-            </Button>
-            {onComment && (
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                aria-label={`Comment on ${item.name}`}
-                onClick={() => onComment(item.name)}
-              >
-                <IssueIcon name="add" />
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              aria-label={`Remove ${item.name}`}
-              onClick={() => onChange(items.filter((_, i) => i !== index))}
-            >
-              <IssueIcon name="close" />
-            </Button>
-          </div>
-          <span id={`attachment-${index}`} />
-        </figure>
-      ))}
-      <Dialog
-        open={!!view}
-        onOpenChange={(open) => !open && setView(undefined)}
-      >
-        <DialogContent className="max-w-4xl">
-          <DialogTitle>{view?.name}</DialogTitle>
-          <DialogDescription>Image preview</DialogDescription>
-          <img
-            src={view?.data}
-            alt={view?.name}
-            className="max-h-[70vh] w-full object-contain"
-          />
-        </DialogContent>
-      </Dialog>
-      <Dialog
-        open={!!crop}
-        onOpenChange={(open) => !open && setCrop(undefined)}
-      >
-        <DialogContent>
-          <DialogTitle>Crop image</DialogTitle>
-          <DialogDescription>
-            Trim equally from each edge. The preview shows the retained area.
-          </DialogDescription>
-          <div className="relative mx-auto max-h-80 overflow-hidden">
-            <img
-              src={crop?.data}
-              alt="Crop preview"
-              className="max-h-80 object-contain"
-              style={{ clipPath: `inset(${inset}%)` }}
-            />
-          </div>
-          <label className="text-sm">
-            Trim {inset}%
-            <input
-              aria-label="Crop inset"
-              type="range"
-              min="0"
-              max="40"
-              value={inset}
-              onChange={(e) => setInset(Number(e.target.value))}
-              className="w-full"
-            />
-          </label>
-          <Button
-            onClick={() =>
-              void applyCrop().catch(() =>
-                toast.error("Image could not be cropped")
-              )
-            }
-          >
-            Apply crop
-          </Button>
-        </DialogContent>
-      </Dialog>
-    </>
-  )
-}
 function CommentInput({
   onSubmit,
   placeholder = "Leave a comment…",
   avatar,
   initialBody = "",
+  autoFocus = false,
 }: {
   onSubmit: (body: string, files: Array<Attachment>) => boolean
   placeholder?: string
   initialBody?: string
+  autoFocus?: boolean
   avatar?: { name: string; image?: string | null }
 }) {
   const [body, setBody] = useState(initialBody)
@@ -477,7 +261,7 @@ function CommentInput({
       <textarea
         aria-label={placeholder === "Leave a reply…" ? "Reply" : "Comment"}
         placeholder={placeholder}
-        autoFocus={Boolean(initialBody)}
+        autoFocus={autoFocus || Boolean(initialBody)}
         value={body}
         onChange={(e) => setBody(e.target.value)}
         onKeyDown={(e) => {
@@ -581,8 +365,7 @@ export function IssueDetail({
     assignee: true,
   })
   const [selected, setSelected] = useState<Array<string>>([])
-  const [commentSeed, setCommentSeed] = useState(0)
-  const [commentContext, setCommentContext] = useState("")
+  const [activeAttachment, setActiveAttachment] = useState("")
   const [editing, setEditing] = useState<string>()
   const [editText, setEditText] = useState("")
   const [tools, setTools] = useState(false)
@@ -703,7 +486,8 @@ export function IssueDetail({
   function addComment(
     body: string,
     attachments: Array<Attachment>,
-    parentId = ""
+    parentId = "",
+    attachmentRef = ""
   ) {
     return patch({
       comments: [
@@ -711,6 +495,8 @@ export function IssueDetail({
         {
           id: crypto.randomUUID(),
           parentId,
+          attachmentId: attachmentRef,
+          resolved: false,
           author: userId,
           body,
           createdAt: new Date().toISOString(),
@@ -731,7 +517,19 @@ export function IssueDetail({
   }
   async function attach(files: FileList) {
     try {
-      const next = [...(issue.attachments ?? []), ...(await readFiles(files))]
+      const uploaded = (await readFiles(files)).map((item) => {
+        const originalId = attachmentId({ ...item, id: undefined })
+        const orphanedThread = issue.comments.some(
+          (comment) => comment.attachmentId === originalId
+        )
+        const alreadyAttached = issue.attachments?.some(
+          (asset) => attachmentId(asset) === originalId
+        )
+        return orphanedThread && !alreadyAttached
+          ? { ...item, id: originalId }
+          : item
+      })
+      const next = [...(issue.attachments ?? []), ...uploaded]
       if (next.length > 5)
         throw new Error("An issue can contain up to 5 files.")
       patch({ attachments: next })
@@ -757,7 +555,7 @@ export function IssueDetail({
       )
     }
   }
-  function renderComment(comment: Comment, reply = false) {
+  function renderComment(comment: Comment, reply = false, imageThread = false) {
     const author =
       comment.author === userId
         ? user
@@ -768,7 +566,7 @@ export function IssueDetail({
     return (
       <div
         key={comment.id}
-        id={`comment-${comment.id}`}
+        id={`${imageThread ? "image-thread-" : ""}comment-${comment.id}`}
         className={cn(
           "rounded-lg border border-border/50 bg-muted/40",
           reply && "ml-8 border-0 bg-transparent"
@@ -789,6 +587,18 @@ export function IssueDetail({
               {comment.edited ? " · edited" : ""}
             </time>
             <div className="ml-auto flex items-center">
+              {comment.attachmentId && !reply && (
+                <ActionIconButton
+                  size="icon-xs"
+                  label={comment.resolved ? "Reopen thread" : "Resolve thread"}
+                  onClick={() => {
+                    changeComment(comment, { resolved: !comment.resolved })
+                    if (!comment.resolved) setActiveAttachment("")
+                  }}
+                >
+                  <IssueIcon name="check" />
+                </ActionIconButton>
+              )}
               <ReactionPicker
                 label="React to comment"
                 onChoose={(emoji) => {
@@ -854,6 +664,30 @@ export function IssueDetail({
               </DropdownMenu>
             </div>
           </div>
+          {comment.attachmentId && !reply && !imageThread && (
+            <button
+              className="mb-2 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+              onClick={() => {
+                const attachment = document.getElementById(
+                  `attachment-${comment.attachmentId}`
+                )
+                if (!attachment) {
+                  toast.info(
+                    "This attachment was removed. You can still reply here."
+                  )
+                  return
+                }
+                setActiveAttachment(comment.attachmentId)
+                attachment.scrollIntoView({
+                  block: "center",
+                  behavior: "smooth",
+                })
+              }}
+            >
+              <IssueIcon name="comment" />
+              {comment.resolved ? "Resolved thread" : "Comment on attachment"}
+            </button>
+          )}
           {editing === comment.id ? (
             <div>
               <textarea
@@ -906,7 +740,7 @@ export function IssueDetail({
           <>
             {issue.comments
               .filter((item) => item.parentId === comment.id)
-              .map((item) => renderComment(item, true))}
+              .map((item) => renderComment(item, true, imageThread))}
             <div className="border-t border-border/40">
               <CommentInput
                 placeholder="Leave a reply…"
@@ -1064,615 +898,667 @@ export function IssueDetail({
             </DropdownMenu>
           </div>
         </div>
-        <div className="mx-auto grid min-h-0 w-full max-w-[1100px] flex-1 grid-cols-1 gap-12 overflow-y-auto overscroll-y-contain px-6 pt-6 md:grid-cols-[minmax(0,1fr)_210px] md:grid-rows-1 md:overflow-hidden md:px-12 xl:grid-cols-[minmax(0,1fr)_210px] xl:gap-16">
-          <article
-            aria-label="Issue content"
-            className="min-w-0 pb-16 md:min-h-0 md:overflow-y-auto md:overscroll-y-contain"
-          >
-            <input
-              aria-label="Issue title"
-              value={title}
-              maxLength={240}
-              onChange={(e) => setTitle(e.target.value)}
-              onBlur={() => {
-                if (title.trim() && title !== issue.title) {
-                  if (!patch({ title })) setTitle(issue.title)
-                } else if (!title.trim()) setTitle(issue.title)
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") e.currentTarget.blur()
-                if (e.key === "Escape") {
-                  setTitle(issue.title)
-                  e.currentTarget.blur()
-                }
-              }}
-              className="mb-5 w-full bg-transparent text-2xl font-semibold outline-none"
-            />
-            <div
-              onBlur={(e) => {
-                if (!e.currentTarget.contains(e.relatedTarget)) persistDoc()
-              }}
-            >
-              <RichEditor
-                value={doc}
-                onChange={(next) => {
-                  descriptionDirty.current = true
-                  setDoc(next)
-                }}
-                editorRef={editor}
-                label="Issue description"
-                placeholder="Add description…"
-                className="min-h-14 border-0 bg-transparent p-0"
-              />
-            </div>
-            <Attachments
-              items={issue.attachments ?? []}
-              onChange={(attachments) => patch({ attachments })}
-              onComment={(name) => {
-                setCommentSeed((value) => value + 1)
-                setCommentContext(`On ${name}: `)
-                document
-                  .querySelector<HTMLTextAreaElement>(
-                    'textarea[aria-label="Comment"]'
-                  )
-                  ?.focus()
-              }}
-            />
-            {issue.links.map((link, index) => (
-              <a
-                key={index}
-                href={link.url}
-                target="_blank"
-                rel="noreferrer"
-                className="my-3 flex items-center gap-2 text-sm text-primary"
-              >
-                <IssueIcon name="link" />
-                {link.title}
-              </a>
-            ))}
-            <div className="mt-5 mb-4 flex items-center gap-1">
-              <Reactions
-                items={issue.reactions}
-                user={userId}
-                onChange={(reactions) => patch({ reactions })}
-              />
-              <ActionIconButton
-                size="icon-sm"
-                label="Attach images, files, or videos"
-                onClick={() => file.current?.click()}
-              >
-                <IssueIcon name="attach" />
-              </ActionIconButton>
+        <div
+          aria-label="Issue scroll area"
+          className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain"
+        >
+          <div className="mx-auto grid w-full max-w-[1100px] grid-cols-1 gap-12 px-6 pt-6 pb-16 md:grid-cols-[minmax(0,1fr)_210px] md:px-12 xl:grid-cols-[minmax(0,1fr)_210px] xl:gap-16">
+            <article aria-label="Issue content" className="min-w-0">
               <input
-                ref={file}
-                hidden
-                type="file"
-                multiple
-                onChange={(e) => {
-                  if (e.target.files) void attach(e.target.files)
-                  e.target.value = ""
+                aria-label="Issue title"
+                value={title}
+                maxLength={240}
+                onChange={(e) => setTitle(e.target.value)}
+                onBlur={() => {
+                  if (title.trim() && title !== issue.title) {
+                    if (!patch({ title })) setTitle(issue.title)
+                  } else if (!title.trim()) setTitle(issue.title)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") e.currentTarget.blur()
+                  if (e.key === "Escape") {
+                    setTitle(issue.title)
+                    e.currentTarget.blur()
+                  }
+                }}
+                className="mb-5 w-full bg-transparent text-2xl font-semibold outline-none"
+              />
+              <div
+                onBlur={(e) => {
+                  if (!e.currentTarget.contains(e.relatedTarget)) persistDoc()
+                }}
+              >
+                <RichEditor
+                  value={doc}
+                  onChange={(next) => {
+                    descriptionDirty.current = true
+                    setDoc(next)
+                  }}
+                  editorRef={editor}
+                  label="Issue description"
+                  placeholder="Add description…"
+                  className="min-h-14 border-0 bg-transparent p-0"
+                />
+              </div>
+              <Attachments
+                items={issue.attachments ?? []}
+                onChange={(attachments) => patch({ attachments })}
+                threadId={activeAttachment}
+                onThreadChange={setActiveAttachment}
+                hasThread={(assetId) =>
+                  issue.comments.some(
+                    (comment) =>
+                      comment.attachmentId === assetId && !comment.deleted
+                  )
+                }
+                renderThread={(item, assetId) => {
+                  const roots = issue.comments.filter(
+                    (comment) =>
+                      comment.attachmentId === assetId && !comment.parentId
+                  )
+                  return (
+                    <>
+                      <div className="flex items-center gap-2 border-b border-border/50 px-3 py-2 text-xs text-muted-foreground">
+                        <IssueIcon name="comment" />
+                        <span className="min-w-0 flex-1 truncate">
+                          {item.name}
+                        </span>
+                        <ActionIconButton
+                          size="icon-xs"
+                          label="Close attachment thread"
+                          onClick={() => setActiveAttachment("")}
+                        >
+                          <IssueIcon name="close" />
+                        </ActionIconButton>
+                      </div>
+                      {roots.map((comment) =>
+                        renderComment(comment, false, true)
+                      )}
+                      {!roots.length && (
+                        <CommentInput
+                          autoFocus
+                          avatar={user ?? undefined}
+                          onSubmit={(body, files) =>
+                            addComment(body, files, "", assetId)
+                          }
+                        />
+                      )}
+                    </>
+                  )
                 }}
               />
-            </div>
-            <section aria-label="Sub-issues" className="mb-5">
-              {children.length > 0 ? (
-                <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
-                  <button
-                    className="flex items-center gap-1"
-                    aria-label={
-                      subCollapsed ? "Expand sub-issues" : "Collapse sub-issues"
-                    }
-                    onClick={() => setSubCollapsed(!subCollapsed)}
-                  >
-                    <IssueIcon
-                      name="down"
-                      className={subCollapsed ? "-rotate-90" : ""}
-                    />
-                    Sub-issues
-                  </button>
-                  <span className="ml-2">
-                    {completed}/{children.length}
-                  </span>
-                  <div className="ml-auto flex">
-                    <Popover>
-                      <PopoverTrigger
-                        render={
-                          <ActionIconButton
-                            size="icon-sm"
-                            label="Sub-issue display options"
-                          />
-                        }
-                      >
-                        <IssueIcon name="settings" />
-                      </PopoverTrigger>
-                      <PopoverContent className="w-48 p-2">
-                        {(["id", "priority", "assignee"] as const).map(
-                          (key) => (
-                            <label
-                              key={key}
-                              className="flex items-center gap-2 p-2 text-xs"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={childDisplay[key]}
-                                onChange={(e) =>
-                                  setChildDisplay({
-                                    ...childDisplay,
-                                    [key]: e.target.checked,
-                                  })
-                                }
-                              />
-                              {key}
-                            </label>
-                          )
-                        )}
-                      </PopoverContent>
-                    </Popover>
-                    <ActionIconButton
-                      size="icon-sm"
-                      label="Create new sub-issue"
-                      onClick={() => setSubOpen(true)}
-                    >
-                      <IssueIcon name="add" />
-                    </ActionIconButton>
-                  </div>
-                </div>
-              ) : (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="px-1 text-xs text-muted-foreground"
-                  onClick={() => setSubOpen(true)}
+              {issue.links.map((link, index) => (
+                <a
+                  key={index}
+                  href={link.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="my-3 flex items-center gap-2 text-sm text-primary"
                 >
-                  <IssueIcon name="add" />
-                  Add sub-issues
-                </Button>
-              )}
-              {!subCollapsed &&
-                children.map((child) => (
-                  <div
-                    key={child.id}
-                    className="group flex min-h-9 items-center gap-2 rounded px-2 text-[13px] hover:bg-muted/60"
-                  >
-                    <input
-                      type="checkbox"
-                      aria-label={`Select sub-issue ${child.title}`}
-                      checked={selected.includes(child.id)}
-                      onChange={() =>
-                        setSelected(
-                          selected.includes(child.id)
-                            ? selected.filter((v) => v !== child.id)
-                            : [...selected, child.id]
-                        )
-                      }
-                      className="size-3.5 opacity-0 group-hover:opacity-100 checked:opacity-100 focus:opacity-100"
-                    />
-                    {childDisplay.priority && (
-                      <InlineIssueProperties
-                        property="priority"
-                        compact
-                        issue={child}
-                        statuses={statuses}
-                        members={members}
-                        onUpdate={onUpdate}
-                      />
-                    )}
-                    <InlineIssueProperties
-                      property="status"
-                      compact
-                      issue={child}
-                      statuses={statuses}
-                      members={members}
-                      onUpdate={onUpdate}
-                    />
-                    {childDisplay.id && (
-                      <span className="text-xs text-muted-foreground">
-                        {team.identifier}-{child.number}
-                      </span>
-                    )}
+                  <IssueIcon name="link" />
+                  {link.title}
+                </a>
+              ))}
+              <div className="mt-5 mb-4 flex items-center gap-1">
+                <Reactions
+                  items={issue.reactions}
+                  user={userId}
+                  onChange={(reactions) => patch({ reactions })}
+                />
+                <ActionIconButton
+                  size="icon-sm"
+                  label="Attach images, files, or videos"
+                  onClick={() => file.current?.click()}
+                >
+                  <IssueIcon name="attach" />
+                </ActionIconButton>
+                <input
+                  ref={file}
+                  hidden
+                  type="file"
+                  multiple
+                  onChange={(e) => {
+                    if (e.target.files) void attach(e.target.files)
+                    e.target.value = ""
+                  }}
+                />
+              </div>
+              <section aria-label="Sub-issues" className="mb-5">
+                {children.length > 0 ? (
+                  <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
                     <button
-                      onClick={() => onOpen(child)}
-                      className="min-w-0 flex-1 truncate text-left"
+                      className="flex items-center gap-1"
+                      aria-label={
+                        subCollapsed
+                          ? "Expand sub-issues"
+                          : "Collapse sub-issues"
+                      }
+                      onClick={() => setSubCollapsed(!subCollapsed)}
                     >
-                      {child.title}
-                    </button>
-                    {childDisplay.assignee && (
-                      <InlineIssueProperties
-                        property="assignee"
-                        compact
-                        issue={child}
-                        statuses={statuses}
-                        members={members}
-                        onUpdate={onUpdate}
+                      <IssueIcon
+                        name="down"
+                        className={subCollapsed ? "-rotate-90" : ""}
                       />
-                    )}
-                  </div>
-                ))}
-              {selected.length > 0 && (
-                <div className="flex items-center gap-2 p-2 text-xs">
-                  <span>{selected.length} selected</span>
-                  <Button
-                    variant="secondary"
-                    onClick={() => {
-                      for (const child of children.filter((c) =>
-                        selected.includes(c.id)
-                      ))
-                        onUpdate(child, { parentId: "" })
-                      setSelected([])
-                    }}
-                  >
-                    Remove from parent
-                  </Button>
-                  <Button variant="ghost" onClick={() => setSelected([])}>
-                    Clear
-                  </Button>
-                </div>
-              )}
-              {subOpen && (
-                <div className="mt-3 rounded-lg border border-border bg-muted/40 p-3">
-                  <div className="flex items-center gap-2">
-                    <IssuePicker
-                      label="Sub-issue status"
-                      value={childDraft.status}
-                      options={statuses.map((s) => ({
-                        value: s.id,
-                        label: s.name,
-                        icon: <StatusMark id={s.id} statuses={statuses} />,
-                      }))}
-                      onChange={(status) =>
-                        setChildDraft({ ...childDraft, status })
-                      }
-                    >
-                      <StatusMark id={childDraft.status} statuses={statuses} />
-                    </IssuePicker>
-                    <input
-                      autoFocus
-                      aria-label="Sub-issue title"
-                      placeholder="Issue title"
-                      value={childDraft.title}
-                      onChange={(e) =>
-                        setChildDraft({ ...childDraft, title: e.target.value })
-                      }
-                      className="w-full bg-transparent text-sm outline-none"
-                    />
-                  </div>
-                  <textarea
-                    aria-label="Sub-issue description"
-                    placeholder="Add description…"
-                    value={childDraft.description}
-                    onChange={(e) =>
-                      setChildDraft({
-                        ...childDraft,
-                        description: e.target.value,
-                      })
-                    }
-                    className="mt-3 min-h-12 w-full resize-y bg-transparent text-sm outline-none"
-                  />
-                  {/bug|test|error/i.test(childDraft.title) && (
-                    <button
-                      className="mb-2 text-xs text-muted-foreground"
-                      onClick={() =>
-                        setChildDraft({ ...childDraft, labels: "Bug" })
-                      }
-                    >
-                      Quick suggestions · Bug
+                      Sub-issues
                     </button>
-                  )}
-                  <div className="flex flex-wrap items-center gap-1">
-                    <span className="mr-1 text-xs">{team.identifier}</span>
-                    <IssuePicker
-                      label="Sub-issue priority"
-                      value={childDraft.priority}
-                      options={[
-                        "No priority",
-                        "Urgent",
-                        "High",
-                        "Medium",
-                        "Low",
-                      ].map((value) => ({ value, label: value }))}
-                      onChange={(priority) =>
-                        setChildDraft({
-                          ...childDraft,
-                          priority: priority as IssueDraft["priority"],
-                        })
-                      }
-                    >
-                      <PriorityMark priority={childDraft.priority} />
-                      Priority
-                    </IssuePicker>
-                    <IssuePicker
-                      label="Sub-issue assignee"
-                      value={childDraft.assignee ?? ""}
-                      options={[
-                        { value: "", label: "No assignee" },
-                        ...members.map((m) => ({
-                          value: m.id,
-                          label: m.name,
-                          icon: <AssigneeMark name={m.name} image={m.image} />,
-                        })),
-                      ]}
-                      onChange={(assignee) =>
-                        setChildDraft({ ...childDraft, assignee })
-                      }
-                    >
-                      <IssueIcon name="person" />
-                      Assignee
-                    </IssuePicker>
-                    <IssuePicker
-                      label="Sub-issue labels"
-                      multiple
-                      value={childDraft.labels ?? ""}
-                      options={labels.map((value) => ({ value, label: value }))}
-                      onChange={(value) =>
-                        setChildDraft({ ...childDraft, labels: value })
-                      }
-                    >
-                      <IssueIcon name="label" />
-                      Labels
-                    </IssuePicker>
-                    <Popover>
-                      <PopoverTrigger
-                        render={
-                          <ActionIconButton
-                            size="icon-xs"
-                            label="More sub-issue actions"
-                          />
-                        }
+                    <span className="ml-2">
+                      {completed}/{children.length}
+                    </span>
+                    <div className="ml-auto flex">
+                      <Popover>
+                        <PopoverTrigger
+                          render={
+                            <ActionIconButton
+                              size="icon-sm"
+                              label="Sub-issue display options"
+                            />
+                          }
+                        >
+                          <IssueIcon name="settings" />
+                        </PopoverTrigger>
+                        <PopoverContent className="w-48 p-2">
+                          {(["id", "priority", "assignee"] as const).map(
+                            (key) => (
+                              <label
+                                key={key}
+                                className="flex items-center gap-2 p-2 text-xs"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={childDisplay[key]}
+                                  onChange={(e) =>
+                                    setChildDisplay({
+                                      ...childDisplay,
+                                      [key]: e.target.checked,
+                                    })
+                                  }
+                                />
+                                {key}
+                              </label>
+                            )
+                          )}
+                        </PopoverContent>
+                      </Popover>
+                      <ActionIconButton
+                        size="icon-sm"
+                        label="Create new sub-issue"
+                        onClick={() => setSubOpen(true)}
                       >
-                        <IssueIcon name="more" />
-                      </PopoverTrigger>
-                      <PopoverContent>
-                        <label className="text-xs">
-                          Due date
-                          <input
-                            type="date"
-                            aria-label="Sub-issue due date"
-                            value={childDraft.dueDate}
-                            onChange={(e) =>
-                              setChildDraft({
-                                ...childDraft,
-                                dueDate: e.target.value,
-                              })
-                            }
-                            className="block p-2"
-                          />
-                        </label>
-                      </PopoverContent>
-                    </Popover>
-                    <label
-                      className="flex size-6 cursor-pointer items-center justify-center"
-                      title="Attach sub-issue files"
+                        <IssueIcon name="add" />
+                      </ActionIconButton>
+                    </div>
+                  </div>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="px-1 text-xs text-muted-foreground"
+                    onClick={() => setSubOpen(true)}
+                  >
+                    <IssueIcon name="add" />
+                    Add sub-issues
+                  </Button>
+                )}
+                {!subCollapsed &&
+                  children.map((child) => (
+                    <div
+                      key={child.id}
+                      className="group flex min-h-9 items-center gap-2 rounded px-2 text-[13px] hover:bg-muted/60"
                     >
-                      <IssueIcon name="attach" />
                       <input
-                        hidden
-                        type="file"
-                        multiple
-                        aria-label="Attach sub-issue files"
-                        onChange={(e) => {
-                          if (e.target.files)
-                            void readFiles(e.target.files)
-                              .then((attachments) =>
-                                setChildDraft({ ...childDraft, attachments })
-                              )
-                              .catch((error) => toast.error(error.message))
-                        }}
+                        type="checkbox"
+                        aria-label={`Select sub-issue ${child.title}`}
+                        checked={selected.includes(child.id)}
+                        onChange={() =>
+                          setSelected(
+                            selected.includes(child.id)
+                              ? selected.filter((v) => v !== child.id)
+                              : [...selected, child.id]
+                          )
+                        }
+                        className="size-3.5 opacity-0 group-hover:opacity-100 checked:opacity-100 focus:opacity-100"
                       />
-                    </label>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="ml-auto text-xs"
-                      onClick={() => setSubOpen(false)}
-                    >
-                      Cancel
-                    </Button>
+                      {childDisplay.priority && (
+                        <InlineIssueProperties
+                          property="priority"
+                          compact
+                          issue={child}
+                          statuses={statuses}
+                          members={members}
+                          onUpdate={onUpdate}
+                        />
+                      )}
+                      <InlineIssueProperties
+                        property="status"
+                        compact
+                        issue={child}
+                        statuses={statuses}
+                        members={members}
+                        onUpdate={onUpdate}
+                      />
+                      {childDisplay.id && (
+                        <span className="text-xs text-muted-foreground">
+                          {team.identifier}-{child.number}
+                        </span>
+                      )}
+                      <button
+                        onClick={() => onOpen(child)}
+                        className="min-w-0 flex-1 truncate text-left"
+                      >
+                        {child.title}
+                      </button>
+                      {childDisplay.assignee && (
+                        <InlineIssueProperties
+                          property="assignee"
+                          compact
+                          issue={child}
+                          statuses={statuses}
+                          members={members}
+                          onUpdate={onUpdate}
+                        />
+                      )}
+                    </div>
+                  ))}
+                {selected.length > 0 && (
+                  <div className="flex items-center gap-2 p-2 text-xs">
+                    <span>{selected.length} selected</span>
                     <Button
                       variant="secondary"
-                      size="sm"
-                      className="text-xs"
-                      disabled={!childDraft.title.trim()}
-                      onClick={createChild}
+                      onClick={() => {
+                        for (const child of children.filter((c) =>
+                          selected.includes(c.id)
+                        ))
+                          onUpdate(child, { parentId: "" })
+                        setSelected([])
+                      }}
                     >
-                      Create
+                      Remove from parent
+                    </Button>
+                    <Button variant="ghost" onClick={() => setSelected([])}>
+                      Clear
                     </Button>
                   </div>
-                </div>
-              )}
-            </section>
-            <section
-              aria-label="Activity"
-              className="border-t border-border/50 pt-5"
-            >
-              <div className="mb-6 flex items-center gap-3">
-                <h2 className="text-sm font-medium">Activity</h2>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="ml-auto px-1 text-xs text-muted-foreground"
-                  aria-label={
-                    subscribers.includes(userId)
-                      ? "Unsubscribe from issue"
-                      : "Subscribe to issue"
-                  }
-                  onClick={() =>
-                    patch({
-                      subscribers: subscribers.includes(userId)
-                        ? subscribers.filter((v) => v !== userId).join(", ")
-                        : [...subscribers, userId].join(", "),
-                    })
-                  }
-                >
-                  {subscribers.includes(userId) ? "Unsubscribe" : "Subscribe"}
-                </Button>
-                <IssuePicker
-                  label="Change subscribers"
-                  multiple
-                  value={issue.subscribers}
-                  options={members.map((m) => ({
-                    value: m.id,
-                    label: m.name,
-                    icon: <AssigneeMark name={m.name} image={m.image} />,
-                  }))}
-                  onChange={(value) => patch({ subscribers: value })}
-                  className="bg-transparent p-0"
-                >
-                  {subscribers.length ? (
-                    subscribers.slice(0, 3).map((subscriber) => {
-                      const member = members.find((m) => m.id === subscriber)
-                      return (
-                        <AssigneeMark
-                          key={subscriber}
-                          name={member?.name ?? subscriber}
-                          image={member?.image}
-                        />
-                      )
-                    })
-                  ) : (
-                    <IssueIcon name="person" />
-                  )}
-                </IssuePicker>
-              </div>
-              <div className="mb-6 flex items-center gap-2 text-xs text-muted-foreground">
-                <AssigneeMark
-                  name={creator?.name ?? issue.creator}
-                  image={creator?.image}
-                />
-                {creator?.name ?? issue.creator} created the issue ·{" "}
-                <time title={new Date(issue.createdAt).toLocaleString()}>
-                  {ago(issue.createdAt)}
-                </time>
-              </div>
-              {issue.activity.map((event) => (
-                <p
-                  key={event.id}
-                  className="mb-3 text-xs text-muted-foreground"
-                >
-                  {event.author === "You"
-                    ? (user?.name ?? "You")
-                    : (members.find((m) => m.id === event.author)?.name ??
-                      event.author)}{" "}
-                  {event.text} · {ago(event.createdAt)}
-                </p>
-              ))}
-              <div className="space-y-4">
-                {issue.comments
-                  .filter((comment) => !comment.parentId)
-                  .map((comment) => renderComment(comment))}
-                <CommentInput
-                  key={commentSeed}
-                  initialBody={commentContext}
-                  onSubmit={addComment}
-                />
-              </div>
-            </section>
-          </article>
-          <aside
-            aria-label="Properties"
-            className="pb-8 text-[13px] md:min-h-0 md:overflow-y-auto md:overscroll-y-contain"
-          >
-            <h2 className="mb-3 px-2 text-xs text-muted-foreground">
-              Properties
-            </h2>
-            <div className="flex flex-col items-start gap-1">
-              {(["status", "priority", "assignee"] as const).map((property) => (
-                <div key={property} className="contents">
-                  <InlineIssueProperties
-                    emptyLabels
-                    property={property}
-                    issue={issue}
-                    statuses={statuses}
-                    members={members}
-                    onUpdate={onUpdate}
-                  />
-                  {property === "status" && (
-                    <div className="flex items-center gap-1">
+                )}
+                {subOpen && (
+                  <div className="mt-3 rounded-lg border border-border bg-muted/40 p-3">
+                    <div className="flex items-center gap-2">
                       <IssuePicker
-                        label="Move to a different team"
-                        value={team.id}
-                        options={(directory?.teams ?? [team]).map((item) => ({
-                          value: item.id,
-                          label: item.name,
+                        label="Sub-issue status"
+                        value={childDraft.status}
+                        options={statuses.map((s) => ({
+                          value: s.id,
+                          label: s.name,
+                          icon: <StatusMark id={s.id} statuses={statuses} />,
                         }))}
-                        onChange={(targetId) => {
-                          const destination = directory?.teams.find(
-                            (item) => item.id === targetId
-                          )
-                          if (!destination || targetId === team.id) return
-                          try {
-                            moveTeamIssue(team.id, targetId, issue.id)
-                            void navigate({
-                              to: "/teams/$teamSlug/issues",
-                              params: { teamSlug: destination.slug },
-                              search: { view: "all", issue: issue.id },
-                            })
-                          } catch (error) {
-                            toast.error(
-                              error instanceof Error
-                                ? error.message
-                                : "Issue could not be moved"
-                            )
-                          }
-                        }}
-                        className={issuePropertyControl}
+                        onChange={(status) =>
+                          setChildDraft({ ...childDraft, status })
+                        }
                       >
-                        <TeamSidebarIcon icon={team.icon} name={team.name} />
-                        <span className="truncate">{team.name}</span>
+                        <StatusMark
+                          id={childDraft.status}
+                          statuses={statuses}
+                        />
                       </IssuePicker>
-                      <Link
-                        to="/teams/$teamSlug/overview"
-                        params={{ teamSlug: team.slug }}
-                        aria-label="Open team overview"
-                        className="flex size-7 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                      >
-                        <IssueIcon name="expand" />
-                      </Link>
+                      <input
+                        autoFocus
+                        aria-label="Sub-issue title"
+                        placeholder="Issue title"
+                        value={childDraft.title}
+                        onChange={(e) =>
+                          setChildDraft({
+                            ...childDraft,
+                            title: e.target.value,
+                          })
+                        }
+                        className="w-full bg-transparent text-sm outline-none"
+                      />
                     </div>
-                  )}
+                    <textarea
+                      aria-label="Sub-issue description"
+                      placeholder="Add description…"
+                      value={childDraft.description}
+                      onChange={(e) =>
+                        setChildDraft({
+                          ...childDraft,
+                          description: e.target.value,
+                        })
+                      }
+                      className="mt-3 min-h-12 w-full resize-y bg-transparent text-sm outline-none"
+                    />
+                    {/bug|test|error/i.test(childDraft.title) && (
+                      <button
+                        className="mb-2 text-xs text-muted-foreground"
+                        onClick={() =>
+                          setChildDraft({ ...childDraft, labels: "Bug" })
+                        }
+                      >
+                        Quick suggestions · Bug
+                      </button>
+                    )}
+                    <div className="flex flex-wrap items-center gap-1">
+                      <span className="mr-1 text-xs">{team.identifier}</span>
+                      <IssuePicker
+                        label="Sub-issue priority"
+                        value={childDraft.priority}
+                        options={[
+                          "No priority",
+                          "Urgent",
+                          "High",
+                          "Medium",
+                          "Low",
+                        ].map((value) => ({ value, label: value }))}
+                        onChange={(priority) =>
+                          setChildDraft({
+                            ...childDraft,
+                            priority: priority as IssueDraft["priority"],
+                          })
+                        }
+                      >
+                        <PriorityMark priority={childDraft.priority} />
+                        Priority
+                      </IssuePicker>
+                      <IssuePicker
+                        label="Sub-issue assignee"
+                        value={childDraft.assignee ?? ""}
+                        options={[
+                          { value: "", label: "No assignee" },
+                          ...members.map((m) => ({
+                            value: m.id,
+                            label: m.name,
+                            icon: (
+                              <AssigneeMark name={m.name} image={m.image} />
+                            ),
+                          })),
+                        ]}
+                        onChange={(assignee) =>
+                          setChildDraft({ ...childDraft, assignee })
+                        }
+                      >
+                        <IssueIcon name="person" />
+                        Assignee
+                      </IssuePicker>
+                      <IssuePicker
+                        label="Sub-issue labels"
+                        multiple
+                        value={childDraft.labels ?? ""}
+                        options={labels.map((value) => ({
+                          value,
+                          label: value,
+                        }))}
+                        onChange={(value) =>
+                          setChildDraft({ ...childDraft, labels: value })
+                        }
+                      >
+                        <IssueIcon name="label" />
+                        Labels
+                      </IssuePicker>
+                      <Popover>
+                        <PopoverTrigger
+                          render={
+                            <ActionIconButton
+                              size="icon-xs"
+                              label="More sub-issue actions"
+                            />
+                          }
+                        >
+                          <IssueIcon name="more" />
+                        </PopoverTrigger>
+                        <PopoverContent>
+                          <label className="text-xs">
+                            Due date
+                            <input
+                              type="date"
+                              aria-label="Sub-issue due date"
+                              value={childDraft.dueDate}
+                              onChange={(e) =>
+                                setChildDraft({
+                                  ...childDraft,
+                                  dueDate: e.target.value,
+                                })
+                              }
+                              className="block p-2"
+                            />
+                          </label>
+                        </PopoverContent>
+                      </Popover>
+                      <label
+                        className="flex size-6 cursor-pointer items-center justify-center"
+                        title="Attach sub-issue files"
+                      >
+                        <IssueIcon name="attach" />
+                        <input
+                          hidden
+                          type="file"
+                          multiple
+                          aria-label="Attach sub-issue files"
+                          onChange={(e) => {
+                            if (e.target.files)
+                              void readFiles(e.target.files)
+                                .then((attachments) =>
+                                  setChildDraft({ ...childDraft, attachments })
+                                )
+                                .catch((error) => toast.error(error.message))
+                          }}
+                        />
+                      </label>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="ml-auto text-xs"
+                        onClick={() => setSubOpen(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="text-xs"
+                        disabled={!childDraft.title.trim()}
+                        onClick={createChild}
+                      >
+                        Create
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </section>
+              <section
+                aria-label="Activity"
+                className="border-t border-border/50 pt-5"
+              >
+                <div className="mb-6 flex items-center gap-3">
+                  <h2 className="text-sm font-medium">Activity</h2>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="ml-auto px-1 text-xs text-muted-foreground"
+                    aria-label={
+                      subscribers.includes(userId)
+                        ? "Unsubscribe from issue"
+                        : "Subscribe to issue"
+                    }
+                    onClick={() =>
+                      patch({
+                        subscribers: subscribers.includes(userId)
+                          ? subscribers.filter((v) => v !== userId).join(", ")
+                          : [...subscribers, userId].join(", "),
+                      })
+                    }
+                  >
+                    {subscribers.includes(userId) ? "Unsubscribe" : "Subscribe"}
+                  </Button>
+                  <IssuePicker
+                    label="Change subscribers"
+                    multiple
+                    value={issue.subscribers}
+                    options={members.map((m) => ({
+                      value: m.id,
+                      label: m.name,
+                      icon: <AssigneeMark name={m.name} image={m.image} />,
+                    }))}
+                    onChange={(value) => patch({ subscribers: value })}
+                    className="bg-transparent p-0"
+                  >
+                    {subscribers.length ? (
+                      subscribers.slice(0, 3).map((subscriber) => {
+                        const member = members.find((m) => m.id === subscriber)
+                        return (
+                          <AssigneeMark
+                            key={subscriber}
+                            name={member?.name ?? subscriber}
+                            image={member?.image}
+                          />
+                        )
+                      })
+                    ) : (
+                      <IssueIcon name="person" />
+                    )}
+                  </IssuePicker>
                 </div>
-              ))}
-            </div>
-            <h2 className="mt-8 mb-3 px-2 text-xs text-muted-foreground">
-              Labels
-            </h2>
-            <IssuePicker
-              label="Add labels"
-              shortcut="L"
-              multiple
-              value={issue.labels ?? ""}
-              options={labels.map((value) => ({ value, label: value }))}
-              onChange={(value) => patch({ labels: value })}
-              className={issuePropertyControl}
+                <div className="mb-6 flex items-center gap-2 text-xs text-muted-foreground">
+                  <AssigneeMark
+                    name={creator?.name ?? issue.creator}
+                    image={creator?.image}
+                  />
+                  {creator?.name ?? issue.creator} created the issue ·{" "}
+                  <time title={new Date(issue.createdAt).toLocaleString()}>
+                    {ago(issue.createdAt)}
+                  </time>
+                </div>
+                {issue.activity.map((event) => (
+                  <p
+                    key={event.id}
+                    className="mb-3 text-xs text-muted-foreground"
+                  >
+                    {event.author === "You"
+                      ? (user?.name ?? "You")
+                      : (members.find((m) => m.id === event.author)?.name ??
+                        event.author)}{" "}
+                    {event.text} · {ago(event.createdAt)}
+                  </p>
+                ))}
+                <div className="space-y-4">
+                  {issue.comments
+                    .filter((comment) => !comment.parentId)
+                    .map((comment) => renderComment(comment))}
+                  <CommentInput onSubmit={addComment} />
+                </div>
+              </section>
+            </article>
+            <aside
+              aria-label="Properties"
+              className="pb-8 text-[13px] md:sticky md:top-6 md:max-h-[calc(100svh-160px)] md:self-start md:overflow-y-auto md:overscroll-y-contain"
             >
-              <IssueIcon name="label" className="size-4" />
-              <span className="truncate">{issue.labels || "Add label"}</span>
-            </IssuePicker>
-            <h2 className="mt-8 mb-3 px-2 text-xs text-muted-foreground">
-              Project
-            </h2>
-            <IssuePicker
-              label="Add to project"
-              shortcut="⇧ P"
-              value={issue.project ?? ""}
-              options={[
-                { value: "", label: "No project" },
-                ...projects.map((value) => ({ value, label: value })),
-              ]}
-              onChange={(project) => patch({ project })}
-              allowCreate
-              className={issuePropertyControl}
-            >
-              <IssueIcon name="project" className="size-4" />
-              <span className="truncate">
-                {issue.project || "Add to project"}
-              </span>
-            </IssuePicker>
-            {issue.dueDate && (
-              <p className="mt-6 text-xs text-muted-foreground">
-                Due {issue.dueDate}
-              </p>
-            )}
-          </aside>
+              <h2 className="mb-3 px-2 text-xs text-muted-foreground">
+                Properties
+              </h2>
+              <div className="flex flex-col items-start gap-1">
+                {(["status", "priority", "assignee"] as const).map(
+                  (property) => (
+                    <div key={property} className="contents">
+                      <InlineIssueProperties
+                        emptyLabels
+                        property={property}
+                        issue={issue}
+                        statuses={statuses}
+                        members={members}
+                        onUpdate={onUpdate}
+                      />
+                      {property === "status" && (
+                        <div className="flex items-center gap-1">
+                          <IssuePicker
+                            label="Move to a different team"
+                            value={team.id}
+                            options={(directory?.teams ?? [team]).map(
+                              (item) => ({
+                                value: item.id,
+                                label: item.name,
+                              })
+                            )}
+                            onChange={(targetId) => {
+                              const destination = directory?.teams.find(
+                                (item) => item.id === targetId
+                              )
+                              if (!destination || targetId === team.id) return
+                              try {
+                                moveTeamIssue(team.id, targetId, issue.id)
+                                void navigate({
+                                  to: "/teams/$teamSlug/issues",
+                                  params: { teamSlug: destination.slug },
+                                  search: { view: "all", issue: issue.id },
+                                })
+                              } catch (error) {
+                                toast.error(
+                                  error instanceof Error
+                                    ? error.message
+                                    : "Issue could not be moved"
+                                )
+                              }
+                            }}
+                            className={issuePropertyControl}
+                          >
+                            <TeamSidebarIcon
+                              icon={team.icon}
+                              name={team.name}
+                            />
+                            <span className="truncate">{team.name}</span>
+                          </IssuePicker>
+                          <Link
+                            to="/teams/$teamSlug/overview"
+                            params={{ teamSlug: team.slug }}
+                            aria-label="Open team overview"
+                            className="flex size-7 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                          >
+                            <IssueIcon name="expand" />
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  )
+                )}
+              </div>
+              <h2 className="mt-8 mb-3 px-2 text-xs text-muted-foreground">
+                Labels
+              </h2>
+              <IssuePicker
+                label="Add labels"
+                shortcut="L"
+                multiple
+                value={issue.labels ?? ""}
+                options={labels.map((value) => ({ value, label: value }))}
+                onChange={(value) => patch({ labels: value })}
+                className={issuePropertyControl}
+              >
+                <IssueIcon name="label" className="size-4" />
+                <span className="truncate">{issue.labels || "Add label"}</span>
+              </IssuePicker>
+              <h2 className="mt-8 mb-3 px-2 text-xs text-muted-foreground">
+                Project
+              </h2>
+              <IssuePicker
+                label="Add to project"
+                shortcut="⇧ P"
+                value={issue.project ?? ""}
+                options={[
+                  { value: "", label: "No project" },
+                  ...projects.map((value) => ({ value, label: value })),
+                ]}
+                onChange={(project) => patch({ project })}
+                allowCreate
+                className={issuePropertyControl}
+              >
+                <IssueIcon name="project" className="size-4" />
+                <span className="truncate">
+                  {issue.project || "Add to project"}
+                </span>
+              </IssuePicker>
+              {issue.dueDate && (
+                <p className="mt-6 text-xs text-muted-foreground">
+                  Due {issue.dueDate}
+                </p>
+              )}
+            </aside>
+          </div>
         </div>
       </div>
       <Dialog open={tools} onOpenChange={setTools}>

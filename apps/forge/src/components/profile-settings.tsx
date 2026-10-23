@@ -316,11 +316,10 @@ export function ProfileSettings() {
     <main className="min-h-0 flex-1 overflow-y-auto px-6 pt-4 pb-4">
       <div className="mx-auto w-full max-w-[640px] pb-16">
         <div className="space-y-10">
+          <h1 className="forge-page-header -mb-5 px-3 text-xl font-semibold tracking-tight text-foreground">
+            Profile
+          </h1>
           <section className="space-y-5">
-            <h1 className="px-3 text-xl font-semibold tracking-tight text-foreground">
-              Profile
-            </h1>
-
             <SettingsCard>
               <ProfileRow label="Profile picture">
                 <AvatarPicker

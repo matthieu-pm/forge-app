@@ -180,6 +180,8 @@ describe("team issues", () => {
         {
           id: "comment",
           parentId: "",
+          attachmentId: "",
+          resolved: false,
           author: "member",
           body: "Review",
           createdAt: new Date().toISOString(),
@@ -204,6 +206,59 @@ describe("team issues", () => {
     expect(parseIssueStore(JSON.stringify(legacy)).issues[0].comments).toEqual(
       []
     )
+  })
+  it("persists attachment sizing and resolved image threads through subsequent edits", () => {
+    const original = saveTeamIssue(team, {
+      ...blankIssueDraft(),
+      title: "Image review",
+      attachments: [
+        {
+          id: "image",
+          name: "image.png",
+          data: "data:image/png;base64,YQ==",
+          width: 45,
+        },
+      ],
+      comments: [
+        {
+          id: "thread",
+          parentId: "",
+          attachmentId: "image",
+          resolved: false,
+          author: "member",
+          body: "Review the image",
+          createdAt: new Date().toISOString(),
+          edited: false,
+          deleted: false,
+          reactions: [],
+        },
+      ],
+    })
+    saveTeamIssue(
+      team,
+      {
+        ...original,
+        priority: "High",
+        comments: original.comments.map((comment) => ({
+          ...comment,
+          resolved: true,
+        })),
+      },
+      { id: original.id }
+    )
+    const saved = readIssueStore(team).issues[0]
+    expect(saved.attachments?.[0]).toMatchObject({ id: "image", width: 45 })
+    expect(saved.comments[0]).toMatchObject({
+      attachmentId: "image",
+      resolved: true,
+      body: "Review the image",
+    })
+    const legacy = JSON.parse(JSON.stringify(readIssueStore(team)))
+    delete legacy.issues[0].comments[0].attachmentId
+    delete legacy.issues[0].comments[0].resolved
+    expect(
+      parseIssueStore(JSON.stringify(legacy)).issues[0].comments[0]
+    ).toMatchObject({ attachmentId: "", resolved: false })
   })
   it("moves parent and descendants together without losing discussion or colliding numbers", () => {
     const parent = saveTeamIssue(team, {

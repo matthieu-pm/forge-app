@@ -1,4 +1,3 @@
-
 import * as React from "react"
 import {
   Add01Icon,
@@ -49,7 +48,9 @@ import {
 } from "@/components/agent/agent-provider"
 import { isAgentProviderEnabled } from "@/application/agents/agent-feature-flags"
 
-"use client"
+;
+
+("use client")
 
 const PROVIDERS: ReadonlyArray<{
   id: ModelProvider
@@ -443,7 +444,7 @@ export function AiSettings() {
 
   return (
     <main className="min-h-0 w-full flex-1 space-y-8 overflow-y-auto px-6 py-6 lg:px-10 lg:py-8 [&>*]:mx-auto [&>*]:w-full [&>*]:max-w-[calc(48rem-3rem)] lg:[&>*]:max-w-[calc(48rem-5rem)]">
-      <header className="space-y-1">
+      <header className="forge-page-header space-y-1">
         <h1 className="text-xl font-semibold tracking-tight">AI & Agents</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
           Connect model APIs for Forge-native agents. Credentials are encrypted

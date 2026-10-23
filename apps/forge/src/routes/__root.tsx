@@ -104,7 +104,7 @@ function RootLayout() {
       <AgentProvider deferModelSources={pathname !== "/forge"}>
         <SidebarProvider
           className={cn(
-            "relative",
+            "forge-app-shell relative",
             pathname === "/inbox" && "forge-inbox-shell",
             /^\/teams\/[^/]+\/issues$/.test(pathname) && "forge-issues-shell",
             hasStandaloneTeamSettingsLayout
@@ -166,7 +166,12 @@ function AgentRouteContent({
         !/^\/teams\/[^/]+\/(triage|overview|documents|loops|members|issues)$/.test(
           pathname
         ) && <AppHeader />}
-      <Outlet key={pathname} />
+      <div
+        data-slot="route-viewport"
+        className="flex min-h-0 flex-1 flex-col overflow-auto overscroll-contain"
+      >
+        <Outlet key={pathname} />
+      </div>
     </div>
   )
 }

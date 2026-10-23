@@ -1,3 +1,5 @@
+"use client"
+
 import * as React from "react"
 import {
   Add01Icon,
@@ -63,10 +65,6 @@ import { notifyTeamDirectoryChanged } from "@/lib/team-events"
 import { teamMemberRole, teamMembersCsv } from "@/lib/team-member-contract"
 import { addTeamMembers } from "@/lib/team-member-state"
 import { cn } from "@/lib/utils"
-
-;
-
-("use client")
 
 function initials(name: string) {
   return name
@@ -172,7 +170,13 @@ export function TeamMembersSettings({
   }
 
   const memberTable = (
-    <div className={home ? "min-h-0 flex-1 overflow-auto" : "mt-5"}>
+    <div
+      className={
+        home
+          ? "min-h-0 flex-1 overflow-auto"
+          : "mt-5 min-h-0 flex-1 overflow-auto"
+      }
+    >
       <Table className="min-w-[640px] table-fixed">
         <TableHeader>
           <TableRow className="border-border/40 hover:bg-transparent">
@@ -429,8 +433,8 @@ export function TeamMembersSettings({
           {memberTable}
         </TeamHomeLayout>
       ) : (
-        <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-none pb-8">
-          <div className="flex h-12 items-center px-4">
+        <main className="flex min-h-0 flex-1 flex-col overflow-hidden pb-8">
+          <div className="forge-page-back flex h-12 items-center px-4">
             <Link
               to="/settings/teams/$teamSlug"
               params={{ teamSlug: team.slug }}
@@ -451,8 +455,8 @@ export function TeamMembersSettings({
             </Link>
           </div>
 
-          <div className="px-5 pt-4 sm:px-8 lg:px-14">
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+          <div className="shrink-0 px-5 pt-4 sm:px-8 lg:px-14">
+            <h1 className="forge-page-header text-2xl font-semibold tracking-tight text-foreground">
               Team members
             </h1>
             <div className="mt-3 flex flex-wrap items-center gap-2">

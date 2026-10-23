@@ -77,7 +77,7 @@ export function BillingSettings() {
       <main className="min-h-0 flex-1 [scrollbar-gutter:stable] overflow-y-auto overscroll-y-none px-6 pt-4 pb-4">
         <div className="mx-auto w-full max-w-[640px] pb-16">
           <div className="space-y-8">
-            <header className="flex items-end justify-between gap-6 px-3">
+            <header className="forge-page-header flex items-end justify-between gap-6 px-3">
               <div className="min-w-0">
                 <h1 className="text-xl font-semibold tracking-tight">
                   Billing

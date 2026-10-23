@@ -110,7 +110,7 @@ export function InitiativesSettings({ workspaceId }: { workspaceId: string }) {
   return (
     <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-none pb-16">
       <div className="mx-auto w-full max-w-[688px] px-4 pt-10 sm:px-6 sm:pt-[68px]">
-        <header className="px-4 pb-8">
+        <header className="forge-page-header px-4 pb-8">
           <h1 className="text-2xl font-medium tracking-tight">Initiatives</h1>
           <p className={copyClass}>
             Initiatives group multiple projects that contribute toward the same

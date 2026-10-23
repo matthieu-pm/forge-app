@@ -1,4 +1,3 @@
-
 import * as React from "react"
 import {
   ArrowRight01Icon,
@@ -19,7 +18,9 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 
-"use client"
+;
+
+("use client")
 
 type ImportSource = "Asana" | "Shortcut" | "GitHub" | "Jira" | "Linear"
 type PrivateTeamSelection = "None" | "All private teams"
@@ -71,14 +72,8 @@ function ServiceIcon({ service }: { service: ImportSource }) {
   if (service === "Jira") {
     return (
       <svg viewBox="0 0 20 20" aria-hidden="true">
-        <path
-          d="m10 2.5 7.5 7.5-7.5 7.5L2.5 10 10 2.5Z"
-          fill="currentColor"
-        />
-        <path
-          d="m10 7 3 3-3 3-3-3 3-3Z"
-          fill="var(--background)"
-        />
+        <path d="m10 2.5 7.5 7.5-7.5 7.5L2.5 10 10 2.5Z" fill="currentColor" />
+        <path d="m10 7 3 3-3 3-3-3 3-3Z" fill="var(--background)" />
       </svg>
     )
   }
@@ -151,10 +146,10 @@ export function ImportExportSettings() {
   }
 
   return (
-    <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-none px-6 pt-4 pb-4 [scrollbar-gutter:stable]">
+    <main className="min-h-0 flex-1 [scrollbar-gutter:stable] overflow-y-auto overscroll-y-none px-6 pt-4 pb-4">
       <div className="mx-auto w-full max-w-[640px] pb-16">
         <div className="space-y-8">
-          <h1 className="px-3 text-xl font-semibold tracking-tight text-foreground">
+          <h1 className="forge-page-header px-3 text-xl font-semibold tracking-tight text-foreground">
             Import &amp; export
           </h1>
 

@@ -62,11 +62,7 @@ function PriorityGlyph({ priority }: { priority: Priority }) {
       aria-hidden="true"
       className="inline-flex w-3 items-center justify-center text-[10px] text-muted-foreground"
     >
-      {priority === "urgent"
-        ? "!"
-        : priority === "none"
-          ? "···"
-          : "▥"}
+      {priority === "urgent" ? "!" : priority === "none" ? "···" : "▥"}
     </span>
   )
 }
@@ -132,7 +128,7 @@ export function SlaSettings({ workspaceId }: { workspaceId: string }) {
     <>
       <main className="min-h-0 flex-1 overflow-y-auto px-5 pt-10 pb-16 sm:pt-14">
         <div className="mx-auto w-full max-w-[688px]">
-          <header className="px-1">
+          <header className="forge-page-header px-1">
             <h1 className="text-2xl font-medium tracking-tight text-foreground">
               SLAs
             </h1>

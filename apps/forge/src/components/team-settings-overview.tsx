@@ -374,20 +374,20 @@ export function TeamSettingsOverview({
       <main className="min-h-0 flex-1 [scrollbar-gutter:stable] overflow-y-auto overscroll-y-none px-6 pt-12 pb-4">
         <div className="mx-auto w-full max-w-[640px] pb-16">
           <div className="space-y-12">
+            <div className="forge-page-header -mb-7 min-w-0 space-y-1 px-3">
+              <h1 className="flex min-w-0 items-center gap-2 text-xl font-semibold tracking-tight text-foreground">
+                <TeamSidebarIcon
+                  icon={team.icon}
+                  name={team.name}
+                  className="size-5"
+                />
+                <span className="truncate">{team.name}</span>
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Accessible to all workspace members
+              </p>
+            </div>
             <section className="space-y-5">
-              <div className="min-w-0 space-y-1 px-3">
-                <h1 className="flex min-w-0 items-center gap-2 text-xl font-semibold tracking-tight text-foreground">
-                  <TeamSidebarIcon
-                    icon={team.icon}
-                    name={team.name}
-                    className="size-5"
-                  />
-                  <span className="truncate">{team.name}</span>
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                  Accessible to all workspace members
-                </p>
-              </div>
               <SettingsCard
                 items={overviewItems.map((item) =>
                   item.section === "members"

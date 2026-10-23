@@ -1,4 +1,3 @@
-
 import * as React from "react"
 import {
   Add01Icon,
@@ -47,7 +46,9 @@ import {
 import { copyTextToClipboard } from "@/lib/copy-to-clipboard"
 import { cn } from "@/lib/utils"
 
-"use client"
+;
+
+("use client")
 
 type SecurityPreferences = {
   allowExternalLoopSources: boolean
@@ -147,7 +148,10 @@ function Section({
   title: string
 }) {
   return (
-    <section id={title === "MCP Servers" ? "forge-agent-mcp-servers" : undefined} className="space-y-5 scroll-mt-8">
+    <section
+      id={title === "MCP Servers" ? "forge-agent-mcp-servers" : undefined}
+      className="scroll-mt-8 space-y-5"
+    >
       <h2 className="px-3 text-sm font-semibold text-foreground">{title}</h2>
       {children}
     </section>
@@ -371,10 +375,10 @@ export function SecuritySettings({
 
   return (
     <>
-      <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-none px-6 pt-4 pb-4 [scrollbar-gutter:stable]">
+      <main className="min-h-0 flex-1 [scrollbar-gutter:stable] overflow-y-auto overscroll-y-none px-6 pt-4 pb-4">
         <div className="mx-auto w-full max-w-[640px] pb-16">
           <div className="space-y-12">
-            <h1 className="px-3 text-xl font-semibold tracking-tight text-foreground">
+            <h1 className="forge-page-header px-3 text-xl font-semibold tracking-tight text-foreground">
               Security
             </h1>
 

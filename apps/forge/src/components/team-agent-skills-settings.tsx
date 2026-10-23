@@ -68,7 +68,7 @@ function SkillsShell({
 }) {
   return (
     <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="flex h-12 shrink-0 items-center px-4">
+      <div className="forge-page-back flex h-12 shrink-0 items-center px-4">
         <Link
           to={editor ? listPath : "/settings/teams/$teamSlug"}
           params={{ teamSlug: team.slug }}
@@ -155,7 +155,7 @@ export function TeamAgentSkillsSettings({
   }
   return (
     <SkillsShell team={team}>
-      <header className="px-4 pb-8">
+      <header className="forge-page-header px-4 pb-8">
         <h1 className="text-2xl font-medium tracking-tight">Agent skills</h1>
         <p className="mt-1.5 text-sm leading-[22px] text-muted-foreground">
           Add reusable instructions team members can use with Forge Agent

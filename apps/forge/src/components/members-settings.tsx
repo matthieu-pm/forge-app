@@ -1,4 +1,3 @@
-
 import * as React from "react"
 import {
   ArrowDown01Icon,
@@ -70,7 +69,9 @@ import {
 } from "@/lib/member-state"
 import { readLocalProfile, usernameFromEmail } from "@/lib/profile-state"
 
-"use client"
+;
+
+("use client")
 
 type MemberFilter = "all" | "active" | "invited"
 type SortDirection = "asc" | "desc"
@@ -204,7 +205,9 @@ export function MembersSettings({
   const [filter, setFilter] = React.useState<MemberFilter>("all")
   const [sortField, setSortField] = React.useState<SortField>("name")
   const [sortDirection, setSortDirection] = React.useState<SortDirection>("asc")
-  const [inviteOpen, setInviteOpen] = React.useState(initialInviteOpen && canManage)
+  const [inviteOpen, setInviteOpen] = React.useState(
+    initialInviteOpen && canManage
+  )
   const [inviteEmail, setInviteEmail] = React.useState("")
   const [inviteRole, setInviteRole] = React.useState<"admin" | "member">(
     "member"
@@ -695,7 +698,7 @@ export function MembersSettings({
     <>
       <main className="min-h-0 flex-1 overflow-y-auto px-5 py-7 sm:px-8 lg:px-10 lg:py-9">
         <div className="w-full">
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">
+          <h1 className="forge-page-header text-xl font-semibold tracking-tight text-foreground">
             Members
           </h1>
 

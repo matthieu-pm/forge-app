@@ -1,4 +1,3 @@
-
 import * as React from "react"
 import {
   Add01Icon,
@@ -41,7 +40,9 @@ import {
 } from "@/lib/api-key-state"
 import { mutateWorkspaceSecurity } from "@/lib/security-state"
 
-"use client"
+;
+
+("use client")
 
 const availableScopes: ReadonlyArray<{
   scope: ApiScope
@@ -316,7 +317,7 @@ export function ApiKeySettings({
     <>
       <main className="min-h-0 flex-1 overflow-y-auto px-6 pt-4 pb-4">
         <div className="mx-auto w-full max-w-[640px] pb-16">
-          <header className="px-3">
+          <header className="forge-page-header px-3">
             <h1 className="text-xl font-semibold tracking-tight">API</h1>
             <p className="mt-1 max-w-2xl text-sm leading-5 text-muted-foreground">
               Forge&apos;s API provides a programmable interface to your data.

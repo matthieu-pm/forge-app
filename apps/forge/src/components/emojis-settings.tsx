@@ -178,7 +178,7 @@ export function EmojisSettings() {
   }
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-      <header className="px-5 pt-6 sm:px-8 lg:px-14">
+      <header className="forge-page-header px-5 pt-6 sm:px-8 lg:px-14">
         <h1 className="text-2xl font-medium tracking-tight">Emojis</h1>
         <div className="mt-3 flex items-center justify-between gap-4">
           <div className="relative w-[300px] min-w-0">

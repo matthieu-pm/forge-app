@@ -361,7 +361,7 @@ export function TeamWorkflowsSettings({ team }: { team: TeamSummary }) {
   }
   return (
     <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="flex h-12 shrink-0 items-center px-4">
+      <div className="forge-page-back flex h-12 shrink-0 items-center px-4">
         <Link
           to="/settings/teams/$teamSlug"
           params={{ teamSlug: team.slug }}
@@ -383,7 +383,7 @@ export function TeamWorkflowsSettings({ team }: { team: TeamSummary }) {
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-none pb-16">
         <div className="mx-auto w-full max-w-[688px] px-4 pt-5 sm:px-6">
-          <header className="px-4 pb-9">
+          <header className="forge-page-header px-4 pb-9">
             <h1 className="text-2xl font-medium tracking-tight">
               Workflows &amp; automations
             </h1>

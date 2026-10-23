@@ -175,7 +175,7 @@ export function IntegrationsSettings() {
     <>
       <main className="min-h-0 flex-1 [scrollbar-gutter:stable] overflow-y-auto overscroll-y-none px-4 pt-6 pb-12 sm:px-6 sm:pt-4">
         <div className="mx-auto w-full max-w-[720px] pb-20">
-          <header className="px-1 sm:px-4">
+          <header className="forge-page-header px-1 sm:px-4">
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">
               Integrations
             </h1>
@@ -332,7 +332,10 @@ export function IntegrationsSettings() {
                             : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                         )}
                       >
-                        <IntegrationLogo integration={integration} size="tiny" />
+                        <IntegrationLogo
+                          integration={integration}
+                          size="tiny"
+                        />
                         {integration.name}
                       </button>
                     )

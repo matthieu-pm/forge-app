@@ -1,10 +1,6 @@
-
 import * as React from "react"
 import { Link } from "@tanstack/react-router"
-import {
-  InformationCircleIcon,
-  SlackIcon,
-} from "@hugeicons/core-free-icons"
+import { InformationCircleIcon, SlackIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { toast } from "sonner"
 import type {
@@ -33,7 +29,9 @@ import {
   writeProjectUpdatesSettings,
 } from "@/lib/project-updates-settings"
 
-"use client"
+;
+
+("use client")
 
 const scheduleOptions: ReadonlyArray<{
   value: ProjectUpdateSchedule
@@ -65,10 +63,13 @@ export function ProjectUpdatesSettings({
 }: {
   workspaceId: string
 }) {
-  const [settings, setSettings] =
-    React.useState<ProjectUpdatesSettingsValue>(defaultProjectUpdatesSettings)
+  const [settings, setSettings] = React.useState<ProjectUpdatesSettingsValue>(
+    defaultProjectUpdatesSettings
+  )
   const [draftSchedule, setDraftSchedule] =
-    React.useState<ProjectUpdateSchedule>(defaultProjectUpdatesSettings.schedule)
+    React.useState<ProjectUpdateSchedule>(
+      defaultProjectUpdatesSettings.schedule
+    )
   const [editing, setEditing] = React.useState(false)
 
   React.useEffect(() => {
@@ -104,14 +105,14 @@ export function ProjectUpdatesSettings({
   return (
     <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-none px-5 pt-10 pb-16 sm:pt-14">
       <div className="mx-auto w-full max-w-[688px]">
-        <header className="px-1">
+        <header className="forge-page-header px-1">
           <h1 className="text-2xl font-medium tracking-tight text-foreground">
             Project updates
           </h1>
           <p className="mt-1 max-w-[670px] text-sm leading-6 text-muted-foreground">
             Short status reports about the progress and health of your projects.
-            Project members regularly post updates, and subscribers automatically
-            receive them in their inbox. {" "}
+            Project members regularly post updates, and subscribers
+            automatically receive them in their inbox.{" "}
             <a
               href="https://linear.app/docs/initiative-and-project-updates"
               target="_blank"
@@ -132,8 +133,8 @@ export function ProjectUpdatesSettings({
               Update schedule
             </h2>
             <p className="mt-1 max-w-[650px] text-sm leading-5 text-muted-foreground">
-              Configure how often updates are expected on projects. Project leads
-              will receive reminders to post updates.
+              Configure how often updates are expected on projects. Project
+              leads will receive reminders to post updates.
             </p>
           </div>
 
@@ -190,7 +191,10 @@ export function ProjectUpdatesSettings({
           </div>
         </section>
 
-        <section aria-labelledby="slack-notifications-heading" className="mt-12">
+        <section
+          aria-labelledby="slack-notifications-heading"
+          className="mt-12"
+        >
           <div className="px-1">
             <h2
               id="slack-notifications-heading"
@@ -208,7 +212,11 @@ export function ProjectUpdatesSettings({
             className={`${cardClass} mt-4 flex min-h-[72px] items-center gap-3 px-4 py-3`}
           >
             <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-background/55 text-muted-foreground">
-              <HugeiconsIcon icon={SlackIcon} strokeWidth={1.75} className="size-4" />
+              <HugeiconsIcon
+                icon={SlackIcon}
+                strokeWidth={1.75}
+                className="size-4"
+              />
             </span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-foreground">
@@ -222,7 +230,7 @@ export function ProjectUpdatesSettings({
               type="button"
               aria-label="About Slack project update notifications"
               title="Project updates are broadcast through the workspace Slack integration."
-              className="grid size-8 shrink-0 place-items-center rounded-lg text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30"
+              className="grid size-8 shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors outline-none hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30"
             >
               <HugeiconsIcon
                 icon={InformationCircleIcon}
@@ -241,10 +249,12 @@ export function ProjectUpdatesSettings({
                 Connected
                 <DropdownChevron className="size-3" />
               </Button>
-              <DropdownMenuContent align="end" sideOffset={6} className="min-w-48">
-                <DropdownMenuItem
-                  render={<Link to="/settings/applications" />}
-                >
+              <DropdownMenuContent
+                align="end"
+                sideOffset={6}
+                className="min-w-48"
+              >
+                <DropdownMenuItem render={<Link to="/settings/applications" />}>
                   Manage in Applications
                 </DropdownMenuItem>
               </DropdownMenuContent>

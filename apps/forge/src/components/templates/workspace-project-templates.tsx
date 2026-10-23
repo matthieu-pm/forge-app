@@ -27,7 +27,7 @@ export function WorkspaceProjectTemplates({
   return (
     <main className="min-h-0 flex-1 overflow-y-auto px-4 pt-[68px] pb-16 sm:px-6">
       <div className="mx-auto w-full max-w-[640px]">
-        <header className="px-4 pb-8">
+        <header className="forge-page-header px-4 pb-8">
           <h1 className="text-2xl font-medium tracking-tight">
             Project templates
           </h1>
