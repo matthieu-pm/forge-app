@@ -5,6 +5,7 @@ import type { ReactNode } from "react"
 import type { ActivityReferenceKind } from "@/lib/issue-activity"
 import type { TeamIssue } from "@/lib/team-issues"
 import type { TeamStatus } from "@/lib/team-statuses"
+import { cn } from "@/lib/utils"
 import {
   activityReferenceIssues,
   activityReferenceSearch,
@@ -60,6 +61,7 @@ export function ActivityReference({
   statuses,
   members,
   color,
+  presentation = "inline",
 }: {
   kind: ActivityReferenceKind
   value: string
@@ -68,6 +70,7 @@ export function ActivityReference({
   statuses: Array<TeamStatus>
   members: Array<{ id: string; name: string; image?: string | null }>
   color?: string
+  presentation?: "inline" | "chip"
 }) {
   const member =
     kind === "member"
@@ -115,11 +118,15 @@ export function ActivityReference({
                   ? `View issues labeled ${name}`
                   : `View issues in project ${name}`
             }
-            className={linkClass}
+            className={cn(
+              linkClass,
+              presentation === "chip" &&
+                "h-6 max-w-48 gap-1.5 rounded-full border border-border/50 px-2 text-xs font-normal hover:bg-muted/60 [&>span:last-child]:truncate"
+            )}
           />
         }
       >
-        {kind === "label" && icon}
+        {(kind === "label" || presentation === "chip") && icon}
         <span>{name}</span>
       </HoverCardTrigger>
       <HoverCardContent

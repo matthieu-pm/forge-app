@@ -9,9 +9,10 @@ import {
   StatusMark,
   issuePropertyControl,
 } from "./issue-controls"
-import { InlineIssueProperties } from "./issue-list"
+import { InlineIssueProperties, IssueSubProgress } from "./issue-list"
 import { Attachments, attachmentId } from "./issue-attachments"
 import { ActivityReference, ActivityRow } from "./issue-activity-row"
+import { IssueLabelPicker } from "./issue-label-picker"
 import type { Editor, JSONContent } from "@tiptap/core"
 import type { IssueDraft, TeamIssue } from "@/lib/team-issues"
 import type { TeamStatus } from "@/lib/team-statuses"
@@ -955,22 +956,6 @@ export function IssueDetail({
     )
   }
   const timeline = issueActivityTimeline(issue)
-  const selectedLabels = (issue.labels ?? "")
-    .split(",")
-    .map((label) => label.trim())
-    .filter(Boolean)
-  const labelOptions = [...new Set([...labels, ...selectedLabels])].map(
-    (value) => ({
-      value,
-      label: value,
-      icon: (
-        <span
-          className="size-2 shrink-0 rounded-full bg-muted-foreground"
-          style={{ backgroundColor: labelColors[value] }}
-        />
-      ),
-    })
-  )
   return (
     <div
       className="flex min-h-0 flex-1 flex-col overflow-hidden"
@@ -1251,6 +1236,7 @@ export function IssueDetail({
                           ? "Expand sub-issues"
                           : "Collapse sub-issues"
                       }
+                      aria-expanded={!subCollapsed}
                       onClick={() => setSubCollapsed(!subCollapsed)}
                     >
                       <IssueIcon
@@ -1259,9 +1245,7 @@ export function IssueDetail({
                       />
                       Sub-issues
                     </button>
-                    <span className="ml-2">
-                      {completed}/{children.length}
-                    </span>
+                    <IssueSubProgress completed={completed} total={children.length} />
                     <div className="ml-auto flex">
                       <Popover>
                         <PopoverTrigger
@@ -1321,7 +1305,10 @@ export function IssueDetail({
                   children.map((child) => (
                     <div
                       key={child.id}
-                      className="group flex min-h-9 items-center gap-2 rounded px-2 text-[13px] hover:bg-muted/60"
+                      className={cn("group flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-2 text-[13px] hover:bg-muted/60 focus-within:bg-muted/40", selected.includes(child.id) && "bg-[#5e6ad2]/20")}
+                      onClick={(event) => {
+                        if (!(event.target as HTMLElement).closest('button, input, a, [data-slot="popover-content"], [data-slot="hover-card-content"]')) onOpen(child)
+                      }}
                     >
                       <input
                         type="checkbox"
@@ -1334,7 +1321,7 @@ export function IssueDetail({
                               : [...selected, child.id]
                           )
                         }
-                        className="size-3.5 opacity-0 group-hover:opacity-100 checked:opacity-100 focus:opacity-100"
+                        className="size-3.5 shrink-0 accent-[#5e6ad2] opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 checked:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100"
                       />
                       {childDisplay.priority && (
                         <InlineIssueProperties
@@ -1361,7 +1348,8 @@ export function IssueDetail({
                       )}
                       <button
                         onClick={() => onOpen(child)}
-                        className="min-w-0 flex-1 truncate text-left"
+                        className="min-w-0 flex-1 truncate rounded text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        aria-label={`Open ${team.identifier}-${child.number} ${child.title}`}
                       >
                         {child.title}
                       </button>
@@ -1772,64 +1760,14 @@ export function IssueDetail({
               <h2 className="mt-8 mb-3 px-2 text-xs text-muted-foreground">
                 Labels
               </h2>
-              <div className="flex flex-wrap items-center gap-1">
-                {selectedLabels.map((value) => (
-                  <IssuePicker
-                    key={value}
-                    label={`Change label ${value}`}
-                    value={value}
-                    options={[
-                      {
-                        value: "",
-                        label: "Remove label",
-                        icon: <IssueIcon name="close" />,
-                      },
-                      ...labelOptions.filter(
-                        (option) =>
-                          option.value === value ||
-                          !selectedLabels.includes(option.value)
-                      ),
-                    ]}
-                    onChange={(next) =>
-                      patch({
-                        labels: selectedLabels
-                          .map((item) => (item === value ? next : item))
-                          .filter(Boolean)
-                          .join(", "),
-                      })
-                    }
-                    className="gap-1.5 border border-border/70 bg-transparent text-[13px] text-foreground"
-                  >
-                    <span
-                      className="size-2 shrink-0 rounded-full bg-muted-foreground"
-                      style={{ backgroundColor: labelColors[value] }}
-                    />
-                    <span className="max-w-32 truncate">{value}</span>
-                  </IssuePicker>
-                ))}
-                <IssuePicker
-                  label="Add labels"
-                  shortcut="L"
-                  multiple
-                  value={issue.labels ?? ""}
-                  options={labelOptions}
-                  onChange={(value) => patch({ labels: value })}
-                  allowCreate
-                  className={cn(
-                    issuePropertyControl,
-                    selectedLabels.length > 0 &&
-                      "size-7 justify-center rounded-full p-0"
-                  )}
-                >
-                  <IssueIcon
-                    name={selectedLabels.length ? "add" : "label"}
-                    className="size-4"
-                  />
-                  {!selectedLabels.length && (
-                    <span className="truncate">Add label</span>
-                  )}
-                </IssuePicker>
-              </div>
+              <IssueLabelPicker
+                value={issue.labels ?? ""}
+                labels={labels}
+                colors={labelColors}
+                issues={issues}
+                team={team}
+                onChange={(next) => patch({ labels: next })}
+              />
               <h2 className="mt-8 mb-3 px-2 text-xs text-muted-foreground">
                 Project
               </h2>

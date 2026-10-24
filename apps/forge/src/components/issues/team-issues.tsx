@@ -713,6 +713,8 @@ export function TeamIssues({
               issues={visible}
               allIssues={store.issues}
               identifier={team.identifier}
+              team={team}
+              labelColors={labelColors}
               statuses={statuses}
               members={members}
               display={display}

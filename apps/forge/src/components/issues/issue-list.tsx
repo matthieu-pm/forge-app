@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useId, useState } from "react"
 import { Link } from "@tanstack/react-router"
 import {
   AssigneeMark,
@@ -8,8 +8,10 @@ import {
   StatusMark,
   issuePropertyControl,
 } from "./issue-controls"
+import { ActivityReference } from "./issue-activity-row"
 import type { IssueDisplay, IssueDraft, TeamIssue } from "@/lib/team-issues"
 import type { TeamStatus } from "@/lib/team-statuses"
+import { ActionHint } from "@/components/ui/action-icon-button"
 import { issueGroupValue, issuePriorities } from "@/lib/team-issues"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -153,10 +155,50 @@ function durationLabel(value: string) {
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`
   return `${Math.floor(seconds / 86400)}d`
 }
+export function IssueSubProgress({
+  completed,
+  total,
+}: {
+  completed: number
+  total: number
+}) {
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums">
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 16 16"
+        className="size-3.5 -rotate-90"
+      >
+        <circle
+          cx="8"
+          cy="8"
+          r="6"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          className="opacity-25"
+        />
+        <circle
+          cx="8"
+          cy="8"
+          r="6"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          pathLength="1"
+          strokeDasharray={`${total ? completed / total : 0} 1`}
+        />
+      </svg>
+      {completed}/{total}
+    </span>
+  )
+}
 export function IssueRows({
   issues,
   allIssues,
   identifier,
+  team,
+  labelColors = {},
   statuses,
   members,
   display,
@@ -170,6 +212,8 @@ export function IssueRows({
   issues: Array<TeamIssue>
   allIssues: Array<TeamIssue>
   identifier: string
+  team: { slug: string; name: string }
+  labelColors?: Record<string, string>
   statuses: Array<TeamStatus>
   members: Members
   display: IssueDisplay
@@ -181,6 +225,8 @@ export function IssueRows({
   onCreate: (patch?: Partial<IssueDraft>) => void
 }) {
   const [collapsed, setCollapsed] = useState<Array<string>>([])
+  const [collapsedIssues, setCollapsedIssues] = useState<Array<string>>([])
+  const rowScope = useId()
   const { data: session } = authClient.useSession()
   const board = display.layout === "board"
   const groups = new Map<string, Array<TeamIssue>>()
@@ -233,7 +279,20 @@ export function IssueRows({
     return {}
   }
   const props = display.properties
-  function renderIssue(issue: TeamIssue, depth = 0) {
+  function renderIssue(
+    issue: TeamIssue,
+    branches: Array<boolean> = [],
+    expandable = false
+  ) {
+    const depth = branches.length
+    const children = allIssues.filter((child) => child.parentId === issue.id)
+    const completed = children.filter(
+      (child) =>
+        statuses.find((status) => status.id === child.status)?.group ===
+        "completed"
+    ).length
+    const expanded = !collapsedIssues.includes(issue.id)
+
     const creator =
       issue.creator === "You"
         ? session?.user
@@ -246,19 +305,27 @@ export function IssueRows({
         key={issue.id}
         data-testid="issue-row"
         data-issue-id={issue.id}
+        data-depth={depth}
+        onClick={(event) => {
+          if (
+            !(event.target as HTMLElement).closest(
+              'button, input, a, [role="option"], [data-slot="popover-content"], [data-slot="hover-card-content"]'
+            )
+          )
+            onOpen(issue)
+        }}
         draggable={board}
         onDragStart={(event) =>
           event.dataTransfer.setData("text/forge-issue", issue.id)
         }
         className={cn(
-          "group/issue flex min-w-0 items-center gap-1 rounded-lg px-2 text-[13px] hover:bg-muted/60",
+          "group/issue relative flex min-w-0 cursor-pointer items-center gap-1 rounded-lg px-2 text-[13px] focus-within:bg-muted/40 hover:bg-muted/60",
           board
             ? "relative flex-wrap border border-border/60 bg-popover p-3 shadow-sm"
             : "min-h-10",
           (selected.includes(issue.id) || focusedId === issue.id) &&
             "bg-[#5e6ad2]/20 hover:bg-[#5e6ad2]/25"
         )}
-        style={!board && depth ? { marginLeft: depth * 24 } : undefined}
       >
         <input
           type="checkbox"
@@ -267,6 +334,35 @@ export function IssueRows({
           onChange={() => onSelect(issue.id)}
           className="size-3.5 shrink-0 accent-[#5e6ad2] opacity-0 group-focus-within/issue:opacity-100 group-hover/issue:opacity-100 checked:opacity-100 focus-visible:opacity-100 dark:[color-scheme:dark] pointer-coarse:opacity-100"
         />
+        {!board && depth > 0 && (
+          <span
+            aria-hidden="true"
+            className="relative shrink-0 self-stretch"
+            style={{ width: depth * 24 }}
+          >
+            {branches.map((continues, level) => (
+              <svg
+                key={level}
+                viewBox="0 0 24 40"
+                preserveAspectRatio="none"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1"
+                className="absolute inset-y-0 h-full w-6 text-foreground/10"
+                style={{ left: level * 24 }}
+              >
+                {level === depth - 1 ? (
+                  <>
+                    <path d="M12 0v12q0 3 3 5l6 3" />
+                    {continues && <path d="M12 12v28" />}
+                  </>
+                ) : (
+                  continues && <path d="M12 0v40" />
+                )}
+              </svg>
+            ))}
+          </span>
+        )}
         {props.includes("Priority") && (
           <InlineIssueProperties
             issue={issue}
@@ -308,26 +404,86 @@ export function IssueRows({
             {durationLabel(issue.statusChangedAt)}
           </span>
         )}
-        <button
-          onClick={() => onOpen(issue)}
+        <div
           className={cn(
-            "min-w-12 flex-1 truncate rounded text-left outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            board &&
-              "order-[-1] mb-1 w-full flex-auto text-sm whitespace-normal"
+            "flex min-w-0 flex-1 items-center gap-2",
+            board && "order-[-1] mb-1 w-full flex-auto"
           )}
-          aria-label={`Open ${identifier}-${issue.number} ${issue.title}`}
         >
-          {issue.title}
-        </button>
+          <button
+            type="button"
+            onClick={() => onOpen(issue)}
+            className={cn(
+              "min-w-0 truncate rounded text-left outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              board && "text-sm whitespace-normal"
+            )}
+            aria-label={`Open ${identifier}-${issue.number} ${issue.title}`}
+          >
+            {issue.title}
+          </button>
+          {children.length > 0 && (
+            <ActionHint
+              label={`${completed} of ${children.length} sub-issues completed`}
+            >
+              <button
+                type="button"
+                aria-label={`${expandable ? (expanded ? "Hide" : "Show") : "View"} sub-issues for ${identifier}-${issue.number}`}
+                aria-expanded={expandable ? expanded : undefined}
+                aria-controls={
+                  expandable ? `${rowScope}-${issue.id}-children` : undefined
+                }
+                onClick={() =>
+                  expandable
+                    ? setCollapsedIssues((current) =>
+                        expanded
+                          ? [...current, issue.id]
+                          : current.filter((id) => id !== issue.id)
+                      )
+                    : onOpen(issue)
+                }
+                className="flex h-6 shrink-0 items-center rounded-full border border-border/50 px-1.5 outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <IssueSubProgress
+                  completed={completed}
+                  total={children.length}
+                />
+              </button>
+            </ActionHint>
+          )}
+        </div>
         {props.includes("Labels") && issue.labels && (
-          <span className="hidden max-w-32 truncate rounded-full border border-border/50 px-2 text-[11px] text-muted-foreground sm:block">
-            {issue.labels}
-          </span>
+          <div className="hidden min-w-0 shrink items-center gap-1 sm:flex">
+            {issue.labels
+              .split(",")
+              .map((label) => label.trim())
+              .filter(Boolean)
+              .map((label) => (
+                <ActivityReference
+                  key={label}
+                  kind="label"
+                  value={label}
+                  team={team}
+                  issues={allIssues}
+                  statuses={statuses}
+                  members={members}
+                  color={labelColors[label]}
+                  presentation="chip"
+                />
+              ))}
+          </div>
         )}
         {props.includes("Project") && issue.project && (
-          <span className="hidden max-w-24 truncate text-xs text-muted-foreground sm:block">
-            {issue.project}
-          </span>
+          <div className="hidden min-w-0 shrink sm:flex">
+            <ActivityReference
+              kind="project"
+              value={issue.project}
+              team={team}
+              issues={allIssues}
+              statuses={statuses}
+              members={members}
+              presentation="chip"
+            />
+          </div>
         )}
         {props.includes("Milestone") && issue.milestone && (
           <span className="max-w-24 truncate text-xs text-muted-foreground">
@@ -399,16 +555,39 @@ export function IssueRows({
       (issue) =>
         !issue.parentId || !items.some((parent) => parent.id === issue.parentId)
     )
-    function descend(issue: TeamIssue, depth: number): Array<React.ReactNode> {
-      return [
-        renderIssue(issue, depth),
-        ...items
-          .filter((child) => child.parentId === issue.id)
-          .flatMap((child) => descend(child, depth + 1)),
-      ]
+    function descend(
+      issue: TeamIssue,
+      branches: Array<boolean>,
+      visited: Set<string>
+    ): React.ReactNode {
+      if (visited.has(issue.id)) return null
+      const nextVisited = new Set([...visited, issue.id])
+      const children = items.filter(
+        (child) => child.parentId === issue.id && !nextVisited.has(child.id)
+      )
+      return (
+        <div key={issue.id}>
+          {renderIssue(issue, branches, children.length > 0)}
+          {children.length > 0 && (
+            <div
+              id={`${rowScope}-${issue.id}-children`}
+              hidden={collapsedIssues.includes(issue.id)}
+            >
+              {children.map((child, index) =>
+                descend(
+                  child,
+                  [...branches, index < children.length - 1],
+                  nextVisited
+                )
+              )}
+            </div>
+          )}
+        </div>
+      )
     }
-    return roots.flatMap((issue) => descend(issue, 0))
+    return roots.map((issue) => descend(issue, [], new Set()))
   }
+
   return (
     <div
       className={cn(
@@ -458,6 +637,7 @@ export function IssueRows({
                 size="icon-sm"
                 className={cn(!board && "w-3.5 shrink-0 p-0")}
                 aria-label={`${collapsed.includes(name) ? "Expand" : "Collapse"} ${name} group`}
+                aria-expanded={!collapsed.includes(name)}
                 onClick={() =>
                   setCollapsed(
                     collapsed.includes(name)

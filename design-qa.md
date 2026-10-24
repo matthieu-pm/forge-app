@@ -892,3 +892,21 @@ Validation: 24 focused tests passed; all 803 application tests across 153 suites
 Boundaries: previews describe data available in this team's local issue store. Full project descriptions, global project IDs, workspace-wide totals, and profile pages are not invented. Names navigate to matching issues. Mobile pointer interaction and slow-motion animation playback were not separately exercised. No commit or deployment was made.
 
 Final result: passed for the supplied desktop activity-row interactions.
+
+### Label picker interactions — 2026-10-24
+
+- Label chips and Add labels share one multi-select menu. Selected labels appear above the remaining team labels; checkboxes toggle without closing the menu or replacing another label.
+- Search, custom label entry, Arrow Up/Down, Home/End, Enter/Space, and keyboard focus across regrouping are supported. The menu remains anchored to the labels area when a trigger chip is removed.
+- Label options show a side preview with the stored color, current exact-match team issue count, and an internal link to matching issues. Preview corners use the activity cards' `rounded-lg` radius; links have no hover underline.
+- Browser verified on TES-11: chip entry point, add/remove/custom entry, stable positioning, keyboard preview, and persisted restored labels after reload. The temporary QA label was removed. The user's TES-3 labels were untouched.
+- Validation: 21 focused label picker/activity/issue persistence tests, scoped ESLint, TypeScript, and diff whitespace check passed. Screenshot: `docs/qa/team-issues/label-picker-preview.png`.
+- Scope: available labels and counts use the existing team directory/store; workspace-wide counts are not claimed.
+
+### Issue rows and sub-issue hierarchy — 2026-10-24
+
+- Parent rows have a compact completed/total progress button. It expands/collapses matching nested children; flat/board views open the parent instead. Nested rows use branch connectors and an internal leading indent, keeping assignees and dates aligned with the parent.
+- Separate colored label chips and project chips reuse the existing entity previews and internal filtered-issue navigation. Row backgrounds open the issue; checkboxes, progress controls, property pickers, and popup contents retain their own actions.
+- Detail sub-issue rows now share the list's 40px spacing, rounded hover/focus/selection treatment, accessible opening action, and progress indicator. Existing status/priority/assignee editing remains available.
+- Browser verified on TES-11/TES-12: collapse/expand in list and detail, independent selection, property menu opening, row opening, child navigation, and project filter navigation. Parent and child date/right edges were measured equal. No issue properties were changed during this QA.
+- Validation: all 811 application tests and 4 Workflow tests passed; scoped ESLint, TypeScript, production build and protected Workflow verification passed. The final popup click-isolation guard also passed the 5 focused row tests.
+- Screenshots: `docs/qa/team-issues/issue-rows-nested.png` and `docs/qa/team-issues/detail-sub-issue-rows.png`. Existing grouping and matching/all/flat display preferences are preserved.
