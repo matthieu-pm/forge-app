@@ -129,7 +129,7 @@ export function ConnectCallsDialog({
           </p>
         )}
         <div className="space-y-5">
-          <label className="block space-y-2 text-[13px] font-medium">
+          <label className="flex flex-col gap-2.5 text-[13px] font-medium">
             <span>Import new calls into</span>
             <OptionSelect
               aria-label="Import calls into team"
