@@ -875,3 +875,20 @@ Browser proof used a new TES-11 Discussion interaction verification fixture so t
 Validation: 21 focused activity, issue persistence, and navigation tests passed, then all 800 application tests across 153 suites and 4 workflow tests passed. TypeScript, scoped ESLint, production build and protected Workflow verification passed. Tests cover interleaving, reply retention, grouping boundaries, property-history metadata and legacy compatibility. No deployment or commit. Mobile and packaged Electron behavior were not separately exercised; generic property navigation remains limited to the existing local issue model.
 
 Final result: passed for the desktop discussion and property interactions shown in the reference.
+
+
+## Activity-row entity previews and navigation — 2026-10-24
+
+Story: an activity-row entity opens a preview from stored team data; selecting the entity opens its matching issue list through validated route search and the existing issue filter engine. Activity timestamps and copy actions retain stable row permalinks inside the fixed issue pane.
+
+Split structured activity changes into prose and entity references. Actor/assignee names, project names, and individual added/removed labels are now separate focusable links. Existing unstructured history stays unchanged. Shared PreviewCard surfaces show real directory colors, exact current issue counts, and project completion progress derived from stored issue statuses. Member links open assigned issues. Label/project links open the corresponding filtered team list. Context filters live in the URL without changing saved filter preferences on navigation; opening and returning from a matching issue retains that context. Assignee filter chips display names rather than internal IDs.
+
+Activity rows reveal a copy-link action on hover/focus and highlight on focus or permalink targeting. Timestamp hints now include weekday, date, and time to the second. Escape dismisses previews; keyboard focus opens previews and Enter follows entity links. Unknown member metadata is labeled without inventing a profile.
+
+Browser verification at 1280×720 reused TES-11 without changing its data. Label Test1 preview showed 1 labeled issue and its link opened exactly TES-11. That URL retained its filter after reload. The project preview showed 1 linked issue and 0 of 1 completed, with matching filtered navigation. The member preview showed 2 assigned issues and Enter opened those 2 rows. Preview dismissal stayed on the issue. Native paste into an unsent QA comment verified the copied URL and update-row hash, then the draft was cleared. Tab navigation exposed the complete date hint. Row permalink navigation left document scroll at 0 and Properties at y=120. Evidence: docs/qa/team-issues/activity-project-preview.png, activity-label-preview.png, activity-date-tooltip.png.
+
+Validation: 24 focused tests passed; all 803 application tests across 153 suites and 4 workflow tests passed. TypeScript, scoped ESLint, whitespace checks, production build, and protected Workflow verification passed. Tests cover legacy prose, removed entity references, exact label counts, validated context parameters, chronological grouping, persistence and navigation. The stopped local dev server was restarted successfully (Vite ready; HTTP 200); a fresh preview tab recovered from the stale connection-error tab. Existing TanStack devtools path.endsWith diagnostics remain unrelated to activity rendering.
+
+Boundaries: previews describe data available in this team's local issue store. Full project descriptions, global project IDs, workspace-wide totals, and profile pages are not invented. Names navigate to matching issues. Mobile pointer interaction and slow-motion animation playback were not separately exercised. No commit or deployment was made.
+
+Final result: passed for the supplied desktop activity-row interactions.

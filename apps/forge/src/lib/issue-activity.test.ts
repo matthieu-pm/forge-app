@@ -1,6 +1,18 @@
 import { describe, expect, it } from "vitest"
-import { issueActivityTimeline } from "./issue-activity"
-import { blankIssueDraft, issueDraftSchema } from "./team-issues"
+import {
+  activityContextFilter,
+  activityReferenceIssues,
+  activityReferenceSearch,
+  activitySegments,
+  issueActivityTimeline,
+  readActivitySearch,
+} from "./issue-activity"
+import {
+  blankIssueDraft,
+  initialIssueStore,
+  issueDraftSchema,
+  parseIssueStore,
+} from "./team-issues"
 
 const event = (id: string, seconds: number, author = "You") => ({
   id,
@@ -9,6 +21,105 @@ const event = (id: string, seconds: number, author = "You") => ({
   createdAt: new Date(seconds * 1000).toISOString(),
 })
 describe("issue activity timeline", () => {
+  it("keeps entity references separate from prose and preserves removed values", () => {
+    expect(
+      activitySegments(
+        {
+          ...event("project", 1),
+          field: "project",
+          from: "Former project",
+          to: "",
+        },
+        "me"
+      )
+    ).toEqual([
+      { text: "removed from project " },
+      { kind: "project", value: "Former project" },
+    ])
+    expect(
+      activitySegments(
+        {
+          ...event("label", 1),
+          field: "labels",
+          from: "Bug, API",
+          to: "API, Improvement",
+        },
+        "me"
+      )
+    ).toEqual([
+      { text: "added label " },
+      { kind: "label", value: "Improvement" },
+      { text: " and " },
+      { text: "removed label " },
+      { kind: "label", value: "Bug" },
+    ])
+    expect(activitySegments(event("legacy", 1), "me")).toEqual([
+      { text: "updated priority" },
+    ])
+  })
+  it("builds exact context filters and ignores malformed links", () => {
+    expect(activityReferenceSearch("label", "Bug")).toEqual({
+      view: "all",
+      label: "Bug",
+    })
+    expect(activityReferenceSearch("member", "member-id")).toEqual({
+      view: "all",
+      assignee: "member-id",
+    })
+    expect(activityContextFilter({ project: " Story mapping " })).toMatchObject(
+      { field: "project", operator: "is", value: "Story mapping" }
+    )
+    expect(activityContextFilter({ label: "Bug" })).toMatchObject({
+      field: "labels",
+      value: "Bug",
+    })
+    expect(
+      readActivitySearch({
+        label: ["Bug"],
+        project: " ",
+        assignee: "x".repeat(201),
+      })
+    ).toEqual({})
+  })
+  it("counts current linked issues exactly rather than substring matches or stored label totals", () => {
+    const base = {
+      ...blankIssueDraft(),
+      title: "Task",
+      createdAt: new Date(0).toISOString(),
+      updatedAt: new Date(0).toISOString(),
+      statusChangedAt: new Date(0).toISOString(),
+      creator: "You",
+      suggestedLabel: "",
+      completedAt: null,
+      recurrenceSpawned: false,
+    }
+    const issues = parseIssueStore(
+      JSON.stringify({
+        ...initialIssueStore(),
+        nextNumber: 3,
+        issues: [
+          {
+            ...base,
+            id: "a",
+            number: 1,
+            project: "Story mapping",
+            assignee: "member-id",
+            labels: "Bug, API",
+          },
+          { ...base, id: "b", number: 2, project: "Other", labels: "Bugfix" },
+        ],
+      })
+    ).issues
+    expect(
+      activityReferenceIssues(issues, "label", "Bug").map((issue) => issue.id)
+    ).toEqual(["a"])
+    expect(
+      activityReferenceIssues(issues, "project", "Story mapping")
+    ).toHaveLength(1)
+    expect(activityReferenceIssues(issues, "member", "member-id")).toHaveLength(
+      1
+    )
+  })
   it("interleaves comments and updates by time without pulling replies out of their thread", () => {
     const issue = issueDraftSchema.parse({
       ...blankIssueDraft(),

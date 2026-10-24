@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { Fragment, useEffect, useRef, useState } from "react"
 import { Link, useNavigate } from "@tanstack/react-router"
 import { toast } from "sonner"
 import {
@@ -11,11 +11,13 @@ import {
 } from "./issue-controls"
 import { InlineIssueProperties } from "./issue-list"
 import { Attachments, attachmentId } from "./issue-attachments"
+import { ActivityReference, ActivityRow } from "./issue-activity-row"
 import type { Editor, JSONContent } from "@tiptap/core"
 import type { IssueDraft, TeamIssue } from "@/lib/team-issues"
 import type { TeamStatus } from "@/lib/team-statuses"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
+import type { ActivityReferenceKind } from "@/lib/issue-activity"
 import { authClient } from "@/lib/auth-client"
 import {
   blankIssueDraft,
@@ -40,7 +42,7 @@ import {
   ActionHint,
   ActionIconButton,
 } from "@/components/ui/action-icon-button"
-import { issueActivityTimeline } from "@/lib/issue-activity"
+import { activitySegments, issueActivityTimeline } from "@/lib/issue-activity"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -641,7 +643,17 @@ export function IssueDetail({
   }
   function activityLink(target: string, date: string, edited = false) {
     return (
-      <ActionHint label={new Date(date).toLocaleString()}>
+      <ActionHint
+        label={new Date(date).toLocaleString(undefined, {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+          second: "2-digit",
+        })}
+      >
         <Link
           to="/teams/$teamSlug/issues"
           params={{ teamSlug: team.slug }}
@@ -912,49 +924,35 @@ export function IssueDetail({
       </div>
     )
   }
+  function activityReference(kind: ActivityReferenceKind, value: string) {
+    const people =
+      user && !members.some((member) => member.id === user.id)
+        ? [...members, { id: user.id, name: user.name, image: user.image }]
+        : members
+    return (
+      <ActivityReference
+        kind={kind}
+        value={value}
+        team={team}
+        issues={issues}
+        statuses={statuses}
+        members={people}
+        color={labelColors[value]}
+      />
+    )
+  }
   function activityText(event: TeamIssue["activity"][number]) {
-    const name = (value: string) =>
-      value === userId || value === "You"
-        ? (user?.name ?? "You")
-        : (members.find((member) => member.id === value)?.name ?? value)
-    if (event.to === undefined) return event.text
-    if (event.field === "assignee")
-      return !event.to
-        ? "unassigned the issue"
-        : event.to === event.author ||
-            (event.author === "You" && event.to === userId)
-          ? "self-assigned the issue"
-          : `assigned the issue to ${name(event.to)}`
-    if (event.field === "priority")
-      return event.to === "No priority"
-        ? "removed the priority"
-        : `set priority to ${event.to}`
-    if (event.field === "project")
-      return event.to
-        ? `added to project ${event.to}`
-        : `removed from project ${event.from}`
-    if (event.field === "labels") {
-      const split = (value = "") =>
-        value
-          .split(",")
-          .map((label) => label.trim())
-          .filter(Boolean)
-      const before = split(event.from),
-        after = split(event.to)
-      const added = after.filter((label) => !before.includes(label))
-      const removed = before.filter((label) => !after.includes(label))
-      return [
-        added.length
-          ? `added ${added.length === 1 ? "label" : "labels"} ${added.join(", ")}`
-          : "",
-        removed.length
-          ? `removed ${removed.length === 1 ? "label" : "labels"} ${removed.join(", ")}`
-          : "",
-      ]
-        .filter(Boolean)
-        .join(" and ")
-    }
-    return event.text
+    return (
+      <>
+        {activitySegments(event, userId).map((segment, index) => (
+          <Fragment key={index}>
+            {"text" in segment
+              ? segment.text
+              : activityReference(segment.kind, segment.value)}
+          </Fragment>
+        ))}
+      </>
+    )
   }
   const timeline = issueActivityTimeline(issue)
   const selectedLabels = (issue.labels ?? "")
@@ -1635,18 +1633,24 @@ export function IssueDetail({
                     )}
                   </IssuePicker>
                 </div>
-                <div
-                  id="issue-created"
-                  className="mb-5 flex items-center gap-2 px-3 text-xs text-muted-foreground"
-                >
-                  <AssigneeMark
-                    name={creator?.name ?? issue.creator}
-                    image={creator?.image}
-                  />
-                  <span className="min-w-0">
-                    {creator?.name ?? issue.creator} created the issue ·{" "}
-                    {activityLink("issue-created", issue.createdAt)}
-                  </span>
+                <div className="mb-5">
+                  <ActivityRow id="issue-created">
+                    <span className="flex h-5 shrink-0 items-center">
+                      <AssigneeMark
+                        name={creator?.name ?? issue.creator}
+                        image={creator?.image}
+                      />
+                    </span>
+                    <p className="min-w-0">
+                      {activityReference(
+                        "member",
+                        creator?.id ??
+                          (issue.creator === "You" ? userId : issue.creator)
+                      )}{" "}
+                      created the issue ·{" "}
+                      {activityLink("issue-created", issue.createdAt)}
+                    </p>
+                  </ActivityRow>
                 </div>
                 <div className="space-y-4">
                   {timeline.map((entry) => {
@@ -1662,23 +1666,28 @@ export function IssueDetail({
                               member.name === event.author
                           )
                     return (
-                      <div
-                        key={entry.id}
-                        id={`update-${entry.id}`}
-                        className="flex scroll-mt-6 items-start gap-2 px-3 py-0.5 text-xs leading-5 text-muted-foreground"
-                      >
+                      <ActivityRow key={entry.id} id={`update-${entry.id}`}>
                         <span className="flex h-5 shrink-0 items-center">
                           <AssigneeMark
                             name={actor?.name ?? event.author}
                             image={actor?.image}
                           />
                         </span>
-                        <p>
-                          <span>{actor?.name ?? event.author}</span>{" "}
-                          {entry.events.map(activityText).join(" and ")} ·{" "}
+                        <p className="min-w-0">
+                          {activityReference(
+                            "member",
+                            actor?.id ?? event.author
+                          )}{" "}
+                          {entry.events.map((item, index) => (
+                            <Fragment key={item.id}>
+                              {index > 0 && " and "}
+                              {activityText(item)}
+                            </Fragment>
+                          ))}{" "}
+                          ·{" "}
                           {activityLink(`update-${entry.id}`, entry.createdAt)}
                         </p>
-                      </div>
+                      </ActivityRow>
                     )
                   })}
                   <CommentInput onSubmit={addComment} />

@@ -17,6 +17,7 @@ import { IssueRows } from "./issue-list"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import type { IssueDraft, IssueStore, TeamIssue } from "@/lib/team-issues"
+import type { ActivitySearch } from "@/lib/issue-activity"
 import {
   blankIssueDraft,
   emptyIssueFilters,
@@ -51,8 +52,9 @@ import {
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { useAgent } from "@/components/agent/agent-provider"
 import { cn } from "@/lib/utils"
+import { activityContextFilter } from "@/lib/issue-activity"
 
-export type IssueSearch = { view: string; issue?: string }
+export type IssueSearch = { view: string; issue?: string } & ActivitySearch
 const emptyCopy = {
   active: {
     title: "Active issues",
@@ -110,7 +112,10 @@ export function TeamIssues({
     (Object.hasOwn(emptyCopy, search.view)
       ? (search.view as keyof typeof emptyCopy)
       : "active")
-  const filters = customView?.filters ?? store.filters
+  const contextFilter = activityContextFilter(search)
+  const filters = contextFilter
+    ? { ...emptyIssueFilters(), rules: [contextFilter] }
+    : (customView?.filters ?? store.filters)
   const display = customView?.display ?? store.display
   const members = directory?.members ?? []
   const visible = visibleIssues(store.issues, scope, statuses, filters, display)
@@ -213,7 +218,7 @@ export function TeamIssues({
     }
   }
   function changeFilters(next: typeof filters) {
-    write((state) =>
+    const saved = write((state) =>
       customView
         ? {
             ...state,
@@ -223,6 +228,7 @@ export function TeamIssues({
           }
         : { ...state, filters: next }
     )
+    if (saved && contextFilter) onNavigate({ view: search.view })
   }
   function changeDisplay(next: typeof display) {
     write((state) =>
@@ -351,7 +357,7 @@ export function TeamIssues({
       )
         return
       if (search.issue) {
-        if (event.key === "Escape") onNavigate({ view: search.view })
+        if (event.key === "Escape") onNavigate({ ...search, issue: undefined })
         return
       }
       if (
@@ -406,7 +412,7 @@ export function TeamIssues({
           labelColors={labelColors}
           onUpdate={updateIssue}
           onOpen={openIssue}
-          onBack={() => onNavigate({ view: search.view })}
+          onBack={() => onNavigate({ ...search, issue: undefined })}
         />
       </main>
     )
@@ -606,7 +612,7 @@ export function TeamIssues({
                   ? "is not set"
                   : rule.operator === "set"
                     ? "is set"
-                    : `${rule.operator} ${rule.field === "status" ? (statuses.find((status) => status.id === rule.value)?.name ?? rule.value) : rule.value}`}
+                    : `${rule.operator} ${rule.field === "status" ? (statuses.find((status) => status.id === rule.value)?.name ?? rule.value) : rule.field === "assignee" ? (members.find((member) => member.id === rule.value)?.name ?? "Selected member") : rule.value}`}
               </span>
               <IssueIcon name="close" className="size-3" />
             </Button>

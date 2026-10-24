@@ -1,11 +1,13 @@
 import { createFileRoute, getRouteApi } from "@tanstack/react-router"
 import type { IssueSearch } from "@/components/issues/team-issues"
 import { TeamIssues } from "@/components/issues/team-issues"
+import { readActivitySearch } from "@/lib/issue-activity"
 
 export const Route = createFileRoute("/teams/$teamSlug/issues")({
   validateSearch: (search: Record<string, unknown>): IssueSearch => ({
     view: typeof search.view === "string" ? search.view : "active",
     issue: typeof search.issue === "string" ? search.issue : undefined,
+    ...readActivitySearch(search),
   }),
   component: TeamIssuesPage,
 })
