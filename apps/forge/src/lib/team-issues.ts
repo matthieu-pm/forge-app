@@ -122,6 +122,7 @@ const commentSchema = z.object({
   id: z.string(),
   parentId: z.string().default(""),
   attachmentId: z.string().default(""),
+  attachmentName: z.string().max(255).optional(),
   resolved: z.boolean().default(false),
   author: z.string(),
   body: z.string().max(10000),
@@ -152,6 +153,11 @@ export const issueDraftSchema = triageDraftSchema.extend({
         author: z.string(),
         text: z.string(),
         createdAt: z.string(),
+        field: z
+          .enum(["status", "priority", "assignee", "labels", "project"])
+          .optional(),
+        from: z.string().optional(),
+        to: z.string().optional(),
       })
     )
     .default([]),
@@ -291,10 +297,19 @@ export function saveTeamIssue(
                 id: crypto.randomUUID(),
                 author: options.creator ?? "You",
                 createdAt: now,
+                field,
+                from: previous[field] ?? "",
+                to: draft[field] ?? "",
                 text:
                   field === "status"
                     ? `changed status to ${status.name}`
-                    : `updated ${field}`,
+                    : field === "priority"
+                      ? `set priority to ${draft.priority}`
+                      : field === "project"
+                        ? draft.project
+                          ? `added to project ${draft.project}`
+                          : "removed the project"
+                        : `updated ${field}`,
               })),
           ]
         : draft.activity,

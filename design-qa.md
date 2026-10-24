@@ -862,3 +862,16 @@ Validation: 797 tests across 152 standard suites plus 4 workflow tests across 2 
 Boundaries: data remains in the existing per-team browser store with its attachment size/count limits. Crop trims equal margins. Desktop browser behavior was verified; mobile stacking and the packaged Electron app were not separately exercised. No deployment or commit was made.
 
 Final result: passed for the shared desktop scrolling layout and supplied attachment workflow.
+
+
+## Reference-driven discussion interactions — 2026-10-24
+
+Refined the Activity section against the supplied Linear screenshot: comments and property updates now appear in chronological order, with replies kept inside their parent card. Nearby updates from the same author are grouped without crossing a comment. New updates persist their previous/next property values; readable sentences identify priority, project, self-assignment, and added/removed labels. Legacy update text remains readable. Event rows now have author avatars and timestamp permalinks with full-date tooltips.
+
+Image-linked comments quote a compact thumbnail above the author, opening the original attachment thread on selection. Removed attachments show an unavailable context rather than a dead action. Comment controls reveal on hover or keyboard focus and remain available while their menu is open. Reply inputs grow with multiline content, keep actions aligned, and submit via Cmd/Ctrl Enter. Editing supports the same shortcut and Escape to cancel, retaining edits if persistence fails. Pending attachments have thumbnail/name previews, accessible removal, cumulative size/count limits, and no accidental submission. Selected labels are individual chips with real directory colors and a separate add control; each chip supports replacement or removal. Selected property values use foreground text.
+
+Browser proof used a new TES-11 Discussion interaction verification fixture so the existing TES-9 data remained unchanged. Submitted a comment, created an image-linked comment, entered a three-line reply (64px expanded height), submitted it with Cmd Enter, edited a comment with Cmd Enter, previewed/removed a pending file, changed priority, self-assigned, replaced Bug with the existing Test1 label, and selected a project. Clicking the image quote opens its thread. Comment timestamps update the URL hash without reloading the shell; reloading that URL restores the saved discussion and scrolls to the comment. Document scroll stayed zero and Properties stayed at y=120. Screenshot: docs/qa/team-issues/activity-interactions.png (1506×1034).
+
+Validation: 21 focused activity, issue persistence, and navigation tests passed, then all 800 application tests across 153 suites and 4 workflow tests passed. TypeScript, scoped ESLint, production build and protected Workflow verification passed. Tests cover interleaving, reply retention, grouping boundaries, property-history metadata and legacy compatibility. No deployment or commit. Mobile and packaged Electron behavior were not separately exercised; generic property navigation remains limited to the existing local issue model.
+
+Final result: passed for the desktop discussion and property interactions shown in the reference.

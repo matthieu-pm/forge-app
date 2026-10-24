@@ -36,7 +36,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { ActionIconButton } from "@/components/ui/action-icon-button"
+import {
+  ActionHint,
+  ActionIconButton,
+} from "@/components/ui/action-icon-button"
+import { issueActivityTimeline } from "@/lib/issue-activity"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -235,70 +239,129 @@ function CommentInput({
   const [body, setBody] = useState(initialBody)
   const compact = placeholder === "Leave a reply…"
   const [files, setFiles] = useState<Array<Attachment>>([])
+  const latestFiles = useRef(files)
+  latestFiles.current = files
   const file = useRef<HTMLInputElement>(null)
+  const textarea = useRef<HTMLTextAreaElement>(null)
+  useEffect(() => {
+    const input = textarea.current
+    if (!input) return
+    input.style.height = "auto"
+    input.style.height = `${Math.min(192, Math.max(compact ? 24 : 48, input.scrollHeight))}px`
+  }, [body, compact])
   function submit() {
     if ((body.trim() || files.length) && onSubmit(body.trim(), files)) {
       setBody("")
       setFiles([])
     }
   }
+  async function attachFiles(value: FileList) {
+    try {
+      const added = await readFiles(value)
+      const next = [...latestFiles.current, ...added]
+      if (
+        next.length > 5 ||
+        next.reduce(
+          (sum, item) => sum + atob(item.data.split(",")[1]).length,
+          0
+        ) > 2_000_000
+      ) {
+        toast.error("Choose up to 5 files totaling 2 MB or less.")
+        return
+      }
+      setFiles(next)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Attachment failed")
+    }
+  }
   return (
     <div
       className={cn(
-        "rounded-lg border border-border/50 bg-muted/40 p-3",
-        compact &&
-          "flex items-center gap-2 rounded-none border-0 bg-transparent"
+        "rounded-lg border border-border/50 bg-muted/40 p-3 transition-colors focus-within:border-border focus-within:bg-muted/50",
+        compact && "rounded-none border-0 bg-transparent px-3 py-2.5"
       )}
     >
-      {avatar && (
-        <span
-          className={cn("flex items-center gap-2 text-xs", !compact && "mb-2")}
-        >
-          <AssigneeMark name={avatar.name} image={avatar.image} />
-          {!compact && avatar.name}
-        </span>
-      )}
-      <textarea
-        aria-label={placeholder === "Leave a reply…" ? "Reply" : "Comment"}
-        placeholder={placeholder}
-        autoFocus={autoFocus || Boolean(initialBody)}
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        onKeyDown={(e) => {
-          if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-            e.preventDefault()
-            submit()
-          }
-        }}
-        className={cn(
-          "w-full bg-transparent text-sm outline-none",
-          compact ? "h-6 min-h-6 flex-1 resize-none" : "min-h-10 resize-y"
+      <div className="flex items-start gap-2">
+        {avatar && (
+          <span className="flex h-6 shrink-0 items-center">
+            <AssigneeMark name={avatar.name} image={avatar.image} />
+          </span>
         )}
-      />
-      {files.map((item, index) => (
-        <button
-          key={index}
-          className="mr-2 text-xs text-muted-foreground"
-          onClick={() => setFiles(files.filter((_, i) => i !== index))}
-        >
-          {item.name} ×
-        </button>
-      ))}
-      <div className="flex justify-end gap-2">
-        <input
-          ref={file}
-          hidden
-          type="file"
-          multiple
-          onChange={(e) => {
-            const value = e.target.files
-            if (value)
-              void readFiles(value)
-                .then(setFiles)
-                .catch((error) => toast.error(String(error.message)))
-            e.target.value = ""
+        <textarea
+          ref={textarea}
+          aria-label={compact ? "Reply" : "Comment"}
+          placeholder={placeholder}
+          autoFocus={autoFocus || Boolean(initialBody)}
+          rows={compact ? 1 : 2}
+          maxLength={10000}
+          value={body}
+          onChange={(event) => setBody(event.target.value)}
+          onKeyDown={(event) => {
+            if (
+              !event.nativeEvent.isComposing &&
+              (event.metaKey || event.ctrlKey) &&
+              event.key === "Enter"
+            ) {
+              event.preventDefault()
+              submit()
+            }
           }}
+          className="min-w-0 flex-1 resize-none bg-transparent py-0.5 text-sm leading-5 outline-none placeholder:text-muted-foreground/70"
         />
+        {compact && controls()}
+      </div>
+      {!!files.length && (
+        <div
+          aria-label="Pending comment attachments"
+          className="mt-3 flex flex-wrap gap-2"
+        >
+          {files.map((item, index) => (
+            <div
+              key={item.id ?? index}
+              className="relative flex max-w-full items-center gap-2 rounded-md border border-border bg-background/50 py-1 pr-7 pl-1"
+            >
+              {item.data.startsWith("data:image/") ? (
+                <img
+                  src={item.data}
+                  alt=""
+                  className="size-10 rounded object-cover"
+                />
+              ) : (
+                <IssueIcon name="file" className="m-2" />
+              )}
+              <span className="max-w-40 truncate text-xs">{item.name}</span>
+              <ActionIconButton
+                size="icon-xs"
+                label={`Remove attachment ${item.name}`}
+                className="absolute top-1 right-0"
+                onClick={() =>
+                  setFiles((current) =>
+                    current.filter((_, position) => position !== index)
+                  )
+                }
+              >
+                <IssueIcon name="close" />
+              </ActionIconButton>
+            </div>
+          ))}
+        </div>
+      )}
+      {!compact && <div className="mt-1 flex justify-end">{controls()}</div>}
+      <input
+        ref={file}
+        hidden
+        type="file"
+        multiple
+        onChange={(event) => {
+          if (event.target.files) void attachFiles(event.target.files)
+          event.target.value = ""
+        }}
+      />
+    </div>
+  )
+  function controls() {
+    return (
+      <div className="flex shrink-0 items-center gap-1">
         <ActionIconButton
           size="icon-xs"
           label="Attach comment files"
@@ -306,19 +369,21 @@ function CommentInput({
         >
           <IssueIcon name="attach" />
         </ActionIconButton>
-        <Button
+        <ActionIconButton
           variant="secondary"
           size="icon-xs"
-          aria-label="Submit comment"
+          label={compact ? "Submit reply" : "Submit comment"}
+          shortcut="⌘ ↵"
           disabled={!body.trim() && !files.length}
           onClick={submit}
         >
           <IssueIcon name="up" />
-        </Button>
+        </ActionIconButton>
       </div>
-    </div>
-  )
+    )
+  }
 }
+
 export function IssueDetail({
   team,
   issue,
@@ -327,6 +392,7 @@ export function IssueDetail({
   directory,
   labels,
   projects,
+  labelColors = {},
   onUpdate,
   onOpen,
   onBack,
@@ -338,6 +404,7 @@ export function IssueDetail({
   directory?: TemplateDirectory
   labels: Array<string>
   projects: Array<string>
+  labelColors?: Record<string, string>
   onUpdate: (issue: TeamIssue, patch: Partial<IssueDraft>) => boolean
   onOpen: (issue: TeamIssue) => void
   onBack: () => void
@@ -401,6 +468,14 @@ export function IssueDetail({
     return onUpdate(issue, next)
   }
   const descriptionDirty = useRef(false)
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      const target = location.hash.slice(1)
+      if (target)
+        document.getElementById(target)?.scrollIntoView({ block: "center" })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [issue.id])
   function persistDoc() {
     if (
       descriptionDirty.current &&
@@ -496,6 +571,9 @@ export function IssueDetail({
           id: crypto.randomUUID(),
           parentId,
           attachmentId: attachmentRef,
+          attachmentName: issue.attachments?.find(
+            (item) => attachmentId(item) === attachmentRef
+          )?.name,
           resolved: false,
           author: userId,
           body,
@@ -509,7 +587,7 @@ export function IssueDetail({
     })
   }
   function changeComment(comment: Comment, next: Partial<Comment>) {
-    patch({
+    return patch({
       comments: issue.comments.map((item) =>
         item.id === comment.id ? { ...item, ...next } : item
       ),
@@ -555,38 +633,114 @@ export function IssueDetail({
       )
     }
   }
+  function jumpToAttachment(assetId: string) {
+    const element = document.getElementById(`attachment-${assetId}`)
+    if (!element) return
+    setActiveAttachment(assetId)
+    element.scrollIntoView({ block: "center", behavior: "smooth" })
+  }
+  function activityLink(target: string, date: string, edited = false) {
+    return (
+      <ActionHint label={new Date(date).toLocaleString()}>
+        <Link
+          to="/teams/$teamSlug/issues"
+          params={{ teamSlug: team.slug }}
+          search={(previous) => ({
+            ...previous,
+            view: previous.view ?? "all",
+            issue: issue.id,
+          })}
+          hash={target}
+          resetScroll={false}
+          replace
+          className="shrink-0 rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+          onClick={() =>
+            document
+              .getElementById(target)
+              ?.scrollIntoView({ block: "center", behavior: "smooth" })
+          }
+        >
+          <time dateTime={date}>
+            {ago(date)}
+            {edited ? " · edited" : ""}
+          </time>
+        </Link>
+      </ActionHint>
+    )
+  }
   function renderComment(comment: Comment, reply = false, imageThread = false) {
-    const author =
-      comment.author === userId
-        ? user
-        : members.find(
-            (member) =>
-              member.id === comment.author || member.name === comment.author
-          )
+    const editId = `${imageThread ? "image-thread-" : ""}${comment.id}`
+    const ownComment = comment.author === userId || comment.author === "You"
+    const contextAttachment = issue.attachments?.find(
+      (item) => attachmentId(item) === comment.attachmentId
+    )
+    const author = ownComment
+      ? user
+      : members.find(
+          (member) =>
+            member.id === comment.author || member.name === comment.author
+        )
     return (
       <div
         key={comment.id}
         id={`${imageThread ? "image-thread-" : ""}comment-${comment.id}`}
         className={cn(
-          "rounded-lg border border-border/50 bg-muted/40",
-          reply && "ml-8 border-0 bg-transparent"
+          "group/comment scroll-mt-6 rounded-lg border border-border/50 bg-muted/40",
+          reply &&
+            "ml-5 rounded-none border-0 border-l border-border/40 bg-transparent"
         )}
       >
         <div className="p-3">
+          {comment.attachmentId &&
+            !reply &&
+            !imageThread &&
+            !comment.deleted && (
+              <button
+                aria-label={
+                  contextAttachment
+                    ? `View attachment context: ${contextAttachment.name}`
+                    : "Attachment no longer available"
+                }
+                disabled={!contextAttachment}
+                onClick={() => jumpToAttachment(comment.attachmentId)}
+                className="mb-4 flex w-full items-center gap-3 border-l-2 border-border pl-3 text-left text-xs text-muted-foreground outline-none hover:border-[#5e6ad2] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default"
+              >
+                {contextAttachment?.data.startsWith("data:image/") ? (
+                  <img
+                    src={contextAttachment.data}
+                    alt={contextAttachment.name}
+                    className="size-24 rounded-lg object-cover outline outline-1 -outline-offset-1 outline-foreground/10"
+                  />
+                ) : (
+                  <>
+                    <IssueIcon name="file" />
+                    {contextAttachment?.name ??
+                      comment.attachmentName ??
+                      "Attachment removed"}
+                  </>
+                )}
+                {comment.resolved && (
+                  <span className="ml-auto flex items-center gap-1">
+                    <IssueIcon name="check" />
+                    Resolved
+                  </span>
+                )}
+              </button>
+            )}
           <div className="mb-2 flex items-center gap-2 text-xs">
             <AssigneeMark
               name={author?.name ?? comment.author}
               image={author?.image}
             />
-            <span>{author?.name ?? comment.author}</span>
-            <time
-              className="text-muted-foreground"
-              title={new Date(comment.createdAt).toLocaleString()}
-            >
-              {ago(comment.createdAt)}
-              {comment.edited ? " · edited" : ""}
-            </time>
-            <div className="ml-auto flex items-center">
+            <span className="min-w-0 truncate">
+              {author?.name ?? comment.author}
+            </span>
+            {activityLink(
+              `comment-${comment.id}`,
+              comment.createdAt,
+              comment.edited
+            )}
+            <div className="ml-auto flex items-center transition-opacity duration-150 group-focus-within/comment:opacity-100 group-hover/comment:opacity-100 has-[[aria-expanded=true]]:opacity-100 motion-reduce:transition-none [@media(hover:hover)]:opacity-0">
               {comment.attachmentId && !reply && (
                 <ActionIconButton
                   size="icon-xs"
@@ -641,11 +795,11 @@ export function IssueDetail({
                   >
                     Copy link
                   </DropdownMenuItem>
-                  {comment.author === userId && (
+                  {ownComment && (
                     <>
                       <DropdownMenuItem
                         onClick={() => {
-                          setEditing(comment.id)
+                          setEditing(editId)
                           setEditText(comment.body)
                         }}
                       >
@@ -664,34 +818,33 @@ export function IssueDetail({
               </DropdownMenu>
             </div>
           </div>
-          {comment.attachmentId && !reply && !imageThread && (
-            <button
-              className="mb-2 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-              onClick={() => {
-                const attachment = document.getElementById(
-                  `attachment-${comment.attachmentId}`
-                )
-                if (!attachment) {
-                  toast.info(
-                    "This attachment was removed. You can still reply here."
-                  )
-                  return
-                }
-                setActiveAttachment(comment.attachmentId)
-                attachment.scrollIntoView({
-                  block: "center",
-                  behavior: "smooth",
-                })
-              }}
-            >
-              <IssueIcon name="comment" />
-              {comment.resolved ? "Resolved thread" : "Comment on attachment"}
-            </button>
-          )}
-          {editing === comment.id ? (
+          {editing === editId ? (
             <div>
               <textarea
                 aria-label="Edit comment"
+                autoFocus
+                maxLength={10000}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") setEditing(undefined)
+                  if (
+                    (event.metaKey || event.ctrlKey) &&
+                    event.key === "Enter" &&
+                    !event.nativeEvent.isComposing &&
+                    editText.trim()
+                  ) {
+                    event.preventDefault()
+                    if (
+                      patch({
+                        comments: issue.comments.map((item) =>
+                          item.id === comment.id
+                            ? { ...item, body: editText.trim(), edited: true }
+                            : item
+                        ),
+                      })
+                    )
+                      setEditing(undefined)
+                  }
+                }}
                 value={editText}
                 onChange={(e) => setEditText(e.target.value)}
                 className="min-h-16 w-full rounded border border-border bg-transparent p-2 text-sm"
@@ -703,8 +856,13 @@ export function IssueDetail({
                 <Button
                   disabled={!editText.trim()}
                   onClick={() => {
-                    changeComment(comment, { body: editText, edited: true })
-                    setEditing(undefined)
+                    if (
+                      changeComment(comment, {
+                        body: editText.trim(),
+                        edited: true,
+                      })
+                    )
+                      setEditing(undefined)
                   }}
                 >
                   Save
@@ -743,6 +901,7 @@ export function IssueDetail({
               .map((item) => renderComment(item, true, imageThread))}
             <div className="border-t border-border/40">
               <CommentInput
+                key={`${imageThread ? "image-" : ""}reply-${comment.id}`}
                 placeholder="Leave a reply…"
                 avatar={user ?? undefined}
                 onSubmit={(body, files) => addComment(body, files, comment.id)}
@@ -753,6 +912,67 @@ export function IssueDetail({
       </div>
     )
   }
+  function activityText(event: TeamIssue["activity"][number]) {
+    const name = (value: string) =>
+      value === userId || value === "You"
+        ? (user?.name ?? "You")
+        : (members.find((member) => member.id === value)?.name ?? value)
+    if (event.to === undefined) return event.text
+    if (event.field === "assignee")
+      return !event.to
+        ? "unassigned the issue"
+        : event.to === event.author ||
+            (event.author === "You" && event.to === userId)
+          ? "self-assigned the issue"
+          : `assigned the issue to ${name(event.to)}`
+    if (event.field === "priority")
+      return event.to === "No priority"
+        ? "removed the priority"
+        : `set priority to ${event.to}`
+    if (event.field === "project")
+      return event.to
+        ? `added to project ${event.to}`
+        : `removed from project ${event.from}`
+    if (event.field === "labels") {
+      const split = (value = "") =>
+        value
+          .split(",")
+          .map((label) => label.trim())
+          .filter(Boolean)
+      const before = split(event.from),
+        after = split(event.to)
+      const added = after.filter((label) => !before.includes(label))
+      const removed = before.filter((label) => !after.includes(label))
+      return [
+        added.length
+          ? `added ${added.length === 1 ? "label" : "labels"} ${added.join(", ")}`
+          : "",
+        removed.length
+          ? `removed ${removed.length === 1 ? "label" : "labels"} ${removed.join(", ")}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join(" and ")
+    }
+    return event.text
+  }
+  const timeline = issueActivityTimeline(issue)
+  const selectedLabels = (issue.labels ?? "")
+    .split(",")
+    .map((label) => label.trim())
+    .filter(Boolean)
+  const labelOptions = [...new Set([...labels, ...selectedLabels])].map(
+    (value) => ({
+      value,
+      label: value,
+      icon: (
+        <span
+          className="size-2 shrink-0 rounded-full bg-muted-foreground"
+          style={{ backgroundColor: labelColors[value] }}
+        />
+      ),
+    })
+  )
   return (
     <div
       className="flex min-h-0 flex-1 flex-col overflow-hidden"
@@ -1415,32 +1635,52 @@ export function IssueDetail({
                     )}
                   </IssuePicker>
                 </div>
-                <div className="mb-6 flex items-center gap-2 text-xs text-muted-foreground">
+                <div
+                  id="issue-created"
+                  className="mb-5 flex items-center gap-2 px-3 text-xs text-muted-foreground"
+                >
                   <AssigneeMark
                     name={creator?.name ?? issue.creator}
                     image={creator?.image}
                   />
-                  {creator?.name ?? issue.creator} created the issue ·{" "}
-                  <time title={new Date(issue.createdAt).toLocaleString()}>
-                    {ago(issue.createdAt)}
-                  </time>
+                  <span className="min-w-0">
+                    {creator?.name ?? issue.creator} created the issue ·{" "}
+                    {activityLink("issue-created", issue.createdAt)}
+                  </span>
                 </div>
-                {issue.activity.map((event) => (
-                  <p
-                    key={event.id}
-                    className="mb-3 text-xs text-muted-foreground"
-                  >
-                    {event.author === "You"
-                      ? (user?.name ?? "You")
-                      : (members.find((m) => m.id === event.author)?.name ??
-                        event.author)}{" "}
-                    {event.text} · {ago(event.createdAt)}
-                  </p>
-                ))}
                 <div className="space-y-4">
-                  {issue.comments
-                    .filter((comment) => !comment.parentId)
-                    .map((comment) => renderComment(comment))}
+                  {timeline.map((entry) => {
+                    if (entry.kind === "comment")
+                      return renderComment(entry.comment)
+                    const event = entry.events[0]
+                    const actor =
+                      event.author === "You" || event.author === userId
+                        ? user
+                        : members.find(
+                            (member) =>
+                              member.id === event.author ||
+                              member.name === event.author
+                          )
+                    return (
+                      <div
+                        key={entry.id}
+                        id={`update-${entry.id}`}
+                        className="flex scroll-mt-6 items-start gap-2 px-3 py-0.5 text-xs leading-5 text-muted-foreground"
+                      >
+                        <span className="flex h-5 shrink-0 items-center">
+                          <AssigneeMark
+                            name={actor?.name ?? event.author}
+                            image={actor?.image}
+                          />
+                        </span>
+                        <p>
+                          <span>{actor?.name ?? event.author}</span>{" "}
+                          {entry.events.map(activityText).join(" and ")} ·{" "}
+                          {activityLink(`update-${entry.id}`, entry.createdAt)}
+                        </p>
+                      </div>
+                    )
+                  })}
                   <CommentInput onSubmit={addComment} />
                 </div>
               </section>
@@ -1495,7 +1735,10 @@ export function IssueDetail({
                                 )
                               }
                             }}
-                            className={issuePropertyControl}
+                            className={cn(
+                              issuePropertyControl,
+                              "text-foreground"
+                            )}
                           >
                             <TeamSidebarIcon
                               icon={team.icon}
@@ -1520,18 +1763,64 @@ export function IssueDetail({
               <h2 className="mt-8 mb-3 px-2 text-xs text-muted-foreground">
                 Labels
               </h2>
-              <IssuePicker
-                label="Add labels"
-                shortcut="L"
-                multiple
-                value={issue.labels ?? ""}
-                options={labels.map((value) => ({ value, label: value }))}
-                onChange={(value) => patch({ labels: value })}
-                className={issuePropertyControl}
-              >
-                <IssueIcon name="label" className="size-4" />
-                <span className="truncate">{issue.labels || "Add label"}</span>
-              </IssuePicker>
+              <div className="flex flex-wrap items-center gap-1">
+                {selectedLabels.map((value) => (
+                  <IssuePicker
+                    key={value}
+                    label={`Change label ${value}`}
+                    value={value}
+                    options={[
+                      {
+                        value: "",
+                        label: "Remove label",
+                        icon: <IssueIcon name="close" />,
+                      },
+                      ...labelOptions.filter(
+                        (option) =>
+                          option.value === value ||
+                          !selectedLabels.includes(option.value)
+                      ),
+                    ]}
+                    onChange={(next) =>
+                      patch({
+                        labels: selectedLabels
+                          .map((item) => (item === value ? next : item))
+                          .filter(Boolean)
+                          .join(", "),
+                      })
+                    }
+                    className="gap-1.5 border border-border/70 bg-transparent text-[13px] text-foreground"
+                  >
+                    <span
+                      className="size-2 shrink-0 rounded-full bg-muted-foreground"
+                      style={{ backgroundColor: labelColors[value] }}
+                    />
+                    <span className="max-w-32 truncate">{value}</span>
+                  </IssuePicker>
+                ))}
+                <IssuePicker
+                  label="Add labels"
+                  shortcut="L"
+                  multiple
+                  value={issue.labels ?? ""}
+                  options={labelOptions}
+                  onChange={(value) => patch({ labels: value })}
+                  allowCreate
+                  className={cn(
+                    issuePropertyControl,
+                    selectedLabels.length > 0 &&
+                      "size-7 justify-center rounded-full p-0"
+                  )}
+                >
+                  <IssueIcon
+                    name={selectedLabels.length ? "add" : "label"}
+                    className="size-4"
+                  />
+                  {!selectedLabels.length && (
+                    <span className="truncate">Add label</span>
+                  )}
+                </IssuePicker>
+              </div>
               <h2 className="mt-8 mb-3 px-2 text-xs text-muted-foreground">
                 Project
               </h2>
@@ -1545,7 +1834,10 @@ export function IssueDetail({
                 ]}
                 onChange={(project) => patch({ project })}
                 allowCreate
-                className={issuePropertyControl}
+                className={cn(
+                  issuePropertyControl,
+                  issue.project && "text-foreground"
+                )}
               >
                 <IssueIcon name="project" className="size-4" />
                 <span className="truncate">

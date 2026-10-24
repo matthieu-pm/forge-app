@@ -84,6 +84,7 @@ export function TeamIssues({
   const [directory, setDirectory] = useState<TemplateDirectory>()
   const [directoryError, setDirectoryError] = useState(false)
   const [labels, setLabels] = useState<Array<string>>([])
+  const [labelColors, setLabelColors] = useState<Record<string, string>>({})
   const [error, setError] = useState("")
   const [details, setDetails] = useState(Boolean(search.issue))
   const [selected, setSelected] = useState<Array<string>>([])
@@ -128,10 +129,14 @@ export function TeamIssues({
       try {
         setStatuses(getIssueStatuses(team.id))
         const raw = localStorage.getItem(teamLabelsStorageKey(team.id))
-        setLabels(
-          (raw ? parseTeamLabels(raw) : initialTeamLabels(team.slug)).labels
-            .filter((label) => !label.archived)
-            .map((label) => label.name)
+        const activeLabels = (
+          raw ? parseTeamLabels(raw) : initialTeamLabels(team.slug)
+        ).labels.filter((label) => !label.archived)
+        setLabels(activeLabels.map((label) => label.name))
+        setLabelColors(
+          Object.fromEntries(
+            activeLabels.map((label) => [label.name, label.color])
+          )
         )
       } catch {
         setError(
@@ -398,6 +403,7 @@ export function TeamIssues({
           directory={directory}
           labels={labels}
           projects={projects}
+          labelColors={labelColors}
           onUpdate={updateIssue}
           onOpen={openIssue}
           onBack={() => onNavigate({ view: search.view })}

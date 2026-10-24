@@ -89,6 +89,11 @@ export function InlineIssueProperties({
         "bg-transparent text-muted-foreground hover:bg-foreground/10",
         emptyLabels && issuePropertyControl,
         emptyLabels &&
+          (property === "status" ||
+            (property === "priority" && issue.priority !== "No priority") ||
+            (property === "assignee" && assignee)) &&
+          "text-foreground",
+        emptyLabels &&
           "text-[13px] transition-colors duration-150 hover:bg-muted active:translate-y-0 motion-reduce:transition-none",
         compact && "size-6 p-0"
       )}

@@ -20,6 +20,39 @@ const team = "issue-page-tests"
 const statuses = initialTeamStatuses().statuses
 beforeEach(() => localStorage.clear())
 describe("team issues", () => {
+  it("records the previous and next property values for readable activity after reload", () => {
+    const issue = saveTeamIssue(team, { ...blankIssueDraft(), title: "Review" })
+    const changed = saveTeamIssue(
+      team,
+      {
+        ...issue,
+        priority: "Medium",
+        labels: "Bug",
+        assignee: "member",
+        project: "Story mapping",
+      },
+      { id: issue.id, creator: "member" }
+    )
+    expect(readIssueStore(team).issues[0].activity).toEqual(changed.activity)
+    expect(changed.activity).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: "priority",
+          from: "No priority",
+          to: "Medium",
+          text: "set priority to Medium",
+        }),
+        expect.objectContaining({ field: "labels", from: "", to: "Bug" }),
+        expect.objectContaining({
+          field: "assignee",
+          author: "member",
+          from: "",
+          to: "member",
+        }),
+        expect.objectContaining({ field: "project", to: "Story mapping" }),
+      ])
+    )
+  })
   it("creates children atomically with unique numbers and consumes a draft", () => {
     const draft = {
       ...blankIssueDraft(),
@@ -199,7 +232,7 @@ describe("team issues", () => {
     expect(edited.comments).toEqual(original.comments)
     expect(edited.reactions).toEqual(original.reactions)
     expect(edited.descriptionDoc).toEqual(original.descriptionDoc)
-    expect(edited.activity[0].text).toBe("updated priority")
+    expect(edited.activity[0].text).toBe("set priority to High")
     const legacy = JSON.parse(JSON.stringify(readIssueStore(team)))
     delete legacy.issues[0].comments
     delete legacy.issues[0].reactions
