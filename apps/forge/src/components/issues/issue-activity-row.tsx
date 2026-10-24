@@ -129,7 +129,7 @@ export function ActivityReference({
         align="start"
         side="top"
         sideOffset={8}
-        className="w-80 max-w-[calc(100vw-32px)] space-y-3 rounded-lg border border-border bg-popover p-3 shadow-md motion-reduce:animate-none"
+        className="w-80 max-w-[calc(100vw-32px)] space-y-3 rounded-[min(var(--radius-4xl),24px)] p-3 motion-reduce:animate-none"
       >
         <div className="flex items-center gap-2 text-[13px] font-medium">
           {icon}
