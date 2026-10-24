@@ -347,7 +347,7 @@ export function ImportCallDialog({
             }
           }}
         >
-          <label className="block space-y-1.5 text-[13px]">
+          <label className="flex flex-col gap-2.5 text-[13px]">
             <span>Call title</span>
             <Input
               autoFocus
@@ -360,7 +360,7 @@ export function ImportCallDialog({
             />
           </label>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <label className="block space-y-1.5 text-[13px]">
+            <label className="flex flex-col gap-2.5 text-[13px]">
               <span>Team</span>
               <OptionSelect
                 required
@@ -379,7 +379,7 @@ export function ImportCallDialog({
                 ))}
               </OptionSelect>
             </label>
-            <label className="block space-y-1.5 text-[13px]">
+            <label className="flex flex-col gap-2.5 text-[13px]">
               <span>Call date</span>
               <Input
                 required
@@ -390,7 +390,7 @@ export function ImportCallDialog({
               />
             </label>
           </div>
-          <label className="block space-y-1.5 text-[13px]">
+          <label className="flex flex-col gap-2.5 text-[13px]">
             <span>
               Transcript file{" "}
               <span className="text-muted-foreground">· VTT, SRT, or TXT</span>
@@ -418,7 +418,7 @@ export function ImportCallDialog({
               }}
             />
           </label>
-          <label className="block space-y-1.5 text-[13px]">
+          <label className="flex flex-col gap-2.5 text-[13px]">
             <span>Or paste transcript text</span>
             <Textarea
               required
