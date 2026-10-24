@@ -106,7 +106,9 @@ function RootLayout() {
           className={cn(
             "forge-app-shell relative",
             pathname === "/inbox" && "forge-inbox-shell",
-            /^\/teams\/[^/]+\/issues$/.test(pathname) && "forge-issues-shell",
+            (pathname === "/my-issues" ||
+              /^\/teams\/[^/]+\/issues$/.test(pathname)) &&
+              "forge-issues-shell",
             hasStandaloneTeamSettingsLayout
               ? "forge-create-team-shell forge-settings-shell"
               : hasSettingsLayout
@@ -163,6 +165,7 @@ function AgentRouteContent({
       inert={obscured || undefined}
     >
       {pathname !== "/inbox" &&
+        pathname !== "/my-issues" &&
         !/^\/teams\/[^/]+\/(triage|overview|documents|loops|members|issues)$/.test(
           pathname
         ) && <AppHeader />}

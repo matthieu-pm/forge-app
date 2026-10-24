@@ -44,6 +44,7 @@ export function WelcomeContent() {
         <li>
           <Link
             to="/my-issues"
+            search={{ view: "assigned" }}
             className="text-indigo-600 underline-offset-4 hover:text-indigo-500 hover:underline dark:text-indigo-400 dark:hover:text-indigo-300"
           >
             Your issues

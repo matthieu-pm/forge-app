@@ -620,7 +620,7 @@ export function IssueDisplayMenu({
             variant="ghost"
             size="sm"
             className="text-xs text-[#7d87f5]"
-            title="Save this browser’s default for this team"
+            title="Save the default display for this view"
             onClick={onSaveDefault}
           >
             Set as default

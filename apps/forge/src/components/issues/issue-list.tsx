@@ -193,12 +193,20 @@ export function IssueSubProgress({
     </span>
   )
 }
+export type IssueRowContext = {
+  team: { slug: string; name: string; identifier: string }
+  statuses: Array<TeamStatus>
+  members: Members
+  labelColors: Record<string, string>
+  issues: Array<TeamIssue>
+}
 export function IssueRows({
   issues,
   allIssues,
   identifier,
   team,
   labelColors = {},
+  contextFor,
   statuses,
   members,
   display,
@@ -214,6 +222,7 @@ export function IssueRows({
   identifier: string
   team: { slug: string; name: string }
   labelColors?: Record<string, string>
+  contextFor?: (issue: TeamIssue) => IssueRowContext
   statuses: Array<TeamStatus>
   members: Members
   display: IssueDisplay
@@ -242,7 +251,13 @@ export function IssueRows({
     empty.forEach((name) => groups.set(name, []))
   }
   for (const issue of issues) {
-    const key = issueGroupValue(issue, display.group, statuses, members)
+    const context = contextFor?.(issue)
+    const key = issueGroupValue(
+      issue,
+      display.group,
+      context?.statuses ?? statuses,
+      context?.members ?? members
+    )
     groups.set(key, [...(groups.get(key) ?? []), issue])
   }
   let entries = [...groups.entries()]
@@ -263,14 +278,19 @@ export function IssueRows({
         )
     )
   if (display.groupDescending) entries = entries.reverse()
-  function patchFor(name: string): Partial<IssueDraft> {
+  function patchFor(name: string, issue?: TeamIssue): Partial<IssueDraft> {
+    const context = issue ? contextFor?.(issue) : undefined
+    const groupStatuses = context?.statuses ?? statuses
+    const groupMembers = context?.members ?? members
     if (display.group === "Status")
-      return { status: statuses.find((status) => status.name === name)?.id }
+      return {
+        status: groupStatuses.find((status) => status.name === name)?.id,
+      }
     if (display.group === "Priority")
       return { priority: name as IssueDraft["priority"] }
     if (display.group === "Assignee")
       return {
-        assignee: members.find((member) => member.name === name)?.id ?? "",
+        assignee: groupMembers.find((member) => member.name === name)?.id ?? "",
       }
     if (display.group === "Project")
       return { project: name === "No project" ? "" : name }
@@ -284,11 +304,18 @@ export function IssueRows({
     branches: Array<boolean> = [],
     expandable = false
   ) {
+    const context = contextFor?.(issue)
+    const rowTeam = context?.team ?? team
+    const rowIdentifier = context?.team.identifier ?? identifier
+    const rowStatuses = context?.statuses ?? statuses
+    const rowMembers = context?.members ?? members
+    const rowColors = context?.labelColors ?? labelColors
+    const rowIssues = context?.issues ?? allIssues
     const depth = branches.length
     const children = allIssues.filter((child) => child.parentId === issue.id)
     const completed = children.filter(
       (child) =>
-        statuses.find((status) => status.id === child.status)?.group ===
+        rowStatuses.find((status) => status.id === child.status)?.group ===
         "completed"
     ).length
     const expanded = !collapsedIssues.includes(issue.id)
@@ -296,7 +323,7 @@ export function IssueRows({
     const creator =
       issue.creator === "You"
         ? session?.user
-        : members.find(
+        : rowMembers.find(
             (member) =>
               member.id === issue.creator || member.name === issue.creator
           )
@@ -329,7 +356,7 @@ export function IssueRows({
       >
         <input
           type="checkbox"
-          aria-label={`Select ${identifier}-${issue.number}`}
+          aria-label={`Select ${rowIdentifier}-${issue.number}`}
           checked={selected.includes(issue.id)}
           onChange={() => onSelect(issue.id)}
           className="size-3.5 shrink-0 accent-[#5e6ad2] opacity-0 group-focus-within/issue:opacity-100 group-hover/issue:opacity-100 checked:opacity-100 focus-visible:opacity-100 dark:[color-scheme:dark] pointer-coarse:opacity-100"
@@ -366,8 +393,8 @@ export function IssueRows({
         {props.includes("Priority") && (
           <InlineIssueProperties
             issue={issue}
-            statuses={statuses}
-            members={members}
+            statuses={rowStatuses}
+            members={rowMembers}
             onUpdate={onUpdate}
             property="priority"
             compact
@@ -379,18 +406,18 @@ export function IssueRows({
               aria-hidden="true"
               className="invisible col-start-1 row-start-1"
             >
-              {identifier}-999
+              {rowIdentifier}-999
             </span>
             <span className="col-start-1 row-start-1">
-              {identifier}-{issue.number}
+              {rowIdentifier}-{issue.number}
             </span>
           </span>
         )}
         {props.includes("Status") && (
           <InlineIssueProperties
             issue={issue}
-            statuses={statuses}
-            members={members}
+            statuses={rowStatuses}
+            members={rowMembers}
             onUpdate={onUpdate}
             property="status"
             compact
@@ -417,7 +444,7 @@ export function IssueRows({
               "min-w-0 truncate rounded text-left outline-none focus-visible:ring-2 focus-visible:ring-ring",
               board && "text-sm whitespace-normal"
             )}
-            aria-label={`Open ${identifier}-${issue.number} ${issue.title}`}
+            aria-label={`Open ${rowIdentifier}-${issue.number} ${issue.title}`}
           >
             {issue.title}
           </button>
@@ -427,7 +454,7 @@ export function IssueRows({
             >
               <button
                 type="button"
-                aria-label={`${expandable ? (expanded ? "Hide" : "Show") : "View"} sub-issues for ${identifier}-${issue.number}`}
+                aria-label={`${expandable ? (expanded ? "Hide" : "Show") : "View"} sub-issues for ${rowIdentifier}-${issue.number}`}
                 aria-expanded={expandable ? expanded : undefined}
                 aria-controls={
                   expandable ? `${rowScope}-${issue.id}-children` : undefined
@@ -462,11 +489,11 @@ export function IssueRows({
                   key={label}
                   kind="label"
                   value={label}
-                  team={team}
-                  issues={allIssues}
-                  statuses={statuses}
-                  members={members}
-                  color={labelColors[label]}
+                  team={rowTeam}
+                  issues={rowIssues}
+                  statuses={rowStatuses}
+                  members={rowMembers}
+                  color={rowColors[label]}
                   presentation="chip"
                 />
               ))}
@@ -477,10 +504,10 @@ export function IssueRows({
             <ActivityReference
               kind="project"
               value={issue.project}
-              team={team}
-              issues={allIssues}
-              statuses={statuses}
-              members={members}
+              team={rowTeam}
+              issues={rowIssues}
+              statuses={rowStatuses}
+              members={rowMembers}
               presentation="chip"
             />
           </div>
@@ -507,8 +534,8 @@ export function IssueRows({
         {props.includes("Assignee") && (
           <InlineIssueProperties
             issue={issue}
-            statuses={statuses}
-            members={members}
+            statuses={rowStatuses}
+            members={rowMembers}
             onUpdate={onUpdate}
             property="assignee"
             compact
@@ -600,11 +627,12 @@ export function IssueRows({
         const status = statuses.find((item) => item.name === name)
         const subgroups = new Map<string, Array<TeamIssue>>()
         for (const issue of items) {
+          const context = contextFor?.(issue)
           const sub = issueGroupValue(
             issue,
             display.subgroup,
-            statuses,
-            members
+            context?.statuses ?? statuses,
+            context?.members ?? members
           )
           subgroups.set(sub, [...(subgroups.get(sub) ?? []), issue])
         }
@@ -623,7 +651,7 @@ export function IssueRows({
                 (item) =>
                   item.id === event.dataTransfer.getData("text/forge-issue")
               )
-              if (issue) onUpdate(issue, patchFor(name))
+              if (issue) onUpdate(issue, patchFor(name, issue))
             }}
           >
             <div
