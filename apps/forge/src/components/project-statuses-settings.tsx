@@ -1,3 +1,4 @@
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import * as React from "react"
 import { Link, useBlocker } from "@tanstack/react-router"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -11,7 +12,6 @@ import {
   HexagonIcon,
   MoreHorizontalIcon,
   Progress03Icon,
-  Tick02Icon,
 } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
 import type {
@@ -161,10 +161,7 @@ function StatusEditor({
                     style={{ backgroundColor: value }}
                   >
                     {color.toLowerCase() === value && (
-                      <HugeiconsIcon
-                        icon={Tick02Icon}
-                        className="size-3 text-black/70"
-                      />
+                      <CheckboxMark checked className="size-3 text-black/70" />
                     )}
                   </span>
                 </button>

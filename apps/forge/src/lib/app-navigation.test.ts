@@ -18,12 +18,14 @@ describe("getBreadcrumbItems", () => {
       "Cycles",
       "Projects",
       "Views",
+      "Calls",
     ])
     expect(nav[1].items?.map((item) => item.title)).toEqual([
       "Home",
       "Issues",
       "Projects",
       "Views",
+      "Calls",
     ])
     expect(
       nav[0].items?.find((item) => item.title === "Cycles")?.items
@@ -135,6 +137,7 @@ describe("getBreadcrumbItems", () => {
           { title: "Issues", to: "/teams/platform-api/issues" },
           { title: "Projects", to: "/teams/platform-api/projects" },
           { title: "Views", to: "/teams/platform-api/views" },
+          { title: "Calls", to: "/teams/platform-api/calls" },
         ],
       },
     ])

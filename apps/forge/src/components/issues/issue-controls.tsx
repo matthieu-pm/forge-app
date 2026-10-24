@@ -1,3 +1,4 @@
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import { useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
@@ -327,7 +328,7 @@ export function IssuePicker({
             >
               {option.icon}
               <span className="min-w-0 flex-1 truncate">{option.label}</span>
-              {selected.includes(option.value) && <IssueIcon name="check" />}
+              <CheckboxMark checked={selected.includes(option.value)} />
               <span className="text-[10px] text-muted-foreground">
                 {index < 10 ? index : ""}
               </span>

@@ -1,4 +1,5 @@
-"use client"
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
+;("use client")
 
 import * as React from "react"
 import { Link } from "@tanstack/react-router"
@@ -12,7 +13,6 @@ import {
   MoreHorizontalIcon,
   PencilEdit02Icon,
   StarIcon,
-  Tick02Icon,
 } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
 import type { TeamSummary } from "@/lib/team-contract"
@@ -129,10 +129,9 @@ function StatusEditor({
                     style={{ backgroundColor: value }}
                   >
                     {color.toLowerCase() === value && (
-                      <HugeiconsIcon
-                        icon={Tick02Icon}
+                      <CheckboxMark
+                        checked
                         className="size-3.5 text-black/70"
-                        strokeWidth={2}
                       />
                     )}
                   </span>

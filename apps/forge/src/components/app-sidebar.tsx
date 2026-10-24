@@ -1,4 +1,5 @@
-"use client"
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
+;("use client")
 
 import * as React from "react"
 import {
@@ -7,7 +8,6 @@ import {
   ArrowRight01Icon,
   CrownIcon,
   Logout03Icon,
-  Tick02Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Link, useRouter, useRouterState } from "@tanstack/react-router"
@@ -540,13 +540,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         <span className="min-w-0 flex-1 truncate font-medium">
                           {availableWorkspace.name}
                         </span>
-                        {isActive || isSwitching ? (
-                          <HugeiconsIcon
-                            icon={Tick02Icon}
-                            strokeWidth={2}
-                            className="text-muted-foreground"
-                          />
-                        ) : null}
+                        <CheckboxMark checked={isActive || isSwitching} />
                       </DropdownMenuItem>
                     )
                   })}

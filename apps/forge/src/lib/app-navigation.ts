@@ -152,6 +152,7 @@ export function buildYourTeamsNav(
           section.section === "overview" ||
           section.section === "projects" ||
           section.section === "views" ||
+          section.section === "calls" ||
           (section.section === "cycles" && team.cyclesEnabled === true) ||
           (section.section === "triage" && team.triageEnabled === true) ||
           section.section === "issues"

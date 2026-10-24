@@ -1,11 +1,8 @@
-"use client"
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
+;("use client")
 
 import * as React from "react"
-import {
-  Search01Icon,
-  Tick02Icon,
-  UserGroup03Icon,
-} from "@hugeicons/core-free-icons"
+import { Search01Icon, UserGroup03Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { toast } from "sonner"
 import type { IconSvgElement } from "@hugeicons/react"
@@ -304,11 +301,7 @@ export function TeamIconPicker<T extends PickerIcon>({
                   style={{ backgroundColor: color }}
                 >
                   {value.color === color ? (
-                    <HugeiconsIcon
-                      icon={Tick02Icon}
-                      strokeWidth={2.5}
-                      className="size-3 text-white"
-                    />
+                    <CheckboxMark checked className="size-3 text-white" />
                   ) : null}
                 </button>
               ))}

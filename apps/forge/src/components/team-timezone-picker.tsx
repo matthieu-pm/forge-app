@@ -1,9 +1,7 @@
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
 
 import * as React from "react"
-import {
-  Search01Icon,
-  Tick02Icon,
-} from "@hugeicons/core-free-icons"
+import { Search01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 
@@ -15,7 +13,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 
-"use client"
+;("use client")
 
 type TimezoneOption = {
   id: string
@@ -231,13 +229,7 @@ export function TeamTimezonePicker({
                   className="flex min-h-8 w-full items-center justify-between gap-2 rounded-lg px-2 text-left text-sm hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                 >
                   <span className="whitespace-nowrap">{item.label}</span>
-                  {value === item.id ? (
-                    <HugeiconsIcon
-                      icon={Tick02Icon}
-                      strokeWidth={2}
-                      className="size-3.5 shrink-0"
-                    />
-                  ) : null}
+                  <CheckboxMark checked={value === item.id} />
                 </button>
               ))
             ) : (

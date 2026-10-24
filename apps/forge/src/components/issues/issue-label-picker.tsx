@@ -1,3 +1,4 @@
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import { useLayoutEffect, useRef, useState } from "react"
 import { Link } from "@tanstack/react-router"
 import { IssueIcon, issueChip, issuePropertyControl } from "./issue-controls"
@@ -118,15 +119,13 @@ export function IssueLabelPicker({
             />
           }
         >
-          <span
-            aria-hidden="true"
+          <CheckboxMark
+            checked={checked}
             className={cn(
-              "flex size-3.5 shrink-0 items-center justify-center rounded border border-muted-foreground/50 opacity-0 group-hover/label:opacity-100 group-focus-visible/label:opacity-100 group-data-popup-open/label:opacity-100",
-              checked && "border-[#5e6ad2] bg-[#5e6ad2] text-white opacity-100"
+              "opacity-0 group-hover/label:opacity-100 group-focus-visible/label:opacity-100 group-data-popup-open/label:opacity-100",
+              checked && "opacity-100"
             )}
-          >
-            {checked && <IssueIcon name="check" className="size-3" />}
-          </span>
+          />
           <span
             aria-hidden="true"
             className="size-2 shrink-0 rounded-full bg-muted-foreground"

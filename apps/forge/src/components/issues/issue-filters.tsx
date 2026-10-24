@@ -1,3 +1,4 @@
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import { useEffect, useRef, useState } from "react"
 import { IssueIcon, StatusMark, issuePrimary } from "./issue-controls"
 import type {
@@ -194,12 +195,14 @@ export function IssueFilters({
           <StatusMark id={next} statuses={statuses} />
         )}
         <span className="flex-1 truncate">{label}</span>
-        {value.rules.some(
-          (rule) =>
-            rule.field === field &&
-            rule.operator === operator &&
-            rule.value === next
-        ) && <IssueIcon name="check" />}
+        <CheckboxMark
+          checked={value.rules.some(
+            (rule) =>
+              rule.field === field &&
+              rule.operator === operator &&
+              rule.value === next
+          )}
+        />
       </DropdownMenuItem>
     )
   }

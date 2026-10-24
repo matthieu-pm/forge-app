@@ -1,3 +1,4 @@
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import { useEffect, useRef, useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
@@ -319,9 +320,12 @@ export function TeamDirectoryFilters({
       onClick={() => apply({ field, operator: "is", value: choiceValue })}
     >
       {label}
-      {value.rules.some(
-        (rule) => rule.field === field && rule.value === choiceValue
-      ) && <span className="ml-auto">✓</span>}
+      <CheckboxMark
+        className="ml-auto"
+        checked={value.rules.some(
+          (rule) => rule.field === field && rule.value === choiceValue
+        )}
+      />
     </DropdownMenuItem>
   )
   const shown = (label: string) =>

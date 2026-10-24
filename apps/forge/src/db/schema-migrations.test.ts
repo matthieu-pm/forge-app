@@ -6,6 +6,11 @@ import { describe, expect, it } from "vitest"
 
 import { apiKeys } from "./auth-schema"
 import {
+  calls,
+  callActions,
+  callNotes,
+  callSettings,
+  callConnections,
   agentApprovals,
   agentArtifacts,
   agentEvents,
@@ -64,6 +69,11 @@ describe("database migrations", () => {
       readFileSync(snapshotPath, "utf8")
     ) as MigrationSnapshot
     for (const [tableName, table] of [
+      ["calls", calls],
+      ["call_actions", callActions],
+      ["call_notes", callNotes],
+      ["call_settings", callSettings],
+      ["call_connections", callConnections],
       ["teams", teams],
       ["team_members", teamMembers],
       ["team_recurring_issues", teamRecurringIssues],

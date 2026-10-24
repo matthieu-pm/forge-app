@@ -99,6 +99,18 @@
     },
     "eval": {
       "cache": false
+    },
+    "calls:sync": {
+      "cache": false,
+      "env": [
+        "DATABASE_URL",
+        "BETTER_AUTH_URL",
+        "OPENAI_API_KEY",
+        "FORGE_MODEL_CREDENTIAL_KEK",
+        "FORGE_*_CLIENT_ID",
+        "FORGE_*_CLIENT_SECRET",
+        "FORGE_CALLS_SUMMARY_MODEL"
+      ]
     }
   }
 }

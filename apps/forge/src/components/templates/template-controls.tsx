@@ -1,3 +1,4 @@
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import * as React from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
@@ -347,29 +348,21 @@ export function Picker({
                 )}
               >
                 {multiple && (
-                  <span
-                    aria-hidden="true"
-                    className={cn(
-                      "grid size-3.5 place-items-center rounded-[3px] border border-border",
-                      selected.includes(option.value) &&
-                        "border-[#5e6ad2] bg-[#5e6ad2] text-white"
-                    )}
-                  >
-                    {selected.includes(option.value) && (
-                      <Glyph name="check" className="size-3" />
-                    )}
-                  </span>
+                  <CheckboxMark checked={selected.includes(option.value)} />
                 )}
                 {option.icon}
                 <span className="min-w-0 flex-1 truncate">{option.label}</span>
                 {option.detail && (
                   <span className="text-muted-foreground">{option.detail}</span>
                 )}
-                {!multiple &&
-                  (selected.includes(option.value) ||
-                    (!option.value && !selected.length)) && (
-                    <Glyph name="check" />
-                  )}
+                {!multiple && (
+                  <CheckboxMark
+                    checked={
+                      selected.includes(option.value) ||
+                      (!option.value && !selected.length)
+                    }
+                  />
+                )}
               </button>
             </React.Fragment>
           ))}

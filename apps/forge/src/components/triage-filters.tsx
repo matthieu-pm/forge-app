@@ -1,3 +1,4 @@
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import { useEffect, useRef, useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
@@ -290,11 +291,9 @@ export function TriageFilters({
         onClick={() => apply(field, operator, filterValue)}
       >
         <span className="truncate">{label}</span>
-        {checked && (
-          <span aria-label="Applied" className="ml-auto text-primary">
-            ✓
-          </span>
-        )}
+        <span aria-label={checked ? "Applied" : undefined} className="ml-auto">
+          <CheckboxMark checked={checked} />
+        </span>
       </DropdownMenuItem>
     )
   }

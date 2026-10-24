@@ -1,4 +1,5 @@
-"use client"
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
+;("use client")
 
 import * as React from "react"
 import {
@@ -14,7 +15,6 @@ import {
   FlashIcon,
   Refresh01Icon,
   SecurityLockIcon,
-  Tick02Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
@@ -109,7 +109,7 @@ function EffortSlider({
               "transition-[width] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]"
           )}
           thumbClassName={cn(
-            "size-7 bg-background shadow-sm ring-1 ring-black/5 motion-reduce:transition-none hover:ring-4 hover:ring-blue-500/15 focus-visible:ring-4 focus-visible:ring-blue-500/25 dark:bg-white",
+            "size-7 bg-background shadow-sm ring-1 ring-black/5 hover:ring-4 hover:ring-blue-500/15 focus-visible:ring-4 focus-visible:ring-blue-500/25 motion-reduce:transition-none dark:bg-white",
             animateStep &&
               "transition-[inset-inline-start,color,box-shadow] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]"
           )}
@@ -284,9 +284,7 @@ function ModelOptionRow({
           </span>
         ) : null}
       </span>
-      {selected ? (
-        <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} className="size-3.5" />
-      ) : null}
+      <CheckboxMark checked={selected} />
     </button>
   )
 }
@@ -557,13 +555,9 @@ export function ComposerModelPicker({
                     </span>
                   ) : null}
                 </span>
-                {value === AUTO_AGENT_MODEL_SELECTION.id ? (
-                  <HugeiconsIcon
-                    icon={Tick02Icon}
-                    strokeWidth={2}
-                    className="size-3.5"
-                  />
-                ) : null}
+                <CheckboxMark
+                  checked={value === AUTO_AGENT_MODEL_SELECTION.id}
+                />
               </button>
               {modelGroups.forge.map((model) => (
                 <ModelOptionRow
@@ -601,11 +595,7 @@ export function ComposerModelPicker({
                   ))}
                 </span>
                 Auto
-                <HugeiconsIcon
-                  icon={Tick02Icon}
-                  strokeWidth={2}
-                  className="ml-auto size-3.5"
-                />
+                <CheckboxMark checked className="ml-auto" />
               </div>
               <p className="mt-1 text-[10px] leading-4 text-muted-foreground">
                 Effort is chosen for each request based on its complexity.

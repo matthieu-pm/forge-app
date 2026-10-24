@@ -1360,3 +1360,112 @@ export const workspaceEmojis = pgTable("workspace_emojis", {
   check("workspace_emojis_name_check", sql`${table.name} ~ '^[a-z0-9][a-z0-9_-]{0,63}$'`),
   check("workspace_emojis_image_size_check", sql`length(${table.image}) <= 350000`),
 ])
+
+// Meeting credentials stay on the server; call content is scoped through its team.
+export const callSettings = pgTable("call_settings", {
+  workspaceId: text("workspace_id")
+    .primaryKey()
+    .references(() => organizations.id, { onDelete: "cascade" }),
+  retentionDays: integer("retention_days").default(30).notNull(),
+})
+export const callConnections = pgTable(
+  "call_connections",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    teamId: uuid("team_id")
+      .notNull()
+      .references(() => teams.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(),
+    secret: text("secret"),
+    oauthStateHash: text("oauth_state_hash"),
+    oauthVerifier: text("oauth_verifier"),
+    oauthExpiresAt: timestamp("oauth_expires_at", { withTimezone: true }),
+    lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
+    syncLeaseAt: timestamp("sync_lease_at", { withTimezone: true }),
+    error: text("error"),
+  },
+  (table) => ({
+    accountUnique: unique("call_connections_account_unique").on(
+      table.workspaceId,
+      table.userId,
+      table.provider
+    ),
+    stateIndex: uniqueIndex("call_connections_state_idx").on(
+      table.oauthStateHash
+    ),
+  })
+)
+export const calls = pgTable(
+  "calls",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    teamId: uuid("team_id")
+      .notNull()
+      .references(() => teams.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(),
+    externalId: text("external_id").notNull(),
+    title: text("title").notNull(),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+    duration: integer("duration").default(0).notNull(),
+    participants: jsonb("participants")
+      .$type<Array<string>>()
+      .default([])
+      .notNull(),
+    transcript: jsonb("transcript")
+      .$type<Array<import("@/lib/calls").TranscriptEntry>>()
+      .default([])
+      .notNull(),
+    summary: text("summary").default("").notNull(),
+    decisions: jsonb("decisions").$type<Array<string>>().default([]).notNull(),
+    status: text("status").default("pending").notNull(),
+    summaryStatus: text("summary_status").default("pending").notNull(),
+    summaryLeaseAt: timestamp("summary_lease_at", { withTimezone: true }),
+  },
+  (table) => ({
+    sourceUnique: unique("calls_source_unique").on(
+      table.workspaceId,
+      table.provider,
+      table.externalId
+    ),
+    workspaceDateIndex: index("calls_workspace_date_idx").on(
+      table.workspaceId,
+      table.startedAt
+    ),
+    teamDateIndex: index("calls_team_date_idx").on(
+      table.teamId,
+      table.startedAt
+    ),
+  })
+)
+export const callActions = pgTable("call_actions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  callId: uuid("call_id")
+    .notNull()
+    .references(() => calls.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  owner: text("owner").default("").notNull(),
+  completed: boolean("completed").default(false).notNull(),
+})
+export const callNotes = pgTable("call_notes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  callId: uuid("call_id")
+    .notNull()
+    .references(() => calls.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  body: text("body").notNull(),
+  kind: text("kind").default("note").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+})

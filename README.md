@@ -24,7 +24,11 @@ Current build: `v0.1.0` (unreleased)
 - `Forge` for starting agent conversations from a centered composer.
 - `Ask Forge` for opening a compact agent chat over the current page.
 - `My issues` for personal execution.
-- `Workspace` sections for initiatives, projects, calls, signals, insights, views, teams, and members.
+- `Workspace` sections for initiatives, projects, signals, insights, views, teams, and members.
+- `Calls` for workspace/team meeting recaps, searchable transcripts, notes, and
+  follow-ups. Native imports require provider OAuth setup and a scheduled sync
+  job; issue conversion follows the existing browser-local issue backlog. See
+  [Calls setup and limitations](docs/calls.md).
 - `Your teams` views for product, engineering, and operations work.
 - Agent tabs for active conversations and searchable thread history.
 
@@ -54,6 +58,8 @@ starts on port 3000 and the EVE runtime starts on `127.0.0.1:2000`.
 - `bun run test` runs Vitest.
 - `bun run eval:agent` runs the agent runtime release evals.
 - `bun run agent:retention` removes expired agent attachments and artifacts.
+- `bun run calls:sync` imports native meeting transcripts, generates recaps, and
+  removes transcripts past workspace retention.
 - `bun run product:retention` removes 90-day workflow records and unpromoted
   30-day desktop drafts.
 - `bun run dev:desktop` runs the shared web and agent stack inside Electron.
