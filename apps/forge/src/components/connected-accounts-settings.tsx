@@ -151,15 +151,10 @@ export function ConnectedAccountsSettings({
 
   return (
     <>
-      <main
-        ref={resetScroll}
-        className="min-h-0 flex-1 [scrollbar-gutter:stable] overflow-y-auto overscroll-y-none px-4 pt-6 pb-6 sm:px-6 sm:pt-4"
-      >
-        <div className="mx-auto w-full max-w-[640px] pb-16">
-          <header className="forge-page-header px-4">
-            <h1 className="text-2xl font-semibold tracking-tight">
-              Connected accounts
-            </h1>
+      <main ref={resetScroll} className="forge-settings-scroll">
+        <div className="forge-settings-content">
+          <header className="forge-page-header forge-settings-header">
+            <h1>Connected accounts</h1>
             <p className="mt-1.5 text-sm leading-5 text-muted-foreground">
               Connect your user accounts to sync attribution of your actions
               between apps

@@ -199,7 +199,7 @@ export function NotificationPreferencesPage({
     )
   }
   return (
-    <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-none pb-16">
+    <main className="forge-settings-scroll">
       {channel && (
         <div className="forge-page-back flex h-12 items-center px-4">
           <Link
@@ -215,8 +215,8 @@ export function NotificationPreferencesPage({
           </Link>
         </div>
       )}
-      <div className="mx-auto w-full max-w-[688px] px-4 pt-5 sm:px-6">
-        <h1 className="forge-page-header mb-8 px-4 text-2xl font-medium tracking-tight">
+      <div className="forge-settings-content">
+        <h1 className="forge-page-header forge-settings-header">
           {channel
             ? priority
               ? "Priority notifications"

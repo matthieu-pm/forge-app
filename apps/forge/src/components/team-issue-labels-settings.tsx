@@ -664,8 +664,8 @@ export function TeamIssueLabelsSettings({
             </Link>
           </div>
         )}
-        <div className="forge-page-header flex flex-wrap items-center justify-between gap-4 border-b border-border/40 px-5 pt-4 pb-3 sm:px-8 lg:px-14">
-          <h1 className="text-2xl font-medium tracking-tight text-foreground">
+        <div className="forge-page-header forge-settings-table-header flex flex-wrap items-start justify-between gap-4 border-b border-border/40">
+          <h1 className="forge-settings-wide-heading">
             {standalone
               ? entityTitle
               : workspaceView
@@ -700,7 +700,7 @@ export function TeamIssueLabelsSettings({
             </Button>
           </div>
         </div>
-        <div className="flex items-center gap-3 px-5 py-2 sm:px-8 lg:px-14">
+        <div className="flex items-center gap-3 px-6 py-2">
           <div className="relative min-w-0 flex-1">
             <HugeiconsIcon
               icon={Search01Icon}

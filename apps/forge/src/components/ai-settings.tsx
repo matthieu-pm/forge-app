@@ -443,9 +443,9 @@ export function AiSettings() {
   }
 
   return (
-    <main className="min-h-0 w-full flex-1 space-y-8 overflow-y-auto px-6 py-6 lg:px-10 lg:py-8 [&>*]:mx-auto [&>*]:w-full [&>*]:max-w-[calc(48rem-3rem)] lg:[&>*]:max-w-[calc(48rem-5rem)]">
-      <header className="forge-page-header space-y-1">
-        <h1 className="text-xl font-semibold tracking-tight">AI & Agents</h1>
+    <main className="forge-settings-scroll forge-settings-direct space-y-8 [&>*]:mx-auto [&>*]:w-full [&>*]:max-w-[640px]">
+      <header className="forge-page-header forge-settings-header space-y-1">
+        <h1>AI & Agents</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
           Connect model APIs for Forge-native agents. Credentials are encrypted
           on the server, never returned to this browser, and each billing source

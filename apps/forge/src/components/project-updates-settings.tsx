@@ -103,12 +103,10 @@ export function ProjectUpdatesSettings({
   }
 
   return (
-    <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-none px-5 pt-10 pb-16 sm:pt-14">
-      <div className="mx-auto w-full max-w-[688px]">
-        <header className="forge-page-header px-1">
-          <h1 className="text-2xl font-medium tracking-tight text-foreground">
-            Project updates
-          </h1>
+    <main className="forge-settings-scroll">
+      <div className="forge-settings-content">
+        <header className="forge-page-header forge-settings-header">
+          <h1>Project updates</h1>
           <p className="mt-1 max-w-[670px] text-sm leading-6 text-muted-foreground">
             Short status reports about the progress and health of your projects.
             Project members regularly post updates, and subscribers

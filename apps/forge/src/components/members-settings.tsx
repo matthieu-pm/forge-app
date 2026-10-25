@@ -696,11 +696,9 @@ export function MembersSettings({
 
   return (
     <>
-      <main className="min-h-0 flex-1 overflow-y-auto px-5 py-7 sm:px-8 lg:px-10 lg:py-9">
+      <main className="forge-settings-scroll forge-settings-wide">
         <div className="w-full">
-          <h1 className="forge-page-header text-xl font-semibold tracking-tight text-foreground">
-            Members
-          </h1>
+          <h1 className="forge-page-header forge-settings-header">Members</h1>
 
           <div className="mt-5 flex flex-wrap items-center gap-2">
             <div className="relative min-w-[220px] flex-1 sm:max-w-[320px]">

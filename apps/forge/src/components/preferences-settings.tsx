@@ -296,10 +296,10 @@ export function PreferencesSettings() {
   }
 
   return (
-    <main className="min-h-0 flex-1 overflow-y-auto px-6 pt-4 pb-4">
-      <div className="mx-auto w-full max-w-[640px] pb-16">
+    <main className="forge-settings-scroll">
+      <div className="forge-settings-content">
         <div className="space-y-10">
-          <h1 className="forge-page-header px-3 text-xl font-semibold tracking-tight text-foreground">
+          <h1 className="forge-page-header forge-settings-header">
             Preferences
           </h1>
 

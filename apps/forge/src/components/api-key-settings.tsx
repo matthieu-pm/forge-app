@@ -315,10 +315,10 @@ export function ApiKeySettings({
 
   return (
     <>
-      <main className="min-h-0 flex-1 overflow-y-auto px-6 pt-4 pb-4">
-        <div className="mx-auto w-full max-w-[640px] pb-16">
-          <header className="forge-page-header px-3">
-            <h1 className="text-xl font-semibold tracking-tight">API</h1>
+      <main className="forge-settings-scroll">
+        <div className="forge-settings-content">
+          <header className="forge-page-header forge-settings-header">
+            <h1>API</h1>
             <p className="mt-1 max-w-2xl text-sm leading-5 text-muted-foreground">
               Forge&apos;s API provides a programmable interface to your data.
               Use our API to build apps, workflows, and integrations for Forge.{" "}

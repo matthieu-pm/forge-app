@@ -74,14 +74,12 @@ export function BillingSettings() {
 
   return (
     <>
-      <main className="min-h-0 flex-1 [scrollbar-gutter:stable] overflow-y-auto overscroll-y-none px-6 pt-4 pb-4">
-        <div className="mx-auto w-full max-w-[640px] pb-16">
+      <main className="forge-settings-scroll">
+        <div className="forge-settings-content">
           <div className="space-y-8">
-            <header className="forge-page-header flex items-end justify-between gap-6 px-3">
+            <header className="forge-page-header forge-settings-header flex items-end justify-between gap-6">
               <div className="min-w-0">
-                <h1 className="text-xl font-semibold tracking-tight">
-                  Billing
-                </h1>
+                <h1>Billing</h1>
                 <p className="mt-1 text-xs text-muted-foreground">
                   For questions about billing,{" "}
                   <button

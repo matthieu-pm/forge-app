@@ -194,7 +194,13 @@ export function TemplateShell({
           )}
         </Link>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 sm:px-6">
+      <div
+        className={
+          overview
+            ? "forge-settings-scroll"
+            : "min-h-0 flex-1 overflow-y-auto px-4 sm:px-6"
+        }
+      >
         {children}
       </div>
     </main>

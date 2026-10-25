@@ -90,10 +90,8 @@ function SkillsShell({
           {editor ? "Agent skills" : team.name}
         </Link>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-none pb-16">
-        <div className="mx-auto w-full max-w-[688px] px-4 pt-5 sm:px-6">
-          {children}
-        </div>
+      <div className="forge-settings-scroll">
+        <div className="forge-settings-content">{children}</div>
       </div>
     </main>
   )
@@ -155,8 +153,8 @@ export function TeamAgentSkillsSettings({
   }
   return (
     <SkillsShell team={team}>
-      <header className="forge-page-header px-4 pb-8">
-        <h1 className="text-2xl font-medium tracking-tight">Agent skills</h1>
+      <header className="forge-page-header forge-settings-header">
+        <h1>Agent skills</h1>
         <p className="mt-1.5 text-sm leading-[22px] text-muted-foreground">
           Add reusable instructions team members can use with Forge Agent
         </p>

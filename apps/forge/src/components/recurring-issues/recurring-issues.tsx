@@ -66,23 +66,23 @@ export function RecurringIssues({
   }
   return (
     <TemplateShell team={team} overview section="recurring-issues">
-      <div className="mx-auto max-w-[680px] px-5 pt-4 pb-10">
-        <h1 className="px-4 text-2xl font-medium tracking-tight">
-          Recurring issues
-        </h1>
-        <p className="mt-2 px-4 text-[13px] leading-[22px] text-muted-foreground">
-          Automatically create issues that need to be completed on a regular
-          schedule. Each issue is created with a due date set by the schedule. A
-          new instance is created after each due date passes.{" "}
-          <a
-            href={docsUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="whitespace-nowrap text-foreground hover:underline"
-          >
-            Docs ↗
-          </a>
-        </p>
+      <div className="forge-settings-content">
+        <header className="forge-page-header forge-settings-header">
+          <h1>Recurring issues</h1>
+          <p className="mt-2 text-[13px] leading-[22px] text-muted-foreground">
+            Automatically create issues that need to be completed on a regular
+            schedule. Each issue is created with a due date set by the schedule.
+            A new instance is created after each due date passes.{" "}
+            <a
+              href={docsUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="whitespace-nowrap text-foreground hover:underline"
+            >
+              Docs ↗
+            </a>
+          </p>
+        </header>
         <section
           aria-label="Recurring issues"
           className="mt-8 overflow-hidden rounded-xl border border-border/40 bg-muted/35"

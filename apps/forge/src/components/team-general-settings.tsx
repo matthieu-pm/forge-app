@@ -182,8 +182,8 @@ export function TeamGeneralSettings({ team }: { team: TeamSummary }) {
     estimationOptions[0]
 
   return (
-    <main className="min-h-0 flex-1 [scrollbar-gutter:stable] overflow-y-auto overscroll-y-none px-6 pt-2 pb-4">
-      <div className="forge-page-back -mx-6 -mt-2 flex h-12 shrink-0 items-center px-6">
+    <main className="forge-settings-scroll">
+      <div className="forge-page-back flex h-12 shrink-0 items-center px-4">
         <Link
           to="/settings/teams/$teamSlug"
           params={{ teamSlug: team.slug }}
@@ -199,12 +199,10 @@ export function TeamGeneralSettings({ team }: { team: TeamSummary }) {
         </Link>
       </div>
 
-      <div className="mx-auto w-full max-w-[640px] pb-16">
-        <div className="mt-8 space-y-12">
-          <div className="forge-page-header -mb-7 flex items-center justify-between gap-4 px-3">
-            <h1 className="text-xl font-semibold tracking-tight text-foreground">
-              General
-            </h1>
+      <div className="forge-settings-content">
+        <div className="space-y-12">
+          <div className="forge-page-header forge-settings-header flex items-center justify-between gap-4">
+            <h1>General</h1>
             <span
               aria-live="polite"
               className={cn(

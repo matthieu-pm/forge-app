@@ -330,13 +330,11 @@ export function WorkspaceSettings({
 
   return (
     <>
-      <main className="min-h-0 flex-1 [scrollbar-gutter:stable] overflow-y-auto overscroll-y-none px-6 pt-4 pb-4">
-        <div className="mx-auto w-full max-w-[640px] pb-16">
+      <main className="forge-settings-scroll">
+        <div className="forge-settings-content">
           <div className="space-y-12">
-            <div className="forge-page-header flex items-center justify-between gap-4 px-3">
-              <h1 className="text-xl font-semibold tracking-tight text-foreground">
-                Workspace
-              </h1>
+            <div className="forge-page-header forge-settings-header flex items-center justify-between gap-4">
+              <h1>Workspace</h1>
               <span
                 aria-live="polite"
                 className={cn(

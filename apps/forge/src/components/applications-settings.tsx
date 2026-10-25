@@ -105,12 +105,10 @@ export function ApplicationsSettings() {
 
   return (
     <>
-      <main className="min-h-0 flex-1 [scrollbar-gutter:stable] overflow-y-auto overscroll-y-none px-6 pt-4 pb-4">
-        <div className="mx-auto w-full max-w-[640px] pb-16">
-          <header className="forge-page-header space-y-1 px-3">
-            <h1 className="text-xl font-semibold tracking-tight text-foreground">
-              Applications
-            </h1>
+      <main className="forge-settings-scroll">
+        <div className="forge-settings-content">
+          <header className="forge-page-header forge-settings-header space-y-1">
+            <h1>Applications</h1>
             <p className="text-sm leading-5 text-muted-foreground">
               Manage which third-party applications have access to your
               workspace.{" "}

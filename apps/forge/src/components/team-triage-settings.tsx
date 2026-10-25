@@ -139,10 +139,10 @@ export function TeamTriageSettings({ team }: { team: TeamSummary }) {
           {team.name}
         </Link>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-none pb-16">
-        <div className="mx-auto w-full max-w-[688px] px-4 pt-5 sm:px-6">
-          <header className="forge-page-header px-4 pb-8">
-            <h1 className="text-2xl font-medium tracking-tight">Triage</h1>
+      <div className="forge-settings-scroll">
+        <div className="forge-settings-content">
+          <header className="forge-page-header forge-settings-header">
+            <h1>Triage</h1>
             <p className="mt-1.5 text-sm leading-[22px] text-muted-foreground">
               Triage is a special inbox for managing issues created by
               integrations and members outside of this team. You’ll have a

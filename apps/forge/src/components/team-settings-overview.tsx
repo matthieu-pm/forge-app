@@ -2,6 +2,7 @@
 
 import {
   AiMagicIcon,
+  ArrowLeft01Icon,
   ArrowRight01Icon,
   Calendar03Icon,
   Clock04Icon,
@@ -371,11 +372,24 @@ export function TeamSettingsOverview({
 
   return (
     <>
-      <main className="min-h-0 flex-1 [scrollbar-gutter:stable] overflow-y-auto overscroll-y-none px-6 pt-12 pb-4">
-        <div className="mx-auto w-full max-w-[640px] pb-16">
+      <main className="forge-settings-scroll">
+        <div className="forge-page-back flex h-12 items-center px-4">
+          <Link
+            to="/settings/teams"
+            className="inline-flex items-center gap-2 rounded-md py-1 text-sm text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          >
+            <HugeiconsIcon
+              icon={ArrowLeft01Icon}
+              className="size-4"
+              strokeWidth={1.5}
+            />
+            Teams
+          </Link>
+        </div>
+        <div className="forge-settings-content">
           <div className="space-y-12">
-            <div className="forge-page-header -mb-7 min-w-0 space-y-1 px-3">
-              <h1 className="flex min-w-0 items-center gap-2 text-xl font-semibold tracking-tight text-foreground">
+            <div className="forge-page-header forge-settings-header min-w-0 space-y-1">
+              <h1 className="flex min-w-0 items-center gap-2">
                 <TeamSidebarIcon
                   icon={team.icon}
                   name={team.name}

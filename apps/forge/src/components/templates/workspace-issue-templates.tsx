@@ -28,12 +28,10 @@ export function WorkspaceIssueTemplates({
   const navigate = useNavigate()
   const router = useRouter()
   return (
-    <main className="min-h-0 flex-1 overflow-y-auto px-4 pt-[68px] pb-16 sm:px-6">
-      <div className="mx-auto w-full max-w-[640px]">
-        <header className="forge-page-header px-4 pb-8">
-          <h1 className="text-2xl font-medium tracking-tight">
-            Issue templates
-          </h1>
+    <main className="forge-settings-scroll">
+      <div className="forge-settings-content">
+        <header className="forge-page-header forge-settings-header">
+          <h1>Issue templates</h1>
           <p className="mt-1.5 text-sm leading-[22px] text-muted-foreground">
             These templates are available when creating issues for any team in
             the workspace. To create templates that only apply to specific

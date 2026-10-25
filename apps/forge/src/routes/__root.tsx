@@ -198,6 +198,7 @@ function AppHeader() {
 
   if (
     pathname.startsWith("/settings/teams/") ||
+    pathname.startsWith("/settings/notifications/") ||
     pathname === "/workspace/teams"
   ) {
     return null

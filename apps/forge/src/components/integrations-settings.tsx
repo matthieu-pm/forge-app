@@ -173,12 +173,10 @@ export function IntegrationsSettings() {
 
   return (
     <>
-      <main className="min-h-0 flex-1 [scrollbar-gutter:stable] overflow-y-auto overscroll-y-none px-4 pt-6 pb-12 sm:px-6 sm:pt-4">
-        <div className="mx-auto w-full max-w-[720px] pb-20">
-          <header className="forge-page-header px-1 sm:px-4">
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-              Integrations
-            </h1>
+      <main className="forge-settings-scroll">
+        <div className="forge-settings-content">
+          <header className="forge-page-header forge-settings-header">
+            <h1>Integrations</h1>
             <p className="mt-1.5 text-sm leading-5 text-muted-foreground">
               Enhance your Forge experience with a wide variety of add-ons and
               integrations.

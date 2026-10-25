@@ -223,12 +223,10 @@ export function CallsTranscriptsSettings({ userId }: { userId: string }) {
   }
 
   return (
-    <main className="min-h-0 flex-1 overflow-y-auto px-5 pt-6 pb-16">
-      <div className="mx-auto w-full max-w-[640px]">
-        <header className="forge-page-header mb-6 px-4">
-          <h1 className="text-2xl font-medium tracking-tight">
-            Calls and transcripts
-          </h1>
+    <main className="forge-settings-scroll">
+      <div className="forge-settings-content">
+        <header className="forge-page-header forge-settings-header">
+          <h1>Calls and transcripts</h1>
           <p className="mt-1.5 text-[13px] leading-5 text-muted-foreground">
             Choose how you record calls and make every transcript your own.
           </p>

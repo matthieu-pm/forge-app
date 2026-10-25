@@ -375,10 +375,10 @@ export function SecuritySettings({
 
   return (
     <>
-      <main className="min-h-0 flex-1 [scrollbar-gutter:stable] overflow-y-auto overscroll-y-none px-6 pt-4 pb-4">
-        <div className="mx-auto w-full max-w-[640px] pb-16">
+      <main className="forge-settings-scroll">
+        <div className="forge-settings-content">
           <div className="space-y-12">
-            <h1 className="forge-page-header px-3 text-xl font-semibold tracking-tight text-foreground">
+            <h1 className="forge-page-header forge-settings-header">
               Security
             </h1>
 

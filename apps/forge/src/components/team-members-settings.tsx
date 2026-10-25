@@ -455,10 +455,8 @@ export function TeamMembersSettings({
             </Link>
           </div>
 
-          <div className="shrink-0 px-5 pt-4 sm:px-8 lg:px-14">
-            <h1 className="forge-page-header text-2xl font-semibold tracking-tight text-foreground">
-              Team members
-            </h1>
+          <div className="forge-settings-table-header shrink-0">
+            <h1 className="forge-settings-wide-heading">Team members</h1>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <div className="relative min-w-0 flex-1 basis-60 sm:max-w-[300px]">
                 <HugeiconsIcon
