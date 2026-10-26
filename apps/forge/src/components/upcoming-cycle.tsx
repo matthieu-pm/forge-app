@@ -4,6 +4,16 @@ import { addWeeks, format } from "date-fns"
 import { toast } from "sonner"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { CycleIssue, CycleIssueDraft } from "@/lib/cycle-issues"
+import type { IssueDraft } from "@/lib/team-issues"
+import type { TemplateDirectory } from "@/lib/template-contract"
+import { IssueComposer } from "@/components/issues/issue-composer"
+import { blankIssueDraft, useIssueStore } from "@/lib/team-issues"
+import { loadTemplates } from "@/lib/template-state"
+import {
+  initialTeamLabels,
+  parseTeamLabels,
+  teamLabelsStorageKey,
+} from "@/lib/team-labels"
 import { OptionSelect } from "@/components/ui/option-select"
 import { useCycleIssues } from "@/lib/cycle-issues"
 import { nextCycleStart, useTeamCycles } from "@/lib/team-cycles"
@@ -85,6 +95,32 @@ export function UpcomingCycle({
   const [filter, setFilter] = useState("")
   const [view, setView] = useState("board")
   const [details, setDetails] = useState(false)
+  const [composer, setComposer] = useState<IssueDraft | null>(null)
+  const [directory, setDirectory] = useState<TemplateDirectory>()
+  const [directoryError, setDirectoryError] = useState(false)
+  const [labels, setLabels] = useState<Array<string>>([])
+  const { store } = useIssueStore(team.id)
+  const projects = [
+    ...new Set(
+      store.issues.map((issue) => issue.project ?? "").filter(Boolean)
+    ),
+  ]
+
+  useEffect(() => {
+    let active = true
+    setDirectory(undefined)
+    setDirectoryError(false)
+    void loadTemplates({ data: { slug: team.slug } })
+      .then((value) => {
+        if (active) setDirectory(value)
+      })
+      .catch(() => {
+        if (active) setDirectoryError(true)
+      })
+    return () => {
+      active = false
+    }
+  }, [team.id, team.slug])
 
   useEffect(() => {
     function load() {
@@ -94,6 +130,15 @@ export function UpcomingCycle({
           (raw ? parseTeamStatuses(raw) : initialTeamStatuses()).statuses
         )
         setWorkflowError(null)
+        const storedLabels = localStorage.getItem(teamLabelsStorageKey(team.id))
+        setLabels(
+          (storedLabels
+            ? parseTeamLabels(storedLabels)
+            : initialTeamLabels(team.slug)
+          ).labels
+            .filter((label) => !label.archived)
+            .map((label) => label.name)
+        )
       } catch {
         setWorkflowError(
           "Your team's issue statuses could not be loaded. Reload to try again."
@@ -102,20 +147,22 @@ export function UpcomingCycle({
     }
     load()
     window.addEventListener("storage", load)
-    return () => window.removeEventListener("storage", load)
-  }, [team.id])
+    window.addEventListener("focus", load)
+    return () => {
+      window.removeEventListener("storage", load)
+      window.removeEventListener("focus", load)
+    }
+  }, [team.id, team.slug])
 
   function create(status?: string) {
-    setDraft(
-      blankDraft(
+    setComposer({
+      ...blankIssueDraft(
         status ??
           statuses.find((item) => item.group === "unstarted")?.id ??
           statuses[0].id
-      )
-    )
-    setEditingId(undefined)
-    setSaveError(null)
-    setEditor(true)
+      ),
+      cycle,
+    })
   }
   function edit(issue: CycleIssue) {
     setDraft(issue)
@@ -196,6 +243,12 @@ export function UpcomingCycle({
           </Button>
         </div>
       </div>
+      {directoryError && (
+        <p role="status" className="px-5 py-2 text-xs text-muted-foreground">
+          Team members could not be loaded. Other issue properties are still
+          available.
+        </p>
+      )}
       {!ready ? (
         <p role="status" className="p-6 text-sm text-muted-foreground">
           Loading cycle…
@@ -406,11 +459,25 @@ export function UpcomingCycle({
           )}
         </div>
       )}
+      {composer && (
+        <IssueComposer
+          team={team}
+          directory={directory}
+          initial={composer}
+          labels={labels}
+          projects={projects}
+          onClose={() => setComposer(null)}
+          onSaved={(issue, savedTeam) =>
+            toast.success("Issue created", {
+              description: `${savedTeam.identifier}-${issue.number} — ${issue.title}`,
+            })
+          }
+          onDraftSaved={() => toast.success("Draft saved")}
+        />
+      )}
       <Dialog open={editor} onOpenChange={setEditor}>
         <DialogContent className="sm:max-w-xl">
-          <DialogTitle>
-            {editingId ? "Edit issue" : "Create new issue"}
-          </DialogTitle>
+          <DialogTitle>Edit issue</DialogTitle>
           <DialogDescription>
             {team.name} · Cycle {cycleNumber}
           </DialogDescription>
@@ -497,7 +564,7 @@ export function UpcomingCycle({
                 Cancel
               </Button>
               <Button type="submit" disabled={!draft.title.trim()}>
-                {editingId ? "Save issue" : "Create issue"}
+                Save issue
               </Button>
             </div>
           </form>

@@ -3,6 +3,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
   within,
 } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
@@ -12,11 +13,31 @@ import type { TeamSummary } from "@/lib/team-contract"
 import { selectOption } from "@/test-utils/select-option"
 import { cycleIssuesKey, parseCycleIssues } from "@/lib/cycle-issues"
 import { initialTeamCycles, teamCyclesStorageKey } from "@/lib/team-cycles"
+import { readIssueStore } from "@/lib/team-issues"
+import { initialTeamStatuses } from "@/lib/team-statuses"
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ children, to }: { children: ReactNode; to: string }) => (
     <a href={to}>{children}</a>
   ),
+}))
+vi.mock("@/lib/auth-client", () => ({
+  authClient: {
+    useSession: () => ({ data: { user: { id: "user", name: "Matthieu" } } }),
+  },
+}))
+vi.mock("@/lib/template-state", () => ({
+  loadTemplates: () =>
+    Promise.resolve({
+      templates: [],
+      teams: [team],
+      members: [{ id: "user", name: "Matthieu", image: null }],
+      defaults: { members: null, nonMembers: null },
+      canManage: false,
+    }),
+}))
+vi.mock("@/components/team-sidebar-icon", () => ({
+  TeamSidebarIcon: () => <span />,
 }))
 const team = {
   id: "upcoming-test",
@@ -26,12 +47,25 @@ const team = {
 } as TeamSummary
 beforeEach(() => {
   localStorage.clear()
+  Element.prototype.scrollIntoView = vi.fn()
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+  )
   localStorage.setItem(
     teamCyclesStorageKey(team.id),
     JSON.stringify({ ...initialTeamCycles(), enabled: true })
   )
 })
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.restoreAllMocks()
+  vi.unstubAllGlobals()
+})
 function create(title: string) {
   fireEvent.click(screen.getByRole("button", { name: "Create new issue" }))
   fireEvent.change(screen.getByRole("textbox", { name: "Issue title" }), {
@@ -72,11 +106,12 @@ describe("upcoming cycle", () => {
     expect(
       within(done).getByRole("button", { name: "Open PRO-1 Plan launch" })
     ).toBeTruthy()
-    selectOption(screen.getByRole("combobox", { name: "Filter by status" }), "Todo")
+    selectOption(
+      screen.getByRole("combobox", { name: "Filter by status" }),
+      "Todo"
+    )
     expect(screen.getByText("No issues match this filter.")).toBeTruthy()
-    expect(
-      parseCycleIssues(localStorage.getItem(cycleIssuesKey(team.id))!)[0].status
-    ).toBe("done")
+    expect(readIssueStore(team.id).issues[0].status).toBe("done")
   })
   it("does not show another team's or another cycle's issues", () => {
     const old = {
@@ -99,11 +134,12 @@ describe("upcoming cycle", () => {
     expect(screen.queryByText("Another team")).toBeNull()
     create("Next cycle")
     expect(
-      screen.getByRole("button", { name: "Open PRO-2 Next cycle" })
+      screen.getByRole("button", { name: "Open PRO-1 Next cycle" })
     ).toBeTruthy()
     expect(
       parseCycleIssues(localStorage.getItem(cycleIssuesKey(team.id))!)
-    ).toHaveLength(2)
+    ).toHaveLength(1)
+    expect(readIssueStore(team.id).issues[0].title).toBe("Next cycle")
   })
   it("preserves corrupt saved data and blocks editing", () => {
     localStorage.setItem(cycleIssuesKey(team.id), "invalid")
@@ -134,5 +170,55 @@ describe("upcoming cycle", () => {
         .value
     ).toBe("Unsaved")
     setItem.mockRestore()
+  })
+  it("uses the shared composer with the current cycle, assignee picker, and draft saving", async () => {
+    render(<UpcomingCycle team={team} cycleNumber={2} />)
+    fireEvent.click(screen.getByRole("button", { name: "Create new issue" }))
+    expect(screen.getByRole("dialog", { name: "Create issue" })).toBeTruthy()
+    expect(
+      screen.getByRole("button", { name: "Change cycle" }).textContent
+    ).toContain("Cycle 2")
+    fireEvent.change(screen.getByRole("textbox", { name: "Issue title" }), {
+      target: { value: "Plan next release" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Change assignee" }))
+    await waitFor(() =>
+      expect(screen.getByRole("option", { name: "Matthieu" })).toBeTruthy()
+    )
+    fireEvent.click(screen.getByRole("option", { name: "Matthieu" }))
+    fireEvent.click(screen.getByRole("button", { name: "Save as draft" }))
+    const saved = readIssueStore(team.id).drafts[0].draft
+    expect(saved).toMatchObject({
+      title: "Plan next release",
+      assignee: "user",
+    })
+    expect(saved.cycle).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    expect(readIssueStore(team.id).issues).toHaveLength(0)
+  })
+  it("opens the same composer from a status column and preserves the cycle for Create more", () => {
+    render(<UpcomingCycle team={team} />)
+    create("First")
+    fireEvent.click(screen.getByRole("button", { name: "Add issue to Done" }))
+    expect(screen.getByRole("dialog", { name: "Create issue" })).toBeTruthy()
+    expect(
+      screen.getByRole("button", { name: "Change status" }).textContent
+    ).toContain("Done")
+    fireEvent.change(screen.getByRole("textbox", { name: "Issue title" }), {
+      target: { value: "Second" },
+    })
+    fireEvent.click(screen.getByRole("switch", { name: "Create more" }))
+    fireEvent.click(screen.getByRole("button", { name: "Create issue" }))
+    expect(screen.getByRole("dialog", { name: "Create issue" })).toBeTruthy()
+    expect(
+      screen.getByRole("button", { name: "Change cycle" }).textContent
+    ).toContain("Cycle 1")
+    const records = readIssueStore(team.id).issues
+    expect(records).toHaveLength(2)
+    expect(records[1].cycle).toBe(records[0].cycle)
+    expect(records[1].status).toBe(
+      initialTeamStatuses().statuses.find(
+        (status) => status.group === "completed"
+      )?.id
+    )
   })
 })
