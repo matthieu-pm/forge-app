@@ -424,7 +424,10 @@ export function ImportCallDialog({
               required
               rows={6}
               maxLength={250000}
-              className={cn(callField, "min-h-32 resize-y leading-6")}
+              className={cn(
+                callField,
+                "max-h-64 min-h-32 resize-y overflow-y-auto leading-6"
+              )}
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="Alex: Let’s start with the onboarding feedback…"
