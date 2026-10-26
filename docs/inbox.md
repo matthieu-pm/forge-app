@@ -1,6 +1,6 @@
 # Inbox
 
-`/inbox` uses Forge's existing shell, with a fixed notification list and an independently scrolling detail pane. Small screens show the list or detail pane with a back button. A Forge welcome message is the only initial entry; sample issue activity is not seeded into users' inboxes.
+`/inbox` uses Forge's existing shell, with a resizable notification list and an independently scrolling detail pane. Drag the divider to resize the list from 80% to 200% of its default responsive width (360 px on medium screens, 400 px on large screens, capped at 42% of the inbox area before applying the scale). The chosen scale is stored locally per workspace and user. The divider supports Left/Right arrow keys in 5% steps, Home/End for the limits, and double-click to reset. Small screens keep the full-width list or detail pane with a back button and no resize divider. A Forge welcome message is the only initial entry; sample issue activity is not seeded into users' inboxes.
 
 The page supports grouped issue activity, read/unread state, notification-type filters, snooze presets and custom times, deleted-item recovery, subscription controls, display options, and keyboard shortcuts. Snoozed items return unread. Shortcuts are scoped to the inbox and do not intercept input fields or modal/menu controls.
 

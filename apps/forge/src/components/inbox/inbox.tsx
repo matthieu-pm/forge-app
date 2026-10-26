@@ -24,6 +24,7 @@ import {
   InboxFilterChips,
   InboxFiltersMenu,
 } from "./inbox-controls"
+import { InboxSidebar } from "./inbox-sidebar"
 import type { ComponentProps, KeyboardEvent } from "react"
 import type {
   InboxAction,
@@ -317,13 +318,7 @@ export function Inbox({ scope }: { scope: InboxScope }) {
       aria-label="Inbox"
       className="relative flex min-h-0 flex-1 overflow-hidden outline-none"
     >
-      <section
-        aria-label="Notifications"
-        className={cn(
-          "flex min-h-0 w-full shrink-0 flex-col border-border/50 md:w-[360px] md:max-w-[42%] md:border-r xl:w-[400px]",
-          selected && "hidden md:flex"
-        )}
-      >
+      <InboxSidebar scope={scope} selected={Boolean(selected)}>
         <header className="flex h-12 shrink-0 items-center gap-1 border-b border-border/40 px-4">
           <h1 className="text-sm font-medium">
             {view === "inbox"
@@ -636,7 +631,7 @@ export function Inbox({ scope }: { scope: InboxScope }) {
             </DropdownMenu>
           </footer>
         )}
-      </section>
+      </InboxSidebar>
       <section
         aria-label="Notification details"
         className={cn(
