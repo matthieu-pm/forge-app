@@ -1,5 +1,12 @@
 import { useCallback, useMemo, useSyncExternalStore } from "react"
 import { z } from "zod"
+import {
+  ISSUES_CHANGED,
+  parseIssueStore,
+  readIssueStore,
+  saveTeamIssue,
+  teamIssuesKey,
+} from "./team-issues"
 
 const issueSchema = z.object({
   id: z.string().min(1),
@@ -28,23 +35,45 @@ export function useCycleIssues(teamId: string, cycle: string) {
     useCallback((notify) => {
       window.addEventListener("storage", notify)
       window.addEventListener(eventName, notify)
+      window.addEventListener(ISSUES_CHANGED, notify)
       return () => {
         window.removeEventListener("storage", notify)
         window.removeEventListener(eventName, notify)
+        window.removeEventListener(ISSUES_CHANGED, notify)
       }
     }, []),
     () => {
       try {
-        return localStorage.getItem(key) ?? "[]"
+        return JSON.stringify([
+          localStorage.getItem(key) ?? "[]",
+          localStorage.getItem(teamIssuesKey(teamId)),
+        ])
       } catch {
         return "unavailable"
       }
     },
-    () => "[]"
+    () => '["[]",null]'
   )
   const { issues, error } = useMemo(() => {
     try {
-      return { issues: parseCycleIssues(raw), error: null }
+      const [legacyRaw, canonicalRaw] = JSON.parse(raw) as [
+        string,
+        string | null,
+      ]
+      const legacy = parseCycleIssues(legacyRaw)
+      const canonical = canonicalRaw
+        ? parseIssueStore(canonicalRaw)
+            .issues.filter((issue) => Boolean(issue.cycle))
+            .map((issue) => issueSchema.parse({ ...issue, cycle: issue.cycle }))
+        : []
+      const canonicalIds = new Set(canonical.map((issue) => issue.id))
+      return {
+        issues: [
+          ...legacy.filter((issue) => !canonicalIds.has(issue.id)),
+          ...canonical,
+        ],
+        error: null,
+      }
     } catch {
       return {
         issues: [],
@@ -56,6 +85,31 @@ export function useCycleIssues(teamId: string, cycle: string) {
 
   function save(draft: CycleIssueDraft, id?: string) {
     if (error) throw new Error(error)
+    if (id) {
+      const canonical = readIssueStore(teamId).issues.find(
+        (issue) => issue.id === id
+      )
+      if (canonical) {
+        if (canonical.cycle !== cycle)
+          throw new Error(
+            "This issue has moved to another cycle. Reload and try again."
+          )
+        return issueSchema.parse(
+          saveTeamIssue(
+            teamId,
+            {
+              ...canonical,
+              ...draft,
+              descriptionDoc:
+                draft.description === canonical.description
+                  ? canonical.descriptionDoc
+                  : null,
+            },
+            { id }
+          )
+        )
+      }
+    }
     // Re-read before writing so another window's latest issues are preserved.
     const current = parseCycleIssues(localStorage.getItem(key) ?? "[]")
     const previous = id

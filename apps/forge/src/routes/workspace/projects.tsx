@@ -1,13 +1,30 @@
 import { createFileRoute } from "@tanstack/react-router"
-
-import { PagePlaceholder } from "@/components/page-placeholder"
+import { ProjectsPage } from "@/components/projects/projects-page"
 import { protectedRouteBeforeLoad } from "@/lib/auth-state"
+import { loadInitiativeDirectory } from "@/lib/initiative-directory"
 
 export const Route = createFileRoute("/workspace/projects")({
   beforeLoad: protectedRouteBeforeLoad,
-  component: ProjectsPage,
+  loader: loadInitiativeDirectory,
+  staleTime: 30_000,
+  component: Page,
 })
-
-function ProjectsPage() {
-  return <PagePlaceholder />
+function Page() {
+  const { authState } = Route.useRouteContext()
+  const directory = Route.useLoaderData()
+  if (!authState.workspace || !authState.user) return null
+  return (
+    <ProjectsPage
+      key={`${authState.workspace.id}:${authState.user.id}`}
+      workspaceId={authState.workspace.id}
+      user={{
+        id: authState.user.id,
+        name: authState.user.name || "You",
+        image: authState.user.image,
+      }}
+      people={directory.people}
+      teams={directory.teams}
+      directoryError={directory.error.replace("Initiatives", "Projects")}
+    />
+  )
 }

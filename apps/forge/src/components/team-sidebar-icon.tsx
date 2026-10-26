@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { File01Icon } from "@hugeicons/core-free-icons"
+import { CubeIcon, File01Icon, Target01Icon } from "@hugeicons/core-free-icons"
 import type { IconSvgElement } from "@hugeicons/react"
 import type { PickerIcon } from "@/components/team-icon-picker"
 
@@ -39,6 +39,14 @@ export function TeamSidebarIcon({
     }
     if (icon.value === "File01Icon") {
       setLoadedIcon(File01Icon)
+      return
+    }
+    if (icon.value === "Target01Icon") {
+      setLoadedIcon(Target01Icon)
+      return
+    }
+    if (icon.value === "CubeIcon") {
+      setLoadedIcon(CubeIcon)
       return
     }
 

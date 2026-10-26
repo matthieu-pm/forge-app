@@ -134,6 +134,7 @@ const commentSchema = z.object({
 })
 export const issueDraftSchema = triageDraftSchema.extend({
   status: z.string().min(1),
+  cycle: z.string().default(""),
   parentId: z.string().default(""),
   links: z.array(linkSchema).default([]),
   subIssues: z.array(z.string().trim().min(1).max(240)).default([]),
@@ -154,7 +155,14 @@ export const issueDraftSchema = triageDraftSchema.extend({
         text: z.string(),
         createdAt: z.string(),
         field: z
-          .enum(["status", "priority", "assignee", "labels", "project"])
+          .enum([
+            "status",
+            "priority",
+            "assignee",
+            "labels",
+            "project",
+            "cycle",
+          ])
           .optional(),
         from: z.string().optional(),
         to: z.string().optional(),
@@ -288,7 +296,14 @@ export function saveTeamIssue(
         ? [
             ...previous.activity,
             ...(
-              ["status", "priority", "assignee", "labels", "project"] as const
+              [
+                "status",
+                "priority",
+                "assignee",
+                "labels",
+                "project",
+                "cycle",
+              ] as const
             )
               .filter(
                 (field) => (previous[field] ?? "") !== (draft[field] ?? "")
@@ -309,7 +324,11 @@ export function saveTeamIssue(
                         ? draft.project
                           ? `added to project ${draft.project}`
                           : "removed the project"
-                        : `updated ${field}`,
+                        : field === "cycle"
+                          ? draft.cycle
+                            ? `added to the cycle starting ${draft.cycle}`
+                            : "removed from the cycle"
+                          : `updated ${field}`,
               })),
           ]
         : draft.activity,
@@ -384,6 +403,7 @@ export function moveTeamIssue(
         return {
           ...issue,
           parentId: issue.id === issueId ? "" : issue.parentId,
+          cycle: "",
           number: target.nextNumber + index,
           status: nextStatus.id,
         }

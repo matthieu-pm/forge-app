@@ -13,6 +13,7 @@ import { InlineIssueProperties, IssueSubProgress } from "./issue-list"
 import { Attachments, attachmentId } from "./issue-attachments"
 import { ActivityReference, ActivityRow } from "./issue-activity-row"
 import { IssueLabelPicker } from "./issue-label-picker"
+import { IssueCyclePicker } from "./issue-cycle-picker"
 import type { Editor, JSONContent } from "@tiptap/core"
 import type { IssueDraft, TeamIssue } from "@/lib/team-issues"
 import type { TeamStatus } from "@/lib/team-statuses"
@@ -504,6 +505,7 @@ export function IssueDetail({
   }, [doc, issue, onUpdate])
   useEffect(() => {
     const shortcuts = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return
       if (
         event.target instanceof Element &&
         event.target.closest("input,textarea,[contenteditable=true]")
@@ -548,7 +550,13 @@ export function IssueDetail({
                   ? `Assign to for ${issue.title}`
                   : key === "l"
                     ? "Add labels"
-                    : undefined
+                    : key === "c" &&
+                        event.shiftKey &&
+                        !document.querySelector('[role="dialog"]')
+                      ? issue.cycle
+                        ? "Change cycle"
+                        : "Add to cycle"
+                      : undefined
             : undefined
       if (label) {
         event.preventDefault()
@@ -560,7 +568,7 @@ export function IssueDetail({
     }
     window.addEventListener("keydown", shortcuts)
     return () => window.removeEventListener("keydown", shortcuts)
-  }, [branch, id, prompt, issue.title])
+  }, [branch, id, prompt, issue.title, issue.cycle])
   function addComment(
     body: string,
     attachments: Array<Attachment>,
@@ -1245,7 +1253,10 @@ export function IssueDetail({
                       />
                       Sub-issues
                     </button>
-                    <IssueSubProgress completed={completed} total={children.length} />
+                    <IssueSubProgress
+                      completed={completed}
+                      total={children.length}
+                    />
                     <div className="ml-auto flex">
                       <Popover>
                         <PopoverTrigger
@@ -1305,9 +1316,17 @@ export function IssueDetail({
                   children.map((child) => (
                     <div
                       key={child.id}
-                      className={cn("group flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-2 text-[13px] hover:bg-muted/60 focus-within:bg-muted/40", selected.includes(child.id) && "bg-[#5e6ad2]/20")}
+                      className={cn(
+                        "group flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-2 text-[13px] focus-within:bg-muted/40 hover:bg-muted/60",
+                        selected.includes(child.id) && "bg-[#5e6ad2]/20"
+                      )}
                       onClick={(event) => {
-                        if (!(event.target as HTMLElement).closest('button, input, a, [data-slot="popover-content"], [data-slot="hover-card-content"]')) onOpen(child)
+                        if (
+                          !(event.target as HTMLElement).closest(
+                            'button, input, a, [data-slot="popover-content"], [data-slot="hover-card-content"]'
+                          )
+                        )
+                          onOpen(child)
                       }}
                     >
                       <input
@@ -1756,6 +1775,13 @@ export function IssueDetail({
                     </div>
                   )
                 )}
+                <IssueCyclePicker
+                  key={team.id}
+                  teamId={team.id}
+                  value={issue.cycle}
+                  property
+                  onChange={(cycle) => patch({ cycle })}
+                />
               </div>
               <h2 className="mt-8 mb-3 px-2 text-xs text-muted-foreground">
                 Labels

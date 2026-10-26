@@ -29,14 +29,15 @@ import {
 } from "@/components/ui/select"
 import { projectUpdateScheduleSchema } from "@/lib/project-updates-settings"
 import { initiativeLabelsStorageKey, parseTeamLabels } from "@/lib/team-labels"
+import { initiativesSettingsStorageKey } from "@/lib/initiatives"
+
+export { initiativesSettingsStorageKey } from "@/lib/initiatives"
 
 const settingsSchema = z.object({
   enabled: z.boolean(),
   schedule: projectUpdateScheduleSchema,
 })
 type Settings = z.infer<typeof settingsSchema>
-export const initiativesSettingsStorageKey = (workspaceId: string) =>
-  `forge:workspace:${workspaceId}:initiatives-settings:v1`
 const defaults: Settings = { enabled: true, schedule: "none" }
 const schedules = projectUpdateScheduleSchema.options
 function scheduleLabel(value: Settings["schedule"]) {

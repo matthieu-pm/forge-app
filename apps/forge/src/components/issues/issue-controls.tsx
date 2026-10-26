@@ -1,4 +1,3 @@
-import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import { useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
@@ -45,6 +44,7 @@ import {
 import type { ReactNode } from "react"
 import type { IssueDisplay } from "@/lib/team-issues"
 import type { TeamStatus } from "@/lib/team-statuses"
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -190,6 +190,7 @@ export function IssuePicker({
   footer,
   open: controlledOpen,
   onOpenChange: controlledChange,
+  side = "bottom",
 }: {
   label: string
   shortcut?: string
@@ -204,6 +205,7 @@ export function IssuePicker({
   footer?: ReactNode
   open?: boolean
   onOpenChange?: (value: boolean) => void
+  side?: "top" | "bottom" | "left" | "right"
 }) {
   const [localOpen, setLocalOpen] = useState(false)
   const [search, setSearch] = useState("")
@@ -258,6 +260,7 @@ export function IssuePicker({
       </ActionHint>
       <PopoverContent
         align="start"
+        side={side}
         className="issue-menu w-52 gap-0 rounded-xl p-1"
         initialFocus={true}
         onKeyDown={(event) => {

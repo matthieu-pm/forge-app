@@ -10,6 +10,7 @@ import {
   issueChip,
   issuePrimary,
 } from "./issue-controls"
+import { IssueCyclePicker } from "./issue-cycle-picker"
 import type { IssueDraft, TeamIssue } from "@/lib/team-issues"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
@@ -138,6 +139,7 @@ export function IssueComposer({
           assignee: draft.assignee,
           project: draft.project,
           labels: draft.labels,
+          cycle: draft.cycle,
         })
         titleRef.current?.focus()
       } else onClose()
@@ -243,6 +245,26 @@ export function IssueComposer({
             submit()
           }}
           onKeyDown={(event) => {
+            if (
+              event.shiftKey &&
+              !event.metaKey &&
+              !event.ctrlKey &&
+              !event.altKey &&
+              event.key.toLowerCase() === "c" &&
+              !(
+                event.target instanceof Element &&
+                event.target.closest("input,textarea,[contenteditable=true]")
+              )
+            ) {
+              const picker =
+                event.currentTarget.querySelector<HTMLButtonElement>(
+                  'button[aria-label="Add to cycle"],button[aria-label="Change cycle"]'
+                )
+              if (picker) {
+                event.preventDefault()
+                picker.click()
+              }
+            }
             if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
               event.preventDefault()
               submit()
@@ -307,6 +329,7 @@ export function IssueComposer({
                           ?.id ?? nextStatuses[0].id,
                       assignee: "",
                       parentId: "",
+                      cycle: "",
                     })
                   } catch {
                     setError(
@@ -496,6 +519,12 @@ export function IssueComposer({
                 {draft.labels || "Labels"}
               </span>
             </IssuePicker>
+            <IssueCyclePicker
+              key={targetTeam.id}
+              teamId={targetTeam.id}
+              value={draft.cycle}
+              onChange={(cycle) => update({ cycle })}
+            />
             <Popover
               open={more}
               onOpenChange={(next) => {

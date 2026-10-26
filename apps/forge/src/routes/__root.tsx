@@ -166,7 +166,9 @@ function AgentRouteContent({
     >
       {pathname !== "/inbox" &&
         pathname !== "/my-issues" &&
-        !/^\/teams\/[^/]+\/(triage|overview|documents|loops|members|issues)$/.test(
+        !pathname.startsWith("/workspace/initiatives") &&
+        pathname !== "/workspace/projects" &&
+        !/^\/teams\/[^/]+\/(triage|overview|documents|loops|members|issues|projects)$/.test(
           pathname
         ) && <AppHeader />}
       <div
