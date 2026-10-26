@@ -108,7 +108,7 @@ function validDocument(document: Record<string, unknown>) {
   }
   return true
 }
-const documentSchema = z
+export const documentSchema = z
   .record(z.string(), z.json())
   .refine(validDocument, "Invalid document content or attachment URL.")
   .nullable()

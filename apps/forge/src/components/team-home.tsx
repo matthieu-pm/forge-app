@@ -60,6 +60,8 @@ import { notifyTeamDirectoryChanged } from "@/lib/team-events"
 import { useTeamTriage } from "@/lib/team-triage"
 import { useTeamCycles } from "@/lib/team-cycles"
 import { cn } from "@/lib/utils"
+import { authClient } from "@/lib/auth-client"
+import { newTeamDocument } from "@/lib/team-documents"
 
 export { ActionIconButton as HomeIconButton } from "@/components/ui/action-icon-button"
 
@@ -390,6 +392,7 @@ export function TeamOverview({
   store: HomeStore
 }) {
   const router = useRouter()
+  const session = authClient.useSession()
   const [name, setName] = React.useState(team.name)
   const [description, setDescription] = React.useState(team.description)
   const [saving, setSaving] = React.useState(false)
@@ -400,6 +403,31 @@ export function TeamOverview({
   const [editor, setEditor] = React.useState<TeamResource | null>(null)
   const triage = useTeamTriage(team.id)
   const cycles = useTeamCycles(team.id)
+  function openResource(resource: TeamResource) {
+    if (resource.kind === "link") setEditor(resource)
+    else
+      void router.navigate({
+        to: "/teams/$teamSlug/documents",
+        params: { teamSlug: team.slug },
+        search: { document: resource.id },
+      })
+  }
+  function createDocument(sectionId: string | null) {
+    const user = session.data?.user
+    const resource = newTeamDocument(
+      user
+        ? { id: user.id, name: user.name || "You", image: user.image }
+        : undefined,
+      sectionId
+    )
+    if (
+      homeSave(store, (state) => ({
+        ...state,
+        resources: [...state.resources, resource],
+      }))
+    )
+      openResource(resource)
+  }
   async function save(
     settings: Parameters<typeof updateTeam>[0]["data"]["settings"]
   ) {
@@ -446,9 +474,7 @@ export function TeamOverview({
           }
         />
         <DropdownMenuContent className="w-44">
-          <DropdownMenuItem
-            onClick={() => setEditor(newResource("document", sectionId))}
-          >
+          <DropdownMenuItem onClick={() => createDocument(sectionId)}>
             <HomeIcon icon={File01Icon} />
             New document
           </DropdownMenuItem>
@@ -492,7 +518,7 @@ export function TeamOverview({
                 "min-w-0 flex-1 truncate rounded-sm text-left text-sm",
                 homeFocus
               )}
-              onClick={() => setEditor(r)}
+              onClick={() => openResource(r)}
             >
               {r.title}
             </button>
@@ -508,7 +534,7 @@ export function TeamOverview({
               }
             />
             <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => setEditor(r)}>
+              <DropdownMenuItem onClick={() => openResource(r)}>
                 Edit resource
               </DropdownMenuItem>
               <DropdownMenuItem
