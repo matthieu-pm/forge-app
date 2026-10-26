@@ -399,7 +399,14 @@ export function MyIssues({
         ) : !visible.length ||
           (search.view === "activity" && !activity.length) ? (
           <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
-            <IssueIcon name="layers" className="size-8 text-muted-foreground" />
+            <img
+              src="/img/empty-states/my-issues.png"
+              alt=""
+              aria-hidden="true"
+              width={168}
+              height={124}
+              className="h-[124px] w-[168px] shrink-0 invert dark:invert-0"
+            />
             <h2 className="text-base font-medium">
               {filters.rules.length
                 ? "No matching issues"

@@ -920,3 +920,41 @@ Final result: passed for the supplied desktop activity-row interactions.
 - Browser verified: Assigned (2), Created (12), Subscribed (3), authored Activity, personal priority filter plus reload persistence, list/board switching, details preview, priority edit/restore on TES-11, full detail/back, and composer open/close. Activity scrolled internally while document scroll stayed 0 and header top stayed 8px. Browser QA created no issues; TES-11 priority was restored to Medium; personal filters/layout/details were restored to clear/list/closed.
 - Validation: 818 application tests and 4 Workflow tests passed; TypeScript, scoped ESLint, production build, and protected Workflow handler verification passed. Tests cover cross-team updates, scopes, exact subscriber matching, preferences isolation, corrupt data preservation, refresh, and preview/composer integration.
 - Evidence: `docs/qa/my-issues/assigned.png`, `docs/qa/my-issues/details.png`, `docs/qa/my-issues/activity.png`. This uses the app's existing browser-persisted issue data; it does not introduce a separate server issue model.
+# My issues illustration QA
+
+Scope: illustration only, per the user's clarification. Copy, buttons, surrounding layout, and empty-state behavior remain unchanged.
+
+- Source visual: `docs/qa/my-issues/empty-illustration-reference.png`, extracted from the supplied Linear reference's live app capture.
+- Implementation screenshot: `docs/qa/my-issues/empty-illustration.png`.
+- Combined comparison: `docs/qa/my-issues/empty-illustration-comparison.png` (source left, implementation right).
+- Viewport: 885 × 1034 CSS pixels; implementation capture 885 × 1034 pixels, density 1.
+- Source crop: 336 × 248 pixels at density 2, normalized to 168 × 124 CSS pixels.
+- State: Subscribed with a temporary Urgent priority filter producing an empty result. Filter removed after verification.
+
+## Findings
+
+No actionable P0/P1/P2 differences within the requested illustration scope. The source artwork's thin outlines, elliptical center, dashed lower ring, and offset echoes match the rendered illustration. Transparent pixels avoid a rectangular background; light themes invert the monochrome asset.
+
+The full screenshot confirms the illustration is centered in the existing empty-state container. The focused combined comparison confirms asset scale, line quality, and tonal fidelity. The reference and implementation have different surrounding content because only the illustration was requested.
+
+## Required fidelity surfaces
+
+- Fonts/typography: unchanged and outside the requested change.
+- Spacing/layout: existing empty-state container retained; illustration rendered at 168 × 124 pixels.
+- Colors/tokens: original grayscale line intensity retained in dark mode, with transparent background and theme inversion for light mode.
+- Image quality: source artwork extracted at double density and displayed at half size; no synthesized vector approximation.
+- Copy/content: unchanged.
+
+## Verification
+
+- Existing My issues component and library tests: 7 passed across 2 files.
+- Component formatting: passed.
+- Browser: image successfully loaded; natural dimensions 336 × 248, rendered dimensions 168 × 124. Temporary filter and tab navigation worked.
+- Console checked: TanStack Router devtools reports `path.endsWith is not a function` in its own panel code. This does not prevent rendering or navigation and is unrelated to the image-only change.
+- Light-theme inversion is implemented but was not separately browser-captured.
+
+## Comparison history
+
+First focused comparison passed without further changes. No unresolved visual findings within the illustration scope.
+
+final result: passed
