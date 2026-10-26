@@ -3,14 +3,12 @@
 import * as React from "react"
 import {
   ArrowDown02Icon,
-  ArrowLeft01Icon,
   ArrowUp02Icon,
   FilterHorizontalIcon,
   Search01Icon,
   SlidersHorizontalIcon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Link } from "@tanstack/react-router"
 import { toast } from "sonner"
 import type { TeamSummary } from "@/lib/team-contract"
 import type {
@@ -35,7 +33,6 @@ import {
   workspaceLabelsStorageKey,
 } from "@/lib/team-labels"
 import { LabelSelectionActions } from "@/components/label-selection-actions"
-import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { LabelGroupRow } from "@/components/label-group-row"
 import { TeamLabelRow } from "@/components/team-label-row"
 import { Button } from "@/components/ui/button"
@@ -641,28 +638,6 @@ export function TeamIssueLabelsSettings({
             Saved labels could not be loaded. Your data has been preserved.
             Reload to try again.
           </p>
-        )}
-        {team && (
-          <div className="forge-page-back flex h-12 items-center px-4">
-            <Link
-              to="/settings/teams/$teamSlug"
-              params={{ teamSlug: team.slug }}
-              aria-label={`Back to ${team.name} settings`}
-              className={`inline-flex min-w-0 items-center gap-2 rounded-md py-1 text-sm text-muted-foreground hover:text-foreground ${focusClass}`}
-            >
-              <HugeiconsIcon
-                icon={ArrowLeft01Icon}
-                strokeWidth={1.5}
-                className="size-4"
-              />
-              <TeamSidebarIcon
-                icon={team.icon}
-                name={team.name}
-                className="size-4"
-              />
-              <span className="truncate">{team.name}</span>
-            </Link>
-          </div>
         )}
         <div className="forge-page-header forge-settings-table-header flex flex-wrap items-start justify-between gap-4 border-b border-border/40">
           <h1 className="forge-settings-wide-heading">

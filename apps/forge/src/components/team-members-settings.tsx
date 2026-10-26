@@ -4,7 +4,6 @@ import * as React from "react"
 import {
   Add01Icon,
   ArrowDown02Icon,
-  ArrowLeft01Icon,
   ArrowUp02Icon,
   Cancel01Icon,
   MoreHorizontalIcon,
@@ -26,7 +25,6 @@ import {
   homePill,
 } from "@/components/team-home"
 import { useTeamHome } from "@/lib/team-home-state"
-import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -434,27 +432,6 @@ export function TeamMembersSettings({
         </TeamHomeLayout>
       ) : (
         <main className="flex min-h-0 flex-1 flex-col overflow-hidden pb-8">
-          <div className="forge-page-back flex h-12 items-center px-4">
-            <Link
-              to="/settings/teams/$teamSlug"
-              params={{ teamSlug: team.slug }}
-              className="inline-flex min-w-0 items-center gap-2 rounded-md py-1 text-sm text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-              aria-label={`Back to ${team.name} settings`}
-            >
-              <HugeiconsIcon
-                icon={ArrowLeft01Icon}
-                strokeWidth={1.5}
-                className="size-4"
-              />
-              <TeamSidebarIcon
-                icon={team.icon}
-                name={team.name}
-                className="size-4"
-              />
-              <span className="truncate">{team.name}</span>
-            </Link>
-          </div>
-
           <div className="forge-settings-table-header shrink-0">
             <h1 className="forge-settings-wide-heading">Team members</h1>
             <div className="mt-3 flex flex-wrap items-center gap-2">

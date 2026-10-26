@@ -1,11 +1,7 @@
 "use client"
 
 import * as React from "react"
-import {
-  ArrowLeft01Icon,
-  ArrowRight01Icon,
-  LinkCircleIcon,
-} from "@hugeicons/core-free-icons"
+import { ArrowRight01Icon, LinkCircleIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Link } from "@tanstack/react-router"
 import { toast } from "sonner"
@@ -14,7 +10,6 @@ import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamTriageSettings as TriagePreferences } from "@/lib/team-triage"
 import { useTeamTriage } from "@/lib/team-triage"
 import { TriageResponsibilityDialog } from "@/components/triage-responsibility-dialog"
-import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import {
@@ -119,26 +114,6 @@ export function TeamTriageSettings({ team }: { team: TeamSummary }) {
   }
   return (
     <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="forge-page-back flex h-12 shrink-0 items-center px-4">
-        <Link
-          to="/settings/teams/$teamSlug"
-          params={{ teamSlug: team.slug }}
-          aria-label={`Back to ${team.name} settings`}
-          className={`inline-flex items-center gap-2 rounded-md py-1 text-sm text-muted-foreground hover:text-foreground ${focusClass}`}
-        >
-          <HugeiconsIcon
-            icon={ArrowLeft01Icon}
-            className="size-4"
-            strokeWidth={1.5}
-          />
-          <TeamSidebarIcon
-            icon={team.icon}
-            name={team.name}
-            className="size-4"
-          />
-          {team.name}
-        </Link>
-      </div>
       <div className="forge-settings-scroll">
         <div className="forge-settings-content">
           <header className="forge-page-header forge-settings-header">

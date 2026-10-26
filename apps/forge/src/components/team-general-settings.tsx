@@ -1,13 +1,11 @@
+"use client"
+
 import * as React from "react"
-import { ArrowLeft01Icon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
-import { Link } from "@tanstack/react-router"
 import { toast } from "sonner"
 
 import type { TeamSummary, UpdateTeamInput } from "@/lib/team-contract"
 import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 import { TeamIconPicker } from "@/components/team-icon-picker"
-import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { TeamTimezonePicker } from "@/components/team-timezone-picker"
 import { Button } from "@/components/ui/button"
 import {
@@ -23,10 +21,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { notifyTeamDirectoryChanged } from "@/lib/team-events"
 import { updateTeam } from "@/lib/team-state"
 import { cn } from "@/lib/utils"
-
-;
-
-("use client")
 
 type TeamSettings = UpdateTeamInput["settings"]
 type SaveStatus = "idle" | "saving" | "saved" | "error"
@@ -183,22 +177,6 @@ export function TeamGeneralSettings({ team }: { team: TeamSummary }) {
 
   return (
     <main className="forge-settings-scroll">
-      <div className="forge-page-back flex h-12 shrink-0 items-center px-4">
-        <Link
-          to="/settings/teams/$teamSlug"
-          params={{ teamSlug: team.slug }}
-          className="inline-flex items-center gap-1.5 rounded-lg px-1 py-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-        >
-          <HugeiconsIcon
-            icon={ArrowLeft01Icon}
-            strokeWidth={2}
-            className="size-3.5"
-          />
-          <TeamSidebarIcon icon={icon} name={team.name} />
-          {name}
-        </Link>
-      </div>
-
       <div className="forge-settings-content">
         <div className="space-y-12">
           <div className="forge-page-header forge-settings-header flex items-center justify-between gap-4">

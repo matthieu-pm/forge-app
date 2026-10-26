@@ -1,9 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Link } from "@tanstack/react-router"
 import {
-  ArrowLeft01Icon,
   Cancel01Icon,
   Delete02Icon,
   GitBranchIcon,
@@ -34,7 +32,6 @@ import {
   workflowDurations,
 } from "@/lib/team-workflows"
 import { IssueStatusIcon } from "@/components/issue-status-icon"
-import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
@@ -50,8 +47,6 @@ import { Checkbox } from "@/components/ui/checkbox"
 const cardClass = "rounded-xl bg-muted/35 px-4 ring-1 ring-border/30"
 const rowClass =
   "flex min-h-16 flex-col justify-center gap-3 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6"
-const focusClass =
-  "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
 type ChoiceOption = { value: string; label: string; icon?: ReactNode }
 
 function Choice({
@@ -361,26 +356,6 @@ export function TeamWorkflowsSettings({ team }: { team: TeamSummary }) {
   }
   return (
     <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="forge-page-back flex h-12 shrink-0 items-center px-4">
-        <Link
-          to="/settings/teams/$teamSlug"
-          params={{ teamSlug: team.slug }}
-          aria-label={`Back to ${team.name} settings`}
-          className={`inline-flex items-center gap-2 rounded-md py-1 text-sm text-muted-foreground hover:text-foreground ${focusClass}`}
-        >
-          <HugeiconsIcon
-            icon={ArrowLeft01Icon}
-            className="size-4"
-            strokeWidth={1.5}
-          />
-          <TeamSidebarIcon
-            icon={team.icon}
-            name={team.name}
-            className="size-4"
-          />
-          {team.name}
-        </Link>
-      </div>
       <div className="forge-settings-scroll">
         <div className="forge-settings-content">
           <header className="forge-page-header forge-settings-header">

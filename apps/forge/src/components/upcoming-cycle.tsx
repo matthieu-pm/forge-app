@@ -7,7 +7,22 @@ import type { CycleIssue, CycleIssueDraft } from "@/lib/cycle-issues"
 import type { IssueDraft } from "@/lib/team-issues"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import { IssueComposer } from "@/components/issues/issue-composer"
-import { blankIssueDraft, useIssueStore } from "@/lib/team-issues"
+import { IssueRows } from "@/components/issues/issue-list"
+import { IssueFilters } from "@/components/issues/issue-filters"
+import {
+  IssueDisplayMenu,
+  IssueIcon,
+  IssuePicker,
+  issueChip,
+} from "@/components/issues/issue-controls"
+import {
+  blankIssueDraft,
+  emptyIssueFilters,
+  issueFields,
+  issuePriorities,
+  useIssueStore,
+  visibleIssues,
+} from "@/lib/team-issues"
 import { loadTemplates } from "@/lib/template-state"
 import {
   initialTeamLabels,
@@ -16,13 +31,14 @@ import {
 } from "@/lib/team-labels"
 import { OptionSelect } from "@/components/ui/option-select"
 import { useCycleIssues } from "@/lib/cycle-issues"
+import { useCycleIssueView } from "@/lib/cycle-issue-view"
 import { nextCycleStart, useTeamCycles } from "@/lib/team-cycles"
 import {
   initialTeamStatuses,
   parseTeamStatuses,
   teamStatusesStorageKey,
 } from "@/lib/team-statuses"
-import { IssueStatusIcon } from "@/components/issue-status-icon"
+import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -32,6 +48,18 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { cn } from "@/lib/utils"
 
 const selectClass =
   "h-8 rounded-lg border border-border bg-background px-2 text-xs focus-visible:outline-2 focus-visible:outline-ring"
@@ -41,7 +69,6 @@ const blankDraft = (status = "todo"): CycleIssueDraft => ({
   status,
   priority: "No priority",
 })
-
 function CycleMark() {
   return (
     <svg
@@ -85,27 +112,31 @@ export function UpcomingCycle({
   const end = addWeeks(start, settings.duration)
   end.setDate(end.getDate() - 1)
   const cycle = format(start, "yyyy-MM-dd")
-  const { issues, error, save } = useCycleIssues(team.id, cycle)
+  const cycleData = useCycleIssues(team.id, cycle)
+  const { issues, records, error, save } = cycleData
+  const view = useCycleIssueView(team.id, cycle)
+  const { display, filters, favorite } = view.value
   const [statuses, setStatuses] = useState(() => initialTeamStatuses().statuses)
   const [workflowError, setWorkflowError] = useState<string | null>(null)
   const [editor, setEditor] = useState(false)
   const [editingId, setEditingId] = useState<string>()
   const [draft, setDraft] = useState<CycleIssueDraft>(() => blankDraft())
   const [saveError, setSaveError] = useState<string | null>(null)
-  const [filter, setFilter] = useState("")
-  const [view, setView] = useState("board")
+  const [actionError, setActionError] = useState("")
+  const [selected, setSelected] = useState<Array<string>>([])
   const [details, setDetails] = useState(false)
   const [composer, setComposer] = useState<IssueDraft | null>(null)
   const [directory, setDirectory] = useState<TemplateDirectory>()
   const [directoryError, setDirectoryError] = useState(false)
   const [labels, setLabels] = useState<Array<string>>([])
+  const [labelColors, setLabelColors] = useState<Record<string, string>>({})
   const { store } = useIssueStore(team.id)
   const projects = [
     ...new Set(
       store.issues.map((issue) => issue.project ?? "").filter(Boolean)
     ),
   ]
-
+  const members = directory?.members ?? []
   useEffect(() => {
     let active = true
     setDirectory(undefined)
@@ -121,7 +152,6 @@ export function UpcomingCycle({
       active = false
     }
   }, [team.id, team.slug])
-
   useEffect(() => {
     function load() {
       try {
@@ -129,19 +159,22 @@ export function UpcomingCycle({
         setStatuses(
           (raw ? parseTeamStatuses(raw) : initialTeamStatuses()).statuses
         )
-        setWorkflowError(null)
         const storedLabels = localStorage.getItem(teamLabelsStorageKey(team.id))
-        setLabels(
-          (storedLabels
+        const activeLabels = (
+          storedLabels
             ? parseTeamLabels(storedLabels)
             : initialTeamLabels(team.slug)
-          ).labels
-            .filter((label) => !label.archived)
-            .map((label) => label.name)
+        ).labels.filter((label) => !label.archived)
+        setLabels(activeLabels.map((label) => label.name))
+        setLabelColors(
+          Object.fromEntries(
+            activeLabels.map((label) => [label.name, label.color])
+          )
         )
+        setWorkflowError(null)
       } catch {
         setWorkflowError(
-          "Your team's issue statuses could not be loaded. Reload to try again."
+          "Your team's issue properties could not be loaded. Saved data has been preserved."
         )
       }
     }
@@ -153,14 +186,13 @@ export function UpcomingCycle({
       window.removeEventListener("focus", load)
     }
   }, [team.id, team.slug])
-
-  function create(status?: string) {
+  function create(patch: Partial<IssueDraft> = {}) {
     setComposer({
       ...blankIssueDraft(
-        status ??
-          statuses.find((item) => item.group === "unstarted")?.id ??
+        statuses.find((item) => item.group === "unstarted")?.id ??
           statuses[0].id
       ),
+      ...patch,
       cycle,
     })
   }
@@ -170,83 +202,245 @@ export function UpcomingCycle({
     setSaveError(null)
     setEditor(true)
   }
-  const visible = issues.filter((issue) => !filter || issue.status === filter)
-  const groups = statuses.filter(
-    (status) =>
-      status.group !== "backlog" ||
-      issues.some((issue) => issue.status === status.id)
-  )
-  const populated = groups.filter((status) =>
-    visible.some((issue) => issue.status === status.id)
-  )
-  const empty = groups.filter(
-    (status) => !issues.some((issue) => issue.status === status.id)
+  function update(ids: Array<string>, patch: Partial<IssueDraft>) {
+    try {
+      cycleData.patch(ids, patch)
+      setActionError("")
+      return true
+    } catch {
+      setActionError(
+        "The issues could not be updated. Your saved data and selection have been preserved."
+      )
+      return false
+    }
+  }
+  function preferences(patch: Parameters<typeof view.save>[0]) {
+    if (!view.save(patch))
+      toast.error("Cycle view preferences could not be saved")
+    else if (patch.filters || patch.display) setSelected([])
+  }
+  const visible = visibleIssues(records, "all", statuses, filters, display)
+  const chosen = selected.filter((id) =>
+    visible.some((issue) => issue.id === id)
   )
   const failure = settingsError ?? error ?? workflowError
+  const writable = ready && settings.enabled && !failure
   const issueNumber = (issue: CycleIssue) =>
     `${team.identifier}-${issue.number}`
-
+  const hasFilters = filters.rules.length > 0
   return (
     <main
-      className="flex min-h-0 min-w-0 flex-1 flex-col"
+      className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden dark:bg-[#111111]"
       aria-label={`Cycle ${cycleNumber}`}
+      onKeyDown={(event) => {
+        if (
+          event.defaultPrevented ||
+          event.metaKey ||
+          event.ctrlKey ||
+          event.altKey ||
+          (event.target instanceof Element &&
+            event.target.closest(
+              'input,textarea,[role="dialog"],[role="menu"],[data-slot="popover-content"],[contenteditable="true"]'
+            ))
+        )
+          return
+        if (event.key === "Escape") setSelected([])
+        if (
+          event.key.toLowerCase() === "c" &&
+          writable &&
+          !editor &&
+          !composer
+        ) {
+          event.preventDefault()
+          create()
+        }
+      }}
     >
-      <div className="flex min-h-12 flex-wrap items-center justify-between gap-3 px-5 py-2">
-        <span className="text-xs text-muted-foreground">
-          {issues.length
-            ? `${issues.length} ${issues.length === 1 ? "issue" : "issues"}`
-            : ""}
-        </span>
-        <div className="flex items-center gap-2">
-          {issues.length > 0 && (
-            <>
-              <OptionSelect
-                aria-label="Filter by status"
-                className={selectClass}
-                value={filter}
-                onValueChange={(nextValue) => setFilter(nextValue)}
-              >
-                <option value="">All statuses</option>
-                {groups.map((status) => (
-                  <option key={status.id} value={status.id}>
-                    {status.name}
-                  </option>
-                ))}
-              </OptionSelect>
-              <OptionSelect
-                aria-label="Display options"
-                className={selectClass}
-                value={view}
-                onValueChange={(nextValue) => setView(nextValue)}
-              >
-                <option value="board">Board</option>
-                <option value="list">List</option>
-              </OptionSelect>
+      <header className="flex h-11 shrink-0 items-center gap-2 border-b border-border/40 px-4 text-[13px]">
+        <Link
+          to="/teams/$teamSlug/overview"
+          params={{ teamSlug: team.slug }}
+          className="flex shrink-0 items-center gap-2"
+        >
+          <TeamSidebarIcon icon={team.icon} name={team.name} />
+          {team.name}
+        </Link>
+        <span className="text-muted-foreground">›</span>
+        <Link to="/teams/$teamSlug/cycles" params={{ teamSlug: team.slug }}>
+          Cycles
+        </Link>
+        <span className="text-muted-foreground">›</span>
+        <h1 aria-label={`Cycle ${cycleNumber}`} className="min-w-0 font-medium">
+          <Popover>
+            <PopoverTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Open cycle"
+                  className="gap-1 px-1 text-[13px]"
+                />
+              }
+            >
+              <IssueIcon name="clock" />
+              Cycle {cycleNumber}
+              <IssueIcon name="down" />
+            </PopoverTrigger>
+            <PopoverContent className="w-60 gap-1 rounded-xl p-2">
+              {Array.from(
+                { length: Math.max(settings.futureCycles, cycleNumber) },
+                (_, index) => (
+                  <Link
+                    key={index}
+                    to="/teams/$teamSlug/cycle/$cycleNumber"
+                    params={{
+                      teamSlug: team.slug,
+                      cycleNumber: String(index + 1),
+                    }}
+                    aria-current={
+                      index + 1 === cycleNumber ? "page" : undefined
+                    }
+                    className="flex h-8 items-center gap-2 rounded-md px-2 text-xs hover:bg-muted"
+                  >
+                    <IssueIcon name="clock" />
+                    Cycle {index + 1}
+                    {index === 0 && (
+                      <span className="ml-auto text-muted-foreground">
+                        Upcoming
+                      </span>
+                    )}
+                  </Link>
+                )
+              )}
+            </PopoverContent>
+          </Popover>
+        </h1>
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          aria-label="Add to favorites"
+          aria-pressed={favorite}
+          onClick={() => preferences({ favorite: !favorite })}
+        >
+          <IssueIcon
+            name="star"
+            className={
+              favorite
+                ? "fill-amber-400 text-amber-400"
+                : "text-muted-foreground"
+            }
+          />
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
               <Button
                 variant="ghost"
-                size="sm"
-                onClick={() => create()}
-                disabled={!!failure}
-              >
-                New issue
-              </Button>
-            </>
-          )}
+                size="icon-xs"
+                aria-label="Cycle options"
+              />
+            }
+          >
+            <IssueIcon name="more" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem disabled={!writable} onClick={() => create()}>
+              <IssueIcon name="add" />
+              New issue
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              render={
+                <Link
+                  to="/settings/teams/$teamSlug/cycles"
+                  params={{ teamSlug: team.slug }}
+                />
+              }
+            >
+              <IssueIcon name="settings" />
+              Cycle settings
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </header>
+      <div className="flex min-h-11 shrink-0 items-center justify-between gap-2 px-4 py-2">
+        <span className="text-xs text-muted-foreground">
+          {issues.length} {issues.length === 1 ? "issue" : "issues"}
+        </span>
+        <div className="flex items-center gap-1.5">
+          <IssueFilters
+            issues={records}
+            statuses={statuses}
+            members={members}
+            value={filters}
+            onChange={(next) => preferences({ filters: next })}
+          />
+          <IssueDisplayMenu
+            value={display}
+            onChange={(next) => preferences({ display: next })}
+            onReset={() => preferences({ display: view.value.defaultDisplay })}
+            onSaveDefault={() => {
+              if (view.save({ defaultDisplay: display }))
+                toast.success("Default saved for this cycle")
+              else toast.error("Cycle display options could not be saved")
+            }}
+          />
           <Button
-            variant="ghost"
-            size="sm"
-            aria-label="Cycle details"
+            variant="secondary"
+            size="icon-sm"
+            className={cn("rounded-full", details && "bg-foreground/15")}
+            aria-label={details ? "Close cycle details" : "Open cycle details"}
             aria-pressed={details}
             onClick={() => setDetails(!details)}
           >
-            Details
+            <IssueIcon name="details" />
           </Button>
         </div>
       </div>
+      {hasFilters && (
+        <div className="flex shrink-0 flex-wrap gap-1 px-3 pb-2">
+          {filters.rules.map((rule) => (
+            <Button
+              key={rule.id}
+              variant="secondary"
+              size="xs"
+              aria-label={`Remove ${issueFields[rule.field]} filter`}
+              onClick={() =>
+                preferences({
+                  filters: {
+                    ...filters,
+                    rules: filters.rules.filter(
+                      (value) => value.id !== rule.id
+                    ),
+                  },
+                })
+              }
+            >
+              {issueFields[rule.field]} {rule.operator}{" "}
+              {rule.field === "status"
+                ? (statuses.find((status) => status.id === rule.value)?.name ??
+                  rule.value)
+                : rule.value}
+              <IssueIcon name="close" />
+            </Button>
+          ))}
+          <Button
+            variant="ghost"
+            size="xs"
+            onClick={() => preferences({ filters: emptyIssueFilters() })}
+          >
+            Clear filters
+          </Button>
+        </div>
+      )}
       {directoryError && (
-        <p role="status" className="px-5 py-2 text-xs text-muted-foreground">
+        <p role="status" className="px-4 py-2 text-xs text-muted-foreground">
           Team members could not be loaded. Other issue properties are still
           available.
+        </p>
+      )}
+      {(actionError || view.error) && (
+        <p role="alert" className="px-4 py-2 text-xs text-destructive">
+          {actionError || view.error}
         </p>
       )}
       {!ready ? (
@@ -259,7 +453,7 @@ export function UpcomingCycle({
         </p>
       ) : !settings.enabled ? (
         <div className="m-auto p-6 text-center">
-          <h1 className="font-medium">Cycles are disabled</h1>
+          <h2 className="font-medium">Cycles are disabled</h2>
           <Link
             className="mt-3 inline-block text-sm underline"
             to="/settings/teams/$teamSlug/cycles"
@@ -269,174 +463,101 @@ export function UpcomingCycle({
           </Link>
         </div>
       ) : (
-        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-auto overscroll-contain lg:grid-cols-[minmax(0,1fr)_auto]">
-          {issues.length === 0 ? (
-            <div className="flex min-h-96 flex-1 items-center justify-center px-6 pb-16">
-              <div className="w-full max-w-[350px]">
-                <CycleMark />
-                <h1 className="mb-2 text-base font-medium">
-                  Cycle {cycleNumber}
-                </h1>
-                <p className="text-sm leading-5 text-muted-foreground">
-                  Cycles are time-based intervals to help your team focus on a
-                  predefined set of work.
-                </p>
-                <p className="mt-5 text-sm leading-5 text-muted-foreground">
-                  Track capacity, scope, and progress as issues are added, and
-                  as the cycle progresses.
-                </p>
-                <div className="mt-6 flex flex-wrap gap-2">
-                  <Button size="sm" onClick={() => create()}>
-                    Create new issue
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    render={
-                      <a
-                        href="https://linear.app/docs/use-cycles"
-                        target="_blank"
-                        rel="noreferrer"
-                      />
-                    }
-                  >
-                    Documentation
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="min-w-0 px-5 pb-6">
-              {visible.length === 0 ? (
-                <div className="py-16 text-center text-sm text-muted-foreground">
-                  <p>No issues match this filter.</p>
-                  <Button
-                    variant="ghost"
-                    className="mt-2"
-                    onClick={() => setFilter("")}
-                  >
-                    Clear filter
-                  </Button>
-                </div>
-              ) : (
-                <div
-                  className={
-                    view === "board"
-                      ? "flex items-start gap-5"
-                      : "flex flex-col gap-6"
-                  }
-                >
-                  {populated.map((status) => (
-                    <section
-                      key={status.id}
-                      aria-label={status.name}
-                      className={
-                        view === "board" ? "w-[320px] shrink-0" : "w-full"
+        <div className="relative flex min-h-0 flex-1">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            {issues.length === 0 && !hasFilters && !display.showEmpty ? (
+              <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto px-6 pb-16">
+                <div className="w-full max-w-[350px]">
+                  <CycleMark />
+                  <h2 className="mb-2 text-base font-medium">
+                    Plan your next cycle
+                  </h2>
+                  <p className="text-sm leading-5 text-muted-foreground">
+                    Cycles are time-based intervals to help your team focus on a
+                    predefined set of work.
+                  </p>
+                  <p className="mt-5 text-sm leading-5 text-muted-foreground">
+                    Track capacity, scope, and progress as issues are added, and
+                    as the cycle progresses.
+                  </p>
+                  <div className="mt-6 flex flex-wrap gap-2">
+                    <Button size="sm" onClick={() => create()}>
+                      Create new issue
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      render={
+                        <a
+                          href="https://linear.app/docs/use-cycles"
+                          target="_blank"
+                          rel="noreferrer"
+                        />
                       }
                     >
-                      <div className="mb-3 flex h-9 items-center gap-2 text-sm">
-                        <IssueStatusIcon
-                          group={status.group}
-                          color={status.color}
-                          review={status.id === "in-review"}
-                        />
-                        <h2>{status.name}</h2>
-                        <span className="text-muted-foreground">
-                          {
-                            visible.filter(
-                              (issue) => issue.status === status.id
-                            ).length
-                          }
-                        </span>
-                        <button
-                          aria-label={`Add issue to ${status.name}`}
-                          className="ml-auto rounded px-2 text-lg text-muted-foreground hover:bg-muted"
-                          onClick={() => create(status.id)}
-                        >
-                          +
-                        </button>
-                      </div>
-                      <div className="space-y-2">
-                        {visible
-                          .filter((issue) => issue.status === status.id)
-                          .map((issue) => (
-                            <button
-                              key={issue.id}
-                              onClick={() => edit(issue)}
-                              aria-label={`Open ${issueNumber(issue)} ${issue.title}`}
-                              className={`w-full rounded-xl border border-border/40 bg-muted/40 p-3 text-left transition-colors hover:bg-muted/70 focus-visible:outline-2 focus-visible:outline-ring ${view === "list" ? "flex items-center gap-4" : ""}`}
-                            >
-                              <span className="text-xs text-muted-foreground">
-                                {issueNumber(issue)}
-                              </span>
-                              <span className="my-1 flex items-center gap-2 text-sm">
-                                <IssueStatusIcon
-                                  group={status.group}
-                                  color={status.color}
-                                />
-                                {issue.title}
-                              </span>
-                              <span className="block text-xs text-muted-foreground">
-                                {issue.priority}
-                              </span>
-                              <span
-                                className={
-                                  view === "board"
-                                    ? "mt-4 block text-xs text-muted-foreground"
-                                    : "ml-auto text-xs text-muted-foreground"
-                                }
-                              >
-                                Created{" "}
-                                {format(new Date(issue.createdAt), "MMM d")}
-                              </span>
-                            </button>
-                          ))}
-                      </div>
-                    </section>
-                  ))}
-                  {view === "board" && !filter && empty.length > 0 && (
-                    <aside className="ml-auto w-[300px] shrink-0">
-                      <h2 className="mb-3 flex h-9 items-center text-xs text-muted-foreground">
-                        Hidden columns
-                      </h2>
-                      <div className="space-y-2">
-                        {empty.map((status) => (
-                          <button
-                            key={status.id}
-                            onClick={() => create(status.id)}
-                            aria-label={`Add issue to ${status.name}`}
-                            className="flex h-10 w-full items-center gap-3 rounded-xl border border-border/40 bg-muted/40 px-3 text-sm hover:bg-muted/70"
-                          >
-                            <IssueStatusIcon
-                              group={status.group}
-                              color={status.color}
-                              review={status.id === "in-review"}
-                            />
-                            {status.name}
-                            <span className="ml-auto text-muted-foreground">
-                              0
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    </aside>
-                  )}
+                      Documentation
+                    </Button>
+                  </div>
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            ) : !visible.length && !display.showEmpty ? (
+              <div className="m-auto text-center text-sm text-muted-foreground">
+                <p>No issues match these filters.</p>
+                <Button
+                  variant="ghost"
+                  className="mt-2"
+                  onClick={() => preferences({ filters: emptyIssueFilters() })}
+                >
+                  Clear filters
+                </Button>
+              </div>
+            ) : (
+              <IssueRows
+                showCycleBadge={false}
+                issues={visible}
+                allIssues={records}
+                identifier={team.identifier}
+                team={team}
+                labelColors={labelColors}
+                statuses={statuses}
+                members={members}
+                display={display}
+                selected={chosen}
+                onSelect={(id) =>
+                  setSelected((current) =>
+                    current.includes(id)
+                      ? current.filter((value) => value !== id)
+                      : [...current, id]
+                  )
+                }
+                onOpen={edit}
+                onUpdate={(issue, patch) => {
+                  update([issue.id], patch)
+                }}
+                onCreate={create}
+              />
+            )}
+          </div>
           {details && (
             <aside
               aria-label="Cycle details"
-              className="mx-5 mb-5 h-fit rounded-xl border border-border/60 bg-muted/30 p-4 lg:sticky lg:top-0 lg:max-h-[calc(100svh-160px)] lg:w-72 lg:self-start lg:overflow-y-auto"
+              className="absolute inset-0 z-10 flex min-h-0 flex-col overflow-y-auto border-l border-border/50 bg-background p-4 md:static md:w-72 md:shrink-0"
             >
-              <div className="flex justify-between text-xs text-muted-foreground">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>{cycleNumber === 1 ? "Upcoming" : "Planned"}</span>
-                <span>
-                  {format(start, "MMM d")} → {format(end, "MMM d")}
-                </span>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label="Close cycle details"
+                  onClick={() => setDetails(false)}
+                >
+                  <IssueIcon name="close" />
+                </Button>
               </div>
-              <h2 className="mt-5 font-medium">Cycle {cycleNumber}</h2>
+              <h2 className="mt-3 text-sm font-medium">Cycle {cycleNumber}</h2>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {format(start, "MMM d")} → {format(end, "MMM d")}
+              </p>
               <dl className="mt-6 grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <dt className="text-muted-foreground">Scope</dt>
@@ -457,6 +578,61 @@ export function UpcomingCycle({
               </dl>
             </aside>
           )}
+        </div>
+      )}
+      {chosen.length > 0 && (
+        <div
+          role="toolbar"
+          aria-label="Selected cycle issues"
+          className="absolute bottom-4 left-1/2 z-20 flex max-w-[calc(100%-24px)] -translate-x-1/2 items-center gap-2 rounded-full border border-border/40 bg-popover p-2 px-4 shadow-xl"
+        >
+          <span className="text-xs whitespace-nowrap">
+            {chosen.length} selected
+          </span>
+          {(["status", "priority", "assignee"] as const).map((property) => (
+            <IssuePicker
+              key={property}
+              label={`Set selected ${property}`}
+              value=""
+              options={
+                property === "status"
+                  ? statuses.map((status) => ({
+                      value: status.id,
+                      label: status.name,
+                    }))
+                  : property === "priority"
+                    ? issuePriorities.map((priority) => ({
+                        value: priority,
+                        label: priority,
+                      }))
+                    : [
+                        { value: "", label: "No assignee" },
+                        ...members.map((member) => ({
+                          value: member.id,
+                          label: member.name,
+                        })),
+                      ]
+              }
+              onChange={(value) => {
+                if (update(chosen, { [property]: value })) setSelected([])
+              }}
+              className={issueChip}
+            >
+              {property === "status"
+                ? "Status"
+                : property === "priority"
+                  ? "Priority"
+                  : "Assignee"}
+            </IssuePicker>
+          ))}
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            aria-label="Clear issue selection"
+            onClick={() => setSelected([])}
+          >
+            <IssueIcon name="close" />
+          </Button>
         </div>
       )}
       {composer && (

@@ -1,10 +1,15 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { IssueRows } from "./issue-list"
 import type { ComponentProps } from "react"
 import type { TeamIssue } from "@/lib/team-issues"
 import { blankIssueDraft, defaultIssueDisplay } from "@/lib/team-issues"
 import { initialTeamStatuses } from "@/lib/team-statuses"
+import {
+  initialTeamCycles,
+  scheduledTeamCycles,
+  teamCyclesStorageKey,
+} from "@/lib/team-cycles"
 
 vi.mock("@/lib/auth-client", () => ({
   authClient: { useSession: () => ({ data: null }) },
@@ -14,14 +19,22 @@ vi.mock("@tanstack/react-router", () => ({
     children,
     search,
     params,
+    to,
     ...props
   }: ComponentProps<"a"> & {
     search?: Record<string, string>
-    params?: { teamSlug: string }
+    params?: { teamSlug: string; cycleNumber?: string }
+    to?: string
   }) => (
     <a
       {...props}
-      href={`/teams/${params?.teamSlug}/issues?${new URLSearchParams(search)}`}
+      href={
+        to?.includes("/cycle")
+          ? to
+              .replace("$teamSlug", params?.teamSlug ?? "")
+              .replace("$cycleNumber", params?.cycleNumber ?? "")
+          : `/teams/${params?.teamSlug}/issues?${new URLSearchParams(search)}`
+      }
     >
       {children}
     </a>
@@ -62,7 +75,7 @@ function start(overrides: Partial<ComponentProps<typeof IssueRows>> = {}) {
     issues: [child, parent, completed, other],
     allIssues: [parent, child, completed, other],
     identifier: "TES",
-    team: { slug: "testing", name: "Testing" },
+    team: { id: "testing-id", slug: "testing", name: "Testing" },
     statuses,
     members: [],
     display: { ...defaultIssueDisplay(), group: "No grouping" as const },
@@ -77,6 +90,7 @@ function start(overrides: Partial<ComponentProps<typeof IssueRows>> = {}) {
   return props
 }
 beforeEach(() => {
+  localStorage.clear()
   vi.stubGlobal(
     "ResizeObserver",
     class {
@@ -142,7 +156,9 @@ describe("issue rows", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Change status for Child" })
     )
-    fireEvent.click(screen.getByRole("listbox", { name: "Change status for Child" }))
+    fireEvent.click(
+      screen.getByRole("listbox", { name: "Change status for Child" })
+    )
     expect(props.onOpen).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole("option", { name: /Done/ }))
     expect(props.onUpdate).toHaveBeenCalledWith(child, { status: done })
@@ -188,5 +204,81 @@ describe("issue rows", () => {
         .getByRole("link", { name: "View issues in project Story mapping" })
         .querySelector("svg")
     ).toBeTruthy()
+  })
+  it("shows an assigned cycle after the project and opens its cycle without opening the issue", () => {
+    const settings = { ...initialTeamCycles(), enabled: true }
+    localStorage.setItem(
+      teamCyclesStorageKey("testing-id"),
+      JSON.stringify(settings)
+    )
+    const assigned = {
+      ...parent,
+      project: "Story mapping",
+      cycle: scheduledTeamCycles(settings)[1].value,
+    }
+    const props = start({
+      issues: [assigned, other],
+      allIssues: [assigned, other],
+    })
+    const badge = screen.getByRole("link", { name: "Open Cycle 2" })
+    expect(badge.textContent).toBe("2")
+    expect(badge.getAttribute("href")).toBe("/teams/testing/cycle/2")
+    const project = screen.getByRole("link", {
+      name: "View issues in project Story mapping",
+    })
+    expect(
+      project.compareDocumentPosition(badge) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
+    expect(
+      screen.getAllByTestId("issue-row")[1].querySelector('a[href*="/cycle"]')
+    ).toBeNull()
+    fireEvent.click(badge)
+    expect(props.onOpen).not.toHaveBeenCalled()
+    act(() => {
+      localStorage.setItem(
+        teamCyclesStorageKey("testing-id"),
+        JSON.stringify({ ...settings, enabled: false })
+      )
+      window.dispatchEvent(
+        new StorageEvent("storage", { key: teamCyclesStorageKey("testing-id") })
+      )
+    })
+    expect(screen.queryByRole("link", { name: "Open Cycle 2" })).toBeNull()
+  })
+  it("uses each issue's team in mixed-team views and keeps older cycle dates identifiable", () => {
+    const settings = { ...initialTeamCycles(), enabled: true }
+    localStorage.setItem(
+      teamCyclesStorageKey("other-team"),
+      JSON.stringify(settings)
+    )
+    const assigned = {
+      ...parent,
+      cycle: scheduledTeamCycles(settings)[0].value,
+    }
+    const historical = { ...other, cycle: "2020-01-06" }
+    start({
+      issues: [assigned, historical],
+      allIssues: [assigned, historical],
+      contextFor: () => ({
+        team: {
+          id: "other-team",
+          slug: "product",
+          name: "Product",
+          identifier: "PRO",
+        },
+        statuses,
+        members: [],
+        labelColors: {},
+        issues: [assigned, historical],
+      }),
+    })
+    expect(
+      screen.getByRole("link", { name: "Open Cycle 1" }).getAttribute("href")
+    ).toBe("/teams/product/cycle/1")
+    const previous = screen.getByRole("link", {
+      name: "Cycle starting Jan 6, 2020",
+    })
+    expect(previous.textContent).toBe("Jan 6")
+    expect(previous.getAttribute("href")).toBe("/teams/product/cycles")
   })
 })

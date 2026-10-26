@@ -9,6 +9,7 @@ import {
   issuePropertyControl,
 } from "./issue-controls"
 import { ActivityReference } from "./issue-activity-row"
+import { IssueCycleBadge } from "./issue-cycle-badge"
 import type { IssueDisplay, IssueDraft, TeamIssue } from "@/lib/team-issues"
 import type { TeamStatus } from "@/lib/team-statuses"
 import { ActionHint } from "@/components/ui/action-icon-button"
@@ -194,7 +195,7 @@ export function IssueSubProgress({
   )
 }
 export type IssueRowContext = {
-  team: { slug: string; name: string; identifier: string }
+  team: { id?: string; slug: string; name: string; identifier: string }
   statuses: Array<TeamStatus>
   members: Members
   labelColors: Record<string, string>
@@ -207,6 +208,7 @@ export function IssueRows({
   team,
   labelColors = {},
   contextFor,
+  showCycleBadge = true,
   statuses,
   members,
   display,
@@ -220,9 +222,10 @@ export function IssueRows({
   issues: Array<TeamIssue>
   allIssues: Array<TeamIssue>
   identifier: string
-  team: { slug: string; name: string }
+  team: { id?: string; slug: string; name: string }
   labelColors?: Record<string, string>
   contextFor?: (issue: TeamIssue) => IssueRowContext
+  showCycleBadge?: boolean
   statuses: Array<TeamStatus>
   members: Members
   display: IssueDisplay
@@ -511,6 +514,13 @@ export function IssueRows({
               presentation="chip"
             />
           </div>
+        )}
+        {showCycleBadge && issue.cycle && rowTeam.id && (
+          <IssueCycleBadge
+            key={`${rowTeam.id}:${issue.cycle}`}
+            team={{ id: rowTeam.id, slug: rowTeam.slug }}
+            value={issue.cycle}
+          />
         )}
         {props.includes("Milestone") && issue.milestone && (
           <span className="max-w-24 truncate text-xs text-muted-foreground">

@@ -1,13 +1,10 @@
-import { CheckboxMark } from "@/components/ui/checkbox-mark"
-;("use client")
+"use client"
 
 import * as React from "react"
-import { Link } from "@tanstack/react-router"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Add01Icon,
   ArrowDown02Icon,
-  ArrowLeft01Icon,
   ArrowUp02Icon,
   Delete02Icon,
   MoreHorizontalIcon,
@@ -17,6 +14,7 @@ import {
 import { toast } from "sonner"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamStatus, TeamStatusDirectory } from "@/lib/team-statuses"
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import {
   initialTeamStatuses,
   parseTeamStatuses,
@@ -24,7 +22,6 @@ import {
   teamStatusesStorageKey,
 } from "@/lib/team-statuses"
 import { IssueStatusIcon as StatusIcon } from "@/components/issue-status-icon"
-import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -344,26 +341,6 @@ export function TeamIssueStatusesSettings({ team }: { team: TeamSummary }) {
 
   return (
     <main className="forge-settings-scroll">
-      <div className="forge-page-back flex h-12 items-center px-4">
-        <Link
-          to="/settings/teams/$teamSlug"
-          params={{ teamSlug: team.slug }}
-          aria-label={`Back to ${team.name} settings`}
-          className={`inline-flex items-center gap-2 rounded-md py-1 text-sm text-muted-foreground hover:text-foreground ${focusClass}`}
-        >
-          <HugeiconsIcon
-            icon={ArrowLeft01Icon}
-            className="size-4"
-            strokeWidth={1.5}
-          />
-          <TeamSidebarIcon
-            icon={team.icon}
-            name={team.name}
-            className="size-4"
-          />
-          {team.name}
-        </Link>
-      </div>
       <div className="forge-settings-content">
         <header className="forge-page-header forge-settings-header">
           <h1>Issue statuses</h1>

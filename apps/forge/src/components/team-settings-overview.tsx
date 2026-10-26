@@ -2,7 +2,6 @@
 
 import {
   AiMagicIcon,
-  ArrowLeft01Icon,
   ArrowRight01Icon,
   Calendar03Icon,
   Clock04Icon,
@@ -373,19 +372,6 @@ export function TeamSettingsOverview({
   return (
     <>
       <main className="forge-settings-scroll">
-        <div className="forge-page-back flex h-12 items-center px-4">
-          <Link
-            to="/settings/teams"
-            className="inline-flex items-center gap-2 rounded-md py-1 text-sm text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-          >
-            <HugeiconsIcon
-              icon={ArrowLeft01Icon}
-              className="size-4"
-              strokeWidth={1.5}
-            />
-            Teams
-          </Link>
-        </div>
         <div className="forge-settings-content">
           <div className="space-y-12">
             <div className="forge-page-header forge-settings-header min-w-0 space-y-1">

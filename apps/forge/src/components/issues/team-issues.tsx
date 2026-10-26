@@ -14,6 +14,7 @@ import { IssueComposer } from "./issue-composer"
 import { IssueDetail } from "./issue-detail"
 import { IssueFilters } from "./issue-filters"
 import { IssueRows } from "./issue-list"
+import { IssueDetailsPanel } from "./issue-details-panel"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import type { IssueDraft, IssueStore, TeamIssue } from "@/lib/team-issues"
@@ -734,22 +735,23 @@ export function TeamIssues({
           )}
         </div>
         {details && (
-          <aside
-            aria-label="Issue details"
-            className="absolute inset-0 z-10 flex min-h-0 flex-col overflow-y-auto border-l border-border/50 bg-background p-3 md:static md:w-[min(38%,420px)] md:shrink-0"
-          >
-            <div className="mb-3 flex items-center justify-between rounded-lg border border-border/40 bg-muted/50 p-3 text-xs text-muted-foreground">
-              <span>No issue details</span>
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                aria-label="Close issue details"
-                onClick={() => setDetails(false)}
-              >
-                <IssueIcon name="close" />
-              </Button>
-            </div>
-          </aside>
+          <IssueDetailsPanel
+            issues={visible}
+            members={members}
+            labelColors={labelColors}
+            onClose={() => setDetails(false)}
+            onFilter={(filter) => {
+              changeFilters({
+                ...filters,
+                rules: [
+                  ...filters.rules.filter(
+                    (rule) => rule.field !== filter.field
+                  ),
+                  { ...filter, id: crypto.randomUUID() },
+                ],
+              })
+            }}
+          />
         )}
       </div>
       {selectedVisible.length > 0 && (

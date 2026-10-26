@@ -105,9 +105,6 @@ describe("team settings workflow navigation", () => {
           `/settings/teams/platform-api/${section}`
         )
       )
-      expect(
-        screen.getByRole("link", { name: "Back to Platform API settings" })
-      ).toBeTruthy()
     }
   )
 })

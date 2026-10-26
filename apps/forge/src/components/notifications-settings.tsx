@@ -3,7 +3,6 @@
 import * as React from "react"
 import { Link } from "@tanstack/react-router"
 import {
-  ArrowLeft01Icon,
   ArrowRight01Icon,
   ComputerIcon,
   Mail01Icon,
@@ -200,21 +199,6 @@ export function NotificationPreferencesPage({
   }
   return (
     <main className="forge-settings-scroll">
-      {channel && (
-        <div className="forge-page-back flex h-12 items-center px-4">
-          <Link
-            to="/settings/notifications"
-            className={`inline-flex items-center gap-2 rounded-md py-1 text-sm text-muted-foreground hover:text-foreground ${focusClass}`}
-          >
-            <HugeiconsIcon
-              icon={ArrowLeft01Icon}
-              className="size-4"
-              strokeWidth={1.5}
-            />
-            Notifications
-          </Link>
-        </div>
-      )}
       <div className="forge-settings-content">
         <h1 className="forge-page-header forge-settings-header">
           {channel

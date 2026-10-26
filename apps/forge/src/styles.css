@@ -770,26 +770,14 @@ html[data-forge-host="macos"] .forge-desktop-footer-actions {
   background: var(--background);
   isolation: isolate;
 }
-.forge-page-back {
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  flex-shrink: 0;
-  background: var(--background);
-  isolation: isolate;
-}
 /* Cover the scroll container's top padding behind pinned page chrome. */
-.forge-page-header::before,
-.forge-page-back::before {
+.forge-page-header::before {
   content: "";
   position: absolute;
   inset: auto 0 100%;
   height: 2rem;
   background: inherit;
   pointer-events: none;
-}
-main.overflow-y-auto:has(> .forge-page-back) {
-  --forge-page-header-offset: 3rem;
 }
 
 /* Settings share one content origin and heading rhythm. Keep the heading gap
@@ -800,9 +788,6 @@ main.overflow-y-auto:has(> .forge-page-back) {
   overflow-y: auto;
   overscroll-behavior-y: none;
   scrollbar-gutter: stable;
-}
-.forge-settings-scroll:has(> .forge-page-back) {
-  --forge-page-header-offset: 3rem;
 }
 .forge-settings-content {
   width: 100%;

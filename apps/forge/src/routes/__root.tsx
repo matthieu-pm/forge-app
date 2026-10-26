@@ -31,6 +31,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { getBreadcrumbItems } from "@/lib/app-navigation"
+import { getSettingsBreadcrumbItems } from "@/lib/settings-navigation"
 import { getTeamFromRouteMatches } from "@/lib/team-route-match"
 import { cn } from "@/lib/utils"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
@@ -168,6 +169,7 @@ function AgentRouteContent({
         pathname !== "/my-issues" &&
         !pathname.startsWith("/workspace/initiatives") &&
         pathname !== "/workspace/projects" &&
+        !/^\/teams\/[^/]+\/cycle\/[^/]+$/.test(pathname) &&
         !/^\/teams\/[^/]+\/(triage|overview|documents|loops|members|issues|projects)$/.test(
           pathname
         ) && <AppHeader />}
@@ -187,7 +189,10 @@ function AppHeader() {
       const resolvedPathname =
         state.resolvedLocation?.pathname ?? state.location.pathname
 
-      if (!/^\/teams\/[^/]+\/(issues|projects|views)$/.test(resolvedPathname)) {
+      if (
+        !/^\/teams\/[^/]+\/(issues|projects|views)$/.test(resolvedPathname) &&
+        !resolvedPathname.startsWith("/settings/teams/")
+      ) {
         return { breadcrumbTeam: undefined, pathname: resolvedPathname }
       }
 
@@ -198,27 +203,29 @@ function AppHeader() {
     },
   })
 
-  if (
-    pathname.startsWith("/settings/teams/") ||
-    pathname.startsWith("/settings/notifications/") ||
-    pathname === "/workspace/teams"
-  ) {
+  if (pathname === "/workspace/teams") {
     return null
   }
 
-  const breadcrumbs = getBreadcrumbItems(pathname)
+  const settings = pathname === "/settings" || pathname.startsWith("/settings/")
+  const breadcrumbs = settings
+    ? getSettingsBreadcrumbItems(pathname, breadcrumbTeam)
+    : getBreadcrumbItems(pathname)
 
   function renderBreadcrumbLink(to: string) {
     return <Link to={to as never} />
   }
 
   return (
-    <header className="flex h-12 shrink-0 items-center gap-3 px-4">
-      <Breadcrumb>
-        <BreadcrumbList className="text-sm">
+    <header className="flex h-12 min-w-0 shrink-0 items-center gap-3 px-4">
+      <Breadcrumb className="min-w-0 overflow-x-auto whitespace-nowrap">
+        <BreadcrumbList className="h-6 flex-nowrap text-sm">
           {breadcrumbs.map((item, index) => {
             const isLast = index === breadcrumbs.length - 1
-            const team = index === 0 ? breadcrumbTeam : undefined
+            const showTeamIcon = settings
+              ? item.to === `/settings/teams/${breadcrumbTeam?.slug}`
+              : index === 0
+            const team = showTeamIcon ? breadcrumbTeam : undefined
             const label = team ? (
               <span className="inline-flex items-center gap-1.5">
                 <TeamSidebarIcon icon={team.icon} name={team.name} />

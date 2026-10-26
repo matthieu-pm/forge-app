@@ -1,5 +1,5 @@
 import { act, cleanup, renderHook } from "@testing-library/react"
-import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { cycleIssuesKey, useCycleIssues } from "./cycle-issues"
 import {
   blankIssueDraft,
@@ -90,6 +90,88 @@ describe("Issue cycle assignments", () => {
       "Existing cycle issue",
       "Canonical",
     ])
+  })
+  it("keeps canonical row properties and promotes edited legacy records without changing their snapshots", () => {
+    const canonical = saveTeamIssue(team, {
+      ...blankIssueDraft(),
+      title: "Linked work",
+      cycle,
+      project: "Release",
+      labels: "Bug",
+      assignee: "member",
+    })
+    const legacy = {
+      id: "legacy",
+      number: 9,
+      title: "Older work",
+      description: "Brief",
+      cycle,
+      status: canonical.status,
+      priority: "No priority",
+      createdAt: new Date().toISOString(),
+    }
+    const snapshot = JSON.stringify([legacy])
+    localStorage.setItem(cycleIssuesKey(team), snapshot)
+    const { result } = renderHook(() => useCycleIssues(team, cycle))
+    expect(
+      result.current.records.find((issue) => issue.id === canonical.id)
+    ).toMatchObject({ project: "Release", labels: "Bug", assignee: "member" })
+    expect(
+      result.current.records.find((issue) => issue.id === legacy.id)
+    ).toMatchObject({
+      description: "Brief",
+      parentId: "",
+      comments: [],
+      dueDate: "",
+    })
+    act(() => {
+      result.current.patch([canonical.id, legacy.id], { priority: "High" })
+    })
+    expect(readIssueStore(team).issues).toHaveLength(2)
+    expect(
+      readIssueStore(team).issues.every((issue) => issue.priority === "High")
+    ).toBe(true)
+    expect(localStorage.getItem(cycleIssuesKey(team))).toBe(snapshot)
+    act(() => {
+      result.current.patch([legacy.id], { cycle: "" })
+    })
+    expect(result.current.records.map((issue) => issue.id)).toEqual([
+      canonical.id,
+    ])
+  })
+  it("keeps mixed selections atomic when saving fails or an issue has moved", () => {
+    const first = saveTeamIssue(team, {
+      ...blankIssueDraft(),
+      title: "First",
+      cycle,
+    })
+    const second = saveTeamIssue(team, {
+      ...blankIssueDraft(),
+      title: "Second",
+      cycle,
+    })
+    const { result } = renderHook(() => useCycleIssues(team, cycle))
+    const write = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(() => {
+        throw new Error("quota")
+      })
+    expect(() =>
+      result.current.patch([first.id, second.id], { priority: "High" })
+    ).toThrow()
+    expect(
+      readIssueStore(team).issues.every(
+        (issue) => issue.priority === "No priority"
+      )
+    ).toBe(true)
+    write.mockRestore()
+    act(() => {
+      saveTeamIssue(team, { ...second, cycle: "other" }, { id: second.id })
+    })
+    expect(() =>
+      result.current.patch([first.id, second.id], { priority: "High" })
+    ).toThrow("no longer")
+    expect(readIssueStore(team).issues[0].priority).toBe("No priority")
   })
   it("clears assignments when moving issues to another team", () => {
     const issue = saveTeamIssue(team, {

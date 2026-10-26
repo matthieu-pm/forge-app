@@ -1,4 +1,3 @@
-import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import * as React from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
@@ -16,7 +15,6 @@ import {
   Tick02Icon,
   UserGroup03Icon,
 } from "@hugeicons/core-free-icons"
-import { Link } from "@tanstack/react-router"
 import type { ReactNode } from "react"
 import type {
   TemplateDirectory,
@@ -24,6 +22,7 @@ import type {
 } from "@/lib/template-contract"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamLabelDirectory } from "@/lib/team-labels"
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import {
@@ -143,12 +142,8 @@ export function Action({
   )
 }
 export function TemplateShell({
-  team,
   children,
   overview = false,
-  section = "templates",
-  workspace = false,
-  workspaceKind = "issue",
 }: {
   team?: TeamSummary
   children: ReactNode
@@ -159,41 +154,6 @@ export function TemplateShell({
 }) {
   return (
     <main className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="flex h-12 shrink-0 items-center px-4">
-        <Link
-          to={
-            workspace
-              ? workspaceKind === "project"
-                ? "/settings/project-templates"
-                : "/settings/issue-templates"
-              : overview
-                ? "/settings/teams/$teamSlug"
-                : section === "recurring-issues"
-                  ? "/settings/teams/$teamSlug/recurring-issues"
-                  : "/settings/teams/$teamSlug/templates"
-          }
-          params={{ teamSlug: team?.slug ?? "" }}
-          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-        >
-          <Glyph name="back" />
-          {workspace ? (
-            workspaceKind === "project" ? (
-              "Project templates"
-            ) : (
-              "Issue templates"
-            )
-          ) : overview && team ? (
-            <>
-              <TeamSidebarIcon icon={team.icon} name={team.name} />
-              {team.name}
-            </>
-          ) : section === "recurring-issues" ? (
-            "Recurring issues"
-          ) : (
-            "Team templates"
-          )}
-        </Link>
-      </div>
       <div
         className={
           overview
