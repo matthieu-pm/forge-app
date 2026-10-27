@@ -2,16 +2,13 @@ import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import { ProjectSelectionToolbar } from "./project-selection-toolbar"
 import { ProjectCollection, projectValueLabel } from "./project-collection"
-import {
-  ProjectDisplayMenu,
-  ProjectFiltersMenu,
-  projectToolButton,
-} from "./project-view-controls"
+import { ProjectDisplayMenu, ProjectFiltersMenu } from "./project-view-controls"
 import type { InitiativePerson, InitiativeProject } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { ProjectFilter, ProjectPreferences } from "@/lib/projects"
 import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
 import { ContentHeader } from "@/components/ui/content-header"
+import { ActionIconButton } from "@/components/ui/action-icon-button"
 import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import { targetTimestamp } from "@/lib/initiatives"
 import { useInitiatives } from "@/lib/initiatives-state"
@@ -336,17 +333,10 @@ export function ProjectsPage({
             disabled={Boolean(display.error)}
           />
           {scoped.length > 0 && (
-            <Button
-              variant="secondary"
-              size="icon-sm"
-              aria-label={
-                preferences.sidebar ? "Close sidebar" : "Open sidebar"
-              }
+            <ActionIconButton
+              label={preferences.sidebar ? "Close sidebar" : "Open sidebar"}
               aria-pressed={preferences.sidebar}
-              className={cn(
-                projectToolButton,
-                preferences.sidebar && "bg-foreground/15 text-foreground"
-              )}
+              className="aria-pressed:bg-secondary aria-pressed:text-foreground"
               onClick={() =>
                 setPreferences({
                   ...preferences,
@@ -355,7 +345,7 @@ export function ProjectsPage({
               }
             >
               <IssueIcon name="details" />
-            </Button>
+            </ActionIconButton>
           )}
         </div>
       </div>

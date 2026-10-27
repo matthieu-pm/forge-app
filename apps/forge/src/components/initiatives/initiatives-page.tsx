@@ -26,6 +26,7 @@ import type { TeamSummary } from "@/lib/team-contract"
 import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
 import { ContentHeader } from "@/components/ui/content-header"
+import { ActionIconButton } from "@/components/ui/action-icon-button"
 import { IssueIcon } from "@/components/issues/issue-controls"
 import { useInitiatives } from "@/lib/initiatives-state"
 import {
@@ -42,7 +43,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { useAgent } from "@/components/agent/agent-provider"
-import { cn } from "@/lib/utils"
 import { directorySelectionToolbarClassName } from "@/components/ui/directory-table"
 
 export function InitiativesPage({
@@ -251,17 +251,12 @@ export function InitiativesPage({
             disabled={Boolean(store.preferencesError)}
           />
           {store.state.initiatives.length > 0 && (
-            <Button
-              variant="secondary"
-              size="icon-sm"
-              aria-label={
+            <ActionIconButton
+              label={
                 store.preferences.sidebar ? "Close sidebar" : "Open sidebar"
               }
               aria-pressed={store.preferences.sidebar}
-              className={cn(
-                "size-7 rounded-full border border-border/40 bg-muted/55 p-0 text-muted-foreground",
-                store.preferences.sidebar && "bg-foreground/15 text-foreground"
-              )}
+              className="aria-pressed:bg-secondary aria-pressed:text-foreground"
               onClick={() =>
                 preferences({
                   ...store.preferences,
@@ -270,7 +265,7 @@ export function InitiativesPage({
               }
             >
               <IssueIcon name="details" />
-            </Button>
+            </ActionIconButton>
           )}
         </div>
       </div>

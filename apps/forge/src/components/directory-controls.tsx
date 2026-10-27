@@ -51,7 +51,7 @@ export function DirectoryToolbar({
   children: ReactNode
 }) {
   return (
-    <div className="flex min-h-11 shrink-0 flex-wrap items-center gap-1 px-4 py-1.5">
+    <div className="flex min-h-11 shrink-0 flex-wrap items-center gap-1 py-1.5 pr-2 pl-4">
       <div className="flex min-w-0 flex-1 items-center gap-2 text-muted-foreground">
         <HugeiconsIcon
           icon={Search01Icon}

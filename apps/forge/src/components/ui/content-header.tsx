@@ -10,7 +10,7 @@ export function ContentHeader({
     <header
       data-slot="content-header"
       className={cn(
-        "flex h-11 min-w-0 shrink-0 items-center gap-2 border-b border-border/40 px-4 text-[13px]",
+        "flex h-11 min-w-0 shrink-0 items-center gap-2 border-b border-border/40 pr-2 pl-4 text-[13px]",
         className
       )}
       {...props}
