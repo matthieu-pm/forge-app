@@ -24,6 +24,10 @@ export const Route = createFileRoute("/teams/$teamSlug/calls")({
     return {
       directory: await loadCalls({ data: { teamId: team.id } }),
       creator: authState.user?.id ?? "You",
+      scope: {
+        workspaceId: authState.workspace?.id ?? team.id,
+        userId: authState.user?.id ?? "You",
+      },
     }
   },
   pendingComponent: CallsLoading,
@@ -33,16 +37,18 @@ export const Route = createFileRoute("/teams/$teamSlug/calls")({
 })
 function TeamCallsPage() {
   const { team } = getRouteApi("/teams/$teamSlug").useLoaderData()
-  const { directory, creator } = Route.useLoaderData()
+  const { directory, creator, scope } = Route.useLoaderData()
   const { call } = Route.useSearch()
   const navigate = Route.useNavigate()
   return (
     <CallsPage
+      simulateWhenEmpty
       key={team.id}
       initialDirectory={directory}
       teams={[team]}
       teamId={team.id}
       creator={creator}
+      scope={scope}
       selectedId={call}
       onSelect={(id) => {
         void navigate({ search: { call: id } })

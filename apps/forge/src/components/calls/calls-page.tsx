@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Call02Icon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
@@ -7,13 +7,20 @@ import {
   ConnectCallsDialog,
   ImportCallDialog,
   ProviderMark,
-  callField,
 } from "./call-dialogs"
 import type { CallRecord, CallsDirectory } from "@/lib/calls"
+import type { InboxScope } from "@/lib/inbox-state"
 import type { TeamSummary } from "@/lib/team-contract"
 import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
 import { ContentHeader } from "@/components/ui/content-header"
+import { ActionIconButton } from "@/components/ui/action-icon-button"
+import { InboxSidebar } from "@/components/inbox/inbox-sidebar"
 import { callDayLabel, callMatches } from "@/lib/calls"
+import {
+  createSimulatedCalls,
+  readSimulatedCall,
+  saveSimulatedCall,
+} from "@/lib/calls-demo"
 import {
   generateCallRecap,
   loadCall,
@@ -34,6 +41,8 @@ export function CallsPage({
   selectedId,
   connectionStatus,
   onSelect,
+  simulateWhenEmpty = false,
+  scope,
 }: {
   initialDirectory: CallsDirectory
   teams: Array<TeamSummary>
@@ -42,11 +51,41 @@ export function CallsPage({
   selectedId?: string
   connectionStatus?: string
   onSelect: (id?: string) => void
+  simulateWhenEmpty?: boolean
+  scope?: InboxScope
 }) {
   const [directory, setDirectory] = useState(initialDirectory)
+  const [sampleCalls, setSampleCalls] = useState(() =>
+    simulateWhenEmpty ? createSimulatedCalls(teams) : []
+  )
+  useEffect(() => {
+    if (simulateWhenEmpty)
+      setSampleCalls(
+        createSimulatedCalls(teams).map((call) =>
+          readSimulatedCall(call, creator)
+        )
+      )
+  }, [simulateWhenEmpty, teams, creator])
+  const simulated =
+    simulateWhenEmpty && !directory.calls.length && sampleCalls.length > 0
+  const calls = simulated ? sampleCalls : directory.calls
+  function changeSimulatedCall(call: CallRecord) {
+    setSampleCalls((current) =>
+      current.map((item) => (item.id === call.id ? call : item))
+    )
+    setDetail(call)
+    try {
+      saveSimulatedCall(call, creator)
+    } catch {
+      toast.error("This change could not be saved in your browser.")
+    }
+  }
   const [detail, setDetail] = useState<CallRecord>()
   const [detailError, setDetailError] = useState("")
   const [query, setQuery] = useState("")
+  const [searchOpen, setSearchOpen] = useState(false)
+  const searchButton = useRef<HTMLButtonElement>(null)
+  const rowRefs = useRef(new Map<string, HTMLButtonElement>())
   const [teamFilter, setTeamFilter] = useState(teamId ?? "all")
   const [filter, setFilter] = useState("all")
   const [connectOpen, setConnectOpen] = useState(false)
@@ -57,9 +96,11 @@ export function CallsPage({
   useEffect(() => {
     setDirectory(initialDirectory)
   }, [initialDirectory])
-  const visible = directory.calls.filter(
+  const teamCalls = calls.filter(
+    (call) => teamFilter === "all" || call.teamId === teamFilter
+  )
+  const visible = teamCalls.filter(
     (call) =>
-      (teamFilter === "all" || call.teamId === teamFilter) &&
       callMatches(call, query) &&
       (filter !== "actions" || call.actions.some((action) => !action.completed))
   )
@@ -67,8 +108,7 @@ export function CallsPage({
   const selectedTeam = teams.find(
     (team) =>
       team.id ===
-      (detail?.teamId ??
-        directory.calls.find((call) => call.id === activeId)?.teamId)
+      (detail?.teamId ?? calls.find((call) => call.id === activeId)?.teamId)
   )
   const groups = new Map<string, Array<CallRecord>>()
   visible.forEach((call) => {
@@ -87,6 +127,12 @@ export function CallsPage({
     let cancelled = false
     setDetail((current) => (current?.id === activeId ? current : undefined))
     setDetailError("")
+    if (simulated) {
+      const call = sampleCalls.find((item) => item.id === activeId)
+      if (call && (!teamId || call.teamId === teamId)) setDetail(call)
+      else setDetailError("This sample call is not available to your team.")
+      return
+    }
     void loadCall({ data: { callId: activeId } })
       .then((call) => {
         if (!cancelled) {
@@ -104,13 +150,14 @@ export function CallsPage({
     return () => {
       cancelled = true
     }
-  }, [activeId, refreshVersion, teamId])
+  }, [activeId, refreshVersion, teamId, simulated, sampleCalls])
   useEffect(() => {
+    if (simulated) return
     const timer = window.setInterval(() => {
       if (document.visibilityState === "visible") void refresh().catch(() => {})
     }, 60000)
     return () => window.clearInterval(timer)
-  }, [refresh])
+  }, [refresh, simulated])
   async function sync() {
     setSyncing(true)
     try {
@@ -145,75 +192,65 @@ export function CallsPage({
       await refresh()
     }
   }
-  const hasCalls = directory.calls.length > 0
+  const hasCalls = calls.length > 0
   const ownedConnection = directory.connections.some(
     (item) => item.connected && item.isOwner
   )
   const hasConnection = directory.connections.some((item) => item.connected)
+  const emptyHeader = (
+    <ContentHeader className="justify-between">
+      <div className="flex items-center gap-2">
+        <h1 className="text-[13px] font-medium">Calls</h1>
+        {simulated && (
+          <span
+            title="Fictional meetings. Notes and action changes are saved in this browser."
+            className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground"
+          >
+            Simulated data
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-2">
+        {hasCalls && (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!ownedConnection || syncing}
+            onClick={() => void sync()}
+          >
+            <IssueIcon
+              name="repeat"
+              className={
+                syncing ? "animate-spin motion-reduce:animate-none" : ""
+              }
+            />
+            {syncing ? "Syncing…" : "Sync"}
+          </Button>
+        )}
+        <Button
+          size="sm"
+          variant="outline"
+          aria-label="Meeting connections and privacy"
+          onClick={() => setConnectOpen(true)}
+        >
+          <IssueIcon name="settings" />
+          <span className="hidden sm:inline">Connections</span>
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={!teams.length}
+          onClick={() => setImportOpen(true)}
+        >
+          <IssueIcon name="add" />
+          Import call
+        </Button>
+      </div>
+    </ContentHeader>
+  )
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <ContentHeader className="justify-between">
-        <h1 className="text-[13px] font-medium">Calls</h1>
-        <div className="flex items-center gap-2">
-          {hasCalls && (
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={!ownedConnection || syncing}
-              onClick={() => void sync()}
-            >
-              <IssueIcon
-                name="repeat"
-                className={
-                  syncing ? "animate-spin motion-reduce:animate-none" : ""
-                }
-              />
-              {syncing ? "Syncing…" : "Sync"}
-            </Button>
-          )}
-          <Button
-            size="sm"
-            variant="outline"
-            aria-label="Meeting connections and privacy"
-            onClick={() => setConnectOpen(true)}
-          >
-            <IssueIcon name="settings" />
-            <span className="hidden sm:inline">Connections</span>
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={!teams.length}
-            onClick={() => setImportOpen(true)}
-          >
-            <IssueIcon name="add" />
-            Import call
-          </Button>
-        </div>
-      </ContentHeader>
-      <div className="flex min-h-11 shrink-0 flex-wrap items-center gap-3 px-4 py-2">
-        <PageTabs aria-label="Call views">
-          <button
-            type="button"
-            onClick={() => setFilter("all")}
-            aria-pressed={filter === "all"}
-            className={pageTabClass}
-          >
-            All calls
-            <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground tabular-nums">
-              {directory.calls.length}
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilter("actions")}
-            aria-pressed={filter === "actions"}
-            className={pageTabClass}
-          >
-            With open actions
-          </button>
-        </PageTabs>
-      </div>
+      {!hasCalls && emptyHeader}
       {connectionStatus && (
         <div
           role="status"
@@ -290,27 +327,93 @@ export function CallsPage({
         </div>
       ) : (
         <div className="flex min-h-0 flex-1 overflow-hidden">
-          <aside
-            aria-label="Recent calls"
-            className={cn(
-              "min-h-0 w-full shrink-0 flex-col border-r border-border/60 lg:flex lg:w-80 xl:w-[360px]",
-              selectedId ? "hidden" : "flex"
-            )}
+          <InboxSidebar
+            scope={
+              scope ?? { workspaceId: teamId ?? "workspace", userId: creator }
+            }
+            selected={Boolean(selectedId)}
+            label="Recent calls"
+            storageNamespace="calls"
+            resizeLabel="Resize calls sidebar"
           >
-            <div className="space-y-2 border-b border-border/50 px-4 py-3">
-              <div className="relative">
-                <IssueIcon
-                  name="search"
-                  className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground"
-                />
-                <Input
-                  aria-label="Search calls"
-                  placeholder="Search calls…"
-                  className={cn(callField, "bg-muted/25 pl-9")}
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                />
+            <ContentHeader>
+              <h1 className="text-[13px] font-medium">Calls</h1>
+              {simulated && (
+                <span
+                  title="Fictional meetings. Changes are saved in this browser."
+                  className="truncate rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground"
+                >
+                  Simulated data
+                </span>
+              )}
+              <div className="ml-auto flex items-center gap-1">
+                <ActionIconButton
+                  ref={searchButton}
+                  label="Search calls"
+                  aria-pressed={searchOpen}
+                  onClick={() => {
+                    setSearchOpen(!searchOpen)
+                    if (searchOpen) {
+                      setQuery("")
+                      if (query) onSelect(undefined)
+                    }
+                  }}
+                >
+                  <IssueIcon name="search" />
+                </ActionIconButton>
+                {ownedConnection && (
+                  <ActionIconButton
+                    label={syncing ? "Syncing calls" : "Sync calls"}
+                    disabled={syncing}
+                    onClick={() => void sync()}
+                  >
+                    <IssueIcon
+                      name="repeat"
+                      className={
+                        syncing ? "animate-spin motion-reduce:animate-none" : ""
+                      }
+                    />
+                  </ActionIconButton>
+                )}
+                <ActionIconButton
+                  label="Meeting connections and privacy"
+                  onClick={() => setConnectOpen(true)}
+                >
+                  <IssueIcon name="settings" />
+                </ActionIconButton>
+                <ActionIconButton
+                  label="Import call"
+                  disabled={!teams.length}
+                  onClick={() => setImportOpen(true)}
+                >
+                  <IssueIcon name="add" />
+                </ActionIconButton>
               </div>
+            </ContentHeader>
+            <div className="space-y-2 border-b border-border/40 px-3 py-2">
+              <PageTabs aria-label="Call views" className="gap-1">
+                {(["all", "actions"] as const).map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => {
+                      setFilter(value)
+                      onSelect(undefined)
+                    }}
+                    aria-pressed={filter === value}
+                    className={cn(pageTabClass, "gap-1.5 px-2 text-[11px]")}
+                  >
+                    {value === "all" ? "All calls" : "With open actions"}
+                    <span className="text-[10px] text-muted-foreground tabular-nums">
+                      {value === "all"
+                        ? teamCalls.length
+                        : teamCalls.filter((call) =>
+                            call.actions.some((action) => !action.completed)
+                          ).length}
+                    </span>
+                  </button>
+                ))}
+              </PageTabs>
               {!teamId && (
                 <OptionSelect
                   aria-label="Filter calls by team"
@@ -320,7 +423,7 @@ export function CallsPage({
                     onSelect(undefined)
                   }}
                   size="sm"
-                  className="w-full bg-transparent text-muted-foreground hover:bg-muted/50"
+                  className="w-full bg-transparent text-xs text-muted-foreground hover:bg-muted/50"
                 >
                   <option value="all">All teams</option>
                   {teams.map((team) => (
@@ -330,75 +433,129 @@ export function CallsPage({
                   ))}
                 </OptionSelect>
               )}
+              {searchOpen && (
+                <Input
+                  autoFocus
+                  type="search"
+                  aria-label="Search calls"
+                  placeholder="Search calls…"
+                  className="h-8 text-xs"
+                  value={query}
+                  onChange={(event) => {
+                    setQuery(event.target.value)
+                    onSelect(undefined)
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                      setSearchOpen(false)
+                      setQuery("")
+                      if (query) onSelect(undefined)
+                      searchButton.current?.focus()
+                    }
+                  }}
+                />
+              )}
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-4">
+            <div
+              aria-label="Call list"
+              className="min-h-0 flex-1 overflow-y-auto p-2"
+            >
               {[...groups.entries()].map(([label, items]) => (
                 <section key={label}>
-                  <h2 className="px-3 pt-5 pb-2 text-[11px] font-medium text-muted-foreground">
+                  <h2 className="px-2.5 pt-3 pb-2 text-[11px] font-medium text-muted-foreground">
                     {label}
                   </h2>
-                  <div className="space-y-1">
-                    {items.map((call) => (
+                  {items.map((call) => {
+                    const openActions = call.actions.filter(
+                      (action) => !action.completed
+                    ).length
+                    return (
                       <button
-                        type="button"
-                        aria-current={call.id === activeId ? "true" : undefined}
                         key={call.id}
+                        ref={(node) => {
+                          if (node) rowRefs.current.set(call.id, node)
+                          else rowRefs.current.delete(call.id)
+                        }}
+                        type="button"
+                        aria-label={`Open call: ${call.title}`}
+                        aria-pressed={call.id === activeId}
                         onClick={() => onSelect(call.id)}
+                        onKeyDown={(event) => {
+                          const index = visible.findIndex(
+                            (item) => item.id === call.id
+                          )
+                          const nextIndex =
+                            event.key === "ArrowDown"
+                              ? Math.min(index + 1, visible.length - 1)
+                              : event.key === "ArrowUp"
+                                ? Math.max(index - 1, 0)
+                                : event.key === "Home"
+                                  ? 0
+                                  : event.key === "End"
+                                    ? visible.length - 1
+                                    : undefined
+                          if (nextIndex === undefined) return
+                          event.preventDefault()
+                          const next = visible[nextIndex]
+                          onSelect(next.id)
+                          const node = rowRefs.current.get(next.id)
+                          node?.focus()
+                        }}
                         className={cn(
-                          "group w-full rounded-xl border border-transparent p-3 text-left transition-colors outline-none hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring",
-                          call.id === activeId && "border-border/40 bg-muted/60"
+                          "group mb-0.5 flex w-full items-start gap-3 rounded-lg px-2.5 py-3 text-left transition-colors outline-none hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset motion-reduce:transition-none",
+                          call.id === activeId && "bg-muted/70"
                         )}
                       >
-                        <div className="mb-2 flex items-center gap-2">
-                          <ProviderMark
-                            provider={call.provider}
-                            className="size-5 rounded-md text-[10px]"
-                          />
-                          <span className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground">
-                            {teams.find((team) => team.id === call.teamId)
-                              ?.name ?? "Team"}
-                          </span>
-                          <time
-                            dateTime={call.startedAt}
-                            className="text-[11px] text-muted-foreground tabular-nums"
-                          >
-                            {new Date(call.startedAt).toLocaleTimeString(
-                              undefined,
-                              { hour: "2-digit", minute: "2-digit" }
-                            )}
-                          </time>
-                        </div>
-                        <h3 className="line-clamp-2 text-[13px] leading-5 font-medium">
-                          {call.title}
-                        </h3>
-                        <p className="mt-1.5 line-clamp-2 text-xs leading-5 text-muted-foreground">
-                          {call.summary ||
-                            (call.status === "expired"
-                              ? "Transcript retention reached"
-                              : call.summaryStatus === "error"
-                                ? "Recap needs another try"
-                                : "Ready for a recap")}
-                        </p>
-                        <div className="mt-3 flex items-center justify-between gap-2 text-[10px] text-muted-foreground">
-                          <span className="truncate">
-                            {call.participants.slice(0, 2).join(", ")}
-                            {call.participants.length > 2
-                              ? ` +${call.participants.length - 2}`
-                              : ""}
-                          </span>
-                          {call.actions.some((item) => !item.completed) && (
-                            <span className="shrink-0 rounded-md bg-background/75 px-1.5 py-0.5">
-                              {
-                                call.actions.filter((item) => !item.completed)
-                                  .length
-                              }{" "}
-                              open actions
+                        <ProviderMark
+                          provider={call.provider}
+                          className="mt-0.5 size-8 rounded-full border-0 bg-muted text-[11px]"
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-baseline gap-2">
+                            <span className="min-w-0 flex-1 truncate text-[13px] leading-5 font-medium">
+                              {call.title}
                             </span>
-                          )}
-                        </div>
+                            <time
+                              dateTime={call.startedAt}
+                              title={new Date(call.startedAt).toLocaleString()}
+                              className="shrink-0 text-[11px] text-muted-foreground tabular-nums"
+                            >
+                              {new Date(call.startedAt).toLocaleTimeString(
+                                undefined,
+                                { hour: "2-digit", minute: "2-digit" }
+                              )}
+                            </time>
+                          </span>
+                          <span className="mt-0.5 block truncate text-xs leading-5 text-muted-foreground">
+                            {call.summary ||
+                              (call.status === "expired"
+                                ? "Transcript retention reached"
+                                : call.summaryStatus === "error"
+                                  ? "Recap needs another try"
+                                  : "Ready for a recap")}
+                          </span>
+                          <span className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
+                            <span
+                              className="min-w-0 flex-1 truncate"
+                              title={call.participants.join(", ")}
+                            >
+                              {!teamId
+                                ? (teams.find((team) => team.id === call.teamId)
+                                    ?.name ?? "Team")
+                                : `${call.participants[0] ?? "No participants"}${call.participants.length > 1 ? ` +${call.participants.length - 1}` : ""}`}
+                              {call.duration > 0 && ` · ${call.duration} min`}
+                            </span>
+                            {openActions > 0 && (
+                              <span className="inline-flex shrink-0 items-center gap-1 tabular-nums">
+                                <IssueIcon name="check" className="size-3" />
+                                {openActions} open
+                              </span>
+                            )}
+                          </span>
+                        </span>
                       </button>
-                    ))}
-                  </div>
+                    )
+                  })}
                 </section>
               ))}
               {!visible.length && (
@@ -446,10 +603,10 @@ export function CallsPage({
                 <IssueIcon name="settings" className="ml-auto size-3" />
               </button>
             </div>
-          </aside>
+          </InboxSidebar>
           <div
             className={cn(
-              "min-h-0 min-w-0 flex-1 flex-col lg:flex",
+              "min-h-0 min-w-0 flex-1 flex-col md:flex",
               selectedId ? "flex" : "hidden"
             )}
           >
@@ -492,6 +649,7 @@ export function CallsPage({
                 creator={creator}
                 retentionDays={directory.retentionDays}
                 onRefresh={refresh}
+                onSimulatedChange={simulated ? changeSimulatedCall : undefined}
                 onBack={() => onSelect(undefined)}
               />
             ) : activeId ? (

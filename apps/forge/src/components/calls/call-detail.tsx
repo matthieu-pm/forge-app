@@ -5,6 +5,7 @@ import { ProviderMark, callField } from "./call-dialogs"
 import type { CallRecord } from "@/lib/calls"
 import type { TeamSummary } from "@/lib/team-contract"
 import { pageTabClass } from "@/components/ui/page-tabs"
+import { ContentHeader } from "@/components/ui/content-header"
 import { timestampLabel } from "@/lib/calls"
 import { addNote, generateCallRecap, updateCallAction } from "@/lib/calls-state"
 import { callActionSource, createCallIssue } from "@/lib/call-issues"
@@ -24,6 +25,7 @@ export function CallDetail({
   retentionDays,
   onRefresh,
   onBack,
+  onSimulatedChange,
 }: {
   call: CallRecord
   team: TeamSummary
@@ -31,6 +33,7 @@ export function CallDetail({
   retentionDays: number
   onRefresh: () => Promise<void>
   onBack: () => void
+  onSimulatedChange?: (call: CallRecord) => void
 }) {
   const [tab, setTab] = useState<"summary" | "transcript" | "notes">("summary")
   const [query, setQuery] = useState("")
@@ -42,7 +45,7 @@ export function CallDetail({
     setBusy(key)
     try {
       await action()
-      await onRefresh()
+      if (!onSimulatedChange) await onRefresh()
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Could not save this change."
@@ -59,23 +62,25 @@ export function CallDetail({
       aria-label={call.title}
       className="flex min-h-0 min-w-0 flex-1 flex-col"
     >
-      <div className="flex items-center justify-between border-b border-border/50 px-5 py-3 lg:px-8">
+      <ContentHeader className="justify-between px-5 lg:px-8">
         <Button
-          className="lg:hidden"
+          className="md:hidden"
           variant="ghost"
           size="sm"
           onClick={onBack}
         >
           ← All calls
         </Button>
-        <span className="hidden items-center gap-2 text-xs text-muted-foreground lg:flex">
+        <span className="hidden items-center gap-2 text-xs text-muted-foreground md:flex">
           <ProviderMark
             provider={call.provider}
             className="size-5 rounded-md text-[10px]"
           />
-          {call.provider === "upload"
-            ? "Imported transcript"
-            : "Native transcript"}
+          {onSimulatedChange
+            ? "Simulated meeting"
+            : call.provider === "upload"
+              ? "Imported transcript"
+              : "Native transcript"}
         </span>
         <Button
           size="icon-sm"
@@ -97,7 +102,7 @@ export function CallDetail({
         >
           <IssueIcon name="link" />
         </Button>
-      </div>
+      </ContentHeader>
       <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-12 lg:px-8">
         <header className="pt-6 pb-5">
           <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -229,8 +234,9 @@ export function CallDetail({
                       {call.summary}
                     </p>
                     <p className="mt-3 text-[11px] text-muted-foreground">
-                      AI-generated. Check important details against the
-                      transcript.
+                      {onSimulatedChange
+                        ? "Sample recap and transcript. This meeting is fictional."
+                        : "AI-generated. Check important details against the transcript."}
                     </p>
                   </section>
                   <section>
@@ -339,15 +345,26 @@ export function CallDetail({
                             aria-labelledby={`call-action-label-${action.id}`}
                             disabled={Boolean(busy)}
                             onCheckedChange={(checked) =>
-                              void run(action.id, () =>
-                                updateCallAction({
+                              void run(action.id, async () => {
+                                if (onSimulatedChange) {
+                                  onSimulatedChange({
+                                    ...call,
+                                    actions: call.actions.map((item) =>
+                                      item.id === action.id
+                                        ? { ...item, completed: checked }
+                                        : item
+                                    ),
+                                  })
+                                  return
+                                }
+                                await updateCallAction({
                                   data: {
                                     callId: call.id,
                                     actionId: action.id,
                                     completed: checked,
                                   },
                                 })
-                              )
+                              })
                             }
                             className="mt-0.5"
                           />
@@ -473,8 +490,10 @@ export function CallDetail({
                     />
                   </div>
                   <p className="mb-5 text-[11px] text-muted-foreground">
-                    {entries.length} passages · Transcription notice managed by
-                    the meeting host
+                    {entries.length} passages ·{" "}
+                    {onSimulatedChange
+                      ? "Fictional conversation"
+                      : "Transcription notice managed by the meeting host"}
                   </p>
                   <div className="space-y-6">
                     {entries.map((entry, index) => (
@@ -511,9 +530,24 @@ export function CallDetail({
                 onSubmit={(e) => {
                   e.preventDefault()
                   void run("note", async () => {
-                    await addNote({
-                      data: { callId: call.id, body: note, kind },
-                    })
+                    if (onSimulatedChange)
+                      onSimulatedChange({
+                        ...call,
+                        notes: [
+                          {
+                            id: crypto.randomUUID(),
+                            body: note.trim(),
+                            kind,
+                            author: "You",
+                            createdAt: new Date().toISOString(),
+                          },
+                          ...call.notes,
+                        ],
+                      })
+                    else
+                      await addNote({
+                        data: { callId: call.id, body: note, kind },
+                      })
                     setNote("")
                   })
                 }}

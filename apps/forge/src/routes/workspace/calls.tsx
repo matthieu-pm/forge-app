@@ -39,10 +39,15 @@ function WorkspaceCallsPage() {
   const navigate = Route.useNavigate()
   return (
     <CallsPage
+      simulateWhenEmpty
       key={authState.workspace!.id}
       initialDirectory={directory}
       teams={teams}
       creator={authState.user?.id ?? "You"}
+      scope={{
+        workspaceId: authState.workspace!.id,
+        userId: authState.user?.id ?? "You",
+      }}
       selectedId={search.call}
       connectionStatus={search.connection}
       onSelect={(call) => {
