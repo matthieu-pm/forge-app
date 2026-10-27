@@ -336,11 +336,11 @@ export function UpcomingCycle({
           </DropdownMenuContent>
         </DropdownMenu>
       </ContentHeader>
-      <div className="flex min-h-11 shrink-0 items-center justify-between gap-2 px-4 py-2">
-        <span className="text-xs text-muted-foreground">
+      <div className="flex min-h-11 shrink-0 items-center justify-between gap-2 px-2 py-2">
+        <span className="px-2 text-xs text-muted-foreground">
           {issues.length} {issues.length === 1 ? "issue" : "issues"}
         </span>
-        <div className="flex items-center gap-1.5">
+        <div className="flex shrink-0 items-center gap-1.5">
           <IssueFilters
             issues={records}
             statuses={statuses}

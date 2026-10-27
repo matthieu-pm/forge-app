@@ -1,11 +1,13 @@
 import { useState } from "react"
 import { Link } from "@tanstack/react-router"
 import { toast } from "sonner"
+import { Link01Icon } from "@hugeicons/core-free-icons"
 import { ProviderMark, callField } from "./call-dialogs"
 import type { CallRecord } from "@/lib/calls"
 import type { TeamSummary } from "@/lib/team-contract"
 import { pageTabClass } from "@/components/ui/page-tabs"
 import { ContentHeader } from "@/components/ui/content-header"
+import { ActionIconButton } from "@/components/ui/action-icon-button"
 import { timestampLabel } from "@/lib/calls"
 import { addNote, generateCallRecap, updateCallAction } from "@/lib/calls-state"
 import { callActionSource, createCallIssue } from "@/lib/call-issues"
@@ -62,7 +64,7 @@ export function CallDetail({
       aria-label={call.title}
       className="flex min-h-0 min-w-0 flex-1 flex-col"
     >
-      <ContentHeader className="justify-between px-5 lg:px-8">
+      <ContentHeader>
         <Button
           className="md:hidden"
           variant="ghost"
@@ -82,10 +84,10 @@ export function CallDetail({
               ? "Imported transcript"
               : "Native transcript"}
         </span>
-        <Button
-          size="icon-sm"
-          variant="ghost"
-          aria-label="Copy call link"
+        <ActionIconButton
+          className="ml-auto"
+          label="Copy call link"
+          icon={Link01Icon}
           onClick={() => {
             void navigator.clipboard
               .writeText(
@@ -99,9 +101,7 @@ export function CallDetail({
                 () => toast.error("Could not copy the call link.")
               )
           }}
-        >
-          <IssueIcon name="link" />
-        </Button>
+        />
       </ContentHeader>
       <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-12 lg:px-8">
         <header className="pt-6 pb-5">

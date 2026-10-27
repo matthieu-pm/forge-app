@@ -244,6 +244,7 @@ export function Reviews({
           <PageTabs aria-label="Review views" className="shrink-0 px-3 py-2">
             <Link
               to="/reviews"
+              activeOptions={{ exact: true, includeSearch: false }}
               className={pageTabClass}
               aria-current={view === "for-you" ? "page" : undefined}
             >
@@ -251,6 +252,7 @@ export function Reviews({
             </Link>
             <Link
               to="/reviews/created"
+              activeOptions={{ exact: true, includeSearch: false }}
               className={pageTabClass}
               aria-current={view === "created" ? "page" : undefined}
             >
