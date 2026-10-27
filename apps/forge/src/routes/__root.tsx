@@ -170,11 +170,12 @@ function AgentRouteContent({
         pathname !== "/my-issues" &&
         !pathname.startsWith("/workspace/initiatives") &&
         pathname !== "/workspace/projects" &&
+        pathname !== "/workspace/views" &&
         pathname !== "/workspace/signals" &&
         pathname !== "/workspace/calls" &&
         !/^\/teams\/[^/]+\/calls$/.test(pathname) &&
         !/^\/teams\/[^/]+\/cycle\/[^/]+$/.test(pathname) &&
-        !/^\/teams\/[^/]+\/(triage|overview|documents|loops|members|issues|projects|signals)$/.test(
+        !/^\/teams\/[^/]+\/(triage|overview|documents|loops|members|issues|projects|signals|views)$/.test(
           pathname
         ) && <AppHeader />}
       <div

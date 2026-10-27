@@ -16,6 +16,7 @@ import type { MenuRootActions } from "@base-ui/react/menu"
 import type { AppNavChild } from "@/lib/app-navigation"
 import type { AuthState, WorkspaceSummary } from "@/lib/auth-types"
 import type { TeamSummary } from "@/lib/team-contract"
+import { ViewFavorites } from "@/components/views/view-favorites"
 import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { GettingStartedChecklist } from "@/components/getting-started-checklist"
@@ -603,6 +604,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             {workspaceSection.map((item) => renderRootItem(item))}
           </SidebarMenu>
         </SidebarGroup>
+        {workspace && sessionState.data?.user.id && (
+          <ViewFavorites
+            workspaceId={workspace.id}
+            userId={sessionState.data.user.id}
+          />
+        )}
         <SidebarGroup className="min-h-0 flex-1 pt-4">
           <SidebarMenu className="flex h-full min-h-0 flex-col">
             {teamsSection.map((item) => renderRootItem(item, true))}
