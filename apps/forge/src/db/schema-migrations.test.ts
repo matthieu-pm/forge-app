@@ -6,11 +6,6 @@ import { describe, expect, it } from "vitest"
 
 import { apiKeys } from "./auth-schema"
 import {
-  calls,
-  callActions,
-  callNotes,
-  callSettings,
-  callConnections,
   agentApprovals,
   agentArtifacts,
   agentEvents,
@@ -19,6 +14,11 @@ import {
   apiIdempotencyKeys,
   businessWorkflowEffects,
   businessWorkflowRuns,
+  callActions,
+  callConnections,
+  callNotes,
+  callSettings,
+  calls,
   desktopReleaseArtifacts,
   desktopReleases,
   modelCatalogEntries,

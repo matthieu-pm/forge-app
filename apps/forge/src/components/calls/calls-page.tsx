@@ -2,6 +2,13 @@ import { useCallback, useEffect, useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Call02Icon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
+import { CallDetail } from "./call-detail"
+import {
+  ConnectCallsDialog,
+  ImportCallDialog,
+  ProviderMark,
+  callField,
+} from "./call-dialogs"
 import type { CallRecord, CallsDirectory } from "@/lib/calls"
 import type { TeamSummary } from "@/lib/team-contract"
 import { callDayLabel, callMatches } from "@/lib/calls"
@@ -15,13 +22,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { OptionSelect } from "@/components/ui/option-select"
 import { IssueIcon } from "@/components/issues/issue-controls"
-import { CallDetail } from "./call-detail"
-import {
-  ConnectCallsDialog,
-  ImportCallDialog,
-  ProviderMark,
-  callField,
-} from "./call-dialogs"
 import { cn } from "@/lib/utils"
 
 export function CallsPage({

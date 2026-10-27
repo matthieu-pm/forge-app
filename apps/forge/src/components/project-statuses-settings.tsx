@@ -1,4 +1,3 @@
-import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import * as React from "react"
 import { Link, useBlocker } from "@tanstack/react-router"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -18,6 +17,7 @@ import type {
   ProjectStatus,
   ProjectStatusDirectory,
 } from "@/lib/project-statuses"
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import {
   deleteProjectStatus,
   initialProjectStatuses,

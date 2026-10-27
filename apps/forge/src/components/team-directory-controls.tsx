@@ -1,4 +1,3 @@
-import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import { useEffect, useRef, useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
@@ -11,6 +10,7 @@ import {
   UserGroup03Icon,
 } from "@hugeicons/core-free-icons"
 import type { TeamDirectoryEntry } from "@/lib/team-contract"
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import { OptionSelect } from "@/components/ui/option-select"
 import { Button } from "@/components/ui/button"
 import {
