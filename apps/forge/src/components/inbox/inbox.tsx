@@ -774,7 +774,7 @@ export function Inbox({ scope }: { scope: InboxScope }) {
             </div>
           </>
         ) : (
-          <IllustratedEmptyState kind="inbox">
+          <IllustratedEmptyState kind="inbox" align="center">
             <p>No notification selected</p>
           </IllustratedEmptyState>
         )}

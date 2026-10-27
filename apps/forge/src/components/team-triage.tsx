@@ -381,6 +381,7 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
         ) : (
           <IllustratedEmptyState
             kind="triage"
+            align="center"
             actions={
               <>
                 <Button
