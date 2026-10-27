@@ -107,7 +107,7 @@ export function InlineIssueProperties({
         compact && [
           tablePropertyIconClassName,
           property === "assignee"
-            ? "overflow-hidden border-0 shadow-none transition-[background-color,border-color,color,scale] duration-150 ease-out hover:bg-muted/60 hover:text-foreground aria-expanded:bg-muted/60 motion-reduce:transition-none dark:hover:bg-muted/60 [&_[data-slot=avatar]]:size-6 [&_[data-slot=avatar]]:after:pointer-events-none [&_[data-slot=avatar]]:after:z-10 [&_[data-slot=avatar]]:after:border-border/50 [&_[data-slot=avatar]]:after:mix-blend-normal dark:[&_[data-slot=avatar]]:after:mix-blend-normal"
+            ? "overflow-hidden border-0 shadow-none transition-[background-color,border-color,color,scale] duration-150 ease-out hover:bg-muted/60 hover:text-foreground aria-expanded:bg-muted/60 motion-reduce:transition-none dark:hover:bg-muted/60 [&_[data-slot=avatar]]:size-6 [&_[data-slot=avatar]]:p-px [&_[data-slot=avatar]]:after:pointer-events-none [&_[data-slot=avatar]]:after:z-10 [&_[data-slot=avatar]]:after:border-border/50 [&_[data-slot=avatar]]:after:mix-blend-normal dark:[&_[data-slot=avatar]]:after:mix-blend-normal"
             : "w-5 border-transparent shadow-none hover:border-transparent hover:bg-transparent aria-expanded:bg-transparent dark:hover:bg-transparent",
         ],
         compact &&
