@@ -23,6 +23,7 @@ import { ContentHeader } from "@/components/ui/content-header"
 import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
 import { ActionIconButton } from "@/components/ui/action-icon-button"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
 /** An original line illustration matching the quiet Reviews empty state. */
@@ -59,10 +60,12 @@ export function Reviews({
   scope,
   view,
   entries = noReviews,
+  simulated = false,
 }: {
   scope: InboxScope
   view: "for-you" | "created"
   entries?: ReadonlyArray<Review>
+  simulated?: boolean
 }) {
   const [display, setDisplay] = useState<ReviewDisplay>(defaultReviewDisplay)
   const [filters, setFilters] = useState(emptyReviewFilters)
@@ -129,6 +132,15 @@ export function Reviews({
       >
         <ContentHeader>
           <h1 className="text-[13px] font-medium">Reviews</h1>
+          {simulated && (
+            <Badge
+              variant="secondary"
+              className="text-[10px] font-normal"
+              title="Fictional pull requests for exploring Reviews"
+            >
+              Simulated data
+            </Badge>
+          )}
           <div className="ml-auto flex items-center gap-1.5">
             <ReviewFiltersMenu
               entries={entries}

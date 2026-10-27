@@ -50,7 +50,8 @@
       "Display property toggles",
       "User/workspace-scoped display persistence",
       "PR summary renderer and GitHub link",
-      "Responsive empty state"
+      "Responsive empty state",
+      "Simulated pull-request preview with varied statuses, authors and repositories"
     ],
     "designChoices": [
       "For you includes authored, personally requested, participated and current-user team reviews",
@@ -62,7 +63,7 @@
       "Diffs, CI, comments, approvals and merge operations",
       "Advanced filters, reviewer/date/label filters and badge settings"
     ],
-    "dataBoundary": "Reviews accepts a typed entries prop; production routes currently supply no entries. Test fixtures are confined to tests."
+    "dataBoundary": "Reviews accepts a typed entries prop. Routes now supply 11 explicitly labeled fictional PRs, including authored, requested, participated and team reviews. Times are relative to preview initialization; no GitHub URLs or external actions are attached."
   },
   "verification": {
     "automated": "31 targeted tests passed; TypeScript, targeted ESLint, and git diff --check passed.",
