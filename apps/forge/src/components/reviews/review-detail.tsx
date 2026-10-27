@@ -16,6 +16,7 @@ import {
   Tick02Icon,
 } from "@hugeicons/core-free-icons"
 import { ReviewDiff } from "./review-diff"
+import { ReviewFiles } from "./review-files"
 import type { ReactNode } from "react"
 import type { Review } from "@/lib/reviews-view"
 import type {
@@ -39,7 +40,7 @@ import {
 } from "@/components/issues/issue-controls"
 import { Attachments } from "@/components/issues/issue-attachments"
 import { Reactions } from "@/components/issues/issue-reactions"
-import { emptyReviewEdit, fileStats, reviewStats } from "@/lib/review-detail"
+import { emptyReviewEdit, reviewStats } from "@/lib/review-detail"
 import { ContentHeader } from "@/components/ui/content-header"
 import { ActionIconButton } from "@/components/ui/action-icon-button"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -163,7 +164,7 @@ function IssuePicker({
             variant="secondary"
             size="sm"
             disabled={!mutable}
-            className={reviewPropertyControl}
+            className={cn(reviewPropertyControl, "gap-1")}
           />
         }
       >
@@ -251,7 +252,6 @@ export function ReviewDetail({
     useState<Review["reviewState"]>("approved")
   const [reviewBody, setReviewBody] = useState("")
   const [mergeOpen, setMergeOpen] = useState(false)
-  const [openCategories, setOpenCategories] = useState<Array<string>>([])
   const [descriptionCollapsed, setDescriptionCollapsed] = useState(false)
   const descriptionId = useId()
   const descriptionContent = useRef<HTMLDivElement>(null)
@@ -355,12 +355,6 @@ export function ReviewDetail({
     open &&
     review.reviewState === "approved" &&
     detail.checks === "passed"
-  const categories = [
-    "Implementation",
-    "Tests",
-    "Documentation",
-    "Generated",
-  ] as const
   return (
     <>
       <ContentHeader className="gap-1.5 px-3">
@@ -599,7 +593,7 @@ export function ReviewDetail({
         />
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-          <div className="mx-auto grid max-w-[1400px] gap-10 px-6 py-6 xl:px-12 xl:py-7 @min-[700px]/review:grid-cols-[minmax(0,1fr)_220px]">
+          <div className="mx-auto grid max-w-[1400px] gap-10 px-6 py-6 xl:px-12 xl:py-7 @min-[700px]/review:grid-cols-[minmax(0,1fr)_264px]">
             <div className="min-w-0">
               <h2>
                 <DetailTitle
@@ -968,7 +962,7 @@ export function ReviewDetail({
                         variant="secondary"
                         size="sm"
                         disabled={!mutable}
-                        className={reviewPropertyControl}
+                        className={cn(reviewPropertyControl, "gap-1")}
                       />
                     }
                   >
@@ -1029,78 +1023,7 @@ export function ReviewDetail({
                       : "Checks pending"}
                 </p>
               </div>
-              <div>
-                <h3 className="mb-2 px-2 text-xs text-muted-foreground">
-                  {detail.files.length} files changed
-                </h3>
-                {categories.map((category) => {
-                  const files = detail.files.filter(
-                    (file) => file.category === category
-                  )
-                  if (!files.length) return null
-                  const total = reviewStats(files)
-                  const expandedCategory = openCategories.includes(category)
-                  return (
-                    <div key={category} className="mb-1">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() =>
-                          setOpenCategories(
-                            expandedCategory
-                              ? openCategories.filter(
-                                  (value) => value !== category
-                                )
-                              : [...openCategories, category]
-                          )
-                        }
-                        aria-expanded={expandedCategory}
-                        className={cn(
-                          reviewPropertyControl,
-                          "w-full text-foreground"
-                        )}
-                      >
-                        <span>{category}</span>
-                        <span className="text-muted-foreground">
-                          {files.length}
-                        </span>
-                        <span className="text-muted-foreground">
-                          {expandedCategory ? "⌄" : "›"}
-                        </span>
-                        <span className="ml-auto flex gap-1 font-mono text-[10px]">
-                          <span className="text-emerald-500">
-                            +{total.additions}
-                          </span>
-                          <span className="text-red-400">
-                            −{total.deletions}
-                          </span>
-                        </span>
-                      </Button>
-                      {expandedCategory &&
-                        files.map((file) => (
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            key={file.path}
-                            title={file.path}
-                            className={cn(
-                              reviewPropertyControl,
-                              "w-full min-w-0 pl-4"
-                            )}
-                            onClick={() => onSelectFile(file.path)}
-                          >
-                            <span className="truncate">
-                              {file.path.split("/").at(-1)}
-                            </span>
-                            <span className="text-muted-foreground/50">
-                              +{fileStats(file).additions}
-                            </span>
-                          </Button>
-                        ))}
-                    </div>
-                  )
-                })}
-              </div>
+              <ReviewFiles files={detail.files} onSelectFile={onSelectFile} />
             </aside>
           </div>
         </div>
