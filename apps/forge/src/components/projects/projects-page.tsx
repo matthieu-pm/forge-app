@@ -12,7 +12,7 @@ import type { TeamSummary } from "@/lib/team-contract"
 import type { ProjectFilter, ProjectPreferences } from "@/lib/projects"
 import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
 import { ContentHeader } from "@/components/ui/content-header"
-import { EmptyStateArt } from "@/components/illustrations/empty-state-art"
+import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import { targetTimestamp } from "@/lib/initiatives"
 import { useInitiatives } from "@/lib/initiatives-state"
 import { initiativeProjectCatalog } from "@/lib/initiative-projects"
@@ -387,16 +387,11 @@ export function ProjectsPage({
           Projects are unavailable until the saved data can be loaded.
         </div>
       ) : scoped.length === 0 ? (
-        <div className="flex min-h-0 flex-1 items-center justify-center px-8 pb-12">
-          <div className="empty-state-content w-[350px] max-w-full">
-            <EmptyStateArt kind="projects" />
-            <h2 className="mt-6 text-sm font-medium">Projects</h2>
-            <p className="mt-2 text-[13px] leading-[1.5] text-muted-foreground">
-              Projects are larger units of work with a clear outcome, such as a
-              new feature you want to ship. They can be shared across multiple
-              teams and are comprised of issues and optional documents.
-            </p>
-            <div className="mt-6 flex flex-wrap gap-2">
+        <IllustratedEmptyState
+          kind="projects"
+          title="Projects"
+          actions={
+            <>
               <Button
                 className={initiativePrimary}
                 disabled={!store.writable}
@@ -419,9 +414,15 @@ export function ProjectsPage({
               >
                 Documentation
               </Button>
-            </div>
-          </div>
-        </div>
+            </>
+          }
+        >
+          <p>
+            Projects are larger units of work with a clear outcome, such as a
+            new feature you want to ship. They can be shared across multiple
+            teams and are comprised of issues and optional documents.
+          </p>
+        </IllustratedEmptyState>
       ) : (
         <div className="relative flex min-h-0 flex-1 overflow-hidden">
           <div className="min-h-0 min-w-0 flex-1 overflow-auto">

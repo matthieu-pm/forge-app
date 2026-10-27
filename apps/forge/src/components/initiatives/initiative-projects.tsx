@@ -12,7 +12,7 @@ import type {
 } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamLabel } from "@/lib/team-labels"
-import { EmptyStateArt } from "@/components/illustrations/empty-state-art"
+import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import {
   blankInitiative,
   initiativeProjectSchema,
@@ -736,15 +736,17 @@ export function InitiativeProjects({
         </div>
       </div>
       {!items.length ? (
-        <div className="empty-state-content flex min-h-56 flex-col items-center justify-center gap-4 rounded-lg border border-border/50 py-8">
-          <EmptyStateArt kind="projects" />
-          <p className="text-xs text-muted-foreground">
+        <IllustratedEmptyState
+          kind="projects"
+          actions={addMenu}
+          className="rounded-lg border border-solid border-border/50"
+        >
+          <p>
             {filterStatus
               ? "No matching projects"
               : "No projects in this initiative"}
           </p>
-          {addMenu}
-        </div>
+        </IllustratedEmptyState>
       ) : (
         <div className="overflow-x-auto">
           <div

@@ -1,11 +1,6 @@
 import { Link } from "@tanstack/react-router"
 import type { InboxEntry } from "@/lib/inbox-state"
-import { EmptyStateArt } from "@/components/illustrations/empty-state-art"
 import { ForgeLogo } from "@/components/forge-logo"
-
-export function InboxEmptyMark() {
-  return <EmptyStateArt kind="inbox" />
-}
 
 export function WelcomeContent() {
   return (

@@ -19,7 +19,7 @@ import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import type { IssueDraft, IssueStore, TeamIssue } from "@/lib/team-issues"
 import type { ActivitySearch } from "@/lib/issue-activity"
-import { EmptyStateArt } from "@/components/illustrations/empty-state-art"
+import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
 import { ContentHeader } from "@/components/ui/content-header"
 import {
@@ -636,18 +636,11 @@ export function TeamIssues({
       <div className="relative flex min-h-0 flex-1">
         <div className="flex min-w-0 flex-1 flex-col">
           {!visible.length && !display.showEmpty ? (
-            <div className="flex min-h-[360px] flex-1 items-center justify-center overflow-y-auto p-6">
-              <div className="empty-state-content w-[340px] max-w-full -translate-y-1">
-                <EmptyStateArt kind="issues" className="mb-7" />
-                <h2 className="mb-2 text-sm font-semibold">
-                  {isFiltered ? "No matching issues" : copyState.title}
-                </h2>
-                <p className="text-[13px] leading-[18px] whitespace-pre-line text-muted-foreground">
-                  {isFiltered
-                    ? "No issues match these filters. Change or clear the filters to see more work."
-                    : copyState.description}
-                </p>
-                <div className="mt-6 flex flex-wrap gap-2">
+            <IllustratedEmptyState
+              kind="issues"
+              title={isFiltered ? "No matching issues" : copyState.title}
+              actions={
+                <>
                   {isFiltered ? (
                     <Button
                       size="sm"
@@ -684,9 +677,15 @@ export function TeamIssues({
                   >
                     Documentation
                   </Button>
-                </div>
-              </div>
-            </div>
+                </>
+              }
+            >
+              <p className="whitespace-pre-line">
+                {isFiltered
+                  ? "No issues match these filters. Change or clear the filters to see more work."
+                  : copyState.description}
+              </p>
+            </IllustratedEmptyState>
           ) : (
             <IssueRows
               issues={visible}

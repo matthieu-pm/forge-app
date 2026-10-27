@@ -17,7 +17,7 @@ import type {
   TeamLabelGroup,
 } from "@/lib/team-labels"
 import type { TeamLabelRowHandle } from "@/components/team-label-row"
-import { EmptyStateArt } from "@/components/illustrations/empty-state-art"
+import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import { OptionSelect } from "@/components/ui/option-select"
 import {
   LABEL_COLORS,
@@ -777,13 +777,13 @@ export function TeamIssueLabelsSettings({
           directory.labels.length === 0 &&
           directory.groups.length === 0 &&
           !newLabel ? (
-            <div
+            <IllustratedEmptyState
+              kind="labels"
+              className="min-h-full"
               role="status"
-              className="empty-state-content flex min-h-64 flex-1 flex-col items-center justify-center gap-5 pb-12 text-sm text-muted-foreground"
             >
-              <EmptyStateArt kind="labels" />
-              No labels found
-            </div>
+              <p>No labels found</p>
+            </IllustratedEmptyState>
           ) : (
             <div className="px-5 sm:px-8 lg:px-14 [&>[data-slot=table-container]]:-ml-4 [&>[data-slot=table-container]]:w-[calc(100%+2rem)] sm:[&>[data-slot=table-container]]:-ml-10 sm:[&>[data-slot=table-container]]:w-[calc(100%+5rem)]">
               <Table

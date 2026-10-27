@@ -31,7 +31,12 @@ import {
   CommentInput,
   readFiles,
 } from "@/components/issues/issue-comment-input"
-import { AssigneeMark, IssueIcon } from "@/components/issues/issue-controls"
+import {
+  AssigneeMark,
+  IssueIcon,
+  issueChip,
+  issuePropertyControl,
+} from "@/components/issues/issue-controls"
 import { Attachments } from "@/components/issues/issue-attachments"
 import { Reactions } from "@/components/issues/issue-reactions"
 import { emptyReviewEdit, fileStats, reviewStats } from "@/lib/review-detail"
@@ -60,6 +65,12 @@ import {
 } from "@/components/ui/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
+
+const reviewPropertyControl = cn(
+  issueChip,
+  issuePropertyControl,
+  "justify-start transition-colors duration-150 hover:bg-muted motion-reduce:transition-none"
+)
 
 function ReviewActivityEvent({
   id,
@@ -149,16 +160,21 @@ function IssuePicker({
       <PopoverTrigger
         render={
           <Button
-            variant="ghost"
+            variant="secondary"
             size="sm"
             disabled={!mutable}
-            className="h-7 justify-start px-1 text-xs font-normal text-muted-foreground"
+            className={reviewPropertyControl}
           />
         }
       >
-        {edit.issueIds.length
-          ? `${edit.issueIds.length} linked issue${edit.issueIds.length === 1 ? "" : "s"}`
-          : "+ Link issue"}
+        {edit.issueIds.length ? (
+          `${edit.issueIds.length} linked issue${edit.issueIds.length === 1 ? "" : "s"}`
+        ) : (
+          <>
+            <IssueIcon name="add" className="size-4" />
+            Link issue
+          </>
+        )}
       </PopoverTrigger>
       <PopoverContent
         aria-label="Link issues"
@@ -859,18 +875,23 @@ export function ReviewDetail({
             </div>
             <aside
               aria-label="Pull request properties"
-              className="min-w-0 space-y-7 text-xs"
+              className="min-w-0 space-y-7 text-[13px]"
             >
               <div>
-                <h3 className="mb-3 text-muted-foreground">Status</h3>
+                <h3 className="mb-2 px-2 text-xs text-muted-foreground">
+                  Status
+                </h3>
                 <DropdownMenu>
                   <DropdownMenuTrigger
                     render={
                       <Button
-                        variant="ghost"
+                        variant="secondary"
                         size="sm"
                         disabled={!mutable || review.status === "merged"}
-                        className="justify-start px-1 text-xs font-normal capitalize"
+                        className={cn(
+                          reviewPropertyControl,
+                          "text-foreground capitalize"
+                        )}
                       />
                     }
                   >
@@ -903,11 +924,13 @@ export function ReviewDetail({
                 </DropdownMenu>
               </div>
               <div>
-                <h3 className="mb-2 text-muted-foreground">Resolves</h3>
+                <h3 className="mb-2 px-2 text-xs text-muted-foreground">
+                  Resolves
+                </h3>
                 {detail.issues
                   .filter((issue) => edit.issueIds.includes(issue.id))
                   .map((issue) => (
-                    <p key={issue.id} className="mb-2 leading-5">
+                    <p key={issue.id} className="mb-2 px-2 leading-5">
                       <span className="mr-1 text-muted-foreground">
                         {issue.identifier}
                       </span>
@@ -922,14 +945,16 @@ export function ReviewDetail({
                 />
               </div>
               <div>
-                <h3 className="mb-3 text-muted-foreground">Reviewers</h3>
+                <h3 className="mb-2 px-2 text-xs text-muted-foreground">
+                  Reviewers
+                </h3>
                 <div className="mb-2 space-y-2">
                   {review.reviewerIds.map((id) => {
                     const person = detail.people.find(
                       (value) => value.id === id
                     )
                     return (
-                      <div key={id} className="flex items-center gap-2">
+                      <div key={id} className="flex items-center gap-2 px-2">
                         <AssigneeMark name={person?.name ?? "You"} />
                         <span>{person?.name ?? "You"}</span>
                       </div>
@@ -940,14 +965,15 @@ export function ReviewDetail({
                   <PopoverTrigger
                     render={
                       <Button
-                        variant="ghost"
+                        variant="secondary"
                         size="sm"
                         disabled={!mutable}
-                        className="h-7 px-1 text-xs font-normal text-muted-foreground"
+                        className={reviewPropertyControl}
                       />
                     }
                   >
-                    + Add reviewers
+                    <IssueIcon name="add" className="size-4" />
+                    Add reviewers
                   </PopoverTrigger>
                   <PopoverContent
                     align="end"
@@ -980,14 +1006,16 @@ export function ReviewDetail({
                 </Popover>
               </div>
               <div>
-                <h3 className="mb-3 text-muted-foreground">Branch</h3>
-                <p className="flex items-center gap-2">
+                <h3 className="mb-2 px-2 text-xs text-muted-foreground">
+                  Branch
+                </h3>
+                <p className="flex items-center gap-2 px-2">
                   <ReviewStatusIcon status="open" />
                   Up to date with {detail.baseBranch}
                 </p>
                 <p
                   className={cn(
-                    "mt-3 flex items-center gap-2",
+                    "mt-3 flex items-center gap-2 px-2",
                     detail.checks === "failed"
                       ? "text-red-400"
                       : "text-muted-foreground"
@@ -1002,7 +1030,7 @@ export function ReviewDetail({
                 </p>
               </div>
               <div>
-                <h3 className="mb-3 text-muted-foreground">
+                <h3 className="mb-2 px-2 text-xs text-muted-foreground">
                   {detail.files.length} files changed
                 </h3>
                 {categories.map((category) => {
@@ -1014,7 +1042,9 @@ export function ReviewDetail({
                   const expandedCategory = openCategories.includes(category)
                   return (
                     <div key={category} className="mb-1">
-                      <button
+                      <Button
+                        variant="secondary"
+                        size="sm"
                         onClick={() =>
                           setOpenCategories(
                             expandedCategory
@@ -1025,7 +1055,10 @@ export function ReviewDetail({
                           )
                         }
                         aria-expanded={expandedCategory}
-                        className="flex w-full items-center gap-1 rounded-md py-2 text-left hover:bg-muted/30"
+                        className={cn(
+                          reviewPropertyControl,
+                          "w-full text-foreground"
+                        )}
                       >
                         <span>{category}</span>
                         <span className="text-muted-foreground">
@@ -1042,20 +1075,27 @@ export function ReviewDetail({
                             −{total.deletions}
                           </span>
                         </span>
-                      </button>
+                      </Button>
                       {expandedCategory &&
                         files.map((file) => (
-                          <button
+                          <Button
+                            variant="secondary"
+                            size="sm"
                             key={file.path}
                             title={file.path}
-                            className="block w-full truncate rounded-md py-1.5 pl-3 text-left text-[11px] text-muted-foreground hover:bg-muted/30 hover:text-foreground"
+                            className={cn(
+                              reviewPropertyControl,
+                              "w-full min-w-0 pl-4"
+                            )}
                             onClick={() => onSelectFile(file.path)}
                           >
-                            {file.path.split("/").at(-1)}{" "}
+                            <span className="truncate">
+                              {file.path.split("/").at(-1)}
+                            </span>
                             <span className="text-muted-foreground/50">
                               +{fileStats(file).additions}
                             </span>
-                          </button>
+                          </Button>
                         ))}
                     </div>
                   )

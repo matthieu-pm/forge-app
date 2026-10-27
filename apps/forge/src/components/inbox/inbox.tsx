@@ -13,7 +13,6 @@ import {
   Settings02Icon,
 } from "@hugeicons/core-free-icons"
 import {
-  InboxEmptyMark,
   IssueContent,
   WelcomeContent,
   initials,
@@ -32,6 +31,7 @@ import type {
   InboxScope,
   InboxView,
 } from "@/lib/inbox-state"
+import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import { ContentHeader } from "@/components/ui/content-header"
 import { Button } from "@/components/ui/button"
 import { ActionIconButton } from "@/components/ui/action-icon-button"
@@ -774,12 +774,9 @@ export function Inbox({ scope }: { scope: InboxScope }) {
             </div>
           </>
         ) : (
-          <div className="empty-state-content flex flex-1 flex-col items-center justify-center gap-6 p-6">
-            <InboxEmptyMark />
-            <p className="text-sm text-muted-foreground">
-              No notification selected
-            </p>
-          </div>
+          <IllustratedEmptyState kind="inbox">
+            <p>No notification selected</p>
+          </IllustratedEmptyState>
         )}
       </section>
       {actionError && (

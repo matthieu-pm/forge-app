@@ -36,7 +36,7 @@ import {
   emojiNameFromFile,
 } from "@/lib/custom-emoji-contract"
 import { prepareEmojiImage } from "@/lib/custom-emoji-upload"
-import { EmptyStateArt } from "@/components/illustrations/empty-state-art"
+import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 
 const focus =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -190,10 +190,9 @@ export function EmojisSettings() {
           Loading emojis…
         </p>
       ) : !emojis.length ? (
-        <div className="empty-state-content flex min-h-80 flex-1 flex-col items-center justify-center gap-4 pb-8">
-          <EmptyStateArt kind="emojis" />
-          <p className="text-sm text-muted-foreground">No emojis</p>
-        </div>
+        <IllustratedEmptyState kind="emojis">
+          <p>No emojis</p>
+        </IllustratedEmptyState>
       ) : (
         <div className="mt-5 px-2 pb-6">
           <Table

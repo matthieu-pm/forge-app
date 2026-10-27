@@ -11,7 +11,7 @@ import {
 import type { CallRecord, CallsDirectory } from "@/lib/calls"
 import type { InboxScope } from "@/lib/inbox-state"
 import type { TeamSummary } from "@/lib/team-contract"
-import { EmptyStateArt } from "@/components/illustrations/empty-state-art"
+import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
 import { ContentHeader } from "@/components/ui/content-header"
 import { ActionIconButton } from "@/components/ui/action-icon-button"
@@ -278,16 +278,11 @@ export function CallsPage({
         </div>
       )}
       {!hasCalls ? (
-        <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-8 py-10 pb-12">
-          <div className="empty-state-content w-[350px] max-w-full">
-            <EmptyStateArt kind="calls" />
-            <h2 className="mt-6 text-sm font-medium">Calls</h2>
-            <p className="mt-2 text-[13px] leading-[1.5] text-muted-foreground">
-              Keep your team’s conversations, decisions, and follow-ups
-              together. Connect a meeting tool or import a transcript to get
-              started.
-            </p>
-            <div className="mt-6 flex flex-wrap gap-2">
+        <IllustratedEmptyState
+          kind="calls"
+          title="Calls"
+          actions={
+            <>
               <Button
                 size="sm"
                 className="text-xs"
@@ -314,18 +309,22 @@ export function CallsPage({
               >
                 Import a transcript
               </Button>
-            </div>
-            {directory.connections.some((item) => item.error) && (
-              <p
-                role="alert"
-                className="mt-4 text-center text-xs text-destructive"
-              >
+            </>
+          }
+          footer={
+            directory.connections.some((item) => item.error) && (
+              <p role="alert" className="text-xs text-destructive">
                 A meeting connection needs attention. Open Connections to review
                 it.
               </p>
-            )}
-          </div>
-        </div>
+            )
+          }
+        >
+          <p>
+            Keep your team’s conversations, decisions, and follow-ups together.
+            Connect a meeting tool or import a transcript to get started.
+          </p>
+        </IllustratedEmptyState>
       ) : (
         <div className="flex min-h-0 flex-1 overflow-hidden">
           <InboxSidebar

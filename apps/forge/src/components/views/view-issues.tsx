@@ -11,7 +11,7 @@ import type {
   IssueDraft,
   TeamIssue,
 } from "@/lib/team-issues"
-import { EmptyStateArt } from "@/components/illustrations/empty-state-art"
+import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import { IssueComposer } from "@/components/issues/issue-composer"
 import { IssueDetail } from "@/components/issues/issue-detail"
 import {
@@ -375,18 +375,11 @@ export function ViewIssues({
           onCreate={openNew}
         />
       ) : (
-        <div className="flex min-h-0 flex-1 items-center justify-center p-8">
-          <div className="empty-state-content w-full max-w-[350px]">
-            <EmptyStateArt kind="issues" />
-            <h2 className="mt-6 text-sm font-medium">
-              {filters.rules.length ? "No matching issues" : "No issues yet"}
-            </h2>
-            <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
-              {filters.rules.length
-                ? "Adjust your filters to see more issues."
-                : "Issues in your teams will appear here."}
-            </p>
-            <div className="mt-6 flex gap-2">
+        <IllustratedEmptyState
+          kind="issues"
+          title={filters.rules.length ? "No matching issues" : "No issues yet"}
+          actions={
+            <>
               <Button
                 size="sm"
                 onClick={() => openNew()}
@@ -403,9 +396,15 @@ export function ViewIssues({
                   Clear filters
                 </Button>
               )}
-            </div>
-          </div>
-        </div>
+            </>
+          }
+        >
+          <p>
+            {filters.rules.length
+              ? "Adjust your filters to see more issues."
+              : "Issues in your teams will appear here."}
+          </p>
+        </IllustratedEmptyState>
       )}
       {selectedVisible.length > 0 && (
         <div

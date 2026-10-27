@@ -12,7 +12,7 @@ import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import type { IssueDraft, TeamIssue } from "@/lib/team-issues"
 import type { MyIssuePreferences, MyIssueSearch } from "@/lib/my-issues"
-import { EmptyStateArt } from "@/components/illustrations/empty-state-art"
+import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
 import { ContentHeader } from "@/components/ui/content-header"
 import { isMyIssue, myIssueActivity, myIssueViews } from "@/lib/my-issues"
@@ -395,34 +395,45 @@ export function MyIssues({
           </div>
         ) : !visible.length ||
           (search.view === "activity" && !activity.length) ? (
-          <div className="empty-state-content flex min-w-0 flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
-            <EmptyStateArt kind="issues" />
-            <h2 className="text-base font-medium">
-              {filters.rules.length
+          <IllustratedEmptyState
+            kind="issues"
+            align="center"
+            title={
+              filters.rules.length
                 ? "No matching issues"
-                : emptyLabels[search.view][0]}
-            </h2>
-            <p className="max-w-sm text-sm text-muted-foreground">
+                : emptyLabels[search.view][0]
+            }
+            actions={
+              (filters.rules.length > 0 || !teams.length) && (
+                <>
+                  {filters.rules.length > 0 && (
+                    <Button
+                      variant="secondary"
+                      onClick={() =>
+                        savePreferences({ filters: emptyIssueFilters() })
+                      }
+                    >
+                      Clear filters
+                    </Button>
+                  )}
+                  {!teams.length && (
+                    <Link
+                      to="/workspace/teams"
+                      className="text-sm text-primary"
+                    >
+                      Find a team
+                    </Link>
+                  )}
+                </>
+              )
+            }
+          >
+            <p>
               {filters.rules.length
                 ? "Adjust your filters to see more issues."
                 : emptyLabels[search.view][1]}
             </p>
-            {filters.rules.length > 0 && (
-              <Button
-                variant="secondary"
-                onClick={() =>
-                  savePreferences({ filters: emptyIssueFilters() })
-                }
-              >
-                Clear filters
-              </Button>
-            )}
-            {!teams.length && (
-              <Link to="/workspace/teams" className="text-sm text-primary">
-                Find a team
-              </Link>
-            )}
-          </div>
+          </IllustratedEmptyState>
         ) : search.view === "activity" ? (
           <div
             aria-label="My issue activity"

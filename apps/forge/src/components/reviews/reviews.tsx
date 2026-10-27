@@ -11,7 +11,7 @@ import type {
 } from "@/lib/review-detail"
 import type { Review, ReviewDisplay } from "@/lib/reviews-view"
 import type { InboxScope } from "@/lib/inbox-state"
-import { EmptyStateArt } from "@/components/illustrations/empty-state-art"
+import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import {
   applyReviewEdit,
   emptyReviewEdit,
@@ -376,12 +376,13 @@ export function Reviews({
               </Fragment>
             ))}
             {!visible.length && !hasReviewFilters(filters) && (
-              <div className="empty-state-content flex flex-col items-center justify-center gap-6 px-6 py-12 md:hidden">
-                <EmptyStateArt kind="reviews" />
-                <p className="text-[13px] text-muted-foreground">
-                  Nothing to review
-                </p>
-              </div>
+              <IllustratedEmptyState
+                kind="reviews"
+                align="center"
+                className="flex-none md:hidden"
+              >
+                <p>Nothing to review</p>
+              </IllustratedEmptyState>
             )}
             {!visible.length && hasReviewFilters(filters) && (
               <div className="px-4 py-12 text-center">
@@ -436,9 +437,8 @@ export function Reviews({
             onOpenAgent={onOpenAgent ? () => onOpenAgent(selected) : undefined}
           />
         ) : (
-          <div className="empty-state-content flex flex-1 flex-col items-center justify-center gap-6 p-6">
-            <EmptyStateArt kind="reviews" />
-            <p className="text-[13px] text-muted-foreground">
+          <IllustratedEmptyState kind="reviews" align="center">
+            <p>
               {entries.length
                 ? visible.length
                   ? `${visible.length} review${visible.length === 1 ? "" : "s"}`
@@ -447,7 +447,7 @@ export function Reviews({
                     : "Nothing to review"
                 : "Nothing to review"}
             </p>
-          </div>
+          </IllustratedEmptyState>
         )}
       </section>
       {saveError && (

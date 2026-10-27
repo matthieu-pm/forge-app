@@ -10,7 +10,7 @@ import {
 import { TeamDocumentEditor } from "./team-document-editor"
 import { TeamSidebarIcon } from "./team-sidebar-icon"
 import type { TeamSummary } from "@/lib/team-contract"
-import { EmptyStateArt } from "@/components/illustrations/empty-state-art"
+import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import { authClient } from "@/lib/auth-client"
 import {
   defaultDocumentIcon,
@@ -245,24 +245,28 @@ export function TeamDocuments({
             </Button>
           </div>
         ) : documents.length === 0 ? (
-          <div className="flex h-full min-h-[420px] items-center justify-center px-6 pb-12">
-            <div className="empty-state-content w-[280px] max-w-full">
-              <EmptyStateArt kind="documents" className="mb-6" />
-              <h2 className="text-base font-medium">Team documents</h2>
-              <p className="mt-2 text-sm leading-5 text-muted-foreground">
-                Create documents to share notes, decisions, and plans with your
-                team.
-              </p>
-              <Button
-                onClick={create}
-                disabled={!!store.error}
-                size="sm"
-                className="mt-4 rounded-full bg-[#5E6AD2] px-3 text-xs font-normal text-white hover:bg-[#5360C8]"
-              >
-                Create document
-              </Button>
-            </div>
-          </div>
+          <IllustratedEmptyState
+            kind="documents"
+            title="Team documents"
+            actions={
+              <>
+                <Button
+                  onClick={create}
+                  disabled={!!store.error}
+                  size="sm"
+                  className="rounded-full bg-[#5E6AD2] px-3 text-xs font-normal text-white hover:bg-[#5360C8]"
+                >
+                  Create document
+                </Button>
+              </>
+            }
+            className="min-h-full"
+          >
+            <p>
+              Create documents to share notes, decisions, and plans with your
+              team.
+            </p>
+          </IllustratedEmptyState>
         ) : (
           <div className="px-2 pt-1" aria-label="Team document list">
             {query && (

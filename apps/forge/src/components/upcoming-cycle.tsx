@@ -6,7 +6,7 @@ import type { TeamSummary } from "@/lib/team-contract"
 import type { CycleIssue, CycleIssueDraft } from "@/lib/cycle-issues"
 import type { IssueDraft } from "@/lib/team-issues"
 import type { TemplateDirectory } from "@/lib/template-contract"
-import { EmptyStateArt } from "@/components/illustrations/empty-state-art"
+import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import { ContentHeader } from "@/components/ui/content-header"
 import { IssueComposer } from "@/components/issues/issue-composer"
 import { IssueRows } from "@/components/issues/issue-list"
@@ -440,21 +440,11 @@ export function UpcomingCycle({
         <div className="relative flex min-h-0 flex-1">
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             {issues.length === 0 && !hasFilters && !display.showEmpty ? (
-              <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto px-6 pb-16">
-                <div className="empty-state-content w-full max-w-[350px]">
-                  <EmptyStateArt kind="cycles" className="mb-6" />
-                  <h2 className="mb-2 text-base font-medium">
-                    Plan your next cycle
-                  </h2>
-                  <p className="text-sm leading-5 text-muted-foreground">
-                    Cycles are time-based intervals to help your team focus on a
-                    predefined set of work.
-                  </p>
-                  <p className="mt-5 text-sm leading-5 text-muted-foreground">
-                    Track capacity, scope, and progress as issues are added, and
-                    as the cycle progresses.
-                  </p>
-                  <div className="mt-6 flex flex-wrap gap-2">
+              <IllustratedEmptyState
+                kind="cycles"
+                title="Plan your next cycle"
+                actions={
+                  <>
                     <Button size="sm" onClick={() => create()}>
                       Create new issue
                     </Button>
@@ -471,9 +461,18 @@ export function UpcomingCycle({
                     >
                       Documentation
                     </Button>
-                  </div>
-                </div>
-              </div>
+                  </>
+                }
+              >
+                <p>
+                  Cycles are time-based intervals to help your team focus on a
+                  predefined set of work.
+                </p>
+                <p>
+                  Track capacity, scope, and progress as issues are added, and
+                  as the cycle progresses.
+                </p>
+              </IllustratedEmptyState>
             ) : !visible.length && !display.showEmpty ? (
               <div className="m-auto text-center text-sm text-muted-foreground">
                 <p>No issues match these filters.</p>

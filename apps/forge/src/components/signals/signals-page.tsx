@@ -2,7 +2,7 @@ import { Suspense, lazy, useState } from "react"
 import { Link } from "@tanstack/react-router"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { InboxScope } from "@/lib/inbox-state"
-import { EmptyStateArt } from "@/components/illustrations/empty-state-art"
+import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import { Button } from "@/components/ui/button"
 import { ContentHeader } from "@/components/ui/content-header"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
@@ -75,32 +75,35 @@ export function SignalsPage({
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       {header}
-      <main className="flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-y-auto px-8 py-10 pb-12">
-        <div className="empty-state-content w-[350px] max-w-full">
-          <EmptyStateArt kind="signals" />
-          <h2 className="mt-6 text-sm font-medium">Signals</h2>
-          <p className="mt-2 text-[13px] leading-[1.5] text-muted-foreground">
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <IllustratedEmptyState
+          kind="signals"
+          title="Signals"
+          actions={
+            <>
+              <Button
+                render={<Link to="/settings/signals" />}
+                size="sm"
+                className="rounded-full text-xs font-normal"
+              >
+                Configure Signals
+              </Button>
+              <Button
+                variant="secondary"
+                size="xs"
+                className="h-7 rounded-full text-xs"
+                onClick={() => setHelpOpen(true)}
+              >
+                Documentation
+              </Button>
+            </>
+          }
+        >
+          <p>
             See what your users need. Review insights from product usage and
             turn the ones that matter into issues.
           </p>
-          <div className="mt-6 flex flex-wrap gap-2">
-            <Button
-              render={<Link to="/settings/signals" />}
-              size="sm"
-              className="rounded-full text-xs font-normal"
-            >
-              Configure Signals
-            </Button>
-            <Button
-              variant="secondary"
-              size="xs"
-              className="h-7 rounded-full text-xs"
-              onClick={() => setHelpOpen(true)}
-            >
-              Documentation
-            </Button>
-          </div>
-        </div>
+        </IllustratedEmptyState>
         <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
           <DialogContent>
             <DialogHeader>

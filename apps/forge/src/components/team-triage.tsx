@@ -10,7 +10,7 @@ import {
 } from "@hugeicons/core-free-icons"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TriageDraft, TriageIssue } from "@/lib/triage-issues"
-import { EmptyStateArt } from "@/components/illustrations/empty-state-art"
+import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import { ContentHeader } from "@/components/ui/content-header"
 import { OptionSelect } from "@/components/ui/option-select"
 import {
@@ -379,25 +379,30 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
             )}
           </article>
         ) : (
-          <div className="empty-state-content flex min-h-72 flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
-            <EmptyStateArt kind="triage" />
-            <p className="text-sm text-muted-foreground">
+          <IllustratedEmptyState
+            kind="triage"
+            actions={
+              <>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="rounded-full px-3 text-xs font-normal"
+                  onClick={() => openEditor()}
+                >
+                  <HugeiconsIcon icon={Add01Icon} className="size-3" />
+                  Create triage issue
+                </Button>
+              </>
+            }
+          >
+            <p>
               {visible.length
                 ? "Select an issue to triage"
                 : issues.length
                   ? "No issues match this view"
                   : "Nothing to triage"}
             </p>
-            <Button
-              variant="secondary"
-              size="sm"
-              className="mt-1 rounded-full px-3 text-xs font-normal"
-              onClick={() => openEditor()}
-            >
-              <HugeiconsIcon icon={Add01Icon} className="size-3" />
-              Create triage issue
-            </Button>
-          </div>
+          </IllustratedEmptyState>
         )}
       </section>
       <TriageResponsibilityDialog

@@ -22,7 +22,7 @@ import {
 } from "@/lib/custom-views-state"
 import { DirectoryDisplay } from "@/components/directory-controls"
 import { ContentHeader } from "@/components/ui/content-header"
-import { EmptyStateArt } from "@/components/illustrations/empty-state-art"
+import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
 import { Button } from "@/components/ui/button"
 import {
@@ -90,20 +90,11 @@ function EmptyViews({
   onCreate: () => void
 }) {
   return (
-    <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto px-6 py-12">
-      <div className="empty-state-content w-full max-w-[350px]">
-        <EmptyStateArt kind="views" />
-        <h2 className="mt-6 text-sm font-medium">Views</h2>
-        <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
-          Create custom views using filters to show only the {kind} you want to
-          see. You can save and favorite these views for easy access and faster
-          team collaboration.
-        </p>
-        <p className="mt-4 text-[13px] leading-relaxed text-muted-foreground">
-          Choose your filters and display options, then save the view to return
-          to it later.
-        </p>
-        <div className="mt-6 flex flex-wrap gap-2">
+    <IllustratedEmptyState
+      kind="views"
+      title="Views"
+      actions={
+        <>
           <Button size="sm" onClick={onCreate}>
             Create new view
           </Button>
@@ -121,9 +112,19 @@ function EmptyViews({
           >
             Documentation
           </Button>
-        </div>
-      </div>
-    </div>
+        </>
+      }
+    >
+      <p>
+        Create custom views using filters to show only the {kind} you want to
+        see. You can save and favorite these views for easy access and faster
+        team collaboration.
+      </p>
+      <p>
+        Choose your filters and display options, then save the view to return to
+        it later.
+      </p>
+    </IllustratedEmptyState>
   )
 }
 export function ViewsPage({

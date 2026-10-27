@@ -23,7 +23,7 @@ import type {
   InitiativeView,
 } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
-import { EmptyStateArt } from "@/components/illustrations/empty-state-art"
+import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
 import { ContentHeader } from "@/components/ui/content-header"
 import { IssueIcon } from "@/components/issues/issue-controls"
@@ -397,26 +397,21 @@ export function InitiativesPage({
           />
         ) : (
           !creating && (
-            <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-y-auto px-6 py-10">
-              <div className="empty-state-content w-full max-w-[360px]">
-                <EmptyStateArt kind="initiatives" className="mb-7" />
-                <h2 className="text-base font-medium">
-                  {filters.rules.length
-                    ? "No matching initiatives"
-                    : store.state.initiatives.length
-                      ? view === "planned"
-                        ? "No planned initiatives"
-                        : view === "active"
-                          ? "No active initiatives"
-                          : "Initiatives"
-                      : "Initiatives"}
-                </h2>
-                <p className="mt-2 text-[13px] leading-[18px] text-muted-foreground">
-                  {filters.rules.length
-                    ? "Adjust your filters to see more initiatives."
-                    : "Initiatives are larger, strategic product efforts that set the direction of your company. They are comprised of all projects that align with the goals of the initiative and allow you to monitor their progress at scale."}
-                </p>
-                <div className="mt-6 flex flex-wrap gap-2">
+            <IllustratedEmptyState
+              kind="initiatives"
+              title={
+                filters.rules.length
+                  ? "No matching initiatives"
+                  : store.state.initiatives.length
+                    ? view === "planned"
+                      ? "No planned initiatives"
+                      : view === "active"
+                        ? "No active initiatives"
+                        : "Initiatives"
+                    : "Initiatives"
+              }
+              actions={
+                <>
                   {filters.rules.length ? (
                     <Button
                       variant="secondary"
@@ -458,9 +453,15 @@ export function InitiativesPage({
                   >
                     Documentation
                   </Button>
-                </div>
-              </div>
-            </div>
+                </>
+              }
+            >
+              <p>
+                {filters.rules.length
+                  ? "Adjust your filters to see more initiatives."
+                  : "Initiatives are larger, strategic product efforts that set the direction of your company. They are comprised of all projects that align with the goals of the initiative and allow you to monitor their progress at scale."}
+              </p>
+            </IllustratedEmptyState>
           )
         )}
         {store.preferences.sidebar && store.state.initiatives.length > 0 && (
