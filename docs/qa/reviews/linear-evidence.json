@@ -4,7 +4,7 @@
   "investigation": {
     "layoutAndViews": "answered",
     "filterAndDisplayControls": "partially answered",
-    "populatedReviewAndGitHubActions": "unresolved: workspace contained no reviews"
+    "populatedReviewAndGitHubActions": "UI answered from user screenshots and live computer inspection; external GitHub side effects were not exercised."
   },
   "observations": [
     {
@@ -18,6 +18,14 @@
     {
       "source": "Live Linear Display options menu",
       "finding": "Defaults shown: Focus grouping, Importance ordering, Closed reviews Past day, Show drafts enabled, Show GitHub team reviews enabled, Badge count All. Property controls include Repository, ID, Author, Timestamp, GitHub team, Labels, Status details, Quick to review and SLA."
+    },
+    {
+      "source": "User-supplied populated Overview and Diff screenshots, plus live Linear Computer inspection on 2026-10-27",
+      "finding": "Compact status groups, colored PR icon and relative timestamp; unselected detail shows review count; selected header has linked issues, title, change counts, favorites, copy/actions and expanded view; Overview/Diff tabs; overview metadata sidebar, description, activity and comment composer; diff toolbar with Files, commits and display options; collapsible file cards, line numbers, reviewed markers, hidden context and generated-file reveal."
+    },
+    {
+      "source": "Linear connector get_diff for the supplied Linear review URL and matching GitHub PR URL",
+      "finding": "Neither lookup resolved the referenced PR in the connector. UI inspection remained the source for the reconstruction."
     }
   ],
   "rea": {
@@ -32,7 +40,23 @@
       "Main and review-preview preload semantic analyses exhausted their worker heaps.",
       "Static package analysis did not establish renderer review behavior or observe execution.",
       "No CDP endpoint was used for a passive runtime capture; UI observations were made separately with computer use."
-    ]
+    ],
+    "focusedReviewPreload": {
+      "artifact": "out/preload/review-preview.js",
+      "sha256": "77beef9dcbdaa5477557eb15ef9bd1afaf817f892054b2af81183a4753d11eea",
+      "evidenceId": "ev_1a314a23f2ab23702f8a46a8ebd9cac7104d6da9401a878a051d2c435ea7980c",
+      "summaryEvidenceId": "ev_0678548363d8eabfee5b2a88f1734f9bc1cdcb35d5533e25cc53c02372a5efec",
+      "observations": [
+        "Extracted bytes matched the ASAR-declared digest.",
+        "Static preview navigation protocol includes init/ready, back/forward/refresh/navigate, same-origin checks and 500ms page-change polling.",
+        "Literal IPC channels: reviewPreviewChildEvent and reviewPreviewChildCommand."
+      ],
+      "limitations": [
+        "Partial analysis: semantic worker exhausted a 2 GiB heap; basic IPC extraction succeeded.",
+        "The desktop preload does not establish the remote web renderer's overview or diff behavior. No target execution was observed.",
+        "The opened archive analysis session was closed."
+      ]
+    }
   },
   "primaryDocumentation": "https://linear.app/docs/diffs",
   "forgeImplementation": {
@@ -51,7 +75,15 @@
       "User/workspace-scoped display persistence",
       "PR summary renderer and GitHub link",
       "Responsive empty state",
-      "Simulated pull-request preview with varied statuses, authors and repositories"
+      "Simulated pull-request preview with varied statuses, authors and repositories",
+      "Compact collapsible PR groups with status icons and relative timestamps",
+      "Review Overview/Diff tabs and shareable review/file query parameters",
+      "Editable simulated title/description, reviewer and issue pickers, favorites and activity",
+      "Local general and inline comments with thread resolution",
+      "Unified/split diff, wrapping, file navigator/search and commit filtering",
+      "File collapse, context expansion, generated-file reveal, reviewed markers and accurate change counts",
+      "Simulated approval/request-changes/comment and confirmed simulated merge, plus reset",
+      "Review-list expansion and existing Forge agent composer entry point"
     ],
     "designChoices": [
       "For you includes authored, personally requested, participated and current-user team reviews",
@@ -60,20 +92,25 @@
     ],
     "notImplemented": [
       "GitHub feed ingestion and account authorization",
-      "Diffs, CI, comments, approvals and merge operations",
-      "Advanced filters, reviewer/date/label filters and badge settings"
+      "External GitHub diffs, CI, comment, approval and merge synchronization",
+      "Attachments, reactions, advanced reviewer/date/label filters and badge settings"
     ],
-    "dataBoundary": "Reviews accepts a typed entries prop. Routes now supply 11 explicitly labeled fictional PRs, including authored, requested, participated and team reviews. Times are relative to preview initialization; no GitHub URLs or external actions are attached."
+    "dataBoundary": "All PRs, file contents, commits, CI status and linked issue options are fictional. User edits, comments, favorites, review decisions and reviewed markers persist in browser storage scoped to workspace and user. No review operation sends an external request. The agent button opens the existing composer without sending a message."
   },
   "verification": {
-    "automated": "31 targeted tests passed; TypeScript, targeted ESLint, and git diff --check passed.",
+    "automated": "38 targeted tests passed, including 7 new overview/diff interaction tests; TypeScript, targeted ESLint and git diff --check passed.",
     "browser": [
       "Authenticated empty page render",
       "For you/Created route navigation",
       "Display preference persists between views",
       "Filter chip and no-match feedback",
       "Legacy Reviews URL redirects to /reviews",
-      "Mobile 390x844 and desktop empty states visually checked"
+      "Mobile 390x844 and desktop empty states visually checked",
+      "Populated overview and Diff rendering",
+      "Approval and confirmed simulated merge update the PR status",
+      "Reset restores the original sample",
+      "Reviewed marker survives full reload",
+      "Mobile 390x844 overview and diff layouts"
     ]
   }
 }

@@ -88,7 +88,13 @@ export function createSimulatedReviews(
       241,
       "Persist review display preferences",
       "Summary\nRemembers grouping, ordering, and visible properties for each person in a workspace.\n\nChanges\n• Validate saved preferences before restoring them.\n• Keep the For you and Created views in sync.\n• Fall back to defaults when browser storage is unavailable.\n\nReview status\nReady for another pass after the storage fallback changes.",
-      { author: you, labels: ["reviews"], updatedAt: ago(4), openedAt: ago(80) }
+      {
+        author: you,
+        reviewState: "approved",
+        labels: ["reviews"],
+        updatedAt: ago(4),
+        openedAt: ago(80),
+      }
     ),
     make(
       83,

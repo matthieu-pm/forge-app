@@ -17,7 +17,7 @@ export const defaultReviewDisplay: ReviewDisplay = {
   closedReviews: "day",
   showDrafts: true,
   showTeamReviews: true,
-  properties: ["repository", "id", "author", "timestamp"],
+  properties: ["timestamp"],
 }
 export type Review = {
   id: string
@@ -143,6 +143,10 @@ export function reviewGroup(
   if (groupBy === "author") return review.author.name
   if (groupBy === "status")
     return review.status[0].toUpperCase() + review.status.slice(1)
+  if (review.status === "merged") return "Merged"
+  if (review.status === "closed") return "Closed"
+  if (review.status === "draft") return "Drafts"
+  if (review.reviewState === "approved") return "Ready to merge"
   if (review.reviewerIds.includes(userId) && review.reviewState === "requested")
     return "Needs your review"
   if (review.author.id === userId && review.reviewState === "changes-requested")
