@@ -1,4 +1,3 @@
-import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import { useEffect, useRef, useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
@@ -25,6 +24,7 @@ import type {
   TriageFilter,
   TriageFilterState,
 } from "@/lib/triage-filters"
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import { OptionSelect } from "@/components/ui/option-select"
 import {
   emptyTriageFilters,

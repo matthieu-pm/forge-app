@@ -12,28 +12,28 @@ import {
   lt,
   or,
 } from "drizzle-orm"
-import type { Actor } from "@/application/actor"
-import type { CallRecord, CallsDirectory, MeetingProvider } from "@/lib/calls"
-import { recapSchema, parseTranscript } from "@/lib/calls"
-import { hasWorkspaceRole } from "@/application/authorization"
-import { getTeamDirectory } from "@/application/teams/teams.server"
-import { EnvelopeModelSecretVault } from "@/application/agents/model-secret-vault.server"
 import {
   authorizationUrl,
   configuredProviders,
   exchangeTokens,
   fetchNativeCalls,
 } from "./providers.server"
+import type { Actor } from "@/application/actor"
+import type { CallRecord, CallsDirectory, MeetingProvider } from "@/lib/calls"
 import type { MeetingTokens } from "./providers.server"
+import { parseTranscript, recapSchema } from "@/lib/calls"
+import { hasWorkspaceRole } from "@/application/authorization"
+import { getTeamDirectory } from "@/application/teams/teams.server"
+import { EnvelopeModelSecretVault } from "@/application/agents/model-secret-vault.server"
 import {
-  db,
-  calls,
   callActions,
+  callConnections,
   callNotes,
   callSettings,
-  callConnections,
-  users,
+  calls,
+  db,
   members,
+  users,
 } from "@/db"
 
 const day = 86400000

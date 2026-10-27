@@ -1,18 +1,22 @@
 import { createFileRoute, getRouteApi } from "@tanstack/react-router"
 import { ProjectsPage } from "@/components/projects/projects-page"
 import { loadInitiativeDirectory } from "@/lib/initiative-directory"
-import { protectedRouteBeforeLoad } from "@/lib/auth-state"
+import { getNavigationAuthState } from "@/lib/auth-state"
 
 export const Route = createFileRoute("/teams/$teamSlug/projects")({
-  beforeLoad: protectedRouteBeforeLoad,
-  loader: loadInitiativeDirectory,
+  loader: async () => {
+    const [authState, directory] = await Promise.all([
+      getNavigationAuthState(),
+      loadInitiativeDirectory(),
+    ])
+    return { authState, directory }
+  },
   staleTime: 30_000,
   component: Page,
 })
 function Page() {
   const { team } = getRouteApi("/teams/$teamSlug").useLoaderData()
-  const { authState } = Route.useRouteContext()
-  const directory = Route.useLoaderData()
+  const { authState, directory } = Route.useLoaderData()
   if (!authState.workspace || !authState.user) return null
   return (
     <ProjectsPage

@@ -1,5 +1,4 @@
-import { CheckboxMark } from "@/components/ui/checkbox-mark"
-;("use client")
+"use client"
 
 import * as React from "react"
 import {
@@ -25,6 +24,7 @@ import type {
   AgentReasoningEffort,
   AgentReasoningEffortSelection,
 } from "@/lib/agent-models"
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import { ForgeLogo } from "@/components/forge-logo"
 import {
   Popover,

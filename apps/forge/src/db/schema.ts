@@ -15,6 +15,7 @@ import {
 } from "drizzle-orm/pg-core"
 
 import { apiKeys, organizations, users } from "./auth-schema"
+import type { TranscriptEntry } from "@/lib/calls"
 import type { TemplateDraft } from "@/lib/template-contract"
 import type { RecurringIssueDraft } from "@/lib/recurring-issue-contract"
 
@@ -1421,7 +1422,7 @@ export const calls = pgTable(
       .default([])
       .notNull(),
     transcript: jsonb("transcript")
-      .$type<Array<import("@/lib/calls").TranscriptEntry>>()
+      .$type<Array<TranscriptEntry>>()
       .default([])
       .notNull(),
     summary: text("summary").default("").notNull(),

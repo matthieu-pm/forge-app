@@ -1,8 +1,9 @@
-import { CheckboxMark } from "@/components/ui/checkbox-mark"
+"use client"
 
 import * as React from "react"
 import { Search01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 
 import { Button } from "@/components/ui/button"
@@ -12,8 +13,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-
-;("use client")
 
 type TimezoneOption = {
   id: string
