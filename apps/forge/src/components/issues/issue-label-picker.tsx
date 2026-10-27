@@ -1,8 +1,8 @@
-import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import { useLayoutEffect, useRef, useState } from "react"
 import { Link } from "@tanstack/react-router"
 import { IssueIcon, issueChip, issuePropertyControl } from "./issue-controls"
 import type { TeamIssue } from "@/lib/team-issues"
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import {
   activityReferenceIssues,
   activityReferenceSearch,

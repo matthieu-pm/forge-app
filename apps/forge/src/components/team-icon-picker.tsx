@@ -1,5 +1,4 @@
-import { CheckboxMark } from "@/components/ui/checkbox-mark"
-;("use client")
+"use client"
 
 import * as React from "react"
 import { Search01Icon, UserGroup03Icon } from "@hugeicons/core-free-icons"
@@ -8,6 +7,7 @@ import { toast } from "sonner"
 import type { IconSvgElement } from "@hugeicons/react"
 
 import type { EmojiChoice } from "@/lib/emoji-catalog"
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"

@@ -7,6 +7,7 @@ export default [
     ignores: [
       ".claude/worktrees/**",
       ".electron-build/**",
+      ".forge/**",
       ".output/**",
       ".vercel/**",
       ".workflow-vitest/**",

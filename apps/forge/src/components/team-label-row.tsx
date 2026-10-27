@@ -1,5 +1,4 @@
-import { CheckboxMark } from "@/components/ui/checkbox-mark"
-;("use client")
+"use client"
 
 import * as React from "react"
 import { format, formatDistanceToNowStrict } from "date-fns"
@@ -11,6 +10,7 @@ import {
   StarIcon,
 } from "@hugeicons/core-free-icons"
 import type { TeamLabel, TeamLabelGroup } from "@/lib/team-labels"
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"

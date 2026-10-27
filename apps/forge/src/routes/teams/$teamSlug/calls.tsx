@@ -1,7 +1,7 @@
 import { createFileRoute, getRouteApi } from "@tanstack/react-router"
 import {
-  CallsLoading,
   CallsLoadError,
+  CallsLoading,
 } from "@/components/calls/calls-route-state"
 import { CallsPage } from "@/components/calls/calls-page"
 import { loadCalls } from "@/lib/calls-state"

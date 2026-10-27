@@ -99,7 +99,7 @@ describe("Signals insight inbox", () => {
       screen.getByRole("textbox", { name: "Issue title" }).getAttribute("value")
     ).toBe("Explain invite roles before sending")
     expect(
-      screen.getByRole("textbox", {
+      screen.getByRole<HTMLTextAreaElement>("textbox", {
         name: "Issue description",
       }).value
     ).toBe("Use plain-language permission descriptions.")
