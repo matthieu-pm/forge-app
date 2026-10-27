@@ -26,7 +26,7 @@ export type InitiativeView = "active" | "planned" | "all"
 
 export function validInitiativeTarget(value: string) {
   if (!value) return true
-  if (/^\d{4}(-Q[1-4])?$/.test(value)) return true
+  if (/^\d{4}(-(Q[1-4]|H[12]))?$/.test(value)) return true
   if (/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) return true
   return (
     /^\d{4}-\d{2}-\d{2}$/.test(value) &&
@@ -60,6 +60,33 @@ export const initiativeCommentSchema = z.object({
   attachments: z.array(attachmentSchema).default([]),
   reactions: z.array(reactionSchema).default([]),
 })
+export const initiativeUpdatesSchema = z.array(
+  z.object({
+    id: z.string(),
+    text: z.string().trim().min(1).max(20000),
+    health: z.enum(["On track", "At risk", "Off track"]),
+    authorId: z.string(),
+    createdAt: z.string().datetime(),
+    attachments: z.array(attachmentSchema).default([]),
+    reactions: z.array(reactionSchema).default([]),
+    comments: z.array(initiativeCommentSchema).default([]),
+  })
+)
+export const initiativeResourcesSchema = z
+  .array(
+    z.object({
+      id: z.string(),
+      title: z.string().trim().min(1).max(200),
+      url: z
+        .string()
+        .url()
+        .refine((value) => /^https?:/.test(value))
+        .optional(),
+      body: documentSchema.optional(),
+    })
+  )
+  .default([])
+
 export const initiativeProjectSchema = z.object({
   id: z.string().min(1),
   name: z.string().trim().min(1).max(200),
@@ -86,6 +113,25 @@ export const initiativeProjectSchema = z.object({
   targetDate: z.string().refine(validInitiativeTarget).optional(),
   labelIds: z.array(z.string()).optional(),
   dependencyIds: z.array(z.string()).optional(),
+  slackChannelUrl: z
+    .string()
+    .max(2000)
+    .refine((value) => {
+      if (!value) return true
+      try {
+        const url = new URL(value)
+        return (
+          url.protocol === "https:" &&
+          (url.hostname === "slack.com" || url.hostname.endsWith(".slack.com"))
+        )
+      } catch {
+        return false
+      }
+    }, "Enter an HTTPS Slack channel URL.")
+    .optional(),
+  updates: initiativeUpdatesSchema.optional(),
+  comments: z.array(initiativeCommentSchema).optional(),
+  resources: initiativeResourcesSchema.removeDefault().optional(),
   milestones: z
     .array(
       z.object({
@@ -117,34 +163,10 @@ export const initiativeSchema = z.object({
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   completedAt: z.string().datetime().nullable(),
-  updates: z.array(
-    z.object({
-      id: z.string(),
-      text: z.string().trim().min(1).max(20000),
-      health: z.enum(["On track", "At risk", "Off track"]),
-      authorId: z.string(),
-      createdAt: z.string().datetime(),
-      attachments: z.array(attachmentSchema).default([]),
-      reactions: z.array(reactionSchema).default([]),
-      comments: z.array(initiativeCommentSchema).default([]),
-    })
-  ),
+  updates: initiativeUpdatesSchema,
   projects: z.array(initiativeProjectSchema).default([]),
   comments: z.array(initiativeCommentSchema).default([]),
-  resources: z
-    .array(
-      z.object({
-        id: z.string(),
-        title: z.string().trim().min(1).max(200),
-        url: z
-          .string()
-          .url()
-          .refine((value) => /^https?:/.test(value))
-          .optional(),
-        body: documentSchema.optional(),
-      })
-    )
-    .default([]),
+  resources: initiativeResourcesSchema,
   views: z
     .array(
       z.object({
@@ -355,6 +377,8 @@ export function targetLabel(value: string) {
   if (!value) return "Target date"
   const quarter = value.match(/^(\d{4})-Q([1-4])$/)
   if (quarter) return `Q${quarter[2]} ${quarter[1]}`
+  const half = value.match(/^(\d{4})-H([12])$/)
+  if (half) return `H${half[2]} ${half[1]}`
   if (/^\d{4}$/.test(value)) return value
   const date = new Date(
     `${value.length === 7 ? `${value}-01` : value}T12:00:00`
@@ -370,6 +394,8 @@ export function targetTimestamp(value: string) {
   const quarter = value.match(/^(\d{4})-Q([1-4])$/)
   if (quarter)
     return Date.UTC(Number(quarter[1]), Number(quarter[2]) * 3, 0, 23, 59, 59)
+  const half = value.match(/^(\d{4})-H([12])$/)
+  if (half) return Date.UTC(Number(half[1]), Number(half[2]) * 6, 0, 23, 59, 59)
   if (/^\d{4}$/.test(value)) return Date.UTC(Number(value), 11, 31, 23, 59, 59)
   if (value.length === 7)
     return Date.UTC(

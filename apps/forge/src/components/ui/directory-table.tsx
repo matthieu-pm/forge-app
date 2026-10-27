@@ -1,5 +1,6 @@
 import { ArrowDown01Icon, ArrowUp01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { tablePropertyControlClassName } from "./table-property-control"
 import type { ComponentProps, ReactNode } from "react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
@@ -14,8 +15,7 @@ export const directoryColumnWidths = {
   health: 136,
   text: 150,
 }
-export const directoryControlClassName =
-  "inline-flex h-7 max-w-full items-center justify-start gap-2 rounded-md border-0 bg-transparent px-1 text-xs font-normal text-muted-foreground hover:bg-muted/60"
+export const directoryControlClassName = tablePropertyControlClassName
 export const directoryNameClassName =
   "flex min-w-0 w-full items-center gap-3 rounded py-1 text-left text-[13px] text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
 export const directorySelectionToolbarClassName =

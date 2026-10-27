@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { ProjectStatusMark } from "./project-properties"
 import type {
   Initiative,
   InitiativePerson,
@@ -7,6 +8,7 @@ import type {
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamLabel } from "@/lib/team-labels"
 import type { ProjectFilter, ProjectPreferences } from "@/lib/projects"
+import { AssigneeMark, IssueIcon, PriorityMark  } from "@/components/issues/issue-controls"
 import {
   projectFilterFields,
   projectGroupings,
@@ -18,7 +20,6 @@ import {
   projectStatusName,
   projectStatuses,
 } from "@/components/initiatives/initiative-projects"
-import { IssueIcon } from "@/components/issues/issue-controls"
 import { Button, buttonSurface } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { OptionSelect } from "@/components/ui/option-select"
@@ -43,14 +44,28 @@ export function projectChoices(field: string, directory: ProjectDirectory) {
     return projectStatuses.map((value) => ({
       value,
       label: projectStatusName(value),
+      icon: <ProjectStatusMark status={value} />,
     }))
   if (field === "Priority")
-    return initiativePriorities.map((value) => ({ value, label: value }))
+    return initiativePriorities.map((value) => ({
+      value,
+      label: value,
+      icon: <PriorityMark priority={value} />,
+    }))
   if (field === "Health")
     return initiativeHealthValues.map((value) => ({
       value,
       label: value === "Update missing" ? "No updates" : value,
     }))
+  if (field === "Lead")
+    return [
+      { value: "", label: "No lead", icon: <AssigneeMark /> },
+      ...directory.people.map((person) => ({
+        value: person.id,
+        label: person.name,
+        icon: <AssigneeMark name={person.name} image={person.image} />,
+      })),
+    ]
   const records =
     field === "Teams"
       ? directory.teams

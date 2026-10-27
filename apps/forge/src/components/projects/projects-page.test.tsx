@@ -361,3 +361,29 @@ describe("Projects page", () => {
     ).toEqual([{ field: "Status", value: "Backlog" }])
   })
 })
+it("opens the appropriate detail tab and keeps property editing inline", async () => {
+  seed()
+  const onOpenProject = vi.fn()
+  render(<ProjectsPage {...props} onOpenProject={onOpenProject} />)
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Write update for Release" })
+  )
+  expect(onOpenProject).toHaveBeenLastCalledWith(
+    expect.objectContaining({ id: "p" }),
+    "activity"
+  )
+  fireEvent.click(
+    screen.getByRole("button", { name: "Open issues for Release" })
+  )
+  expect(onOpenProject).toHaveBeenLastCalledWith(
+    expect.objectContaining({ id: "p" }),
+    "issues"
+  )
+  onOpenProject.mockClear()
+  fireEvent.click(
+    screen.getByRole("button", { name: "Change priority for Release" })
+  )
+  fireEvent.click(await screen.findByRole("option", { name: "High" }))
+  expect(onOpenProject).not.toHaveBeenCalled()
+  expect(read().workspaceProjects[0].priority).toBe("High")
+})

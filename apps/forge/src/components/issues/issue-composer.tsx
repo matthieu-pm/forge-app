@@ -48,6 +48,7 @@ export function IssueComposer({
   draftId,
   labels,
   projects,
+  projectOptions = [],
   onClose,
   onSaved,
   onDraftSaved,
@@ -61,6 +62,7 @@ export function IssueComposer({
   draftId?: string
   labels: Array<string>
   projects: Array<string>
+  projectOptions?: Array<{ id: string; name: string }>
   onClose: () => void
   onSaved: (issue: TeamIssue, team: TeamSummary) => void
   onDraftSaved: () => void
@@ -499,13 +501,25 @@ export function IssueComposer({
             value={draft.project ?? ""}
             options={[
               { value: "", label: "No project" },
-              ...projects.map((name) => ({ value: name, label: name })),
+              ...projectOptions.map((item) => ({
+                value: item.id,
+                label: item.name,
+              })),
+              ...projects
+                .filter(
+                  (name) =>
+                    !projectOptions.some(
+                      (item) => item.id === name || item.name === name
+                    )
+                )
+                .map((name) => ({ value: name, label: name })),
             ]}
             allowCreate
             onChange={(value) => update({ project: value })}
           >
             <IssueIcon name="project" />
-            {draft.project || "Project"}
+            {projectOptions.find((item) => item.id === draft.project)?.name ??
+              (draft.project || "Project")}
           </IssuePicker>
           <IssuePicker
             label="Change labels"

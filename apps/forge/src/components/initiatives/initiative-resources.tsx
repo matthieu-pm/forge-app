@@ -28,7 +28,7 @@ export function InitiativeResources({
   onSave,
   onRemove,
 }: {
-  item: Initiative
+  item: Pick<Initiative, "resources">
   writable: boolean
   onSave: (resource: Resource) => boolean
   onRemove: (id: string) => void

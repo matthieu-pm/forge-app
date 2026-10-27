@@ -53,6 +53,7 @@ export function ProjectsPage({
   teams,
   team,
   directoryError = "",
+  onOpenProject,
 }: {
   workspaceId: string
   user: InitiativePerson
@@ -60,6 +61,10 @@ export function ProjectsPage({
   teams: Array<TeamSummary>
   team?: TeamSummary
   directoryError?: string
+  onOpenProject?: (
+    project: InitiativeProject,
+    tab?: "overview" | "activity" | "issues"
+  ) => void
 }) {
   const store = useInitiatives(workspaceId, user.id, "projects")
   const display = useProjectPreferences(workspaceId, user.id, team?.id)
@@ -103,6 +108,13 @@ export function ProjectsPage({
   useEffect(() => {
     root.current?.focus({ preventScroll: true })
   }, [])
+  function openProject(
+    project: InitiativeProject,
+    tab: "overview" | "activity" | "issues" = "overview"
+  ) {
+    if (onOpenProject) onOpenProject(project, tab)
+    else setEditing(project)
+  }
   function setPreferences(next: ProjectPreferences) {
     const saved = display.save(next)
     if (
@@ -454,7 +466,7 @@ export function ProjectsPage({
                 state={store.state}
                 preferences={preferences}
                 directory={directory}
-                onOpen={setEditing}
+                onOpen={openProject}
                 onPatch={patch}
                 writable={store.writable}
                 stats={issueStats.stats}
@@ -625,11 +637,12 @@ export function ProjectsPage({
                 if (preferences.closed === "Only")
                   setPreferences({ ...preferences, closed: "All" })
               }
+              if (creating && onOpenProject) onOpenProject(project)
               toast.success(creating ? "Project created" : "Project saved", {
                 description: project.name,
                 action: {
                   label: "View project",
-                  onClick: () => setEditing(project),
+                  onClick: () => openProject(project),
                 },
               })
             }

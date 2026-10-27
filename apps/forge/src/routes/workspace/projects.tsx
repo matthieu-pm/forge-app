@@ -10,6 +10,7 @@ export const Route = createFileRoute("/workspace/projects")({
   component: Page,
 })
 function Page() {
+  const navigate = Route.useNavigate()
   const { authState } = Route.useRouteContext()
   const directory = Route.useLoaderData()
   if (!authState.workspace || !authState.user) return null
@@ -21,6 +22,13 @@ function Page() {
         id: authState.user.id,
         name: authState.user.name || "You",
         image: authState.user.image,
+      }}
+      onOpenProject={(project, tab = "overview") => {
+        void navigate({
+          to: "/projects/$projectId",
+          params: { projectId: project.id },
+          search: { tab },
+        })
       }}
       people={directory.people}
       teams={directory.teams}

@@ -204,33 +204,36 @@ export function InitiativeTable({
         </button>
       )
     }
-    if (property === "Active projects")
+    if (property === "Active projects") {
+      const activeProjects = item.projects.filter(
+        (project) => project.status === "Active"
+      )
+      if (!activeProjects.length) return null
       return (
         <button
           aria-label={`View active projects for ${item.name}`}
           onClick={() => onOpen(item, "projects")}
-          className="flex min-h-7 min-w-8 items-center gap-1 rounded outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring"
+          className={cn(directoryControlClassName, "min-w-6")}
         >
-          {item.projects
-            .filter((project) => project.status === "Active")
-            .map((project) => (
-              <span
-                key={project.id}
-                title={project.name}
-                className={cn(
-                  "size-2 rounded-full",
-                  project.health === "On track"
-                    ? "bg-emerald-500"
-                    : project.health === "At risk"
-                      ? "bg-amber-500"
-                      : project.health === "Off track"
-                        ? "bg-red-500"
-                        : "bg-muted-foreground/50"
-                )}
-              />
-            ))}
+          {activeProjects.map((project) => (
+            <span
+              key={project.id}
+              title={project.name}
+              className={cn(
+                "size-2 rounded-full",
+                project.health === "On track"
+                  ? "bg-emerald-500"
+                  : project.health === "At risk"
+                    ? "bg-amber-500"
+                    : project.health === "Off track"
+                      ? "bg-red-500"
+                      : "bg-muted-foreground/50"
+              )}
+            />
+          ))}
         </button>
       )
+    }
     const value =
       property === "Created"
         ? item.createdAt

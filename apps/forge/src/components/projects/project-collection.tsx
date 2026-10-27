@@ -1,9 +1,13 @@
 import { Fragment, useState } from "react"
+import { Link } from "@tanstack/react-router"
+import { ProjectStatusMark } from "./project-properties"
 import { projectChoices } from "./project-view-controls"
 import type { CSSProperties, ReactNode } from "react"
 import type { InitiativeProject, InitiativeStore } from "@/lib/initiatives"
 import type { ProjectPreferences } from "@/lib/projects"
 import type { ProjectDirectory } from "./project-view-controls"
+import { Button } from "@/components/ui/button"
+import { ActionHint } from "@/components/ui/action-icon-button"
 import { projectValues } from "@/lib/projects"
 import { targetLabel, targetTimestamp } from "@/lib/initiatives"
 import { projectStatusName } from "@/components/initiatives/initiative-projects"
@@ -18,6 +22,7 @@ import {
 } from "@/components/issues/issue-controls"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { cn } from "@/lib/utils"
+import { tablePropertyIconClassName } from "@/components/ui/table-property-control"
 import {
   DirectoryNoUpdates,
   DirectoryRowCheckbox,
@@ -57,7 +62,10 @@ type Props = {
   state: InitiativeStore
   preferences: ProjectPreferences
   directory: ProjectDirectory
-  onOpen: (project: InitiativeProject) => void
+  onOpen: (
+    project: InitiativeProject,
+    tab?: "overview" | "activity" | "issues"
+  ) => void
   onPatch: (
     project: InitiativeProject,
     patch: Partial<InitiativeProject>
@@ -77,15 +85,10 @@ function ProjectCell({
   writable,
   stats,
   statsError,
+  onOpen,
 }: Omit<
   Props,
-  | "projects"
-  | "state"
-  | "preferences"
-  | "onOpen"
-  | "onSort"
-  | "selected"
-  | "onSelect"
+  "projects" | "state" | "preferences" | "onSort" | "selected" | "onSelect"
 > & {
   property: string
   project: InitiativeProject
@@ -105,9 +108,35 @@ function ProjectCell({
       <IssuePicker
         label={`Change ${field.toLowerCase()} for ${project.name}`}
         value={value}
+        shortcut={
+          field === "Status"
+            ? "P, then S"
+            : field === "Priority"
+              ? "P, then P"
+              : field === "Lead"
+                ? "P, then A"
+                : undefined
+        }
+        placeholder={
+          field === "Lead" ? "Set lead…" : `Change ${field.toLowerCase()}…`
+        }
+        footer={
+          field === "Lead" ? (
+            <Link
+              to="/settings/members"
+              className="flex h-8 items-center gap-2 px-2 text-xs"
+            >
+              Invite and add…
+            </Link>
+          ) : undefined
+        }
         options={projectChoices(field, directory)}
         onChange={(next) => onPatch(project, patch(next))}
-        className={directoryControlClassName}
+        className={cn(
+          directoryControlClassName,
+          (field === "Priority" || (field === "Lead" && !lead)) &&
+            tablePropertyIconClassName
+        )}
       >
         {children}
       </IssuePicker>
@@ -133,13 +162,27 @@ function ProjectCell({
       )
     case "Health":
       return (
-        <span className="inline-flex items-center gap-2 text-muted-foreground">
-          {project.health === "Update missing" ? (
-            <DirectoryNoUpdates />
-          ) : (
-            <InitiativeHealthMark health={project.health} />
-          )}
-        </span>
+        <ActionHint
+          label={
+            project.health === "Update missing"
+              ? "There are no updates for this project"
+              : project.health
+          }
+        >
+          <Button
+            variant="ghost"
+            size="sm"
+            className={directoryControlClassName}
+            aria-label={`Write update for ${project.name}`}
+            onClick={() => onOpen(project, "activity")}
+          >
+            {project.health === "Update missing" ? (
+              <DirectoryNoUpdates />
+            ) : (
+              <InitiativeHealthMark health={project.health} />
+            )}
+          </Button>
+        </ActionHint>
       )
     case "Status":
       return pick(
@@ -147,14 +190,7 @@ function ProjectCell({
         project.status,
         (status) => ({ status: status as InitiativeProject["status"] }),
         <>
-          <span
-            title={projectStatusName(project.status)}
-            className={cn(
-              "size-3 rounded-full border-2 border-dotted border-amber-500",
-              project.status === "Completed" && "border-[#5e6ad2] bg-[#5e6ad2]",
-              project.status === "Canceled" && "border-muted-foreground"
-            )}
-          />
+          <ProjectStatusMark status={project.status} />
           <span>
             {statsError
               ? "—"
@@ -260,7 +296,19 @@ function ProjectCell({
       ) : null
     case "Issues":
       return (
-        <span className="tabular-nums">{statsError ? "—" : stat.count}</span>
+        <ActionHint
+          label={`${stat.count} ${stat.count === 1 ? "issue" : "issues"}`}
+        >
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(directoryControlClassName, "tabular-nums")}
+            aria-label={`Open issues for ${project.name}`}
+            onClick={() => onOpen(project, "issues")}
+          >
+            {statsError ? "—" : stat.count}
+          </Button>
+        </ActionHint>
       )
     case "Created":
     case "Updated": {

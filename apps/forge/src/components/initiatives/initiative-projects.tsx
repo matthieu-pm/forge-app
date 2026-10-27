@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from "react"
 import {
   InitiativeHealthMark,
+  InitiativeMark,
   InitiativePropertyPicker,
   TargetPicker,
   initiativePrimary,
@@ -50,6 +51,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
+import { ProjectInitiativePicker } from "@/components/projects/project-initiative-picker"
 
 export const projectStatuses = [
   "Backlog",
@@ -61,7 +63,7 @@ export const projectStatuses = [
 ] as const
 export const projectStatusName = (status: InitiativeProject["status"]) =>
   status === "Active" ? "In Progress" : status
-const projectIcon = {
+export const projectIcon = {
   kind: "icon" as const,
   value: "CubeIcon",
   color: "#5e6ad2",
@@ -344,32 +346,15 @@ export function ProjectDialog({
               />
               {item ? (
                 <span className="inline-flex h-6 items-center gap-1 rounded-full border border-border/40 bg-muted/50 px-2 text-xs">
-                  <IssueIcon name="layers" className="text-red-400" />
+                  <InitiativeMark item={item} />
                   {item.name}
                 </span>
               ) : (
-                <IssuePicker
-                  label="Change project initiatives"
-                  multiple
-                  value={initiativeIds.join(",")}
-                  options={(initiatives ?? []).map((value) => ({
-                    value: value.id,
-                    label: value.name,
-                  }))}
-                  onChange={(value) =>
-                    setInitiativeIds(
-                      value
-                        .split(",")
-                        .map((id) => id.trim())
-                        .filter(Boolean)
-                    )
-                  }
-                  className="h-6 rounded-full border border-border/40 bg-muted/50 px-2 text-xs"
-                >
-                  <IssueIcon name="layers" />
-                  Initiatives
-                  {initiativeIds.length ? ` (${initiativeIds.length})` : ""}
-                </IssuePicker>
+                <ProjectInitiativePicker
+                  initiatives={initiatives ?? []}
+                  value={initiativeIds}
+                  onChange={setInitiativeIds}
+                />
               )}
               <InitiativePropertyPicker
                 item={propertyItem}
@@ -738,6 +723,7 @@ export function InitiativeProjects({
       {!items.length ? (
         <IllustratedEmptyState
           kind="projects"
+          align="center"
           actions={addMenu}
           className="rounded-lg border border-solid border-border/50"
         >
@@ -751,10 +737,10 @@ export function InitiativeProjects({
         <div className="overflow-x-auto">
           <div
             className="min-w-[600px] text-xs"
-            style={{ minWidth: Math.max(350, 230 + columns.length * 115) }}
+            style={{ minWidth: Math.max(350, 246 + columns.length * 115) }}
           >
             <div
-              className="grid h-9 items-center gap-3 text-muted-foreground"
+              className="grid h-9 items-center gap-3 px-2 text-muted-foreground"
               style={{
                 gridTemplateColumns: `minmax(180px,1fr) repeat(${columns.length},105px) 28px`,
               }}
@@ -778,7 +764,7 @@ export function InitiativeProjects({
               <Fragment key={group.name}>
                 {group.name && (
                   <button
-                    className="my-2 flex w-full items-center gap-2 text-[11px] text-muted-foreground"
+                    className="my-2 flex w-full items-center gap-2 px-2 text-[11px] text-muted-foreground"
                     aria-label={`${collapsed.includes(group.name) ? "Expand" : "Collapse"} ${group.name} projects`}
                     onClick={() =>
                       setCollapsed((current) =>
@@ -803,7 +789,7 @@ export function InitiativeProjects({
                   group.items.map((project) => (
                     <div
                       key={project.id}
-                      className="grid min-h-11 items-center gap-3 rounded-md hover:bg-muted/35"
+                      className="grid min-h-11 items-center gap-3 rounded-md px-2 hover:bg-muted/35"
                       style={{
                         gridTemplateColumns: `minmax(180px,1fr) repeat(${columns.length},105px) 28px`,
                       }}

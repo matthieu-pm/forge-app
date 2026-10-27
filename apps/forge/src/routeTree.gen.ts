@@ -25,6 +25,7 @@ import { Route as ApiOpenapiDotjsonRouteImport } from './routes/api/openapi[.]js
 import { Route as AuthDesktopRouteImport } from './routes/auth/desktop'
 import { Route as JoinTokenRouteImport } from './routes/join.$token'
 import { Route as OnboardingWorkspaceRouteImport } from './routes/onboarding/workspace'
+import { Route as ProjectsProjectIdRouteImport } from './routes/projects/$projectId'
 import { Route as ReviewsCreatedRouteImport } from './routes/reviews_.created'
 import { Route as SettingsIndexRouteImport } from './routes/settings.index'
 import { Route as SettingsAiRouteImport } from './routes/settings.ai'
@@ -193,6 +194,11 @@ const JoinTokenRoute = JoinTokenRouteImport.update({
 const OnboardingWorkspaceRoute = OnboardingWorkspaceRouteImport.update({
   id: '/onboarding/workspace',
   path: '/onboarding/workspace',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
+  id: '/projects/$projectId',
+  path: '/projects/$projectId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReviewsCreatedRoute = ReviewsCreatedRouteImport.update({
@@ -695,6 +701,7 @@ export interface FileRoutesByFullPath {
   '/auth/desktop': typeof AuthDesktopRoute
   '/join/$token': typeof JoinTokenRoute
   '/onboarding/workspace': typeof OnboardingWorkspaceRoute
+  '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/reviews/created': typeof ReviewsCreatedRoute
   '/settings/ai': typeof SettingsAiRoute
   '/settings/api': typeof SettingsApiRoute
@@ -801,6 +808,7 @@ export interface FileRoutesByTo {
   '/auth/desktop': typeof AuthDesktopRoute
   '/join/$token': typeof JoinTokenRoute
   '/onboarding/workspace': typeof OnboardingWorkspaceRoute
+  '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/reviews/created': typeof ReviewsCreatedRoute
   '/settings/ai': typeof SettingsAiRoute
   '/settings/api': typeof SettingsApiRoute
@@ -904,6 +912,7 @@ export interface FileRoutesById {
   '/auth/desktop': typeof AuthDesktopRoute
   '/join/$token': typeof JoinTokenRoute
   '/onboarding/workspace': typeof OnboardingWorkspaceRoute
+  '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/reviews_/created': typeof ReviewsCreatedRoute
   '/settings/ai': typeof SettingsAiRoute
   '/settings/api': typeof SettingsApiRoute
@@ -1013,6 +1022,7 @@ export interface FileRouteTypes {
     | '/auth/desktop'
     | '/join/$token'
     | '/onboarding/workspace'
+    | '/projects/$projectId'
     | '/reviews/created'
     | '/settings/ai'
     | '/settings/api'
@@ -1119,6 +1129,7 @@ export interface FileRouteTypes {
     | '/auth/desktop'
     | '/join/$token'
     | '/onboarding/workspace'
+    | '/projects/$projectId'
     | '/reviews/created'
     | '/settings/ai'
     | '/settings/api'
@@ -1221,6 +1232,7 @@ export interface FileRouteTypes {
     | '/auth/desktop'
     | '/join/$token'
     | '/onboarding/workspace'
+    | '/projects/$projectId'
     | '/reviews_/created'
     | '/settings/ai'
     | '/settings/api'
@@ -1329,6 +1341,7 @@ export interface RootRouteChildren {
   AuthDesktopRoute: typeof AuthDesktopRoute
   JoinTokenRoute: typeof JoinTokenRoute
   OnboardingWorkspaceRoute: typeof OnboardingWorkspaceRoute
+  ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
   ReviewsCreatedRoute: typeof ReviewsCreatedRoute
   SettingsTeamsRoute: typeof SettingsTeamsRouteWithChildren
   TeamsTeamSlugRoute: typeof TeamsTeamSlugRouteWithChildren
@@ -1461,6 +1474,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding/workspace'
       fullPath: '/onboarding/workspace'
       preLoaderRoute: typeof OnboardingWorkspaceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projects/$projectId': {
+      id: '/projects/$projectId'
+      path: '/projects/$projectId'
+      fullPath: '/projects/$projectId'
+      preLoaderRoute: typeof ProjectsProjectIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reviews_/created': {
@@ -2361,6 +2381,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthDesktopRoute: AuthDesktopRoute,
   JoinTokenRoute: JoinTokenRoute,
   OnboardingWorkspaceRoute: OnboardingWorkspaceRoute,
+  ProjectsProjectIdRoute: ProjectsProjectIdRoute,
   ReviewsCreatedRoute: ReviewsCreatedRoute,
   SettingsTeamsRoute: SettingsTeamsRouteWithChildren,
   TeamsTeamSlugRoute: TeamsTeamSlugRouteWithChildren,

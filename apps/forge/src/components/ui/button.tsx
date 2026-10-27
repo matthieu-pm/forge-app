@@ -7,6 +7,10 @@ import { cn } from "@/lib/utils"
 export const buttonSurface =
   "border-border bg-[color-mix(in_oklab,var(--background)_96%,var(--foreground))] text-muted-foreground shadow-[inset_0_0_0_1px_var(--background)] hover:bg-[color-mix(in_oklab,var(--background)_92%,var(--foreground))] hover:text-foreground aria-expanded:bg-[color-mix(in_oklab,var(--background)_90%,var(--foreground))] aria-expanded:text-foreground data-popup-open:bg-[color-mix(in_oklab,var(--background)_90%,var(--foreground))] data-popup-open:text-foreground"
 
+// Detail properties use the issue controls' quiet surface, not action-button pills.
+export const propertyButtonClassName =
+  "h-7 w-fit max-w-full justify-start gap-2 rounded-full border-0 bg-transparent px-2 text-[13px] font-normal text-muted-foreground shadow-none hover:bg-muted hover:text-foreground aria-expanded:bg-muted data-popup-open:bg-muted active:translate-y-0"
+
 const buttonVariants = cva(
   "group/button inline-flex shrink-0 items-center justify-center rounded-full border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-[background-color,border-color,color,box-shadow,scale] duration-150 ease-out outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 motion-reduce:transition-none dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {

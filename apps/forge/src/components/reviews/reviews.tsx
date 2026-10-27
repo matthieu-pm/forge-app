@@ -1,7 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Link } from "@tanstack/react-router"
 import { Fragment, useEffect, useMemo, useRef, useState } from "react"
-import { Cancel01Icon } from "@hugeicons/core-free-icons"
+import { ArrowDown01Icon, ArrowRight01Icon, Cancel01Icon } from "@hugeicons/core-free-icons"
 import { ReviewDisplayOptions, ReviewFiltersMenu } from "./review-controls"
 import { ReviewDetail, ReviewStatusIcon } from "./review-detail"
 import type {
@@ -314,9 +314,7 @@ export function Reviews({
                       className="flex h-7 w-full items-center gap-2 rounded-md bg-muted/35 px-2 text-left text-xs font-medium text-muted-foreground"
                     >
                       <span>{group}</span>
-                      <span className="text-[10px] opacity-50">
-                        {collapsedGroups.includes(group) ? "›" : "⌄"}
-                      </span>
+                      <HugeiconsIcon icon={collapsedGroups.includes(group) ? ArrowRight01Icon : ArrowDown01Icon} aria-hidden="true" className="size-3 shrink-0 opacity-50" />
                       <span className="ml-auto text-[10px] opacity-50">
                         {reviews.length}
                       </span>

@@ -45,7 +45,7 @@ import type { ReactNode } from "react"
 import type { IssueDisplay } from "@/lib/team-issues"
 import type { TeamStatus } from "@/lib/team-statuses"
 import { CheckboxMark } from "@/components/ui/checkbox-mark"
-import { Button } from "@/components/ui/button"
+import { Button, propertyButtonClassName } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   Popover,
@@ -116,8 +116,7 @@ export function IssueIcon({
   )
 }
 export const issueChip = "gap-1 rounded-full px-2 text-xs font-normal"
-export const issuePropertyControl =
-  "max-w-full gap-2 border-0 bg-transparent text-[13px] text-muted-foreground"
+export const issuePropertyControl = propertyButtonClassName
 export const issuePrimary =
   "rounded-full bg-[#5e6ad2] px-3 text-xs text-white hover:bg-[#6e79e1]"
 export function StatusMark({

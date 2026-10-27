@@ -172,6 +172,7 @@ function AgentRouteContent({
         pathname !== "/my-issues" &&
         !pathname.startsWith("/workspace/initiatives") &&
         pathname !== "/workspace/projects" &&
+        !pathname.startsWith("/projects/") &&
         pathname !== "/workspace/views" &&
         pathname !== "/workspace/signals" &&
         pathname !== "/workspace/calls" &&

@@ -19,6 +19,10 @@ import { issueGroupValue, issuePriorities } from "@/lib/team-issues"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { authClient } from "@/lib/auth-client"
+import {
+  tablePropertyIconClassName,
+  tablePropertySurfaceClassName,
+} from "@/components/ui/table-property-control"
 
 type Members = Array<{ id: string; name: string; image?: string | null }>
 export function InlineIssueProperties({
@@ -91,7 +95,7 @@ export function InlineIssueProperties({
       }
       onChange={(next) => onUpdate(issue, { [property]: next })}
       className={cn(
-        "bg-transparent text-muted-foreground hover:bg-foreground/10",
+        tablePropertySurfaceClassName,
         emptyLabels && issuePropertyControl,
         emptyLabels &&
           (property === "status" ||
@@ -100,7 +104,15 @@ export function InlineIssueProperties({
           "text-foreground",
         emptyLabels &&
           "text-[13px] transition-colors duration-150 hover:bg-muted active:translate-y-0 motion-reduce:transition-none",
-        compact && "size-6 p-0"
+        compact && [
+          tablePropertyIconClassName,
+          property === "assignee"
+            ? "overflow-hidden border-0 shadow-none transition-[background-color,border-color,color,scale] duration-150 ease-out hover:bg-muted/60 hover:text-foreground aria-expanded:bg-muted/60 motion-reduce:transition-none dark:hover:bg-muted/60 [&_[data-slot=avatar]]:size-6 [&_[data-slot=avatar]]:after:pointer-events-none [&_[data-slot=avatar]]:after:z-10 [&_[data-slot=avatar]]:after:border-border/50 [&_[data-slot=avatar]]:after:mix-blend-normal dark:[&_[data-slot=avatar]]:after:mix-blend-normal"
+            : "w-5 border-transparent shadow-none hover:border-transparent hover:bg-transparent aria-expanded:bg-transparent dark:hover:bg-transparent",
+        ],
+        compact &&
+          property !== "assignee" &&
+          "transition-[color,filter] duration-150 ease-out hover:text-foreground hover:brightness-125 motion-reduce:transition-none"
       )}
       footer={
         property === "assignee" ? (
@@ -351,9 +363,9 @@ export function IssueRows({
           event.dataTransfer.setData("text/forge-issue", issue.id)
         }
         className={cn(
-          "group/issue relative flex min-w-0 cursor-pointer items-center gap-1 rounded-lg px-2 text-[13px] focus-within:bg-muted/40 hover:bg-muted/60",
+          "group/issue relative flex min-w-0 cursor-pointer items-center gap-1.5 rounded-lg px-2 text-[13px] focus-within:bg-muted/40 hover:bg-muted/60",
           board
-            ? "relative flex-wrap border border-border/60 bg-popover p-3 shadow-sm"
+            ? "relative flex-wrap gap-1 border border-border/60 bg-popover p-3 shadow-sm"
             : "min-h-10",
           (selected.includes(issue.id) || focusedId === issue.id) &&
             "bg-[#5e6ad2]/20 hover:bg-[#5e6ad2]/25"
@@ -411,9 +423,9 @@ export function IssueRows({
               aria-hidden="true"
               className="invisible col-start-1 row-start-1"
             >
-              {rowIdentifier}-999
+              {board ? `${rowIdentifier}-${issue.number}` : "XXX-999"}
             </span>
-            <span className="col-start-1 row-start-1">
+            <span className="col-start-1 row-start-1 text-left">
               {rowIdentifier}-{issue.number}
             </span>
           </span>
@@ -430,7 +442,7 @@ export function IssueRows({
         )}
         {props.includes("Time in status") && (
           <span
-            className="mr-3 shrink-0 text-xs text-muted-foreground tabular-nums"
+            className="shrink-0 text-xs text-muted-foreground tabular-nums"
             title={`In status since ${new Date(issue.statusChangedAt).toLocaleString()}`}
           >
             {durationLabel(issue.statusChangedAt)}
@@ -577,7 +589,7 @@ export function IssueRows({
           <time
             dateTime={issue.createdAt}
             title={`Created ${new Date(issue.createdAt).toLocaleString()}`}
-            className="ml-3 w-14 shrink-0 text-center text-xs text-muted-foreground tabular-nums"
+            className="w-14 shrink-0 text-center text-xs text-muted-foreground tabular-nums"
           >
             {dateLabel(issue.createdAt)}
           </time>
@@ -586,7 +598,7 @@ export function IssueRows({
           <time
             dateTime={issue.updatedAt}
             title={`Updated ${new Date(issue.updatedAt).toLocaleString()}`}
-            className="ml-2 w-14 shrink-0 text-center text-xs text-muted-foreground tabular-nums"
+            className="w-14 shrink-0 text-center text-xs text-muted-foreground tabular-nums"
           >
             {dateLabel(issue.updatedAt)}
           </time>

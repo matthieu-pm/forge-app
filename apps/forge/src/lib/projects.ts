@@ -71,6 +71,9 @@ export const projectPreferencesSchema = z.object({
   closed: z.enum(["All", "Hide", "Only"]),
   properties: z.array(z.enum(projectProperties)),
   sidebar: z.boolean(),
+  favoriteIds: z.array(z.string()).default([]),
+  subscribedIds: z.array(z.string()).default([]),
+  detailSidebar: z.boolean().default(false),
   sidebarTab: z.enum(["Health", "Initiatives", "Teams", "Leads"]),
   views: z.array(
     z.object({
@@ -89,6 +92,9 @@ export const defaultProjectPreferences = (): ProjectPreferences => ({
   closed: "All",
   properties: ["Health", "Priority", "Lead", "Target date", "Issues", "Status"],
   sidebar: false,
+  favoriteIds: [],
+  subscribedIds: [],
+  detailSidebar: false,
   sidebarTab: "Health",
   views: [],
 })

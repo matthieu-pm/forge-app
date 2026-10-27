@@ -57,6 +57,7 @@ export type ViewIssuesProps = {
   teams: Array<TeamSummary>
   team?: TeamSummary
   teamIds?: Array<string>
+  project?: { id: string; name: string }
   filters: Filters
   display: IssueDisplay
   onFiltersChange: (filters: Filters) => void
@@ -77,6 +78,7 @@ export function ViewIssues({
   teams,
   team,
   teamIds,
+  project,
   filters,
   display,
   onFiltersChange,
@@ -124,7 +126,14 @@ export function ViewIssues({
       (!team || context.team.id === team.id) &&
       (!teamIds?.length || teamIds.includes(context.team.id))
   )
-  const allIssues = scoped.flatMap((context) => context.issues)
+  const allIssues = scoped
+    .flatMap((context) => context.issues)
+    .filter(
+      (issue) =>
+        !project ||
+        issue.project === project.id ||
+        issue.project === project.name
+    )
   const contexts = new Map<string, IssueRowContext>(
     scoped.flatMap((context) =>
       context.issues.map(
@@ -239,6 +248,7 @@ export function ViewIssues({
             "todo"
         ),
         ...patch,
+        ...(project ? { project: project.id } : {}),
       },
       key: crypto.randomUUID(),
     })
@@ -402,7 +412,9 @@ export function ViewIssues({
           <p>
             {filters.rules.length
               ? "Adjust your filters to see more issues."
-              : "Issues in your teams will appear here."}
+              : project
+                ? "Issues assigned to this project will appear here."
+                : "Issues in your teams will appear here."}
           </p>
         </IllustratedEmptyState>
       )}
@@ -519,6 +531,7 @@ export function ViewIssues({
           team={editor.team}
           directory={directory}
           initial={editor.draft}
+          projectOptions={project ? [project] : []}
           labels={
             scoped.find((context) => context.team.id === editor.team.id)
               ?.labels ?? []

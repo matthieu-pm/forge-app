@@ -3,6 +3,7 @@ import {
   InitiativeHealthMark,
   initiativePrimary,
 } from "./initiative-properties"
+import type { ReactNode } from "react"
 import type {
   Initiative,
   InitiativeComment,
@@ -50,7 +51,11 @@ export function ActivityComposer({
   onPublish,
   writable,
   onAsk,
+  subject = "Initiative",
+  children,
 }: {
+  subject?: "Initiative" | "Project"
+  children?: ReactNode
   draft: ActivityDraft
   onDraft: (draft: ActivityDraft) => void
   onPublish: () => boolean
@@ -106,7 +111,7 @@ export function ActivityComposer({
   }
   return (
     <form
-      aria-label="Initiative activity composer"
+      aria-label={`${subject} activity composer`}
       className="rounded-xl border border-border/30 bg-muted/35 p-3.5"
       onSubmit={(event) => {
         event.preventDefault()
@@ -155,7 +160,7 @@ export function ActivityComposer({
       </div>
       <Textarea
         aria-label={
-          draft.kind === "update" ? "Initiative update" : "Initiative comment"
+          draft.kind === "update" ? `${subject} update` : `${subject} comment`
         }
         value={draft.text}
         onChange={(event) => onDraft({ ...draft, text: event.target.value })}
@@ -163,11 +168,12 @@ export function ActivityComposer({
         maxLength={20000}
         placeholder={
           draft.kind === "update"
-            ? "Write an initiative update…"
+            ? `Write a ${subject.toLowerCase()} update…`
             : "Leave a comment…"
         }
         className="mt-3 max-h-64 min-h-24 resize-none overflow-y-auto rounded-none border-0 bg-transparent! p-0 text-sm shadow-none focus-visible:ring-0"
       />
+      {children}
       {draft.attachments.length > 0 && (
         <div className="mb-3 flex flex-wrap gap-1">
           {draft.attachments.map((attachment) => (

@@ -4,6 +4,8 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import type { Initiative, InitiativePerson } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamLabel } from "@/lib/team-labels"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { parseTargetDateInput } from "@/lib/target-dates"
 import {
   AssigneeMark,
   IssueIcon,
@@ -11,7 +13,7 @@ import {
   PriorityMark,
 } from "@/components/issues/issue-controls"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
-import { Button } from "@/components/ui/button"
+import { Button, propertyButtonClassName } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
   Popover,
@@ -25,6 +27,7 @@ import {
 } from "@/lib/initiatives"
 import { cn } from "@/lib/utils"
 import { directoryControlClassName } from "@/components/ui/directory-table"
+import { tablePropertyIconClassName } from "@/components/ui/table-property-control"
 
 export const initiativeChip =
   "h-6 max-w-full gap-1.5 rounded-full bg-muted/65 px-2 text-xs font-normal text-muted-foreground"
@@ -128,13 +131,41 @@ export function TargetPicker({
 }) {
   const [open, setOpen] = useState(false)
   const year = new Date().getFullYear()
-  const [selectedYear, setSelectedYear] = useState(year)
+  const [selectedYear, setSelectedYear] = useState(
+    Number(value.slice(0, 4)) || year
+  )
+  const [input, setInput] = useState(value ? targetLabel(value) : "")
+  const [error, setError] = useState("")
+  const [precision, setPrecision] = useState(
+    /-Q/.test(value) || !value
+      ? "Quarter"
+      : /-H/.test(value)
+        ? "Half-year"
+        : value.length === 4
+          ? "Year"
+          : value.length === 7
+            ? "Month"
+            : "Day"
+  )
+  const dateLabel = label.toLowerCase().includes("start")
+    ? "Start date"
+    : "Target date"
   function choose(next: string) {
     onChange(next)
     setOpen(false)
   }
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next)
+        if (next) {
+          setInput(value ? targetLabel(value) : "")
+          setError("")
+          setSelectedYear(Number(value.slice(0, 4)) || year)
+        }
+      }}
+    >
       <PopoverTrigger
         render={
           <Button
@@ -145,39 +176,58 @@ export function TargetPicker({
             className={cn(
               initiativeChip,
               compact && directoryControlClassName,
-              plain &&
-                "h-7 max-w-full justify-start rounded-md border-0 bg-transparent px-1 text-[13px] font-normal hover:bg-muted/60"
+              compact && !value && tablePropertyIconClassName,
+              plain && propertyButtonClassName,
+              plain && value && "text-foreground"
             )}
           />
         }
       >
-        <IssueIcon
-          name="date"
-          className={cn(
-            compact &&
-              !value &&
-              "opacity-0 group-focus-within/directory:opacity-100 group-hover:opacity-100 group-hover/directory:opacity-100"
-          )}
-        />
+        <IssueIcon name="date" />
         {value ? targetLabel(value) : !compact && emptyLabel}
       </PopoverTrigger>
       <PopoverContent
         align="start"
         side={plain ? "left" : "bottom"}
-        className="w-64 gap-3 rounded-xl p-3"
+        className="w-[320px] max-w-[calc(100vw-24px)] gap-3 rounded-xl p-3"
       >
         <label className="text-xs text-muted-foreground">
-          Target date
+          {dateLabel}
           <Input
-            aria-label="Set initiative target date"
-            type="date"
-            value={/^\d{4}-\d{2}-\d{2}$/.test(value) ? value : ""}
+            autoFocus
+            aria-label={`Set ${dateLabel.toLowerCase()}`}
+            placeholder="Try: May 2027, Q4, 05/20/2027"
+            value={input}
             onChange={(event) => {
-              if (event.target.value) choose(event.target.value)
+              setInput(event.target.value)
+              setError("")
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault()
+                const next = parseTargetDateInput(input)
+                if (next === null)
+                  setError("Enter a date, month, quarter, half-year, or year.")
+                else choose(next)
+              }
             }}
             className="mt-2 h-8 text-xs"
           />
         </label>
+        {error && (
+          <p role="alert" className="text-xs text-destructive">
+            {error}
+          </p>
+        )}
+        <Tabs value={precision} onValueChange={setPrecision}>
+          <TabsList className="w-full justify-between gap-0.5">
+            {["Day", "Month", "Quarter", "Half-year", "Year"].map((mode) => (
+              <TabsTrigger key={mode} value={mode} className="px-2 text-xs">
+                {mode}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
         <div className="flex items-center justify-between border-t border-border/40 pt-3">
           <Button
             variant="ghost"
@@ -197,20 +247,78 @@ export function TargetPicker({
             <IssueIcon name="down" className="-rotate-90" />
           </Button>
         </div>
-        <div className="grid grid-cols-4 gap-1">
-          {[1, 2, 3, 4].map((quarter) => (
-            <Button
-              key={quarter}
-              variant="secondary"
-              size="sm"
-              className="rounded-md text-xs"
-              aria-pressed={value === `${selectedYear}-Q${quarter}`}
-              onClick={() => choose(`${selectedYear}-Q${quarter}`)}
-            >
-              Q{quarter}
-            </Button>
-          ))}
-        </div>
+        {precision === "Day" ? (
+          <Input
+            aria-label={`Choose ${dateLabel.toLowerCase()} day`}
+            type="date"
+            value={/^\d{4}-\d{2}-\d{2}$/.test(value) ? value : ""}
+            onChange={(event) => {
+              if (event.target.value) choose(event.target.value)
+            }}
+          />
+        ) : (
+          <div className="max-h-56 space-y-3 overflow-y-auto">
+            {[selectedYear - 1, selectedYear, selectedYear + 1].map(
+              (shownYear) => (
+                <div key={shownYear}>
+                  <p className="mb-2 text-xs text-muted-foreground">
+                    {shownYear}
+                  </p>
+                  <div
+                    className={cn(
+                      "grid gap-1",
+                      precision === "Half-year"
+                        ? "grid-cols-2"
+                        : precision === "Year"
+                          ? "grid-cols-1"
+                          : "grid-cols-4"
+                    )}
+                  >
+                    {(precision === "Month"
+                      ? Array.from({ length: 12 }, (_, index) => ({
+                          label: new Date(2000, index, 1).toLocaleDateString(
+                            "en",
+                            { month: "short" }
+                          ),
+                          value: `${shownYear}-${String(index + 1).padStart(2, "0")}`,
+                        }))
+                      : precision === "Quarter"
+                        ? [1, 2, 3, 4].map((q) => ({
+                            label: `Q${q}`,
+                            value: `${shownYear}-Q${q}`,
+                          }))
+                        : precision === "Half-year"
+                          ? [1, 2].map((h) => ({
+                              label: `H${h}`,
+                              value: `${shownYear}-H${h}`,
+                            }))
+                          : [
+                              {
+                                label: String(shownYear),
+                                value: String(shownYear),
+                              },
+                            ]
+                    ).map((option) => (
+                      <Button
+                        key={option.value}
+                        variant={
+                          value === option.value ? "default" : "secondary"
+                        }
+                        size="sm"
+                        className="rounded-full text-xs"
+                        aria-label={`${option.label}${precision === "Year" ? "" : ` ${shownYear}`}`}
+                        aria-pressed={value === option.value}
+                        onClick={() => choose(option.value)}
+                      >
+                        {option.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )
+            )}
+          </div>
+        )}
         <Button
           variant="ghost"
           size="sm"
@@ -254,13 +362,22 @@ export function InitiativePropertyPicker({
   detail?: boolean
 }) {
   const suffix = item.name ? ` for ${item.name}` : ""
+  const owner = people.find((person) => person.id === item.ownerId)
   const className = cn(
     initiativeChip,
     compact && directoryControlClassName,
+    compact &&
+      (property === "priority" || (property === "owner" && !owner)) &&
+      tablePropertyIconClassName,
+    detail && propertyButtonClassName,
     detail &&
-      "h-7 max-w-full justify-start rounded-md border-0 bg-transparent px-1 text-[13px] font-normal hover:bg-muted/60"
+      (property === "status" ||
+        (property === "priority" && item.priority !== "No priority") ||
+        (property === "owner" && item.ownerId) ||
+        (property === "labels" && item.labelIds.length) ||
+        (property === "teams" && item.teamIds.length)) &&
+      "text-foreground"
   )
-  const owner = people.find((person) => person.id === item.ownerId)
   let control
   if (property === "target")
     control = (
