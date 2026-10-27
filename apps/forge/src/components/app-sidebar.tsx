@@ -4,6 +4,7 @@ import * as React from "react"
 import {
   AccountSetting01Icon,
   Add01Icon,
+  ArrowDown01Icon,
   ArrowRight01Icon,
   CrownIcon,
   Logout03Icon,
@@ -17,6 +18,7 @@ import type { AppNavChild } from "@/lib/app-navigation"
 import type { AuthState, WorkspaceSummary } from "@/lib/auth-types"
 import type { TeamSummary } from "@/lib/team-contract"
 import { ViewFavorites } from "@/components/views/view-favorites"
+import { SidebarIssueButton } from "@/components/issues/sidebar-issue-button"
 import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { GettingStartedChecklist } from "@/components/getting-started-checklist"
@@ -496,10 +498,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     <Sidebar variant="inset" {...props}>
       <SidebarHeader className="px-2 pt-3 pb-1">
         <SidebarMenu>
-          <SidebarMenuItem>
+          <SidebarMenuItem className="flex min-w-0 items-center justify-between gap-2">
             <DropdownMenu actionsRef={workspaceMenuActions}>
               <SidebarMenuButton
-                className="h-7 px-2 py-1 text-sm font-medium text-sidebar-foreground aria-expanded:bg-sidebar-accent aria-expanded:text-sidebar-accent-foreground"
+                className="h-7 w-fit max-w-[calc(100%-36px)] min-w-0 px-2 py-1 text-sm font-medium text-sidebar-foreground group-data-[collapsible=icon]:max-w-none aria-expanded:bg-sidebar-accent aria-expanded:text-sidebar-accent-foreground"
                 render={<DropdownMenuTrigger />}
               >
                 <Avatar className="size-5 after:hidden">
@@ -514,9 +516,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   {workspaceName}
                 </span>
                 <HugeiconsIcon
-                  icon={ArrowRight01Icon}
+                  icon={ArrowDown01Icon}
                   strokeWidth={2}
-                  className="ml-auto transition-transform duration-200 group-aria-expanded/menu-button:rotate-90"
+                  className="shrink-0 transition-transform duration-150 ease-out group-aria-expanded/menu-button:rotate-180 motion-reduce:transition-none"
                 />
               </SidebarMenuButton>
               <DropdownMenuContent
@@ -590,6 +592,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            <SidebarIssueButton pathname={pathname} />
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
