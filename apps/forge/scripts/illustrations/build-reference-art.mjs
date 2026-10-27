@@ -50,7 +50,16 @@ export function buildReferenceArt(k, G, A, scene) {
         extra
       )
     }
-    const turned = (F, s0, s1, r, tone = "mid", lit = false, extra = "") =>
+    const turned = (
+      F,
+      s0,
+      s1,
+      r,
+      tone = "mid",
+      lit = false,
+      extra = "",
+      move = [0, 0, 0]
+    ) =>
       put(
         G.solidOf(
           [
@@ -65,15 +74,17 @@ export function buildReferenceArt(k, G, A, scene) {
         G.add3(F.o, G.mul3(F.a, (s0 + s1) / 2)),
         tone,
         lit,
-        [0, 0, 0],
+        move,
         extra
       )
-    const ring = (F, s0, s1, rin, rout, tone = "mid") =>
+    const ring = (F, s0, s1, rin, rout, tone = "mid", move = [0, 0, 0]) =>
       put(
         G.ringBand(s0, s1, rin, rout, F, P),
         A.ring(F, s0, s1, rin, rout),
         G.add3(F.o, G.mul3(F.a, (s0 + s1) / 2)),
-        tone
+        tone,
+        false,
+        move
       )
     const prism = (
       F,
@@ -172,17 +183,19 @@ export function buildReferenceArt(k, G, A, scene) {
         { tone: "lo", free: true }
       )
     const finish = (move = [0, 0, 0], ground) => {
-      const states = [
-        0,
-        1,
-        ...Array.from({ length: 61 }, (_, i) => ({
-          label: `motion ${i}/60`,
-          shares: { slide: i / 60 },
-        })),
-      ]
+      const states = move.some(Boolean)
+        ? [
+            0,
+            1,
+            ...Array.from({ length: 61 }, (_, i) => ({
+              label: `motion ${i}/60`,
+              shares: { slide: i / 60 },
+            })),
+          ]
+        : [0]
       A.settle(R, P, { states })
 
-      A.auditOrExit(R, P, { ground, frames: states, apart: true })
+      A.auditOrExit(R, P, { ground, frames: states, apart: move.some(Boolean) })
       const [x, y] = k.iso(move, { ...P, origin: [0, 0] })
       return {
         body: R.items
@@ -239,13 +252,20 @@ export function buildReferenceArt(k, G, A, scene) {
       turned(F, 3.5, 6, 9, "hi")
       turned(F, 6, 8, 5, "lo")
       turned(F, 8, 10, 4, "hi")
+      if (side === 1) {
+        const origin = k.iso([20, -21, 39], o.P)
+        const u = k.iso([0, 1, 0], { ...o.P, origin: [0, 0] })
+        const v = k.iso([0, 0, 1], { ...o.P, origin: [0, 0] })
+        o.R.items[o.R.items.length - 1].svg +=
+          `<g transform="matrix(${u[0]} ${u[1]} ${v[0]} ${v[1]} ${origin[0]} ${origin[1]})"><g data-motion="focus-dial"><path d="M-.5 .7H.5V3.3H-.5Z" style="fill:var(--art-lit);stroke:none"/></g></g>`
+      }
     }
-    // Mechanical stage meets the front face of the column at y=-12.
-    slab(-30, -12, 60, 47, 42, 3, "mid")
-    slab(-27, -9, 54, 41, 45, 0.5, "lo")
-    for (const y of [-5, 28]) slab(-25, y, 50, 2, 45.5, 2, "mid")
-    for (const x of [-27, 25]) slab(x, -5, 2, 35, 45.5, 3, "hi")
-    const move = [3, 0, 0]
+    // The focus carriage travels up the front face of the column.
+    const move = [0, 0, 7]
+    slab(-30, -12, 60, 47, 42, 3, "mid", false, move)
+    slab(-27, -9, 54, 41, 45, 0.5, "lo", false, move)
+    for (const y of [-5, 28]) slab(-25, y, 50, 2, 45.5, 2, "mid", false, move)
+    for (const x of [-27, 25]) slab(x, -5, 2, 35, 45.5, 3, "hi", false, move)
     slab(-20, -5, 40, 35, 47.5, 0.7, "hi", true, move, 1)
     slab(-6, 7, 12, 12, 48.2, 0.3, "lo", false, move, 1)
     for (const x of [-18, 14]) slab(x, 0, 3, 26, 48.2, 0.8, "mid", false, move)
@@ -253,8 +273,13 @@ export function buildReferenceArt(k, G, A, scene) {
     turned(vertical(0, 12), 10, 17, 12, "mid")
     turned(vertical(0, 12), 17, 19, 10, "hi")
     turned(vertical(0, 12), 19, 20, 7, "lo")
-    turned(vertical(0, 12), 34, 42, 8, "mid")
-    ring(vertical(0, 12), 32, 34, 3, 10, "hi")
+    o.R.items[o.R.items.length - 1].svg +=
+      `<path data-motion="lamp" d="${k.pathOf(
+        k.circleRing(0, 12, 6, 48).map(([x, y]) => k.iso([x, y, 20.01], o.P)),
+        true
+      )}" style="fill:var(--art-lit);stroke:none"/>`
+    turned(vertical(0, 12), 34, 42, 8, "mid", false, "", move)
+    ring(vertical(0, 12), 32, 34, 3, 10, "hi", move)
     // Nosepiece and three objective lenses, each on its own turret seat.
     turned(vertical(0, 22), 81, 85, 10, "mid")
     turned(vertical(0, 22), 78, 81, 12, "hi")
@@ -368,16 +393,15 @@ export function buildReferenceArt(k, G, A, scene) {
     turned(top, 20, 22, 4, "hi")
     turned(top, 22, 29, 1, "hi")
     turned(top, 29, 30, 2, "mid")
-    // Static round hardware; a small scan tab advances along the solar bus.
+    // Round hardware stays attached while the whole craft drifts in orbit.
     for (const side of [-1, 1]) {
       const F2 = G.frameAlong([side * 18, 15, 36], [side, 0, 0])
       turned(F2, 0, 1, 2, "mid")
     }
-    const move = [0, 3, 0]
-    slab(33, -17, 5, 8, 37.9, 0.3, "hi", true, move, 0)
-    return o.finish(move, (s) => s === host)
+    const figure = o.finish([0, 0, 0], (s) => s === host)
+    return { ...figure, body: `<g data-motion="orbit">${figure.body}</g>` }
   }
-  function mailbox() {
+  function mailbox(phase = 0) {
     const o = rig("mailbox", { x: -40, y: -48, w: 80, d: 92, r: 2 }, 116)
     const { slab, prism, turned, rules, P } = o
     const grounds = []
@@ -444,12 +468,32 @@ export function buildReferenceArt(k, G, A, scene) {
     }
     for (const x of [-24, 20]) slab(x, 31.5, 4, 3, 60, 6, "mid")
     slab(-4, 31.5, 8, 4, 88, 3, "hi")
-    // A raised flag is fixed to its side pivot; no detached floating animation.
+    // The stamped flag turns in the side plane around the fixed circular pivot.
     slab(25, 10, 2, 8, 73, 8, "mid")
     const F = G.frameAlong([27, 14, 77], [1, 0, 0])
     turned(F, 0, 2, 3, "hi")
-    slab(29, 13, 1, 2, 77, 25, "hi")
-    slab(29, 13, 1, 13, 96, 6, "hi")
+    const flag = [
+      [-1, 0],
+      [1, 0],
+      [1, 19],
+      [13, 19],
+      [13, 25],
+      [-1, 25],
+    ]
+    const angle = (-65 * phase * Math.PI) / 180
+    const rotated = flag.map(([y, z]) => [
+      y * Math.cos(angle) - z * Math.sin(angle),
+      y * Math.sin(angle) + z * Math.cos(angle),
+    ])
+    const flagFrame = G.frameOf([29, 14, 77], [1, 0, 0], [0, 1, 0], [0, 0, 1])
+    const shape = A.prism(flagFrame, rotated, 0, 0.2, { name: "mailbox.flag" })
+    o.R.solid(shape)
+    const origin = k.iso(flagFrame.o, P),
+      u = k.iso([0, 1, 0], { ...P, origin: [0, 0] }),
+      v = k.iso([0, 0, 1], { ...P, origin: [0, 0] })
+    const svg = `<g transform="matrix(${u[0]} ${u[1]} ${v[0]} ${v[1]} ${origin[0]} ${origin[1]})"><g data-motion="flag" transform="rotate(${-65 * phase})"><path d="${k.pathOf(flag, true)}" style="fill:var(--art-top);stroke:var(--art-hi);stroke-width:.65;stroke-linejoin:round"/></g></g>`
+    o.R.put({ name: "mailbox.flag", at: [29, 14, 88], shapes: [shape], svg })
+    turned(F, 2.2, 2.7, 0.8, "hi")
     // Case-side identification plate, with its rules on that same plane.
     slab(25, -18, 0.5, 21, 64, 10, "lo")
     for (let i = 0; i < 2; i++)
@@ -469,5 +513,12 @@ export function buildReferenceArt(k, G, A, scene) {
         turned(G.frameAlong([x, 31.5, z], [0, 1, 0]), 0, 0.5, 0.9, "hi")
     return o.finish([0, 0, 0], (shape) => grounds.includes(shape))
   }
-  return { reviews: microscope(), signals: satellite(), inbox: mailbox() }
+  const figures = {
+    reviews: microscope(),
+    signals: satellite(),
+    inbox: mailbox(),
+  }
+  if (process.argv.includes("--audit"))
+    for (let i = 1; i <= 16; i++) mailbox(i / 16)
+  return figures
 }

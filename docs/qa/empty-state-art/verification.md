@@ -9,7 +9,7 @@ Thirteen figure families share one camera, app theme colors and sizing. SVG
 geometry is generated ahead of time with the Anatomy kit. No skill files or
 geometry engine are imported by the running app. Motion uses a short CSS
 transition on supported mechanisms, enabled on hover or action focus, and is
-suppressed by reduced motion. The reference mailbox is a still figure.
+suppressed by reduced motion. Inbox, Reviews and Signals now also have gentle visible-only idle motion. The mailbox flag pivots in its side plane, the microscope adjusts its mechanical stage and focus dial with bounded lamp illumination, and the satellite drifts as a rigid body. The shared controller is used by React and the QA gallery, pauses offscreen and follows reduced motion.
 
 Validation:
 
@@ -37,3 +37,18 @@ node apps/forge/scripts/illustrations/build-empty-state-art.mjs --audit
 
 The prismatic figures use kit slabs/frames; the reference-driven microscope,
 satellite and mailbox additionally use recorded turned, saddle and arched solids.
+
+## Motion correction — 2026-10-27
+
+- Replaced the static mailbox flag with a 65° pivot. Checked geometry at 17 angular
+  poses; no unsupported solids, intersections, coverage or depth-order failures.
+- Increased microscope focus-carriage travel to 7 world units; its condenser,
+  slide and clips move with their mounts. Focus dial and lamp make the change
+  legible at the normal icon size. Geometry checks pass across 61 positions.
+- Removed the satellite's unrelated scan tab. Every spacecraft part moves
+  together, with gentle drift and a 3° attitude change.
+- Motion is automatic when visible and responds to hover/action focus. The
+  controller writes CSS variables without React frame rerenders.
+- Verified ongoing phase changes in the app; QA gallery confirms offscreen pause
+  and reduced-motion stillness. Both-theme moving-pose screenshots and line checks
+  pass. Focused TypeScript/lint checks and 17 Inbox/Reviews/Signals tests pass.

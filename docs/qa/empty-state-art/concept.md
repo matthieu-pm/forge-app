@@ -124,3 +124,14 @@ rails, handle, carriage and fasteners); initiative Labels gets a tag-printing
 station (base, feed bed, guides, paper roll housing, die carriage, ticket stack,
 six tag blanks, tag holes, label plates, control keys and fasteners). Each has
 40+ supported prismatic parts and one small sliding assembly.
+
+
+## Motion correction
+
+The three reference-driven figures now share a visible-only motion controller:
+Inbox's flag pivots in its physical side plane, Reviews adjusts its stage,
+condenser and slide as one focus carriage while turning its dial, and Signals
+moves the whole spacecraft with a gentle camera-axis attitude change. The latter
+is a rigid image transform, so every internal depth relationship stays fixed.
+Idle motion pauses offscreen; reduced motion remains still. Other figures retain
+their existing hover/focus transitions.

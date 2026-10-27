@@ -99,3 +99,37 @@
     translate: none !important;
   }
 }
+
+/* Reference figures have visible, object-specific motion, including at rest. */
+.empty-state-content .empty-state-art[data-kind="reviews"] [data-part] {
+  transition: none;
+  translate: calc(var(--art-phase, 0) * var(--art-x, 0px))
+    calc(var(--art-phase, 0) * var(--art-y, 0px));
+}
+.empty-state-art [data-motion="flag"] {
+  transform-origin: 0px 0px;
+  transform: rotate(calc(var(--art-phase, 0) * -65deg));
+}
+.empty-state-art [data-motion="focus-dial"] {
+  transform-origin: 0px 0px;
+  transform: rotate(calc(var(--art-phase, 0) * 110deg));
+}
+.empty-state-art [data-motion="lamp"] {
+  opacity: calc(0.15 + var(--art-phase, 0) * 0.65);
+}
+.empty-state-art [data-motion="orbit"] {
+  transform-origin: 130px 104px;
+  transform: translate(
+      calc(var(--art-phase, 0) * 3px),
+      calc(var(--art-phase, 0) * -7px)
+    )
+    rotate(calc(var(--art-phase, 0) * -3deg));
+}
+@media (prefers-reduced-motion: reduce) {
+  .empty-state-art [data-motion] {
+    transform: none;
+  }
+  .empty-state-art [data-motion="lamp"] {
+    opacity: 0.15;
+  }
+}

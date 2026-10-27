@@ -1,3 +1,5 @@
+import { useRef } from "react"
+import { useEmptyStateMotion } from "./use-empty-state-motion"
 import { emptyStateArt } from "./empty-state-art.generated"
 import type { CSSProperties } from "react"
 import { cn } from "@/lib/utils"
@@ -28,9 +30,14 @@ export function EmptyStateArt({
   kind: EmptyStateArtKind
   className?: string
 }) {
+  const ref = useRef<SVGSVGElement>(null)
+  useEmptyStateMotion(ref, kind)
   const figure = emptyStateArt[kind]
+  const [motionX, motionY] = figure.move.split(" ")
   return (
     <svg
+      ref={ref}
+      data-kind={kind}
       role="img"
       aria-label={labels[kind]}
       viewBox="0 0 260 208"
@@ -38,7 +45,13 @@ export function EmptyStateArt({
       height="157"
       focusable="false"
       className={cn("empty-state-art", className)}
-      style={{ "--art-move": figure.move } as CSSProperties}
+      style={
+        {
+          "--art-move": figure.move,
+          "--art-x": motionX,
+          "--art-y": motionY,
+        } as CSSProperties
+      }
       // Generated local SVG paths only; no user-authored markup enters this surface.
       dangerouslySetInnerHTML={{ __html: figure.body }}
     />
