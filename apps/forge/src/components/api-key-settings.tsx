@@ -1,9 +1,6 @@
-"use client"
-
 import * as React from "react"
 import {
   Add01Icon,
-  ArrowDown01Icon,
   Copy01Icon,
   Delete02Icon,
   Key01Icon,
@@ -13,6 +10,7 @@ import { toast } from "sonner"
 
 import type { ApiScope } from "@/application/actor"
 import type { ApiKeySummary } from "@/application/api-keys/api-key-contract"
+import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 import { DEFAULT_API_KEY_EXPIRES_IN_DAYS } from "@/application/api-keys/api-key-contract"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -41,6 +39,10 @@ import {
   revokeWorkspaceApiKey,
 } from "@/lib/api-key-state"
 import { mutateWorkspaceSecurity } from "@/lib/security-state"
+
+;
+
+("use client")
 
 const availableScopes: ReadonlyArray<{
   scope: ApiScope
@@ -161,11 +163,7 @@ function ApiKeyPolicySelect({
         className="group rounded-lg font-normal"
       >
         {selected.label}
-        <HugeiconsIcon
-          icon={ArrowDown01Icon}
-          strokeWidth={2}
-          className="size-3.5 transition-transform duration-200 ease-out group-aria-expanded:rotate-180 group-data-popup-open:rotate-180 group-data-open:rotate-180"
-        />
+        <DropdownChevron className="size-3.5" />
       </Button>
       <DropdownMenuContent align="end" sideOffset={6} className="w-36">
         <DropdownMenuRadioGroup
@@ -317,10 +315,10 @@ export function ApiKeySettings({
 
   return (
     <>
-      <main className="min-h-0 flex-1 overflow-y-auto px-6 pt-4 pb-4">
-        <div className="mx-auto w-full max-w-[640px] pb-16">
-          <header className="px-3">
-            <h1 className="text-xl font-semibold tracking-tight">API</h1>
+      <main className="forge-settings-scroll">
+        <div className="forge-settings-content">
+          <header className="forge-page-header forge-settings-header">
+            <h1>API</h1>
             <p className="mt-1 max-w-2xl text-sm leading-5 text-muted-foreground">
               Forge&apos;s API provides a programmable interface to your data.
               Use our API to build apps, workflows, and integrations for Forge.{" "}

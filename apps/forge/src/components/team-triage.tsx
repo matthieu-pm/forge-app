@@ -10,6 +10,8 @@ import {
 } from "@hugeicons/core-free-icons"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TriageDraft, TriageIssue } from "@/lib/triage-issues"
+import { ContentHeader } from "@/components/ui/content-header"
+import { OptionSelect } from "@/components/ui/option-select"
 import {
   triageDraftKey,
   triageDraftSchema,
@@ -181,13 +183,13 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
         aria-label="Triage queue"
         className="flex min-h-0 shrink-0 flex-col border-b border-border/50 md:w-[400px] md:max-w-[42%] md:border-r md:border-b-0"
       >
-        <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border/40 px-4">
+        <ContentHeader>
           <TeamSidebarIcon
             icon={team.icon}
             name={team.name}
             className="size-4"
           />
-          <h1 className="text-sm font-medium">Triage</h1>
+          <h1 className="text-[13px] font-medium">Triage</h1>
           <Button
             variant="ghost"
             size="icon-sm"
@@ -206,7 +208,7 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
           </Button>
           <div className="ml-auto flex items-center gap-0.5">
             <Button
-              variant="ghost"
+              variant="outline"
               size="icon-sm"
               aria-label="Configure triage responsibility"
               title="Configure triage responsibility"
@@ -224,7 +226,7 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
               <PopoverTrigger
                 render={
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="icon-sm"
                     aria-label="Display options"
                     title="Display options"
@@ -251,16 +253,16 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
                   >
                     <HugeiconsIcon icon={ArrowUpDownIcon} />
                   </Button>
-                  <select
+                  <OptionSelect
                     aria-label="View ordering"
                     className={selectClass}
                     value={ordering}
-                    onChange={(event) => setOrdering(event.target.value)}
+                    onValueChange={(nextValue) => setOrdering(nextValue)}
                   >
                     <option value="added">Added to triage</option>
                     <option value="priority">Priority</option>
                     <option value="due">Due date</option>
-                  </select>
+                  </OptionSelect>
                 </div>
                 <div className="flex items-center justify-between border-b border-border/50 p-4 text-xs text-muted-foreground">
                   Show snoozed
@@ -283,7 +285,7 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
                           properties.includes(property) ? "secondary" : "ghost"
                         }
                         size="sm"
-                        className="h-6 rounded-full px-2 text-xs"
+                        className="rounded-full px-2 text-xs"
                         aria-pressed={properties.includes(property)}
                         onClick={() =>
                           setProperties(
@@ -301,7 +303,7 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
               </PopoverContent>
             </Popover>
           </div>
-        </header>
+        </ContentHeader>
         <TriageFilterChips value={filters} onChange={setFilters} />
         <div className="max-h-56 overflow-y-auto md:max-h-none md:flex-1">
           {visible.map((issue) => (
@@ -430,7 +432,7 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
             <Button
               variant="secondary"
               size="sm"
-              className="mt-1 h-7 rounded-full px-3 text-xs font-normal"
+              className="mt-1 rounded-full px-3 text-xs font-normal"
               onClick={() => openEditor()}
             >
               <HugeiconsIcon icon={Add01Icon} className="size-3" />

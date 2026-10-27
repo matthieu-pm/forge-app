@@ -73,6 +73,8 @@ type SettingsItem = {
     | "/settings/account/connections"
     | "/settings/account/agents"
     | "/settings/code-and-reviews"
+    | "/settings/calls-and-transcripts"
+    | "/settings/signals"
     | "/settings/notifications"
     | "/settings/api"
     | "/settings/ai"
@@ -133,7 +135,11 @@ const settingsGroups: Array<SettingsGroup> = [
         icon: Cursor02Icon,
         to: "/settings/account/agents",
       },
-      { label: "Calls and transcripts", icon: Call02Icon },
+      {
+        label: "Calls and transcripts",
+        icon: Call02Icon,
+        to: "/settings/calls-and-transcripts",
+      },
     ],
   },
   {
@@ -173,7 +179,7 @@ const settingsGroups: Array<SettingsGroup> = [
     label: "Features",
     items: [
       { label: "AI & Agents", icon: FlashIcon, to: "/settings/ai" },
-      { label: "Signals", icon: Asteroid02Icon },
+      { label: "Signals", icon: Asteroid02Icon, to: "/settings/signals" },
       { label: "Initiatives", icon: AirplayIcon, to: "/settings/initiatives" },
       { label: "Emojis", icon: Monocle01Icon, to: "/settings/emojis" },
       {

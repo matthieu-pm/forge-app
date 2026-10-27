@@ -313,14 +313,11 @@ export function ProfileSettings() {
   const avatarName = name || sessionUser?.name || email
 
   return (
-    <main className="min-h-0 flex-1 overflow-y-auto px-6 pt-4 pb-4">
-      <div className="mx-auto w-full max-w-[640px] pb-16">
+    <main className="forge-settings-scroll">
+      <div className="forge-settings-content">
         <div className="space-y-10">
+          <h1 className="forge-page-header forge-settings-header">Profile</h1>
           <section className="space-y-5">
-            <h1 className="px-3 text-xl font-semibold tracking-tight text-foreground">
-              Profile
-            </h1>
-
             <SettingsCard>
               <ProfileRow label="Profile picture">
                 <AvatarPicker

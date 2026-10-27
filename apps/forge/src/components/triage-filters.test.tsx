@@ -9,6 +9,7 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { TriageFilterChips, TriageFilters } from "./triage-filters"
 import type { TeamSummary } from "@/lib/team-contract"
+import { selectOption } from "@/test-utils/select-option"
 import { emptyTriageFilters } from "@/lib/triage-filters"
 
 vi.mock("@/lib/template-state", () => ({
@@ -51,17 +52,11 @@ describe("triage filter menu", () => {
     fireEvent.click(
       await screen.findByRole("menuitem", { name: "Advanced filter" })
     )
-    fireEvent.change(
-      await screen.findByRole("combobox", { name: "Filter 1 field" }),
-      { target: { value: "content" } }
-    )
+    selectOption(await screen.findByRole("combobox", { name: "Filter 1 field" }), "Content")
     fireEvent.change(screen.getByRole("textbox", { name: "Filter 1 value" }), {
       target: { value: "request" },
     })
-    fireEvent.change(
-      screen.getByRole("combobox", { name: "Match conditions" }),
-      { target: { value: "any" } }
-    )
+    selectOption(screen.getByRole("combobox", { name: "Match conditions" }), "any")
     fireEvent.click(screen.getByRole("button", { name: "Apply filters" }))
     expect(
       await screen.findByRole("button", {

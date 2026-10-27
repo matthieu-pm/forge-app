@@ -1,22 +1,20 @@
 "use client"
 
 import * as React from "react"
-import { Link } from "@tanstack/react-router"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Add01Icon,
   ArrowDown02Icon,
-  ArrowLeft01Icon,
   ArrowUp02Icon,
   Delete02Icon,
   MoreHorizontalIcon,
   PencilEdit02Icon,
   StarIcon,
-  Tick02Icon,
 } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamStatus, TeamStatusDirectory } from "@/lib/team-statuses"
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import {
   initialTeamStatuses,
   parseTeamStatuses,
@@ -24,7 +22,6 @@ import {
   teamStatusesStorageKey,
 } from "@/lib/team-statuses"
 import { IssueStatusIcon as StatusIcon } from "@/components/issue-status-icon"
-import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -129,10 +126,9 @@ function StatusEditor({
                     style={{ backgroundColor: value }}
                   >
                     {color.toLowerCase() === value && (
-                      <HugeiconsIcon
-                        icon={Tick02Icon}
+                      <CheckboxMark
+                        checked
                         className="size-3.5 text-black/70"
-                        strokeWidth={2}
                       />
                     )}
                   </span>
@@ -344,32 +340,10 @@ export function TeamIssueStatusesSettings({ team }: { team: TeamSummary }) {
   }
 
   return (
-    <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-none pb-12">
-      <div className="flex h-12 items-center px-4">
-        <Link
-          to="/settings/teams/$teamSlug"
-          params={{ teamSlug: team.slug }}
-          aria-label={`Back to ${team.name} settings`}
-          className={`inline-flex items-center gap-2 rounded-md py-1 text-sm text-muted-foreground hover:text-foreground ${focusClass}`}
-        >
-          <HugeiconsIcon
-            icon={ArrowLeft01Icon}
-            className="size-4"
-            strokeWidth={1.5}
-          />
-          <TeamSidebarIcon
-            icon={team.icon}
-            name={team.name}
-            className="size-4"
-          />
-          {team.name}
-        </Link>
-      </div>
-      <div className="mx-auto w-full max-w-[688px] px-4 pt-5 sm:px-6">
-        <header className="px-3 pb-8">
-          <h1 className="text-2xl font-medium tracking-tight">
-            Issue statuses
-          </h1>
+    <main className="forge-settings-scroll">
+      <div className="forge-settings-content">
+        <header className="forge-page-header forge-settings-header">
+          <h1>Issue statuses</h1>
           <p className="mt-1.5 text-sm leading-5 text-muted-foreground">
             Issue statuses define the workflow that issues go through from start
             to completion.

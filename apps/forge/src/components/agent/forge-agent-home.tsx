@@ -43,7 +43,7 @@ export function ForgeAgentHome() {
               key={suggestion}
               type="button"
               variant="ghost"
-              size="xs"
+              size="sm"
               className="rounded-full text-muted-foreground"
               onClick={() => setDraft(suggestion)}
             >

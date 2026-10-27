@@ -1,14 +1,11 @@
 "use client"
 
 import * as React from "react"
-import { ArrowDown01Icon, ArrowLeft01Icon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
-import { Link } from "@tanstack/react-router"
 import { toast } from "sonner"
 
 import type { TeamSummary, UpdateTeamInput } from "@/lib/team-contract"
+import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 import { TeamIconPicker } from "@/components/team-icon-picker"
-import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { TeamTimezonePicker } from "@/components/team-timezone-picker"
 import { Button } from "@/components/ui/button"
 import {
@@ -179,42 +176,23 @@ export function TeamGeneralSettings({ team }: { team: TeamSummary }) {
     estimationOptions[0]
 
   return (
-    <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-none px-6 pt-2 pb-4 [scrollbar-gutter:stable]">
-      <div className="sticky top-0 z-20 -mx-6 -mt-2 px-6 pt-2 pb-2">
-        <Link
-          to="/settings/teams/$teamSlug"
-          params={{ teamSlug: team.slug }}
-          className="inline-flex items-center gap-1.5 rounded-lg px-1 py-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-        >
-          <HugeiconsIcon
-            icon={ArrowLeft01Icon}
-            strokeWidth={2}
-            className="size-3.5"
-          />
-          <TeamSidebarIcon icon={icon} name={team.name} />
-          {name}
-        </Link>
-      </div>
-
-      <div className="mx-auto w-full max-w-[640px] pb-16">
-        <div className="mt-8 space-y-12">
+    <main className="forge-settings-scroll">
+      <div className="forge-settings-content">
+        <div className="space-y-12">
+          <div className="forge-page-header forge-settings-header flex items-center justify-between gap-4">
+            <h1>General</h1>
+            <span
+              aria-live="polite"
+              className={cn(
+                "text-xs text-muted-foreground transition-opacity",
+                !saveStatusLabel && "opacity-0",
+                saveStatus === "error" && "text-destructive"
+              )}
+            >
+              {saveStatusLabel || "Saved"}
+            </span>
+          </div>
           <section className="space-y-5">
-            <div className="flex items-center justify-between gap-4 px-3">
-              <h1 className="text-xl font-semibold tracking-tight text-foreground">
-                General
-              </h1>
-              <span
-                aria-live="polite"
-                className={cn(
-                  "text-xs text-muted-foreground transition-opacity",
-                  !saveStatusLabel && "opacity-0",
-                  saveStatus === "error" && "text-destructive"
-                )}
-              >
-                {saveStatusLabel || "Saved"}
-              </span>
-            </div>
-
             <SettingsCard>
               <FieldRow label="Icon & Name">
                 <TeamIconPicker
@@ -306,11 +284,7 @@ export function TeamGeneralSettings({ team }: { team: TeamSummary }) {
                     className="group rounded-lg font-normal"
                   >
                     <span>{selectedEstimation.label}</span>
-                    <HugeiconsIcon
-                      icon={ArrowDown01Icon}
-                      strokeWidth={2}
-                      className="size-3.5 transition-transform duration-200 ease-out group-aria-expanded:rotate-180"
-                    />
+                    <DropdownChevron className="size-3.5" />
                   </Button>
                   <DropdownMenuContent
                     align="end"

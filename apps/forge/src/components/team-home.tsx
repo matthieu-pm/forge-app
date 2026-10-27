@@ -28,16 +28,18 @@ import { toast } from "sonner"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamMemberDirectory } from "@/lib/team-member-contract"
 import type { HomeStore, TeamResource } from "@/lib/team-home-state"
+import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
+import { ContentHeader } from "@/components/ui/content-header"
+import { OptionSelect } from "@/components/ui/option-select"
 import { removeHomeSection, safeResourceUrl } from "@/lib/team-home-state"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { TeamIconPicker } from "@/components/team-icon-picker"
-import { Button } from "@/components/ui/button"
+import { Button, buttonSurface } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+  ActionHint as HomeHint,
+  ActionIconButton as HomeIconButton,
+} from "@/components/ui/action-icon-button"
 import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -60,9 +62,15 @@ import { notifyTeamDirectoryChanged } from "@/lib/team-events"
 import { useTeamTriage } from "@/lib/team-triage"
 import { useTeamCycles } from "@/lib/team-cycles"
 import { cn } from "@/lib/utils"
+import { authClient } from "@/lib/auth-client"
+import { newTeamDocument } from "@/lib/team-documents"
 
-export const homePill =
-  "h-7 rounded-full bg-muted/55 px-2.5 text-xs font-normal text-muted-foreground shadow-[0_0_0_1px_var(--border)] hover:bg-muted hover:text-foreground"
+export { ActionIconButton as HomeIconButton } from "@/components/ui/action-icon-button"
+
+export const homePill = cn(
+  buttonSurface,
+  "h-7 rounded-full px-2.5 text-xs font-normal"
+)
 export function HomeIcon({
   icon,
   className,
@@ -87,52 +95,6 @@ const homeShortcut =
   homeFocus
 const revealChevron =
   "size-3 text-muted-foreground opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none"
-function HomeHint({
-  label,
-  children,
-}: {
-  label: string
-  children: React.ReactElement
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger delay={450} render={children} />
-      <TooltipContent
-        side="bottom"
-        sideOffset={6}
-        className="rounded-lg border border-border bg-popover px-2 py-1.5 text-xs text-popover-foreground shadow-md motion-reduce:animate-none [&>div]:hidden [&>svg]:hidden"
-      >
-        {label}
-      </TooltipContent>
-    </Tooltip>
-  )
-}
-export function HomeIconButton({
-  label,
-  icon,
-  className,
-  ...props
-}: React.ComponentProps<typeof Button> & {
-  label: string
-  icon: React.ComponentProps<typeof HugeiconsIcon>["icon"]
-}) {
-  return (
-    <HomeHint label={label}>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label={label}
-        className={cn(
-          "rounded-full transition-colors duration-150 active:translate-y-0 data-popup-open:bg-muted motion-reduce:transition-none",
-          className
-        )}
-        {...props}
-      >
-        <HomeIcon icon={icon} />
-      </Button>
-    </HomeHint>
-  )
-}
 export function homeSave(
   store: HomeStore,
   reducer: Parameters<HomeStore["update"]>[0],
@@ -172,9 +134,9 @@ export function TeamHomeLayout({
   }
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <header className="flex h-11 shrink-0 items-center gap-2 border-b border-border/40 px-4">
+      <ContentHeader>
         <TeamSidebarIcon icon={team.icon} name={team.name} className="size-4" />
-        <h1 className="truncate text-sm font-medium">{team.name}</h1>
+        <h1 className="truncate text-[13px] font-medium">{team.name}</h1>
         <HomeIconButton
           label={
             store.state.favorite ? "Remove from favorites" : "Add to favorites"
@@ -236,9 +198,9 @@ export function TeamHomeLayout({
           className="ml-auto text-muted-foreground"
           onClick={copyUrl}
         />
-      </header>
+      </ContentHeader>
       <div className="flex min-h-11 shrink-0 flex-wrap items-center justify-between gap-2 px-2 py-2">
-        <nav aria-label="Team home" className="flex gap-2">
+        <PageTabs aria-label="Team home">
           {(["overview", "documents", "loops", "members"] as const).map(
             (value) => (
               <Link
@@ -246,17 +208,13 @@ export function TeamHomeLayout({
                 to={`/teams/$teamSlug/${value}`}
                 params={{ teamSlug: team.slug }}
                 aria-current={tab === value ? "page" : undefined}
-                className={cn(
-                  homePill,
-                  "inline-flex items-center focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                  tab === value && "bg-muted text-foreground"
-                )}
+                className={pageTabClass}
               >
                 {value[0].toUpperCase() + value.slice(1)}
               </Link>
             )
           )}
-        </nav>
+        </PageTabs>
         {actions && (
           <div className="ml-auto flex items-center gap-2">{actions}</div>
         )}
@@ -374,11 +332,11 @@ export function ResourceEditor({
           )}
           <label className="flex items-center gap-3 text-sm text-muted-foreground">
             Section
-            <select
+            <OptionSelect
               aria-label="Resource section"
               className="h-8 rounded-lg bg-muted px-2 text-foreground"
               value={sectionId}
-              onChange={(e) => setSectionId(e.target.value)}
+              onValueChange={(nextValue) => setSectionId(nextValue)}
             >
               <option value="">Team resources</option>
               {store.state.sections.map((s) => (
@@ -386,7 +344,7 @@ export function ResourceEditor({
                   {s.name}
                 </option>
               ))}
-            </select>
+            </OptionSelect>
           </label>
           {validation && (
             <p role="alert" className="text-sm text-destructive">
@@ -434,6 +392,7 @@ export function TeamOverview({
   store: HomeStore
 }) {
   const router = useRouter()
+  const session = authClient.useSession()
   const [name, setName] = React.useState(team.name)
   const [description, setDescription] = React.useState(team.description)
   const [saving, setSaving] = React.useState(false)
@@ -444,6 +403,31 @@ export function TeamOverview({
   const [editor, setEditor] = React.useState<TeamResource | null>(null)
   const triage = useTeamTriage(team.id)
   const cycles = useTeamCycles(team.id)
+  function openResource(resource: TeamResource) {
+    if (resource.kind === "link") setEditor(resource)
+    else
+      void router.navigate({
+        to: "/teams/$teamSlug/documents",
+        params: { teamSlug: team.slug },
+        search: { document: resource.id },
+      })
+  }
+  function createDocument(sectionId: string | null) {
+    const user = session.data?.user
+    const resource = newTeamDocument(
+      user
+        ? { id: user.id, name: user.name || "You", image: user.image }
+        : undefined,
+      sectionId
+    )
+    if (
+      homeSave(store, (state) => ({
+        ...state,
+        resources: [...state.resources, resource],
+      }))
+    )
+      openResource(resource)
+  }
   async function save(
     settings: Parameters<typeof updateTeam>[0]["data"]["settings"]
   ) {
@@ -490,9 +474,7 @@ export function TeamOverview({
           }
         />
         <DropdownMenuContent className="w-44">
-          <DropdownMenuItem
-            onClick={() => setEditor(newResource("document", sectionId))}
-          >
+          <DropdownMenuItem onClick={() => createDocument(sectionId)}>
             <HomeIcon icon={File01Icon} />
             New document
           </DropdownMenuItem>
@@ -536,7 +518,7 @@ export function TeamOverview({
                 "min-w-0 flex-1 truncate rounded-sm text-left text-sm",
                 homeFocus
               )}
-              onClick={() => setEditor(r)}
+              onClick={() => openResource(r)}
             >
               {r.title}
             </button>
@@ -552,7 +534,7 @@ export function TeamOverview({
               }
             />
             <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => setEditor(r)}>
+              <DropdownMenuItem onClick={() => openResource(r)}>
                 Edit resource
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -924,7 +906,7 @@ export function TeamOverview({
             </form>
           )}
         </div>
-        <aside className="pt-3 text-sm">
+        <aside className="-mx-3 px-3 pt-3 text-sm md:sticky md:top-7 md:max-h-[calc(100svh-160px)] md:self-start md:overflow-x-hidden md:overflow-y-auto md:overscroll-y-contain">
           <h2 className="text-muted-foreground">Members</h2>
           <div className="group/members mt-3 flex items-center gap-1">
             <HomeHint label="View members">

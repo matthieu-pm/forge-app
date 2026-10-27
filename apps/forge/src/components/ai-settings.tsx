@@ -1,10 +1,7 @@
-"use client"
-
 import * as React from "react"
 import {
   Add01Icon,
   ApiIcon,
-  ArrowDown01Icon,
   Delete02Icon,
   SecurityLockIcon,
 } from "@hugeicons/core-free-icons"
@@ -16,6 +13,7 @@ import type {
   ModelProvider,
 } from "@/application/agents/model-connection-contract"
 import type { HostRuntime, LocalAgentRuntime } from "@/host/forge-host"
+import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -49,6 +47,10 @@ import {
   useAgent,
 } from "@/components/agent/agent-provider"
 import { isAgentProviderEnabled } from "@/application/agents/agent-feature-flags"
+
+;
+
+("use client")
 
 const PROVIDERS: ReadonlyArray<{
   id: ModelProvider
@@ -140,11 +142,7 @@ function SettingsSelect<TValue extends string>({
           className="group w-full justify-between rounded-2xl bg-input/50 px-2.5 font-medium text-foreground hover:bg-input/50 aria-expanded:bg-input/50 aria-expanded:text-foreground"
         >
           <span>{selectedOption?.label ?? value}</span>
-          <HugeiconsIcon
-            icon={ArrowDown01Icon}
-            strokeWidth={2}
-            className="size-3.5 transition-transform duration-200 ease-out group-aria-expanded:rotate-180 group-data-popup-open:rotate-180 group-data-open:rotate-180"
-          />
+          <DropdownChevron className="size-3.5" />
         </Button>
         <DropdownMenuContent
           align="start"
@@ -445,9 +443,9 @@ export function AiSettings() {
   }
 
   return (
-    <main className="min-h-0 w-full flex-1 space-y-8 overflow-y-auto px-6 py-6 lg:px-10 lg:py-8 [&>*]:mx-auto [&>*]:w-full [&>*]:max-w-[calc(48rem-3rem)] lg:[&>*]:max-w-[calc(48rem-5rem)]">
-      <header className="space-y-1">
-        <h1 className="text-xl font-semibold tracking-tight">AI & Agents</h1>
+    <main className="forge-settings-scroll forge-settings-direct space-y-8 [&>*]:mx-auto [&>*]:w-full [&>*]:max-w-[640px]">
+      <header className="forge-page-header forge-settings-header space-y-1">
+        <h1>AI & Agents</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
           Connect model APIs for Forge-native agents. Credentials are encrypted
           on the server, never returned to this browser, and each billing source

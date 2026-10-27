@@ -7,15 +7,17 @@ import {
   ArrowRight01Icon,
   CrownIcon,
   Logout03Icon,
-  Tick02Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Link, useRouter, useRouterState } from "@tanstack/react-router"
 import { toast } from "sonner"
 
+import type { MenuRootActions } from "@base-ui/react/menu"
 import type { AppNavChild } from "@/lib/app-navigation"
 import type { AuthState, WorkspaceSummary } from "@/lib/auth-types"
 import type { TeamSummary } from "@/lib/team-contract"
+import { ViewFavorites } from "@/components/views/view-favorites"
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { GettingStartedChecklist } from "@/components/getting-started-checklist"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
@@ -130,6 +132,7 @@ function SidebarCollapsibleContent({
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const router = useRouter()
+  const workspaceMenuActions = React.useRef<MenuRootActions>(null)
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
@@ -307,6 +310,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     })
   }
 
+  function closeWorkspaceMenuForNavigation() {
+    workspaceMenuActions.current?.close()
+    // Activity hides this sidebar on settings routes and stops its effects,
+    // so remove the portal before its exit animation can be interrupted.
+    workspaceMenuActions.current?.unmount()
+  }
+
   function renderNavLink(to: AppNavChild["to"]) {
     return <Link to={to as never} />
   }
@@ -434,7 +444,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           }
         >
           <SidebarMenuButton
-            className="h-7 py-1 text-sm font-medium text-foreground/70"
+            className="h-7 shrink-0 py-1 text-sm font-medium text-foreground/70"
             isActive={false}
             render={<CollapsibleTrigger />}
           >
@@ -449,7 +459,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarCollapsibleContent
             className={teamsScrollable ? "min-h-0 w-full" : "w-full"}
           >
-            <div className="w-full">{renderNavItems(item.items)}</div>
+            <div
+              className={
+                teamsScrollable
+                  ? "no-scrollbar h-full w-full overflow-x-hidden overflow-y-auto overscroll-contain"
+                  : "w-full"
+              }
+              role={teamsScrollable ? "region" : undefined}
+              aria-label={teamsScrollable ? "Your teams list" : undefined}
+              tabIndex={teamsScrollable ? 0 : undefined}
+            >
+              {renderNavItems(item.items)}
+            </div>
           </SidebarCollapsibleContent>
         </SidebarMenuItem>
       </PersistentCollapsible>
@@ -476,7 +497,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader className="px-2 pt-3 pb-1">
         <SidebarMenu>
           <SidebarMenuItem>
-            <DropdownMenu>
+            <DropdownMenu actionsRef={workspaceMenuActions}>
               <SidebarMenuButton
                 className="h-7 px-2 py-1 text-sm font-medium text-sidebar-foreground aria-expanded:bg-sidebar-accent aria-expanded:text-sidebar-accent-foreground"
                 render={<DropdownMenuTrigger />}
@@ -531,13 +552,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         <span className="min-w-0 flex-1 truncate font-medium">
                           {availableWorkspace.name}
                         </span>
-                        {isActive || isSwitching ? (
-                          <HugeiconsIcon
-                            icon={Tick02Icon}
-                            strokeWidth={2}
-                            className="text-muted-foreground"
-                          />
-                        ) : null}
+                        <CheckboxMark checked={isActive || isSwitching} />
                       </DropdownMenuItem>
                     )
                   })}
@@ -546,6 +561,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <DropdownMenuItem
                   className="h-7 min-h-0 rounded-xl px-2 py-1 text-sm font-medium"
                   render={<Link to="/onboarding/workspace" />}
+                  onClick={closeWorkspaceMenuForNavigation}
                 >
                   <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
                   New workspace
@@ -553,6 +569,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <DropdownMenuItem
                   className="h-7 min-h-0 rounded-xl px-2 py-1 text-sm font-medium"
                   render={<Link to="/settings" />}
+                  onClick={closeWorkspaceMenuForNavigation}
                 >
                   <HugeiconsIcon icon={AccountSetting01Icon} strokeWidth={2} />
                   Settings
@@ -576,17 +593,23 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup className="pb-0">
+      <SidebarContent className="overflow-hidden">
+        <SidebarGroup className="shrink-0 pb-0">
           <SidebarMenu className="gap-px">
             {primaryNav.map((item) => renderRootItem(item))}
           </SidebarMenu>
         </SidebarGroup>
-        <SidebarGroup className="pt-4 pb-0">
+        <SidebarGroup className="shrink-0 pt-4 pb-0">
           <SidebarMenu>
             {workspaceSection.map((item) => renderRootItem(item))}
           </SidebarMenu>
         </SidebarGroup>
+        {workspace && sessionState.data?.user.id && (
+          <ViewFavorites
+            workspaceId={workspace.id}
+            userId={sessionState.data.user.id}
+          />
+        )}
         <SidebarGroup className="min-h-0 flex-1 pt-4">
           <SidebarMenu className="flex h-full min-h-0 flex-col">
             {teamsSection.map((item) => renderRootItem(item, true))}

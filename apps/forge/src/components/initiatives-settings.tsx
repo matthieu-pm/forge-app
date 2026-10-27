@@ -29,14 +29,15 @@ import {
 } from "@/components/ui/select"
 import { projectUpdateScheduleSchema } from "@/lib/project-updates-settings"
 import { initiativeLabelsStorageKey, parseTeamLabels } from "@/lib/team-labels"
+import { initiativesSettingsStorageKey } from "@/lib/initiatives"
+
+export { initiativesSettingsStorageKey } from "@/lib/initiatives"
 
 const settingsSchema = z.object({
   enabled: z.boolean(),
   schedule: projectUpdateScheduleSchema,
 })
 type Settings = z.infer<typeof settingsSchema>
-export const initiativesSettingsStorageKey = (workspaceId: string) =>
-  `forge:workspace:${workspaceId}:initiatives-settings:v1`
 const defaults: Settings = { enabled: true, schedule: "none" }
 const schedules = projectUpdateScheduleSchema.options
 function scheduleLabel(value: Settings["schedule"]) {
@@ -108,10 +109,10 @@ export function InitiativesSettings({ workspaceId }: { workspaceId: string }) {
   }
   const disabled = !settings.enabled || !ready || !!error
   return (
-    <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-none pb-16">
-      <div className="mx-auto w-full max-w-[688px] px-4 pt-10 sm:px-6 sm:pt-[68px]">
-        <header className="px-4 pb-8">
-          <h1 className="text-2xl font-medium tracking-tight">Initiatives</h1>
+    <main className="forge-settings-scroll">
+      <div className="forge-settings-content">
+        <header className="forge-page-header forge-settings-header">
+          <h1>Initiatives</h1>
           <p className={copyClass}>
             Initiatives group multiple projects that contribute toward the same
             strategic effort. Use initiatives to plan and coordinate larger
@@ -227,7 +228,8 @@ export function InitiativesSettings({ workspaceId }: { workspaceId: string }) {
                   <p className="text-sm">{scheduleLabel(settings.schedule)}</p>
                   <Button
                     variant="secondary"
-                    className="h-6 rounded-full px-2 text-xs font-normal"
+                    size="sm"
+                    className="rounded-full px-2 text-xs font-normal"
                     disabled={disabled}
                     onClick={() => {
                       setDraft(settings.schedule)
@@ -269,7 +271,8 @@ export function InitiativesSettings({ workspaceId }: { workspaceId: string }) {
                 variant="ghost"
                 disabled={disabled}
                 onClick={() => setSlackOpen(true)}
-                className="h-8 rounded-full px-2 font-normal"
+                size="default"
+                className="rounded-full px-2 font-normal"
               >
                 Connect
               </Button>

@@ -1,5 +1,6 @@
 import * as React from "react"
 import { z } from "zod"
+import { documentSchema } from "./template-contract"
 
 const resourceSchema = z.object({
   id: z.string(),
@@ -8,6 +9,23 @@ const resourceSchema = z.object({
   content: z.string().max(100000),
   sectionId: z.string().nullable(),
   updatedAt: z.string(),
+  createdAt: z.string().optional(),
+  body: documentSchema.optional(),
+  icon: z
+    .object({
+      kind: z.enum(["icon", "emoji"]),
+      value: z.string().min(1).max(100),
+      color: z.string().regex(/^#[0-9a-f]{6}$/i),
+    })
+    .optional(),
+  owner: z
+    .object({
+      id: z.string(),
+      name: z.string(),
+      image: z.string().nullable().optional(),
+    })
+    .optional(),
+  favorite: z.boolean().optional(),
 })
 export const teamHomeSchema = z.object({
   favorite: z.boolean(),

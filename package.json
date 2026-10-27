@@ -40,7 +40,8 @@
     "agent:retention": "turbo run agent:retention --filter=@forge/app",
     "product:retention": "turbo run product:retention --filter=@forge/app",
     "workflow:health": "turbo run workflow:health --filter=@forge/app",
-    "eval:agent": "turbo run eval --filter=@forge/agent-runtime"
+    "eval:agent": "turbo run eval --filter=@forge/agent-runtime",
+    "calls:sync": "turbo run calls:sync --filter=@forge/app"
   },
   "devDependencies": {
     "prettier": "^3.9.6",

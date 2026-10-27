@@ -1,9 +1,6 @@
-"use client"
-
 import * as React from "react"
 import {
   Add01Icon,
-  ArrowDown01Icon,
   AtIcon,
   Copy01Icon,
   Delete02Icon,
@@ -20,6 +17,7 @@ import type {
   WorkspaceSecurityCommand,
   WorkspaceSecuritySnapshot,
 } from "@/application/workspace-security/security-contract"
+import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -47,6 +45,10 @@ import {
 } from "@/lib/security-state"
 import { copyTextToClipboard } from "@/lib/copy-to-clipboard"
 import { cn } from "@/lib/utils"
+
+;
+
+("use client")
 
 type SecurityPreferences = {
   allowExternalLoopSources: boolean
@@ -146,7 +148,10 @@ function Section({
   title: string
 }) {
   return (
-    <section id={title === "MCP Servers" ? "forge-agent-mcp-servers" : undefined} className="space-y-5 scroll-mt-8">
+    <section
+      id={title === "MCP Servers" ? "forge-agent-mcp-servers" : undefined}
+      className="scroll-mt-8 space-y-5"
+    >
       <h2 className="px-3 text-sm font-semibold text-foreground">{title}</h2>
       {children}
     </section>
@@ -212,11 +217,7 @@ function SettingsSelect<TValue extends string>({
         className="group rounded-lg font-normal"
       >
         <span>{selectedOption.label}</span>
-        <HugeiconsIcon
-          icon={ArrowDown01Icon}
-          strokeWidth={2}
-          className="size-3.5 transition-transform duration-200 group-aria-expanded:rotate-180"
-        />
+        <DropdownChevron className="size-3.5" />
       </Button>
       <DropdownMenuContent align="end" sideOffset={6}>
         <DropdownMenuRadioGroup
@@ -374,10 +375,10 @@ export function SecuritySettings({
 
   return (
     <>
-      <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-none px-6 pt-4 pb-4 [scrollbar-gutter:stable]">
-        <div className="mx-auto w-full max-w-[640px] pb-16">
+      <main className="forge-settings-scroll">
+        <div className="forge-settings-content">
           <div className="space-y-12">
-            <h1 className="px-3 text-xl font-semibold tracking-tight text-foreground">
+            <h1 className="forge-page-header forge-settings-header">
               Security
             </h1>
 

@@ -3,7 +3,6 @@
 import * as React from "react"
 import { Link } from "@tanstack/react-router"
 import {
-  ArrowLeft01Icon,
   ArrowRight01Icon,
   ComputerIcon,
   Mail01Icon,
@@ -199,24 +198,9 @@ export function NotificationPreferencesPage({
     )
   }
   return (
-    <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-none pb-16">
-      {channel && (
-        <div className="flex h-12 items-center px-4">
-          <Link
-            to="/settings/notifications"
-            className={`inline-flex items-center gap-2 rounded-md py-1 text-sm text-muted-foreground hover:text-foreground ${focusClass}`}
-          >
-            <HugeiconsIcon
-              icon={ArrowLeft01Icon}
-              className="size-4"
-              strokeWidth={1.5}
-            />
-            Notifications
-          </Link>
-        </div>
-      )}
-      <div className="mx-auto w-full max-w-[688px] px-4 pt-5 sm:px-6">
-        <h1 className="mb-8 px-4 text-2xl font-medium tracking-tight">
+    <main className="forge-settings-scroll">
+      <div className="forge-settings-content">
+        <h1 className="forge-page-header forge-settings-header">
           {channel
             ? priority
               ? "Priority notifications"

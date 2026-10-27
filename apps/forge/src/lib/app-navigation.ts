@@ -47,6 +47,8 @@ export type AppPath =
   | "/settings/account/connections"
   | "/settings/account/agents"
   | "/settings/code-and-reviews"
+  | "/settings/calls-and-transcripts"
+  | "/settings/signals"
   | "/settings/api"
   | "/settings/ai"
   | "/settings/emojis"
@@ -59,6 +61,8 @@ export type AppPath =
   | "/settings/sla"
   | "/settings/teams"
   | "/settings/workspace"
+  | "/reviews"
+  | "/reviews/created"
   | "/inbox"
   | "/my-issues"
   | "/workspace/initiatives"
@@ -126,6 +130,7 @@ export const workspaceNav: Array<AppNavChild> = [
     icon: AirplayLineIcon,
   },
   { title: "Projects", to: "/workspace/projects", icon: CubeIcon },
+  { title: "Calls", to: "/workspace/calls", icon: Call02Icon },
   { title: "Views", to: "/workspace/views", icon: LayerIcon },
   { title: "Teams", to: "/workspace/teams", icon: UserIdVerificationIcon },
   { title: "Members", to: "/workspace/members", icon: UserGroup03Icon },
@@ -150,6 +155,7 @@ export function buildYourTeamsNav(
           section.section === "overview" ||
           section.section === "projects" ||
           section.section === "views" ||
+          section.section === "calls" ||
           (section.section === "cycles" && team.cyclesEnabled === true) ||
           (section.section === "triage" && team.triageEnabled === true) ||
           section.section === "issues"
@@ -186,18 +192,13 @@ export const appNav: Array<AppNavItem> = [
     iconSrc: "/img/forge-logo-black.svg",
   },
   {
-    title: "Calls",
-    to: "/workspace/calls",
-    icon: Call02Icon,
-  },
-  {
     title: "Signals",
     to: "/workspace/signals",
     icon: Asteroid02Icon,
   },
   {
     title: "Reviews",
-    to: "/workspace/insights",
+    to: "/reviews",
     icon: GitPullRequestArrowIcon,
   },
   {
@@ -264,6 +265,17 @@ const pageMetaByPath: Partial<Record<AppPath, PageMeta>> = {
     title: "Signals",
     description:
       "Surface the highest-signal events across the app so the team can react early and clearly.",
+  },
+  "/reviews": {
+    eyebrow: "Queue",
+    title: "Reviews",
+    description:
+      "Keep track of pull requests that need your attention and changes you created.",
+  },
+  "/reviews/created": {
+    eyebrow: "Queue",
+    title: "Reviews",
+    description: "Track pull requests you created.",
   },
   "/workspace/insights": {
     eyebrow: "Workspace",
@@ -477,6 +489,12 @@ export function getBreadcrumbItems(pathname: string): Array<BreadcrumbItem> {
 
   if (pathname === "/settings/code-and-reviews") {
     return [{ label: "Code & reviews" }]
+  }
+  if (pathname === "/settings/signals") {
+    return [{ label: "Signals" }]
+  }
+  if (pathname === "/settings/calls-and-transcripts") {
+    return [{ label: "Calls and transcripts" }]
   }
 
   if (pathname === "/settings/emojis") {

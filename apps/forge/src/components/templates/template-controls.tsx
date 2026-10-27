@@ -15,7 +15,6 @@ import {
   Tick02Icon,
   UserGroup03Icon,
 } from "@hugeicons/core-free-icons"
-import { Link } from "@tanstack/react-router"
 import type { ReactNode } from "react"
 import type {
   TemplateDirectory,
@@ -23,6 +22,8 @@ import type {
 } from "@/lib/template-contract"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamLabelDirectory } from "@/lib/team-labels"
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
+import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import {
   initialTeamLabels,
@@ -67,6 +68,7 @@ export function Glyph({
   name: keyof typeof glyphs
   className?: string
 }) {
+  if (name === "down") return <DropdownChevron className={className} />
   return (
     <HugeiconsIcon
       icon={glyphs[name]}
@@ -140,12 +142,8 @@ export function Action({
   )
 }
 export function TemplateShell({
-  team,
   children,
   overview = false,
-  section = "templates",
-  workspace = false,
-  workspaceKind = "issue",
 }: {
   team?: TeamSummary
   children: ReactNode
@@ -156,42 +154,13 @@ export function TemplateShell({
 }) {
   return (
     <main className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="flex h-12 shrink-0 items-center px-4">
-        <Link
-          to={
-            workspace
-              ? workspaceKind === "project"
-                ? "/settings/project-templates"
-                : "/settings/issue-templates"
-              : overview
-                ? "/settings/teams/$teamSlug"
-                : section === "recurring-issues"
-                  ? "/settings/teams/$teamSlug/recurring-issues"
-                  : "/settings/teams/$teamSlug/templates"
-          }
-          params={{ teamSlug: team?.slug ?? "" }}
-          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-        >
-          <Glyph name="back" />
-          {workspace ? (
-            workspaceKind === "project" ? (
-              "Project templates"
-            ) : (
-              "Issue templates"
-            )
-          ) : overview && team ? (
-            <>
-              <TeamSidebarIcon icon={team.icon} name={team.name} />
-              {team.name}
-            </>
-          ) : section === "recurring-issues" ? (
-            "Recurring issues"
-          ) : (
-            "Team templates"
-          )}
-        </Link>
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 sm:px-6">
+      <div
+        className={
+          overview
+            ? "forge-settings-scroll"
+            : "min-h-0 flex-1 overflow-y-auto px-4 sm:px-6"
+        }
+      >
         {children}
       </div>
     </main>
@@ -272,7 +241,7 @@ export function Picker({
           <button
             type="button"
             className={cn(
-              "inline-flex h-6 shrink-0 items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50",
+              "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50",
               selected.length > 0 && "text-foreground",
               className
             )}
@@ -345,29 +314,21 @@ export function Picker({
                 )}
               >
                 {multiple && (
-                  <span
-                    aria-hidden="true"
-                    className={cn(
-                      "grid size-3.5 place-items-center rounded-[3px] border border-border",
-                      selected.includes(option.value) &&
-                        "border-[#5e6ad2] bg-[#5e6ad2] text-white"
-                    )}
-                  >
-                    {selected.includes(option.value) && (
-                      <Glyph name="check" className="size-3" />
-                    )}
-                  </span>
+                  <CheckboxMark checked={selected.includes(option.value)} />
                 )}
                 {option.icon}
                 <span className="min-w-0 flex-1 truncate">{option.label}</span>
                 {option.detail && (
                   <span className="text-muted-foreground">{option.detail}</span>
                 )}
-                {!multiple &&
-                  (selected.includes(option.value) ||
-                    (!option.value && !selected.length)) && (
-                    <Glyph name="check" />
-                  )}
+                {!multiple && (
+                  <CheckboxMark
+                    checked={
+                      selected.includes(option.value) ||
+                      (!option.value && !selected.length)
+                    }
+                  />
+                )}
               </button>
             </React.Fragment>
           ))}
@@ -747,7 +708,7 @@ function DependencyPicker({
         render={
           <button
             type="button"
-            className="inline-flex h-6 items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-2 text-xs text-muted-foreground hover:bg-muted"
+            className="inline-flex h-7 items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-2 text-xs text-muted-foreground hover:bg-muted"
           />
         }
       >
@@ -835,7 +796,8 @@ export function SaveFooter({
       <Button
         type="button"
         variant="secondary"
-        className="h-8 rounded-full border border-border/60 px-3 text-xs"
+        size="default"
+        className="rounded-full border border-border/60 px-3 text-xs"
         onClick={onCancel}
         disabled={saving}
       >
@@ -843,7 +805,8 @@ export function SaveFooter({
       </Button>
       <Button
         type="button"
-        className="h-8 rounded-full bg-[#5e6ad2] px-3 text-xs text-white hover:bg-[#5360c8]"
+        size="default"
+        className="rounded-full bg-[#5e6ad2] px-3 text-xs text-white hover:bg-[#5360c8]"
         onClick={onSave}
         disabled={saving || !canSave}
       >

@@ -1,14 +1,32 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { PagePlaceholder } from "@/components/page-placeholder"
-import { getPageMeta } from "@/lib/app-navigation"
+import { createFileRoute, getRouteApi } from "@tanstack/react-router"
+import { SignalsPage as SignalsView } from "@/components/signals/signals-page"
+import { readSignalsSearch } from "@/lib/signals-demo"
+import { getNavigationAuthState } from "@/lib/auth-state"
 
 export const Route = createFileRoute("/teams/$teamSlug/signals")({
-  component: TeamSignalsPage,
+  loader: () => getNavigationAuthState(),
+  staleTime: 30_000,
+  validateSearch: readSignalsSearch,
+  component: SignalsPage,
 })
 
-function TeamSignalsPage() {
-  const { teamSlug } = Route.useParams()
-  const pageMeta = getPageMeta(`/teams/${teamSlug}/signals`)
-
-  return <PagePlaceholder {...pageMeta} />
+function SignalsPage() {
+  const authState = Route.useLoaderData()
+  const { team } = getRouteApi("/teams/$teamSlug").useLoaderData()
+  const { preview } = Route.useSearch()
+  const navigate = Route.useNavigate()
+  if (!authState.user) return null
+  return (
+    <SignalsView
+      scope={{
+        workspaceId: authState.workspace?.id ?? "personal",
+        userId: authState.user.id,
+      }}
+      team={team}
+      preview={preview}
+      onPreviewChange={(next) => {
+        void navigate({ search: next ? { preview: true } : {} })
+      }}
+    />
+  )
 }

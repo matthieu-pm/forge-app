@@ -20,6 +20,8 @@ export const triageDraftSchema = z.object({
   attachments: z
     .array(
       z.object({
+        id: z.string().optional(),
+        width: z.number().min(20).max(100).optional(),
         name: z.string().max(255),
         data: z
           .string()

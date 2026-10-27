@@ -1,5 +1,3 @@
-"use client"
-
 import * as React from "react"
 import {
   ArrowDown01Icon,
@@ -22,6 +20,8 @@ import type {
   WorkspaceInvitationSummary,
   WorkspaceMemberSummary,
 } from "@/lib/member-contract"
+import { OptionSelect } from "@/components/ui/option-select"
+import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,7 +54,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import {
   Table,
   TableBody,
@@ -69,6 +68,10 @@ import {
   retryInvitationDelivery,
 } from "@/lib/member-state"
 import { readLocalProfile, usernameFromEmail } from "@/lib/profile-state"
+
+;
+
+("use client")
 
 type MemberFilter = "all" | "active" | "invited"
 type SortDirection = "asc" | "desc"
@@ -202,7 +205,9 @@ export function MembersSettings({
   const [filter, setFilter] = React.useState<MemberFilter>("all")
   const [sortField, setSortField] = React.useState<SortField>("name")
   const [sortDirection, setSortDirection] = React.useState<SortDirection>("asc")
-  const [inviteOpen, setInviteOpen] = React.useState(initialInviteOpen && canManage)
+  const [inviteOpen, setInviteOpen] = React.useState(
+    initialInviteOpen && canManage
+  )
   const [inviteEmail, setInviteEmail] = React.useState("")
   const [inviteRole, setInviteRole] = React.useState<"admin" | "member">(
     "member"
@@ -691,11 +696,9 @@ export function MembersSettings({
 
   return (
     <>
-      <main className="min-h-0 flex-1 overflow-y-auto px-5 py-7 sm:px-8 lg:px-10 lg:py-9">
+      <main className="forge-settings-scroll forge-settings-wide">
         <div className="w-full">
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">
-            Members
-          </h1>
+          <h1 className="forge-page-header forge-settings-header">Members</h1>
 
           <div className="mt-5 flex flex-wrap items-center gap-2">
             <div className="relative min-w-[220px] flex-1 sm:max-w-[320px]">
@@ -723,11 +726,7 @@ export function MembersSettings({
                 className="rounded-lg px-2.5 font-normal"
               >
                 {filterLabels[filter]}
-                <HugeiconsIcon
-                  icon={ArrowDown01Icon}
-                  strokeWidth={2}
-                  className="size-3.5"
-                />
+                <DropdownChevron className="size-3.5" />
               </Button>
               <DropdownMenuContent align="start" className="min-w-40">
                 <DropdownMenuRadioGroup
@@ -919,17 +918,17 @@ export function MembersSettings({
 
             <div className="space-y-2">
               <Label htmlFor="member-invite-role">Role</Label>
-              <NativeSelect
+              <OptionSelect
                 id="member-invite-role"
                 value={inviteRole}
-                onChange={(event) =>
-                  setInviteRole(event.target.value as "admin" | "member")
+                onValueChange={(nextValue) =>
+                  setInviteRole(nextValue as "admin" | "member")
                 }
                 className="w-full"
               >
-                <NativeSelectOption value="member">Member</NativeSelectOption>
-                <NativeSelectOption value="admin">Admin</NativeSelectOption>
-              </NativeSelect>
+                <option value="member">Member</option>
+                <option value="admin">Admin</option>
+              </OptionSelect>
             </div>
 
             <DialogFooter className="pt-1">
@@ -971,17 +970,17 @@ export function MembersSettings({
 
           <div className="space-y-2">
             <Label htmlFor="member-edit-role">Role</Label>
-            <NativeSelect
+            <OptionSelect
               id="member-edit-role"
               value={editedRole}
-              onChange={(event) =>
-                setEditedRole(event.target.value as "admin" | "member")
+              onValueChange={(nextValue) =>
+                setEditedRole(nextValue as "admin" | "member")
               }
               className="w-full"
             >
-              <NativeSelectOption value="member">Member</NativeSelectOption>
-              <NativeSelectOption value="admin">Admin</NativeSelectOption>
-            </NativeSelect>
+              <option value="member">Member</option>
+              <option value="admin">Admin</option>
+            </OptionSelect>
           </div>
 
           <DialogFooter className="pt-1">

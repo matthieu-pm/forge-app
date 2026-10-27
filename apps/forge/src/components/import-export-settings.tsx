@@ -1,14 +1,12 @@
-"use client"
-
 import * as React from "react"
 import {
-  ArrowDown01Icon,
   ArrowRight01Icon,
   ArrowUpRight01Icon,
   Github01Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { toast } from "sonner"
+import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -19,6 +17,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
+
+;
+
+("use client")
 
 type ImportSource = "Asana" | "Shortcut" | "GitHub" | "Jira" | "Linear"
 type PrivateTeamSelection = "None" | "All private teams"
@@ -70,14 +72,8 @@ function ServiceIcon({ service }: { service: ImportSource }) {
   if (service === "Jira") {
     return (
       <svg viewBox="0 0 20 20" aria-hidden="true">
-        <path
-          d="m10 2.5 7.5 7.5-7.5 7.5L2.5 10 10 2.5Z"
-          fill="currentColor"
-        />
-        <path
-          d="m10 7 3 3-3 3-3-3 3-3Z"
-          fill="var(--background)"
-        />
+        <path d="m10 2.5 7.5 7.5-7.5 7.5L2.5 10 10 2.5Z" fill="currentColor" />
+        <path d="m10 7 3 3-3 3-3-3 3-3Z" fill="var(--background)" />
       </svg>
     )
   }
@@ -150,10 +146,10 @@ export function ImportExportSettings() {
   }
 
   return (
-    <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-none px-6 pt-4 pb-4 [scrollbar-gutter:stable]">
-      <div className="mx-auto w-full max-w-[640px] pb-16">
+    <main className="forge-settings-scroll">
+      <div className="forge-settings-content">
         <div className="space-y-8">
-          <h1 className="px-3 text-xl font-semibold tracking-tight text-foreground">
+          <h1 className="forge-page-header forge-settings-header">
             Import &amp; export
           </h1>
 
@@ -269,11 +265,7 @@ export function ImportExportSettings() {
                     className="group rounded-lg font-normal"
                   >
                     <span>{privateTeams}</span>
-                    <HugeiconsIcon
-                      icon={ArrowDown01Icon}
-                      strokeWidth={2}
-                      className="size-3.5 transition-transform duration-200 group-aria-expanded:rotate-180 group-data-popup-open:rotate-180"
-                    />
+                    <DropdownChevron className="size-3.5" />
                   </Button>
                   <DropdownMenuContent
                     align="end"

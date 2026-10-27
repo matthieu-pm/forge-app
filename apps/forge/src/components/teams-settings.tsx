@@ -1,5 +1,3 @@
-"use client"
-
 import * as React from "react"
 import {
   ArrowDown01Icon,
@@ -20,6 +18,7 @@ import type {
   TeamDirectoryEntry,
   TeamLifecycle,
 } from "@/lib/team-contract"
+import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import {
   AlertDialog,
@@ -53,6 +52,10 @@ import {
 } from "@/components/ui/table"
 import { notifyTeamDirectoryChanged } from "@/lib/team-events"
 import { deleteTeam, leaveTeam, restoreTeam } from "@/lib/team-state"
+
+;
+
+("use client")
 
 type SortDirection = "asc" | "desc"
 type SortField = "name" | "visibility" | "members" | "issues" | "createdAt"
@@ -281,11 +284,9 @@ export function TeamsSettings({
 
   return (
     <>
-      <main className="min-h-0 flex-1 overflow-y-auto px-5 py-7 sm:px-8 lg:px-10 lg:py-9">
+      <main className="forge-settings-scroll forge-settings-wide">
         <div className="w-full">
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">
-            Teams
-          </h1>
+          <h1 className="forge-page-header forge-settings-header">Teams</h1>
 
           <div className="mt-5 flex flex-wrap items-center gap-2">
             <div className="relative min-w-[220px] flex-1 sm:max-w-[320px]">
@@ -313,11 +314,7 @@ export function TeamsSettings({
                 className="rounded-lg px-2.5 font-normal"
               >
                 {status === "active" ? "Active" : "Archived"}
-                <HugeiconsIcon
-                  icon={ArrowDown01Icon}
-                  strokeWidth={2}
-                  className="size-3.5"
-                />
+                <DropdownChevron className="size-3.5" />
               </Button>
               <DropdownMenuContent align="start" className="min-w-36">
                 <DropdownMenuRadioGroup

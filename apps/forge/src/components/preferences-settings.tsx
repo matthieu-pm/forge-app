@@ -1,8 +1,4 @@
-"use client"
-
 import * as React from "react"
-import { ArrowDown01Icon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
 import { toast } from "sonner"
 
 import type {
@@ -10,6 +6,7 @@ import type {
   LightTheme,
   PersonalPreferences,
 } from "@/lib/personal-preferences"
+import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -27,6 +24,10 @@ import {
 } from "@/lib/personal-preferences"
 import { getForgeHost } from "@/host/forge-host"
 import { cn } from "@/lib/utils"
+
+;
+
+("use client")
 
 type ThemePreviewPalette = {
   accent: string
@@ -234,11 +235,7 @@ function PreferenceSelect<TValue extends string>({
           <ThemePreview palette={selectedOption.preview} />
         ) : null}
         <span>{selectedOption.label}</span>
-        <HugeiconsIcon
-          icon={ArrowDown01Icon}
-          strokeWidth={2}
-          className="size-3.5 transition-transform duration-200 ease-out group-aria-expanded:rotate-180 group-data-popup-open:rotate-180 group-data-open:rotate-180"
-        />
+        <DropdownChevron className="size-3.5" />
       </Button>
       <DropdownMenuContent
         align="end"
@@ -299,10 +296,10 @@ export function PreferencesSettings() {
   }
 
   return (
-    <main className="min-h-0 flex-1 overflow-y-auto px-6 pt-4 pb-4">
-      <div className="mx-auto w-full max-w-[640px] pb-16">
+    <main className="forge-settings-scroll">
+      <div className="forge-settings-content">
         <div className="space-y-10">
-          <h1 className="px-3 text-xl font-semibold tracking-tight text-foreground">
+          <h1 className="forge-page-header forge-settings-header">
             Preferences
           </h1>
 

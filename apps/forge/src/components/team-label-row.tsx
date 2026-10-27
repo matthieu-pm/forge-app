@@ -8,9 +8,9 @@ import {
   MoreHorizontalIcon,
   PencilEdit02Icon,
   StarIcon,
-  Tick02Icon,
 } from "@hugeicons/core-free-icons"
 import type { TeamLabel, TeamLabelGroup } from "@/lib/team-labels"
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -284,9 +284,8 @@ export function TeamLabelRow({
                         style={{ backgroundColor: swatch.value }}
                       >
                         {color === swatch.value && (
-                          <HugeiconsIcon
-                            icon={Tick02Icon}
-                            strokeWidth={1.5}
+                          <CheckboxMark
+                            checked
                             className="size-3.5 text-black/60"
                           />
                         )}

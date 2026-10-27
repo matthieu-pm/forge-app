@@ -1,15 +1,35 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { PagePlaceholder } from "@/components/page-placeholder"
-import { getPageMeta } from "@/lib/app-navigation"
+import { ViewsPage, viewsSearchSchema } from "@/components/views/views-page"
 import { protectedRouteBeforeLoad } from "@/lib/auth-state"
-
-const pageMeta = getPageMeta("/workspace/views")
+import { loadInitiativeDirectory } from "@/lib/initiative-directory"
 
 export const Route = createFileRoute("/workspace/views")({
   beforeLoad: protectedRouteBeforeLoad,
-  component: ViewsPage,
+  loader: loadInitiativeDirectory,
+  staleTime: 30_000,
+  validateSearch: viewsSearchSchema,
+  component: Page,
 })
-
-function ViewsPage() {
-  return <PagePlaceholder {...pageMeta} />
+function Page() {
+  const { authState } = Route.useRouteContext()
+  const directory = Route.useLoaderData()
+  const search = Route.useSearch()
+  const navigate = Route.useNavigate()
+  if (!authState.workspace || !authState.user) return null
+  return (
+    <ViewsPage
+      key={`${authState.workspace.id}:${authState.user.id}`}
+      workspaceId={authState.workspace.id}
+      user={{
+        id: authState.user.id,
+        name: authState.user.name || "You",
+        image: authState.user.image,
+      }}
+      people={directory.people}
+      teams={directory.teams}
+      directoryError={directory.error.replace("Initiatives", "Views")}
+      search={search}
+      onNavigate={(next) => void navigate({ search: next })}
+    />
+  )
 }

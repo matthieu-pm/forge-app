@@ -3,9 +3,7 @@
 import * as React from "react"
 import {
   Add01Icon,
-  ArrowDown01Icon,
   ArrowDown02Icon,
-  ArrowLeft01Icon,
   ArrowUp02Icon,
   Cancel01Icon,
   MoreHorizontalIcon,
@@ -19,6 +17,7 @@ import { toast } from "sonner"
 
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamMemberDirectory } from "@/lib/team-member-contract"
+import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 import {
   HomeIcon,
   HomeIconButton,
@@ -26,7 +25,6 @@ import {
   homePill,
 } from "@/components/team-home"
 import { useTeamHome } from "@/lib/team-home-state"
-import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -170,7 +168,13 @@ export function TeamMembersSettings({
   }
 
   const memberTable = (
-    <div className={home ? "min-h-0 flex-1 overflow-auto" : "mt-5"}>
+    <div
+      className={
+        home
+          ? "min-h-0 flex-1 overflow-auto"
+          : "mt-5 min-h-0 flex-1 overflow-auto"
+      }
+    >
       <Table className="min-w-[640px] table-fixed">
         <TableHeader>
           <TableRow className="border-border/40 hover:bg-transparent">
@@ -427,32 +431,9 @@ export function TeamMembersSettings({
           {memberTable}
         </TeamHomeLayout>
       ) : (
-        <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-none pb-8">
-          <div className="flex h-12 items-center px-4">
-            <Link
-              to="/settings/teams/$teamSlug"
-              params={{ teamSlug: team.slug }}
-              className="inline-flex min-w-0 items-center gap-2 rounded-md py-1 text-sm text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-              aria-label={`Back to ${team.name} settings`}
-            >
-              <HugeiconsIcon
-                icon={ArrowLeft01Icon}
-                strokeWidth={1.5}
-                className="size-4"
-              />
-              <TeamSidebarIcon
-                icon={team.icon}
-                name={team.name}
-                className="size-4"
-              />
-              <span className="truncate">{team.name}</span>
-            </Link>
-          </div>
-
-          <div className="px-5 pt-4 sm:px-8 lg:px-14">
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-              Team members
-            </h1>
+        <main className="flex min-h-0 flex-1 flex-col overflow-hidden pb-8">
+          <div className="forge-settings-table-header shrink-0">
+            <h1 className="forge-settings-wide-heading">Team members</h1>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <div className="relative min-w-0 flex-1 basis-60 sm:max-w-[300px]">
                 <HugeiconsIcon
@@ -473,14 +454,11 @@ export function TeamMembersSettings({
                   variant="secondary"
                   aria-label="Filter team members by role"
                   render={<DropdownMenuTrigger />}
-                  className="h-8 rounded-lg px-2.5 font-normal"
+                  size="default"
+                  className="rounded-lg px-2.5 font-normal"
                 >
                   {role}
-                  <HugeiconsIcon
-                    icon={ArrowDown01Icon}
-                    strokeWidth={1.5}
-                    className="size-3.5"
-                  />
+                  <DropdownChevron className="size-3.5" />
                 </Button>
                 <DropdownMenuContent align="start">
                   <DropdownMenuRadioGroup value={role} onValueChange={setRole}>
@@ -498,14 +476,16 @@ export function TeamMembersSettings({
                 <Button
                   variant="secondary"
                   onClick={exportCsv}
-                  className="h-8 rounded-full px-3 font-normal"
+                  size="default"
+                  className="rounded-full px-3 font-normal"
                 >
                   Export CSV
                 </Button>
                 {directory.canManage ? (
                   <Button
                     onClick={() => setAddOpen(true)}
-                    className="h-8 rounded-full bg-[#5E6AD2] px-3 font-normal text-white hover:bg-[#5360C8]"
+                    size="default"
+                    className="rounded-full bg-[#5E6AD2] px-3 font-normal text-white hover:bg-[#5360C8]"
                   >
                     Add a member
                   </Button>
@@ -595,11 +575,7 @@ export function TeamMembersSettings({
                         .join(", ")
                     : "Select members..."}
                 </span>
-                <HugeiconsIcon
-                  icon={ArrowDown01Icon}
-                  strokeWidth={1.5}
-                  className="size-3.5"
-                />
+                <DropdownChevron className="size-3.5" />
               </PopoverTrigger>
               <PopoverContent
                 align="start"

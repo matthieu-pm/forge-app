@@ -4,7 +4,6 @@ import * as React from "react"
 import { Link, useBlocker, useNavigate } from "@tanstack/react-router"
 import {
   Add01Icon,
-  ArrowLeft01Icon,
   BubbleChatIcon,
   Delete02Icon,
   Link01Icon,
@@ -58,8 +57,6 @@ const editPath = "/settings/teams/$teamSlug/agent-skills/$skillId"
 const purpleButton = "bg-[#5e6ad2] text-white hover:bg-[#535fc3]"
 
 function SkillsShell({
-  team,
-  editor = false,
   children,
 }: {
   team: TeamSummary
@@ -68,32 +65,8 @@ function SkillsShell({
 }) {
   return (
     <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="flex h-12 shrink-0 items-center px-4">
-        <Link
-          to={editor ? listPath : "/settings/teams/$teamSlug"}
-          params={{ teamSlug: team.slug }}
-          aria-label={
-            editor ? "Back to Agent skills" : `Back to ${team.name} settings`
-          }
-          className={`inline-flex items-center gap-2 rounded-md py-1 text-sm text-muted-foreground hover:text-foreground ${focusClass}`}
-        >
-          <HugeiconsIcon
-            icon={ArrowLeft01Icon}
-            className="size-4"
-            strokeWidth={1.5}
-          />
-          <TeamSidebarIcon
-            icon={team.icon}
-            name={team.name}
-            className="size-4"
-          />
-          {editor ? "Agent skills" : team.name}
-        </Link>
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-none pb-16">
-        <div className="mx-auto w-full max-w-[688px] px-4 pt-5 sm:px-6">
-          {children}
-        </div>
+      <div className="forge-settings-scroll">
+        <div className="forge-settings-content">{children}</div>
       </div>
     </main>
   )
@@ -155,8 +128,8 @@ export function TeamAgentSkillsSettings({
   }
   return (
     <SkillsShell team={team}>
-      <header className="px-4 pb-8">
-        <h1 className="text-2xl font-medium tracking-tight">Agent skills</h1>
+      <header className="forge-page-header forge-settings-header">
+        <h1>Agent skills</h1>
         <p className="mt-1.5 text-sm leading-[22px] text-muted-foreground">
           Add reusable instructions team members can use with Forge Agent
         </p>

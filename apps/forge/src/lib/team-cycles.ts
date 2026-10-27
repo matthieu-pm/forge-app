@@ -1,5 +1,6 @@
 import * as React from "react"
 import { z } from "zod"
+import { addDays, addWeeks, format } from "date-fns"
 
 const cyclesSchema = z.object({
   enabled: z.boolean(),
@@ -119,4 +120,23 @@ export function nextCycleStart(startDay: number, now = new Date()) {
   next.setHours(12, 0, 0, 0)
   next.setDate(next.getDate() + ((startDay - next.getDay() + 7) % 7 || 7))
   return next
+}
+
+export function scheduledTeamCycles(
+  settings: TeamCyclesSettings,
+  now = new Date()
+) {
+  const first = nextCycleStart(settings.startDay, now)
+  return Array.from({ length: settings.futureCycles }, (_, index) => {
+    const start = addWeeks(
+      first,
+      index * (settings.duration + settings.cooldown)
+    )
+    return {
+      number: index + 1,
+      start,
+      end: addDays(addWeeks(start, settings.duration), -1),
+      value: format(start, "yyyy-MM-dd"),
+    }
+  })
 }

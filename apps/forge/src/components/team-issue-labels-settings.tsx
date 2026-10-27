@@ -3,14 +3,12 @@
 import * as React from "react"
 import {
   ArrowDown02Icon,
-  ArrowLeft01Icon,
   ArrowUp02Icon,
   FilterHorizontalIcon,
   Search01Icon,
   SlidersHorizontalIcon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Link } from "@tanstack/react-router"
 import { toast } from "sonner"
 import type { TeamSummary } from "@/lib/team-contract"
 import type {
@@ -19,6 +17,7 @@ import type {
   TeamLabelGroup,
 } from "@/lib/team-labels"
 import type { TeamLabelRowHandle } from "@/components/team-label-row"
+import { OptionSelect } from "@/components/ui/option-select"
 import {
   LABEL_COLORS,
   initialInitiativeLabels,
@@ -34,7 +33,6 @@ import {
   workspaceLabelsStorageKey,
 } from "@/lib/team-labels"
 import { LabelSelectionActions } from "@/components/label-selection-actions"
-import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { LabelGroupRow } from "@/components/label-group-row"
 import { TeamLabelRow } from "@/components/team-label-row"
 import { Button } from "@/components/ui/button"
@@ -634,37 +632,15 @@ export function TeamIssueLabelsSettings({
 
   return (
     <>
-      <main className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-none pb-8">
+      <main className="flex min-h-0 flex-1 flex-col overflow-hidden pb-8">
         {loadError && (
           <p role="alert" className="px-5 py-3 text-sm text-destructive">
             Saved labels could not be loaded. Your data has been preserved.
             Reload to try again.
           </p>
         )}
-        {team && (
-          <div className="flex h-12 items-center px-4">
-            <Link
-              to="/settings/teams/$teamSlug"
-              params={{ teamSlug: team.slug }}
-              aria-label={`Back to ${team.name} settings`}
-              className={`inline-flex min-w-0 items-center gap-2 rounded-md py-1 text-sm text-muted-foreground hover:text-foreground ${focusClass}`}
-            >
-              <HugeiconsIcon
-                icon={ArrowLeft01Icon}
-                strokeWidth={1.5}
-                className="size-4"
-              />
-              <TeamSidebarIcon
-                icon={team.icon}
-                name={team.name}
-                className="size-4"
-              />
-              <span className="truncate">{team.name}</span>
-            </Link>
-          </div>
-        )}
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border/40 px-5 pt-4 pb-3 sm:px-8 lg:px-14">
-          <h1 className="text-2xl font-medium tracking-tight text-foreground">
+        <div className="forge-page-header forge-settings-table-header flex flex-wrap items-start justify-between gap-4 border-b border-border/40">
+          <h1 className="forge-settings-wide-heading">
             {standalone
               ? entityTitle
               : workspaceView
@@ -683,21 +659,23 @@ export function TeamIssueLabelsSettings({
             )}
             <Button
               variant="secondary"
-              className="h-8 rounded-full px-3 font-normal"
+              size="default"
+              className="rounded-full px-3 font-normal"
               onClick={() => setEditor({ kind: "group" })}
             >
               New group
             </Button>
             <Button
               ref={newLabelButton}
-              className="h-8 rounded-full bg-[#5E6AD2] px-3 font-normal text-white hover:bg-[#5360C8]"
+              size="default"
+              className="rounded-full bg-[#5E6AD2] px-3 font-normal text-white hover:bg-[#5360C8]"
               onClick={() => startNewLabel()}
             >
               New label
             </Button>
           </div>
         </div>
-        <div className="flex items-center gap-3 px-5 py-2 sm:px-8 lg:px-14">
+        <div className="flex items-center gap-3 px-6 py-2">
           <div className="relative min-w-0 flex-1">
             <HugeiconsIcon
               icon={Search01Icon}
@@ -793,282 +771,285 @@ export function TeamIssueLabelsSettings({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        {initiativeLabels &&
-        directory.labels.length === 0 &&
-        directory.groups.length === 0 &&
-        !newLabel ? (
-          <div
-            role="status"
-            className="flex min-h-64 flex-1 flex-col items-center justify-center gap-5 pb-12 text-sm text-muted-foreground"
-          >
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 140 100"
-              className="h-24 w-32"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
+        <div className="min-h-0 flex-1 overflow-auto overscroll-contain">
+          {initiativeLabels &&
+          directory.labels.length === 0 &&
+          directory.groups.length === 0 &&
+          !newLabel ? (
+            <div
+              role="status"
+              className="flex min-h-64 flex-1 flex-col items-center justify-center gap-5 pb-12 text-sm text-muted-foreground"
             >
-              <g transform="rotate(20 70 50)">
-                <ellipse
-                  cx="70"
-                  cy="50"
-                  rx="62"
-                  ry="39"
-                  strokeDasharray="4 5"
-                  opacity=".7"
-                />
-                {[
-                  [-17, -12],
-                  [17, -12],
-                  [-17, 12],
-                  [17, 12],
-                ].map(([x, y], i) => (
-                  <g key={i} transform={`translate(${70 + x} ${50 + y})`}>
-                    <ellipse cy="3" rx="11" ry="8" />
-                    <ellipse rx="11" ry="7" fill="var(--background)" />
-                  </g>
-                ))}
-              </g>
-            </svg>
-            No labels found
-          </div>
-        ) : (
-          <div className="px-5 sm:px-8 lg:px-14 [&>[data-slot=table-container]]:-ml-4 [&>[data-slot=table-container]]:w-[calc(100%+2rem)] sm:[&>[data-slot=table-container]]:-ml-10 sm:[&>[data-slot=table-container]]:w-[calc(100%+5rem)]">
-            <Table
-              className="min-w-[1000px] table-fixed border-separate border-spacing-0"
-              aria-label={
-                entity !== "issue"
-                  ? entityTitle
-                  : workspaceView
-                    ? "Workspace issue labels"
-                    : "Team issue labels"
-              }
-            >
-              <TableHeader className="[&_tr]:border-b-0">
-                <TableRow className="border-0 hover:bg-transparent">
-                  <TableHead className="w-10 p-0 sm:w-12">
-                    <span className="sr-only">Selection</span>
-                  </TableHead>
-                  <TableHead
-                    scope="col"
-                    aria-sort={ascending ? "ascending" : "descending"}
-                    className="h-8 w-[32.5%] px-0 text-xs font-normal text-muted-foreground"
-                  >
-                    <button
-                      type="button"
-                      aria-label={`Sort by name ${ascending ? "descending" : "ascending"}`}
-                      onClick={() => setAscending((current) => !current)}
-                      className={`inline-flex items-center gap-1 rounded-sm py-1 hover:text-foreground ${focusClass}`}
-                    >
-                      Name{" "}
-                      <HugeiconsIcon
-                        icon={ascending ? ArrowDown02Icon : ArrowUp02Icon}
-                        strokeWidth={1.5}
-                        className="size-3"
-                      />
-                    </button>
-                  </TableHead>
-                  {columns.description && (
-                    <TableHead
-                      scope="col"
-                      className="h-8 px-0 text-xs font-normal text-muted-foreground"
-                    >
-                      Description
-                    </TableHead>
-                  )}
-                  {columns.rules && (
-                    <TableHead
-                      scope="col"
-                      className="h-8 w-[5.3%] px-0 text-xs font-normal text-muted-foreground"
-                    >
-                      Rules
-                    </TableHead>
-                  )}
-                  {columns.issues && (
-                    <TableHead
-                      scope="col"
-                      className="h-8 w-[5.3%] px-0 text-xs font-normal text-muted-foreground"
-                    >
-                      {usageTitle}
-                    </TableHead>
-                  )}
-                  {columns.lastApplied && (
-                    <TableHead
-                      scope="col"
-                      className="h-8 w-[7.2%] px-0 text-xs font-normal text-muted-foreground"
-                    >
-                      Last applied
-                    </TableHead>
-                  )}
-                  {columns.created && (
-                    <TableHead
-                      scope="col"
-                      className="h-8 w-[6.2%] px-0 text-xs font-normal text-muted-foreground"
-                    >
-                      Created
-                    </TableHead>
-                  )}
-                  <TableHead className="w-10 p-0">
-                    <span className="sr-only">Actions</span>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {newLabel && showNewLabel && (
-                  <TeamLabelRow
-                    key={newLabel.id}
-                    ref={newLabelRow}
-                    label={newLabel}
-                    columns={columns}
-                    rowClassName={labelRowClass}
-                    isNewRow
-                    workspaceStyle={standalone}
-                    groups={directory.groups}
-                    selected={selectedIds.has(newLabel.id)}
-                    onSelectedChange={(selected) =>
-                      selectLabel(newLabel.id, selected)
-                    }
-                    saved={directory.labels.some(
-                      (label) => label.id === newLabel.id
-                    )}
-                    onSave={saveLabel}
-                    onClose={closeNewLabel}
-                    onDelete={() => remove("label", newLabel.id)}
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 140 100"
+                className="h-24 w-32"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              >
+                <g transform="rotate(20 70 50)">
+                  <ellipse
+                    cx="70"
+                    cy="50"
+                    rx="62"
+                    ry="39"
+                    strokeDasharray="4 5"
+                    opacity=".7"
                   />
-                )}
-                {sections.map(({ key, group, labels }) => (
-                  <React.Fragment key={key}>
-                    {group &&
-                      (labels.length > 0 ||
-                        (!query && filter === "all") ||
-                        (filter === "all" &&
-                          group.name
-                            .toLocaleLowerCase()
-                            .includes(query.trim().toLocaleLowerCase()))) && (
-                        <LabelGroupRow
-                          group={group}
-                          labels={directory.labels.filter(
-                            (label) =>
-                              label.groupId === group.id && !label.archived
-                          )}
-                          columns={columns}
-                          rowClassName={labelRowClass}
-                          expanded={!!query || expandedGroups.has(group.id)}
-                          selectedIds={selectedIds}
-                          onSelect={(checked) =>
-                            setSelectedIds((current) => {
-                              const next = new Set(current)
-                              labels.forEach((label) =>
-                                checked
-                                  ? next.add(label.id)
-                                  : next.delete(label.id)
-                              )
-                              return next
-                            })
-                          }
-                          onToggle={() =>
-                            setExpandedGroups((current) => {
-                              const next = new Set(current)
-                              if (next.has(group.id)) next.delete(group.id)
-                              else next.add(group.id)
-                              return next
-                            })
-                          }
-                          onEdit={() =>
-                            setEditor({ kind: "group", item: group })
-                          }
-                          onCreate={() => startNewLabel(group.id)}
-                          onDelete={() => remove("group", group.id)}
-                        />
-                      )}
-                    {group &&
-                      labels.length === 0 &&
-                      expandedGroups.has(group.id) &&
-                      !query &&
-                      filter === "all" && (
-                        <TableRow className="border-0 hover:bg-transparent">
-                          <TableCell
-                            colSpan={
-                              3 + Object.values(columns).filter(Boolean).length
-                            }
-                            className="h-11 pl-16 text-xs text-muted-foreground"
-                          >
-                            No labels in this group.{" "}
-                            <button
-                              type="button"
-                              onClick={() => startNewLabel(group.id)}
-                              className={`rounded-sm text-foreground hover:underline ${focusClass}`}
-                            >
-                              Create label
-                            </button>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    {(!group || !!query || expandedGroups.has(group.id)) &&
-                      labels.map((label, index) => (
-                        <TeamLabelRow
-                          key={label.id}
-                          label={label}
-                          nested={!!group}
-                          lastInGroup={index === labels.length - 1}
-                          workspaceStyle={standalone}
-                          columns={columns}
-                          rowClassName={labelRowClass}
-                          saved
-                          groups={directory.groups}
-                          selected={selectedIds.has(label.id)}
-                          onSelectedChange={(selected) =>
-                            selectLabel(label.id, selected)
-                          }
-                          onSave={saveLabel}
-                          onClose={() => {}}
-                          onDelete={() => remove("label", label.id)}
-                        />
-                      ))}
-                  </React.Fragment>
-                ))}
-              </TableBody>
-            </Table>
-            {visible.length === 0 &&
-              !showNewLabel &&
-              !sections.some(
-                (section) =>
-                  section.group &&
-                  filter === "all" &&
-                  section.group.name
-                    .toLocaleLowerCase()
-                    .includes(query.trim().toLocaleLowerCase())
-              ) && (
-                <p
-                  role="status"
-                  className="py-10 text-center text-sm text-muted-foreground"
-                >
-                  {query || filter !== "all"
-                    ? "No labels match your filters."
+                  {[
+                    [-17, -12],
+                    [17, -12],
+                    [-17, 12],
+                    [17, 12],
+                  ].map(([x, y], i) => (
+                    <g key={i} transform={`translate(${70 + x} ${50 + y})`}>
+                      <ellipse cy="3" rx="11" ry="8" />
+                      <ellipse rx="11" ry="7" fill="var(--background)" />
+                    </g>
+                  ))}
+                </g>
+              </svg>
+              No labels found
+            </div>
+          ) : (
+            <div className="px-5 sm:px-8 lg:px-14 [&>[data-slot=table-container]]:-ml-4 [&>[data-slot=table-container]]:w-[calc(100%+2rem)] sm:[&>[data-slot=table-container]]:-ml-10 sm:[&>[data-slot=table-container]]:w-[calc(100%+5rem)]">
+              <Table
+                className="min-w-[1000px] table-fixed border-separate border-spacing-0"
+                aria-label={
+                  entity !== "issue"
+                    ? entityTitle
                     : workspaceView
-                      ? "No workspace labels yet. Create a label to get started."
-                      : "No team labels yet. Create a label to get started."}
+                      ? "Workspace issue labels"
+                      : "Team issue labels"
+                }
+              >
+                <TableHeader className="[&_tr]:border-b-0">
+                  <TableRow className="border-0 hover:bg-transparent">
+                    <TableHead className="w-10 p-0 sm:w-12">
+                      <span className="sr-only">Selection</span>
+                    </TableHead>
+                    <TableHead
+                      scope="col"
+                      aria-sort={ascending ? "ascending" : "descending"}
+                      className="h-8 w-[32.5%] px-0 text-xs font-normal text-muted-foreground"
+                    >
+                      <button
+                        type="button"
+                        aria-label={`Sort by name ${ascending ? "descending" : "ascending"}`}
+                        onClick={() => setAscending((current) => !current)}
+                        className={`inline-flex items-center gap-1 rounded-sm py-1 hover:text-foreground ${focusClass}`}
+                      >
+                        Name{" "}
+                        <HugeiconsIcon
+                          icon={ascending ? ArrowDown02Icon : ArrowUp02Icon}
+                          strokeWidth={1.5}
+                          className="size-3"
+                        />
+                      </button>
+                    </TableHead>
+                    {columns.description && (
+                      <TableHead
+                        scope="col"
+                        className="h-8 px-0 text-xs font-normal text-muted-foreground"
+                      >
+                        Description
+                      </TableHead>
+                    )}
+                    {columns.rules && (
+                      <TableHead
+                        scope="col"
+                        className="h-8 w-[5.3%] px-0 text-xs font-normal text-muted-foreground"
+                      >
+                        Rules
+                      </TableHead>
+                    )}
+                    {columns.issues && (
+                      <TableHead
+                        scope="col"
+                        className="h-8 w-[5.3%] px-0 text-xs font-normal text-muted-foreground"
+                      >
+                        {usageTitle}
+                      </TableHead>
+                    )}
+                    {columns.lastApplied && (
+                      <TableHead
+                        scope="col"
+                        className="h-8 w-[7.2%] px-0 text-xs font-normal text-muted-foreground"
+                      >
+                        Last applied
+                      </TableHead>
+                    )}
+                    {columns.created && (
+                      <TableHead
+                        scope="col"
+                        className="h-8 w-[6.2%] px-0 text-xs font-normal text-muted-foreground"
+                      >
+                        Created
+                      </TableHead>
+                    )}
+                    <TableHead className="w-10 p-0">
+                      <span className="sr-only">Actions</span>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {newLabel && showNewLabel && (
+                    <TeamLabelRow
+                      key={newLabel.id}
+                      ref={newLabelRow}
+                      label={newLabel}
+                      columns={columns}
+                      rowClassName={labelRowClass}
+                      isNewRow
+                      workspaceStyle={standalone}
+                      groups={directory.groups}
+                      selected={selectedIds.has(newLabel.id)}
+                      onSelectedChange={(selected) =>
+                        selectLabel(newLabel.id, selected)
+                      }
+                      saved={directory.labels.some(
+                        (label) => label.id === newLabel.id
+                      )}
+                      onSave={saveLabel}
+                      onClose={closeNewLabel}
+                      onDelete={() => remove("label", newLabel.id)}
+                    />
+                  )}
+                  {sections.map(({ key, group, labels }) => (
+                    <React.Fragment key={key}>
+                      {group &&
+                        (labels.length > 0 ||
+                          (!query && filter === "all") ||
+                          (filter === "all" &&
+                            group.name
+                              .toLocaleLowerCase()
+                              .includes(query.trim().toLocaleLowerCase()))) && (
+                          <LabelGroupRow
+                            group={group}
+                            labels={directory.labels.filter(
+                              (label) =>
+                                label.groupId === group.id && !label.archived
+                            )}
+                            columns={columns}
+                            rowClassName={labelRowClass}
+                            expanded={!!query || expandedGroups.has(group.id)}
+                            selectedIds={selectedIds}
+                            onSelect={(checked) =>
+                              setSelectedIds((current) => {
+                                const next = new Set(current)
+                                labels.forEach((label) =>
+                                  checked
+                                    ? next.add(label.id)
+                                    : next.delete(label.id)
+                                )
+                                return next
+                              })
+                            }
+                            onToggle={() =>
+                              setExpandedGroups((current) => {
+                                const next = new Set(current)
+                                if (next.has(group.id)) next.delete(group.id)
+                                else next.add(group.id)
+                                return next
+                              })
+                            }
+                            onEdit={() =>
+                              setEditor({ kind: "group", item: group })
+                            }
+                            onCreate={() => startNewLabel(group.id)}
+                            onDelete={() => remove("group", group.id)}
+                          />
+                        )}
+                      {group &&
+                        labels.length === 0 &&
+                        expandedGroups.has(group.id) &&
+                        !query &&
+                        filter === "all" && (
+                          <TableRow className="border-0 hover:bg-transparent">
+                            <TableCell
+                              colSpan={
+                                3 +
+                                Object.values(columns).filter(Boolean).length
+                              }
+                              className="h-11 pl-16 text-xs text-muted-foreground"
+                            >
+                              No labels in this group.{" "}
+                              <button
+                                type="button"
+                                onClick={() => startNewLabel(group.id)}
+                                className={`rounded-sm text-foreground hover:underline ${focusClass}`}
+                              >
+                                Create label
+                              </button>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      {(!group || !!query || expandedGroups.has(group.id)) &&
+                        labels.map((label, index) => (
+                          <TeamLabelRow
+                            key={label.id}
+                            label={label}
+                            nested={!!group}
+                            lastInGroup={index === labels.length - 1}
+                            workspaceStyle={standalone}
+                            columns={columns}
+                            rowClassName={labelRowClass}
+                            saved
+                            groups={directory.groups}
+                            selected={selectedIds.has(label.id)}
+                            onSelectedChange={(selected) =>
+                              selectLabel(label.id, selected)
+                            }
+                            onSave={saveLabel}
+                            onClose={() => {}}
+                            onDelete={() => remove("label", label.id)}
+                          />
+                        ))}
+                    </React.Fragment>
+                  ))}
+                </TableBody>
+              </Table>
+              {visible.length === 0 &&
+                !showNewLabel &&
+                !sections.some(
+                  (section) =>
+                    section.group &&
+                    filter === "all" &&
+                    section.group.name
+                      .toLocaleLowerCase()
+                      .includes(query.trim().toLocaleLowerCase())
+                ) && (
+                  <p
+                    role="status"
+                    className="py-10 text-center text-sm text-muted-foreground"
+                  >
+                    {query || filter !== "all"
+                      ? "No labels match your filters."
+                      : workspaceView
+                        ? "No workspace labels yet. Create a label to get started."
+                        : "No team labels yet. Create a label to get started."}
+                  </p>
+                )}
+              {!workspaceView && (
+                <p className="mt-10 text-center text-xs text-muted-foreground">
+                  <button
+                    type="button"
+                    aria-label="Manage workspace labels"
+                    onClick={() => switchScope(true)}
+                    className={`mr-1.5 rounded-sm text-foreground/90 hover:underline ${focusClass}`}
+                  >
+                    {directory.inheritedCount + workspaceCount > 0
+                      ? `${directory.inheritedCount + workspaceCount} labels`
+                      : "Manage workspace labels"}
+                  </button>
+                  {directory.inheritedCount + workspaceCount > 0 &&
+                    "inherited from workspace"}
                 </p>
               )}
-            {!workspaceView && (
-              <p className="mt-10 text-center text-xs text-muted-foreground">
-                <button
-                  type="button"
-                  aria-label="Manage workspace labels"
-                  onClick={() => switchScope(true)}
-                  className={`mr-1.5 rounded-sm text-foreground/90 hover:underline ${focusClass}`}
-                >
-                  {directory.inheritedCount + workspaceCount > 0
-                    ? `${directory.inheritedCount + workspaceCount} labels`
-                    : "Manage workspace labels"}
-                </button>
-                {directory.inheritedCount + workspaceCount > 0 &&
-                  "inherited from workspace"}
-              </p>
-            )}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
         {selectedLabels.length > 0 && (
           <LabelSelectionActions
             labels={selectedLabels}
@@ -1225,10 +1206,10 @@ function LabelEditor({
           <label htmlFor={`${prefix}-group`} className="text-sm font-medium">
             Group
           </label>
-          <select
+          <OptionSelect
             id={`${prefix}-group`}
             value={groupId}
-            onChange={(event) => setGroupId(event.target.value)}
+            onValueChange={(nextValue) => setGroupId(nextValue)}
             className={`h-9 w-full rounded-lg border border-input bg-background px-3 text-sm ${focusClass}`}
           >
             <option value="">No group</option>
@@ -1237,7 +1218,7 @@ function LabelEditor({
                 {group.name}
               </option>
             ))}
-          </select>
+          </OptionSelect>
         </div>
       )}
       {error && (

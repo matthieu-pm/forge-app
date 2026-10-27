@@ -1,12 +1,11 @@
-"use client"
-
 import * as React from "react"
-import { ArrowDown01Icon, Delete02Icon } from "@hugeicons/core-free-icons"
+import { Delete02Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Link, useRouter } from "@tanstack/react-router"
 import { toast } from "sonner"
 
 import type { WorkspaceSummary } from "@/lib/auth-types"
+import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 import { AvatarPicker } from "@/components/avatar-picker"
 import {
   AlertDialog,
@@ -30,6 +29,10 @@ import {
 import { Input } from "@/components/ui/input"
 import { authClient } from "@/lib/auth-client"
 import { cn } from "@/lib/utils"
+
+;
+
+("use client")
 
 type SaveStatus = "idle" | "saving" | "saved" | "error"
 
@@ -327,13 +330,11 @@ export function WorkspaceSettings({
 
   return (
     <>
-      <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-none px-6 pt-4 pb-4 [scrollbar-gutter:stable]">
-        <div className="mx-auto w-full max-w-[640px] pb-16">
+      <main className="forge-settings-scroll">
+        <div className="forge-settings-content">
           <div className="space-y-12">
-            <div className="flex items-center justify-between gap-4 px-3">
-              <h1 className="text-xl font-semibold tracking-tight text-foreground">
-                Workspace
-              </h1>
+            <div className="forge-page-header forge-settings-header flex items-center justify-between gap-4">
+              <h1>Workspace</h1>
               <span
                 aria-live="polite"
                 className={cn(
@@ -426,11 +427,7 @@ export function WorkspaceSettings({
                       className="group rounded-lg font-normal"
                     >
                       <span>{fiscalMonth}</span>
-                      <HugeiconsIcon
-                        icon={ArrowDown01Icon}
-                        strokeWidth={2}
-                        className="size-3.5 transition-transform duration-200 group-aria-expanded:rotate-180"
-                      />
+                      <DropdownChevron className="size-3.5" />
                     </Button>
                     <DropdownMenuContent
                       align="end"

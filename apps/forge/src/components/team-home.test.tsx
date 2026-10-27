@@ -13,14 +13,64 @@ import { TeamLoops } from "./team-home-loops"
 import type { TeamSummary } from "@/lib/team-contract"
 import { updateTeam } from "@/lib/team-state"
 import { emptyTeamHome, teamHomeKey } from "@/lib/team-home-state"
+import { newTeamDocument } from "@/lib/team-documents"
 
 vi.mock("@tanstack/react-router", () => ({
   useRouter: () => ({ navigate: vi.fn(), invalidate: vi.fn() }),
+  useBlocker: () => ({ status: "idle" }),
   Link: ({ children, params, to, search: _search, ...props }: any) => (
     <a href={to.replace("$teamSlug", params?.teamSlug ?? "")} {...props}>
       {children}
     </a>
   ),
+}))
+vi.mock("@/lib/auth-client", () => ({
+  authClient: {
+    useSession: () => ({
+      data: { user: { id: "user", name: "Matthieu", image: null } },
+    }),
+  },
+}))
+vi.mock("./team-icon-picker", () => ({
+  TeamIconPicker: ({ label }: { label: string }) => (
+    <button aria-label={label}>Icon</button>
+  ),
+}))
+vi.mock("./templates/rich-editor", () => ({
+  RichEditor: ({
+    value,
+    onChange,
+    label,
+  }: {
+    value: { content?: Array<{ content?: Array<{ text?: string }> }> }
+    onChange: (value: unknown) => void
+    label: string
+  }) => {
+    const text =
+      value.content
+        ?.map(
+          (node) =>
+            node.content?.map((child) => child.text ?? "").join("") ?? ""
+        )
+        .join("\n") ?? ""
+    return (
+      <textarea
+        aria-label={label}
+        defaultValue={text}
+        onChange={(event) =>
+          onChange({
+            type: "doc",
+            content: [
+              {
+                type: "paragraph",
+                content: [{ type: "text", text: event.target.value }],
+              },
+            ],
+          })
+        }
+      />
+    )
+  },
 }))
 vi.mock("@/components/team-sidebar-icon", () => ({
   TeamSidebarIcon: () => <span />,
@@ -110,13 +160,15 @@ describe("team home workflows", () => {
       ).toBeTruthy()
     )
     fireEvent.click(screen.getByRole("button", { name: "Create document" }))
-    fireEvent.change(screen.getByLabelText("Resource title"), {
+    expect(screen.queryByRole("dialog")).toBeNull()
+    expect(screen.queryByRole("button", { name: "Save document" })).toBeNull()
+    fireEvent.change(screen.getByLabelText("Document title"), {
       target: { value: "Decision log" },
     })
     fireEvent.change(screen.getByLabelText("Document content"), {
       target: { value: "Keep the existing shell." },
     })
-    fireEvent.click(screen.getByRole("button", { name: "Save document" }))
+    fireEvent.click(screen.getByRole("button", { name: "Documents" }))
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Decision log" })).toBeTruthy()
     )
@@ -127,6 +179,106 @@ describe("team home workflows", () => {
     expect(
       JSON.parse(localStorage.getItem(teamHomeKey(team.id))!).resources[0].title
     ).toBe("Decision log")
+    expect(
+      JSON.parse(localStorage.getItem(teamHomeKey(team.id))!).resources[0].owner
+        .name
+    ).toBe("Matthieu")
+  })
+  it("retains failed autosaves, blocks returning to the list, and retries without losing content", () => {
+    const resource = {
+      ...newTeamDocument(),
+      title: "Saved plan",
+      content: "Original notes",
+    }
+    localStorage.setItem(
+      teamHomeKey(team.id),
+      JSON.stringify({ ...emptyTeamHome(), resources: [resource] })
+    )
+    render(<TeamDocuments team={team} />)
+    fireEvent.click(screen.getByRole("button", { name: "Saved plan" }))
+    const write = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(() => {
+        throw new Error("Storage full")
+      })
+    fireEvent.change(screen.getByLabelText("Document title"), {
+      target: { value: "Unsaved plan" },
+    })
+    expect(screen.getByRole("alert").textContent).toContain(
+      "could not be saved"
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Documents" }))
+    expect(
+      screen.getByLabelText<HTMLInputElement>("Document title").value
+    ).toBe("Unsaved plan")
+    expect(
+      JSON.parse(localStorage.getItem(teamHomeKey(team.id))!).resources[0].title
+    ).toBe("Saved plan")
+    write.mockRestore()
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }))
+    expect(screen.queryByRole("alert")).toBeNull()
+    expect(
+      JSON.parse(localStorage.getItem(teamHomeKey(team.id))!).resources[0].title
+    ).toBe("Unsaved plan")
+    expect(
+      screen.getByLabelText<HTMLTextAreaElement>("Document content").value
+    ).toBe("Original notes")
+  })
+  it("orders documents by creation date and collapses the document group without altering saved content", () => {
+    const first = {
+      ...newTeamDocument(),
+      id: "first",
+      title: "A notes",
+      createdAt: "2026-10-01T12:00:00Z",
+    }
+    const second = {
+      ...newTeamDocument(),
+      id: "second",
+      title: "B notes",
+      createdAt: "2026-10-20T12:00:00Z",
+    }
+    const original = JSON.stringify({
+      ...emptyTeamHome(),
+      resources: [second, first],
+    })
+    localStorage.setItem(teamHomeKey(team.id), original)
+    render(<TeamDocuments team={team} />)
+    const before = (left: string, right: string) =>
+      Boolean(
+        screen
+          .getByRole("button", { name: left })
+          .compareDocumentPosition(
+            screen.getByRole("button", { name: right })
+          ) & Node.DOCUMENT_POSITION_FOLLOWING
+      )
+    expect(before("A notes", "B notes")).toBe(true)
+    fireEvent.click(screen.getByRole("button", { name: "Created" }))
+    expect(before("B notes", "A notes")).toBe(true)
+    fireEvent.click(
+      screen.getByRole("button", { name: "Collapse Team documents" })
+    )
+    expect(screen.queryByRole("button", { name: "A notes" })).toBeNull()
+    fireEvent.click(
+      screen.getByRole("button", { name: "Expand Team documents" })
+    )
+    expect(screen.getByRole("button", { name: "A notes" })).toBeTruthy()
+    expect(localStorage.getItem(teamHomeKey(team.id))).toBe(original)
+  })
+  it("handles a missing document deep link without creating or changing records", () => {
+    const onOpenDocument = vi.fn()
+    render(
+      <TeamDocuments
+        team={team}
+        documentId="missing"
+        onOpenDocument={onOpenDocument}
+      />
+    )
+    expect(screen.getByRole("status").textContent).toContain(
+      "no longer available"
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Back to documents" }))
+    expect(onOpenDocument).toHaveBeenCalledWith(undefined)
+    expect(localStorage.getItem(teamHomeKey(team.id))).toBeNull()
   })
   it("rejects unsafe link schemes before saving", () => {
     const update = vi.fn(() => true)
@@ -182,9 +334,9 @@ describe("team home workflows", () => {
     })
     await waitFor(() => expect(template.hasAttribute("disabled")).toBe(false))
     fireEvent.click(template)
-    expect(screen.getByLabelText<HTMLSelectElement>("Loop trigger").value).toBe(
-      "Weekly schedule"
-    )
+    expect(
+      screen.getByRole("combobox", { name: "Loop trigger" }).textContent
+    ).toBe("Weekly schedule")
     fireEvent.change(screen.getByLabelText("Loop name"), {
       target: { value: "Friday wrap" },
     })

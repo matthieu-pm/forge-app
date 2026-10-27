@@ -9,6 +9,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { RecurringIssueEditor } from "./recurring-issue-editor"
 import type { TeamSummary } from "@/lib/team-contract"
+import { selectOption } from "@/test-utils/select-option"
 import { emptyRecurringIssue } from "@/lib/recurring-issue-contract"
 
 const mocks = vi.hoisted(() => ({
@@ -72,13 +73,8 @@ describe("Recurring issue editor", () => {
     fireEvent.input(screen.getByLabelText("First due"), {
       target: { value: "2026-10-21" },
     })
-    fireEvent.change(
-      screen.getByRole("combobox", { name: "Repeat interval" }),
-      { target: { value: "2" } }
-    )
-    fireEvent.change(screen.getByRole("combobox", { name: "Repeat unit" }), {
-      target: { value: "month" },
-    })
+    selectOption(screen.getByRole("combobox", { name: "Repeat interval" }), "2")
+    selectOption(screen.getByRole("combobox", { name: "Repeat unit" }), "months")
     fireEvent.click(screen.getByRole("button", { name: "Create" }))
     await waitFor(() =>
       expect(mocks.save).toHaveBeenCalledWith({

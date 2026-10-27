@@ -1,12 +1,10 @@
 "use client"
 
 import * as React from "react"
-import {
-  ArrowDown01Icon,
-  Search01Icon,
-  Tick02Icon,
-} from "@hugeicons/core-free-icons"
+import { Search01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
+import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -189,11 +187,7 @@ export function TeamTimezonePicker({
         <span className="truncate whitespace-nowrap">
           {selectedTimezone.label}
         </span>
-        <HugeiconsIcon
-          icon={ArrowDown01Icon}
-          strokeWidth={2}
-          className="size-3.5 shrink-0 transition-transform duration-200 ease-out group-data-popup-open:rotate-180 group-data-open:rotate-180"
-        />
+        <DropdownChevron className="size-3.5" />
       </PopoverTrigger>
       <PopoverContent
         align="end"
@@ -234,13 +228,7 @@ export function TeamTimezonePicker({
                   className="flex min-h-8 w-full items-center justify-between gap-2 rounded-lg px-2 text-left text-sm hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                 >
                   <span className="whitespace-nowrap">{item.label}</span>
-                  {value === item.id ? (
-                    <HugeiconsIcon
-                      icon={Tick02Icon}
-                      strokeWidth={2}
-                      className="size-3.5 shrink-0"
-                    />
-                  ) : null}
+                  <CheckboxMark checked={value === item.id} />
                 </button>
               ))
             ) : (

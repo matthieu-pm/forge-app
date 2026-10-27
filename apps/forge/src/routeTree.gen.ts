@@ -17,6 +17,7 @@ import { Route as ForgeRouteImport } from './routes/forge'
 import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MyIssuesRouteImport } from './routes/my-issues'
+import { Route as ReviewsRouteImport } from './routes/reviews'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as ApiDocsRouteImport } from './routes/api/docs'
@@ -24,11 +25,13 @@ import { Route as ApiOpenapiDotjsonRouteImport } from './routes/api/openapi[.]js
 import { Route as AuthDesktopRouteImport } from './routes/auth/desktop'
 import { Route as JoinTokenRouteImport } from './routes/join.$token'
 import { Route as OnboardingWorkspaceRouteImport } from './routes/onboarding/workspace'
+import { Route as ReviewsCreatedRouteImport } from './routes/reviews_.created'
 import { Route as SettingsIndexRouteImport } from './routes/settings.index'
 import { Route as SettingsAiRouteImport } from './routes/settings.ai'
 import { Route as SettingsApiRouteImport } from './routes/settings.api'
 import { Route as SettingsApplicationsRouteImport } from './routes/settings.applications'
 import { Route as SettingsBillingRouteImport } from './routes/settings.billing'
+import { Route as SettingsCallsAndTranscriptsRouteImport } from './routes/settings.calls-and-transcripts'
 import { Route as SettingsCodeAndReviewsRouteImport } from './routes/settings.code-and-reviews'
 import { Route as SettingsEmojisRouteImport } from './routes/settings.emojis'
 import { Route as SettingsImportExportRouteImport } from './routes/settings.import-export'
@@ -45,6 +48,7 @@ import { Route as SettingsProjectStatusesRouteImport } from './routes/settings.p
 import { Route as SettingsProjectTemplatesRouteImport } from './routes/settings.project-templates'
 import { Route as SettingsProjectUpdatesRouteImport } from './routes/settings.project-updates'
 import { Route as SettingsSecurityRouteImport } from './routes/settings.security'
+import { Route as SettingsSignalsRouteImport } from './routes/settings.signals'
 import { Route as SettingsSlaRouteImport } from './routes/settings.sla'
 import { Route as SettingsWorkspaceRouteImport } from './routes/settings.workspace'
 import { Route as SettingsTeamsRouteImport } from './routes/settings_.teams'
@@ -80,6 +84,7 @@ import { Route as TeamsTeamSlugTriageRouteImport } from './routes/teams/$teamSlu
 import { Route as TeamsTeamSlugViewsRouteImport } from './routes/teams/$teamSlug/views'
 import { Route as WorkspaceInitiativesIndexRouteImport } from './routes/workspace/initiatives/index'
 import { Route as WorkspaceInitiativesInitiativeIdRouteImport } from './routes/workspace/initiatives/$initiativeId'
+import { Route as ApiCallsOauthCallbackRouteImport } from './routes/api/calls/oauth/callback'
 import { Route as ApiInternalDesktopReleasesRouteImport } from './routes/api/internal/desktop/releases'
 import { Route as SettingsTemplatesIssueTemplateIdRouteImport } from './routes/settings.templates.issue.$templateId'
 import { Route as SettingsTemplatesProjectTemplateIdRouteImport } from './routes/settings.templates.project.$templateId'
@@ -150,6 +155,11 @@ const MyIssuesRoute = MyIssuesRouteImport.update({
   path: '/my-issues',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReviewsRoute = ReviewsRouteImport.update({
+  id: '/reviews',
+  path: '/reviews',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -185,6 +195,11 @@ const OnboardingWorkspaceRoute = OnboardingWorkspaceRouteImport.update({
   path: '/onboarding/workspace',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReviewsCreatedRoute = ReviewsCreatedRouteImport.update({
+  id: '/reviews_/created',
+  path: '/reviews/created',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsIndexRoute = SettingsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -210,6 +225,12 @@ const SettingsBillingRoute = SettingsBillingRouteImport.update({
   path: '/billing',
   getParentRoute: () => SettingsRoute,
 } as any)
+const SettingsCallsAndTranscriptsRoute =
+  SettingsCallsAndTranscriptsRouteImport.update({
+    id: '/calls-and-transcripts',
+    path: '/calls-and-transcripts',
+    getParentRoute: () => SettingsRoute,
+  } as any)
 const SettingsCodeAndReviewsRoute = SettingsCodeAndReviewsRouteImport.update({
   id: '/code-and-reviews',
   path: '/code-and-reviews',
@@ -290,6 +311,11 @@ const SettingsProjectUpdatesRoute = SettingsProjectUpdatesRouteImport.update({
 const SettingsSecurityRoute = SettingsSecurityRouteImport.update({
   id: '/security',
   path: '/security',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsSignalsRoute = SettingsSignalsRouteImport.update({
+  id: '/signals',
+  path: '/signals',
   getParentRoute: () => SettingsRoute,
 } as any)
 const SettingsSlaRoute = SettingsSlaRouteImport.update({
@@ -472,6 +498,11 @@ const WorkspaceInitiativesInitiativeIdRoute =
     path: '/workspace/initiatives/$initiativeId',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiCallsOauthCallbackRoute = ApiCallsOauthCallbackRouteImport.update({
+  id: '/api/calls/oauth/callback',
+  path: '/api/calls/oauth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiInternalDesktopReleasesRoute =
   ApiInternalDesktopReleasesRouteImport.update({
     id: '/api/internal/desktop/releases',
@@ -656,6 +687,7 @@ export interface FileRoutesByFullPath {
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
   '/my-issues': typeof MyIssuesRoute
+  '/reviews': typeof ReviewsRoute
   '/settings': typeof SettingsRouteWithChildren
   '/signup': typeof SignupRoute
   '/api/docs': typeof ApiDocsRoute
@@ -663,10 +695,12 @@ export interface FileRoutesByFullPath {
   '/auth/desktop': typeof AuthDesktopRoute
   '/join/$token': typeof JoinTokenRoute
   '/onboarding/workspace': typeof OnboardingWorkspaceRoute
+  '/reviews/created': typeof ReviewsCreatedRoute
   '/settings/ai': typeof SettingsAiRoute
   '/settings/api': typeof SettingsApiRoute
   '/settings/applications': typeof SettingsApplicationsRoute
   '/settings/billing': typeof SettingsBillingRoute
+  '/settings/calls-and-transcripts': typeof SettingsCallsAndTranscriptsRoute
   '/settings/code-and-reviews': typeof SettingsCodeAndReviewsRoute
   '/settings/emojis': typeof SettingsEmojisRoute
   '/settings/import-export': typeof SettingsImportExportRoute
@@ -683,6 +717,7 @@ export interface FileRoutesByFullPath {
   '/settings/project-templates': typeof SettingsProjectTemplatesRoute
   '/settings/project-updates': typeof SettingsProjectUpdatesRoute
   '/settings/security': typeof SettingsSecurityRoute
+  '/settings/signals': typeof SettingsSignalsRoute
   '/settings/sla': typeof SettingsSlaRoute
   '/settings/workspace': typeof SettingsWorkspaceRoute
   '/settings/teams': typeof SettingsTeamsRouteWithChildren
@@ -719,6 +754,7 @@ export interface FileRoutesByFullPath {
   '/workspace/initiatives/$initiativeId': typeof WorkspaceInitiativesInitiativeIdRoute
   '/settings/notifications/': typeof SettingsNotificationsIndexRoute
   '/workspace/initiatives/': typeof WorkspaceInitiativesIndexRoute
+  '/api/calls/oauth/callback': typeof ApiCallsOauthCallbackRoute
   '/api/internal/desktop/releases': typeof ApiInternalDesktopReleasesRouteWithChildren
   '/settings/templates/issue/$templateId': typeof SettingsTemplatesIssueTemplateIdRoute
   '/settings/templates/project/$templateId': typeof SettingsTemplatesProjectTemplateIdRoute
@@ -758,16 +794,19 @@ export interface FileRoutesByTo {
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
   '/my-issues': typeof MyIssuesRoute
+  '/reviews': typeof ReviewsRoute
   '/signup': typeof SignupRoute
   '/api/docs': typeof ApiDocsRoute
   '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
   '/auth/desktop': typeof AuthDesktopRoute
   '/join/$token': typeof JoinTokenRoute
   '/onboarding/workspace': typeof OnboardingWorkspaceRoute
+  '/reviews/created': typeof ReviewsCreatedRoute
   '/settings/ai': typeof SettingsAiRoute
   '/settings/api': typeof SettingsApiRoute
   '/settings/applications': typeof SettingsApplicationsRoute
   '/settings/billing': typeof SettingsBillingRoute
+  '/settings/calls-and-transcripts': typeof SettingsCallsAndTranscriptsRoute
   '/settings/code-and-reviews': typeof SettingsCodeAndReviewsRoute
   '/settings/emojis': typeof SettingsEmojisRoute
   '/settings/import-export': typeof SettingsImportExportRoute
@@ -783,6 +822,7 @@ export interface FileRoutesByTo {
   '/settings/project-templates': typeof SettingsProjectTemplatesRoute
   '/settings/project-updates': typeof SettingsProjectUpdatesRoute
   '/settings/security': typeof SettingsSecurityRoute
+  '/settings/signals': typeof SettingsSignalsRoute
   '/settings/sla': typeof SettingsSlaRoute
   '/settings/workspace': typeof SettingsWorkspaceRoute
   '/settings/teams': typeof SettingsTeamsRouteWithChildren
@@ -818,6 +858,7 @@ export interface FileRoutesByTo {
   '/workspace/initiatives/$initiativeId': typeof WorkspaceInitiativesInitiativeIdRoute
   '/settings/notifications': typeof SettingsNotificationsIndexRoute
   '/workspace/initiatives': typeof WorkspaceInitiativesIndexRoute
+  '/api/calls/oauth/callback': typeof ApiCallsOauthCallbackRoute
   '/api/internal/desktop/releases': typeof ApiInternalDesktopReleasesRouteWithChildren
   '/settings/templates/issue/$templateId': typeof SettingsTemplatesIssueTemplateIdRoute
   '/settings/templates/project/$templateId': typeof SettingsTemplatesProjectTemplateIdRoute
@@ -855,6 +896,7 @@ export interface FileRoutesById {
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
   '/my-issues': typeof MyIssuesRoute
+  '/reviews': typeof ReviewsRoute
   '/settings': typeof SettingsRouteWithChildren
   '/signup': typeof SignupRoute
   '/api/docs': typeof ApiDocsRoute
@@ -862,10 +904,12 @@ export interface FileRoutesById {
   '/auth/desktop': typeof AuthDesktopRoute
   '/join/$token': typeof JoinTokenRoute
   '/onboarding/workspace': typeof OnboardingWorkspaceRoute
+  '/reviews_/created': typeof ReviewsCreatedRoute
   '/settings/ai': typeof SettingsAiRoute
   '/settings/api': typeof SettingsApiRoute
   '/settings/applications': typeof SettingsApplicationsRoute
   '/settings/billing': typeof SettingsBillingRoute
+  '/settings/calls-and-transcripts': typeof SettingsCallsAndTranscriptsRoute
   '/settings/code-and-reviews': typeof SettingsCodeAndReviewsRoute
   '/settings/emojis': typeof SettingsEmojisRoute
   '/settings/import-export': typeof SettingsImportExportRoute
@@ -882,6 +926,7 @@ export interface FileRoutesById {
   '/settings/project-templates': typeof SettingsProjectTemplatesRoute
   '/settings/project-updates': typeof SettingsProjectUpdatesRoute
   '/settings/security': typeof SettingsSecurityRoute
+  '/settings/signals': typeof SettingsSignalsRoute
   '/settings/sla': typeof SettingsSlaRoute
   '/settings/workspace': typeof SettingsWorkspaceRoute
   '/settings_/teams': typeof SettingsTeamsRouteWithChildren
@@ -918,6 +963,7 @@ export interface FileRoutesById {
   '/workspace/initiatives/$initiativeId': typeof WorkspaceInitiativesInitiativeIdRoute
   '/settings/notifications/': typeof SettingsNotificationsIndexRoute
   '/workspace/initiatives/': typeof WorkspaceInitiativesIndexRoute
+  '/api/calls/oauth/callback': typeof ApiCallsOauthCallbackRoute
   '/api/internal/desktop/releases': typeof ApiInternalDesktopReleasesRouteWithChildren
   '/settings/templates/issue/$templateId': typeof SettingsTemplatesIssueTemplateIdRoute
   '/settings/templates/project/$templateId': typeof SettingsTemplatesProjectTemplateIdRoute
@@ -959,6 +1005,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/login'
     | '/my-issues'
+    | '/reviews'
     | '/settings'
     | '/signup'
     | '/api/docs'
@@ -966,10 +1013,12 @@ export interface FileRouteTypes {
     | '/auth/desktop'
     | '/join/$token'
     | '/onboarding/workspace'
+    | '/reviews/created'
     | '/settings/ai'
     | '/settings/api'
     | '/settings/applications'
     | '/settings/billing'
+    | '/settings/calls-and-transcripts'
     | '/settings/code-and-reviews'
     | '/settings/emojis'
     | '/settings/import-export'
@@ -986,6 +1035,7 @@ export interface FileRouteTypes {
     | '/settings/project-templates'
     | '/settings/project-updates'
     | '/settings/security'
+    | '/settings/signals'
     | '/settings/sla'
     | '/settings/workspace'
     | '/settings/teams'
@@ -1022,6 +1072,7 @@ export interface FileRouteTypes {
     | '/workspace/initiatives/$initiativeId'
     | '/settings/notifications/'
     | '/workspace/initiatives/'
+    | '/api/calls/oauth/callback'
     | '/api/internal/desktop/releases'
     | '/settings/templates/issue/$templateId'
     | '/settings/templates/project/$templateId'
@@ -1061,16 +1112,19 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/login'
     | '/my-issues'
+    | '/reviews'
     | '/signup'
     | '/api/docs'
     | '/api/openapi.json'
     | '/auth/desktop'
     | '/join/$token'
     | '/onboarding/workspace'
+    | '/reviews/created'
     | '/settings/ai'
     | '/settings/api'
     | '/settings/applications'
     | '/settings/billing'
+    | '/settings/calls-and-transcripts'
     | '/settings/code-and-reviews'
     | '/settings/emojis'
     | '/settings/import-export'
@@ -1086,6 +1140,7 @@ export interface FileRouteTypes {
     | '/settings/project-templates'
     | '/settings/project-updates'
     | '/settings/security'
+    | '/settings/signals'
     | '/settings/sla'
     | '/settings/workspace'
     | '/settings/teams'
@@ -1121,6 +1176,7 @@ export interface FileRouteTypes {
     | '/workspace/initiatives/$initiativeId'
     | '/settings/notifications'
     | '/workspace/initiatives'
+    | '/api/calls/oauth/callback'
     | '/api/internal/desktop/releases'
     | '/settings/templates/issue/$templateId'
     | '/settings/templates/project/$templateId'
@@ -1157,6 +1213,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/login'
     | '/my-issues'
+    | '/reviews'
     | '/settings'
     | '/signup'
     | '/api/docs'
@@ -1164,10 +1221,12 @@ export interface FileRouteTypes {
     | '/auth/desktop'
     | '/join/$token'
     | '/onboarding/workspace'
+    | '/reviews_/created'
     | '/settings/ai'
     | '/settings/api'
     | '/settings/applications'
     | '/settings/billing'
+    | '/settings/calls-and-transcripts'
     | '/settings/code-and-reviews'
     | '/settings/emojis'
     | '/settings/import-export'
@@ -1184,6 +1243,7 @@ export interface FileRouteTypes {
     | '/settings/project-templates'
     | '/settings/project-updates'
     | '/settings/security'
+    | '/settings/signals'
     | '/settings/sla'
     | '/settings/workspace'
     | '/settings_/teams'
@@ -1220,6 +1280,7 @@ export interface FileRouteTypes {
     | '/workspace/initiatives/$initiativeId'
     | '/settings/notifications/'
     | '/workspace/initiatives/'
+    | '/api/calls/oauth/callback'
     | '/api/internal/desktop/releases'
     | '/settings/templates/issue/$templateId'
     | '/settings/templates/project/$templateId'
@@ -1260,6 +1321,7 @@ export interface RootRouteChildren {
   InboxRoute: typeof InboxRoute
   LoginRoute: typeof LoginRoute
   MyIssuesRoute: typeof MyIssuesRoute
+  ReviewsRoute: typeof ReviewsRoute
   SettingsRoute: typeof SettingsRouteWithChildren
   SignupRoute: typeof SignupRoute
   ApiDocsRoute: typeof ApiDocsRoute
@@ -1267,6 +1329,7 @@ export interface RootRouteChildren {
   AuthDesktopRoute: typeof AuthDesktopRoute
   JoinTokenRoute: typeof JoinTokenRoute
   OnboardingWorkspaceRoute: typeof OnboardingWorkspaceRoute
+  ReviewsCreatedRoute: typeof ReviewsCreatedRoute
   SettingsTeamsRoute: typeof SettingsTeamsRouteWithChildren
   TeamsTeamSlugRoute: typeof TeamsTeamSlugRouteWithChildren
   WorkspaceCallsRoute: typeof WorkspaceCallsRoute
@@ -1281,6 +1344,7 @@ export interface RootRouteChildren {
   ApiV1SplatRoute: typeof ApiV1SplatRoute
   WorkspaceInitiativesInitiativeIdRoute: typeof WorkspaceInitiativesInitiativeIdRoute
   WorkspaceInitiativesIndexRoute: typeof WorkspaceInitiativesIndexRoute
+  ApiCallsOauthCallbackRoute: typeof ApiCallsOauthCallbackRoute
   ApiInternalDesktopReleasesRoute: typeof ApiInternalDesktopReleasesRouteWithChildren
   ApiDesktopUpdatesDarwinArchRoute: typeof ApiDesktopUpdatesDarwinArchRoute
 }
@@ -1343,6 +1407,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MyIssuesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reviews': {
+      id: '/reviews'
+      path: '/reviews'
+      fullPath: '/reviews'
+      preLoaderRoute: typeof ReviewsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
@@ -1392,6 +1463,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingWorkspaceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reviews_/created': {
+      id: '/reviews_/created'
+      path: '/reviews/created'
+      fullPath: '/reviews/created'
+      preLoaderRoute: typeof ReviewsCreatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings/': {
       id: '/settings/'
       path: '/'
@@ -1425,6 +1503,13 @@ declare module '@tanstack/react-router' {
       path: '/billing'
       fullPath: '/settings/billing'
       preLoaderRoute: typeof SettingsBillingRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/calls-and-transcripts': {
+      id: '/settings/calls-and-transcripts'
+      path: '/calls-and-transcripts'
+      fullPath: '/settings/calls-and-transcripts'
+      preLoaderRoute: typeof SettingsCallsAndTranscriptsRouteImport
       parentRoute: typeof SettingsRoute
     }
     '/settings/code-and-reviews': {
@@ -1537,6 +1622,13 @@ declare module '@tanstack/react-router' {
       path: '/security'
       fullPath: '/settings/security'
       preLoaderRoute: typeof SettingsSecurityRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/signals': {
+      id: '/settings/signals'
+      path: '/signals'
+      fullPath: '/settings/signals'
+      preLoaderRoute: typeof SettingsSignalsRouteImport
       parentRoute: typeof SettingsRoute
     }
     '/settings/sla': {
@@ -1784,6 +1876,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceInitiativesInitiativeIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/calls/oauth/callback': {
+      id: '/api/calls/oauth/callback'
+      path: '/api/calls/oauth/callback'
+      fullPath: '/api/calls/oauth/callback'
+      preLoaderRoute: typeof ApiCallsOauthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/internal/desktop/releases': {
       id: '/api/internal/desktop/releases'
       path: '/api/internal/desktop/releases'
@@ -2010,6 +2109,7 @@ interface SettingsRouteChildren {
   SettingsApiRoute: typeof SettingsApiRoute
   SettingsApplicationsRoute: typeof SettingsApplicationsRoute
   SettingsBillingRoute: typeof SettingsBillingRoute
+  SettingsCallsAndTranscriptsRoute: typeof SettingsCallsAndTranscriptsRoute
   SettingsCodeAndReviewsRoute: typeof SettingsCodeAndReviewsRoute
   SettingsEmojisRoute: typeof SettingsEmojisRoute
   SettingsImportExportRoute: typeof SettingsImportExportRoute
@@ -2026,6 +2126,7 @@ interface SettingsRouteChildren {
   SettingsProjectTemplatesRoute: typeof SettingsProjectTemplatesRoute
   SettingsProjectUpdatesRoute: typeof SettingsProjectUpdatesRoute
   SettingsSecurityRoute: typeof SettingsSecurityRoute
+  SettingsSignalsRoute: typeof SettingsSignalsRoute
   SettingsSlaRoute: typeof SettingsSlaRoute
   SettingsWorkspaceRoute: typeof SettingsWorkspaceRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
@@ -2041,6 +2142,7 @@ const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsApiRoute: SettingsApiRoute,
   SettingsApplicationsRoute: SettingsApplicationsRoute,
   SettingsBillingRoute: SettingsBillingRoute,
+  SettingsCallsAndTranscriptsRoute: SettingsCallsAndTranscriptsRoute,
   SettingsCodeAndReviewsRoute: SettingsCodeAndReviewsRoute,
   SettingsEmojisRoute: SettingsEmojisRoute,
   SettingsImportExportRoute: SettingsImportExportRoute,
@@ -2057,6 +2159,7 @@ const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsProjectTemplatesRoute: SettingsProjectTemplatesRoute,
   SettingsProjectUpdatesRoute: SettingsProjectUpdatesRoute,
   SettingsSecurityRoute: SettingsSecurityRoute,
+  SettingsSignalsRoute: SettingsSignalsRoute,
   SettingsSlaRoute: SettingsSlaRoute,
   SettingsWorkspaceRoute: SettingsWorkspaceRoute,
   SettingsIndexRoute: SettingsIndexRoute,
@@ -2250,6 +2353,7 @@ const rootRouteChildren: RootRouteChildren = {
   InboxRoute: InboxRoute,
   LoginRoute: LoginRoute,
   MyIssuesRoute: MyIssuesRoute,
+  ReviewsRoute: ReviewsRoute,
   SettingsRoute: SettingsRouteWithChildren,
   SignupRoute: SignupRoute,
   ApiDocsRoute: ApiDocsRoute,
@@ -2257,6 +2361,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthDesktopRoute: AuthDesktopRoute,
   JoinTokenRoute: JoinTokenRoute,
   OnboardingWorkspaceRoute: OnboardingWorkspaceRoute,
+  ReviewsCreatedRoute: ReviewsCreatedRoute,
   SettingsTeamsRoute: SettingsTeamsRouteWithChildren,
   TeamsTeamSlugRoute: TeamsTeamSlugRouteWithChildren,
   WorkspaceCallsRoute: WorkspaceCallsRoute,
@@ -2271,6 +2376,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiV1SplatRoute: ApiV1SplatRoute,
   WorkspaceInitiativesInitiativeIdRoute: WorkspaceInitiativesInitiativeIdRoute,
   WorkspaceInitiativesIndexRoute: WorkspaceInitiativesIndexRoute,
+  ApiCallsOauthCallbackRoute: ApiCallsOauthCallbackRoute,
   ApiInternalDesktopReleasesRoute: ApiInternalDesktopReleasesRouteWithChildren,
   ApiDesktopUpdatesDarwinArchRoute: ApiDesktopUpdatesDarwinArchRoute,
 }

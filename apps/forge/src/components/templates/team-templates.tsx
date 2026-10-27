@@ -109,14 +109,16 @@ export function TeamTemplates({
   )
   return (
     <TemplateShell team={team} overview>
-      <div className="mx-auto w-full max-w-[640px] px-0 pt-4 pb-20">
-        <h1 className="text-2xl font-medium tracking-tight">Team templates</h1>
-        <p className="mt-1 text-[13px] leading-[22px] text-muted-foreground">
-          Any templates created here will be available when creating issues,
-          projects, and documents within this team. To create templates that
-          apply to all teams, do so in the workspace issue, project, or document
-          templates sections.
-        </p>
+      <div className="forge-settings-content">
+        <header className="forge-page-header forge-settings-header">
+          <h1>Team templates</h1>
+          <p className="mt-1 text-[13px] leading-[22px] text-muted-foreground">
+            Any templates created here will be available when creating issues,
+            projects, and documents within this team. To create templates that
+            apply to all teams, do so in the workspace issue, project, or
+            document templates sections.
+          </p>
+        </header>
         {(["issue", "project", "document"] as const).map((kind, index) => {
           const items = directory.templates.filter(
             (t) => t.payload.kind === kind
@@ -138,9 +140,9 @@ export function TeamTemplates({
                       <Button
                         type="button"
                         variant="ghost"
-                        size="sm"
+                        size="default"
                         disabled={busy}
-                        className="h-8 rounded-full px-3 text-xs font-normal"
+                        className="rounded-full px-3 text-xs font-normal"
                         aria-label={`New ${kind} template`}
                         onClick={() =>
                           kind === "issue"

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { TeamTriageSettings } from "./team-triage-settings"
 import type { ReactNode } from "react"
 import type { TeamSummary } from "@/lib/team-contract"
+import { selectOption } from "@/test-utils/select-option"
 import { parseTeamTriage, teamTriageStorageKey } from "@/lib/team-triage"
 
 vi.mock("@tanstack/react-router", () => ({
@@ -67,9 +68,7 @@ describe("team triage settings", () => {
     render(<TeamTriageSettings team={team} />)
     fireEvent.click(enable())
     fireEvent.click(screen.getByRole("button", { name: "Configure" }))
-    fireEvent.change(screen.getByRole("combobox", { name: "Action" }), {
-      target: { value: "assign" },
-    })
+    selectOption(screen.getByRole("combobox", { name: "Action" }), "Assign")
     expect(saved().action).toBe("assign")
     expect(screen.getByRole("dialog").textContent).toContain(
       "not connected yet"

@@ -33,6 +33,8 @@ import {
 type ChecklistIcon = ComponentProps<typeof HugeiconsIcon>["icon"]
 
 const CHECKLIST_SEEN_STORAGE_KEY = "forge:getting-started-checklist-seen"
+const CHECKLIST_COMPLETE_STORAGE_KEY =
+  "forge:getting-started-checklist-complete"
 
 const checklistSteps: Array<{ label: string; icon: ChecklistIcon }> = [
   { label: "Sync your codebase", icon: Github01Icon },
@@ -45,12 +47,19 @@ const checklistSteps: Array<{ label: string; icon: ChecklistIcon }> = [
 
 export function GettingStartedChecklist() {
   const [open, setOpen] = useState(false)
+  const [ready, setReady] = useState(false)
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(
     () => new Set()
   )
 
   useEffect(() => {
     try {
+      if (
+        window.localStorage.getItem(CHECKLIST_COMPLETE_STORAGE_KEY) === "true"
+      ) {
+        setCompletedSteps(new Set(checklistSteps.map((_, index) => index)))
+        return
+      }
       if (window.localStorage.getItem(CHECKLIST_SEEN_STORAGE_KEY)) return
 
       setOpen(true)
@@ -58,8 +67,21 @@ export function GettingStartedChecklist() {
     } catch {
       // Keep the checklist usable when storage is unavailable.
       setOpen(true)
+    } finally {
+      setReady(true)
     }
   }, [])
+
+  const complete = completedSteps.size === checklistSteps.length
+  useEffect(() => {
+    if (!complete) return
+    setOpen(false)
+    try {
+      window.localStorage.setItem(CHECKLIST_COMPLETE_STORAGE_KEY, "true")
+    } catch {
+      // Completion still hides the checklist for this session.
+    }
+  }, [complete])
 
   function toggleStep(index: number) {
     setCompletedSteps((current) => {
@@ -69,6 +91,8 @@ export function GettingStartedChecklist() {
       return next
     })
   }
+
+  if (!ready || complete) return null
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

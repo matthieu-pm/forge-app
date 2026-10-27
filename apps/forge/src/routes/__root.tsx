@@ -11,6 +11,7 @@ import { TanStackDevtools } from "@tanstack/react-devtools"
 import { Activity, Fragment } from "react"
 
 import appCss from "../styles.css?url"
+import { ContentHeader } from "@/components/ui/content-header"
 import { AppSidebar } from "@/components/app-sidebar"
 import { AgentProvider, useAgent } from "@/components/agent/agent-provider"
 import { AgentFooterActions } from "@/components/agent/agent-footer-actions"
@@ -31,6 +32,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { getBreadcrumbItems } from "@/lib/app-navigation"
+import { getSettingsBreadcrumbItems } from "@/lib/settings-navigation"
 import { getTeamFromRouteMatches } from "@/lib/team-route-match"
 import { cn } from "@/lib/utils"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
@@ -104,7 +106,11 @@ function RootLayout() {
       <AgentProvider deferModelSources={pathname !== "/forge"}>
         <SidebarProvider
           className={cn(
-            "relative",
+            "forge-app-shell relative",
+            pathname === "/inbox" && "forge-inbox-shell",
+            (pathname === "/my-issues" ||
+              /^\/teams\/[^/]+\/issues$/.test(pathname)) &&
+              "forge-issues-shell",
             hasStandaloneTeamSettingsLayout
               ? "forge-create-team-shell forge-settings-shell"
               : hasSettingsLayout
@@ -160,10 +166,26 @@ function AgentRouteContent({
       aria-hidden={obscured || undefined}
       inert={obscured || undefined}
     >
-      {!/^\/teams\/[^/]+\/(triage|overview|documents|loops|members)$/.test(
-        pathname
-      ) && <AppHeader />}
-      <Outlet key={pathname} />
+      {pathname !== "/reviews" &&
+        pathname !== "/reviews/created" &&
+        pathname !== "/inbox" &&
+        pathname !== "/my-issues" &&
+        !pathname.startsWith("/workspace/initiatives") &&
+        pathname !== "/workspace/projects" &&
+        pathname !== "/workspace/views" &&
+        pathname !== "/workspace/signals" &&
+        pathname !== "/workspace/calls" &&
+        !/^\/teams\/[^/]+\/calls$/.test(pathname) &&
+        !/^\/teams\/[^/]+\/cycle\/[^/]+$/.test(pathname) &&
+        !/^\/teams\/[^/]+\/(triage|overview|documents|loops|members|issues|projects|signals|views)$/.test(
+          pathname
+        ) && <AppHeader />}
+      <div
+        data-slot="route-viewport"
+        className="flex min-h-0 flex-1 flex-col overflow-auto overscroll-contain"
+      >
+        <Outlet key={pathname} />
+      </div>
     </div>
   )
 }
@@ -174,7 +196,10 @@ function AppHeader() {
       const resolvedPathname =
         state.resolvedLocation?.pathname ?? state.location.pathname
 
-      if (!/^\/teams\/[^/]+\/(issues|projects|views)$/.test(resolvedPathname)) {
+      if (
+        !/^\/teams\/[^/]+\/(issues|projects|views)$/.test(resolvedPathname) &&
+        !resolvedPathname.startsWith("/settings/teams/")
+      ) {
         return { breadcrumbTeam: undefined, pathname: resolvedPathname }
       }
 
@@ -185,26 +210,29 @@ function AppHeader() {
     },
   })
 
-  if (
-    pathname.startsWith("/settings/teams/") ||
-    pathname === "/workspace/teams"
-  ) {
+  if (pathname === "/workspace/teams" || pathname === "/workspace/members") {
     return null
   }
 
-  const breadcrumbs = getBreadcrumbItems(pathname)
+  const settings = pathname === "/settings" || pathname.startsWith("/settings/")
+  const breadcrumbs = settings
+    ? getSettingsBreadcrumbItems(pathname, breadcrumbTeam)
+    : getBreadcrumbItems(pathname)
 
   function renderBreadcrumbLink(to: string) {
     return <Link to={to as never} />
   }
 
   return (
-    <header className="flex h-12 shrink-0 items-center gap-3 px-4">
-      <Breadcrumb>
-        <BreadcrumbList className="text-sm">
+    <ContentHeader>
+      <Breadcrumb className="min-w-0 overflow-x-auto whitespace-nowrap">
+        <BreadcrumbList className="h-6 flex-nowrap text-[13px]">
           {breadcrumbs.map((item, index) => {
             const isLast = index === breadcrumbs.length - 1
-            const team = index === 0 ? breadcrumbTeam : undefined
+            const showTeamIcon = settings
+              ? item.to === `/settings/teams/${breadcrumbTeam?.slug}`
+              : index === 0
+            const team = showTeamIcon ? breadcrumbTeam : undefined
             const label = team ? (
               <span className="inline-flex items-center gap-1.5">
                 <TeamSidebarIcon icon={team.icon} name={team.name} />
@@ -222,7 +250,7 @@ function AppHeader() {
                       {label}
                     </BreadcrumbLink>
                   ) : (
-                    <BreadcrumbPage className="text-sm font-medium">
+                    <BreadcrumbPage className="text-[13px] font-medium">
                       {label}
                     </BreadcrumbPage>
                   )}
@@ -233,7 +261,7 @@ function AppHeader() {
           })}
         </BreadcrumbList>
       </Breadcrumb>
-    </header>
+    </ContentHeader>
   )
 }
 

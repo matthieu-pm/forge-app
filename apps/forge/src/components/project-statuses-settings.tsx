@@ -11,13 +11,13 @@ import {
   HexagonIcon,
   MoreHorizontalIcon,
   Progress03Icon,
-  Tick02Icon,
 } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
 import type {
   ProjectStatus,
   ProjectStatusDirectory,
 } from "@/lib/project-statuses"
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import {
   deleteProjectStatus,
   initialProjectStatuses,
@@ -161,10 +161,7 @@ function StatusEditor({
                     style={{ backgroundColor: value }}
                   >
                     {color.toLowerCase() === value && (
-                      <HugeiconsIcon
-                        icon={Tick02Icon}
-                        className="size-3 text-black/70"
-                      />
+                      <CheckboxMark checked className="size-3 text-black/70" />
                     )}
                   </span>
                 </button>
@@ -329,12 +326,10 @@ export function ProjectStatusesSettings({
     }
   }
   return (
-    <main className="min-h-0 flex-1 overflow-y-auto px-5 pt-6 pb-16">
-      <div className="mx-auto w-full max-w-[640px]">
-        <header className="mb-8 px-4">
-          <h1 className="text-2xl font-medium tracking-tight">
-            Project statuses
-          </h1>
+    <main className="forge-settings-scroll">
+      <div className="forge-settings-content">
+        <header className="forge-page-header forge-settings-header">
+          <h1>Project statuses</h1>
           <p className="mt-1.5 text-[13px] leading-5 text-muted-foreground">
             Project statuses define the workflow that projects go through from
             start to completion

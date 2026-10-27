@@ -7,6 +7,7 @@ import type {
   RecurringIssueDraft,
   SavedRecurringIssue,
 } from "@/lib/recurring-issue-contract"
+import { OptionSelect } from "@/components/ui/option-select"
 import {
   emptyRecurringIssue,
   recurrenceUnitSchema,
@@ -198,7 +199,7 @@ export function RecurringIssueEditor({
                 type="button"
                 aria-label="Add sub-issue"
                 onClick={() => setSubIssueCreating(true)}
-                className="inline-flex h-6 items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                className="inline-flex h-7 items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               >
                 <Glyph name="dependency" />
                 Sub-issues
@@ -262,7 +263,8 @@ export function RecurringIssueEditor({
               variant="secondary"
               onClick={cancel}
               disabled={saving}
-              className="h-8 rounded-full border border-border/60 px-3 text-xs"
+              size="default"
+              className="rounded-full border border-border/60 px-3 text-xs"
             >
               Cancel
             </Button>
@@ -270,7 +272,8 @@ export function RecurringIssueEditor({
               type="button"
               onClick={() => void save()}
               disabled={saving || !directory.canManage}
-              className="h-8 rounded-full bg-[#5e6ad2] px-3 text-xs text-white hover:bg-[#5360c8]"
+              size="default"
+              className="rounded-full bg-[#5e6ad2] px-3 text-xs text-white hover:bg-[#5360c8]"
             >
               {saving ? "Saving…" : saved ? "Save changes" : "Create"}
             </Button>
@@ -326,19 +329,15 @@ function ScheduleSelect({
 }) {
   return (
     <div className="relative">
-      <select
+      <OptionSelect
         disabled={disabled}
         aria-label={label}
         value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="h-8 appearance-none rounded-lg border border-border/60 bg-muted/40 py-1 pr-7 pl-2 text-xs focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        onValueChange={(nextValue) => onChange(nextValue)}
+        className="h-8 rounded-lg border border-border/60 bg-muted/40 px-2.5 py-1 text-xs focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       >
         {children}
-      </select>
-      <Glyph
-        name="down"
-        className="pointer-events-none absolute top-2.5 right-2 size-3 text-muted-foreground"
-      />
+      </OptionSelect>
     </div>
   )
 }

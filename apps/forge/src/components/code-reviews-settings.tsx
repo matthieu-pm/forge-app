@@ -1,6 +1,5 @@
 import * as React from "react"
 import {
-  ArrowDown01Icon,
   ArrowRight01Icon,
   ArrowUpRight01Icon,
   GithubIcon,
@@ -8,6 +7,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 import { toast } from "sonner"
 import type { CodeReviewPreferences } from "@/lib/code-review-preferences"
+import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 import {
   defaultCodeReviewPreferences,
   readCodeReviewPreferences,
@@ -138,13 +138,14 @@ function SettingSelect<TValue extends string>({
             variant="secondary"
             disabled={disabled}
             aria-label={label}
-            className="h-7 gap-1.5 rounded-lg border border-border/50 px-2.5 text-xs font-normal"
+            size="sm"
+            className="gap-1.5 rounded-lg border border-border/50 px-2.5 text-xs font-normal"
           />
         }
       >
         {github && <HugeiconsIcon icon={GithubIcon} className="size-3.5" />}{" "}
         {options.find((option) => option.value === value)?.label}
-        <HugeiconsIcon icon={ArrowDown01Icon} className="size-3" />
+        <DropdownChevron className="size-3" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-36">
         <DropdownMenuRadioGroup
@@ -200,12 +201,10 @@ export function CodeReviewsSettings({ userId }: { userId: string }) {
     }
   }
   return (
-    <main className="min-h-0 flex-1 overflow-y-auto px-5 pt-6 pb-16">
-      <div className="mx-auto w-full max-w-[640px]">
-        <header className="mb-8 px-4">
-          <h1 className="text-2xl font-medium tracking-tight">
-            Code &amp; reviews
-          </h1>
+    <main className="forge-settings-scroll">
+      <div className="forge-settings-content">
+        <header className="forge-page-header forge-settings-header">
+          <h1>Code &amp; reviews</h1>
           <p className="mt-1.5 text-[13px] text-muted-foreground">
             Review GitHub pull requests and agent code diffs in Forge
           </p>
@@ -218,7 +217,8 @@ export function CodeReviewsSettings({ userId }: { userId: string }) {
             <Button
               onClick={() => setDialog("access")}
               aria-label="Add code access to GitHub integration"
-              className="h-8 gap-1.5 rounded-full bg-[#5e6ad2] px-3 text-xs text-white hover:bg-[#5360c8]"
+              size="default"
+              className="gap-1.5 rounded-full bg-[#5e6ad2] px-3 text-xs text-white hover:bg-[#5360c8]"
             >
               <HugeiconsIcon icon={GithubIcon} className="size-3.5" />
               Enable code access
@@ -302,7 +302,8 @@ export function CodeReviewsSettings({ userId }: { userId: string }) {
               <Button
                 variant="ghost"
                 disabled
-                className="h-7 px-2 text-xs"
+                size="sm"
+                className="px-2 text-xs"
                 title="Enable code access to configure this setting"
               >
                 Add key

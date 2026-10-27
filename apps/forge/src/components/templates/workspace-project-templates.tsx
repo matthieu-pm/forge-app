@@ -25,12 +25,10 @@ export function WorkspaceProjectTemplates({
   const [busy, setBusy] = React.useState(false)
   const router = useRouter()
   return (
-    <main className="min-h-0 flex-1 overflow-y-auto px-4 pt-[68px] pb-16 sm:px-6">
-      <div className="mx-auto w-full max-w-[640px]">
-        <header className="px-4 pb-8">
-          <h1 className="text-2xl font-medium tracking-tight">
-            Project templates
-          </h1>
+    <main className="forge-settings-scroll">
+      <div className="forge-settings-content">
+        <header className="forge-page-header forge-settings-header">
+          <h1>Project templates</h1>
           <p className="mt-1.5 text-sm leading-[22px] text-muted-foreground">
             These templates are available when creating projects for any team in
             the workspace. To create templates that only apply to specific

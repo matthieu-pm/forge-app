@@ -1,6 +1,7 @@
 import * as React from "react"
 import { Glyph, Picker } from "./template-controls"
 import type { TemplateDraft } from "@/lib/template-contract"
+import { OptionSelect } from "@/components/ui/option-select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -32,7 +33,7 @@ export function FormBuilder({
           type="button"
           size="sm"
           variant="ghost"
-          className="h-7 text-xs"
+          className="text-xs"
           onClick={() => setPreview(!preview)}
         >
           {preview ? "Edit fields" : "Preview form"}
@@ -60,7 +61,7 @@ export function FormBuilder({
                   className="min-h-20 w-full rounded-lg border border-border bg-background/50 p-2 text-xs outline-none focus:ring-1 focus:ring-ring"
                 />
               ) : field.type === "select" ? (
-                <select
+                <OptionSelect
                   id={`preview-${field.id}`}
                   className="h-8 w-full rounded-lg border border-border bg-background px-2 text-xs"
                 >
@@ -68,7 +69,7 @@ export function FormBuilder({
                   {field.options.map((o) => (
                     <option key={o}>{o}</option>
                   ))}
-                </select>
+                </OptionSelect>
               ) : field.type === "checkbox" ? (
                 <div>
                   <Checkbox id={`preview-${field.id}`} />
@@ -183,7 +184,7 @@ export function FormBuilder({
             type="button"
             variant="ghost"
             size="sm"
-            className="h-7 rounded-full text-xs"
+            className="rounded-full text-xs"
             onClick={() =>
               onChange([
                 ...fields,

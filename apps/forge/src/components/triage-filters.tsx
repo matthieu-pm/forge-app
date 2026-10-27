@@ -24,6 +24,8 @@ import type {
   TriageFilter,
   TriageFilterState,
 } from "@/lib/triage-filters"
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
+import { OptionSelect } from "@/components/ui/option-select"
 import {
   emptyTriageFilters,
   fieldOperators,
@@ -289,11 +291,9 @@ export function TriageFilters({
         onClick={() => apply(field, operator, filterValue)}
       >
         <span className="truncate">{label}</span>
-        {checked && (
-          <span aria-label="Applied" className="ml-auto text-primary">
-            ✓
-          </span>
-        )}
+        <span aria-label={checked ? "Applied" : undefined} className="ml-auto">
+          <CheckboxMark checked={checked} />
+        </span>
       </DropdownMenuItem>
     )
   }
@@ -541,20 +541,20 @@ export function TriageFilters({
           </DialogDescription>
           <div className="flex items-center gap-2 text-sm">
             Match
-            <select
+            <OptionSelect
               aria-label="Match conditions"
               className={selectClass}
               value={draft.match}
-              onChange={(event) =>
+              onValueChange={(nextValue) =>
                 setDraft({
                   ...draft,
-                  match: event.target.value as "all" | "any",
+                  match: nextValue as "all" | "any",
                 })
               }
             >
               <option value="all">all</option>
               <option value="any">any</option>
-            </select>
+            </OptionSelect>
             conditions
           </div>
           <div className="max-h-[45vh] space-y-2 overflow-y-auto">
@@ -563,12 +563,12 @@ export function TriageFilters({
                 key={rule.id}
                 className="flex flex-wrap items-center gap-2 rounded-xl bg-muted/50 p-2"
               >
-                <select
+                <OptionSelect
                   aria-label={`Filter ${index + 1} field`}
                   className={selectClass}
                   value={rule.field}
-                  onChange={(event) => {
-                    const field = event.target.value as FilterField
+                  onValueChange={(nextValue) => {
+                    const field = nextValue as FilterField
                     updateRule(rule.id, { ...newRule(field), id: rule.id })
                   }}
                 >
@@ -577,14 +577,14 @@ export function TriageFilters({
                       {label}
                     </option>
                   ))}
-                </select>
-                <select
+                </OptionSelect>
+                <OptionSelect
                   aria-label={`Filter ${index + 1} operator`}
                   className={selectClass}
                   value={rule.operator}
-                  onChange={(event) =>
+                  onValueChange={(nextValue) =>
                     updateRule(rule.id, {
-                      operator: event.target.value as FilterOperator,
+                      operator: nextValue as FilterOperator,
                     })
                   }
                 >
@@ -593,15 +593,15 @@ export function TriageFilters({
                       {operatorLabels[operator]}
                     </option>
                   ))}
-                </select>
+                </OptionSelect>
                 {needsFilterValue(rule.operator) &&
                   (rule.field === "priority" || rule.field === "assignee" ? (
-                    <select
+                    <OptionSelect
                       aria-label={`Filter ${index + 1} value`}
                       className={`${selectClass} flex-1`}
                       value={rule.value}
-                      onChange={(event) =>
-                        updateRule(rule.id, { value: event.target.value })
+                      onValueChange={(nextValue) =>
+                        updateRule(rule.id, { value: nextValue })
                       }
                     >
                       <option value="">Choose…</option>
@@ -610,7 +610,7 @@ export function TriageFilters({
                           {option.name}
                         </option>
                       ))}
-                    </select>
+                    </OptionSelect>
                   ) : (
                     <input
                       required
@@ -704,8 +704,8 @@ export function TriageFilterChips({
           <Button
             key={rule.id}
             variant="secondary"
-            size="xs"
-            className="h-6 max-w-full gap-1 rounded-md text-[11px] font-normal"
+            size="sm"
+            className="max-w-full gap-1 rounded-md text-[11px] font-normal"
             aria-label={`Remove filter: ${label}`}
             title={label}
             onClick={() =>
@@ -722,8 +722,8 @@ export function TriageFilterChips({
       })}
       <Button
         variant="ghost"
-        size="xs"
-        className="h-6 text-[11px]"
+        size="sm"
+        className="text-[11px]"
         onClick={() => onChange(emptyTriageFilters())}
       >
         Clear filters

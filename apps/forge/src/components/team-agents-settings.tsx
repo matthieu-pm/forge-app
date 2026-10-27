@@ -1,43 +1,19 @@
 "use client"
 
-import { Link } from "@tanstack/react-router"
-import { ArrowLeft01Icon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
 import { toast } from "sonner"
 import type { TeamSummary } from "@/lib/team-contract"
-import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 
 const focusClass =
   "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
 const textLinkClass = `rounded-sm text-foreground underline-offset-4 hover:underline ${focusClass}`
 
-export function TeamAgentsSettings({ team }: { team: TeamSummary }) {
+export function TeamAgentsSettings(_props: { team: TeamSummary }) {
   return (
     <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="flex h-12 shrink-0 items-center px-4">
-        <Link
-          to="/settings/teams/$teamSlug"
-          params={{ teamSlug: team.slug }}
-          aria-label={`Back to ${team.name} settings`}
-          className={`inline-flex items-center gap-2 rounded-md py-1 text-sm text-muted-foreground hover:text-foreground ${focusClass}`}
-        >
-          <HugeiconsIcon
-            icon={ArrowLeft01Icon}
-            className="size-4"
-            strokeWidth={1.5}
-          />
-          <TeamSidebarIcon
-            icon={team.icon}
-            name={team.name}
-            className="size-4"
-          />
-          {team.name}
-        </Link>
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-none pb-16">
-        <div className="mx-auto w-full max-w-[688px] px-4 pt-5 sm:px-6">
-          <header className="px-4 pb-8">
-            <h1 className="text-2xl font-medium tracking-tight">Team agents</h1>
+      <div className="forge-settings-scroll">
+        <div className="forge-settings-content">
+          <header className="forge-page-header forge-settings-header">
+            <h1>Team agents</h1>
             <p className="mt-1.5 text-sm leading-[22px] text-muted-foreground">
               AI agents can work alongside you as teammates. Tackle complex
               tasks together or delegate entire issues end-to-end.{" "}
