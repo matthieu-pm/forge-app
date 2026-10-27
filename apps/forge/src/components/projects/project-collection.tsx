@@ -32,6 +32,7 @@ import {
   DirectoryTableRow,
   directoryColumnWidths,
   directoryControlClassName,
+  directoryHoverControlsClassName,
   directoryNameClassName,
 } from "@/components/ui/directory-table"
 
@@ -473,6 +474,7 @@ export function ProjectCollection(props: Props) {
                 <DirectoryTableRow
                   key={project.id}
                   selected={selected.includes(project.id)}
+                  className={directoryHoverControlsClassName}
                   selection={
                     <DirectoryRowCheckbox
                       name={project.name}

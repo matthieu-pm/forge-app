@@ -16,6 +16,8 @@ export const directoryColumnWidths = {
   text: 150,
 }
 export const directoryControlClassName = tablePropertyControlClassName
+export const directoryHoverControlsClassName =
+  "[&:not(:hover):not(:focus-within)_td:not(:first-child)_button:not([aria-expanded=true])]:border-transparent [&:not(:hover):not(:focus-within)_td:not(:first-child)_button:not([aria-expanded=true])]:bg-transparent [&:not(:hover):not(:focus-within)_td:not(:first-child)_button:not([aria-expanded=true])]:shadow-none"
 export const directoryNameClassName =
   "flex min-w-0 w-full items-center gap-3 rounded py-1 text-left text-[13px] text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
 export const directorySelectionToolbarClassName =
