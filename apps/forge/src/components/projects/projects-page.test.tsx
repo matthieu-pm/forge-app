@@ -8,6 +8,7 @@ import {
 } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { ProjectsPage } from "./projects-page"
+import type { ReactNode } from "react"
 import type { InitiativeProject } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
 import {
@@ -27,10 +28,37 @@ import {
   initiativesStorageKey,
 } from "@/lib/initiatives"
 
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({
+    children,
+    params,
+    hash,
+    search: _search,
+    to: _to,
+    ...props
+  }: {
+    children: ReactNode
+    params: { projectId: string }
+    hash?: string
+    search?: unknown
+    to: string
+  }) => (
+    <a
+      {...props}
+      href={`/projects/${params.projectId}?tab=overview#${hash ?? ""}`}
+    >
+      {children}
+    </a>
+  ),
+}))
 vi.mock("@/components/templates/rich-editor", () => ({
   RichEditor: ({ label }: { label: string }) => (
     <div role="textbox" aria-label={label} />
   ),
+}))
+vi.mock("@hugeicons/core-free-icons?catalog", () => ({
+  CubeIcon: [],
+  Rocket01Icon: [],
 }))
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 vi.mock("@/components/agent/agent-provider", () => ({
@@ -77,6 +105,7 @@ const read = () =>
 beforeEach(() => {
   localStorage.clear()
   Element.prototype.scrollIntoView = vi.fn()
+  Element.prototype.scrollTo = vi.fn()
   vi.stubGlobal(
     "ResizeObserver",
     class {
@@ -92,6 +121,43 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 describe("Projects page", () => {
+  it("changes the icon and color from the row without opening the project and preserves them after remount", async () => {
+    seed()
+    const open = vi.fn()
+    const view = render(<ProjectsPage {...props} onOpenProject={open} />)
+    fireEvent.click(
+      screen.getByRole("button", { name: "Change icon for Release" })
+    )
+    expect(screen.getByRole("tab", { name: "Icons" })).toBeTruthy()
+    expect(screen.getByRole("tab", { name: "Emojis" })).toBeTruthy()
+    fireEvent.change(screen.getByLabelText("Custom icon color"), {
+      target: { value: "#22c55e" },
+    })
+    fireEvent.change(screen.getByPlaceholderText("Search icons..."), {
+      target: { value: "Rocket" },
+    })
+    fireEvent.click(await screen.findByRole("button", { name: "Rocket 01" }))
+    expect(open).not.toHaveBeenCalled()
+    expect(read().initiatives[0].projects[0].icon).toEqual({
+      kind: "icon",
+      value: "Rocket01Icon",
+      color: "#22c55e",
+    })
+    view.unmount()
+    render(<ProjectsPage {...props} onOpenProject={open} />)
+    expect(
+      screen.getByRole("button", { name: "Change icon for Release" }).style
+        .color
+    ).toBe("rgb(34, 197, 94)")
+    fireEvent.click(screen.getByRole("button", { name: /^Release$/ }))
+    expect(open).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "Release",
+        icon: { kind: "icon", value: "Rocket01Icon", color: "#22c55e" },
+      }),
+      "overview"
+    )
+  })
   it("creates while initiatives are disabled and persists after remount", async () => {
     localStorage.setItem(
       initiativesSettingsStorageKey(props.workspaceId),
@@ -386,4 +452,33 @@ it("opens the appropriate detail tab and keeps property editing inline", async (
   fireEvent.click(await screen.findByRole("option", { name: "High" }))
   expect(onOpenProject).not.toHaveBeenCalled()
   expect(read().workspaceProjects[0].priority).toBe("High")
+})
+
+it("shows the first unfinished milestone next to the project name with a link to its overview", async () => {
+  seed([
+    {
+      ...project,
+      milestones: [
+        { id: "done", name: "Discovery", completed: true },
+        {
+          id: "beta",
+          name: "Beta",
+          completed: false,
+          targetDate: "2026-11-13",
+        },
+        { id: "release", name: "Release phase", completed: false },
+      ],
+    },
+  ])
+  render(<ProjectsPage {...props} />)
+  const link = await screen.findByRole("link", {
+    name: "Open milestone Beta for Release",
+  })
+  expect(link.textContent).toContain("Nov 13")
+  expect(link.getAttribute("href")).toBe(
+    "/projects/p?tab=overview#milestone-beta"
+  )
+  expect(
+    screen.queryByRole("link", { name: /Open milestone Discovery/ })
+  ).toBeNull()
 })

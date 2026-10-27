@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 /** One content column and spacing scale for page and detail-pane empty states. */
 export function IllustratedEmptyState({
   kind,
+  illustration,
   align = "left",
   title,
   children,
@@ -16,6 +17,7 @@ export function IllustratedEmptyState({
   role,
 }: {
   kind: EmptyStateArtKind
+  illustration?: ReactNode
   align?: "left" | "center"
   title?: ReactNode
   children?: ReactNode
@@ -41,7 +43,7 @@ export function IllustratedEmptyState({
             : "items-start text-left"
         )}
       >
-        <EmptyStateArt kind={kind} />
+        {illustration ?? <EmptyStateArt kind={kind} />}
         <div className="mt-5 w-full">
           {title && <h2 className="text-sm font-medium">{title}</h2>}
           {children && (

@@ -96,6 +96,7 @@ export function InitiativeDetailsPanel({
                     item={item}
                     property={row.property}
                     detail
+                    addOnly={row.property === "labels"}
                     people={people}
                     teams={teams}
                     labels={labels}

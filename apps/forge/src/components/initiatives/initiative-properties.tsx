@@ -13,7 +13,11 @@ import {
   PriorityMark,
 } from "@/components/issues/issue-controls"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
-import { Button, propertyButtonClassName } from "@/components/ui/button"
+import {
+  Button,
+  buttonVariants,
+  propertyButtonClassName,
+} from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
   Popover,
@@ -120,6 +124,7 @@ export function TargetPicker({
   emptyLabel = "Target date",
   plain = false,
   disabled = false,
+  className,
 }: {
   value: string
   onChange: (value: string) => void
@@ -128,6 +133,7 @@ export function TargetPicker({
   emptyLabel?: string
   plain?: boolean
   disabled?: boolean
+  className?: string
 }) {
   const [open, setOpen] = useState(false)
   const year = new Date().getFullYear()
@@ -178,7 +184,8 @@ export function TargetPicker({
               compact && directoryControlClassName,
               compact && !value && tablePropertyIconClassName,
               plain && propertyButtonClassName,
-              plain && value && "text-foreground"
+              plain && value && "text-foreground",
+              className
             )}
           />
         }
@@ -350,6 +357,8 @@ export function InitiativePropertyPicker({
   compact = false,
   disabled = false,
   detail = false,
+  addOnly = false,
+  className: controlClassName,
 }: {
   item: Omit<Initiative, "number">
   property: "status" | "priority" | "owner" | "target" | "labels" | "teams"
@@ -360,9 +369,13 @@ export function InitiativePropertyPicker({
   compact?: boolean
   disabled?: boolean
   detail?: boolean
+  addOnly?: boolean
+  className?: string
 }) {
   const suffix = item.name ? ` for ${item.name}` : ""
   const owner = people.find((person) => person.id === item.ownerId)
+  const labelAddOnly =
+    detail && addOnly && property === "labels" && item.labelIds.length > 0
   const className = cn(
     initiativeChip,
     compact && directoryControlClassName,
@@ -376,7 +389,10 @@ export function InitiativePropertyPicker({
         (property === "owner" && item.ownerId) ||
         (property === "labels" && item.labelIds.length) ||
         (property === "teams" && item.teamIds.length)) &&
-      "text-foreground"
+      "text-foreground",
+    controlClassName,
+    labelAddOnly && buttonVariants({ variant: "outline", size: "icon-sm" }),
+    labelAddOnly && "p-0"
   )
   let control
   if (property === "target")
@@ -388,6 +404,7 @@ export function InitiativePropertyPicker({
         label={`Change initiative target date${suffix}`}
         plain={detail}
         emptyLabel={detail ? "Add target date" : "Target date"}
+        className={controlClassName}
       />
     )
   else if (property === "status")
@@ -508,19 +525,26 @@ export function InitiativePropertyPicker({
           ) : undefined
         }
       >
-        <IssueIcon name={property === "labels" ? "label" : "person"} />
-        <span className="truncate">
-          {chosen.length
-            ? options
-                .filter((option) => chosen.includes(option.value))
-                .map((option) => option.label)
-                .join(", ") || `${chosen.length} selected`
-            : property === "labels"
-              ? detail
-                ? "Add label"
-                : "Labels"
-              : "Contributing teams"}
-        </span>
+        <IssueIcon
+          name={
+            labelAddOnly ? "add" : property === "labels" ? "label" : "person"
+          }
+          className={labelAddOnly ? "size-4" : undefined}
+        />
+        {!labelAddOnly && (
+          <span className="truncate">
+            {chosen.length
+              ? options
+                  .filter((option) => chosen.includes(option.value))
+                  .map((option) => option.label)
+                  .join(", ") || `${chosen.length} selected`
+              : property === "labels"
+                ? detail
+                  ? "Add label"
+                  : "Labels"
+                : "Contributing teams"}
+          </span>
+        )}
       </IssuePicker>
     )
   }
@@ -532,7 +556,32 @@ export function InitiativePropertyPicker({
         disabled && "pointer-events-none opacity-60"
       )}
     >
-      {control}
+      {detail && addOnly && property === "labels" ? (
+        <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+          {item.labelIds.map((id) => {
+            const label = labels.find((value) => value.id === id)
+            return (
+              <span
+                key={id}
+                className="inline-flex h-7 max-w-full items-center gap-1.5 rounded-full border border-border/40 px-2 text-[13px]"
+              >
+                <span
+                  className="size-2 shrink-0 rounded-full"
+                  style={{
+                    backgroundColor: label?.color ?? "var(--muted-foreground)",
+                  }}
+                />
+                <span className="truncate">
+                  {label?.name ?? "Unavailable label"}
+                </span>
+              </span>
+            )
+          })}
+          {control}
+        </span>
+      ) : (
+        control
+      )}
     </fieldset>
   )
 }

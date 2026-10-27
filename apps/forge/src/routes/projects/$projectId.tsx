@@ -9,11 +9,18 @@ export const Route = createFileRoute("/projects/$projectId")({
   staleTime: 30_000,
   validateSearch: (
     search: Record<string, unknown>
-  ): { tab: "overview" | "activity" | "issues"; team?: string } => ({
+  ): {
+    tab: "overview" | "activity" | "issues"
+    team?: string
+    milestone?: string
+  } => ({
     tab:
       search.tab === "activity" || search.tab === "issues"
         ? search.tab
         : "overview",
+    ...(typeof search.milestone === "string" && search.milestone
+      ? { milestone: search.milestone }
+      : {}),
     ...(typeof search.team === "string" && search.team
       ? { team: search.team }
       : {}),
@@ -40,9 +47,19 @@ function Page() {
       teams={directory.teams}
       projectId={projectId}
       tab={search.tab}
+      milestone={search.milestone}
+      onMilestoneFilter={(milestone) =>
+        void navigate({ search: { ...search, tab: "issues", milestone } })
+      }
       directoryError={directory.error}
       onTab={(tab) => {
-        void navigate({ search: { ...search, tab } })
+        void navigate({
+          search: {
+            ...search,
+            tab,
+            milestone: tab === "issues" ? search.milestone : undefined,
+          },
+        })
       }}
       onBack={() => {
         if (search.team)

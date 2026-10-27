@@ -11,6 +11,9 @@ import type {
   IssueDraft,
   TeamIssue,
 } from "@/lib/team-issues"
+import type { ProjectMilestone } from "@/lib/project-milestones"
+import { NO_MILESTONE, matchesMilestone } from "@/lib/project-milestones"
+import { MilestoneMark } from "@/components/ui/milestone-mark"
 import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import { IssueComposer } from "@/components/issues/issue-composer"
 import { IssueDetail } from "@/components/issues/issue-detail"
@@ -58,6 +61,9 @@ export type ViewIssuesProps = {
   team?: TeamSummary
   teamIds?: Array<string>
   project?: { id: string; name: string }
+  milestones?: Array<ProjectMilestone>
+  milestone?: Pick<ProjectMilestone, "id" | "name" | "aliases">
+  onClearMilestone?: () => void
   filters: Filters
   display: IssueDisplay
   onFiltersChange: (filters: Filters) => void
@@ -79,6 +85,9 @@ export function ViewIssues({
   team,
   teamIds,
   project,
+  milestones,
+  milestone,
+  onClearMilestone,
   filters,
   display,
   onFiltersChange,
@@ -134,10 +143,32 @@ export function ViewIssues({
         issue.project === project.id ||
         issue.project === project.name
     )
+    .filter(
+      (issue) =>
+        !milestone ||
+        (milestone.id === NO_MILESTONE
+          ? !issue.milestone
+          : matchesMilestone(milestone, issue.milestone))
+    )
   const contexts = new Map<string, IssueRowContext>(
     scoped.flatMap((context) =>
       context.issues.map(
-        (issue) => [issue.id, { ...context, members }] as const
+        (issue) =>
+          [
+            issue.id,
+            {
+              ...context,
+              members,
+              milestoneNames: Object.fromEntries(
+                (milestones ?? []).flatMap((item) =>
+                  [item.id, item.name, ...(item.aliases ?? [])].map((value) => [
+                    value,
+                    item.name,
+                  ])
+                )
+              ),
+            },
+          ] as const
       )
     )
   )
@@ -249,6 +280,9 @@ export function ViewIssues({
         ),
         ...patch,
         ...(project ? { project: project.id } : {}),
+        ...(milestone
+          ? { milestone: milestone.id === NO_MILESTONE ? "" : milestone.id }
+          : {}),
       },
       key: crypto.randomUUID(),
     })
@@ -259,6 +293,28 @@ export function ViewIssues({
     return () => {
       createActionRef.current = null
     }
+  })
+  useEffect(() => {
+    if (!milestone) return
+    function shortcut(event: KeyboardEvent) {
+      const target = event.target as HTMLElement
+      if (
+        event.defaultPrevented ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.altKey ||
+        target.closest(
+          'input, textarea, [contenteditable="true"], [role="dialog"]'
+        )
+      )
+        return
+      if (event.key.toLowerCase() === "c") {
+        event.preventDefault()
+        openNew()
+      }
+    }
+    window.addEventListener("keydown", shortcut)
+    return () => window.removeEventListener("keydown", shortcut)
   })
   const toolbar = (
     <div
@@ -358,6 +414,15 @@ export function ViewIssues({
           </Button>
         </div>
       )}
+      {milestone && (
+        <div className="flex items-center gap-2 px-3 pb-2 text-xs text-muted-foreground">
+          <MilestoneMark />
+          <span>{milestone.name}</span>
+          <Button variant="ghost" size="sm" onClick={onClearMilestone}>
+            Clear milestone filter
+          </Button>
+        </div>
+      )}
       {!data.ready ? (
         <div role="status" className="p-8 text-sm text-muted-foreground">
           Loading issues…
@@ -387,7 +452,15 @@ export function ViewIssues({
       ) : (
         <IllustratedEmptyState
           kind="issues"
-          title={filters.rules.length ? "No matching issues" : "No issues yet"}
+          illustration={
+            milestone ? (
+              <MilestoneMark className="size-20 text-muted-foreground" />
+            ) : undefined
+          }
+          title={
+            milestone?.name ??
+            (filters.rules.length ? "No matching issues" : "No issues yet")
+          }
           actions={
             <>
               <Button
@@ -396,7 +469,27 @@ export function ViewIssues({
                 disabled={!scoped.length}
               >
                 Create new issue
+                {milestone && (
+                  <kbd className="ml-1 rounded border border-current/30 px-1 text-[10px]">
+                    C
+                  </kbd>
+                )}
               </Button>
+              {milestone && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  render={
+                    <a
+                      href="https://linear.app/docs/project-milestones"
+                      target="_blank"
+                      rel="noreferrer"
+                    />
+                  }
+                >
+                  Documentation
+                </Button>
+              )}
               {filters.rules.length > 0 && (
                 <Button
                   variant="secondary"
@@ -410,11 +503,13 @@ export function ViewIssues({
           }
         >
           <p>
-            {filters.rules.length
-              ? "Adjust your filters to see more issues."
-              : project
-                ? "Issues assigned to this project will appear here."
-                : "Issues in your teams will appear here."}
+            {milestone
+              ? "Add issues to milestone"
+              : filters.rules.length
+                ? "Adjust your filters to see more issues."
+                : project
+                  ? "Issues assigned to this project will appear here."
+                  : "Issues in your teams will appear here."}
           </p>
         </IllustratedEmptyState>
       )}
@@ -430,6 +525,29 @@ export function ViewIssues({
               Actions
             </PopoverTrigger>
             <PopoverContent side="top" className="w-56 gap-2 rounded-xl p-3">
+              {!!milestones?.length && (
+                <IssuePicker
+                  label="Set milestone for selected issues"
+                  value=""
+                  options={[
+                    { value: "", label: "No milestone" },
+                    ...milestones.map((item) => ({
+                      value: item.id,
+                      label: item.name,
+                      icon: <MilestoneMark />,
+                    })),
+                  ]}
+                  onChange={(assignment) => {
+                    const saved = visible
+                      .filter((issue) => selectedVisible.includes(issue.id))
+                      .map((issue) => update(issue, { milestone: assignment }))
+                    if (saved.every(Boolean)) setSelected([])
+                  }}
+                >
+                  <MilestoneMark />
+                  Milestone
+                </IssuePicker>
+              )}
               <IssuePicker
                 label="Set priority for selected issues"
                 value=""
@@ -532,6 +650,7 @@ export function ViewIssues({
           directory={directory}
           initial={editor.draft}
           projectOptions={project ? [project] : []}
+          milestones={milestones}
           labels={
             scoped.find((context) => context.team.id === editor.team.id)
               ?.labels ?? []

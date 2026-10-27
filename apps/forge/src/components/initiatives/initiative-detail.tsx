@@ -36,7 +36,7 @@ import { initiativeProjectCatalog } from "@/lib/initiative-projects"
 import { saveWorkspaceProject } from "@/lib/projects"
 import { documentTime } from "@/lib/team-documents"
 import { useAgent } from "@/components/agent/agent-provider"
-import { Button } from "@/components/ui/button"
+import { Button, buttonSurface } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { OptionSelect } from "@/components/ui/option-select"
@@ -334,6 +334,7 @@ export function InitiativeDetail({
           labels={store.labels}
           onChange={patch}
           disabled={!store.writable}
+          className={cn(buttonSurface, "h-7")}
         />
       ))}
       {!all && (
@@ -734,7 +735,7 @@ export function InitiativeDetail({
                   onChange={(event) => setSummary(event.target.value)}
                   className="mt-1 h-8 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
                 />
-                <div className="mt-5 flex flex-wrap items-center gap-2 text-[13px] [&_fieldset>button]:border-0 [&_fieldset>button]:bg-transparent [&_fieldset>button]:text-[13px]">
+                <div className="mt-5 flex flex-wrap items-center gap-2 text-[13px]">
                   <h2 className="mr-2 w-16 shrink-0 text-xs font-normal text-muted-foreground">
                     Properties
                   </h2>

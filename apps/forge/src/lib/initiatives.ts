@@ -138,6 +138,27 @@ export const initiativeProjectSchema = z.object({
         id: z.string(),
         name: z.string().trim().min(1).max(200),
         completed: z.boolean(),
+        targetDate: z.string().refine(validInitiativeTarget).optional(),
+        description: documentSchema.optional(),
+        aliases: z.array(z.string()).optional(),
+        descriptionHistory: z
+          .array(
+            z.object({
+              description: documentSchema,
+              createdAt: z.string().datetime(),
+            })
+          )
+          .optional(),
+      })
+    )
+    .optional(),
+  milestoneEvents: z
+    .array(
+      z.object({
+        id: z.string(),
+        text: z.string(),
+        authorId: z.string(),
+        createdAt: z.string().datetime(),
       })
     )
     .optional(),

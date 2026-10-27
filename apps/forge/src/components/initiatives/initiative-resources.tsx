@@ -120,9 +120,9 @@ export function InitiativeResources({
           </div>
         ))}
         <Button
-          variant="ghost"
-          size="xs"
-          className="px-0 text-xs text-muted-foreground"
+          variant="outline"
+          size="sm"
+          className="text-xs font-normal"
           disabled={!writable}
           onClick={() => open()}
         >

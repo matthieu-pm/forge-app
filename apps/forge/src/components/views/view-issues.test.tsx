@@ -58,10 +58,12 @@ vi.mock("@/components/issues/issue-composer", () => ({
     initial,
   }: {
     team: TeamSummary
-    initial: { status: string }
+    initial: { status: string; project?: string; milestone?: string }
   }) => (
     <div role="dialog" aria-label="Create issue">
       {team.name} {initial.status}
+      <span data-testid="composer-project">{initial.project}</span>
+      <span data-testid="composer-milestone">{initial.milestone}</span>
     </div>
   ),
 }))
@@ -269,5 +271,53 @@ describe("Custom view issue collection", () => {
     expect(
       await screen.findByRole("button", { name: "Open TWO-2 Third issue" })
     ).toBeTruthy()
+  })
+})
+
+describe("Project milestone issue scope", () => {
+  const milestone = {
+    id: "beta",
+    name: "Beta",
+    aliases: ["Old beta"],
+    completed: false,
+  }
+  const project = { id: "launch", name: "Launch", teamIds: [first.id] }
+  it("filters milestone assignments within the project and excludes other milestones and projects", async () => {
+    for (const [title, projectId, assignment] of [
+      ["Beta issue", "launch", "beta"],
+      ["Renamed beta issue", "launch", "Old beta"],
+      ["Other milestone issue", "launch", "later"],
+      ["Unrelated project issue", "other", "beta"],
+    ])
+      saveTeamIssue(
+        first.id,
+        {
+          ...blankIssueDraft(),
+          title,
+          project: projectId,
+          milestone: assignment,
+        },
+        { creator: "user" }
+      )
+    start({ project, milestone, milestones: [milestone] })
+    await screen.findByRole("button", { name: /Open ONE-2 Beta issue/ })
+    expect(
+      screen.getByRole("button", { name: /Open ONE-3 Renamed beta issue/ })
+    ).toBeTruthy()
+    expect(
+      screen.queryByRole("button", { name: /Open .*Other milestone issue/ })
+    ).toBeNull()
+    expect(
+      screen.queryByRole("button", { name: /Open .*Unrelated project issue/ })
+    ).toBeNull()
+  })
+  it("prefills the project and selected milestone when creating from an empty milestone", async () => {
+    const onClearMilestone = vi.fn()
+    start({ project, milestone, milestones: [milestone], onClearMilestone })
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Create new issue/ })
+    )
+    expect(screen.getByTestId("composer-project").textContent).toBe("launch")
+    expect(screen.getByTestId("composer-milestone").textContent).toBe("beta")
   })
 })

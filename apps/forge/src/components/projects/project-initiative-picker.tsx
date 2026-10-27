@@ -1,12 +1,12 @@
 import { HugeiconsIcon } from "@hugeicons/react"
-import { AirplayLineIcon } from "@hugeicons/core-free-icons"
+import { Add01Icon, AirplayLineIcon } from "@hugeicons/core-free-icons"
 import type { Initiative } from "@/lib/initiatives"
 import {
   InitiativeMark,
   initiativeChip,
 } from "@/components/initiatives/initiative-properties"
 import { IssuePicker } from "@/components/issues/issue-controls"
-import { propertyButtonClassName } from "@/components/ui/button"
+import { buttonVariants, propertyButtonClassName } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 export function ProjectInitiativePicker({
@@ -22,6 +22,7 @@ export function ProjectInitiativePicker({
   detail?: boolean
   disabled?: boolean
 }) {
+  const iconOnly = detail && value.length > 0
   return (
     <div
       className={cn(disabled && "pointer-events-none opacity-50")}
@@ -44,14 +45,19 @@ export function ProjectInitiativePicker({
               .filter(Boolean)
           )
         }
-        className={cn(initiativeChip, detail && propertyButtonClassName)}
+        className={cn(
+          initiativeChip,
+          detail && propertyButtonClassName,
+          iconOnly && buttonVariants({ variant: "outline", size: "icon-sm" }),
+          iconOnly && "p-0"
+        )}
       >
         <HugeiconsIcon
-          icon={AirplayLineIcon}
+          icon={iconOnly ? Add01Icon : AirplayLineIcon}
           strokeWidth={1.8}
-          className="size-3.5 shrink-0"
+          className={cn("shrink-0", iconOnly ? "size-4" : "size-3.5")}
         />
-        {detail ? "Add initiative…" : "Initiatives"}
+        {!iconOnly && (detail ? "Add initiative…" : "Initiatives")}
         {!detail && value.length > 0 && ` (${value.length})`}
       </IssuePicker>
     </div>

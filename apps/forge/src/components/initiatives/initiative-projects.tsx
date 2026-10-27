@@ -26,7 +26,6 @@ import {
   IssuePicker,
 } from "@/components/issues/issue-controls"
 import { TeamIconPicker } from "@/components/team-icon-picker"
-import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { RichEditor } from "@/components/templates/rich-editor"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -52,6 +51,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 import { ProjectInitiativePicker } from "@/components/projects/project-initiative-picker"
+import { ProjectRowIcon } from "@/components/projects/project-row-icon"
 
 export const projectStatuses = [
   "Backlog",
@@ -794,17 +794,19 @@ export function InitiativeProjects({
                         gridTemplateColumns: `minmax(180px,1fr) repeat(${columns.length},105px) 28px`,
                       }}
                     >
-                      <button
-                        onClick={() => setEditing(project)}
-                        className="flex min-w-0 items-center gap-3 text-left"
-                      >
-                        <TeamSidebarIcon
-                          name={project.name}
-                          icon={project.icon ?? projectIcon}
-                          className="size-4"
+                      <div className="flex min-w-0 items-center gap-3 text-left">
+                        <ProjectRowIcon
+                          project={project}
+                          writable={writable}
+                          onChange={(icon) => onSave({ ...project, icon })}
                         />
-                        <span className="truncate">{project.name}</span>
-                      </button>
+                        <button
+                          onClick={() => setEditing(project)}
+                          className="min-w-0 flex-1 truncate rounded py-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          {project.name}
+                        </button>
+                      </div>
                       {columns.map((column) => (
                         <div
                           key={column}

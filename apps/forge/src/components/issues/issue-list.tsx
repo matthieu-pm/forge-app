@@ -209,6 +209,7 @@ export function IssueSubProgress({
   )
 }
 export type IssueRowContext = {
+  milestoneNames?: Record<string, string>
   team: { id?: string; slug: string; name: string; identifier: string }
   statuses: Array<TeamStatus>
   members: Members
@@ -542,7 +543,7 @@ export function IssueRows({
         )}
         {props.includes("Milestone") && issue.milestone && (
           <span className="max-w-24 truncate text-xs text-muted-foreground">
-            {issue.milestone}
+            {context?.milestoneNames?.[issue.milestone] ?? issue.milestone}
           </span>
         )}
         {props.includes("Links") &&

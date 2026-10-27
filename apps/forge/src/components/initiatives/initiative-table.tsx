@@ -2,7 +2,6 @@ import { Fragment, useState } from "react"
 import { Link } from "@tanstack/react-router"
 import {
   InitiativeHealthMark,
-  InitiativeMark,
   InitiativePropertyPicker,
 } from "./initiative-properties"
 import type {
@@ -14,6 +13,7 @@ import type {
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamLabel } from "@/lib/team-labels"
 import { IssueIcon } from "@/components/issues/issue-controls"
+import { DirectoryRowIcon } from "@/components/ui/directory-row-icon"
 import {
   DirectoryNoUpdates,
   DirectoryRowCheckbox,
@@ -319,15 +319,20 @@ export function InitiativeTable({
                     setDragged(undefined)
                   }}
                 >
-                  <DirectoryTableCell>
-                    <Link
-                      to="/workspace/initiatives/$initiativeId"
-                      params={{ initiativeId: item.id }}
-                      search={{ tab: "overview" }}
-                      className={directoryNameClassName}
-                    >
-                      <InitiativeMark item={item} />
-                      <span className="min-w-0 flex-1">
+                  <DirectoryTableCell className="overflow-visible">
+                    <div className={cn(directoryNameClassName, "py-0")}>
+                      <DirectoryRowIcon
+                        name={item.name}
+                        icon={item.icon}
+                        writable={!disabled}
+                        onChange={(icon) => onPatch(item, { icon })}
+                      />
+                      <Link
+                        to="/workspace/initiatives/$initiativeId"
+                        params={{ initiativeId: item.id }}
+                        search={{ tab: "overview" }}
+                        className="min-w-0 flex-1 rounded py-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
                         <span className="block truncate font-medium">
                           {item.name}
                         </span>
@@ -337,8 +342,8 @@ export function InitiativeTable({
                               {item.summary}
                             </span>
                           )}
-                      </span>
-                    </Link>
+                      </Link>
+                    </div>
                   </DirectoryTableCell>
                   {columns.map((column) => (
                     <DirectoryTableCell key={column.property}>

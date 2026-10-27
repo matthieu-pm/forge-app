@@ -121,7 +121,7 @@ afterEach(() => {
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
 })
-it("edits the canonical project, keeps initiative copies in sync, and persists milestones", () => {
+it("edits the canonical project, keeps initiative copies in sync, and persists milestones", async () => {
   const page = render(<Page />)
   fireEvent.change(screen.getByRole("textbox", { name: "Project name" }), {
     target: { value: "Launch v2" },
@@ -134,7 +134,10 @@ it("edits the canonical project, keeps initiative copies in sync, and persists m
     target: { value: "Ship beta" },
   })
   fireEvent.click(screen.getByRole("button", { name: "Add milestone" }))
-  fireEvent.click(screen.getByRole("checkbox", { name: "Complete Ship beta" }))
+  fireEvent.click(screen.getByRole("button", { name: "Actions for Ship beta" }))
+  fireEvent.click(
+    await screen.findByRole("menuitem", { name: "Mark complete" })
+  )
   expect(read().workspaceProjects[0].milestones[0].completed).toBe(true)
   page.unmount()
   render(<Page />)
@@ -143,10 +146,9 @@ it("edits the canonical project, keeps initiative copies in sync, and persists m
       .value
   ).toBe("Launch v2")
   expect(
-    screen
-      .getByRole("checkbox", { name: "Complete Ship beta" })
-      .getAttribute("aria-checked")
-  ).toBe("true")
+    screen.getByRole("textbox", { name: "Milestone name for Ship beta" })
+  ).toBeTruthy()
+  expect(read().workspaceProjects[0].milestones[0].completed).toBe(true)
 })
 it("publishes a project update and retains it after remount", async () => {
   const page = render(<Page />)
@@ -252,4 +254,74 @@ it("saves a Slack channel link without publishing project updates", async () => 
     )
   )
   expect(read().workspaceProjects[0].updates ?? []).toEqual([])
+})
+
+it("edits milestone metadata, reorders milestones, and filters project issues from the sidebar", async () => {
+  const state = read()
+  state.initiatives[0].projects[0].milestones = [
+    { id: "beta", name: "Beta", completed: false },
+    { id: "release", name: "Release", completed: false },
+  ]
+  localStorage.setItem(
+    initiativesStorageKey("workspace"),
+    JSON.stringify(state)
+  )
+  saveTeamIssue(
+    team.id,
+    {
+      ...blankIssueDraft(),
+      title: "Beta work",
+      project: "project",
+      milestone: "beta",
+    },
+    { creator: "user" }
+  )
+  saveTeamIssue(
+    team.id,
+    {
+      ...blankIssueDraft(),
+      title: "Other work",
+      project: "project",
+      milestone: "release",
+    },
+    { creator: "user" }
+  )
+  render(<Page />)
+  fireEvent.click(
+    screen.getByRole("button", { name: "Change target date for Beta" })
+  )
+  fireEvent.change(screen.getByLabelText("Beta target date"), {
+    target: { value: "2026-11-13" },
+  })
+  expect(read().workspaceProjects[0].milestones[0].targetDate).toBe(
+    "2026-11-13"
+  )
+  const name = screen.getByRole("textbox", { name: "Milestone name for Beta" })
+  fireEvent.change(name, { target: { value: "Private beta" } })
+  fireEvent.blur(name)
+  expect(read().workspaceProjects[0].milestones[0]).toMatchObject({
+    name: "Private beta",
+    aliases: ["Beta"],
+    targetDate: "2026-11-13",
+  })
+  fireEvent.click(screen.getByRole("button", { name: "Actions for Release" }))
+  fireEvent.click(await screen.findByRole("menuitem", { name: "Move earlier" }))
+  expect(
+    read().workspaceProjects[0].milestones.map(
+      (item: { id: string }) => item.id
+    )
+  ).toEqual(["release", "beta"])
+  fireEvent.click(screen.getByRole("button", { name: "Open project details" }))
+  const sidebar = screen.getByLabelText("Project sidebar")
+  fireEvent.click(
+    await within(sidebar).findByRole("button", { name: /Private beta.*1/ })
+  )
+  await screen.findByRole("button", { name: /Open FOR-1 Beta work/ })
+  expect(screen.queryByRole("button", { name: /Open .*Other work/ })).toBeNull()
+  fireEvent.click(
+    screen.getByRole("button", { name: "Clear milestone filter" })
+  )
+  expect(
+    await screen.findByRole("button", { name: /Open FOR-2 Other work/ })
+  ).toBeTruthy()
 })

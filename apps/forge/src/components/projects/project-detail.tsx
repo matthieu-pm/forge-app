@@ -3,11 +3,19 @@ import { Link } from "@tanstack/react-router"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { ProjectSidebar } from "./project-sidebar"
+import { ProjectMilestones } from "./project-milestones"
 import { ProjectProperties } from "./project-properties"
 import { ProjectInitiativePicker } from "./project-initiative-picker"
+import type { ProjectMilestone } from "@/lib/project-milestones"
 import type { InitiativePerson, InitiativeProject } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { ActivityEntry } from "@/components/initiatives/initiative-activity"
+import { useMyIssueData } from "@/lib/my-issues-state"
+import {
+  NO_MILESTONE,
+  matchesProject,
+  relocateProjectMilestone,
+} from "@/lib/project-milestones"
 import { useInitiatives } from "@/lib/initiatives-state"
 import {
   initiativeProjectCatalog,
@@ -52,14 +60,6 @@ import { ContentHeader } from "@/components/ui/content-header"
 import { ActionIconButton } from "@/components/ui/action-icon-button"
 import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Input } from "@/components/ui/input"
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -78,6 +78,8 @@ type Props = {
   onTab: (tab: ProjectTab) => void
   onBack: () => void
   directoryError?: string
+  milestone?: string
+  onMilestoneFilter?: (id?: string) => void
 }
 
 export function ProjectDetailPage(props: Props) {
@@ -127,6 +129,8 @@ function ProjectDetail({
   onTab,
   onBack,
   directoryError,
+  milestone: milestoneFilter,
+  onMilestoneFilter,
 }: Props & {
   project: InitiativeProject
   store: ReturnType<typeof useInitiatives>
@@ -135,7 +139,13 @@ function ProjectDetail({
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(blankActivityDraft)
   const [milestoneOpen, setMilestoneOpen] = useState(false)
-  const [milestoneName, setMilestoneName] = useState("")
+  const [editingMilestone, setEditingMilestone] = useState<{
+    id: string
+    request: number
+  }>()
+  const [localMilestone, setLocalMilestone] = useState<string | undefined>(
+    milestoneFilter
+  )
   const [issueTeamId, setIssueTeamId] = useState<string>()
   const [filters, setFilters] = useState(emptyIssueFilters)
   const [display, setDisplay] = useState(defaultIssueDisplay)
@@ -153,6 +163,80 @@ function ProjectDetail({
   const updates = project.updates ?? []
   const comments = project.comments ?? []
   const milestones = project.milestones ?? []
+  const selectedMilestone = onMilestoneFilter ? milestoneFilter : localMilestone
+  const milestoneData = useMyIssueData(teams)
+  const milestoneRows = milestoneData.contexts.flatMap((context) =>
+    context.issues
+      .filter((issue) => matchesProject(issue, context.team.id, project))
+      .map((issue) => ({
+        issue,
+        completed:
+          context.statuses.find((status) => status.id === issue.status)
+            ?.group === "completed",
+      }))
+  )
+  function showMilestoneIssues(id?: string) {
+    setIssueTeamId(undefined)
+    setFilters(emptyIssueFilters())
+    setLocalMilestone(id)
+    if (onMilestoneFilter) onMilestoneFilter(id)
+    else onTab("issues")
+  }
+  const milestoneControls = {
+    project,
+    catalog,
+    rows: milestoneRows,
+    writable: store.writable && !milestoneData.errors.length,
+    selected: selectedMilestone,
+    onChange: (next: ProjectMilestone) =>
+      patch({
+        milestones: milestones.map((item) =>
+          item.id === next.id ? next : item
+        ),
+        milestoneEvents: [
+          ...(project.milestoneEvents ?? []),
+          {
+            id: crypto.randomUUID(),
+            text: `updated milestone ${next.name}`,
+            authorId: user.id,
+            createdAt: new Date().toISOString(),
+          },
+        ],
+      }),
+    onEdit: (id: string) => {
+      setEditingMilestone({ id, request: Date.now() })
+      onTab("overview")
+    },
+    onIssues: showMilestoneIssues,
+    onReorder: (next: Array<ProjectMilestone>) => patch({ milestones: next }),
+    onRelocate: (id: string, targetId?: string, convert?: boolean) => {
+      try {
+        relocateProjectMilestone({
+          workspaceId,
+          userId: user.id,
+          teamIds: teams.map((team) => team.id),
+          sourceId: project.id,
+          milestoneId: id,
+          targetId,
+          convert,
+        })
+        toast.success(
+          convert
+            ? "Milestone converted to project"
+            : targetId
+              ? "Milestone moved"
+              : "Milestone deleted"
+        )
+        if (selectedMilestone === id) showMilestoneIssues()
+        return true
+      } catch {
+        setError(
+          "The milestone could not be changed. Your existing data has been preserved."
+        )
+        return false
+      }
+    },
+  }
   const stats = useProjectIssueStats(teams, [project])
   const stat = stats.stats.get(project.id) ?? { count: 0, completed: 0 }
   const progress = stat.count
@@ -301,6 +385,7 @@ function ProjectDetail({
   const labels = (
     <InitiativePropertyPicker
       detail
+      addOnly
       item={{
         ...blankInitiative(user.id),
         name: project.name,
@@ -497,6 +582,13 @@ function ProjectDetail({
             teamIds={project.teamIds}
             team={teams.find((team) => team.id === issueTeamId)}
             project={{ id: project.id, name: project.name }}
+            milestones={milestones}
+            milestone={
+              selectedMilestone === NO_MILESTONE
+                ? { id: NO_MILESTONE, name: "No milestone" }
+                : milestones.find((item) => item.id === selectedMilestone)
+            }
+            onClearMilestone={() => showMilestoneIssues()}
             filters={filters}
             display={display}
             onFiltersChange={setFilters}
@@ -604,55 +696,29 @@ function ProjectDetail({
                       onSave={(_text, description) => patch({ description })}
                     />
                   </section>
-                  <section className="mt-10 space-y-2" aria-label="Milestones">
-                    {milestones.map((milestone) => (
-                      <div
-                        key={milestone.id}
-                        className="flex items-center gap-2 rounded-lg border border-border/40 px-3 py-2"
-                      >
-                        <Checkbox
-                          aria-label={`Complete ${milestone.name}`}
-                          disabled={!store.writable}
-                          checked={milestone.completed}
-                          onCheckedChange={(completed) =>
-                            patch({
-                              milestones: milestones.map((item) =>
-                                item.id === milestone.id
-                                  ? { ...item, completed: Boolean(completed) }
-                                  : item
-                              ),
-                            })
-                          }
-                        />
-                        <span className="flex-1 text-[13px]">
-                          {milestone.name}
-                        </span>
-                        <ActionIconButton
-                          label={`Remove ${milestone.name}`}
-                          disabled={!store.writable}
-                          onClick={() =>
-                            patch({
-                              milestones: milestones.filter(
-                                (item) => item.id !== milestone.id
-                              ),
-                            })
-                          }
-                        >
-                          <IssueIcon name="close" />
-                        </ActionIconButton>
-                      </div>
-                    ))}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="px-0 text-muted-foreground"
-                      disabled={!store.writable}
-                      onClick={() => setMilestoneOpen(true)}
-                    >
-                      <IssueIcon name="add" />
-                      Milestone
-                    </Button>
-                  </section>
+                  <ProjectMilestones
+                    {...milestoneControls}
+                    adding={milestoneOpen}
+                    onAddingChange={setMilestoneOpen}
+                    editingId={editingMilestone}
+                    onAdd={(name) =>
+                      patch({
+                        milestones: [
+                          ...milestones,
+                          { id: crypto.randomUUID(), name, completed: false },
+                        ],
+                        milestoneEvents: [
+                          ...(project.milestoneEvents ?? []),
+                          {
+                            id: crypto.randomUUID(),
+                            text: `added milestone ${name}`,
+                            authorId: user.id,
+                            createdAt: new Date().toISOString(),
+                          },
+                        ],
+                      })
+                    }
+                  />
                 </>
               ) : (
                 <div className="space-y-7">
@@ -660,6 +726,21 @@ function ProjectDetail({
                   {[...updates, ...comments]
                     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
                     .map(card)}
+                  {(project.milestoneEvents ?? [])
+                    .slice()
+                    .reverse()
+                    .map((event) => (
+                      <p
+                        key={event.id}
+                        className="flex items-center gap-2 px-3 text-xs text-muted-foreground"
+                      >
+                        <IssueIcon name="project" />
+                        {people.find((person) => person.id === event.authorId)
+                          ?.name ?? "A teammate"}{" "}
+                        {event.text} ·{" "}
+                        {format(new Date(event.createdAt), "MMM d")}
+                      </p>
+                    ))}
                   <p className="flex items-center gap-2 px-3 text-xs text-muted-foreground">
                     <TeamSidebarIcon
                       name={project.name}
@@ -686,9 +767,14 @@ function ProjectDetail({
             initiatives={initiatives}
             labels={labels}
             onChange={patch}
-            onMilestone={() => setMilestoneOpen(true)}
+            milestoneControls={milestoneControls}
+            onMilestone={() => {
+              onTab("overview")
+              setMilestoneOpen(true)
+            }}
             onActivity={() => onTab("activity")}
             onIssues={(field, value) => {
+              setLocalMilestone(undefined)
               setIssueTeamId(field === "teamId" ? value : undefined)
               setFilters(
                 field && field !== "teamId"
@@ -705,7 +791,8 @@ function ProjectDetail({
                     }
                   : emptyIssueFilters()
               )
-              onTab("issues")
+              if (onMilestoneFilter) onMilestoneFilter()
+              else onTab("issues")
             }}
           />
         )}
@@ -724,44 +811,6 @@ function ProjectDetail({
           onSave={(next, nextIds) => patch(next, nextIds)}
         />
       )}
-      <Dialog open={milestoneOpen} onOpenChange={setMilestoneOpen}>
-        <DialogContent>
-          <DialogTitle>Add milestone</DialogTitle>
-          <form
-            onSubmit={(event) => {
-              event.preventDefault()
-              if (!milestoneName.trim()) return
-              if (
-                patch({
-                  milestones: [
-                    ...milestones,
-                    {
-                      id: crypto.randomUUID(),
-                      name: milestoneName.trim(),
-                      completed: false,
-                    },
-                  ],
-                })
-              ) {
-                setMilestoneOpen(false)
-                setMilestoneName("")
-              }
-            }}
-          >
-            <Input
-              autoFocus
-              aria-label="Milestone name"
-              placeholder="Milestone name"
-              maxLength={200}
-              value={milestoneName}
-              onChange={(event) => setMilestoneName(event.target.value)}
-            />
-            <DialogFooter className="mt-4">
-              <Button type="submit">Add milestone</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </main>
   )
 }

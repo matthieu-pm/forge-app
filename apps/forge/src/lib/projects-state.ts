@@ -15,6 +15,13 @@ import { teamStatusesStorageKey } from "./team-statuses"
 import type { ProjectPreferences } from "./projects"
 import type { TeamSummary } from "./team-contract"
 import type { InitiativeProject } from "./initiatives"
+import type { MilestoneIssue } from "./project-milestones"
+
+export type ProjectIssueStat = {
+  count: number
+  completed: number
+  milestoneIssues?: Array<MilestoneIssue>
+}
 
 const changed = "forge:projects-view-changed"
 function subscribe(notify: () => void) {
@@ -108,7 +115,7 @@ export function useProjectIssueStats(
     () => "[]"
   )
   return useMemo(() => {
-    const stats = new Map<string, { count: number; completed: number }>()
+    const stats = new Map<string, ProjectIssueStat>()
     try {
       for (const [teamId, stored] of JSON.parse(raw) as Array<
         [string, string | null]
@@ -129,6 +136,13 @@ export function useProjectIssueStats(
           )
           const current = stats.get(project.id) ?? { count: 0, completed: 0 }
           stats.set(project.id, {
+            milestoneIssues: [
+              ...(current.milestoneIssues ?? []),
+              ...matching.map((issue) => ({
+                issue,
+                completed: completed.has(issue.status),
+              })),
+            ],
             count: current.count + matching.length,
             completed:
               current.completed +
@@ -139,7 +153,7 @@ export function useProjectIssueStats(
       return { stats, error: "" }
     } catch {
       return {
-        stats: new Map<string, { count: number; completed: number }>(),
+        stats: new Map<string, ProjectIssueStat>(),
         error:
           "Project issue counts could not be loaded. Saved issues have been preserved.",
       }

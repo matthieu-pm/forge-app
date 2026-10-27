@@ -1,11 +1,18 @@
 import { Fragment, useState } from "react"
 import { Link } from "@tanstack/react-router"
 import { ProjectStatusMark } from "./project-properties"
+import { ProjectRowIcon } from "./project-row-icon"
 import { projectChoices } from "./project-view-controls"
+import type { ProjectIssueStat } from "@/lib/projects-state"
 import type { CSSProperties, ReactNode } from "react"
 import type { InitiativeProject, InitiativeStore } from "@/lib/initiatives"
 import type { ProjectPreferences } from "@/lib/projects"
 import type { ProjectDirectory } from "./project-view-controls"
+import {
+  currentProjectMilestone,
+  milestoneDateLabel,
+} from "@/lib/project-milestones"
+import { MilestoneMark } from "@/components/ui/milestone-mark"
 import { Button } from "@/components/ui/button"
 import { ActionHint } from "@/components/ui/action-icon-button"
 import { projectValues } from "@/lib/projects"
@@ -73,7 +80,7 @@ type Props = {
   ) => void
   onSort: (property: string) => void
   writable: boolean
-  stats: Map<string, { count: number; completed: number }>
+  stats: Map<string, ProjectIssueStat>
   statsError: boolean
   selected: Array<string>
   onSelect: (id: string) => void
@@ -470,50 +477,81 @@ export function ProjectCollection(props: Props) {
               />
             )}
             {!collapsed.includes(key) &&
-              items.map((project) => (
-                <DirectoryTableRow
-                  key={project.id}
-                  selected={selected.includes(project.id)}
-                  className={directoryHoverControlsClassName}
-                  selection={
-                    <DirectoryRowCheckbox
-                      name={project.name}
-                      checked={selected.includes(project.id)}
-                      visible={selected.length > 0}
-                      onChange={() => onSelect(project.id)}
-                    />
-                  }
-                >
-                  <DirectoryTableCell>
-                    <button
-                      onClick={() => onOpen(project)}
-                      className={directoryNameClassName}
-                    >
-                      {projectMark(project)}
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-medium">
-                          {project.name}
-                        </span>
-                        {preferences.properties.includes("Summary") &&
-                          project.summary && (
-                            <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                              {project.summary}
-                            </span>
-                          )}
-                      </span>
-                    </button>
-                  </DirectoryTableCell>
-                  {columns.map((column) => (
-                    <DirectoryTableCell key={column.id}>
-                      <ProjectCell
-                        {...props}
-                        property={column.id}
-                        project={project}
+              items.map((project) => {
+                const milestone = currentProjectMilestone(
+                  project,
+                  props.stats.get(project.id)?.milestoneIssues
+                )
+                return (
+                  <DirectoryTableRow
+                    key={project.id}
+                    selected={selected.includes(project.id)}
+                    className={directoryHoverControlsClassName}
+                    selection={
+                      <DirectoryRowCheckbox
+                        name={project.name}
+                        checked={selected.includes(project.id)}
+                        visible={selected.length > 0}
+                        onChange={() => onSelect(project.id)}
                       />
+                    }
+                  >
+                    <DirectoryTableCell className="overflow-visible">
+                      <div className={cn(directoryNameClassName, "py-0")}>
+                        <ProjectRowIcon
+                          project={project}
+                          writable={props.writable}
+                          onChange={(icon) => props.onPatch(project, { icon })}
+                        />
+                        <button
+                          onClick={() => onOpen(project)}
+                          className={cn(
+                            "min-w-0 rounded py-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            !milestone && "flex-1"
+                          )}
+                        >
+                          <span className="block truncate font-medium">
+                            {project.name}
+                          </span>
+                          {preferences.properties.includes("Summary") &&
+                            project.summary && (
+                              <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                                {project.summary}
+                              </span>
+                            )}
+                        </button>
+                        {milestone && (
+                          <Link
+                            to="/projects/$projectId"
+                            params={{ projectId: project.id }}
+                            search={{ tab: "overview" }}
+                            hash={`milestone-${milestone.id}`}
+                            aria-label={`Open milestone ${milestone.name} for ${project.name}`}
+                            className="flex min-w-0 items-center gap-1.5 rounded py-1 text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            <MilestoneMark active />
+                            <span className="truncate">{milestone.name}</span>
+                            {milestone.targetDate && (
+                              <span className="shrink-0">
+                                {milestoneDateLabel(milestone.targetDate)}
+                              </span>
+                            )}
+                          </Link>
+                        )}
+                      </div>
                     </DirectoryTableCell>
-                  ))}
-                </DirectoryTableRow>
-              ))}
+                    {columns.map((column) => (
+                      <DirectoryTableCell key={column.id}>
+                        <ProjectCell
+                          {...props}
+                          property={column.id}
+                          project={project}
+                        />
+                      </DirectoryTableCell>
+                    ))}
+                  </DirectoryTableRow>
+                )
+              })}
           </Fragment>
         ))}
       </DirectoryTable>

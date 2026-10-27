@@ -3,6 +3,8 @@ import { format } from "date-fns"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ArrowDown01Icon } from "@hugeicons/core-free-icons"
 import { ProjectProperties } from "./project-properties"
+import { ProjectMilestoneSummary } from "./project-milestones"
+import type { MilestoneControls } from "./project-milestones"
 import type { ReactNode } from "react"
 import type { InitiativePerson, InitiativeProject } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
@@ -24,7 +26,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Checkbox } from "@/components/ui/checkbox"
 import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
 
 function PanelSection({
@@ -63,6 +64,7 @@ export function ProjectSidebar({
   labels,
   onChange,
   onMilestone,
+  milestoneControls,
   onActivity,
   onIssues,
 }: {
@@ -75,6 +77,7 @@ export function ProjectSidebar({
   labels: ReactNode
   onChange: (patch: Partial<InitiativeProject>) => boolean
   onMilestone: () => void
+  milestoneControls: MilestoneControls
   onActivity: () => void
   onIssues: (field?: IssueField | "teamId", value?: string) => void
 }) {
@@ -167,7 +170,14 @@ export function ProjectSidebar({
       <IssueIcon name="add" />
     </Button>
   )
-  const latest = [...(project.updates ?? []), ...(project.comments ?? [])]
+  const latest = [
+    ...(project.updates ?? []),
+    ...(project.comments ?? []),
+    ...(project.milestoneEvents ?? []).map((event) => ({
+      ...event,
+      milestoneEvent: true,
+    })),
+  ]
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .at(0)
   return (
@@ -243,33 +253,7 @@ export function ProjectSidebar({
         title="Milestones"
         action={add("Add milestone", onMilestone)}
       >
-        {project.milestones?.length ? (
-          <div className="space-y-2">
-            {project.milestones.map((m) => (
-              <label key={m.id} className="flex items-center gap-2 text-xs">
-                <Checkbox
-                  aria-label={`Complete ${m.name}`}
-                  checked={m.completed}
-                  onCheckedChange={(checked) =>
-                    onChange({
-                      milestones: project.milestones?.map((item) =>
-                        item.id === m.id
-                          ? { ...item, completed: Boolean(checked) }
-                          : item
-                      ),
-                    })
-                  }
-                />
-                <span>{m.name}</span>
-              </label>
-            ))}
-          </div>
-        ) : (
-          <p className="text-xs leading-relaxed text-muted-foreground/70">
-            Add milestones to organize work within your project and break it
-            into more granular stages.
-          </p>
-        )}
+        <ProjectMilestoneSummary {...milestoneControls} />
       </PanelSection>
       <PanelSection title="Progress">
         {data.errors.length ? (
@@ -351,7 +335,7 @@ export function ProjectSidebar({
           />
           <span>
             {latest
-              ? `${people.find((p) => p.id === latest.authorId)?.name ?? "A teammate"} ${"health" in latest ? "posted an update" : "commented"}`
+              ? `${people.find((p) => p.id === latest.authorId)?.name ?? "A teammate"} ${"milestoneEvent" in latest ? latest.text : "health" in latest ? "posted an update" : "commented"}`
               : `${people.find((p) => p.id === project.creatorId)?.name ?? "A teammate"} created the project`}
             {(latest?.createdAt ?? project.createdAt) &&
               ` · ${format(new Date(latest?.createdAt ?? project.createdAt!), "MMM d")}`}

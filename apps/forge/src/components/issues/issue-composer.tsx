@@ -24,6 +24,7 @@ import {
 } from "@/lib/team-issues"
 import { initialTeamStatuses } from "@/lib/team-statuses"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
+import { MilestoneMark } from "@/components/ui/milestone-mark"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -49,6 +50,7 @@ export function IssueComposer({
   labels,
   projects,
   projectOptions = [],
+  milestones = [],
   onClose,
   onSaved,
   onDraftSaved,
@@ -63,6 +65,7 @@ export function IssueComposer({
   labels: Array<string>
   projects: Array<string>
   projectOptions?: Array<{ id: string; name: string }>
+  milestones?: Array<{ id: string; name: string }>
   onClose: () => void
   onSaved: (issue: TeamIssue, team: TeamSummary) => void
   onDraftSaved: () => void
@@ -168,6 +171,7 @@ export function IssueComposer({
           project: draft.project,
           labels: draft.labels,
           cycle: draft.cycle,
+          milestone: draft.milestone,
         })
         titleRef.current?.focus()
       } else onClose()
@@ -515,12 +519,33 @@ export function IssueComposer({
                 .map((name) => ({ value: name, label: name })),
             ]}
             allowCreate
-            onChange={(value) => update({ project: value })}
+            onChange={(value) => update({ project: value, milestone: "" })}
           >
             <IssueIcon name="project" />
             {projectOptions.find((item) => item.id === draft.project)?.name ??
               (draft.project || "Project")}
           </IssuePicker>
+          {!!milestones.length &&
+            projectOptions.some((project) => project.id === draft.project) && (
+              <IssuePicker
+                label="Change milestone"
+                value={draft.milestone}
+                options={[
+                  { value: "", label: "No milestone" },
+                  ...milestones.map((milestone) => ({
+                    value: milestone.id,
+                    label: milestone.name,
+                    icon: <MilestoneMark />,
+                  })),
+                ]}
+                onChange={(milestone) => update({ milestone })}
+              >
+                <MilestoneMark />
+                {milestones.find(
+                  (milestone) => milestone.id === draft.milestone
+                )?.name ?? "Milestone"}
+              </IssuePicker>
+            )}
           <IssuePicker
             label="Change labels"
             value={draft.labels ?? ""}
