@@ -1,0 +1,101 @@
+.empty-state-art {
+  --art-paper: color-mix(in oklab, var(--background) 98%, var(--foreground));
+  --art-top: var(--background);
+  --art-shade-0: color-mix(in oklab, var(--background) 80%, var(--foreground));
+  --art-shade-1: color-mix(in oklab, var(--background) 86%, var(--foreground));
+  --art-shade-2: color-mix(in oklab, var(--background) 92%, var(--foreground));
+  --art-shade-3: color-mix(in oklab, var(--background) 96%, var(--foreground));
+  --art-hi: color-mix(in oklab, var(--foreground) 72%, var(--background));
+  --art-mid: color-mix(in oklab, var(--foreground) 42%, var(--background));
+  --art-lo: color-mix(in oklab, var(--foreground) 24%, var(--background));
+  --art-faint: color-mix(in oklab, var(--foreground) 12%, var(--background));
+  --art-lit: color-mix(in oklab, var(--foreground) 90%, var(--background));
+  display: block;
+  width: 196px;
+  height: 157px;
+  max-width: 100%;
+  overflow: visible;
+}
+.dark .empty-state-art {
+  --art-top: color-mix(in oklab, var(--background) 91%, var(--foreground));
+  --art-shade-0: var(--background);
+  --art-shade-1: color-mix(in oklab, var(--background) 98%, var(--foreground));
+  --art-shade-2: color-mix(in oklab, var(--background) 96%, var(--foreground));
+  --art-shade-3: color-mix(in oklab, var(--background) 94%, var(--foreground));
+}
+.empty-state-art path,
+.empty-state-art circle {
+  vector-effect: non-scaling-stroke;
+}
+.empty-state-art .iso-fill {
+  fill: var(--art-paper);
+  stroke: none;
+}
+.empty-state-art .iso-shade {
+  stroke: none;
+}
+.empty-state-art .iso-shade[data-shade="0"] {
+  fill: var(--art-shade-0);
+}
+.empty-state-art .iso-shade[data-shade="1"] {
+  fill: var(--art-shade-1);
+}
+.empty-state-art .iso-shade[data-shade="2"] {
+  fill: var(--art-shade-2);
+}
+.empty-state-art .iso-shade[data-shade="3"] {
+  fill: var(--art-shade-3);
+}
+.empty-state-art .iso-top {
+  fill: var(--art-top);
+  stroke: none;
+}
+.empty-state-art .iso-line {
+  fill: none;
+  stroke: var(--art-lo);
+  stroke-width: 0.65;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.empty-state-art .iso-line[data-tone="hi"] {
+  stroke: var(--art-hi);
+}
+.empty-state-art .iso-line[data-tone="mid"] {
+  stroke: var(--art-mid);
+}
+.empty-state-art .iso-line[data-tone="faint"] {
+  stroke: var(--art-faint);
+}
+.empty-state-art .iso-solid[data-lit] > .iso-edge {
+  stroke: var(--art-lit);
+}
+.empty-state-art .iso-dots circle {
+  fill: var(--art-mid);
+  stroke: none;
+}
+.empty-state-art .iso-halo {
+  fill: var(--foreground);
+  opacity: 0.07;
+  filter: blur(6px);
+}
+.dark .empty-state-art .iso-halo {
+  fill: #000;
+  opacity: 0.65;
+}
+.empty-state-art [data-part] {
+  transition: translate 280ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.empty-state-content:focus-within .empty-state-art [data-part] {
+  translate: var(--art-move);
+}
+@media (hover: hover) and (pointer: fine) {
+  .empty-state-content:hover .empty-state-art [data-part] {
+    translate: var(--art-move);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .empty-state-art [data-part] {
+    transition: none;
+    translate: none !important;
+  }
+}

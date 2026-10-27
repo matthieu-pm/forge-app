@@ -22,6 +22,7 @@ import {
 } from "@/lib/custom-views-state"
 import { DirectoryDisplay } from "@/components/directory-controls"
 import { ContentHeader } from "@/components/ui/content-header"
+import { EmptyStateArt } from "@/components/illustrations/empty-state-art"
 import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
 import { Button } from "@/components/ui/button"
 import {
@@ -81,26 +82,6 @@ function ViewMark({ view }: { view: Pick<CustomView, "name" | "icon"> }) {
     <IssueIcon name="layers" />
   )
 }
-function ViewsIllustration() {
-  return (
-    <svg
-      width="84"
-      height="92"
-      viewBox="0 0 84 92"
-      fill="none"
-      aria-label="Empty custom views illustration"
-      role="img"
-      className="text-muted-foreground"
-    >
-      <g stroke="currentColor" strokeWidth="1.25" strokeLinejoin="round">
-        <path d="m9 47 22-37 35-7 3 4-21 36-37 7Z" />
-        <path d="m12 47 22-35 32-6M48 43 69 7" />
-        <path d="m11 56 25-10 37 14-34 19-28-14Z" />
-        <path d="m11 61 28 13 34-18M11 66v5l28 14 34-19v-5M11 72v5l28 14 34-19v-5" />
-      </g>
-    </svg>
-  )
-}
 function EmptyViews({
   kind,
   onCreate,
@@ -110,8 +91,8 @@ function EmptyViews({
 }) {
   return (
     <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto px-6 py-12">
-      <div className="w-full max-w-[350px]">
-        <ViewsIllustration />
+      <div className="empty-state-content w-full max-w-[350px]">
+        <EmptyStateArt kind="views" />
         <h2 className="mt-6 text-sm font-medium">Views</h2>
         <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
           Create custom views using filters to show only the {kind} you want to

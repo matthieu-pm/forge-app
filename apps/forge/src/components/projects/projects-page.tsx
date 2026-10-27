@@ -12,6 +12,7 @@ import type { TeamSummary } from "@/lib/team-contract"
 import type { ProjectFilter, ProjectPreferences } from "@/lib/projects"
 import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
 import { ContentHeader } from "@/components/ui/content-header"
+import { EmptyStateArt } from "@/components/illustrations/empty-state-art"
 import { targetTimestamp } from "@/lib/initiatives"
 import { useInitiatives } from "@/lib/initiatives-state"
 import { initiativeProjectCatalog } from "@/lib/initiative-projects"
@@ -387,8 +388,8 @@ export function ProjectsPage({
         </div>
       ) : scoped.length === 0 ? (
         <div className="flex min-h-0 flex-1 items-center justify-center px-8 pb-12">
-          <div className="w-[350px] max-w-full">
-            <ProjectEmptyArt />
+          <div className="empty-state-content w-[350px] max-w-full">
+            <EmptyStateArt kind="projects" />
             <h2 className="mt-6 text-sm font-medium">Projects</h2>
             <p className="mt-2 text-[13px] leading-[1.5] text-muted-foreground">
               Projects are larger units of work with a clear outcome, such as a
@@ -708,45 +709,5 @@ export function ProjectsPage({
         </DialogContent>
       </Dialog>
     </main>
-  )
-}
-function ProjectEmptyArt() {
-  return (
-    <svg
-      role="img"
-      aria-label="No projects illustration"
-      width="72"
-      height="76"
-      viewBox="0 0 80 84"
-      fill="none"
-      className="text-muted-foreground/80"
-    >
-      <defs>
-        <g
-          id="project-empty-cube"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinejoin="round"
-        >
-          <path d="m0-13 13 7.5v15L0 17-13 9.5v-15Z" fill="var(--background)" />
-          <path d="M-13-5.5 0 2l13-7.5M0 2v15" />
-        </g>
-      </defs>
-      {[
-        [40, 15],
-        [25, 24],
-        [55, 24],
-        [40, 33],
-        [25, 43],
-        [55, 43],
-        [40, 52],
-      ].map(([x, y], index) => (
-        <use
-          key={index}
-          href="#project-empty-cube"
-          transform={`translate(${x} ${y})`}
-        />
-      ))}
-    </svg>
   )
 }

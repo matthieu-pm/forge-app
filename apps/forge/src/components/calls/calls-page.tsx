@@ -11,6 +11,7 @@ import {
 import type { CallRecord, CallsDirectory } from "@/lib/calls"
 import type { InboxScope } from "@/lib/inbox-state"
 import type { TeamSummary } from "@/lib/team-contract"
+import { EmptyStateArt } from "@/components/illustrations/empty-state-art"
 import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
 import { ContentHeader } from "@/components/ui/content-header"
 import { ActionIconButton } from "@/components/ui/action-icon-button"
@@ -278,8 +279,8 @@ export function CallsPage({
       )}
       {!hasCalls ? (
         <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-8 py-10 pb-12">
-          <div className="w-[350px] max-w-full">
-            <CallsEmptyArt />
+          <div className="empty-state-content w-[350px] max-w-full">
+            <EmptyStateArt kind="calls" />
             <h2 className="mt-6 text-sm font-medium">Calls</h2>
             <p className="mt-2 text-[13px] leading-[1.5] text-muted-foreground">
               Keep your team’s conversations, decisions, and follow-ups
@@ -693,36 +694,5 @@ export function CallsPage({
         />
       )}
     </div>
-  )
-}
-
-function CallsEmptyArt() {
-  return (
-    <svg
-      role="img"
-      aria-label="No calls illustration"
-      width="88"
-      height="76"
-      viewBox="0 0 96 84"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="text-muted-foreground/80"
-    >
-      <path
-        d="M23 15h48a10 10 0 0 1 10 10v25a10 10 0 0 1-10 10h-4"
-        opacity=".35"
-      />
-      <path d="M16 22h48a10 10 0 0 1 10 10v25a10 10 0 0 1-10 10H52l-10 9v-9H16A10 10 0 0 1 6 57V32a10 10 0 0 1 10-10Z" />
-      <path
-        d="M6 51v6a10 10 0 0 0 10 10h26v9l10-9h12a10 10 0 0 0 10-10v-6"
-        transform="translate(0 -5)"
-        opacity=".45"
-      />
-      <path d="M24 36c-2 1-3 3-2 6 3 8 9 14 17 17 3 1 5 0 6-2l2-4-8-4-3 4c-4-2-7-5-9-9l4-3-4-7-3 2Z" />
-      <path d="M51 37v8m5-12v16m5-12v8" opacity=".65" />
-    </svg>
   )
 }

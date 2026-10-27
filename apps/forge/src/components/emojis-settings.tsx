@@ -1,4 +1,5 @@
 "use client"
+
 import * as React from "react"
 import { format } from "date-fns"
 import {
@@ -35,52 +36,8 @@ import {
   emojiNameFromFile,
 } from "@/lib/custom-emoji-contract"
 import { prepareEmojiImage } from "@/lib/custom-emoji-upload"
+import { EmptyStateArt } from "@/components/illustrations/empty-state-art"
 
-function EmptyEmojis() {
-  return (
-    <svg
-      viewBox="0 0 160 125"
-      aria-hidden="true"
-      className="h-28 w-36 text-foreground"
-    >
-      {[28, 20, 12, 4].map((offset, index) => (
-        <ellipse
-          key={offset}
-          cx="80"
-          cy={49 + offset}
-          rx="65"
-          ry="39"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.3"
-          opacity={0.12 + index * 0.1}
-        />
-      ))}
-      <ellipse
-        cx="80"
-        cy="47"
-        rx="65"
-        ry="39"
-        fill="var(--background)"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      />
-      <ellipse
-        cx="80"
-        cy="47"
-        rx="61"
-        ry="35"
-        fill="none"
-        stroke="currentColor"
-        opacity=".18"
-      />
-      <g transform="rotate(-12 80 47)" fill="currentColor" opacity=".55">
-        <path d="M49 27h7v3h3v9h-7v-3h-3zM84 25h7v3h3v9h-7v-3h-3z" />
-        <path d="M42 48h4v7h-4zm4 7h6v4h-6zm6 4h10v4H52zm10 4h23v4H62zm23-4h11v4H85zm11-5h8v5h-8zm8-8h4v8h-4z" />
-      </g>
-    </svg>
-  )
-}
 const focus =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 type SortKey = "name" | "sourceName" | "createdAt"
@@ -233,8 +190,8 @@ export function EmojisSettings() {
           Loading emojis…
         </p>
       ) : !emojis.length ? (
-        <div className="flex min-h-80 flex-1 flex-col items-center justify-center gap-4 pb-8">
-          <EmptyEmojis />
+        <div className="empty-state-content flex min-h-80 flex-1 flex-col items-center justify-center gap-4 pb-8">
+          <EmptyStateArt kind="emojis" />
           <p className="text-sm text-muted-foreground">No emojis</p>
         </div>
       ) : (

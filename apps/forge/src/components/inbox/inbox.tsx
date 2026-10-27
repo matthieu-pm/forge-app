@@ -774,7 +774,7 @@ export function Inbox({ scope }: { scope: InboxScope }) {
             </div>
           </>
         ) : (
-          <div className="flex flex-1 flex-col items-center justify-center gap-6 p-6">
+          <div className="empty-state-content flex flex-1 flex-col items-center justify-center gap-6 p-6">
             <InboxEmptyMark />
             <p className="text-sm text-muted-foreground">
               No notification selected

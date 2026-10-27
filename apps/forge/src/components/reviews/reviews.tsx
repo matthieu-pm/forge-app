@@ -11,6 +11,7 @@ import type {
 } from "@/lib/review-detail"
 import type { Review, ReviewDisplay } from "@/lib/reviews-view"
 import type { InboxScope } from "@/lib/inbox-state"
+import { EmptyStateArt } from "@/components/illustrations/empty-state-art"
 import {
   applyReviewEdit,
   emptyReviewEdit,
@@ -34,41 +35,6 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
-/** An original line illustration matching the quiet Reviews empty state. */
-function ReviewsEmptyMark({ populated = false }: { populated?: boolean }) {
-  return (
-    <svg
-      viewBox="0 0 180 160"
-      className="h-36 w-40 text-muted-foreground"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      aria-hidden="true"
-    >
-      {populated && (
-        <g opacity=".18">
-          <path d="M31 100l65-22 52 39-65 23z" />
-          <path d="M31 106l52 40 65-23M31 112l52 40 65-23" />
-        </g>
-      )}
-      <g opacity=".4" strokeDasharray="4 4">
-        <ellipse cx="90" cy="112" rx="70" ry="43" />
-        <ellipse cx="90" cy="110" rx="64" ry="39" />
-        <ellipse cx="90" cy="108" rx="58" ry="35" />
-      </g>
-      <path
-        d="M69 38v17L53 97c-4 12 13 23 37 23s41-11 37-23l-16-42V38"
-        className="text-foreground/70"
-      />
-      <ellipse cx="90" cy="37" rx="21" ry="10" className="text-foreground/70" />
-      <ellipse cx="90" cy="37" rx="16" ry="6" />
-      <path
-        d="M69 53c0 6 9 11 21 11s21-5 21-11M55 93c5-9 19-14 35-14s30 5 35 14"
-        opacity=".35"
-      />
-    </svg>
-  )
-}
 const noReviews: ReadonlyArray<Review> = []
 const emptyDetail: Detail = {
   branch: "",
@@ -410,8 +376,8 @@ export function Reviews({
               </Fragment>
             ))}
             {!visible.length && !hasReviewFilters(filters) && (
-              <div className="flex flex-col items-center justify-center gap-6 px-6 py-12 md:hidden">
-                <ReviewsEmptyMark />
+              <div className="empty-state-content flex flex-col items-center justify-center gap-6 px-6 py-12 md:hidden">
+                <EmptyStateArt kind="reviews" />
                 <p className="text-[13px] text-muted-foreground">
                   Nothing to review
                 </p>
@@ -470,8 +436,8 @@ export function Reviews({
             onOpenAgent={onOpenAgent ? () => onOpenAgent(selected) : undefined}
           />
         ) : (
-          <div className="flex flex-1 flex-col items-center justify-center gap-6 p-6">
-            <ReviewsEmptyMark populated={Boolean(visible.length)} />
+          <div className="empty-state-content flex flex-1 flex-col items-center justify-center gap-6 p-6">
+            <EmptyStateArt kind="reviews" />
             <p className="text-[13px] text-muted-foreground">
               {entries.length
                 ? visible.length

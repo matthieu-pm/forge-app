@@ -23,6 +23,7 @@ import type {
   InitiativeView,
 } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
+import { EmptyStateArt } from "@/components/illustrations/empty-state-art"
 import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
 import { ContentHeader } from "@/components/ui/content-header"
 import { IssueIcon } from "@/components/issues/issue-controls"
@@ -397,15 +398,8 @@ export function InitiativesPage({
         ) : (
           !creating && (
             <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-y-auto px-6 py-10">
-              <div className="w-full max-w-[360px]">
-                <img
-                  src="/img/empty-states/initiatives.png"
-                  alt=""
-                  aria-hidden="true"
-                  width={110}
-                  height={80}
-                  className="mb-7 h-20 w-[110px] dark:brightness-[1.8]"
-                />
+              <div className="empty-state-content w-full max-w-[360px]">
+                <EmptyStateArt kind="initiatives" className="mb-7" />
                 <h2 className="text-base font-medium">
                   {filters.rules.length
                     ? "No matching initiatives"

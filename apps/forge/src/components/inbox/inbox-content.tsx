@@ -1,23 +1,10 @@
 import { Link } from "@tanstack/react-router"
 import type { InboxEntry } from "@/lib/inbox-state"
+import { EmptyStateArt } from "@/components/illustrations/empty-state-art"
 import { ForgeLogo } from "@/components/forge-logo"
 
 export function InboxEmptyMark() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 120 120"
-      className="size-24 text-muted-foreground/70"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinejoin="round"
-    >
-      <path d="M35 16h50q10 0 12 12l12 62q1 6-3 17t-12 10H26q-9 0-12-10T11 90l12-62q2-12 12-12Z" />
-      <path d="M36 21h48q7 0 8 8l12 59q1 8-7 8H80q-4 0-7 5l-3 4H50l-3-4q-3-5-7-5H23q-8 0-7-8l12-59q1-8 8-8Z" />
-      <path d="M11 89q1 12 12 12h15q5 0 8 5l3 4h22l3-4q3-5 8-5h15q11 0 12-12" />
-    </svg>
-  )
+  return <EmptyStateArt kind="inbox" />
 }
 
 export function WelcomeContent() {

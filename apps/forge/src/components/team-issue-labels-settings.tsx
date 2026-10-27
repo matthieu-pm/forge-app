@@ -17,6 +17,7 @@ import type {
   TeamLabelGroup,
 } from "@/lib/team-labels"
 import type { TeamLabelRowHandle } from "@/components/team-label-row"
+import { EmptyStateArt } from "@/components/illustrations/empty-state-art"
 import { OptionSelect } from "@/components/ui/option-select"
 import {
   LABEL_COLORS,
@@ -778,38 +779,9 @@ export function TeamIssueLabelsSettings({
           !newLabel ? (
             <div
               role="status"
-              className="flex min-h-64 flex-1 flex-col items-center justify-center gap-5 pb-12 text-sm text-muted-foreground"
+              className="empty-state-content flex min-h-64 flex-1 flex-col items-center justify-center gap-5 pb-12 text-sm text-muted-foreground"
             >
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 140 100"
-                className="h-24 w-32"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-              >
-                <g transform="rotate(20 70 50)">
-                  <ellipse
-                    cx="70"
-                    cy="50"
-                    rx="62"
-                    ry="39"
-                    strokeDasharray="4 5"
-                    opacity=".7"
-                  />
-                  {[
-                    [-17, -12],
-                    [17, -12],
-                    [-17, 12],
-                    [17, 12],
-                  ].map(([x, y], i) => (
-                    <g key={i} transform={`translate(${70 + x} ${50 + y})`}>
-                      <ellipse cy="3" rx="11" ry="8" />
-                      <ellipse rx="11" ry="7" fill="var(--background)" />
-                    </g>
-                  ))}
-                </g>
-              </svg>
+              <EmptyStateArt kind="labels" />
               No labels found
             </div>
           ) : (

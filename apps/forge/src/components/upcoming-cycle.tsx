@@ -6,6 +6,7 @@ import type { TeamSummary } from "@/lib/team-contract"
 import type { CycleIssue, CycleIssueDraft } from "@/lib/cycle-issues"
 import type { IssueDraft } from "@/lib/team-issues"
 import type { TemplateDirectory } from "@/lib/template-contract"
+import { EmptyStateArt } from "@/components/illustrations/empty-state-art"
 import { ContentHeader } from "@/components/ui/content-header"
 import { IssueComposer } from "@/components/issues/issue-composer"
 import { IssueRows } from "@/components/issues/issue-list"
@@ -70,34 +71,6 @@ const blankDraft = (status = "todo"): CycleIssueDraft => ({
   status,
   priority: "No priority",
 })
-function CycleMark() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 100 100"
-      className="mb-6 size-24 text-muted-foreground"
-    >
-      <circle
-        cx="50"
-        cy="50"
-        r="44"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="4"
-        strokeDasharray="0.1 8"
-        strokeLinecap="round"
-        opacity=".45"
-      />
-      <path
-        d="M37 33q0-4 4-2l28 15q5 3 0 6L41 67q-4 2-4-2Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      />
-    </svg>
-  )
-}
-
 export function UpcomingCycle({
   team,
   cycleNumber = 1,
@@ -468,8 +441,8 @@ export function UpcomingCycle({
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             {issues.length === 0 && !hasFilters && !display.showEmpty ? (
               <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto px-6 pb-16">
-                <div className="w-full max-w-[350px]">
-                  <CycleMark />
+                <div className="empty-state-content w-full max-w-[350px]">
+                  <EmptyStateArt kind="cycles" className="mb-6" />
                   <h2 className="mb-2 text-base font-medium">
                     Plan your next cycle
                   </h2>

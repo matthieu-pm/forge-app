@@ -10,6 +10,7 @@ import {
 import { TeamDocumentEditor } from "./team-document-editor"
 import { TeamSidebarIcon } from "./team-sidebar-icon"
 import type { TeamSummary } from "@/lib/team-contract"
+import { EmptyStateArt } from "@/components/illustrations/empty-state-art"
 import { authClient } from "@/lib/auth-client"
 import {
   defaultDocumentIcon,
@@ -245,29 +246,8 @@ export function TeamDocuments({
           </div>
         ) : documents.length === 0 ? (
           <div className="flex h-full min-h-[420px] items-center justify-center px-6 pb-12">
-            <div className="w-[280px]">
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 96 100"
-                className="mb-6 h-24 w-20 text-muted-foreground"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-              >
-                {[3, 2, 1, 0].map((i) => (
-                  <g
-                    key={i}
-                    transform={`translate(${-i * 4} ${i * 5})`}
-                    opacity={1 - i * 0.23}
-                  >
-                    <path
-                      d="M30 8 61 12 77 26 81 75 Q81 81 75 80 L34 75 Q29 74 28 68 L25 14 Q24 7 30 8Z"
-                      fill="var(--background)"
-                    />
-                    <path d="m38 30 29 4m-29 4 29 4m-28 4 29 4m-28 4 21 3" />
-                  </g>
-                ))}
-              </svg>
+            <div className="empty-state-content w-[280px] max-w-full">
+              <EmptyStateArt kind="documents" className="mb-6" />
               <h2 className="text-base font-medium">Team documents</h2>
               <p className="mt-2 text-sm leading-5 text-muted-foreground">
                 Create documents to share notes, decisions, and plans with your

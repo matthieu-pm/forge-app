@@ -12,6 +12,7 @@ import type {
 } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamLabel } from "@/lib/team-labels"
+import { EmptyStateArt } from "@/components/illustrations/empty-state-art"
 import {
   blankInitiative,
   initiativeProjectSchema,
@@ -735,35 +736,8 @@ export function InitiativeProjects({
         </div>
       </div>
       {!items.length ? (
-        <div className="flex min-h-56 flex-col items-center justify-center gap-4 rounded-lg border border-border/50 py-8">
-          <svg
-            aria-hidden="true"
-            width="100"
-            height="90"
-            viewBox="0 0 100 90"
-            className="text-muted-foreground/80"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.3"
-            strokeLinejoin="round"
-          >
-            {[
-              [48, 2],
-              [24, 9],
-              [4, 23],
-              [24, 35],
-              [48, 44],
-              [24, 58],
-            ].map(([x, y], index) => (
-              <g key={index} transform={`translate(${x} ${y})`}>
-                <path
-                  d="M2 9 15 2 29 9 28 24 15 32 2 25Z"
-                  fill="var(--background)"
-                />
-                <path d="M2 9 15 17 29 9M15 17 15 32" />
-              </g>
-            ))}
-          </svg>
+        <div className="empty-state-content flex min-h-56 flex-col items-center justify-center gap-4 rounded-lg border border-border/50 py-8">
+          <EmptyStateArt kind="projects" />
           <p className="text-xs text-muted-foreground">
             {filterStatus
               ? "No matching projects"

@@ -19,6 +19,7 @@ import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import type { IssueDraft, IssueStore, TeamIssue } from "@/lib/team-issues"
 import type { ActivitySearch } from "@/lib/issue-activity"
+import { EmptyStateArt } from "@/components/illustrations/empty-state-art"
 import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
 import { ContentHeader } from "@/components/ui/content-header"
 import {
@@ -636,27 +637,8 @@ export function TeamIssues({
         <div className="flex min-w-0 flex-1 flex-col">
           {!visible.length && !display.showEmpty ? (
             <div className="flex min-h-[360px] flex-1 items-center justify-center overflow-y-auto p-6">
-              <div className="w-[340px] max-w-full -translate-y-1">
-                <div
-                  className="relative mb-7 h-[82px] w-24 overflow-hidden"
-                  aria-hidden="true"
-                >
-                  <img
-                    src="/images/issues/status-tokens.png"
-                    alt=""
-                    className="pointer-events-none absolute top-[-31px] w-[435px] max-w-none mix-blend-multiply contrast-[1.2] invert dark:mix-blend-lighten dark:contrast-100 dark:invert-0"
-                    style={{
-                      left:
-                        scope === "active"
-                          ? -30
-                          : scope === "backlog"
-                            ? -171
-                            : -313,
-                    }}
-                    width={2172}
-                    height={724}
-                  />
-                </div>
+              <div className="empty-state-content w-[340px] max-w-full -translate-y-1">
+                <EmptyStateArt kind="issues" className="mb-7" />
                 <h2 className="mb-2 text-sm font-semibold">
                   {isFiltered ? "No matching issues" : copyState.title}
                 </h2>

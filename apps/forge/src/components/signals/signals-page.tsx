@@ -2,6 +2,7 @@ import { Suspense, lazy, useState } from "react"
 import { Link } from "@tanstack/react-router"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { InboxScope } from "@/lib/inbox-state"
+import { EmptyStateArt } from "@/components/illustrations/empty-state-art"
 import { Button } from "@/components/ui/button"
 import { ContentHeader } from "@/components/ui/content-header"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
@@ -75,8 +76,8 @@ export function SignalsPage({
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       {header}
       <main className="flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-y-auto px-8 py-10 pb-12">
-        <div className="w-[350px] max-w-full">
-          <SignalsEmptyArt />
+        <div className="empty-state-content w-[350px] max-w-full">
+          <EmptyStateArt kind="signals" />
           <h2 className="mt-6 text-sm font-medium">Signals</h2>
           <p className="mt-2 text-[13px] leading-[1.5] text-muted-foreground">
             See what your users need. Review insights from product usage and
@@ -124,29 +125,5 @@ export function SignalsPage({
         </Dialog>
       </main>
     </div>
-  )
-}
-
-function SignalsEmptyArt() {
-  return (
-    <svg
-      aria-hidden="true"
-      width="110"
-      height="80"
-      viewBox="0 0 110 80"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="text-muted-foreground/80"
-    >
-      <path d="M59 50a24 24 0 1 1-48 0 24 24 0 0 1 48 0Z" />
-      <path d="M11 50v3a24 24 0 0 0 48 0v-3" />
-      <path d="m27 45 37-37m6-6-3 3m-28 51 12-12m14-7 22-22m6-6 4-4" />
-      <path d="m78 43 18-18" />
-      <circle cx="22" cy="58" r="2.5" />
-      <circle cx="43" cy="64" r="1.5" />
-    </svg>
   )
 }

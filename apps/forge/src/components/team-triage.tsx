@@ -10,6 +10,7 @@ import {
 } from "@hugeicons/core-free-icons"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TriageDraft, TriageIssue } from "@/lib/triage-issues"
+import { EmptyStateArt } from "@/components/illustrations/empty-state-art"
 import { ContentHeader } from "@/components/ui/content-header"
 import { OptionSelect } from "@/components/ui/option-select"
 import {
@@ -38,48 +39,6 @@ const emptyDraft = (): TriageDraft => ({
   priority: "No priority",
   dueDate: "",
 })
-function TriageMark() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 120 88"
-      className="mb-3 h-20 w-28 text-muted-foreground"
-    >
-      {[0, 1, 2].map((ring) => (
-        <ellipse
-          key={ring}
-          cx="60"
-          cy="44"
-          rx={55 - ring * 5}
-          ry={33 - ring * 4}
-          fill="none"
-          stroke="currentColor"
-          strokeDasharray="3 3"
-          opacity={0.3 + ring * 0.1}
-          transform="rotate(-8 60 44)"
-        />
-      ))}
-      <g
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-        transform="rotate(-8 60 44)"
-      >
-        <path d="M34 37v15q0 3 3 3h29v-5H40V37zM86 47V32q0-3-3-3H54v5h26v13z" />
-        <rect
-          x="50"
-          y="40"
-          width="20"
-          height="5"
-          rx="2.5"
-          transform="rotate(-20 60 43)"
-        />
-      </g>
-    </svg>
-  )
-}
-
 export function TeamTriage({ team }: { team: TeamSummary }) {
   const { settings, ready, error: settingsError } = useTeamTriage(team.id)
   const { issues, error, save } = useTriageIssues(team.id)
@@ -420,8 +379,8 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
             )}
           </article>
         ) : (
-          <div className="flex min-h-72 flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
-            <TriageMark />
+          <div className="empty-state-content flex min-h-72 flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+            <EmptyStateArt kind="triage" />
             <p className="text-sm text-muted-foreground">
               {visible.length
                 ? "Select an issue to triage"

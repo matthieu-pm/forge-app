@@ -12,6 +12,7 @@ import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import type { IssueDraft, TeamIssue } from "@/lib/team-issues"
 import type { MyIssuePreferences, MyIssueSearch } from "@/lib/my-issues"
+import { EmptyStateArt } from "@/components/illustrations/empty-state-art"
 import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
 import { ContentHeader } from "@/components/ui/content-header"
 import { isMyIssue, myIssueActivity, myIssueViews } from "@/lib/my-issues"
@@ -394,15 +395,8 @@ export function MyIssues({
           </div>
         ) : !visible.length ||
           (search.view === "activity" && !activity.length) ? (
-          <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
-            <img
-              src="/img/empty-states/my-issues.png"
-              alt=""
-              aria-hidden="true"
-              width={168}
-              height={124}
-              className="h-[124px] w-[168px] shrink-0 invert dark:invert-0"
-            />
+          <div className="empty-state-content flex min-w-0 flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
+            <EmptyStateArt kind="issues" />
             <h2 className="text-base font-medium">
               {filters.rules.length
                 ? "No matching issues"

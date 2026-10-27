@@ -11,6 +11,7 @@ import type {
   IssueDraft,
   TeamIssue,
 } from "@/lib/team-issues"
+import { EmptyStateArt } from "@/components/illustrations/empty-state-art"
 import { IssueComposer } from "@/components/issues/issue-composer"
 import { IssueDetail } from "@/components/issues/issue-detail"
 import {
@@ -375,15 +376,8 @@ export function ViewIssues({
         />
       ) : (
         <div className="flex min-h-0 flex-1 items-center justify-center p-8">
-          <div className="w-full max-w-[350px]">
-            <img
-              src="/img/empty-states/my-issues.png"
-              alt=""
-              aria-hidden="true"
-              width={128}
-              height={94}
-              className="h-[94px] w-32 invert dark:invert-0"
-            />
+          <div className="empty-state-content w-full max-w-[350px]">
+            <EmptyStateArt kind="issues" />
             <h2 className="mt-6 text-sm font-medium">
               {filters.rules.length ? "No matching issues" : "No issues yet"}
             </h2>
