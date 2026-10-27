@@ -670,10 +670,12 @@ export function IssueRows({
                 board ? "h-9 gap-2" : "h-8 gap-1"
               )}
             >
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className={cn(!board && "w-3.5 shrink-0 p-0")}
+              <button
+                type="button"
+                className={cn(
+                  "inline-flex size-7 shrink-0 items-center justify-center bg-transparent p-0 text-inherit outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  !board && "w-3.5"
+                )}
                 aria-label={`${collapsed.includes(name) ? "Expand" : "Collapse"} ${name} group`}
                 aria-expanded={!collapsed.includes(name)}
                 onClick={() =>
@@ -688,7 +690,7 @@ export function IssueRows({
                   name="down"
                   className={collapsed.includes(name) ? "-rotate-90" : ""}
                 />
-              </Button>
+              </button>
               {display.group === "Status" && status && (
                 <span
                   className={cn(
