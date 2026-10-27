@@ -288,6 +288,7 @@ export function InitiativeTable({
                 <DirectoryTableRow
                   key={item.id}
                   selected={selected.includes(item.id)}
+                  className="[&:not(:hover):not(:focus-within)_td:not(:first-child)_button:not([aria-expanded=true])]:border-transparent [&:not(:hover):not(:focus-within)_td:not(:first-child)_button:not([aria-expanded=true])]:bg-transparent [&:not(:hover):not(:focus-within)_td:not(:first-child)_button:not([aria-expanded=true])]:shadow-none"
                   selection={
                     <DirectoryRowCheckbox
                       name={item.name}

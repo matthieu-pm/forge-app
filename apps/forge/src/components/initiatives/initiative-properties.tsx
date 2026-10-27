@@ -455,9 +455,11 @@ export function InitiativePropertyPicker({
         className={className}
       >
         <AssigneeMark name={owner?.name} image={owner?.image} />
-        <span className="truncate">
-          {owner?.name ?? (!compact ? (detail ? "Add owner" : "Owner") : "")}
-        </span>
+        {(owner || !compact) && (
+          <span className="truncate">
+            {owner?.name ?? (detail ? "Add owner" : "Owner")}
+          </span>
+        )}
       </IssuePicker>
     )
   else {
