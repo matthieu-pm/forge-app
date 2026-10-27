@@ -141,7 +141,7 @@ export function TeamDocuments({
       actions={
         <>
           <Button
-            variant="secondary"
+            variant="outline"
             className={homePill}
             disabled={!store.ready || !!store.error}
             onClick={create}

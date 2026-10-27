@@ -50,13 +50,10 @@ export function ActionIconButton({
   return (
     <ActionHint label={label} shortcut={shortcut} disabled={hintDisabled}>
       <Button
-        variant="ghost"
+        variant="outline"
         size="icon-sm"
         aria-label={label}
-        className={cn(
-          "rounded-full text-muted-foreground [&_svg]:size-4 transition-colors duration-150 hover:text-foreground active:translate-y-0 data-popup-open:bg-muted motion-reduce:transition-none",
-          className
-        )}
+        className={cn("rounded-full [&_svg]:size-4", className, "p-0")}
         {...props}
       >
         {children ??

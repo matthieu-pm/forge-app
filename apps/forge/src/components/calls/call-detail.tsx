@@ -1,11 +1,13 @@
 import { useState } from "react"
 import { Link } from "@tanstack/react-router"
 import { toast } from "sonner"
+import { ProviderMark, callField } from "./call-dialogs"
 import type { CallRecord } from "@/lib/calls"
 import type { TeamSummary } from "@/lib/team-contract"
+import { pageTabClass } from "@/components/ui/page-tabs"
 import { timestampLabel } from "@/lib/calls"
 import { addNote, generateCallRecap, updateCallAction } from "@/lib/calls-state"
-import { createCallIssue, callActionSource } from "@/lib/call-issues"
+import { callActionSource, createCallIssue } from "@/lib/call-issues"
 import { useIssueStore } from "@/lib/team-issues"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -13,7 +15,6 @@ import { Input } from "@/components/ui/input"
 import { OptionSelect } from "@/components/ui/option-select"
 import { Textarea } from "@/components/ui/textarea"
 import { IssueIcon } from "@/components/issues/issue-controls"
-import { ProviderMark, callField } from "./call-dialogs"
 import { cn } from "@/lib/utils"
 
 export function CallDetail({
@@ -160,7 +161,7 @@ export function CallDetail({
         <div
           role="tablist"
           aria-label="Call content"
-          className="sticky top-0 z-10 flex gap-6 border-b border-border/60 bg-background"
+          className="sticky top-0 z-10 flex gap-1.5 border-b border-border/60 bg-background py-2"
         >
           {(["summary", "transcript", "notes"] as const).map((value) => (
             <button
@@ -191,12 +192,7 @@ export function CallDetail({
               id={`call-tab-${call.id}-${value}`}
               key={value}
               onClick={() => setTab(value)}
-              className={cn(
-                "relative flex items-center gap-2 py-3 text-[13px] font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                tab === value
-                  ? "text-foreground after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:rounded-full after:bg-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
+              className={pageTabClass}
             >
               {value === "summary"
                 ? "Summary"

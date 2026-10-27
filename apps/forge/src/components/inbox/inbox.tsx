@@ -32,7 +32,9 @@ import type {
   InboxScope,
   InboxView,
 } from "@/lib/inbox-state"
+import { ContentHeader } from "@/components/ui/content-header"
 import { Button } from "@/components/ui/button"
+import { ActionIconButton } from "@/components/ui/action-icon-button"
 import {
   Popover,
   PopoverContent,
@@ -66,18 +68,7 @@ function IconButton({
   label: string
   icon: ComponentProps<typeof HugeiconsIcon>["icon"]
 }) {
-  return (
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      aria-label={label}
-      title={label}
-      className="rounded-lg text-muted-foreground"
-      {...props}
-    >
-      <HugeiconsIcon icon={icon} className="size-4" />
-    </Button>
-  )
+  return <ActionIconButton label={label} icon={icon} {...props} />
 }
 function relativeTime(date: string | undefined, now: number) {
   if (!date) return ""
@@ -319,8 +310,8 @@ export function Inbox({ scope }: { scope: InboxScope }) {
       className="relative flex min-h-0 flex-1 overflow-hidden outline-none"
     >
       <InboxSidebar scope={scope} selected={Boolean(selected)}>
-        <header className="flex h-12 shrink-0 items-center gap-1 border-b border-border/40 px-4">
-          <h1 className="text-sm font-medium">
+        <ContentHeader>
+          <h1 className="text-[13px] font-medium">
             {view === "inbox"
               ? "Inbox"
               : view === "snoozed"
@@ -385,7 +376,7 @@ export function Inbox({ scope }: { scope: InboxScope }) {
               icon={InboxUnreadIcon}
               aria-pressed={unreadOnly}
               className={cn(
-                "rounded-lg text-muted-foreground",
+                "text-muted-foreground",
                 unreadOnly && "bg-muted text-foreground"
               )}
               onClick={() => {
@@ -413,7 +404,7 @@ export function Inbox({ scope }: { scope: InboxScope }) {
               }}
             />
           </div>
-        </header>
+        </ContentHeader>
         {preferences.priorityEnabled && view === "inbox" && (
           <div
             className="flex shrink-0 gap-1 px-3 py-2"
@@ -641,7 +632,7 @@ export function Inbox({ scope }: { scope: InboxScope }) {
       >
         {selected ? (
           <>
-            <header className="flex h-12 shrink-0 items-center gap-1 border-b border-border/40 px-4">
+            <ContentHeader>
               <IconButton
                 label="Back to inbox"
                 className="rounded-lg text-muted-foreground md:hidden"
@@ -768,7 +759,7 @@ export function Inbox({ scope }: { scope: InboxScope }) {
                   />
                 )}
               </div>
-            </header>
+            </ContentHeader>
             {!subscribed && (
               <p className="border-b border-border/40 px-6 py-2 text-xs text-muted-foreground">
                 Unsubscribed · You'll still receive assignments and mentions.

@@ -11,10 +11,14 @@ export function InboxSidebar({
   children,
   scope,
   selected,
+  label = "Notifications",
+  storageNamespace = "inbox",
 }: {
   children: ReactNode
   scope: InboxScope
   selected: boolean
+  label?: string
+  storageNamespace?: string
 }) {
   const id = useId()
   const sidebar = useRef<HTMLElement>(null)
@@ -27,7 +31,7 @@ export function InboxSidebar({
   } | null>(null)
   const [scale, setScale] = useState(1)
   const [resizing, setResizing] = useState(false)
-  const storageKey = `forge:inbox-sidebar-width:v1:${JSON.stringify([scope.workspaceId, scope.userId])}`
+  const storageKey = `forge:${storageNamespace}-sidebar-width:v1:${JSON.stringify([scope.workspaceId, scope.userId])}`
 
   useEffect(() => {
     try {
@@ -75,7 +79,7 @@ export function InboxSidebar({
     <section
       ref={sidebar}
       id={id}
-      aria-label="Notifications"
+      aria-label={label}
       style={{ "--inbox-sidebar-scale": scale } as CSSProperties}
       className={cn(
         "relative flex min-h-0 w-full shrink-0 flex-col border-border/50 md:w-[calc(min(360px,42%)*var(--inbox-sidebar-scale))] md:border-r xl:w-[calc(min(400px,42%)*var(--inbox-sidebar-scale))]",

@@ -2,8 +2,17 @@ import { useCallback, useEffect, useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Call02Icon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
+import { CallDetail } from "./call-detail"
+import {
+  ConnectCallsDialog,
+  ImportCallDialog,
+  ProviderMark,
+  callField,
+} from "./call-dialogs"
 import type { CallRecord, CallsDirectory } from "@/lib/calls"
 import type { TeamSummary } from "@/lib/team-contract"
+import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
+import { ContentHeader } from "@/components/ui/content-header"
 import { callDayLabel, callMatches } from "@/lib/calls"
 import {
   generateCallRecap,
@@ -15,13 +24,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { OptionSelect } from "@/components/ui/option-select"
 import { IssueIcon } from "@/components/issues/issue-controls"
-import { CallDetail } from "./call-detail"
-import {
-  ConnectCallsDialog,
-  ImportCallDialog,
-  ProviderMark,
-  callField,
-} from "./call-dialogs"
 import { cn } from "@/lib/utils"
 
 export function CallsPage({
@@ -150,39 +152,13 @@ export function CallsPage({
   const hasConnection = directory.connections.some((item) => item.connected)
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-3 border-y border-border/60 px-5 py-2">
-        <div className="flex items-center gap-5">
-          <button
-            type="button"
-            onClick={() => setFilter("all")}
-            aria-pressed={filter === "all"}
-            className={cn(
-              "flex items-center gap-2 text-[13px] font-medium",
-              filter !== "all" && "text-muted-foreground"
-            )}
-          >
-            All calls
-            <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground tabular-nums">
-              {directory.calls.length}
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilter("actions")}
-            aria-pressed={filter === "actions"}
-            className={cn(
-              "text-[13px] font-medium",
-              filter !== "actions" && "text-muted-foreground"
-            )}
-          >
-            With open actions
-          </button>
-        </div>
+      <ContentHeader className="justify-between">
+        <h1 className="text-[13px] font-medium">Calls</h1>
         <div className="flex items-center gap-2">
           {hasCalls && (
             <Button
               size="sm"
-              variant="ghost"
+              variant="outline"
               disabled={!ownedConnection || syncing}
               onClick={() => void sync()}
             >
@@ -197,7 +173,7 @@ export function CallsPage({
           )}
           <Button
             size="sm"
-            variant="ghost"
+            variant="outline"
             aria-label="Meeting connections and privacy"
             onClick={() => setConnectOpen(true)}
           >
@@ -214,6 +190,29 @@ export function CallsPage({
             Import call
           </Button>
         </div>
+      </ContentHeader>
+      <div className="flex min-h-11 shrink-0 flex-wrap items-center gap-3 px-4 py-2">
+        <PageTabs aria-label="Call views">
+          <button
+            type="button"
+            onClick={() => setFilter("all")}
+            aria-pressed={filter === "all"}
+            className={pageTabClass}
+          >
+            All calls
+            <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground tabular-nums">
+              {directory.calls.length}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilter("actions")}
+            aria-pressed={filter === "actions"}
+            className={pageTabClass}
+          >
+            With open actions
+          </button>
+        </PageTabs>
       </div>
       {connectionStatus && (
         <div
@@ -241,78 +240,19 @@ export function CallsPage({
         </div>
       )}
       {!hasCalls ? (
-        <div className="flex flex-1 items-center justify-center overflow-y-auto px-6 py-12">
-          <div className="w-full max-w-lg">
-            <div className="relative mb-8 flex h-24 items-center justify-center">
-              <div
-                aria-hidden="true"
-                className="absolute h-20 w-56 rounded-full bg-muted/50 blur-xl"
-              />
-              <ProviderMark
-                provider="google"
-                className="relative size-12 -rotate-12 rounded-2xl text-xl shadow-sm"
-              />
-              <span
-                aria-hidden="true"
-                className="relative z-10 -mx-1 mb-4 flex size-16 items-center justify-center rounded-[20px] border border-border/60 bg-background shadow-sm"
-              >
-                <HugeiconsIcon
-                  icon={Call02Icon}
-                  className="size-6"
-                  strokeWidth={1.5}
-                />
-              </span>
-              <ProviderMark
-                provider="zoom"
-                className="relative size-12 rotate-12 rounded-2xl text-xl shadow-sm"
-              />
-            </div>
-            <div className="text-center">
-              <h1 className="text-2xl font-semibold tracking-tight">
-                Good conversations deserve a next step.
-              </h1>
-              <p className="mx-auto mt-3 max-w-sm text-[13px] leading-6 text-muted-foreground">
-                Keep your{" "}
-                {teamId
-                  ? `${teams.find((team) => team.id === teamId)?.name ?? "team"} team’s`
-                  : "team’s"}{" "}
-                calls, decisions, and follow-ups together. Turn the next good
-                idea into tracked work.
-              </p>
-            </div>
-            <div className="mt-8 space-y-5 border-y border-border/60 py-6">
-              {[
-                {
-                  number: "01",
-                  title: "Connect the tool you already use",
-                  text: "Google Meet, Microsoft Teams, or Zoom. No bot in your meeting.",
-                },
-                {
-                  number: "02",
-                  title: "Catch up in a minute",
-                  text: "Native transcripts become short recaps, decisions, and action items.",
-                },
-                {
-                  number: "03",
-                  title: "Take the conversation forward",
-                  text: "Add context with team notes, then turn an action into a Forge issue.",
-                },
-              ].map((step) => (
-                <div key={step.number} className="flex gap-4">
-                  <span className="pt-0.5 text-[11px] text-muted-foreground/65 tabular-nums">
-                    {step.number}
-                  </span>
-                  <div>
-                    <p className="text-[13px] font-medium">{step.title}</p>
-                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                      {step.text}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-6 flex flex-wrap justify-center gap-2">
+        <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-8 py-10 pb-12">
+          <div className="w-[350px] max-w-full">
+            <CallsEmptyArt />
+            <h2 className="mt-6 text-sm font-medium">Calls</h2>
+            <p className="mt-2 text-[13px] leading-[1.5] text-muted-foreground">
+              Keep your team’s conversations, decisions, and follow-ups
+              together. Connect a meeting tool or import a transcript to get
+              started.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-2">
               <Button
+                size="sm"
+                className="text-xs"
                 onClick={() =>
                   hasConnection && ownedConnection
                     ? void sync()
@@ -328,19 +268,15 @@ export function CallsPage({
                     : "Connect a meeting tool"}
               </Button>
               <Button
-                variant="ghost"
+                variant="secondary"
+                size="sm"
+                className="text-xs"
                 disabled={!teams.length}
                 onClick={() => setImportOpen(true)}
               >
                 Import a transcript
               </Button>
             </div>
-            <p className="mt-5 text-center text-[11px] leading-5 text-muted-foreground">
-              Participants must be informed before transcription.
-              <br />
-              Transcripts are kept for {directory.retentionDays} days. Admins
-              can change this in Connections.
-            </p>
             {directory.connections.some((item) => item.error) && (
               <p
                 role="alert"
@@ -599,5 +535,36 @@ export function CallsPage({
         />
       )}
     </div>
+  )
+}
+
+function CallsEmptyArt() {
+  return (
+    <svg
+      role="img"
+      aria-label="No calls illustration"
+      width="88"
+      height="76"
+      viewBox="0 0 96 84"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="text-muted-foreground/80"
+    >
+      <path
+        d="M23 15h48a10 10 0 0 1 10 10v25a10 10 0 0 1-10 10h-4"
+        opacity=".35"
+      />
+      <path d="M16 22h48a10 10 0 0 1 10 10v25a10 10 0 0 1-10 10H52l-10 9v-9H16A10 10 0 0 1 6 57V32a10 10 0 0 1 10-10Z" />
+      <path
+        d="M6 51v6a10 10 0 0 0 10 10h26v9l10-9h12a10 10 0 0 0 10-10v-6"
+        transform="translate(0 -5)"
+        opacity=".45"
+      />
+      <path d="M24 36c-2 1-3 3-2 6 3 8 9 14 17 17 3 1 5 0 6-2l2-4-8-4-3 4c-4-2-7-5-9-9l4-3-4-7-3 2Z" />
+      <path d="M51 37v8m5-12v16m5-12v8" opacity=".65" />
+    </svg>
   )
 }

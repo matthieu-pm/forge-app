@@ -16,6 +16,7 @@ import { TeamSidebarIcon } from "./team-sidebar-icon"
 import type { JSONContent } from "@tiptap/core"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { HomeStore, TeamResource } from "@/lib/team-home-state"
+import { ContentHeader } from "@/components/ui/content-header"
 import {
   defaultDocumentIcon,
   documentPlainText,
@@ -128,7 +129,7 @@ export function TeamDocumentEditor({
       aria-label="Document editor"
       className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
     >
-      <header className="flex h-11 shrink-0 items-center gap-1.5 border-b border-border/40 px-4 text-[13px]">
+      <ContentHeader>
         <Link
           to="/teams/$teamSlug/overview"
           params={{ teamSlug: team.slug }}
@@ -271,7 +272,7 @@ export function TeamDocumentEditor({
             onClick={copyUrl}
           />
         </div>
-      </header>
+      </ContentHeader>
       {(error || store.error) && (
         <div
           role="alert"

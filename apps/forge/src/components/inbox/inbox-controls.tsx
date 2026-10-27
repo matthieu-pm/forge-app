@@ -287,11 +287,11 @@ export function InboxFiltersMenu({
       <DropdownMenuTrigger
         render={
           <Button
-            variant="ghost"
+            variant="outline"
             size="icon-sm"
             aria-label="Add filter"
             title="Add filter"
-            className="rounded-lg text-muted-foreground data-popup-open:bg-muted"
+            className="rounded-full text-muted-foreground"
           >
             <HugeiconsIcon icon={FilterIcon} className="size-4" />
           </Button>
@@ -410,11 +410,11 @@ export function InboxDisplayOptions({
       <PopoverTrigger
         render={
           <Button
-            variant="ghost"
+            variant="outline"
             size="icon-sm"
             aria-label="Display options"
             title="Display options"
-            className="rounded-lg text-muted-foreground data-popup-open:bg-muted"
+            className="rounded-full text-muted-foreground"
           >
             <HugeiconsIcon icon={SlidersHorizontalIcon} className="size-4" />
           </Button>

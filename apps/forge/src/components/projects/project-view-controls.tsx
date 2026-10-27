@@ -19,7 +19,7 @@ import {
   projectStatuses,
 } from "@/components/initiatives/initiative-projects"
 import { IssueIcon } from "@/components/issues/issue-controls"
-import { Button } from "@/components/ui/button"
+import { Button, buttonSurface } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { OptionSelect } from "@/components/ui/option-select"
 import {
@@ -30,8 +30,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 
-export const projectToolButton =
-  "size-7 rounded-full border border-border/40 bg-muted/55 p-0 text-muted-foreground"
+export const projectToolButton = cn(buttonSurface, "size-7 rounded-full p-0")
 export type ProjectDirectory = {
   people: Array<InitiativePerson>
   teams: Array<TeamSummary>
@@ -103,7 +102,7 @@ export function ProjectFiltersMenu({
       <PopoverTrigger
         render={
           <Button
-            variant="secondary"
+            variant="outline"
             size="icon-sm"
             aria-label="Add filter"
             className={projectToolButton}
@@ -221,7 +220,7 @@ export function ProjectDisplayMenu({
       <PopoverTrigger
         render={
           <Button
-            variant="secondary"
+            variant="outline"
             size="icon-sm"
             aria-label="Display options"
             disabled={disabled}

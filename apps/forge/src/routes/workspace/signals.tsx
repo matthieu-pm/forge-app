@@ -1,15 +1,28 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { PagePlaceholder } from "@/components/page-placeholder"
-import { getPageMeta } from "@/lib/app-navigation"
+import { SignalsPage as SignalsView } from "@/components/signals/signals-page"
 import { protectedRouteBeforeLoad } from "@/lib/auth-state"
-
-const pageMeta = getPageMeta("/workspace/signals")
+import { readSignalsSearch } from "@/lib/signals-demo"
 
 export const Route = createFileRoute("/workspace/signals")({
   beforeLoad: protectedRouteBeforeLoad,
+  validateSearch: readSignalsSearch,
   component: SignalsPage,
 })
 
 function SignalsPage() {
-  return <PagePlaceholder {...pageMeta} />
+  const { authState } = Route.useRouteContext()
+  const { preview } = Route.useSearch()
+  const navigate = Route.useNavigate()
+  return (
+    <SignalsView
+      scope={{
+        workspaceId: authState.workspace?.id ?? "personal",
+        userId: authState.user!.id,
+      }}
+      preview={preview}
+      onPreviewChange={(next) => {
+        void navigate({ search: next ? { preview: true } : {} })
+      }}
+    />
+  )
 }

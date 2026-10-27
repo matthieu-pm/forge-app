@@ -12,6 +12,8 @@ import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import type { IssueDraft, TeamIssue } from "@/lib/team-issues"
 import type { MyIssuePreferences, MyIssueSearch } from "@/lib/my-issues"
+import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
+import { ContentHeader } from "@/components/ui/content-header"
 import { isMyIssue, myIssueActivity, myIssueViews } from "@/lib/my-issues"
 import { useMyIssueData, useMyIssuePreferences } from "@/lib/my-issues-state"
 import {
@@ -27,7 +29,6 @@ import {
   ActionHint,
   ActionIconButton,
 } from "@/components/ui/action-icon-button"
-import { cn } from "@/lib/utils"
 
 const viewLabels = {
   assigned: "Assigned",
@@ -238,7 +239,7 @@ export function MyIssues({
       (item) => item.team.slug === currentContext.team.slug
     )!
     return (
-      <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background md:rounded-2xl dark:bg-[#111111]">
+      <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background md:rounded-2xl">
         <IssueDetail
           key={current.id}
           team={context.team}
@@ -263,12 +264,13 @@ export function MyIssues({
   return (
     <main
       aria-label="My issues"
-      className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background md:rounded-2xl dark:bg-[#111111]"
+      className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background md:rounded-2xl"
     >
-      <header className="flex h-11 shrink-0 items-center justify-between border-b border-border/40 px-4">
+      <ContentHeader className="justify-between">
         <h1 className="text-[13px] font-medium">My issues</h1>
         <Button
-          variant="ghost"
+          variant="outline"
+          size="sm"
           className="w-auto gap-1.5 px-3 text-xs text-muted-foreground"
           onClick={() => openNew()}
           disabled={!data.contexts.length}
@@ -276,22 +278,16 @@ export function MyIssues({
           <IssueIcon name="add" />
           New issue
         </Button>
-      </header>
+      </ContentHeader>
       <div className="flex min-h-11 shrink-0 items-center justify-between gap-2 px-2 py-2">
-        <nav
-          aria-label="My issue views"
-          className="flex min-w-0 items-center gap-1 overflow-x-auto"
-        >
+        <PageTabs aria-label="My issue views">
           {myIssueViews.map((view) => (
             <Link
               key={view}
               to="/my-issues"
               search={{ view }}
               aria-current={search.view === view ? "page" : undefined}
-              className={cn(
-                "shrink-0 rounded-full border border-border/30 bg-secondary/45 px-2.5 py-1 text-xs text-muted-foreground hover:bg-secondary",
-                search.view === view && "bg-secondary text-foreground"
-              )}
+              className={pageTabClass}
               onClick={() => {
                 setSelected([])
                 setPreviewId(undefined)
@@ -300,7 +296,7 @@ export function MyIssues({
               {viewLabels[view]}
             </Link>
           ))}
-        </nav>
+        </PageTabs>
         <div className="flex shrink-0 items-center gap-1.5">
           <IssueFilters
             issues={mine}

@@ -6,6 +6,7 @@ import type { TeamSummary } from "@/lib/team-contract"
 import type { CycleIssue, CycleIssueDraft } from "@/lib/cycle-issues"
 import type { IssueDraft } from "@/lib/team-issues"
 import type { TemplateDirectory } from "@/lib/template-contract"
+import { ContentHeader } from "@/components/ui/content-header"
 import { IssueComposer } from "@/components/issues/issue-composer"
 import { IssueRows } from "@/components/issues/issue-list"
 import { IssueFilters } from "@/components/issues/issue-filters"
@@ -230,7 +231,7 @@ export function UpcomingCycle({
   const hasFilters = filters.rules.length > 0
   return (
     <main
-      className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden dark:bg-[#111111]"
+      className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
       aria-label={`Cycle ${cycleNumber}`}
       onKeyDown={(event) => {
         if (
@@ -256,7 +257,7 @@ export function UpcomingCycle({
         }
       }}
     >
-      <header className="flex h-11 shrink-0 items-center gap-2 border-b border-border/40 px-4 text-[13px]">
+      <ContentHeader>
         <Link
           to="/teams/$teamSlug/overview"
           params={{ teamSlug: team.slug }}
@@ -335,7 +336,7 @@ export function UpcomingCycle({
           <DropdownMenuTrigger
             render={
               <Button
-                variant="ghost"
+                variant="outline"
                 size="icon-xs"
                 aria-label="Cycle options"
               />
@@ -361,7 +362,7 @@ export function UpcomingCycle({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </header>
+      </ContentHeader>
       <div className="flex min-h-11 shrink-0 items-center justify-between gap-2 px-4 py-2">
         <span className="text-xs text-muted-foreground">
           {issues.length} {issues.length === 1 ? "issue" : "issues"}
@@ -385,7 +386,7 @@ export function UpcomingCycle({
             }}
           />
           <Button
-            variant="secondary"
+            variant="outline"
             size="icon-sm"
             className={cn("rounded-full", details && "bg-foreground/15")}
             aria-label={details ? "Close cycle details" : "Open cycle details"}

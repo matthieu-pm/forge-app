@@ -10,6 +10,8 @@ import {
 import type { InitiativePerson, InitiativeProject } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { ProjectFilter, ProjectPreferences } from "@/lib/projects"
+import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
+import { ContentHeader } from "@/components/ui/content-header"
 import { targetTimestamp } from "@/lib/initiatives"
 import { useInitiatives } from "@/lib/initiatives-state"
 import { initiativeProjectCatalog } from "@/lib/initiative-projects"
@@ -212,7 +214,7 @@ export function ProjectsPage({
       ref={root}
       tabIndex={-1}
       aria-label={team ? `${team.name} projects` : "Projects"}
-      className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden outline-none dark:bg-[#111111]"
+      className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background outline-none"
       onKeyDown={(event) => {
         if (
           event.defaultPrevented ||
@@ -243,7 +245,7 @@ export function ProjectsPage({
         }
       }}
     >
-      <header className="flex h-11 shrink-0 items-center justify-between border-b border-border/40 px-4">
+      <ContentHeader className="justify-between">
         <h1 className="flex items-center gap-2 text-[13px] font-medium">
           {team && (
             <>
@@ -255,7 +257,7 @@ export function ProjectsPage({
           Projects
         </h1>
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
           className="gap-1.5 px-2 text-xs text-muted-foreground"
           disabled={!store.writable}
@@ -264,20 +266,14 @@ export function ProjectsPage({
           <IssueIcon name="add" />
           New project
         </Button>
-      </header>
+      </ContentHeader>
       <div className="flex min-h-11 shrink-0 items-center justify-between gap-2 px-2 py-2">
-        <nav
-          aria-label="Project views"
-          className="flex min-w-0 items-center gap-1 overflow-x-auto"
-        >
+        <PageTabs aria-label="Project views">
           <Button
-            variant="secondary"
+            variant="outline"
             size="xs"
             aria-pressed={!viewId}
-            className={cn(
-              "h-7 shrink-0 rounded-full text-xs font-normal",
-              viewId && "bg-transparent text-muted-foreground"
-            )}
+            className={pageTabClass}
             onClick={() => {
               setViewId("")
               setFilters([])
@@ -288,13 +284,10 @@ export function ProjectsPage({
           {preferences.views.map((view) => (
             <Button
               key={view.id}
-              variant="ghost"
+              variant="outline"
               size="xs"
               aria-pressed={viewId === view.id}
-              className={cn(
-                "h-7 shrink-0 rounded-full text-xs font-normal text-muted-foreground",
-                viewId === view.id && "bg-muted text-foreground"
-              )}
+              className={pageTabClass}
               onClick={() => {
                 setViewId(view.id)
                 setFilters(view.filters)
@@ -304,7 +297,7 @@ export function ProjectsPage({
             </Button>
           ))}
           <Button
-            variant="ghost"
+            variant="outline"
             size="icon-xs"
             aria-label="Add new view"
             disabled={Boolean(display.error)}
@@ -316,7 +309,7 @@ export function ProjectsPage({
           >
             <IssueIcon name="layers" />
           </Button>
-        </nav>
+        </PageTabs>
         <div className="flex shrink-0 items-center gap-1.5">
           <ProjectFiltersMenu
             open={filterOpen}

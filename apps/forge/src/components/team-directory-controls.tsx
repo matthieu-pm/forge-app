@@ -1,4 +1,3 @@
-import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import { useEffect, useRef, useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
@@ -6,11 +5,12 @@ import {
   Cancel01Icon,
   FilterHorizontalIcon,
   LockIcon,
-  Sorting01Icon,
   TextIcon,
   UserGroup03Icon,
 } from "@hugeicons/core-free-icons"
 import type { TeamDirectoryEntry } from "@/lib/team-contract"
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
+import { DirectoryDisplay } from "@/components/directory-controls"
 import { OptionSelect } from "@/components/ui/option-select"
 import { Button } from "@/components/ui/button"
 import {
@@ -23,11 +23,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
 import {
   Dialog,
   DialogContent,
@@ -149,77 +144,24 @@ export function TeamDirectoryDisplay({
   onProperties: (value: Array<TeamProperty>) => void
 }) {
   return (
-    <Popover>
-      <PopoverTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Team list display options"
-            className="rounded-full border border-border/60 bg-muted/40 text-muted-foreground"
-          />
-        }
-      >
-        <HugeiconsIcon icon={FilterHorizontalIcon} />
-      </PopoverTrigger>
-      <PopoverContent
-        align="end"
-        className="w-[300px] gap-0 rounded-xl p-0 data-open:animate-none data-closed:animate-none"
-      >
-        <div className="flex items-center gap-2 border-b border-border/60 p-4 text-xs">
-          <span className="mr-auto text-muted-foreground">Ordering</span>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            aria-label="Direction"
-            title={descending ? "Descending" : "Ascending"}
-            aria-pressed={descending}
-            onClick={onDirection}
-          >
-            <HugeiconsIcon
-              icon={Sorting01Icon}
-              className={descending ? "rotate-180" : ""}
-            />
-          </Button>
-          <OptionSelect
-            aria-label="View ordering"
-            value={ordering}
-            onValueChange={(nextValue) => onOrdering(nextValue as TeamOrdering)}
-            className={selectClass}
-          >
-            <option value="name">Name</option>
-            <option value="members">Members</option>
-            <option value="created">Created</option>
-          </OptionSelect>
-        </div>
-        <div className="p-4">
-          <p className="mb-2 text-xs text-muted-foreground">
-            Display properties
-          </p>
-          <div className="flex flex-wrap gap-1">
-            {teamProperties.map((property) => (
-              <button
-                key={property}
-                type="button"
-                aria-pressed={properties.includes(property)}
-                onClick={() =>
-                  onProperties(
-                    properties.includes(property)
-                      ? properties.filter((item) => item !== property)
-                      : [...properties, property]
-                  )
-                }
-                className={`rounded-full border border-border/50 px-2 py-1 text-xs leading-none focus-visible:outline-2 focus-visible:outline-ring ${properties.includes(property) ? "bg-accent text-foreground" : "bg-muted/40 text-muted-foreground"}`}
-              >
-                {property}
-              </button>
-            ))}
-          </div>
-        </div>
-      </PopoverContent>
-    </Popover>
+    <DirectoryDisplay
+      label="Team list display options"
+      ordering={ordering}
+      descending={descending}
+      properties={properties}
+      propertyOptions={teamProperties}
+      orderingOptions={[
+        { value: "name", label: "Name" },
+        { value: "members", label: "Members" },
+        { value: "created", label: "Created" },
+      ]}
+      onOrdering={onOrdering}
+      onDirection={onDirection}
+      onProperties={onProperties}
+    />
   )
 }
+
 export function TeamDirectoryFilters({
   teams,
   value,
@@ -353,11 +295,11 @@ export function TeamDirectoryFilters({
         <DropdownMenuTrigger
           render={
             <Button
-              variant="ghost"
+              variant="outline"
               size="icon-sm"
               aria-label="Filter teams"
               title="Add filter (F)"
-              className="relative rounded-full border border-border/60 bg-muted/40 text-muted-foreground"
+              className="relative rounded-full text-muted-foreground"
             />
           }
         >
@@ -652,7 +594,7 @@ export function TeamDirectoryFilters({
                   />
                 )}
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="icon-sm"
                   aria-label="Remove condition"
                   onClick={() =>

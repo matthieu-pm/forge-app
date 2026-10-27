@@ -19,6 +19,8 @@ import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import type { IssueDraft, IssueStore, TeamIssue } from "@/lib/team-issues"
 import type { ActivitySearch } from "@/lib/issue-activity"
+import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
+import { ContentHeader } from "@/components/ui/content-header"
 import {
   blankIssueDraft,
   emptyIssueFilters,
@@ -400,7 +402,7 @@ export function TeamIssues({
   const isFiltered = filters.rules.length > 0
   if (current)
     return (
-      <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background md:rounded-2xl dark:bg-[#111111]">
+      <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background md:rounded-2xl">
         <IssueDetail
           key={current.id}
           team={team}
@@ -420,9 +422,9 @@ export function TeamIssues({
   return (
     <main
       aria-label={`${team.name} issues`}
-      className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background md:rounded-2xl dark:bg-[#111111]"
+      className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background md:rounded-2xl"
     >
-      <header className="flex h-11 shrink-0 items-center gap-2 border-b border-border/40 px-4">
+      <ContentHeader>
         <Link
           to="/teams/$teamSlug/overview"
           params={{ teamSlug: team.slug }}
@@ -509,8 +511,8 @@ export function TeamIssues({
             </PopoverContent>
           </Popover>
           <Button
-            variant="ghost"
-            size="default"
+            variant="outline"
+            size="sm"
             className="w-auto gap-1.5 px-3 text-xs text-muted-foreground"
             onClick={() => openNew()}
           >
@@ -518,12 +520,9 @@ export function TeamIssues({
             New issue
           </Button>
         </div>
-      </header>
+      </ContentHeader>
       <div className="flex min-h-11 shrink-0 items-center justify-between gap-2 px-2 py-2">
-        <nav
-          aria-label="Issue views"
-          className="flex min-w-0 items-center gap-1 overflow-x-auto"
-        >
+        <PageTabs aria-label="Issue views">
           {[
             { id: "active", label: "Active" },
             { id: "backlog", label: "Backlog" },
@@ -536,10 +535,7 @@ export function TeamIssues({
               params={{ teamSlug: team.slug }}
               search={{ view: view.id }}
               aria-current={search.view === view.id ? "page" : undefined}
-              className={cn(
-                "shrink-0 rounded-full border border-border/30 bg-secondary/45 px-2.5 py-1 text-xs text-muted-foreground hover:bg-secondary",
-                search.view === view.id && "bg-secondary text-foreground"
-              )}
+              className={pageTabClass}
               onClick={() => {
                 setSelected([])
               }}
@@ -560,7 +556,7 @@ export function TeamIssues({
           >
             <IssueIcon name="layers" />
           </Button>
-        </nav>
+        </PageTabs>
         <div className="flex shrink-0 items-center gap-1.5">
           <IssueFilters
             issues={store.issues}

@@ -11,6 +11,7 @@ import { TanStackDevtools } from "@tanstack/react-devtools"
 import { Activity, Fragment } from "react"
 
 import appCss from "../styles.css?url"
+import { ContentHeader } from "@/components/ui/content-header"
 import { AppSidebar } from "@/components/app-sidebar"
 import { AgentProvider, useAgent } from "@/components/agent/agent-provider"
 import { AgentFooterActions } from "@/components/agent/agent-footer-actions"
@@ -169,8 +170,11 @@ function AgentRouteContent({
         pathname !== "/my-issues" &&
         !pathname.startsWith("/workspace/initiatives") &&
         pathname !== "/workspace/projects" &&
+        pathname !== "/workspace/signals" &&
+        pathname !== "/workspace/calls" &&
+        !/^\/teams\/[^/]+\/calls$/.test(pathname) &&
         !/^\/teams\/[^/]+\/cycle\/[^/]+$/.test(pathname) &&
-        !/^\/teams\/[^/]+\/(triage|overview|documents|loops|members|issues|projects)$/.test(
+        !/^\/teams\/[^/]+\/(triage|overview|documents|loops|members|issues|projects|signals)$/.test(
           pathname
         ) && <AppHeader />}
       <div
@@ -203,7 +207,7 @@ function AppHeader() {
     },
   })
 
-  if (pathname === "/workspace/teams") {
+  if (pathname === "/workspace/teams" || pathname === "/workspace/members") {
     return null
   }
 
@@ -217,9 +221,9 @@ function AppHeader() {
   }
 
   return (
-    <header className="flex h-12 min-w-0 shrink-0 items-center gap-3 px-4">
+    <ContentHeader>
       <Breadcrumb className="min-w-0 overflow-x-auto whitespace-nowrap">
-        <BreadcrumbList className="h-6 flex-nowrap text-sm">
+        <BreadcrumbList className="h-6 flex-nowrap text-[13px]">
           {breadcrumbs.map((item, index) => {
             const isLast = index === breadcrumbs.length - 1
             const showTeamIcon = settings
@@ -243,7 +247,7 @@ function AppHeader() {
                       {label}
                     </BreadcrumbLink>
                   ) : (
-                    <BreadcrumbPage className="text-sm font-medium">
+                    <BreadcrumbPage className="text-[13px] font-medium">
                       {label}
                     </BreadcrumbPage>
                   )}
@@ -254,7 +258,7 @@ function AppHeader() {
           })}
         </BreadcrumbList>
       </Breadcrumb>
-    </header>
+    </ContentHeader>
   )
 }
 

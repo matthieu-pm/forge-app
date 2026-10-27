@@ -26,6 +26,8 @@ import type {
 } from "@/lib/initiatives"
 import type { InitiativeData } from "@/lib/initiatives-state"
 import type { TeamSummary } from "@/lib/team-contract"
+import { pageTabClass } from "@/components/ui/page-tabs"
+import { ContentHeader } from "@/components/ui/content-header"
 import { IssueIcon } from "@/components/issues/issue-controls"
 import { TeamIconPicker } from "@/components/team-icon-picker"
 import { RichEditor } from "@/components/templates/rich-editor"
@@ -489,9 +491,9 @@ export function InitiativeDetail({
   return (
     <main
       aria-label="Initiative details"
-      className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden dark:bg-[#111111]"
+      className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
     >
-      <header className="flex h-11 shrink-0 items-center gap-2 border-b border-border/40 px-4 text-[13px]">
+      <ContentHeader>
         <Link
           to="/workspace/initiatives"
           search={{ view: "active" }}
@@ -599,7 +601,7 @@ export function InitiativeDetail({
             </ActionIconButton>
           )}
         </div>
-      </header>
+      </ContentHeader>
       <nav
         aria-label="Initiative sections"
         className="flex h-11 shrink-0 items-center gap-1 px-2"
@@ -617,10 +619,7 @@ export function InitiativeDetail({
             <button
               key={section.id}
               aria-current={section.id === tab ? "page" : undefined}
-              className={cn(
-                "shrink-0 rounded-full border border-border/30 bg-muted/45 px-2.5 py-1 text-xs text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                section.id === tab && "bg-muted text-foreground"
-              )}
+              className={pageTabClass}
               onClick={() => onTab(section.id)}
             >
               {section.name}

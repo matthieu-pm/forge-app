@@ -1,4 +1,3 @@
-import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import { useEffect, useRef, useState } from "react"
 import { IssueIcon, StatusMark, issuePrimary } from "./issue-controls"
 import type {
@@ -8,6 +7,7 @@ import type {
   TeamIssue,
 } from "@/lib/team-issues"
 import type { TeamStatus } from "@/lib/team-statuses"
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import {
   emptyIssueFilters,
   issueFieldValue,
@@ -294,7 +294,7 @@ export function IssueFilters({
         <DropdownMenuTrigger
           render={
             <Button
-              variant="secondary"
+              variant="outline"
               size="icon-sm"
               aria-label="Add filter"
               title="Add filter (F)"

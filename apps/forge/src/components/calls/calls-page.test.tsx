@@ -6,14 +6,15 @@ import {
   waitFor,
 } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { CallsPage } from "./calls-page"
+import { CallDetail } from "./call-detail"
 import type { ComponentProps } from "react"
 import type { CallRecord, CallsDirectory } from "@/lib/calls"
 import type { TeamSummary } from "@/lib/team-contract"
-import { CallsPage } from "./calls-page"
-import { CallDetail } from "./call-detail"
-import { loadCall, addNote, updateCallAction } from "@/lib/calls-state"
+import { addNote, loadCall, updateCallAction } from "@/lib/calls-state"
 import { selectOption } from "@/test-utils/select-option"
 import { readIssueStore } from "@/lib/team-issues"
+
 vi.mock("@/lib/calls-state", () => ({
   loadCall: vi.fn(),
   loadCalls: vi.fn(),
@@ -108,7 +109,7 @@ describe("Calls", () => {
       />
     )
     expect(
-      screen.getByText("Good conversations deserve a next step.")
+      screen.getByRole("heading", { name: "Calls", level: 2 })
     ).toBeTruthy()
     fireEvent.click(
       screen.getByRole("button", { name: "Connect a meeting tool" })

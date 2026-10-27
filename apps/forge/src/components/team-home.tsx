@@ -28,11 +28,13 @@ import { toast } from "sonner"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamMemberDirectory } from "@/lib/team-member-contract"
 import type { HomeStore, TeamResource } from "@/lib/team-home-state"
+import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
+import { ContentHeader } from "@/components/ui/content-header"
 import { OptionSelect } from "@/components/ui/option-select"
 import { removeHomeSection, safeResourceUrl } from "@/lib/team-home-state"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { TeamIconPicker } from "@/components/team-icon-picker"
-import { Button } from "@/components/ui/button"
+import { Button, buttonSurface } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
   ActionHint as HomeHint,
@@ -65,8 +67,10 @@ import { newTeamDocument } from "@/lib/team-documents"
 
 export { ActionIconButton as HomeIconButton } from "@/components/ui/action-icon-button"
 
-export const homePill =
-  "h-7 rounded-full bg-muted/55 px-2.5 text-xs font-normal text-muted-foreground shadow-[0_0_0_1px_var(--border)] hover:bg-muted hover:text-foreground"
+export const homePill = cn(
+  buttonSurface,
+  "h-7 rounded-full px-2.5 text-xs font-normal"
+)
 export function HomeIcon({
   icon,
   className,
@@ -130,9 +134,9 @@ export function TeamHomeLayout({
   }
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <header className="flex h-11 shrink-0 items-center gap-2 border-b border-border/40 px-4">
+      <ContentHeader>
         <TeamSidebarIcon icon={team.icon} name={team.name} className="size-4" />
-        <h1 className="truncate text-sm font-medium">{team.name}</h1>
+        <h1 className="truncate text-[13px] font-medium">{team.name}</h1>
         <HomeIconButton
           label={
             store.state.favorite ? "Remove from favorites" : "Add to favorites"
@@ -194,9 +198,9 @@ export function TeamHomeLayout({
           className="ml-auto text-muted-foreground"
           onClick={copyUrl}
         />
-      </header>
+      </ContentHeader>
       <div className="flex min-h-11 shrink-0 flex-wrap items-center justify-between gap-2 px-2 py-2">
-        <nav aria-label="Team home" className="flex gap-2">
+        <PageTabs aria-label="Team home">
           {(["overview", "documents", "loops", "members"] as const).map(
             (value) => (
               <Link
@@ -204,17 +208,13 @@ export function TeamHomeLayout({
                 to={`/teams/$teamSlug/${value}`}
                 params={{ teamSlug: team.slug }}
                 aria-current={tab === value ? "page" : undefined}
-                className={cn(
-                  homePill,
-                  "inline-flex items-center focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                  tab === value && "bg-muted text-foreground"
-                )}
+                className={pageTabClass}
               >
                 {value[0].toUpperCase() + value.slice(1)}
               </Link>
             )
           )}
-        </nav>
+        </PageTabs>
         {actions && (
           <div className="ml-auto flex items-center gap-2">{actions}</div>
         )}
@@ -906,7 +906,7 @@ export function TeamOverview({
             </form>
           )}
         </div>
-        <aside className="pt-3 text-sm md:sticky md:top-7 md:max-h-[calc(100svh-160px)] md:self-start md:overflow-y-auto md:overscroll-y-contain">
+        <aside className="-mx-3 px-3 pt-3 text-sm md:sticky md:top-7 md:max-h-[calc(100svh-160px)] md:self-start md:overflow-x-hidden md:overflow-y-auto md:overscroll-y-contain">
           <h2 className="text-muted-foreground">Members</h2>
           <div className="group/members mt-3 flex items-center gap-1">
             <HomeHint label="View members">

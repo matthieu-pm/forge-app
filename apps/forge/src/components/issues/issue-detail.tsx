@@ -20,6 +20,7 @@ import type { TeamStatus } from "@/lib/team-statuses"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import type { ActivityReferenceKind } from "@/lib/issue-activity"
+import { ContentHeader } from "@/components/ui/content-header"
 import { authClient } from "@/lib/auth-client"
 import {
   blankIssueDraft,
@@ -969,7 +970,7 @@ export function IssueDetail({
       className="flex min-h-0 flex-1 flex-col overflow-hidden"
       aria-label={`${id} ${issue.title}`}
     >
-      <header className="flex h-11 shrink-0 items-center gap-2 border-b border-border/40 px-4 text-[13px]">
+      <ContentHeader>
         <Link
           to="/teams/$teamSlug/overview"
           params={{ teamSlug: team.slug }}
@@ -1036,9 +1037,9 @@ export function IssueDetail({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </header>
+      </ContentHeader>
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="z-10 ml-auto flex w-fit shrink-0 gap-1 bg-background/90 px-3 py-2 dark:bg-[#111]/90">
+        <div className="z-10 ml-auto flex w-fit shrink-0 gap-1 bg-background/90 px-3 py-2">
           {(
             [
               {

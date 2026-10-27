@@ -430,7 +430,7 @@ export function IssueDisplayMenu({
       <PopoverTrigger
         render={
           <Button
-            variant="secondary"
+            variant="outline"
             size="icon-sm"
             aria-label="Display options"
             title="Display options"

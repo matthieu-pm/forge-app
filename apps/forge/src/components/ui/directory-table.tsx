@@ -54,7 +54,7 @@ export function DirectoryTable({
           16,
       }}
     >
-      <thead className="sticky top-0 z-10 col-span-full grid grid-cols-subgrid bg-background dark:bg-[#111111]">
+      <thead className="sticky top-0 z-10 col-span-full grid grid-cols-subgrid bg-background">
         <tr className="col-span-full grid h-9 grid-cols-subgrid items-center">
           <th scope="col">
             <span className="sr-only">Select</span>

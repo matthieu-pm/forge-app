@@ -23,6 +23,8 @@ import type {
   InitiativeView,
 } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
+import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
+import { ContentHeader } from "@/components/ui/content-header"
 import { IssueIcon } from "@/components/issues/issue-controls"
 import { useInitiatives } from "@/lib/initiatives-state"
 import {
@@ -160,7 +162,7 @@ export function InitiativesPage({
       ref={root}
       tabIndex={-1}
       aria-label="Initiatives"
-      className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden outline-none dark:bg-[#111111]"
+      className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background outline-none"
       onKeyDown={(event) => {
         if (
           event.defaultPrevented ||
@@ -194,10 +196,10 @@ export function InitiativesPage({
         }
       }}
     >
-      <header className="flex h-11 shrink-0 items-center justify-between border-b border-border/40 px-4">
+      <ContentHeader className="justify-between">
         <h1 className="text-[13px] font-medium">Initiatives</h1>
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
           disabled={!store.writable}
           onClick={() => setCreating(true)}
@@ -206,22 +208,16 @@ export function InitiativesPage({
           <IssueIcon name="add" />
           New initiative
         </Button>
-      </header>
+      </ContentHeader>
       <div className="flex min-h-11 shrink-0 items-center justify-between gap-2 px-2 py-2">
-        <nav
-          aria-label="Initiative views"
-          className="flex min-w-0 gap-1 overflow-x-auto"
-        >
+        <PageTabs aria-label="Initiative views">
           {(["active", "planned", "all"] as const).map((tab) => (
             <Link
               key={tab}
               to="/workspace/initiatives"
               search={{ view: tab }}
               aria-current={tab === view ? "page" : undefined}
-              className={cn(
-                "shrink-0 rounded-full border border-border/30 bg-muted/45 px-2.5 py-1 text-xs text-muted-foreground outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring",
-                tab === view && "bg-muted text-foreground"
-              )}
+              className={pageTabClass}
               onClick={() => {
                 setSelected([])
                 setCreating(false)
@@ -234,7 +230,7 @@ export function InitiativesPage({
                   : "Planned"}
             </Link>
           ))}
-        </nav>
+        </PageTabs>
         <div className="flex shrink-0 items-center gap-1.5">
           <InitiativeFiltersMenu
             open={filterOpen}
@@ -453,14 +449,21 @@ export function InitiativesPage({
                       </span>
                     </Button>
                   )}
-                  <a
-                    href="https://linear.app/docs/initiatives"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex h-7 items-center rounded-full border border-border/30 bg-muted/55 px-3 text-xs"
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    nativeButton={false}
+                    className="text-xs"
+                    render={
+                      <a
+                        href="https://linear.app/docs/initiatives"
+                        target="_blank"
+                        rel="noreferrer"
+                      />
+                    }
                   >
                     Documentation
-                  </a>
+                  </Button>
                 </div>
               </div>
             </div>

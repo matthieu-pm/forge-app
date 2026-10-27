@@ -23,7 +23,7 @@ import {
   initiativeProperties,
   initiativeStatuses,
 } from "@/lib/initiatives"
-import { Button } from "@/components/ui/button"
+import { Button, buttonSurface } from "@/components/ui/button"
 import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import { Input } from "@/components/ui/input"
 import { OptionSelect } from "@/components/ui/option-select"
@@ -52,8 +52,7 @@ import {
 } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 
-const iconButton =
-  "size-7 rounded-full border border-border/40 bg-muted/55 p-0 text-muted-foreground"
+const iconButton = cn(buttonSurface, "size-7 rounded-full p-0")
 type Directory = {
   people: Array<InitiativePerson>
   teams: Array<TeamSummary>
@@ -226,7 +225,7 @@ export function InitiativeFiltersMenu({
         <DropdownMenuTrigger
           render={
             <Button
-              variant="secondary"
+              variant="outline"
               size="icon-sm"
               aria-label="Add filter"
               className={cn(
@@ -583,7 +582,7 @@ export function InitiativeDisplayMenu({
         render={
           <Button
             aria-label="Display options"
-            variant="secondary"
+            variant="outline"
             size="icon-sm"
             className={iconButton}
           />

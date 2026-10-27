@@ -4,16 +4,19 @@ import type { VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 
+export const buttonSurface =
+  "border-border bg-[color-mix(in_oklab,var(--background)_96%,var(--foreground))] text-muted-foreground shadow-[inset_0_0_0_1px_var(--background)] hover:bg-[color-mix(in_oklab,var(--background)_92%,var(--foreground))] hover:text-foreground aria-expanded:bg-[color-mix(in_oklab,var(--background)_90%,var(--foreground))] aria-expanded:text-foreground data-popup-open:bg-[color-mix(in_oklab,var(--background)_90%,var(--foreground))] data-popup-open:text-foreground"
+
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-2xl border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 items-center justify-center rounded-full border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-[background-color,border-color,color,box-shadow,scale] duration-150 ease-out outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 motion-reduce:transition-none dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/80",
-        outline:
-          "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:bg-transparent dark:hover:bg-input/30",
+        default:
+          "border-primary bg-primary text-primary-foreground shadow-[inset_0_0_0_1px_var(--background)] hover:border-primary/80 hover:bg-primary/80 focus-visible:border-primary focus-visible:ring-primary/30",
+        outline: buttonSurface,
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
+          "border-border bg-secondary text-secondary-foreground shadow-[inset_0_0_0_1px_var(--background)] hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         ghost:
           "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
         destructive:
@@ -44,13 +47,23 @@ function Button({
   className,
   variant = "default",
   size = "default",
+  static: isStatic = variant === "ghost" || variant === "link",
   ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+}: ButtonPrimitive.Props &
+  VariantProps<typeof buttonVariants> & {
+    static?: boolean
+  }) {
   return (
     <ButtonPrimitive
       data-slot="button"
+      data-variant={variant}
       data-size={size}
-      className={cn(buttonVariants({ variant, size, className }))}
+      className={cn(
+        buttonVariants({ variant, size }),
+        !isStatic &&
+          "active:not-disabled:scale-[0.96] motion-reduce:active:scale-100",
+        className
+      )}
       {...props}
     />
   )
