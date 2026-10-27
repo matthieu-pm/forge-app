@@ -3,13 +3,16 @@ import { Link } from "@tanstack/react-router"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { ProjectSidebar } from "./project-sidebar"
+import { ProjectDocumentEditor } from "./project-document-editor"
 import { ProjectMilestones } from "./project-milestones"
 import { ProjectProperties } from "./project-properties"
 import { ProjectInitiativePicker } from "./project-initiative-picker"
 import type { ProjectMilestone } from "@/lib/project-milestones"
+import type { ProjectResource } from "@/lib/project-resources"
 import type { InitiativePerson, InitiativeProject } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { ActivityEntry } from "@/components/initiatives/initiative-activity"
+import { updateProjectResources } from "@/lib/project-resources"
 import { useMyIssueData } from "@/lib/my-issues-state"
 import {
   NO_MILESTONE,
@@ -80,9 +83,12 @@ type Props = {
   directoryError?: string
   milestone?: string
   onMilestoneFilter?: (id?: string) => void
+  documentId?: string
+  onDocumentChange?: (id?: string) => void
 }
 
 export function ProjectDetailPage(props: Props) {
+  const [localDocumentId, setLocalDocumentId] = useState<string>()
   const store = useInitiatives(props.workspaceId, props.user.id, "projects")
   const project = initiativeProjectCatalog(store.state).find(
     (item) => item.id === props.projectId
@@ -108,12 +114,71 @@ export function ProjectDetailPage(props: Props) {
         </div>
       </main>
     )
+  const documentId = props.onDocumentChange ? props.documentId : localDocumentId
+  const openDocument = props.onDocumentChange ?? setLocalDocumentId
+  function saveResource(resource: ProjectResource) {
+    return store.update((state) =>
+      updateProjectResources(
+        state,
+        props.projectId,
+        (resources) =>
+          resources.some((item) => item.id === resource.id)
+            ? resources.map((item) =>
+                item.id === resource.id ? resource : item
+              )
+            : [...resources, resource],
+        props.user.id
+      )
+    )
+  }
+  function removeResource(id: string) {
+    return store.update((state) =>
+      updateProjectResources(
+        state,
+        props.projectId,
+        (resources) => resources.filter((item) => item.id !== id),
+        props.user.id
+      )
+    )
+  }
+  if (documentId) {
+    const resource = project.resources?.find(
+      (item) => item.id === documentId && !item.url
+    )
+    return resource ? (
+      <ProjectDocumentEditor
+        key={resource.id}
+        project={project}
+        resource={resource}
+        writable={store.writable}
+        onSave={saveResource}
+        onBack={() => openDocument(undefined)}
+        onRemove={() => removeResource(resource.id)}
+      />
+    ) : (
+      <div className="p-8">
+        <p role="status">
+          This document is no longer available on this device.
+        </p>
+        <Button
+          variant="secondary"
+          className="mt-4"
+          onClick={() => openDocument(undefined)}
+        >
+          Back to project
+        </Button>
+      </div>
+    )
+  }
   return (
     <ProjectDetail
       key={project.id}
       {...props}
       project={project}
       store={store}
+      onOpenDocument={openDocument}
+      onSaveResource={saveResource}
+      onRemoveResource={removeResource}
     />
   )
 }
@@ -131,9 +196,15 @@ function ProjectDetail({
   directoryError,
   milestone: milestoneFilter,
   onMilestoneFilter,
+  onOpenDocument,
+  onSaveResource,
+  onRemoveResource,
 }: Props & {
   project: InitiativeProject
   store: ReturnType<typeof useInitiatives>
+  onOpenDocument: (id: string) => void
+  onSaveResource: (resource: ProjectResource) => boolean
+  onRemoveResource: (id: string) => boolean
 }) {
   const preferences = useProjectPreferences(workspaceId, user.id)
   const [editing, setEditing] = useState(false)
@@ -641,45 +712,34 @@ function ProjectDetail({
                     }}
                   />
                   <div className="space-y-3 text-[13px]">
-                    <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
-                      <h2 className="w-16 shrink-0 pt-1 text-xs font-normal text-muted-foreground">
+                    <div className="grid grid-cols-[64px_minmax(0,1fr)] items-start gap-x-4">
+                      <h2 className="flex h-7 items-center text-xs font-normal text-muted-foreground">
                         Properties
                       </h2>
                       {properties}
                     </div>
-                    <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
-                      <h2 className="w-16 shrink-0 pt-1 text-xs font-normal text-muted-foreground">
+                    <div className="grid grid-cols-[64px_minmax(0,1fr)] items-start gap-x-4">
+                      <h2 className="flex h-7 items-center text-xs font-normal text-muted-foreground">
                         Initiatives
                       </h2>
                       {initiatives}
                     </div>
-                    <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
-                      <h2 className="w-16 shrink-0 pt-1 text-xs font-normal text-muted-foreground">
+                    <div className="grid grid-cols-[64px_minmax(0,1fr)] items-start gap-x-4">
+                      <h2 className="flex h-7 items-center text-xs font-normal text-muted-foreground">
                         Labels
                       </h2>
-                      {labels}
+                      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                        {labels}
+                      </div>
                     </div>
                   </div>
                   <InitiativeResources
+                    context="project"
                     item={{ resources: project.resources ?? [] }}
                     writable={store.writable}
-                    onSave={(resource) =>
-                      patch({
-                        resources: [
-                          ...(project.resources ?? []).filter(
-                            (item) => item.id !== resource.id
-                          ),
-                          resource,
-                        ],
-                      })
-                    }
-                    onRemove={(id) =>
-                      patch({
-                        resources: (project.resources ?? []).filter(
-                          (item) => item.id !== id
-                        ),
-                      })
-                    }
+                    onOpenDocument={onOpenDocument}
+                    onSave={onSaveResource}
+                    onRemove={onRemoveResource}
                   />
                   <div className="mt-7">
                     {updates[0] ? (

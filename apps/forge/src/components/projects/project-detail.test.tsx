@@ -22,6 +22,7 @@ import {
 import { blankIssueDraft, saveTeamIssue } from "@/lib/team-issues"
 
 vi.mock("@tanstack/react-router", () => ({
+  useBlocker: () => ({ status: "idle" }),
   Link: ({
     children,
     to,
@@ -202,21 +203,138 @@ it("reuses the issue table while preventing unrelated issues from entering the p
   fireEvent.click(toolbar.getByRole("button", { name: "Add filter" }))
   expect(await screen.findByRole("menuitem", { name: "Status" })).toBeTruthy()
 })
-it("adds resources through the shared document and link dialog", async () => {
+it("adds links through the resource menu with an optional title", async () => {
   render(<Page />)
   fireEvent.click(screen.getByRole("button", { name: "Add document or link…" }))
-  const dialog = within(screen.getByRole("dialog"))
-  const fields = dialog.getAllByRole("textbox")
-  fireEvent.change(fields[0], { target: { value: "Project brief" } })
-  fireEvent.change(fields[1], {
+  fireEvent.click(await screen.findByRole("menuitem", { name: /Add a link/ }))
+  const dialog = within(
+    screen.getByRole("dialog", { name: "Add link to project" })
+  )
+  expect(dialog.queryByRole("tablist")).toBeNull()
+  fireEvent.change(dialog.getByRole("textbox", { name: "URL" }), {
     target: { value: "https://example.com/brief" },
   })
-  fireEvent.click(dialog.getByRole("button", { name: /Save|Add resource/ }))
+  fireEvent.click(dialog.getByRole("button", { name: "Add link" }))
   await waitFor(() =>
-    expect(read().workspaceProjects[0].resources[0].url).toBe(
-      "https://example.com/brief"
+    expect(read().workspaceProjects[0].resources[0]).toMatchObject({
+      url: "https://example.com/brief",
+      title: "https://example.com/brief",
+    })
+  )
+  expect(read().initiatives[0].projects[0].resources).toEqual(
+    read().workspaceProjects[0].resources
+  )
+})
+it("creates a document, autosaves its title and favorite, and reopens it after remount", async () => {
+  const page = render(<Page />)
+  fireEvent.click(screen.getByRole("button", { name: "Add document or link…" }))
+  fireEvent.click(
+    await screen.findByRole("menuitem", { name: /Create new document/ })
+  )
+  expect(
+    await screen.findByRole("region", { name: "Project document editor" })
+  ).toBeTruthy()
+  expect(screen.queryByRole("dialog")).toBeNull()
+  expect(read().workspaceProjects[0].resources[0].title).toBe("New document")
+  fireEvent.change(screen.getByRole("textbox", { name: "Document title" }), {
+    target: { value: "Release plan" },
+  })
+  fireEvent.click(
+    screen.getByRole("button", { name: "Add document to favorites" })
+  )
+  expect(read().workspaceProjects[0].resources[0]).toMatchObject({
+    title: "Release plan",
+    favorite: true,
+  })
+  fireEvent.click(screen.getByRole("button", { name: "Back to Launch" }))
+  page.unmount()
+  render(<Page />)
+  fireEvent.click(screen.getByRole("button", { name: "Release plan" }))
+  expect(
+    screen.getByRole<HTMLInputElement>("textbox", { name: "Document title" })
+      .value
+  ).toBe("Release plan")
+  expect(
+    screen
+      .getByRole("button", { name: "Remove document from favorites" })
+      .getAttribute("aria-pressed")
+  ).toBe("true")
+})
+it("keeps a document draft open when storage fails and saves it on retry", async () => {
+  render(<Page />)
+  fireEvent.click(screen.getByRole("button", { name: "Add document or link…" }))
+  fireEvent.click(
+    await screen.findByRole("menuitem", { name: /Create new document/ })
+  )
+  await screen.findByRole("textbox", { name: "Document title" })
+  const storage = vi
+    .spyOn(Storage.prototype, "setItem")
+    .mockImplementation(() => {
+      throw new Error("Quota exceeded")
+    })
+  fireEvent.change(screen.getByRole("textbox", { name: "Document title" }), {
+    target: { value: "Keep this draft" },
+  })
+  expect(screen.getByRole("alert").textContent).toContain("could not be saved")
+  fireEvent.click(screen.getByRole("button", { name: "Back to Launch" }))
+  expect(
+    screen.getByRole<HTMLInputElement>("textbox", { name: "Document title" })
+      .value
+  ).toBe("Keep this draft")
+  storage.mockRestore()
+  fireEvent.click(screen.getByRole("button", { name: "Try again" }))
+  expect(read().workspaceProjects[0].resources[0].title).toBe("Keep this draft")
+  expect(screen.queryByRole("alert")).toBeNull()
+})
+it("does not open a new document when its initial save fails", async () => {
+  render(<Page />)
+  fireEvent.click(screen.getByRole("button", { name: "Add document or link…" }))
+  vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    throw new Error("Quota exceeded")
+  })
+  fireEvent.click(
+    await screen.findByRole("menuitem", { name: /Create new document/ })
+  )
+  expect(screen.getByRole("alert").textContent).toContain(
+    "could not be created"
+  )
+  expect(
+    screen.queryByRole("region", { name: "Project document editor" })
+  ).toBeNull()
+})
+it("confirms document removal and removes it from every project copy", async () => {
+  render(<Page />)
+  fireEvent.click(screen.getByRole("button", { name: "Add document or link…" }))
+  fireEvent.click(
+    await screen.findByRole("menuitem", { name: /Create new document/ })
+  )
+  await screen.findByRole("textbox", { name: "Document title" })
+  fireEvent.click(screen.getByRole("button", { name: "Document options" }))
+  fireEvent.click(
+    await screen.findByRole("menuitem", { name: "Delete document" })
+  )
+  fireEvent.click(
+    within(screen.getByRole("dialog", { name: "Delete document?" })).getByRole(
+      "button",
+      { name: "Cancel" }
     )
   )
+  expect(read().workspaceProjects[0].resources).toHaveLength(1)
+  fireEvent.click(screen.getByRole("button", { name: "Document options" }))
+  fireEvent.click(
+    await screen.findByRole("menuitem", { name: "Delete document" })
+  )
+  fireEvent.click(
+    within(screen.getByRole("dialog", { name: "Delete document?" })).getByRole(
+      "button",
+      { name: "Delete document" }
+    )
+  )
+  expect(read().workspaceProjects[0].resources).toEqual([])
+  expect(read().initiatives[0].projects[0].resources).toEqual([])
+  expect(
+    screen.queryByRole("region", { name: "Project document editor" })
+  ).toBeNull()
 })
 it("shows live progress breakdowns and opens the matching project issues", async () => {
   saveTeamIssue(

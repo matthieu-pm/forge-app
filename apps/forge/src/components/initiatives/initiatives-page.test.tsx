@@ -371,25 +371,29 @@ describe("Initiative detail interactions", () => {
     expect(saved()[0].updates).toHaveLength(1)
     expect(screen.getByRole("button", { name: "Release" })).toBeTruthy()
   })
-  it("validates resource links and saves them with the initiative", () => {
+  it("validates resource links and saves them with the initiative", async () => {
     seed([{ name: "Launch" }])
     render(<DetailHarness />)
     fireEvent.click(
       screen.getByRole("button", { name: /Add document or link/ })
     )
-    fireEvent.change(screen.getByRole("textbox", { name: "Resource title" }), {
-      target: { value: "Design brief" },
-    })
-    fireEvent.change(screen.getByRole("textbox", { name: "Resource URL" }), {
+    fireEvent.click(await screen.findByRole("menuitem", { name: /Add a link/ }))
+    fireEvent.change(
+      screen.getByRole("textbox", { name: "Title (optional)" }),
+      {
+        target: { value: "Design brief" },
+      }
+    )
+    fireEvent.change(screen.getByRole("textbox", { name: "URL" }), {
       target: { value: "javascript:alert(1)" },
     })
-    fireEvent.click(screen.getByRole("button", { name: "Save resource" }))
+    fireEvent.click(screen.getByRole("button", { name: "Add link" }))
     expect(screen.getByRole("alert").textContent).toContain("http or https")
     expect(saved()[0].resources).toHaveLength(0)
-    fireEvent.change(screen.getByRole("textbox", { name: "Resource URL" }), {
+    fireEvent.change(screen.getByRole("textbox", { name: "URL" }), {
       target: { value: "https://example.com/brief" },
     })
-    fireEvent.click(screen.getByRole("button", { name: "Save resource" }))
+    fireEvent.click(screen.getByRole("button", { name: "Add link" }))
     expect(
       screen.getByRole("link", { name: "Design brief" }).getAttribute("href")
     ).toBe("https://example.com/brief")

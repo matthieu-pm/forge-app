@@ -1,19 +1,16 @@
 import { useRef, useState } from "react"
-import {
-  InitiativeHealthMark,
-  initiativePrimary,
-} from "./initiative-properties"
+import { initiativePrimary } from "./initiative-properties"
+import { ActivityAuthor, ActivityDate } from "./activity-author"
 import type { ReactNode } from "react"
 import type {
   Initiative,
   InitiativeComment,
   InitiativePerson,
+  InitiativeProject,
 } from "@/lib/initiatives"
-import { documentTime } from "@/lib/team-documents"
-import { AssigneeMark, IssueIcon } from "@/components/issues/issue-controls"
+import { IssueIcon } from "@/components/issues/issue-controls"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { OptionSelect } from "@/components/ui/option-select"
 import {
   Popover,
   PopoverContent,
@@ -23,6 +20,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
@@ -44,6 +43,45 @@ export const blankActivityDraft = (): ActivityDraft => ({
   health: "On track",
   attachments: [],
 })
+
+const activityHealthOptions: Array<ActivityDraft["health"]> = [
+  "On track",
+  "At risk",
+  "Off track",
+]
+
+function ActivityHealthIcon({ health }: { health: ActivityDraft["health"] }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 16 16"
+      className={cn(
+        "size-4 shrink-0",
+        health === "On track"
+          ? "text-emerald-500"
+          : health === "At risk"
+            ? "text-amber-500"
+            : "text-red-500"
+      )}
+    >
+      <circle cx="8" cy="8" r="8" fill="currentColor" opacity=".3" />
+      <path
+        d={
+          health === "On track"
+            ? "m3.5 9.5 3-3 3 3 3-4"
+            : health === "At risk"
+              ? "M8 4.5v4m0 3h.01"
+              : "m3.5 6 3 3 3-3 3 4"
+        }
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
 
 export function ActivityComposer({
   draft,
@@ -112,7 +150,7 @@ export function ActivityComposer({
   return (
     <form
       aria-label={`${subject} activity composer`}
-      className="rounded-xl border border-border/30 bg-muted/35 p-3.5"
+      className="rounded-xl border border-border/30 bg-muted/35 p-3"
       onSubmit={(event) => {
         event.preventDefault()
         if (onPublish()) setError("")
@@ -122,7 +160,7 @@ export function ActivityComposer({
         <div
           role="tablist"
           aria-label="Post type"
-          className="inline-flex rounded-full border border-border/30 bg-muted/50 p-0.5"
+          className="inline-flex h-6 items-center rounded-full border border-border/40 bg-muted/45"
         >
           {(["comment", "update"] as const).map((kind) => (
             <button
@@ -132,8 +170,9 @@ export function ActivityComposer({
               aria-selected={draft.kind === kind}
               onClick={() => onDraft({ ...draft, kind })}
               className={cn(
-                "rounded-full px-2 py-1 text-xs text-muted-foreground",
-                draft.kind === kind && "bg-muted text-foreground"
+                "h-6 rounded-full border border-transparent px-2 text-xs text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50",
+                draft.kind === kind &&
+                  "border-border/50 bg-muted text-foreground"
               )}
             >
               {kind === "comment" ? "Comment" : "Update"}
@@ -141,21 +180,56 @@ export function ActivityComposer({
           ))}
         </div>
         {draft.kind === "update" && (
-          <OptionSelect
-            aria-label="Update health"
-            disabled={!writable}
-            value={draft.health}
-            onValueChange={(value) =>
-              onDraft({ ...draft, health: value as ActivityDraft["health"] })
-            }
-            className="h-7 w-28 rounded-full border-0 bg-green-500/10 text-xs"
-          >
-            {["On track", "At risk", "Off track"].map((value) => (
-              <option key={value} value={value}>
-                {value}
-              </option>
-            ))}
-          </OptionSelect>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  aria-label={`Update health: ${draft.health}`}
+                  disabled={!writable}
+                  variant="secondary"
+                  size="xs"
+                  className={cn(
+                    "gap-1.5 rounded-full border-border/40 bg-muted/70 pr-2 pl-1 shadow-none",
+                    draft.health === "On track"
+                      ? "text-emerald-500 aria-expanded:text-emerald-500"
+                      : draft.health === "At risk"
+                        ? "text-amber-500 aria-expanded:text-amber-500"
+                        : "text-red-500 aria-expanded:text-red-500"
+                  )}
+                />
+              }
+            >
+              <ActivityHealthIcon health={draft.health} />
+              {draft.health}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              aria-label={`Set ${subject.toLowerCase()} health`}
+              align="start"
+              className="w-44 rounded-xl border border-border/50 p-1.5 shadow-lg ring-0"
+            >
+              <DropdownMenuRadioGroup
+                value={draft.health}
+                onValueChange={(value) =>
+                  onDraft({
+                    ...draft,
+                    health: value as ActivityDraft["health"],
+                  })
+                }
+              >
+                {activityHealthOptions.map((health) => (
+                  <DropdownMenuRadioItem
+                    key={health}
+                    value={health}
+                    closeOnClick
+                    className="h-8 gap-2 rounded-lg px-2 text-[13px] data-checked:bg-muted [&>[data-slot=dropdown-menu-radio-item-indicator]]:hidden"
+                  >
+                    <ActivityHealthIcon health={health} />
+                    {health}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </div>
       <Textarea
@@ -168,10 +242,10 @@ export function ActivityComposer({
         maxLength={20000}
         placeholder={
           draft.kind === "update"
-            ? `Write a ${subject.toLowerCase()} update…`
+            ? `Write ${subject === "Initiative" ? "an" : "a"} ${subject.toLowerCase()} update…`
             : "Leave a comment…"
         }
-        className="mt-3 max-h-64 min-h-24 resize-none overflow-y-auto rounded-none border-0 bg-transparent! p-0 text-sm shadow-none focus-visible:ring-0"
+        className="mt-4 mb-2 max-h-64 min-h-20 resize-none overflow-y-auto rounded-none border-0 bg-transparent! px-1 py-0 text-sm shadow-none placeholder:text-muted-foreground/60 focus-visible:ring-0"
       />
       {children}
       {draft.attachments.length > 0 && (
@@ -206,9 +280,11 @@ export function ActivityComposer({
         <Button
           variant="secondary"
           size="xs"
-          className="rounded-full"
+          className="rounded-full border-border/40 bg-muted/45 px-2 shadow-none"
           onClick={() =>
-            onAsk(`Help me write an initiative ${draft.kind}.\n${draft.text}`)
+            onAsk(
+              `Help me write ${subject === "Initiative" ? "an" : "a"} ${subject.toLowerCase()} ${draft.kind}.\n${draft.text}`
+            )
           }
         >
           <IssueIcon name="prompt" />
@@ -219,13 +295,13 @@ export function ActivityComposer({
           type="file"
           multiple
           className="hidden"
-          aria-label="Initiative attachments"
+          aria-label={`${subject} attachments`}
           onChange={(event) => void attach(event.target.files)}
         />
         <Button
           variant="ghost"
           size="icon-xs"
-          className="ml-auto"
+          className="ml-auto text-muted-foreground"
           aria-label="Attach images, files, or videos"
           disabled={!writable || loading}
           onClick={() => file.current?.click()}
@@ -236,7 +312,7 @@ export function ActivityComposer({
           type="submit"
           size="xs"
           variant="secondary"
-          className="rounded-full"
+          className="rounded-full border-border/40 bg-muted/45 px-2 shadow-none"
           disabled={!writable || loading || !draft.text.trim()}
         >
           {draft.kind === "update" ? "Post update" : "Post comment"}
@@ -249,6 +325,7 @@ export function ActivityComposer({
 export function ActivityCard({
   entry,
   people,
+  projects,
   userId,
   writable,
   onChange,
@@ -259,6 +336,7 @@ export function ActivityCard({
 }: {
   entry: ActivityEntry
   people: Array<InitiativePerson>
+  projects?: Array<InitiativeProject>
   userId: string
   writable: boolean
   onChange: (patch: Partial<ActivityEntry>) => boolean
@@ -294,7 +372,7 @@ export function ActivityCard({
   return (
     <article
       data-activity-id={entry.id}
-      className="rounded-xl border border-border/60 p-4 text-sm"
+      className="group/activity rounded-xl border border-border/60 p-4 text-sm"
     >
       {latest && (
         <div className="mb-4 flex items-center justify-between text-xs text-muted-foreground">
@@ -305,25 +383,31 @@ export function ActivityCard({
           </Button>
         </div>
       )}
-      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        {entry.health && <InitiativeHealthMark health={entry.health} />}
-        <span className="flex items-center gap-2">
-          <AssigneeMark name={author?.name} image={author?.image} />
-          {author?.name ?? "Former member"}
-        </span>
-        <time
-          dateTime={entry.createdAt}
-          title={new Date(entry.createdAt).toLocaleString()}
-        >
-          {documentTime(entry.createdAt)}
-        </time>
+      <div className="flex min-h-6 flex-wrap items-center gap-2 text-[13px] text-muted-foreground">
+        {entry.health && (
+          <span
+            className={cn(
+              "inline-flex items-center gap-2",
+              entry.health === "On track"
+                ? "text-emerald-500"
+                : entry.health === "At risk"
+                  ? "text-amber-500"
+                  : "text-red-500"
+            )}
+          >
+            <ActivityHealthIcon health={entry.health} />
+            {entry.health}
+          </span>
+        )}
+        <ActivityAuthor person={author} userId={userId} projects={projects} />
+        <ActivityDate value={entry.createdAt} />
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
               <Button
                 variant="ghost"
                 size="icon-xs"
-                className="ml-auto"
+                className="ml-auto opacity-0 group-focus-within/activity:opacity-100 group-hover/activity:opacity-100 aria-expanded:opacity-100 [@media(hover:none)]:opacity-100"
                 aria-label="Update options"
               >
                 <IssueIcon name="more" />
@@ -382,7 +466,7 @@ export function ActivityCard({
           </div>
         </div>
       ) : (
-        <p className="my-5 leading-6 whitespace-pre-wrap">{entry.text}</p>
+        <p className="mt-5 mb-4 leading-6 whitespace-pre-wrap">{entry.text}</p>
       )}
       {!!entry.attachments.length && (
         <div className="mb-4 flex flex-wrap gap-2">
@@ -404,11 +488,12 @@ export function ActivityCard({
           <Button
             variant="secondary"
             size="xs"
-            className="rounded-full"
+            className="h-7 min-w-9 rounded-full border-border/40 bg-muted/40 text-muted-foreground shadow-none"
             aria-label={`Open ${entry.comments?.length ?? 0} comments`}
+            aria-expanded={comments}
             onClick={() => setComments((value) => !value)}
           >
-            <IssueIcon name="comment" />
+            <IssueIcon name="comment" className="size-4" />
             {(entry.comments?.length ?? 0) > 0 && entry.comments?.length}
           </Button>
         )}
@@ -434,10 +519,11 @@ export function ActivityCard({
               <Button
                 variant="ghost"
                 size="icon-xs"
+                className="size-7 text-muted-foreground"
                 aria-label="Add reaction"
                 disabled={!writable}
               >
-                <IssueIcon name="reaction" />
+                <IssueIcon name="reaction" className="size-4" />
               </Button>
             }
           />
@@ -460,16 +546,14 @@ export function ActivityCard({
         <div className="mt-4 space-y-3 border-t border-border/40 pt-4">
           {entry.comments?.map((comment) => (
             <div key={comment.id} className="text-xs">
-              <span className="font-medium">
-                {people.find((value) => value.id === comment.authorId)?.name ??
-                  "Former member"}
-              </span>
-              <time
-                className="ml-2 text-muted-foreground"
-                dateTime={comment.createdAt}
-              >
-                {documentTime(comment.createdAt)}
-              </time>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <ActivityAuthor
+                  person={people.find((value) => value.id === comment.authorId)}
+                  userId={userId}
+                  projects={projects}
+                />
+                <ActivityDate value={comment.createdAt} />
+              </div>
               <p className="mt-1 leading-5 whitespace-pre-wrap">
                 {comment.text}
               </p>

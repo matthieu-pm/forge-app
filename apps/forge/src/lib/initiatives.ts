@@ -83,6 +83,10 @@ export const initiativeResourcesSchema = z
         .refine((value) => /^https?:/.test(value))
         .optional(),
       body: documentSchema.optional(),
+      icon: iconSchema.optional(),
+      favorite: z.boolean().optional(),
+      createdAt: z.string().datetime().optional(),
+      updatedAt: z.string().datetime().optional(),
     })
   )
   .default([])
@@ -296,6 +300,14 @@ export type InitiativePerson = {
   id: string
   name: string
   image?: string | null
+  username?: string | null
+  isOnline?: boolean
+  teams?: Array<{
+    id: string
+    slug: string
+    name: string
+    icon?: Initiative["icon"]
+  }>
 }
 export const initiativeFilterFields = [
   "Status",

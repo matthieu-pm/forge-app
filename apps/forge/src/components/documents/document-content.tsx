@@ -2,10 +2,11 @@ import type { JSONContent } from "@tiptap/core"
 import type { ReactNode } from "react"
 import type { PickerIcon } from "@/components/team-icon-picker"
 import { TeamIconPicker } from "@/components/team-icon-picker"
+import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { RichEditor } from "@/components/templates/rich-editor"
 import { cn } from "@/lib/utils"
 
-// Shared writing surface for team documents and Signals draft documents.
+// Shared writing surface for team, project, and Signals documents.
 export function DocumentContent({
   title,
   body,
@@ -15,6 +16,7 @@ export function DocumentContent({
   onIconChange,
   wide = false,
   autoFocus = false,
+  editable = true,
   metadata,
   children,
 }: {
@@ -26,6 +28,7 @@ export function DocumentContent({
   onIconChange: (icon: PickerIcon) => void
   wide?: boolean
   autoFocus?: boolean
+  editable?: boolean
   metadata?: ReactNode
   children?: ReactNode
 }) {
@@ -36,19 +39,24 @@ export function DocumentContent({
         wide && "max-w-none"
       )}
     >
-      <TeamIconPicker
-        label="Document icon"
-        name={title}
-        value={icon}
-        onChange={onIconChange}
-        className="mb-2 size-9 rounded-lg border border-border/30 bg-transparent text-muted-foreground"
-      />
+      {editable ? (
+        <TeamIconPicker
+          label="Document icon"
+          name={title}
+          value={icon}
+          onChange={onIconChange}
+          className="mb-2 size-9 rounded-lg border border-border/30 bg-transparent text-muted-foreground"
+        />
+      ) : (
+        <TeamSidebarIcon icon={icon} name={title} className="mb-2 size-9" />
+      )}
       <input
         autoFocus={autoFocus}
         aria-label="Document title"
         placeholder="New document"
         maxLength={200}
         value={title}
+        readOnly={!editable}
         onChange={(event) => onTitleChange(event.target.value)}
         onKeyDown={(event) => {
           if (event.key !== "Enter") return
@@ -66,6 +74,7 @@ export function DocumentContent({
         placeholder="Start writing..."
         className="min-h-[360px]"
         onChange={onBodyChange}
+        editable={editable}
       />
       {children}
     </article>

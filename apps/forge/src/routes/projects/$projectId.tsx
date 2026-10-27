@@ -13,6 +13,7 @@ export const Route = createFileRoute("/projects/$projectId")({
     tab: "overview" | "activity" | "issues"
     team?: string
     milestone?: string
+    document?: string
   } => ({
     tab:
       search.tab === "activity" || search.tab === "issues"
@@ -23,6 +24,9 @@ export const Route = createFileRoute("/projects/$projectId")({
       : {}),
     ...(typeof search.team === "string" && search.team
       ? { team: search.team }
+      : {}),
+    ...(typeof search.document === "string" && search.document.length <= 200
+      ? { document: search.document }
       : {}),
   }),
   component: Page,
@@ -46,6 +50,10 @@ function Page() {
       people={directory.people}
       teams={directory.teams}
       projectId={projectId}
+      documentId={search.document}
+      onDocumentChange={(document) =>
+        void navigate({ search: { ...search, tab: "overview", document } })
+      }
       tab={search.tab}
       milestone={search.milestone}
       onMilestoneFilter={(milestone) =>

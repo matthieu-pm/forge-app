@@ -6,6 +6,7 @@ import {
   ActivityComposer,
   blankActivityDraft,
 } from "./initiative-activity"
+import { ActivityAuthor, ActivityDate } from "./activity-author"
 import {
   InitiativeProjects,
   projectStatusName,
@@ -34,7 +35,6 @@ import { RichEditor } from "@/components/templates/rich-editor"
 import { patchInitiative } from "@/lib/initiatives"
 import { initiativeProjectCatalog } from "@/lib/initiative-projects"
 import { saveWorkspaceProject } from "@/lib/projects"
-import { documentTime } from "@/lib/team-documents"
 import { useAgent } from "@/components/agent/agent-provider"
 import { Button, buttonSurface } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -250,6 +250,7 @@ export function InitiativeDetail({
         key={entry.id}
         entry={entry}
         people={people}
+        projects={initiativeProjectCatalog(store.state)}
         userId={userId}
         writable={store.writable}
         latest={latest}
@@ -878,15 +879,18 @@ export function InitiativeDetail({
               </div>
               <div className="mt-8 flex items-center gap-2 px-4 text-xs text-muted-foreground">
                 <InitiativeMark item={item} />
-                {people.find((person) => person.id === item.creatorId)?.name ??
-                  "Former member"}{" "}
-                created the initiative ·{" "}
-                <time
-                  dateTime={item.createdAt}
-                  title={new Date(item.createdAt).toLocaleString()}
-                >
-                  {documentTime(item.createdAt)}
-                </time>
+                <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
+                  <ActivityAuthor
+                    person={people.find(
+                      (person) => person.id === item.creatorId
+                    )}
+                    userId={userId}
+                    projects={initiativeProjectCatalog(store.state)}
+                    withAvatar={false}
+                  />
+                  <span>created the initiative ·</span>
+                  <ActivityDate value={item.createdAt} />
+                </div>
               </div>
             </div>
           )}
