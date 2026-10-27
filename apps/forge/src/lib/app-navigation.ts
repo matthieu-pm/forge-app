@@ -61,6 +61,8 @@ export type AppPath =
   | "/settings/sla"
   | "/settings/teams"
   | "/settings/workspace"
+  | "/reviews"
+  | "/reviews/created"
   | "/inbox"
   | "/my-issues"
   | "/workspace/initiatives"
@@ -196,7 +198,7 @@ export const appNav: Array<AppNavItem> = [
   },
   {
     title: "Reviews",
-    to: "/workspace/insights",
+    to: "/reviews",
     icon: GitPullRequestArrowIcon,
   },
   {
@@ -263,6 +265,17 @@ const pageMetaByPath: Partial<Record<AppPath, PageMeta>> = {
     title: "Signals",
     description:
       "Surface the highest-signal events across the app so the team can react early and clearly.",
+  },
+  "/reviews": {
+    eyebrow: "Queue",
+    title: "Reviews",
+    description:
+      "Keep track of pull requests that need your attention and changes you created.",
+  },
+  "/reviews/created": {
+    eyebrow: "Queue",
+    title: "Reviews",
+    description: "Track pull requests you created.",
   },
   "/workspace/insights": {
     eyebrow: "Workspace",

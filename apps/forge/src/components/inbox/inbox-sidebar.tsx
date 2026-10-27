@@ -13,12 +13,14 @@ export function InboxSidebar({
   selected,
   label = "Notifications",
   storageNamespace = "inbox",
+  resizeLabel = "Resize inbox sidebar",
 }: {
   children: ReactNode
   scope: InboxScope
   selected: boolean
   label?: string
   storageNamespace?: string
+  resizeLabel?: string
 }) {
   const id = useId()
   const sidebar = useRef<HTMLElement>(null)
@@ -90,7 +92,7 @@ export function InboxSidebar({
       <div
         role="separator"
         tabIndex={0}
-        aria-label="Resize inbox sidebar"
+        aria-label={resizeLabel}
         aria-orientation="vertical"
         aria-controls={id}
         aria-valuemin={MIN_SCALE * 100}

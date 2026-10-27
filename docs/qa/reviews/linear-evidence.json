@@ -1,0 +1,78 @@
+{
+  "target": "Linear 1.32.7, SKEMA workspace Reviews",
+  "observedAt": "2026-10-27",
+  "investigation": {
+    "layoutAndViews": "answered",
+    "filterAndDisplayControls": "partially answered",
+    "populatedReviewAndGitHubActions": "unresolved: workspace contained no reviews"
+  },
+  "observations": [
+    {
+      "source": "User screenshot and live Linear accessibility UI at linear.app/skema/reviews",
+      "finding": "Split list/detail layout, For you and Created links, Add filter and Display options, Nothing to review illustration and message."
+    },
+    {
+      "source": "Live Linear filter menu",
+      "finding": "Filter menu includes Status, Author, Reviewers, GitHub team reviewers, Content, date fields, Quick to review and Missing issue."
+    },
+    {
+      "source": "Live Linear Display options menu",
+      "finding": "Defaults shown: Focus grouping, Importance ordering, Closed reviews Past day, Show drafts enabled, Show GitHub team reviews enabled, Badge count All. Property controls include Repository, ID, Author, Timestamp, GitHub team, Labels, Status details, Quick to review and SLA."
+    }
+  ],
+  "rea": {
+    "operation": "analyze_javascript_application",
+    "input": "/Applications/Linear.app/Contents/Resources/app.asar",
+    "sha256": "dcb7a9500b83e76f29a073452f40748c9aa1c5ca1fc6f7e95558448e278ddbfe",
+    "evidenceId": "ev_36541db985934ef72bab8956a7e30296c78c8a3b91dfbecae492d62c66d4c806",
+    "summaryEvidenceId": "ev_0fe573be4e605e41fb827f81b46705b8f93a333344abf9d9d935fdd16978f419",
+    "coverage": "partial",
+    "limitations": [
+      "Three unpacked native addon integrity mismatches; analysis used record-and-continue and treated the observed bytes as untrusted.",
+      "Main and review-preview preload semantic analyses exhausted their worker heaps.",
+      "Static package analysis did not establish renderer review behavior or observe execution.",
+      "No CDP endpoint was used for a passive runtime capture; UI observations were made separately with computer use."
+    ]
+  },
+  "primaryDocumentation": "https://linear.app/docs/diffs",
+  "forgeImplementation": {
+    "routes": [
+      "/reviews",
+      "/reviews/created"
+    ],
+    "legacyRedirect": "/workspace/insights -> /reviews",
+    "implemented": [
+      "Shared resizable inbox pane",
+      "Shared header and tab components",
+      "Status, author, repository and content filters",
+      "Grouping and ordering",
+      "Draft, closed and team visibility",
+      "Display property toggles",
+      "User/workspace-scoped display persistence",
+      "PR summary renderer and GitHub link",
+      "Responsive empty state"
+    ],
+    "designChoices": [
+      "For you includes authored, personally requested, participated and current-user team reviews",
+      "Simplified filter form uses existing Forge controls",
+      "Focus grouping and Importance sorting are local approximations; Linear internal ranking was not recovered"
+    ],
+    "notImplemented": [
+      "GitHub feed ingestion and account authorization",
+      "Diffs, CI, comments, approvals and merge operations",
+      "Advanced filters, reviewer/date/label filters and badge settings"
+    ],
+    "dataBoundary": "Reviews accepts a typed entries prop; production routes currently supply no entries. Test fixtures are confined to tests."
+  },
+  "verification": {
+    "automated": "31 targeted tests passed; TypeScript, targeted ESLint, and git diff --check passed.",
+    "browser": [
+      "Authenticated empty page render",
+      "For you/Created route navigation",
+      "Display preference persists between views",
+      "Filter chip and no-match feedback",
+      "Legacy Reviews URL redirects to /reviews",
+      "Mobile 390x844 and desktop empty states visually checked"
+    ]
+  }
+}

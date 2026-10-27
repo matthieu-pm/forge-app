@@ -166,7 +166,9 @@ function AgentRouteContent({
       aria-hidden={obscured || undefined}
       inert={obscured || undefined}
     >
-      {pathname !== "/inbox" &&
+      {pathname !== "/reviews" &&
+        pathname !== "/reviews/created" &&
+        pathname !== "/inbox" &&
         pathname !== "/my-issues" &&
         !pathname.startsWith("/workspace/initiatives") &&
         pathname !== "/workspace/projects" &&

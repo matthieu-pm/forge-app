@@ -17,6 +17,7 @@ import { Route as ForgeRouteImport } from './routes/forge'
 import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MyIssuesRouteImport } from './routes/my-issues'
+import { Route as ReviewsRouteImport } from './routes/reviews'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as ApiDocsRouteImport } from './routes/api/docs'
@@ -24,6 +25,7 @@ import { Route as ApiOpenapiDotjsonRouteImport } from './routes/api/openapi[.]js
 import { Route as AuthDesktopRouteImport } from './routes/auth/desktop'
 import { Route as JoinTokenRouteImport } from './routes/join.$token'
 import { Route as OnboardingWorkspaceRouteImport } from './routes/onboarding/workspace'
+import { Route as ReviewsCreatedRouteImport } from './routes/reviews_.created'
 import { Route as SettingsIndexRouteImport } from './routes/settings.index'
 import { Route as SettingsAiRouteImport } from './routes/settings.ai'
 import { Route as SettingsApiRouteImport } from './routes/settings.api'
@@ -153,6 +155,11 @@ const MyIssuesRoute = MyIssuesRouteImport.update({
   path: '/my-issues',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReviewsRoute = ReviewsRouteImport.update({
+  id: '/reviews',
+  path: '/reviews',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -186,6 +193,11 @@ const JoinTokenRoute = JoinTokenRouteImport.update({
 const OnboardingWorkspaceRoute = OnboardingWorkspaceRouteImport.update({
   id: '/onboarding/workspace',
   path: '/onboarding/workspace',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReviewsCreatedRoute = ReviewsCreatedRouteImport.update({
+  id: '/reviews_/created',
+  path: '/reviews/created',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsIndexRoute = SettingsIndexRouteImport.update({
@@ -675,6 +687,7 @@ export interface FileRoutesByFullPath {
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
   '/my-issues': typeof MyIssuesRoute
+  '/reviews': typeof ReviewsRoute
   '/settings': typeof SettingsRouteWithChildren
   '/signup': typeof SignupRoute
   '/api/docs': typeof ApiDocsRoute
@@ -682,6 +695,7 @@ export interface FileRoutesByFullPath {
   '/auth/desktop': typeof AuthDesktopRoute
   '/join/$token': typeof JoinTokenRoute
   '/onboarding/workspace': typeof OnboardingWorkspaceRoute
+  '/reviews/created': typeof ReviewsCreatedRoute
   '/settings/ai': typeof SettingsAiRoute
   '/settings/api': typeof SettingsApiRoute
   '/settings/applications': typeof SettingsApplicationsRoute
@@ -780,12 +794,14 @@ export interface FileRoutesByTo {
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
   '/my-issues': typeof MyIssuesRoute
+  '/reviews': typeof ReviewsRoute
   '/signup': typeof SignupRoute
   '/api/docs': typeof ApiDocsRoute
   '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
   '/auth/desktop': typeof AuthDesktopRoute
   '/join/$token': typeof JoinTokenRoute
   '/onboarding/workspace': typeof OnboardingWorkspaceRoute
+  '/reviews/created': typeof ReviewsCreatedRoute
   '/settings/ai': typeof SettingsAiRoute
   '/settings/api': typeof SettingsApiRoute
   '/settings/applications': typeof SettingsApplicationsRoute
@@ -880,6 +896,7 @@ export interface FileRoutesById {
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
   '/my-issues': typeof MyIssuesRoute
+  '/reviews': typeof ReviewsRoute
   '/settings': typeof SettingsRouteWithChildren
   '/signup': typeof SignupRoute
   '/api/docs': typeof ApiDocsRoute
@@ -887,6 +904,7 @@ export interface FileRoutesById {
   '/auth/desktop': typeof AuthDesktopRoute
   '/join/$token': typeof JoinTokenRoute
   '/onboarding/workspace': typeof OnboardingWorkspaceRoute
+  '/reviews_/created': typeof ReviewsCreatedRoute
   '/settings/ai': typeof SettingsAiRoute
   '/settings/api': typeof SettingsApiRoute
   '/settings/applications': typeof SettingsApplicationsRoute
@@ -987,6 +1005,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/login'
     | '/my-issues'
+    | '/reviews'
     | '/settings'
     | '/signup'
     | '/api/docs'
@@ -994,6 +1013,7 @@ export interface FileRouteTypes {
     | '/auth/desktop'
     | '/join/$token'
     | '/onboarding/workspace'
+    | '/reviews/created'
     | '/settings/ai'
     | '/settings/api'
     | '/settings/applications'
@@ -1092,12 +1112,14 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/login'
     | '/my-issues'
+    | '/reviews'
     | '/signup'
     | '/api/docs'
     | '/api/openapi.json'
     | '/auth/desktop'
     | '/join/$token'
     | '/onboarding/workspace'
+    | '/reviews/created'
     | '/settings/ai'
     | '/settings/api'
     | '/settings/applications'
@@ -1191,6 +1213,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/login'
     | '/my-issues'
+    | '/reviews'
     | '/settings'
     | '/signup'
     | '/api/docs'
@@ -1198,6 +1221,7 @@ export interface FileRouteTypes {
     | '/auth/desktop'
     | '/join/$token'
     | '/onboarding/workspace'
+    | '/reviews_/created'
     | '/settings/ai'
     | '/settings/api'
     | '/settings/applications'
@@ -1297,6 +1321,7 @@ export interface RootRouteChildren {
   InboxRoute: typeof InboxRoute
   LoginRoute: typeof LoginRoute
   MyIssuesRoute: typeof MyIssuesRoute
+  ReviewsRoute: typeof ReviewsRoute
   SettingsRoute: typeof SettingsRouteWithChildren
   SignupRoute: typeof SignupRoute
   ApiDocsRoute: typeof ApiDocsRoute
@@ -1304,6 +1329,7 @@ export interface RootRouteChildren {
   AuthDesktopRoute: typeof AuthDesktopRoute
   JoinTokenRoute: typeof JoinTokenRoute
   OnboardingWorkspaceRoute: typeof OnboardingWorkspaceRoute
+  ReviewsCreatedRoute: typeof ReviewsCreatedRoute
   SettingsTeamsRoute: typeof SettingsTeamsRouteWithChildren
   TeamsTeamSlugRoute: typeof TeamsTeamSlugRouteWithChildren
   WorkspaceCallsRoute: typeof WorkspaceCallsRoute
@@ -1381,6 +1407,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MyIssuesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reviews': {
+      id: '/reviews'
+      path: '/reviews'
+      fullPath: '/reviews'
+      preLoaderRoute: typeof ReviewsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
@@ -1428,6 +1461,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding/workspace'
       fullPath: '/onboarding/workspace'
       preLoaderRoute: typeof OnboardingWorkspaceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reviews_/created': {
+      id: '/reviews_/created'
+      path: '/reviews/created'
+      fullPath: '/reviews/created'
+      preLoaderRoute: typeof ReviewsCreatedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings/': {
@@ -2313,6 +2353,7 @@ const rootRouteChildren: RootRouteChildren = {
   InboxRoute: InboxRoute,
   LoginRoute: LoginRoute,
   MyIssuesRoute: MyIssuesRoute,
+  ReviewsRoute: ReviewsRoute,
   SettingsRoute: SettingsRouteWithChildren,
   SignupRoute: SignupRoute,
   ApiDocsRoute: ApiDocsRoute,
@@ -2320,6 +2361,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthDesktopRoute: AuthDesktopRoute,
   JoinTokenRoute: JoinTokenRoute,
   OnboardingWorkspaceRoute: OnboardingWorkspaceRoute,
+  ReviewsCreatedRoute: ReviewsCreatedRoute,
   SettingsTeamsRoute: SettingsTeamsRouteWithChildren,
   TeamsTeamSlugRoute: TeamsTeamSlugRouteWithChildren,
   WorkspaceCallsRoute: WorkspaceCallsRoute,
