@@ -2,6 +2,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import { buildReferenceArt } from "./build-reference-art.mjs"
 import { buildMilestoneArt } from "./build-milestone-art.mjs"
+import { buildCallSmartphone } from "./build-call-smartphone.mjs"
 import { buildCollection } from "./build-empty-state-collection.mjs"
 import { homedir } from "node:os"
 import { dirname, join, resolve } from "node:path"
@@ -301,6 +302,7 @@ const figures = {
   milestones: buildMilestoneArt(k, G, A, scene),
   ...buildReferenceArt(k, G, A, scene),
   ...buildCollection(k, G, drawing, scene),
+  calls: buildCallSmartphone(k, G, A, scene),
   projects: projects(),
   views: views(),
 }

@@ -318,8 +318,7 @@ describe("Project milestone issue scope", () => {
     ).toBeNull()
   })
   it("prefills the project and selected milestone when creating from an empty milestone", async () => {
-    const onClearMilestone = vi.fn()
-    start({ project, milestone, milestones: [milestone], onClearMilestone })
+    start({ project, milestone, milestones: [milestone] })
     fireEvent.click(
       await screen.findByRole("button", { name: /Create new issue/ })
     )

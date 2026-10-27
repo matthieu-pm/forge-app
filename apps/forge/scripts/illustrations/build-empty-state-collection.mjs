@@ -254,39 +254,6 @@ export function buildCollection(k, G, drawing, scene) {
     return finish()
   }
 
-  function calls() {
-    const o = object({ x: -53, y: -39, w: 106, d: 83, r: 5 }, 25)
-    const { add, box, S, rules, screws, slot, moving, base, finish } = o
-    base({ x: -50, y: -36, w: 100, d: 76, r: 7 })
-    add(
-      S({ x: -47, y: -33, w: 94, d: 70, r: 6 }, 1, 9, "mid"),
-      S({ x: -43, y: -29, w: 86, d: 62, r: 5 }, 10, 1, "hi")
-    )
-    add(box(-35, -23, 42, 37, 11, 0.5, "lo"))
-    for (let i = 0; i < 12; i++)
-      add(box(-31, -20 + i * 2.6, 34, 1.1, 11.5, 0.25, "lo"))
-    add(box(12, -21, 24, 32, 11, 1, "mid"), box(15, -18, 18, 26, 12, 0.4, "lo"))
-    for (let i = 0; i < 3; i++)
-      add(rules(18, -13 + i * 6, 12.5, 12 - (i === 2 ? 3 : 0), 1))
-    for (const y of [-16, 5]) add(box(15, y, 18, 0.5, 12.5, 0.3, "lo"))
-    moving([box(17, -14, 14, 2, 12.5, 0.3, "hi", true)], [0, 6, 0])
-    for (const [x, y] of [
-      [-38, 21],
-      [31, 21],
-      [-3, -29],
-    ]) {
-      add(box(x, y, 7, 5, 11, 2, "mid"), box(x + 1, y + 1, 5, 3, 13, 0.3, "lo"))
-    }
-    for (let i = 0; i < 3; i++)
-      add(
-        box(-15 + i * 12, 22, 9, 7, 11, 1, "mid"),
-        box(-12 + i * 12, 24, 3, 3, 12, 0.3, "hi")
-      )
-    add(box(-11, -36, 22, 3, 4, 5, "lo"))
-    for (const x of [-7, 3]) add(box(x, -36.4, 5, 0.4, 5, 3, "mid"))
-    add(box(-14, 34, 28, 2, 5, 3, "lo"), screws(-43, -29, 86, 62, 11.2))
-    return finish()
-  }
   function documents() {
     const o = object({ x: -49, y: -39, w: 98, d: 87, r: 3 }, 74)
     const { add, box, rules, screws, moving, base, finish } = o
@@ -406,7 +373,6 @@ export function buildCollection(k, G, drawing, scene) {
     initiatives: initiatives(),
     triage: triage(),
     cycles: cycles(),
-    calls: calls(),
     documents: documents(),
     emojis: emojis(),
     labels: labels(),

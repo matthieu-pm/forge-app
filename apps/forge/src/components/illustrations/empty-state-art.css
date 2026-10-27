@@ -126,6 +126,16 @@
     )
     rotate(calc(var(--art-phase, 0) * -3deg));
 }
+.empty-state-art .smartphone-glass,
+.empty-state-art .smartphone-recess {
+  --art-top: var(--art-shade-0);
+}
+.empty-state-art .smartphone-ink {
+  --art-top: var(--art-mid);
+}
+.empty-state-art [data-motion="call-waveform"] {
+  opacity: calc(0.45 + var(--art-phase, 0) * 0.5);
+}
 @media (prefers-reduced-motion: reduce) {
   .empty-state-art [data-motion] {
     transform: none;

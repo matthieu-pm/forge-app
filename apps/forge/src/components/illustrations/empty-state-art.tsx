@@ -17,7 +17,7 @@ const labels: Record<EmptyStateArtKind, string> = {
   initiatives: "Initiative planning table illustration",
   triage: "Triage sorting station illustration",
   cycles: "Upcoming cycle calendar illustration",
-  calls: "Conference speakerphone illustration",
+  calls: "Smartphone illustration",
   documents: "Document binding press illustration",
   emojis: "Emoji stamp tray illustration",
   labels: "Label printing station illustration",

@@ -94,13 +94,17 @@ Concepts and parts planned before geometry:
   date tiles, two binding supports, seven binding links, cursor guides,
   cursor frame (four bars), cursor handle, two end stops, identification
   plate and four base fasteners.
-- Calls — a conference speakerphone. Its transcript carriage advances over
-  a small display. Four pads, four feet, plinth, enclosure, top inset,
-  speaker grille frame, twelve grille slots, three microphone blocks,
-  three microphone inlays, display frame, display inset, three transcript
-  rows, transcript cursor, two cursor guides, three control keys, three key
-  inlays, rear connector block, two connector sockets, front badge, four
-  enclosure fasteners.
+- Calls — a smartphone resting face-up, with a call waveform on its screen.
+  The waveform brightens gently at rest and on hover/action focus; the phone
+  stays assembled. The screen is decorative and does not indicate a live call.
+  Parts planned before geometry: rear shell, aluminum frame, bezel, display
+  glass, earpiece recess, eight earpiece mesh slots, camera surround, lens,
+  lens reflection, two volume keys, power key, three key seats, four antenna
+  breaks, USB-C recess, connector tongue, six lower speaker openings, two
+  retaining screws, caller disc, caller inlay, two caller name rules, eleven
+  waveform bars, three call-control discs, microphone and speaker glyphs,
+  handset glyph, home indicator, and two status indicators. All face detail
+  is attached to its host; the chassis has a continuous perimeter seam.
 
 The initial additional bodies used flat-faced prismatic construction (including the square
 optics and faceted antenna horn); there are no pipes, cables, shaders or turned

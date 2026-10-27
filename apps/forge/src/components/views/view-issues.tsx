@@ -63,7 +63,6 @@ export type ViewIssuesProps = {
   project?: { id: string; name: string }
   milestones?: Array<ProjectMilestone>
   milestone?: Pick<ProjectMilestone, "id" | "name" | "aliases">
-  onClearMilestone?: () => void
   filters: Filters
   display: IssueDisplay
   onFiltersChange: (filters: Filters) => void
@@ -87,7 +86,6 @@ export function ViewIssues({
   project,
   milestones,
   milestone,
-  onClearMilestone,
   filters,
   display,
   onFiltersChange,
@@ -409,15 +407,6 @@ export function ViewIssues({
             onClick={() => onFiltersChange(emptyIssueFilters())}
           >
             Clear filters
-          </Button>
-        </div>
-      )}
-      {milestone && (
-        <div className="flex items-center gap-2 px-3 pb-2 text-xs text-muted-foreground">
-          <MilestoneMark />
-          <span>{milestone.name}</span>
-          <Button variant="ghost" size="sm" onClick={onClearMilestone}>
-            Clear milestone filter
           </Button>
         </div>
       )}

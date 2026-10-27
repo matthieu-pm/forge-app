@@ -671,7 +671,6 @@ function ProjectDetail({
                 ? { id: NO_MILESTONE, name: "No milestone" }
                 : milestones.find((item) => item.id === selectedMilestone)
             }
-            onClearMilestone={() => showMilestoneIssues()}
             filters={filters}
             display={display}
             onFiltersChange={setFilters}

@@ -449,9 +449,10 @@ it("edits milestone metadata, reorders milestones, and filters project issues fr
   )
   await screen.findByRole("button", { name: /Open FOR-1 Beta work/ })
   expect(screen.queryByRole("button", { name: /Open .*Other work/ })).toBeNull()
-  fireEvent.click(
-    screen.getByRole("button", { name: "Clear milestone filter" })
-  )
+  expect(
+    screen.queryByRole("button", { name: "Clear milestone filter" })
+  ).toBeNull()
+  fireEvent.click(within(sidebar).getByRole("button", { name: "Clear filter" }))
   expect(
     await screen.findByRole("button", { name: /Open FOR-2 Other work/ })
   ).toBeTruthy()

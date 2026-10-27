@@ -52,3 +52,22 @@ satellite and mailbox additionally use recorded turned, saddle and arched solids
 - Verified ongoing phase changes in the app; QA gallery confirms offscreen pause
   and reduced-motion stillness. Both-theme moving-pose screenshots and line checks
   pass. Focused TypeScript/lint checks and 17 Inbox/Reviews/Signals tests pass.
+
+## Calls smartphone — 2026-10-27
+
+- Replaced the conference speakerphone with a face-up smartphone: 58 recorded
+  solids, including the chassis, glass, earpiece mesh, camera, side keys, USB-C
+  port, lower speaker apertures, and a decorative call screen.
+- The phone stays assembled. Its screen waveform follows the shared eased,
+  visible-only animation controller, including action focus and reduced motion.
+- The geometry audit passes with zero support, intersection, coverage, or depth
+  failures. Thin screen inlays use a 0.01-unit depth tolerance so the mesh and
+  display marks paint over their actual host rather than disappearing beneath it.
+- The Anatomy line-end checker reports zero floating ends in dark and light.
+  The same checker ran inside local QA pages controlled through the browser tool.
+- Normal-size and 4× dark/light views were inspected. The 390px preview has no
+  horizontal overflow. Focus raises waveform opacity to 0.95; reduced motion
+  keeps it at 0.45. The actual Calls page shows the smartphone and animates it.
+- A comparison against the prior generated collection confirms that only the
+  `calls` figure changed; all other figure bodies are byte-identical.
+- Application typecheck, focused lint, and 27 Calls/project/issue-view tests pass.
