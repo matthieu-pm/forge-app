@@ -57,6 +57,49 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 describe("Simulated review detail", () => {
+  it("saves description reactions and attachments with the shared issue controls", async () => {
+    const page = start()
+    openFirst()
+    fireEvent.click(screen.getByRole("button", { name: "Add reaction" }))
+    fireEvent.change(screen.getByRole("textbox", { name: "Search emoji" }), {
+      target: { value: "party popper" },
+    })
+    fireEvent.click(await screen.findByRole("button", { name: "party popper" }))
+    expect(
+      screen.getByRole("button", { name: /🎉.*1/ }).getAttribute("aria-pressed")
+    ).toBe("true")
+    fireEvent.change(screen.getByLabelText("Attach description files"), {
+      target: {
+        files: [
+          new File(["Description attachment"], "design-notes.txt", {
+            type: "text/plain",
+          }),
+        ],
+      },
+    })
+    expect(await screen.findByText("design-notes.txt")).toBeTruthy()
+    const saved = readReviewEdits(reviewEditsKey(scope))["reviews-demo:248"]
+    expect(saved.reactions).toEqual([{ emoji: "🎉", users: ["me"] }])
+    expect(saved.attachments[0]).toMatchObject({
+      name: "design-notes.txt",
+      data: expect.stringMatching(/^data:text\/plain;base64,/),
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Description" }))
+    expect(screen.queryByRole("button", { name: "Add reaction" })).toBeNull()
+    expect(
+      screen.queryByRole("button", { name: "Attach images, files, or videos" })
+    ).toBeNull()
+    fireEvent.click(screen.getByRole("button", { name: "Expand description" }))
+    expect(screen.getByText("design-notes.txt")).toBeTruthy()
+    page.unmount()
+    start()
+    openFirst()
+    expect(screen.getByText("design-notes.txt")).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: /🎉.*1/ }))
+    expect(
+      readReviewEdits(reviewEditsKey(scope))["reviews-demo:248"].reactions
+    ).toEqual([])
+  })
   it("collapses a rich description into a preview without changing its saved content", () => {
     localStorage.setItem(
       reviewEditsKey(scope),

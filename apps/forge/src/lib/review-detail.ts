@@ -74,6 +74,18 @@ export const reviewEditSchema = z.object({
   title: z.string().optional(),
   description: z.string().optional(),
   descriptionDoc: z.record(z.string(), z.unknown()).optional(),
+  reactions: z
+    .array(z.object({ emoji: z.string(), users: z.array(z.string()) }))
+    .default([]),
+  attachments: z
+    .array(
+      z.object({
+        id: z.string().optional(),
+        name: z.string(),
+        data: z.string(),
+      })
+    )
+    .default([]),
   status: z.enum(["open", "draft", "merged", "closed"]).optional(),
   reviewState: z
     .enum(["requested", "changes-requested", "approved", "reviewed"])

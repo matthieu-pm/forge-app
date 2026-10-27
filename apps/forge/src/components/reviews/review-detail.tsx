@@ -1,8 +1,9 @@
-import { useId, useState } from "react"
+import { useEffect, useId, useRef, useState } from "react"
+import { motion, useReducedMotion } from "framer-motion"
+import { toast } from "sonner"
 import { formatDistanceToNowStrict } from "date-fns"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
-  ArrowDown01Icon,
   ArrowLeft01Icon,
   ArrowRight01Icon,
   ArrowUpRight01Icon,
@@ -26,9 +27,13 @@ import {
   DetailDescription,
   DetailTitle,
 } from "@/components/issues/detail-content"
-import { CommentInput } from "@/components/issues/issue-comment-input"
-import { AssigneeMark } from "@/components/issues/issue-controls"
+import {
+  CommentInput,
+  readFiles,
+} from "@/components/issues/issue-comment-input"
+import { AssigneeMark, IssueIcon } from "@/components/issues/issue-controls"
 import { Attachments } from "@/components/issues/issue-attachments"
+import { Reactions } from "@/components/issues/issue-reactions"
 import { emptyReviewEdit, fileStats, reviewStats } from "@/lib/review-detail"
 import { ContentHeader } from "@/components/ui/content-header"
 import { ActionIconButton } from "@/components/ui/action-icon-button"
@@ -196,6 +201,7 @@ export function ReviewDetail({
   edit,
   mutable,
   userName,
+  userId,
   tab,
   onTabChange,
   onChange,
@@ -212,6 +218,7 @@ export function ReviewDetail({
   edit: ReviewEdit
   mutable: boolean
   userName: string
+  userId: string
   tab: "overview" | "diff"
   onTabChange: (tab: "overview" | "diff") => void
   onChange: (changes: Partial<ReviewEdit>) => void
@@ -231,6 +238,39 @@ export function ReviewDetail({
   const [openCategories, setOpenCategories] = useState<Array<string>>([])
   const [descriptionCollapsed, setDescriptionCollapsed] = useState(false)
   const descriptionId = useId()
+  const descriptionContent = useRef<HTMLDivElement>(null)
+  const [previewHeight, setPreviewHeight] = useState(320)
+  const reduceMotion = useReducedMotion()
+  useEffect(() => {
+    const content = descriptionContent.current
+    if (!content) return
+    const measure = () => setPreviewHeight(Math.min(content.scrollHeight, 320))
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(content)
+    return () => observer.disconnect()
+  }, [tab])
+  const descriptionFile = useRef<HTMLInputElement>(null)
+  const latestAttachments = useRef(edit.attachments)
+  latestAttachments.current = edit.attachments
+  async function attachDescriptionFiles(files: FileList) {
+    try {
+      const added = await readFiles(files)
+      const attachments = [...latestAttachments.current, ...added]
+      if (
+        attachments.length > 5 ||
+        attachments.reduce(
+          (sum, item) => sum + atob(item.data.split(",")[1]).length,
+          0
+        ) > 2_000_000
+      )
+        throw new Error("Choose up to 5 files totaling 2 MB or less.")
+      latestAttachments.current = attachments
+      onChange({ attachments })
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Attachment failed")
+    }
+  }
   const titleUrl = () => {
     const url = new URL(window.location.href)
     url.searchParams.set("review", review.id)
@@ -572,56 +612,117 @@ export function ReviewDetail({
                   {detail.branch}
                 </button>
               </div>
-              <div
-                className={cn(
-                  "mt-8 mb-8",
-                  descriptionCollapsed && "-mx-4 rounded-xl bg-muted/40 p-4"
-                )}
-              >
+              <div className="relative mt-8 mb-8">
+                <div
+                  aria-hidden="true"
+                  className={cn(
+                    "pointer-events-none absolute -inset-4 rounded-xl bg-muted/40 transition-opacity duration-200 ease-out motion-reduce:transition-none",
+                    descriptionCollapsed ? "opacity-100" : "opacity-0"
+                  )}
+                />
                 <button
                   type="button"
                   aria-expanded={!descriptionCollapsed}
                   aria-controls={descriptionId}
                   onClick={() => setDescriptionCollapsed((value) => !value)}
-                  className="mb-2 -ml-1 inline-flex items-center gap-1 rounded-md px-1 py-0.5 text-xs text-muted-foreground outline-none hover:bg-muted/60 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                  className="relative mb-2 -ml-2 inline-flex h-7 items-center gap-1 rounded-md px-2 text-sm text-muted-foreground outline-none hover:bg-muted/60 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   Description
                   <HugeiconsIcon
-                    icon={
-                      descriptionCollapsed ? ArrowRight01Icon : ArrowDown01Icon
-                    }
-                    className="size-3"
+                    icon={ArrowRight01Icon}
+                    className={cn(
+                      "size-3.5 transition-transform duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none",
+                      !descriptionCollapsed && "rotate-90"
+                    )}
                   />
                 </button>
                 <div className="relative">
-                  <div
+                  <motion.div
                     id={descriptionId}
+                    initial={false}
+                    animate={{
+                      height: descriptionCollapsed ? previewHeight : "auto",
+                    }}
+                    transition={{
+                      duration: reduceMotion ? 0 : 0.22,
+                      ease: [0.23, 1, 0.32, 1],
+                    }}
                     inert={descriptionCollapsed}
                     aria-hidden={descriptionCollapsed}
-                    className={cn(
-                      descriptionCollapsed &&
-                        "max-h-80 overflow-hidden [mask-image:linear-gradient(to_bottom,black_20%,transparent_100%)]"
-                    )}
+                    className="overflow-hidden"
                   >
-                    <DetailDescription
-                      value={review.description}
-                      document={review.descriptionDoc}
-                      label="Pull request description"
-                      editable={mutable && !descriptionCollapsed}
-                      onSave={(description, descriptionDoc) =>
-                        record(
-                          {
-                            description,
-                            descriptionDoc: descriptionDoc as Record<
-                              string,
-                              unknown
-                            >,
-                          },
-                          "Updated the description"
-                        )
-                      }
-                    />
-                  </div>
+                    <div ref={descriptionContent}>
+                      <DetailDescription
+                        value={review.description}
+                        document={review.descriptionDoc}
+                        label="Pull request description"
+                        editable={mutable && !descriptionCollapsed}
+                        onSave={(description, descriptionDoc) =>
+                          record(
+                            {
+                              description,
+                              descriptionDoc: descriptionDoc as Record<
+                                string,
+                                unknown
+                              >,
+                            },
+                            "Updated the description"
+                          )
+                        }
+                      />
+                    </div>
+                    <div
+                      className={cn(
+                        "transition-opacity duration-150 ease-out motion-reduce:transition-none",
+                        descriptionCollapsed ? "opacity-0" : "opacity-100"
+                      )}
+                    >
+                      <Attachments
+                        items={edit.attachments}
+                        onChange={(attachments) => {
+                          if (mutable) onChange({ attachments })
+                        }}
+                      />
+                      {mutable && (
+                        <div
+                          aria-label="Description actions"
+                          className="mt-4 flex flex-wrap items-center gap-1"
+                        >
+                          <Reactions
+                            items={edit.reactions}
+                            user={userId}
+                            onChange={(reactions) => onChange({ reactions })}
+                          />
+                          <ActionIconButton
+                            size="icon-sm"
+                            label="Attach images, files, or videos"
+                            onClick={() => descriptionFile.current?.click()}
+                          >
+                            <IssueIcon name="attach" />
+                          </ActionIconButton>
+                          <input
+                            ref={descriptionFile}
+                            aria-label="Attach description files"
+                            hidden
+                            type="file"
+                            multiple
+                            onChange={(event) => {
+                              if (event.target.files)
+                                void attachDescriptionFiles(event.target.files)
+                              event.target.value = ""
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                  <div
+                    aria-hidden="true"
+                    className={cn(
+                      "pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,transparent_20%,color-mix(in_oklab,var(--muted)_40%,var(--background))_100%)] transition-opacity duration-200 ease-out motion-reduce:transition-none",
+                      descriptionCollapsed ? "opacity-100" : "opacity-0"
+                    )}
+                  />
                   {descriptionCollapsed && (
                     <button
                       type="button"

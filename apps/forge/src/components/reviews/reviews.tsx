@@ -450,6 +450,7 @@ export function Reviews({
             edit={edits[selected.id] ?? emptyReviewEdit()}
             mutable={simulated}
             userName={currentUserName}
+            userId={scope.userId}
             tab={currentSelection.tab ?? "overview"}
             onTabChange={(tab) =>
               navigate({
