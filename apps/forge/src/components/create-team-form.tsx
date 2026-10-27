@@ -283,7 +283,6 @@ export function CreateTeamForm() {
             type="submit"
             size="sm"
             disabled={isSubmitting}
-            className="bg-[#1616E2] text-white hover:bg-[#1010C8]"
           >
             {isSubmitting ? "Creating team..." : "Create team"}
           </Button>

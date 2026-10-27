@@ -7,6 +7,7 @@ import "./empty-state-art.css"
 
 export type EmptyStateArtKind = keyof typeof emptyStateArt
 const labels: Record<EmptyStateArtKind, string> = {
+  milestones: "Milestone checkpoint station illustration",
   projects: "No projects illustration",
   views: "Empty custom views illustration",
   inbox: "Mailbox illustration",

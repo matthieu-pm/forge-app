@@ -101,7 +101,8 @@
 }
 
 /* Reference figures have visible, object-specific motion, including at rest. */
-.empty-state-content .empty-state-art[data-kind="reviews"] [data-part] {
+.empty-state-content .empty-state-art[data-kind="reviews"] [data-part],
+.empty-state-content .empty-state-art[data-kind="milestones"] [data-part] {
   transition: none;
   translate: calc(var(--art-phase, 0) * var(--art-x, 0px))
     calc(var(--art-phase, 0) * var(--art-y, 0px));

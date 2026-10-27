@@ -186,7 +186,20 @@ it("reuses the issue table while preventing unrelated issues from entering the p
   render(<Page initialTab="issues" />)
   await waitFor(() => expect(screen.getByText("Launch issue")).toBeTruthy())
   expect(screen.queryByText("Other project issue")).toBeNull()
-  fireEvent.click(screen.getByRole("button", { name: "Add filter" }))
+  const toolbar = within(
+    screen.getByRole("toolbar", { name: "Project toolbar" })
+  )
+  expect(toolbar.getByRole("button", { name: "Display options" })).toBeTruthy()
+  expect(screen.queryByRole("button", { name: "New issue" })).toBeNull()
+  expect(
+    within(screen.getByLabelText("View issues")).queryByRole("button", {
+      name: "Add filter",
+    })
+  ).toBeNull()
+  expect(
+    within(screen.getByLabelText("View issues")).queryByRole("status")
+  ).toBeNull()
+  fireEvent.click(toolbar.getByRole("button", { name: "Add filter" }))
   expect(await screen.findByRole("menuitem", { name: "Status" })).toBeTruthy()
 })
 it("adds resources through the shared document and link dialog", async () => {

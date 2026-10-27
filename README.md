@@ -81,6 +81,42 @@ The shared database client lives in `apps/forge/src/db/index.ts`. Application
 workspace schema lives in `apps/forge/src/db/schema.ts`, and auth schema lives
 in `apps/forge/src/db/auth-schema.ts`.
 
+The local Neon link targets project `raspy-union-96305162`, branch `production`,
+in organization `org-twilight-sunset-21080560`. To set up another checkout:
+
+```sh
+npx neon@latest init -y --org-id org-twilight-sunset-21080560 --project-id raspy-union-96305162 --branch production --services postgres,auth
+npx neon@latest deploy
+npm run db:migrate
+```
+
+Neon writes its environment variables into the root `.env` when it exists.
+Keep that file private. Restart the app after pulling a different database's
+environment variables. The app uses pooled `DATABASE_URL` through the existing
+Neon serverless driver and Drizzle, retaining interactive transaction support.
+Drizzle migrations prefer the direct `DATABASE_URL_UNPOOLED` connection and
+fall back to `DATABASE_URL` for older configurations.
+
+Forge keeps its own Better Auth server and its auth tables in the new database.
+This preserves Electron login, Forge API keys, and the custom ChatGPT provider.
+Managed Neon Auth is declared in `neon.ts` and provisioned alongside Postgres,
+but its `NEON_AUTH_*` variables are intentionally unused by Forge login. Its
+managed plugin set cannot replace those app-specific plugins. Existing users
+and records from another database are not copied by this setup.
+
+To repeat the browser and database verification against a running local app:
+
+```sh
+FORGE_VERIFY_ORIGIN=http://localhost:3000 npm run verify:neon
+```
+
+The smoke test needs Playwright Chromium (`bun x playwright install chromium`
+from `apps/forge` if missing). It creates a temporary account and workspace,
+checks signup, sign-in, reload, sign-out, protected access, and database writes,
+then removes its test records. It also checks the provisioned managed Auth JWKS
+endpoint; that check does not claim Forge uses managed Auth. Screenshots are
+saved under the ignored `.forge/neon-verification/` directory.
+
 ## Agent Platform
 
 Forge streams assistant text, tools, code, file operations, approvals, and

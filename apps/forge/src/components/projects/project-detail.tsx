@@ -149,6 +149,8 @@ function ProjectDetail({
   const [issueTeamId, setIssueTeamId] = useState<string>()
   const [filters, setFilters] = useState(emptyIssueFilters)
   const [display, setDisplay] = useState(defaultIssueDisplay)
+  const [issueToolbarHost, setIssueToolbarHost] =
+    useState<HTMLDivElement | null>(null)
   const [error, setError] = useState("")
   const agent = useAgent()
   const people = [
@@ -532,7 +534,11 @@ function ProjectDetail({
           </ActionIconButton>
         </div>
       </ContentHeader>
-      <div className="flex min-h-11 shrink-0 items-center justify-between gap-2 px-2 py-2">
+      <div
+        role="toolbar"
+        aria-label="Project toolbar"
+        className="flex min-h-11 shrink-0 items-center justify-between gap-2 px-2 py-2"
+      >
         <PageTabs aria-label="Project views">
           {(["overview", "activity", "issues"] as const).map((value) => (
             <Button
@@ -547,18 +553,21 @@ function ProjectDetail({
             </Button>
           ))}
         </PageTabs>
-        <ActionIconButton
-          label={details ? "Close project details" : "Open project details"}
-          aria-pressed={details}
-          onClick={() =>
-            preferences.save({
-              ...preferences.preferences,
-              detailSidebar: !details,
-            })
-          }
-        >
-          <IssueIcon name="details" />
-        </ActionIconButton>
+        <div className="flex items-center gap-1.5">
+          {tab === "issues" && <div ref={setIssueToolbarHost} />}
+          <ActionIconButton
+            label={details ? "Close project details" : "Open project details"}
+            aria-pressed={details}
+            onClick={() =>
+              preferences.save({
+                ...preferences.preferences,
+                detailSidebar: !details,
+              })
+            }
+          >
+            <IssueIcon name="details" />
+          </ActionIconButton>
+        </div>
       </div>
       {(error ||
         store.error ||
@@ -576,6 +585,9 @@ function ProjectDetail({
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
         {tab === "issues" ? (
           <ViewIssues
+            toolbarHost={issueToolbarHost}
+            hideCreate
+            hideCount
             workspaceId={workspaceId}
             user={user}
             teams={teams}

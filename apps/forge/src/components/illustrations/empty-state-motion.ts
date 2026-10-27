@@ -1,7 +1,7 @@
 /** Visible-only, reduced-motion-aware animation shared by React and the QA gallery. */
 export function mountEmptyStateMotion(svg: SVGSVGElement, kind: string) {
   if (
-    !["inbox", "reviews", "signals"].includes(kind) ||
+    !["inbox", "reviews", "signals", "milestones"].includes(kind) ||
     typeof matchMedia !== "function" ||
     typeof requestAnimationFrame !== "function" ||
     typeof IntersectionObserver !== "function"

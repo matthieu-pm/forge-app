@@ -39,7 +39,6 @@ function WorkspaceCallsPage() {
   const navigate = Route.useNavigate()
   return (
     <CallsPage
-      simulateWhenEmpty
       key={authState.workspace!.id}
       initialDirectory={directory}
       teams={teams}

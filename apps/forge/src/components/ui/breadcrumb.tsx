@@ -2,9 +2,12 @@ import * as React from "react"
 import { mergeProps } from "@base-ui/react/merge-props"
 import { useRender } from "@base-ui/react/use-render"
 
-import { cn } from "@/lib/utils"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowRight01Icon, MoreHorizontalCircle01Icon } from "@hugeicons/core-free-icons"
+import {
+  ArrowRight01Icon,
+  MoreHorizontalCircle01Icon,
+} from "@hugeicons/core-free-icons"
+import { cn } from "@/lib/utils"
 
 function Breadcrumb({ className, ...props }: React.ComponentProps<"nav">) {
   return (
@@ -49,7 +52,10 @@ function BreadcrumbLink({
     defaultTagName: "a",
     props: mergeProps<"a">(
       {
-        className: cn("transition-colors hover:text-foreground", className),
+        className: cn(
+          "inline-flex items-center transition-colors hover:text-foreground",
+          className
+        ),
       },
       props
     ),
@@ -67,7 +73,10 @@ function BreadcrumbPage({ className, ...props }: React.ComponentProps<"span">) {
       role="link"
       aria-disabled="true"
       aria-current="page"
-      className={cn("font-normal text-foreground", className)}
+      className={cn(
+        "inline-flex items-center font-normal text-foreground",
+        className
+      )}
       {...props}
     />
   )

@@ -165,7 +165,7 @@ function ProjectCell({
         (leadId) => ({ leadId }),
         <>
           <AssigneeMark name={lead?.name} image={lead?.image} />
-          <span className="truncate">{lead?.name}</span>
+          {lead ? <span className="truncate">{lead.name}</span> : null}
         </>
       )
     case "Health":

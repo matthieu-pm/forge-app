@@ -1,6 +1,7 @@
 // Build-time use of the MIT-licensed Anatomy skill. No kit code ships at runtime.
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import { buildReferenceArt } from "./build-reference-art.mjs"
+import { buildMilestoneArt } from "./build-milestone-art.mjs"
 import { buildCollection } from "./build-empty-state-collection.mjs"
 import { homedir } from "node:os"
 import { dirname, join, resolve } from "node:path"
@@ -297,6 +298,7 @@ function views() {
 }
 
 const figures = {
+  milestones: buildMilestoneArt(k, G, A, scene),
   ...buildReferenceArt(k, G, A, scene),
   ...buildCollection(k, G, drawing, scene),
   projects: projects(),
@@ -331,6 +333,18 @@ for (const theme of ["dark", "light"])
     join(qa, `gallery-${theme}.html`),
     `<!doctype html><html class="${theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>:root{--background:#fff;--foreground:#18181b}.dark{--background:#111;--foreground:#eee}body{margin:0;background:var(--background);color:var(--foreground);font:13px system-ui}main{display:flex;flex-wrap:wrap;gap:48px;padding:32px}.iso-plate{width:300px;max-width:100%;box-sizing:border-box;padding:24px;border:1px solid #8883}button{background:none;color:inherit;border:1px solid #8886;border-radius:20px;padding:6px 14px}h2{text-transform:capitalize;font-size:14px}${css}</style></head><body><main>${markup}</main><script type="module">${motionScript}</script></body></html>`
   )
+// Focused plates for reviewing the milestone at product size and 4×.
+for (const theme of ["dark", "light"]) {
+  const figure = figures.milestones
+  for (const zoom of [1, 4]) {
+    const artWidth = width * zoom,
+      artHeight = height * zoom
+    await writeFile(
+      join(qa, `milestone-${theme}${zoom === 4 ? "-4x" : ""}.html`),
+      `<!doctype html><html class="${theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>:root{--background:#fff;--foreground:#18181b}.dark{--background:#111;--foreground:#eee}body{margin:0;background:var(--background);color:var(--foreground);font:13px system-ui}main{padding:24px}.iso-plate{width:${artWidth + 48}px;max-width:100%;box-sizing:border-box;padding:24px;border:1px solid #8883;border-radius:14px}header,footer{display:flex;justify-content:space-between;gap:24px;color:#888;font-size:11px}.empty-state-art{width:${artWidth}px!important;height:${artHeight}px!important;max-width:100%;margin:12px auto}.caption{max-width:310px;color:#888;line-height:1.6}button{background:none;color:inherit;border:1px solid #8886;border-radius:20px;padding:6px 12px}${css}</style></head><body><main><article class="iso-plate empty-state-content"><header><span>Fig 14</span><span>Milestone checkpoint</span></header><svg class="empty-state-art" data-kind="milestones" style="--art-move:${figure.move};--art-x:${figure.move.split(" ")[0]};--art-y:${figure.move.split(" ")[1]}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Milestone checkpoint station">${figure.body}</svg><footer><span>Hover or focus to lift the gate</span><span data-readout>0 issues</span></footer><p class="caption">A raised checkpoint marker and an empty intake tray. The gate stays in its guides as it lifts; no work has been assigned.</p><button>Create new issue</button></article></main><script type="module">${motionScript}</script></body></html>`
+    )
+  }
+}
 console.log(
   Object.fromEntries(
     Object.entries(figures).map(([kind, figure]) => [

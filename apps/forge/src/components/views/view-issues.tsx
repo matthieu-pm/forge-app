@@ -318,19 +318,17 @@ export function ViewIssues({
   })
   const toolbar = (
     <div
-      className={`flex min-h-11 shrink-0 items-center justify-between gap-2 px-3 py-2 ${toolbarClassName ?? ""}`}
+      className={
+        toolbarHost && hideCount
+          ? "flex shrink-0 items-center"
+          : `flex min-h-11 shrink-0 items-center justify-between gap-2 px-3 py-2 ${toolbarClassName ?? ""}`
+      }
     >
-      <span
-        className="text-xs text-muted-foreground"
-        role="status"
-        aria-hidden={hideCount || undefined}
-      >
-        {!hideCount && (
-          <>
-            {visible.length} {visible.length === 1 ? "issue" : "issues"}
-          </>
-        )}
-      </span>
+      {!hideCount && (
+        <span className="text-xs text-muted-foreground" role="status">
+          {visible.length} {visible.length === 1 ? "issue" : "issues"}
+        </span>
+      )}
       <div className="flex items-center gap-1.5">
         {!hideCreate && (
           <Button
@@ -451,12 +449,8 @@ export function ViewIssues({
         />
       ) : (
         <IllustratedEmptyState
-          kind="issues"
-          illustration={
-            milestone ? (
-              <MilestoneMark className="size-20 text-muted-foreground" />
-            ) : undefined
-          }
+          align={project ? "center" : "left"}
+          kind={milestone ? "milestones" : "issues"}
           title={
             milestone?.name ??
             (filters.rules.length ? "No matching issues" : "No issues yet")

@@ -42,7 +42,6 @@ function TeamCallsPage() {
   const navigate = Route.useNavigate()
   return (
     <CallsPage
-      simulateWhenEmpty
       key={team.id}
       initialDirectory={directory}
       teams={[team]}

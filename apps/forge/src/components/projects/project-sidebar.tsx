@@ -183,7 +183,7 @@ export function ProjectSidebar({
   return (
     <aside
       aria-label="Project sidebar"
-      className="w-[320px] shrink-0 space-y-2 overflow-y-auto overscroll-contain p-2 pt-0 max-lg:w-[284px] max-md:absolute max-md:inset-y-0 max-md:right-0 max-md:z-20 max-md:bg-background"
+      className="w-[384px] max-w-[calc(100%-16px)] shrink-0 space-y-2 overflow-y-auto overscroll-contain p-2 pt-0 max-lg:w-[341px] max-md:absolute max-md:inset-y-0 max-md:right-0 max-md:z-20 max-md:bg-background"
     >
       <PanelSection
         title="Properties"

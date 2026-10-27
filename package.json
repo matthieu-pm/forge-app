@@ -17,6 +17,7 @@
     "dev:agent": "bun run prepare:local && turbo run dev --filter=@forge/agent-runtime --ui=stream",
     "dev:desktop": "bun run prepare:local && turbo run dev desktop:host --filter=@forge/app --filter=@forge/agent-runtime --ui=stream",
     "build": "turbo run build",
+    "verify:neon": "node apps/forge/scripts/verify-neon.mjs",
     "preview": "turbo run preview --filter=@forge/app --ui=stream",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",

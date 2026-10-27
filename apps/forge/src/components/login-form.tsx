@@ -91,7 +91,7 @@ export function LoginForm({
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <form onSubmit={handleSubmit}>
-        <FieldGroup>
+        <FieldGroup className="gap-4 [&>[data-slot=field]]:gap-2">
           <div className="flex flex-col items-center gap-2 text-center">
             <div className="flex flex-col items-center gap-3 font-medium">
               <div className="flex size-8 items-center justify-center rounded-md">

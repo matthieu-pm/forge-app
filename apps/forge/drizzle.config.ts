@@ -12,7 +12,9 @@ config({
   override: true,
 })
 
-const databaseUrl = process.env.DATABASE_URL
+// Migrations need a direct connection; application queries keep using the pool.
+const databaseUrl =
+  process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL
 
 if (!databaseUrl) {
   throw new Error("DATABASE_URL is required to use Drizzle.")

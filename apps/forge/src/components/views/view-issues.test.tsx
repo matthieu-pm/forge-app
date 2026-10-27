@@ -235,7 +235,12 @@ describe("Custom view issue collection", () => {
     const host = document.createElement("div")
     document.body.append(host)
     const createActionRef = { current: null as (() => void) | null }
-    const page = start({ toolbarHost: host, createActionRef, hideCreate: true })
+    const page = start({
+      toolbarHost: host,
+      createActionRef,
+      hideCreate: true,
+      hideCount: true,
+    })
     await screen.findByRole("button", { name: "Open ONE-1 First issue" })
     expect(
       within(host).getByRole("button", { name: "Add filter" })
@@ -244,6 +249,7 @@ describe("Custom view issue collection", () => {
       within(page.container).queryByRole("button", { name: "Add filter" })
     ).toBeNull()
     expect(within(host).queryByRole("button", { name: "New issue" })).toBeNull()
+    expect(within(host).queryByRole("status")).toBeNull()
     act(() => createActionRef.current?.())
     expect(screen.getByRole("dialog", { name: "Create issue" })).toBeTruthy()
     page.unmount()
