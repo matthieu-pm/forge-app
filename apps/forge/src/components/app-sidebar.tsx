@@ -1,5 +1,4 @@
-import { CheckboxMark } from "@/components/ui/checkbox-mark"
-;("use client")
+"use client"
 
 import * as React from "react"
 import {
@@ -17,6 +16,7 @@ import type { MenuRootActions } from "@base-ui/react/menu"
 import type { AppNavChild } from "@/lib/app-navigation"
 import type { AuthState, WorkspaceSummary } from "@/lib/auth-types"
 import type { TeamSummary } from "@/lib/team-contract"
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { GettingStartedChecklist } from "@/components/getting-started-checklist"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
@@ -443,7 +443,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           }
         >
           <SidebarMenuButton
-            className="h-7 py-1 text-sm font-medium text-foreground/70"
+            className="h-7 shrink-0 py-1 text-sm font-medium text-foreground/70"
             isActive={false}
             render={<CollapsibleTrigger />}
           >
@@ -458,7 +458,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarCollapsibleContent
             className={teamsScrollable ? "min-h-0 w-full" : "w-full"}
           >
-            <div className="w-full">{renderNavItems(item.items)}</div>
+            <div
+              className={
+                teamsScrollable
+                  ? "no-scrollbar h-full w-full overflow-x-hidden overflow-y-auto overscroll-contain"
+                  : "w-full"
+              }
+              role={teamsScrollable ? "region" : undefined}
+              aria-label={teamsScrollable ? "Your teams list" : undefined}
+              tabIndex={teamsScrollable ? 0 : undefined}
+            >
+              {renderNavItems(item.items)}
+            </div>
           </SidebarCollapsibleContent>
         </SidebarMenuItem>
       </PersistentCollapsible>
@@ -581,13 +592,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup className="pb-0">
+      <SidebarContent className="overflow-hidden">
+        <SidebarGroup className="shrink-0 pb-0">
           <SidebarMenu className="gap-px">
             {primaryNav.map((item) => renderRootItem(item))}
           </SidebarMenu>
         </SidebarGroup>
-        <SidebarGroup className="pt-4 pb-0">
+        <SidebarGroup className="shrink-0 pt-4 pb-0">
           <SidebarMenu>
             {workspaceSection.map((item) => renderRootItem(item))}
           </SidebarMenu>

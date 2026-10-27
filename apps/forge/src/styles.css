@@ -5,6 +5,15 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@utility resize-handle-gradient {
+  background-image: linear-gradient(
+    var(--resize-handle-direction, to bottom),
+    rgb(212 212 212 / 0),
+    rgb(212 212 212 / 35%),
+    rgb(212 212 212 / 0)
+  );
+}
+
 @theme {
   --font-weight-medium: 450;
   --font-weight-semibold: 550;
@@ -310,6 +319,8 @@ html[data-forge-underline-links="true"] a:not([data-sidebar="menu-button"]) {
 .forge-settings-shell,
 .forge-inbox-shell,
 .forge-issues-shell {
+  --sidebar-rail-top: 8px;
+  --sidebar-rail-bottom: 32px;
   height: 100svh;
   min-height: 0;
   overflow: hidden;
@@ -336,6 +347,7 @@ html[data-forge-host="macos"] .forge-app-shell,
 html[data-forge-host="macos"] .forge-settings-shell,
 html[data-forge-host="macos"] .forge-inbox-shell,
 html[data-forge-host="macos"] .forge-issues-shell {
+  --sidebar-rail-top: 0px;
   height: calc(100svh - var(--forge-desktop-titlebar-height));
 }
 

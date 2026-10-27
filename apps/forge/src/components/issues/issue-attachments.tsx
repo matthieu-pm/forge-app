@@ -654,7 +654,10 @@ function AttachmentCard({
                 (open || resizing) && "opacity-100"
               )}
             >
-              <span className="h-9 w-1 rounded-full border border-border bg-muted shadow-sm" />
+              <span
+                aria-hidden="true"
+                className="h-9 w-px resize-handle-gradient"
+              />
             </button>
           ))}
       </ContextMenuTrigger>

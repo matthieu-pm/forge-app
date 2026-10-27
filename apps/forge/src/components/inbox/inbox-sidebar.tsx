@@ -95,7 +95,7 @@ export function InboxSidebar({
         aria-valuetext={`${Math.round(scale * 100)}% of default width`}
         title="Drag to resize. Double-click to reset."
         data-resizing={resizing}
-        className="absolute inset-y-0 -right-1 z-10 hidden w-2 cursor-col-resize touch-none outline-none after:absolute after:inset-y-0 after:left-1/2 after:w-px hover:after:bg-primary/50 focus-visible:after:w-0.5 focus-visible:after:bg-ring data-[resizing=true]:after:bg-primary/50 md:block"
+        className="absolute inset-y-0 -right-1 z-10 hidden w-2 cursor-col-resize touch-none outline-none after:absolute after:inset-y-0 after:left-1/2 after:w-px after:resize-handle-gradient after:opacity-0 after:transition-opacity hover:after:opacity-100 focus-visible:after:opacity-100 data-[resizing=true]:after:opacity-100 md:block"
         onPointerDown={(event) => {
           if (event.button !== 0 || event.isPrimary === false || drag.current)
             return

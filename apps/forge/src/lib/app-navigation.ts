@@ -128,6 +128,7 @@ export const workspaceNav: Array<AppNavChild> = [
     icon: AirplayLineIcon,
   },
   { title: "Projects", to: "/workspace/projects", icon: CubeIcon },
+  { title: "Calls", to: "/workspace/calls", icon: Call02Icon },
   { title: "Views", to: "/workspace/views", icon: LayerIcon },
   { title: "Teams", to: "/workspace/teams", icon: UserIdVerificationIcon },
   { title: "Members", to: "/workspace/members", icon: UserGroup03Icon },
@@ -187,11 +188,6 @@ export const appNav: Array<AppNavItem> = [
     title: "Forge",
     to: "/forge",
     iconSrc: "/img/forge-logo-black.svg",
-  },
-  {
-    title: "Calls",
-    to: "/workspace/calls",
-    icon: Call02Icon,
   },
   {
     title: "Signals",
