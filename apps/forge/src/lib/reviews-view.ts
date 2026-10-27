@@ -24,6 +24,7 @@ export type Review = {
   number: number
   title: string
   description: string
+  descriptionDoc?: Record<string, unknown>
   repository: string
   author: { id: string; name: string }
   reviewerIds: Array<string>

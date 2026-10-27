@@ -2,7 +2,7 @@ import * as React from "react"
 import { z } from "zod"
 import { documentSchema } from "./template-contract"
 
-const resourceSchema = z.object({
+export const teamResourceSchema = z.object({
   id: z.string(),
   kind: z.enum(["document", "link"]),
   title: z.string().trim().min(1).max(200),
@@ -36,7 +36,7 @@ export const teamHomeSchema = z.object({
       collapsed: z.boolean(),
     })
   ),
-  resources: z.array(resourceSchema),
+  resources: z.array(teamResourceSchema),
   loops: z.array(
     z.object({
       id: z.string(),
@@ -48,7 +48,7 @@ export const teamHomeSchema = z.object({
   ),
 })
 export type TeamHomeState = z.infer<typeof teamHomeSchema>
-export type TeamResource = z.infer<typeof resourceSchema>
+export type TeamResource = z.infer<typeof teamResourceSchema>
 export type LoopDraft = TeamHomeState["loops"][number]
 export const emptyTeamHome = (): TeamHomeState => ({
   favorite: false,

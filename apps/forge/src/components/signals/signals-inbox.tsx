@@ -49,6 +49,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { IssueComposer } from "@/components/issues/issue-composer"
 import { cn } from "@/lib/utils"
+import { newSignalDocument, useSignalDocuments } from "@/lib/signals-documents"
 
 const views: Array<{ id: SignalInsightStatus; name: string }> = [
   { id: "inbox", name: "To review" },
@@ -90,6 +91,15 @@ export function SignalsInbox({
     Partial<Record<string, { id: string; identifier: string; slug: string }>>
   >({})
   const rowRefs = useRef(new Map<string, HTMLButtonElement>())
+  const documentStore = useSignalDocuments(scope)
+  const [initialDocuments] = useState(() =>
+    Object.fromEntries(
+      sampleSignalInsights.map((insight) => [
+        insight.id,
+        newSignalDocument(insight),
+      ])
+    )
+  )
   useEffect(() => {
     let active = true
     setDirectoryError("")
@@ -432,12 +442,30 @@ export function SignalsInbox({
             </div>
           )}
         </ContentHeader>
+        {documentStore.error && (
+          <div
+            role="alert"
+            className="flex items-center gap-3 border-b border-destructive/20 bg-destructive/5 px-4 py-2 text-xs text-destructive"
+          >
+            <span className="flex-1">{documentStore.error}</span>
+            {!documentStore.readError && (
+              <Button size="sm" variant="ghost" onClick={documentStore.retry}>
+                Try again
+              </Button>
+            )}
+          </div>
+        )}
         <div className="min-h-0 flex-1 overflow-y-auto" key={selected?.id}>
-          {selected && currentDraft ? (
+          {selected && currentDraft && documentStore.ready ? (
             <>
               <SignalsInsightReport
                 key={selected.id}
                 insight={selected}
+                document={
+                  documentStore.documents[initialDocuments[selected.id].id] ??
+                  initialDocuments[selected.id]
+                }
+                onDocumentChange={documentStore.save}
                 issueComposer={
                   createdIssue ? (
                     <Button

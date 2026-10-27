@@ -12,14 +12,22 @@ import {
 import { InlineIssueProperties, IssueSubProgress } from "./issue-list"
 import { Attachments, attachmentId } from "./issue-attachments"
 import { ActivityReference, ActivityRow } from "./issue-activity-row"
+import { CommentInput, readFiles } from "./issue-comment-input"
+import { DetailDescription, DetailTitle } from "./detail-content"
+import {
+  IssueDiffs,
+  IssuePullRequestLink,
+  LinkPullRequestDialog,
+  PullRequestMark,
+} from "./issue-pull-request"
 import { IssueLabelPicker } from "./issue-label-picker"
 import { IssueCyclePicker } from "./issue-cycle-picker"
-import type { Editor, JSONContent } from "@tiptap/core"
 import type { IssueDraft, TeamIssue } from "@/lib/team-issues"
 import type { TeamStatus } from "@/lib/team-statuses"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import type { ActivityReferenceKind } from "@/lib/issue-activity"
+import { issuePullRequest, issuePullRequests } from "@/lib/issue-pull-requests"
 import { ContentHeader } from "@/components/ui/content-header"
 import { authClient } from "@/lib/auth-client"
 import {
@@ -27,7 +35,6 @@ import {
   moveTeamIssue,
   saveTeamIssue,
 } from "@/lib/team-issues"
-import { RichEditor } from "@/components/templates/rich-editor"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { Button } from "@/components/ui/button"
 import {
@@ -59,20 +66,6 @@ import { cn } from "@/lib/utils"
 type Attachment = NonNullable<IssueDraft["attachments"]>[number]
 type Reaction = IssueDraft["reactions"][number]
 type Comment = IssueDraft["comments"][number]
-const plainDoc = (text: string): JSONContent => ({
-  type: "doc",
-  content: text.split("\n").map((line) => ({
-    type: "paragraph",
-    content: line ? [{ type: "text", text: line }] : [],
-  })),
-})
-function docText(doc: JSONContent): string {
-  return (
-    doc.text ??
-    doc.content?.map(docText).join(doc.type === "doc" ? "\n" : "") ??
-    ""
-  )
-}
 function ago(date: string) {
   const minutes = Math.max(
     0,
@@ -86,30 +79,7 @@ function ago(date: string) {
         ? `${Math.floor(minutes / 60)}h ago`
         : new Date(date).toLocaleDateString()
 }
-async function readFiles(files: FileList): Promise<Array<Attachment>> {
-  if (
-    files.length > 5 ||
-    Array.from(files).reduce((sum, file) => sum + file.size, 0) > 2_000_000
-  )
-    throw new Error("Choose up to 5 files totaling 2 MB or less.")
-  return Promise.all(
-    Array.from(files).map(
-      (file) =>
-        new Promise<Attachment>((resolve, reject) => {
-          const reader = new FileReader()
-          reader.onload = () =>
-            resolve({
-              id: crypto.randomUUID(),
-              name: file.name,
-              data: String(reader.result),
-            })
-          reader.onerror = () =>
-            reject(new Error("The file could not be read."))
-          reader.readAsDataURL(file)
-        })
-    )
-  )
-}
+
 async function copy(value: string) {
   try {
     await navigator.clipboard.writeText(value)
@@ -228,166 +198,6 @@ function Reactions({
     </div>
   )
 }
-function CommentInput({
-  onSubmit,
-  placeholder = "Leave a comment…",
-  avatar,
-  initialBody = "",
-  autoFocus = false,
-}: {
-  onSubmit: (body: string, files: Array<Attachment>) => boolean
-  placeholder?: string
-  initialBody?: string
-  autoFocus?: boolean
-  avatar?: { name: string; image?: string | null }
-}) {
-  const [body, setBody] = useState(initialBody)
-  const compact = placeholder === "Leave a reply…"
-  const [files, setFiles] = useState<Array<Attachment>>([])
-  const latestFiles = useRef(files)
-  latestFiles.current = files
-  const file = useRef<HTMLInputElement>(null)
-  const textarea = useRef<HTMLTextAreaElement>(null)
-  useEffect(() => {
-    const input = textarea.current
-    if (!input) return
-    input.style.height = "auto"
-    input.style.height = `${Math.min(192, Math.max(compact ? 24 : 48, input.scrollHeight))}px`
-  }, [body, compact])
-  function submit() {
-    if ((body.trim() || files.length) && onSubmit(body.trim(), files)) {
-      setBody("")
-      setFiles([])
-    }
-  }
-  async function attachFiles(value: FileList) {
-    try {
-      const added = await readFiles(value)
-      const next = [...latestFiles.current, ...added]
-      if (
-        next.length > 5 ||
-        next.reduce(
-          (sum, item) => sum + atob(item.data.split(",")[1]).length,
-          0
-        ) > 2_000_000
-      ) {
-        toast.error("Choose up to 5 files totaling 2 MB or less.")
-        return
-      }
-      setFiles(next)
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Attachment failed")
-    }
-  }
-  return (
-    <div
-      className={cn(
-        "rounded-lg border border-border/50 bg-muted/40 p-3 transition-colors focus-within:border-border focus-within:bg-muted/50",
-        compact && "rounded-none border-0 bg-transparent px-3 py-2.5"
-      )}
-    >
-      <div className="flex items-start gap-2">
-        {avatar && (
-          <span className="flex h-6 shrink-0 items-center">
-            <AssigneeMark name={avatar.name} image={avatar.image} />
-          </span>
-        )}
-        <textarea
-          ref={textarea}
-          aria-label={compact ? "Reply" : "Comment"}
-          placeholder={placeholder}
-          autoFocus={autoFocus || Boolean(initialBody)}
-          rows={compact ? 1 : 2}
-          maxLength={10000}
-          value={body}
-          onChange={(event) => setBody(event.target.value)}
-          onKeyDown={(event) => {
-            if (
-              !event.nativeEvent.isComposing &&
-              (event.metaKey || event.ctrlKey) &&
-              event.key === "Enter"
-            ) {
-              event.preventDefault()
-              submit()
-            }
-          }}
-          className="min-w-0 flex-1 resize-none bg-transparent py-0.5 text-sm leading-5 outline-none placeholder:text-muted-foreground/70"
-        />
-        {compact && controls()}
-      </div>
-      {!!files.length && (
-        <div
-          aria-label="Pending comment attachments"
-          className="mt-3 flex flex-wrap gap-2"
-        >
-          {files.map((item, index) => (
-            <div
-              key={item.id ?? index}
-              className="relative flex max-w-full items-center gap-2 rounded-md border border-border bg-background/50 py-1 pr-7 pl-1"
-            >
-              {item.data.startsWith("data:image/") ? (
-                <img
-                  src={item.data}
-                  alt=""
-                  className="size-10 rounded object-cover"
-                />
-              ) : (
-                <IssueIcon name="file" className="m-2" />
-              )}
-              <span className="max-w-40 truncate text-xs">{item.name}</span>
-              <ActionIconButton
-                size="icon-xs"
-                label={`Remove attachment ${item.name}`}
-                className="absolute top-1 right-0"
-                onClick={() =>
-                  setFiles((current) =>
-                    current.filter((_, position) => position !== index)
-                  )
-                }
-              >
-                <IssueIcon name="close" />
-              </ActionIconButton>
-            </div>
-          ))}
-        </div>
-      )}
-      {!compact && <div className="mt-1 flex justify-end">{controls()}</div>}
-      <input
-        ref={file}
-        hidden
-        type="file"
-        multiple
-        onChange={(event) => {
-          if (event.target.files) void attachFiles(event.target.files)
-          event.target.value = ""
-        }}
-      />
-    </div>
-  )
-  function controls() {
-    return (
-      <div className="flex shrink-0 items-center gap-1">
-        <ActionIconButton
-          size="icon-xs"
-          label="Attach comment files"
-          onClick={() => file.current?.click()}
-        >
-          <IssueIcon name="attach" />
-        </ActionIconButton>
-        <ActionIconButton
-          variant="secondary"
-          size="icon-xs"
-          label={compact ? "Submit reply" : "Submit comment"}
-          shortcut="⌘ ↵"
-          disabled={!body.trim() && !files.length}
-          onClick={submit}
-        >
-          <IssueIcon name="up" />
-        </ActionIconButton>
-      </div>
-    )
-  }
-}
 
 export function IssueDetail({
   team,
@@ -419,11 +229,6 @@ export function IssueDetail({
   const user = session?.user
   const userId = user?.id ?? "You"
   const members = directory?.members ?? []
-  const [title, setTitle] = useState(issue.title)
-  const [doc, setDoc] = useState<JSONContent>(
-    (issue.descriptionDoc as JSONContent | null) ?? plainDoc(issue.description)
-  )
-  const editor = useRef<Editor | null>(null)
   const [subOpen, setSubOpen] = useState(false)
   const [subCollapsed, setSubCollapsed] = useState(false)
   const [childDraft, setChildDraft] = useState(
@@ -443,6 +248,7 @@ export function IssueDetail({
   const [tools, setTools] = useState(false)
   const [codingMenuOpen, setCodingMenuOpen] = useState(false)
   const [issueMenuOpen, setIssueMenuOpen] = useState(false)
+  const [linkPullRequestOpen, setLinkPullRequestOpen] = useState(false)
   const [tool, setTool] = useState(
     () => localStorage.getItem("forge:issue-coding-tool") ?? ""
   )
@@ -472,7 +278,6 @@ export function IssueDetail({
   function patch(next: Partial<IssueDraft>) {
     return onUpdate(issue, next)
   }
-  const descriptionDirty = useRef(false)
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
       const target = location.hash.slice(1)
@@ -481,29 +286,6 @@ export function IssueDetail({
     })
     return () => cancelAnimationFrame(frame)
   }, [issue.id])
-  function persistDoc() {
-    if (
-      descriptionDirty.current &&
-      patch({
-        description: docText(doc),
-        descriptionDoc: doc as Record<string, unknown>,
-      })
-    )
-      descriptionDirty.current = false
-  }
-  useEffect(() => {
-    if (!descriptionDirty.current) return
-    const timeout = window.setTimeout(() => {
-      if (
-        onUpdate(issue, {
-          description: docText(doc),
-          descriptionDoc: doc as Record<string, unknown>,
-        })
-      )
-        descriptionDirty.current = false
-    }, 600)
-    return () => window.clearTimeout(timeout)
-  }, [doc, issue, onUpdate])
   useEffect(() => {
     const shortcuts = (event: KeyboardEvent) => {
       if (event.defaultPrevented) return
@@ -952,6 +734,14 @@ export function IssueDetail({
     )
   }
   function activityText(event: TeamIssue["activity"][number]) {
+    const request = event.link && issuePullRequest(event.link)
+    if (request)
+      return (
+        <>
+          {event.linkAction ?? "linked"}{" "}
+          <IssuePullRequestLink request={request} presentation="inline" />
+        </>
+      )
     return (
       <>
         {activitySegments(event, userId).map((segment, index) => (
@@ -1035,6 +825,10 @@ export function IssueDetail({
               <IssueIcon name="bell" />
               {subscribers.includes(userId) ? "Unsubscribe" : "Subscribe"}
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setLinkPullRequestOpen(true)}>
+              <IssueIcon name="branch" />
+              Link pull request…
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </ContentHeader>
@@ -1116,42 +910,23 @@ export function IssueDetail({
         >
           <div className="mx-auto grid w-full max-w-[1100px] grid-cols-1 gap-12 px-6 pt-6 pb-16 md:grid-cols-[minmax(0,1fr)_210px] md:px-12 xl:grid-cols-[minmax(0,1fr)_210px] xl:gap-16">
             <article aria-label="Issue content" className="min-w-0">
-              <input
-                aria-label="Issue title"
-                value={title}
-                maxLength={240}
-                onChange={(e) => setTitle(e.target.value)}
-                onBlur={() => {
-                  if (title.trim() && title !== issue.title) {
-                    if (!patch({ title })) setTitle(issue.title)
-                  } else if (!title.trim()) setTitle(issue.title)
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") e.currentTarget.blur()
-                  if (e.key === "Escape") {
-                    setTitle(issue.title)
-                    e.currentTarget.blur()
-                  }
-                }}
-                className="mb-5 w-full bg-transparent text-2xl font-semibold outline-none"
+              <DetailTitle
+                value={issue.title}
+                label="Issue title"
+                onSave={(title) => patch({ title })}
               />
-              <div
-                onBlur={(e) => {
-                  if (!e.currentTarget.contains(e.relatedTarget)) persistDoc()
-                }}
-              >
-                <RichEditor
-                  value={doc}
-                  onChange={(next) => {
-                    descriptionDirty.current = true
-                    setDoc(next)
-                  }}
-                  editorRef={editor}
-                  label="Issue description"
-                  placeholder="Add description…"
-                  className="min-h-14 border-0 bg-transparent p-0"
-                />
-              </div>
+              <DetailDescription
+                key={issue.id}
+                value={issue.description}
+                document={issue.descriptionDoc}
+                label="Issue description"
+                onSave={(description, descriptionDoc) =>
+                  patch({
+                    description,
+                    descriptionDoc: descriptionDoc as Record<string, unknown>,
+                  })
+                }
+              />
               <Attachments
                 items={issue.attachments ?? []}
                 onChange={(attachments) => patch({ attachments })}
@@ -1199,18 +974,20 @@ export function IssueDetail({
                   )
                 }}
               />
-              {issue.links.map((link, index) => (
-                <a
-                  key={index}
-                  href={link.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="my-3 flex items-center gap-2 text-sm text-primary"
-                >
-                  <IssueIcon name="link" />
-                  {link.title}
-                </a>
-              ))}
+              {issue.links
+                .filter((link) => !issuePullRequest(link))
+                .map((link, index) => (
+                  <a
+                    key={index}
+                    href={link.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="my-3 flex items-center gap-2 text-sm text-primary"
+                  >
+                    <IssueIcon name="link" />
+                    {link.title}
+                  </a>
+                ))}
               <div className="mt-5 mb-4 flex items-center gap-1">
                 <Reactions
                   items={issue.reactions}
@@ -1676,10 +1453,16 @@ export function IssueDetail({
                     return (
                       <ActivityRow key={entry.id} id={`update-${entry.id}`}>
                         <span className="flex h-5 shrink-0 items-center">
-                          <AssigneeMark
-                            name={actor?.name ?? event.author}
-                            image={actor?.image}
-                          />
+                          {event.link && issuePullRequest(event.link) ? (
+                            <PullRequestMark
+                              status={event.link.pullRequest?.status}
+                            />
+                          ) : (
+                            <AssigneeMark
+                              name={actor?.name ?? event.author}
+                              image={actor?.image}
+                            />
+                          )}
                         </span>
                         <p className="min-w-0">
                           {activityReference(
@@ -1706,6 +1489,16 @@ export function IssueDetail({
               aria-label="Properties"
               className="pb-8 text-[13px] md:sticky md:top-6 md:max-h-[calc(100svh-160px)] md:self-start md:overflow-y-auto md:overscroll-y-contain"
             >
+              <IssueDiffs
+                requests={issuePullRequests(issue.links)}
+                onUnlink={(request) =>
+                  patch({
+                    links: issue.links.filter(
+                      (link) => issuePullRequest(link)?.key !== request.key
+                    ),
+                  })
+                }
+              />
               <h2 className="mb-3 px-2 text-xs text-muted-foreground">
                 Properties
               </h2>
@@ -1827,6 +1620,25 @@ export function IssueDetail({
           </div>
         </div>
       </div>
+      <LinkPullRequestDialog
+        open={linkPullRequestOpen}
+        onOpenChange={setLinkPullRequestOpen}
+        onLink={(link) => {
+          const request = issuePullRequest(link)
+          if (
+            !request ||
+            issuePullRequests(issue.links).some(
+              (item) => item.key === request.key
+            )
+          ) {
+            toast.error("This pull request is already linked")
+            return false
+          }
+          return patch({
+            links: [...issue.links, link],
+          })
+        }}
+      />
       <Dialog open={tools} onOpenChange={setTools}>
         <DialogContent>
           <DialogTitle>Coding tools</DialogTitle>

@@ -9,9 +9,8 @@ import {
   Settings03Icon,
   StarIcon,
 } from "@hugeicons/core-free-icons"
-import { RichEditor } from "./templates/rich-editor"
+import { DocumentContent } from "./documents/document-content"
 import { HomeIcon, HomeIconButton } from "./team-home"
-import { TeamIconPicker } from "./team-icon-picker"
 import { TeamSidebarIcon } from "./team-sidebar-icon"
 import type { JSONContent } from "@tiptap/core"
 import type { TeamSummary } from "@/lib/team-contract"
@@ -287,49 +286,19 @@ export function TeamDocumentEditor({
         </div>
       )}
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <article
-          className={cn(
-            "mx-auto w-full max-w-[888px] px-6 pt-16 pb-24 sm:px-10",
-            wide && "max-w-none"
-          )}
-        >
-          <TeamIconPicker
-            label="Document icon"
-            name={draft.title}
-            value={draft.icon ?? defaultDocumentIcon}
-            onChange={(icon) => save({ icon })}
-            className="mb-2 size-9 rounded-lg border border-border/30 bg-transparent text-muted-foreground"
-          />
-          <input
-            autoFocus
-            aria-label="Document title"
-            placeholder="New document"
-            maxLength={200}
-            value={title}
-            onChange={(event) => {
-              setTitle(event.target.value)
-              save({ title: event.target.value.trim() || "New document" })
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault()
-                event.currentTarget.parentElement
-                  ?.querySelector<HTMLElement>(
-                    '[aria-label="Document content"]'
-                  )
-                  ?.focus()
-              }
-            }}
-            className="mb-7 h-10 w-full min-w-0 border-0 bg-transparent p-0 text-2xl font-semibold tracking-tight outline-none placeholder:text-muted-foreground/55"
-          />
-          <RichEditor
-            value={initialBody.current}
-            label="Document content"
-            placeholder="Start writing..."
-            className="min-h-[360px]"
-            onChange={updateBody}
-          />
-        </article>
+        <DocumentContent
+          autoFocus
+          wide={wide}
+          title={title}
+          body={initialBody.current}
+          icon={draft.icon ?? defaultDocumentIcon}
+          onIconChange={(icon) => save({ icon })}
+          onTitleChange={(value) => {
+            setTitle(value)
+            save({ title: value.trim() || "New document" })
+          }}
+          onBodyChange={updateBody}
+        />
       </div>
       <Dialog
         open={blocker.status === "blocked"}

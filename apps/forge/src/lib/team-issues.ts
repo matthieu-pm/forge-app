@@ -6,6 +6,10 @@ import {
   parseTeamStatuses,
   teamStatusesStorageKey,
 } from "@/lib/team-statuses"
+import {
+  issuePullRequests,
+  pullRequestMetadataSchema,
+} from "@/lib/issue-pull-requests"
 import { triageDraftSchema, triagePriorities } from "@/lib/triage-issues"
 
 export { triagePriorities as issuePriorities }
@@ -83,6 +87,7 @@ export const displaySchema = z.object({
   nested: z.enum(["Show matching", "Show all", "Hide"]),
   showEmpty: z.boolean(),
   properties: z.array(z.string()),
+  showPullRequests: z.boolean().optional(),
 })
 export type IssueDisplay = z.infer<typeof displaySchema>
 export const defaultIssueDisplay = (): IssueDisplay => ({
@@ -108,6 +113,7 @@ export const defaultIssueDisplay = (): IssueDisplay => ({
   ],
 })
 const linkSchema = z.object({
+  pullRequest: pullRequestMetadataSchema.optional(),
   title: z.string().max(200),
   url: z
     .string()
@@ -164,6 +170,8 @@ export const issueDraftSchema = triageDraftSchema.extend({
             "cycle",
           ])
           .optional(),
+        link: linkSchema.optional(),
+        linkAction: z.enum(["linked", "unlinked"]).optional(),
         from: z.string().optional(),
         to: z.string().optional(),
       })
@@ -272,6 +280,31 @@ export function saveTeamIssue(
       throw new Error("The parent issue is no longer available.")
     const now = new Date().toISOString()
     const completed = status.group === "completed"
+    const beforeRequests = issuePullRequests(previous?.links ?? [])
+    const afterRequests = issuePullRequests(draft.links)
+    const requestActivity = [
+      ...afterRequests
+        .filter(
+          (request) => !beforeRequests.some((item) => item.key === request.key)
+        )
+        .map((request) => ({ request, action: "linked" as const })),
+      ...beforeRequests
+        .filter(
+          (request) => !afterRequests.some((item) => item.key === request.key)
+        )
+        .map((request) => ({ request, action: "unlinked" as const })),
+    ].map(({ request, action }) => ({
+      id: crypto.randomUUID(),
+      author: options.creator ?? "You",
+      createdAt: now,
+      text: `${action} ${request.title}`,
+      linkAction: action,
+      link: {
+        title: request.title,
+        url: request.url,
+        pullRequest: request.pullRequest,
+      },
+    }))
     saved = issueSchema.parse({
       ...draft,
       subIssues: [],
@@ -295,6 +328,7 @@ export function saveTeamIssue(
       activity: previous
         ? [
             ...previous.activity,
+            ...requestActivity,
             ...(
               [
                 "status",
@@ -331,7 +365,7 @@ export function saveTeamIssue(
                           : `updated ${field}`,
               })),
           ]
-        : draft.activity,
+        : [...draft.activity, ...requestActivity],
     })
     let nextNumber = options.id ? store.nextNumber : store.nextNumber + 1
     const children = draft.subIssues.map((title) =>

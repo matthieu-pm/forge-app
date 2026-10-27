@@ -1,9 +1,10 @@
-import { useState } from "react"
+import { useId, useState } from "react"
+import { formatDistanceToNowStrict } from "date-fns"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   ArrowDown01Icon,
   ArrowLeft01Icon,
-  ArrowUp01Icon,
+  ArrowRight01Icon,
   ArrowUpRight01Icon,
   GitPullRequestArrowIcon,
   Link01Icon,
@@ -14,13 +15,24 @@ import {
   Tick02Icon,
 } from "@hugeicons/core-free-icons"
 import { ReviewDiff } from "./review-diff"
+import type { ReactNode } from "react"
 import type { Review } from "@/lib/reviews-view"
-import type { ReviewDetail as Detail, ReviewEdit } from "@/lib/review-detail"
+import type {
+  ReviewDetail as Detail,
+  ReviewComment,
+  ReviewEdit,
+} from "@/lib/review-detail"
+import {
+  DetailDescription,
+  DetailTitle,
+} from "@/components/issues/detail-content"
+import { CommentInput } from "@/components/issues/issue-comment-input"
+import { AssigneeMark } from "@/components/issues/issue-controls"
+import { Attachments } from "@/components/issues/issue-attachments"
 import { emptyReviewEdit, fileStats, reviewStats } from "@/lib/review-detail"
 import { ContentHeader } from "@/components/ui/content-header"
 import { ActionIconButton } from "@/components/ui/action-icon-button"
 import { Button, buttonVariants } from "@/components/ui/button"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
 import {
   Popover,
@@ -43,6 +55,41 @@ import {
 } from "@/components/ui/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
+
+function ReviewActivityEvent({
+  id,
+  status,
+  createdAt,
+  children,
+}: {
+  id: string
+  status?: Review["status"]
+  createdAt: string
+  children: ReactNode
+}) {
+  return (
+    <div
+      id={id}
+      className="relative flex scroll-mt-6 items-start gap-2.5 py-1.5 text-xs leading-5 text-muted-foreground before:absolute before:top-6 before:bottom-0 before:left-[6px] before:w-px before:bg-border/60 last:before:hidden"
+    >
+      <span className="relative z-10 flex h-5 shrink-0 items-center">
+        {status ? (
+          <ReviewStatusIcon status={status} />
+        ) : (
+          <span className="flex size-3.5 items-center justify-center">
+            <span className="size-1 rounded-full bg-muted-foreground/60" />
+          </span>
+        )}
+      </span>
+      <p>
+        {children} <span aria-hidden="true">· </span>
+        <time dateTime={createdAt} title={new Date(createdAt).toLocaleString()}>
+          {formatDistanceToNowStrict(new Date(createdAt), { addSuffix: true })}
+        </time>
+      </p>
+    </div>
+  )
+}
 
 export function ReviewStatusIcon({
   status,
@@ -67,19 +114,6 @@ export function ReviewStatusIcon({
         className
       )}
     />
-  )
-}
-function PersonAvatar({ name }: { name: string }) {
-  return (
-    <Avatar className="size-5">
-      <AvatarFallback className="bg-emerald-500/20 text-[9px] text-emerald-400">
-        {name
-          .split(/\s+/)
-          .map((part) => part[0])
-          .slice(0, 2)
-          .join("")}
-      </AvatarFallback>
-    </Avatar>
   )
 }
 export function ReviewCounts({ files }: { files: Detail["files"] }) {
@@ -189,15 +223,14 @@ export function ReviewDetail({
   onCopy: (value: string, label: string) => void
   onOpenAgent?: () => void
 }) {
-  const [editingDescription, setEditingDescription] = useState(false)
-  const [description, setDescription] = useState(review.description)
-  const [comment, setComment] = useState("")
   const [reviewOpen, setReviewOpen] = useState(false)
   const [reviewAction, setReviewAction] =
     useState<Review["reviewState"]>("approved")
   const [reviewBody, setReviewBody] = useState("")
   const [mergeOpen, setMergeOpen] = useState(false)
   const [openCategories, setOpenCategories] = useState<Array<string>>([])
+  const [descriptionCollapsed, setDescriptionCollapsed] = useState(false)
+  const descriptionId = useId()
   const titleUrl = () => {
     const url = new URL(window.location.href)
     url.searchParams.set("review", review.id)
@@ -208,24 +241,57 @@ export function ReviewDetail({
       ...changes,
       activity: [
         ...edit.activity,
-        { id: crypto.randomUUID(), body, createdAt: new Date().toISOString() },
+        {
+          id: crypto.randomUUID(),
+          body,
+          createdAt: new Date().toISOString(),
+          status: changes.status,
+          actor: userName,
+        },
       ],
     })
-  const addComment = () => {
-    if (!comment.trim()) return
+  function addComment(
+    body: string,
+    attachments: NonNullable<ReviewComment["attachments"]>
+  ) {
+    if (!body.trim() && !attachments.length) return false
     onChange({
       comments: [
         ...edit.comments,
         {
           id: crypto.randomUUID(),
-          body: comment.trim(),
+          body: body.trim(),
+          attachments,
           author: userName,
           createdAt: new Date().toISOString(),
           resolved: false,
         },
       ],
     })
-    setComment("")
+    return true
+  }
+  const activity = edit.activity.map((event) => {
+    // Preserve the status presentation for previews saved before event metadata existed.
+    const legacyMerge = " squash-merged this simulated pull request"
+    return !event.status && event.body.endsWith(legacyMerge)
+      ? {
+          ...event,
+          status: "merged" as const,
+          actor: event.body.slice(0, -legacyMerge.length),
+        }
+      : event
+  })
+  if (
+    (review.status === "merged" || review.status === "closed") &&
+    review.closedAt &&
+    !activity.some((event) => event.status === review.status)
+  ) {
+    activity.push({
+      id: `review-${review.id}-completed`,
+      status: review.status,
+      createdAt: review.closedAt,
+      body: review.status === "merged" ? "Merged" : "Closed",
+    })
   }
   const open = review.status === "open"
   const canMerge =
@@ -372,6 +438,7 @@ export function ReviewDetail({
                       ...emptyReviewEdit(),
                       title: undefined,
                       description: undefined,
+                      descriptionDoc: undefined,
                       status: undefined,
                       reviewState: undefined,
                       closedAt: undefined,
@@ -478,30 +545,17 @@ export function ReviewDetail({
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           <div className="mx-auto grid max-w-[1400px] gap-10 px-6 py-6 xl:px-12 xl:py-7 @min-[700px]/review:grid-cols-[minmax(0,1fr)_220px]">
             <div className="min-w-0">
-              <h2 className="text-[22px] leading-8 font-semibold tracking-tight">
-                {mutable ? (
-                  <textarea
-                    rows={1}
-                    aria-label="Pull request title"
-                    defaultValue={review.title}
-                    key={review.id + review.title}
-                    className="block [field-sizing:content] w-full resize-none overflow-hidden rounded-md bg-transparent outline-none hover:bg-muted/30 focus:bg-muted/40 focus:ring-1 focus:ring-ring"
-                    onBlur={(event) => {
-                      const value = event.target.value.trim()
-                      if (value && value !== review.title)
-                        record({ title: value }, "Updated the title")
-                      else event.target.value = review.title
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") event.currentTarget.blur()
-                    }}
-                  />
-                ) : (
-                  review.title
-                )}
+              <h2>
+                <DetailTitle
+                  label="Pull request title"
+                  value={review.title}
+                  editable={mutable}
+                  className="mb-2"
+                  onSave={(title) => record({ title }, "Updated the title")}
+                />
               </h2>
               <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                <PersonAvatar name={review.author.name} />
+                <AssigneeMark name={review.author.name} />
                 <span className="text-foreground">{review.author.name}</span>
                 <span>·</span>
                 <button
@@ -518,193 +572,189 @@ export function ReviewDetail({
                   {detail.branch}
                 </button>
               </div>
-              <div className="mt-9">
-                <div className="mb-3 flex items-center justify-between">
-                  <button
-                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-                    disabled={!mutable}
-                    onClick={() => {
-                      setDescription(review.description)
-                      setEditingDescription(!editingDescription)
-                    }}
+              <div
+                className={cn(
+                  "mt-8 mb-8",
+                  descriptionCollapsed && "-mx-4 rounded-xl bg-muted/40 p-4"
+                )}
+              >
+                <button
+                  type="button"
+                  aria-expanded={!descriptionCollapsed}
+                  aria-controls={descriptionId}
+                  onClick={() => setDescriptionCollapsed((value) => !value)}
+                  className="mb-2 -ml-1 inline-flex items-center gap-1 rounded-md px-1 py-0.5 text-xs text-muted-foreground outline-none hover:bg-muted/60 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  Description
+                  <HugeiconsIcon
+                    icon={
+                      descriptionCollapsed ? ArrowRight01Icon : ArrowDown01Icon
+                    }
+                    className="size-3"
+                  />
+                </button>
+                <div className="relative">
+                  <div
+                    id={descriptionId}
+                    inert={descriptionCollapsed}
+                    aria-hidden={descriptionCollapsed}
+                    className={cn(
+                      descriptionCollapsed &&
+                        "max-h-80 overflow-hidden [mask-image:linear-gradient(to_bottom,black_20%,transparent_100%)]"
+                    )}
                   >
-                    Description{" "}
-                    <HugeiconsIcon icon={ArrowDown01Icon} className="size-3" />
-                  </button>
-                  {mutable && !editingDescription && (
+                    <DetailDescription
+                      value={review.description}
+                      document={review.descriptionDoc}
+                      label="Pull request description"
+                      editable={mutable && !descriptionCollapsed}
+                      onSave={(description, descriptionDoc) =>
+                        record(
+                          {
+                            description,
+                            descriptionDoc: descriptionDoc as Record<
+                              string,
+                              unknown
+                            >,
+                          },
+                          "Updated the description"
+                        )
+                      }
+                    />
+                  </div>
+                  {descriptionCollapsed && (
                     <button
-                      className="text-[11px] text-muted-foreground hover:text-foreground"
-                      onClick={() => {
-                        setDescription(review.description)
-                        setEditingDescription(true)
-                      }}
-                    >
-                      Edit
-                    </button>
+                      type="button"
+                      aria-label="Expand description"
+                      onClick={() => setDescriptionCollapsed(false)}
+                      className="absolute inset-0 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    />
                   )}
                 </div>
-                {editingDescription ? (
-                  <div className="grid gap-2">
-                    <textarea
-                      aria-label="Pull request description"
-                      className="min-h-64 w-full rounded-xl border border-border bg-muted/20 p-3 text-[13px] leading-6 outline-none focus:ring-1 focus:ring-ring"
-                      value={description}
-                      onChange={(event) => setDescription(event.target.value)}
-                    />
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setEditingDescription(false)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          record({ description }, "Updated the description")
-                          setEditingDescription(false)
-                        }}
-                      >
-                        Save description
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-[13px] leading-6 whitespace-pre-wrap">
-                    {review.description || "No description provided."}
-                  </div>
-                )}
               </div>
-              <div className="mt-10">
-                <h3 className="mb-4 text-xs text-muted-foreground">Activity</h3>
-                <div className="flex items-start gap-2 py-2 text-xs text-muted-foreground">
-                  <ReviewStatusIcon status="open" />
-                  <p>
-                    Opened by{" "}
-                    <span className="text-foreground">
-                      {review.author.name}
-                    </span>{" "}
-                    with {detail.commits.length} commits{" "}
-                    <span className="text-muted-foreground/60">
-                      ·{" "}
-                      {new Date(review.openedAt).toLocaleDateString(undefined, {
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </span>
-                  </p>
-                </div>
-                {[
-                  ...edit.activity.map((event) => ({
-                    ...event,
-                    type: "event" as const,
-                  })),
-                  ...edit.comments.map((item) => ({
-                    ...item,
-                    type: "comment" as const,
-                  })),
-                ]
-                  .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
-                  .map((item) => (
-                    <div
-                      key={item.id}
-                      className={cn(
-                        "mt-3 text-xs",
-                        item.type === "comment"
-                          ? "rounded-xl border border-border/50 p-3"
-                          : "flex gap-2 py-1 text-muted-foreground"
-                      )}
-                    >
-                      {item.type === "comment" ? (
-                        <>
-                          <div className="mb-2 flex items-center gap-2">
-                            <PersonAvatar name={item.author} />
-                            <span>{item.author}</span>
-                            <time
-                              className="ml-auto text-[10px] text-muted-foreground"
-                              dateTime={item.createdAt}
-                            >
-                              {new Date(item.createdAt).toLocaleTimeString(
-                                undefined,
-                                { hour: "2-digit", minute: "2-digit" }
-                              )}
-                            </time>
-                          </div>
-                          {item.path && (
-                            <button
-                              className="mb-2 max-w-full truncate font-mono text-[10px] text-muted-foreground hover:text-foreground"
-                              onClick={() => onSelectFile(item.path!)}
-                            >
-                              {item.path}:{item.line}
-                            </button>
-                          )}
-                          <p className="leading-5 whitespace-pre-wrap">
-                            {item.body}
-                          </p>
-                          {item.path && (
-                            <Button
-                              variant="ghost"
-                              size="xs"
-                              disabled={!mutable}
-                              className="mt-2 text-[10px]"
-                              onClick={() =>
-                                onChange({
-                                  comments: edit.comments.map((value) =>
-                                    value.id === item.id
-                                      ? { ...value, resolved: !value.resolved }
-                                      : value
-                                  ),
-                                })
-                              }
-                            >
-                              {item.resolved
-                                ? "Reopen thread"
-                                : "Resolve thread"}
-                            </Button>
-                          )}
-                        </>
+              <section aria-label="Activity">
+                <h3 className="mb-3 text-xs text-muted-foreground">Activity</h3>
+                <div>
+                  <ReviewActivityEvent
+                    id={`review-${review.id}-opened`}
+                    status="open"
+                    createdAt={review.openedAt}
+                  >
+                    Opened by {review.author.name} with {detail.commits.length}{" "}
+                    commits
+                  </ReviewActivityEvent>
+                  {[
+                    ...activity.map((event) => ({
+                      ...event,
+                      type: "event" as const,
+                    })),
+                    ...edit.comments.map((item) => ({
+                      ...item,
+                      type: "comment" as const,
+                    })),
+                  ]
+                    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+                    .map((item) =>
+                      item.type === "event" ? (
+                        <ReviewActivityEvent
+                          key={item.id}
+                          id={`review-event-${item.id}`}
+                          status={item.status}
+                          createdAt={item.createdAt}
+                        >
+                          {item.status === "merged"
+                            ? `Merged${item.actor ? ` by ${item.actor}` : ""}`
+                            : item.status === "closed"
+                              ? `Closed${item.actor ? ` by ${item.actor}` : ""}`
+                              : item.body}
+                        </ReviewActivityEvent>
                       ) : (
-                        <>
-                          <HugeiconsIcon
-                            icon={Tick02Icon}
-                            className="size-3.5"
-                          />
-                          <p>{item.body}</p>
-                        </>
-                      )}
-                    </div>
-                  ))}
+                        <div
+                          key={item.id}
+                          className={cn(
+                            "mt-3 text-xs",
+                            "group/comment rounded-lg border border-border/50 bg-muted/40 p-3"
+                          )}
+                        >
+                          <>
+                            <div className="mb-2 flex items-center gap-2">
+                              <AssigneeMark name={item.author} />
+                              <span>{item.author}</span>
+                              <time
+                                className="ml-auto text-[10px] text-muted-foreground"
+                                dateTime={item.createdAt}
+                              >
+                                {new Date(item.createdAt).toLocaleTimeString(
+                                  undefined,
+                                  { hour: "2-digit", minute: "2-digit" }
+                                )}
+                              </time>
+                            </div>
+                            {item.path && (
+                              <button
+                                className="mb-2 max-w-full truncate font-mono text-[10px] text-muted-foreground hover:text-foreground"
+                                onClick={() => onSelectFile(item.path!)}
+                              >
+                                {item.path}:{item.line}
+                              </button>
+                            )}
+                            <p className="leading-5 whitespace-pre-wrap">
+                              {item.body}
+                            </p>
+                            {!!item.attachments?.length && (
+                              <Attachments
+                                items={item.attachments}
+                                onChange={(attachments) =>
+                                  onChange({
+                                    comments: edit.comments.map((comment) =>
+                                      comment.id === item.id
+                                        ? { ...comment, attachments }
+                                        : comment
+                                    ),
+                                  })
+                                }
+                              />
+                            )}
+                            {item.path && (
+                              <Button
+                                variant="ghost"
+                                size="xs"
+                                disabled={!mutable}
+                                className="mt-2 text-[10px]"
+                                onClick={() =>
+                                  onChange({
+                                    comments: edit.comments.map((value) =>
+                                      value.id === item.id
+                                        ? {
+                                            ...value,
+                                            resolved: !value.resolved,
+                                          }
+                                        : value
+                                    ),
+                                  })
+                                }
+                              >
+                                {item.resolved
+                                  ? "Reopen thread"
+                                  : "Resolve thread"}
+                              </Button>
+                            )}
+                          </>
+                        </div>
+                      )
+                    )}
+                </div>
                 {mutable && (
-                  <div className="mt-4 rounded-xl border border-border/50 bg-muted/20 p-3">
-                    <div className="flex items-start gap-2">
-                      <PersonAvatar name={userName} />
-                      <textarea
-                        aria-label="Leave a comment"
-                        placeholder="Leave a comment…"
-                        className="min-h-14 min-w-0 flex-1 resize-y bg-transparent text-[13px] outline-none"
-                        value={comment}
-                        onChange={(event) => setComment(event.target.value)}
-                        onKeyDown={(event) => {
-                          if (
-                            (event.metaKey || event.ctrlKey) &&
-                            event.key === "Enter"
-                          )
-                            addComment()
-                        }}
-                      />
-                    </div>
-                    <div className="flex justify-end">
-                      <ActionIconButton
-                        label="Submit comment"
-                        icon={ArrowUp01Icon}
-                        disabled={!comment.trim()}
-                        onClick={addComment}
-                      />
-                    </div>
+                  <div className="-mx-2 mt-2">
+                    <CommentInput
+                      presentation="review"
+                      avatar={{ name: userName }}
+                      label="Leave a comment"
+                      onSubmit={addComment}
+                    />
                   </div>
                 )}
-              </div>
+              </section>
             </div>
             <aside
               aria-label="Pull request properties"
@@ -779,7 +829,7 @@ export function ReviewDetail({
                     )
                     return (
                       <div key={id} className="flex items-center gap-2">
-                        <PersonAvatar name={person?.name ?? "You"} />
+                        <AssigneeMark name={person?.name ?? "You"} />
                         <span>{person?.name ?? "You"}</span>
                       </div>
                     )

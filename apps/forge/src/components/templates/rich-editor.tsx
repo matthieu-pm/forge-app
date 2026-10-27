@@ -20,6 +20,7 @@ import {
   DetailsSummary,
 } from "@tiptap/extension-details"
 import { toast } from "sonner"
+import { AnalyticsChart } from "./analytics-chart"
 import type { Editor, JSONContent } from "@tiptap/core"
 import type { NodeViewProps } from "@tiptap/react"
 import type { PickerIcon } from "@/components/team-icon-picker"
@@ -213,6 +214,7 @@ export const richEditorExtensions = [
   Callout,
   Diagram,
   Attachment,
+  AnalyticsChart,
 ]
 export const slashCommands = [
   {

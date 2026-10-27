@@ -324,3 +324,43 @@ describe("team issues", () => {
     expect(readIssueStore("target").issues).toHaveLength(0)
   })
 })
+
+it("records PR linking and unlinking once and preserves metadata after reload", () => {
+  const link = {
+    title: "Fix invitations",
+    url: "https://gitlab.com/acme/web/-/merge_requests/1",
+    pullRequest: {
+      status: "merged" as const,
+      files: 3,
+      additions: 24,
+      deletions: 2,
+    },
+  }
+  const issue = saveTeamIssue(team, {
+    ...blankIssueDraft(),
+    title: "Invitations",
+  })
+  const linked = saveTeamIssue(
+    team,
+    { ...issue, links: [link] },
+    { id: issue.id, creator: "member" }
+  )
+  expect(readIssueStore(team).issues[0].links).toEqual([link])
+  expect(linked.activity).toEqual([
+    expect.objectContaining({ author: "member", link, linkAction: "linked" }),
+  ])
+  const changed = saveTeamIssue(
+    team,
+    { ...linked, description: "Details" },
+    { id: issue.id }
+  )
+  expect(changed.activity).toHaveLength(1)
+  const unlinked = saveTeamIssue(
+    team,
+    { ...changed, links: [] },
+    { id: issue.id }
+  )
+  expect(unlinked.activity).toHaveLength(2)
+  expect(unlinked.activity[1]).toMatchObject({ link, linkAction: "unlinked" })
+  expect(readIssueStore(team).issues[0].links).toEqual([])
+})

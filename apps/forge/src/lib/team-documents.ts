@@ -1,3 +1,4 @@
+import { documentChartSchema } from "./document-chart"
 import type { JSONContent } from "@tiptap/core"
 import type { TeamResource } from "./team-home-state"
 
@@ -38,6 +39,20 @@ export function teamDocumentBody(resource: TeamResource): JSONContent {
 }
 
 export function documentPlainText(body: JSONContent): string {
+  if (body.type === "analyticsChart") {
+    const parsed = documentChartSchema.safeParse(body.attrs?.chart)
+    if (!parsed.success) return "[Chart unavailable]"
+    const chart = parsed.data
+    return [
+      chart.title,
+      `${chart.source.provider} · ${chart.source.account} / ${chart.source.product} · ${chart.source.period}${chart.source.simulated ? " · Simulated data" : ""}`,
+      chart.caption,
+      ...chart.points.map(
+        (point) =>
+          `${point.label}: ${point.values.map((value, index) => `${chart.series[index]} ${value}${chart.unit === "percent" ? "%" : ""}`).join(", ")}`
+      ),
+    ].join("\n")
+  }
   if (body.type === "text") return body.text ?? ""
   if (body.type === "hardBreak") return "\n"
   const separator = [

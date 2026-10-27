@@ -4,12 +4,13 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { Reviews } from "./reviews"
 import type { ReactNode } from "react"
 import { createSimulatedReviews } from "@/lib/reviews-demo"
-import { reviewEditsKey } from "@/lib/review-detail"
+import { readReviewEdits, reviewEditsKey } from "@/lib/review-detail"
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ children, to, ...props }: { children: ReactNode; to: string }) => (
@@ -56,6 +57,58 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 describe("Simulated review detail", () => {
+  it("collapses a rich description into a preview without changing its saved content", () => {
+    localStorage.setItem(
+      reviewEditsKey(scope),
+      JSON.stringify({
+        "reviews-demo:248": {
+          description: "Keep this formatting",
+          descriptionDoc: {
+            type: "doc",
+            content: [
+              {
+                type: "paragraph",
+                content: [
+                  {
+                    type: "text",
+                    text: "Keep this formatting",
+                    marks: [{ type: "bold" }],
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      })
+    )
+    start()
+    openFirst()
+    const toggle = screen.getByRole("button", {
+      name: "Description",
+    })
+    const editor = screen.getByRole("textbox", {
+      name: "Pull request description",
+    })
+    expect(editor.querySelector("strong")?.textContent).toBe(
+      "Keep this formatting"
+    )
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute("aria-expanded")).toBe("false")
+    expect(
+      screen.queryByRole("textbox", { name: "Pull request description" })
+    ).toBeNull()
+    fireEvent.click(screen.getByRole("button", { name: "Expand description" }))
+    expect(toggle.getAttribute("aria-expanded")).toBe("true")
+    expect(
+      screen.getByRole("textbox", { name: "Pull request description" })
+    ).toBe(editor)
+    expect(editor.querySelector("strong")?.textContent).toBe(
+      "Keep this formatting"
+    )
+    expect(
+      readReviewEdits(reviewEditsKey(scope))["reviews-demo:248"].activity
+    ).toEqual([])
+  })
   it("persists title edits, comments and favorites, isolated to the workspace", () => {
     const page = start()
     openFirst()
@@ -85,6 +138,34 @@ describe("Simulated review detail", () => {
       localStorage.getItem(reviewEditsKey({ ...scope, workspaceId: "another" }))
     ).toBeNull()
   })
+  it("submits and restores attachments through the shared issue comment composer", async () => {
+    const page = start()
+    openFirst()
+    const activity = screen.getByRole("region", { name: "Activity" })
+    const file = activity.querySelector('input[type="file"]')!
+    fireEvent.change(file, {
+      target: {
+        files: [
+          new File(["Review notes"], "review-notes.txt", {
+            type: "text/plain",
+          }),
+        ],
+      },
+    })
+    await within(activity).findByText("review-notes.txt")
+    fireEvent.click(screen.getByRole("button", { name: "Submit comment" }))
+    const saved = JSON.parse(localStorage.getItem(reviewEditsKey(scope))!)[
+      "reviews-demo:248"
+    ]
+    expect(saved.comments[0].attachments[0]).toMatchObject({
+      name: "review-notes.txt",
+      data: expect.stringMatching(/^data:text\/plain;base64,/),
+    })
+    page.unmount()
+    start()
+    openFirst()
+    expect(await screen.findByText("review-notes.txt")).toBeTruthy()
+  })
   it("submits a local approval, confirms a simulated merge, and can reset the preview", async () => {
     start()
     openFirst()
@@ -97,19 +178,42 @@ describe("Simulated review detail", () => {
     fireEvent.click(
       await screen.findByRole("button", { name: "Simulate squash & merge" })
     )
+    expect(screen.getByText("Merged by Alex", { exact: false })).toBeTruthy()
     expect(
-      screen.getByText("Alex squash-merged this simulated pull request")
-    ).toBeTruthy()
+      readReviewEdits(reviewEditsKey(scope))["reviews-demo:248"].activity.at(-1)
+    ).toMatchObject({ status: "merged", actor: "Alex" })
     fireEvent.click(
       screen.getByRole("button", { name: "Pull request actions" })
     )
     fireEvent.click(
       await screen.findByRole("menuitem", { name: "Reset simulated review" })
     )
-    expect(
-      screen.queryByText("Alex squash-merged this simulated pull request")
-    ).toBeNull()
+    expect(screen.queryByText("Merged by Alex", { exact: false })).toBeNull()
     expect(screen.getByRole("button", { name: "Review" })).toBeTruthy()
+  })
+  it("restores a single merge event from a previously saved preview", () => {
+    const createdAt = new Date().toISOString()
+    localStorage.setItem(
+      reviewEditsKey(scope),
+      JSON.stringify({
+        "reviews-demo:248": {
+          status: "merged",
+          closedAt: createdAt,
+          activity: [
+            {
+              id: "previous-merge",
+              body: "Alex squash-merged this simulated pull request",
+              createdAt,
+            },
+          ],
+        },
+      })
+    )
+    start()
+    openFirst()
+    const activity = screen.getByRole("region", { name: "Activity" })
+    expect(within(activity).getAllByText(/Merged by Alex/)).toHaveLength(1)
+    expect(activity.querySelectorAll("time")).toHaveLength(2)
   })
   it("opens a file from the overview and persists reviewed state across PR navigation", async () => {
     start()

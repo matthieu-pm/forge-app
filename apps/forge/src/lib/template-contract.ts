@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { documentChartSchema } from "./document-chart"
 import type { JSONContent } from "@tiptap/core"
 import type { TeamSummary } from "@/lib/team-contract"
 
@@ -30,6 +31,7 @@ const nodeTypes = new Set([
   "callout",
   "diagram",
   "attachment",
+  "analyticsChart",
 ])
 function validDocument(document: Record<string, unknown>) {
   if (document.type !== "doc") return false
@@ -61,6 +63,11 @@ function validDocument(document: Record<string, unknown>) {
     )
       return false
     const attrs = (node.attrs ?? {}) as Record<string, unknown>
+    if (
+      node.type === "analyticsChart" &&
+      !documentChartSchema.safeParse(attrs.chart).success
+    )
+      return false
     if (node.type === "callout" && !iconSchema.safeParse(attrs.icon).success)
       return false
     if (node.type === "diagram" && typeof attrs.source !== "string")

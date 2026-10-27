@@ -9,9 +9,11 @@ import {
   issuePropertyControl,
 } from "./issue-controls"
 import { ActivityReference } from "./issue-activity-row"
+import { IssuePullRequestLink } from "./issue-pull-request"
 import { IssueCycleBadge } from "./issue-cycle-badge"
 import type { IssueDisplay, IssueDraft, TeamIssue } from "@/lib/team-issues"
 import type { TeamStatus } from "@/lib/team-statuses"
+import { issuePullRequest, issuePullRequests } from "@/lib/issue-pull-requests"
 import { ActionHint } from "@/components/ui/action-icon-button"
 import { issueGroupValue, issuePriorities } from "@/lib/team-issues"
 import { Button } from "@/components/ui/button"
@@ -502,6 +504,10 @@ export function IssueRows({
               ))}
           </div>
         )}
+        {display.showPullRequests !== false &&
+          issuePullRequests(issue.links).map((request) => (
+            <IssuePullRequestLink key={request.key} request={request} />
+          ))}
         {props.includes("Project") && issue.project && (
           <div className="hidden min-w-0 shrink sm:flex">
             <ActivityReference
@@ -527,11 +533,14 @@ export function IssueRows({
             {issue.milestone}
           </span>
         )}
-        {props.includes("Links") && issue.links.length > 0 && (
-          <span title={`${issue.links.length} links`}>
-            <IssueIcon name="link" />
-          </span>
-        )}
+        {props.includes("Links") &&
+          issue.links.some((link) => !issuePullRequest(link)) && (
+            <span
+              title={`${issue.links.filter((link) => !issuePullRequest(link)).length} links`}
+            >
+              <IssueIcon name="link" />
+            </span>
+          )}
         {props.includes("Due date") && issue.dueDate && (
           <time
             className="text-xs text-muted-foreground"

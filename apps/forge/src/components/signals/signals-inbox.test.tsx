@@ -10,6 +10,7 @@ import { SignalsInbox } from "./signals-inbox"
 import type { ReactNode } from "react"
 import { readIssueStore } from "@/lib/team-issues"
 import { sampleSignalInsights } from "@/lib/signals-insights"
+import { signalDocumentsKey } from "@/lib/signals-documents"
 
 vi.mock("@/lib/template-state", () => ({
   loadTemplates: () =>
@@ -67,13 +68,51 @@ describe("Signals insight inbox", () => {
       })
     )
     expect(
-      screen.getByRole("heading", { name: "Search ends without a result" })
+      screen.getByDisplayValue("Search ends without a result")
     ).toBeTruthy()
     expect(
       await screen.findByDisplayValue(sampleSignalInsights[1].draft.title)
     ).toBeTruthy()
     expect(screen.getByRole("region", { name: "Create issue" })).toBeTruthy()
     expect(screen.queryByRole("dialog")).toBeNull()
+  })
+  it("saves editable document titles and chart snapshots across selection and reload", async () => {
+    const first = start()
+    await screen.findByRole("textbox", { name: "Document content" })
+    fireEvent.change(screen.getByRole("textbox", { name: "Document title" }), {
+      target: { value: "Investigate teammate invite abandonment" },
+    })
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Open insight: Setup errors block imports",
+      })
+    )
+    await screen.findByDisplayValue("Setup errors block imports")
+    await screen.findByRole("figure", {
+      name: "Recovery after a date-format error",
+    })
+    expect(
+      screen.getByText("Amplitude · Northstar / Workspace · Simulated")
+    ).toBeTruthy()
+    first.unmount()
+    start()
+    await screen.findByDisplayValue("Investigate teammate invite abandonment")
+    await screen.findByRole("figure", { name: "Teammate invite funnel" })
+    fireEvent.click(screen.getByRole("button", { name: "View data" }))
+    expect(
+      screen.getByRole("table", { name: "Teammate invite funnel data" })
+    ).toBeTruthy()
+    expect(screen.getByRole("cell", { name: "131" })).toBeTruthy()
+    const saved = JSON.parse(
+      localStorage.getItem(
+        signalDocumentsKey({ userId: "user", workspaceId: "workspace" })
+      )!
+    )
+    expect(
+      saved["signal-document:SIG-108"].body.content.some(
+        (node: { type: string }) => node.type === "analyticsChart"
+      )
+    ).toBe(true)
   })
   it("keeps full draft edits between insights and creates the issue through the real composer", async () => {
     start()

@@ -282,3 +282,31 @@ describe("issue rows", () => {
     expect(previous.getAttribute("href")).toBe("/teams/product/cycles")
   })
 })
+
+it("shows linked PRs between labels and project by default, and supports hiding them", () => {
+  const linked = {
+    ...parent,
+    labels: "Bug",
+    project: "Web",
+    links: [
+      { title: "Fix permissions", url: "https://github.com/acme/web/pull/12" },
+    ],
+  }
+  const props = start({ issues: [linked], allIssues: [linked] })
+  const badge = screen.getByRole("link", {
+    name: /Open linked pull request #12/,
+  })
+  expect(badge.textContent).toBe("#12")
+  const row = badge.parentElement!
+  expect(row.textContent.indexOf("Bug")).toBeLessThan(
+    row.textContent.indexOf("#12")
+  )
+  expect(row.textContent.indexOf("#12")).toBeLessThan(
+    row.textContent.indexOf("Web")
+  )
+  cleanup()
+  start({ ...props, display: { ...props.display, showPullRequests: false } })
+  expect(
+    screen.queryByRole("link", { name: /Open linked pull request/ })
+  ).toBeNull()
+})

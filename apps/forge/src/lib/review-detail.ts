@@ -59,11 +59,21 @@ const commentSchema = z.object({
   line: z.number().optional(),
   side: z.enum(["old", "new"]).optional(),
   resolved: z.boolean().default(false),
+  attachments: z
+    .array(
+      z.object({
+        id: z.string().optional(),
+        name: z.string(),
+        data: z.string(),
+      })
+    )
+    .optional(),
 })
 export type ReviewComment = z.infer<typeof commentSchema>
 export const reviewEditSchema = z.object({
   title: z.string().optional(),
   description: z.string().optional(),
+  descriptionDoc: z.record(z.string(), z.unknown()).optional(),
   status: z.enum(["open", "draft", "merged", "closed"]).optional(),
   reviewState: z
     .enum(["requested", "changes-requested", "approved", "reviewed"])
@@ -76,7 +86,13 @@ export const reviewEditSchema = z.object({
   comments: z.array(commentSchema).default([]),
   activity: z
     .array(
-      z.object({ id: z.string(), body: z.string(), createdAt: z.string() })
+      z.object({
+        id: z.string(),
+        body: z.string(),
+        createdAt: z.string(),
+        status: z.enum(["open", "draft", "merged", "closed"]).optional(),
+        actor: z.string().optional(),
+      })
     )
     .default([]),
 })
@@ -104,6 +120,7 @@ export function applyReviewEdit(
     ...review,
     title: edit.title ?? review.title,
     description: edit.description ?? review.description,
+    descriptionDoc: edit.descriptionDoc ?? review.descriptionDoc,
     status: edit.status ?? review.status,
     reviewState: edit.reviewState ?? review.reviewState,
     reviewerIds: edit.reviewerIds ?? review.reviewerIds,

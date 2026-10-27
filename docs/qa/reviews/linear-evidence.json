@@ -83,7 +83,8 @@
       "Unified/split diff, wrapping, file navigator/search and commit filtering",
       "File collapse, context expansion, generated-file reveal, reviewed markers and accurate change counts",
       "Simulated approval/request-changes/comment and confirmed simulated merge, plus reset",
-      "Review-list expansion and existing Forge agent composer entry point"
+      "Review-list expansion and existing Forge agent composer entry point",
+      "Shared issue/review title and rich-text description components; shared issue comment composer, attachment viewer, assignee avatars and activity rows"
     ],
     "designChoices": [
       "For you includes authored, personally requested, participated and current-user team reviews",
@@ -93,7 +94,7 @@
     "notImplemented": [
       "GitHub feed ingestion and account authorization",
       "External GitHub diffs, CI, comment, approval and merge synchronization",
-      "Attachments, reactions, advanced reviewer/date/label filters and badge settings"
+      "Reactions, advanced reviewer/date/label filters and badge settings"
     ],
     "dataBoundary": "All PRs, file contents, commits, CI status and linked issue options are fictional. User edits, comments, favorites, review decisions and reviewed markers persist in browser storage scoped to workspace and user. No review operation sends an external request. The agent button opens the existing composer without sending a message."
   },
@@ -111,6 +112,14 @@
       "Reset restores the original sample",
       "Reviewed marker survives full reload",
       "Mobile 390x844 overview and diff layouts"
-    ]
+    ],
+    "sharedComponentsPass": {
+      "automated": "30 targeted tests passed across shared detail controls, Reviews, Issues and the rich-text editor; TypeScript, targeted ESLint and diff checks passed.",
+      "browser": [
+        "Bold description formatting autosaves and survives a reload",
+        "Reset restores the sample rich-text content",
+        "Shared issue-style comment composer and attachment action render in Reviews"
+      ]
+    }
   }
 }

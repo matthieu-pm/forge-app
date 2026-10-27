@@ -422,6 +422,7 @@ export function IssueDisplayMenu({
     "Labels",
     "Links",
     "Time in status",
+    "Pull requests",
     "Created",
     "Updated",
   ]
@@ -587,20 +588,32 @@ export function IssueDisplayMenu({
                 size="sm"
                 key={property}
                 variant="secondary"
-                aria-pressed={value.properties.includes(property)}
+                aria-pressed={
+                  property === "Pull requests"
+                    ? value.showPullRequests !== false
+                    : value.properties.includes(property)
+                }
                 className={cn(
                   issueChip,
                   "px-2",
-                  value.properties.includes(property)
+                  (
+                    property === "Pull requests"
+                      ? value.showPullRequests !== false
+                      : value.properties.includes(property)
+                  )
                     ? "bg-foreground/15 text-foreground"
                     : "text-muted-foreground"
                 )}
                 onClick={() =>
-                  update({
-                    properties: value.properties.includes(property)
-                      ? value.properties.filter((item) => item !== property)
-                      : [...value.properties, property],
-                  })
+                  property === "Pull requests"
+                    ? update({
+                        showPullRequests: value.showPullRequests === false,
+                      })
+                    : update({
+                        properties: value.properties.includes(property)
+                          ? value.properties.filter((item) => item !== property)
+                          : [...value.properties, property],
+                      })
                 }
               >
                 {property}
