@@ -1,4 +1,4 @@
-import { useRef } from "react"
+import { useMemo, useRef } from "react"
 import { useEmptyStateMotion } from "./use-empty-state-motion"
 import { emptyStateArt } from "./empty-state-art.generated"
 import type { CSSProperties } from "react"
@@ -32,8 +32,10 @@ export function EmptyStateArt({
   className?: string
 }) {
   const ref = useRef<SVGSVGElement>(null)
-  useEmptyStateMotion(ref, kind)
   const figure = emptyStateArt[kind]
+  // Keep React from replacing an imperatively animated subtree on parent renders.
+  const markup = useMemo(() => ({ __html: figure.body }), [figure.body])
+  useEmptyStateMotion(ref, kind, figure.body)
   const [motionX, motionY] = figure.move.split(" ")
   return (
     <svg
@@ -54,7 +56,7 @@ export function EmptyStateArt({
         } as CSSProperties
       }
       // Generated local SVG paths only; no user-authored markup enters this surface.
-      dangerouslySetInnerHTML={{ __html: figure.body }}
+      dangerouslySetInnerHTML={markup}
     />
   )
 }

@@ -1,9 +1,9 @@
-/** An open issue binder. Its paper rotates five degrees about its bound edge. */
-export function buildIssueBinder(k, A, scene) {
+/** An open binder: punched paper follows the semicircular rings through a full turn. */
+export function buildIssueBinder(k, A, scene, G) {
   const bounds = { x: -58, y: -44, w: 118, d: 88, r: 2 }
   const P = scene(bounds, 14)
-  const spineZ = 2.55
-  const maxAngle = (5 * Math.PI) / 180
+  const spineZ = 2.75
+  const maxAngle = Math.PI
   const holes = [-26, 0, 26]
   const line = (d, tone = "lo", free = false) => k.lineSvg(d, { tone, free })
   function pose(phase) {
@@ -11,15 +11,15 @@ export function buildIssueBinder(k, A, scene) {
     const ground = []
     const angle = phase * maxAngle
     const pageFrame = {
-      o: [1, 0, spineZ],
+      o: [0, 0, spineZ],
       a: [-Math.sin(angle), 0, Math.cos(angle)],
       u: [Math.cos(angle), 0, Math.sin(angle)],
       v: [0, 1, 0],
     }
     const pagePoint = ([x, y]) => [
-      1 + (x - 1) * Math.cos(angle),
+      x * Math.cos(angle),
       y,
-      spineZ + (x - 1) * Math.sin(angle),
+      spineZ + x * Math.sin(angle),
     ]
     const print = (points, tone = "lo", closed = false, free = false) =>
       line(
@@ -178,9 +178,9 @@ export function buildIssueBinder(k, A, scene) {
       [2.5, 21],
       [28.5, 11.5],
     ].entries())
-      slab(`binding support ${i}`, 0, y, 1, d, 1.2, 1.35, "lo")
+      slab(`binding support ${i}`, 0, y, 1, d, 1.2, 1.55, "lo")
     for (const [i, y] of holes.entries()) {
-      slab(`ring mount ${i}`, -6.5, y - 2.5, 13, 5, 1.45, 1.1, "mid")
+      slab(`ring mount ${i}`, -6.5, y - 2.5, 13, 5, 1.45, 1.3, "mid")
       for (const [j, x] of [-3, 3].entries())
         slab(
           `mount rivet ${i}.${j}`,
@@ -197,31 +197,54 @@ export function buildIssueBinder(k, A, scene) {
           ),
           0.55
         )
-      for (const [j, x] of [-5.5, 4.5].entries()) {
-        slab(`ring foot ${i}.${j}`, x - 0.4, y - 1, 2, 2, spineZ, 0.4, "mid")
+      for (const [j, x] of [-5.3, 5.3].entries())
         slab(
-          `ring upright ${i}.${j}`,
-          x,
-          y - 0.6,
-          1.2,
-          1.2,
-          spineZ + 0.4,
-          8.6,
+          `ring foot ${i}.${j}`,
+          x - 0.7,
+          y - 1,
+          1.4,
+          2,
+          spineZ - 0.2,
+          0.2,
+          "mid"
+        )
+      // Split at the paper plane as well as every 15 degrees. Each recorded
+      // wedge is convex; no ring geometry is hidden inside a stand-in hull.
+      const cuts = [
+        ...new Set([
+          0,
+          angle,
+          ...Array.from({ length: 13 }, (_, j) => (j * Math.PI) / 12),
+        ]),
+      ].sort((a, b) => a - b)
+      const F = { o: [0, y, spineZ], a: [0, 1, 0], u: [1, 0, 0], v: [0, 0, 1] }
+      for (let j = 0; j < cuts.length - 1; j++) {
+        const lo = cuts[j],
+          hi = cuts[j + 1]
+        if (hi - lo < 1e-6) continue
+        const polar = (r, t) => [r * Math.cos(t), r * Math.sin(t)]
+        const polygon = [
+          polar(4.7, lo),
+          polar(5.9, lo),
+          polar(5.9, hi),
+          polar(4.7, hi),
+        ]
+        const paths = G.prismOf(F, polygon, -0.6, 0.6, P)
+        // Radial joins are construction boundaries, not seams in the metal.
+        paths.outline = ""
+        paths.crease = ""
+        put(
+          `ring arc ${i}.${j}`,
+          paths,
+          [A.prism(F, polygon, -0.6, 0.6)],
+          [
+            5.3 * Math.cos((lo + hi) / 2),
+            y,
+            spineZ + 5.3 * Math.sin((lo + hi) / 2),
+          ],
           "hi"
         )
       }
-      slab(
-        `ring crown ${i}`,
-        -5.5,
-        y - 0.6,
-        11.2,
-        1.2,
-        spineZ + 9,
-        1.2,
-        "hi",
-        "",
-        0.6
-      )
     }
 
     // The page's punched slots are real holes. Record its ten material panels,
@@ -229,19 +252,19 @@ export function buildIssueBinder(k, A, scene) {
     const panels = []
     let y = -40
     for (const hole of holes) {
-      panels.push([1, y, 53, hole - 1.3 - y])
-      panels.push([1, hole - 1.3, 2.5, 2.6], [7.5, hole - 1.3, 46.5, 2.6])
-      y = hole + 1.3
+      panels.push([1, y, 53, hole - 0.7 - y])
+      panels.push([1, hole - 0.7, 3.65, 1.4], [5.95, hole - 0.7, 48.05, 1.4])
+      y = hole + 0.7
     }
     panels.push([1, y, 53, 40 - y])
     const shapes = panels.map(([x, y, w, d]) =>
       A.prism(
         pageFrame,
         [
-          [x - 1, y],
-          [x + w - 1, y],
-          [x + w - 1, y + d],
-          [x - 1, y + d],
+          [x, y],
+          [x + w, y],
+          [x + w, y + d],
+          [x, y + d],
         ],
         0,
         0
@@ -251,10 +274,10 @@ export function buildIssueBinder(k, A, scene) {
       .map((y) =>
         k.pathOf(
           [
-            [3.5, y - 1.3],
-            [7.5, y - 1.3],
-            [7.5, y + 1.3],
-            [3.5, y + 1.3],
+            [4.65, y - 0.7],
+            [5.95, y - 0.7],
+            [5.95, y + 0.7],
+            [4.65, y + 0.7],
           ].map((p) => k.iso(pagePoint(p), P)),
           true
         )
@@ -323,50 +346,81 @@ export function buildIssueBinder(k, A, scene) {
     const svg =
       `<path class="iso-top" fill-rule="evenodd" d="${outline}"/>` +
       `<path class="iso-line" data-tone="hi" d="${outline}"/>${ink}`
-    put("issue sheet", svg, shapes, pagePoint([27.5, 0]))
+    put(
+      "issue sheet",
+      `<g class="issue-sheet">${svg}</g>`,
+      shapes,
+      pagePoint([27.5, 0])
+    )
     return { R, ground, phase }
   }
 
-  const phases = process.argv.includes("--audit")
-    ? Array.from({ length: 11 }, (_, i) => i / 10)
-    : [0, 1]
+  const phases = Array.from({ length: 91 }, (_, i) => i / 90)
   const poses = phases.map(pose)
+  // The page passes through the loops' openings. Their painter order changes
+  // during the turn, so solve the moving assembly at every displayed pose.
   for (const { R } of poses)
     A.settle(R, P, { states: [0], step: 0.18, tolerance: 0.01, least: 0.02 })
-  // One painter order must hold across the whole page lift, not just at rest.
-  const common = A.orderKeys(poses[0].R.items, {
-    ...poses[0].R.settled.overlaps,
-    pairs: poses.flatMap(({ R }) => R.settled.overlaps.pairs),
-  })
-  for (const { R, ground, phase } of poses) {
-    R.items.forEach((item, i) => (item.key = common.keys[i]))
-    R.settled.solved = common
-    if (process.argv.includes("--audit"))
-      console.log(`Issue binder: ${(phase * 5).toFixed(1)} degree lift`)
-    A.auditOrExit(R, P, {
-      ground: (shape) => ground.includes(shape),
-      frames: [0],
-    })
+  const movingNames = new Set(
+    poses.flatMap(({ R }) =>
+      R.items
+        .filter(
+          (item) =>
+            item.name === "issue sheet" || item.name.startsWith("ring arc")
+        )
+        .map((item) => item.name)
+    )
+  )
+  // Keep any stationary piece that occludes the paper in the moving assembly,
+  // too. A static background is safe only when it is behind every moving part.
+  let changed = true
+  while (changed) {
+    changed = false
+    for (const { R } of poses) {
+      for (const pair of R.settled.overlaps.pairs) {
+        const front =
+          pair.front[0].area >= R.settled.overlaps.least ? pair.a : pair.b
+        const back = front === pair.a ? pair.b : pair.a
+        if (
+          movingNames.has(R.items[back].name) &&
+          !movingNames.has(R.items[front].name)
+        ) {
+          movingNames.add(R.items[front].name)
+          changed = true
+        }
+      }
+    }
   }
-  const hinge = k.iso([1, 0, spineZ], P)
-  const O = k.iso([0, 0, 0], { ...P, origin: [0, 0] })
-  const vector = (point) =>
-    k.iso(point, { ...P, origin: [0, 0] }).map((value, i) => value - O[i])
-  const X = vector([1, 0, 0]),
-    Y = vector([0, 1, 0]),
-    Z = vector([0, 0, 1])
-  const det = X[0] * Y[1] - Y[0] * X[1]
-  const attrs = `data-motion="issue-page" data-page-angle="${maxAngle}" data-page-hinge="${hinge.join(" ")}" data-page-x="${X.join(" ")}" data-page-z="${Z.join(" ")}" data-page-inverse="${Y[1] / det} ${-Y[0] / det}"`
+  const moving = (item) => movingNames.has(item.name)
+  const stationary = [...poses[0].R.items]
+    .filter((item) => !moving(item))
+    .sort((a, b) => a.key - b.key)
+  const background = stationary.map((item) => item.svg).join("")
+  const frames = []
+  for (const { R, ground, phase } of poses) {
+    const live = [...R.items].filter(moving).sort((a, b) => a.key - b.key)
+    // Audit the actual final SVG order, including its background/animation split.
+    const names = [...stationary, ...live].map((item) => item.name)
+    R.items.forEach((item) => (item.key = names.indexOf(item.name)))
+    if (process.argv.includes("--audit")) {
+      console.log(`Issue binder: ${(phase * 180).toFixed(0)} degree page turn`)
+      A.auditOrExit(R, P, {
+        ground: (shape) => ground.includes(shape),
+        frames: [0],
+      })
+    }
+    frames.push(live.map((item) => item.svg).join(""))
+  }
+  const encoded = JSON.stringify(frames)
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("<", "&lt;")
   return {
     body:
       `<path class="iso-halo" d="${k.haloOf(bounds, -1, 7, P)}"/>` +
-      poses[0].R.items
-        .sort((a, b) => a.key - b.key)
-        .map((item) =>
-          item.name === "issue sheet" ? `<g ${attrs}>${item.svg}</g>` : item.svg
-        )
-        .join(""),
-    parts: poses[0].R.items.length,
+      background +
+      `<g data-motion="issue-page" data-page-frames="${encoded}">${frames[0]}</g>`,
+    parts: 47,
     move: "0px 0px",
   }
 }

@@ -4,9 +4,10 @@ import type { RefObject } from "react"
 
 export function useEmptyStateMotion(
   ref: RefObject<SVGSVGElement | null>,
-  kind: string
+  kind: string,
+  geometry: string
 ) {
   useEffect(() => {
     if (ref.current) return mountEmptyStateMotion(ref.current, kind)
-  }, [ref, kind])
+  }, [ref, kind, geometry])
 }

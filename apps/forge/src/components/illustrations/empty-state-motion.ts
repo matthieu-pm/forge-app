@@ -20,30 +20,21 @@ export function mountEmptyStateMotion(svg: SVGSVGElement, kind: string) {
   let started = 0
   const period = kind === "reviews" ? 6200 : kind === "signals" ? 8400 : 7600
   const page = svg.querySelector<SVGGElement>('[data-motion="issue-page"]')
-  const pageAngle = Number(page?.getAttribute("data-page-angle") ?? 0)
-  const pair = (name: string) =>
-    (page?.getAttribute(`data-page-${name}`) ?? "0 0").split(" ").map(Number)
-  const hinge = pair("hinge"),
-    xAxis = pair("x"),
-    zAxis = pair("z"),
-    inverse = pair("inverse")
+  const pageFrames: Array<string> = JSON.parse(
+    page?.getAttribute("data-page-frames") ?? "[]"
+  )
+  let pageFrame = -1
+  let pageTime = 0
 
   function paint() {
     svg.style.setProperty("--art-phase", phase.toFixed(5))
-    if (!page) return
-    const angle = phase * pageAngle
-    const dx = (Math.cos(angle) - 1) * xAxis[0] + Math.sin(angle) * zAxis[0]
-    const dy = (Math.cos(angle) - 1) * xAxis[1] + Math.sin(angle) * zAxis[1]
-    const a = 1 + dx * inverse[0],
-      b = dy * inverse[0]
-    const c = dx * inverse[1],
-      d = 1 + dy * inverse[1]
-    const e = hinge[0] - a * hinge[0] - c * hinge[1]
-    const f = hinge[1] - b * hinge[0] - d * hinge[1]
-    page.setAttribute(
-      "transform",
-      `matrix(${[a, b, c, d, e, f].map((value) => value.toFixed(6)).join(" ")})`
-    )
+    if (!page || !pageFrames.length) return
+    const index = Math.round(phase * (pageFrames.length - 1))
+    if (index === pageFrame) return
+    pageFrame = index
+    // Trusted, build-generated SVG. Only the turning paper and the ring arcs
+    // change: their physical depth order is solved ahead of time for each pose.
+    page.innerHTML = pageFrames[index]
   }
 
   function draw(now: number) {
@@ -53,16 +44,13 @@ export function mountEmptyStateMotion(svg: SVGSVGElement, kind: string) {
     const dt = last ? Math.min((now - last) / 1000, 1 / 30) : 1 / 60
     last = now
     const elapsed = Math.max(0, now - started - 900)
-    const idle =
-      kind === "issues"
-        ? 0
-        : (1 - Math.cos((elapsed / period) * Math.PI * 2)) / 2
-    const target = hovered || focused ? 1 : idle
-    phase += (target - phase) * (1 - Math.exp(-dt / 0.18))
-    if (kind === "issues" && Math.abs(target - phase) < 0.0001) {
-      phase = target
-      paint()
-      return
+    if (kind === "issues") {
+      pageTime += dt * 1000
+      phase = issuePagePhase(pageTime)
+    } else {
+      const idle = (1 - Math.cos((elapsed / period) * Math.PI * 2)) / 2
+      const target = hovered || focused ? 1 : idle
+      phase += (target - phase) * (1 - Math.exp(-dt / 0.18))
     }
     paint()
     frame = requestAnimationFrame(draw)
@@ -80,6 +68,7 @@ export function mountEmptyStateMotion(svg: SVGSVGElement, kind: string) {
   }
   function enter() {
     hovered = true
+    if (kind === "issues" && phase === 0) pageTime = 600
     start()
   }
   function leave() {
@@ -88,6 +77,7 @@ export function mountEmptyStateMotion(svg: SVGSVGElement, kind: string) {
   }
   function focus() {
     focused = true
+    if (kind === "issues" && phase === 0) pageTime = 600
     start()
   }
   function blur(event: Event) {
@@ -100,6 +90,7 @@ export function mountEmptyStateMotion(svg: SVGSVGElement, kind: string) {
     stop()
     if (still.matches) {
       phase = 0
+      pageTime = 0
       paint()
     } else start()
   }
@@ -141,4 +132,15 @@ export function mountEmptyStateMotion(svg: SVGSVGElement, kind: string) {
     content.removeEventListener("focusout", blur)
     still.removeEventListener("change", preference)
   }
+}
+
+/** A full right-to-left turn, a readable rest on each side, then a return. */
+export function issuePagePhase(time: number) {
+  const t = time % 7200
+  const ease = (value: number) => (1 - Math.cos(Math.PI * value)) / 2
+  if (t < 600) return 0
+  if (t < 2400) return ease((t - 600) / 1800)
+  if (t < 4000) return 1
+  if (t < 5800) return 1 - ease((t - 4000) / 1800)
+  return 0
 }

@@ -303,7 +303,7 @@ const figures = {
   milestones: buildMilestoneArt(k, G, A, scene),
   ...buildReferenceArt(k, G, A, scene),
   ...buildCollection(k, G, drawing, scene),
-  issues: buildIssueBinder(k, A, scene),
+  issues: buildIssueBinder(k, A, scene, G),
   calls: buildCallSmartphone(k, G, A, scene),
   projects: projects(),
   views: views(),

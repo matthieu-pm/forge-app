@@ -68,15 +68,16 @@ Concepts and parts planned before geometry:
   clips, objective body, objective collar, objective aperture, four stage
   fasteners, four column fasteners, identification plate and printed rules.
 - Issues — an open ring binder with a fresh issue sheet and indexed dividers.
-  The bound edge stays fixed while the free edge lifts by five degrees on
-  hover or action focus, then settles back. It is still at rest and under
-  reduced motion. The sheet is decorative, not a set of real issue records.
+  The punched sheet turns 180° from right to left along semicircular
+  metal loops. It pauses on each side before returning; hover or action focus
+  starts an early turn. Reduced motion shows the right-hand resting pose. The sheet is decorative, not a set of real issue records.
   Parts planned before geometry: two cover boards, spine, two cloth hinges,
   eight metal corner guards, three left leaves, three right divider leaves,
   three index tabs, four binding supports, three ring mounting plates,
-  six mounting rivets, six ring feet, six ring uprights, three ring crowns,
+  six mounting rivets, six ring feet, three semicircular metal loops,
   one loose issue sheet, a cover pocket and its label card. Closed punched slots clear the
-  metal rings throughout the lift. Printed rules, checkboxes, cover seams,
+  metal rings throughout the full turn. Each loop is split at the paper plane
+  and into convex sectors for depth sorting and clearance checks. Printed rules, checkboxes, cover seams,
   pocket stitching and fastener slots belong to their host surfaces.
 - Initiatives — a route-planning table with milestones joined by engraved
   channels. A route pointer slides to the next milestone. Four pads, four

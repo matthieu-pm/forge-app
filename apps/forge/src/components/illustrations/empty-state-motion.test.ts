@@ -1,17 +1,22 @@
+import { createElement } from "react"
+import { cleanup, render } from "@testing-library/react"
 import { afterEach, expect, it, vi } from "vitest"
-import { mountEmptyStateMotion } from "./empty-state-motion"
+import { EmptyStateArt } from "./empty-state-art"
+import { issuePagePhase, mountEmptyStateMotion } from "./empty-state-motion"
 
 afterEach(() => {
+  cleanup()
   document.body.innerHTML = ""
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
 })
 
 function setup(reduced = false) {
+  const poses = ["right", "turning", "left"].map(
+    (side) => `<path data-side="${side}"/>`
+  )
   document.body.innerHTML = `<div class="empty-state-content"><svg><g
-    data-motion="issue-page" data-page-angle="0.0872664626" data-page-hinge="100 80"
-    data-page-x="0.7 0.4" data-page-z="0 -0.7"
-    data-page-inverse="0.7 1.2"></g></svg><button>Inside</button></div><button>Outside</button>`
+    data-motion="issue-page" data-page-frames='${JSON.stringify(poses)}'>${poses[0]}</g></svg><button>Inside</button></div><button>Outside</button>`
   const svg = document.querySelector("svg")!
   const page = document.querySelector("g")!
   const content = document.querySelector(".empty-state-content")!
@@ -60,28 +65,47 @@ function setup(reduced = false) {
   return { svg, page, box, frames, advance, focus, blur, dispose }
 }
 
-it("rests quietly, lifts from the bound edge on focus, and settles when focus leaves", () => {
+it("turns automatically from right to left, pauses, then returns", () => {
   const rig = setup()
-  rig.advance()
-  expect(rig.svg.style.getPropertyValue("--art-phase")).toBe("0.00000")
-  expect(rig.frames.size).toBe(0)
-  rig.focus()
-  rig.advance()
+  rig.advance(30)
+  expect(rig.page.querySelector("path")?.getAttribute("data-side")).toBe(
+    "right"
+  )
+  rig.advance(60)
+  expect(rig.page.querySelector("path")?.getAttribute("data-side")).toBe(
+    "turning"
+  )
+  rig.advance(90)
   expect(rig.svg.style.getPropertyValue("--art-phase")).toBe("1.00000")
-  const [a, b, c, d, e, f] = rig.page
-    .getAttribute("transform")!
-    .slice(7, -1)
-    .split(" ")
-    .map(Number)
-  expect([a, b, c, d]).not.toEqual([1, 0, 0, 1])
-  expect(a * 100 + c * 80 + e).toBeCloseTo(100, 3)
-  expect(b * 100 + d * 80 + f).toBeCloseTo(80, 3)
-  expect(rig.frames.size).toBe(0)
-  rig.blur()
-  rig.advance()
-  expect(rig.svg.style.getPropertyValue("--art-phase")).toBe("0.00000")
-  expect(rig.frames.size).toBe(0)
+  expect(rig.page.querySelector("path")?.getAttribute("data-side")).toBe("left")
+  rig.advance(30)
+  expect(rig.svg.style.getPropertyValue("--art-phase")).toBe("1.00000")
+  rig.advance(150)
+  expect(rig.page.querySelector("path")?.getAttribute("data-side")).toBe(
+    "right"
+  )
   rig.dispose?.()
+})
+
+it("starts the turn early on keyboard focus", () => {
+  const rig = setup()
+  rig.focus()
+  rig.advance(30)
+  expect(Number(rig.svg.style.getPropertyValue("--art-phase"))).toBeGreaterThan(
+    0.1
+  )
+  rig.dispose?.()
+})
+
+it("has continuous eased turns and readable rests at both ends", () => {
+  expect(issuePagePhase(0)).toBe(0)
+  expect(issuePagePhase(600)).toBe(0)
+  expect(issuePagePhase(1500)).toBeCloseTo(0.5)
+  expect(issuePagePhase(2400)).toBe(1)
+  expect(issuePagePhase(3999)).toBe(1)
+  expect(issuePagePhase(4900)).toBeCloseTo(0.5)
+  expect(issuePagePhase(5800)).toBe(0)
+  expect(issuePagePhase(7200)).toBe(0)
 })
 
 it("does not animate the issue page under reduced motion", () => {
@@ -93,10 +117,10 @@ it("does not animate the issue page under reduced motion", () => {
   rig.dispose?.()
 })
 
-it("pauses the page lift offscreen and cancels its frame when disposed", () => {
+it("pauses the page turn offscreen and cancels its frame when disposed", () => {
   const rig = setup()
   rig.focus()
-  rig.advance(6)
+  rig.advance(60)
   const phase = rig.svg.style.getPropertyValue("--art-phase")
   expect(Number(phase)).toBeGreaterThan(0)
   rig.box.mockReturnValue(new DOMRect(10, -1000, 196, 157))
@@ -109,4 +133,27 @@ it("pauses the page lift offscreen and cancels its frame when disposed", () => {
   expect(rig.frames.size).toBe(1)
   rig.dispose?.()
   expect(rig.frames.size).toBe(0)
+})
+
+it("keeps turning the visible paper after its React parent rerenders", () => {
+  const rig = setup()
+  rig.dispose?.()
+  document.body.innerHTML = ""
+  vi.spyOn(SVGElement.prototype, "getBoundingClientRect").mockReturnValue(
+    new DOMRect(10, 10, 196, 157)
+  )
+  const view = render(createElement(EmptyStateArt, { kind: "issues" }))
+  rig.advance(90)
+  const paper = () =>
+    view.container.querySelector(".issue-sheet path")?.getAttribute("d")
+  const turning = paper()
+  const layer = view.container.querySelector('[data-motion="issue-page"]')!
+  view.rerender(createElement(EmptyStateArt, { kind: "issues" }))
+  expect(layer.isConnected).toBe(true)
+  rig.advance(90)
+  const left = paper()
+  rig.advance(180)
+  const right = paper()
+  expect(left).not.toBe(turning)
+  expect(left).not.toBe(right)
 })

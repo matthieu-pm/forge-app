@@ -72,24 +72,39 @@ satellite and mailbox additionally use recorded turned, saddle and arched solids
   `calls` figure changed; all other figure bodies are byte-identical.
 - Application typecheck, focused lint, and 27 Calls/project/issue-view tests pass.
 
-## Issue binder — 2026-10-27
+## Issue binder page turn — 2026-10-28
 
-- Replaced the ticket press and sliding ticket with an open binder: 53 physical
-  parts, three metal loops, indexed dividers, cover corner guards, a stitched
-  pocket, and an issue sheet with three punched slots.
-- The sheet is still at rest. Hover or action focus lifts its free edge by five
-  degrees around the fixed binding edge, then it settles flat. The projection
-  and maximum angle are generated with the geometry and read by the shared
-  motion controller. Settled issue figures stop requesting animation frames.
-- The single paper surface has ten material panels around its real punched
-  slots, giving 62 audited solids. A common painter order passes geometry audits
-  at eleven positions from 0° through 5°, with zero clearance, support, coverage,
-  or depth-order failures. No audit exceptions are used.
-- The Anatomy line-end checker reports zero floating ends on 34 lines in dark
-  and light, flat and lifted. Both themes were inspected at 4×.
-- Browser verification confirms the new binder in the real Active issues page.
-  The 390px layout has no horizontal overflow. Reduced motion remains flat.
-- Three motion regressions verify no idle loop, a fixed binding edge, return to
-  rest, reduced-motion stillness, offscreen pause, and frame cancellation on
-  disposal. Those and eight issue-view tests pass, along with typecheck and lint.
-- Only the `issues` figure changed in the generated collection.
+- The issue sheet now turns a full 180° from right to left across three
+  semicircular metal rings, pauses, and returns. The idle loop lasts 7.2 seconds;
+  each turn lasts 1.8 seconds. Hover or keyboard focus starts an early turn.
+- The 47 physical parts retain the cover boards, pocket, indexed dividers,
+  corner guards and punched sheet. The ring arcs are divided into convex sectors
+  at the page plane; 91 generated poses preserve true occlusion through the turn.
+  The same pose sequence is used by the motion controller and geometry audit.
+- All 91 displayed poses pass clearance, support, coverage and depth-order audits
+  with zero failures. The audit checks the actual background/animation layer split,
+  including stationary pieces that must occlude the moving sheet.
+- The isolated 390px figure preview has no horizontal overflow. Reduced-motion
+  preview remains on its right-hand resting pose.
+- Dark and light 4× captures at 0°, 44°, 90°, 134° and 180° were inspected.
+  The Anatomy line checker reports zero floating ends on all ten captures.
+- The real Active issues page shows an automatic turn without hovering. Animation
+  pauses offscreen and under reduced motion; disposal cancels its frame request.
+  Geometry changes also remount the controller so a development update cannot
+  leave it pointing at a replaced SVG group.
+- Five motion regressions and eight issue-view tests pass, along with focused
+  lint, application typecheck and diff whitespace validation.
+- Other figures retain their existing geometry and motion. Generated milestone
+  galleries only pick up the updated shared controller and stylesheet.
+
+## Animation rerender regression — 2026-10-28
+
+- Reproduced the reported freeze in the user’s live tab: the phase advanced but
+  the visible sheet’s path remained at the right-hand resting pose.
+- A real React component test reproduced the cause: rerendering EmptyStateArt
+  detached the animated group, leaving its controller writing into an old node.
+  The inline dangerouslySetInnerHTML object was recreated on each render.
+- Memoizing that markup object preserves the animated subtree when its parent
+  rerenders. The test verifies the group stays attached and its visible paper
+  continues through distinct turning, left-hand and right-hand poses.
+- The original live tab now shows changing sheet paths through the full turn.
