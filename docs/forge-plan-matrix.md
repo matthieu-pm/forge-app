@@ -190,3 +190,6 @@ counter migration and auth/join integration verified against real PostgreSQL;
 production migration/application rollout remains pending. See
 [the member-capacity implementation guide](https://linear.app/atriumcrm/document/atomic-workspace-member-capacity-implementation-and-rollout-a8b750fd4060),
 `docs/polar-billing.md` and FOR-76/FOR-111 for remaining integration work.
+
+
+Owner cancellation timing is confirmed: retain paid access until the current billing period ends, then apply Free limits while preserving existing members. The server command, durable cutoff and reconciliation are implemented on isolated staging; see `docs/subscription-cancellation.md`. Cancellation cannot extend payment grace or issue another AI pool. Refunds and exceptional immediate revocation remain unresolved; billing remains gated.

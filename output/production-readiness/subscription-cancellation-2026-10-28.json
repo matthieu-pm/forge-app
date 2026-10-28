@@ -1,0 +1,62 @@
+{
+  "date": "2026-10-28",
+  "baseCommit": "bada21cf8f02ea87e98a71357e1b73603a63e5f2",
+  "committed": true,
+  "deployed": false,
+  "servingDatabaseModified": false,
+  "localConnectionFilesChanged": false,
+  "issues": [
+    "FOR-109",
+    "FOR-110",
+    "FOR-111"
+  ],
+  "status": "In Progress; confirmed timing implemented; overall billing remains gated",
+  "policy": {
+    "timing": "Keep paid access until current billing-period end",
+    "command": "Prepared first-party owner/admin server entry point with live reauthorization, server binding, exact provider scheduling and receipt/audit",
+    "cutoff": "Durable earliest cutoff; no extension during cancellation or payment grace; reactivation needs current uncanceled provider state",
+    "implementation": "Verified on isolated staging; UI/public action, durable effect processing and actual Polar release validation remain",
+    "guide": "https://linear.app/atriumcrm/document/forge-period-end-cancellation-and-retained-access-1ee5ac990eb6"
+  },
+  "staging": {
+    "project": "raspy-union-96305162",
+    "branch": "br-autumn-union-za0opf1e",
+    "database": "forge_staging",
+    "migrations": 30
+  },
+  "checks": {
+    "appTestsPassed": 1305,
+    "workflowTestsPassed": 4,
+    "postgresBillingStateCasesPassed": 13,
+    "postgresMembershipCasesPassed": 13,
+    "postgresMigrationRehearsalCasesPassed": 3,
+    "typecheck": "passed",
+    "changedFileLint": "passed",
+    "format": "passed",
+    "productionBuild": "passed including protected Workflow handlers",
+    "corrections": [
+      "Membership test guard correctly rejected the migration-only DATABASE_URL_UNPOOLED test override; reran without that override and all thirteen cases passed."
+    ]
+  },
+  "routeEnabled": false,
+  "remaining": [
+    "Refund and exceptional immediate-revocation/pause policy",
+    "UI/public billing action and customer-portal configuration",
+    "Verified terminal-old/new-paid resubscription binding replacement",
+    "Durable external-effect/reconciliation/communication processing",
+    "Commercial ledger integration and actual Polar sandbox/release validation"
+  ],
+  "sourceSha256": {
+    "apps/forge/drizzle/0029_subscription_cancellation.sql": "efb5f12ec5afe00ee91e5a30aa3a1a3d2c9147a94513fe755261809510030ed2",
+    "apps/forge/src/db/schema.ts": "752659e64a3d21a8cd880f85522d843e8ae7504461209c05970caa8538f2cb20",
+    "apps/forge/src/application/billing/subscription-access.ts": "981869a85bd1d42bc0d413da585f2643f00499d14c13ef8b816f02e94547bbab",
+    "apps/forge/src/application/billing/subscription-access-state.server.ts": "0dee27a62d1c5294c81075cdcb70354153d77d6d0c98ebc8ddd743f674e2e0bf",
+    "apps/forge/src/application/billing/subscription-reconciliation.server.ts": "9b80a5811499b9bbf3301e359ece6a139af30ac6f74cfd74f062a17b8ce2c48a",
+    "apps/forge/src/application/billing/polar-subscription-reconciliation.server.ts": "ce1ed53cb7d31c4ee8654a2d210dfd3710622cd9b5190975017d9feedfeb9b72",
+    "apps/forge/src/application/billing/polar-subscription-cancellation.server.ts": "a8e73ef7d8be675e938e1d34331510e501b2cfcc12e1352f9e53b79dde0fddf1",
+    "apps/forge/src/application/billing/subscription-cancellation-context.server.ts": "d4a8e6d83c981493ddde76a92a2ccf5e8e4da49e24320e0486c2f508d4d3a5b5",
+    "apps/forge/src/application/billing/polar-webhook.server.ts": "6fbb8a16b27be5e30cfbb95390bd402ba410577e845812bd59dc116df6db77ae",
+    "apps/forge/src/application/billing/member-capacity.postgres.test.ts": "d0835c93650197f639168a818ee920ee83beba011bcbde16d69aef113bbaa569",
+    "apps/forge/src/application/billing/subscription-reconciliation.postgres.test.ts": "df8c7568469ad1ee09f5f461cbe551e2a29dc67473adfa21af383abedda49626"
+  }
+}

@@ -90,3 +90,5 @@ isolated. Neither passing helper tests nor the existence of a staging database
 closes those release contracts.
 
 Billing-grace expansion and provider-subscription binding (0027/0028) have since been applied to staging and rehearsal; both now contain the complete 29-migration history. The three migration fault/ownership cases passed again. The shared read path was also verified against the prior table schema without writes. Production execution remains disabled.
+
+Migration 0029 adds the frozen scheduled-cancellation boundary and updates the counter helper. It was applied only to isolated staging/rehearsal, now 30 migrations. The complete-history migration ownership/failure cases passed again.

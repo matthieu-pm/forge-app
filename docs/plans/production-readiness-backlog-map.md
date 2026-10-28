@@ -206,3 +206,8 @@ Agent concurrency is unlimited per user/workspace/provider under the user’s re
 ## Billing-grace checkpoint · 28 October 2026
 
 The user confirmed 7 days of paid-access grace after failed renewal, including included AI and existing capped/opted-in overage. FOR-111 is In Progress with durable original-failure/expiry state, signed-byte webhook verification, current provider reconciliation and atomic entitlement/receipt/audit writes. Staging and rehearsal now apply all 29 migrations. Eight billing PostgreSQL cases, twelve real-auth/member cases, six previous-schema team-visibility cases and three migration fault cases passed. Full app rerun: 1,295 tests plus 4 workflow tests; typecheck, lint, formatting and production build passed. No serving/default migration or deployment occurred. The webhook stays disabled pending remaining cancellation/refund/revocation/pause, reconciliation job, communications, ledger and Polar release evidence.
+
+
+## Scheduled cancellation checkpoint · 28 October 2026
+
+The user selected keeping paid access until billing-period end. The owner/admin server command, durable frozen cutoff, canceled/uncanceled reconciliation and read/member-insertion enforcement are implemented and staging-verified. Thirteen billing-state and thirteen real-auth member cases pass, plus three complete-history migration fault cases. Isolated staging/rehearsal now have 30 migrations. FOR-109/FOR-110/FOR-111 remain In Progress for remaining policy, UI/action and lifecycle/release work; no serving deployment or provider cancellation occurred.

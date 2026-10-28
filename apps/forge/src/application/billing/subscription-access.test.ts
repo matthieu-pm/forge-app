@@ -81,4 +81,47 @@ describe("paid-access grace", () => {
       allowsExistingOverage: false,
     })
   })
+  it("keeps scheduled cancellation paid only until its original cutoff", () => {
+    const start = new Date("2026-10-01T00:00:00Z"),
+      end = new Date("2026-11-01T00:00:00Z")
+    const canceled: SubscriptionAccessState = {
+      plan: "plus",
+      status: "canceled",
+      source: "polar",
+      paidActivatedAt: start,
+      currentPeriodStart: start,
+      currentPeriodEnd: end,
+      cancelAtPeriodEnd: true,
+      cancellationPeriodEnd: end,
+    }
+    expect(subscriptionAccess(canceled, new Date(end.getTime() - 1)).plan).toBe(
+      "business"
+    )
+    expect(subscriptionAccess(canceled, end).plan).toBe("free")
+    expect(
+      subscriptionAccess({ ...canceled, cancellationPeriodEnd: null }, failed)
+        .plan
+    ).toBe("free")
+    expect(
+      subscriptionAccess({ ...canceled, paidActivatedAt: null }, failed).plan
+    ).toBe("free")
+  })
+  it("does not extend payment grace when cancellation is scheduled", () => {
+    expect(
+      subscriptionAccess(
+        {
+          ...state,
+          cancelAtPeriodEnd: true,
+          cancellationPeriodEnd: new Date("2026-11-25T01:00:00Z"),
+        },
+        state.graceExpiresAt!
+      ).plan
+    ).toBe("free")
+    expect(
+      subscriptionAccess(
+        { ...state, cancelAtPeriodEnd: true, cancellationPeriodEnd: failed },
+        failed
+      ).plan
+    ).toBe("free")
+  })
 })

@@ -40,8 +40,8 @@ external ID must match `forge:workspace:<workspaceId>`, with one approved
 environment/product/currency mapping and monthly cadence. Webhook metadata,
 success redirects, browser plan names and event payload status cannot grant access.
 
-The current implementation handles active/past-due subscription reconciliation.
-Unimplemented cancellation, revocation, refund, pause and other event policies
+The implementation now also handles scheduled-canceled/uncanceled reconciliation.
+Unimplemented immediate revocation, refund, pause and other event policies
 return a retryable failure rather than an acknowledgement. Keep the route disabled
 until those lifecycle paths, periodic reconciliation and the billing release gate
 are complete. No live Polar credentials, webhook configuration or charges were
@@ -103,7 +103,10 @@ instance has the new expiry policy. Missing provider evidence fails closed.
 * Three PostgreSQL migration-owner/fault cases pass against the complete current
   history. These are isolated fixture checks, with own records cleaned up.
 
-FOR-111 remains In Progress. Full cancellation/refund/revocation policy, scheduled
+FOR-111 remains In Progress. Remaining refund/immediate-revocation/pause policy, scheduled
 provider reconciliation, entitlement-change communications, commercial usage
 ledger integration and live Polar sandbox/candidate release checks are still
 required. Passing these tests is not completion of the entire billing feature.
+
+
+Period-end cancellation is now implemented as described in [the cancellation guide](subscription-cancellation.md). Staging/rehearsal contain 30 migrations; thirteen billing-state and thirteen real-auth member cases pass, including cancellation/grace interaction and term-end access. UI/public command wiring and the full billing release gate remain open.

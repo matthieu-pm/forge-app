@@ -202,6 +202,8 @@ export const workspaceEntitlements = pgTable(
     graceExpiresAt: timestamp("grace_expires_at", { withTimezone: true }),
     currentPeriodStart: timestamp("current_period_start", { withTimezone: true }),
     currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+    cancelAtPeriodEnd: boolean("cancel_at_period_end").default(false).notNull(),
+    cancellationPeriodEnd: timestamp("cancellation_period_end", { withTimezone: true }),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -229,6 +231,10 @@ export const workspaceEntitlements = pgTable(
     graceCheck: check(
       "workspace_entitlements_grace_check",
       sql`(${table.paymentFailedAt} IS NULL AND ${table.graceExpiresAt} IS NULL) OR (${table.source} = 'polar' AND ${table.status} = 'past_due' AND ${table.paymentFailedAt} IS NOT NULL AND ${table.graceExpiresAt} IS NOT NULL AND ${table.paidActivatedAt} IS NOT NULL AND isfinite(${table.paidActivatedAt}) AND isfinite(${table.paymentFailedAt}) AND ${table.paidActivatedAt} < ${table.paymentFailedAt} AND ${table.graceExpiresAt} = ${table.paymentFailedAt} + interval '168 hours')`
+    ),
+    cancellationCheck: check(
+      "workspace_entitlements_cancellation_check",
+      sql`(NOT ${table.cancelAtPeriodEnd} AND ${table.cancellationPeriodEnd} IS NULL) OR (${table.source} = 'polar' AND ${table.cancelAtPeriodEnd} AND ${table.cancellationPeriodEnd} IS NOT NULL AND isfinite(${table.cancellationPeriodEnd}) AND ${table.currentPeriodStart} IS NOT NULL AND ${table.currentPeriodEnd} IS NOT NULL AND ${table.currentPeriodStart} < ${table.cancellationPeriodEnd} AND ${table.cancellationPeriodEnd} <= ${table.currentPeriodEnd})`
     ),
   })
 )

@@ -13,6 +13,9 @@ import type * as Provider from "./polar-subscription-reconciliation.server"
 import type * as Database from "@/db"
 import type * as Security from "@/application/workspace-security/workspace-security.server"
 import type * as Capacity from "./member-capacity-auth.server"
+import type * as Cancellation from "./polar-subscription-cancellation.server"
+import type * as CancellationContext from "./subscription-cancellation-context.server"
+import type { Actor } from "@/application/actor"
 
 const connection = process.env.FORGE_BILLING_TEST_DATABASE_URL
 describe.skipIf(!connection)(
@@ -28,7 +31,9 @@ describe.skipIf(!connection)(
       webhook: typeof Webhook,
       provider: typeof Provider,
       security: typeof Security,
-      capacity: typeof Capacity
+      capacity: typeof Capacity,
+      cancellation: typeof Cancellation,
+      cancellationContext: typeof CancellationContext
     const config: EnabledBillingConfig = {
       enabled: true,
       environment: "sandbox",
@@ -146,7 +151,7 @@ describe.skipIf(!connection)(
       })
       const migration = await readFile(
         new URL(
-          "../../../drizzle/0028_subscription_binding.sql",
+          "../../../drizzle/0029_subscription_cancellation.sql",
           import.meta.url
         ),
         "utf8"
@@ -169,6 +174,9 @@ describe.skipIf(!connection)(
       security =
         await import("@/application/workspace-security/workspace-security.server")
       capacity = await import("./member-capacity-auth.server")
+      cancellation = await import("./polar-subscription-cancellation.server")
+      cancellationContext =
+        await import("./subscription-cancellation-context.server")
     }, 30_000)
 
     afterAll(async () => {
@@ -208,6 +216,9 @@ describe.skipIf(!connection)(
             recurring_interval: "month",
             recurring_interval_count: 1,
             status: failure.status,
+            cancel_at_period_end: false,
+            ends_at: null,
+            ended_at: null,
             modified_at: failure.updatedAt.toISOString(),
             current_period_start: failure.currentPeriodStart.toISOString(),
             current_period_end: failure.currentPeriodEnd.toISOString(),
@@ -451,6 +462,197 @@ describe.skipIf(!connection)(
       expect((await row(id))?.graceExpiresAt).toEqual(
         new Date("2026-10-31T12:00:00Z")
       )
+    })
+    it("schedules cancellation with live owner authority and denies replay after revocation", async () => {
+      const id = await workspace(),
+        owner = await add(id),
+        paid = snapshot(id)
+      await apply(paid)
+      const actor: Actor = {
+        workspaceId: id,
+        userId: owner,
+        workspaceRole: "owner",
+        scopes: null,
+        authentication: { kind: "session", sessionId: "fixture" },
+      }
+      let current: Provider.ProviderSubscription = {
+        id: paid.subscriptionId,
+        product_id: config.paidProducts.plus.usd,
+        currency: "usd",
+        status: "active",
+        modified_at: paid.updatedAt.toISOString(),
+        current_period_start: paid.currentPeriodStart.toISOString(),
+        current_period_end: paid.currentPeriodEnd.toISOString(),
+        recurring_interval: "month",
+        recurring_interval_count: 1,
+        past_due_at: null,
+        cancel_at_period_end: false,
+        ends_at: null,
+        ended_at: null,
+        customer: { external_id: `forge:workspace:${id}` },
+      }
+      const get = vi.fn(() => Promise.resolve(current)),
+        update = vi.fn(() => {
+          current = {
+            ...current,
+            cancel_at_period_end: true,
+            ends_at: current.current_period_end,
+            modified_at: now.toISOString(),
+          }
+          return Promise.resolve(current)
+        })
+      const service = new cancellation.PolarSubscriptionCancellation(
+        config,
+        (a) => cancellationContext.readCancellationContext(a, "sandbox"),
+        { subscriptions: { get, update } }
+      )
+      expect((await service.schedule(actor)).status).toBe("scheduled")
+      await service.schedule(actor)
+      expect(update).toHaveBeenCalledTimes(1)
+      expect((await row(id))?.cancellationPeriodEnd).toEqual(
+        paid.currentPeriodEnd
+      )
+      const audit = await pool.query(
+        "SELECT actor_user_id FROM public.workspace_security_audit_events WHERE workspace_id=$1 AND actor_user_id IS NOT NULL",
+        [id]
+      )
+      expect(audit.rows.map((r) => r.actor_user_id)).toEqual([owner])
+      const receipt = await pool.query(
+        "SELECT event_id,body_hash FROM public.billing_event_receipts WHERE workspace_id=$1 AND event_id LIKE 'forge.cancel.%'",
+        [id]
+      )
+      await pool.query(
+        "UPDATE public.member SET role='member' WHERE organization_id=$1 AND user_id=$2",
+        [id, owner]
+      )
+      await expect(service.schedule(actor)).rejects.toThrow("REVOKED")
+      await expect(
+        store.applyVerifiedSubscriptionSnapshot({
+          eventId: receipt.rows[0].event_id,
+          bodyHash: receipt.rows[0].body_hash,
+          snapshot: { ...paid, updatedAt: now, cancelAtPeriodEnd: true },
+          actor,
+        })
+      ).rejects.toThrow("REVOKED")
+    })
+    it("rechecks roles after a provider read before a cancellation write", async () => {
+      const id = await workspace(),
+        owner = await add(id),
+        paid = snapshot(id)
+      await apply(paid)
+      const actor: Actor = {
+        workspaceId: id,
+        userId: owner,
+        workspaceRole: "owner",
+        scopes: null,
+        authentication: { kind: "session", sessionId: "fixture" },
+      }
+      const update = vi.fn()
+      const get = vi.fn(async () => {
+        await pool.query(
+          "UPDATE public.member SET role='member' WHERE organization_id=$1 AND user_id=$2",
+          [id, owner]
+        )
+        return {
+          id: paid.subscriptionId,
+          product_id: config.paidProducts.plus.usd,
+          currency: "usd",
+          status: "active" as const,
+          modified_at: paid.updatedAt.toISOString(),
+          current_period_start: paid.currentPeriodStart.toISOString(),
+          current_period_end: paid.currentPeriodEnd.toISOString(),
+          recurring_interval: "month" as const,
+          recurring_interval_count: 1,
+          past_due_at: null,
+          cancel_at_period_end: false,
+          ends_at: null,
+          ended_at: null,
+          customer: { external_id: `forge:workspace:${id}` },
+        }
+      })
+      const service = new cancellation.PolarSubscriptionCancellation(
+        config,
+        (a) => cancellationContext.readCancellationContext(a, "sandbox"),
+        { subscriptions: { get, update } }
+      )
+      await expect(service.schedule(actor)).rejects.toThrow("REVOKED")
+      expect(update).not.toHaveBeenCalled()
+      expect((await row(id))?.cancelAtPeriodEnd).toBe(false)
+    })
+    it("freezes the cancellation cutoff across later periods and clears it only after confirmed uncancellation", async () => {
+      const id = await workspace(),
+        paid = snapshot(id)
+      await apply(paid)
+      await apply({ ...paid, updatedAt: failed, cancelAtPeriodEnd: true })
+      const laterEnd = new Date(paid.currentPeriodEnd.getTime() + 86400000)
+      await apply({
+        ...paid,
+        updatedAt: now,
+        currentPeriodEnd: laterEnd,
+        cancelAtPeriodEnd: true,
+      })
+      expect((await row(id))?.cancellationPeriodEnd).toEqual(
+        paid.currentPeriodEnd
+      )
+      expect(
+        subscriptionAccess(await row(id), paid.currentPeriodEnd).plan
+      ).toBe("free")
+      await apply({
+        ...paid,
+        updatedAt: new Date(now.getTime() + 1),
+        currentPeriodEnd: laterEnd,
+        cancelAtPeriodEnd: false,
+      })
+      expect((await row(id))?.cancellationPeriodEnd).toBeNull()
+      expect(
+        subscriptionAccess(await row(id), paid.currentPeriodEnd).plan
+      ).toBe("business")
+    })
+    it("does not turn grace into a full unpaid period when cancellation is confirmed", async () => {
+      const id = await workspace(),
+        paid = snapshot(id)
+      await apply(paid)
+      await apply({
+        ...paid,
+        status: "past_due",
+        updatedAt: failed,
+        pastDueAt: failed,
+      })
+      await apply({
+        ...paid,
+        status: "canceled",
+        updatedAt: now,
+        cancelAtPeriodEnd: true,
+      })
+      const state = await row(id)
+      expect(state?.paymentFailedAt).toEqual(failed)
+      expect(
+        subscriptionAccess(state, new Date(failed.getTime() + PAYMENT_GRACE_MS))
+          .plan
+      ).toBe("free")
+      expect(state?.cancellationPeriodEnd).toEqual(paid.currentPeriodEnd)
+    })
+    it("keeps legacy fingerprints compatible while refusing equal-version reactivation", async () => {
+      const id = await workspace(),
+        paid = snapshot(id)
+      await apply(paid)
+      expect((await row(id))?.providerStateHash).toBe(
+        createHash("sha256").update(JSON.stringify(paid)).digest("hex")
+      )
+      expect((await apply({ ...paid, cancelAtPeriodEnd: false })).outcome).toBe(
+        "unchanged"
+      )
+      expect((await apply({ ...paid, cancelAtPeriodEnd: true })).outcome).toBe(
+        "applied"
+      )
+      await expect(
+        apply({ ...paid, cancelAtPeriodEnd: false })
+      ).rejects.toThrow("VERSION_CONFLICT")
+      const unpaid = await workspace()
+      await apply(
+        snapshot(unpaid, { status: "canceled", cancelAtPeriodEnd: true })
+      )
+      expect(subscriptionAccess(await row(unpaid), now).plan).toBe("free")
     })
   }
 )

@@ -59,5 +59,7 @@
     "apps/forge/src/application/billing/member-capacity.postgres.test.ts": "a938905978db926f04f967d10d1c6761b0fd2eac4c2381f44ffe3dfb96431f3c",
     "apps/forge/src/application/billing/subscription-reconciliation.postgres.test.ts": "2c4764658bce5a01d0f3a176d2632f9c1d320ace0cc4464226d28462737e02fe",
     "apps/forge/src/application/workspace-security/workspace-security.server.ts": "dc0f2e575bd050619a7a190a8cdf31a9d73c565f8a2dc6f8c6b7178b54f56c52"
-  }
+  },
+  "sourceCommit": "bada21cf8f02ea87e98a71357e1b73603a63e5f2",
+  "evidenceScope": "Historical payment-grace checkpoint; verify digests against sourceCommit. Scheduled cancellation is recorded in subscription-cancellation-2026-10-28.json."
 }

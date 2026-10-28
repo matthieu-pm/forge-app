@@ -11,6 +11,8 @@ const identitySchema = z.object({
     "subscription.active",
     "subscription.past_due",
     "subscription.updated",
+    "subscription.canceled",
+    "subscription.uncanceled",
   ]),
   data: z.object({
     id: z.uuid(),

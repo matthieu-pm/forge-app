@@ -207,12 +207,30 @@ describe.skipIf(!testUrl)(
         ),
         "utf8"
       )
+      const bindingMigration = await readFile(
+        new URL(
+          "../../../drizzle/0028_subscription_binding.sql",
+          import.meta.url
+        ),
+        "utf8"
+      )
+      const cancellationMigration = await readFile(
+        new URL(
+          "../../../drizzle/0029_subscription_cancellation.sql",
+          import.meta.url
+        ),
+        "utf8"
+      )
       if (installed) {
         // Reuse only an empty, explicitly selected test branch with exactly the
         // checked-in trigger bodies. Do not drop/reset any database objects.
         expect(process.env.FORGE_TEST_REUSE_MEMBER_CAPACITY).toBe("1")
         const latestDefinitions = new Map<string, RegExpMatchArray>()
-        for (const match of (migration + graceMigration).matchAll(
+        for (const match of (
+          migration +
+          graceMigration +
+          cancellationMigration
+        ).matchAll(
           /CREATE (?:OR REPLACE )?FUNCTION public\.(\w+)[\s\S]*?AS \$\$([\s\S]*?)\$\$;/g
         ))
           latestDefinitions.set(match[1], match)
@@ -255,6 +273,10 @@ describe.skipIf(!testUrl)(
             "--> statement-breakpoint"
           ))
             if (statement.trim()) await client.query(statement)
+          for (const extra of [bindingMigration, cancellationMigration]) {
+            for (const statement of extra.split("--> statement-breakpoint"))
+              if (statement.trim()) await client.query(statement)
+          }
           await client.query("COMMIT")
         } catch (error) {
           await client.query("ROLLBACK")
@@ -559,6 +581,45 @@ describe.skipIf(!testUrl)(
         (
           await pool.query("SELECT status FROM public.invitation WHERE id=$1", [
             deniedInvite,
+          ])
+        ).rows[0].status
+      ).toBe("pending")
+    }, 30_000)
+
+    it("preserves existing members and refuses new joins after scheduled cancellation ends", async () => {
+      const w = await workspace(5, true),
+        sixth = await user(),
+        cookie = await login(sixth)
+      const start = new Date(Date.now() - 30 * 86400000),
+        end = new Date(Date.now() + 3600000)
+      await pool.query(
+        `UPDATE public.workspace_entitlements SET source='polar',source_reference=$2,provider_environment='sandbox',provider_updated_at=now(),provider_state_hash=$3,paid_activated_at=$4,current_period_start=$4,current_period_end=$5,cancel_at_period_end=true,cancellation_period_end=$5 WHERE workspace_id=$1`,
+        [w.id, randomUUID(), "a".repeat(64), start, end]
+      )
+      expect(
+        (await accept(await invitation(w.id, sixth, w.members[0]), cookie)).ok
+      ).toBe(true)
+      const ended = new Date(Date.now() - 60000)
+      await pool.query(
+        `UPDATE public.workspace_entitlements SET status='canceled',current_period_end=$2,cancellation_period_end=$2 WHERE workspace_id=$1`,
+        [w.id, ended]
+      )
+      const seventh = await user(),
+        pending = await invitation(w.id, seventh, w.members[0])
+      expect((await accept(pending, await login(seventh))).ok).toBe(false)
+      expect(await count(w.id)).toEqual({ actual: 6, tracked: 6 })
+      expect(
+        (
+          await app.auth.api.getFullOrganization({
+            headers: new Headers({ cookie }),
+            query: { organizationId: w.id },
+          })
+        )?.id
+      ).toBe(w.id)
+      expect(
+        (
+          await pool.query("SELECT status FROM public.invitation WHERE id=$1", [
+            pending,
           ])
         ).rows[0].status
       ).toBe("pending")

@@ -13,6 +13,8 @@ const stateSchema = z.object({
   grace_expires_at: date,
   current_period_start: date,
   current_period_end: date,
+  cancel_at_period_end: z.boolean().optional(),
+  cancellation_period_end: date,
   feature_overrides: z.record(z.string(), z.boolean()).default({}),
 })
 
@@ -35,6 +37,8 @@ export async function readSubscriptionAccessState(workspaceId: string) {
     graceExpiresAt: row.grace_expires_at,
     currentPeriodStart: row.current_period_start,
     currentPeriodEnd: row.current_period_end,
+    cancelAtPeriodEnd: row.cancel_at_period_end,
+    cancellationPeriodEnd: row.cancellation_period_end,
     featureOverrides: row.feature_overrides,
   }
 }

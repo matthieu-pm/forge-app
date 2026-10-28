@@ -11,6 +11,8 @@ export type SubscriptionAccessState = {
   graceExpiresAt?: Date | null
   currentPeriodStart?: Date | null
   currentPeriodEnd?: Date | null
+  cancelAtPeriodEnd?: boolean
+  cancellationPeriodEnd?: Date | null
 }
 
 function validTime(value: Date | null | undefined) {
@@ -49,13 +51,27 @@ export function subscriptionAccess(
   if (!state || at === null) return free
   const plan = securityPlan(state.plan)
   if (plan === "free") return free
-  if (state.status === "active" || state.status === "trialing") {
+  const cancellationEnd = validTime(state.cancellationPeriodEnd)
+  if (
+    state.cancelAtPeriodEnd &&
+    (cancellationEnd === null || at >= cancellationEnd)
+  )
+    return free
+  const scheduledCancellation =
+    state.source === "polar" &&
+    state.status === "canceled" &&
+    state.cancelAtPeriodEnd === true
+  if (
+    state.status === "active" ||
+    state.status === "trialing" ||
+    scheduledCancellation
+  ) {
     if (state.source === "polar") {
       const start = validTime(state.currentPeriodStart),
         end = validTime(state.currentPeriodEnd)
       // Forge trials are app-managed; provider trialing cannot create paid access.
       if (
-        state.status !== "active" ||
+        (state.status !== "active" && !scheduledCancellation) ||
         start === null ||
         end === null ||
         start >= end ||
