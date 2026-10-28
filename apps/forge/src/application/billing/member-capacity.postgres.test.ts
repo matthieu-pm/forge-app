@@ -221,6 +221,13 @@ describe.skipIf(!testUrl)(
         ),
         "utf8"
       )
+      const refundMigration = await readFile(
+        new URL(
+          "../../../drizzle/0030_subscription_refunds.sql",
+          import.meta.url
+        ),
+        "utf8"
+      )
       if (installed) {
         // Reuse only an empty, explicitly selected test branch with exactly the
         // checked-in trigger bodies. Do not drop/reset any database objects.
@@ -229,7 +236,8 @@ describe.skipIf(!testUrl)(
         for (const match of (
           migration +
           graceMigration +
-          cancellationMigration
+          cancellationMigration +
+          refundMigration
         ).matchAll(
           /CREATE (?:OR REPLACE )?FUNCTION public\.(\w+)[\s\S]*?AS \$\$([\s\S]*?)\$\$;/g
         ))
@@ -273,7 +281,11 @@ describe.skipIf(!testUrl)(
             "--> statement-breakpoint"
           ))
             if (statement.trim()) await client.query(statement)
-          for (const extra of [bindingMigration, cancellationMigration]) {
+          for (const extra of [
+            bindingMigration,
+            cancellationMigration,
+            refundMigration,
+          ]) {
             for (const statement of extra.split("--> statement-breakpoint"))
               if (statement.trim()) await client.query(statement)
           }
@@ -619,6 +631,52 @@ describe.skipIf(!testUrl)(
       expect(
         (
           await pool.query("SELECT status FROM public.invitation WHERE id=$1", [
+            pending,
+          ])
+        ).rows[0].status
+      ).toBe("pending")
+    }, 30_000)
+
+    it("preserves existing member sessions and pending invites after a full period refund", async () => {
+      const w = await workspace(6, true),
+        subscriptionId = randomUUID()
+      const start = new Date(Date.now() - 86400000),
+        end = new Date(Date.now() + 30 * 86400000)
+      await pool.query(
+        `UPDATE workspace_entitlements SET source='polar',source_reference=$2,provider_environment='sandbox',provider_updated_at=now(),provider_state_hash=$3,paid_activated_at=$4,current_period_start=$4,current_period_end=$5 WHERE workspace_id=$1`,
+        [w.id, subscriptionId, "a".repeat(64), start, end]
+      )
+      const cookie = await login(w.members[5]),
+        next = await user(),
+        pending = await invitation(w.id, next, w.members[0])
+      const { applyVerifiedPeriodRefund } =
+        await import("./subscription-refund.server")
+      await applyVerifiedPeriodRefund({
+        eventId: randomUUID(),
+        bodyHash: "b".repeat(64),
+        refund: {
+          workspaceId: w.id,
+          environment: "sandbox",
+          orderId: randomUUID(),
+          subscriptionId,
+          start: start.toISOString(),
+          end: end.toISOString(),
+          refundedAt: new Date().toISOString(),
+        },
+      })
+      expect((await accept(pending, await login(next))).ok).toBe(false)
+      expect(await count(w.id)).toEqual({ actual: 6, tracked: 6 })
+      expect(
+        (
+          await app.auth.api.getFullOrganization({
+            headers: new Headers({ cookie }),
+            query: { organizationId: w.id },
+          })
+        )?.id
+      ).toBe(w.id)
+      expect(
+        (
+          await pool.query("SELECT status FROM invitation WHERE id=$1", [
             pending,
           ])
         ).rows[0].status

@@ -204,6 +204,10 @@ export const workspaceEntitlements = pgTable(
     currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
     cancelAtPeriodEnd: boolean("cancel_at_period_end").default(false).notNull(),
     cancellationPeriodEnd: timestamp("cancellation_period_end", { withTimezone: true }),
+    refundedPeriods: jsonb("refunded_periods").$type<Array<{
+      orderId: string; subscriptionId: string; environment: "sandbox" | "production";
+      start: string; end: string; refundedAt: string;
+    }>>().default([]).notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -232,6 +236,7 @@ export const workspaceEntitlements = pgTable(
       "workspace_entitlements_grace_check",
       sql`(${table.paymentFailedAt} IS NULL AND ${table.graceExpiresAt} IS NULL) OR (${table.source} = 'polar' AND ${table.status} = 'past_due' AND ${table.paymentFailedAt} IS NOT NULL AND ${table.graceExpiresAt} IS NOT NULL AND ${table.paidActivatedAt} IS NOT NULL AND isfinite(${table.paidActivatedAt}) AND isfinite(${table.paymentFailedAt}) AND ${table.paidActivatedAt} < ${table.paymentFailedAt} AND ${table.graceExpiresAt} = ${table.paymentFailedAt} + interval '168 hours')`
     ),
+    refundHistoryCheck: check("workspace_entitlements_refund_history_check", sql`jsonb_typeof(${table.refundedPeriods}) = 'array'`),
     cancellationCheck: check(
       "workspace_entitlements_cancellation_check",
       sql`(NOT ${table.cancelAtPeriodEnd} AND ${table.cancellationPeriodEnd} IS NULL) OR (${table.source} = 'polar' AND ${table.cancelAtPeriodEnd} AND ${table.cancellationPeriodEnd} IS NOT NULL AND isfinite(${table.cancellationPeriodEnd}) AND ${table.currentPeriodStart} IS NOT NULL AND ${table.currentPeriodEnd} IS NOT NULL AND ${table.currentPeriodStart} < ${table.cancellationPeriodEnd} AND ${table.cancellationPeriodEnd} <= ${table.currentPeriodEnd})`

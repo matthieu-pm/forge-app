@@ -169,8 +169,8 @@ Usage reservations/settlement must bind workspace, period, trusted plan, feature
 and payer snapshots. Free exhaustion blocks additional metered agent/Calls/Signals
 work; paid Calls/Signals must still pass independent safety/admission controls.
 Existing consumption must survive membership changes, retries and plan transitions.
-Other upgrade/downgrade carryover, effective dates, cancellation and refunds remain open
-decisions. Member grandfathering on downgrade is confirmed above; team/issue/upload
+Other upgrade/downgrade carryover, effective dates and partial-refund handling remain open
+decisions. Cancellation and full current-period refund timing are confirmed below. Member grandfathering on downgrade is confirmed above; team/issue/upload
 over-capacity transitions still need rules. Currency migration and EUR overage invoicing also
 need explicit rules before live billing.
 
@@ -192,4 +192,4 @@ production migration/application rollout remains pending. See
 `docs/polar-billing.md` and FOR-76/FOR-111 for remaining integration work.
 
 
-Owner cancellation timing is confirmed: retain paid access until the current billing period ends, then apply Free limits while preserving existing members. The server command, durable cutoff and reconciliation are implemented on isolated staging; see `docs/subscription-cancellation.md`. Cancellation cannot extend payment grace or issue another AI pool. Refunds and exceptional immediate revocation remain unresolved; billing remains gated.
+Owner cancellation timing is confirmed: retain paid access until the current billing period ends, then apply Free limits while preserving existing members. The server command, durable cutoff and reconciliation are implemented on isolated staging; see `docs/subscription-cancellation.md`. Cancellation cannot extend payment grace or issue another AI pool. Full current-period refunds end paid access immediately while preserving existing members. The signed order handler, durable period denial and shared feature/auth/SQL enforcement are implemented on isolated staging; see `docs/subscription-refunds.md`. Partial refunds, exceptional immediate revocation and pause policy remain unresolved; billing remains gated.

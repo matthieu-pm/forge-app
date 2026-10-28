@@ -121,3 +121,8 @@ separate production migration/application rollout remains a release-gate task.
 The shared access reader and member-capacity invariant honor the confirmed 168-hour renewal grace. Migration 0027 replaces only the counter helper to evaluate paid period/grace timestamps; migration 0028 binds a provider subscription to one workspace. The complete history now has 29 migrations on isolated staging. The twelve-case member/auth suite passes, including a sixth-member acceptance during grace, refusal after expiry with the invitation still pending, and continued authorized access for existing members. Membership and security reads tolerate the previous entitlement schema. FOR-153 remains Done; production rollout and full billing reconciliation remain separately gated.
 
 Scheduled cancellation now uses the same stored cutoff in feature reads, auth preflight and the SQL counter. The thirteen-case real-auth suite additionally proves that an existing sixth member keeps access after term end while a seventh invitation is refused and remains pending. Migration 0029 is applied only to staging/rehearsal; production rollout remains gated.
+
+
+## Full-refund migration follow-up · 28 October 2026
+
+Versioned migration 0030 adds the retained refunded-period history and updates member admission to deny refunded paid capacity. All 31 migrations are applied on the exact isolated staging and rehearsal targets. Three serialized migration ownership/fault cases pass against the complete history. The serving/default database is unchanged and still lacks the new production-readiness expansions; production rollout remains separately gated. See `docs/subscription-refunds.md`.

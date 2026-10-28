@@ -110,11 +110,16 @@ describe.skipIf(!connection)(
       )
       return id
     }
-    function signed(workspaceId: string, eventId: string) {
+    function signed(
+      workspaceId: string,
+      eventId: string,
+      type = "subscription.updated",
+      objectId = subscriptions.get(workspaceId)!
+    ) {
       const body = JSON.stringify({
-        type: "subscription.updated",
+        type,
         data: {
-          id: subscriptions.get(workspaceId)!,
+          id: objectId,
           customer: { external_id: `forge:workspace:${workspaceId}` },
         },
       })
@@ -151,7 +156,7 @@ describe.skipIf(!connection)(
       })
       const migration = await readFile(
         new URL(
-          "../../../drizzle/0029_subscription_cancellation.sql",
+          "../../../drizzle/0030_subscription_refunds.sql",
           import.meta.url
         ),
         "utf8"
@@ -198,6 +203,271 @@ describe.skipIf(!connection)(
         vi.unstubAllEnvs()
       }
     }, 30_000)
+
+    it("revokes a fully refunded term through a signed webhook, preserves members, and survives newer active events", async () => {
+      const id = await workspace(),
+        paid = snapshot(id)
+      await apply(paid)
+      for (let i = 0; i < 6; i++) await add(id)
+      const refunds = await import("./polar-subscription-refund.server")
+      const orderId = randomUUID(),
+        eventId = randomUUID()
+      const order = {
+        id: orderId,
+        status: "refunded" as const,
+        net_amount: 1600,
+        tax_amount: 320,
+        total_amount: 1920,
+        refunded_amount: 1600,
+        refunded_tax_amount: 320,
+        applied_balance_amount: 0,
+        billing_reason: "subscription_cycle" as const,
+        currency: "usd",
+        product_id: config.paidProducts.plus.usd,
+        subscription_id: paid.subscriptionId,
+        modified_at: now.toISOString(),
+        customer: { external_id: `forge:workspace:${id}` },
+        items: [
+          {
+            amount: 1600,
+            tax_amount: 320,
+            proration: false,
+            start_timestamp: paid.currentPeriodStart.toISOString(),
+            end_timestamp: paid.currentPeriodEnd.toISOString(),
+          },
+        ],
+      }
+      const service = new refunds.PolarSubscriptionRefundReconciler(config, {
+        orders: { get: () => Promise.resolve(order) },
+      })
+      for (let i = 0; i < 2; i++)
+        expect(
+          (
+            await webhook.handlePolarWebhook(
+              signed(id, eventId, "order.refunded", orderId),
+              config,
+              undefined,
+              service
+            )
+          ).status
+        ).toBe(200)
+      // Same event ID with different signed bytes cannot consume another receipt.
+      expect(
+        (
+          await webhook.handlePolarWebhook(
+            signed(id, eventId, "order.refunded", randomUUID()),
+            config,
+            undefined,
+            service
+          )
+        ).status
+      ).toBe(503)
+      await apply({ ...paid, updatedAt: now })
+      expect(subscriptionAccess(await row(id), now).plan).toBe("free")
+      expect(await capacity.workspaceAuthMembershipLimit(id)).toBe(5)
+      await pool.query(
+        "UPDATE workspace_entitlements SET feature_overrides=$2::jsonb WHERE workspace_id=$1",
+        [id, JSON.stringify({ "restrict-invitations": true })]
+      )
+      const owner = (
+        await pool.query(
+          "SELECT user_id FROM member WHERE organization_id=$1 LIMIT 1",
+          [id]
+        )
+      ).rows[0].user_id
+      const view = await security.getWorkspaceSecuritySnapshot(
+        {
+          workspaceId: id,
+          userId: owner,
+          workspaceRole: "owner",
+          scopes: null,
+          authentication: { kind: "session", sessionId: "fixture" },
+        },
+        "http://localhost:3000"
+      )
+      expect(view.plan).toBe("free")
+      expect(view.entitlements["restrict-invitations"]).toBe(false)
+      await expect(add(id)).rejects.toThrow(/five-member/)
+      expect(
+        (
+          await pool.query(
+            "SELECT active_member_count FROM workspace_member_capacity WHERE workspace_id=$1",
+            [id]
+          )
+        ).rows[0].active_member_count
+      ).toBe(6)
+      expect((await row(id))?.refundedPeriods).toHaveLength(1)
+      const later = {
+        ...paid,
+        updatedAt: new Date(now.getTime() + 1),
+        currentPeriodStart: paid.currentPeriodEnd,
+        currentPeriodEnd: new Date(
+          paid.currentPeriodEnd.getTime() + 30 * 86400000
+        ),
+      }
+      await apply(later)
+      expect(
+        subscriptionAccess(await row(id), later.currentPeriodStart).plan
+      ).toBe("business")
+      await service.reconcile({
+        workspaceId: id,
+        orderId,
+        eventId: randomUUID(),
+        bodyHash: "b".repeat(64),
+      })
+      expect(
+        subscriptionAccess(await row(id), later.currentPeriodStart).plan
+      ).toBe("business")
+    })
+
+    it("keeps a refund delivered before activation and denies overlapping replacement snapshots", async () => {
+      const id = await workspace(),
+        paid = snapshot(id),
+        refunds = await import("./subscription-refund.server")
+      const refund = {
+        workspaceId: id,
+        environment: "sandbox" as const,
+        orderId: randomUUID(),
+        subscriptionId: paid.subscriptionId,
+        start: paid.currentPeriodStart.toISOString(),
+        end: paid.currentPeriodEnd.toISOString(),
+        refundedAt: now.toISOString(),
+      }
+      await refunds.applyVerifiedPeriodRefund({
+        eventId: randomUUID(),
+        bodyHash: "a".repeat(64),
+        refund,
+      })
+      await apply(paid)
+      expect(subscriptionAccess(await row(id), now).plan).toBe("free")
+      await apply({
+        ...paid,
+        updatedAt: now,
+        currentPeriodStart: new Date(paid.currentPeriodStart.getTime() + 1000),
+      })
+      expect(subscriptionAccess(await row(id), now).plan).toBe("free")
+      await apply({
+        ...paid,
+        status: "past_due",
+        updatedAt: new Date(now.getTime() + 1),
+        pastDueAt: failed,
+      })
+      expect(subscriptionAccess(await row(id), now).plan).toBe("free")
+    })
+
+    it("does not regrant access through failed-renewal grace after the paid term was refunded", async () => {
+      const id = await workspace(),
+        paid = snapshot(id),
+        refunds = await import("./subscription-refund.server")
+      await apply(paid)
+      await refunds.applyVerifiedPeriodRefund({
+        eventId: randomUUID(),
+        bodyHash: "e".repeat(64),
+        refund: {
+          workspaceId: id,
+          environment: "sandbox",
+          subscriptionId: paid.subscriptionId,
+          orderId: randomUUID(),
+          start: paid.currentPeriodStart.toISOString(),
+          end: paid.currentPeriodEnd.toISOString(),
+          refundedAt: now.toISOString(),
+        },
+      })
+      const next = {
+        ...paid,
+        status: "past_due" as const,
+        updatedAt: paid.currentPeriodEnd,
+        pastDueAt: paid.currentPeriodEnd,
+        currentPeriodStart: paid.currentPeriodEnd,
+        currentPeriodEnd: new Date(
+          paid.currentPeriodEnd.getTime() + 30 * 86400000
+        ),
+      }
+      for (let retry = 0; retry < 2; retry++) {
+        await apply({
+          ...next,
+          updatedAt: new Date(next.updatedAt.getTime() + retry),
+        })
+        expect(
+          subscriptionAccess(await row(id), next.currentPeriodStart).plan
+        ).toBe("free")
+        expect((await row(id))?.paidActivatedAt).toBeNull()
+      }
+      await apply({
+        ...next,
+        status: "active",
+        pastDueAt: null,
+        updatedAt: new Date(next.updatedAt.getTime() + 2),
+      })
+      expect(
+        subscriptionAccess(
+          await row(id),
+          new Date(next.currentPeriodStart.getTime() + 2)
+        ).plan
+      ).toBe("business")
+    })
+
+    it("serializes concurrent refunds and activation without losing either denial", async () => {
+      const id = await workspace(),
+        paid = snapshot(id),
+        refunds = await import("./subscription-refund.server")
+      const refund = {
+        workspaceId: id,
+        environment: "sandbox" as const,
+        subscriptionId: paid.subscriptionId,
+        start: paid.currentPeriodStart.toISOString(),
+        end: paid.currentPeriodEnd.toISOString(),
+        refundedAt: now.toISOString(),
+      }
+      await Promise.all([
+        apply(paid),
+        ...Array.from({ length: 2 }, () =>
+          refunds.applyVerifiedPeriodRefund({
+            eventId: randomUUID(),
+            bodyHash: "d".repeat(64),
+            refund: { ...refund, orderId: randomUUID() },
+          })
+        ),
+      ])
+      expect((await row(id))?.refundedPeriods).toHaveLength(2)
+      expect(subscriptionAccess(await row(id), now).plan).toBe("free")
+    })
+
+    it("rolls back a refund and its receipt if audit persistence fails", async () => {
+      const id = await workspace(),
+        paid = snapshot(id),
+        refunds = await import("./subscription-refund.server")
+      await apply(paid)
+      const constraint = `refund_fault_${randomUUID().replaceAll("-", "")}`
+      await pool.query(
+        `ALTER TABLE workspace_security_audit_events ADD CONSTRAINT ${constraint} CHECK (action <> 'billing.subscription_period.refunded') NOT VALID`
+      )
+      const input = {
+        eventId: randomUUID(),
+        bodyHash: "c".repeat(64),
+        refund: {
+          workspaceId: id,
+          environment: "sandbox" as const,
+          orderId: randomUUID(),
+          subscriptionId: paid.subscriptionId,
+          start: paid.currentPeriodStart.toISOString(),
+          end: paid.currentPeriodEnd.toISOString(),
+          refundedAt: now.toISOString(),
+        },
+      }
+      try {
+        await expect(refunds.applyVerifiedPeriodRefund(input)).rejects.toThrow()
+        expect((await row(id))?.refundedPeriods).toHaveLength(0)
+      } finally {
+        await pool.query(
+          `ALTER TABLE workspace_security_audit_events DROP CONSTRAINT ${constraint}`
+        )
+      }
+      expect((await refunds.applyVerifiedPeriodRefund(input)).replayed).toBe(
+        false
+      )
+      expect(subscriptionAccess(await row(id), now).plan).toBe("free")
+    })
 
     it("processes a signed request through current provider state into one durable receipt and grace", async () => {
       const id = await workspace()

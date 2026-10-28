@@ -8,6 +8,20 @@ const stateSchema = z.object({
   plan: z.string(),
   status: z.string(),
   source: z.string().optional(),
+  source_reference: z.string().nullable().optional(),
+  provider_environment: z.string().nullable().optional(),
+  refunded_periods: z
+    .array(
+      z.object({
+        orderId: z.uuid(),
+        subscriptionId: z.uuid(),
+        environment: z.enum(["sandbox", "production"]),
+        start: z.iso.datetime({ offset: true }),
+        end: z.iso.datetime({ offset: true }),
+        refundedAt: z.iso.datetime({ offset: true }),
+      })
+    )
+    .default([]),
   paid_activated_at: date,
   payment_failed_at: date,
   grace_expires_at: date,
@@ -32,6 +46,9 @@ export async function readSubscriptionAccessState(workspaceId: string) {
     plan: row.plan,
     status: row.status,
     source: row.source,
+    sourceReference: row.source_reference,
+    providerEnvironment: row.provider_environment,
+    refundedPeriods: row.refunded_periods,
     paidActivatedAt: row.paid_activated_at,
     paymentFailedAt: row.payment_failed_at,
     graceExpiresAt: row.grace_expires_at,

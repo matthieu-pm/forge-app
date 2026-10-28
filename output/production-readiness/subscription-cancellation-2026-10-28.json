@@ -58,5 +58,7 @@
     "apps/forge/src/application/billing/polar-webhook.server.ts": "6fbb8a16b27be5e30cfbb95390bd402ba410577e845812bd59dc116df6db77ae",
     "apps/forge/src/application/billing/member-capacity.postgres.test.ts": "d0835c93650197f639168a818ee920ee83beba011bcbde16d69aef113bbaa569",
     "apps/forge/src/application/billing/subscription-reconciliation.postgres.test.ts": "df8c7568469ad1ee09f5f461cbe551e2a29dc67473adfa21af383abedda49626"
-  }
+  },
+  "sourceCommit": "1d92c9bc45c7c847ce75257c4ebe3bd0720ac10f",
+  "historical": true
 }

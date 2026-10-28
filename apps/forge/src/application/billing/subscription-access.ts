@@ -5,6 +5,16 @@ export const PAYMENT_GRACE_MS = 7 * 24 * 60 * 60 * 1000
 export type SubscriptionAccessState = {
   plan: string
   status: string
+  sourceReference?: string | null
+  providerEnvironment?: string | null
+  refundedPeriods?: Array<{
+    orderId: string
+    subscriptionId: string
+    environment: string
+    start: string
+    end: string
+    refundedAt: string
+  }>
   source?: string
   paidActivatedAt?: Date | null
   paymentFailedAt?: Date | null
@@ -51,6 +61,7 @@ export function subscriptionAccess(
   if (!state || at === null) return free
   const plan = securityPlan(state.plan)
   if (plan === "free") return free
+  if (isRefundedSubscriptionPeriod(state)) return free
   const cancellationEnd = validTime(state.cancellationPeriodEnd)
   if (
     state.cancelAtPeriodEnd &&
@@ -101,4 +112,20 @@ export function subscriptionAccess(
   )
     return free
   return { plan, phase: "grace" as const, allowsExistingOverage: true }
+}
+
+/** Refund denial survives status updates; another subscription/period is separate. */
+export function isRefundedSubscriptionPeriod(state: SubscriptionAccessState) {
+  return (
+    state.source === "polar" &&
+    state.refundedPeriods?.some(
+      (period) =>
+        period.subscriptionId === state.sourceReference &&
+        period.environment === state.providerEnvironment &&
+        validTime(state.currentPeriodStart) !== null &&
+        validTime(state.currentPeriodEnd) !== null &&
+        new Date(period.start).getTime() < state.currentPeriodEnd!.getTime() &&
+        new Date(period.end).getTime() > state.currentPeriodStart!.getTime()
+    )
+  )
 }

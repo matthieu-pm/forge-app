@@ -92,3 +92,8 @@ closes those release contracts.
 Billing-grace expansion and provider-subscription binding (0027/0028) have since been applied to staging and rehearsal; both now contain the complete 29-migration history. The three migration fault/ownership cases passed again. The shared read path was also verified against the prior table schema without writes. Production execution remains disabled.
 
 Migration 0029 adds the frozen scheduled-cancellation boundary and updates the counter helper. It was applied only to isolated staging/rehearsal, now 30 migrations. The complete-history migration ownership/failure cases passed again.
+
+
+## Full-refund migration follow-up · 28 October 2026
+
+Versioned migration 0030 adds the retained refunded-period history and updates member admission to deny refunded paid capacity. All 31 migrations are applied on the exact isolated staging and rehearsal targets. Three serialized migration ownership/fault cases pass against the complete history. The serving/default database is unchanged and still lacks the new production-readiness expansions; production rollout remains separately gated. See `docs/subscription-refunds.md`.

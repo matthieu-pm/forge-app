@@ -1,0 +1,62 @@
+{
+  "date": "2026-10-28",
+  "baseCommit": "1d92c9bc45c7c847ce75257c4ebe3bd0720ac10f",
+  "committed": true,
+  "deployed": false,
+  "servingDatabaseModified": false,
+  "localConnectionFilesChanged": false,
+  "issues": [
+    "FOR-109",
+    "FOR-111"
+  ],
+  "status": "Confirmed full-refund access slice verified; broader billing issues remain In Progress",
+  "policy": {
+    "policy": "End paid access immediately on full current-period refund; preserve existing members and all history",
+    "implementation": "Signed order re-fetch, full net/tax/catalog/customer/line-period validation, append-only refund history, atomic audit/receipt, shared feature/auth/SQL denial, refunded paid-proof invalidation and later-paid-period separation",
+    "evidence": "18 PostgreSQL billing and 14 real-auth membership cases passed on isolated staging; guide in refundDocument",
+    "remaining": "Partial-refund and mixed/prorated/balance-credit allocation, exceptional revocation/pause, binding replacement, periodic reconciliation/outbox, communications, commercial ledger and real Polar release validation",
+    "status": "Confirmed full-refund access slice verified; FOR-109/FOR-111 remain In Progress"
+  },
+  "staging": {
+    "project": "raspy-union-96305162",
+    "branch": "br-autumn-union-za0opf1e",
+    "database": "forge_staging",
+    "migrations": 31
+  },
+  "rehearsal": {
+    "branch": "br-square-sky-za2iavfk",
+    "database": "forge_migration_rehearsal",
+    "migrations": 31
+  },
+  "checks": {
+    "appTestsPassed": 1325,
+    "workflowTestsPassed": 4,
+    "postgresBillingStateCasesPassed": 18,
+    "postgresMembershipCasesPassed": 14,
+    "postgresMigrationRehearsalCasesPassed": 3,
+    "typecheck": "passed",
+    "changedFileLint": "passed",
+    "format": "passed",
+    "productionBuild": "passed including protected Workflow handlers"
+  },
+  "routeEnabled": false,
+  "providerCalls": "SDK methods mocked in tests; real Neon staging/rehearsal used; no live provider mutation",
+  "remaining": "Partial-refund and mixed/prorated/balance-credit allocation, exceptional revocation/pause, binding replacement, periodic reconciliation/outbox, communications, commercial ledger and real Polar release validation",
+  "sourceSha256": {
+    "apps/forge/drizzle/0030_subscription_refunds.sql": "9668f43fd83226b375f864f9f0d7029fe7ca4bac439ed30ef486f407e186fda6",
+    "apps/forge/drizzle/meta/0030_snapshot.json": "5a0edb43063b9f0735e084c9ab9836cdc5f6032141e42e43171116e9406c7130",
+    "apps/forge/src/db/schema.ts": "da056d13037978f4ccebc110e5807d3d58a96f280d1ae7b91dc132c30bdc98d8",
+    "apps/forge/src/application/billing/subscription-access.ts": "ac95de3d9de967bbe62aa599ed2cf10cafa13a57ab601d03fba06e401f0a3ffa",
+    "apps/forge/src/application/billing/subscription-access-state.server.ts": "9f3018efbbdd6dd4811a79ce67c3dde0fc68a71774a7c6a2ec56ed688c3c9448",
+    "apps/forge/src/application/billing/subscription-reconciliation.server.ts": "f262b1adbc6d3fa188605311d5e5faa47005c828ecf7fb8302eeb4c2b2de85e8",
+    "apps/forge/src/application/billing/subscription-refund.server.ts": "944c248505c5d7ed7ce7200ec2ee59ec6e74aa8e41d675ee540b14eb678126d2",
+    "apps/forge/src/application/billing/polar-subscription-refund.server.ts": "2c4b56925323485c551eb3becbbb1b746118f78fe710914c3bdb413bb911ec1d",
+    "apps/forge/src/application/billing/polar-subscription-refund.server.test.ts": "8f2b23fa86bb3f56936050c5264392b9331c60641a85c2710b380bc4da3dc525",
+    "apps/forge/src/application/billing/polar-webhook.server.ts": "7b071c45e847aa303aff46c7c035fb88a5c1a69f3b1f1f47b93401b09d69b014",
+    "apps/forge/src/application/billing/subscription-reconciliation.postgres.test.ts": "196fb13aed370f3e1036cfdfa0ad847dc2c91b986da8a72fd54d0a1139e3ba54",
+    "apps/forge/src/application/billing/member-capacity.postgres.test.ts": "104e9ec79c88ee8e7f43b6b14eda39374449c221270dcb2181e4761449434544",
+    "apps/forge/src/lib/team-thread-summaries-server.ts": "a3b8e8a970c5d0a6a0f845d8d6f77110de62186b84ebad9c2d09a0f17fe83209",
+    "apps/forge/src/lib/team-thread-summaries-server.test.ts": "d5af1bda64f735a8bb6fdffc311302685c2b69da7cb4f7c268410c9aea9bb05b",
+    "docs/subscription-refunds.md": "f2bd92f030655443f45444f1eea366eff93a78faa287ee799c73e15b2dad53e6"
+  }
+}

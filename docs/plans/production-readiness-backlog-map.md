@@ -211,3 +211,8 @@ The user confirmed 7 days of paid-access grace after failed renewal, including i
 ## Scheduled cancellation checkpoint · 28 October 2026
 
 The user selected keeping paid access until billing-period end. The owner/admin server command, durable frozen cutoff, canceled/uncanceled reconciliation and read/member-insertion enforcement are implemented and staging-verified. Thirteen billing-state and thirteen real-auth member cases pass, plus three complete-history migration fault cases. Isolated staging/rehearsal now have 30 migrations. FOR-109/FOR-110/FOR-111 remain In Progress for remaining policy, UI/action and lifecycle/release work; no serving deployment or provider cancellation occurred.
+
+
+## Full-refund checkpoint · 28 October 2026
+
+The user selected immediate loss of paid access on full refund of the current period. Signed order verification, durable period denial, atomic receipt/audit and shared feature/auth/SQL enforcement are implemented on isolated staging. Refund history survives activation ordering and later active updates; a refunded term cannot start failed-renewal grace. Existing members retain access. Team thread summaries now use the shared policy. Isolated staging and rehearsal have all 31 migrations. Exact checks are in `output/production-readiness/subscription-refunds-2026-10-28.json` and `docs/subscription-refunds.md`. FOR-109/FOR-111 remain In Progress for outstanding policy and full billing lifecycle/release work.

@@ -5,6 +5,10 @@ import type { EnabledBillingConfig } from "./billing-config.server"
 import type { ProviderSubscription } from "./polar-subscription-reconciliation.server"
 import type { Actor } from "@/application/actor"
 
+vi.mock("./subscription-refund.server", () => ({
+  applyVerifiedPeriodRefund: vi.fn(),
+}))
+
 vi.mock("./subscription-reconciliation.server", () => ({
   applyVerifiedSubscriptionSnapshot: vi.fn(),
 }))

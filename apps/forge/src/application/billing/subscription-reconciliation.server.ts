@@ -2,7 +2,10 @@ import "@tanstack/react-start/server-only"
 import { createHash } from "node:crypto"
 import { and, eq } from "drizzle-orm"
 import { z } from "zod"
-import { PAYMENT_GRACE_MS } from "./subscription-access"
+import {
+  PAYMENT_GRACE_MS,
+  isRefundedSubscriptionPeriod,
+} from "./subscription-access"
 import { workspaceBillingIdentity } from "./billing-authority"
 import type { Actor } from "@/application/actor"
 import { hasWorkspaceRole } from "@/application/authorization"
@@ -135,7 +138,16 @@ export async function applyVerifiedSubscriptionSnapshot(input: {
       }
     }
     if (outcome === "applied") {
-      const paidActivatedAt = sameSubscription ? previous.paidActivatedAt : null
+      // A refunded term is no longer paid proof for a subsequent failed renewal.
+      // Clear it durably so repeated past-due snapshots cannot restart access.
+      const invalidatedPaidProof =
+        sameSubscription &&
+        snapshot.status === "past_due" &&
+        isRefundedSubscriptionPeriod(previous)
+      const paidActivatedAt =
+        sameSubscription && !invalidatedPaidProof
+          ? previous.paidActivatedAt
+          : null
       const status =
         snapshot.status === "canceled" &&
         sameSubscription &&

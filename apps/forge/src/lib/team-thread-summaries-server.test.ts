@@ -12,6 +12,9 @@ vi.mock("@/adapters/auth/session-actor.server", () => ({
   requireSessionActor: mocks.actor,
 }))
 vi.mock("@/application/teams/teams.server", () => ({ getTeam: mocks.team }))
+vi.mock("@/application/billing/subscription-access-state.server", () => ({
+  readSubscriptionAccessState: mocks.entitlement,
+}))
 vi.mock("@/db", () => ({
   db: {
     query: {
@@ -50,6 +53,70 @@ describe("thread summary access", () => {
       available,
       canManage: true,
     })
+  })
+  it("denies a refunded period despite an active provider subscription", async () => {
+    const start = new Date(Date.now() - 86400000),
+      end = new Date(Date.now() + 86400000)
+    const paid = {
+      plan: "business",
+      status: "active",
+      source: "polar",
+      sourceReference: "sub",
+      providerEnvironment: "sandbox",
+      paidActivatedAt: start,
+      currentPeriodStart: start,
+      currentPeriodEnd: end,
+    }
+    mocks.entitlement.mockResolvedValue(paid)
+    expect(
+      (await getTeamThreadSummariesAccess(request, "forge")).available
+    ).toBe(true)
+    mocks.entitlement.mockResolvedValue({
+      ...paid,
+      refundedPeriods: [
+        {
+          orderId: "order",
+          subscriptionId: "sub",
+          environment: "sandbox",
+          start: start.toISOString(),
+          end: end.toISOString(),
+          refundedAt: new Date().toISOString(),
+        },
+      ],
+    })
+    expect(
+      (await getTeamThreadSummariesAccess(request, "forge")).available
+    ).toBe(false)
+  })
+  it("retains access during valid payment grace and scheduled cancellation", async () => {
+    const start = new Date(Date.now() - 86400000),
+      end = new Date(Date.now() + 86400000)
+    const paid = {
+      plan: "business",
+      source: "polar",
+      paidActivatedAt: start,
+      currentPeriodStart: start,
+      currentPeriodEnd: end,
+    }
+    mocks.entitlement.mockResolvedValue({
+      ...paid,
+      status: "canceled",
+      cancelAtPeriodEnd: true,
+      cancellationPeriodEnd: end,
+    })
+    expect(
+      (await getTeamThreadSummariesAccess(request, "forge")).available
+    ).toBe(true)
+    const failed = new Date(Date.now() - 3600000)
+    mocks.entitlement.mockResolvedValue({
+      ...paid,
+      status: "past_due",
+      paymentFailedAt: failed,
+      graceExpiresAt: new Date(failed.getTime() + 7 * 86400000),
+    })
+    expect(
+      (await getTeamThreadSummariesAccess(request, "forge")).available
+    ).toBe(true)
   })
   it("allows administrators but makes non-team members read-only", async () => {
     mocks.membership.mockResolvedValue(undefined)

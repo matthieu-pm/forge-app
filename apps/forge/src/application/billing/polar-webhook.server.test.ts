@@ -5,6 +5,10 @@ import { handlePolarWebhook } from "./polar-webhook.server"
 import { PolarSubscriptionReconciler } from "./polar-subscription-reconciliation.server"
 import type { EnabledBillingConfig } from "./billing-config.server"
 
+vi.mock("./subscription-refund.server", () => ({
+  applyVerifiedPeriodRefund: vi.fn(),
+}))
+
 vi.mock("./subscription-reconciliation.server", () => ({
   applyVerifiedSubscriptionSnapshot: vi.fn(),
 }))

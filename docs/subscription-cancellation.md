@@ -85,8 +85,13 @@ until all serving instances enforce the boundary.
   dedicated rehearsal database. Migration 0029 was applied only to isolated staging
   and rehearsal; the serving/default database and local connection files are unchanged.
 
-Billing remains disabled. Refunds, exceptional immediate revocation, pause policy,
+Billing remains disabled. Partial refunds, exceptional immediate revocation, pause policy,
 periodic reconciliation/outbox communication, commercial ledger integration,
 customer-portal configuration and actual Polar sandbox/candidate tests remain.
 
 Resubscribing after term end is a remaining release check: verify the old subscription is terminal before replacing its workspace binding with a newly paid subscription, retain old receipts/usage and refuse two active subscriptions. The current conflict guard stays strict until that path is implemented.
+
+
+## Full-refund follow-up
+
+A full refund of the current period now ends paid access immediately. The separate refund history overrides the cancellation schedule and cannot be cleared by later active subscription updates. See `docs/subscription-refunds.md` for implementation and current evidence; the earlier checkpoint counts above describe the cancellation commit.

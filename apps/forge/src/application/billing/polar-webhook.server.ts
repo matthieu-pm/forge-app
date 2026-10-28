@@ -3,11 +3,13 @@ import { createHash } from "node:crypto"
 import { webhooks } from "@polar-sh/sdk/2026-10"
 import { z } from "zod"
 import { PolarSubscriptionReconciler } from "./polar-subscription-reconciliation.server"
+import { PolarSubscriptionRefundReconciler } from "./polar-subscription-refund.server"
 import type { BillingConfig } from "./billing-config.server"
 
 const MAX_BODY_BYTES = 1_048_576
 const identitySchema = z.object({
   type: z.enum([
+    "order.refunded",
     "subscription.active",
     "subscription.past_due",
     "subscription.updated",
@@ -30,7 +32,8 @@ function response(status: number, code: string) {
 export async function handlePolarWebhook(
   request: Request,
   config: BillingConfig,
-  reconciler?: Pick<PolarSubscriptionReconciler, "reconcile">
+  reconciler?: Pick<PolarSubscriptionReconciler, "reconcile">,
+  refunds?: Pick<PolarSubscriptionRefundReconciler, "reconcile">
 ) {
   if (!config.enabled) return response(404, "NOT_FOUND")
   if (request.method !== "POST") return response(405, "METHOD_NOT_ALLOWED")
@@ -80,12 +83,24 @@ export async function handlePolarWebhook(
   if (!customer.startsWith(prefix) || !customer.slice(prefix.length).trim())
     return response(400, "INVALID_BILLING_IDENTITY")
   try {
-    await (reconciler ?? new PolarSubscriptionReconciler(config)).reconcile({
+    const identity = {
       workspaceId: customer.slice(prefix.length),
-      subscriptionId: parsed.data.data.id,
       eventId: request.headers.get("webhook-id")!,
       bodyHash: createHash("sha256").update(raw).digest("hex"),
-    })
+    }
+    if (parsed.data.type === "order.refunded") {
+      await (
+        refunds ?? new PolarSubscriptionRefundReconciler(config)
+      ).reconcile({
+        ...identity,
+        orderId: parsed.data.data.id,
+      })
+    } else {
+      await (reconciler ?? new PolarSubscriptionReconciler(config)).reconcile({
+        ...identity,
+        subscriptionId: parsed.data.data.id,
+      })
+    }
     return response(200, "RECONCILED")
   } catch {
     // No raw body, customer fields, provider errors or credentials in responses.
