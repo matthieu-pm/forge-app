@@ -1,0 +1,50 @@
+{
+  "date": "2026-10-28",
+  "baseCommit": "53d175f419162432e0b98ade1f12e11867398ee7",
+  "committed": true,
+  "deployed": false,
+  "servingDatabaseModified": false,
+  "localConnectionFilesChanged": false,
+  "issues": [
+    "FOR-109",
+    "FOR-111"
+  ],
+  "status": "Confirmed partial-refund access slice complete; broader billing issues remain In Progress",
+  "policy": {
+    "policy": "Keep paid access unchanged; partial refunds neither revoke nor restore it",
+    "implementation": "Provider-verified positive partial net/tax totals and status; atomic unchanged receipt/audit without entitlement writes; promote a replayed partial receipt if fresh order fetch shows cumulative full refund; roll back promotion if audit persistence fails",
+    "evidence": "1331 app + 4 workflow tests; 24 PostgreSQL billing + 14 real-auth member cases; typecheck/lint/format/build pass",
+    "status": "Confirmed partial-refund access slice complete; FOR-109/FOR-111 remain In Progress",
+    "remaining": "Mixed/prorated/balance-credit invoice allocation, exceptional revocation/pause, binding replacement, periodic reconciliation/outbox, communications, commercial ledger and real Polar release validation"
+  },
+  "staging": {
+    "project": "raspy-union-96305162",
+    "branch": "br-autumn-union-za0opf1e",
+    "database": "forge_staging",
+    "migrations": 31,
+    "newMigrationsApplied": 0
+  },
+  "checks": {
+    "appTestsPassed": 1331,
+    "workflowTestsPassed": 4,
+    "postgresBillingStateCasesPassed": 24,
+    "postgresMembershipCasesPassed": 14,
+    "migrationRehearsal": "Not rerun: schema/migrations unchanged; three-case evidence retained at prior full-refund commit",
+    "typecheck": "passed",
+    "changedFileLint": "passed",
+    "format": "passed",
+    "productionBuild": "passed including protected Workflow handlers"
+  },
+  "routeEnabled": false,
+  "providerCalls": "SDK calls mocked; real isolated Neon staging database; no live Polar mutation",
+  "sourceSha256": {
+    "apps/forge/src/application/billing/polar-subscription-refund.server.ts": "da8545ebc080f85adef4627ea52ee3d46ded2c8cbb3c22c12c83247b0dea745f",
+    "apps/forge/src/application/billing/subscription-refund.server.ts": "b625cc1f236d688c3e8e1763369cc9b2e825cfecf8b296831a17fb4ef20b9ec1",
+    "apps/forge/src/application/billing/polar-subscription-refund.server.test.ts": "3c1afc38ad41a3e03ace7a4b144dbb3621e68f9da639c1dede0120aa4a3979a2",
+    "apps/forge/src/application/billing/subscription-reconciliation.postgres.test.ts": "b048beb88417f29e57e46aa0c5e4284d3837d65bb416c5565ee82f417e75ccb9",
+    "docs/subscription-refunds.md": "b6a54c8c8ad238aa14721b55bc69144d181649564da79865e92a8174107f5b3d",
+    "docs/forge-plan-matrix.md": "51cefd4e5b4acba1a8b242bf4e3012c8ef176996149cdf4c8c69efb88e265ff2",
+    "docs/subscription-cancellation.md": "4495017830274e43444a1a25cd36396fae1b9ddaee23f34f66a8af5dd24cb1bb",
+    "docs/plans/production-readiness-backlog-map.md": "d8d19dfbda7bc10022e718592fedf4dfa654feda55062043d8ec22f36bd165ee"
+  }
+}

@@ -1,4 +1,4 @@
-# Full subscription-period refunds
+# Subscription-period refunds
 
 FOR-109/FOR-111 implementation record, 28 October 2026.
 
@@ -11,6 +11,11 @@ Included paid AI and opted-in paid overage stop being authorized by that term.
 A refund does not erase consumption, reservations, receipts or audit history and
 does not mint a new Free/trial/paid pool. Commercial ledger settlement and in-flight
 run handling remain FOR-76 integration work; this implementation enforces access.
+
+A partial refund keeps paid access unchanged. It cannot restore ended access,
+modify the paid-through or grace boundary, reset the included pool, or grant another
+trial. Several partial refunds that cumulatively cover the full net charge and tax
+follow the full-refund rule once the current provider order verifies that total.
 
 A genuinely paid later period is separate. An old refund cannot revoke a
 nonoverlapping later period or a different subscription/environment. A refunded
@@ -26,12 +31,15 @@ webhook's amount, plan, period or status fields.
 
 The order must match the workspace customer, requested order ID, approved product
 and currency, subscription ID and subscription-create/cycle billing reason. Require
-refunded status, a positive net charge, full net and tax refund, consistent total,
-zero applied balance and one nonprorated, dated subscription line. The billed period
-comes from that order line, never from a subscription whose period may have advanced.
-Missing dates, mixed/prorated/balance-credit allocations, partial refunds, one-time
+a positive net charge, consistent total, zero applied balance and one nonprorated,
+dated subscription line. Full refunds require refunded status and exactly full net
+and tax refund amounts. Partial refunds require partially-refunded status, positive
+cumulative refunds below the charge total, and neither net nor tax refunds above
+their corresponding charged amounts. Contradictory statuses/totals are refused.
+The billed period comes from that order line, never from a subscription whose period
+may have advanced. Missing dates, mixed/prorated/balance-credit allocations, one-time
 and overage charges return a reconciliation-required response with no access change
-and no successful receipt. These require further allocation/policy work before launch.
+and no successful receipt. These require further allocation work before launch.
 
 Sources: [Polar refund event](https://polar.sh/docs/api-reference/webhooks/order.refunded),
 [order fields](https://polar.sh/docs/api-reference/orders/get), and the pinned
@@ -49,6 +57,14 @@ persists the digest-only event receipt in one transaction. A failed audit/receip
 write rolls everything back. Conflicting event reuse or changed order-period
 identity is rejected. Duplicate delivery is idempotent. Different orders cannot
 race away each other's history.
+
+A verified partial refund writes its own audit event and an unchanged-outcome
+receipt in the same transaction. It does not insert or update entitlement state,
+including when it arrives before activation. Duplicates do not duplicate audits.
+On replay, fetching a now-fully-refunded order can atomically promote that same
+receipt and append the full-period denial; a lost later event cannot strand access.
+A late partial snapshot never removes a full-refund denial or reactivates a period.
+The prior event digest/identity must still match exactly before promotion.
 
 The history can be recorded before first activation. Ordinary subscription upserts
 never overwrite it. Both the shared TypeScript access policy and SQL member-admission
@@ -79,8 +95,16 @@ cases, 14 real-auth membership cases and 3 full-history migration fault cases** 
 TypeScript, changed-file lint/format checks, diff checks and the production build
 (including protected Workflow handlers) pass. The checkpoint JSON records source digests.
 
-Billing stays disabled. FOR-111 remains In Progress for partial-refund and exceptional
+The full-refund checkpoint above describes commit `53d175f`. The partial-refund
+follow-up verifies **1,331 app tests, 4 workflow tests, 24 PostgreSQL billing cases
+and 14 real-auth membership cases**, including unchanged active/grace/canceled
+state, duplicate delivery, partial-to-full receipt promotion, late partial snapshots,
+preactivation ordering and partial audit/receipt rollback. TypeScript, changed-file
+lint/format and production build pass. No new migration was required; migration
+fault evidence remains the prior full-refund checkpoint's three cases.
+
+Billing stays disabled. FOR-111 remains In Progress for exceptional
 revocation/pause policy, verified old/new subscription replacement, periodic
 reconciliation and durable effects/communications, commercial ledger integration,
 provider configuration and actual Polar sandbox/candidate validation. This record
-completes the confirmed full-refund access slice, not the entire billing issue.
+completes the confirmed full/partial-refund access slices, not the entire billing issue.

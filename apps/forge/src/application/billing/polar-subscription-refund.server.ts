@@ -64,16 +64,27 @@ export function verifiedPolarPeriodRefund(
     throw new Error("BILLING_REFUND_SCOPE_REQUIRED")
   const net = cents.parse(order.net_amount),
     tax = cents.parse(order.tax_amount)
+  const refundedNet = cents.parse(order.refunded_amount),
+    refundedTax = cents.parse(order.refunded_tax_amount)
   // Balance credits and mixed/prorated invoices need their own allocation policy.
   if (
-    order.status !== "refunded" ||
     net <= 0 ||
     cents.parse(order.total_amount) !== net + tax ||
-    cents.parse(order.refunded_amount) !== net ||
-    cents.parse(order.refunded_tax_amount) !== tax ||
-    order.applied_balance_amount !== 0
+    order.applied_balance_amount !== 0 ||
+    refundedNet > net ||
+    refundedTax > tax
   )
-    throw new Error("BILLING_FULL_REFUND_REQUIRED")
+    throw new Error("BILLING_REFUND_AMOUNT_INVALID")
+  const full = refundedNet === net && refundedTax === tax
+  const kind: "full" | "partial" = full ? "full" : "partial"
+  if (
+    (full && order.status !== "refunded") ||
+    (!full &&
+      (order.status !== "partially_refunded" ||
+        refundedNet + refundedTax <= 0 ||
+        refundedNet + refundedTax >= net + tax))
+  )
+    throw new Error("BILLING_REFUND_STATUS_INVALID")
   if (
     order.items.length !== 1 ||
     order.items[0].proration ||
@@ -85,6 +96,7 @@ export function verifiedPolarPeriodRefund(
     end = instant.parse(order.items[0].end_timestamp)
   if (start >= end) throw new Error("BILLING_REFUND_PERIOD_INVALID")
   return {
+    kind,
     workspaceId,
     environment: config.environment,
     orderId: z.uuid().parse(orderId),

@@ -216,3 +216,8 @@ The user selected keeping paid access until billing-period end. The owner/admin 
 ## Full-refund checkpoint · 28 October 2026
 
 The user selected immediate loss of paid access on full refund of the current period. Signed order verification, durable period denial, atomic receipt/audit and shared feature/auth/SQL enforcement are implemented on isolated staging. Refund history survives activation ordering and later active updates; a refunded term cannot start failed-renewal grace. Existing members retain access. Team thread summaries now use the shared policy. Isolated staging and rehearsal have all 31 migrations. Exact checks are in `output/production-readiness/subscription-refunds-2026-10-28.json` and `docs/subscription-refunds.md`. FOR-109/FOR-111 remain In Progress for outstanding policy and full billing lifecycle/release work.
+
+
+## Partial-refund checkpoint · 28 October 2026
+
+The user selected keeping paid access unchanged on partial subscription-period refunds. Current order status/net/tax validation, atomic unchanged receipt/audit, and promotion to full-period denial on cumulative full refund are implemented. No entitlement row is modified by a partial refund, and late partial delivery cannot restore refunded access. Verified: 1,331 app tests, 4 workflow tests, 24 PostgreSQL billing cases and 14 real-auth member cases; TypeScript, changed-file lint/format and production build. No migration or serving deployment. FOR-109/FOR-111 stay In Progress for exceptional lifecycle policy and remaining billing integration/release gates. See `docs/subscription-refunds.md` and `output/production-readiness/partial-refunds-2026-10-28.json`.

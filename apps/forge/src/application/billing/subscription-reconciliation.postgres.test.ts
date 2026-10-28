@@ -7,6 +7,7 @@ import { DATABASE_TARGETS } from "../../../scripts/lib/database-targets"
 import { assertMigrationTarget } from "../../../scripts/lib/serialized-migrations"
 import { PAYMENT_GRACE_MS, subscriptionAccess } from "./subscription-access"
 import type { EnabledBillingConfig } from "./billing-config.server"
+import type { ProviderRefundOrder } from "./polar-subscription-refund.server"
 import type * as Store from "./subscription-reconciliation.server"
 import type * as Webhook from "./polar-webhook.server"
 import type * as Provider from "./polar-subscription-reconciliation.server"
@@ -80,6 +81,37 @@ describe.skipIf(!connection)(
         currentPeriodEnd: new Date(now.getTime() + 30 * 86400000),
         pastDueAt: null,
         ...patch,
+      }
+    }
+    function refundOrder(
+      id: string,
+      paid: Store.VerifiedSubscriptionSnapshot,
+      orderId = randomUUID()
+    ): ProviderRefundOrder {
+      return {
+        id: orderId,
+        status: "refunded" as const,
+        net_amount: 1600,
+        tax_amount: 320,
+        total_amount: 1920,
+        refunded_amount: 1600,
+        refunded_tax_amount: 320,
+        applied_balance_amount: 0,
+        billing_reason: "subscription_cycle" as const,
+        currency: "usd",
+        product_id: config.paidProducts.plus.usd,
+        subscription_id: paid.subscriptionId,
+        modified_at: now.toISOString(),
+        customer: { external_id: `forge:workspace:${id}` },
+        items: [
+          {
+            amount: 1600,
+            tax_amount: 320,
+            proration: false,
+            start_timestamp: paid.currentPeriodStart.toISOString(),
+            end_timestamp: paid.currentPeriodEnd.toISOString(),
+          },
+        ],
       }
     }
     async function apply(
@@ -212,31 +244,7 @@ describe.skipIf(!connection)(
       const refunds = await import("./polar-subscription-refund.server")
       const orderId = randomUUID(),
         eventId = randomUUID()
-      const order = {
-        id: orderId,
-        status: "refunded" as const,
-        net_amount: 1600,
-        tax_amount: 320,
-        total_amount: 1920,
-        refunded_amount: 1600,
-        refunded_tax_amount: 320,
-        applied_balance_amount: 0,
-        billing_reason: "subscription_cycle" as const,
-        currency: "usd",
-        product_id: config.paidProducts.plus.usd,
-        subscription_id: paid.subscriptionId,
-        modified_at: now.toISOString(),
-        customer: { external_id: `forge:workspace:${id}` },
-        items: [
-          {
-            amount: 1600,
-            tax_amount: 320,
-            proration: false,
-            start_timestamp: paid.currentPeriodStart.toISOString(),
-            end_timestamp: paid.currentPeriodEnd.toISOString(),
-          },
-        ],
-      }
+      const order = refundOrder(id, paid, orderId)
       const service = new refunds.PolarSubscriptionRefundReconciler(config, {
         orders: { get: () => Promise.resolve(order) },
       })
@@ -318,6 +326,234 @@ describe.skipIf(!connection)(
       expect(
         subscriptionAccess(await row(id), later.currentPeriodStart).plan
       ).toBe("business")
+    })
+
+    it.each(["active", "past_due", "canceled"] as const)(
+      "receipts a signed partial refund without changing %s access or its clocks",
+      async (status) => {
+        const id = await workspace(),
+          paid = snapshot(id)
+        await apply(paid)
+        if (status !== "active")
+          await apply({
+            ...paid,
+            status,
+            updatedAt: failed,
+            pastDueAt: status === "past_due" ? failed : null,
+            cancelAtPeriodEnd: status === "canceled",
+          })
+        const before = await row(id),
+          refundProvider = await import("./polar-subscription-refund.server")
+        const order = refundOrder(id, paid)
+        order.status = "partially_refunded"
+        order.refunded_amount = 100
+        order.refunded_tax_amount = 20
+        const service = new refundProvider.PolarSubscriptionRefundReconciler(
+          config,
+          {
+            orders: { get: () => Promise.resolve(order) },
+          }
+        )
+        const eventId = randomUUID()
+        for (let retry = 0; retry < 2; retry++)
+          expect(
+            (
+              await webhook.handlePolarWebhook(
+                signed(id, eventId, "order.refunded", order.id),
+                config,
+                undefined,
+                service
+              )
+            ).status
+          ).toBe(200)
+        expect(await row(id)).toEqual(before)
+        expect(subscriptionAccess(await row(id), now)).toEqual(
+          subscriptionAccess(before, now)
+        )
+        expect(await capacity.workspaceAuthMembershipLimit(id)).toBe(
+          Number.MAX_SAFE_INTEGER
+        )
+        for (let i = 0; i < 6; i++) await add(id)
+        expect(
+          (
+            await pool.query(
+              "SELECT count(*)::int AS count FROM billing_event_receipts WHERE event_id=$1",
+              [eventId]
+            )
+          ).rows[0].count
+        ).toBe(1)
+        expect(
+          (
+            await pool.query(
+              "SELECT count(*)::int AS count FROM workspace_security_audit_events WHERE request_id=$1 AND action='billing.subscription_period.partially_refunded'",
+              [eventId]
+            )
+          ).rows[0].count
+        ).toBe(1)
+      }
+    )
+
+    it("promotes a replayed partial receipt after cumulative full refund and never restores access from a late partial", async () => {
+      const id = await workspace(),
+        paid = snapshot(id)
+      await apply(paid)
+      const refundProvider = await import("./polar-subscription-refund.server"),
+        sink = await import("./subscription-refund.server")
+      const order = refundOrder(id, paid),
+        eventId = randomUUID()
+      order.status = "partially_refunded"
+      order.refunded_amount = 100
+      order.refunded_tax_amount = 20
+      const service = new refundProvider.PolarSubscriptionRefundReconciler(
+        config,
+        {
+          orders: { get: () => Promise.resolve(order) },
+        }
+      )
+      expect(
+        (
+          await webhook.handlePolarWebhook(
+            signed(id, eventId, "order.refunded", order.id),
+            config,
+            undefined,
+            service
+          )
+        ).status
+      ).toBe(200)
+      const partial = refundProvider.verifiedPolarPeriodRefund(
+        config,
+        id,
+        order.id,
+        order
+      )
+      order.status = "refunded"
+      order.refunded_amount = order.net_amount
+      order.refunded_tax_amount = order.tax_amount
+      const constraint = `promotion_fault_${randomUUID().replaceAll("-", "")}`
+      await pool.query(
+        `ALTER TABLE workspace_security_audit_events ADD CONSTRAINT ${constraint} CHECK (action <> 'billing.subscription_period.refunded') NOT VALID`
+      )
+      try {
+        expect(
+          (
+            await webhook.handlePolarWebhook(
+              signed(id, eventId, "order.refunded", order.id),
+              config,
+              undefined,
+              service
+            )
+          ).status
+        ).toBe(503)
+        expect(
+          (
+            await pool.query(
+              "SELECT outcome FROM billing_event_receipts WHERE event_id=$1",
+              [eventId]
+            )
+          ).rows[0].outcome
+        ).toBe("unchanged")
+        expect((await row(id))?.refundedPeriods).toHaveLength(0)
+        expect(subscriptionAccess(await row(id), now).plan).toBe("business")
+      } finally {
+        await pool.query(
+          `ALTER TABLE workspace_security_audit_events DROP CONSTRAINT ${constraint}`
+        )
+      }
+
+      expect(
+        (
+          await webhook.handlePolarWebhook(
+            signed(id, eventId, "order.refunded", order.id),
+            config,
+            undefined,
+            service
+          )
+        ).status
+      ).toBe(200)
+      expect(
+        (
+          await pool.query(
+            "SELECT outcome FROM billing_event_receipts WHERE event_id=$1",
+            [eventId]
+          )
+        ).rows[0].outcome
+      ).toBe("applied")
+      const denied = await row(id)
+      await sink.applyVerifiedPeriodRefund({
+        eventId: randomUUID(),
+        bodyHash: "f".repeat(64),
+        refund: partial,
+      })
+      expect(await row(id)).toEqual(denied)
+      expect(subscriptionAccess(await row(id), now).plan).toBe("free")
+      expect((await row(id))?.refundedPeriods).toHaveLength(1)
+    })
+
+    it("does not create entitlement state for a partial refund arriving before activation", async () => {
+      const id = await workspace(),
+        paid = snapshot(id),
+        sink = await import("./subscription-refund.server")
+      await sink.applyVerifiedPeriodRefund({
+        eventId: randomUUID(),
+        bodyHash: "1".repeat(64),
+        refund: {
+          kind: "partial",
+          workspaceId: id,
+          environment: "sandbox",
+          subscriptionId: paid.subscriptionId,
+          orderId: randomUUID(),
+          start: paid.currentPeriodStart.toISOString(),
+          end: paid.currentPeriodEnd.toISOString(),
+          refundedAt: now.toISOString(),
+        },
+      })
+      expect(await row(id)).toBeUndefined()
+      await apply(paid)
+      expect(subscriptionAccess(await row(id), now).plan).toBe("business")
+    })
+
+    it("rolls back partial refund audit and receipt together without changing access", async () => {
+      const id = await workspace(),
+        paid = snapshot(id),
+        sink = await import("./subscription-refund.server")
+      await apply(paid)
+      const before = await row(id),
+        constraint = `partial_fault_${randomUUID().replaceAll("-", "")}`
+      const input = {
+        eventId: randomUUID(),
+        bodyHash: "2".repeat(64),
+        refund: {
+          kind: "partial" as const,
+          workspaceId: id,
+          environment: "sandbox" as const,
+          subscriptionId: paid.subscriptionId,
+          orderId: randomUUID(),
+          start: paid.currentPeriodStart.toISOString(),
+          end: paid.currentPeriodEnd.toISOString(),
+          refundedAt: now.toISOString(),
+        },
+      }
+      await pool.query(
+        `ALTER TABLE workspace_security_audit_events ADD CONSTRAINT ${constraint} CHECK (action <> 'billing.subscription_period.partially_refunded') NOT VALID`
+      )
+      try {
+        await expect(sink.applyVerifiedPeriodRefund(input)).rejects.toThrow()
+      } finally {
+        await pool.query(
+          `ALTER TABLE workspace_security_audit_events DROP CONSTRAINT ${constraint}`
+        )
+      }
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int AS count FROM billing_event_receipts WHERE event_id=$1",
+            [input.eventId]
+          )
+        ).rows[0].count
+      ).toBe(0)
+      expect(await row(id)).toEqual(before)
+      expect((await sink.applyVerifiedPeriodRefund(input)).replayed).toBe(false)
+      expect(await row(id)).toEqual(before)
     })
 
     it("keeps a refund delivered before activation and denies overlapping replacement snapshots", async () => {

@@ -58,5 +58,7 @@
     "apps/forge/src/lib/team-thread-summaries-server.ts": "a3b8e8a970c5d0a6a0f845d8d6f77110de62186b84ebad9c2d09a0f17fe83209",
     "apps/forge/src/lib/team-thread-summaries-server.test.ts": "d5af1bda64f735a8bb6fdffc311302685c2b69da7cb4f7c268410c9aea9bb05b",
     "docs/subscription-refunds.md": "f2bd92f030655443f45444f1eea366eff93a78faa287ee799c73e15b2dad53e6"
-  }
+  },
+  "sourceCommit": "53d175f419162432e0b98ade1f12e11867398ee7",
+  "historical": true
 }

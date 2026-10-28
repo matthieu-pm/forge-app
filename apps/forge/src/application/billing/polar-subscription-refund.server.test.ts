@@ -70,7 +70,27 @@ describe("verified subscription-period refunds", () => {
     })
   })
   it.each([
-    { status: "partially_refunded", refunded_amount: 100 },
+    { refunded_amount: 100, refunded_tax_amount: 20 },
+    { refunded_amount: 1600, refunded_tax_amount: 319 },
+    { refunded_amount: 0, refunded_tax_amount: 1 },
+  ])("keeps access for verified positive partial totals: %j", (totals) => {
+    expect(
+      verifiedPolarPeriodRefund(config, "w1", orderId, {
+        ...order,
+        status: "partially_refunded",
+        ...totals,
+      })
+    ).toMatchObject({ kind: "partial", subscriptionId })
+  })
+  it.each([
+    { status: "partially_refunded" },
+    {
+      status: "partially_refunded",
+      refunded_amount: 0,
+      refunded_tax_amount: 0,
+    },
+    { status: "partially_refunded", refunded_amount: -1 },
+    { status: "paid", refunded_amount: 100 },
     { refunded_tax_amount: 0 },
     { refunded_amount: 1920 },
     { applied_balance_amount: 500 },

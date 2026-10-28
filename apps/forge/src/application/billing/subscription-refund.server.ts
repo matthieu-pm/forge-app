@@ -10,6 +10,7 @@ import {
 } from "@/db"
 
 const refundSchema = z.object({
+  kind: z.enum(["full", "partial"]).default("full"),
   workspaceId: z.string().min(1),
   environment: z.enum(["sandbox", "production"]),
   orderId: z.uuid(),
@@ -18,9 +19,9 @@ const refundSchema = z.object({
   end: z.iso.datetime({ offset: true }),
   refundedAt: z.iso.datetime({ offset: true }),
 })
-export type VerifiedPeriodRefund = z.infer<typeof refundSchema>
+export type VerifiedPeriodRefund = z.input<typeof refundSchema>
 
-/** Append provider-verified denial independently of mutable subscription status. */
+/** Reconcile provider-verified refunds without deriving access from event payloads. */
 export async function applyVerifiedPeriodRefund(input: {
   eventId: string
   bodyHash: string
@@ -31,7 +32,7 @@ export async function applyVerifiedPeriodRefund(input: {
     .string()
     .regex(/^[a-f0-9]{64}$/)
     .parse(input.bodyHash)
-  const { workspaceId, ...refund } = refundSchema.parse(input.refund)
+  const { workspaceId, kind, ...refund } = refundSchema.parse(input.refund)
   if (new Date(refund.start) >= new Date(refund.end))
     throw new Error("BILLING_REFUND_PERIOD_INVALID")
   return db.transaction(async (tx) => {
@@ -54,7 +55,6 @@ export async function applyVerifiedPeriodRefund(input: {
         duplicate.subscriptionId !== refund.subscriptionId
       )
         throw new Error("BILLING_EVENT_CONFLICT")
-      return { outcome: duplicate.outcome, replayed: true }
     }
     const previous = await tx.query.workspaceEntitlements.findFirst({
       where: eq(workspaceEntitlements.workspaceId, workspaceId),
@@ -71,8 +71,13 @@ export async function applyVerifiedPeriodRefund(input: {
         existing.end !== refund.end)
     )
       throw new Error("BILLING_REFUND_CONFLICT")
-    const outcome = existing ? "unchanged" : "applied"
-    if (!existing) {
+    // A retried partial-refund event can now fetch a cumulatively full refund.
+    // Promote that exact receipt without requiring another event to arrive.
+    const revoke = kind === "full" && !existing
+    if (duplicate && !revoke)
+      return { outcome: duplicate.outcome, replayed: true }
+    const outcome = revoke ? "applied" : "unchanged"
+    if (revoke) {
       // This also records refunds arriving before first activation. Subscription
       // reconciliation deliberately never replaces this append-only history.
       const refundedPeriods = [...history, refund]
@@ -83,23 +88,39 @@ export async function applyVerifiedPeriodRefund(input: {
           target: workspaceEntitlements.workspaceId,
           set: { refundedPeriods, updatedAt: new Date() },
         })
+    }
+    if (revoke || kind === "partial") {
       await tx.insert(workspaceSecurityAuditEvents).values({
         workspaceId,
-        action: "billing.subscription_period.refunded",
+        action:
+          kind === "full"
+            ? "billing.subscription_period.refunded"
+            : "billing.subscription_period.partially_refunded",
         target: refund.orderId,
         outcome: "succeeded",
-        after: refund,
+        after: { ...refund, kind },
         requestId: eventId,
       })
     }
-    await tx.insert(billingEventReceipts).values({
-      workspaceId,
-      environment: refund.environment,
-      eventId,
-      bodyHash,
-      subscriptionId: refund.subscriptionId,
-      outcome,
-    })
-    return { outcome, replayed: false }
+    if (duplicate) {
+      await tx
+        .update(billingEventReceipts)
+        .set({ outcome })
+        .where(
+          and(
+            eq(billingEventReceipts.environment, refund.environment),
+            eq(billingEventReceipts.eventId, eventId)
+          )
+        )
+    } else
+      await tx.insert(billingEventReceipts).values({
+        workspaceId,
+        environment: refund.environment,
+        eventId,
+        bodyHash,
+        subscriptionId: refund.subscriptionId,
+        outcome,
+      })
+    return { outcome, replayed: !!duplicate }
   })
 }
