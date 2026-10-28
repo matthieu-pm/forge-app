@@ -52,6 +52,9 @@ function subscription(): ProviderSubscription {
     cancel_at_period_end: false,
     ends_at: null,
     ended_at: null,
+    pause_at_period_end: false,
+    paused_at: null,
+    resumes_at: null,
     customer: { external_id: "forge:workspace:w1" },
   }
 }
@@ -223,5 +226,21 @@ describe("owner cancellation at period end", () => {
       "NOT_CONFIRMED"
     )
     expect(second.apply).not.toHaveBeenCalled()
+  })
+})
+
+it("records unexpected pause evidence and sends only the approved period-end cancellation", async () => {
+  const f = setup()
+  f.get.mockResolvedValueOnce({ ...subscription(), pause_at_period_end: true })
+  await f.service.schedule(actor)
+  expect(f.apply).toHaveBeenCalledWith(
+    expect.objectContaining({
+      snapshot: expect.objectContaining({
+        unsupportedPauseAt: new Date("2026-11-01T00:00:00Z"),
+      }),
+    })
+  )
+  expect(f.update).toHaveBeenCalledExactlyOnceWith(id, {
+    cancel_at_period_end: true,
   })
 })

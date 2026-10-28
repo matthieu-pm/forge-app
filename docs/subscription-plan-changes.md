@@ -40,7 +40,8 @@ proration_behavior: "invoice"}`. Downgrade uses the approved Starter product wit
 `proration_behavior: "next_period"`. No price, trial, currency, period reset or
 immediate seat quantity is sent. Current subscription ownership, approved monthly
 catalog, period, seat count and pending changes must match. Canceled, terminal,
-trial and paused subscriptions require their own lifecycle path. An existing
+trial subscriptions require their own lifecycle path. Pause/resume is excluded at
+launch; unexpected provider pauses are recorded and refused. An existing
 failed upgrade can be inspected again without resubmitting its invoice.
 
 After writes, fetch current provider state and verify the original period,
@@ -182,9 +183,13 @@ changes that bypass Forge's asymmetric timing and membership rules before launch
 Starter renewal after a full upgrade-only refund is confirmed and implemented.
 The controlled provider adjustment needed to buy Plus again while the refunded
 provider product still says Plus remains gated; it cannot silently charge again
-or restore Plus without new verified payment. Pause, currency changes and
-team/issue/upload over-capacity policies still need decisions. Keep FOR-110/FOR-111
+or restore Plus without new verified payment. Pause/resume is excluded at launch; `docs/subscription-pause-policy.md` records
+its verified safeguards. Currency changes and team/issue/upload over-capacity
+policies still need decisions. Keep FOR-110/FOR-111
 In Progress until those policies and the remaining public/release gates are complete.
 This is prepared backend behavior, not a live Polar sandbox/candidate result.
 Durable workspace-wide external-effect serialization, periodic redrive and a
 reactivation handler must enforce any pending refund intent before live billing.
+
+
+The verification counts above describe the tier/refund-renewal checkpoint at `53f0226`. Current no-pause verification and the 34-migration staging/rehearsal follow-up are recorded in `docs/subscription-pause-policy.md`; the earlier checkpoint is historical.

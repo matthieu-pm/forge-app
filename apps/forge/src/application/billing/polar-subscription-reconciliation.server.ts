@@ -24,6 +24,9 @@ export type ProviderSubscription = Pick<
   | "cancel_at_period_end"
   | "ends_at"
   | "ended_at"
+  | "pause_at_period_end"
+  | "paused_at"
+  | "resumes_at"
 > & { customer: Pick<Subscription["customer"], "external_id"> }
 
 export function verifiedPolarSubscriptionSnapshot(
@@ -53,7 +56,7 @@ export function verifiedPolarSubscriptionSnapshot(
   )
     throw new Error("BILLING_PROVIDER_CATALOG_MISMATCH")
   const status = z
-    .enum(["active", "past_due", "canceled", "unpaid"])
+    .enum(["active", "past_due", "canceled", "unpaid", "paused"])
     .safeParse(subscription.status)
   if (!status.success) throw new Error("BILLING_LIFECYCLE_POLICY_REQUIRED")
   const cancelAtPeriodEnd = z.boolean().parse(subscription.cancel_at_period_end)
@@ -64,6 +67,18 @@ export function verifiedPolarSubscriptionSnapshot(
       .parse(value)
   const updatedAt = date(subscription.modified_at)
   const end = date(subscription.current_period_end)
+  const scheduledPause = z.boolean().parse(subscription.pause_at_period_end)
+  const pausedAt =
+    subscription.paused_at === null ? null : date(subscription.paused_at)
+  const resumesAt =
+    subscription.resumes_at === null ? null : date(subscription.resumes_at)
+  if (
+    (status.data === "paused" && !pausedAt) ||
+    (pausedAt && pausedAt > updatedAt) ||
+    (resumesAt &&
+      ((!pausedAt && !scheduledPause) || (pausedAt && resumesAt <= pausedAt)))
+  )
+    throw new Error("BILLING_PAUSE_STATE_INVALID")
   const endedAt = subscription.ended_at ? date(subscription.ended_at) : null
   const terminalStatus = status.data === "canceled" || status.data === "unpaid"
   if (endedAt && (!terminalStatus || endedAt > updatedAt))
@@ -85,8 +100,16 @@ export function verifiedPolarSubscriptionSnapshot(
     environment: config.environment,
     subscriptionId,
     plan: products[0].plan === "starter" ? "starter" : "plus",
-    status: status.data === "unpaid" ? "canceled" : status.data,
+    // A provider pause is projected only through the restrictive branch below;
+    // the normalized status cannot grant access or mint paid activation there.
+    status:
+      status.data === "unpaid"
+        ? "canceled"
+        : status.data === "paused"
+          ? "active"
+          : status.data,
     terminatedAt,
+    unsupportedPauseAt: pausedAt ?? (scheduledPause ? end : null),
     updatedAt,
     currentPeriodStart: date(subscription.current_period_start),
     currentPeriodEnd: end,
@@ -119,6 +142,7 @@ export class PolarSubscriptionReconciler {
     subscriptionId: string
     eventId: string
     bodyHash: string
+    unsupportedResume?: boolean
   }) {
     const subscription = await this.client.subscriptions.get(
       z.uuid().parse(input.subscriptionId)
@@ -129,11 +153,20 @@ export class PolarSubscriptionReconciler {
       input.subscriptionId,
       subscription
     )
+    // A signed resume can arrive after the pause event was missed. Current active
+    // state alone must not turn that unsupported transition into a first grant.
+    if (
+      input.unsupportedResume &&
+      !snapshot.terminatedAt &&
+      !snapshot.unsupportedPauseAt
+    )
+      snapshot.unsupportedPauseAt = snapshot.updatedAt
     if (
       snapshot.plan === "plus" &&
       (snapshot.status === "active" ||
         (snapshot.status === "canceled" && snapshot.cancelAtPeriodEnd)) &&
       !snapshot.terminatedAt &&
+      !snapshot.unsupportedPauseAt &&
       this.client.orders
     ) {
       snapshot.paidUpgrade = await findPaidUpgradeOrder(this.client.orders, {

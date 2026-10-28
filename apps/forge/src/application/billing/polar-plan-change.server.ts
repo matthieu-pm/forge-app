@@ -93,15 +93,19 @@ export class PolarPlanChanger {
         id,
         observed
       )
-      if (snapshot.terminatedAt) {
-        const eventId = `forge.plan.terminated.${id}.${snapshot.updatedAt.toISOString()}`
+      if (snapshot.terminatedAt || snapshot.unsupportedPauseAt) {
+        const eventId = `forge.plan.restricted.${id}.${snapshot.updatedAt.toISOString()}`
         await this.apply({
           eventId,
           bodyHash: createHash("sha256").update(eventId).digest("hex"),
           snapshot,
           actor,
         })
-        throw new Error("BILLING_SUBSCRIPTION_TERMINATED")
+        throw new Error(
+          snapshot.terminatedAt
+            ? "BILLING_SUBSCRIPTION_TERMINATED"
+            : "BILLING_SUBSCRIPTION_PAUSE_UNSUPPORTED"
+        )
       }
       return observed
     }

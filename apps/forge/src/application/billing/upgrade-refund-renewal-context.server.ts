@@ -42,6 +42,8 @@ function contextFor(
   )
     return { status: "superseded" }
   if (state.terminatedAt) return { status: "terminated" }
+  if (state.unsupportedPauseAt)
+    throw new Error("BILLING_SUBSCRIPTION_PAUSE_UNSUPPORTED")
   if (state.paidUpgradeOrderId && state.paidUpgradeOrderId !== input.orderId)
     return { status: "superseded" }
   const start = state.currentPeriodStart?.toISOString(),

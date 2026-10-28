@@ -50,5 +50,7 @@
     "docs/polar-billing.md": "3ef9c9b6262727e4638faaa54369e795cf86cff13962d1e1a5e749dc717cd96e",
     "docs/subscription-plan-changes.md": "1013c1f6efb5ea1985d7c2e587c6c61214c220763a77ced2f51798b2f3e13f41",
     "docs/subscription-refunds.md": "64a19c2b75237f4c696b8aeb421a91f3c0c28c1083daa7d59b2801af4997d9d3"
-  }
+  },
+  "historical": true,
+  "sourceCommit": "53f02268233abe90390782649787d5c8370cf19f"
 }

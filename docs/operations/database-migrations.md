@@ -1,6 +1,6 @@
 # Database migration ownership and rehearsal
 
-FOR-27/FOR-28 implementation evidence, 28 October 2026. Production execution stays
+FOR-27/FOR-28 implementation evidence, updated 29 October 2026. Production execution stays
 disabled until FOR-25 verifies the actual serving database and source revision.
 
 ## Provisioned targets
@@ -8,13 +8,16 @@ disabled until FOR-25 verifies the actual serving database and source revision.
 | Use | Neon branch | Direct host | Database | Lifecycle |
 | --- | --- | --- | --- | --- |
 | Persistent staging | `br-autumn-union-za0opf1e`, renamed `staging` | `ep-blue-shadow-zauhwkjz.c-2.eu-west-2.aws.neon.tech` | `forge_staging` | No expiry |
-| Disposable rehearsal | `br-square-sky-za2iavfk` | `ep-ancient-resonance-zaeuj9gw.c-2.eu-west-2.aws.neon.tech` | `forge_migration_rehearsal` | Expires 2026-10-28 22:40:11 UTC |
+| Disposable rehearsal | `br-empty-waterfall-zay0vqug` | `ep-billowing-night-zan57ux5.c-2.eu-west-2.aws.neon.tech` | `forge_migration_rehearsal` | Expires 2026-10-29 03:30:00 UTC |
 
-Both branches were originally schema-only roots. Before reuse, read-only SQL
-confirmed zero users, organizations, teams and member counters on both. New empty
+The persistent staging branch was originally a schema-only root. The current
+rehearsal replaces an expired disposable branch and is an expiring child of
+isolated staging; its distinct rehearsal database started empty. Earlier
+checkpoint references below describe the retired rehearsal. Before reuse, read-only SQL
+confirmed the isolated branch/database identities and empty application data. New empty
 databases avoid adopting the rowless schema-only copy's empty migration journal.
-Staging applied **all 29 checked-in migrations** through `db:migrate`. Rehearsal
-applied the complete history too. No production rows were copied, no branches were
+At the original checkpoint, staging and rehearsal applied all 29 then-checked-in
+migrations. The latest checkpoint below advances both current targets to 34. No production rows were copied, no branches were manually
 deleted, and the default branch/application connection selection was unchanged.
 
 Staging is a database foundation. Hosted web/runtime, isolated object storage,
@@ -107,3 +110,8 @@ Migration 0031 adds finite provider-backed terminal state and makes SQL member a
 ## Upgrade-refund access migration follow-up · 28 October 2026
 
 Migration 0032 records paid Plus grant identity and aligns refund-aware Starter fallback with SQL admission. All 33 migrations are applied only to isolated staging/rehearsal; three full-history migration ownership/fault cases pass. Staging: 43 billing and 16 real-auth membership cases pass, including temporary admission refusal without base proof and resumed paid Starter admission after verification. Existing member sessions are preserved. The serving/default database and local connection files are unchanged. See `docs/subscription-plan-changes.md`.
+
+
+## No-pause migration follow-up · 29 October 2026
+
+Migration 0033 adds a finite provider-backed unsupported-pause cutoff and aligns SQL admission with shared access policy. A fresh empty rehearsal database on the current expiring branch applied all 34 migrations; all 3 ownership/fault cases passed. Only then did the exact persistent staging target apply the one pending migration, now also 34. Current staging tests pass 52 billing and 17 real-auth membership cases. No serving/default database or local connection setting changed; no branches were manually deleted. See `docs/subscription-pause-policy.md`.

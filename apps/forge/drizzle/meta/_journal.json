@@ -232,6 +232,13 @@
       "when": 1793226201911,
       "tag": "0032_upgrade_refund_access",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1793229444378,
+      "tag": "0033_unsupported_pause",
+      "breakpoints": true
     }
   ]
 }

@@ -239,3 +239,8 @@ The new `PolarPlanChanger` and live context resolver prepare immediate prorated 
 ## Upgrade-refund renewal follow-up · 29 October 2026
 
 The user confirmed Starter at the next renewal after fully refunding only a Plus upgrade. The refund handler commits access restriction first, then verifies and schedules the approved same-currency Starter product with explicit next-period timing. Billed and scheduled seats, current charge and period are preserved. Existing refund intent redrives failed/lost responses and atomic confirmation; terminal/newer paid grants cannot be overwritten by old refund confirmation. No new migration or live billing change. See `docs/subscription-plan-changes.md` for current verification, retry boundaries and remaining release gates.
+
+
+## No subscription pausing at launch · 29 October 2026
+
+Confirmed: use period-end cancellation; no pause/resume feature. Provider verification now checks the separate pause fields, signed pause/resume events re-fetch current state, and unexpected pauses receive a durable access cutoff shared by features, overage authorization and SQL membership admission. Ordinary resumed/active snapshots cannot clear it. The portal/candidate release gate must disable customer-facing pausing; no live provider setting was modified. See `docs/subscription-pause-policy.md`.

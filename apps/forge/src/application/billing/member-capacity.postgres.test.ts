@@ -242,6 +242,10 @@ describe.skipIf(!testUrl)(
         ),
         "utf8"
       )
+      const unsupportedPauseMigration = await readFile(
+        new URL("../../../drizzle/0033_unsupported_pause.sql", import.meta.url),
+        "utf8"
+      )
       if (installed) {
         // Reuse only an empty, explicitly selected test branch with exactly the
         // checked-in trigger bodies. Do not drop/reset any database objects.
@@ -253,7 +257,8 @@ describe.skipIf(!testUrl)(
           cancellationMigration +
           refundMigration +
           terminationMigration +
-          upgradeRefundMigration
+          upgradeRefundMigration +
+          unsupportedPauseMigration
         ).matchAll(
           /CREATE (?:OR REPLACE )?FUNCTION public\.(\w+)[\s\S]*?AS \$\$([\s\S]*?)\$\$;/g
         ))
@@ -303,6 +308,7 @@ describe.skipIf(!testUrl)(
             refundMigration,
             terminationMigration,
             upgradeRefundMigration,
+            unsupportedPauseMigration,
           ]) {
             for (const statement of extra.split("--> statement-breakpoint"))
               if (statement.trim()) await client.query(statement)
@@ -743,6 +749,67 @@ describe.skipIf(!testUrl)(
           })
         )?.id
       ).toBe(w.id)
+      expect(
+        (
+          await pool.query("SELECT status FROM invitation WHERE id=$1", [
+            pending,
+          ])
+        ).rows[0].status
+      ).toBe("pending")
+    }, 30_000)
+
+    it("retains sessions but blocks paid member admission after an unsupported provider pause", async () => {
+      const w = await workspace(6, true),
+        subscriptionId = randomUUID(),
+        start = new Date(Date.now() - 86400000),
+        end = new Date(Date.now() + 30 * 86400000)
+      await pool.query(
+        `UPDATE workspace_entitlements SET source='polar',source_reference=$2,provider_environment='sandbox',provider_updated_at=now(),provider_state_hash=$3,paid_activated_at=$4,current_period_start=$4,current_period_end=$5 WHERE workspace_id=$1`,
+        [w.id, subscriptionId, "b".repeat(64), start, end]
+      )
+      const cookie = await login(w.members[5]),
+        next = await user(),
+        pending = await invitation(w.id, next, w.members[0])
+      const { applyVerifiedSubscriptionSnapshot } =
+        await import("./subscription-reconciliation.server")
+      const pausedAt = new Date(),
+        snapshot = {
+          workspaceId: w.id,
+          environment: "sandbox" as const,
+          subscriptionId,
+          plan: "starter" as const,
+          status: "active" as const,
+          updatedAt: pausedAt,
+          currentPeriodStart: start,
+          currentPeriodEnd: end,
+          pastDueAt: null,
+          unsupportedPauseAt: pausedAt,
+        }
+      await applyVerifiedSubscriptionSnapshot({
+        eventId: randomUUID(),
+        bodyHash: "d".repeat(64),
+        snapshot,
+      })
+      expect((await accept(pending, await login(next))).ok).toBe(false)
+      expect(await count(w.id)).toEqual({ actual: 6, tracked: 6 })
+      expect(
+        (
+          await app.auth.api.getFullOrganization({
+            headers: new Headers({ cookie }),
+            query: { organizationId: w.id },
+          })
+        )?.id
+      ).toBe(w.id)
+      await applyVerifiedSubscriptionSnapshot({
+        eventId: randomUUID(),
+        bodyHash: "e".repeat(64),
+        snapshot: {
+          ...snapshot,
+          unsupportedPauseAt: null,
+          updatedAt: new Date(),
+        },
+      })
+      expect((await accept(pending, await login(next))).ok).toBe(false)
       expect(
         (
           await pool.query("SELECT status FROM invitation WHERE id=$1", [

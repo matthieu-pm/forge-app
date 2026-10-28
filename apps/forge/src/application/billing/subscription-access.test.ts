@@ -14,6 +14,50 @@ const state: SubscriptionAccessState = {
 
 describe("paid-access grace", () => {
   it.each(["active", "past_due", "canceled"])(
+    "denies unsupported provider pause in %s before grants, refunds or grace",
+    (status) => {
+      const paused = {
+        ...state,
+        status,
+        unsupportedPauseAt: failed,
+        currentPeriodStart: new Date(failed.getTime() - 86400000),
+        currentPeriodEnd: new Date(failed.getTime() + 30 * 86400000),
+        cancelAtPeriodEnd: status === "canceled",
+        cancellationPeriodEnd: new Date(failed.getTime() + 30 * 86400000),
+      }
+      expect(subscriptionAccess(paused, failed)).toMatchObject({
+        plan: "free",
+        phase: "free",
+        allowsExistingOverage: false,
+      })
+      expect(
+        subscriptionAccess(
+          { ...paused, unsupportedPauseAt: new Date(NaN) },
+          failed
+        ).plan
+      ).toBe("free")
+    }
+  )
+  it("keeps paid access only until the earliest unsupported scheduled-pause cutoff", () => {
+    const cutoff = new Date(failed.getTime() + 86400000)
+    const scheduled = {
+      ...state,
+      status: "active",
+      currentPeriodStart: state.paidActivatedAt,
+      currentPeriodEnd: new Date(failed.getTime() + 30 * 86400000),
+      unsupportedPauseAt: cutoff,
+    }
+    expect(
+      subscriptionAccess(scheduled, new Date(cutoff.getTime() - 1)).plan
+    ).toBe("business")
+    expect(subscriptionAccess(scheduled, cutoff).plan).toBe("free")
+    expect(
+      subscriptionAccess({ ...scheduled, status: "past_due" }, cutoff)
+        .allowsExistingOverage
+    ).toBe(false)
+  })
+
+  it.each(["active", "past_due", "canceled"])(
     "denies terminal %s state before other paid or grace rules",
     (status) => {
       expect(

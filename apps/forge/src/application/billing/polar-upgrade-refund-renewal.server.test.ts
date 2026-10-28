@@ -60,6 +60,7 @@ function fixture() {
     ended_at: null,
     pause_at_period_end: false,
     paused_at: null,
+    resumes_at: null,
     pending_update: {
       id: orderId,
       created_at: start,

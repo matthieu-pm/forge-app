@@ -28,6 +28,7 @@ export async function readPlanChangeContext(
     state.source !== "polar" ||
     state.providerEnvironment !== environment ||
     state.sourceReference !== binding.subscriptionId ||
+    state.unsupportedPauseAt != null ||
     !capacity ||
     access.phase !== "paid" ||
     !["basic", "business"].includes(access.plan)

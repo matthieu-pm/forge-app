@@ -17,6 +17,8 @@ const identitySchema = z.object({
     "subscription.updated",
     "subscription.canceled",
     "subscription.uncanceled",
+    "subscription.paused",
+    "subscription.resumed",
   ]),
   data: z.object({
     id: z.uuid(),
@@ -110,6 +112,9 @@ export async function handlePolarWebhook(
       await (reconciler ?? new PolarSubscriptionReconciler(config)).reconcile({
         ...identity,
         subscriptionId: parsed.data.data.id,
+        ...(parsed.data.type === "subscription.resumed"
+          ? { unsupportedResume: true }
+          : {}),
       })
     }
     return response(200, "RECONCILED")

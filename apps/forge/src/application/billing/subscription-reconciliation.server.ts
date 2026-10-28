@@ -30,6 +30,7 @@ const snapshotSchema = z.object({
   pastDueAt: z.date().nullable(),
   cancelAtPeriodEnd: z.boolean().default(false),
   terminatedAt: z.date().nullable().default(null),
+  unsupportedPauseAt: z.date().nullable().default(null),
   paidUpgrade: z
     .object({
       orderId: z.uuid(),
@@ -84,6 +85,7 @@ export async function applyVerifiedSubscriptionSnapshot(input: {
       ((snapshot.status !== "active" &&
         !(snapshot.status === "canceled" && snapshot.cancelAtPeriodEnd)) ||
         !!snapshot.terminatedAt ||
+        !!snapshot.unsupportedPauseAt ||
         snapshot.plan !== "plus" ||
         snapshot.paidUpgrade.subscriptionId !== snapshot.subscriptionId ||
         snapshot.paidUpgrade.periodStart.getTime() !==
@@ -95,6 +97,10 @@ export async function applyVerifiedSubscriptionSnapshot(input: {
     (snapshot.terminatedAt &&
       (snapshot.status !== "canceled" ||
         snapshot.terminatedAt > snapshot.updatedAt)) ||
+    (snapshot.unsupportedPauseAt &&
+      snapshot.unsupportedPauseAt > snapshot.updatedAt &&
+      snapshot.unsupportedPauseAt.getTime() !==
+        snapshot.currentPeriodEnd.getTime()) ||
     (snapshot.status === "canceled" &&
       !snapshot.cancelAtPeriodEnd &&
       !snapshot.terminatedAt) ||
@@ -108,6 +114,7 @@ export async function applyVerifiedSubscriptionSnapshot(input: {
     cancelAtPeriodEnd: cancelFlag,
     terminatedAt,
     paidUpgrade,
+    unsupportedPauseAt,
     ...legacySnapshot
   } = snapshot
   const cancellationSnapshot = cancelFlag
@@ -263,6 +270,47 @@ export async function applyVerifiedSubscriptionSnapshot(input: {
       }
       return receipt(changed ? "applied" : "unchanged")
     }
+    if (unsupportedPauseAt) {
+      // Unsupported provider state is restrictive independently of event order.
+      // Keep the earliest cutoff; an ordinary resume/active event cannot clear it.
+      const earlier = sameSubscription ? previous.unsupportedPauseAt : null
+      const cutoff = new Date(
+        Math.min(earlier?.getTime() ?? Infinity, unsupportedPauseAt.getTime())
+      )
+      const changed = !earlier || cutoff < earlier
+      if (sameSubscription && previous.terminatedAt) return receipt("unchanged")
+      if (changed) {
+        if (sameSubscription)
+          await tx
+            .update(workspaceEntitlements)
+            .set({ unsupportedPauseAt: cutoff, updatedAt: new Date() })
+            .where(eq(workspaceEntitlements.workspaceId, snapshot.workspaceId))
+        else
+          await tx.insert(workspaceEntitlements).values({
+            workspaceId: snapshot.workspaceId,
+            source: "polar",
+            sourceReference: snapshot.subscriptionId,
+            providerEnvironment: snapshot.environment,
+            providerUpdatedAt: snapshot.updatedAt,
+            providerStateHash: stateHash,
+            plan: snapshot.plan === "starter" ? "basic" : "business",
+            status: snapshot.status,
+            currentPeriodStart: snapshot.currentPeriodStart,
+            currentPeriodEnd: snapshot.currentPeriodEnd,
+            unsupportedPauseAt: cutoff,
+          })
+        await tx.insert(workspaceSecurityAuditEvents).values({
+          workspaceId: snapshot.workspaceId,
+          actorUserId: input.actor?.userId ?? null,
+          action: "billing.subscription.unsupported_pause",
+          target: snapshot.subscriptionId,
+          outcome: "succeeded",
+          after: { unsupportedPauseAt: cutoff.toISOString() },
+          requestId: eventId,
+        })
+      }
+      return receipt(changed ? "applied" : "unchanged")
+    }
     const usablePaidUpgrade =
       paidUpgrade &&
       !previous?.refundedPeriods.some(
@@ -276,6 +324,7 @@ export async function applyVerifiedSubscriptionSnapshot(input: {
     const paymentPromotion =
       sameSubscription &&
       !previous.terminatedAt &&
+      !previous.unsupportedPauseAt &&
       previous.plan === "basic" &&
       snapshot.plan === "plus" &&
       (snapshot.status === "active" ||

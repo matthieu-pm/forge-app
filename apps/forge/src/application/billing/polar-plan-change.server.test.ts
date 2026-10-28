@@ -112,6 +112,7 @@ function fixture(plan: "starter" | "plus" = "starter") {
     ended_at: null,
     pause_at_period_end: false,
     paused_at: null,
+    resumes_at: null,
     pending_update: null,
   }
   const value = {
@@ -681,4 +682,18 @@ describe("refund of only a Plus upgrade", () => {
       verifiedPolarPeriodRefund(config, "w1", orderId, mixed)
     ).toThrow()
   })
+})
+
+it("persists unsupported pause proof before refusing a paid product change", async () => {
+  const f = fixture()
+  f.current.pause_at_period_end = true
+  await expect(f.service.change(actor, "plus")).rejects.toThrow(
+    "PAUSE_UNSUPPORTED"
+  )
+  expect(f.update).not.toHaveBeenCalled()
+  expect(f.apply).toHaveBeenCalledWith(
+    expect.objectContaining({
+      snapshot: expect.objectContaining({ unsupportedPauseAt: new Date(end) }),
+    })
+  )
 })

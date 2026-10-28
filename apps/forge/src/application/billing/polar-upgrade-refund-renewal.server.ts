@@ -65,13 +65,15 @@ export class PolarUpgradeRefundRenewal {
         id,
         value
       )
-      if (snapshot.terminatedAt) {
-        const eventId = `forge.refund-renewal.terminated.${id}.${snapshot.updatedAt.toISOString()}`
+      if (snapshot.terminatedAt || snapshot.unsupportedPauseAt) {
+        const eventId = `forge.refund-renewal.restricted.${id}.${snapshot.updatedAt.toISOString()}`
         await this.store.project({
           eventId,
           bodyHash: createHash("sha256").update(eventId).digest("hex"),
           snapshot,
         })
+        if (snapshot.unsupportedPauseAt && !snapshot.terminatedAt)
+          throw new Error("BILLING_SUBSCRIPTION_PAUSE_UNSUPPORTED")
         return { value, snapshot, terminal: true as const }
       }
       if (

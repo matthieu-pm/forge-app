@@ -68,6 +68,9 @@ function subscription(): ProviderSubscription {
     cancel_at_period_end: false,
     ends_at: null,
     ended_at: null,
+    pause_at_period_end: false,
+    paused_at: null,
+    resumes_at: null,
     modified_at: "2026-10-28T01:00:00Z",
     past_due_at: "2026-10-25T01:00:00Z",
     current_period_start: "2026-10-25T01:00:00Z",
@@ -276,4 +279,131 @@ describe("Polar authoritative subscription reconciliation", () => {
       expect(apply).not.toHaveBeenCalled()
     }
   )
+})
+
+describe("unsupported provider pauses at launch", () => {
+  it.each(["subscription.paused", "subscription.resumed"])(
+    "re-fetches current state for signed %s instead of trusting a resumed event",
+    async (type) => {
+      const current = {
+        ...subscription(),
+        status: "paused" as const,
+        past_due_at: null,
+        paused_at: "2026-10-27T00:00:00Z",
+        resumes_at: "2026-11-01T00:00:00Z",
+      }
+      const get = vi.fn().mockResolvedValue(current),
+        list = vi.fn(),
+        apply = vi.fn().mockResolvedValue({})
+      const service = new PolarSubscriptionReconciler(
+        config,
+        { subscriptions: { get }, orders: { get: vi.fn(), list } },
+        apply
+      )
+      const body = JSON.stringify({
+        type,
+        data: {
+          id,
+          customer: { external_id: "forge:workspace:w1" },
+          paused_at: null,
+          status: "active",
+        },
+      })
+      expect(
+        (await handlePolarWebhook(signed(body), config, service)).status
+      ).toBe(200)
+      expect(get).toHaveBeenCalledWith(id)
+      expect(list).not.toHaveBeenCalled()
+      expect(apply).toHaveBeenCalledWith(
+        expect.objectContaining({
+          snapshot: expect.objectContaining({
+            unsupportedPauseAt: new Date(current.paused_at),
+          }),
+        })
+      )
+    }
+  )
+  it("records the original period end for a scheduled pause without minting paid proof", async () => {
+    const current = {
+      ...subscription(),
+      status: "active" as const,
+      past_due_at: null,
+      pause_at_period_end: true,
+    }
+    expect(
+      verifiedPolarSubscriptionSnapshot(config, "w1", id, current)
+        .unsupportedPauseAt
+    ).toEqual(new Date(current.current_period_end))
+    const apply = vi.fn(),
+      list = vi.fn()
+    await new PolarSubscriptionReconciler(
+      config,
+      {
+        subscriptions: { get: () => Promise.resolve(current) },
+        orders: { get: vi.fn(), list },
+      },
+      apply
+    ).reconcile({
+      workspaceId: "w1",
+      subscriptionId: id,
+      eventId: "pause",
+      bodyHash: "a".repeat(64),
+    })
+    expect(list).not.toHaveBeenCalled()
+  })
+  it.each([
+    { paused_at: "2026-10-29T00:00:00Z" },
+    { resumes_at: "2026-11-01T00:00:00Z" },
+    { paused_at: "2026-10-27T00:00:00Z", resumes_at: "2026-10-26T00:00:00Z" },
+    { pause_at_period_end: undefined },
+    { paused_at: undefined },
+    { resumes_at: undefined },
+  ])("refuses incomplete or contradictory pause evidence: %j", (patch) => {
+    expect(() =>
+      verifiedPolarSubscriptionSnapshot(config, "w1", id, {
+        ...subscription(),
+        ...patch,
+      } as ProviderSubscription)
+    ).toThrow()
+  })
+})
+
+it("does not grant from an active resumed subscription when the pause delivery was missed", async () => {
+  const current = {
+    ...subscription(),
+    status: "active" as const,
+    past_due_at: null,
+  }
+  const apply = vi.fn(),
+    list = vi.fn()
+  const service = new PolarSubscriptionReconciler(
+    config,
+    {
+      subscriptions: { get: () => Promise.resolve(current) },
+      orders: { get: vi.fn(), list },
+    },
+    apply
+  )
+  expect(
+    (
+      await handlePolarWebhook(
+        signed(
+          JSON.stringify({
+            type: "subscription.resumed",
+            data: { id, customer: current.customer },
+          })
+        ),
+        config,
+        service
+      )
+    ).status
+  ).toBe(200)
+  expect(apply).toHaveBeenCalledWith(
+    expect.objectContaining({
+      snapshot: expect.objectContaining({
+        unsupportedPauseAt: new Date(current.modified_at!),
+      }),
+    })
+  )
+  expect(list).not.toHaveBeenCalled()
 })

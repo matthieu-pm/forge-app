@@ -59,6 +59,15 @@ export class PolarSubscriptionCancellation {
       fresh.subscriptionId !== id
     )
       throw new Error("BILLING_SUBSCRIPTION_CONFLICT")
+    if (before.unsupportedPauseAt) {
+      const eventId = `forge.cancel.pause.${id}.${before.updatedAt.toISOString()}`
+      await this.apply({
+        eventId,
+        bodyHash: createHash("sha256").update(eventId).digest("hex"),
+        snapshot: before,
+        actor,
+      })
+    }
     if (!before.cancelAtPeriodEnd && !before.terminatedAt) {
       await this.client.subscriptions.update(id, { cancel_at_period_end: true })
       current = await this.client.subscriptions.get(id)

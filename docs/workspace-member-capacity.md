@@ -136,3 +136,8 @@ Migration 0031 adds finite provider-backed terminal state and makes SQL member a
 ## Upgrade-refund access migration follow-up · 28 October 2026
 
 Migration 0032 records paid Plus grant identity and aligns refund-aware Starter fallback with SQL admission. All 33 migrations are applied only to isolated staging/rehearsal; three full-history migration ownership/fault cases pass. Staging: 43 billing and 16 real-auth membership cases pass, including temporary admission refusal without base proof and resumed paid Starter admission after verification. Existing member sessions are preserved. The serving/default database and local connection files are unchanged. See `docs/subscription-plan-changes.md`.
+
+
+## Unsupported provider pause · 29 October 2026
+
+Pause/resume is excluded at launch. Migration 0033 makes SQL admission honor the same durable pause cutoff as feature/auth access. At cutoff, new joins follow Free capacity while existing member sessions remain valid. The 17-case real-auth suite verifies a retained sixth-member session, blocked invitation acceptance and unchanged pending invitation after an ordinary resumed/active update. Current evidence: `docs/subscription-pause-policy.md`.

@@ -106,6 +106,9 @@ describe.skipIf(!connection)(
         cancel_at_period_end: false,
         ends_at: null,
         ended_at: null,
+        pause_at_period_end: false,
+        paused_at: null,
+        resumes_at: null,
         ...patch,
       }
     }
@@ -329,10 +332,7 @@ describe.skipIf(!connection)(
         branch: target.branchId,
       })
       const migration = await readFile(
-        new URL(
-          "../../../drizzle/0032_upgrade_refund_access.sql",
-          import.meta.url
-        ),
+        new URL("../../../drizzle/0033_unsupported_pause.sql", import.meta.url),
         "utf8"
       )
       const latest = await pool.query(
@@ -377,6 +377,185 @@ describe.skipIf(!connection)(
         vi.unstubAllEnvs()
       }
     }, 30_000)
+
+    it.each(["active", "past_due", "paused"] as const)(
+      "records unsupported provider pause against %s access and fences resumed events",
+      async (status) => {
+        const id = await workspace(),
+          paid = snapshot(id)
+        await apply(paid)
+        for (let n = 0; n < 6; n++) await add(id)
+        if (status === "past_due")
+          await apply({ ...paid, status, updatedAt: failed, pastDueAt: failed })
+        let current = providerSubscription(id, paid, {
+          status,
+          modified_at: now.toISOString(),
+          past_due_at: status === "past_due" ? failed.toISOString() : null,
+          paused_at: failed.toISOString(),
+          resumes_at: paid.currentPeriodEnd.toISOString(),
+        })
+        const get = vi.fn(() => Promise.resolve(current)),
+          service = new provider.PolarSubscriptionReconciler(config, {
+            subscriptions: { get },
+          })
+        const eventId = randomUUID()
+        for (let n = 0; n < 2; n++)
+          expect(
+            (
+              await webhook.handlePolarWebhook(
+                signed(id, eventId, "subscription.paused"),
+                config,
+                service
+              )
+            ).status
+          ).toBe(200)
+        expect((await row(id))?.unsupportedPauseAt).toEqual(failed)
+        expect(subscriptionAccess(await row(id), now)).toMatchObject({
+          plan: "free",
+          allowsExistingOverage: false,
+        })
+        expect(await capacity.workspaceAuthMembershipLimit(id)).toBe(5)
+        await expect(add(id)).rejects.toThrow(/five-member/)
+        const read = await import("./subscription-access-state.server")
+        expect(
+          (await read.readSubscriptionAccessState(id))?.unsupportedPauseAt
+        ).toEqual(failed)
+        current = providerSubscription(id, paid, {
+          modified_at: new Date(now.getTime() + 1).toISOString(),
+        })
+        expect(
+          (
+            await webhook.handlePolarWebhook(
+              signed(id, randomUUID(), "subscription.resumed"),
+              config,
+              service
+            )
+          ).status
+        ).toBe(200)
+        expect((await row(id))?.unsupportedPauseAt).toEqual(failed)
+        expect(subscriptionAccess(await row(id), now).plan).toBe("free")
+        expect(
+          (
+            await pool.query(
+              "SELECT count(*)::int AS n FROM workspace_security_audit_events WHERE workspace_id=$1 AND action='billing.subscription.unsupported_pause'",
+              [id]
+            )
+          ).rows[0].n
+        ).toBe(1)
+      },
+      15_000
+    )
+
+    it("fences a signed resume before any pause delivery or first activation", async () => {
+      const id = await workspace(),
+        paid = snapshot(id, { updatedAt: now }),
+        service = new provider.PolarSubscriptionReconciler(config, {
+          subscriptions: {
+            get: () => Promise.resolve(providerSubscription(id, paid)),
+          },
+        })
+      expect(
+        (
+          await webhook.handlePolarWebhook(
+            signed(id, randomUUID(), "subscription.resumed"),
+            config,
+            service
+          )
+        ).status
+      ).toBe(200)
+      expect((await row(id))?.paidActivatedAt).toBeNull()
+      expect((await row(id))?.unsupportedPauseAt).toEqual(now)
+      await apply({ ...paid, updatedAt: new Date(now.getTime() + 1) })
+      expect(
+        subscriptionAccess(await row(id), new Date(now.getTime() + 100)).plan
+      ).toBe("free")
+      expect(await capacity.workspaceAuthMembershipLimit(id)).toBe(5)
+    })
+
+    it("promotes cached pause evidence and never extends the original scheduled cutoff", async () => {
+      const id = await workspace(),
+        paid = snapshot(id),
+        eventId = randomUUID()
+      await apply(paid, eventId)
+      await apply(
+        { ...paid, unsupportedPauseAt: paid.currentPeriodEnd },
+        eventId
+      )
+      expect(subscriptionAccess(await row(id), now).plan).toBe("business")
+      expect(
+        subscriptionAccess(await row(id), paid.currentPeriodEnd).plan
+      ).toBe("free")
+      const laterEnd = new Date(paid.currentPeriodEnd.getTime() + 30 * 86400000)
+      await apply({
+        ...paid,
+        updatedAt: now,
+        currentPeriodEnd: laterEnd,
+        unsupportedPauseAt: laterEnd,
+      })
+      expect((await row(id))?.unsupportedPauseAt).toEqual(paid.currentPeriodEnd)
+      await apply({
+        ...paid,
+        updatedAt: now,
+        currentPeriodStart: paid.currentPeriodEnd,
+        currentPeriodEnd: laterEnd,
+      })
+      expect(
+        subscriptionAccess(await row(id), paid.currentPeriodEnd).plan
+      ).toBe("free")
+    })
+
+    it("rolls back pause restrictions and receipts when their audit fails, then retries safely", async () => {
+      const id = await workspace(),
+        paid = snapshot(id),
+        eventId = randomUUID()
+      await apply(paid)
+      const constraint = `pause_audit_${randomUUID().replaceAll("-", "")}`
+      await pool.query(
+        `ALTER TABLE workspace_security_audit_events ADD CONSTRAINT ${constraint} CHECK (action <> 'billing.subscription.unsupported_pause') NOT VALID`
+      )
+      try {
+        await expect(
+          apply(
+            { ...paid, updatedAt: now, unsupportedPauseAt: failed },
+            eventId
+          )
+        ).rejects.toThrow()
+        expect((await row(id))?.unsupportedPauseAt).toBeNull()
+        expect(
+          (
+            await pool.query(
+              "SELECT count(*)::int AS n FROM billing_event_receipts WHERE event_id=$1",
+              [eventId]
+            )
+          ).rows[0].n
+        ).toBe(0)
+      } finally {
+        await pool.query(
+          `ALTER TABLE workspace_security_audit_events DROP CONSTRAINT ${constraint}`
+        )
+      }
+      await apply(
+        { ...paid, updatedAt: now, unsupportedPauseAt: failed },
+        eventId
+      )
+      expect(subscriptionAccess(await row(id), now).plan).toBe("free")
+      const next = await workspace(),
+        snapshotBeforeActivation = snapshot(next, {
+          updatedAt: now,
+          unsupportedPauseAt: failed,
+        })
+      await apply(snapshotBeforeActivation)
+      expect((await row(next))?.paidActivatedAt).toBeNull()
+      expect(subscriptionAccess(await row(next), now).plan).toBe("free")
+      await apply({
+        ...snapshotBeforeActivation,
+        unsupportedPauseAt: null,
+        updatedAt: new Date(now.getTime() + 1),
+      })
+      expect(
+        subscriptionAccess(await row(next), new Date(now.getTime() + 100)).plan
+      ).toBe("free")
+    })
 
     it("restores the still-paid Starter term on a signed full upgrade-only refund and fences stale paid proof", async () => {
       const id = await workspace(),
@@ -2047,6 +2226,9 @@ describe.skipIf(!connection)(
             cancel_at_period_end: false,
             ends_at: null,
             ended_at: null,
+            pause_at_period_end: false,
+            paused_at: null,
+            resumes_at: null,
             modified_at: failure.updatedAt.toISOString(),
             current_period_start: failure.currentPeriodStart.toISOString(),
             current_period_end: failure.currentPeriodEnd.toISOString(),
@@ -2317,6 +2499,9 @@ describe.skipIf(!connection)(
         cancel_at_period_end: false,
         ends_at: null,
         ended_at: null,
+        pause_at_period_end: false,
+        paused_at: null,
+        resumes_at: null,
         customer: { external_id: `forge:workspace:${id}` },
       }
       const get = vi.fn(() => Promise.resolve(current)),
@@ -2395,6 +2580,9 @@ describe.skipIf(!connection)(
           cancel_at_period_end: false,
           ends_at: null,
           ended_at: null,
+          pause_at_period_end: false,
+          paused_at: null,
+          resumes_at: null,
           customer: { external_id: `forge:workspace:${id}` },
         }
       })

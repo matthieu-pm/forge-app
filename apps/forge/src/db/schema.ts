@@ -199,6 +199,9 @@ export const workspaceEntitlements = pgTable(
     providerStateHash: text("provider_state_hash"),
     paidUpgradeOrderId: uuid("paid_upgrade_order_id"),
     terminatedAt: timestamp("terminated_at", { withTimezone: true }),
+    unsupportedPauseAt: timestamp("unsupported_pause_at", {
+      withTimezone: true,
+    }),
     paidActivatedAt: timestamp("paid_activated_at", { withTimezone: true }),
     paymentFailedAt: timestamp("payment_failed_at", { withTimezone: true }),
     graceExpiresAt: timestamp("grace_expires_at", { withTimezone: true }),
@@ -264,6 +267,10 @@ export const workspaceEntitlements = pgTable(
     terminationCheck: check(
       "workspace_entitlements_termination_check",
       sql`${table.terminatedAt} IS NULL OR (${table.source} = 'polar' AND isfinite(${table.terminatedAt}))`
+    ),
+    unsupportedPauseCheck: check(
+      "workspace_entitlements_unsupported_pause_check",
+      sql`${table.unsupportedPauseAt} IS NULL OR (${table.source} = 'polar' AND isfinite(${table.unsupportedPauseAt}))`
     ),
     refundHistoryCheck: check(
       "workspace_entitlements_refund_history_check",

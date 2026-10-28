@@ -21,6 +21,7 @@ export type SubscriptionAccessState = {
   }>
   source?: string
   terminatedAt?: Date | null
+  unsupportedPauseAt?: Date | null
   paidUpgradeOrderId?: string | null
   paidActivatedAt?: Date | null
   paymentFailedAt?: Date | null
@@ -65,6 +66,10 @@ export function subscriptionAccess(
   }
   const at = validTime(now)
   if (!state || at === null || state.terminatedAt != null) return free
+  if (state.unsupportedPauseAt != null) {
+    const cutoff = validTime(state.unsupportedPauseAt)
+    if (cutoff === null || at >= cutoff) return free
+  }
   const plan = securityPlan(state.plan)
   if (plan === "free") return free
   if (isRefundedSubscriptionPeriod(state)) return free

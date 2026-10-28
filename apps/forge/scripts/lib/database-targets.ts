@@ -7,8 +7,8 @@ export const DATABASE_TARGETS = {
     database: "forge_staging",
   },
   rehearsal: {
-    branchId: "br-square-sky-za2iavfk",
-    host: "ep-ancient-resonance-zaeuj9gw.c-2.eu-west-2.aws.neon.tech",
+    branchId: "br-empty-waterfall-zay0vqug",
+    host: "ep-billowing-night-zan57ux5.c-2.eu-west-2.aws.neon.tech",
     database: "forge_migration_rehearsal",
   },
 } as const
