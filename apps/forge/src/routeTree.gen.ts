@@ -63,6 +63,7 @@ import { Route as WorkspaceTeamsRouteImport } from './routes/workspace/teams'
 import { Route as WorkspaceViewsRouteImport } from './routes/workspace/views'
 import { Route as ApiAgentSplatRouteImport } from './routes/api/agent/$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiInternalEnvironmentRouteImport } from './routes/api/internal/environment'
 import { Route as ApiV1SplatRouteImport } from './routes/api/v1/$'
 import { Route as SettingsAccountAgentsRouteImport } from './routes/settings.account.agents'
 import { Route as SettingsAccountConnectionsRouteImport } from './routes/settings.account.connections'
@@ -387,6 +388,11 @@ const ApiAgentSplatRoute = ApiAgentSplatRouteImport.update({
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiInternalEnvironmentRoute = ApiInternalEnvironmentRouteImport.update({
+  id: '/api/internal/environment',
+  path: '/api/internal/environment',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiV1SplatRoute = ApiV1SplatRouteImport.update({
@@ -739,6 +745,7 @@ export interface FileRoutesByFullPath {
   '/settings/': typeof SettingsIndexRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/internal/environment': typeof ApiInternalEnvironmentRoute
   '/api/v1/$': typeof ApiV1SplatRoute
   '/settings/account/agents': typeof SettingsAccountAgentsRoute
   '/settings/account/connections': typeof SettingsAccountConnectionsRoute
@@ -845,6 +852,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsIndexRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/internal/environment': typeof ApiInternalEnvironmentRoute
   '/api/v1/$': typeof ApiV1SplatRoute
   '/settings/account/agents': typeof SettingsAccountAgentsRoute
   '/settings/account/connections': typeof SettingsAccountConnectionsRoute
@@ -950,6 +958,7 @@ export interface FileRoutesById {
   '/settings/': typeof SettingsIndexRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/internal/environment': typeof ApiInternalEnvironmentRoute
   '/api/v1/$': typeof ApiV1SplatRoute
   '/settings/account/agents': typeof SettingsAccountAgentsRoute
   '/settings/account/connections': typeof SettingsAccountConnectionsRoute
@@ -1060,6 +1069,7 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/api/agent/$'
     | '/api/auth/$'
+    | '/api/internal/environment'
     | '/api/v1/$'
     | '/settings/account/agents'
     | '/settings/account/connections'
@@ -1166,6 +1176,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/api/agent/$'
     | '/api/auth/$'
+    | '/api/internal/environment'
     | '/api/v1/$'
     | '/settings/account/agents'
     | '/settings/account/connections'
@@ -1270,6 +1281,7 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/api/agent/$'
     | '/api/auth/$'
+    | '/api/internal/environment'
     | '/api/v1/$'
     | '/settings/account/agents'
     | '/settings/account/connections'
@@ -1354,6 +1366,7 @@ export interface RootRouteChildren {
   WorkspaceViewsRoute: typeof WorkspaceViewsRoute
   ApiAgentSplatRoute: typeof ApiAgentSplatRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiInternalEnvironmentRoute: typeof ApiInternalEnvironmentRoute
   ApiV1SplatRoute: typeof ApiV1SplatRoute
   WorkspaceInitiativesInitiativeIdRoute: typeof WorkspaceInitiativesInitiativeIdRoute
   WorkspaceInitiativesIndexRoute: typeof WorkspaceInitiativesIndexRoute
@@ -1740,6 +1753,13 @@ declare module '@tanstack/react-router' {
       path: '/api/auth/$'
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/environment': {
+      id: '/api/internal/environment'
+      path: '/api/internal/environment'
+      fullPath: '/api/internal/environment'
+      preLoaderRoute: typeof ApiInternalEnvironmentRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/v1/$': {
@@ -2394,6 +2414,7 @@ const rootRouteChildren: RootRouteChildren = {
   WorkspaceViewsRoute: WorkspaceViewsRoute,
   ApiAgentSplatRoute: ApiAgentSplatRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiInternalEnvironmentRoute: ApiInternalEnvironmentRoute,
   ApiV1SplatRoute: ApiV1SplatRoute,
   WorkspaceInitiativesInitiativeIdRoute: WorkspaceInitiativesInitiativeIdRoute,
   WorkspaceInitiativesIndexRoute: WorkspaceInitiativesIndexRoute,
