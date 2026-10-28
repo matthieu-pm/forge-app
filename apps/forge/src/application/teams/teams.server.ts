@@ -21,6 +21,7 @@ import {
   requireTeamRead,
 } from "@/application/authorization"
 import { slugifyTeamName } from "@/application/teams/team-schemas"
+import { visibleTeamCondition } from "@/application/teams/team-visibility.server"
 import { canWorkspaceAction } from "@/application/workspace-security/workspace-security.server"
 import { db, teamMembers, teams } from "@/db"
 
@@ -228,7 +229,7 @@ export async function getTeamDirectory(
   const recoveryCutoff = new Date(Date.now() - TEAM_RECOVERY_WINDOW_MS)
   const workspaceTeams = await db.query.teams.findMany({
     where: and(
-      eq(teams.workspaceId, actor.workspaceId),
+      visibleTeamCondition(actor),
       lifecycle === "active"
         ? isNull(teams.deletedAt)
         : and(isNotNull(teams.deletedAt), gt(teams.deletedAt, recoveryCutoff))
@@ -244,16 +245,9 @@ export async function getTeamDirectory(
   const canCreateTeam =
     hasScope(actor, "teams:write") &&
     (await canWorkspaceAction(actor, "teams.create"))
-  const visibleTeams = workspaceTeams.filter(
-    (team) =>
-      team.visibility === "workspace" ||
-      canManage ||
-      team.members.some((member) => member.userId === actor.userId)
-  )
-
   return {
     canCreateTeam,
-    items: visibleTeams.map((team) => {
+    items: workspaceTeams.map((team) => {
       const currentMembership = team.members.find(
         (member) => member.userId === actor.userId
       )
@@ -335,6 +329,7 @@ export async function listTeams(
       and(
         eq(teams.workspaceId, actor.workspaceId),
         isNull(teams.deletedAt),
+        visibleTeamCondition(actor),
         cursorCondition
       )
     )
@@ -530,7 +525,8 @@ export async function getTeam(
       and(
         eq(teams.workspaceId, actor.workspaceId),
         selectorCondition(selector),
-        isNull(teams.deletedAt)
+        isNull(teams.deletedAt),
+        visibleTeamCondition(actor)
       )
     )
     .limit(1)

@@ -1,6 +1,7 @@
 import "@tanstack/react-start/server-only"
 import { and, eq } from "drizzle-orm"
 import type { AuthState, WorkspaceSummary } from "@/lib/auth-types"
+import { requireVerifiedEmail } from "@/lib/email-verification"
 import { auth } from "@/lib/auth"
 import { db, members, organizations } from "@/db"
 
@@ -172,13 +173,14 @@ export async function requireSession(request: Request) {
     throw new Error("Authenticated session required.")
   }
 
+  requireVerifiedEmail(session.user)
   return session
 }
 
 export async function getActiveWorkspace(request: Request) {
   const session = await getSession(request)
 
-  if (!session) {
+  if (!session || session.user.emailVerified !== true) {
     return null
   }
 
@@ -210,6 +212,7 @@ export async function requireActiveWorkspaceMember(
     throw new WorkspaceAccessError("UNAUTHENTICATED")
   }
 
+  requireVerifiedEmail(session.user)
   const membership = await loadWorkspaceFromRequest(request, session)
   if (!membership) {
     throw new WorkspaceAccessError("NO_ACTIVE_WORKSPACE")
@@ -228,7 +231,7 @@ export async function requireActiveWorkspaceMember(
 export async function buildAuthState(request: Request): Promise<AuthState> {
   const session = await getSession(request)
 
-  if (!session) {
+  if (!session || session.user.emailVerified !== true) {
     return {
       user: null,
       session: null,

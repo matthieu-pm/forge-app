@@ -11,6 +11,7 @@ import type { CapabilityGateway } from "@/application/agents/capability-gateway.
 import type { AgentArtifactService } from "@/application/agents/artifact-service.server"
 import type { AgentFeatureFlags } from "@/application/agents/agent-feature-flags"
 import type { AgentAttachmentService } from "@/application/agents/attachment-service.server"
+import { EmailVerificationRequiredError } from "@/lib/email-verification"
 import { AgentCoordinatorError } from "@/application/agents/agent-coordinator.server"
 import {
   createAgentThreadInputSchema,
@@ -181,6 +182,9 @@ async function requireLocalIngestToken(
 }
 
 function errorResponse(error: unknown) {
+  if (error instanceof EmailVerificationRequiredError) {
+    return json({ error: { code: error.code, message: error.message } }, 403)
+  }
   if (error instanceof z.ZodError) {
     return json(
       {
@@ -287,7 +291,9 @@ export function createAgentHttpHandler(dependencies: AgentHttpDependencies) {
     let actor: Actor
     try {
       actor = await dependencies.getActor(request)
-    } catch {
+    } catch (error) {
+      if (error instanceof EmailVerificationRequiredError)
+        return errorResponse(error)
       return json(
         {
           error: {

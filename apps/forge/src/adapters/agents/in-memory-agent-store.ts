@@ -108,18 +108,28 @@ export class InMemoryAgentStore implements AgentStore {
   async summarizeUsage(
     workspaceId: string,
     userId: string | null,
-    since: Date
+    since: Date,
+    until?: Date
   ) {
+    if (
+      !Number.isFinite(since.getTime()) ||
+      (until && (!Number.isFinite(until.getTime()) || until <= since))
+    ) {
+      throw new Error("Invalid agent usage window.")
+    }
     const runs = [...this.runs.values()].filter((run) => {
       const thread = this.threads.get(run.threadId)
       return (
         thread?.workspaceId === workspaceId &&
-        (!userId || run.initiatedByUserId === userId) &&
-        run.createdAt >= since
+        (userId === null || run.initiatedByUserId === userId)
       )
     })
     return {
-      costMicros: runs.reduce((total, run) => total + run.costMicros, 0),
+      costMicros: runs
+        .filter(
+          (run) => run.createdAt >= since && (!until || run.createdAt < until)
+        )
+        .reduce((total, run) => total + run.costMicros, 0),
       activeRuns: runs.filter((run) =>
         [
           "created",
@@ -130,22 +140,5 @@ export class InMemoryAgentStore implements AgentStore {
         ].includes(run.state)
       ).length,
     }
-  }
-
-  async countActiveProviderRuns(workspaceId: string, provider: string) {
-    return [...this.runs.values()].filter((run) => {
-      const thread = this.threads.get(run.threadId)
-      return (
-        thread?.workspaceId === workspaceId &&
-        run.requestedSelection.provider === provider &&
-        [
-          "created",
-          "connecting",
-          "running",
-          "waiting-for-approval",
-          "reconnecting",
-        ].includes(run.state)
-      )
-    }).length
   }
 }

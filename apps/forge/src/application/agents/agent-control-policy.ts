@@ -7,9 +7,6 @@ export type AgentControlPolicy = {
   maxOutputTokens: number
   userMonthlyBudgetMicros: number | null
   workspaceMonthlyBudgetMicros: number | null
-  userConcurrentRuns: number
-  workspaceConcurrentRuns: number
-  providerConcurrentRuns: number
   allowedProviders: ReadonlySet<string> | null
   allowedCapabilities: ReadonlySet<string> | null
 }
@@ -44,12 +41,6 @@ export function resolveAgentControlPolicy(
     workspaceMonthlyBudgetMicros: positiveInteger(
       environment.FORGE_AGENT_WORKSPACE_MONTHLY_BUDGET_MICROS
     ),
-    userConcurrentRuns:
-      positiveInteger(environment.FORGE_AGENT_USER_CONCURRENT_RUNS) ?? 10,
-    workspaceConcurrentRuns:
-      positiveInteger(environment.FORGE_AGENT_WORKSPACE_CONCURRENT_RUNS) ?? 20,
-    providerConcurrentRuns:
-      positiveInteger(environment.FORGE_AGENT_PROVIDER_CONCURRENT_RUNS) ?? 10,
     allowedProviders: allowlist(environment.FORGE_AGENT_ALLOWED_PROVIDERS),
     allowedCapabilities: allowlist(
       environment.FORGE_AGENT_ALLOWED_CAPABILITIES
@@ -59,7 +50,7 @@ export function resolveAgentControlPolicy(
 
 export class AgentControlPolicyError extends Error {
   constructor(
-    readonly code: "BUDGET_EXCEEDED" | "CONCURRENCY_LIMIT",
+    readonly code: "BUDGET_EXCEEDED",
     message: string
   ) {
     super(message)
@@ -69,24 +60,6 @@ export class AgentControlPolicyError extends Error {
 
 function monthStart(now: Date) {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
-}
-
-export async function assertAgentProviderRunAllowed(
-  store: Pick<AgentStore, "countActiveProviderRuns">,
-  actor: Actor,
-  policy: AgentControlPolicy,
-  provider: string
-) {
-  const activeRuns = await store.countActiveProviderRuns(
-    actor.workspaceId,
-    provider
-  )
-  if (activeRuns >= policy.providerConcurrentRuns) {
-    throw new AgentControlPolicyError(
-      "CONCURRENCY_LIMIT",
-      `${provider} has reached its concurrent Forge Agent run limit in this workspace.`
-    )
-  }
 }
 
 export async function assertAgentRunAllowed(
@@ -116,18 +89,6 @@ export async function assertAgentRunAllowed(
     throw new AgentControlPolicyError(
       "BUDGET_EXCEEDED",
       "This workspace's monthly Forge Agent budget has been reached."
-    )
-  }
-  if (user.activeRuns >= policy.userConcurrentRuns) {
-    throw new AgentControlPolicyError(
-      "CONCURRENCY_LIMIT",
-      "Your concurrent Forge Agent run limit has been reached."
-    )
-  }
-  if (workspace.activeRuns >= policy.workspaceConcurrentRuns) {
-    throw new AgentControlPolicyError(
-      "CONCURRENCY_LIMIT",
-      "This workspace has reached its concurrent Forge Agent run limit."
     )
   }
 }

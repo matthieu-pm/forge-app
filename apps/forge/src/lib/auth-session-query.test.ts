@@ -113,6 +113,44 @@ describe("database-backed session lookup", () => {
       )
   })
 
+  it("requires verification for password sign-in and sends signup verification mail", () => {
+    expect(auth.options.emailAndPassword.requireEmailVerification).toBe(true)
+    expect(auth.options.emailVerification.sendOnSignUp).toBe(true)
+  })
+
+  it("rejects a direct workspace creation request from an old unverified session", async () => {
+    user.emailVerified = false
+    try {
+      const context = await auth.$context
+      const signature = createHmac("sha256", fixtureSecret)
+        .update(session.token)
+        .digest("base64")
+      const response = await auth.handler(
+        new Request("http://localhost:3002/api/auth/organization/create", {
+          method: "POST",
+          headers: {
+            cookie: `${context.authCookies.sessionToken.name}=${encodeURIComponent(`${session.token}.${signature}`)}`,
+            origin: "http://localhost:3002",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: "Forbidden workspace",
+            slug: "forbidden",
+            userId: user.id,
+          }),
+        })
+      )
+      expect(response.status).toBe(403)
+      expect(
+        mocks.query.mock.calls.some(([query]) =>
+          /insert into "organization"/.test(query.text)
+        )
+      ).toBe(false)
+    } finally {
+      user.emailVerified = true
+    }
+  })
+
   it("fetches the session and its user together in one SQL query", async () => {
     const context = await auth.$context
     const result = await context.internalAdapter.findSession("fixture-token")

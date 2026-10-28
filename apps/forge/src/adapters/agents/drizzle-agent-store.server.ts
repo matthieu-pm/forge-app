@@ -1,6 +1,6 @@
 import "@tanstack/react-start/server-only"
 
-import { and, desc, eq, gte, inArray, sql } from "drizzle-orm"
+import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm"
 
 import type {
   AgentRunRecord,
@@ -188,11 +188,22 @@ export class DrizzleAgentStore implements AgentStore {
   async summarizeUsage(
     workspaceId: string,
     userId: string | null,
-    since: Date
+    since: Date,
+    until?: Date
   ) {
+    if (
+      !Number.isFinite(since.getTime()) ||
+      (until && (!Number.isFinite(until.getTime()) || until <= since))
+    ) {
+      throw new Error("Invalid agent usage window.")
+    }
+    const usageWindow = and(
+      gte(agentRuns.createdAt, since),
+      until ? lt(agentRuns.createdAt, until) : undefined
+    )
     const rows = await db
       .select({
-        costMicros: sql<number>`coalesce(sum(${agentRuns.costMicros}), 0)::bigint`,
+        costMicros: sql<number>`coalesce(sum(${agentRuns.costMicros}) filter (where ${usageWindow}), 0)::bigint`,
         activeRuns: sql<number>`count(*) filter (where ${agentRuns.state} in ('created', 'connecting', 'running', 'waiting-for-approval', 'reconnecting'))::int`,
       })
       .from(agentRuns)
@@ -200,30 +211,12 @@ export class DrizzleAgentStore implements AgentStore {
       .where(
         and(
           eq(agentThreads.workspaceId, workspaceId),
-          userId ? eq(agentRuns.initiatedByUserId, userId) : undefined,
-          gte(agentRuns.createdAt, since)
+          userId !== null ? eq(agentRuns.initiatedByUserId, userId) : undefined
         )
       )
     return {
       costMicros: Number(rows.at(0)?.costMicros ?? 0),
       activeRuns: Number(rows.at(0)?.activeRuns ?? 0),
     }
-  }
-
-  async countActiveProviderRuns(workspaceId: string, provider: string) {
-    const rows = await db
-      .select({
-        activeRuns: sql<number>`count(*)::int`,
-      })
-      .from(agentRuns)
-      .innerJoin(agentThreads, eq(agentRuns.threadId, agentThreads.id))
-      .where(
-        and(
-          eq(agentThreads.workspaceId, workspaceId),
-          sql`${agentRuns.requestedSelection}->>'provider' = ${provider}`,
-          sql`${agentRuns.state} in ('created', 'connecting', 'running', 'waiting-for-approval', 'reconnecting')`
-        )
-      )
-    return Number(rows.at(0)?.activeRuns ?? 0)
   }
 }

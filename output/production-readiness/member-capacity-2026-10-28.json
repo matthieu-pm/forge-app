@@ -1,0 +1,66 @@
+{
+  "issue": "FOR-153",
+  "date": "2026-10-28",
+  "baseRevision": "ededa613588aaf885732ec05f6ecbf9cb17f43a4",
+  "state": "Implementation completed and verified on fresh persistent staging; production rollout separately release-gated",
+  "committed": true,
+  "defaultDatabaseModified": false,
+  "localConnectionSettingsChanged": false,
+  "postgres": {
+    "version": "18.6",
+    "projectId": "raspy-union-96305162",
+    "verifiedBranchId": "br-square-sky-za2iavfk",
+    "source": "schema-only",
+    "freshMigrationCasesPassed": 10,
+    "finalIntegrationCasesPassed": 11,
+    "finalRunReusedEmptyBranch": true,
+    "triggerBodiesMatchedCheckedInMigration": true,
+    "publicHelperExecuteRevokedAndChecked": true,
+    "fixturesRemoved": true,
+    "testBranches": [
+      {
+        "id": "br-autumn-union-za0opf1e",
+        "name": "staging",
+        "init_source": "parent-schema",
+        "expires_at": null,
+        "reusedAs": "Persistent staging root, with a separate fresh forge_staging database"
+      },
+      {
+        "id": "br-square-sky-za2iavfk",
+        "name": "dev-for153-member-cap-v2-20261028",
+        "init_source": "parent-schema",
+        "expires_at": "2026-10-28T22:40:11Z"
+      }
+    ],
+    "stagingVerification": {
+      "branchId": "br-autumn-union-za0opf1e",
+      "database": "forge_staging",
+      "migrationCount": 27,
+      "integrationCasesPassed": 11,
+      "fixturesRemoved": true
+    }
+  },
+  "checks": {
+    "appTestsPassed": 1269,
+    "workflowTestsPassed": 4,
+    "livePostgresTestsPassed": 11,
+    "appTypecheck": "passed",
+    "changedFileLint": "passed",
+    "productionBuild": "passed including protected Workflow handler verification",
+    "diffCheck": "passed"
+  },
+  "corrections": [
+    "Kept a nested savepoint so the SDK can restore a refused invitation without an aborted transaction",
+    "Supplied required added_by_user_id in the approved-domain test fixture"
+  ],
+  "sourceSha256": {
+    "apps/forge/drizzle/0026_workspace_member_capacity.sql": "076c9657f148a39e4a803c549d6331b40b28aad103bda3ddb00a577843747877",
+    "apps/forge/src/db/schema.ts": "08de18e280adc8c0e23f873e11d69630750bd84762e3592be212c7a4460d795c",
+    "apps/forge/src/lib/auth.ts": "18285cbe68961aac8b7994b68339c12d763c4881ba9bf7ff59b51b7e024fa1fb",
+    "apps/forge/src/routes/api/auth/$.ts": "1c449c13cb39526719019dd59fd14db953e5df6f37045730ed37d20d66df0eeb",
+    "apps/forge/src/application/workspace-security/workspace-join.server.ts": "76a35f32b8c6867995ba473b5e21d22ff1b1cb17f77f2d0d6a10a7320e88c341",
+    "apps/forge/src/application/billing/member-capacity-auth.server.ts": "42e55dc7b55d8e74e299cb8c7a0b4506ec4c35a206c0a62b1e3acbf307a9f94a",
+    "apps/forge/src/application/billing/member-capacity-error.ts": "3ac1683e7ed30e3c2a9cbb4386113685ccb04f47562adaec3b0f8ae46c6c2709",
+    "apps/forge/src/application/billing/member-capacity.postgres.test.ts": "7be8cd5db9b1d1ff9aa52061a258be87706c95e35369a8a8728c148f50f2ff35"
+  }
+}

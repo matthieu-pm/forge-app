@@ -11,6 +11,10 @@ import type {
 } from "@/application/workspace-security/workspace-join-contract"
 import { verifyWorkspaceInviteLink } from "@/application/workspace-security/invite-link-token.server"
 import {
+  WORKSPACE_MEMBER_LIMIT_MESSAGE,
+  isWorkspaceMemberLimitError,
+} from "@/application/billing/member-capacity-error"
+import {
   db,
   members,
   organizations,
@@ -22,11 +26,31 @@ import {
 
 export class WorkspaceInviteError extends Error {
   constructor(
-    readonly code: "EMAIL_NOT_VERIFIED" | "INVALID" | "NOT_FOUND" | "REVOKED",
+    readonly code:
+      | "EMAIL_NOT_VERIFIED"
+      | "INVALID"
+      | "NOT_FOUND"
+      | "REVOKED"
+      | "MEMBER_LIMIT",
     message: string
   ) {
     super(message)
     this.name = "WorkspaceInviteError"
+  }
+}
+
+async function joinMembershipTransaction(
+  callback: Parameters<typeof db.transaction>[0]
+) {
+  try {
+    await db.transaction(callback)
+  } catch (error) {
+    if (isWorkspaceMemberLimitError(error))
+      throw new WorkspaceInviteError(
+        "MEMBER_LIMIT",
+        WORKSPACE_MEMBER_LIMIT_MESSAGE
+      )
+    throw error
   }
 }
 
@@ -106,7 +130,7 @@ export async function joinWorkspaceWithInvite(input: {
     )
   }
 
-  await db.transaction(async (transaction) => {
+  await joinMembershipTransaction(async (transaction) => {
     const currentRows = await transaction
       .select({
         enabled: workspaceSecuritySettings.inviteLinksEnabled,
@@ -214,7 +238,7 @@ export async function joinWorkspaceWithApprovedDomain(input: {
     )
   }
 
-  await db.transaction(async (transaction) => {
+  await joinMembershipTransaction(async (transaction) => {
     await transaction
       .insert(members)
       .values({

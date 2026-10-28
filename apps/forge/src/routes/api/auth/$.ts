@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { chatGPTWebsiteConfigured } from "@/lib/chatgpt-auth.server"
-import { auth } from "@/lib/auth"
+import { handleAuthRequest } from "@/lib/auth"
 
 export const Route = createFileRoute("/api/auth/$")({
   server: {
@@ -11,8 +11,8 @@ export const Route = createFileRoute("/api/auth/$")({
               { enabled: chatGPTWebsiteConfigured() },
               { headers: { "cache-control": "no-store" } }
             )
-          : auth.handler(request),
-      POST: ({ request }) => auth.handler(request),
+          : handleAuthRequest(request),
+      POST: ({ request }) => handleAuthRequest(request),
     },
   },
 })

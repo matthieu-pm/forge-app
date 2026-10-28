@@ -64,6 +64,7 @@ describe("buildAuthState", () => {
       user: {
         id: "user-1",
         email: "person@forge.test",
+        emailVerified: true,
         name: "Person",
         image: null,
       },
@@ -111,6 +112,7 @@ describe("buildAuthState", () => {
       user: {
         id: "user-1",
         email: "person@forge.test",
+        emailVerified: true,
         name: "Person",
         image: null,
       },
@@ -145,6 +147,7 @@ describe("buildAuthState", () => {
       user: {
         id: "user-1",
         email: "person@forge.test",
+        emailVerified: true,
         name: "Person",
         image: null,
       },
@@ -167,7 +170,7 @@ describe("buildAuthState", () => {
   it("authorizes an active workspace with the same single summary query", async () => {
     mocks.getSession.mockResolvedValue({
       session: { id: "session-1", activeOrganizationId: "workspace-1" },
-      user: { id: "user-1" },
+      user: { id: "user-1", emailVerified: true },
     })
     await expect(requireActiveWorkspaceMember(request)).resolves.toEqual({
       userId: "user-1",
@@ -182,7 +185,7 @@ describe("buildAuthState", () => {
   it("does not authorize a workspace without a matching membership", async () => {
     mocks.getSession.mockResolvedValue({
       session: { id: "session-1", activeOrganizationId: "other-workspace" },
-      user: { id: "user-1" },
+      user: { id: "user-1", emailVerified: true },
     })
     mocks.limit.mockResolvedValue([])
     mocks.listOrganizations.mockResolvedValue([])
@@ -194,7 +197,7 @@ describe("buildAuthState", () => {
   it("rechecks revoked membership on the next server request", async () => {
     mocks.getSession.mockResolvedValue({
       session: { id: "session-1", activeOrganizationId: "workspace-1" },
-      user: { id: "user-1" },
+      user: { id: "user-1", emailVerified: true },
     })
     await requireActiveWorkspaceMember(request)
     mocks.limit.mockResolvedValue([])
@@ -220,6 +223,23 @@ describe("buildAuthState", () => {
       workspace: null,
     })
     expect(mocks.setActiveOrganization).not.toHaveBeenCalled()
+  })
+
+  it("denies old unverified sessions before querying workspace data", async () => {
+    mocks.getSession.mockResolvedValue({
+      session: { id: "old-session", activeOrganizationId: "workspace-1" },
+      user: { id: "user-1", emailVerified: false },
+    })
+    await expect(requireActiveWorkspaceMember(request)).rejects.toMatchObject({
+      code: "EMAIL_NOT_VERIFIED",
+    })
+    await expect(buildAuthState(request)).resolves.toEqual({
+      user: null,
+      session: null,
+      workspace: null,
+    })
+    expect(mocks.select).not.toHaveBeenCalled()
+    expect(mocks.listOrganizations).not.toHaveBeenCalled()
   })
 
   it("rejects unauthenticated requests without a workspace query", async () => {

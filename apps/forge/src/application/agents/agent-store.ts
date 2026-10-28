@@ -101,10 +101,7 @@ export interface AgentStore {
   summarizeUsage: (
     workspaceId: string,
     userId: string | null,
-    since: Date
+    since: Date,
+    until?: Date
   ) => Promise<{ costMicros: number; activeRuns: number }>
-  countActiveProviderRuns: (
-    workspaceId: string,
-    provider: string
-  ) => Promise<number>
 }

@@ -52,9 +52,6 @@ const controlPolicy: AgentControlPolicy = {
   maxOutputTokens: 50_000,
   userMonthlyBudgetMicros: null,
   workspaceMonthlyBudgetMicros: null,
-  userConcurrentRuns: 3,
-  workspaceConcurrentRuns: 20,
-  providerConcurrentRuns: 10,
   allowedProviders: null,
   allowedCapabilities: null,
 }
@@ -86,6 +83,38 @@ async function collect<T>(events: AsyncIterable<T>) {
 }
 
 describe("agent coordinator", () => {
+  it("starts more than the former per-user, workspace and provider caps without rejecting runs", async () => {
+    const store = new InMemoryAgentStore()
+    const runtime = new FakeAgentRuntime()
+    let sequence = 0
+    const service = new AgentCoordinator({
+      store,
+      eventStore: new InMemoryAgentEventStore(),
+      runtimes: [runtime],
+      listModels: () => Promise.resolve([model]),
+      controlPolicy,
+      id: () =>
+        `00000000-0000-4000-8000-${String(++sequence).padStart(12, "0")}`,
+    })
+    const sessions = await Promise.all(
+      Array.from({ length: 30 }, async () => {
+        const thread = await service.createThread(actor, { runtimeKind: "eve" })
+        return service.startTurn(actor, {
+          threadId: thread.id,
+          message: "Parallel run",
+          selectionMode: "auto",
+          attachmentIds: [],
+        })
+      })
+    )
+    expect(store.runs.size).toBe(30)
+    await Promise.all(sessions.map((session) => collect(session.events)))
+    expect(runtime.starts).toHaveLength(30)
+    expect(
+      [...store.runs.values()].every((run) => run.state === "completed")
+    ).toBe(true)
+  })
+
   it("creates, routes, streams, and completes through the fake runtime", async () => {
     const { runtime, service, store } = coordinator()
     const thread = await service.createThread(actor, {
@@ -125,6 +154,9 @@ describe("agent coordinator", () => {
       },
     })
     expect(store.runs.get(session.run.id)?.state).toBe("completed")
+    expect(store.runs.get(session.run.id)?.requestedSelection.billingMode).toBe(
+      "pay-as-you-go"
+    )
   })
 
   it("reconnects once from a durable runtime checkpoint", async () => {
@@ -637,6 +669,9 @@ describe("agent coordinator", () => {
       attachmentIds: [],
     })
 
+    expect(
+      store.runs.get(prepared.run.id)?.requestedSelection.billingMode
+    ).toBe("subscription")
     expect(prepared.initialEvents.map((event) => event.type)).toEqual([
       "run.created",
       "run.routing-resolved",

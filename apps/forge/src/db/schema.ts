@@ -162,6 +162,24 @@ export const workspaceApprovedDomains = pgTable(
   })
 )
 
+// Maintained by member-table triggers, so every membership write shares the
+// same atomic capacity invariant (including Better Auth and background imports).
+export const workspaceMemberCapacity = pgTable(
+  "workspace_member_capacity",
+  {
+    workspaceId: text("workspace_id")
+      .primaryKey()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    activeMemberCount: integer("active_member_count").default(0).notNull(),
+  },
+  (table) => ({
+    nonnegativeCount: check(
+      "workspace_member_capacity_nonnegative",
+      sql`${table.activeMemberCount} >= 0`
+    ),
+  })
+)
+
 export const workspaceEntitlements = pgTable(
   "workspace_entitlements",
   {

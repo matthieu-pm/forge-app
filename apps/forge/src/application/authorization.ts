@@ -29,6 +29,11 @@ export function canReadTeams(actor: Actor) {
   return hasScope(actor, "teams:read")
 }
 
+/** Read access is independent of a credential's permission to manage teams. */
+export function canReadAllPrivateTeams(actor: Actor) {
+  return canReadTeams(actor) && hasWorkspaceRole(actor, ["owner", "admin"])
+}
+
 export function canManageTeams(actor: Actor) {
   return (
     hasWorkspaceRole(actor, ["owner", "admin"]) &&

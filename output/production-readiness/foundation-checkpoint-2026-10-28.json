@@ -1,0 +1,78 @@
+{
+  "date": "2026-10-28",
+  "baseRevision": "ededa613588aaf885732ec05f6ecbf9cb17f43a4",
+  "committed": true,
+  "deployed": false,
+  "productionDatabaseModified": false,
+  "defaultBranchChanged": false,
+  "localConnectionFilesChanged": false,
+  "completedIssues": [
+    "FOR-21",
+    "FOR-128",
+    "FOR-153"
+  ],
+  "inProgressIssues": [
+    "FOR-20",
+    "FOR-25",
+    "FOR-27",
+    "FOR-28",
+    "FOR-39",
+    "FOR-75",
+    "FOR-76",
+    "FOR-97",
+    "FOR-109",
+    "FOR-110",
+    "FOR-155"
+  ],
+  "backlog": {
+    "issues": 136,
+    "prerequisites": 258,
+    "acyclic": true,
+    "duplicateTitles": []
+  },
+  "checks": {
+    "appTests": 1269,
+    "workflowTests": 4,
+    "postgresMembershipOnFreshStaging": 11,
+    "postgresTeamVisibility": 6,
+    "postgresMigrationRehearsal": 3,
+    "migrationSafetyUnitCases": 3,
+    "parallelCoordinatorRuns": 30,
+    "typecheck": "passed",
+    "lint": "passed with existing async/no-await warnings",
+    "build": "passed, protected Workflow handlers verified",
+    "diffCheck": "passed"
+  },
+  "decisions": {
+    "agentConcurrency": {
+      "user": null,
+      "workspace": null,
+      "providerWithinWorkspace": null,
+      "meaning": "No Forge run-count concurrency caps; retired environment settings are ignored"
+    },
+    "fundedProviders": [
+      "openai",
+      "anthropic",
+      "google",
+      "minimax",
+      "mistral",
+      "xai",
+      "deepseek",
+      "kimi"
+    ],
+    "firstPaidPeriod": "Fresh US$5 per active member; no deduction of earlier Free/trial usage; retain earlier period ledger and reservations",
+    "visibility": "User-confirmed role/resource policy completed in FOR-21; persisted team queries tested; remaining adapters are FOR-39"
+  },
+  "sourceSha256": {
+    "apps/forge/src/application/authorization.ts": "beb78226f21e174b62ef428ebf9882bf4f857c6097a9dfc128698cfb4149ce77",
+    "apps/forge/src/application/teams/team-visibility.server.ts": "7619aa1c551cd3fd9082ca38afeb918b0b146c2aaa61a87ce649d49e9a3d4eaf",
+    "apps/forge/src/application/teams/teams.server.ts": "127adb8ac2cf45f9633bd51ee789c0e4556a280bec7f0385cb9f99d751050b3f",
+    "apps/forge/src/application/teams/team-members.server.ts": "2e6f15df9e0f04bbecc08f254660ecd2292990d16fc7b3a3a44314dd24e153a5",
+    "apps/forge/src/application/resource-visibility.ts": "7b219007dadfada8f2d3676c0322eab1cdaeab19bf296780ed2de68816971d25",
+    "apps/forge/src/application/agents/agent-control-policy.ts": "d8c9f5633fdd5085cfb1edef1d7af79794d368c79da360c7f088accb114f2a94",
+    "apps/forge/src/application/agents/agent-coordinator.server.ts": "769807150dfbf2e5e6f565d510d504bc9e050aa5901705938a1984fe546d4304",
+    "apps/forge/scripts/lib/serialized-migrations.ts": "4be88acc703cd0a40aab90278182e568649c74c2d14d54373fd18453d6add897",
+    "apps/forge/scripts/lib/database-targets.ts": "e663cb62f83e04b506e610e6744015ade401e71ba9a0d3daf4bf87ad55dbebca",
+    "apps/forge/scripts/migrate-database.ts": "6d059f650437fd3836d7e499c7ba2b18ff169095e0fd255c3bc2c4d265b0b310"
+  }
+}

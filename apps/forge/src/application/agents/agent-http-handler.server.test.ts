@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { Actor } from "@/application/actor"
 import type { ModelCatalogEntry } from "@/application/agents/model-contract"
+import { EmailVerificationRequiredError } from "@/lib/email-verification"
 import { AgentCoordinator } from "@/application/agents/agent-coordinator.server"
 import { createAgentHttpHandler } from "@/application/agents/agent-http-handler.server"
 import { FakeAgentRuntime } from "@/adapters/agents/fake-runtime"
@@ -114,6 +115,28 @@ function fixture() {
 }
 
 describe("agent HTTP transport", () => {
+  it("denies unverified sessions before creating an agent thread", async () => {
+    const { coordinator } = fixture()
+    const createThread = vi.spyOn(coordinator, "createThread")
+    const handler = createAgentHttpHandler({
+      coordinator,
+      getActor: () => Promise.reject(new EmailVerificationRequiredError()),
+      listModels: () => Promise.resolve([model]),
+    })
+    const response = await handler(
+      new Request("http://forge.test/api/agent/threads", {
+        method: "POST",
+        headers: { origin: "http://forge.test" },
+        body: JSON.stringify({ title: "Blocked", runtimeKind: "eve" }),
+      })
+    )
+    expect(response.status).toBe(403)
+    expect(await response.json()).toMatchObject({
+      error: { code: "EMAIL_NOT_VERIFIED" },
+    })
+    expect(createThread).not.toHaveBeenCalled()
+  })
+
   it("uploads bounded attachments through the authenticated endpoint", async () => {
     const { handler, uploadAttachment } = fixture()
     const response = await handler(

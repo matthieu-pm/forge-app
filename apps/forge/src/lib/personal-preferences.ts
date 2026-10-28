@@ -1,58 +1,68 @@
+import {
+  PERSONAL_PREFERENCE_VERSION,
+  parsePersonalPreferences,
+  personalPreferencesSchema,
+} from "./personal-preference-contract"
+import type { PersonalPreferences } from "./personal-preference-contract"
+
 export const PREFERENCES_STORAGE_KEY = "forge.personal-preferences"
 
-export type InterfaceTheme = "system" | "light" | "dark"
-export type LightTheme = "light" | "paper"
-export type DarkTheme = "dark" | "midnight" | "forest" | "plum"
-export type FontSize = "small" | "default" | "large"
-
-export type PersonalPreferences = {
-  defaultHomeView: "agent" | "inbox" | "my-issues"
-  displayNames: "username" | "full-name"
-  firstDayOfWeek: "sunday" | "monday" | "saturday"
-  convertEmoticons: boolean
-  submitCommentsWith: "command-enter" | "enter"
-  fontSize: FontSize
-  pointerCursors: boolean
-  underlineLinks: boolean
-  interfaceTheme: InterfaceTheme
-  lightTheme: LightTheme
-  darkTheme: DarkTheme
-  notificationBadge: "unread" | "count" | "off"
-  checkSpelling: boolean
-  autoAssignToSelf: boolean
-  assignStartedIssues: boolean
-}
-
-export const defaultPersonalPreferences: PersonalPreferences = {
-  defaultHomeView: "agent",
-  displayNames: "username",
-  firstDayOfWeek: "sunday",
-  convertEmoticons: true,
-  submitCommentsWith: "command-enter",
-  fontSize: "default",
-  pointerCursors: false,
-  underlineLinks: false,
-  interfaceTheme: "system",
-  lightTheme: "light",
-  darkTheme: "dark",
-  notificationBadge: "unread",
-  checkSpelling: true,
-  autoAssignToSelf: false,
-  assignStartedIssues: false,
-}
+export { defaultPersonalPreferences } from "./personal-preference-contract"
+export type {
+  PersonalPreferences,
+  InterfaceTheme,
+  LightTheme,
+  DarkTheme,
+  FontSize,
+} from "./personal-preference-contract"
 
 export function loadPersonalPreferences(): PersonalPreferences {
   try {
-    const stored = window.localStorage.getItem(PREFERENCES_STORAGE_KEY)
-    return stored
-      ? {
-          ...defaultPersonalPreferences,
-          ...(JSON.parse(stored) as Partial<PersonalPreferences>),
-        }
-      : defaultPersonalPreferences
+    return parsePersonalPreferences(
+      window.localStorage.getItem(PREFERENCES_STORAGE_KEY)
+    ).preferences
   } catch {
-    return defaultPersonalPreferences
+    return parsePersonalPreferences(null).preferences
   }
+}
+
+/** Explicit local edit only; this does not migrate data to an authenticated account. */
+export function savePersonalPreferences(
+  preferences: PersonalPreferences
+): void {
+  const validated = personalPreferencesSchema.parse(preferences)
+  const storage = window.localStorage
+  const raw = storage.getItem(PREFERENCES_STORAGE_KEY)
+  const previous = parsePersonalPreferences(raw)
+  if (previous.status === "unsupported") {
+    throw new Error("These preferences were saved by a newer version of Forge.")
+  }
+  if (
+    raw !== null &&
+    (previous.status === "invalid" || previous.invalidFields.length)
+  ) {
+    // If preservation fails, abort before overwriting the source record.
+    storage.setItem(
+      `${PREFERENCES_STORAGE_KEY}.recovery.${crypto.randomUUID()}`,
+      raw
+    )
+  }
+  const original =
+    previous.status === "current" || previous.status === "legacy"
+      ? (JSON.parse(raw!) as Record<string, unknown>)
+      : {}
+  const values =
+    previous.status === "current"
+      ? (original.values as Record<string, unknown>)
+      : original
+  storage.setItem(
+    PREFERENCES_STORAGE_KEY,
+    JSON.stringify({
+      ...(previous.status === "current" ? original : {}),
+      version: PERSONAL_PREFERENCE_VERSION,
+      values: { ...values, ...validated },
+    })
+  )
 }
 
 export function applyPersonalInterfacePreferences(

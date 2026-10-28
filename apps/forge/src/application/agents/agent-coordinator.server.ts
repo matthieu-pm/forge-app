@@ -52,10 +52,7 @@ import {
   localRuntimeApprovalPayloadSchema,
   runtimeApprovalPayloadSchema,
 } from "@/application/agents/local-runtime-contract"
-import {
-  assertAgentProviderRunAllowed,
-  assertAgentRunAllowed,
-} from "@/application/agents/agent-control-policy"
+import { assertAgentRunAllowed } from "@/application/agents/agent-control-policy"
 
 export class AgentCoordinatorError extends Error {
   constructor(
@@ -84,9 +81,7 @@ type RunUsage = Pick<
 class AgentRunLimitError extends Error {
   constructor(
     readonly code:
-      | "RUN_WALL_CLOCK_LIMIT"
-      | "INPUT_TOKEN_LIMIT"
-      | "OUTPUT_TOKEN_LIMIT",
+      "RUN_WALL_CLOCK_LIMIT" | "INPUT_TOKEN_LIMIT" | "OUTPUT_TOKEN_LIMIT",
     message: string
   ) {
     super(message)
@@ -476,14 +471,6 @@ export class AgentCoordinator {
         preferredOpenAIConnectionId: input.preferredOpenAIConnectionId,
       })
     }
-    if (this.dependencies.controlPolicy) {
-      await assertAgentProviderRunAllowed(
-        this.dependencies.store,
-        actor,
-        this.dependencies.controlPolicy,
-        resolved.model.provider
-      )
-    }
     await this.setThreadModelPreference(actor, thread.id, {
       mode: input.selectionMode,
       selectedConnectionId:
@@ -536,6 +523,7 @@ export class AgentCoordinator {
         mode: input.selectionMode,
         selectionId: resolved.requestedSelection,
         provider: resolved.model.provider,
+        billingMode: resolved.route.billingMode,
       },
       resolvedConnectionId: resolved.model.connectionId,
       resolvedModelId: resolved.model.modelId,
@@ -660,6 +648,7 @@ export class AgentCoordinator {
         selectionId: input.model.selectionId,
         provider: input.model.provider,
         runtimeId: input.runtimeId,
+        billingMode: "subscription",
       },
       resolvedConnectionId: input.model.connectionId,
       resolvedModelId: input.model.modelId,

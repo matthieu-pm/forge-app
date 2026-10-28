@@ -1,0 +1,146 @@
+import { DATABASE_TARGETS } from "./database-targets"
+import type { MigrationMeta } from "drizzle-orm/migrator"
+
+export const MIGRATION_LOCK_ID = 646_735_021
+
+export class MigrationSafetyError extends Error {}
+
+type MigrationClient = {
+  query: (
+    statement: string,
+    values?: Array<unknown>
+  ) => Promise<{ rows: Array<Record<string, unknown>> }>
+}
+
+export type MigrationTarget = {
+  environment: "staging" | "rehearsal"
+  branchId: string
+  host: string
+  database: string
+}
+
+function assertExpectedTarget(target: MigrationTarget) {
+  const targets: Partial<
+    Record<string, { branchId: string; host: string; database: string }>
+  > = DATABASE_TARGETS
+  const allowed = targets[target.environment]
+  if (
+    !allowed ||
+    target.branchId !== allowed.branchId ||
+    target.host !== allowed.host ||
+    target.database !== allowed.database
+  ) {
+    throw new MigrationSafetyError(
+      "The migration target is not an approved isolated environment. Production migrations remain disabled until serving identity is verified."
+    )
+  }
+}
+
+export function assertMigrationTarget(
+  connection: string,
+  target: MigrationTarget
+) {
+  assertExpectedTarget(target)
+  let url: URL
+  try {
+    url = new URL(connection)
+  } catch {
+    throw new MigrationSafetyError(
+      "The PostgreSQL connection is not a valid URL."
+    )
+  }
+  if (!["postgres:", "postgresql:"].includes(url.protocol))
+    throw new MigrationSafetyError("A PostgreSQL connection is required.")
+  if (!/^br-/.test(target.branchId))
+    throw new MigrationSafetyError("An expected Neon branch ID is required.")
+  if (
+    !target.host ||
+    url.hostname !== target.host ||
+    url.hostname.includes("-pooler.")
+  )
+    throw new MigrationSafetyError(
+      "Migrations require the exact expected direct database host."
+    )
+  if (
+    !target.database ||
+    decodeURIComponent(url.pathname.slice(1)) !== target.database
+  )
+    throw new MigrationSafetyError(
+      "The connection database does not match the expected database."
+    )
+}
+
+/** One connected session owns both the lock and the complete migration transaction. */
+export async function runSerializedMigrations(
+  client: MigrationClient,
+  migrations: Array<MigrationMeta>,
+  target: MigrationTarget
+) {
+  assertExpectedTarget(target)
+  const identity = await client.query(
+    "SELECT current_database() AS database, current_setting('neon.branch_id',true) AS branch"
+  )
+  if (
+    identity.rows[0]?.database !== target.database ||
+    identity.rows[0]?.branch !== target.branchId
+  )
+    throw new Error(
+      "Database identity does not match the expected isolated migration target."
+    )
+  const lock = await client.query(
+    "SELECT pg_try_advisory_lock($1) AS acquired",
+    [MIGRATION_LOCK_ID]
+  )
+  if (lock.rows[0]?.acquired !== true)
+    throw new Error(
+      "MIGRATION_BUSY: another migration owner holds the database lock."
+    )
+  let inTransaction = false
+  try {
+    await client.query("BEGIN")
+    inTransaction = true
+    await client.query("SET LOCAL lock_timeout = '5s'")
+    await client.query("SET LOCAL statement_timeout = '5min'")
+    await client.query("CREATE SCHEMA IF NOT EXISTS drizzle")
+    await client.query(
+      "CREATE TABLE IF NOT EXISTS drizzle.__drizzle_migrations (id SERIAL PRIMARY KEY, hash text NOT NULL, created_at bigint)"
+    )
+    const applied = await client.query(
+      "SELECT hash,created_at FROM drizzle.__drizzle_migrations ORDER BY created_at,id"
+    )
+    if (
+      applied.rows.length > migrations.length ||
+      applied.rows.some(
+        (row, i) =>
+          row.hash !== migrations[i]?.hash ||
+          Number(row.created_at) !== migrations[i]?.folderMillis
+      )
+    )
+      throw new Error(
+        "Migration journal is not an exact prefix of the release's migration hashes. Refusing to guess or replay migrations."
+      )
+    for (let i = 0; i < migrations.length; i++) {
+      if (i && migrations[i].folderMillis <= migrations[i - 1].folderMillis)
+        throw new Error("Migration timestamps must be strictly increasing.")
+      if (i < applied.rows.length) continue
+      for (const statement of migrations[i].sql) {
+        if (statement.trim()) await client.query(statement)
+      }
+      await client.query(
+        "INSERT INTO drizzle.__drizzle_migrations(hash,created_at) VALUES($1,$2)",
+        [migrations[i].hash, migrations[i].folderMillis]
+      )
+    }
+    await client.query("COMMIT")
+    inTransaction = false
+    return {
+      applied: migrations.length - applied.rows.length,
+      total: migrations.length,
+    }
+  } catch (error) {
+    if (inTransaction) await client.query("ROLLBACK")
+    throw error
+  } finally {
+    await client.query("SELECT pg_advisory_unlock($1)", [MIGRATION_LOCK_ID])
+  }
+}

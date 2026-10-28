@@ -8,6 +8,7 @@ import {
   beginDesktopAuthorizationRedirect,
   desktopAuthorizationQuery,
 } from "@/lib/auth-session"
+import { EmailVerificationNotice } from "@/components/email-verification-notice"
 import { ChatGPTSignIn } from "@/components/chatgpt-sign-in"
 import { Button } from "@/components/ui/button"
 import {
@@ -38,6 +39,11 @@ export function SignupForm({
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [verificationEmail, setVerificationEmail] = useState<string | null>(
+    null
+  )
+  const verificationCallbackURL =
+    typeof window === "undefined" ? "/login" : `/login${window.location.search}`
   const authorizationQuery =
     typeof window === "undefined"
       ? null
@@ -58,17 +64,25 @@ export function SignupForm({
 
     setIsSubmitting(true)
 
-    const { error: signupError } = await authClient.signUp.email(
-      {
-        name,
-        email,
-        password,
-      },
-      authorizationQuery ? { query: authorizationQuery } : undefined
-    )
+    const { data: signupData, error: signupError } =
+      await authClient.signUp.email(
+        {
+          name,
+          email,
+          password,
+          callbackURL: verificationCallbackURL,
+        },
+        authorizationQuery ? { query: authorizationQuery } : undefined
+      )
 
     if (signupError) {
       setError(signupError.message ?? "Unable to create your account.")
+      setIsSubmitting(false)
+      return
+    }
+
+    if (!signupData.token) {
+      setVerificationEmail(email)
       setIsSubmitting(false)
       return
     }
@@ -92,6 +106,12 @@ export function SignupForm({
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
+      {verificationEmail ? (
+        <EmailVerificationNotice
+          email={verificationEmail}
+          callbackURL={verificationCallbackURL}
+        />
+      ) : null}
       <form onSubmit={handleSubmit}>
         <FieldGroup className="gap-4 [&>[data-slot=field]]:gap-2">
           <div className="flex flex-col items-center gap-2 text-center">

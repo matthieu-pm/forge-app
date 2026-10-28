@@ -1,3 +1,5 @@
+"use client"
+
 import * as React from "react"
 import { toast } from "sonner"
 
@@ -17,17 +19,13 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Switch } from "@/components/ui/switch"
 import {
-  PREFERENCES_STORAGE_KEY,
   applyPersonalInterfacePreferences,
   defaultPersonalPreferences,
   loadPersonalPreferences,
+  savePersonalPreferences,
 } from "@/lib/personal-preferences"
 import { getForgeHost } from "@/host/forge-host"
 import { cn } from "@/lib/utils"
-
-;
-
-("use client")
 
 type ThemePreviewPalette = {
   accent: string
@@ -286,11 +284,15 @@ export function PreferencesSettings() {
     value: PersonalPreferences[TKey]
   ) {
     const nextPreferences = { ...preferences, [key]: value }
+    try {
+      savePersonalPreferences(nextPreferences)
+    } catch {
+      toast.error(
+        "Your preferences could not be saved. Your previous data has been preserved."
+      )
+      return
+    }
     setPreferences(nextPreferences)
-    window.localStorage.setItem(
-      PREFERENCES_STORAGE_KEY,
-      JSON.stringify(nextPreferences)
-    )
     applyPersonalInterfacePreferences(nextPreferences)
     void getForgeHost().setThemeSource(nextPreferences.interfaceTheme)
   }

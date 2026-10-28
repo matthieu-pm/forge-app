@@ -6,6 +6,7 @@ import type { TeamMemberDirectory } from "@/lib/team-member-contract"
 import {
   ApplicationAccessError,
   canManageTeams,
+  canReadAllPrivateTeams,
   requireTeamRead,
 } from "@/application/authorization"
 import { db, members, teamMembers, teams } from "@/db"
@@ -23,7 +24,7 @@ async function requireVisibleTeam(actor: Actor, slug: string) {
   if (!team) throw new Error("The team no longer exists.")
   if (
     team.visibility === "private" &&
-    !canManageTeams(actor) &&
+    !canReadAllPrivateTeams(actor) &&
     !team.members.some((member) => member.userId === actor.userId)
   ) {
     throw new ApplicationAccessError("You do not have access to this team.")

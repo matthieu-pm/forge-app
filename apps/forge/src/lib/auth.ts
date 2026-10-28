@@ -24,6 +24,10 @@ import {
 } from "@/application/mail/auth-emails.server"
 
 import { chatGPTAuth } from "@/lib/chatgpt-auth.server"
+import {
+  withMemberCapacityErrors,
+  workspaceAuthMembershipLimit,
+} from "@/application/billing/member-capacity-auth.server"
 
 const betterAuthUrl = process.env.BETTER_AUTH_URL
 const betterAuthSecret = process.env.BETTER_AUTH_SECRET
@@ -36,6 +40,26 @@ if (!betterAuthSecret) {
   throw new Error("BETTER_AUTH_SECRET is required to initialize Better Auth.")
 }
 
+function authDatabaseAdapter(database: Parameters<typeof drizzleAdapter>[0]) {
+  return withMemberCapacityErrors(
+    drizzleAdapter(database, {
+      provider: "pg",
+      transaction: true,
+      schema: {
+        ...authSchema,
+        user: authSchema.users,
+        session: authSchema.sessions,
+        account: authSchema.accounts,
+        verification: authSchema.verifications,
+        apikey: authSchema.apiKeys,
+        organization: authSchema.organizations,
+        member: authSchema.members,
+        invitation: authSchema.invitations,
+      },
+    })
+  )
+}
+
 export const auth = betterAuth({
   appName: "Forge",
   baseURL: betterAuthUrl,
@@ -46,23 +70,11 @@ export const auth = betterAuth({
     `${desktopAuthScheme}:/`,
     `${developmentDesktopAuthScheme}:/`,
   ],
-  database: drizzleAdapter(db, {
-    provider: "pg",
-    schema: {
-      ...authSchema,
-      user: authSchema.users,
-      session: authSchema.sessions,
-      account: authSchema.accounts,
-      verification: authSchema.verifications,
-      apikey: authSchema.apiKeys,
-      organization: authSchema.organizations,
-      member: authSchema.members,
-      invitation: authSchema.invitations,
-    },
-  }),
+  database: authDatabaseAdapter(db),
   account: { accountLinking: { enabled: true, disableImplicitLinking: true } },
   emailAndPassword: {
     enabled: true,
+    requireEmailVerification: true,
   },
   user: {
     additionalFields: profileUserFields,
@@ -75,6 +87,7 @@ export const auth = betterAuth({
     deferSessionRefresh: true,
   },
   emailVerification: {
+    sendOnSignUp: true,
     expiresIn: 60 * 60,
     sendVerificationEmail: async ({ user, url }) => {
       await sendVerificationEmail({
@@ -88,6 +101,10 @@ export const auth = betterAuth({
     electron(),
     chatGPTAuth(),
     organization({
+      membershipLimit: (_user, workspace) =>
+        workspaceAuthMembershipLimit(workspace.id),
+      requireEmailVerificationOnInvitation: true,
+      allowUserToCreateOrganization: (user) => user.emailVerified === true,
       invitationExpiresIn: 60 * 60 * 48,
       sendInvitationEmail: async (data) => {
         if (isInvitationWorkflowEnabled(data.organization.id)) {
@@ -131,3 +148,40 @@ export const auth = betterAuth({
     tanstackStartCookies(),
   ],
 })
+
+class RollbackAuthResponse extends Error {
+  constructor(readonly response: Response) {
+    super("Rollback the unsuccessful auth operation.")
+  }
+}
+
+/**
+ * Better Auth updates an invitation before its inner member transaction. Scope
+ * the WHOLE endpoint to one transaction so losing the last slot cannot consume
+ * the invitation or commit partial membership/team/session state.
+ */
+export async function handleAuthRequest(request: Request) {
+  const path = new URL(request.url).pathname.replace(/\/+$/, "")
+  if (
+    request.method !== "POST" ||
+    path !== "/api/auth/organization/accept-invitation"
+  )
+    return auth.handler(request)
+  try {
+    return await db.transaction(async (transaction) => {
+      const scoped = betterAuth({
+        ...auth.options,
+        // Keep the SDK's inner member transaction as a savepoint: its failure
+        // handler restores the invitation and must not query an aborted outer
+        // transaction. The outer transaction still covers the whole endpoint.
+        database: authDatabaseAdapter(transaction),
+      })
+      const response = await scoped.handler(request)
+      if (!response.ok) throw new RollbackAuthResponse(response)
+      return response
+    })
+  } catch (error) {
+    if (error instanceof RollbackAuthResponse) return error.response
+    throw error
+  }
+}
