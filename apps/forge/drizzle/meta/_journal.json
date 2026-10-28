@@ -218,6 +218,13 @@
       "when": 1793222834207,
       "tag": "0030_subscription_refunds",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1793223957729,
+      "tag": "0031_subscription_termination",
+      "breakpoints": true
     }
   ]
 }

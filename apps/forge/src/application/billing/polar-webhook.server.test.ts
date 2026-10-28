@@ -2,7 +2,11 @@
 import { createHmac } from "node:crypto"
 import { describe, expect, it, vi } from "vitest"
 import { handlePolarWebhook } from "./polar-webhook.server"
-import { PolarSubscriptionReconciler } from "./polar-subscription-reconciliation.server"
+import {
+  PolarSubscriptionReconciler,
+  verifiedPolarSubscriptionSnapshot,
+} from "./polar-subscription-reconciliation.server"
+import type { ProviderSubscription } from "./polar-subscription-reconciliation.server"
 import type { EnabledBillingConfig } from "./billing-config.server"
 
 vi.mock("./subscription-refund.server", () => ({
@@ -52,7 +56,7 @@ function signed(
     body,
   })
 }
-function subscription() {
+function subscription(): ProviderSubscription {
   return {
     id,
     product_id: config.paidProducts.plus.usd,
@@ -172,13 +176,80 @@ describe("Polar authoritative subscription reconciliation", () => {
     )
   })
   it.each([
+    { status: "unpaid" as const, ended_at: null },
+    { status: "canceled" as const, ended_at: "2026-10-27T00:00:00Z" },
+    { status: "canceled" as const, ended_at: null },
+    {
+      status: "canceled" as const,
+      cancel_at_period_end: true,
+      ended_at: "2026-10-27T00:00:00Z",
+      ends_at: "2026-10-27T00:00:00Z",
+    },
+  ])("verifies terminal provider state independently of grace: %j", (patch) => {
+    const snapshot = verifiedPolarSubscriptionSnapshot(config, "w1", id, {
+      ...subscription(),
+      ...patch,
+    })
+    expect(snapshot).toMatchObject({
+      status: "canceled",
+      cancelAtPeriodEnd: false,
+      terminatedAt: expect.any(Date),
+    })
+    expect(snapshot.pastDueAt).toBeNull()
+  })
+  it("keeps scheduled cancellation nonterminal until the provider actually ends it", () => {
+    expect(
+      verifiedPolarSubscriptionSnapshot(config, "w1", id, {
+        ...subscription(),
+        status: "canceled",
+        cancel_at_period_end: true,
+        ended_at: null,
+      })
+    ).toMatchObject({ cancelAtPeriodEnd: true, terminatedAt: null })
+  })
+  it("dispatches a signed revoked event but fetches current provider proof", async () => {
+    const get = vi
+        .fn()
+        .mockResolvedValue({ ...subscription(), status: "unpaid" }),
+      apply = vi.fn().mockResolvedValue({ outcome: "applied", replayed: false })
+    const service = new PolarSubscriptionReconciler(
+      config,
+      { subscriptions: { get } },
+      apply
+    )
+    expect(
+      (
+        await handlePolarWebhook(
+          signed(
+            JSON.stringify({
+              type: "subscription.revoked",
+              data: { id, customer: { external_id: "forge:workspace:w1" } },
+            })
+          ),
+          config,
+          service
+        )
+      ).status
+    ).toBe(200)
+    expect(get).toHaveBeenCalledWith(id)
+    expect(apply).toHaveBeenCalledWith(
+      expect.objectContaining({
+        snapshot: expect.objectContaining({
+          terminatedAt: new Date("2026-10-28T01:00:00Z"),
+        }),
+      })
+    )
+  })
+  it.each([
     { customer: { external_id: "forge:workspace:w2" } },
     { id: "wrong" },
     { product_id: "unapproved-product" },
     { currency: "eur" },
     { recurring_interval: "year" },
     { status: "incomplete" },
-    { status: "canceled" },
+    { status: "paused" },
+    { status: "active", ended_at: "2026-10-27T00:00:00Z" },
+    { status: "unpaid", ended_at: "2026-10-29T00:00:00Z" },
     { past_due_at: null },
     { modified_at: null },
   ])(

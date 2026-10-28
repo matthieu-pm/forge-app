@@ -197,6 +197,7 @@ export const workspaceEntitlements = pgTable(
     providerEnvironment: text("provider_environment"),
     providerUpdatedAt: timestamp("provider_updated_at", { withTimezone: true }),
     providerStateHash: text("provider_state_hash"),
+    terminatedAt: timestamp("terminated_at", { withTimezone: true }),
     paidActivatedAt: timestamp("paid_activated_at", { withTimezone: true }),
     paymentFailedAt: timestamp("payment_failed_at", { withTimezone: true }),
     graceExpiresAt: timestamp("grace_expires_at", { withTimezone: true }),
@@ -236,6 +237,7 @@ export const workspaceEntitlements = pgTable(
       "workspace_entitlements_grace_check",
       sql`(${table.paymentFailedAt} IS NULL AND ${table.graceExpiresAt} IS NULL) OR (${table.source} = 'polar' AND ${table.status} = 'past_due' AND ${table.paymentFailedAt} IS NOT NULL AND ${table.graceExpiresAt} IS NOT NULL AND ${table.paidActivatedAt} IS NOT NULL AND isfinite(${table.paidActivatedAt}) AND isfinite(${table.paymentFailedAt}) AND ${table.paidActivatedAt} < ${table.paymentFailedAt} AND ${table.graceExpiresAt} = ${table.paymentFailedAt} + interval '168 hours')`
     ),
+    terminationCheck: check("workspace_entitlements_termination_check", sql`${table.terminatedAt} IS NULL OR (${table.source} = 'polar' AND isfinite(${table.terminatedAt}))`),
     refundHistoryCheck: check("workspace_entitlements_refund_history_check", sql`jsonb_typeof(${table.refundedPeriods}) = 'array'`),
     cancellationCheck: check(
       "workspace_entitlements_cancellation_check",

@@ -1,0 +1,65 @@
+{
+  "date": "2026-10-28",
+  "baseCommit": "9ad6915571510013359b42dd702fced2203e02c0",
+  "committed": true,
+  "deployed": false,
+  "servingDatabaseModified": false,
+  "localConnectionFilesChanged": false,
+  "issues": [
+    "FOR-109",
+    "FOR-111"
+  ],
+  "status": "Confirmed immediate provider termination access slice complete; broader billing issues remain In Progress",
+  "policy": {
+    "policy": "End paid access immediately, including during payment grace; preserve existing workspace members and history",
+    "implementation": "Signed revoked/current-provider verification; final canceled/unpaid proof; durable earliest terminal latch; restrictive older/equal-version and cached-event promotion; atomic audit/receipt; shared feature/auth/SQL denial; no ordinary same-subscription reactivation",
+    "evidence": "1343 app + 4 workflow tests; 31 PostgreSQL billing + 15 real-auth member + 3 migration fault cases; typecheck/lint/format/build pass",
+    "status": "Confirmed immediate-termination access slice complete; FOR-109/FOR-111 remain In Progress",
+    "remaining": "Verified replacement/reinstatement binding, pause/paid plan-transition policy, periodic reconciliation/outbox/communications, invoice allocation, commercial ledger integration and actual Polar sandbox/candidate release validation"
+  },
+  "staging": {
+    "project": "raspy-union-96305162",
+    "branch": "br-autumn-union-za0opf1e",
+    "database": "forge_staging",
+    "migrations": 32,
+    "newMigrationsApplied": 1
+  },
+  "rehearsal": {
+    "branch": "br-square-sky-za2iavfk",
+    "database": "forge_migration_rehearsal",
+    "migrations": 32,
+    "newMigrationsApplied": 1
+  },
+  "checks": {
+    "appTestsPassed": 1343,
+    "workflowTestsPassed": 4,
+    "postgresBillingStateCasesPassed": 31,
+    "postgresMembershipCasesPassed": 15,
+    "postgresMigrationRehearsalCasesPassed": 3,
+    "typecheck": "passed",
+    "changedFileLint": "passed",
+    "format": "passed",
+    "productionBuild": "passed including protected Workflow handlers"
+  },
+  "routeEnabled": false,
+  "providerCalls": "SDK calls mocked; real isolated Neon staging/rehearsal databases; no live Polar mutation",
+  "remaining": "Verified replacement/reinstatement binding, pause/paid plan-transition policy, periodic reconciliation/outbox/communications, invoice allocation, commercial ledger integration and actual Polar sandbox/candidate release validation",
+  "sourceSha256": {
+    "apps/forge/drizzle/0031_subscription_termination.sql": "79443bda416ed8a9bce3fbaf23720955070121a47fcb69bb7845dd3829bd4492",
+    "apps/forge/drizzle/meta/0031_snapshot.json": "fce393bcb6ed06587814ba4df5ca8626b4e76b981d19121ca1cf6d0a65dd878b",
+    "apps/forge/src/db/schema.ts": "6bbdf3d3023f0d0147e013e0ca9bf74dff78883b3770e300f0b3da2bae7ec734",
+    "apps/forge/src/application/billing/subscription-access.ts": "9a5d53f0303da3b686f8bf5f1170a6bf6630f6d51e6f9dd3cfeecbb31cc57e9e",
+    "apps/forge/src/application/billing/subscription-access-state.server.ts": "a9d4e10666a292b2aee589571ef781bd25406b431c30dd401e600ec971dc4f0b",
+    "apps/forge/src/application/billing/subscription-access.test.ts": "704ac135bb7190038bc3ae86e0e3abf951599d557d1fb5e8acd9c87f7dc42299",
+    "apps/forge/src/application/billing/subscription-reconciliation.server.ts": "6a7920cb915f9059b30f5ef31708ac3302f6d9ed7da2cf7c30a4cc32df9d1fb2",
+    "apps/forge/src/application/billing/polar-subscription-reconciliation.server.ts": "a5614123eca4f64bddd355599dda3e84fbfceba875d413065d6eab1e12e9a47b",
+    "apps/forge/src/application/billing/polar-webhook.server.ts": "8e04cbc76675862d98ce4cfe847f68ce0f261f9c6b1004d6d20543d27f63b1a7",
+    "apps/forge/src/application/billing/polar-webhook.server.test.ts": "74f67bfc87c49f921513325dbfac16e3731dfe730de07a0edd5f4f9a4c518fcd",
+    "apps/forge/src/application/billing/polar-subscription-cancellation.server.ts": "d5a742a2644fccadf8efafe5b50b1848bed5003723c8c294d70e6d00a79e3c39",
+    "apps/forge/src/application/billing/polar-subscription-cancellation.server.test.ts": "920eec80319a9558e46088461fad594c8384660c5574639d075a101b7159dacb",
+    "apps/forge/src/application/billing/subscription-reconciliation.postgres.test.ts": "404d62e7fa00cbd25eac72d7d52d65a8c5e5c7ea1329179ab986bebeacec4935",
+    "apps/forge/src/application/billing/member-capacity.postgres.test.ts": "29c2690d74063ceb4310599137a9b9501cea04419807a21c37f823ebac1190d0",
+    "docs/subscription-termination.md": "d32d4efa39124f951e2ade55d780d9748618a71ec3a85cd0a4f82082c925dd87",
+    "docs/forge-plan-matrix.md": "975c5cd23cd9a3c93f7519ca8b75306cf655d5b7187aa5b9667905dfd599ecad"
+  }
+}

@@ -16,6 +16,7 @@ export type SubscriptionAccessState = {
     refundedAt: string
   }>
   source?: string
+  terminatedAt?: Date | null
   paidActivatedAt?: Date | null
   paymentFailedAt?: Date | null
   graceExpiresAt?: Date | null
@@ -58,7 +59,7 @@ export function subscriptionAccess(
     allowsExistingOverage: false,
   }
   const at = validTime(now)
-  if (!state || at === null) return free
+  if (!state || at === null || state.terminatedAt != null) return free
   const plan = securityPlan(state.plan)
   if (plan === "free") return free
   if (isRefundedSubscriptionPeriod(state)) return free

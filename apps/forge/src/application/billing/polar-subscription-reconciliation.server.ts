@@ -51,7 +51,7 @@ export function verifiedPolarSubscriptionSnapshot(
   )
     throw new Error("BILLING_PROVIDER_CATALOG_MISMATCH")
   const status = z
-    .enum(["active", "past_due", "canceled"])
+    .enum(["active", "past_due", "canceled", "unpaid"])
     .safeParse(subscription.status)
   if (!status.success) throw new Error("BILLING_LIFECYCLE_POLICY_REQUIRED")
   const cancelAtPeriodEnd = z.boolean().parse(subscription.cancel_at_period_end)
@@ -60,36 +60,41 @@ export function verifiedPolarSubscriptionSnapshot(
       .datetime({ offset: true })
       .transform((v) => new Date(v))
       .parse(value)
+  const updatedAt = date(subscription.modified_at)
   const end = date(subscription.current_period_end)
   const endedAt = subscription.ended_at ? date(subscription.ended_at) : null
+  const terminalStatus = status.data === "canceled" || status.data === "unpaid"
+  if (endedAt && (!terminalStatus || endedAt > updatedAt))
+    throw new Error("BILLING_TERMINATION_STATE_INVALID")
+  const terminatedAt =
+    terminalStatus &&
+    (endedAt || status.data === "unpaid" || !cancelAtPeriodEnd)
+      ? (endedAt ?? updatedAt)
+      : null
   if (
+    !terminatedAt &&
     cancelAtPeriodEnd &&
     subscription.ends_at &&
     date(subscription.ends_at).getTime() !== end.getTime()
   )
     throw new Error("BILLING_CANCELLATION_BOUNDARY_MISMATCH")
-  if (endedAt && endedAt < end)
-    throw new Error("BILLING_IMMEDIATE_REVOCATION_POLICY_REQUIRED")
-  if (
-    subscription.status === "canceled" &&
-    !cancelAtPeriodEnd &&
-    (!endedAt || endedAt < end)
-  )
-    throw new Error("BILLING_LIFECYCLE_POLICY_REQUIRED")
   return {
     workspaceId,
     environment: config.environment,
     subscriptionId,
     plan: products[0].plan === "starter" ? "starter" : "plus",
-    status: status.data,
-    updatedAt: date(subscription.modified_at),
+    status: status.data === "unpaid" ? "canceled" : status.data,
+    terminatedAt,
+    updatedAt,
     currentPeriodStart: date(subscription.current_period_start),
     currentPeriodEnd: end,
     pastDueAt:
       subscription.status === "past_due"
         ? date(subscription.past_due_at)
         : null,
-    cancelAtPeriodEnd: cancelAtPeriodEnd || subscription.status === "canceled",
+    cancelAtPeriodEnd:
+      !terminatedAt &&
+      (cancelAtPeriodEnd || subscription.status === "canceled"),
   }
 }
 

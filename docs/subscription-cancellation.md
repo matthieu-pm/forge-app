@@ -60,8 +60,8 @@ active/past-due events. A completed scheduled cancellation retains the stored pr
 paid proof and expires at its original boundary. An unpaid initial subscription
 cannot receive paid time from a canceled event. A cancellation arriving during
 grace preserves that original failure and expiry instead of converting it into a
-full unpaid month. Immediate early revocations remain an explicit unimplemented
-policy; keep billing gated until that policy is resolved.
+full unpaid month. Immediate early revocations now use the confirmed terminal-access rule in
+`docs/subscription-termination.md`; normal cancellation remains at period end.
 
 Feature checks, Better Auth preflight and the SQL member-counter helper all apply
 the cutoff at read/insertion time. Expiry does not depend on the final webhook or
@@ -85,7 +85,7 @@ until all serving instances enforce the boundary.
   dedicated rehearsal database. Migration 0029 was applied only to isolated staging
   and rehearsal; the serving/default database and local connection files are unchanged.
 
-Billing remains disabled. Exceptional immediate revocation, pause policy,
+Billing remains disabled. Pause and plan-transition policy,
 periodic reconciliation/outbox communication, commercial ledger integration,
 customer-portal configuration and actual Polar sandbox/candidate tests remain.
 
@@ -97,3 +97,5 @@ Resubscribing after term end is a remaining release check: verify the old subscr
 A full refund of the current period now ends paid access immediately. The separate refund history overrides the cancellation schedule and cannot be cleared by later active subscription updates. See `docs/subscription-refunds.md` for implementation and current evidence; the earlier checkpoint counts above describe the cancellation commit.
 
 Partial refunds now keep paid access and its existing cancellation/grace boundary unchanged. Current order verification can promote an earlier partial event to full revocation when cumulative refunds reach the complete charged amount. See the refund guide for current verification evidence.
+
+Immediate provider termination now overrides both the cancellation boundary and payment grace. The owner command reconciles a detected terminal subscription without another provider write, including termination during a moved-period scheduling race. See the termination guide for the new checkpoint.

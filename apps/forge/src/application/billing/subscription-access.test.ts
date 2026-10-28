@@ -13,6 +13,27 @@ const state: SubscriptionAccessState = {
 }
 
 describe("paid-access grace", () => {
+  it.each(["active", "past_due", "canceled"])(
+    "denies terminal %s state before other paid or grace rules",
+    (status) => {
+      expect(
+        subscriptionAccess(
+          {
+            ...state,
+            status,
+            terminatedAt: failed,
+            cancelAtPeriodEnd: true,
+            cancellationPeriodEnd: new Date(failed.getTime() + 30 * 86400000),
+          },
+          failed
+        )
+      ).toMatchObject({
+        plan: "free",
+        phase: "free",
+        allowsExistingOverage: false,
+      })
+    }
+  )
   it("retains paid features and existing overage authority for exactly 168 hours", () => {
     expect(subscriptionAccess(state, failed)).toMatchObject({
       plan: "business",

@@ -46,5 +46,7 @@
     "docs/forge-plan-matrix.md": "51cefd4e5b4acba1a8b242bf4e3012c8ef176996149cdf4c8c69efb88e265ff2",
     "docs/subscription-cancellation.md": "4495017830274e43444a1a25cd36396fae1b9ddaee23f34f66a8af5dd24cb1bb",
     "docs/plans/production-readiness-backlog-map.md": "d8d19dfbda7bc10022e718592fedf4dfa654feda55062043d8ec22f36bd165ee"
-  }
+  },
+  "sourceCommit": "9ad6915571510013359b42dd702fced2203e02c0",
+  "historical": true
 }

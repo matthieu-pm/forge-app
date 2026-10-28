@@ -59,7 +59,7 @@ export class PolarSubscriptionCancellation {
       fresh.subscriptionId !== id
     )
       throw new Error("BILLING_SUBSCRIPTION_CONFLICT")
-    if (!before.cancelAtPeriodEnd) {
+    if (!before.cancelAtPeriodEnd && !before.terminatedAt) {
       await this.client.subscriptions.update(id, { cancel_at_period_end: true })
       current = await this.client.subscriptions.get(id)
     }
@@ -70,8 +70,10 @@ export class PolarSubscriptionCancellation {
       current
     )
     if (
-      !snapshot.cancelAtPeriodEnd ||
-      snapshot.currentPeriodEnd.getTime() !== before.currentPeriodEnd.getTime()
+      !snapshot.terminatedAt &&
+      (!snapshot.cancelAtPeriodEnd ||
+        snapshot.currentPeriodEnd.getTime() !==
+          before.currentPeriodEnd.getTime())
     )
       throw new Error("BILLING_CANCELLATION_NOT_CONFIRMED")
     const eventId = `forge.cancel.${id}.${snapshot.updatedAt.toISOString()}`
@@ -93,7 +95,9 @@ export class PolarSubscriptionCancellation {
         snapshot.status === "canceled"
           ? ("canceled" as const)
           : ("scheduled" as const),
-      cancellationEffectiveAt: snapshot.currentPeriodEnd.toISOString(),
+      cancellationEffectiveAt: (
+        snapshot.terminatedAt ?? snapshot.currentPeriodEnd
+      ).toISOString(),
     }
   }
 }

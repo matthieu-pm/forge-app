@@ -22,6 +22,7 @@ const stateSchema = z.object({
       })
     )
     .default([]),
+  terminated_at: date,
   paid_activated_at: date,
   payment_failed_at: date,
   grace_expires_at: date,
@@ -49,6 +50,7 @@ export async function readSubscriptionAccessState(workspaceId: string) {
     sourceReference: row.source_reference,
     providerEnvironment: row.provider_environment,
     refundedPeriods: row.refunded_periods,
+    terminatedAt: row.terminated_at,
     paidActivatedAt: row.paid_activated_at,
     paymentFailedAt: row.payment_failed_at,
     graceExpiresAt: row.grace_expires_at,

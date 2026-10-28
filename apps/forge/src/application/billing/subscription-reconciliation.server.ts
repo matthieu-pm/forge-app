@@ -28,6 +28,7 @@ const snapshotSchema = z.object({
   currentPeriodEnd: z.date(),
   pastDueAt: z.date().nullable(),
   cancelAtPeriodEnd: z.boolean().default(false),
+  terminatedAt: z.date().nullable().default(null),
 })
 export type VerifiedSubscriptionSnapshot = z.input<typeof snapshotSchema>
 
@@ -51,20 +52,32 @@ export async function applyVerifiedSubscriptionSnapshot(input: {
     throw new Error("BILLING_ACTOR_WORKSPACE_MISMATCH")
   if (
     snapshot.currentPeriodStart >= snapshot.currentPeriodEnd ||
-    (snapshot.status === "canceled" && !snapshot.cancelAtPeriodEnd) ||
+    (snapshot.terminatedAt &&
+      (snapshot.status !== "canceled" ||
+        snapshot.terminatedAt > snapshot.updatedAt)) ||
+    (snapshot.status === "canceled" &&
+      !snapshot.cancelAtPeriodEnd &&
+      !snapshot.terminatedAt) ||
     (snapshot.status === "past_due" &&
       (!snapshot.pastDueAt || snapshot.pastDueAt > snapshot.updatedAt))
   ) {
     throw new Error("BILLING_SNAPSHOT_INVALID")
   }
   // Keep unchanged pre-expansion snapshots replayable without a version conflict.
-  const { cancelAtPeriodEnd: cancelFlag, ...legacySnapshot } = snapshot
+  const {
+    cancelAtPeriodEnd: cancelFlag,
+    terminatedAt,
+    ...legacySnapshot
+  } = snapshot
+  const cancellationSnapshot = cancelFlag
+    ? { ...legacySnapshot, cancelAtPeriodEnd: true }
+    : legacySnapshot
   const stateHash = createHash("sha256")
     .update(
       JSON.stringify(
-        cancelFlag
-          ? { ...legacySnapshot, cancelAtPeriodEnd: true }
-          : legacySnapshot
+        terminatedAt
+          ? { ...cancellationSnapshot, terminatedAt }
+          : cancellationSnapshot
       )
     )
     .digest("hex")
@@ -107,7 +120,6 @@ export async function applyVerifiedSubscriptionSnapshot(input: {
         duplicate.subscriptionId !== snapshot.subscriptionId
       )
         throw new Error("BILLING_EVENT_CONFLICT")
-      return { outcome: duplicate.outcome, replayed: true }
     }
     const previous = await tx.query.workspaceEntitlements.findFirst({
       where: eq(workspaceEntitlements.workspaceId, snapshot.workspaceId),
@@ -118,6 +130,90 @@ export async function applyVerifiedSubscriptionSnapshot(input: {
       previous.providerEnvironment === snapshot.environment
     if (previous?.source === "polar" && !sameSubscription)
       throw new Error("BILLING_SUBSCRIPTION_CONFLICT")
+    async function receipt(outcome: "applied" | "stale" | "unchanged") {
+      if (duplicate)
+        await tx
+          .update(billingEventReceipts)
+          .set({ outcome })
+          .where(
+            and(
+              eq(billingEventReceipts.environment, snapshot.environment),
+              eq(billingEventReceipts.eventId, eventId)
+            )
+          )
+      else
+        await tx.insert(billingEventReceipts).values({
+          workspaceId: snapshot.workspaceId,
+          environment: snapshot.environment,
+          eventId,
+          bodyHash,
+          subscriptionId: snapshot.subscriptionId,
+          outcome,
+        })
+      return { outcome, replayed: !!duplicate }
+    }
+    if (terminatedAt) {
+      // Final provider revocation is restrictive independently of ordinary state
+      // ordering. It can also promote a previously acknowledged active event.
+      const earlier = sameSubscription ? previous.terminatedAt : null
+      const cutoff = new Date(
+        Math.min(earlier?.getTime() ?? Infinity, terminatedAt.getTime())
+      )
+      const changed = !earlier || cutoff < earlier
+      if (!changed && duplicate)
+        return { outcome: duplicate.outcome, replayed: true }
+      if (changed) {
+        if (sameSubscription)
+          await tx
+            .update(workspaceEntitlements)
+            .set({ terminatedAt: cutoff, updatedAt: new Date() })
+            .where(eq(workspaceEntitlements.workspaceId, snapshot.workspaceId))
+        else {
+          const terminalBinding = {
+            plan: snapshot.plan === "starter" ? "basic" : "business",
+            status: "canceled",
+            source: "polar",
+            sourceReference: snapshot.subscriptionId,
+            providerEnvironment: snapshot.environment,
+            providerUpdatedAt: snapshot.updatedAt,
+            providerStateHash: stateHash,
+            currentPeriodStart: snapshot.currentPeriodStart,
+            currentPeriodEnd: snapshot.currentPeriodEnd,
+            terminatedAt: cutoff,
+            cancelAtPeriodEnd: false,
+            cancellationPeriodEnd: null,
+            paidActivatedAt: null,
+            paymentFailedAt: null,
+            graceExpiresAt: null,
+            updatedAt: new Date(),
+          }
+          await tx
+            .insert(workspaceEntitlements)
+            .values({ workspaceId: snapshot.workspaceId, ...terminalBinding })
+            .onConflictDoUpdate({
+              target: workspaceEntitlements.workspaceId,
+              set: terminalBinding,
+            })
+        }
+        await tx.insert(workspaceSecurityAuditEvents).values({
+          workspaceId: snapshot.workspaceId,
+          actorUserId: input.actor?.userId ?? null,
+          action: "billing.subscription.terminated",
+          target: snapshot.subscriptionId,
+          outcome: "succeeded",
+          after: {
+            terminatedAt: cutoff.toISOString(),
+            normalizedStatus: snapshot.status,
+          },
+          requestId: eventId,
+        })
+      }
+      return receipt(changed ? "applied" : "unchanged")
+    }
+    if (duplicate) return { outcome: duplicate.outcome, replayed: true }
+    // This subscription is terminal. Only a separately verified replacement
+    // binding can establish new paid access; ordinary snapshots never clear it.
+    if (sameSubscription && previous.terminatedAt) return receipt("unchanged")
     let outcome: "applied" | "stale" | "unchanged" = "applied"
     if (sameSubscription && previous.providerUpdatedAt) {
       const version =
@@ -233,14 +329,6 @@ export async function applyVerifiedSubscriptionSnapshot(input: {
         requestId: eventId,
       })
     }
-    await tx.insert(billingEventReceipts).values({
-      workspaceId: snapshot.workspaceId,
-      environment: snapshot.environment,
-      eventId,
-      bodyHash,
-      subscriptionId: snapshot.subscriptionId,
-      outcome,
-    })
-    return { outcome, replayed: false }
+    return receipt(outcome)
   })
 }

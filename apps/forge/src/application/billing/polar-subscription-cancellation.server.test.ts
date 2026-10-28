@@ -95,9 +95,45 @@ describe("owner cancellation at period end", () => {
       cancel_at_period_end: false,
       ends_at: subscription().current_period_end,
       ended_at: subscription().current_period_end,
+      modified_at: subscription().current_period_end,
     })
     expect((await service.schedule(actor)).status).toBe("canceled")
     expect(update).not.toHaveBeenCalled()
+  })
+  it("reconciles immediate termination without scheduling another provider write", async () => {
+    const { service, get, update, apply } = setup()
+    get.mockResolvedValue({
+      ...subscription(),
+      status: "unpaid",
+      ended_at: "2026-10-28T00:00:00Z",
+      modified_at: "2026-10-28T00:00:00Z",
+    })
+    expect(await service.schedule(actor)).toEqual({
+      status: "canceled",
+      cancellationEffectiveAt: "2026-10-28T00:00:00.000Z",
+    })
+    expect(update).not.toHaveBeenCalled()
+    expect(apply).toHaveBeenCalledWith(
+      expect.objectContaining({
+        snapshot: expect.objectContaining({
+          terminatedAt: new Date("2026-10-28T00:00:00Z"),
+        }),
+      })
+    )
+    // If the subscription terminates while scheduling, reconcile that final
+    // state even when the provider's period moved during the network operation.
+    const raced = setup()
+    raced.get.mockResolvedValueOnce(subscription()).mockResolvedValueOnce({
+      ...subscription(),
+      status: "unpaid",
+      ended_at: "2026-10-28T00:00:00Z",
+      modified_at: "2026-10-28T00:00:00Z",
+      current_period_end: "2026-12-01T00:00:00Z",
+    })
+    expect((await raced.service.schedule(actor)).cancellationEffectiveAt).toBe(
+      "2026-10-28T00:00:00.000Z"
+    )
+    expect(raced.apply).toHaveBeenCalled()
   })
   it("sends only the scheduled-cancel flag and persists confirmed provider state", async () => {
     const { service, context, update, apply } = setup()

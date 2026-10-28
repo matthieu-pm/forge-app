@@ -126,3 +126,8 @@ Scheduled cancellation now uses the same stored cutoff in feature reads, auth pr
 ## Full-refund migration follow-up · 28 October 2026
 
 Versioned migration 0030 adds the retained refunded-period history and updates member admission to deny refunded paid capacity. All 31 migrations are applied on the exact isolated staging and rehearsal targets. Three serialized migration ownership/fault cases pass against the complete history. The serving/default database is unchanged and still lacks the new production-readiness expansions; production rollout remains separately gated. See `docs/subscription-refunds.md`.
+
+
+## Immediate termination migration follow-up · 28 October 2026
+
+Migration 0031 adds finite provider-backed terminal state and makes SQL member admission deny paid capacity immediately on final revocation. All 32 migrations are applied only to isolated staging and rehearsal; three serialized ownership/fault cases pass against the complete history. Thirty-one billing-state and fifteen real-auth member cases pass on staging. Existing members stay authorized. No serving/default database or connection configuration changed. See `docs/subscription-termination.md`; production rollout remains separately gated.

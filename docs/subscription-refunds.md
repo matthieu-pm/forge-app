@@ -103,8 +103,10 @@ preactivation ordering and partial audit/receipt rollback. TypeScript, changed-f
 lint/format and production build pass. No new migration was required; migration
 fault evidence remains the prior full-refund checkpoint's three cases.
 
-Billing stays disabled. FOR-111 remains In Progress for exceptional
-revocation/pause policy, verified old/new subscription replacement, periodic
+Billing stays disabled. FOR-111 remains In Progress for pause/plan-transition
+policy, verified old/new subscription replacement, periodic
 reconciliation and durable effects/communications, commercial ledger integration,
 provider configuration and actual Polar sandbox/candidate validation. This record
 completes the confirmed full/partial-refund access slices, not the entire billing issue.
+
+Immediate provider termination is now separately implemented and takes precedence over paid/grace access. Ordinary subscription or partial-refund updates cannot reopen it. See `docs/subscription-termination.md`; the refund checkpoint counts above describe the earlier commits.

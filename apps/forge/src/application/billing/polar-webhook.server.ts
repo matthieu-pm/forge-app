@@ -11,6 +11,7 @@ const identitySchema = z.object({
   type: z.enum([
     "order.refunded",
     "subscription.active",
+    "subscription.revoked",
     "subscription.past_due",
     "subscription.updated",
     "subscription.canceled",

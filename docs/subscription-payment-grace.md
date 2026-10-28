@@ -41,10 +41,11 @@ environment/product/currency mapping and monthly cadence. Webhook metadata,
 success redirects, browser plan names and event payload status cannot grant access.
 
 The implementation now also handles scheduled-canceled/uncanceled reconciliation.
-Unimplemented immediate revocation, refund, pause and other event policies
-return a retryable failure rather than an acknowledgement. Keep the route disabled
-until those lifecycle paths, periodic reconciliation and the billing release gate
-are complete. No live Polar credentials, webhook configuration or charges were
+Immediate revocation and standard full/partial subscription-period refunds are
+implemented in the subsequent guides. Pause, unsupported invoice allocations and
+other unimplemented event policies still return a retryable failure. Keep the route
+disabled until the remaining lifecycle paths, periodic reconciliation and billing
+release gate are complete. No live Polar credentials, webhook configuration or charges were
 changed by this work.
 
 ## Persistence and ordering
@@ -110,3 +111,8 @@ required. Passing these tests is not completion of the entire billing feature.
 
 
 Period-end cancellation is now implemented as described in [the cancellation guide](subscription-cancellation.md). Staging/rehearsal contain 30 migrations; thirteen billing-state and thirteen real-auth member cases pass, including cancellation/grace interaction and term-end access. UI/public command wiring and the full billing release gate remain open.
+
+
+## Immediate termination follow-up
+
+The user confirmed that final provider termination overrides remaining payment grace. Current Polar `unpaid` after retry exhaustion is final revocation, even if retries end before the ordinary seven-day Forge grace boundary. A durable terminal marker now denies paid access while preserving the original failure/grace history and existing members. See `docs/subscription-termination.md` for current implementation and verification. Earlier checkpoint counts above are historical.

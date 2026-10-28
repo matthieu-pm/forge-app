@@ -83,6 +83,29 @@ describe.skipIf(!connection)(
         ...patch,
       }
     }
+    function providerSubscription(
+      id: string,
+      paid: Store.VerifiedSubscriptionSnapshot,
+      patch: Partial<Provider.ProviderSubscription> = {}
+    ): Provider.ProviderSubscription {
+      return {
+        id: paid.subscriptionId,
+        product_id: config.paidProducts.plus.usd,
+        currency: "usd",
+        customer: { external_id: `forge:workspace:${id}` },
+        status: "active",
+        recurring_interval: "month",
+        recurring_interval_count: 1,
+        modified_at: paid.updatedAt.toISOString(),
+        current_period_start: paid.currentPeriodStart.toISOString(),
+        current_period_end: paid.currentPeriodEnd.toISOString(),
+        past_due_at: null,
+        cancel_at_period_end: false,
+        ends_at: null,
+        ended_at: null,
+        ...patch,
+      }
+    }
     function refundOrder(
       id: string,
       paid: Store.VerifiedSubscriptionSnapshot,
@@ -188,7 +211,7 @@ describe.skipIf(!connection)(
       })
       const migration = await readFile(
         new URL(
-          "../../../drizzle/0030_subscription_refunds.sql",
+          "../../../drizzle/0031_subscription_termination.sql",
           import.meta.url
         ),
         "utf8"
@@ -235,6 +258,220 @@ describe.skipIf(!connection)(
         vi.unstubAllEnvs()
       }
     }, 30_000)
+
+    it.each(["active", "past_due", "canceled"] as const)(
+      "immediately terminates signed %s access while retaining its prior clocks and members",
+      async (status) => {
+        const id = await workspace(),
+          paid = snapshot(id)
+        await apply(paid)
+        if (status !== "active")
+          await apply({
+            ...paid,
+            status,
+            updatedAt: failed,
+            pastDueAt: status === "past_due" ? failed : null,
+            cancelAtPeriodEnd: status === "canceled",
+          })
+        let owner = ""
+        for (let i = 0; i < 6; i++) owner = await add(id)
+        await pool.query(
+          "UPDATE workspace_entitlements SET feature_overrides=$2::jsonb WHERE workspace_id=$1",
+          [id, JSON.stringify({ "restrict-invitations": true })]
+        )
+        const before = await row(id),
+          eventId = randomUUID()
+        const service = new provider.PolarSubscriptionReconciler(config, {
+          subscriptions: {
+            get: () =>
+              Promise.resolve(
+                providerSubscription(id, paid, {
+                  status: status === "past_due" ? "unpaid" : "canceled",
+                  modified_at: now.toISOString(),
+                  ended_at: status === "past_due" ? null : now.toISOString(),
+                })
+              ),
+          },
+        })
+        for (let retry = 0; retry < 2; retry++)
+          expect(
+            (
+              await webhook.handlePolarWebhook(
+                signed(id, eventId, "subscription.revoked"),
+                config,
+                service
+              )
+            ).status
+          ).toBe(200)
+        const after = await row(id)
+        expect(after?.terminatedAt).toEqual(now)
+        expect(after?.paymentFailedAt).toEqual(before?.paymentFailedAt)
+        expect(after?.graceExpiresAt).toEqual(before?.graceExpiresAt)
+        expect(after?.cancellationPeriodEnd).toEqual(
+          before?.cancellationPeriodEnd
+        )
+        expect(after?.providerStateHash).toBe(before?.providerStateHash)
+        expect(subscriptionAccess(after, now)).toMatchObject({
+          plan: "free",
+          allowsExistingOverage: false,
+        })
+        expect(await capacity.workspaceAuthMembershipLimit(id)).toBe(5)
+        await expect(add(id)).rejects.toThrow(/five-member/)
+        expect(
+          (
+            await pool.query(
+              "SELECT active_member_count FROM workspace_member_capacity WHERE workspace_id=$1",
+              [id]
+            )
+          ).rows[0].active_member_count
+        ).toBe(6)
+        const view = await security.getWorkspaceSecuritySnapshot(
+          {
+            workspaceId: id,
+            userId: owner,
+            workspaceRole: "owner",
+            scopes: null,
+            authentication: { kind: "session", sessionId: "fixture" },
+          },
+          "http://localhost:3000"
+        )
+        expect(view.plan).toBe("free")
+        expect(view.entitlements["restrict-invitations"]).toBe(false)
+        expect(
+          (
+            await pool.query(
+              "SELECT count(*)::int AS count FROM workspace_security_audit_events WHERE request_id=$1 AND action='billing.subscription.terminated'",
+              [eventId]
+            )
+          ).rows[0].count
+        ).toBe(1)
+      }
+    )
+
+    it("retains termination arriving before first activation and ignores later paid/grace snapshots for that ID", async () => {
+      const id = await workspace(),
+        paid = snapshot(id),
+        terminal = {
+          ...paid,
+          status: "canceled" as const,
+          updatedAt: now,
+          terminatedAt: now,
+          cancelAtPeriodEnd: false,
+        }
+      await apply(terminal)
+      expect((await row(id))?.paidActivatedAt).toBeNull()
+      for (const value of [
+        paid,
+        { ...paid, updatedAt: new Date(now.getTime() + 1) },
+        {
+          ...paid,
+          status: "past_due" as const,
+          updatedAt: new Date(now.getTime() + 2),
+          pastDueAt: failed,
+        },
+      ]) {
+        expect((await apply(value)).outcome).toBe("unchanged")
+        expect(subscriptionAccess(await row(id), now).plan).toBe("free")
+      }
+      await expect(
+        apply({ ...paid, subscriptionId: randomUUID() })
+      ).rejects.toThrow(/SUBSCRIPTION_CONFLICT/)
+    })
+
+    it.each(["older", "equal"])(
+      "accepts restrictive %s-version termination without rewriting the normal state fingerprint",
+      async (order) => {
+        const id = await workspace(),
+          paid = snapshot(id)
+        await apply({ ...paid, updatedAt: now })
+        const before = await row(id),
+          terminalAt = new Date(now.getTime() - 2000),
+          version = new Date(now.getTime() - (order === "older" ? 1000 : 0))
+        expect(
+          (
+            await apply({
+              ...paid,
+              status: "canceled",
+              cancelAtPeriodEnd: false,
+              updatedAt: version,
+              terminatedAt: terminalAt,
+            })
+          ).outcome
+        ).toBe("applied")
+        expect((await row(id))?.providerStateHash).toBe(
+          before?.providerStateHash
+        )
+        await Promise.all([
+          apply({
+            ...paid,
+            updatedAt: new Date(now.getTime() + 1),
+            currentPeriodStart: paid.currentPeriodEnd,
+            currentPeriodEnd: new Date(
+              paid.currentPeriodEnd.getTime() + 30 * 86400000
+            ),
+          }),
+          apply({
+            ...paid,
+            status: "canceled",
+            updatedAt: new Date(now.getTime() + 2),
+            terminatedAt: now,
+          }),
+        ])
+        expect((await row(id))?.terminatedAt).toEqual(terminalAt)
+        expect(subscriptionAccess(await row(id), now).plan).toBe("free")
+      }
+    )
+
+    it("promotes a cached active event to terminal state atomically and rolls back a failed audit", async () => {
+      const id = await workspace(),
+        paid = snapshot(id),
+        eventId = randomUUID()
+      let current = providerSubscription(id, paid)
+      const service = new provider.PolarSubscriptionReconciler(config, {
+        subscriptions: { get: () => Promise.resolve(current) },
+      })
+      expect(
+        (await webhook.handlePolarWebhook(signed(id, eventId), config, service))
+          .status
+      ).toBe(200)
+      current = providerSubscription(id, paid, {
+        status: "unpaid",
+        modified_at: now.toISOString(),
+      })
+      const constraint = `termination_fault_${randomUUID().replaceAll("-", "")}`
+      await pool.query(
+        `ALTER TABLE workspace_security_audit_events ADD CONSTRAINT ${constraint} CHECK (action <> 'billing.subscription.terminated') NOT VALID`
+      )
+      try {
+        expect(
+          (
+            await webhook.handlePolarWebhook(
+              signed(id, eventId),
+              config,
+              service
+            )
+          ).status
+        ).toBe(503)
+        expect((await row(id))?.terminatedAt).toBeNull()
+      } finally {
+        await pool.query(
+          `ALTER TABLE workspace_security_audit_events DROP CONSTRAINT ${constraint}`
+        )
+      }
+      expect(
+        (await webhook.handlePolarWebhook(signed(id, eventId), config, service))
+          .status
+      ).toBe(200)
+      expect(subscriptionAccess(await row(id), now).plan).toBe("free")
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int AS count FROM billing_event_receipts WHERE event_id=$1",
+            [eventId]
+          )
+        ).rows[0].count
+      ).toBe(1)
+    })
 
     it("revokes a fully refunded term through a signed webhook, preserves members, and survives newer active events", async () => {
       const id = await workspace(),
