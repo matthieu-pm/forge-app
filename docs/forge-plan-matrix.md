@@ -169,10 +169,19 @@ Usage reservations/settlement must bind workspace, period, trusted plan, feature
 and payer snapshots. Free exhaustion blocks additional metered agent/Calls/Signals
 work; paid Calls/Signals must still pass independent safety/admission controls.
 Existing consumption must survive membership changes, retries and plan transitions.
-Other upgrade/downgrade carryover, effective dates and dunning remain open
+Other upgrade/downgrade carryover, effective dates, cancellation and refunds remain open
 decisions. Member grandfathering on downgrade is confirmed above; team/issue/upload
 over-capacity transitions still need rules. Currency migration and EUR overage invoicing also
 need explicit rules before live billing.
+
+Failed-renewal access is confirmed: **7 days (168 hours) of paid access**, including
+the included pool and paid overage under the existing opt-in/cap. Retries cannot
+restart grace; an unpaid first subscription gets none. At expiry, resolve access
+as Free while preserving existing members. Backend projection, time-aware
+security/member checks and the signed webhook boundary are implemented and
+verified on isolated staging. Webhooks remain disabled until remaining lifecycle
+handlers, periodic reconciliation and the billing release gate pass. See
+`docs/subscription-payment-grace.md`.
 
 The local helpers implement fixed Free/trial allowance, paid per-member allowance,
 overage rules and plan/phase/feature/payer usage classification. They are not yet

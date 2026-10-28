@@ -190,6 +190,20 @@
       "when": 1793212028059,
       "tag": "0026_workspace_member_capacity",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1793219223021,
+      "tag": "0027_subscription_grace",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1793219395147,
+      "tag": "0028_subscription_binding",
+      "breakpoints": true
     }
   ]
 }

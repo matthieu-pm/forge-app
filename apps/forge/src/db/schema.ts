@@ -194,6 +194,14 @@ export const workspaceEntitlements = pgTable(
       .notNull(),
     source: text("source").default("internal").notNull(),
     sourceReference: text("source_reference"),
+    providerEnvironment: text("provider_environment"),
+    providerUpdatedAt: timestamp("provider_updated_at", { withTimezone: true }),
+    providerStateHash: text("provider_state_hash"),
+    paidActivatedAt: timestamp("paid_activated_at", { withTimezone: true }),
+    paymentFailedAt: timestamp("payment_failed_at", { withTimezone: true }),
+    graceExpiresAt: timestamp("grace_expires_at", { withTimezone: true }),
+    currentPeriodStart: timestamp("current_period_start", { withTimezone: true }),
+    currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -207,8 +215,39 @@ export const workspaceEntitlements = pgTable(
       "workspace_entitlements_status_check",
       sql`${table.status} in ('active', 'trialing', 'past_due', 'canceled')`
     ),
+    providerIdentityCheck: check(
+      "workspace_entitlements_provider_identity_check",
+      sql`${table.source} <> 'polar' OR (${table.providerEnvironment} IS NOT NULL AND ${table.providerEnvironment} IN ('sandbox','production') AND ${table.sourceReference} IS NOT NULL AND ${table.providerUpdatedAt} IS NOT NULL AND isfinite(${table.providerUpdatedAt}) AND ${table.providerStateHash} IS NOT NULL AND ${table.providerStateHash} ~ '^[a-f0-9]{64}$')`
+    ),
+    providerSubscriptionUnique: uniqueIndex("workspace_entitlements_provider_subscription_unique")
+      .on(table.providerEnvironment, table.sourceReference)
+      .where(sql`${table.source} = 'polar'`),
+    periodCheck: check(
+      "workspace_entitlements_period_check",
+      sql`(${table.currentPeriodStart} IS NULL AND ${table.currentPeriodEnd} IS NULL) OR (${table.currentPeriodStart} IS NOT NULL AND ${table.currentPeriodEnd} IS NOT NULL AND isfinite(${table.currentPeriodStart}) AND isfinite(${table.currentPeriodEnd}) AND ${table.currentPeriodStart} < ${table.currentPeriodEnd})`
+    ),
+    graceCheck: check(
+      "workspace_entitlements_grace_check",
+      sql`(${table.paymentFailedAt} IS NULL AND ${table.graceExpiresAt} IS NULL) OR (${table.source} = 'polar' AND ${table.status} = 'past_due' AND ${table.paymentFailedAt} IS NOT NULL AND ${table.graceExpiresAt} IS NOT NULL AND ${table.paidActivatedAt} IS NOT NULL AND isfinite(${table.paidActivatedAt}) AND isfinite(${table.paymentFailedAt}) AND ${table.paidActivatedAt} < ${table.paymentFailedAt} AND ${table.graceExpiresAt} = ${table.paymentFailedAt} + interval '168 hours')`
+    ),
   })
 )
+
+export const billingEventReceipts = pgTable("billing_event_receipts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: text("workspace_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  environment: text("environment").notNull(),
+  eventId: text("event_id").notNull(),
+  bodyHash: text("body_hash").notNull(),
+  subscriptionId: text("subscription_id").notNull(),
+  outcome: text("outcome").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  environmentEventUnique: unique("billing_event_receipts_environment_event_unique").on(table.environment, table.eventId),
+  environmentCheck: check("billing_event_receipts_environment_check", sql`${table.environment} IN ('sandbox','production')`),
+  hashCheck: check("billing_event_receipts_hash_check", sql`${table.bodyHash} ~ '^[a-f0-9]{64}$'`),
+  outcomeCheck: check("billing_event_receipts_outcome_check", sql`${table.outcome} IN ('applied','stale','unchanged')`),
+}))
 
 export const workspaceSecurityAuditEvents = pgTable(
   "workspace_security_audit_events",

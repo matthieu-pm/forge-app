@@ -7,9 +7,8 @@ import {
 import { isWorkspaceMemberLimitError } from "./member-capacity-error"
 
 const mocks = vi.hoisted(() => ({ entitlement: vi.fn() }))
-vi.mock("@/db", () => ({
-  db: { query: { workspaceEntitlements: { findFirst: mocks.entitlement } } },
-  workspaceEntitlements: { workspaceId: "workspace_id" },
+vi.mock("./subscription-access-state.server", () => ({
+  readSubscriptionAccessState: mocks.entitlement,
 }))
 
 type Factory = Parameters<typeof withMemberCapacityErrors>[0]

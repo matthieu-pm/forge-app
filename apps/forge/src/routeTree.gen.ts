@@ -85,6 +85,7 @@ import { Route as TeamsTeamSlugTriageRouteImport } from './routes/teams/$teamSlu
 import { Route as TeamsTeamSlugViewsRouteImport } from './routes/teams/$teamSlug/views'
 import { Route as WorkspaceInitiativesIndexRouteImport } from './routes/workspace/initiatives/index'
 import { Route as WorkspaceInitiativesInitiativeIdRouteImport } from './routes/workspace/initiatives/$initiativeId'
+import { Route as ApiBillingPolarWebhookRouteImport } from './routes/api/billing/polar/webhook'
 import { Route as ApiCallsOauthCallbackRouteImport } from './routes/api/calls/oauth/callback'
 import { Route as ApiInternalDesktopReleasesRouteImport } from './routes/api/internal/desktop/releases'
 import { Route as SettingsTemplatesIssueTemplateIdRouteImport } from './routes/settings.templates.issue.$templateId'
@@ -504,6 +505,11 @@ const WorkspaceInitiativesInitiativeIdRoute =
     path: '/workspace/initiatives/$initiativeId',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiBillingPolarWebhookRoute = ApiBillingPolarWebhookRouteImport.update({
+  id: '/api/billing/polar/webhook',
+  path: '/api/billing/polar/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiCallsOauthCallbackRoute = ApiCallsOauthCallbackRouteImport.update({
   id: '/api/calls/oauth/callback',
   path: '/api/calls/oauth/callback',
@@ -761,6 +767,7 @@ export interface FileRoutesByFullPath {
   '/workspace/initiatives/$initiativeId': typeof WorkspaceInitiativesInitiativeIdRoute
   '/settings/notifications/': typeof SettingsNotificationsIndexRoute
   '/workspace/initiatives/': typeof WorkspaceInitiativesIndexRoute
+  '/api/billing/polar/webhook': typeof ApiBillingPolarWebhookRoute
   '/api/calls/oauth/callback': typeof ApiCallsOauthCallbackRoute
   '/api/internal/desktop/releases': typeof ApiInternalDesktopReleasesRouteWithChildren
   '/settings/templates/issue/$templateId': typeof SettingsTemplatesIssueTemplateIdRoute
@@ -866,6 +873,7 @@ export interface FileRoutesByTo {
   '/workspace/initiatives/$initiativeId': typeof WorkspaceInitiativesInitiativeIdRoute
   '/settings/notifications': typeof SettingsNotificationsIndexRoute
   '/workspace/initiatives': typeof WorkspaceInitiativesIndexRoute
+  '/api/billing/polar/webhook': typeof ApiBillingPolarWebhookRoute
   '/api/calls/oauth/callback': typeof ApiCallsOauthCallbackRoute
   '/api/internal/desktop/releases': typeof ApiInternalDesktopReleasesRouteWithChildren
   '/settings/templates/issue/$templateId': typeof SettingsTemplatesIssueTemplateIdRoute
@@ -972,6 +980,7 @@ export interface FileRoutesById {
   '/workspace/initiatives/$initiativeId': typeof WorkspaceInitiativesInitiativeIdRoute
   '/settings/notifications/': typeof SettingsNotificationsIndexRoute
   '/workspace/initiatives/': typeof WorkspaceInitiativesIndexRoute
+  '/api/billing/polar/webhook': typeof ApiBillingPolarWebhookRoute
   '/api/calls/oauth/callback': typeof ApiCallsOauthCallbackRoute
   '/api/internal/desktop/releases': typeof ApiInternalDesktopReleasesRouteWithChildren
   '/settings/templates/issue/$templateId': typeof SettingsTemplatesIssueTemplateIdRoute
@@ -1082,6 +1091,7 @@ export interface FileRouteTypes {
     | '/workspace/initiatives/$initiativeId'
     | '/settings/notifications/'
     | '/workspace/initiatives/'
+    | '/api/billing/polar/webhook'
     | '/api/calls/oauth/callback'
     | '/api/internal/desktop/releases'
     | '/settings/templates/issue/$templateId'
@@ -1187,6 +1197,7 @@ export interface FileRouteTypes {
     | '/workspace/initiatives/$initiativeId'
     | '/settings/notifications'
     | '/workspace/initiatives'
+    | '/api/billing/polar/webhook'
     | '/api/calls/oauth/callback'
     | '/api/internal/desktop/releases'
     | '/settings/templates/issue/$templateId'
@@ -1292,6 +1303,7 @@ export interface FileRouteTypes {
     | '/workspace/initiatives/$initiativeId'
     | '/settings/notifications/'
     | '/workspace/initiatives/'
+    | '/api/billing/polar/webhook'
     | '/api/calls/oauth/callback'
     | '/api/internal/desktop/releases'
     | '/settings/templates/issue/$templateId'
@@ -1357,6 +1369,7 @@ export interface RootRouteChildren {
   ApiV1SplatRoute: typeof ApiV1SplatRoute
   WorkspaceInitiativesInitiativeIdRoute: typeof WorkspaceInitiativesInitiativeIdRoute
   WorkspaceInitiativesIndexRoute: typeof WorkspaceInitiativesIndexRoute
+  ApiBillingPolarWebhookRoute: typeof ApiBillingPolarWebhookRoute
   ApiCallsOauthCallbackRoute: typeof ApiCallsOauthCallbackRoute
   ApiInternalDesktopReleasesRoute: typeof ApiInternalDesktopReleasesRouteWithChildren
   ApiDesktopUpdatesDarwinArchRoute: typeof ApiDesktopUpdatesDarwinArchRoute
@@ -1896,6 +1909,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceInitiativesInitiativeIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/billing/polar/webhook': {
+      id: '/api/billing/polar/webhook'
+      path: '/api/billing/polar/webhook'
+      fullPath: '/api/billing/polar/webhook'
+      preLoaderRoute: typeof ApiBillingPolarWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/calls/oauth/callback': {
       id: '/api/calls/oauth/callback'
       path: '/api/calls/oauth/callback'
@@ -2397,6 +2417,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiV1SplatRoute: ApiV1SplatRoute,
   WorkspaceInitiativesInitiativeIdRoute: WorkspaceInitiativesInitiativeIdRoute,
   WorkspaceInitiativesIndexRoute: WorkspaceInitiativesIndexRoute,
+  ApiBillingPolarWebhookRoute: ApiBillingPolarWebhookRoute,
   ApiCallsOauthCallbackRoute: ApiCallsOauthCallbackRoute,
   ApiInternalDesktopReleasesRoute: ApiInternalDesktopReleasesRouteWithChildren,
   ApiDesktopUpdatesDarwinArchRoute: ApiDesktopUpdatesDarwinArchRoute,

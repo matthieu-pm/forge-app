@@ -1,13 +1,13 @@
 import "@tanstack/react-start/server-only"
 import { APIError } from "better-auth/api"
-import { eq } from "drizzle-orm"
 import {
   WORKSPACE_MEMBER_LIMIT_MESSAGE,
   isWorkspaceMemberLimitError,
 } from "./member-capacity-error"
 import { FREE_WORKSPACE_MEMBER_LIMIT } from "./billing-plan-contract"
+import { subscriptionAccess } from "./subscription-access"
+import { readSubscriptionAccessState } from "./subscription-access-state.server"
 import type { drizzleAdapter } from "@better-auth/drizzle-adapter"
-import { db, workspaceEntitlements } from "@/db"
 
 type AdapterFactory = ReturnType<typeof drizzleAdapter>
 
@@ -48,12 +48,7 @@ export function withMemberCapacityErrors(
 
 /** Better Auth preflight; the database trigger remains the race-safe authority. */
 export async function workspaceAuthMembershipLimit(workspaceId: string) {
-  const row = await db.query.workspaceEntitlements.findFirst({
-    where: eq(workspaceEntitlements.workspaceId, workspaceId),
-  })
-  const paid =
-    row &&
-    ["active", "trialing"].includes(row.status) &&
-    ["basic", "business", "starter", "plus", "enterprise"].includes(row.plan)
+  const row = await readSubscriptionAccessState(workspaceId)
+  const paid = subscriptionAccess(row).plan !== "free"
   return paid ? Number.MAX_SAFE_INTEGER : FREE_WORKSPACE_MEMBER_LIMIT
 }

@@ -200,15 +200,23 @@ describe.skipIf(!testUrl)(
         ),
         "utf8"
       )
+      const graceMigration = await readFile(
+        new URL(
+          "../../../drizzle/0027_subscription_grace.sql",
+          import.meta.url
+        ),
+        "utf8"
+      )
       if (installed) {
         // Reuse only an empty, explicitly selected test branch with exactly the
         // checked-in trigger bodies. Do not drop/reset any database objects.
         expect(process.env.FORGE_TEST_REUSE_MEMBER_CAPACITY).toBe("1")
-        const definitions = [
-          ...migration.matchAll(
-            /CREATE FUNCTION public\.(\w+)[\s\S]*?AS \$\$([\s\S]*?)\$\$;/g
-          ),
-        ]
+        const latestDefinitions = new Map<string, RegExpMatchArray>()
+        for (const match of (migration + graceMigration).matchAll(
+          /CREATE (?:OR REPLACE )?FUNCTION public\.(\w+)[\s\S]*?AS \$\$([\s\S]*?)\$\$;/g
+        ))
+          latestDefinitions.set(match[1], match)
+        const definitions = [...latestDefinitions.values()]
         expect(definitions).toHaveLength(2)
         const actual = await pool.query<{ proname: string; prosrc: string }>(
           `SELECT p.proname,p.prosrc FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname=ANY($1::text[])`,
@@ -242,6 +250,10 @@ describe.skipIf(!testUrl)(
         try {
           await client.query("BEGIN")
           for (const statement of migration.split("--> statement-breakpoint"))
+            if (statement.trim()) await client.query(statement)
+          for (const statement of graceMigration.split(
+            "--> statement-breakpoint"
+          ))
             if (statement.trim()) await client.query(statement)
           await client.query("COMMIT")
         } catch (error) {
@@ -509,6 +521,47 @@ describe.skipIf(!testUrl)(
         "accepted",
         "pending",
       ])
+    }, 30_000)
+
+    it("keeps auth admission and existing access correct during and after payment grace", async () => {
+      const w = await workspace(5, true)
+      const activated = new Date(Date.now() - 60 * 86400000)
+      const failed = new Date(Date.now() - 3600000)
+      const expires = new Date(failed.getTime() + 7 * 86400000)
+      await pool.query(
+        `UPDATE public.workspace_entitlements SET source='polar',source_reference=$2,provider_environment='sandbox',provider_updated_at=now(),provider_state_hash=$3,status='past_due',paid_activated_at=$4,payment_failed_at=$5,grace_expires_at=$6 WHERE workspace_id=$1`,
+        [w.id, randomUUID(), "a".repeat(64), activated, failed, expires]
+      )
+      const sixth = await user(),
+        cookie = await login(sixth)
+      const invite = await invitation(w.id, sixth, w.members[0])
+      expect((await accept(invite, cookie)).ok).toBe(true)
+      expect(await count(w.id)).toEqual({ actual: 6, tracked: 6 })
+      const expiredFailure = new Date(Date.now() - 8 * 86400000)
+      await pool.query(
+        `UPDATE public.workspace_entitlements SET payment_failed_at=$2,grace_expires_at=$3 WHERE workspace_id=$1`,
+        [
+          w.id,
+          expiredFailure,
+          new Date(expiredFailure.getTime() + 7 * 86400000),
+        ]
+      )
+      const denied = await user(),
+        deniedInvite = await invitation(w.id, denied, w.members[0])
+      expect((await accept(deniedInvite, await login(denied))).ok).toBe(false)
+      expect(await count(w.id)).toEqual({ actual: 6, tracked: 6 })
+      const stillAuthorized = await app.auth.api.getFullOrganization({
+        headers: new Headers({ cookie }),
+        query: { organizationId: w.id },
+      })
+      expect(stillAuthorized?.id).toBe(w.id)
+      expect(
+        (
+          await pool.query("SELECT status FROM public.invitation WHERE id=$1", [
+            deniedInvite,
+          ])
+        ).rows[0].status
+      ).toBe("pending")
     }, 30_000)
 
     it("covers invite-link/domain joins and returns an actionable capacity error", async () => {

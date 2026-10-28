@@ -13,7 +13,7 @@ disabled until FOR-25 verifies the actual serving database and source revision.
 Both branches were originally schema-only roots. Before reuse, read-only SQL
 confirmed zero users, organizations, teams and member counters on both. New empty
 databases avoid adopting the rowless schema-only copy's empty migration journal.
-Staging applied **all 27 checked-in migrations** through `db:migrate`. Rehearsal
+Staging applied **all 29 checked-in migrations** through `db:migrate`. Rehearsal
 applied the complete history too. No production rows were copied, no branches were
 deleted, and the default branch/application connection selection was unchanged.
 
@@ -88,3 +88,5 @@ backfill recovery and the hosted staging release rehearsal are still required.
 FOR-27 remains In Progress until all staging resources and provider identities are
 isolated. Neither passing helper tests nor the existence of a staging database
 closes those release contracts.
+
+Billing-grace expansion and provider-subscription binding (0027/0028) have since been applied to staging and rehearsal; both now contain the complete 29-migration history. The three migration fault/ownership cases passed again. The shared read path was also verified against the prior table schema without writes. Production execution remains disabled.

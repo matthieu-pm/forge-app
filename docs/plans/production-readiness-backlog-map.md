@@ -9,7 +9,7 @@ Based on the [production readiness review](<https://linear.app/atriumcrm/documen
 * **258 prerequisite relationships** in the maintained graph, all internal. The original 133-issue audit read every native relationship; subsequent selected-release and plan-limit changes were read back. The current local graph was checked for cycles and duplicate titles; this is not a fresh whole-backlog remote audit.
 * **57 Core production**, **73 Feature gated**, **6 Later expansion** items.
 * **75 High**, **55 Medium**, **6 Low** priorities. High blocks its labeled launch scope; Medium is required before enabling the corresponding feature; Low is later expansion. Priority is not a delivery date.
-* Implementation tracking: **FOR-21, FOR-128 and FOR-153 Done**; **FOR-20, FOR-25, FOR-27, FOR-28, FOR-39, FOR-75, FOR-76, FOR-97, FOR-109, FOR-110 and FOR-155 In Progress**. Other live statuses are authoritative in Linear. No assignees, estimates, sprints or deadlines were invented.
+* Implementation tracking: **FOR-21, FOR-128 and FOR-153 Done**; **FOR-20, FOR-25, FOR-27, FOR-28, FOR-39, FOR-75, FOR-76, FOR-97, FOR-109, FOR-110, FOR-111 and FOR-155 In Progress**. Other live statuses are authoritative in Linear. No assignees, estimates, sprints or deadlines were invented.
 * The graph is acyclic. Every pre-launch core item reaches the core launch gate. The user selected web collaboration, Forge agent, macOS and paid billing, so their conditional gates are now mandatory for this selected release.
 * No active issue depends on the removed preference project. The audit found no exact duplicate tickets to delete; overlapping responsibilities were separated.
 
@@ -201,3 +201,8 @@ FOR-21 is Done: the user confirmed project/private-team, administrator, document
 Team SQL visibility now filters direct lookup and pagination before limits; six PostgreSQL cases passed. The new staging database applied all 27 migrations through an exact-target, serialized runner; three real migration fault/concurrency cases passed. Full app suite: 1,269 tests plus 4 workflow tests; TypeScript and production build passed. FOR-25 still lacks verified deployed DB/commit identity; FOR-27/FOR-28/FOR-39 retain their remaining acceptance work.
 
 Agent concurrency is unlimited per user/workspace/provider under the user’s revised decision. All built-in providers are in the funded launch scope. A first paid period starts a fresh US$5-per-active-member pool, with earlier usage/reservations preserved in their original periods. Commercial ledger, provider provisioning and paid lifecycle verification remain open.
+
+
+## Billing-grace checkpoint · 28 October 2026
+
+The user confirmed 7 days of paid-access grace after failed renewal, including included AI and existing capped/opted-in overage. FOR-111 is In Progress with durable original-failure/expiry state, signed-byte webhook verification, current provider reconciliation and atomic entitlement/receipt/audit writes. Staging and rehearsal now apply all 29 migrations. Eight billing PostgreSQL cases, twelve real-auth/member cases, six previous-schema team-visibility cases and three migration fault cases passed. Full app rerun: 1,295 tests plus 4 workflow tests; typecheck, lint, formatting and production build passed. No serving/default migration or deployment occurred. The webhook stays disabled pending remaining cancellation/refund/revocation/pause, reconciliation job, communications, ledger and Polar release evidence.

@@ -62,5 +62,7 @@
     "apps/forge/src/application/billing/member-capacity-auth.server.ts": "42e55dc7b55d8e74e299cb8c7a0b4506ec4c35a206c0a62b1e3acbf307a9f94a",
     "apps/forge/src/application/billing/member-capacity-error.ts": "3ac1683e7ed30e3c2a9cbb4386113685ccb04f47562adaec3b0f8ae46c6c2709",
     "apps/forge/src/application/billing/member-capacity.postgres.test.ts": "7be8cd5db9b1d1ff9aa52061a258be87706c95e35369a8a8728c148f50f2ff35"
-  }
+  },
+  "sourceCommit": "6978600d54688cc0d66079595489f3e3a7920b24",
+  "evidenceScope": "Historical foundation snapshot; verify its source digests against sourceCommit. Current grace evidence is in payment-grace-2026-10-28.json."
 }

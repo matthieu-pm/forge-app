@@ -114,3 +114,8 @@ The full eleven-case real-auth/PostgreSQL suite also passed against the fresh
 `forge_staging` database after its complete 27-migration history was applied.
 This closes the membership implementation contract on isolated staging. The
 separate production migration/application rollout remains a release-gate task.
+
+
+## Payment-grace compatibility · 28 October 2026
+
+The shared access reader and member-capacity invariant honor the confirmed 168-hour renewal grace. Migration 0027 replaces only the counter helper to evaluate paid period/grace timestamps; migration 0028 binds a provider subscription to one workspace. The complete history now has 29 migrations on isolated staging. The twelve-case member/auth suite passes, including a sixth-member acceptance during grace, refusal after expiry with the invitation still pending, and continued authorized access for existing members. Membership and security reads tolerate the previous entitlement schema. FOR-153 remains Done; production rollout and full billing reconciliation remain separately gated.

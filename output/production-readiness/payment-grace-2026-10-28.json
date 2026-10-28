@@ -1,0 +1,63 @@
+{
+  "date": "2026-10-28",
+  "baseCommit": "6978600d54688cc0d66079595489f3e3a7920b24",
+  "committed": true,
+  "deployed": false,
+  "servingDatabaseModified": false,
+  "localConnectionFilesChanged": false,
+  "issue": "FOR-111",
+  "issueStatus": "In Progress",
+  "policy": {
+    "days": 7,
+    "elapsedHours": 168,
+    "includedAI": true,
+    "existingOptedInCappedOverage": true,
+    "firstUnpaidCheckoutEligible": false,
+    "retriesExtendGrace": false,
+    "expiry": "Read-time and member-insertion checks resolve as Free; existing access preserved",
+    "implementation": "Durable provider state, atomic receipts/audit, signed-request boundary and authoritative provider fetch verified on isolated staging; route remains gated",
+    "guide": "https://linear.app/atriumcrm/document/forge-failed-renewal-grace-and-subscription-reconciliation-d97d91c24bf1"
+  },
+  "staging": {
+    "project": "raspy-union-96305162",
+    "branch": "br-autumn-union-za0opf1e",
+    "database": "forge_staging",
+    "migrations": 29
+  },
+  "checks": {
+    "appTestsPassed": 1295,
+    "workflowTestsPassed": 4,
+    "postgresBillingGraceCasesPassed": 8,
+    "postgresMembershipCasesPassed": 12,
+    "postgresPriorSchemaVisibilityCasesPassed": 6,
+    "postgresMigrationRehearsalCasesPassed": 3,
+    "legacyConfiguredDatabaseRead": "Succeeded with nonexistent probe identity; zero mutations; not proof of serving Vercel identity",
+    "typecheck": "passed",
+    "changedFileLint": "passed",
+    "format": "passed",
+    "productionBuild": "passed including protected Workflow handlers",
+    "testFlake": "One pre-existing review emoji-picker timeout during concurrent build/test; isolated seven-case file and full suite rerun passed without modifying it"
+  },
+  "routeEnabled": false,
+  "remaining": [
+    "Cancellation/refund/revocation/pause policy and handlers",
+    "Periodic provider reconciliation and outbox communications",
+    "Commercial reservation/settlement ledger integration",
+    "Actual Polar sandbox and release-candidate validation"
+  ],
+  "sourceSha256": {
+    "apps/forge/drizzle/0027_subscription_grace.sql": "edd3093a0b25aaae197105f6d9aa2a40579f6229c50c0a58b4b09047bf898511",
+    "apps/forge/drizzle/0028_subscription_binding.sql": "ec2f3b210f94db63a899ecba640196e2b088cf81204bb425350d48a304cbbf1b",
+    "apps/forge/src/db/schema.ts": "29ff8133cd0e8961d1e21b99a70faaaefd0f9a319c14f0b0afb46c2d5ab7f4ac",
+    "apps/forge/src/application/billing/subscription-access.ts": "5379029eedff3ee3364c9dd611465acb34932945e2c4520d11befcc5772a9797",
+    "apps/forge/src/application/billing/subscription-access-state.server.ts": "7b12a0ccc6d2bb99c925d746e64d2d22a05d453ad98830209e74f4a713e14710",
+    "apps/forge/src/application/billing/subscription-reconciliation.server.ts": "24894fa33e7d6cf8ca16b0609692caf7b7f41b247a2b642541e9f37819b1df49",
+    "apps/forge/src/application/billing/polar-subscription-reconciliation.server.ts": "b8a8df9b3bff0926bce6e0179e1811794eb50c604fc653b67c77936f1ba7eb4e",
+    "apps/forge/src/application/billing/polar-webhook.server.ts": "d65564cbbc99a76fbae3bc373cf25eda528b7a21092d91dbfd1a54a5f82a2ac5",
+    "apps/forge/src/routes/api/billing/polar/webhook.ts": "0a201f7db89f7fb216aef87e2706b72f41e0fb4c5b980838eaf325ba57c2ebe5",
+    "apps/forge/src/application/billing/member-capacity-auth.server.ts": "394e00b2d5d5e11b698a4c0a966f5aa272b7e784716da4b129175d8b7544952a",
+    "apps/forge/src/application/billing/member-capacity.postgres.test.ts": "a938905978db926f04f967d10d1c6761b0fd2eac4c2381f44ffe3dfb96431f3c",
+    "apps/forge/src/application/billing/subscription-reconciliation.postgres.test.ts": "2c4764658bce5a01d0f3a176d2632f9c1d320ace0cc4464226d28462737e02fe",
+    "apps/forge/src/application/workspace-security/workspace-security.server.ts": "dc0f2e575bd050619a7a190a8cdf31a9d73c565f8a2dc6f8c6b7178b54f56c52"
+  }
+}

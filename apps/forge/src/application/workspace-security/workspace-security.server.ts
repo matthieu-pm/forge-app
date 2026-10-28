@@ -19,6 +19,8 @@ import type {
   WorkspaceSecuritySnapshot,
 } from "@/application/workspace-security/security-contract"
 import { hasWorkspaceRole } from "@/application/authorization"
+import { subscriptionAccess } from "@/application/billing/subscription-access"
+import { readSubscriptionAccessState } from "@/application/billing/subscription-access-state.server"
 import {
   REQUIRED_PLAN,
   isWorkspaceActionAllowed,
@@ -29,7 +31,6 @@ import {
   db,
   organizations,
   workspaceApprovedDomains,
-  workspaceEntitlements,
   workspaceSecurityAuditEvents,
   workspaceSecuritySettings,
 } from "@/db"
@@ -116,14 +117,10 @@ async function ensureSecurityRow(workspaceId: string) {
 }
 
 async function entitlementState(workspaceId: string) {
-  const row = await db.query.workspaceEntitlements.findFirst({
-    where: eq(workspaceEntitlements.workspaceId, workspaceId),
-  })
-  const plan =
-    row?.status === "active" || row?.status === "trialing"
-      ? (row.plan as WorkspacePlan)
-      : "free"
+  const row = await readSubscriptionAccessState(workspaceId)
+  const { plan } = subscriptionAccess(row)
   const overrides =
+    (row?.source !== "polar" || plan !== "free") &&
     row?.featureOverrides &&
     typeof row.featureOverrides === "object" &&
     !Array.isArray(row.featureOverrides)

@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "workspace_entitlements_provider_subscription_unique" ON "workspace_entitlements" USING btree ("provider_environment","source_reference") WHERE "workspace_entitlements"."source" = 'polar';

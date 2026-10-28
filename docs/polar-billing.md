@@ -215,3 +215,12 @@ separate legacy operational controls. Anniversary commercial accounting must be
 wired to the authoritative period and atomic reservation ledger in FOR-76 before
 it becomes a production guarantee. Provider reconciliation/reset orchestration,
 late settlement and actual invoicing remain open.
+
+
+## Failed-renewal grace implementation · 28 October 2026
+
+The user confirmed exactly 7 days of paid access after failed renewal, with included allowance and paid overage under the existing explicit opt-in/cap. The new durable state, signed exact-body webhook verification, authoritative provider fetch, event receipts and audit commit atomically. Retries cannot restart grace; expiry is enforced at read/insertion time and retains existing-member access. Card-free trials and initially unpaid subscriptions do not gain paid overage or renewal grace.
+
+Migrations 0027/0028 and all 29 versioned migrations are applied only to isolated staging. Eight billing PostgreSQL cases and twelve real-auth/member cases pass, plus six team-visibility cases against the prior schema and three migration fault/serialization cases. Whole-row validated reads remain compatible with the old entitlement table. Full app rerun: 1,295 tests plus 4 workflow tests; typecheck, lint, formatting and build passed. An unrelated emoji-picker timeout passed in isolation and full rerun without modifications.
+
+FOR-153 is Done; FOR-111 is In Progress. FORGE_BILLING_WEBHOOKS_ENABLED stays false. Cancellation/refunds/revocation/pause, scheduled reconciliation, communications, commercial ledger and actual Polar sandbox/release evidence remain required. [Implementation guide](https://linear.app/atriumcrm/document/forge-failed-renewal-grace-and-subscription-reconciliation-d97d91c24bf1). No live provider charge or serving DB migration occurred.
