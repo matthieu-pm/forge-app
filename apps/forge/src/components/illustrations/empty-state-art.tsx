@@ -13,7 +13,7 @@ const labels: Record<EmptyStateArtKind, string> = {
   inbox: "Mailbox illustration",
   signals: "Satellite illustration",
   reviews: "Microscope illustration",
-  issues: "Issue ticket press illustration",
+  issues: "Issue binder illustration",
   initiatives: "Initiative planning table illustration",
   triage: "Triage sorting station illustration",
   cycles: "Upcoming cycle calendar illustration",

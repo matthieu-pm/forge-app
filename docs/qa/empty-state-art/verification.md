@@ -71,3 +71,25 @@ satellite and mailbox additionally use recorded turned, saddle and arched solids
 - A comparison against the prior generated collection confirms that only the
   `calls` figure changed; all other figure bodies are byte-identical.
 - Application typecheck, focused lint, and 27 Calls/project/issue-view tests pass.
+
+## Issue binder — 2026-10-27
+
+- Replaced the ticket press and sliding ticket with an open binder: 53 physical
+  parts, three metal loops, indexed dividers, cover corner guards, a stitched
+  pocket, and an issue sheet with three punched slots.
+- The sheet is still at rest. Hover or action focus lifts its free edge by five
+  degrees around the fixed binding edge, then it settles flat. The projection
+  and maximum angle are generated with the geometry and read by the shared
+  motion controller. Settled issue figures stop requesting animation frames.
+- The single paper surface has ten material panels around its real punched
+  slots, giving 62 audited solids. A common painter order passes geometry audits
+  at eleven positions from 0° through 5°, with zero clearance, support, coverage,
+  or depth-order failures. No audit exceptions are used.
+- The Anatomy line-end checker reports zero floating ends on 34 lines in dark
+  and light, flat and lifted. Both themes were inspected at 4×.
+- Browser verification confirms the new binder in the real Active issues page.
+  The 390px layout has no horizontal overflow. Reduced motion remains flat.
+- Three motion regressions verify no idle loop, a fixed binding edge, return to
+  rest, reduced-motion stillness, offscreen pause, and frame cancellation on
+  disposal. Those and eight issue-view tests pass, along with typecheck and lint.
+- Only the `issues` figure changed in the generated collection.

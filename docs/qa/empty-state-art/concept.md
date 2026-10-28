@@ -67,13 +67,17 @@ Concepts and parts planned before geometry:
   rails, two end stops, slide carrier, glass slide, specimen inset, two slide
   clips, objective body, objective collar, objective aperture, four stage
   fasteners, four column fasteners, identification plate and printed rules.
-- Issues — a tabletop ticket press. A ticket slides out of the delivery bed.
-  Four pads, four feet, plinth, bed, bed inset, four guide strips, four guide
-  stops, two uprights, two upright feet, two bearing blocks, crosshead,
-  press carriage, press stem, die, die plate, ticket, ticket header, three
-  checkbox frames, three checkbox inlays, three text-rule groups, delivery
-  lip, lever support, lever arm, lever grip, two control keys, label plate,
-  four head bolts, four bed bolts.
+- Issues — an open ring binder with a fresh issue sheet and indexed dividers.
+  The bound edge stays fixed while the free edge lifts by five degrees on
+  hover or action focus, then settles back. It is still at rest and under
+  reduced motion. The sheet is decorative, not a set of real issue records.
+  Parts planned before geometry: two cover boards, spine, two cloth hinges,
+  eight metal corner guards, three left leaves, three right divider leaves,
+  three index tabs, four binding supports, three ring mounting plates,
+  six mounting rivets, six ring feet, six ring uprights, three ring crowns,
+  one loose issue sheet, a cover pocket and its label card. Closed punched slots clear the
+  metal rings throughout the lift. Printed rules, checkboxes, cover seams,
+  pocket stitching and fastener slots belong to their host surfaces.
 - Initiatives — a route-planning table with milestones joined by engraved
   channels. A route pointer slides to the next milestone. Four pads, four
   feet, plinth, table, inset map, four edge rails, eight rail fasteners,

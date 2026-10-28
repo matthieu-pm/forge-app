@@ -136,6 +136,12 @@
 .empty-state-art [data-motion="call-waveform"] {
   opacity: calc(0.45 + var(--art-phase, 0) * 0.5);
 }
+.empty-state-art [data-motion="issue-page"] {
+  --art-top: color-mix(in oklab, var(--background) 97%, var(--foreground));
+}
+.dark .empty-state-art [data-motion="issue-page"] {
+  --art-top: color-mix(in oklab, var(--background) 85%, var(--foreground));
+}
 @media (prefers-reduced-motion: reduce) {
   .empty-state-art [data-motion] {
     transform: none;

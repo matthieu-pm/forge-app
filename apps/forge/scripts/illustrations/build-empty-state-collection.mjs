@@ -73,56 +73,6 @@ export function buildCollection(k, G, drawing, scene) {
     return { ...d, P, add, loop, beam, rules, screws, slot, moving, finish }
   }
 
-  function issues() {
-    const o = object({ x: -48, y: -36, w: 96, d: 99, r: 3 }, 79)
-    const { add, box, beam, rules, screws, slot, moving, base, finish } = o
-    base({ x: -46, y: -34, w: 92, d: 88, r: 4 })
-    add(box(-41, -29, 82, 74, 1, 7, "mid"), box(-32, -23, 64, 62, 8, 0.5, "lo"))
-    for (const x of [-37, 33]) {
-      add(box(x, -25, 4, 65, 8, 3, "mid"))
-      for (const y of [-28, 39]) add(box(x - 1, y, 6, 3, 8, 5, "hi"))
-    }
-    for (const x of [-31, 23]) {
-      add(box(x, -23, 8, 16, 8, 5, "mid"), box(x + 1, -22, 6, 14, 13, 45, "hi"))
-      add(box(x - 1, -24, 10, 18, 58, 6, "mid"))
-    }
-    add(box(-33, -26, 66, 22, 64, 7, "hi"), screws(-33, -26, 66, 22, 71.2))
-    add(box(-12, -21, 2, 12, 49, 9, "lo"), box(10, -21, 2, 12, 49, 9, "lo"))
-    add(
-      box(-10, -21, 20, 12, 42, 22, "mid"),
-      box(-17, -25, 34, 21, 38, 4, "hi"),
-      box(-15, -23, 30, 17, 36, 2, "lo")
-    )
-    // Lever rises above the crosshead, with a grip on its outer end.
-    add(
-      box(-4, -20, 8, 10, 71, 3, "mid"),
-      beam([0, -15, 74], [24, -15, 79], 3, 3, "mid"),
-      box(22, -20, 12, 10, 77, 4, "hi")
-    )
-    const ticket = [
-      box(-27, 2, 54, 43, 9, 0.6, "hi", true),
-      box(-24, 5, 48, 6, 9.6, 0.3, "mid"),
-    ]
-    for (let i = 0; i < 3; i++)
-      ticket.push(
-        slot(-22, 16 + i * 8, 4, 4, 9.8),
-        box(-21, 17 + i * 8, 2, 2, 9.7, 0.2, "lo"),
-        rules(-13, 17 + i * 8, 9.8, 29, 1)
-      )
-    moving(ticket, [0, 5, 0])
-    add(
-      box(-32, 47, 64, 5, 8, 2, "hi"),
-      box(31, 17, 6, 11, 11, 1, "mid"),
-      box(31, 31, 6, 8, 11, 1, "hi")
-    )
-    add(
-      box(-19, 48, 19, 3, 10, 0.3, "lo"),
-      rules(-17, 49, 10.4, 14, 1),
-      screws(-41, -29, 82, 74, 8.6)
-    )
-    return finish()
-  }
-
   function initiatives() {
     const o = object({ x: -59, y: -43, w: 118, d: 88, r: 4 }, 26)
     const { add, box, S, beam, rules, screws, moving, base, finish } = o
@@ -369,7 +319,6 @@ export function buildCollection(k, G, drawing, scene) {
     return finish()
   }
   return {
-    issues: issues(),
     initiatives: initiatives(),
     triage: triage(),
     cycles: cycles(),

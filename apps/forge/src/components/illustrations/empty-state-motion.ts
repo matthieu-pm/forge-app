@@ -1,7 +1,9 @@
 /** Visible-only, reduced-motion-aware animation shared by React and the QA gallery. */
 export function mountEmptyStateMotion(svg: SVGSVGElement, kind: string) {
   if (
-    !["inbox", "reviews", "signals", "milestones", "calls"].includes(kind) ||
+    !["inbox", "reviews", "signals", "milestones", "calls", "issues"].includes(
+      kind
+    ) ||
     typeof matchMedia !== "function" ||
     typeof requestAnimationFrame !== "function" ||
     typeof IntersectionObserver !== "function"
@@ -17,6 +19,32 @@ export function mountEmptyStateMotion(svg: SVGSVGElement, kind: string) {
   let last = 0
   let started = 0
   const period = kind === "reviews" ? 6200 : kind === "signals" ? 8400 : 7600
+  const page = svg.querySelector<SVGGElement>('[data-motion="issue-page"]')
+  const pageAngle = Number(page?.getAttribute("data-page-angle") ?? 0)
+  const pair = (name: string) =>
+    (page?.getAttribute(`data-page-${name}`) ?? "0 0").split(" ").map(Number)
+  const hinge = pair("hinge"),
+    xAxis = pair("x"),
+    zAxis = pair("z"),
+    inverse = pair("inverse")
+
+  function paint() {
+    svg.style.setProperty("--art-phase", phase.toFixed(5))
+    if (!page) return
+    const angle = phase * pageAngle
+    const dx = (Math.cos(angle) - 1) * xAxis[0] + Math.sin(angle) * zAxis[0]
+    const dy = (Math.cos(angle) - 1) * xAxis[1] + Math.sin(angle) * zAxis[1]
+    const a = 1 + dx * inverse[0],
+      b = dy * inverse[0]
+    const c = dx * inverse[1],
+      d = 1 + dy * inverse[1]
+    const e = hinge[0] - a * hinge[0] - c * hinge[1]
+    const f = hinge[1] - b * hinge[0] - d * hinge[1]
+    page.setAttribute(
+      "transform",
+      `matrix(${[a, b, c, d, e, f].map((value) => value.toFixed(6)).join(" ")})`
+    )
+  }
 
   function draw(now: number) {
     frame = 0
@@ -25,10 +53,18 @@ export function mountEmptyStateMotion(svg: SVGSVGElement, kind: string) {
     const dt = last ? Math.min((now - last) / 1000, 1 / 30) : 1 / 60
     last = now
     const elapsed = Math.max(0, now - started - 900)
-    const idle = (1 - Math.cos((elapsed / period) * Math.PI * 2)) / 2
+    const idle =
+      kind === "issues"
+        ? 0
+        : (1 - Math.cos((elapsed / period) * Math.PI * 2)) / 2
     const target = hovered || focused ? 1 : idle
     phase += (target - phase) * (1 - Math.exp(-dt / 0.18))
-    svg.style.setProperty("--art-phase", phase.toFixed(5))
+    if (kind === "issues" && Math.abs(target - phase) < 0.0001) {
+      phase = target
+      paint()
+      return
+    }
+    paint()
     frame = requestAnimationFrame(draw)
   }
   function start() {
@@ -48,6 +84,7 @@ export function mountEmptyStateMotion(svg: SVGSVGElement, kind: string) {
   }
   function leave() {
     hovered = false
+    start()
   }
   function focus() {
     focused = true
@@ -57,12 +94,13 @@ export function mountEmptyStateMotion(svg: SVGSVGElement, kind: string) {
     focused = content.contains(
       (event as FocusEvent).relatedTarget as Node | null
     )
+    start()
   }
   function preference() {
     stop()
     if (still.matches) {
       phase = 0
-      svg.style.setProperty("--art-phase", "0")
+      paint()
     } else start()
   }
   function visibility() {
