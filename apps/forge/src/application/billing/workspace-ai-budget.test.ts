@@ -13,6 +13,10 @@ const base: WorkspaceBudgetAdmissionInput = {
   feature: "agent",
   billingMode: "forge-managed",
   activeMembers: 3,
+  billingCurrency: "usd",
+  settledOverageMicros: 0,
+  reservedOverageMicros: 0,
+  incurredAt: new Date("2026-10-29T00:00:00Z"),
   settledCostMicros: 10_000_000,
   reservedCostMicros: 1_000_000,
   requestedReservationMicros: 2_000_000,
@@ -38,7 +42,11 @@ describe("workspace AI allowance and capped overage", () => {
               settledCostMicros: 5_000_000,
               reservedCostMicros: 0,
               requestedReservationMicros: 1,
-              overage: { enabled: true, monthlyCapMicros: 50_000_000 },
+              overage: {
+                enabled: true,
+                currency: "usd",
+                monthlyCapMicros: 50_000_000,
+              },
               paidOverageAuthorized: true,
             })
           ).toMatchObject({
@@ -135,7 +143,11 @@ describe("workspace AI allowance and capped overage", () => {
         settledCostMicros: 5_000_000,
         reservedCostMicros: 0,
         requestedReservationMicros: 1,
-        overage: { enabled: true, monthlyCapMicros: 20_000_000 },
+        overage: {
+          enabled: true,
+          currency: "usd",
+          monthlyCapMicros: 20_000_000,
+        },
         paidOverageAuthorized: true,
       })
     ).toMatchObject({
@@ -195,7 +207,11 @@ describe("workspace AI allowance and capped overage", () => {
     const optedIn = {
       ...base,
       requestedReservationMicros: 6_000_000,
-      overage: { enabled: true as const, monthlyCapMicros: 5_000_000 },
+      overage: {
+        enabled: true as const,
+        currency: "usd" as const,
+        monthlyCapMicros: 5_000_000,
+      },
     }
     expect(evaluateWorkspaceBudgetAdmission(optedIn).allowed).toBe(false)
     expect(
@@ -233,6 +249,7 @@ describe("workspace AI allowance and capped overage", () => {
     expect(
       workspaceOveragePolicySchema.safeParse({
         enabled: true,
+        currency: "usd",
         monthlyCapMicros: Infinity,
       }).success
     ).toBe(false)

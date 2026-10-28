@@ -170,8 +170,9 @@ and payer snapshots. Free exhaustion blocks additional metered agent/Calls/Signa
 work; paid Calls/Signals must still pass independent safety/admission controls.
 Existing consumption must survive membership changes, retries and plan transitions.
 Starter→Plus upgrades now take effect after successful immediate prorated payment; Plus→Starter downgrades take effect at renewal. Failed upgrade payment retains the original Starter contract. A full refund of only that upgrade charge restores verified, already-paid Starter access through its original boundary. The fully refunded upgrade also renews on Starter; verified provider scheduling preserves existing renewal seats and retries safely. Other plan-change carryover decisions remain open. Cancellation and full/partial current-period refund timing are confirmed below. Member grandfathering on downgrade is confirmed above; team/issue/upload
-over-capacity transitions still need rules. Currency migration and EUR overage invoicing also
-need explicit rules before live billing.
+over-capacity transitions still need rules. Currency migration still needs a rule. EUR overage/caps and usage-time ECB
+reference conversion are confirmed; durable ledger/invoice integration remains
+required before live billing. See `docs/overage-currency.md`.
 
 Failed-renewal access is confirmed: **7 days (168 hours) of paid access**, including
 the included pool and paid overage under the existing opt-in/cap. Retries cannot
@@ -195,3 +196,6 @@ Owner cancellation timing is confirmed: retain paid access until the current bil
 
 
 Subscription pausing policy confirmed 29 October 2026: no pause/resume at launch; period-end cancellation is the supported exit path. The prepared server boundary refuses unexpected pause states and records a cutoff shared by feature/auth/SQL admission. Provider portal configuration and actual candidate flows still require release verification.
+
+
+Overage currency confirmed 29 October 2026: EUR-billed workspaces use EUR for paid overage and its separate cap; USD-billed workspaces use USD. The included pool remains US$5 under the existing plan rules. Conversion is fixed when usage is incurred using the latest published ECB daily reference rate, with no added spread; invoice generation must reuse the recorded rate. Prepared currency-aware cap/conversion helpers are verified, with atomic ledger/quote retention and real provider billing still gated. See `docs/overage-currency.md`.

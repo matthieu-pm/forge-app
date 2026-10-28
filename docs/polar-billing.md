@@ -244,3 +244,8 @@ The user confirmed Starter at the next renewal after fully refunding only a Plus
 ## No subscription pausing at launch · 29 October 2026
 
 Confirmed: use period-end cancellation; no pause/resume feature. Provider verification now checks the separate pause fields, signed pause/resume events re-fetch current state, and unexpected pauses receive a durable access cutoff shared by features, overage authorization and SQL membership admission. Ordinary resumed/active snapshots cannot clear it. The portal/candidate release gate must disable customer-facing pausing; no live provider setting was modified. See `docs/subscription-pause-policy.md`.
+
+
+## Overage currency and usage-time FX · 29 October 2026
+
+Confirmed: overage and cap currency follow EUR/USD subscription currency; included allowance stays USD. Use the latest published ECB daily reference rate with no added spread, fixed for the usage and retained for later billing. The budget helper now checks a separate billing-currency balance rather than adding EUR caps to USD allowances; prepared converter/source helpers pass boundary/rounding/overflow tests and a read-only live source check. Atomic quote/ledger persistence and actual Polar invoice reporting remain FOR-76/release work. See `docs/overage-currency.md`.

@@ -241,3 +241,8 @@ Confirmed and implemented: a full upgrade-only refund renews on Starter. The sig
 ## No-pause launch policy checkpoint · 29 October 2026
 
 Confirmed and implemented: no subscription pause/resume at launch; period-end cancellation remains the supported path. Unexpected current provider pause fields now persist a cutoff and audit/receipt; ordinary resume/active events cannot silently reopen access. Shared feature/overage/auth policy and SQL member admission agree while retaining existing sessions. Verification: 1,428 app + 4 workflow tests, 52 isolated PostgreSQL billing cases, 17 real-auth member cases and 3 full-history migration fault cases. Staging and the new empty rehearsal database have all 34 migrations. FOR-109/FOR-110/FOR-111 remain In Progress for remaining commercial/public/durable/provider-release work. See `docs/subscription-pause-policy.md` and `output/production-readiness/no-pause-2026-10-29.json`.
+
+
+## Overage currency checkpoint · 29 October 2026
+
+Confirmed: overage/caps follow the EUR/USD subscription currency; included pools stay USD. Rates are fixed at usage time from the latest published ECB daily reference, with no added spread and no invoice-time repricing. Prepared currency-aware cap arithmetic, exact conversion and bounded server source adapter are implemented. Current checks: 1,451 app + 4 workflow tests, typecheck/lint/format/diff/build and a read-only live ECB source check. No migration/provider billing or deployment. FOR-109/FOR-76 remain In Progress for atomic dual-currency ledger/quote retention, invoice allocation and actual provider/candidate gates. Prior database evidence remains at `1ba1ff8`. See `docs/overage-currency.md` and `output/production-readiness/overage-currency-2026-10-29.json`.

@@ -1,12 +1,16 @@
 import { z } from "zod"
 import {
   billableMemberCountSchema,
+  billingCurrencySchema,
   pooledWorkspaceLimit,
   standardPlanSchema,
   workspaceAccessPhaseSchema,
 } from "./billing-plan-contract"
+import { reserveWorkspaceOverage } from "./workspace-overage-money"
 import { workspaceUsageChargePolicy } from "./forge-billable-usage"
+import type { EcbRateSnapshot } from "./workspace-overage-money"
 import type {
+  BillingCurrency,
   StandardPlan,
   WorkspaceAccessPhase,
 } from "./billing-plan-contract"
@@ -26,6 +30,7 @@ export const workspaceOveragePolicySchema = z.discriminatedUnion("enabled", [
   z
     .object({
       enabled: z.literal(true),
+      currency: billingCurrencySchema,
       monthlyCapMicros: microsSchema,
     })
     .strict(),
@@ -71,6 +76,13 @@ export type WorkspaceBudgetAdmissionInput = {
   feature: WorkspaceUsageFeature
   billingMode: WorkspaceUsageBillingMode
   activeMembers: number
+  billingCurrency: BillingCurrency
+  /** Settled/reserved overage totals are in the subscription currency. */
+  settledOverageMicros: number
+  reservedOverageMicros: number
+  incurredAt: Date
+  rate?: EcbRateSnapshot
+  /** Provider and included-pool accounting remains USD. */
   settledCostMicros: number
   reservedCostMicros: number
   requestedReservationMicros: number
@@ -97,14 +109,15 @@ export function evaluateWorkspaceBudgetAdmission(
   )
   const overage = workspaceOveragePolicySchema.parse(input.overage)
   const paidAuthorized = z.boolean().parse(input.paidOverageAuthorized)
-  const usableOverageMicros =
+  const currency = billingCurrencySchema.parse(input.billingCurrency)
+  const eligible =
+    usesWorkspaceAiPool &&
     plan !== "free" &&
     accessPhase !== "trial" &&
     overage.enabled &&
     paidAuthorized
-      ? overage.monthlyCapMicros
-      : 0
-  const totalLimitMicros = sumMicros(includedMicros, usableOverageMicros)
+  if (eligible && overage.currency !== currency)
+    throw new Error("BILLING_OVERAGE_CURRENCY_MISMATCH")
   const committedMicros = sumMicros(
     input.settledCostMicros,
     input.reservedCostMicros
@@ -112,9 +125,33 @@ export function evaluateWorkspaceBudgetAdmission(
   const requestedMicros = microsSchema.parse(input.requestedReservationMicros)
   const allowanceReservationMicros = usesWorkspaceAiPool ? requestedMicros : 0
   const projectedMicros = sumMicros(committedMicros, allowanceReservationMicros)
+  const requestedOverageUsdMicros = Math.min(
+    allowanceReservationMicros,
+    Math.max(0, projectedMicros - includedMicros)
+  )
+  const cap = reserveWorkspaceOverage({
+    currency,
+    capMicros: eligible ? overage.monthlyCapMicros : 0,
+    settledMicros: input.settledOverageMicros,
+    reservedMicros: input.reservedOverageMicros,
+    requestedUsdMicros: eligible ? requestedOverageUsdMicros : 0,
+    incurredAt: input.incurredAt,
+    rate: input.rate,
+  })
+  const withinPool =
+    committedMicros < includedMicros && projectedMicros <= includedMicros
   const allowed =
-    !usesWorkspaceAiPool ||
-    (committedMicros < totalLimitMicros && projectedMicros <= totalLimitMicros)
+    !usesWorkspaceAiPool || withinPool || (eligible && cap.allowed)
+  // An EUR cap cannot be added to a USD included allowance. No 1:1 fallback.
+  const usableOverageMicros = eligible
+    ? currency === "usd"
+      ? overage.monthlyCapMicros
+      : null
+    : 0
+  const totalLimitMicros =
+    usableOverageMicros === null
+      ? null
+      : sumMicros(includedMicros, usableOverageMicros)
   return {
     allowed,
     usesWorkspaceAiPool,
@@ -123,13 +160,18 @@ export function evaluateWorkspaceBudgetAdmission(
     usableOverageMicros,
     totalLimitMicros,
     projectedMicros,
-    remainingMicros: Math.max(0, totalLimitMicros - committedMicros),
+    remainingMicros:
+      totalLimitMicros === null
+        ? null
+        : Math.max(0, totalLimitMicros - committedMicros),
+    costCurrency: "usd" as const,
+    overageCurrency: currency,
+    overageRemainingMicros: cap.remainingMicros,
+    billingOverageReservation:
+      allowed && requestedOverageUsdMicros > 0 && eligible
+        ? cap.reservation
+        : null,
     // Incremental part of this reservation beyond the included pool, not an invoice.
-    requestedOverageMicros: allowed
-      ? Math.min(
-          allowanceReservationMicros,
-          Math.max(0, projectedMicros - includedMicros)
-        )
-      : 0,
+    requestedOverageMicros: allowed ? requestedOverageUsdMicros : 0,
   }
 }

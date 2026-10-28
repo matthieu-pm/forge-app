@@ -81,5 +81,7 @@
     "docs/subscription-pause-policy.md": "cfb6ba8b78d6b0e393ae3f2e4b6e2342e2ba44fb0a64eac0659f2163a246248d",
     "docs/subscription-plan-changes.md": "efc186bf6db669edd172ecb3692057134b4b08eab8794f3dd9d3b07b80bee06a",
     "docs/workspace-member-capacity.md": "72c9ccc2c356ecf5237a695aa6811ae5b5e92024b34db22cf600957c36b783a6"
-  }
+  },
+  "historical": true,
+  "sourceCommit": "1ba1ff8abac8705440f11e6ba7442ab2dbfa6832"
 }

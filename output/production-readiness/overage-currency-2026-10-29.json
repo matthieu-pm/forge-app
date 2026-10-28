@@ -1,0 +1,62 @@
+{
+  "date": "2026-10-29",
+  "baseCommit": "1ba1ff8abac8705440f11e6ba7442ab2dbfa6832",
+  "committed": true,
+  "deployed": false,
+  "servingDatabaseModified": false,
+  "localConnectionFilesChanged": false,
+  "providerBillingChanged": false,
+  "issues": [
+    "FOR-109",
+    "FOR-76"
+  ],
+  "policy": {
+    "date": "2026-10-29",
+    "policy": "Overage and separate cap follow EUR/USD subscription currency; included pools remain USD.",
+    "fxTiming": "Fix rate when usage is incurred; retain original quote for later billing.",
+    "fxSource": "Latest published ECB daily reference rate, with no added spread.",
+    "status": "Prepared source/conversion/cap arithmetic implemented and verified; atomic ledger and provider invoicing still In Progress.",
+    "liveSourceCheck": {
+      "source": "ecb-daily-reference",
+      "referenceDate": "2026-10-28",
+      "usdPerEur": "1.1133",
+      "observedAt": "2026-10-28T23:38:01.979Z"
+    },
+    "guide": "https://linear.app/atriumcrm/document/forge-paid-ai-overage-currency-and-usage-time-ecb-conversion-408511e4f5c1",
+    "remaining": "Atomic quote/usage/period/payer and dual-currency balance persistence; concurrent reservation/run admission; idempotent settlement/recovery and Polar invoice allocation; final minor-unit rounding; actual sandbox/candidate flows; currency transitions."
+  },
+  "checks": {
+    "appTestsPassed": 1451,
+    "workflowTestsPassed": 4,
+    "newMoneyAndSourceCases": 23,
+    "typecheck": "passed",
+    "changedFileLint": "passed",
+    "format": "passed",
+    "productionBuild": "passed including protected Workflow handlers",
+    "liveEcbReadOnly": "passed"
+  },
+  "databaseBaseline": {
+    "sourceCommit": "1ba1ff8abac8705440f11e6ba7442ab2dbfa6832",
+    "migrations": 34,
+    "billingCases": 52,
+    "authMembershipCases": 17,
+    "migrationFaultCases": 3,
+    "rerunForThisSlice": false
+  },
+  "newMigrations": 0,
+  "routeEnabled": false,
+  "remaining": "Atomic quote/usage/period/payer and dual-currency balance persistence; concurrent reservation/run admission; idempotent settlement/recovery and Polar invoice allocation; final minor-unit rounding; actual sandbox/candidate flows; currency transitions.",
+  "sourceSha256": {
+    "apps/forge/src/application/billing/ecb-reference-rate.server.test.ts": "7e251557349c502dbf7d0e5d222c113d6a2ed1089b70a059ad86193661fb6be5",
+    "apps/forge/src/application/billing/ecb-reference-rate.server.ts": "a89804d41c7392594429b292ce68bb9cdee9b04fa66996897114eaf5662709a3",
+    "apps/forge/src/application/billing/workspace-ai-budget.test.ts": "b04e7f66a2030ba47550b52e29f8d2a0ef2551650d1f23b1a32b6cb13a16ff82",
+    "apps/forge/src/application/billing/workspace-ai-budget.ts": "b43fda5e955b9dd68757cf978ab70f858ad567c9d9b6a118682f847107cc689d",
+    "apps/forge/src/application/billing/workspace-overage-money.test.ts": "ac98db5bfaaa79ae9cbab47f016811fdf38dae1aa012ce7b4df108408e874380",
+    "apps/forge/src/application/billing/workspace-overage-money.ts": "588d9b46f03a77c59b14e3d7fc117805a44db24943f74785ad3b1c526d71c503",
+    "docs/forge-plan-matrix.md": "77e23acc2a4fbeb525e70710d609a3ede8ba203c6d9453176cb0cc5425e8a109",
+    "docs/overage-currency.md": "e912e7753dbcd51b3dadeb559fc6decdaf710673ee3b2c2f84c50e8d92f4663d",
+    "docs/plans/production-readiness-backlog-map.md": "34f8314b07d4dffd6bf4d992a2523afe7a02bc9e3b5529b30686075e99e0d53b",
+    "docs/plans/production-readiness-linear-backlog.json": "9ad370149f4c7e3e873e3185e0170e60e52b43baf3bbef038e4d61dd1cfc9eef",
+    "docs/polar-billing.md": "3ac28d45c4af12fb660ee5f1b8931e2bcb64a8e108544b736316e8d4b845acad"
+  }
+}
