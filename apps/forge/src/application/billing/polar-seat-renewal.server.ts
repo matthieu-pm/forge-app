@@ -112,20 +112,25 @@ export class PolarSeatRenewalScheduler {
         currentPeriodEnd: new Date(subscription.current_period_end),
       })
       const pending = subscription.pending_update
+      const pendingProduct = pending?.product_id ?? null
+      const validDowngrade =
+        pendingProduct === this.config.paidProducts.starter[currency] &&
+        subscription.product_id === this.config.paidProducts.plus[currency]
       if (
         pending &&
-        (pending.product_id !== null ||
+        ((pendingProduct !== null && !validDowngrade) ||
           pending.units !== null ||
-          pending.seats === null ||
+          (pending.seats === null && pendingProduct === null) ||
           new Date(pending.applies_at).getTime() !== period.end.getTime())
       )
         throw new Error(
           "Reconcile the conflicting scheduled subscription change."
         )
-      const renewalSeats = pending
-        ? billableMemberCountSchema.parse(pending.seats)
-        : currentSeats
-      return { currentSeats, renewalSeats, period }
+      const renewalSeats =
+        pending?.seats != null
+          ? billableMemberCountSchema.parse(pending.seats)
+          : currentSeats
+      return { currentSeats, renewalSeats, period, pendingProduct }
     }
 
     const current = validate(before)
@@ -150,7 +155,8 @@ export class PolarSeatRenewalScheduler {
       after.amount !== before.amount ||
       confirmed.currentSeats !== current.currentSeats ||
       confirmed.renewalSeats !== seats ||
-      (seats === current.currentSeats && after.pending_update !== null) ||
+      confirmed.pendingProduct !== current.pendingProduct ||
+      (seats === current.currentSeats && after.pending_update?.seats != null) ||
       confirmed.period.key !== current.period.key
     )
       throw new Error(

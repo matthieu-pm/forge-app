@@ -11,6 +11,14 @@ import {
 
 const refundSchema = z.object({
   kind: z.enum(["full", "partial"]).default("full"),
+  scope: z.enum(["period", "upgrade"]).default("period"),
+  starterBasis: z
+    .object({
+      orderId: z.uuid(),
+      start: z.iso.datetime({ offset: true }),
+      end: z.iso.datetime({ offset: true }),
+    })
+    .optional(),
   workspaceId: z.string().min(1),
   environment: z.enum(["sandbox", "production"]),
   orderId: z.uuid(),
@@ -32,9 +40,18 @@ export async function applyVerifiedPeriodRefund(input: {
     .string()
     .regex(/^[a-f0-9]{64}$/)
     .parse(input.bodyHash)
-  const { workspaceId, kind, ...refund } = refundSchema.parse(input.refund)
+  const { workspaceId, kind, scope, starterBasis, ...refund } =
+    refundSchema.parse(input.refund)
   if (new Date(refund.start) >= new Date(refund.end))
     throw new Error("BILLING_REFUND_PERIOD_INVALID")
+  if (
+    starterBasis &&
+    (scope !== "upgrade" ||
+      new Date(starterBasis.start) > new Date(refund.start) ||
+      new Date(starterBasis.start) >= new Date(starterBasis.end) ||
+      new Date(starterBasis.end).getTime() !== new Date(refund.end).getTime())
+  )
+    throw new Error("BILLING_STARTER_BASE_INVALID")
   return db.transaction(async (tx) => {
     const workspace = await tx
       .select({ id: organizations.id })
@@ -68,40 +85,73 @@ export async function applyVerifiedPeriodRefund(input: {
       existing &&
       (existing.subscriptionId !== refund.subscriptionId ||
         existing.start !== refund.start ||
-        existing.end !== refund.end)
+        existing.end !== refund.end ||
+        (existing.kind === "upgrade") !== (scope === "upgrade") ||
+        (existing.starterOrderId &&
+          starterBasis &&
+          existing.starterOrderId !== starterBasis.orderId))
     )
       throw new Error("BILLING_REFUND_CONFLICT")
-    // A retried partial-refund event can now fetch a cumulatively full refund.
-    // Promote that exact receipt without requiring another event to arrive.
-    const revoke = kind === "full" && !existing
-    if (duplicate && !revoke)
+    const restoreBase =
+      scope === "upgrade" &&
+      kind === "full" &&
+      !!starterBasis &&
+      !!existing &&
+      !existing.starterOrderId
+    const change = kind === "full" && (!existing || restoreBase)
+    if (duplicate && !change)
       return { outcome: duplicate.outcome, replayed: true }
-    const outcome = revoke ? "applied" : "unchanged"
-    if (revoke) {
-      // This also records refunds arriving before first activation. Subscription
-      // reconciliation deliberately never replaces this append-only history.
-      const refundedPeriods = [...history, refund]
+    const outcome = change ? "applied" : "unchanged"
+    if (change) {
+      const marker =
+        scope === "upgrade"
+          ? {
+              ...refund,
+              kind: "upgrade" as const,
+              starterOrderId: starterBasis?.orderId ?? null,
+              basePeriodStart: starterBasis?.start,
+              basePeriodEnd: starterBasis?.end,
+            }
+          : refund
+      const refundedPeriods = existing
+        ? history.map((period) => (period === existing ? marker : period))
+        : [...history, marker]
+      const affectsCurrent =
+        scope === "upgrade" &&
+        previous?.source === "polar" &&
+        previous.providerEnvironment === refund.environment &&
+        previous.sourceReference === refund.subscriptionId &&
+        previous.currentPeriodStart &&
+        previous.currentPeriodEnd &&
+        new Date(refund.start) < previous.currentPeriodEnd &&
+        new Date(refund.end) > previous.currentPeriodStart &&
+        (!previous.paidUpgradeOrderId ||
+          previous.paidUpgradeOrderId === refund.orderId)
+      const downgrade = affectsCurrent
+        ? { plan: "basic", paidUpgradeOrderId: null }
+        : {}
       await tx
         .insert(workspaceEntitlements)
         .values({ workspaceId, refundedPeriods })
         .onConflictDoUpdate({
           target: workspaceEntitlements.workspaceId,
-          set: { refundedPeriods, updatedAt: new Date() },
+          set: { refundedPeriods, updatedAt: new Date(), ...downgrade },
         })
     }
-    if (revoke || kind === "partial") {
+    if (change || kind === "partial")
       await tx.insert(workspaceSecurityAuditEvents).values({
         workspaceId,
         action:
-          kind === "full"
-            ? "billing.subscription_period.refunded"
-            : "billing.subscription_period.partially_refunded",
+          kind === "partial"
+            ? "billing.subscription_period.partially_refunded"
+            : scope === "upgrade"
+              ? "billing.upgrade_charge.refunded"
+              : "billing.subscription_period.refunded",
         target: refund.orderId,
         outcome: "succeeded",
-        after: { ...refund, kind },
+        after: { ...refund, kind, scope, starterBasis: starterBasis ?? null },
         requestId: eventId,
       })
-    }
     if (duplicate) {
       await tx
         .update(billingEventReceipts)

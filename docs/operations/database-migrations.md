@@ -102,3 +102,8 @@ Versioned migration 0030 adds the retained refunded-period history and updates m
 ## Immediate termination migration follow-up · 28 October 2026
 
 Migration 0031 adds finite provider-backed terminal state and makes SQL member admission deny paid capacity immediately on final revocation. All 32 migrations are applied only to isolated staging and rehearsal; three serialized ownership/fault cases pass against the complete history. Thirty-one billing-state and fifteen real-auth member cases pass on staging. Existing members stay authorized. No serving/default database or connection configuration changed. See `docs/subscription-termination.md`; production rollout remains separately gated.
+
+
+## Upgrade-refund access migration follow-up · 28 October 2026
+
+Migration 0032 records paid Plus grant identity and aligns refund-aware Starter fallback with SQL admission. All 33 migrations are applied only to isolated staging/rehearsal; three full-history migration ownership/fault cases pass. Staging: 43 billing and 16 real-auth membership cases pass, including temporary admission refusal without base proof and resumed paid Starter admission after verification. Existing member sessions are preserved. The serving/default database and local connection files are unchanged. See `docs/subscription-plan-changes.md`.

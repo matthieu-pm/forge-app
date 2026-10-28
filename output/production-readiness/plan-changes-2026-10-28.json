@@ -1,0 +1,71 @@
+{
+  "date": "2026-10-28",
+  "baseCommit": "2a8b116f980f780bae148cad15cfebd1cb3c2041",
+  "committed": true,
+  "deployed": false,
+  "servingDatabaseModified": false,
+  "localConnectionFilesChanged": false,
+  "issues": [
+    "FOR-109",
+    "FOR-110",
+    "FOR-111"
+  ],
+  "status": "Confirmed tier-change, payment-failure and upgrade-refund access slices verified; overall billing issues remain In Progress",
+  "policy": {
+    "policy": "Upgrade Starter to Plus immediately after successful prorated payment; downgrade Plus to Starter at renewal. Failed upgrade retains original Starter contract. Full refund of only the upgrade charge restores verified Starter for the already-paid period.",
+    "implementation": "Trusted live owner/admin context, explicit invoice/next_period bodies, fixed billed seats/currency/period, restored renewal quantity, verified paid invoice evidence, signed order-paid reconciliation, cached/equal-version promotion, typed grant/refund references, full-base/terminal overrides and SQL/auth parity",
+    "status": "Confirmed backend/access slices complete and staging-verified; FOR-109/FOR-110/FOR-111 remain In Progress",
+    "remaining": "Upgrade-refund renewal tier and controlled repeat-upgrade adjustment; pause/currency/over-capacity policy; public billing UI/actions; durable serialization/effects and ambiguous-outcome recovery; verified replacement binding; periodic reconciliation/communications; historical invoice allocation; commercial usage ledger and actual Polar sandbox/candidate release evidence"
+  },
+  "staging": {
+    "project": "raspy-union-96305162",
+    "branch": "br-autumn-union-za0opf1e",
+    "database": "forge_staging",
+    "migrations": 33,
+    "newMigrationsApplied": 1
+  },
+  "rehearsal": {
+    "branch": "br-square-sky-za2iavfk",
+    "database": "forge_migration_rehearsal",
+    "migrations": 33,
+    "newMigrationsApplied": 1
+  },
+  "checks": {
+    "appTestsPassed": 1392,
+    "workflowTestsPassed": 4,
+    "postgresBillingStateCasesPassed": 43,
+    "postgresMembershipCasesPassed": 16,
+    "postgresMigrationRehearsalCasesPassed": 3,
+    "typecheck": "passed",
+    "changedFileLint": "passed",
+    "format": "passed",
+    "productionBuild": "passed including protected Workflow handlers"
+  },
+  "routeEnabled": false,
+  "providerCalls": "SDK calls mocked; real isolated Neon staging/rehearsal databases; no live Polar invoice/refund/portal mutation",
+  "remaining": "Upgrade-refund renewal tier and controlled repeat-upgrade adjustment; pause/currency/over-capacity policy; public billing UI/actions; durable serialization/effects and ambiguous-outcome recovery; verified replacement binding; periodic reconciliation/communications; historical invoice allocation; commercial usage ledger and actual Polar sandbox/candidate release evidence",
+  "sourceSha256": {
+    "apps/forge/drizzle/0032_upgrade_refund_access.sql": "f521db25f96f688ebae03224b0c472a84cce8cbf2e58e8e6499f07a14a7476d8",
+    "apps/forge/drizzle/meta/0032_snapshot.json": "d2c8eedb87d827fea125bf48570ed07b6fc03d52b9b29b7e7ff8c1aec7fcedb3",
+    "apps/forge/src/db/schema.ts": "c3ed5ec4fc7880b2c50cfda8bcc951c936605990929be94a0ae172a6839d0ff9",
+    "apps/forge/src/application/billing/plan-change-context.server.ts": "c319c2f0836ea0d0dfaa3b1028e948e618a3ebf18bf6c921f5dca56898b67f6b",
+    "apps/forge/src/application/billing/polar-plan-change.server.ts": "d0b59db79c9fbcab1bdf6a45aafdd31b35cd1fb37c1ccf9ab5c2c3b98b768409",
+    "apps/forge/src/application/billing/polar-plan-change.server.test.ts": "f1ff3f8ccc5680df8452cb6cd495c9b601bad5ddafe1a9f067cdcd9703873034",
+    "apps/forge/src/application/billing/polar-paid-upgrade.server.ts": "8b4aa52fe266caa313e5ce1f282c574377b16787614c56853f26f9ef25c7af60",
+    "apps/forge/src/application/billing/polar-seat-renewal.server.ts": "636750395de394c20e2849607988dedf7f6a6f8ebb22ba57a153a6e910f741d4",
+    "apps/forge/src/application/billing/polar-seat-renewal.server.test.ts": "b20b1f598175a83127f39077bc1b8ed6a479010f7da71566c1e7a391d22d40a8",
+    "apps/forge/src/application/billing/polar-subscription-reconciliation.server.ts": "c7586a6bde82ec724bb9780d64ba9443df4ee032aefa06209468a29b74122dfa",
+    "apps/forge/src/application/billing/polar-subscription-refund.server.ts": "01ffd87c0a19555473c168d0c563845ffa87450e9f80410cc78f5695f890d1ed",
+    "apps/forge/src/application/billing/subscription-refund.server.ts": "2007259b544d5f1e14afdbd96e171a1a35d3115f31262455c1b5632f603f38cc",
+    "apps/forge/src/application/billing/subscription-access.ts": "7c6909739ae159df33741528980f4ac453dd1c09537bda232ba24a88f2246192",
+    "apps/forge/src/application/billing/subscription-access.test.ts": "872eeedfa48adca92cea675bf10c00b06f180eafd6958fbd78f461c5a72b95ac",
+    "apps/forge/src/application/billing/subscription-access-state.server.ts": "852be3abf142991b95db267675981990ccfc7c042c1fb7b4f96c4dddad97cb3f",
+    "apps/forge/src/application/billing/subscription-reconciliation.server.ts": "cc291800d852ef4a265033b557af531228e34837a922c08c8f1fe0179f377b28",
+    "apps/forge/src/application/billing/polar-webhook.server.ts": "4aef373a8ecfd71e7c4e2367e050bbffbbc196eadd6d0b468fcb2616630def7a",
+    "apps/forge/src/application/billing/subscription-reconciliation.postgres.test.ts": "0b332cc5b4f00daf09c1205d1b7350d240b2b1899ce849103be493dad8231915",
+    "apps/forge/src/application/billing/member-capacity.postgres.test.ts": "847aeda97862b6082e0d8ccf3178b7c317ff217814ec077f610de4c1aa59b0be",
+    "docs/subscription-plan-changes.md": "4472e98fdfce7f95d2d83152817082e3392f0f7c7a54377ac44a985a1df3d790",
+    "docs/forge-plan-matrix.md": "a905ab84f60cfa26c3c96a290f1d398d0ad50f6384f989e3b89397f25d60210f",
+    "docs/polar-billing.md": "0ae937b2362bca1ffee323b0068e4f678602f897ec801f93dd0b627c36577ee2"
+  }
+}

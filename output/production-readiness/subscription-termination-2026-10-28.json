@@ -61,5 +61,7 @@
     "apps/forge/src/application/billing/member-capacity.postgres.test.ts": "29c2690d74063ceb4310599137a9b9501cea04419807a21c37f823ebac1190d0",
     "docs/subscription-termination.md": "d32d4efa39124f951e2ade55d780d9748618a71ec3a85cd0a4f82082c925dd87",
     "docs/forge-plan-matrix.md": "975c5cd23cd9a3c93f7519ca8b75306cf655d5b7187aa5b9667905dfd599ecad"
-  }
+  },
+  "sourceCommit": "2a8b116f980f780bae148cad15cfebd1cb3c2041",
+  "historical": true
 }

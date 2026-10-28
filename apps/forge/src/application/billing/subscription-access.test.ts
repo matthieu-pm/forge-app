@@ -34,6 +34,71 @@ describe("paid-access grace", () => {
       })
     }
   )
+  it("restores only a verified already-paid Starter term after a full upgrade refund", () => {
+    const start = new Date("2026-10-01T00:00:00Z"),
+      end = new Date("2026-11-01T00:00:00Z"),
+      at = new Date("2026-10-28T00:00:00Z")
+    const refunded: SubscriptionAccessState = {
+      plan: "business",
+      status: "active",
+      source: "polar",
+      sourceReference: "sub",
+      providerEnvironment: "sandbox",
+      paidUpgradeOrderId: "upgrade",
+      paidActivatedAt: start,
+      currentPeriodStart: start,
+      currentPeriodEnd: end,
+      refundedPeriods: [
+        {
+          kind: "upgrade",
+          orderId: "upgrade",
+          subscriptionId: "sub",
+          environment: "sandbox",
+          start: "2026-10-15T00:00:00Z",
+          end: end.toISOString(),
+          refundedAt: at.toISOString(),
+          starterOrderId: "base",
+          basePeriodStart: start.toISOString(),
+          basePeriodEnd: end.toISOString(),
+        },
+      ],
+    }
+    expect(subscriptionAccess(refunded, at).plan).toBe("basic")
+    expect(
+      subscriptionAccess(
+        { ...refunded, status: "past_due", paidActivatedAt: null },
+        at
+      ).plan
+    ).toBe("basic")
+    expect(subscriptionAccess(refunded, end).plan).toBe("free")
+    expect(
+      subscriptionAccess(
+        { ...refunded, paidUpgradeOrderId: "new-paid-upgrade" },
+        at
+      ).plan
+    ).toBe("business")
+    expect(subscriptionAccess({ ...refunded, terminatedAt: at }, at).plan).toBe(
+      "free"
+    )
+    const missing = structuredClone(refunded)
+    missing.refundedPeriods![0].starterOrderId = null
+    expect(subscriptionAccess(missing, at).plan).toBe("free")
+    const baseRefunded = {
+      ...refunded,
+      refundedPeriods: [
+        ...refunded.refundedPeriods!,
+        {
+          orderId: "base",
+          subscriptionId: "sub",
+          environment: "sandbox",
+          start: start.toISOString(),
+          end: end.toISOString(),
+          refundedAt: at.toISOString(),
+        },
+      ],
+    }
+    expect(subscriptionAccess(baseRefunded, at).plan).toBe("free")
+  })
   it("retains paid features and existing overage authority for exactly 168 hours", () => {
     expect(subscriptionAccess(state, failed)).toMatchObject({
       plan: "business",

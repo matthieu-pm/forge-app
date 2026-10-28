@@ -131,8 +131,8 @@ The adapter requires an owner/admin session and trusted server resolution of
 membership and the environment-specific subscription mapping. It reads the live
 subscription, verifies its workspace external customer, configured product/currency,
 monthly interval and current period, and refuses unsupported lifecycle states or
-conflicting pending product/unit changes. It accepts active, renewing subscriptions;
-trial, dunning, cancellation and pause policy remains open. Repeated requests for
+conflicting product/unit changes; an approved pending Plus→Starter downgrade is now preserved alongside its renewal-seat change. It accepts active, renewing subscriptions;
+new seat scheduling still excludes trial, dunning, cancellation and pause states. Their accepted access policies are described in the later lifecycle guides. Repeated requests for
 the confirmed quantity require no write. Membership returning to the current billed
 quantity withdraws a pending seat change using the same explicit next-period mode.
 Responses must preserve the period, product, currency, current amount and billed
@@ -229,3 +229,8 @@ FOR-153 is Done; FOR-111 is In Progress. FORGE_BILLING_WEBHOOKS_ENABLED stays fa
 ## Period-end cancellation · 28 October 2026
 
 The user confirmed retaining paid access through the current billing period on cancellation. A first-party owner/admin command now derives the server subscription binding, rechecks live roles before effects, sets only cancel_at_period_end=true and verifies current provider confirmation. Replays do not repeat the write; revoked actors cannot read a cached receipt. Durable cutoff/reconciliation and SQL admission agree at expiry, preserve existing members, and cannot extend payment grace. Source is verified on isolated staging with thirteen billing-state and thirteen real-auth member cases; all 30 migrations pass rehearsal. UI/public command wiring, durable external-effect processing and real Polar sandbox/candidate checks remain. See `docs/subscription-cancellation.md`.
+
+
+## Paid tier changes and upgrade-only refunds
+
+The new `PolarPlanChanger` and live context resolver prepare immediate prorated upgrades, renewal-time downgrades and preservation of future seat changes. Paid invoice proof is required for Starter→Plus access; failed payment preserves the original Starter contract. A full refund of the upgrade-only charge restores Starter only with a verified unrefunded base-period invoice. Signed order-paid/refunded events, persistent grant/refund references and SQL/auth feature parity are staging-tested. See `docs/subscription-plan-changes.md` for the exact verification and remaining public-action, durable-effect, ledger and provider-release gates. No live billing is enabled.

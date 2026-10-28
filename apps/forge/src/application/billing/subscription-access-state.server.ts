@@ -19,9 +19,14 @@ const stateSchema = z.object({
         start: z.iso.datetime({ offset: true }),
         end: z.iso.datetime({ offset: true }),
         refundedAt: z.iso.datetime({ offset: true }),
+        kind: z.literal("upgrade").optional(),
+        starterOrderId: z.uuid().nullable().optional(),
+        basePeriodStart: z.iso.datetime({ offset: true }).optional(),
+        basePeriodEnd: z.iso.datetime({ offset: true }).optional(),
       })
     )
     .default([]),
+  paid_upgrade_order_id: z.uuid().nullable().optional(),
   terminated_at: date,
   paid_activated_at: date,
   payment_failed_at: date,
@@ -50,6 +55,7 @@ export async function readSubscriptionAccessState(workspaceId: string) {
     sourceReference: row.source_reference,
     providerEnvironment: row.provider_environment,
     refundedPeriods: row.refunded_periods,
+    paidUpgradeOrderId: row.paid_upgrade_order_id,
     terminatedAt: row.terminated_at,
     paidActivatedAt: row.paid_activated_at,
     paymentFailedAt: row.payment_failed_at,

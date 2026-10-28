@@ -5,6 +5,7 @@ import { z } from "zod"
 import {
   PAYMENT_GRACE_MS,
   isRefundedSubscriptionPeriod,
+  subscriptionAccess,
 } from "./subscription-access"
 import { workspaceBillingIdentity } from "./billing-authority"
 import type { Actor } from "@/application/actor"
@@ -29,8 +30,30 @@ const snapshotSchema = z.object({
   pastDueAt: z.date().nullable(),
   cancelAtPeriodEnd: z.boolean().default(false),
   terminatedAt: z.date().nullable().default(null),
+  paidUpgrade: z
+    .object({
+      orderId: z.uuid(),
+      subscriptionId: z.uuid(),
+      periodStart: z.date(),
+      periodEnd: z.date(),
+      createdAt: z.date(),
+    })
+    .optional(),
 })
 export type VerifiedSubscriptionSnapshot = z.input<typeof snapshotSchema>
+const planChangeSchema = z.object({
+  target: z.enum(["starter", "plus"]),
+  status: z.enum([
+    "applied",
+    "scheduled",
+    "unchanged",
+    "payment-pending",
+    "cleared",
+  ]),
+  effectiveAt: z.date().nullable(),
+  renewalSeats: z.number().int().positive().safe(),
+})
+export type VerifiedPlanChange = z.infer<typeof planChangeSchema>
 
 /** Server-only sink for provider-verified identity/catalog snapshots, never browser input. */
 export async function applyVerifiedSubscriptionSnapshot(input: {
@@ -38,6 +61,7 @@ export async function applyVerifiedSubscriptionSnapshot(input: {
   bodyHash: string
   snapshot: VerifiedSubscriptionSnapshot
   actor?: Actor
+  planChange?: VerifiedPlanChange
 }) {
   const eventId = z.string().trim().min(1).max(255).parse(input.eventId)
   const bodyHash = z
@@ -45,6 +69,10 @@ export async function applyVerifiedSubscriptionSnapshot(input: {
     .regex(/^[a-f0-9]{64}$/)
     .parse(input.bodyHash)
   const snapshot = snapshotSchema.parse(input.snapshot)
+  const planChange = input.planChange
+    ? planChangeSchema.parse(input.planChange)
+    : null
+  if (planChange && !input.actor) throw new Error("BILLING_ACTOR_REQUIRED")
   if (
     input.actor &&
     workspaceBillingIdentity(input.actor).workspaceId !== snapshot.workspaceId
@@ -52,6 +80,18 @@ export async function applyVerifiedSubscriptionSnapshot(input: {
     throw new Error("BILLING_ACTOR_WORKSPACE_MISMATCH")
   if (
     snapshot.currentPeriodStart >= snapshot.currentPeriodEnd ||
+    (snapshot.paidUpgrade &&
+      ((snapshot.status !== "active" &&
+        !(snapshot.status === "canceled" && snapshot.cancelAtPeriodEnd)) ||
+        !!snapshot.terminatedAt ||
+        snapshot.plan !== "plus" ||
+        snapshot.paidUpgrade.subscriptionId !== snapshot.subscriptionId ||
+        snapshot.paidUpgrade.periodStart.getTime() !==
+          snapshot.currentPeriodStart.getTime() ||
+        snapshot.paidUpgrade.periodEnd.getTime() !==
+          snapshot.currentPeriodEnd.getTime() ||
+        snapshot.paidUpgrade.createdAt < snapshot.currentPeriodStart ||
+        snapshot.paidUpgrade.createdAt >= snapshot.currentPeriodEnd)) ||
     (snapshot.terminatedAt &&
       (snapshot.status !== "canceled" ||
         snapshot.terminatedAt > snapshot.updatedAt)) ||
@@ -67,6 +107,7 @@ export async function applyVerifiedSubscriptionSnapshot(input: {
   const {
     cancelAtPeriodEnd: cancelFlag,
     terminatedAt,
+    paidUpgrade,
     ...legacySnapshot
   } = snapshot
   const cancellationSnapshot = cancelFlag
@@ -130,6 +171,19 @@ export async function applyVerifiedSubscriptionSnapshot(input: {
       previous.providerEnvironment === snapshot.environment
     if (previous?.source === "polar" && !sameSubscription)
       throw new Error("BILLING_SUBSCRIPTION_CONFLICT")
+    let projectedAccess: ReturnType<typeof subscriptionAccess> | undefined
+    async function currentAccess() {
+      if (!projectedAccess) {
+        const state = await tx.query.workspaceEntitlements.findFirst({
+          where: eq(workspaceEntitlements.workspaceId, snapshot.workspaceId),
+        })
+        projectedAccess = subscriptionAccess(state)
+      }
+      return projectedAccess
+    }
+    async function answer(outcome: string, replayed: boolean) {
+      return { outcome, replayed, effectivePlan: (await currentAccess()).plan }
+    }
     async function receipt(outcome: "applied" | "stale" | "unchanged") {
       if (duplicate)
         await tx
@@ -150,7 +204,7 @@ export async function applyVerifiedSubscriptionSnapshot(input: {
           subscriptionId: snapshot.subscriptionId,
           outcome,
         })
-      return { outcome, replayed: !!duplicate }
+      return answer(outcome, !!duplicate)
     }
     if (terminatedAt) {
       // Final provider revocation is restrictive independently of ordinary state
@@ -160,8 +214,7 @@ export async function applyVerifiedSubscriptionSnapshot(input: {
         Math.min(earlier?.getTime() ?? Infinity, terminatedAt.getTime())
       )
       const changed = !earlier || cutoff < earlier
-      if (!changed && duplicate)
-        return { outcome: duplicate.outcome, replayed: true }
+      if (!changed && duplicate) return answer(duplicate.outcome, true)
       if (changed) {
         if (sameSubscription)
           await tx
@@ -210,7 +263,25 @@ export async function applyVerifiedSubscriptionSnapshot(input: {
       }
       return receipt(changed ? "applied" : "unchanged")
     }
-    if (duplicate) return { outcome: duplicate.outcome, replayed: true }
+    const usablePaidUpgrade =
+      paidUpgrade &&
+      !previous?.refundedPeriods.some(
+        (period) =>
+          period.kind === "upgrade" &&
+          period.environment === snapshot.environment &&
+          period.orderId === paidUpgrade.orderId
+      )
+        ? paidUpgrade
+        : undefined
+    const paymentPromotion =
+      sameSubscription &&
+      !previous.terminatedAt &&
+      previous.plan === "basic" &&
+      snapshot.plan === "plus" &&
+      (snapshot.status === "active" ||
+        (snapshot.status === "canceled" && snapshot.cancelAtPeriodEnd)) &&
+      !!usablePaidUpgrade
+    if (duplicate && !paymentPromotion) return answer(duplicate.outcome, true)
     // This subscription is terminal. Only a separately verified replacement
     // binding can establish new paid access; ordinary snapshots never clear it.
     if (sameSubscription && previous.terminatedAt) return receipt("unchanged")
@@ -230,7 +301,8 @@ export async function applyVerifiedSubscriptionSnapshot(input: {
           previous.providerStateHash === legacyHash
         if (previous.providerStateHash !== stateHash && !restrictiveExpansion)
           throw new Error("BILLING_VERSION_CONFLICT")
-        outcome = restrictiveExpansion ? "applied" : "unchanged"
+        outcome =
+          restrictiveExpansion || paymentPromotion ? "applied" : "unchanged"
       }
     }
     if (outcome === "applied") {
@@ -305,12 +377,47 @@ export async function applyVerifiedSubscriptionSnapshot(input: {
           : null,
         updatedAt: new Date(),
       }
+      const unpaidUpgrade =
+        sameSubscription &&
+        previous.plan === "basic" &&
+        snapshot.plan === "plus" &&
+        !usablePaidUpgrade
+      const earlyDowngrade =
+        sameSubscription &&
+        previous.plan === "business" &&
+        snapshot.plan === "starter" &&
+        previous.currentPeriodEnd &&
+        snapshot.currentPeriodStart < previous.currentPeriodEnd
+      if (unpaidUpgrade || earlyDowngrade) {
+        // Preserve the paid contract and its clocks; provider product/status alone
+        // cannot authorize an unpaid upgrade or an early loss of purchased Plus.
+        Object.assign(values, {
+          plan: previous.plan,
+          status: previous.status,
+          paidActivatedAt: previous.paidActivatedAt,
+          currentPeriodStart: previous.currentPeriodStart,
+          currentPeriodEnd: previous.currentPeriodEnd,
+          cancelAtPeriodEnd: previous.cancelAtPeriodEnd,
+          cancellationPeriodEnd: previous.cancellationPeriodEnd,
+          paymentFailedAt: previous.paymentFailedAt,
+          graceExpiresAt: previous.graceExpiresAt,
+        })
+      }
+      const paidUpgradeOrderId =
+        values.plan === "business"
+          ? (usablePaidUpgrade?.orderId ??
+            (sameSubscription ? previous.paidUpgradeOrderId : null))
+          : null
       await tx
         .insert(workspaceEntitlements)
-        .values({ workspaceId: snapshot.workspaceId, ...values })
+        .values({
+          workspaceId: snapshot.workspaceId,
+          ...values,
+          paidUpgradeOrderId,
+        })
         .onConflictDoUpdate({
           target: workspaceEntitlements.workspaceId,
-          set: values,
+          set: { ...values, paidUpgradeOrderId },
         })
       await tx.insert(workspaceSecurityAuditEvents).values({
         workspaceId: snapshot.workspaceId,
@@ -322,9 +429,32 @@ export async function applyVerifiedSubscriptionSnapshot(input: {
           plan: values.plan,
           status: values.status,
           providerStatus: snapshot.status,
+          upgradePaymentPending: unpaidUpgrade,
+          earlyDowngradeDeferred: !!earlyDowngrade,
+          paidUpgradeOrderId,
           cancellationPeriodEnd:
             values.cancellationPeriodEnd?.toISOString() ?? null,
           graceExpiresAt: values.graceExpiresAt?.toISOString() ?? null,
+        },
+        requestId: eventId,
+      })
+    }
+    if (planChange && outcome !== "stale") {
+      const pending =
+        planChange.target === "plus" &&
+        (await currentAccess()).plan !== "business"
+      await tx.insert(workspaceSecurityAuditEvents).values({
+        workspaceId: snapshot.workspaceId,
+        actorUserId: input.actor!.userId,
+        action: "billing.plan_change.confirmed",
+        target: snapshot.subscriptionId,
+        outcome: "succeeded",
+        after: {
+          ...planChange,
+          status: pending ? "payment-pending" : planChange.status,
+          effectiveAt: pending
+            ? null
+            : (planChange.effectiveAt?.toISOString() ?? null),
         },
         requestId: eventId,
       })

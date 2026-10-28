@@ -1,7 +1,9 @@
 import "@tanstack/react-start/server-only"
 import { createPolar } from "@polar-sh/sdk/2026-10"
 import { z } from "zod"
+import { findPaidStarterBasis } from "./polar-paid-upgrade.server"
 import { applyVerifiedPeriodRefund } from "./subscription-refund.server"
+import type { UpgradeOrderClient } from "./polar-paid-upgrade.server"
 import type { EnabledBillingConfig } from "./billing-config.server"
 import type { Polar } from "@polar-sh/sdk/2026-10"
 
@@ -51,15 +53,21 @@ export function verifiedPolarPeriodRefund(
   )
     throw new Error("BILLING_PROVIDER_IDENTITY_MISMATCH")
   const products = Object.entries(config.paidProducts)
-    .flatMap(([, prices]) => Object.entries(prices))
-    .filter(
-      ([currency, id]) => currency === order.currency && id === order.product_id
+    .flatMap(([plan, prices]) =>
+      Object.entries(prices).map(([currency, id]) => ({ plan, currency, id }))
     )
+    .filter(
+      (item) => item.currency === order.currency && item.id === order.product_id
+    )
+  const upgrade =
+    order.billing_reason === "subscription_update" &&
+    products[0]?.plan === "plus"
   if (
     products.length !== 1 ||
-    !["subscription_create", "subscription_cycle"].includes(
-      order.billing_reason
-    )
+    (!upgrade &&
+      !["subscription_create", "subscription_cycle"].includes(
+        order.billing_reason
+      ))
   )
     throw new Error("BILLING_REFUND_SCOPE_REQUIRED")
   const net = cents.parse(order.net_amount),
@@ -85,18 +93,34 @@ export function verifiedPolarPeriodRefund(
         refundedNet + refundedTax >= net + tax))
   )
     throw new Error("BILLING_REFUND_STATUS_INVALID")
-  if (
+  if (!order.items.length) throw new Error("BILLING_REFUND_ALLOCATION_REQUIRED")
+  const start = instant.parse(order.items[0].start_timestamp),
+    end = instant.parse(order.items[0].end_timestamp)
+  if (start >= end) throw new Error("BILLING_REFUND_PERIOD_INVALID")
+  if (upgrade) {
+    if (
+      order.items.some(
+        (item) =>
+          item.proration !== true ||
+          !Number.isSafeInteger(item.amount) ||
+          !Number.isSafeInteger(item.tax_amount) ||
+          instant.parse(item.start_timestamp) !== start ||
+          instant.parse(item.end_timestamp) !== end
+      ) ||
+      order.items.reduce((total, item) => total + item.amount, 0) < net ||
+      order.items.reduce((total, item) => total + item.tax_amount, 0) !== tax
+    )
+      throw new Error("BILLING_REFUND_ALLOCATION_REQUIRED")
+  } else if (
     order.items.length !== 1 ||
-    order.items[0].proration ||
+    order.items[0].proration !== false ||
     cents.parse(order.items[0].amount) < net ||
     cents.parse(order.items[0].tax_amount) !== tax
   )
     throw new Error("BILLING_REFUND_ALLOCATION_REQUIRED")
-  const start = instant.parse(order.items[0].start_timestamp),
-    end = instant.parse(order.items[0].end_timestamp)
-  if (start >= end) throw new Error("BILLING_REFUND_PERIOD_INVALID")
   return {
     kind,
+    scope: upgrade ? ("upgrade" as const) : ("period" as const),
     workspaceId,
     environment: config.environment,
     orderId: z.uuid().parse(orderId),
@@ -111,7 +135,10 @@ export class PolarSubscriptionRefundReconciler {
   constructor(
     private readonly config: EnabledBillingConfig,
     private readonly client: {
-      orders: { get: (id: string) => Promise<ProviderRefundOrder> }
+      orders: {
+        get: (id: string) => Promise<ProviderRefundOrder>
+        list?: UpgradeOrderClient["list"]
+      }
     } = createPolar({
       accessToken: config.accessToken,
       environment: config.environment,
@@ -132,10 +159,38 @@ export class PolarSubscriptionRefundReconciler {
       input.orderId,
       order
     )
-    return this.apply({
+    let starterBasis
+    if (
+      refund.scope === "upgrade" &&
+      refund.kind === "full" &&
+      this.client.orders.list
+    ) {
+      try {
+        starterBasis = await findPaidStarterBasis(
+          { list: this.client.orders.list },
+          {
+            workspaceId: input.workspaceId,
+            subscriptionId: refund.subscriptionId,
+            productId:
+              this.config.paidProducts.starter[
+                z.enum(["usd", "eur"]).parse(order.currency)
+              ],
+            currency: order.currency,
+            upgradeStart: new Date(refund.start),
+            periodEnd: new Date(refund.end),
+          }
+        )
+      } catch {
+        /* Persist restrictive denial before retrying unavailable base proof. */
+      }
+    }
+    const result = await this.apply({
       eventId: input.eventId,
       bodyHash: input.bodyHash,
-      refund,
+      refund: { ...refund, starterBasis },
     })
+    if (refund.scope === "upgrade" && refund.kind === "full" && !starterBasis)
+      throw new Error("BILLING_STARTER_BASE_RECONCILIATION_REQUIRED")
+    return result
   }
 }

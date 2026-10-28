@@ -14,9 +14,14 @@ export type SubscriptionAccessState = {
     start: string
     end: string
     refundedAt: string
+    kind?: "upgrade"
+    starterOrderId?: string | null
+    basePeriodStart?: string
+    basePeriodEnd?: string
   }>
   source?: string
   terminatedAt?: Date | null
+  paidUpgradeOrderId?: string | null
   paidActivatedAt?: Date | null
   paymentFailedAt?: Date | null
   graceExpiresAt?: Date | null
@@ -69,6 +74,33 @@ export function subscriptionAccess(
     (cancellationEnd === null || at >= cancellationEnd)
   )
     return free
+  const upgradeRefunds =
+    state.source === "polar"
+      ? (state.refundedPeriods?.filter(
+          (period) =>
+            period.kind === "upgrade" &&
+            refundMatchesPeriod(state, period) &&
+            (!state.paidUpgradeOrderId ||
+              state.paidUpgradeOrderId === period.orderId)
+        ) ?? [])
+      : []
+  if (upgradeRefunds.length) {
+    const paidBase = upgradeRefunds.some(
+      (period) =>
+        period.starterOrderId &&
+        period.basePeriodStart &&
+        period.basePeriodEnd &&
+        at >= new Date(period.basePeriodStart).getTime() &&
+        at < new Date(period.basePeriodEnd).getTime()
+    )
+    return paidBase
+      ? {
+          plan: "basic" as const,
+          phase: "paid" as const,
+          allowsExistingOverage: true,
+        }
+      : free
+  }
   const scheduledCancellation =
     state.source === "polar" &&
     state.status === "canceled" &&
@@ -116,17 +148,25 @@ export function subscriptionAccess(
 }
 
 /** Refund denial survives status updates; another subscription/period is separate. */
+function refundMatchesPeriod(
+  state: SubscriptionAccessState,
+  period: NonNullable<SubscriptionAccessState["refundedPeriods"]>[number]
+) {
+  return (
+    period.subscriptionId === state.sourceReference &&
+    period.environment === state.providerEnvironment &&
+    validTime(state.currentPeriodStart) !== null &&
+    validTime(state.currentPeriodEnd) !== null &&
+    new Date(period.start).getTime() < state.currentPeriodEnd!.getTime() &&
+    new Date(period.end).getTime() > state.currentPeriodStart!.getTime()
+  )
+}
 export function isRefundedSubscriptionPeriod(state: SubscriptionAccessState) {
   return (
     state.source === "polar" &&
     state.refundedPeriods?.some(
       (period) =>
-        period.subscriptionId === state.sourceReference &&
-        period.environment === state.providerEnvironment &&
-        validTime(state.currentPeriodStart) !== null &&
-        validTime(state.currentPeriodEnd) !== null &&
-        new Date(period.start).getTime() < state.currentPeriodEnd!.getTime() &&
-        new Date(period.end).getTime() > state.currentPeriodStart!.getTime()
+        period.kind !== "upgrade" && refundMatchesPeriod(state, period)
     )
   )
 }

@@ -37,7 +37,7 @@ and tax refund amounts. Partial refunds require partially-refunded status, posit
 cumulative refunds below the charge total, and neither net nor tax refunds above
 their corresponding charged amounts. Contradictory statuses/totals are refused.
 The billed period comes from that order line, never from a subscription whose period
-may have advanced. Missing dates, mixed/prorated/balance-credit allocations, one-time
+may have advanced. Missing dates, unsupported mixed/balance-credit allocations, one-time
 and overage charges return a reconciliation-required response with no access change
 and no successful receipt. These require further allocation work before launch.
 
@@ -110,3 +110,8 @@ provider configuration and actual Polar sandbox/candidate validation. This recor
 completes the confirmed full/partial-refund access slices, not the entire billing issue.
 
 Immediate provider termination is now separately implemented and takes precedence over paid/grace access. Ordinary subscription or partial-refund updates cannot reopen it. See `docs/subscription-termination.md`; the refund checkpoint counts above describe the earlier commits.
+
+
+## Upgrade-only refund follow-up
+
+A full refund of only the prorated Plus-upgrade charge now restores the verified already-paid Starter period. This differs from refunding the full base subscription charge. Partial refunds still keep access unchanged. Migration 0032 and stored paid invoice references prevent stale payment proof from regranting refunded Plus. Missing base evidence removes unproven Plus and retries before restoring Starter; a new verified paid grant remains separate. See `docs/subscription-plan-changes.md` for current checks and limits. Earlier checkpoint counts above are historical.

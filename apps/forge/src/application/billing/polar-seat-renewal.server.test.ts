@@ -118,6 +118,36 @@ describe("renewal-only workspace seat changes", () => {
     }
   )
 
+  it("keeps an approved pending downgrade while changing or clearing renewal seats", async () => {
+    const f = fixture()
+    f.snapshot.product_id = "plus-eur"
+    f.snapshot.amount = 4800
+    f.snapshot.pending_update = { ...pending(8), product_id: "starter-eur" }
+    f.update.mockImplementation((_id, body) => {
+      if (!("seats" in body)) throw new Error("Expected seats")
+      f.snapshot.pending_update = {
+        ...pending(body.seats),
+        product_id: "starter-eur",
+        seats: body.seats === f.snapshot.seats ? null : body.seats,
+      }
+      return Promise.resolve(structuredClone(f.snapshot))
+    })
+    expect((await f.scheduler.schedule(actor)).status).toBe("scheduled")
+    expect(f.snapshot.pending_update).toMatchObject({
+      product_id: "starter-eur",
+      seats: 5,
+    })
+    f.context.mockResolvedValue({
+      workspaceId: actor.workspaceId,
+      subscriptionId,
+      billableMembers: 3,
+    })
+    expect((await f.scheduler.schedule(actor)).status).toBe("cleared")
+    expect(f.snapshot.pending_update).toMatchObject({
+      product_id: "starter-eur",
+      seats: null,
+    })
+  })
   it("retries a confirmed schedule without a second write", async () => {
     const f = fixture()
     await f.scheduler.schedule(actor)

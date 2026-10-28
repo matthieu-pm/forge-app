@@ -7,6 +7,8 @@ import { DATABASE_TARGETS } from "../../../scripts/lib/database-targets"
 import { assertMigrationTarget } from "../../../scripts/lib/serialized-migrations"
 import { PAYMENT_GRACE_MS, subscriptionAccess } from "./subscription-access"
 import type { EnabledBillingConfig } from "./billing-config.server"
+import type { UpgradeOrder } from "./polar-paid-upgrade.server"
+import type { PlanChangeSubscription } from "./polar-plan-change.server"
 import type { ProviderRefundOrder } from "./polar-subscription-refund.server"
 import type * as Store from "./subscription-reconciliation.server"
 import type * as Webhook from "./polar-webhook.server"
@@ -106,10 +108,41 @@ describe.skipIf(!connection)(
         ...patch,
       }
     }
+    function upgradeOrder(
+      id: string,
+      paid: Store.VerifiedSubscriptionSnapshot,
+      orderId: string = randomUUID()
+    ): UpgradeOrder {
+      return {
+        id: orderId,
+        subscription_id: paid.subscriptionId,
+        product_id: config.paidProducts.plus.usd,
+        currency: "usd",
+        customer: { external_id: `forge:workspace:${id}` },
+        status: "paid",
+        paid: true,
+        billing_reason: "subscription_update",
+        net_amount: 60,
+        tax_amount: 0,
+        total_amount: 60,
+        due_amount: 0,
+        refunded_amount: 0,
+        refunded_tax_amount: 0,
+        created_at: now.toISOString(),
+        items: [
+          {
+            proration: true,
+            amount: 60,
+            start_timestamp: now.toISOString(),
+            end_timestamp: paid.currentPeriodEnd.toISOString(),
+          },
+        ],
+      }
+    }
     function refundOrder(
       id: string,
       paid: Store.VerifiedSubscriptionSnapshot,
-      orderId = randomUUID()
+      orderId: string = randomUUID()
     ): ProviderRefundOrder {
       return {
         id: orderId,
@@ -132,6 +165,53 @@ describe.skipIf(!connection)(
             tax_amount: 320,
             proration: false,
             start_timestamp: paid.currentPeriodStart.toISOString(),
+            end_timestamp: paid.currentPeriodEnd.toISOString(),
+          },
+        ],
+      }
+    }
+    function starterBaseOrder(
+      id: string,
+      paid: Store.VerifiedSubscriptionSnapshot,
+      orderId: string = randomUUID()
+    ): UpgradeOrder {
+      return {
+        ...upgradeOrder(id, paid, orderId),
+        product_id: config.paidProducts.starter.usd,
+        billing_reason: "subscription_create",
+        created_at: paid.currentPeriodStart.toISOString(),
+        net_amount: 1000,
+        tax_amount: 0,
+        total_amount: 1000,
+        items: [
+          {
+            amount: 1000,
+            proration: false,
+            start_timestamp: paid.currentPeriodStart.toISOString(),
+            end_timestamp: paid.currentPeriodEnd.toISOString(),
+          },
+        ],
+      }
+    }
+    function refundedUpgradeOrder(
+      id: string,
+      paid: Store.VerifiedSubscriptionSnapshot,
+      orderId: string
+    ): ProviderRefundOrder {
+      return {
+        ...refundOrder(id, paid, orderId),
+        billing_reason: "subscription_update",
+        net_amount: 60,
+        tax_amount: 0,
+        total_amount: 60,
+        refunded_amount: 60,
+        refunded_tax_amount: 0,
+        items: [
+          {
+            amount: 60,
+            tax_amount: 0,
+            proration: true,
+            start_timestamp: now.toISOString(),
             end_timestamp: paid.currentPeriodEnd.toISOString(),
           },
         ],
@@ -211,7 +291,7 @@ describe.skipIf(!connection)(
       })
       const migration = await readFile(
         new URL(
-          "../../../drizzle/0031_subscription_termination.sql",
+          "../../../drizzle/0032_upgrade_refund_access.sql",
           import.meta.url
         ),
         "utf8"
@@ -258,6 +338,710 @@ describe.skipIf(!connection)(
         vi.unstubAllEnvs()
       }
     }, 30_000)
+
+    it("restores the still-paid Starter term on a signed full upgrade-only refund and fences stale paid proof", async () => {
+      const id = await workspace(),
+        paid = snapshot(id, { plan: "starter" }),
+        orderId: string = randomUUID(),
+        base = starterBaseOrder(id, paid)
+      await apply(paid)
+      const proof = {
+        orderId,
+        subscriptionId: paid.subscriptionId,
+        periodStart: paid.currentPeriodStart,
+        periodEnd: paid.currentPeriodEnd,
+        createdAt: now,
+      }
+      await apply({ ...paid, plan: "plus", updatedAt: now, paidUpgrade: proof })
+      expect((await row(id))?.paidUpgradeOrderId).toBe(orderId)
+      for (let i = 0; i < 6; i++) await add(id)
+      const refunds = await import("./polar-subscription-refund.server")
+      const service = new refunds.PolarSubscriptionRefundReconciler(config, {
+        orders: {
+          get: () => Promise.resolve(refundedUpgradeOrder(id, paid, orderId)),
+          list: () =>
+            Promise.resolve({ items: [base], pagination: { max_page: 1 } }),
+        },
+      })
+      const eventId = randomUUID()
+      expect(
+        (
+          await webhook.handlePolarWebhook(
+            signed(id, eventId, "order.refunded", orderId),
+            config,
+            undefined,
+            service
+          )
+        ).status
+      ).toBe(200)
+      expect((await row(id))?.plan).toBe("basic")
+      expect((await row(id))?.paidUpgradeOrderId).toBeNull()
+      expect(subscriptionAccess(await row(id), now).plan).toBe("basic")
+      expect((await row(id))?.paidActivatedAt).toEqual(paid.updatedAt)
+      expect((await row(id))?.currentPeriodEnd).toEqual(paid.currentPeriodEnd)
+      await apply({
+        ...paid,
+        plan: "plus",
+        updatedAt: new Date(now.getTime() + 1),
+        paidUpgrade: proof,
+      })
+      expect(subscriptionAccess(await row(id), now).plan).toBe("basic")
+      expect(await capacity.workspaceAuthMembershipLimit(id)).toBe(
+        Number.MAX_SAFE_INTEGER
+      )
+      await add(id)
+      expect((await row(id))?.refundedPeriods).toHaveLength(1)
+      // A refund racing a previously paid order fetch must also keep the
+      // command response and its confirmation audit pending, not just access.
+      const command = await import("./polar-plan-change.server"),
+        context = await import("./plan-change-context.server")
+      const owner = (
+        await pool.query(
+          "SELECT user_id FROM member WHERE organization_id=$1 LIMIT 1",
+          [id]
+        )
+      ).rows[0].user_id
+      const current: PlanChangeSubscription = {
+        ...providerSubscription(id, paid, {
+          modified_at: new Date(now.getTime() + 1).toISOString(),
+        }),
+        seats: 7,
+        amount: 11200,
+        pause_at_period_end: false,
+        paused_at: null,
+        pending_update: null,
+      }
+      const raced = new command.PolarPlanChanger(
+        config,
+        (actor) => context.readPlanChangeContext(actor, "sandbox"),
+        {
+          subscriptions: {
+            get: () => Promise.resolve(current),
+            update: vi.fn(),
+          },
+          orders: {
+            get: () => Promise.resolve(upgradeOrder(id, paid, orderId)),
+            list: () =>
+              Promise.resolve({
+                items: [upgradeOrder(id, paid, orderId)],
+                pagination: { max_page: 1 },
+              }),
+          },
+        }
+      )
+      const reply = await raced.change(
+        {
+          workspaceId: id,
+          userId: owner,
+          workspaceRole: "owner",
+          scopes: null,
+          authentication: { kind: "session", sessionId: "fixture" },
+        },
+        "plus"
+      )
+      expect(reply.status).toBe("payment-pending")
+      expect(reply.effectiveAt).toBeNull()
+      expect(
+        (
+          await pool.query(
+            "SELECT after FROM workspace_security_audit_events WHERE workspace_id=$1 AND action='billing.plan_change.confirmed' ORDER BY created_at DESC LIMIT 1",
+            [id]
+          )
+        ).rows[0].after.status
+      ).toBe("payment-pending")
+      // Full refund of the separate base charge still ends all paid access.
+      const sink = await import("./subscription-refund.server")
+      await sink.applyVerifiedPeriodRefund({
+        eventId: randomUUID(),
+        bodyHash: "8".repeat(64),
+        refund: {
+          workspaceId: id,
+          environment: "sandbox",
+          subscriptionId: paid.subscriptionId,
+          orderId: base.id,
+          start: paid.currentPeriodStart.toISOString(),
+          end: paid.currentPeriodEnd.toISOString(),
+          refundedAt: now.toISOString(),
+        },
+      })
+      expect(subscriptionAccess(await row(id), now).plan).toBe("free")
+      await expect(add(id)).rejects.toThrow(/five-member/)
+    }, 15_000)
+
+    it("denies Plus while base proof is unavailable, then promotes that same refund receipt to Starter", async () => {
+      const id = await workspace(),
+        paid = snapshot(id, { plan: "starter" }),
+        orderId: string = randomUUID(),
+        base = starterBaseOrder(id, paid)
+      await apply(paid)
+      await apply({
+        ...paid,
+        plan: "plus",
+        updatedAt: now,
+        paidUpgrade: {
+          orderId,
+          subscriptionId: paid.subscriptionId,
+          periodStart: paid.currentPeriodStart,
+          periodEnd: paid.currentPeriodEnd,
+          createdAt: now,
+        },
+      })
+      for (let i = 0; i < 5; i++) await add(id)
+      const refunds = await import("./polar-subscription-refund.server"),
+        bases: Array<UpgradeOrder> = []
+      const service = new refunds.PolarSubscriptionRefundReconciler(config, {
+        orders: {
+          get: () => Promise.resolve(refundedUpgradeOrder(id, paid, orderId)),
+          list: () =>
+            Promise.resolve({ items: bases, pagination: { max_page: 1 } }),
+        },
+      })
+      const eventId = randomUUID()
+      expect(
+        (
+          await webhook.handlePolarWebhook(
+            signed(id, eventId, "order.refunded", orderId),
+            config,
+            undefined,
+            service
+          )
+        ).status
+      ).toBe(503)
+      expect(subscriptionAccess(await row(id), now).plan).toBe("free")
+      await expect(add(id)).rejects.toThrow(/five-member/)
+      bases.push(base)
+      expect(
+        (
+          await webhook.handlePolarWebhook(
+            signed(id, eventId, "order.refunded", orderId),
+            config,
+            undefined,
+            service
+          )
+        ).status
+      ).toBe(200)
+      expect(subscriptionAccess(await row(id), now).plan).toBe("basic")
+      await add(id)
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int AS count FROM billing_event_receipts WHERE event_id=$1",
+            [eventId]
+          )
+        ).rows[0].count
+      ).toBe(1)
+    })
+
+    it("uses a verified base invoice to restore Starter even when the upgrade refund arrives before activation", async () => {
+      const id = await workspace(),
+        paid = snapshot(id),
+        orderId: string = randomUUID(),
+        base = starterBaseOrder(id, paid),
+        sink = await import("./subscription-refund.server")
+      await sink.applyVerifiedPeriodRefund({
+        eventId: randomUUID(),
+        bodyHash: "9".repeat(64),
+        refund: {
+          scope: "upgrade",
+          workspaceId: id,
+          environment: "sandbox",
+          subscriptionId: paid.subscriptionId,
+          orderId,
+          start: now.toISOString(),
+          end: paid.currentPeriodEnd.toISOString(),
+          refundedAt: now.toISOString(),
+          starterBasis: {
+            orderId: base.id,
+            start: paid.currentPeriodStart.toISOString(),
+            end: paid.currentPeriodEnd.toISOString(),
+          },
+        },
+      })
+      await apply({
+        ...paid,
+        status: "past_due",
+        updatedAt: now,
+        pastDueAt: now,
+      })
+      expect((await row(id))?.paidActivatedAt).toBeNull()
+      expect(subscriptionAccess(await row(id), now).plan).toBe("basic")
+      for (let i = 0; i < 6; i++) await add(id)
+    })
+
+    it("retains a genuinely newer paid Plus grant when an old upgrade refund or payment proof is replayed", async () => {
+      const id = await workspace(),
+        paid = snapshot(id, { plan: "starter" }),
+        orderId: string = randomUUID(),
+        nextOrder = randomUUID(),
+        base = starterBaseOrder(id, paid),
+        sink = await import("./subscription-refund.server")
+      await apply(paid)
+      const proof = {
+        orderId,
+        subscriptionId: paid.subscriptionId,
+        periodStart: paid.currentPeriodStart,
+        periodEnd: paid.currentPeriodEnd,
+        createdAt: now,
+      }
+      await apply({ ...paid, plan: "plus", updatedAt: now, paidUpgrade: proof })
+      const refund = {
+        scope: "upgrade" as const,
+        workspaceId: id,
+        environment: "sandbox" as const,
+        subscriptionId: paid.subscriptionId,
+        orderId,
+        start: now.toISOString(),
+        end: paid.currentPeriodEnd.toISOString(),
+        refundedAt: now.toISOString(),
+        starterBasis: {
+          orderId: base.id,
+          start: paid.currentPeriodStart.toISOString(),
+          end: paid.currentPeriodEnd.toISOString(),
+        },
+      }
+      await sink.applyVerifiedPeriodRefund({
+        eventId: randomUUID(),
+        bodyHash: "a".repeat(64),
+        refund,
+      })
+      await apply({
+        ...paid,
+        plan: "plus",
+        updatedAt: new Date(now.getTime() + 1),
+        paidUpgrade: { ...proof, orderId: nextOrder },
+      })
+      await sink.applyVerifiedPeriodRefund({
+        eventId: randomUUID(),
+        bodyHash: "b".repeat(64),
+        refund,
+      })
+      await apply({
+        ...paid,
+        plan: "plus",
+        updatedAt: new Date(now.getTime() + 2),
+        paidUpgrade: proof,
+      })
+      expect(subscriptionAccess(await row(id), now).plan).toBe("business")
+      expect((await row(id))?.paidUpgradeOrderId).toBe(nextOrder)
+    })
+
+    it("rolls back upgrade-refund fallback, history and receipt if its audit fails", async () => {
+      const id = await workspace(),
+        paid = snapshot(id, { plan: "starter" }),
+        orderId: string = randomUUID(),
+        base = starterBaseOrder(id, paid),
+        sink = await import("./subscription-refund.server")
+      await apply(paid)
+      await apply({
+        ...paid,
+        plan: "plus",
+        updatedAt: now,
+        paidUpgrade: {
+          orderId,
+          subscriptionId: paid.subscriptionId,
+          periodStart: paid.currentPeriodStart,
+          periodEnd: paid.currentPeriodEnd,
+          createdAt: now,
+        },
+      })
+      const before = await row(id),
+        input = {
+          eventId: randomUUID(),
+          bodyHash: "c".repeat(64),
+          refund: {
+            scope: "upgrade" as const,
+            workspaceId: id,
+            environment: "sandbox" as const,
+            subscriptionId: paid.subscriptionId,
+            orderId,
+            start: now.toISOString(),
+            end: paid.currentPeriodEnd.toISOString(),
+            refundedAt: now.toISOString(),
+            starterBasis: {
+              orderId: base.id,
+              start: paid.currentPeriodStart.toISOString(),
+              end: paid.currentPeriodEnd.toISOString(),
+            },
+          },
+        }
+      const constraint = `upgrade_refund_fault_${randomUUID().replaceAll("-", "")}`
+      await pool.query(
+        `ALTER TABLE workspace_security_audit_events ADD CONSTRAINT ${constraint} CHECK (action <> 'billing.upgrade_charge.refunded') NOT VALID`
+      )
+      try {
+        await expect(sink.applyVerifiedPeriodRefund(input)).rejects.toThrow()
+        expect(await row(id)).toEqual(before)
+      } finally {
+        await pool.query(
+          `ALTER TABLE workspace_security_audit_events DROP CONSTRAINT ${constraint}`
+        )
+      }
+      expect((await sink.applyVerifiedPeriodRefund(input)).replayed).toBe(false)
+      expect(subscriptionAccess(await row(id), now).plan).toBe("basic")
+    })
+
+    it("holds Starter through unpaid upgrade states and grants Plus from a signed paid order at the same provider version", async () => {
+      const id = await workspace(),
+        starter = snapshot(id, { plan: "starter" })
+      await apply(starter)
+      const before = await row(id),
+        eventId = randomUUID(),
+        payment = upgradeOrder(id, starter)
+      let current = providerSubscription(id, starter, {
+        modified_at: now.toISOString(),
+      })
+      const orders: Array<typeof payment> = []
+      const service = new provider.PolarSubscriptionReconciler(config, {
+        subscriptions: { get: () => Promise.resolve(current) },
+        orders: {
+          get: () => Promise.resolve(payment),
+          list: () =>
+            Promise.resolve({ items: orders, pagination: { max_page: 1 } }),
+        },
+      })
+      expect(
+        (await webhook.handlePolarWebhook(signed(id, eventId), config, service))
+          .status
+      ).toBe(200)
+      const held = await row(id)
+      expect(held?.plan).toBe("basic")
+      expect(held?.status).toBe(before?.status)
+      expect(held?.paidActivatedAt).toEqual(before?.paidActivatedAt)
+      expect(held?.currentPeriodStart).toEqual(before?.currentPeriodStart)
+      expect(held?.currentPeriodEnd).toEqual(before?.currentPeriodEnd)
+      expect(subscriptionAccess(held, now).plan).toBe("basic")
+      current = {
+        ...current,
+        status: "past_due",
+        past_due_at: now.toISOString(),
+        modified_at: new Date(now.getTime() + 1).toISOString(),
+      }
+      await service.reconcile({
+        workspaceId: id,
+        subscriptionId: starter.subscriptionId,
+        eventId: randomUUID(),
+        bodyHash: "4".repeat(64),
+      })
+      expect((await row(id))?.graceExpiresAt).toBeNull()
+      expect(subscriptionAccess(await row(id), now).plan).toBe("basic")
+      current = {
+        ...current,
+        status: "active",
+        past_due_at: null,
+        modified_at: new Date(now.getTime() + 2).toISOString(),
+      }
+      const activeEvent = randomUUID()
+      await webhook.handlePolarWebhook(signed(id, activeEvent), config, service)
+      orders.push(payment)
+      current = {
+        ...current,
+        status: "canceled",
+        cancel_at_period_end: true,
+        modified_at: new Date(now.getTime() + 3).toISOString(),
+      }
+      expect(
+        (
+          await webhook.handlePolarWebhook(
+            signed(id, randomUUID(), "order.paid", payment.id),
+            config,
+            service
+          )
+        ).status
+      ).toBe(200)
+      expect(subscriptionAccess(await row(id), now).plan).toBe("business")
+      expect((await row(id))?.paidActivatedAt).toEqual(before?.paidActivatedAt)
+      expect((await row(id))?.currentPeriodEnd).toEqual(
+        before?.currentPeriodEnd
+      )
+      expect((await row(id))?.graceExpiresAt).toBeNull()
+    })
+
+    it("promotes a cached unpaid-upgrade receipt when a re-fetch proves payment without another subscription event", async () => {
+      const id = await workspace(),
+        starter = snapshot(id, { plan: "starter" }),
+        payment = upgradeOrder(id, starter)
+      await apply(starter)
+      const orders: Array<typeof payment> = [],
+        eventId = randomUUID()
+      const service = new provider.PolarSubscriptionReconciler(config, {
+        subscriptions: {
+          get: () =>
+            Promise.resolve(
+              providerSubscription(id, starter, {
+                modified_at: now.toISOString(),
+              })
+            ),
+        },
+        orders: {
+          get: () => Promise.resolve(payment),
+          list: () =>
+            Promise.resolve({ items: orders, pagination: { max_page: 1 } }),
+        },
+      })
+      await webhook.handlePolarWebhook(signed(id, eventId), config, service)
+      expect((await row(id))?.plan).toBe("basic")
+      orders.push(payment)
+      for (let retry = 0; retry < 2; retry++)
+        expect(
+          (
+            await webhook.handlePolarWebhook(
+              signed(id, eventId),
+              config,
+              service
+            )
+          ).status
+        ).toBe(200)
+      expect((await row(id))?.plan).toBe("business")
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int AS count FROM billing_event_receipts WHERE event_id=$1",
+            [eventId]
+          )
+        ).rows[0].count
+      ).toBe(1)
+    })
+
+    it("does not shorten prior grace or extend a paid period for an unpaid upgrade", async () => {
+      const id = await workspace(),
+        starter = snapshot(id, { plan: "starter" })
+      await apply(starter)
+      await apply({
+        ...starter,
+        status: "past_due",
+        pastDueAt: failed,
+        updatedAt: failed,
+      })
+      const before = await row(id)
+      await apply({
+        ...starter,
+        plan: "plus",
+        updatedAt: now,
+        status: "past_due",
+        pastDueAt: now,
+      })
+      expect((await row(id))?.plan).toBe("basic")
+      expect((await row(id))?.graceExpiresAt).toEqual(before?.graceExpiresAt)
+      expect((await row(id))?.paymentFailedAt).toEqual(before?.paymentFailedAt)
+      expect(
+        subscriptionAccess(await row(id), before!.graceExpiresAt!).plan
+      ).toBe("free")
+    })
+
+    it("defers an early downgrade, then applies Starter only at a new authoritative period", async () => {
+      const id = await workspace(),
+        paid = snapshot(id)
+      await apply(paid)
+      await apply({ ...paid, plan: "starter", updatedAt: now })
+      expect(subscriptionAccess(await row(id), now).plan).toBe("business")
+      const next = {
+        ...paid,
+        plan: "starter" as const,
+        updatedAt: new Date(now.getTime() + 1),
+        currentPeriodStart: paid.currentPeriodEnd,
+        currentPeriodEnd: new Date(
+          paid.currentPeriodEnd.getTime() + 30 * 86400000
+        ),
+      }
+      await apply(next)
+      expect(
+        subscriptionAccess(await row(id), next.currentPeriodStart).plan
+      ).toBe("basic")
+    })
+
+    it("rejects invalid order identity and ignores stale paid-upgrade proof", async () => {
+      const id = await workspace(),
+        starter = snapshot(id, { plan: "starter" }),
+        payment = upgradeOrder(id, starter)
+      await apply(starter)
+      const service = new provider.PolarSubscriptionReconciler(config, {
+        subscriptions: {
+          get: () => Promise.resolve(providerSubscription(id, starter)),
+        },
+        orders: {
+          get: () =>
+            Promise.resolve({
+              ...payment,
+              customer: { external_id: "forge:workspace:foreign" },
+            }),
+          list: () =>
+            Promise.resolve({ items: [payment], pagination: { max_page: 1 } }),
+        },
+      })
+      expect(
+        (
+          await webhook.handlePolarWebhook(
+            signed(id, randomUUID(), "order.paid", payment.id),
+            config,
+            service
+          )
+        ).status
+      ).toBe(503)
+      await apply({ ...starter, updatedAt: now })
+      expect(
+        (
+          await apply({
+            ...starter,
+            plan: "plus",
+            paidUpgrade: {
+              orderId: payment.id,
+              subscriptionId: starter.subscriptionId,
+              periodStart: starter.currentPeriodStart,
+              periodEnd: starter.currentPeriodEnd,
+              createdAt: now,
+            },
+          })
+        ).outcome
+      ).toBe("stale")
+      expect((await row(id))?.plan).toBe("basic")
+    })
+
+    it("recovers plan-command audit failure without invoicing twice, with live owner and member resolution", async () => {
+      const id = await workspace(),
+        starter = snapshot(id, { plan: "starter" }),
+        owner = await add(id)
+      await apply(starter)
+      for (let i = 0; i < 4; i++) await add(id)
+      const command = await import("./polar-plan-change.server"),
+        context = await import("./plan-change-context.server"),
+        payment = upgradeOrder(id, starter)
+      const actor: Actor = {
+        workspaceId: id,
+        userId: owner,
+        workspaceRole: "owner",
+        scopes: null,
+        authentication: { kind: "session", sessionId: "fixture" },
+      }
+      const current: PlanChangeSubscription = {
+        ...providerSubscription(id, starter, {
+          product_id: config.paidProducts.starter.usd,
+        }),
+        seats: 3,
+        amount: 3000,
+        paused_at: null,
+        pause_at_period_end: false,
+        pending_update: null,
+      }
+      const update = vi
+        .fn<
+          NonNullable<
+            ConstructorParameters<typeof command.PolarPlanChanger>[2]
+          >["subscriptions"]["update"]
+        >()
+        .mockImplementation((_id, body) => {
+          if ("product_id" in body) {
+            current.product_id = body.product_id!
+            current.amount = 4800
+            current.pending_update = null
+          }
+          if ("seats" in body)
+            current.pending_update = {
+              id: randomUUID(),
+              created_at: now.toISOString(),
+              modified_at: null,
+              applies_at: starter.currentPeriodEnd.toISOString(),
+              product_id: null,
+              seats: body.seats,
+              units: null,
+            }
+          current.modified_at = now.toISOString()
+          return Promise.resolve(structuredClone(current))
+        })
+      const service = new command.PolarPlanChanger(
+        config,
+        (a) => context.readPlanChangeContext(a, "sandbox"),
+        {
+          subscriptions: {
+            get: () => Promise.resolve(structuredClone(current)),
+            update,
+          },
+          orders: {
+            get: () => Promise.resolve(payment),
+            list: () =>
+              Promise.resolve({
+                items: [payment],
+                pagination: { max_page: 1 },
+              }),
+          },
+        }
+      )
+      const constraint = `plan_fault_${randomUUID().replaceAll("-", "")}`
+      await pool.query(
+        `ALTER TABLE workspace_security_audit_events ADD CONSTRAINT ${constraint} CHECK (action <> 'billing.plan_change.confirmed') NOT VALID`
+      )
+      try {
+        await expect(service.change(actor, "plus")).rejects.toThrow()
+        expect((await row(id))?.plan).toBe("basic")
+      } finally {
+        await pool.query(
+          `ALTER TABLE workspace_security_audit_events DROP CONSTRAINT ${constraint}`
+        )
+      }
+      expect((await service.change(actor, "plus")).status).toBe("unchanged")
+      expect((await row(id))?.plan).toBe("business")
+      expect(current.pending_update?.seats).toBe(5)
+      expect(
+        update.mock.calls.filter((call) => "product_id" in call[1])
+      ).toHaveLength(1)
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int AS count FROM workspace_security_audit_events WHERE workspace_id=$1 AND action='billing.plan_change.confirmed'",
+            [id]
+          )
+        ).rows[0].count
+      ).toBe(1)
+    })
+
+    it("rechecks live membership after the provider read before a plan charge", async () => {
+      const id = await workspace(),
+        starter = snapshot(id, { plan: "starter" }),
+        owner = await add(id)
+      await apply(starter)
+      const command = await import("./polar-plan-change.server"),
+        context = await import("./plan-change-context.server"),
+        update = vi.fn()
+      const current: PlanChangeSubscription = {
+        ...providerSubscription(id, starter, {
+          product_id: config.paidProducts.starter.usd,
+        }),
+        seats: 1,
+        amount: 1000,
+        paused_at: null,
+        pause_at_period_end: false,
+        pending_update: null,
+      }
+      const service = new command.PolarPlanChanger(
+        config,
+        (a) => context.readPlanChangeContext(a, "sandbox"),
+        {
+          subscriptions: {
+            get: async () => {
+              await pool.query(
+                "UPDATE member SET role='member' WHERE organization_id=$1 AND user_id=$2",
+                [id, owner]
+              )
+              return current
+            },
+            update,
+          },
+          orders: { get: vi.fn(), list: vi.fn() },
+        }
+      )
+      await expect(
+        service.change(
+          {
+            workspaceId: id,
+            userId: owner,
+            workspaceRole: "owner",
+            scopes: null,
+            authentication: { kind: "session", sessionId: "fixture" },
+          },
+          "plus"
+        )
+      ).rejects.toThrow("REVOKED")
+      expect(update).not.toHaveBeenCalled()
+    })
 
     it.each(["active", "past_due", "canceled"] as const)(
       "immediately terminates signed %s access while retaining its prior clocks and members",
@@ -479,7 +1263,7 @@ describe.skipIf(!connection)(
       await apply(paid)
       for (let i = 0; i < 6; i++) await add(id)
       const refunds = await import("./polar-subscription-refund.server")
-      const orderId = randomUUID(),
+      const orderId: string = randomUUID(),
         eventId = randomUUID()
       const order = refundOrder(id, paid, orderId)
       const service = new refunds.PolarSubscriptionRefundReconciler(config, {

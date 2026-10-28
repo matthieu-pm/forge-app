@@ -197,18 +197,36 @@ export const workspaceEntitlements = pgTable(
     providerEnvironment: text("provider_environment"),
     providerUpdatedAt: timestamp("provider_updated_at", { withTimezone: true }),
     providerStateHash: text("provider_state_hash"),
+    paidUpgradeOrderId: uuid("paid_upgrade_order_id"),
     terminatedAt: timestamp("terminated_at", { withTimezone: true }),
     paidActivatedAt: timestamp("paid_activated_at", { withTimezone: true }),
     paymentFailedAt: timestamp("payment_failed_at", { withTimezone: true }),
     graceExpiresAt: timestamp("grace_expires_at", { withTimezone: true }),
-    currentPeriodStart: timestamp("current_period_start", { withTimezone: true }),
+    currentPeriodStart: timestamp("current_period_start", {
+      withTimezone: true,
+    }),
     currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
     cancelAtPeriodEnd: boolean("cancel_at_period_end").default(false).notNull(),
-    cancellationPeriodEnd: timestamp("cancellation_period_end", { withTimezone: true }),
-    refundedPeriods: jsonb("refunded_periods").$type<Array<{
-      orderId: string; subscriptionId: string; environment: "sandbox" | "production";
-      start: string; end: string; refundedAt: string;
-    }>>().default([]).notNull(),
+    cancellationPeriodEnd: timestamp("cancellation_period_end", {
+      withTimezone: true,
+    }),
+    refundedPeriods: jsonb("refunded_periods")
+      .$type<
+        Array<{
+          orderId: string
+          subscriptionId: string
+          environment: "sandbox" | "production"
+          start: string
+          end: string
+          refundedAt: string
+          kind?: "upgrade"
+          starterOrderId?: string | null
+          basePeriodStart?: string
+          basePeriodEnd?: string
+        }>
+      >()
+      .default([])
+      .notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -226,7 +244,9 @@ export const workspaceEntitlements = pgTable(
       "workspace_entitlements_provider_identity_check",
       sql`${table.source} <> 'polar' OR (${table.providerEnvironment} IS NOT NULL AND ${table.providerEnvironment} IN ('sandbox','production') AND ${table.sourceReference} IS NOT NULL AND ${table.providerUpdatedAt} IS NOT NULL AND isfinite(${table.providerUpdatedAt}) AND ${table.providerStateHash} IS NOT NULL AND ${table.providerStateHash} ~ '^[a-f0-9]{64}$')`
     ),
-    providerSubscriptionUnique: uniqueIndex("workspace_entitlements_provider_subscription_unique")
+    providerSubscriptionUnique: uniqueIndex(
+      "workspace_entitlements_provider_subscription_unique"
+    )
       .on(table.providerEnvironment, table.sourceReference)
       .where(sql`${table.source} = 'polar'`),
     periodCheck: check(
@@ -237,8 +257,18 @@ export const workspaceEntitlements = pgTable(
       "workspace_entitlements_grace_check",
       sql`(${table.paymentFailedAt} IS NULL AND ${table.graceExpiresAt} IS NULL) OR (${table.source} = 'polar' AND ${table.status} = 'past_due' AND ${table.paymentFailedAt} IS NOT NULL AND ${table.graceExpiresAt} IS NOT NULL AND ${table.paidActivatedAt} IS NOT NULL AND isfinite(${table.paidActivatedAt}) AND isfinite(${table.paymentFailedAt}) AND ${table.paidActivatedAt} < ${table.paymentFailedAt} AND ${table.graceExpiresAt} = ${table.paymentFailedAt} + interval '168 hours')`
     ),
-    terminationCheck: check("workspace_entitlements_termination_check", sql`${table.terminatedAt} IS NULL OR (${table.source} = 'polar' AND isfinite(${table.terminatedAt}))`),
-    refundHistoryCheck: check("workspace_entitlements_refund_history_check", sql`jsonb_typeof(${table.refundedPeriods}) = 'array'`),
+    paidUpgradeCheck: check(
+      "workspace_entitlements_paid_upgrade_check",
+      sql`${table.paidUpgradeOrderId} IS NULL OR ${table.source} = 'polar'`
+    ),
+    terminationCheck: check(
+      "workspace_entitlements_termination_check",
+      sql`${table.terminatedAt} IS NULL OR (${table.source} = 'polar' AND isfinite(${table.terminatedAt}))`
+    ),
+    refundHistoryCheck: check(
+      "workspace_entitlements_refund_history_check",
+      sql`jsonb_typeof(${table.refundedPeriods}) = 'array'`
+    ),
     cancellationCheck: check(
       "workspace_entitlements_cancellation_check",
       sql`(NOT ${table.cancelAtPeriodEnd} AND ${table.cancellationPeriodEnd} IS NULL) OR (${table.source} = 'polar' AND ${table.cancelAtPeriodEnd} AND ${table.cancellationPeriodEnd} IS NOT NULL AND isfinite(${table.cancellationPeriodEnd}) AND ${table.currentPeriodStart} IS NOT NULL AND ${table.currentPeriodEnd} IS NOT NULL AND ${table.currentPeriodStart} < ${table.cancellationPeriodEnd} AND ${table.cancellationPeriodEnd} <= ${table.currentPeriodEnd})`
@@ -246,21 +276,40 @@ export const workspaceEntitlements = pgTable(
   })
 )
 
-export const billingEventReceipts = pgTable("billing_event_receipts", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  workspaceId: text("workspace_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
-  environment: text("environment").notNull(),
-  eventId: text("event_id").notNull(),
-  bodyHash: text("body_hash").notNull(),
-  subscriptionId: text("subscription_id").notNull(),
-  outcome: text("outcome").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-}, (table) => ({
-  environmentEventUnique: unique("billing_event_receipts_environment_event_unique").on(table.environment, table.eventId),
-  environmentCheck: check("billing_event_receipts_environment_check", sql`${table.environment} IN ('sandbox','production')`),
-  hashCheck: check("billing_event_receipts_hash_check", sql`${table.bodyHash} ~ '^[a-f0-9]{64}$'`),
-  outcomeCheck: check("billing_event_receipts_outcome_check", sql`${table.outcome} IN ('applied','stale','unchanged')`),
-}))
+export const billingEventReceipts = pgTable(
+  "billing_event_receipts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    environment: text("environment").notNull(),
+    eventId: text("event_id").notNull(),
+    bodyHash: text("body_hash").notNull(),
+    subscriptionId: text("subscription_id").notNull(),
+    outcome: text("outcome").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    environmentEventUnique: unique(
+      "billing_event_receipts_environment_event_unique"
+    ).on(table.environment, table.eventId),
+    environmentCheck: check(
+      "billing_event_receipts_environment_check",
+      sql`${table.environment} IN ('sandbox','production')`
+    ),
+    hashCheck: check(
+      "billing_event_receipts_hash_check",
+      sql`${table.bodyHash} ~ '^[a-f0-9]{64}$'`
+    ),
+    outcomeCheck: check(
+      "billing_event_receipts_outcome_check",
+      sql`${table.outcome} IN ('applied','stale','unchanged')`
+    ),
+  })
+)
 
 export const workspaceSecurityAuditEvents = pgTable(
   "workspace_security_audit_events",
@@ -1347,8 +1396,7 @@ export const teamTemplates = pgTable(
     workspaceId: text("workspace_id")
       .notNull()
       .references(() => organizations.id, { onDelete: "cascade" }),
-    teamId: uuid("team_id")
-      .references(() => teams.id, { onDelete: "cascade" }),
+    teamId: uuid("team_id").references(() => teams.id, { onDelete: "cascade" }),
     payload: jsonb("payload").$type<TemplateDraft>().notNull(),
     createdByUserId: text("created_by_user_id")
       .notNull()
@@ -1418,19 +1466,37 @@ export const teamRecurringIssues = pgTable(
   })
 )
 
-export const workspaceEmojis = pgTable("workspace_emojis", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  workspaceId: text("workspace_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  image: text("image").notNull(),
-  createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  deletedAt: timestamp("deleted_at", { withTimezone: true }),
-}, (table) => [
-  uniqueIndex("workspace_emojis_active_name_unique").on(table.workspaceId, table.name).where(sql`${table.deletedAt} is null`),
-  check("workspace_emojis_name_check", sql`${table.name} ~ '^[a-z0-9][a-z0-9_-]{0,63}$'`),
-  check("workspace_emojis_image_size_check", sql`length(${table.image}) <= 350000`),
-])
+export const workspaceEmojis = pgTable(
+  "workspace_emojis",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    image: text("image").notNull(),
+    createdBy: text("created_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex("workspace_emojis_active_name_unique")
+      .on(table.workspaceId, table.name)
+      .where(sql`${table.deletedAt} is null`),
+    check(
+      "workspace_emojis_name_check",
+      sql`${table.name} ~ '^[a-z0-9][a-z0-9_-]{0,63}$'`
+    ),
+    check(
+      "workspace_emojis_image_size_check",
+      sql`length(${table.image}) <= 350000`
+    ),
+  ]
+)
 
 // Meeting credentials stay on the server; call content is scoped through its team.
 export const callSettings = pgTable("call_settings", {

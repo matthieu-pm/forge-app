@@ -1,7 +1,9 @@
 import "@tanstack/react-start/server-only"
 import { createPolar } from "@polar-sh/sdk/2026-10"
 import { z } from "zod"
+import { findPaidUpgradeOrder } from "./polar-paid-upgrade.server"
 import { applyVerifiedSubscriptionSnapshot } from "./subscription-reconciliation.server"
+import type { UpgradeOrderClient } from "./polar-paid-upgrade.server"
 import type { EnabledBillingConfig } from "./billing-config.server"
 import type { VerifiedSubscriptionSnapshot } from "./subscription-reconciliation.server"
 import type { Polar } from "@polar-sh/sdk/2026-10"
@@ -103,6 +105,7 @@ export class PolarSubscriptionReconciler {
     private readonly config: EnabledBillingConfig,
     private readonly client: {
       subscriptions: { get: (id: string) => Promise<ProviderSubscription> }
+      orders?: UpgradeOrderClient
     } = createPolar({
       accessToken: config.accessToken,
       environment: config.environment,
@@ -126,10 +129,45 @@ export class PolarSubscriptionReconciler {
       input.subscriptionId,
       subscription
     )
+    if (
+      snapshot.plan === "plus" &&
+      (snapshot.status === "active" ||
+        (snapshot.status === "canceled" && snapshot.cancelAtPeriodEnd)) &&
+      !snapshot.terminatedAt &&
+      this.client.orders
+    ) {
+      snapshot.paidUpgrade = await findPaidUpgradeOrder(this.client.orders, {
+        workspaceId: input.workspaceId,
+        subscriptionId: input.subscriptionId,
+        productId: subscription.product_id,
+        currency: subscription.currency,
+        periodStart: snapshot.currentPeriodStart,
+        periodEnd: snapshot.currentPeriodEnd,
+      })
+    }
     return this.apply({
       eventId: input.eventId,
       bodyHash: input.bodyHash,
       snapshot,
+    })
+  }
+  async reconcileOrder(input: {
+    workspaceId: string
+    orderId: string
+    eventId: string
+    bodyHash: string
+  }) {
+    if (!this.client.orders)
+      throw new Error("BILLING_ORDER_RECONCILIATION_REQUIRED")
+    const order = await this.client.orders.get(z.uuid().parse(input.orderId))
+    if (
+      order.id !== input.orderId ||
+      order.customer.external_id !== `forge:workspace:${input.workspaceId}`
+    )
+      throw new Error("BILLING_PROVIDER_IDENTITY_MISMATCH")
+    return this.reconcile({
+      ...input,
+      subscriptionId: z.uuid().parse(order.subscription_id),
     })
   }
 }

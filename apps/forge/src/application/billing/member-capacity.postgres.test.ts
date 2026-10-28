@@ -235,6 +235,13 @@ describe.skipIf(!testUrl)(
         ),
         "utf8"
       )
+      const upgradeRefundMigration = await readFile(
+        new URL(
+          "../../../drizzle/0032_upgrade_refund_access.sql",
+          import.meta.url
+        ),
+        "utf8"
+      )
       if (installed) {
         // Reuse only an empty, explicitly selected test branch with exactly the
         // checked-in trigger bodies. Do not drop/reset any database objects.
@@ -245,7 +252,8 @@ describe.skipIf(!testUrl)(
           graceMigration +
           cancellationMigration +
           refundMigration +
-          terminationMigration
+          terminationMigration +
+          upgradeRefundMigration
         ).matchAll(
           /CREATE (?:OR REPLACE )?FUNCTION public\.(\w+)[\s\S]*?AS \$\$([\s\S]*?)\$\$;/g
         ))
@@ -294,6 +302,7 @@ describe.skipIf(!testUrl)(
             cancellationMigration,
             refundMigration,
             terminationMigration,
+            upgradeRefundMigration,
           ]) {
             for (const statement of extra.split("--> statement-breakpoint"))
               if (statement.trim()) await client.query(statement)
@@ -741,6 +750,65 @@ describe.skipIf(!testUrl)(
           ])
         ).rows[0].status
       ).toBe("pending")
+    }, 30_000)
+
+    it("retains existing sessions and restores paid Starter admission after upgrade-refund base proof arrives", async () => {
+      const w = await workspace(6, true),
+        subscriptionId = randomUUID(),
+        orderId = randomUUID(),
+        baseOrder = randomUUID(),
+        start = new Date(Date.now() - 86400000),
+        end = new Date(Date.now() + 30 * 86400000),
+        at = new Date()
+      await pool.query(
+        `UPDATE workspace_entitlements SET plan='business',source='polar',source_reference=$2,provider_environment='sandbox',provider_updated_at=now(),provider_state_hash=$3,paid_activated_at=$4,current_period_start=$4,current_period_end=$5,paid_upgrade_order_id=$6 WHERE workspace_id=$1`,
+        [w.id, subscriptionId, "a".repeat(64), start, end, orderId]
+      )
+      const cookie = await login(w.members[5]),
+        next = await user(),
+        pending = await invitation(w.id, next, w.members[0])
+      const { applyVerifiedPeriodRefund } =
+        await import("./subscription-refund.server")
+      const eventId = randomUUID(),
+        refund = {
+          scope: "upgrade" as const,
+          workspaceId: w.id,
+          environment: "sandbox" as const,
+          subscriptionId,
+          orderId,
+          start: at.toISOString(),
+          end: end.toISOString(),
+          refundedAt: at.toISOString(),
+        }
+      await applyVerifiedPeriodRefund({
+        eventId,
+        bodyHash: "d".repeat(64),
+        refund,
+      })
+      expect((await accept(pending, await login(next))).ok).toBe(false)
+      expect(await count(w.id)).toEqual({ actual: 6, tracked: 6 })
+      expect(
+        (
+          await app.auth.api.getFullOrganization({
+            headers: new Headers({ cookie }),
+            query: { organizationId: w.id },
+          })
+        )?.id
+      ).toBe(w.id)
+      await applyVerifiedPeriodRefund({
+        eventId,
+        bodyHash: "d".repeat(64),
+        refund: {
+          ...refund,
+          starterBasis: {
+            orderId: baseOrder,
+            start: start.toISOString(),
+            end: end.toISOString(),
+          },
+        },
+      })
+      expect((await accept(pending, await login(next))).ok).toBe(true)
+      expect(await count(w.id)).toEqual({ actual: 7, tracked: 7 })
     }, 30_000)
 
     it("covers invite-link/domain joins and returns an actionable capacity error", async () => {

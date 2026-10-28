@@ -225,6 +225,13 @@
       "when": 1793223957729,
       "tag": "0031_subscription_termination",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1793226201911,
+      "tag": "0032_upgrade_refund_access",
+      "breakpoints": true
     }
   ]
 }

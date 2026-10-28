@@ -10,6 +10,7 @@ const MAX_BODY_BYTES = 1_048_576
 const identitySchema = z.object({
   type: z.enum([
     "order.refunded",
+    "order.paid",
     "subscription.active",
     "subscription.revoked",
     "subscription.past_due",
@@ -33,7 +34,8 @@ function response(status: number, code: string) {
 export async function handlePolarWebhook(
   request: Request,
   config: BillingConfig,
-  reconciler?: Pick<PolarSubscriptionReconciler, "reconcile">,
+  reconciler?: Pick<PolarSubscriptionReconciler, "reconcile"> &
+    Partial<Pick<PolarSubscriptionReconciler, "reconcileOrder">>,
   refunds?: Pick<PolarSubscriptionRefundReconciler, "reconcile">
 ) {
   if (!config.enabled) return response(404, "NOT_FOUND")
@@ -93,6 +95,14 @@ export async function handlePolarWebhook(
       await (
         refunds ?? new PolarSubscriptionRefundReconciler(config)
       ).reconcile({
+        ...identity,
+        orderId: parsed.data.data.id,
+      })
+    } else if (parsed.data.type === "order.paid") {
+      const service = reconciler ?? new PolarSubscriptionReconciler(config)
+      if (!service.reconcileOrder)
+        throw new Error("BILLING_ORDER_RECONCILIATION_REQUIRED")
+      await service.reconcileOrder({
         ...identity,
         orderId: parsed.data.data.id,
       })
