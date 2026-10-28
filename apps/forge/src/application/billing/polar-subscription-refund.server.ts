@@ -3,6 +3,9 @@ import { createPolar } from "@polar-sh/sdk/2026-10"
 import { z } from "zod"
 import { findPaidStarterBasis } from "./polar-paid-upgrade.server"
 import { applyVerifiedPeriodRefund } from "./subscription-refund.server"
+import { PolarUpgradeRefundRenewal } from "./polar-upgrade-refund-renewal.server"
+import type { RefundRenewalClient } from "./polar-upgrade-refund-renewal.server"
+import type { RefundRenewalIdentity } from "./upgrade-refund-renewal-context.server"
 import type { UpgradeOrderClient } from "./polar-paid-upgrade.server"
 import type { EnabledBillingConfig } from "./billing-config.server"
 import type { Polar } from "@polar-sh/sdk/2026-10"
@@ -135,6 +138,7 @@ export class PolarSubscriptionRefundReconciler {
   constructor(
     private readonly config: EnabledBillingConfig,
     private readonly client: {
+      subscriptions?: RefundRenewalClient
       orders: {
         get: (id: string) => Promise<ProviderRefundOrder>
         list?: UpgradeOrderClient["list"]
@@ -144,7 +148,10 @@ export class PolarSubscriptionRefundReconciler {
       environment: config.environment,
       timeout: 15,
     }),
-    private readonly apply: typeof applyVerifiedPeriodRefund = applyVerifiedPeriodRefund
+    private readonly apply: typeof applyVerifiedPeriodRefund = applyVerifiedPeriodRefund,
+    private readonly renew?: (
+      identity: RefundRenewalIdentity
+    ) => Promise<unknown>
   ) {}
   async reconcile(input: {
     workspaceId: string
@@ -189,6 +196,23 @@ export class PolarSubscriptionRefundReconciler {
       bodyHash: input.bodyHash,
       refund: { ...refund, starterBasis },
     })
+    if (refund.scope === "upgrade" && refund.kind === "full") {
+      const identity = {
+        workspaceId: input.workspaceId,
+        environment: this.config.environment,
+        subscriptionId: refund.subscriptionId,
+        orderId: refund.orderId,
+      }
+      if (this.renew) await this.renew(identity)
+      else {
+        if (!this.client.subscriptions)
+          throw new Error("BILLING_REFUND_RENEWAL_CLIENT_REQUIRED")
+        await new PolarUpgradeRefundRenewal(
+          this.config,
+          this.client.subscriptions
+        ).reconcile(identity)
+      }
+    }
     if (refund.scope === "upgrade" && refund.kind === "full" && !starterBasis)
       throw new Error("BILLING_STARTER_BASE_RECONCILIATION_REQUIRED")
     return result

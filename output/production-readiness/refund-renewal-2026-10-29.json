@@ -1,0 +1,54 @@
+{
+  "date": "2026-10-29",
+  "baseCommit": "f2ce360ac3a0d83dce017aa74be6023bc5dc8db6",
+  "committed": true,
+  "deployed": false,
+  "servingDatabaseModified": false,
+  "localConnectionFilesChanged": false,
+  "issues": [
+    "FOR-109",
+    "FOR-110",
+    "FOR-111"
+  ],
+  "policy": "Full upgrade-only refund restores verified Starter for the already-paid period and renews on Starter.",
+  "implemented": "Durable refund-marker authority; explicit same-currency next-period product only; current charge/billed seats/period and scheduled seats preserved; retry after accepted response loss and audit failure; locked confirmation/receipt; newer grant/terminal checks; refunded Plus command guard.",
+  "staging": {
+    "project": "raspy-union-96305162",
+    "branch": "br-autumn-union-za0opf1e",
+    "database": "forge_staging",
+    "migrations": 33,
+    "newMigrationsApplied": 0
+  },
+  "checks": {
+    "appTestsPassed": 1412,
+    "workflowTestsPassed": 4,
+    "postgresBillingStateCasesPassed": 46,
+    "postgresMembershipCasesPassed": 16,
+    "priorMigrationFaultCases": 3,
+    "migrationFaultCasesRerun": false,
+    "typecheck": "passed",
+    "changedFileLint": "passed",
+    "format": "passed",
+    "productionBuild": "passed including protected Workflow handlers"
+  },
+  "testRetry": "Initial broad run: unchanged review emoji-picker lookup timeout (1411 passed, 1 failed). Isolated review suite 7 passed; final full app suite 1412 and workflow 4 passed.",
+  "providerCalls": "SDK subscription calls mocked; real isolated Neon staging transaction/auth checks. No live Polar invoice/refund/subscription mutation.",
+  "routeEnabled": false,
+  "remaining": "Controlled repeat-upgrade adjustment; pause/currency/over-capacity policy; public billing UI/actions; durable serialization/effects and ambiguous-outcome recovery; verified replacement binding; periodic reconciliation/communications; historical invoice allocation; commercial usage ledger and actual Polar sandbox/candidate release evidence",
+  "sourceSha256": {
+    "apps/forge/src/application/billing/plan-change-context.server.ts": "df4395b82851fc5cc1ec01b250605cccdba684680a12e1ff5f4201bc01d6a33b",
+    "apps/forge/src/application/billing/polar-plan-change.server.test.ts": "861c61d36d248cad29d62de541b639e5ad5612d4e29b04a95db9245960676625",
+    "apps/forge/src/application/billing/polar-plan-change.server.ts": "8160157e48cfa18b41b1543ac75ea29cb716fa17250f491fc25bdfaa9acddb79",
+    "apps/forge/src/application/billing/polar-subscription-refund.server.ts": "f33cfd18bad561e73553e760f63cc13d3675892a3ceec69a0f26bd29be95294f",
+    "apps/forge/src/application/billing/polar-upgrade-refund-renewal.server.test.ts": "e6a1790ae620b4113500798d6557f084ccee1963319ea3cfd1808c8ce0276945",
+    "apps/forge/src/application/billing/polar-upgrade-refund-renewal.server.ts": "d6b12711acf3812198365b4306bcf0065c4eaa43e96d9c4c88734de82258d0a7",
+    "apps/forge/src/application/billing/subscription-reconciliation.postgres.test.ts": "ed35a1a4d74d28f7692e9184f2ac4f23567349116daebe460eb9a99aac2da736",
+    "apps/forge/src/application/billing/upgrade-refund-renewal-context.server.ts": "e57fd8a4c7ff48ae973c2408a95c181df9d9980a556a0c94e7445e8975795ee0",
+    "docs/forge-plan-matrix.md": "4742691388020c7f14393d72d178b77b7a5c70d78850c7f7b01bebdfc4832957",
+    "docs/plans/production-readiness-backlog-map.md": "5c842a063ba96124080bbcd297bf4a3a1eb4b5696fe5b407ed8ec8a530a91244",
+    "docs/plans/production-readiness-linear-backlog.json": "0b83241e4942660f389c212f9f11cc1b7109b30afcbd5c668bf6cb294974cc0a",
+    "docs/polar-billing.md": "3ef9c9b6262727e4638faaa54369e795cf86cff13962d1e1a5e749dc717cd96e",
+    "docs/subscription-plan-changes.md": "1013c1f6efb5ea1985d7c2e587c6c61214c220763a77ced2f51798b2f3e13f41",
+    "docs/subscription-refunds.md": "64a19c2b75237f4c696b8aeb421a91f3c0c28c1083daa7d59b2801af4997d9d3"
+  }
+}

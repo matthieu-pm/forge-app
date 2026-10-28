@@ -115,3 +115,8 @@ Immediate provider termination is now separately implemented and takes precedenc
 ## Upgrade-only refund follow-up
 
 A full refund of only the prorated Plus-upgrade charge now restores the verified already-paid Starter period. This differs from refunding the full base subscription charge. Partial refunds still keep access unchanged. Migration 0032 and stored paid invoice references prevent stale payment proof from regranting refunded Plus. Missing base evidence removes unproven Plus and retries before restoring Starter; a new verified paid grant remains separate. See `docs/subscription-plan-changes.md` for current checks and limits. Earlier checkpoint counts above are historical.
+
+
+## Upgrade-refund renewal follow-up · 29 October 2026
+
+The user confirmed Starter at the next renewal after fully refunding only a Plus upgrade. The refund handler commits access restriction first, then verifies and schedules the approved same-currency Starter product with explicit next-period timing. Billed and scheduled seats, current charge and period are preserved. Existing refund intent redrives failed/lost responses and atomic confirmation; terminal/newer paid grants cannot be overwritten by old refund confirmation. No new migration or live billing change. See `docs/subscription-plan-changes.md` for current verification, retry boundaries and remaining release gates.

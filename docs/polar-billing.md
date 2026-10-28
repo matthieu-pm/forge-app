@@ -234,3 +234,8 @@ The user confirmed retaining paid access through the current billing period on c
 ## Paid tier changes and upgrade-only refunds
 
 The new `PolarPlanChanger` and live context resolver prepare immediate prorated upgrades, renewal-time downgrades and preservation of future seat changes. Paid invoice proof is required for Starter→Plus access; failed payment preserves the original Starter contract. A full refund of the upgrade-only charge restores Starter only with a verified unrefunded base-period invoice. Signed order-paid/refunded events, persistent grant/refund references and SQL/auth feature parity are staging-tested. See `docs/subscription-plan-changes.md` for the exact verification and remaining public-action, durable-effect, ledger and provider-release gates. No live billing is enabled.
+
+
+## Upgrade-refund renewal follow-up · 29 October 2026
+
+The user confirmed Starter at the next renewal after fully refunding only a Plus upgrade. The refund handler commits access restriction first, then verifies and schedules the approved same-currency Starter product with explicit next-period timing. Billed and scheduled seats, current charge and period are preserved. Existing refund intent redrives failed/lost responses and atomic confirmation; terminal/newer paid grants cannot be overwritten by old refund confirmation. No new migration or live billing change. See `docs/subscription-plan-changes.md` for current verification, retry boundaries and remaining release gates.

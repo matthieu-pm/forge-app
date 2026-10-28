@@ -1,6 +1,6 @@
 # Paid tier changes and upgrade refunds
 
-FOR-109/FOR-110/FOR-111 implementation record, 28 October 2026.
+FOR-109/FOR-110/FOR-111 implementation record, updated 29 October 2026.
 
 ## Confirmed behavior
 
@@ -19,7 +19,8 @@ paid, non-fully-refunded invoice for the current Plus period. A changed provider
 product or an active status alone is insufficient evidence for this elevation.
 
 A full refund of only the prorated Plus-upgrade charge returns the workspace to
-Starter for its already-paid base period. This requires a verified, still-paid
+Starter for its already-paid base period and schedules Starter at the next renewal.
+The next-renewal rule was confirmed on 29 October 2026. Restoring current access requires a verified, still-paid
 Starter base invoice. A full refund of that separate base charge still ends all
 paid access. Partial refunds keep access unchanged. Existing members, usage,
 reservations, refund records and receipts are preserved in every case.
@@ -117,9 +118,43 @@ The SQL member-admission helper, whole-row JSON reader, workspace security and
 thread-summary gates share these rules. Missing/expired base evidence cannot keep
 paid capacity solely because the stored provider plan still says Plus.
 
+## Starter renewal after an upgrade refund
+
+`PolarUpgradeRefundRenewal` reads the durable verified upgrade-refund marker and
+current environment-specific binding before any provider mutation. The signed
+refund handler first commits the access restriction and original receipt, then
+redrives this renewal step on every retry, including when base-invoice evidence
+is temporarily unavailable. It acknowledges success only after scheduling and
+confirmation; a network/provider/audit failure keeps the webhook retryable. No new
+schema migration is needed: the existing full-upgrade-refund marker is the intent.
+
+The only mutation is the approved Starter product in the subscription's existing
+currency with `proration_behavior: "next_period"`. It sends no amount, seats,
+refund, credit, cancellation, pause, trial or period reset. The adapter verifies
+that current product, charge, billed seats, scheduled renewal seats and period
+remain intact, and that the pending Starter product applies at the original end.
+An already scheduled Starter change or an already-Starter subscription needs no
+write. A lost response is recovered by fetching current provider state on retry.
+It can schedule in past-due state without creating a payment or changing grace.
+
+Live binding and refunded-grant identity are checked again before the write.
+Atomic confirmation checks them under the workspace lock and writes an audit plus
+digest-only receipt. If a separately paid newer Plus grant or replacement binding
+has superseded the refunded grant, no old-refund confirmation is recorded.
+Terminal provider proof is projected immediately; the adapter never uncancels or
+unpauses a subscription. Scheduled cancellation/pause and unexpected periods or
+pending changes remain retryable reconciliation exceptions, not silent success.
+An old refund received after a genuine later term cannot downgrade that new term.
+
+The owner/admin Plus command refuses to reuse an upgrade that has been fully
+refunded or withdraw its Starter schedule. A new purchase requires a controlled
+provider adjustment with fresh paid evidence; automatic repurchase remains gated.
+Existing seat scheduling preserves the pending Starter product as member counts
+change. Repeated signed deliveries cannot create duplicate confirmation effects.
+
 ## Verification and remaining release work
 
-Verified: **1,392 app tests, 4 workflow tests, 43 PostgreSQL billing cases,
+Verified: **1,412 app tests, 4 workflow tests, 46 PostgreSQL billing cases,
 16 real-auth membership cases and 3 full-history migration fault cases**. Coverage
 includes exact API bodies, retry/timeout recovery, pending seat/downgrade
 composition, foreign and unpaid invoices, same-version payment promotion,
@@ -127,9 +162,12 @@ late-refund/payment ordering, base proof before activation, partial/full refund
 separation, audit rollback, role revocation before charging, retained sessions and
 restored Starter admission. TypeScript, changed-file lint/format and diff checks
 pass. The production build, including protected Workflow handlers, passes; the
-checkpoint records source digests.
+checkpoint records source digests. The initial broad run hit a timeout in the
+unchanged review emoji picker; its isolated rerun and the final full run passed.
 
-All 33 migrations are applied only to isolated staging and rehearsal. The
+All 33 migrations were applied only to isolated staging and rehearsal. The renewal
+follow-up uses the unchanged 33-migration staging database; migration fault results
+are from the prior checkpoint. The
 serving/default database and local connection files are unchanged. No live provider
 invoice, refund, subscription or portal setting was changed, and nothing is
 deployed. Live billing remains disabled.
@@ -141,8 +179,12 @@ commercial usage ledger integration, historical invoice allocations and actual
 Polar sandbox/candidate flows remain required. Disable hosted portal plan/seat
 changes that bypass Forge's asymmetric timing and membership rules before launch.
 
-The renewal tier after refunding an upgrade, and the controlled provider adjustment
-needed to buy Plus again while that refunded provider product still says Plus,
-remain unresolved. The adapter returns pending rather than silently charging again
-or restoring Plus without new verified payment. Keep FOR-110/FOR-111 In Progress
-until those policies and the remaining public/release gates are complete.
+Starter renewal after a full upgrade-only refund is confirmed and implemented.
+The controlled provider adjustment needed to buy Plus again while the refunded
+provider product still says Plus remains gated; it cannot silently charge again
+or restore Plus without new verified payment. Pause, currency changes and
+team/issue/upload over-capacity policies still need decisions. Keep FOR-110/FOR-111
+In Progress until those policies and the remaining public/release gates are complete.
+This is prepared backend behavior, not a live Polar sandbox/candidate result.
+Durable workspace-wide external-effect serialization, periodic redrive and a
+reactivation handler must enforce any pending refund intent before live billing.

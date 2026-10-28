@@ -31,6 +31,7 @@ export type WorkspacePlanChangeContext = {
   subscriptionId: string
   billableMembers: number
   projectedPlan: SelfServePlan
+  refundedUpgrade?: boolean
 }
 type Client = {
   subscriptions: {
@@ -75,8 +76,14 @@ export class PolarPlanChanger {
       return value
     }
     checkContext(context)
-    const refresh = async () =>
-      (context = checkContext(await this.resolveContext(actor)))
+    if (selected === "plus" && context.refundedUpgrade)
+      throw new Error("BILLING_REFUNDED_UPGRADE_REPURCHASE_REQUIRED")
+    const refresh = async () => {
+      context = checkContext(await this.resolveContext(actor))
+      if (selected === "plus" && context.refundedUpgrade)
+        throw new Error("BILLING_REFUNDED_UPGRADE_REPURCHASE_REQUIRED")
+      return context
+    }
     const observe = async (subId: string) => {
       if (subId !== id) throw new Error("BILLING_SUBSCRIPTION_CONFLICT")
       const observed = await this.client.subscriptions.get(subId)

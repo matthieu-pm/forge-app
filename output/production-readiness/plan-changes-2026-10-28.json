@@ -67,5 +67,7 @@
     "docs/subscription-plan-changes.md": "4472e98fdfce7f95d2d83152817082e3392f0f7c7a54377ac44a985a1df3d790",
     "docs/forge-plan-matrix.md": "a905ab84f60cfa26c3c96a290f1d398d0ad50f6384f989e3b89397f25d60210f",
     "docs/polar-billing.md": "0ae937b2362bca1ffee323b0068e4f678602f897ec801f93dd0b627c36577ee2"
-  }
+  },
+  "historical": true,
+  "sourceCommit": "f2ce360ac3a0d83dce017aa74be6023bc5dc8db6"
 }

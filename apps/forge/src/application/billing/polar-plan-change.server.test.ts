@@ -513,6 +513,23 @@ describe("owner paid-tier changes", () => {
   })
 })
 
+it("does not withdraw Starter renewal or reuse a refunded upgrade when Plus is requested again", async () => {
+  const f = fixture("plus")
+  f.context.mockResolvedValue({
+    ...f.value,
+    projectedPlan: "starter",
+    refundedUpgrade: true,
+  })
+  f.current.pending_update = {
+    ...f.pending(),
+    product_id: config.paidProducts.starter.eur,
+  }
+  await expect(f.service.change(actor, "plus")).rejects.toThrow(
+    "REFUNDED_UPGRADE_REPURCHASE_REQUIRED"
+  )
+  expect(f.update).not.toHaveBeenCalled()
+})
+
 describe("refund of only a Plus upgrade", () => {
   function refunded(): ProviderRefundOrder {
     return {
@@ -558,7 +575,8 @@ describe("refund of only a Plus upgrade", () => {
     const service = new PolarSubscriptionRefundReconciler(
       config,
       { orders: { get: () => Promise.resolve(refunded()), list } },
-      apply
+      apply,
+      vi.fn().mockResolvedValue({ status: "scheduled" })
     )
     await service.reconcile({
       workspaceId: "w1",
@@ -595,7 +613,8 @@ describe("refund of only a Plus upgrade", () => {
             list: () => Promise.resolve({ items, pagination: { max_page: 1 } }),
           },
         },
-        apply
+        apply,
+        vi.fn().mockResolvedValue({ status: "scheduled" })
       )
       await expect(
         service.reconcile({

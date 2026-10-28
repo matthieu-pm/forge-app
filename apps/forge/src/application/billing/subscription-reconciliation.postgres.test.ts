@@ -9,6 +9,7 @@ import { PAYMENT_GRACE_MS, subscriptionAccess } from "./subscription-access"
 import type { EnabledBillingConfig } from "./billing-config.server"
 import type { UpgradeOrder } from "./polar-paid-upgrade.server"
 import type { PlanChangeSubscription } from "./polar-plan-change.server"
+import type { RefundRenewalClient } from "./polar-upgrade-refund-renewal.server"
 import type { ProviderRefundOrder } from "./polar-subscription-refund.server"
 import type * as Store from "./subscription-reconciliation.server"
 import type * as Webhook from "./polar-webhook.server"
@@ -138,6 +139,44 @@ describe.skipIf(!connection)(
           },
         ],
       }
+    }
+    function refundRenewalProvider(
+      id: string,
+      paid: Store.VerifiedSubscriptionSnapshot
+    ) {
+      const current: PlanChangeSubscription = {
+        ...providerSubscription(id, paid, { modified_at: now.toISOString() }),
+        amount: 4800,
+        seats: 3,
+        pause_at_period_end: false,
+        paused_at: null,
+        pending_update: {
+          id: randomUUID(),
+          created_at: now.toISOString(),
+          modified_at: null,
+          applies_at: paid.currentPeriodEnd.toISOString(),
+          product_id: null,
+          seats: 5,
+          units: null,
+        },
+      }
+      const get = vi
+        .fn<RefundRenewalClient["get"]>()
+        .mockImplementation(() => Promise.resolve(structuredClone(current)))
+      const update = vi
+        .fn<RefundRenewalClient["update"]>()
+        .mockImplementation((_id, body) => {
+          if (
+            !("product_id" in body) ||
+            typeof body.product_id !== "string" ||
+            body.proration_behavior !== "next_period"
+          )
+            throw new Error("fixture unexpected write")
+          current.pending_update!.product_id = body.product_id
+          current.modified_at = new Date(now.getTime() + 10).toISOString()
+          return Promise.resolve(structuredClone(current))
+        })
+      return { current, get, update }
     }
     function refundOrder(
       id: string,
@@ -356,7 +395,9 @@ describe.skipIf(!connection)(
       expect((await row(id))?.paidUpgradeOrderId).toBe(orderId)
       for (let i = 0; i < 6; i++) await add(id)
       const refunds = await import("./polar-subscription-refund.server")
+      const renewal = refundRenewalProvider(id, paid)
       const service = new refunds.PolarSubscriptionRefundReconciler(config, {
+        subscriptions: renewal,
         orders: {
           get: () => Promise.resolve(refundedUpgradeOrder(id, paid, orderId)),
           list: () =>
@@ -374,6 +415,14 @@ describe.skipIf(!connection)(
           )
         ).status
       ).toBe(200)
+      expect(renewal.update).toHaveBeenCalledExactlyOnceWith(
+        paid.subscriptionId,
+        {
+          product_id: config.paidProducts.starter.usd,
+          proration_behavior: "next_period",
+        }
+      )
+      expect(renewal.current.pending_update?.seats).toBe(5)
       expect((await row(id))?.plan).toBe("basic")
       expect((await row(id))?.paidUpgradeOrderId).toBeNull()
       expect(subscriptionAccess(await row(id), now).plan).toBe("basic")
@@ -413,7 +462,12 @@ describe.skipIf(!connection)(
       }
       const raced = new command.PolarPlanChanger(
         config,
-        (actor) => context.readPlanChangeContext(actor, "sandbox"),
+        // Simulate a command whose context was captured just before the refund;
+        // the locked sink still fences the refunded order after network reads.
+        async (actor) => ({
+          ...(await context.readPlanChangeContext(actor, "sandbox")),
+          refundedUpgrade: false,
+        }),
         {
           subscriptions: {
             get: () => Promise.resolve(current),
@@ -468,6 +522,251 @@ describe.skipIf(!connection)(
       await expect(add(id)).rejects.toThrow(/five-member/)
     }, 15_000)
 
+    it("redrives Starter renewal after a lost provider response and transactional audit failure", async () => {
+      const id = await workspace(),
+        paid = snapshot(id, { plan: "starter" }),
+        orderId = randomUUID()
+      await apply(paid)
+      await apply({
+        ...paid,
+        plan: "plus",
+        updatedAt: now,
+        paidUpgrade: {
+          orderId,
+          subscriptionId: paid.subscriptionId,
+          periodStart: paid.currentPeriodStart,
+          periodEnd: paid.currentPeriodEnd,
+          createdAt: now,
+        },
+      })
+      const refunds = await import("./polar-subscription-refund.server"),
+        renewal = refundRenewalProvider(id, paid),
+        base = starterBaseOrder(id, paid)
+      const update = renewal.update.getMockImplementation()!
+      renewal.update.mockImplementationOnce(async (...args) => {
+        await update(...args)
+        throw new Error("lost response")
+      })
+      const service = new refunds.PolarSubscriptionRefundReconciler(config, {
+        subscriptions: renewal,
+        orders: {
+          get: () => Promise.resolve(refundedUpgradeOrder(id, paid, orderId)),
+          list: () =>
+            Promise.resolve({
+              items: [base],
+              pagination: { max_page: 1 },
+            }),
+        },
+      })
+      const eventId = randomUUID(),
+        request = () =>
+          webhook.handlePolarWebhook(
+            signed(id, eventId, "order.refunded", orderId),
+            config,
+            undefined,
+            service
+          )
+      expect((await request()).status).toBe(503)
+      expect(subscriptionAccess(await row(id), now).plan).toBe("basic")
+      const constraint = `refund_renewal_audit_${randomUUID().replaceAll("-", "")}`
+      await pool.query(
+        `ALTER TABLE workspace_security_audit_events ADD CONSTRAINT ${constraint} CHECK (action <> 'billing.upgrade_refund.renewal_confirmed') NOT VALID`
+      )
+      try {
+        expect((await request()).status).toBe(503)
+        expect(
+          (
+            await pool.query(
+              "SELECT count(*)::int AS n FROM billing_event_receipts WHERE workspace_id=$1",
+              [id]
+            )
+          ).rows[0].n
+        ).toBe(3)
+        expect(
+          (
+            await pool.query(
+              "SELECT count(*)::int AS n FROM workspace_security_audit_events WHERE workspace_id=$1 AND action='billing.upgrade_refund.renewal_confirmed'",
+              [id]
+            )
+          ).rows[0].n
+        ).toBe(0)
+      } finally {
+        await pool.query(
+          `ALTER TABLE workspace_security_audit_events DROP CONSTRAINT ${constraint}`
+        )
+      }
+      expect((await request()).status).toBe(200)
+      expect((await request()).status).toBe(200)
+      expect(renewal.update).toHaveBeenCalledTimes(1)
+      expect(renewal.current.pending_update).toMatchObject({
+        product_id: config.paidProducts.starter.usd,
+        seats: 5,
+      })
+      const audits = (
+        await pool.query(
+          "SELECT after FROM workspace_security_audit_events WHERE workspace_id=$1 AND action='billing.upgrade_refund.renewal_confirmed'",
+          [id]
+        )
+      ).rows
+      expect(audits).toHaveLength(1)
+      expect(audits[0].after).toMatchObject({
+        target: "starter",
+        billedSeats: 3,
+        renewalSeats: 5,
+        effectiveAt: paid.currentPeriodEnd.toISOString(),
+      })
+      const later = {
+        ...paid,
+        updatedAt: new Date(now.getTime() + 100),
+        currentPeriodStart: paid.currentPeriodEnd,
+        currentPeriodEnd: new Date(
+          paid.currentPeriodEnd.getTime() + 30 * 86400000
+        ),
+      }
+      await apply(later)
+      expect(
+        subscriptionAccess(await row(id), later.currentPeriodStart).plan
+      ).toBe("basic")
+      await service.reconcile({
+        workspaceId: id,
+        orderId,
+        eventId: randomUUID(),
+        bodyHash: "a".repeat(64),
+      })
+      expect(renewal.update).toHaveBeenCalledTimes(1)
+    }, 15_000)
+
+    it("cannot confirm an old refund renewal over a newly paid Plus grant", async () => {
+      const id = await workspace(),
+        paid = snapshot(id, { plan: "starter" }),
+        orderId = randomUUID()
+      await apply(paid)
+      const sink = await import("./subscription-refund.server"),
+        renewal = await import("./polar-upgrade-refund-renewal.server")
+      await sink.applyVerifiedPeriodRefund({
+        eventId: randomUUID(),
+        bodyHash: "4".repeat(64),
+        refund: {
+          kind: "full",
+          scope: "upgrade",
+          workspaceId: id,
+          environment: "sandbox",
+          subscriptionId: paid.subscriptionId,
+          orderId,
+          start: now.toISOString(),
+          end: paid.currentPeriodEnd.toISOString(),
+          refundedAt: now.toISOString(),
+          starterBasis: {
+            orderId: randomUUID(),
+            start: paid.currentPeriodStart.toISOString(),
+            end: paid.currentPeriodEnd.toISOString(),
+          },
+        },
+      })
+      const client = refundRenewalProvider(id, paid),
+        original = client.update.getMockImplementation()!
+      client.update.mockImplementationOnce(async (...args) => {
+        const result = await original(...args)
+        await apply({
+          ...paid,
+          plan: "plus",
+          updatedAt: new Date(now.getTime() + 20),
+          paidUpgrade: {
+            orderId: randomUUID(),
+            subscriptionId: paid.subscriptionId,
+            periodStart: paid.currentPeriodStart,
+            periodEnd: paid.currentPeriodEnd,
+            createdAt: now,
+          },
+        })
+        return result
+      })
+      const service = new renewal.PolarUpgradeRefundRenewal(config, client)
+      expect(
+        await service.reconcile({
+          workspaceId: id,
+          environment: "sandbox",
+          subscriptionId: paid.subscriptionId,
+          orderId,
+        })
+      ).toMatchObject({ status: "superseded" })
+      expect(subscriptionAccess(await row(id), now).plan).toBe("business")
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int AS n FROM workspace_security_audit_events WHERE workspace_id=$1 AND action='billing.upgrade_refund.renewal_confirmed'",
+            [id]
+          )
+        ).rows[0].n
+      ).toBe(0)
+      await service.reconcile({
+        workspaceId: id,
+        environment: "sandbox",
+        subscriptionId: paid.subscriptionId,
+        orderId,
+      })
+      expect(client.update).toHaveBeenCalledTimes(1)
+    })
+
+    it("requires a durable matching refund and binding and refuses a changed confirmation context", async () => {
+      const id = await workspace(),
+        paid = snapshot(id, { plan: "starter" }),
+        orderId = randomUUID()
+      await apply(paid)
+      const repo = await import("./upgrade-refund-renewal-context.server"),
+        sink = await import("./subscription-refund.server")
+      const identity = {
+        workspaceId: id,
+        environment: "sandbox" as const,
+        subscriptionId: paid.subscriptionId,
+        orderId,
+      }
+      await expect(
+        repo.readUpgradeRefundRenewalContext(identity)
+      ).rejects.toThrow("VERIFIED_UPGRADE_REFUND_REQUIRED")
+      await sink.applyVerifiedPeriodRefund({
+        eventId: randomUUID(),
+        bodyHash: "5".repeat(64),
+        refund: {
+          kind: "full",
+          scope: "upgrade",
+          ...identity,
+          start: now.toISOString(),
+          end: paid.currentPeriodEnd.toISOString(),
+          refundedAt: now.toISOString(),
+        },
+      })
+      const value = await repo.readUpgradeRefundRenewalContext(identity)
+      expect(value.status).toBe("required")
+      await expect(
+        repo.readUpgradeRefundRenewalContext({
+          ...identity,
+          environment: "production",
+        })
+      ).rejects.toThrow("VERIFIED_UPGRADE_REFUND_REQUIRED")
+      await expect(
+        repo.confirmUpgradeRefundRenewal(identity, {
+          revision: "0".repeat(64),
+          effectiveAt: paid.currentPeriodEnd.toISOString(),
+          providerUpdatedAt: now.toISOString(),
+          currency: "usd",
+          productId: config.paidProducts.starter.usd,
+          billedSeats: 3,
+          renewalSeats: 5,
+          status: "scheduled",
+        })
+      ).rejects.toThrow("CONTEXT_CHANGED")
+      await apply({
+        ...paid,
+        status: "canceled",
+        updatedAt: now,
+        terminatedAt: now,
+      })
+      expect(
+        await repo.readUpgradeRefundRenewalContext(identity)
+      ).toMatchObject({ status: "terminated" })
+    })
+
     it("denies Plus while base proof is unavailable, then promotes that same refund receipt to Starter", async () => {
       const id = await workspace(),
         paid = snapshot(id, { plan: "starter" }),
@@ -489,7 +788,9 @@ describe.skipIf(!connection)(
       for (let i = 0; i < 5; i++) await add(id)
       const refunds = await import("./polar-subscription-refund.server"),
         bases: Array<UpgradeOrder> = []
+      const renewal = refundRenewalProvider(id, paid)
       const service = new refunds.PolarSubscriptionRefundReconciler(config, {
+        subscriptions: renewal,
         orders: {
           get: () => Promise.resolve(refundedUpgradeOrder(id, paid, orderId)),
           list: () =>

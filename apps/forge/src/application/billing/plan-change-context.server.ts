@@ -37,6 +37,18 @@ export async function readPlanChangeContext(
     ...binding,
     billableMembers: capacity.activeMemberCount,
     projectedPlan: access.plan === "basic" ? "starter" : "plus",
+    refundedUpgrade:
+      !state.paidUpgradeOrderId &&
+      state.refundedPeriods.some(
+        (period) =>
+          period.kind === "upgrade" &&
+          period.environment === environment &&
+          period.subscriptionId === binding.subscriptionId &&
+          state.currentPeriodStart &&
+          state.currentPeriodEnd &&
+          new Date(period.start) < state.currentPeriodEnd &&
+          new Date(period.end) > state.currentPeriodStart
+      ),
   }
 }
 
