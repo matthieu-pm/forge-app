@@ -1,10 +1,7 @@
-import { resolve } from "node:path"
-import { config } from "dotenv"
 import { and, eq, inArray, isNotNull } from "drizzle-orm"
+import { validateJobEnvironment } from "./lib/script-environment"
 
-const root = resolve(import.meta.dirname, "../../..")
-config({ path: resolve(root, ".env"), quiet: true })
-config({ path: resolve(root, ".env.local"), override: true, quiet: true })
+validateJobEnvironment("calls-sync")
 const { db, callConnections, calls } = await import("@/db")
 const { syncCallConnection, generateCallSummary, sweepCallTranscripts } =
   await import("@/application/calls/calls.server")

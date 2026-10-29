@@ -28,9 +28,9 @@ export function assertStagingEnvironment(
     STAGING.runtimeProjectId as string,
   ].includes(env.VERCEL_PROJECT_ID ?? "")
   if (env.FORGE_ENVIRONMENT !== "staging" && !isStagingProject) return
-  const fail = () => {
+  const fail = (...variables: string[]) => {
     throw new Error(
-      "Staging isolation configuration is invalid. Check the staging resource manifest; values are redacted."
+      `Staging isolation configuration is invalid: ${variables.join(", ")}. Check the staging resource manifest; values are redacted.`
     )
   }
   if (
@@ -38,13 +38,17 @@ export function assertStagingEnvironment(
     env.VERCEL_PROJECT_ID !==
       (service === "web" ? STAGING.webProjectId : STAGING.runtimeProjectId)
   )
-    fail()
+    fail("VERCEL_PROJECT_ID")
   if (
     env.FORGE_ENVIRONMENT !== "staging" ||
     !["disabled", "sandbox"].includes(env.FORGE_EXTERNAL_INTEGRATIONS ?? "") ||
     env.EVE_EVAL_FIXTURE_MODE === "true"
   )
-    fail()
+    fail(
+      "FORGE_ENVIRONMENT",
+      "FORGE_EXTERNAL_INTEGRATIONS",
+      "EVE_EVAL_FIXTURE_MODE"
+    )
   for (const [name, value] of Object.entries(env)) {
     if (
       value &&
@@ -65,39 +69,40 @@ export function assertStagingEnvironment(
         createHash("sha256").update(value).digest("hex") !==
           STAGING_CREDENTIAL_DIGESTS[name]
       )
-        fail()
+        fail(name)
   }
   if (env.FORGE_EXTERNAL_INTEGRATIONS === "sandbox") {
-    if (service !== "web") fail()
+    if (service !== "web") fail("FORGE_EXTERNAL_INTEGRATIONS")
     if (
       env.OPENAI_API_KEY &&
       env.FORGE_MANAGED_OPENAI_MODELS !== STAGING_INTEGRATIONS.openaiModel
     )
-      fail()
+      fail("FORGE_MANAGED_OPENAI_MODELS")
     if (
       env.RESEND_API_KEY &&
       env.RESEND_FROM_EMAIL !== STAGING_INTEGRATIONS.mailFrom
     )
-      fail()
-    if (env.POLAR_ACCESS_TOKEN && env.POLAR_ENVIRONMENT !== "sandbox") fail()
+      fail("RESEND_FROM_EMAIL")
+    if (env.POLAR_ACCESS_TOKEN && env.POLAR_ENVIRONMENT !== "sandbox")
+      fail("POLAR_ENVIRONMENT")
     if (
       Boolean(env.FORGE_GOOGLE_MEET_CLIENT_ID) !==
       Boolean(env.FORGE_GOOGLE_MEET_CLIENT_SECRET)
     )
-      fail()
+      fail("FORGE_GOOGLE_MEET_CLIENT_ID", "FORGE_GOOGLE_MEET_CLIENT_SECRET")
     if (
       Boolean(env.FORGE_ZOOM_CLIENT_ID) !==
       Boolean(env.FORGE_ZOOM_CLIENT_SECRET)
     )
-      fail()
+      fail("FORGE_ZOOM_CLIENT_ID", "FORGE_ZOOM_CLIENT_SECRET")
   }
   if (
     !env.FORGE_AGENT_CHANNEL_SECRET ||
     env.FORGE_AGENT_CHANNEL_SECRET.length < 32
   )
-    fail()
+    fail("FORGE_AGENT_CHANNEL_SECRET")
   if (service === "runtime") {
-    if (env.FORGE_APP_ORIGIN !== STAGING.webOrigin) fail()
+    if (env.FORGE_APP_ORIGIN !== STAGING.webOrigin) fail("FORGE_APP_ORIGIN")
     return
   }
   if (
@@ -108,7 +113,14 @@ export function assertStagingEnvironment(
     env.FORGE_BILLING_ENABLED !== "false" ||
     env.FORGE_BILLING_WEBHOOKS_ENABLED !== "false"
   )
-    fail()
+    fail(
+      "BETTER_AUTH_URL",
+      "EVE_AGENT_RUNTIME_URL",
+      "FORGE_AGENT_BLOB_ADAPTER",
+      "BLOB_STORE_ID",
+      "FORGE_BILLING_ENABLED",
+      "FORGE_BILLING_WEBHOOKS_ENABLED"
+    )
   try {
     const url = new URL(env.DATABASE_URL ?? "")
     if (
@@ -127,8 +139,8 @@ export function assertStagingEnvironment(
           url.searchParams.getAll(key).length !== 1
       )
     )
-      fail()
+      fail("DATABASE_URL")
   } catch {
-    fail()
+    fail("DATABASE_URL")
   }
 }

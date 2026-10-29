@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
   authorizationUrl,
+  configuredProviders,
   exchangeTokens,
   fetchNativeCalls,
 } from "./providers.server"
@@ -17,6 +18,22 @@ afterEach(() => {
   vi.unstubAllEnvs()
 })
 describe("native meeting adapters", () => {
+  it("does not expose or authorize a disabled provider even with stored credentials", () => {
+    vi.stubEnv("FORGE_CALLS_ENABLED", "false")
+    vi.stubEnv("FORGE_GOOGLE_MEET_CLIENT_ID", "client-id")
+    vi.stubEnv("FORGE_GOOGLE_MEET_CLIENT_SECRET", "test-secret")
+    vi.stubEnv("BETTER_AUTH_URL", "http://localhost:3000")
+    vi.stubEnv(
+      "FORGE_MODEL_CREDENTIAL_KEK",
+      Buffer.alloc(32).toString("base64")
+    )
+    expect(configuredProviders()).toEqual([])
+    expect(() => authorizationUrl("google", "state", "challenge")).toThrow(
+      "not enabled"
+    )
+    expect(fetcher).not.toHaveBeenCalled()
+  })
+
   it("paginates Google entries and resolves speaker names", async () => {
     fetcher
       .mockResolvedValueOnce(

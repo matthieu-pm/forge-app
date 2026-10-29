@@ -1,5 +1,6 @@
 import "@tanstack/react-start/server-only"
 import { assertStagingEnvironment } from "../../../../../packages/environment/staging-environment"
+import { selectedCallProviders } from "../../../../../packages/environment/service-config"
 import type { MeetingProvider, TranscriptEntry } from "@/lib/calls"
 import { parseTranscript } from "@/lib/calls"
 
@@ -41,6 +42,7 @@ const providerConfig = {
 export function configuredProviders() {
   return (Object.keys(providerConfig) as Array<MeetingProvider>).filter(
     (provider) => {
+      if (!selectedCallProviders(process.env).includes(provider)) return false
       const prefix = providerConfig[provider].prefix
       return Boolean(
         process.env[`FORGE_${prefix}_CLIENT_ID`] &&
@@ -53,6 +55,8 @@ export function configuredProviders() {
 }
 function config(provider: MeetingProvider) {
   assertStagingEnvironment(process.env, "web")
+  if (!selectedCallProviders(process.env).includes(provider))
+    throw new Error("This meeting provider is not enabled for this deployment.")
   const item = providerConfig[provider]
   const clientId = process.env[`FORGE_${item.prefix}_CLIENT_ID`]
   const clientSecret = process.env[`FORGE_${item.prefix}_CLIENT_SECRET`]

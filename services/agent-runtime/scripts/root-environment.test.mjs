@@ -26,4 +26,22 @@ describe("root environment", () => {
 
     expect(environment.FORGE_APP_ORIGIN).toBe("https://forge.example.com")
   })
+
+  it.each([
+    { NODE_ENV: "production" },
+    { FORGE_ENVIRONMENT: "staging" },
+    { FORGE_ENVIRONMENT: "production" },
+    { VERCEL_ENV: "preview" },
+  ])(
+    "never supplies a local callback origin to a deployed service: %j",
+    async (baseEnvironment) => {
+      const environment = await createRootEnvironment({
+        baseEnvironment,
+        repositoryRoot: "/repository",
+        serviceRoot: "/repository/services/agent-runtime",
+        environmentFiles: [],
+      })
+      expect(environment.FORGE_APP_ORIGIN).toBeUndefined()
+    }
+  )
 })

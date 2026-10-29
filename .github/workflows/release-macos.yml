@@ -65,6 +65,8 @@ jobs:
           bun run build
 
       - name: Make signed and notarized app
+        env:
+          FORGE_ENVIRONMENT: production
         run: |
           bun run desktop:validate
           bunx electron-forge make --platform darwin --arch "${{ matrix.arch }}"

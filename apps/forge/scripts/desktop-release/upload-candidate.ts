@@ -1,12 +1,15 @@
 import { readFile, readdir } from "node:fs/promises"
 import { createHash } from "node:crypto"
 import { resolve } from "node:path"
-
 import {
   HeadObjectCommand,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3"
+import { validateReleaseEnvironment } from "../lib/script-environment"
+
+
+validateReleaseEnvironment("upload")
 
 type CandidateArtifact = {
   platform: "darwin"

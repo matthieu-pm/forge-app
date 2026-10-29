@@ -6,11 +6,16 @@ export async function createRootEnvironment({
   baseEnvironment = process.env,
   repositoryRoot,
   serviceRoot,
-  environmentFiles = [
-    [resolve(repositoryRoot, ".env"), false],
-    [resolve(repositoryRoot, ".env.local"), true],
-    [resolve(serviceRoot, ".env"), true],
-  ],
+  environmentFiles = baseEnvironment.CI ||
+  baseEnvironment.NODE_ENV === "production" ||
+  ["staging", "production"].includes(baseEnvironment.FORGE_ENVIRONMENT) ||
+  ["preview", "production"].includes(baseEnvironment.VERCEL_ENV)
+    ? []
+    : [
+        [resolve(repositoryRoot, ".env"), false],
+        [resolve(repositoryRoot, ".env.local"), true],
+        [resolve(serviceRoot, ".env"), true],
+      ],
 }) {
   const runtimeEnvironment = { ...baseEnvironment }
 
@@ -25,7 +30,12 @@ export async function createRootEnvironment({
     }
   }
 
-  runtimeEnvironment.FORGE_APP_ORIGIN ??= "http://localhost:3000"
+  if (
+    !["staging", "production"].includes(runtimeEnvironment.FORGE_ENVIRONMENT) &&
+    runtimeEnvironment.NODE_ENV !== "production" &&
+    !["preview", "production"].includes(runtimeEnvironment.VERCEL_ENV)
+  )
+    runtimeEnvironment.FORGE_APP_ORIGIN ??= "http://localhost:3000"
   runtimeEnvironment.PATH = [
     resolve(repositoryRoot, "node_modules/.bin"),
     resolve(serviceRoot, "node_modules/.bin"),

@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "node scripts/run-with-root-env.mjs eve dev --no-ui",
-    "build": "eve build",
+    "build": "node scripts/run-with-root-env.mjs eve build",
     "start": "node scripts/run-with-root-env.mjs eve start",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -21,7 +21,8 @@
     "ai": "7.0.55",
     "eve": "0.31.0",
     "jose": "6.2.8",
-    "zod": "4.4.3"
+    "zod": "4.4.3",
+    "@forge/environment": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "26.1.2",

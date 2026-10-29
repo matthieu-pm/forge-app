@@ -35,6 +35,12 @@ const config = defineConfig(({ mode }) => {
       workflow(),
       devtools(),
       nitro({
+        plugins: [
+          resolve(
+            import.meta.dirname,
+            "server/plugins/service-configuration.ts"
+          ),
+        ],
         traceDeps: ["@vercel/oidc*", "@vercel/cli-config*", "xdg-app-paths*"],
       }),
       tailwindcss(),

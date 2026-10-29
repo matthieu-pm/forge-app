@@ -1,7 +1,9 @@
 import { eveChannel } from "eve/channels/eve"
 import { verifyForgeChannelRequest } from "../../src/forge-auth.js"
+import { assertServiceConfiguration } from "../../../../packages/environment/service-config.js"
 import type { AuthFn } from "eve/channels/auth"
 
+assertServiceConfiguration(process.env, "runtime")
 
 const forgeAuth: AuthFn = (request) => {
   if (process.env.EVE_EVAL_FIXTURE_MODE === "true") {

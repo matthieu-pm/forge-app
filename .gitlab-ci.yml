@@ -91,6 +91,8 @@ agent-live-evals:
     - bun run --cwd services/agent-runtime eval:live
 
 product-retention:
+  variables:
+    FORGE_ENVIRONMENT: production
   stage: maintenance
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule" && $FORGE_MAINTENANCE_SCHEDULE == "true"
@@ -100,6 +102,8 @@ product-retention:
     name: production-maintenance
 
 workflow-health:
+  variables:
+    FORGE_ENVIRONMENT: production
   stage: maintenance
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule" && $FORGE_MAINTENANCE_SCHEDULE == "true"
@@ -109,6 +113,8 @@ workflow-health:
     name: production-maintenance
 
 release-macos:
+  variables:
+    FORGE_ENVIRONMENT: production
   stage: package
   tags:
     - macos
@@ -164,6 +170,8 @@ release-macos:
       - apps/forge/release-candidate/
 
 upload-desktop-draft:
+  variables:
+    FORGE_ENVIRONMENT: production
   stage: release
   needs:
     - job: release-macos
@@ -176,6 +184,8 @@ upload-desktop-draft:
     name: desktop-release-draft
 
 promote-desktop-release:
+  variables:
+    FORGE_ENVIRONMENT: production
   stage: release
   needs:
     - upload-desktop-draft
@@ -189,6 +199,8 @@ promote-desktop-release:
     name: desktop-production
 
 pause-desktop-release:
+  variables:
+    FORGE_ENVIRONMENT: production
   stage: release
   rules:
     - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/ && $CI_COMMIT_REF_PROTECTED == "true"'
