@@ -145,3 +145,20 @@ metrics, alert routing/readiness and lease recovery for future jobs belong to th
 owning features (including FOR-30/FOR-64). Missing samples must not be treated as
 zero backlog or a healthy scheduler. These events alone do not prove FOR-24's
 final-byte latency, availability or notification-delivery objectives.
+
+## Accepted failure-injection evidence · 29 October 2026
+
+At source `48a811e0c9859c450094dbb9d76763120d179174`, the isolated staging web and
+runtime passed the hosted synthetic issue-write check. Retained logs contain the
+originating request, failed command and failed separate worker with matching
+correlation/command/run IDs: five web records and four runtime records. All nine
+records and the returned response exclude the token, transcript and signed-URL
+fixtures. Anonymous probes returned 404. The services independently attest the
+same source revision and their own deployment IDs.
+
+[The evidence artifact](for29-observability-evidence.json) records those bounded
+logs, deployment identities, test results, authority expiry and raw-token cleanup.
+The local token was destroyed after verification; its hashes exist only on these
+short-lived staging deployments. This satisfies FOR-29's telemetry acceptance
+criteria. It does not certify canonical issue storage or deploy the production
+runtime; those product/release tasks retain their own acceptance gates.
