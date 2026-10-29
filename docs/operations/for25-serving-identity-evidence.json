@@ -1,0 +1,115 @@
+{
+  "issue": "FOR-25",
+  "webSourceCommit": "f58a81d8766fa9370a6a3544b3a707efa119e3b0",
+  "webBaseCommit": "826ff75cd5c96291ad6edaf87b1127f26fd022af",
+  "neonProject": "raspy-union-96305162",
+  "neonEndpoint": "ep-lingering-bread-zazpwrxp",
+  "neonRegion": "aws-eu-west-2",
+  "stagedProbe": {
+    "check": "authenticated",
+    "exitCode": 0,
+    "status": "200",
+    "challengeVerified": true,
+    "data": {
+      "checkedAt": "2026-10-28T22:20:02.337Z",
+      "deployment": {
+        "id": "dpl_CgVaY7whJUjaAUAKoMh5VdCtw1Ly",
+        "url": "forge-10ffsefkc-matthieu-pm.vercel.app",
+        "region": "iad1",
+        "environment": "production",
+        "gitCommit": ""
+      },
+      "database": {
+        "host": "ep-lingering-bread-zazpwrxp-pooler.c-2.eu-west-2.aws.neon.tech",
+        "challenge": "5b41ce782f4981997cc7d7bab7a789b7",
+        "database": "neondb",
+        "branch": "br-muddy-queen-zaeeysjt",
+        "postgres_version": "18.6 (4e5fd08)",
+        "transaction_read_only": "on",
+        "migration_count": 26,
+        "migration_hash": "f75aa12984dcf6bc851fb30dd4faf4d314302b9c529a075e0f1ae1594a8a81f1"
+      },
+      "runtimeOrigin": "https://forge-agent-runtime.vercel.app",
+      "artifacts": {
+        "adapter": "local-filesystem",
+        "directoryConfigured": false,
+        "durableBucket": null
+      }
+    }
+  },
+  "publicAliasProbe": {
+    "publicAlias": "forge-app-mauve.vercel.app",
+    "status": "200",
+    "verified": true,
+    "data": {
+      "checkedAt": "2026-10-28T22:20:33.898Z",
+      "deployment": {
+        "id": "dpl_CgVaY7whJUjaAUAKoMh5VdCtw1Ly",
+        "url": "forge-10ffsefkc-matthieu-pm.vercel.app",
+        "region": "iad1",
+        "environment": "production",
+        "gitCommit": ""
+      },
+      "database": {
+        "host": "ep-lingering-bread-zazpwrxp-pooler.c-2.eu-west-2.aws.neon.tech",
+        "challenge": "0cd0a8f7fad4ad79e3b9ca7af9b1738a",
+        "database": "neondb",
+        "branch": "br-muddy-queen-zaeeysjt",
+        "postgres_version": "18.6 (4e5fd08)",
+        "transaction_read_only": "on",
+        "migration_count": 26,
+        "migration_hash": "f75aa12984dcf6bc851fb30dd4faf4d314302b9c529a075e0f1ae1594a8a81f1"
+      },
+      "runtimeOrigin": "https://forge-agent-runtime.vercel.app",
+      "artifacts": {
+        "adapter": "local-filesystem",
+        "directoryConfigured": false,
+        "durableBucket": null
+      }
+    },
+    "cacheControlNoStore": true
+  },
+  "sourceJournalComparison": {
+    "rows": 26,
+    "allHashesAndTimestampsMatch": true
+  },
+  "denialChecks": {
+    "anonymous": 404,
+    "incorrectToken": 404,
+    "emptyBodies": true
+  },
+  "agentRuntime": {
+    "deployment": "dpl_12bYPfjiXsMhFB7U2DkjZ4LuDn5r",
+    "healthPath": "/eve/v1/health",
+    "healthStatus": 200,
+    "healthBody": {
+      "ok": true,
+      "status": "ready",
+      "workflowId": "workflow//eve//workflowEntry"
+    },
+    "infoWithoutAuthorization": 401,
+    "sourceCommit": null,
+    "callbackOrigin": null
+  },
+  "validation": {
+    "focusedTests": 9,
+    "typecheck": "passed",
+    "changedFileLint": "passed",
+    "productionBuild": "passed",
+    "diffCheck": "passed"
+  },
+  "probeCleanup": {
+    "expiresAt": "2026-10-28T22:48:02.359838Z",
+    "projectProbeVariablesRemoved": true,
+    "temporaryVercelAutomationBypassRevoked": true,
+    "rawLocalTokenDestroyed": true
+  },
+  "remainingReleaseIssues": [
+    "FOR-26",
+    "FOR-34",
+    "FOR-85",
+    "FOR-28",
+    "FOR-38",
+    "FOR-122"
+  ]
+}
