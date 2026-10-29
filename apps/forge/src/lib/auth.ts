@@ -28,8 +28,9 @@ import {
   withMemberCapacityErrors,
   workspaceAuthMembershipLimit,
 } from "@/application/billing/member-capacity-auth.server"
+import { resolveAuthUrl } from "@/lib/auth-url"
 
-const betterAuthUrl = process.env.BETTER_AUTH_URL
+const betterAuthUrl = resolveAuthUrl(process.env)
 const betterAuthSecret = process.env.BETTER_AUTH_SECRET
 
 if (!betterAuthUrl) {

@@ -54,6 +54,25 @@ do not trigger these checks. The GitLab pipeline and its scheduled jobs remain
 configured until their replacement is explicitly selected. See the
 [Vercel CI documentation](https://vercel.com/docs/ci).
 
+### Preview database and authentication
+
+Vercel's Preview environment uses the persistent Neon branch `vercel-preview`
+(`br-crimson-hall-za64iwrn`) in project `raspy-union-96305162`. It was branched
+from the isolated `staging` branch, not production. The database remains named
+`forge_staging`; its Preview compute has its own pooled hostname
+`ep-misty-pine-zarpm3cj-pooler.c-2.eu-west-2.aws.neon.tech`.
+
+Preview `DATABASE_URL` is a Vercel Secret for `forge_preview_web`, a separate
+login inheriting the restricted staging application's grants. Preview has its
+own `BETTER_AUTH_SECRET`. Credentials are not stored in this repository.
+These variables apply to all Preview branches; the database is shared across
+previews, not provisioned separately for each PR.
+
+When no `BETTER_AUTH_URL` is set, auth derives its HTTPS origin from `VERCEL_URL`
+only in Vercel Preview. Production and local development still require their
+explicit auth URL. No production or local environment credentials are changed
+by this setup.
+
 Use `turbo run lint typecheck test build --dry=json` to inspect package
 selection and `--summarize` in CI to explain cache misses.
 
