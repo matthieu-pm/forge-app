@@ -38,6 +38,7 @@
     "db:migrate": "turbo run db:migrate --filter=@forge/app",
     "db:push": "turbo run db:push --filter=@forge/app",
     "db:studio": "turbo run db:studio --filter=@forge/app --ui=stream",
+    "agent:policy:check": "bun apps/forge/scripts/check-agent-policy.ts",
     "agent:retention": "turbo run agent:retention --filter=@forge/app",
     "product:retention": "turbo run product:retention --filter=@forge/app",
     "workflow:health": "turbo run workflow:health --filter=@forge/app",

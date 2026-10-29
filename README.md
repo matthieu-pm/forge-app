@@ -57,6 +57,7 @@ starts on port 3000 and the EVE runtime starts on `127.0.0.1:2000`.
 - `bun run preview` previews the production build.
 - `bun run test` runs Vitest.
 - `bun run eval:agent` runs the agent runtime release evals.
+- `bun run agent:policy:check <candidate.json> <evidence.json>` qualifies a provider route against the [accepted agent policy](docs/agent-execution-policy.md).
 - `bun run agent:retention` removes expired agent attachments and artifacts.
 - `bun run calls:sync` imports native meeting transcripts, generates recaps, and
   removes transcripts past workspace retention.

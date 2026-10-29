@@ -146,7 +146,9 @@ token bounds remain distinct controls.
 Forge-funded usage is in scope for every built-in supported provider: OpenAI,
 Anthropic, Google, MiniMax, Mistral, xAI, DeepSeek and Kimi. Each still needs its
 own credential, cost reconciliation and release verification. BYOK/provider-paid
-subscriptions retain their separate payer classification.
+subscriptions retain their separate payer classification. The accepted
+[agent execution policy v1](agent-execution-policy.md) defines the provider/payer
+matrix, execution bounds, disconnect ownership and production evidence contract.
 
 The first paid billing period after Free or trial starts with a **fresh US$5 per
 active member pool**. Earlier Free/trial consumption is not deducted. Keep old
