@@ -274,6 +274,13 @@
       "when": 1793273270870,
       "tag": "0038_workspace_usage_ledger",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1793307794586,
+      "tag": "0039_absent_blade",
+      "breakpoints": true
     }
   ]
 }

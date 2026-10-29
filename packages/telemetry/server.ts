@@ -37,6 +37,7 @@ export type Operation =
   | "calls.summary"
   | "agent.retention"
   | "product.retention"
+  | "operations.monitor"
   | "workflow.health"
   | "runtime.authenticate"
   | "runtime.callback"
@@ -95,6 +96,7 @@ const operations = new Set<Operation>([
   "calls.summary",
   "agent.retention",
   "product.retention",
+  "operations.monitor",
   "workflow.health",
   "runtime.authenticate",
   "runtime.callback",
