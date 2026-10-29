@@ -36,6 +36,8 @@ describe.skipIf(!file)(
       }
       assertMigrationTarget(connection, target)
       neonConfig.webSocketConstructor = WebSocket
+      // Match the web's HTTP shortcut: pool lifecycle does not stop Pool.query().
+      neonConfig.poolQueryViaFetch = true
       pool = new Pool({
         connectionString: connection,
         max: 2,
