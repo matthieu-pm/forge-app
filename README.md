@@ -164,6 +164,7 @@ local development, signing, updates, and release operations.
 
 ## Operations
 
+- [Capacity, service and recovery objectives](docs/operations/service-objectives.md)
 - [Legacy browser import ownership and conflict policy](docs/legacy-browser-import-policy.md)
 - [Data retention and account/workspace deletion policy](docs/data-retention-and-deletion-policy.md)
 - [Turborepo and cache policy](docs/operations/turborepo.md)

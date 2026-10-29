@@ -29,6 +29,7 @@
     "agent:retention": "bun scripts/sweep-agent-retention.ts",
     "product:retention": "bun scripts/sweep-product-retention.ts",
     "workflow:health": "bun scripts/check-workflow-health.ts",
+    "objectives:check": "bun scripts/check-service-objectives.ts",
     "test:desktop": "bun run desktop:build && playwright test --config playwright.desktop.config.ts",
     "test:desktop:packaged": "bun scripts/desktop-release/smoke-packaged.ts",
     "lint": "eslint",
