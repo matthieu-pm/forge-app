@@ -41,6 +41,7 @@
     "agent:retention": "turbo run agent:retention --filter=@forge/app",
     "product:retention": "turbo run product:retention --filter=@forge/app",
     "workflow:health": "turbo run workflow:health --filter=@forge/app",
+    "objectives:check": "bun apps/forge/scripts/check-service-objectives.ts",
     "eval:agent": "turbo run eval --filter=@forge/agent-runtime",
     "calls:sync": "turbo run calls:sync --filter=@forge/app",
     "deploy:staging": "bun scripts/deploy-staging.ts"
