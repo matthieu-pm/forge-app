@@ -1,0 +1,596 @@
+{
+  "issue": "FOR-28",
+  "runId": "7e0c9436-9ed1-471b-8d18-1226a1227666",
+  "sourceRevision": "b6adf722ece4b414f8c7d162fc9a71315b5e1f5d",
+  "scope": "Synthetic expand/contract release protocol on isolated staging, not blanket acceptance of arbitrary product migrations.",
+  "builds": {
+    "old": {
+      "id": "dpl_A91rkZvRRoetWPuPy4u1xFbCFbUt",
+      "url": "https://forge-staging-awhxzfykz-matthieu-pm.vercel.app"
+    },
+    "bridge": {
+      "id": "dpl_4GshP43WJ7TkM2kyz1CYyeh1tEUP",
+      "url": "https://forge-staging-jnwknocbd-matthieu-pm.vercel.app"
+    },
+    "new": {
+      "id": "dpl_BMn45mhMQpJPPBSDeaSs5cUdSiSp",
+      "url": "https://forge-staging-6kurkw1r7-matthieu-pm.vercel.app"
+    }
+  },
+  "startedAt": "2026-10-29T19:50:45.456Z",
+  "steps": [
+    {
+      "step": "hosted-prior-schema-old-write",
+      "at": "2026-10-29T19:50:47.372Z",
+      "result": {
+        "status": 200,
+        "challenge": "627b5b3407fd924fecaeb139457bfda9",
+        "sourceRevision": "b6adf722ece4b414f8c7d162fc9a71315b5e1f5d",
+        "deploymentId": "dpl_A91rkZvRRoetWPuPy4u1xFbCFbUt",
+        "runId": "7e0c9436-9ed1-471b-8d18-1226a1227666",
+        "result": {
+          "version": "old",
+          "id": 1,
+          "value": "prior-hosted"
+        }
+      }
+    },
+    {
+      "step": "expand",
+      "at": "2026-10-29T19:51:17.542Z",
+      "result": {
+        "applied": 1,
+        "total": 2
+      }
+    },
+    {
+      "step": "bridge-fallback-before-backfill",
+      "at": "2026-10-29T19:51:18.924Z",
+      "result": {
+        "status": 200,
+        "challenge": "627b5b3407fd924fecaeb139457bfda9",
+        "sourceRevision": "b6adf722ece4b414f8c7d162fc9a71315b5e1f5d",
+        "deploymentId": "dpl_4GshP43WJ7TkM2kyz1CYyeh1tEUP",
+        "runId": "7e0c9436-9ed1-471b-8d18-1226a1227666",
+        "result": {
+          "version": "bridge",
+          "id": 1,
+          "value": "prior-hosted"
+        }
+      }
+    },
+    {
+      "step": "backfill-first-chunk",
+      "at": "2026-10-29T19:51:19.086Z",
+      "result": {
+        "processed": 2,
+        "lastId": 2,
+        "complete": false
+      }
+    },
+    {
+      "step": "interrupted-chunk-data-and-cursor-rollback",
+      "at": "2026-10-29T19:51:19.260Z",
+      "result": {
+        "lastId": 2,
+        "valueV2ForId3": null
+      }
+    },
+    {
+      "step": "hosted-old-update-after-backfill",
+      "at": "2026-10-29T19:51:20.497Z",
+      "result": {
+        "status": 200,
+        "challenge": "627b5b3407fd924fecaeb139457bfda9",
+        "sourceRevision": "b6adf722ece4b414f8c7d162fc9a71315b5e1f5d",
+        "deploymentId": "dpl_A91rkZvRRoetWPuPy4u1xFbCFbUt",
+        "runId": "7e0c9436-9ed1-471b-8d18-1226a1227666",
+        "result": {
+          "version": "old",
+          "id": 1,
+          "value": "old-after-backfill"
+        }
+      }
+    },
+    {
+      "step": "hosted-old-insert-above-highwater",
+      "at": "2026-10-29T19:51:21.574Z",
+      "result": {
+        "status": 200,
+        "challenge": "627b5b3407fd924fecaeb139457bfda9",
+        "sourceRevision": "b6adf722ece4b414f8c7d162fc9a71315b5e1f5d",
+        "deploymentId": "dpl_A91rkZvRRoetWPuPy4u1xFbCFbUt",
+        "runId": "7e0c9436-9ed1-471b-8d18-1226a1227666",
+        "result": {
+          "version": "old",
+          "id": 6,
+          "value": "late-old-hosted"
+        }
+      }
+    },
+    {
+      "step": "backfill-resumed-chunk",
+      "at": "2026-10-29T19:51:23.959Z",
+      "result": {
+        "processed": 2,
+        "lastId": 4,
+        "complete": false
+      }
+    },
+    {
+      "step": "backfill-completed",
+      "at": "2026-10-29T19:51:24.231Z",
+      "result": {
+        "processed": 1,
+        "lastId": 5,
+        "complete": true
+      }
+    },
+    {
+      "step": "backfill-replay",
+      "at": "2026-10-29T19:51:24.347Z",
+      "result": {
+        "processed": 0,
+        "lastId": 5,
+        "complete": true
+      }
+    },
+    {
+      "step": "hosted-bridge-write",
+      "at": "2026-10-29T19:51:25.432Z",
+      "result": {
+        "status": 200,
+        "challenge": "627b5b3407fd924fecaeb139457bfda9",
+        "sourceRevision": "b6adf722ece4b414f8c7d162fc9a71315b5e1f5d",
+        "deploymentId": "dpl_4GshP43WJ7TkM2kyz1CYyeh1tEUP",
+        "runId": "7e0c9436-9ed1-471b-8d18-1226a1227666",
+        "result": {
+          "version": "bridge",
+          "id": 2,
+          "value": "bridge-hosted"
+        }
+      }
+    },
+    {
+      "step": "contract-refused-with-old-readers",
+      "at": "2026-10-29T19:51:26.602Z",
+      "result": {
+        "refused": true
+      }
+    },
+    {
+      "step": "promoted-bridge-reads-valid-data",
+      "at": "2026-10-29T19:52:27.080Z",
+      "result": {
+        "status": 200,
+        "challenge": "627b5b3407fd924fecaeb139457bfda9",
+        "sourceRevision": "b6adf722ece4b414f8c7d162fc9a71315b5e1f5d",
+        "deploymentId": "dpl_4GshP43WJ7TkM2kyz1CYyeh1tEUP",
+        "runId": "7e0c9436-9ed1-471b-8d18-1226a1227666",
+        "result": {
+          "version": "bridge",
+          "id": 2,
+          "value": "bridge-hosted"
+        }
+      }
+    },
+    {
+      "step": "rollback-old-reads-bridge-write",
+      "at": "2026-10-29T19:53:08.260Z",
+      "result": {
+        "status": 200,
+        "challenge": "627b5b3407fd924fecaeb139457bfda9",
+        "sourceRevision": "b6adf722ece4b414f8c7d162fc9a71315b5e1f5d",
+        "deploymentId": "dpl_A91rkZvRRoetWPuPy4u1xFbCFbUt",
+        "runId": "7e0c9436-9ed1-471b-8d18-1226a1227666",
+        "result": {
+          "version": "old",
+          "id": 2,
+          "value": "bridge-hosted"
+        }
+      }
+    },
+    {
+      "step": "rollback-old-writes",
+      "at": "2026-10-29T19:53:09.335Z",
+      "result": {
+        "status": 200,
+        "challenge": "627b5b3407fd924fecaeb139457bfda9",
+        "sourceRevision": "b6adf722ece4b414f8c7d162fc9a71315b5e1f5d",
+        "deploymentId": "dpl_A91rkZvRRoetWPuPy4u1xFbCFbUt",
+        "runId": "7e0c9436-9ed1-471b-8d18-1226a1227666",
+        "result": {
+          "version": "old",
+          "id": 2,
+          "value": "rollback-hosted"
+        }
+      }
+    },
+    {
+      "step": "new-reads-rollback-write",
+      "at": "2026-10-29T19:53:10.729Z",
+      "result": {
+        "status": 200,
+        "challenge": "627b5b3407fd924fecaeb139457bfda9",
+        "sourceRevision": "b6adf722ece4b414f8c7d162fc9a71315b5e1f5d",
+        "deploymentId": "dpl_BMn45mhMQpJPPBSDeaSs5cUdSiSp",
+        "runId": "7e0c9436-9ed1-471b-8d18-1226a1227666",
+        "result": {
+          "version": "new",
+          "id": 2,
+          "value": "rollback-hosted"
+        }
+      }
+    },
+    {
+      "step": "new-writes-before-contract",
+      "at": "2026-10-29T19:53:11.933Z",
+      "result": {
+        "status": 200,
+        "challenge": "627b5b3407fd924fecaeb139457bfda9",
+        "sourceRevision": "b6adf722ece4b414f8c7d162fc9a71315b5e1f5d",
+        "deploymentId": "dpl_BMn45mhMQpJPPBSDeaSs5cUdSiSp",
+        "runId": "7e0c9436-9ed1-471b-8d18-1226a1227666",
+        "result": {
+          "version": "new",
+          "id": 3,
+          "value": "new-hosted"
+        }
+      }
+    },
+    {
+      "step": "old-reads-new-only-write",
+      "at": "2026-10-29T19:53:13.060Z",
+      "result": {
+        "status": 200,
+        "challenge": "627b5b3407fd924fecaeb139457bfda9",
+        "sourceRevision": "b6adf722ece4b414f8c7d162fc9a71315b5e1f5d",
+        "deploymentId": "dpl_A91rkZvRRoetWPuPy4u1xFbCFbUt",
+        "runId": "7e0c9436-9ed1-471b-8d18-1226a1227666",
+        "result": {
+          "version": "old",
+          "id": 3,
+          "value": "new-hosted"
+        }
+      }
+    },
+    {
+      "step": "new-promoted",
+      "at": "2026-10-29T19:53:52.017Z",
+      "result": {
+        "status": 200,
+        "challenge": "627b5b3407fd924fecaeb139457bfda9",
+        "sourceRevision": "b6adf722ece4b414f8c7d162fc9a71315b5e1f5d",
+        "deploymentId": "dpl_BMn45mhMQpJPPBSDeaSs5cUdSiSp",
+        "runId": "7e0c9436-9ed1-471b-8d18-1226a1227666",
+        "result": {
+          "version": "new",
+          "id": 2,
+          "value": "rollback-hosted"
+        }
+      }
+    },
+    {
+      "step": "retire",
+      "at": "2026-10-29T19:53:52.134Z",
+      "result": {
+        "retired": ["old", "bridge"]
+      }
+    },
+    {
+      "step": "immutable-old-writer-denied",
+      "at": "2026-10-29T19:53:53.078Z",
+      "result": {
+        "status": 503,
+        "error": "Environment check failed"
+      }
+    },
+    {
+      "step": "immutable-bridge-reader-denied",
+      "at": "2026-10-29T19:53:54.127Z",
+      "result": {
+        "status": 503,
+        "error": "Environment check failed"
+      }
+    },
+    {
+      "step": "contract",
+      "at": "2026-10-29T19:53:54.407Z",
+      "result": {
+        "applied": 1,
+        "total": 3
+      }
+    },
+    {
+      "step": "contract-replay",
+      "at": "2026-10-29T19:53:54.669Z",
+      "result": {
+        "applied": 0,
+        "total": 3
+      }
+    },
+    {
+      "step": "hosted-new-write-after-contract",
+      "at": "2026-10-29T19:53:56.888Z",
+      "result": {
+        "status": 200,
+        "challenge": "627b5b3407fd924fecaeb139457bfda9",
+        "sourceRevision": "b6adf722ece4b414f8c7d162fc9a71315b5e1f5d",
+        "deploymentId": "dpl_BMn45mhMQpJPPBSDeaSs5cUdSiSp",
+        "runId": "7e0c9436-9ed1-471b-8d18-1226a1227666",
+        "result": {
+          "version": "new",
+          "id": 4,
+          "value": "contracted-hosted"
+        }
+      }
+    },
+    {
+      "step": "actual-legacy-column-removed",
+      "at": "2026-10-29T19:53:56.908Z",
+      "result": {
+        "columns": ["id", "value_v2"]
+      }
+    },
+    {
+      "step": "owned-cleanup-preserves-sentinel",
+      "at": "2026-10-29T19:54:21.441Z",
+      "result": {
+        "version": "old",
+        "id": 1,
+        "value": "synthetic-1"
+      }
+    },
+    {
+      "step": "cleanup",
+      "at": "2026-10-29T19:54:21.694Z",
+      "result": {
+        "remainingOwnedSchemas": 0,
+        "productJournalUnchanged": true,
+        "productMigrationCount": 39
+      }
+    }
+  ],
+  "database": {
+    "database": "forge_staging",
+    "branch": "br-autumn-union-za0opf1e"
+  },
+  "productJournal": [
+    {
+      "hash": "a452bc6e7cb5830184916d97e2742a7019ec79b9f5df675e2540b47894937ee3",
+      "created_at": "1775897885324"
+    },
+    {
+      "hash": "dcdc12a50872dd3be90182919f25f33dc3083845a50b519a82fa6537de8c7f78",
+      "created_at": "1775901927327"
+    },
+    {
+      "hash": "558f60874f510893e14d0a00c0edb9c0361db429cc4ac8c3969c3e1c7c047a10",
+      "created_at": "1775901977934"
+    },
+    {
+      "hash": "953a616de384e440c2fa22a0e427b9ba71c2085ced5b2206b5be1bc3a5e462ec",
+      "created_at": "1784721534127"
+    },
+    {
+      "hash": "cf2fec372cb9fdcdf6d389eeb13677fb725ce788130ec70fe73928831674bd6b",
+      "created_at": "1784729222035"
+    },
+    {
+      "hash": "5baca8bfb51f125c647cd214ba3522ba3756933fc0031d5f998e5010e7cf7ec9",
+      "created_at": "1784732244800"
+    },
+    {
+      "hash": "048242f4baf746b1923c7026f2398eccfd5b5a26255911f8c97fac024060376b",
+      "created_at": "1784759842535"
+    },
+    {
+      "hash": "9f4c32991147f90e107d9f2c01267a4542d99c74f4b267e5ca2868003ea150fc",
+      "created_at": "1784760219664"
+    },
+    {
+      "hash": "ee83a1c735dfd3d7832a3f8d2e2bd9724166bb027277074ba59ddc4ccfec0c81",
+      "created_at": "1784840082082"
+    },
+    {
+      "hash": "afc8f5a9977b77d51116d992ebe7294e742c0efca4adc498f7a02626fedac051",
+      "created_at": "1784860581468"
+    },
+    {
+      "hash": "28e3ff59fde1a277e9e2d1b7f26e22002b868f9db31df42065db4452fbfbc366",
+      "created_at": "1784860753732"
+    },
+    {
+      "hash": "30d8212ee94b2e62ef79172577582806629e8c4727426748e9a266eb06a5635b",
+      "created_at": "1784864481315"
+    },
+    {
+      "hash": "8b188c1bfcf47cb44f716a6d10d6a74af9a5047d103d3bbee0dbbf985192f8db",
+      "created_at": "1784867160536"
+    },
+    {
+      "hash": "5ee50103a30348f534521f7fb3f51ad55b08656b11edd028ee9c77ca2cb3e8e0",
+      "created_at": "1785068270737"
+    },
+    {
+      "hash": "8d69bf340a7eb80ff020269b11dfc7097a69793ba7d538a17cc3b22f55c6479b",
+      "created_at": "1785072891668"
+    },
+    {
+      "hash": "08f5add21e79150d8290ef32ff07cb61b7de43547d96f09cd0699f3114a3d93c",
+      "created_at": "1785073621782"
+    },
+    {
+      "hash": "5a68e20e1cf2d4094b81a3a05b11713e7560b52faa6276ecdd1780ed92ce9ee3",
+      "created_at": "1785092551605"
+    },
+    {
+      "hash": "5a3935730e156f61be9239718c30cfc0a0e883074d383a8e0ed7c86ed3982854",
+      "created_at": "1785147780895"
+    },
+    {
+      "hash": "030b559030e70bd17a7c533e31d137956380573e5bf892e051b87dc21ff691ea",
+      "created_at": "1785148912959"
+    },
+    {
+      "hash": "6270dc802ac38769d8cf74d35a591485f3e192e205335496a6f2d3d1e7b459e8",
+      "created_at": "1785148984979"
+    },
+    {
+      "hash": "7b66c5d4542329df01274d50ec40e884b20c642877fc4003500a1f63747a5d91",
+      "created_at": "1791748923675"
+    },
+    {
+      "hash": "94f2aead9faef6b2294e17cc8a551c4668f3f18f063a26eba5229c78a7b8ef94",
+      "created_at": "1791752566207"
+    },
+    {
+      "hash": "f06bd559f43d6cd8138bca48a65e1147bdf473ca1302239710de6dc84fc86d29",
+      "created_at": "1791753051231"
+    },
+    {
+      "hash": "bfb926ead21cfda2807045acb2b46f0a4e11dcbccdd7b9d4b78a584475a31b5f",
+      "created_at": "1791823960655"
+    },
+    {
+      "hash": "c29f44a65637302036b890029d2ef955c053318247b5e4fd9d8e48239dd63cbc",
+      "created_at": "1791825274715"
+    },
+    {
+      "hash": "f75aa12984dcf6bc851fb30dd4faf4d314302b9c529a075e0f1ae1594a8a81f1",
+      "created_at": "1792843627355"
+    },
+    {
+      "hash": "076c9657f148a39e4a803c549d6331b40b28aad103bda3ddb00a577843747877",
+      "created_at": "1793212028059"
+    },
+    {
+      "hash": "edd3093a0b25aaae197105f6d9aa2a40579f6229c50c0a58b4b09047bf898511",
+      "created_at": "1793219223021"
+    },
+    {
+      "hash": "ec2f3b210f94db63a899ecba640196e2b088cf81204bb425350d48a304cbbf1b",
+      "created_at": "1793219395147"
+    },
+    {
+      "hash": "efb5f12ec5afe00ee91e5a30aa3a1a3d2c9147a94513fe755261809510030ed2",
+      "created_at": "1793220970938"
+    },
+    {
+      "hash": "9668f43fd83226b375f864f9f0d7029fe7ca4bac439ed30ef486f407e186fda6",
+      "created_at": "1793222834207"
+    },
+    {
+      "hash": "79443bda416ed8a9bce3fbaf23720955070121a47fcb69bb7845dd3829bd4492",
+      "created_at": "1793223957729"
+    },
+    {
+      "hash": "f521db25f96f688ebae03224b0c472a84cce8cbf2e58e8e6499f07a14a7476d8",
+      "created_at": "1793226201911"
+    },
+    {
+      "hash": "750bd1c96b704d0acc0e4986deffe785fe36b34948e6a7ecc6df58e5fa744796",
+      "created_at": "1793229444378"
+    },
+    {
+      "hash": "201492ca91b2dd97830c3b7fff5943cb3bd44da17cf214f033f18fbcd70e7680",
+      "created_at": "1793231534503"
+    },
+    {
+      "hash": "8e3e98a122a31c4fc51e87e2224dba8ecdcb4b39a30131a04830e7c327dbb7e3",
+      "created_at": "1793266594962"
+    },
+    {
+      "hash": "e0cc6e67f28808cd090ded0806aa748126928af383992bb8e6b0f6a60c001231",
+      "created_at": "1793268754179"
+    },
+    {
+      "hash": "1c3da5b416e88f45b36495a92f2f598b5cb1a74f419a1747e1f2bdaecd84c12e",
+      "created_at": "1793271805492"
+    },
+    {
+      "hash": "a292e663dc140909071abc749286a2b8dc2fb095de0c7895fb20e3963ad7c170",
+      "created_at": "1793273270870"
+    }
+  ],
+  "sentinel": "de56a37a-548c-4360-a4f5-b252403bf084",
+  "finalApplicationCounts": {
+    "workspaces": 0,
+    "users": 0,
+    "sessions": 0
+  },
+  "status": "accepted_isolated_release_protocol",
+  "completedAt": "2026-10-29T19:55:34.271Z",
+  "production": {
+    "deploymentChanged": false,
+    "databaseMutated": false,
+    "connectionPointersChanged": false
+  },
+  "restoration": {
+    "deploymentId": "dpl_7J4wUbZbeJC2HRcSNK3um2DJMPEG",
+    "aliases": [
+      "forge-staging-matthieu-pm.vercel.app",
+      "forge-staging-rho.vercel.app"
+    ],
+    "bothAliasApisVerified": true,
+    "temporaryAutomationBypasses": 0,
+    "temporaryProjectVariables": 0,
+    "rawLocalTokensDestroyed": true,
+    "protectionChecks": [
+      {
+        "usingRevokedBypass": false,
+        "status": 302,
+        "redirectHost": "vercel.com"
+      },
+      {
+        "usingRevokedBypass": true,
+        "status": 302,
+        "redirectHost": "vercel.com"
+      }
+    ]
+  },
+  "probeExpiry": "2026-10-29T21:17:59.296Z",
+  "deploymentConfiguration": "Per-deployment run ID, version, token hash and bounded expiry only. No raw operator token was deployed. Run schemas removed; bypass revoked; original staging restored.",
+  "additionalBuild": {
+    "id": "dpl_4YUknjS6sgcX5QM4zkGAAhm8eDrt",
+    "url": "https://forge-staging-qvuqqt07e-matthieu-pm.vercel.app",
+    "sourceRevision": "8798bb85c437d00995ac1d9b43824600a94b27e4",
+    "state": "READY",
+    "purpose": "Reproducible JavaScript CLI upload validation; release protocol acceptance uses the three b6adf72 builds above."
+  },
+  "validation": {
+    "appTests": {
+      "passed": 1781,
+      "skipped": 153
+    },
+    "workflowTests": 4,
+    "focusedTests": 10,
+    "focusedRealPostgresCases": 2,
+    "finalUnitRerun": 8,
+    "typecheck": "passed",
+    "targetedLint": "passed; zero errors and zero warnings",
+    "localProductionBuild": "passed",
+    "hostedBuilds": "four READY builds",
+    "diffCheck": "passed"
+  },
+  "acceptance": {
+    "AC-01 / AT-01": "Passed: old adapter used the sanitized prior schema; expansion + bridge promotion retained valid data; actual staging rollback served the old immutable deployment, which read bridge writes and wrote data the new build read. New-only writes remained old-readable before retirement.",
+    "AC-02 / AT-02": "Passed: two actual independent serialized migration jobs raced on the same isolated journal; one held ownership, the other exited MIGRATION_BUSY; retry applied zero migrations. PostgreSQL test pauses the actual owner after acquiring the lock to make overlap deterministic.",
+    "BR-01": "Passed for the enforced rehearsal consumers: active readers prevent retirement; old/bridge permission revoked under an exclusive lock; immutable retired endpoints fail before record access. Contract refuses active old versions, incomplete checkpoints or inconsistent values, then removes the actual legacy column.",
+    "backfill": "Passed: bounded keyed chunks persist a source digest and upper key; interruption after row update before checkpoint rolls back both; independent connection resumes; completed retry is a no-op; synchronization covers old updates and late inserts."
+  },
+  "limits": "Synthetic, run-owned compatibility schema and three version-specific adapters in actual Forge hosted builds. This verifies the release protocol, not a historical product binary or blanket compatibility of all product schema changes. Product contractions require their own consumer inventory/retirement proof; production migration/promotion remains a separate gated operation.",
+  "operatorFindings": [
+    "Both tested uploaders reassigned the staging alias despite --skip-domain; verify actual routing before each phase.",
+    "Promotion acknowledgement is asynchronous; alias API plus challenge response were required. An attempted overlapping rollback received 409 and was retried after completion.",
+    "Custom metadata was absent from connector deployment responses; exact source revisions were verified in authenticated responses.",
+    "Linear get_agent_context and record_agent_learning returned tool-not-found; operational findings are retained in the checked-in operator guide."
+  ],
+  "sourceFilesSha256": {
+    "apps/forge/scripts/lib/serialized-migrations.ts": "37d64567bc01641642aaa0b7565114b2e6aed7ff1699e4b186bc7a50021cbba4",
+    "apps/forge/src/application/operations/database-release-rehearsal.ts": "276d4bf7962047baf73797c6326fc3fbff5b7f4b35ed928ea02434b2dafd1c32",
+    "apps/forge/src/application/operations/database-release-handler.ts": "7cfcf69e1f463b2151310a7a9a21c06535ef10fcc5e11cdbd690d4b398c901ae",
+    "apps/forge/src/routes/api/internal/database-release-rehearsal.ts": "a2193493efdd912dff1773629ba75c6ee68e2d454ede4b0b71ff5ff7a51d1013",
+    "apps/forge/src/application/operations/database-release-rehearsal.postgres.test.ts": "9fb0d48bca3949c137737fd06b69d98b1d8f2dcb654e8c95d1d5b01e720c902f"
+  }
+}

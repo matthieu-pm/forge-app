@@ -89,9 +89,16 @@ export function assertMigrationTarget(
 export async function runSerializedMigrations(
   client: MigrationClient,
   migrations: Array<MigrationMeta>,
-  target: MigrationTarget
+  target: MigrationTarget,
+  journalSchema = "drizzle"
 ) {
   assertExpectedTarget(target)
+  // Rehearsals use their own journal; never append synthetic releases to app history.
+  if (
+    journalSchema !== "drizzle" &&
+    !/^for28_[a-f0-9]{32}$/.test(journalSchema)
+  )
+    throw new MigrationSafetyError("Invalid isolated migration journal schema.")
   const identity = await client.query(
     "SELECT current_database() AS database, current_setting('neon.branch_id',true) AS branch"
   )
@@ -116,12 +123,12 @@ export async function runSerializedMigrations(
     inTransaction = true
     await client.query("SET LOCAL lock_timeout = '5s'")
     await client.query("SET LOCAL statement_timeout = '5min'")
-    await client.query("CREATE SCHEMA IF NOT EXISTS drizzle")
+    await client.query(`CREATE SCHEMA IF NOT EXISTS ${journalSchema}`)
     await client.query(
-      "CREATE TABLE IF NOT EXISTS drizzle.__drizzle_migrations (id SERIAL PRIMARY KEY, hash text NOT NULL, created_at bigint)"
+      `CREATE TABLE IF NOT EXISTS ${journalSchema}.__drizzle_migrations (id SERIAL PRIMARY KEY, hash text NOT NULL, created_at bigint)`
     )
     const applied = await client.query(
-      "SELECT hash,created_at FROM drizzle.__drizzle_migrations ORDER BY created_at,id"
+      `SELECT hash,created_at FROM ${journalSchema}.__drizzle_migrations ORDER BY created_at,id`
     )
     if (
       applied.rows.length > migrations.length ||
@@ -142,7 +149,7 @@ export async function runSerializedMigrations(
         if (statement.trim()) await client.query(statement)
       }
       await client.query(
-        "INSERT INTO drizzle.__drizzle_migrations(hash,created_at) VALUES($1,$2)",
+        `INSERT INTO ${journalSchema}.__drizzle_migrations(hash,created_at) VALUES($1,$2)`,
         [migrations[i].hash, migrations[i].folderMillis]
       )
     }
