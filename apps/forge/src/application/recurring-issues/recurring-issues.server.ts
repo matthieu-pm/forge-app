@@ -5,6 +5,7 @@ import type {
   RecurringIssueDraft,
   SavedRecurringIssue,
 } from "@/lib/recurring-issue-contract"
+import { requireCurrentActor } from "@/application/resource-policy.server"
 import {
   ApplicationAccessError,
   canManageTeams,
@@ -29,6 +30,7 @@ export async function loadRecurringIssues(
   actor: Actor,
   slug: string
 ): Promise<Array<SavedRecurringIssue>> {
+  actor = await requireCurrentActor(actor)
   const { team } = await scope(actor, slug)
   const records = await db
     .select()
@@ -56,6 +58,7 @@ export async function saveRecurringIssue(
     payload: RecurringIssueDraft
   }
 ) {
+  actor = await requireCurrentActor(actor)
   const { team, directory } = await scope(actor, input.slug, true)
   const allowedTeams = new Set(directory.items.map((item) => item.id))
   const people = await db.query.members.findMany({
@@ -128,6 +131,7 @@ export async function deleteRecurringIssue(
   actor: Actor,
   input: { slug: string; id: string; updatedAt: string }
 ) {
+  actor = await requireCurrentActor(actor)
   const { team } = await scope(actor, input.slug, true)
   const rows = await db
     .delete(teamRecurringIssues)

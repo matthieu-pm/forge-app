@@ -1,4 +1,5 @@
 import "@tanstack/react-start/server-only"
+import { requireCurrentActor } from "@/application/resource-policy.server"
 
 import {
   isAgentProviderEnabled,
@@ -107,7 +108,9 @@ const coordinator = new AgentCoordinator({
 })
 
 const handler = createAgentHttpHandler({
-  getActor: requireSessionActor,
+  getActor: async (request) =>
+    requireCurrentActor(await requireSessionActor(request)),
+  authorizeStream: requireCurrentActor,
   coordinator,
   listModels: async (actor) =>
     (await listModelCatalog(actor)).filter((model) =>

@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm"
 import { z } from "zod"
 
 import type { Actor } from "@/application/actor"
+import { requireCurrentActor } from "@/application/resource-policy.server"
 import { requireTeamRead } from "@/application/authorization"
 import { db, organizations } from "@/db"
 
@@ -17,6 +18,7 @@ export const workspaceDescriptionSchema = z
   .strict()
 
 export async function describeWorkspace(actor: Actor) {
+  actor = await requireCurrentActor(actor)
   requireTeamRead(actor)
   const rows = await db
     .select({

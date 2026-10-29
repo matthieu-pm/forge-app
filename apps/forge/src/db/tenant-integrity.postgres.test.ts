@@ -40,7 +40,10 @@ describe.skipIf(!file)("PostgreSQL tenant integrity (FOR-31)", () => {
       userId: user,
       workspaceId: w[0],
       workspaceRole: "owner",
-      authentication: { kind: "session", sessionId: "fixture" },
+      authentication: {
+        kind: "session",
+        sessionId: `${overrides.userId ?? user}-session`,
+      },
       scopes: null,
       ...overrides,
     }
@@ -91,6 +94,11 @@ describe.skipIf(!file)("PostgreSQL tenant integrity (FOR-31)", () => {
       await pool.query(
         "INSERT INTO public.member(id,organization_id,user_id,role) VALUES($1,$2,$3,$4)",
         [randomUUID(), w[0], id, id === user ? "owner" : "member"]
+      )
+    for (const id of [user, member])
+      await pool.query(
+        "INSERT INTO session(id,token,user_id,expires_at,active_organization_id) VALUES($1,$1,$2,now()+interval '1 day',$3)",
+        [`${id}-session`, id, w[0]]
       )
     for (let i = 0; i < team.length; i++)
       await pool.query(

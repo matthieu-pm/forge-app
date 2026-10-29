@@ -106,6 +106,12 @@ export class CapabilityGateway {
       id?: () => string
       now?: () => Date
       allowedCapabilities?: ReadonlySet<string> | null
+      /** Production adapters must reauthorize targets before execution AND replay. */
+      authorize?: (
+        actor: Actor,
+        invocation: CapabilityInvocation,
+        context: CapabilityExecutionContext
+      ) => Promise<Actor>
     } = {}
   ) {
     this.#id = options.id ?? randomUUID
@@ -133,6 +139,27 @@ export class CapabilityGateway {
     invocation: CapabilityInvocation,
     context: CapabilityExecutionContext
   ): Promise<CapabilityResult> {
+    if (
+      actor.authentication.kind === "agent" &&
+      actor.authentication.runId !== context.runId
+    ) {
+      return {
+        ok: false,
+        errorCode: "RUN_BINDING_MISMATCH",
+        errorMessage: "The run token does not match this invocation.",
+      }
+    }
+    if (this.options.authorize) {
+      try {
+        actor = await this.options.authorize(actor, invocation, context)
+      } catch {
+        return {
+          ok: false,
+          errorCode: "FORBIDDEN",
+          errorMessage: "The capability request was rejected.",
+        }
+      }
+    }
     if (
       this.options.allowedCapabilities &&
       !this.options.allowedCapabilities.has(invocation.capabilityId)

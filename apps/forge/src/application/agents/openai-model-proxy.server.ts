@@ -4,6 +4,7 @@ import { and, eq, or } from "drizzle-orm"
 import { Agent } from "undici"
 
 import type { PublicEndpointAddress } from "@/application/agents/custom-endpoint-policy.server"
+import { ApplicationAccessError } from "@/application/authorization"
 import {
   createPinnedEndpointLookup,
   resolveServerProviderEndpoint,
@@ -72,6 +73,19 @@ function bearer(request: Request) {
 async function defaultLoadCredential(
   claims: ModelAccessClaims
 ): Promise<RuntimeModelCredential | null> {
+  const { requireCurrentActor } =
+    await import("@/application/resource-policy.server")
+  await requireCurrentActor({
+    userId: claims.sub,
+    workspaceId: claims.workspaceId,
+    workspaceRole: "",
+    authentication: {
+      kind: "agent",
+      runId: claims.runId,
+      tokenId: claims.tokenId,
+    },
+    scopes: [],
+  })
   const managedApiKey = managedOpenAIApiKeyFor(
     claims.connectionId,
     claims.workspaceId,
@@ -286,7 +300,13 @@ export function createOpenAIModelProxy(
         statusText: upstream.statusText,
         headers,
       })
-    } catch {
+    } catch (error) {
+      if (error instanceof ApplicationAccessError)
+        return errorResponse(
+          403,
+          "FORBIDDEN",
+          "The model request was rejected."
+        )
       return errorResponse(
         502,
         "MODEL_PROXY_FAILED",

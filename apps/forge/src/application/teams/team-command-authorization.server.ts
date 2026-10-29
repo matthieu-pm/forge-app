@@ -4,11 +4,8 @@ import type { Actor } from "@/application/actor"
 import type { Transaction } from "@/db"
 import type { TeamSummary } from "./team-schemas"
 import { teamMembers, teams, workspaceSecuritySettings } from "@/db"
-import {
-  ApplicationAccessError,
-  canReadAllPrivateTeams,
-  hasScope,
-} from "@/application/authorization"
+import { ApplicationAccessError, hasScope } from "@/application/authorization"
+import { readableTeamCondition } from "@/application/resource-policy.server"
 import { canWorkspaceAction } from "@/application/workspace-security/workspace-security.server"
 
 export async function authorizeTeamCreation(
@@ -31,13 +28,25 @@ export async function authorizeTeamCreation(
       throw new ApplicationAccessError()
     return
   }
+  // Hold any existing private-team membership before evaluating visibility.
+  await tx
+    .select()
+    .from(teamMembers)
+    .where(
+      and(
+        eq(teamMembers.workspaceId, actor.workspaceId),
+        eq(teamMembers.teamId, value.id),
+        eq(teamMembers.userId, actor.userId)
+      )
+    )
+    .for("share")
   const team = (
     await tx
       .select()
       .from(teams)
       .where(
         and(
-          eq(teams.workspaceId, actor.workspaceId),
+          readableTeamCondition(actor, teams.id),
           eq(teams.id, value.id),
           isNull(teams.deletedAt)
         )
@@ -45,19 +54,4 @@ export async function authorizeTeamCreation(
       .for("share")
   ).at(0)
   if (!team) throw new ApplicationAccessError()
-  if (team.visibility === "workspace" || canReadAllPrivateTeams(actor)) return
-  const membership = (
-    await tx
-      .select()
-      .from(teamMembers)
-      .where(
-        and(
-          eq(teamMembers.workspaceId, actor.workspaceId),
-          eq(teamMembers.teamId, team.id),
-          eq(teamMembers.userId, actor.userId)
-        )
-      )
-      .for("share")
-  ).at(0)
-  if (!membership) throw new ApplicationAccessError()
 }

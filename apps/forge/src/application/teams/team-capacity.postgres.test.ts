@@ -85,12 +85,16 @@ describe.skipIf(!connection)("atomic PostgreSQL team capacity", () => {
       "INSERT INTO workspace_entitlements(workspace_id,plan,status) VALUES($1,$2,'active')",
       [id, plan]
     )
+    await pool.query(
+      "INSERT INTO session(id,token,user_id,expires_at,active_organization_id) VALUES($1,$1,$2,now()+interval '1 day',$3)",
+      [`${owner}-session`, owner, id]
+    )
     const actor: Actor = {
       workspaceId: id,
       userId: owner,
       workspaceRole: "owner",
       scopes: null,
-      authentication: { kind: "session", sessionId: "fixture" },
+      authentication: { kind: "session", sessionId: `${owner}-session` },
     }
     return { id, owner, actor }
   }

@@ -1,0 +1,1 @@
+ALTER TABLE "documents" ADD COLUMN "shared_with_workspace" boolean DEFAULT false NOT NULL;

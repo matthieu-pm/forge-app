@@ -115,6 +115,43 @@ function fixture() {
 }
 
 describe("agent HTTP transport", () => {
+  it("stops exposing events when live stream authorization is revoked", async () => {
+    const { coordinator, handler: setup } = fixture()
+    const response = await setup(
+      new Request("http://forge.test/api/agent/threads", {
+        method: "POST",
+        headers: { origin: "http://forge.test" },
+        body: JSON.stringify({ runtimeKind: "eve" }),
+      })
+    )
+    const thread = (await response.json()) as { id: string }
+    const authorizeStream = vi
+      .fn()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValue(new Error("revoked"))
+    const handler = createAgentHttpHandler({
+      getActor: async () => actor,
+      coordinator,
+      listModels: async () => [model],
+      authorizeStream,
+    })
+    const stream = await handler(
+      new Request("http://forge.test/api/agent/runs", {
+        method: "POST",
+        headers: { origin: "http://forge.test" },
+        body: JSON.stringify({
+          threadId: thread.id,
+          message: "fixture",
+          selectionMode: "auto",
+          attachmentIds: [],
+        }),
+      })
+    )
+    const text = await stream.text()
+    expect(authorizeStream).toHaveBeenCalledTimes(2)
+    expect(text).toContain("transport.error")
+    expect(text).not.toContain("assistant.message")
+  })
   it("denies unverified sessions before creating an agent thread", async () => {
     const { coordinator } = fixture()
     const createThread = vi.spyOn(coordinator, "createThread")

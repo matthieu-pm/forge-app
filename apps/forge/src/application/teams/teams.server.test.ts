@@ -332,7 +332,9 @@ describe("Teams application module", () => {
     expect(mocks.directoryFindFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.arrayContaining([
-          expect.objectContaining({ value: "workspace-1" }),
+          expect.arrayContaining([
+            expect.objectContaining({ value: "workspace-1" }),
+          ]),
         ]),
       })
     )
@@ -482,3 +484,10 @@ describe("Teams application module", () => {
     })
   })
 })
+
+// Persistence policy is verified with real PostgreSQL in resource-authorization.postgres.test.ts.
+vi.mock("@/application/resource-policy.server", () => ({
+  requireCurrentActor: async (actor: Actor) => actor,
+  currentMemberCondition: vi.fn(),
+  readableTeamCondition: vi.fn(),
+}))

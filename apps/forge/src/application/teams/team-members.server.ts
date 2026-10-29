@@ -1,12 +1,13 @@
 import "@tanstack/react-start/server-only"
-
 import { and, asc, eq, inArray, isNull } from "drizzle-orm"
+import { visibleTeamCondition } from "./team-visibility.server"
 import type { Actor } from "@/application/actor"
 import type { TeamMemberDirectory } from "@/lib/team-member-contract"
+import { requireCurrentActor } from "@/application/resource-policy.server"
+
 import {
   ApplicationAccessError,
   canManageTeams,
-  canReadAllPrivateTeams,
   requireTeamRead,
 } from "@/application/authorization"
 import { db, members, teamMembers, teams } from "@/db"
@@ -15,20 +16,14 @@ async function requireVisibleTeam(actor: Actor, slug: string) {
   requireTeamRead(actor)
   const team = await db.query.teams.findFirst({
     where: and(
-      eq(teams.workspaceId, actor.workspaceId),
+      visibleTeamCondition(actor),
       eq(teams.slug, slug),
       isNull(teams.deletedAt)
     ),
     with: { members: true },
   })
-  if (!team) throw new Error("The team no longer exists.")
-  if (
-    team.visibility === "private" &&
-    !canReadAllPrivateTeams(actor) &&
-    !team.members.some((member) => member.userId === actor.userId)
-  ) {
+  if (!team)
     throw new ApplicationAccessError("You do not have access to this team.")
-  }
   return team
 }
 
@@ -36,6 +31,7 @@ export async function getTeamMemberDirectory(
   actor: Actor,
   slug: string
 ): Promise<TeamMemberDirectory> {
+  actor = await requireCurrentActor(actor)
   const team = await requireVisibleTeam(actor, slug)
   const canManage = canManageTeams(actor)
   const workspaceMembers = await db.query.members.findMany({
@@ -68,6 +64,7 @@ export async function addTeamMembers(
   actor: Actor,
   input: { slug: string; userIds: Array<string> }
 ) {
+  actor = await requireCurrentActor(actor)
   if (!canManageTeams(actor))
     return {
       ok: false as const,

@@ -22,9 +22,7 @@ const DEFAULT_MAX_TURN_ATTACHMENT_BYTES = 20 * 1024 * 1024
 export class AgentAttachmentError extends Error {
   constructor(
     readonly code:
-      | "ATTACHMENT_NOT_FOUND"
-      | "ATTACHMENT_TOO_LARGE"
-      | "INVALID_ATTACHMENT",
+      "ATTACHMENT_NOT_FOUND" | "ATTACHMENT_TOO_LARGE" | "INVALID_ATTACHMENT",
     message: string
   ) {
     super(message)
@@ -70,6 +68,7 @@ export class AgentAttachmentService {
 
   constructor(
     private readonly dependencies: {
+      authorizeActor?: (actor: Actor) => Promise<Actor>
       metadata: AgentAttachmentMetadataStore
       blobs: AgentArtifactBlobStore
       id?: () => string
@@ -84,6 +83,7 @@ export class AgentAttachmentService {
   }
 
   async upload(actor: Actor, rawInput: CreateAgentAttachmentInput) {
+    actor = (await this.dependencies.authorizeActor?.(actor)) ?? actor
     requireAgentRun(actor)
     const input = createAgentAttachmentInputSchema.parse(rawInput)
     await this.dependencies.authorizeUpload?.(actor, input.contentType)
@@ -134,6 +134,7 @@ export class AgentAttachmentService {
     actor: Actor,
     attachmentIds: ReadonlyArray<string>
   ): Promise<Array<ResolvedAgentAttachment>> {
+    actor = (await this.dependencies.authorizeActor?.(actor)) ?? actor
     requireAgentRun(actor)
     const ids = [...new Set(attachmentIds)]
     if (ids.length !== attachmentIds.length || ids.length > 20) {

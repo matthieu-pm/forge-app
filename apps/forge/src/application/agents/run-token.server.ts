@@ -47,6 +47,7 @@ export async function mintAgentCapabilityToken({
   if (capabilities.includes("teams.update")) {
     scopes.add("teams:write")
   }
+  if (capabilities.includes("artifacts.create")) scopes.add("agents:write")
   return new SignJWT({
     workspaceId: actor.workspaceId,
     workspaceRole: actor.workspaceRole,

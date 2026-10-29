@@ -11,6 +11,7 @@ import {
   isNull,
   lt,
   or,
+  sql,
 } from "drizzle-orm"
 import {
   authorizationUrl,
@@ -21,9 +22,14 @@ import {
 import type { Actor } from "@/application/actor"
 import type { CallRecord, CallsDirectory, MeetingProvider } from "@/lib/calls"
 import type { MeetingTokens } from "./providers.server"
+import {
+  readableTeamCondition,
+  requireCurrentActor,
+  requireResourceScope,
+} from "@/application/resource-policy.server"
 import { parseTranscript, recapSchema } from "@/lib/calls"
 import { hasWorkspaceRole } from "@/application/authorization"
-import { getTeamDirectory } from "@/application/teams/teams.server"
+
 import { EnvelopeModelSecretVault } from "@/application/agents/model-secret-vault.server"
 import {
   callActions,
@@ -33,6 +39,7 @@ import {
   calls,
   db,
   members,
+  teams,
   users,
 } from "@/db"
 import {
@@ -49,7 +56,13 @@ function requireAdmin(actor: Actor) {
     )
 }
 async function visibleTeamIds(actor: Actor) {
-  return (await getTeamDirectory(actor, "active")).items.map((team) => team.id)
+  requireResourceScope(actor, "teams:read")
+  return (
+    await db
+      .select({ id: teams.id })
+      .from(teams)
+      .where(readableTeamCondition(actor, teams.id))
+  ).map((team) => team.id)
 }
 async function requireTeam(actor: Actor, teamId: string) {
   if (!(await visibleTeamIds(actor)).includes(teamId))
@@ -62,6 +75,32 @@ async function requireCall(actor: Actor, id: string) {
   if (!call) throw new Error("This call is no longer available.")
   await requireTeam(actor, call.teamId)
   return call
+}
+// Scheduled summaries are a system service over active stored calls; they do
+// not inherit a departed user's credential or publish anything outside the call.
+function readableTeamConditionForSystem(teamId: typeof calls.teamId) {
+  return sql`EXISTS (SELECT 1 FROM teams call_team WHERE call_team.id = ${teamId} AND call_team.workspace_id = ${calls.workspaceId} AND call_team.deleted_at IS NULL)`
+}
+async function authorizeMeetingSync(
+  connection: typeof callConnections.$inferSelect
+) {
+  const member = await db.query.members.findFirst({
+    where: and(
+      eq(members.organizationId, connection.workspaceId),
+      eq(members.userId, connection.userId)
+    ),
+  })
+  if (!member)
+    throw new Error("The meeting connection no longer has permission.")
+  const actor: Actor = {
+    userId: connection.userId,
+    workspaceId: connection.workspaceId,
+    workspaceRole: member.role,
+    authentication: { kind: "session", sessionId: "internal-meeting-sync" },
+    scopes: null,
+  }
+  requireAdmin(actor)
+  await requireTeam(actor, connection.teamId)
 }
 async function retention(workspaceId: string) {
   return (
@@ -152,6 +191,7 @@ export async function listCalls(
   actor: Actor,
   teamId?: string
 ): Promise<CallsDirectory> {
+  actor = await requireCurrentActor(actor)
   const ids = await visibleTeamIds(actor)
   if (teamId && !ids.includes(teamId))
     throw new Error("This team is not available.")
@@ -198,6 +238,7 @@ export async function listCalls(
   }
 }
 export async function readCall(actor: Actor, callId: string) {
+  actor = await requireCurrentActor(actor)
   await sweepCallTranscripts(actor.workspaceId)
   return (await decorate([await requireCall(actor, callId)]))[0]
 }
@@ -205,6 +246,7 @@ export async function importCall(
   actor: Actor,
   input: { teamId: string; title: string; startedAt: string; text: string }
 ) {
+  actor = await requireCurrentActor(actor)
   await requireTeam(actor, input.teamId)
   const startedAt = new Date(input.startedAt)
   if (
@@ -244,6 +286,7 @@ export async function addCallNote(
   actor: Actor,
   input: { callId: string; body: string; kind: "note" | "follow-up" }
 ) {
+  actor = await requireCurrentActor(actor)
   await requireCall(actor, input.callId)
   await db.insert(callNotes).values({ ...input, userId: actor.userId })
 }
@@ -251,6 +294,7 @@ export async function setCallAction(
   actor: Actor,
   input: { callId: string; actionId: string; completed: boolean }
 ) {
+  actor = await requireCurrentActor(actor)
   await requireCall(actor, input.callId)
   await db
     .update(callActions)
@@ -263,6 +307,7 @@ export async function setCallAction(
     )
 }
 export async function saveRetention(actor: Actor, days: number) {
+  actor = await requireCurrentActor(actor)
   requireAdmin(actor)
   await db
     .insert(callSettings)
@@ -278,6 +323,7 @@ export async function beginConnection(
   provider: MeetingProvider,
   teamId: string
 ) {
+  actor = await requireCurrentActor(actor)
   requireAdmin(actor)
   await requireTeam(actor, teamId)
   if (!configuredProviders().includes(provider))
@@ -319,6 +365,7 @@ export async function finishConnection(
   state: string,
   code: string
 ) {
+  actor = await requireCurrentActor(actor)
   requireAdmin(actor)
   const hash = createHash("sha256").update(state).digest("hex")
   const connection = await db.query.callConnections.findFirst({
@@ -361,6 +408,7 @@ export async function finishConnection(
     .where(eq(callConnections.id, connection.id))
 }
 export async function disconnectCallProvider(actor: Actor, id: string) {
+  actor = await requireCurrentActor(actor)
   requireAdmin(actor)
   await db
     .delete(callConnections)
@@ -372,10 +420,18 @@ export async function disconnectCallProvider(actor: Actor, id: string) {
     )
 }
 export async function summarizeCall(actor: Actor, callId: string) {
+  actor = await requireCurrentActor(actor)
   await requireCall(actor, callId)
-  return generateCallSummary(callId)
+  return generateCallSummary(callId, actor)
 }
-async function generateCallSummaryImpl(callId: string) {
+async function generateCallSummaryImpl(
+  callId: string,
+  requestingActor?: Actor
+) {
+  if (requestingActor) {
+    requestingActor = await requireCurrentActor(requestingActor)
+    await requireCall(requestingActor, callId)
+  }
   const now = new Date()
   const [call] = await db
     .update(calls)
@@ -383,6 +439,7 @@ async function generateCallSummaryImpl(callId: string) {
     .where(
       and(
         eq(calls.id, callId),
+        readableTeamConditionForSystem(calls.teamId),
         eq(calls.status, "ready"),
         inArray(calls.summaryStatus, ["pending", "error"]),
         or(
@@ -438,6 +495,10 @@ async function generateCallSummaryImpl(callId: string) {
     const recap = recapSchema.parse(
       JSON.parse(result.choices?.[0]?.message.content ?? "{}")
     )
+    if (requestingActor) {
+      requestingActor = await requireCurrentActor(requestingActor)
+      await requireCall(requestingActor, callId)
+    }
     await db.transaction(async (tx) => {
       const updated = await tx
         .update(calls)
@@ -450,6 +511,10 @@ async function generateCallSummaryImpl(callId: string) {
         .where(
           and(
             eq(calls.id, call.id),
+            readableTeamConditionForSystem(calls.teamId),
+            ...(requestingActor
+              ? [readableTeamCondition(requestingActor, calls.teamId)]
+              : []),
             eq(calls.status, "ready"),
             eq(calls.summaryLeaseAt, now)
           )
@@ -494,25 +559,7 @@ async function syncCallConnectionImpl(id: string) {
     return 0
   }
   try {
-    const member = await db.query.members.findFirst({
-      where: and(
-        eq(members.organizationId, connection.workspaceId),
-        eq(members.userId, connection.userId)
-      ),
-    })
-    if (!member)
-      throw new Error(
-        "The connected account no longer belongs to this workspace."
-      )
-    const actor: Actor = {
-      userId: connection.userId,
-      workspaceId: connection.workspaceId,
-      workspaceRole: member.role,
-      authentication: { kind: "session", sessionId: "meeting-sync" },
-      scopes: null,
-    }
-    requireAdmin(actor)
-    await requireTeam(actor, connection.teamId)
+    await authorizeMeetingSync(connection)
     const context = `meeting:${connection.workspaceId}:${connection.id}`
     const vault = new EnvelopeModelSecretVault()
     let tokens = JSON.parse(
@@ -526,6 +573,7 @@ async function syncCallConnectionImpl(id: string) {
       tokens = await exchangeTokens(connection.provider as MeetingProvider, {
         refreshToken: tokens.refresh_token,
       })
+      await authorizeMeetingSync(connection)
       await db
         .update(callConnections)
         .set({ secret: await vault.seal(JSON.stringify(tokens), context) })
@@ -541,6 +589,7 @@ async function syncCallConnectionImpl(id: string) {
     let imported = 0
     for (const record of records) {
       if (!record.transcript.length || record.startedAt < since) continue
+      await authorizeMeetingSync(connection)
       const [inserted] = await db
         .insert(calls)
         .values({
@@ -577,6 +626,7 @@ async function syncCallConnectionImpl(id: string) {
   }
 }
 export async function syncCalls(actor: Actor) {
+  actor = await requireCurrentActor(actor)
   const ids = await visibleTeamIds(actor)
   const connections = ids.length
     ? await db

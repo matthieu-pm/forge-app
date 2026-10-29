@@ -14,19 +14,19 @@ import type {
   StoredAgentArtifactRecord,
 } from "@/application/agents/artifact-store"
 import type { AgentEventStore } from "@/application/agents/event-store"
-import {
-  createAgentArtifactInputSchema,
-} from "@/application/agents/artifact-contract"
+import { createAgentArtifactInputSchema } from "@/application/agents/artifact-contract"
 import { mintArtifactAccessToken } from "@/application/agents/artifact-access-token.server"
+import {
+  requireAgentRead,
+  requireAgentRun,
+} from "@/application/agents/agent-authorization"
 
 const DEFAULT_MAX_ARTIFACT_BYTES = 5 * 1024 * 1024
 
 export class AgentArtifactError extends Error {
   constructor(
     readonly code:
-      | "ARTIFACT_NOT_FOUND"
-      | "ARTIFACT_TOO_LARGE"
-      | "INVALID_ARTIFACT_CONTENT",
+      "ARTIFACT_NOT_FOUND" | "ARTIFACT_TOO_LARGE" | "INVALID_ARTIFACT_CONTENT",
     message: string
   ) {
     super(message)
@@ -72,6 +72,7 @@ export class AgentArtifactService {
 
   constructor(
     private readonly dependencies: {
+      authorizeActor?: (actor: Actor) => Promise<Actor>
       metadata: AgentArtifactMetadataStore
       blobs: AgentArtifactBlobStore
       agents: AgentStore
@@ -90,6 +91,8 @@ export class AgentArtifactService {
     runId: string,
     rawInput: CreateAgentArtifactInput
   ): Promise<AgentArtifactRecord> {
+    actor = (await this.dependencies.authorizeActor?.(actor)) ?? actor
+    requireAgentRun(actor)
     const input = createAgentArtifactInputSchema.parse(rawInput)
     const run = await this.dependencies.agents.getRun(actor.workspaceId, runId)
     if (!run || run.initiatedByUserId !== actor.userId) {
@@ -163,6 +166,8 @@ export class AgentArtifactService {
   }
 
   async getMetadata(actor: Actor, artifactId: string) {
+    actor = (await this.dependencies.authorizeActor?.(actor)) ?? actor
+    requireAgentRead(actor)
     const record = await this.dependencies.metadata.getAuthorized(
       actor.workspaceId,
       actor.userId,
@@ -188,6 +193,8 @@ export class AgentArtifactService {
   }
 
   async read(actor: Actor, artifactId: string) {
+    actor = (await this.dependencies.authorizeActor?.(actor)) ?? actor
+    requireAgentRead(actor)
     const record = await this.dependencies.metadata.getAuthorized(
       actor.workspaceId,
       actor.userId,

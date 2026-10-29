@@ -3,19 +3,12 @@ import { and, eq, sql } from "drizzle-orm"
 import { z } from "zod"
 import type { Actor } from "@/application/actor"
 import {
-  ApplicationAccessError,
-  hasScope,
-  hasWorkspaceRole,
-} from "@/application/authorization"
-import {
-  db,
-  issues,
-  members,
-  projectTeams,
-  projects,
-  teamMembers,
-  teams,
-} from "@/db"
+  readableProjectCondition,
+  readableTeamCondition,
+  requireCurrentActor,
+} from "@/application/resource-policy.server"
+import { ApplicationAccessError, hasScope } from "@/application/authorization"
+import { db, issues, projects, teams } from "@/db"
 
 const relationshipInput = z
   .object({
@@ -38,6 +31,7 @@ async function setRelationship(
   raw: z.input<typeof relationshipInput>,
   kind: "parent" | "project"
 ) {
+  actor = await requireCurrentActor(actor)
   const input = relationshipInput.parse(raw)
   if (
     !hasScope(actor, "issues:write") ||
@@ -47,20 +41,13 @@ async function setRelationship(
     throw new ApplicationAccessError()
   try {
     await db.transaction(async (tx) => {
-      const membershipRows = await tx
-        .select()
-        .from(members)
-        .where(
-          and(
-            eq(members.organizationId, actor.workspaceId),
-            eq(members.userId, actor.userId)
-          )
-        )
-        .for("share")
-      const membership = membershipRows.at(0)
-      if (!membership) throw new ApplicationAccessError()
-      const currentActor = { ...actor, workspaceRole: membership.role }
-      const privileged = hasWorkspaceRole(currentActor, ["owner", "admin"])
+      const currentActor = await requireCurrentActor(actor, tx)
+      if (
+        !hasScope(currentActor, "issues:write") ||
+        !hasScope(currentActor, "issues:read") ||
+        (kind === "project" && !hasScope(currentActor, "projects:read"))
+      )
+        throw new ApplicationAccessError()
       // Fences the complete check/write and makes concurrent parent edits safe at
       // every supported isolation level, matching the direct-SQL trigger guard.
       await tx.execute(
@@ -73,26 +60,12 @@ async function setRelationship(
           .where(
             and(
               eq(teams.id, teamId),
-              eq(teams.workspaceId, actor.workspaceId),
+              readableTeamCondition(currentActor, teams.id),
               sql`${teams.deletedAt} IS NULL`
             )
           )
           .for("share")
-        const team = rows.at(0)
-        if (!team) return false
-        if (privileged || team.visibility === "workspace") return true
-        const memberships = await tx
-          .select({ id: teamMembers.id })
-          .from(teamMembers)
-          .where(
-            and(
-              eq(teamMembers.teamId, team.id),
-              eq(teamMembers.workspaceId, actor.workspaceId),
-              eq(teamMembers.userId, actor.userId)
-            )
-          )
-          .for("share")
-        return memberships.length > 0
+        return rows.length > 0
       }
       const issueRows = await tx
         .select()
@@ -129,27 +102,12 @@ async function setRelationship(
           .where(
             and(
               eq(projects.id, input.targetId),
-              eq(projects.workspaceId, actor.workspaceId)
+              readableProjectCondition(currentActor, projects.id)
             )
           )
           .for("share")
         const project = projectRows.at(0)
         if (!project) throw new ApplicationAccessError()
-        const participating = await tx
-          .select()
-          .from(projectTeams)
-          .where(
-            and(
-              eq(projectTeams.projectId, project.id),
-              eq(projectTeams.workspaceId, actor.workspaceId)
-            )
-          )
-          .for("share")
-        const readable = await Promise.all(
-          participating.map((t) => readableTeam(t.teamId))
-        )
-        if (participating.length && !readable.some(Boolean))
-          throw new ApplicationAccessError()
       }
       await tx
         .update(issues)

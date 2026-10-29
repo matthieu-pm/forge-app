@@ -16,6 +16,7 @@ import type {
   UpdateTeamInput,
   UpdateTeamResult,
 } from "@/application/teams/team-schemas"
+import { requireCurrentActor } from "@/application/resource-policy.server"
 import {
   canManageTeams,
   hasScope,
@@ -139,6 +140,7 @@ async function createTeamImpl(
   input: CreateTeamInput,
   executor: DatabaseExecutor = db
 ): Promise<CreateTeamResult> {
+  actor = await requireCurrentActor(actor, executor)
   if (
     !hasScope(actor, "teams:write") ||
     !(await canWorkspaceAction(actor, "teams.create", executor))
@@ -232,6 +234,7 @@ export async function getTeamDirectory(
   actor: Actor,
   lifecycle: TeamLifecycle
 ): Promise<TeamDirectory> {
+  actor = await requireCurrentActor(actor)
   requireTeamRead(actor)
 
   const recoveryCutoff = new Date(Date.now() - TEAM_RECOVERY_WINDOW_MS)
@@ -319,6 +322,7 @@ export async function listTeams(
   actor: Actor,
   input: ListTeamsInput = {}
 ): Promise<TeamPage> {
+  actor = await requireCurrentActor(actor)
   requireTeamRead(actor)
 
   const limit = Math.max(1, Math.min(input.limit ?? 100, 100))
@@ -361,6 +365,7 @@ async function restoreTeamImpl(
   actor: Actor,
   selector: TeamSelector
 ): Promise<RestoreTeamResult> {
+  actor = await requireCurrentActor(actor)
   if (!canManageTeams(actor)) {
     return {
       ok: false,
@@ -423,6 +428,7 @@ async function joinTeamImpl(
   | { ok: true; team: { name: string; slug: string } }
   | { ok: false; message: string }
 > {
+  actor = await requireCurrentActor(actor)
   requireTeamRead(actor)
   if (!hasScope(actor, "teams:write"))
     return {
@@ -431,7 +437,7 @@ async function joinTeamImpl(
     }
   const team = await db.query.teams.findFirst({
     where: and(
-      eq(teams.workspaceId, actor.workspaceId),
+      visibleTeamCondition(actor),
       selectorCondition(selector),
       isNull(teams.deletedAt)
     ),
@@ -461,6 +467,7 @@ async function leaveTeamImpl(
   actor: Actor,
   selector: TeamSelector
 ): Promise<LeaveTeamResult> {
+  actor = await requireCurrentActor(actor)
   requireTeamRead(actor)
   if (!hasScope(actor, "teams:write")) {
     return {
@@ -472,7 +479,7 @@ async function leaveTeamImpl(
 
   const team = await db.query.teams.findFirst({
     where: and(
-      eq(teams.workspaceId, actor.workspaceId),
+      visibleTeamCondition(actor),
       selectorCondition(selector),
       isNull(teams.deletedAt)
     ),
@@ -527,6 +534,7 @@ export async function getTeam(
   actor: Actor,
   selector: TeamSelector
 ): Promise<TeamSummary | null> {
+  actor = await requireCurrentActor(actor)
   requireTeamRead(actor)
 
   const matchingTeams = await db
@@ -551,6 +559,7 @@ async function archiveTeamImpl(
   selector: TeamSelector,
   confirmationName?: string
 ): Promise<DeleteTeamResult> {
+  actor = await requireCurrentActor(actor)
   if (!canManageTeams(actor)) {
     return {
       ok: false,
@@ -599,6 +608,7 @@ async function updateTeamImpl(
   settings: UpdateTeamInput["settings"],
   executor: DatabaseExecutor = db
 ): Promise<UpdateTeamResult> {
+  actor = await requireCurrentActor(actor, executor)
   if (!canManageTeams(actor)) {
     return {
       ok: false,

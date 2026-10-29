@@ -32,10 +32,16 @@ describe.skipIf(!testUrl)("PostgreSQL private-team read boundaries", () => {
       workspaceId,
       userId: userIds[role === "owner" ? 0 : role === "admin" ? 1 : 2],
       workspaceRole: role,
-      authentication: { kind: "session", sessionId: "fixture" },
+      authentication: {
+        kind: "session",
+        sessionId: `${userIds[role === "owner" ? 0 : role === "admin" ? 1 : 2]}-session`,
+      },
       scopes,
     }
   }
+
+  const readerId = (role: string) =>
+    userIds[role === "owner" ? 0 : role === "admin" ? 1 : 2]
 
   beforeAll(async () => {
     const target = assertIsolatedTestConnection(testUrl!)
@@ -76,6 +82,21 @@ describe.skipIf(!testUrl)("PostgreSQL private-team read boundaries", () => {
       "INSERT INTO public.member(id,organization_id,user_id,role) VALUES($1,$2,$3,'owner')",
       [randomUUID(), foreignWorkspaceId, userIds[3]]
     )
+    for (let i = 0; i < 3; i++) {
+      await pool.query(
+        "INSERT INTO session(id,token,user_id,expires_at,active_organization_id) VALUES($1,$1,$2,now()+interval '1 day',$3)",
+        [`${userIds[i]}-session`, userIds[i], workspaceId]
+      )
+      await pool.query(
+        "INSERT INTO apikey(id,key,config_id,reference_id,permissions,metadata) VALUES($1,$1,'forge-api',$2,$3,$4)",
+        [
+          `${userIds[i]}-key`,
+          userIds[i],
+          JSON.stringify({ teams: ["read"] }),
+          JSON.stringify({ workspaceId }),
+        ]
+      )
+    }
     for (let i = 0; i < teamIds.length; i++) {
       await pool.query(
         `INSERT INTO public.teams(id,workspace_id,slug,identifier,name,icon_kind,icon_value,color,timezone,visibility,created_by_user_id)
@@ -156,7 +177,10 @@ describe.skipIf(!testUrl)("PostgreSQL private-team read boundaries", () => {
     async (role) => {
       const reader: Actor = {
         ...actor(role, ["teams:read"]),
-        authentication: { kind: "apiKey", credentialId: "fixture-key" },
+        authentication: {
+          kind: "apiKey",
+          credentialId: `${readerId(role)}-key`,
+        },
       }
       expect(
         (await teams.listTeams(reader)).items.map((team) => team.id)

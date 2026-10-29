@@ -22,7 +22,9 @@ export function hasWorkspaceRole(
 }
 
 export function hasScope(actor: Actor, scope: ApiScope) {
-  return actor.scopes === null || actor.scopes.includes(scope)
+  return actor.scopes === null
+    ? actor.authentication.kind === "session"
+    : actor.scopes.includes(scope)
 }
 
 export function canReadTeams(actor: Actor) {
