@@ -1,0 +1,263 @@
+{
+  "issue": "FOR-34",
+  "recordedAt": "2026-10-29T23:43:50.353980+00:00",
+  "authorization": "User requested completion of production configuration, legacy-file migration and rollout in this chat.",
+  "code": {
+    "web": "066b9c5c552a5ce615a24be1f39cb6b36a448aeb",
+    "runtime": "7717b8d9278797e96c6a5737700055adbca4ad99",
+    "note": "Runtime-only changes restore the prior bounded callback diagnostic. Web code is unchanged between these source revisions."
+  },
+  "production": {
+    "webProject": "prj_S0XLtdngbexhl2ao7WviBrlMScar",
+    "webAliases": [
+      "https://app.forgenow.tech",
+      "https://forge-app-mauve.vercel.app"
+    ],
+    "webDeployment": "dpl_GQsj3VX7RSdNEv9vPdkdfRoTtWFL",
+    "runtimeProject": "prj_NtW13t9fbFligQ3pWV4DdUxW5Mub",
+    "runtimeAlias": "https://forge-agent-runtime.vercel.app",
+    "runtimeDeployment": "dpl_CG1mYfVhuTC36zzFU2p8tvgtefS5",
+    "privateStore": {
+      "id": "store_z6l5eIW5xSJCsoUL",
+      "access": "private",
+      "region": "iad1",
+      "connectedEnvironments": [
+        "production"
+      ]
+    },
+    "configured": [
+      "BLOB_READ_WRITE_TOKEN (server-only)",
+      "BLOB_STORE_ID",
+      "FORGE_AGENT_BLOB_ADAPTER=vercel-private",
+      "FORGE_ENVIRONMENT=production"
+    ]
+  },
+  "legacyInventory": {
+    "branch": "br-muddy-queen-zaeeysjt",
+    "database": "neondb",
+    "artifactRows": 0,
+    "attachmentRows": 0,
+    "recheckedAtCutover": true,
+    "bytesToCopy": 0,
+    "boundary": "No referenced server agent files required copying. This does not claim recovery of old lost bytes or migration of browser-local issue data."
+  },
+  "rehearsal": {
+    "checkedAt": "2026-10-29T23:30:03.979Z",
+    "identity": {
+      "database": "neondb",
+      "branch": "br-little-hat-zag5o7k8"
+    },
+    "initialMigrations": 26,
+    "initialLastHash": "f75aa12984dcf6bc851fb30dd4faf4d314302b9c529a075e0f1ae1594a8a81f1",
+    "applied": {
+      "applied": 20,
+      "total": 46
+    },
+    "retry": {
+      "applied": 0,
+      "total": 46
+    },
+    "preserved": {
+      "user": true,
+      "organization": true,
+      "member": true,
+      "session": true,
+      "teams": true,
+      "agent_threads": true,
+      "agent_runs": true,
+      "agent_artifacts": true,
+      "agent_attachments": true,
+      "workspace_entitlements": true
+    }
+  },
+  "productionMigration": {
+    "checkedAt": "2026-10-29T23:35:42.856Z",
+    "identity": {
+      "database": "neondb",
+      "branch": "br-muddy-queen-zaeeysjt"
+    },
+    "sourceRevision": "066b9c5c552a5ce615a24be1f39cb6b36a448aeb",
+    "applied": {
+      "environment": "production",
+      "branchId": "br-muddy-queen-zaeeysjt",
+      "host": "ep-lingering-bread-zazpwrxp.c-2.eu-west-2.aws.neon.tech",
+      "database": "neondb",
+      "applied": 20,
+      "total": 46
+    },
+    "retry": {
+      "environment": "production",
+      "branchId": "br-muddy-queen-zaeeysjt",
+      "host": "ep-lingering-bread-zazpwrxp.c-2.eu-west-2.aws.neon.tech",
+      "database": "neondb",
+      "applied": 0,
+      "total": 46
+    },
+    "preserved": {
+      "user": true,
+      "organization": true,
+      "member": true,
+      "session": true,
+      "teams": true,
+      "agent_threads": true,
+      "agent_runs": true,
+      "agent_artifacts": true,
+      "agent_attachments": true,
+      "workspace_entitlements": true
+    }
+  },
+  "acceptance": {
+    "writerDeployment": "dpl_D2kvU3cqNvoTQf5QBqe2zqRbGBUR",
+    "replacementReaderDeployment": "dpl_GQsj3VX7RSdNEv9vPdkdfRoTtWFL",
+    "write": {
+      "checkedAt": "2026-10-29T23:37:06.745Z",
+      "status": 200,
+      "action": "write",
+      "checksum": "ec11db55885f9a412e5b98e44773abd2a2e80fea48631bd78ae931d488e1acb3",
+      "sizeBytes": 75,
+      "verified": true,
+      "deleted": false,
+      "challenge": "3b198c488528c9769fdd6635a0a49bb0",
+      "deploymentId": "dpl_D2kvU3cqNvoTQf5QBqe2zqRbGBUR",
+      "sourceRevision": "066b9c5c552a5ce615a24be1f39cb6b36a448aeb",
+      "storeId": "store_z6l5eIW5xSJCsoUL"
+    },
+    "read": {
+      "checkedAt": "2026-10-29T23:39:31.124Z",
+      "status": 200,
+      "action": "read",
+      "checksum": "ec11db55885f9a412e5b98e44773abd2a2e80fea48631bd78ae931d488e1acb3",
+      "sizeBytes": 75,
+      "verified": true,
+      "deleted": false,
+      "challenge": "e28ab30dd1062369fe5d1418b2a7b5c4",
+      "deploymentId": "dpl_GQsj3VX7RSdNEv9vPdkdfRoTtWFL",
+      "sourceRevision": "066b9c5c552a5ce615a24be1f39cb6b36a448aeb",
+      "storeId": "store_z6l5eIW5xSJCsoUL"
+    },
+    "anonymousDirectObject": {
+      "status": 403,
+      "denied": true
+    },
+    "liveAliasRead": {
+      "checkedAt": "2026-10-29T23:42:18.575Z",
+      "status": 200,
+      "action": "read",
+      "checksum": "ec11db55885f9a412e5b98e44773abd2a2e80fea48631bd78ae931d488e1acb3",
+      "sizeBytes": 75,
+      "verified": true,
+      "deleted": false,
+      "challenge": "cc94c16c9a4a514cd96d3e4e65fe2d0a",
+      "deploymentId": "dpl_GQsj3VX7RSdNEv9vPdkdfRoTtWFL",
+      "sourceRevision": "066b9c5c552a5ce615a24be1f39cb6b36a448aeb",
+      "storeId": "store_z6l5eIW5xSJCsoUL"
+    },
+    "cleanup": {
+      "checkedAt": "2026-10-29T23:42:19.662Z",
+      "status": 200,
+      "action": "delete",
+      "checksum": "ec11db55885f9a412e5b98e44773abd2a2e80fea48631bd78ae931d488e1acb3",
+      "sizeBytes": 75,
+      "verified": true,
+      "deleted": true,
+      "challenge": "786d57be30a8f1a3e6453bcf7769775f",
+      "deploymentId": "dpl_GQsj3VX7RSdNEv9vPdkdfRoTtWFL",
+      "sourceRevision": "066b9c5c552a5ce615a24be1f39cb6b36a448aeb",
+      "storeId": "store_z6l5eIW5xSJCsoUL"
+    }
+  },
+  "liveEnvironment": {
+    "checkedAt": "2026-10-29T23:42:15.567Z",
+    "status": 200,
+    "deployment": {
+      "id": "dpl_GQsj3VX7RSdNEv9vPdkdfRoTtWFL",
+      "url": "forge-dt9ih1ppt-matthieu-pm.vercel.app",
+      "region": "iad1",
+      "environment": "production",
+      "gitCommit": "",
+      "sourceRevision": "066b9c5c552a5ce615a24be1f39cb6b36a448aeb"
+    },
+    "database": {
+      "host": "ep-lingering-bread-zazpwrxp-pooler.c-2.eu-west-2.aws.neon.tech",
+      "challenge": "44c88c23ebe35a35bdf07ddf6ca49592",
+      "database": "neondb",
+      "branch": "br-muddy-queen-zaeeysjt",
+      "postgres_version": "18.6 (4e5fd08)",
+      "transaction_read_only": "on",
+      "artifact_count": 0,
+      "attachment_count": 0,
+      "resource_files_present": true,
+      "migration_count": 46,
+      "migration_hash": "ed9d484822d65ce2f3a26fbd2bddac6dd0df169fe7f90d0456cd21fec66c6b95"
+    },
+    "stagingRuntime": null,
+    "runtimeOrigin": "https://forge-agent-runtime.vercel.app",
+    "artifacts": {
+      "adapter": "vercel-private",
+      "directoryConfigured": false,
+      "durableBucket": "store_z6l5eIW5xSJCsoUL"
+    }
+  },
+  "runtimeQualification": {
+    "checkedAt": "2026-10-29T23:40:53.449Z",
+    "status": 200,
+    "challenge": "903273bc7476ca7e6fbe134135b058f8",
+    "deployment": {
+      "id": "dpl_CG1mYfVhuTC36zzFU2p8tvgtefS5",
+      "sourceRevision": "7717b8d9278797e96c6a5737700055adbca4ad99"
+    },
+    "configuration": {
+      "service": "runtime",
+      "environment": "production",
+      "ready": true,
+      "issues": []
+    },
+    "callback": {
+      "originMatchesExpected": true,
+      "reachable": true,
+      "status": 200
+    }
+  },
+  "readiness": {
+    "web": {
+      "checkedAt": "2026-10-29T23:42:17.383Z",
+      "status": "ok",
+      "code": "READY"
+    },
+    "runtime": {
+      "checkedAt": "2026-10-29T23:40:50.584Z",
+      "status": "ok",
+      "code": "READY"
+    }
+  },
+  "validation": {
+    "appTests": 2023,
+    "workflowTests": 4,
+    "runtimeTests": 37,
+    "appTypecheck": "passed",
+    "runtimeTypecheck": "passed",
+    "appBuild": "passed",
+    "runtimeBuild": "passed",
+    "migrationSafetyAndProbeFocusedTests": 21
+  },
+  "observability": {
+    "windowStart": "2026-10-29T23:39:00Z",
+    "windowEnd": "2026-10-29T23:42:51Z",
+    "webErrorFatalRecords": 0,
+    "runtimeErrorFatalRecords": 0,
+    "scope": "named production deployments; no excluded intervals reported"
+  },
+  "operatorAuthority": {
+    "deploymentOnly": true,
+    "expiresAt": "2026-10-30T01:02:31.672Z",
+    "anonymousOperatorStatus": 404,
+    "anonymousOperatorNoStore": true,
+    "rawToken": "destroyed after qualification; no token or hash is recorded here"
+  },
+  "rollback": {
+    "previousWeb": "dpl_3yaB1vVGpEDHbdakrvtPNehBgPwG",
+    "previousRuntime": "dpl_7DeFJKSaQu2v6W53L3AGxVpETZ5K",
+    "database": "Retain compatible expanded schema; no data or schema was dropped. Rehearsal branch is migrated too and is not an untouched pre-release schema backup. FOR-38 owns full recovery acceptance."
+  },
+  "mergeAndServingHistory": "PR #12 and Linear FOR-34 record the subsequent merge and final Git-integrated serving identity."
+}

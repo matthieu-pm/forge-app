@@ -37,8 +37,7 @@ import {
 } from "@/application/agents/artifact-contract"
 import { AgentArtifactService } from "@/application/agents/artifact-service.server"
 import { DrizzleAgentArtifactStore } from "@/adapters/agents/drizzle-artifact-store.server"
-import { VercelArtifactBlobStore } from "@/adapters/agents/vercel-artifact-blob-store.server"
-import { LocalArtifactBlobStore } from "@/adapters/agents/local-artifact-blob-store.server"
+import { createFileBlobStore } from "@/adapters/files/file-blob-store.server"
 import { resolveAgentControlPolicy } from "@/application/agents/agent-control-policy"
 import { AgentAttachmentService } from "@/application/agents/attachment-service.server"
 import { assertWorkspaceUploadAllowed } from "@/application/workspace-security/workspace-security.server"
@@ -187,10 +186,7 @@ const updateTeamCapability = defineCapability({
 
 const agentStore = new DrizzleAgentStore()
 const eventStore = new DrizzleAgentEventStore()
-const artifactBlobs =
-  process.env.FORGE_AGENT_BLOB_ADAPTER === "vercel-private"
-    ? new VercelArtifactBlobStore()
-    : new LocalArtifactBlobStore()
+const artifactBlobs = createFileBlobStore()
 export const forgeArtifactService = new AgentArtifactService({
   authorizeActor: requireCurrentActor,
   metadata: new DrizzleAgentArtifactStore(),

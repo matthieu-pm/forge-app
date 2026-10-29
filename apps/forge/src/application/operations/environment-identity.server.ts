@@ -1,6 +1,7 @@
 import "@tanstack/react-start/server-only"
 
 import { sql } from "drizzle-orm"
+import { inspectFileStorage } from "../../../../../packages/environment/file-storage"
 import { STAGING } from "../../../../../packages/environment/staging-environment"
 import { stagingServiceFetch } from "../../../../../packages/environment/staging-service-auth"
 
@@ -16,6 +17,9 @@ export async function readEnvironmentIdentity(challenge: string) {
              current_setting('neon.branch_id', true) AS branch,
              current_setting('server_version') AS postgres_version,
              current_setting('transaction_read_only') AS transaction_read_only,
+             (SELECT count(*)::integer FROM agent_artifacts) AS artifact_count,
+             (SELECT count(*)::integer FROM agent_attachments) AS attachment_count,
+             to_regclass('public.resource_files') IS NOT NULL AS resource_files_present,
              (SELECT count(*)::integer FROM drizzle.__drizzle_migrations) AS migration_count,
              (SELECT hash FROM drizzle.__drizzle_migrations ORDER BY created_at DESC, id DESC LIMIT 1) AS migration_hash
     `)
@@ -55,12 +59,12 @@ export async function readEnvironmentIdentity(challenge: string) {
     // Report the selected adapter without exposing its credentials.
     artifacts: {
       adapter:
-        process.env.FORGE_AGENT_BLOB_ADAPTER === "vercel-private"
+        inspectFileStorage(process.env).adapter === "vercel-private"
           ? "vercel-private"
           : "local-filesystem",
       directoryConfigured: Boolean(process.env.FORGE_AGENT_ARTIFACT_DIRECTORY),
       durableBucket:
-        process.env.FORGE_AGENT_BLOB_ADAPTER === "vercel-private"
+        inspectFileStorage(process.env).adapter === "vercel-private"
           ? (process.env.BLOB_STORE_ID ?? null)
           : null,
     },

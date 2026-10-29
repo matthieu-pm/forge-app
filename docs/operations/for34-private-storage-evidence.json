@@ -1,0 +1,127 @@
+{
+  "issue": "FOR-34",
+  "sourceRevision": "353a14680924154b40aab72b00820a64e5ba5917",
+  "baseRevision": "9fb9bea",
+  "recordedAt": "2026-10-29T23:20:46.066630+00:00",
+  "environment": {
+    "kind": "isolated acceptance; no production rollout",
+    "neonProject": "raspy-union-96305162",
+    "branchId": "br-autumn-union-za0opf1e",
+    "database": "forge_file_storage_acceptance_v2",
+    "applicationRole": "forge_staging_web",
+    "privateBlobStoreId": "store_HCogFKvO1n2cbJw7",
+    "blobAccess": "private"
+  },
+  "migration": {
+    "newMigration": "0045_private_resource_files",
+    "sha256": "ed9d484822d65ce2f3a26fbd2bddac6dd0df169fe7f90d0456cd21fec66c6b95",
+    "freshApplied": 46,
+    "exactRetryApplied": 0,
+    "existingSharedStagingJournalModified": false
+  },
+  "acceptance": {
+    "AT-01": {
+      "result": "passed",
+      "method": "independent writer and replacement reader OS processes; real Drizzle metadata with ordinary application login and authenticated private Blob bytes",
+      "fileClasses": [
+        "agent artifact",
+        "agent attachment",
+        "issue file",
+        "document file"
+      ],
+      "assertions": [
+        "writer exited before reader starts; different PID",
+        "all content and persisted SHA-256/size match",
+        "no local byte or metadata sharing between processes"
+      ]
+    },
+    "AT-02": {
+      "result": "passed",
+      "method": "anonymous direct request for each of four existing private object URLs; denied; authenticated readback confirms existence"
+    },
+    "additional": [
+      "private overwrite denied and original content unchanged",
+      "resource/workspace FK rejection",
+      "immutable scope, resource, reference, checksum and size rejection",
+      "dangling canonical resource deletion rejected while metadata exists",
+      "revoked session denies all four file classes",
+      "legacy local migration CLI check/apply/exact retry with source retention",
+      "exact object and metadata cleanup"
+    ],
+    "cases": 7,
+    "command": "cd apps/forge && FORGE_FILE_STORAGE_TEST_DATABASE_FILE=<mode-0600-credentials.json> bun run files:verify",
+    "requiredSecretEnvironment": "FORGE_STAGING_BLOB_TEST_TOKEN (checked against isolated store identity; never recorded)"
+  },
+  "validation": {
+    "appTestsPassed": 2015,
+    "appTestsSkipped": 225,
+    "workflowTestsPassed": 4,
+    "typecheck": "passed",
+    "productionBuild": "passed using synthetic configuration; no provider or production access",
+    "schemaDrift": "no changes",
+    "changedFileLint": {
+      "errors": 0,
+      "warnings": 3,
+      "detail": "two defensive setup-failure cleanup optional chains in acceptance test; one pre-existing readiness async warning"
+    },
+    "diffCheck": "passed",
+    "builtServerStartupGuards": [
+      "missing private credentials exits 1 naming BLOB_STORE_ID without values",
+      "explicit deployed local adapter exits 1 naming FORGE_AGENT_BLOB_ADAPTER without values"
+    ],
+    "knownFlake": "One concurrent full run hit the unchanged Reviews reaction-picker timing assertion; focused 7-case rerun and independent complete rerun passed without UI/test changes."
+  },
+  "cleanup": {
+    "checkedAt": "2026-10-29T23:19:21.137Z",
+    "databases": [
+      {
+        "database": "forge_file_storage_acceptance",
+        "branch": "br-autumn-union-za0opf1e",
+        "users": 0,
+        "workspaces": 0,
+        "resource_files": 0,
+        "artifacts": 0,
+        "attachments": 0,
+        "migrations": 44
+      },
+      {
+        "database": "forge_file_storage_acceptance_v2",
+        "branch": "br-autumn-union-za0opf1e",
+        "users": 0,
+        "workspaces": 0,
+        "resource_files": 0,
+        "artifacts": 0,
+        "attachments": 0,
+        "migrations": 46
+      }
+    ],
+    "privateStore": {
+      "id": "store_HCogFKvO1n2cbJw7",
+      "objectsObserved": 0,
+      "hasMore": false
+    }
+  },
+  "releaseBoundary": {
+    "productionDatabaseChanged": false,
+    "productionBucketChanged": false,
+    "productionDeploymentChanged": false,
+    "retainedIsolatedDatabases": [
+      "forge_file_storage_acceptance (initial pre-rebase schema, empty)",
+      "forge_file_storage_acceptance_v2 (final schema, empty)"
+    ],
+    "requiredBeforeProduction": [
+      "provision/verify separate production private store and configure its matching server-only credentials",
+      "inventory and copy surviving legacy local agent bytes from the actual old host/backup; investigate missing bytes",
+      "apply reviewed migration chain and promote through the release gate"
+    ],
+    "separateOwners": [
+      "FOR-35 direct upload intents/finalization",
+      "FOR-36 download/preview delivery policy",
+      "FOR-37 orphan reconciliation and durable deletion",
+      "FOR-38 recovery",
+      "FOR-48 issue/comment binding",
+      "FOR-61 document editing",
+      "FOR-83 agent runtime transfer"
+    ]
+  }
+}

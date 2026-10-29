@@ -14,6 +14,7 @@ import type {
   StoredAgentArtifactRecord,
 } from "@/application/agents/artifact-store"
 import type { AgentEventStore } from "@/application/agents/event-store"
+import { fileContentMatches } from "@/application/files/file-integrity.server"
 import { createAgentArtifactInputSchema } from "@/application/agents/artifact-contract"
 import { mintArtifactAccessToken } from "@/application/agents/artifact-access-token.server"
 import {
@@ -213,6 +214,11 @@ export class AgentArtifactService {
         "The artifact content is unavailable."
       )
     }
+    if (!fileContentMatches(content, record))
+      throw new AgentArtifactError(
+        "INVALID_ARTIFACT_CONTENT",
+        "The artifact content failed its integrity check."
+      )
     return { artifact: publicRecord(record), content }
   }
 

@@ -100,15 +100,39 @@
     },
     "agent:retention": {
       "cache": false,
-      "passThroughEnv": ["DATABASE_URL", "BLOB_READ_WRITE_TOKEN", "R2_*"]
+      "passThroughEnv": [
+        "DATABASE_URL",
+        "BLOB_READ_WRITE_TOKEN",
+        "BLOB_STORE_ID",
+        "FORGE_AGENT_BLOB_ADAPTER",
+        "FORGE_AGENT_ARTIFACT_DIRECTORY",
+        "FORGE_ENVIRONMENT",
+        "R2_*"
+      ]
     },
     "product:retention": {
       "cache": false,
-      "passThroughEnv": ["DATABASE_URL", "BLOB_READ_WRITE_TOKEN", "R2_*"]
+      "passThroughEnv": [
+        "DATABASE_URL",
+        "BLOB_READ_WRITE_TOKEN",
+        "BLOB_STORE_ID",
+        "FORGE_AGENT_BLOB_ADAPTER",
+        "FORGE_AGENT_ARTIFACT_DIRECTORY",
+        "FORGE_ENVIRONMENT",
+        "R2_*"
+      ]
     },
     "workflow:health": {
       "cache": false,
-      "passThroughEnv": ["DATABASE_URL", "BLOB_READ_WRITE_TOKEN", "R2_*"]
+      "passThroughEnv": [
+        "DATABASE_URL",
+        "BLOB_READ_WRITE_TOKEN",
+        "BLOB_STORE_ID",
+        "FORGE_AGENT_BLOB_ADAPTER",
+        "FORGE_AGENT_ARTIFACT_DIRECTORY",
+        "FORGE_ENVIRONMENT",
+        "R2_*"
+      ]
     },
     "eval": {
       "cache": false

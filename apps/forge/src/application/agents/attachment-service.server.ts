@@ -13,6 +13,7 @@ import type {
   AgentAttachmentMetadataStore,
   StoredAgentAttachmentRecord,
 } from "@/application/agents/attachment-store"
+import { fileContentMatches } from "@/application/files/file-integrity.server"
 import { createAgentAttachmentInputSchema } from "@/application/agents/attachment-contract"
 import { requireAgentRun } from "@/application/agents/agent-authorization"
 
@@ -196,6 +197,11 @@ export class AgentAttachmentService {
             "The attachment content is unavailable."
           )
         }
+        if (!fileContentMatches(content, record))
+          throw new AgentAttachmentError(
+            "INVALID_ATTACHMENT",
+            "The attachment content failed its integrity check."
+          )
         return {
           ...publicRecord(record),
           contentBase64: Buffer.from(content).toString("base64"),
