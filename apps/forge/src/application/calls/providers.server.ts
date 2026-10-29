@@ -1,4 +1,5 @@
 import "@tanstack/react-start/server-only"
+import { assertStagingEnvironment } from "../../../../../packages/environment/staging-environment"
 import type { MeetingProvider, TranscriptEntry } from "@/lib/calls"
 import { parseTranscript } from "@/lib/calls"
 
@@ -51,6 +52,7 @@ export function configuredProviders() {
   )
 }
 function config(provider: MeetingProvider) {
+  assertStagingEnvironment(process.env, "web")
   const item = providerConfig[provider]
   const clientId = process.env[`FORGE_${item.prefix}_CLIENT_ID`]
   const clientSecret = process.env[`FORGE_${item.prefix}_CLIENT_SECRET`]

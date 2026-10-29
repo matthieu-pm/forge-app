@@ -31,7 +31,7 @@ function assertExpectedTarget(target: MigrationTarget) {
     target.database !== allowed.database
   ) {
     throw new MigrationSafetyError(
-      "The migration target is not an approved isolated environment. Production migrations remain disabled until serving identity is verified."
+      "The migration target is not an approved isolated environment. Production migrations are not enabled by this isolated runner."
     )
   }
 }
@@ -51,6 +51,21 @@ export function assertMigrationTarget(
   }
   if (!["postgres:", "postgresql:"].includes(url.protocol))
     throw new MigrationSafetyError("A PostgreSQL connection is required.")
+  if (
+    (url.port && url.port !== "5432") ||
+    url.hash ||
+    !["require", "verify-full"].includes(
+      url.searchParams.get("sslmode") ?? ""
+    ) ||
+    [...url.searchParams.keys()].some(
+      (key) =>
+        !["sslmode", "channel_binding"].includes(key) ||
+        url.searchParams.getAll(key).length !== 1
+    )
+  )
+    throw new MigrationSafetyError(
+      "Only TLS PostgreSQL URLs without routing overrides are allowed."
+    )
   if (!/^br-/.test(target.branchId))
     throw new MigrationSafetyError("An expected Neon branch ID is required.")
   if (

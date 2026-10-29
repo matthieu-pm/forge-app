@@ -22,3 +22,9 @@
 **/.eve/
 .git/
 .DS_Store
+**/.forge/
+**/.turbo/
+**/.vite/
+**/.swc/
+**/.neon/
+output/

@@ -38,7 +38,8 @@
     "db:migrate": "bun scripts/migrate-database.ts",
     "db:push": "bun scripts/reject-db-push.ts",
     "db:studio": "drizzle-kit studio",
-    "calls:sync": "bun scripts/sync-calls.ts"
+    "calls:sync": "bun scripts/sync-calls.ts",
+    "integration:fixtures": "bun scripts/integration-fixtures.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -72,6 +73,8 @@
     "@tiptap/pm": "^3.31.4",
     "@tiptap/react": "^3.31.4",
     "@tiptap/starter-kit": "^3.31.4",
+    "@vercel/blob": "^2.8.2",
+    "@vercel/oidc": "4.0.4",
     "better-auth": "1.6.26",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

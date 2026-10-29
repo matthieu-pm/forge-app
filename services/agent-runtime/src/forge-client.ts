@@ -1,3 +1,4 @@
+import { stagingServiceFetch } from "../../../packages/environment/staging-service-auth.js"
 import { z } from "zod"
 
 const teamSchema = z.object({
@@ -53,7 +54,7 @@ export async function callForgeCapability(
   const origin = process.env.FORGE_APP_ORIGIN
   if (!origin) throw new Error("FORGE_APP_ORIGIN is not configured.")
 
-  const response = await fetch(
+  const response = await stagingServiceFetch(
     new URL(
       `/api/agent/capabilities/${encodeURIComponent(capability.id)}`,
       origin

@@ -16,6 +16,33 @@ const claims = {
 }
 
 describe("OpenAI model proxy", () => {
+  it("refuses unregistered stored connections in staging before database or provider I/O", async () => {
+    const old = process.env.FORGE_ENVIRONMENT
+    process.env.FORGE_ENVIRONMENT = "staging"
+    const fetcher = vi.fn<typeof fetch>()
+    try {
+      const handler = createOpenAIModelProxy({
+        verifyToken: vi.fn().mockResolvedValue(claims),
+        fetcher,
+      })
+      const result = await handler(
+        new Request("https://forge.test/api/agent/runtime/model/responses", {
+          method: "POST",
+          headers: { authorization: "Bearer fixture" },
+          body: JSON.stringify({
+            model: claims.modelId,
+            input: "Synthetic fixture",
+          }),
+        }),
+        "responses"
+      )
+      expect(result.status).toBe(403)
+      expect(fetcher).not.toHaveBeenCalled()
+    } finally {
+      if (old === undefined) delete process.env.FORGE_ENVIRONMENT
+      else process.env.FORGE_ENVIRONMENT = old
+    }
+  })
   it("uses the selected server-side credential without returning it", async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
       new Response('data: {"type":"response.completed"}\n\n', {

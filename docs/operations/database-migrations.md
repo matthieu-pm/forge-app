@@ -1,7 +1,9 @@
 # Database migration ownership and rehearsal
 
-FOR-27/FOR-28 implementation evidence, updated 29 October 2026. Production execution stays
-disabled until FOR-25 verifies the actual serving database and source revision.
+FOR-27/FOR-28 implementation evidence, updated 29 October 2026. FOR-25 has verified the serving database/source identity. Production execution
+remains excluded from this isolated migration runner; production release is a
+separate operation. See [isolated-staging.md](isolated-staging.md) for the hosted
+staging and disposable fixture continuation.
 
 ## Provisioned targets
 
