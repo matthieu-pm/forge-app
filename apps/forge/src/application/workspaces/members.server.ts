@@ -4,6 +4,8 @@ import { and, desc, eq, isNull, max } from "drizzle-orm"
 
 import type { Actor } from "@/application/actor"
 import type { WorkspaceAccessSummary } from "@/lib/member-contract"
+import { requireCurrentActor } from "@/application/resource-policy.server"
+import { visibleTeamCondition } from "@/application/teams/team-visibility.server"
 import { hasWorkspaceRole, requireTeamRead } from "@/application/authorization"
 import { db, invitations, members, sessions, teams, users } from "@/db"
 
@@ -12,6 +14,7 @@ const ONLINE_WINDOW_MS = 5 * 60 * 1000
 export async function getWorkspaceAccess(
   actor: Actor
 ): Promise<WorkspaceAccessSummary> {
+  actor = await requireCurrentActor(actor)
   requireTeamRead(actor)
 
   const [memberRows, invitationRows, workspaceTeams] = await Promise.all([
@@ -68,9 +71,7 @@ export async function getWorkspaceAccess(
     db
       .select({ id: teams.id })
       .from(teams)
-      .where(
-        and(eq(teams.workspaceId, actor.workspaceId), isNull(teams.deletedAt))
-      ),
+      .where(and(visibleTeamCondition(actor), isNull(teams.deletedAt))),
   ])
 
   const now = Date.now()

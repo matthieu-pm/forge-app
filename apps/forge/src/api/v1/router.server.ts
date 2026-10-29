@@ -30,8 +30,10 @@ const os = implement(publicApiContract).$context<PublicApiInitialContext>()
 const requireApiActor = os.middleware(async ({ context, next, errors }) => {
   try {
     const actor = await requireApiKeyActor(context.headers)
-    return next({ context: { actor } })
+    return await next({ context: { actor } })
   } catch (error) {
+    if (error instanceof ApplicationAccessError)
+      throw errors.FORBIDDEN({ message: error.message })
     if (error instanceof ApiCredentialError) {
       if (error.code === "RATE_LIMITED") {
         throw errors.RATE_LIMITED({ message: error.message })

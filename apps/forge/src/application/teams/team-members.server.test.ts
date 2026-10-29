@@ -134,11 +134,7 @@ describe("team membership boundaries", () => {
     })
   })
   it("does not expose a private team's directory to nonmembers", async () => {
-    mocks.team.mockResolvedValue({
-      id: "team",
-      visibility: "private",
-      members: [],
-    })
+    mocks.team.mockResolvedValue(undefined)
     await expect(
       getTeamMemberDirectory({ ...owner, workspaceRole: "member" }, "private")
     ).rejects.toThrow("You do not have access to this team.")
@@ -190,3 +186,17 @@ describe("team membership boundaries", () => {
     expect(directory.availableMembers).toEqual([])
   })
 })
+
+// Persistence policy is verified with real PostgreSQL in resource-authorization.postgres.test.ts.
+vi.mock("@/application/resource-policy.server", () => ({
+  requireCurrentActor: async (actor: Actor) => actor,
+  currentMemberCondition: vi.fn(),
+  readableTeamCondition: vi.fn(),
+}))
+
+vi.mock("./team-visibility.server", () => ({
+  visibleTeamCondition: () => ({
+    field: "team.workspaceId",
+    value: "workspace",
+  }),
+}))

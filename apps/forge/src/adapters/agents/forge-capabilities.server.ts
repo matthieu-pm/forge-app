@@ -1,10 +1,12 @@
 import "@tanstack/react-start/server-only"
-
 import { z } from "zod"
+import { authorizeForgeCapability } from "./capability-authorization.server"
+
 import {
   consumeCapabilityCommandApproval,
   executeCapabilityCommand,
 } from "./drizzle-capability-command.server"
+import { requireCurrentActor } from "@/application/resource-policy.server"
 
 import {
   CapabilityGateway,
@@ -190,12 +192,14 @@ const artifactBlobs =
     ? new VercelArtifactBlobStore()
     : new LocalArtifactBlobStore()
 export const forgeArtifactService = new AgentArtifactService({
+  authorizeActor: requireCurrentActor,
   metadata: new DrizzleAgentArtifactStore(),
   blobs: artifactBlobs,
   agents: agentStore,
   events: eventStore,
 })
 export const forgeAttachmentService = new AgentAttachmentService({
+  authorizeActor: requireCurrentActor,
   metadata: new DrizzleAgentAttachmentStore(),
   blobs: artifactBlobs,
   authorizeUpload: assertWorkspaceUploadAllowed,
@@ -263,6 +267,7 @@ export const forgeCapabilityGateway = new CapabilityGateway(
         context,
         consumeCapabilityCommandApproval
       ),
+    authorize: authorizeForgeCapability,
     approvals: forgeApprovalService,
     idempotency: new DrizzleCapabilityIdempotencyStore(),
     allowedCapabilities: resolveAgentControlPolicy().allowedCapabilities,

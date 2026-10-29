@@ -6,6 +6,7 @@ import type {
   AgentArtifactMetadataStore,
   StoredAgentArtifactRecord,
 } from "@/application/agents/artifact-store"
+import { currentMemberCondition } from "@/application/resource-policy.server"
 import { agentArtifacts, agentRuns, agentThreads, db } from "@/db"
 
 function toRecord(
@@ -17,9 +18,7 @@ function toRecord(
   }
 }
 
-export class DrizzleAgentArtifactStore
-  implements AgentArtifactMetadataStore
-{
+export class DrizzleAgentArtifactStore implements AgentArtifactMetadataStore {
   async create(input: StoredAgentArtifactRecord) {
     const rows = await db.insert(agentArtifacts).values(input).returning()
     const artifact = rows.at(0)
@@ -47,11 +46,7 @@ export class DrizzleAgentArtifactStore
     return artifact ? toRecord(artifact) : null
   }
 
-  async getAuthorized(
-    workspaceId: string,
-    userId: string,
-    artifactId: string
-  ) {
+  async getAuthorized(workspaceId: string, userId: string, artifactId: string) {
     const rows = await db
       .select({ artifact: agentArtifacts })
       .from(agentArtifacts)
@@ -59,6 +54,7 @@ export class DrizzleAgentArtifactStore
       .innerJoin(agentThreads, eq(agentRuns.threadId, agentThreads.id))
       .where(
         and(
+          currentMemberCondition({ workspaceId, userId }),
           eq(agentArtifacts.id, artifactId),
           eq(agentThreads.workspaceId, workspaceId),
           eq(agentThreads.createdByUserId, userId)
@@ -89,10 +85,7 @@ export class DrizzleAgentArtifactStore
       .update(agentArtifacts)
       .set({ deletedAt })
       .where(
-        and(
-          eq(agentArtifacts.id, artifactId),
-          isNull(agentArtifacts.deletedAt)
-        )
+        and(eq(agentArtifacts.id, artifactId), isNull(agentArtifacts.deletedAt))
       )
       .returning()
     const artifact = rows.at(0)

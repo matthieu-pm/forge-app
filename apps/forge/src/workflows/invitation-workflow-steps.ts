@@ -3,6 +3,8 @@ import { FatalError, RetryableError } from "workflow"
 import { emitTelemetry } from "../../../../packages/telemetry/server"
 
 import { sendWorkspaceInvitationEmail } from "@/application/mail/auth-emails.server"
+import { authorizeInvitationDelivery } from "@/application/workflows/invitation-authorization.server"
+import { ApplicationAccessError } from "@/application/authorization"
 import { EmailDeliveryError } from "@/application/mail/mail.server"
 import {
   classifyInvitationDelivery,
@@ -21,6 +23,7 @@ async function loadInvitationForRun(businessRunId: string) {
   const [record] = await db
     .select({
       runId: businessWorkflowRuns.id,
+      workspaceId: businessWorkflowRuns.workspaceId,
       invitationId: invitations.id,
       email: invitations.email,
       role: invitations.role,
@@ -35,7 +38,8 @@ async function loadInvitationForRun(businessRunId: string) {
       invitations,
       and(
         eq(businessWorkflowRuns.subjectType, "invitation"),
-        eq(businessWorkflowRuns.subjectId, invitations.id)
+        eq(businessWorkflowRuns.subjectId, invitations.id),
+        eq(businessWorkflowRuns.workspaceId, invitations.organizationId)
       )
     )
     .innerJoin(organizations, eq(invitations.organizationId, organizations.id))
@@ -144,6 +148,14 @@ export async function sendInvitationEffectStep(
   }
 
   const effectKey = invitationEffectKey(invitation.invitationId, effect)
+  try {
+    await authorizeInvitationDelivery(
+      invitation.workspaceId,
+      invitation.invitationId
+    )
+  } catch {
+    throw new FatalError("The invitation sender no longer has permission.")
+  }
   const [existingEffect] = await db
     .select({
       id: businessWorkflowEffects.id,
@@ -211,6 +223,11 @@ export async function sendInvitationEffectStep(
     .where(eq(businessWorkflowEffects.id, effectId))
 
   try {
+    // Recheck after waiting for the effect reservation, immediately before I/O.
+    await authorizeInvitationDelivery(
+      invitation.workspaceId,
+      invitation.invitationId
+    )
     const delivery = await sendWorkspaceInvitationEmail({
       id: invitation.invitationId,
       email: invitation.email,
@@ -242,10 +259,16 @@ export async function sendInvitationEffectStep(
       .update(businessWorkflowEffects)
       .set({
         state: "failed",
-        failureCode: "email_provider_error",
+        failureCode:
+          error instanceof ApplicationAccessError
+            ? "authorization_revoked"
+            : "email_provider_error",
         updatedAt: new Date(),
       })
       .where(eq(businessWorkflowEffects.id, effectId))
+    if (error instanceof ApplicationAccessError) {
+      throw new FatalError("The invitation sender no longer has permission.")
+    }
     if (error instanceof EmailDeliveryError) {
       if (!error.retryable) {
         throw new FatalError("The email provider rejected the invitation.")

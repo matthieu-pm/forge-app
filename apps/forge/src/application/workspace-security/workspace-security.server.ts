@@ -19,6 +19,7 @@ import type {
   WorkspaceSecuritySnapshot,
 } from "@/application/workspace-security/security-contract"
 import type { DatabaseExecutor } from "@/db"
+import { requireCurrentActor } from "@/application/resource-policy.server"
 import { hasWorkspaceRole } from "@/application/authorization"
 import { subscriptionAccess } from "@/application/billing/subscription-access"
 import { readSubscriptionAccessState } from "@/application/billing/subscription-access-state.server"
@@ -194,6 +195,7 @@ export async function getWorkspaceSecuritySnapshot(
   actor: Actor,
   requestUrl: string
 ) {
+  actor = await requireCurrentActor(actor)
   if (!hasWorkspaceRole(actor, ["owner", "admin"])) {
     throw new WorkspaceSecurityAccessError(
       "FORBIDDEN",
@@ -422,6 +424,7 @@ export async function executeWorkspaceSecurityCommand(
   requestUrl: string,
   requestId?: string
 ): Promise<WorkspaceSecurityMutationResult> {
+  actor = await requireCurrentActor(actor)
   if (!hasWorkspaceRole(actor, ["owner", "admin"])) {
     await writeRejectedAudit(actor, command, requestId)
     return {
@@ -611,6 +614,7 @@ export async function getWorkspaceSecuritySettings(
 }
 
 export async function getWorkspaceApiKeyPolicy(actor: Actor) {
+  actor = await requireCurrentActor(actor)
   const row = await ensureSecurityRow(actor.workspaceId)
   const settings = toSettings(row)
   return {
@@ -625,6 +629,7 @@ export async function assertWorkspaceActionAllowed(
   actor: Actor,
   action: WorkspaceSecurityAction
 ) {
+  actor = await requireCurrentActor(actor)
   const settings = await getWorkspaceSecuritySettings(actor.workspaceId)
   if (!isWorkspaceActionAllowed(actor, settings, action)) {
     throw new WorkspaceSecurityAccessError(
@@ -639,6 +644,7 @@ export async function canWorkspaceAction(
   action: WorkspaceSecurityAction,
   executor: DatabaseExecutor = db
 ) {
+  actor = await requireCurrentActor(actor, executor)
   const settings = await getWorkspaceSecuritySettings(
     actor.workspaceId,
     executor
@@ -647,6 +653,7 @@ export async function canWorkspaceAction(
 }
 
 export async function getWorkspaceUploadPolicy(actor: Actor) {
+  actor = await requireCurrentActor(actor)
   const settings = await getWorkspaceSecuritySettings(actor.workspaceId)
   return {
     restricted: settings.restrictFileUploads,

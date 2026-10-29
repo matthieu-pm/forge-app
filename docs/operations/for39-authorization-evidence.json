@@ -1,0 +1,92 @@
+{
+  "issue": "FOR-39",
+  "verifiedOn": "2026-10-29",
+  "implementationCommit": "9d625d7efbc346ed8d2d1c3b44c3234cf2f82b59",
+  "baseCommit": "b916e9b",
+  "environment": {
+    "target": {
+      "environment": "staging",
+      "branchId": "br-autumn-union-za0opf1e",
+      "host": "ep-blue-shadow-zauhwkjz.c-2.eu-west-2.aws.neon.tech",
+      "database": "forge_staging"
+    },
+    "applicationRole": "forge_staging_web",
+    "migrationRetry": {
+      "applied": 0,
+      "total": 45
+    },
+    "documentGrant": {
+      "column_default": "false",
+      "is_nullable": "NO"
+    },
+    "fixtureCleanup": {
+      "workspaces": 0,
+      "users": 0
+    }
+  },
+  "acceptance": {
+    "AC-01/AT-01": {
+      "status": "passed",
+      "evidence": "13 PostgreSQL authorization scenarios include pre-pagination private-team resource filtering, canonical direct reads/search/export, relations/backlink redaction, project/initiative/label counts, owner/admin document grants, independent credential scopes, session/REST/signed-tool denial parity, Calls/templates/recurring access, file grants, expired sessions, credential/team/run revocation, and disabled public planning routes."
+    },
+    "AC-02/AT-02": {
+      "status": "passed",
+      "evidence": "The actual durable invitation step executes after role revocation with no mail invocation and no effect reservation. A valid execution delivers once; receipt replay after workspace membership deletion is denied without another mail. A pre-demotion signed team-write token is denied with no team change."
+    }
+  },
+  "postgres": {
+    "distinctCasesPassed": 87,
+    "authorization": 13,
+    "commandRegression": 24,
+    "tenantIntegrityRegression": 21,
+    "teamCapacityAndVisibilityRegression": 29,
+    "driver": "@neondatabase/serverless 1.1.0",
+    "ordinaryApplicationRole": "forge_staging_web",
+    "authenticationBoundary": "Provider key verification and the session identity seam are stubbed in the authorization fixture; current credential/session/run and resource authorization, signed agent JWTs, web wrappers, REST router and durable job step use actual application code and PostgreSQL. Team capacity regression also exercises real Better Auth API keys through HTTP. Mail is stubbed and no provider email is sent."
+  },
+  "checks": {
+    "appVitestPassed": 1893,
+    "workflowVitestPassed": 4,
+    "runtimeVitestPassed": 25,
+    "targetedFinalUnitCasesPassed": 63,
+    "workspaceTypecheck": "passed",
+    "productionBuildAndWorkflowProtection": "passed",
+    "schemaDrift": "no schema changes",
+    "changedFileLint": {
+      "errors": 0,
+      "warnings": 32
+    },
+    "diffCheck": "passed",
+    "appOptInIntegrationCasesSkipped": 218
+  },
+  "migration": {
+    "name": "0044_resource_authorization",
+    "initialApplied": 1,
+    "totalReceipts": 45,
+    "exactRetryApplied": 0,
+    "retainedHistory": true,
+    "existingDocumentGrantDefault": false,
+    "productionChanged": false
+  },
+  "reproduction": [
+    "bun run test",
+    "bun run typecheck",
+    "bun run build",
+    "cd apps/forge && FORGE_AUTHZ_TEST_DATABASE_FILE=/absolute/private/database.json bunx vitest run src/application/resource-authorization.postgres.test.ts",
+    "cd apps/forge && FORGE_COMMAND_TEST_DATABASE_FILE=/absolute/private/database.json FORGE_TENANT_TEST_DATABASE_FILE=/absolute/private/database.json bunx vitest run src/application/commands/commands.postgres.test.ts src/db/tenant-integrity.postgres.test.ts",
+    "cd apps/forge && FORGE_TEST_DATABASE_URL=<approved-isolated-direct-url> FORGE_TEAM_CAPACITY_TEST_DATABASE_URL=<approved-isolated-direct-url> bunx vitest run src/application/teams/team-visibility.postgres.test.ts src/application/teams/team-capacity.postgres.test.ts"
+  ],
+  "scope": {
+    "supportedAdapterMatrix": "docs/operations/authorization-policy.md",
+    "canonicalQueries": "internal services over the FOR-31 identity/relationship schema",
+    "optionalTransports": "Public planning endpoints, external MCP and canonical document file adapters remain disabled/unimplemented and need their own scope/parity enablement evidence. No browser-local drafts were published.",
+    "productionMigrationOrDeployment": false
+  },
+  "cleanup": {
+    "for39FixtureUsers": 0,
+    "for39FixtureWorkspaces": 0,
+    "privateConnectionFileRemoved": true
+  },
+  "validationObservation": "An earlier full suite run alongside a build hit the existing Reviews reaction-picker timing assertion. The independent final full rerun passed without changing that UI/test.",
+  "pullRequest": "https://github.com/matthieu-pm/forge-app/pull/11"
+}

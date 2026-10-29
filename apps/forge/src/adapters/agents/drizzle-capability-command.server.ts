@@ -30,6 +30,7 @@ import {
   teamSummarySchema,
   updateTeamInputSchema,
 } from "@/application/teams/team-schemas"
+import { readableTeamCondition } from "@/application/resource-policy.server"
 import { updateTeam } from "@/application/teams/teams.server"
 
 export type ConsumeCommandApproval = (
@@ -83,7 +84,7 @@ export async function executeCapabilityCommand(
           .from(teams)
           .where(
             and(
-              eq(teams.workspaceId, actor.workspaceId),
+              readableTeamCondition(current, teams.id),
               value ? eq(teams.id, value.id) : eq(teams.slug, input.slug),
               isNull(teams.deletedAt)
             )

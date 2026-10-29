@@ -309,6 +309,13 @@
       "when": 1793311186490,
       "tag": "0043_aromatic_jigsaw",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1793312773530,
+      "tag": "0044_resource_authorization",
+      "breakpoints": true
     }
   ]
 }

@@ -291,3 +291,10 @@ describe("Workspace project templates", () => {
     )
   })
 })
+
+// Persistence policy is verified with real PostgreSQL in resource-authorization.postgres.test.ts.
+vi.mock("@/application/resource-policy.server", () => ({
+  requireCurrentActor: async (actor: Actor) => actor,
+  currentMemberCondition: vi.fn(),
+  readableTeamCondition: vi.fn(),
+}))

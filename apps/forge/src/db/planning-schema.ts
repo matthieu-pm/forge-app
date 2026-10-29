@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm"
 import {
+  boolean,
   check,
   foreignKey,
   integer,
@@ -215,6 +216,9 @@ export const documents = pgTable(
     id: id(),
     workspaceId: workspace(),
     title: text("title").notNull(),
+    sharedWithWorkspace: boolean("shared_with_workspace")
+      .default(false)
+      .notNull(),
     body: jsonb("body").$type<Record<string, unknown>>().default({}).notNull(),
     teamId: uuid("team_id"),
     issueId: uuid("issue_id"),

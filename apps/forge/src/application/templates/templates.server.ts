@@ -2,6 +2,7 @@ import "@tanstack/react-start/server-only"
 import { and, desc, eq, isNull } from "drizzle-orm"
 import type { Actor } from "@/application/actor"
 import type { TemplateDirectory, TemplateDraft } from "@/lib/template-contract"
+import { requireCurrentActor } from "@/application/resource-policy.server"
 import {
   ApplicationAccessError,
   canManageTeams,
@@ -27,6 +28,7 @@ export async function loadDirectory(
   actor: Actor,
   slug?: string
 ): Promise<TemplateDirectory> {
+  actor = await requireCurrentActor(actor)
   const { team, directory } = await scope(actor, slug)
   const [records, defaults, people] = await Promise.all([
     db
@@ -85,6 +87,7 @@ export async function saveTemplate(
     payload: TemplateDraft
   }
 ) {
+  actor = await requireCurrentActor(actor)
   const { team, directory } = await scope(actor, input.slug, true)
   if (!team && !["issue", "project"].includes(input.payload.kind))
     throw new Error("Only workspace issue and project templates are supported.")
@@ -191,6 +194,7 @@ export async function deleteTemplate(
   actor: Actor,
   input: { slug?: string; id: string }
 ) {
+  actor = await requireCurrentActor(actor)
   const { team } = await scope(actor, input.slug, true)
   await db
     .delete(teamTemplates)
@@ -211,6 +215,7 @@ export async function setDefault(
     templateId: string | null
   }
 ) {
+  actor = await requireCurrentActor(actor)
   const { team } = await scope(actor, input.slug, true)
   if (!team) throw new ApplicationAccessError("Choose a team for defaults.")
   if (input.templateId) {

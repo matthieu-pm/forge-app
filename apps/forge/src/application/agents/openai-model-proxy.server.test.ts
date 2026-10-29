@@ -1,7 +1,8 @@
 // @vitest-environment node
 
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { ApplicationAccessError } from "@/application/authorization"
 import { createOpenAIModelProxy } from "@/application/agents/openai-model-proxy.server"
 import { managedOpenAIConnectionIdForWorkspace } from "@/application/agents/managed-openai-models.server"
 
@@ -193,6 +194,25 @@ describe("OpenAI model proxy", () => {
     expect(await response.text()).not.toContain("secret-anthropic-key")
   })
 
+  it("denies an inactive run or revoked member before using the managed provider key", async () => {
+    liveAuthorization.check.mockRejectedValueOnce(new ApplicationAccessError())
+    const fetcher = vi.fn<typeof fetch>()
+    const handler = createOpenAIModelProxy({
+      verifyToken: vi.fn().mockResolvedValue(claims),
+      fetcher,
+    })
+    const response = await handler(
+      new Request("https://forge.test/api/agent/runtime/model/responses", {
+        method: "POST",
+        headers: { authorization: "Bearer fixture" },
+        body: JSON.stringify({ model: claims.modelId, input: "fixture" }),
+      }),
+      "responses"
+    )
+    expect(response.status).toBe(403)
+    expect(fetcher).not.toHaveBeenCalled()
+  })
+
   it("rejects model substitution before opening a credential", async () => {
     const loadCredential = vi.fn()
     const handler = createOpenAIModelProxy({
@@ -214,4 +234,12 @@ describe("OpenAI model proxy", () => {
     expect(response.status).toBe(403)
     expect(loadCredential).not.toHaveBeenCalled()
   })
+})
+
+const liveAuthorization = vi.hoisted(() => ({ check: vi.fn() }))
+vi.mock("@/application/resource-policy.server", () => ({
+  requireCurrentActor: liveAuthorization.check,
+}))
+beforeEach(() => {
+  liveAuthorization.check.mockResolvedValue({})
 })

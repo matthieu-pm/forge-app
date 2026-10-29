@@ -6,6 +6,7 @@ import type {
   AgentAttachmentMetadataStore,
   StoredAgentAttachmentRecord,
 } from "@/application/agents/attachment-store"
+import { currentMemberCondition } from "@/application/resource-policy.server"
 import { agentAttachments, db } from "@/db"
 
 function toRecord(
@@ -33,6 +34,7 @@ export class DrizzleAgentAttachmentStore implements AgentAttachmentMetadataStore
       .from(agentAttachments)
       .where(
         and(
+          currentMemberCondition({ workspaceId, userId }),
           eq(agentAttachments.workspaceId, workspaceId),
           eq(agentAttachments.userId, userId),
           inArray(agentAttachments.id, [...ids]),

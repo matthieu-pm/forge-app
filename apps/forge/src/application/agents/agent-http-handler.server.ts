@@ -72,6 +72,7 @@ type AgentHttpDependencies = {
   attachments?: Pick<AgentAttachmentService, "upload">
   featureFlags?: AgentFeatureFlags
   getDiagnostics?: (actor: Actor, since: Date) => Promise<unknown>
+  authorizeStream?: (actor: Actor) => Promise<unknown>
 }
 
 class LocalIngestAuthorizationError extends Error {}
@@ -97,7 +98,10 @@ async function readJson(request: Request) {
   }
 }
 
-function streamEvents(events: AsyncIterable<unknown>) {
+function streamEvents(
+  events: AsyncIterable<unknown>,
+  authorize?: () => Promise<unknown>
+) {
   const encoder = new TextEncoder()
 
   return new Response(
@@ -105,6 +109,7 @@ function streamEvents(events: AsyncIterable<unknown>) {
       async start(controller) {
         try {
           for await (const event of events) {
+            await authorize?.()
             const record = event as { sequence?: number; type?: string }
             const id =
               typeof record.sequence === "number"
@@ -415,7 +420,10 @@ export function createAgentHttpHandler(dependencies: AgentHttpDependencies) {
       if (resource === "runs" && !id && request.method === "POST") {
         const input = startAgentTurnInputSchema.parse(await readJson(request))
         const session = await dependencies.coordinator.startTurn(actor, input)
-        return streamEvents(session.events)
+        return streamEvents(
+          session.events,
+          () => dependencies.authorizeStream?.(actor) ?? Promise.resolve()
+        )
       }
 
       if (resource === "local-runs" && !id && request.method === "POST") {
@@ -540,7 +548,10 @@ export function createAgentHttpHandler(dependencies: AgentHttpDependencies) {
           id,
           input.decision
         )
-        return streamEvents(session.events)
+        return streamEvents(
+          session.events,
+          () => dependencies.authorizeStream?.(actor) ?? Promise.resolve()
+        )
       }
 
       if (
