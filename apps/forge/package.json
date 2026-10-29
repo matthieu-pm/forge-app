@@ -26,6 +26,7 @@
     "test": "vitest run && bun run test:workflow",
     "test:workflow": "vitest run --config vitest.workflow.config.ts",
     "test:member-capacity:postgres": "bun scripts/test-member-capacity-postgres.mjs",
+    "agent:policy:check": "bun scripts/check-agent-policy.ts",
     "agent:retention": "bun scripts/sweep-agent-retention.ts",
     "product:retention": "bun scripts/sweep-product-retention.ts",
     "workflow:health": "bun scripts/check-workflow-health.ts",

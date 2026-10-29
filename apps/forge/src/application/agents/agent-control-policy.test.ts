@@ -48,6 +48,26 @@ describe("agent control policy", () => {
       new Set(["teams.list", "workspace.describe"])
     )
   })
+  it("uses accepted bounds and prevents environment overrides from raising them", () => {
+    expect(resolveAgentControlPolicy({})).toMatchObject({
+      runWallClockMs: 900_000,
+      maxInputTokens: 200_000,
+      maxOutputTokens: 50_000,
+    })
+    for (const value of ["999999999", "0", "-1", "Infinity", "invalid"]) {
+      expect(
+        resolveAgentControlPolicy({
+          FORGE_AGENT_RUN_WALL_CLOCK_MS: value,
+          FORGE_AGENT_MAX_INPUT_TOKENS: value,
+          FORGE_AGENT_MAX_OUTPUT_TOKENS: value,
+        })
+      ).toMatchObject({
+        runWallClockMs: 900_000,
+        maxInputTokens: 200_000,
+        maxOutputTokens: 50_000,
+      })
+    }
+  })
   it.each(["user", "workspace"])(
     "continues to reject exhausted %s spending budgets",
     async (scope) => {

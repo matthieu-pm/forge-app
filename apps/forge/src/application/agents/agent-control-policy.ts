@@ -1,3 +1,4 @@
+import { agentExecutionPolicy } from "./agent-execution-policy"
 import type { Actor } from "@/application/actor"
 import type { AgentStore } from "@/application/agents/agent-store"
 
@@ -29,12 +30,21 @@ export function resolveAgentControlPolicy(
   environment: Record<string, string | undefined> = process.env
 ): AgentControlPolicy {
   return {
-    runWallClockMs:
-      positiveInteger(environment.FORGE_AGENT_RUN_WALL_CLOCK_MS) ?? 15 * 60_000,
-    maxInputTokens:
-      positiveInteger(environment.FORGE_AGENT_MAX_INPUT_TOKENS) ?? 200_000,
-    maxOutputTokens:
-      positiveInteger(environment.FORGE_AGENT_MAX_OUTPUT_TOKENS) ?? 50_000,
+    runWallClockMs: Math.min(
+      positiveInteger(environment.FORGE_AGENT_RUN_WALL_CLOCK_MS) ??
+        agentExecutionPolicy.runWallClockMs,
+      agentExecutionPolicy.runWallClockMs
+    ),
+    maxInputTokens: Math.min(
+      positiveInteger(environment.FORGE_AGENT_MAX_INPUT_TOKENS) ??
+        agentExecutionPolicy.maxInputTokens,
+      agentExecutionPolicy.maxInputTokens
+    ),
+    maxOutputTokens: Math.min(
+      positiveInteger(environment.FORGE_AGENT_MAX_OUTPUT_TOKENS) ??
+        agentExecutionPolicy.maxOutputTokens,
+      agentExecutionPolicy.maxOutputTokens
+    ),
     userMonthlyBudgetMicros: positiveInteger(
       environment.FORGE_AGENT_USER_MONTHLY_BUDGET_MICROS
     ),
