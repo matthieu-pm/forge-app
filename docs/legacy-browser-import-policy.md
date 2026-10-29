@@ -1,0 +1,110 @@
+# Legacy browser import ownership and conflicts
+
+FOR-22 decision record, 29 October 2026. Policy version **1**. The conservative rules below are the implementation contract for this issue. This record does not claim a separate stakeholder review or certify a production migration. The same policy applies to each browser profile and desktop renderer origin independently.
+
+The inventory was checked against `debe41e2fbe7c07509ac4d32921fc98c2d60c84a`, rather than relying on the original `ededa61` review. [Review §06](plans/production-readiness-review-2026-10-28.md) supplies the migration requirements. The [resource visibility policy](resource-visibility-policy.md) and [personal preference contract](personal-preference-contract.md) govern destination access and field scope.
+
+## Ownership and destination
+
+Browser possession, storage-key IDs, author names, emails and matching content are **never proof of ownership**. Discovery is local, read-only and explicitly started by the user. Login and account/workspace switching never trigger legacy uploads.
+
+1. Start with no records selected. Preview the current account, destination workspace/teams, source groups, counts, invalid records, exclusions, unresolved references, conflicts and eventual visibility. Do not render another account's personal payload in the current account's preview; a generic excluded-source count is sufficient.
+2. Personal stores carrying another user ID are excluded. Sign into that account to review them; administrators cannot claim another user's preferences, inbox or profile. Matching IDs are hints only and still require confirmation. Unscoped personal stores can be explicitly claimed for the current account as individually selected fields or a visible group of supported fields.
+3. Team/workspace records without reliable actor ownership are ambiguous. Require explicit selection and confirmation that the user is entitled to import the selected content into the displayed destination. Confirm each source group and destination mapping; one team's confirmation cannot authorize every origin key. Skip and cancel remain available. Claiming content never claims historical authorship.
+4. Personal imports target only the authenticated account. Shared imports require live destination membership and normal write permission for every affected resource. Team mappings must resolve within that workspace; user references must resolve to authorized members. Shared settings require administrative write permission. Imports never implicitly grant document sharing or broaden private-resource visibility. Exclude an unresolvable private source until a restricted destination and its visibility are explicitly reviewed.
+5. Bind confirmation to policy version, actor, destination including team, exact source snapshot, selected records/fields, mappings, exclusions and conflict decisions. Any change requires a new preview/confirmation. Reauthorize before each batch, file finalization, resumed effect and receipt read. Revocation stops work; never fall back to another workspace/account.
+
+## Current source inventory
+
+All keys below use `localStorage` unless identified otherwise. `{u}`, `{w}`, `{t}`, `{c}` mean legacy user/workspace/team/cycle hints; tuple notation means the existing JSON-encoded tuple. A `v1` key suffix is not necessarily an envelope version. Use the owning schema, preserve the original stored string before parsing and never import an `initial*` fixture when a key is absent.
+
+| Existing key / owning source | Actual scope and payload | Disposition |
+| --- | --- | --- |
+| `forge:team-issues:v1:{t}` — [team-issues.ts](../apps/forge/src/lib/team-issues.ts) | Team only; v1 envelope with issues, comments, reactions, activity, drafts, views, display, favorites, notifications and numbering | Split content/personal/device fields; confirm team. Allocate server issue numbers; preserve legacy aliases. |
+| `forge:triage-issues:v1:{t}` — [triage-issues.ts](../apps/forge/src/lib/triage-issues.ts) | Team; issue array with dates, snoozing and embedded files | Import as canonical issues in triage; review overlaps with other stores. |
+| `forge:cycle-issues:v1:{t}` — [cycle-issues.ts](../apps/forge/src/lib/cycle-issues.ts) | Team; cycle issue records | Resolve canonical aliases and explicit cycle mappings; review overlaps. |
+| `forge:triage-draft:v1:{t}` | Team only; transient issue draft, possibly base64 attachments | Preserve locally; later explicit create uses normal validation. |
+| `forge:team-statuses:v1:{t}` — [team-statuses.ts](../apps/forge/src/lib/team-statuses.ts) | Team; status/default directory | Explicit definition mapping; no overwrite of server defaults. |
+| `forge:team-issue-labels:{t}:v1` — [team-labels.ts](../apps/forge/src/lib/team-labels.ts) | Team; v1 labels/groups directory | Explicit mapping; recompute usage counts. |
+| `forge:workspace-issue-labels:v1`, `forge:workspace-project-labels:v1`, `forge:workspace-initiative-labels:v1` | **Unscoped**; v1 directories | Confirm workspace for each selected group; never infer the active workspace. |
+| `forge:team-workflows:v1:{t}`, `forge:team-triage:v1:{t}`, `forge:team-cycles:v1:{t}` — [workflows](../apps/forge/src/lib/team-workflows.ts), [triage](../apps/forge/src/lib/team-triage.ts), [cycles](../apps/forge/src/lib/team-cycles.ts) | Team; shared workflow/triage/cycle settings | Administrative review and definition mapping. Do not activate automations during import. |
+| `forge:team-thread-summaries:v1:{t}`, `forge:team-project-updates:v1:{t}` — owning settings components | Team; shared summary/update settings | Administrative review; no deliveries/jobs during import. |
+| `forge:team-home:v1:{t}` — [team-home-state.ts](../apps/forge/src/lib/team-home-state.ts) | Team; sections, documents/links, loop drafts, favorites/collapse state | Split shared resources from personal state; loops remain inactive. |
+| `forge:workspace:{w}:initiatives:v1` — [initiatives.ts](../apps/forge/src/lib/initiatives.ts) | Workspace; v1 initiatives and workspace projects, nested memberships, milestones/history, updates, comments and resources | Alias relationships; review projects repeated inside initiatives as possible duplicates. |
+| `forge:project-statuses:v1:{w}` — [project-statuses.ts](../apps/forge/src/lib/project-statuses.ts) | Workspace; project status directory | Reviewed definition mapping. |
+| `forge:workspace:{w}:initiatives-settings:v1`, `forge:workspace:{w}:project-updates-settings`, `forge:workspace:{w}:sla-settings`, `forge:workspace:{w}:fiscal-month` | Workspace; shared schedules, SLA and month value | Administrative review; exclude from personal preference patches. |
+| `forge:workspace:{w}:custom-views:v1:{u}` — [custom-views.ts](../apps/forge/src/lib/custom-views.ts) | Workspace/user; v1 views with owner and personal/workspace/team visibility | Same-account review; personal by default. Publishing requires explicit visibility confirmation and permission. |
+| Previous key plus `:directory`; `forge:workspace:{w}:projects-view:v1:{u}:{t or all}`; `forge:workspace:{w}:initiatives-view:v1:{u}` | Workspace/user; display, filters, favorites, subscriptions and saved views | Split durable personal choices from device layout. Subscriptions require opt-in; never replay historical deliveries. |
+| `forge:my-issues:v1:{u}`, `forge:cycle-issue-view:v1:{t}:{c}` | User / team-only; filters/display | Supported account choices only; geometry stays local. Team-only state is ambiguous. |
+| `forge:inbox:v1:[w,u]` — [inbox-state.ts](../apps/forge/src/lib/inbox-state.ts) | Workspace/user; inbox records/state | Same-account review; no new notification events. Exclude inaccessible targets. |
+| `forge:signal-documents:v1:[w,u]` — [signals-documents.ts](../apps/forge/src/lib/signals-documents.ts) | Workspace/user; draft documents, potentially fictional evidence | Preserve drafts locally; explicit publication only with preview provenance retained. |
+| `forge:team-agent-skills:v1` — [team-agent-skills.ts](../apps/forge/src/lib/team-agent-skills.ts) | **Unscoped** array; per-record team IDs and revisions | Confirm each team mapping/instruction set. Import inactive; no automatic run injection. |
+| `forge:agent-personalization:v1:{u}` — [agent-personalization.ts](../apps/forge/src/lib/agent-personalization.ts) | User; personal instructions | Same-account explicit review; no automatic run activation or team policy changes. |
+| `forge.personal-preferences` — [personal-preferences.ts](../apps/forge/src/lib/personal-preferences.ts) | **Unscoped**; flat legacy object or `{version:1, values}` | Explicitly claim supported fields for current account. Appearance follows the account, per FOR-128. |
+| `forge.personal-preferences.recovery.{uuid}` | Unscoped raw recovery payload | Backup only; no independent automatic import alongside main source. |
+| `forge:notifications:v1:{u}`, `forge:calls-and-transcripts:v1:{u}`, `forge:code-reviews:{u}`, `forge:profile:{u}` | User; notification/Calls/review choices and profile extras | Same-account supported fields; account values win by default. Auth/security identity fields excluded. |
+| `forge:signals:v1:{encoded u}:{encoded w}`, `forge:reviews-display:v1:[w,u]` | Workspace/user; display preferences | Same-account supported fields only. |
+| `forge:reviews-preview:v1:[w,u]`, `forge:calls-demo:v1:[creator,t,call]` | Preview edits/demo Calls overlay | Exclude from canonical provider records; preserve locally with preview provenance. |
+| `forge.agent.open-threads.v1`, `forge.agent.composer-state.v1`, `forge:desktop-tabs` (`sessionStorage`) | Unscoped navigation pointers and transient composers/tabs | Device-local; never import as conversations or cross-account drafts. |
+| `forge:issue-coding-tool`, `forge:{inbox or signals}-sidebar-width:v1:[w,u]`, `forge:getting-started-checklist-seen`, `forge:getting-started-checklist-complete`, `sidebar_state` cookie | Device/tool hints, widths and onboarding state | Remain local; no account/content migration. |
+
+The inspected browser sources contain no IndexedDB-backed store. Server rows, desktop main-process settings, credentials, authentication cookies and unrelated origin keys are outside discovery. Unknown keys/future schemas remain preserved and excluded until explicitly supported. Never upload every `forge*` key. Mixed stores are split by **field**, never copied wholesale because one field is eligible.
+
+## Duplicates and conflicts
+
+| Situation | Rule |
+| --- | --- |
+| New selected content without an alias or duplicate candidate | Create a new canonical ID after confirmed review. |
+| Verified source alias/checksum and unchanged imported target | Return existing receipt; no second object/event. |
+| Same manifest resumes after partial completion | Resume uncommitted records using durable checkpoints/idempotency; return committed receipts. |
+| Another profile/import ID overlaps, changed legacy IDs, identical title/content, deleted mapped target | Review candidate; never guess identity, silently skip or resurrect deleted data. |
+| Local/server content conflict, including edits after a previous import | Require **Keep server / skip** or **Keep both**. Keep both creates a separate ID and preserves both versions. No in-place shared-content overwrite or automatic merge. |
+| Preference field conflicts with account choice | Default **Keep account**. Explicit **Use local for this field** permits a field patch against the reviewed server revision. Concurrent edits return to preview; never replace the whole account. |
+| Selected preference field is absent on the server | Create only with an atomic absence check; a concurrent account choice returns to preview. |
+| Definition/name uniqueness prevents another copy | Require an explicit existing-definition mapping or new name; otherwise exclude dependents. |
+| Unresolved/unauthorized relationship | Exclude relation/dependent records with a reason; no title-based linking, cross-tenant reference or silent loss of required relationships. |
+
+Duplicate candidates are destination-scoped and permission-filtered before details are returned. Checksums propose candidates; they do not establish identity. Durable uniqueness covers `(destination, import ID, entity kind, legacy ID)`. Destination-scoped aliases include source namespace/fingerprint and checksums, so changing import ID cannot bypass duplicate review. Keep-both decisions have stable receipts: retrying cannot create another copy. Server issue numbers are allocated normally; old numbers remain aliases.
+
+## Historical authors and side effects
+
+The authenticated importer is the audit actor. Preserve author labels, claimed IDs, timestamps and activity as **unverified historical metadata**, visually distinct from server authorship. Do not attribute every imported record to the importer or map authors by name/email. Identity mapping requires independent server verification; missing identities remain “Unknown legacy author”. Dates never rewrite server creation/audit timestamps.
+
+Imported mentions, subscriptions, reactions, recurrence, loops and skills cannot impersonate users, replay notifications or execute jobs. Rich text/URLs undergo current sanitization; attachments use validated upload intents, checksums and current access checks. Base64 in a legacy record is not a trusted file. Preview data never becomes purported live provider evidence.
+
+## Snapshots, backup retention and explicit cleanup
+
+* Before upload/write, preserve a recoverable local backup of exact selected stored strings, keys, versions and file bytes, including malformed source, with checksums. Verify completeness/readability and offer a downloadable copy. Preservation failure blocks import. Other-account and unrelated payloads stay outside the current account's backup/export.
+* Fingerprint the exact raw snapshot/files. The selection fingerprint covers ownership choices, destinations, selected records, mappings, exclusions, expected target revisions and conflict decisions. Manifests record policy/schema versions, actor, import ID, fingerprints, per-record states/checksums/errors, aliases and receipts. Clients cannot self-assert trusted authorization or receipts.
+* Changed source/destination/actor/selection requires new preview/confirmation. Preserve committed receipts; review a delta and reconcile new/changed records. Cancellation, quota failure, restart and partial upload leave source strings intact. No indefinite local/server dual-write authority after cutover.
+* **No automatic TTL/deletion** applies to local legacy source or recovery backups. Keep them until successful reconciliation and a separate explicit cleanup action. Downloads are user-controlled; browser eviction or user file deletion cannot be prevented. Server manifests, historical metadata and copies follow FOR-23's destination retention/deletion policy, without a retention exemption from this decision.
+* Reconcile record/relationship counts, exclusions/errors, file checksums and canonical IDs. Malformed, unsupported, excluded, unresolved and uncommitted records remain recoverable; never count them as successes. Cleanup covers only successfully reconciled selected records with verified backup and an acknowledgment of exclusions left behind.
+* Cleanup names exact keys/records and fingerprints, rechecks immediately before removal and refuses a changed snapshot. Never call `localStorage.clear()`, remove other-account sources or delete a mixed key with excluded/uncommitted records. Leave mixed keys intact unless a reviewed adapter safely removes only reconciled records. Backup deletion is a separate explicit action after reconciliation. Completion, sign-out and cutover never imply cleanup consent.
+* Rollback reads backup as a newly reviewed source; it never overwrites a newer server object. Revoked access cannot be bypassed by exporting through an old manifest.
+
+## Executable contract and delivery boundaries
+
+[`legacy-import-policy.ts`](../apps/forge/src/lib/legacy-import-policy.ts) implements pure review/conflict decisions. Review requires current permission, verified backup and actor/destination/snapshot/selection-bound ownership confirmation. Conflict resolution has no shared-content overwrite outcome; preference patches return a revision guard. Inputs must be validated and derived by trusted adapters. `ready` is a policy result, not an authorization token. Both checks must pass with fresh targets before atomic server writes. Manifest policy version is included in its selection fingerprint; unsupported policy versions require new review.
+
+| Follow-up owner | Required implementation/evidence |
+| --- | --- |
+| FOR-53 | Read-only discovery/preview, backup, malformed/future source preservation and exact ownership/destination/selection confirmation. |
+| FOR-56 | Trusted manifests, live permissions, scoped aliases, atomic idempotency and restart-safe batches/files; overlaps and revoked membership. |
+| FOR-57 | Reconciliation, every issue entry point cutover, no dual writes and snapshot-checked explicit cleanup. |
+| FOR-126 | Enabled planning/document/view adapters with relationship/visibility preservation. |
+| FOR-144 | Same-account field selection, version-checked preference patches and interrupted resume without overriding newer choices. |
+
+FOR-22 acceptance is the recorded decision and pure behavior. These stories retain UI/server/storage/packaged-client and release checks. This change does not enable migration at login or add an import endpoint.
+
+## Acceptance evidence
+
+Run from `apps/forge`: `bun x vitest run src/lib/legacy-import-policy.test.ts`.
+
+* **AC-01 / AT-01:** Alice/Bob fixture excludes Bob's personal records; ambiguous records require explicit ownership and exact destination confirmation. Matching account hints never bypass consent. Changed actor/team/workspace/source/selection invalidates consent; revoked permission denies resume.
+* **AC-02 / AT-02:** conflicting local/server objects require a choice; Keep both produces a separate copy, Keep server skips, shared-content replacement is rejected. Exact receipts avoid duplicates; changed sources/targets and deleted targets require review. Preference replacement requires a selected field and matching revision.
+* Additional fixtures cover malformed/future source preservation, backup failure, missing fingerprints and input immutability. Pure tests do not prove follow-up adapters enforce the contract in deployment.
+
+Local verification on 29 October 2026: **44 tests passed** across the policy,
+personal-preference contract and personal-preference storage suites; app TypeScript
+and ESLint on the two added TypeScript files passed. Local documentation links
+and `git diff --check` passed. No production data was read or migrated.

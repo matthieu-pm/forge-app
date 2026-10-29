@@ -164,6 +164,7 @@ local development, signing, updates, and release operations.
 
 ## Operations
 
+- [Legacy browser import ownership and conflict policy](docs/legacy-browser-import-policy.md)
 - [Turborepo and cache policy](docs/operations/turborepo.md)
 - [Desktop releases](docs/operations/desktop-releases.md)
 - [Workflow SDK invitation lifecycle](docs/operations/workflows.md)
