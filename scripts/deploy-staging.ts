@@ -69,12 +69,15 @@ try {
   if (extract.status !== 0)
     throw new Error("Could not extract the source snapshot.")
   const result = spawnSync(
-    "vercel",
+    "bunx",
     [
+      // Native CLI 65.7.0 ignored --skip-domain and custom metadata in the
+      // isolated rehearsal. Pin the JS CLI that preserves these release gates.
+      "--package",
+      "vercel@50.4.11",
+      "vercel",
       "deploy",
       "--prod",
-      "--project",
-      service === "web" ? STAGING.webProjectId : STAGING.runtimeProjectId,
       "--yes",
       "--scope",
       "matthieu-pm",

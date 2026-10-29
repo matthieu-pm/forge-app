@@ -105,6 +105,8 @@ production. Configure per-deployment variables, never project-wide defaults:
 `bun scripts/deploy-staging.ts web --rehearsal old|bridge|new` requires a clean
 committed snapshot and pins the staging project/team explicitly. It creates a
 production-slot deployment **inside the staging project**, with `--skip-domain`.
+The launcher pins JavaScript CLI 50.4.11: native CLI 65.7.0 ignored `--skip-domain`
+and custom metadata during verification, although runtime overrides arrived.
 The selected version is immutable deployment configuration; all three adapters
 belong to the same reviewed source revision. Record all deployment IDs and version
 metadata. Promote/roll back only this staging project's stable alias to perform
