@@ -113,12 +113,32 @@ nested cause and unsafe request ID. Tests cover concurrent request isolation,
 deferred consumption after request scope exit, approved-write failures, signed
 runtime correlation, callback failures and framework exception sanitization.
 
-The baseline still uses browser-local issues. Current production command hooks
-therefore cover existing server-owned team writes and capability writes; the shared
-`observeCommand` wrapper is the boundary for the upcoming canonical issue commands.
-The failure-injection acceptance analogue exercises an approved server write;
-it does not claim a deployed collaborative issue-write flow. No production write,
-provider execution or live rollout acceptance is established by local tests.
+The browser-local issue product does not need to be migrated to test this
+technical enabler. A staging-only synthetic issue-write command dispatches a bounded
+UUID envelope to a separate runtime worker, which fails the injected write with
+fixture secrets inside its exception. Both services emit their production telemetry
+through the same correlation/command/run IDs. This verifies the failure/capture
+boundary without writing a customer issue or executing a model. Canonical issue
+commands must use the same observer when their separate backend work lands.
+
+For hosted acceptance, generate a random 32-byte base64url operator token locally.
+Pass only its SHA-256 and an expiry within two hours as
+`FORGE_OBSERVABILITY_CHECK_TOKEN_SHA256` / `FORGE_OBSERVABILITY_CHECK_EXPIRES_AT`
+to `bun run deploy:staging runtime --observability` and
+`bun run deploy:staging web --observability`. Both commands deploy clean source
+snapshots to the existing isolated staging projects. Do not persist the probe
+settings on the projects. Confirm both serving aliases point to that source.
+
+Run `FORGE_OBSERVABILITY_CHECK_TOKEN=<ephemeral token> bun run observability:check`
+from that exact source; inject the token through the operator's environment, never
+shell history or command arguments. The verifier sends authorization over curl stdin
+and prints only bounded acceptance evidence. It verifies anonymous denial and checks
+the two deployment identities, challenge, source revision and full correlation
+chain. Then query both deployments' logs by the returned correlation UUID and verify
+the failed-command/failed-worker records contain no fixture content. Delete the local
+raw token after verification. The deployment-local hashes expire automatically.
+Both probe routes return empty 404 outside staging, without valid probe authority,
+or after expiry. The probe imports no database, model or business-write services.
 
 This is the diagnostic foundation. Database pool saturation, durable outbox/import
 metrics, alert routing/readiness and lease recovery for future jobs belong to the

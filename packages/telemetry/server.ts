@@ -17,6 +17,8 @@ export type Operation =
   | "agent_http"
   | "capability_http"
   | "model_proxy"
+  | "issues.write"
+  | "runtime.issue-worker"
   | "teams.create"
   | "teams.update"
   | "teams.archive"
@@ -73,6 +75,8 @@ const operations = new Set<Operation>([
   "agent_http",
   "capability_http",
   "model_proxy",
+  "issues.write",
+  "runtime.issue-worker",
   "teams.create",
   "teams.update",
   "teams.archive",
@@ -114,6 +118,8 @@ const events = new Set<Event>([
 ])
 const errorCodes = new Set([
   "INTERNAL_ERROR",
+  "ISSUE_WRITE_FAILED",
+  "WORKER_EXECUTION_FAILED",
   "INVALID_INPUT",
   "FORBIDDEN",
   "UNAUTHORIZED",
