@@ -88,11 +88,11 @@ an attempted production branch under a rehearsal name, and actual branch mismatc
 before locking or DDL. Fixture cleanup removes only the invocation's random table
 and exact hashes. No live database objects are reset by the tests.
 
-FOR-28 remains In Progress: full old/new app rollback compatibility, resumable
-backfill recovery and the hosted staging release rehearsal are still required.
-FOR-27 remains In Progress until all staging resources and provider identities are
-isolated. Neither passing helper tests nor the existence of a staging database
-closes those release contracts.
+That initial checkpoint left old/new rollback, backfill recovery and hosted
+rehearsal open. FOR-27's later hosting/provider isolation is recorded in
+`for27-staging-evidence.json`. FOR-28's reproducible expand/bridge/contract
+protocol is now in [database-release-rehearsal.md](database-release-rehearsal.md);
+its separate run journal leaves the product migration history unchanged.
 
 Billing-grace expansion and provider-subscription binding (0027/0028) have since been applied to staging and rehearsal; both now contain the complete 29-migration history. The three migration fault/ownership cases passed again. The shared read path was also verified against the prior table schema without writes. Production execution remains disabled.
 

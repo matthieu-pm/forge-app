@@ -12,6 +12,13 @@ const target = {
 const connection = `postgresql://fixture:fixture@${target.host}/${target.database}?sslmode=require`
 
 describe("migration safety boundaries", () => {
+  it("rejects an untrusted journal namespace before any query", async () => {
+    const client = { query: vi.fn() }
+    await expect(
+      runSerializedMigrations(client, [], target, "public;DROP SCHEMA public")
+    ).rejects.toThrow("journal schema")
+    expect(client.query).not.toHaveBeenCalled()
+  })
   it("accepts only the reviewed exact direct target", () => {
     expect(() => assertMigrationTarget(connection, target)).not.toThrow()
     expect(() =>
