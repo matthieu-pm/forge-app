@@ -11,7 +11,30 @@ if (service !== "web" && service !== "runtime")
 const rehearsalVersion =
   process.argv[3] === "--rehearsal" ? process.argv[4] : undefined
 const rehearsalArguments: Array<string> = []
-if (process.argv.length > 3) {
+const observability = process.argv[3] === "--observability"
+if (observability) {
+  const expiry = Date.parse(
+    process.env.FORGE_OBSERVABILITY_CHECK_EXPIRES_AT ?? ""
+  )
+  if (
+    process.argv.length !== 4 ||
+    !Number.isFinite(expiry) ||
+    expiry <= Date.now() ||
+    expiry > Date.now() + 2 * 60 * 60 * 1000 ||
+    !/^[a-f0-9]{64}$/.test(
+      process.env.FORGE_OBSERVABILITY_CHECK_TOKEN_SHA256 ?? ""
+    )
+  ) {
+    throw new Error(
+      "Observability acceptance requires a hash and expiry within two hours."
+    )
+  }
+  for (const key of [
+    "FORGE_OBSERVABILITY_CHECK_TOKEN_SHA256",
+    "FORGE_OBSERVABILITY_CHECK_EXPIRES_AT",
+  ])
+    rehearsalArguments.push("--env", `${key}=${process.env[key]}`)
+} else if (process.argv.length > 3) {
   if (
     service !== "web" ||
     !["old", "bridge", "new"].includes(rehearsalVersion ?? "") ||

@@ -1,0 +1,195 @@
+{
+  "schemaVersion": 1,
+  "issue": "FOR-29",
+  "sourceRevision": "48a811e0c9859c450094dbb9d76763120d179174",
+  "environment": "isolated-staging",
+  "checkedAt": "2026-10-29T20:26:35.487Z",
+  "outcome": "passed",
+  "scenario": "synthetic-issue-write-failure",
+  "correlation": {
+    "correlationId": "e9c5c9d6-fd71-4dce-94e2-d0dfc0bccb68",
+    "requestId": "d545efe5-dde6-4951-bf2c-0649195bb84f",
+    "commandId": "0eb16c06-2f6b-4e11-9833-7e72691d6373",
+    "runId": "4cbe93d7-adf9-4805-b0c2-2f47d66a28c9"
+  },
+  "deployments": {
+    "web": {
+      "projectId": "prj_undcmz4aPiL4FuTc69hQoPwWYead",
+      "deploymentId": "dpl_FSNXy8XbUxPDpSNdUfGKPKwHkjVu",
+      "url": "https://forge-staging-qst2g73m5-matthieu-pm.vercel.app",
+      "alias": "https://forge-staging-matthieu-pm.vercel.app"
+    },
+    "runtime": {
+      "projectId": "prj_OTylfBHAV8WwAmi3rQ5OWRvGhq6b",
+      "deploymentId": "dpl_5LRQjGLUcLZwEdcadHUwMUBBBYEn",
+      "url": "https://forge-staging-runtime-g37tm9ys3-matthieu-pm.vercel.app",
+      "alias": "https://forge-staging-runtime-matthieu-pm.vercel.app"
+    }
+  },
+  "acceptance": {
+    "AC01": {
+      "passed": true,
+      "evidence": "Retained request, issue-write command, link and separate-worker failure records share the originating IDs."
+    },
+    "AC02": {
+      "passed": true,
+      "evidence": "All 9 captured telemetry records and HTTP responses exclude synthetic token, transcript and signed URL fixtures."
+    },
+    "unauthenticatedProbesDenied": true,
+    "fixturesUsed": "Fixed synthetic token/transcript/signed URL inside an injected worker exception; no customer content."
+  },
+  "localValidation": {
+    "appTestsPassed": 1841,
+    "workflowTestsPassed": 4,
+    "runtimeTestsPassed": 25,
+    "databaseTestsSkipped": 154,
+    "typechecks": "app/runtime passed",
+    "builds": "app/runtime production builds passed",
+    "focusedObservabilityAndStagingTestsPassed": 42
+  },
+  "records": {
+    "web": [
+      {
+        "schemaVersion": 1,
+        "event": "forge.request.completed",
+        "timestamp": "2026-10-29T20:26:35.460Z",
+        "operation": "http",
+        "service": "app",
+        "correlationId": "e9c5c9d6-fd71-4dce-94e2-d0dfc0bccb68",
+        "requestId": "d545efe5-dde6-4951-bf2c-0649195bb84f",
+        "deploymentId": "dpl_FSNXy8XbUxPDpSNdUfGKPKwHkjVu",
+        "sourceRevision": "48a811e0c9859c450094dbb9d76763120d179174",
+        "durationMs": 148.55264799999713,
+        "status": 200
+      },
+      {
+        "schemaVersion": 1,
+        "event": "forge.operation.failed",
+        "timestamp": "2026-10-29T20:26:35.460Z",
+        "operation": "issues.write",
+        "service": "app",
+        "correlationId": "e9c5c9d6-fd71-4dce-94e2-d0dfc0bccb68",
+        "requestId": "d545efe5-dde6-4951-bf2c-0649195bb84f",
+        "commandId": "0eb16c06-2f6b-4e11-9833-7e72691d6373",
+        "deploymentId": "dpl_FSNXy8XbUxPDpSNdUfGKPKwHkjVu",
+        "sourceRevision": "48a811e0c9859c450094dbb9d76763120d179174",
+        "durationMs": 146.3626260000019,
+        "errorCode": "ISSUE_WRITE_FAILED"
+      },
+      {
+        "schemaVersion": 1,
+        "event": "forge.run.linked",
+        "timestamp": "2026-10-29T20:26:35.314Z",
+        "operation": "issues.write",
+        "service": "app",
+        "correlationId": "e9c5c9d6-fd71-4dce-94e2-d0dfc0bccb68",
+        "requestId": "d545efe5-dde6-4951-bf2c-0649195bb84f",
+        "commandId": "0eb16c06-2f6b-4e11-9833-7e72691d6373",
+        "runId": "4cbe93d7-adf9-4805-b0c2-2f47d66a28c9",
+        "deploymentId": "dpl_FSNXy8XbUxPDpSNdUfGKPKwHkjVu",
+        "sourceRevision": "48a811e0c9859c450094dbb9d76763120d179174"
+      },
+      {
+        "schemaVersion": 1,
+        "event": "forge.operation.started",
+        "timestamp": "2026-10-29T20:26:35.313Z",
+        "operation": "issues.write",
+        "service": "app",
+        "correlationId": "e9c5c9d6-fd71-4dce-94e2-d0dfc0bccb68",
+        "requestId": "d545efe5-dde6-4951-bf2c-0649195bb84f",
+        "commandId": "0eb16c06-2f6b-4e11-9833-7e72691d6373",
+        "deploymentId": "dpl_FSNXy8XbUxPDpSNdUfGKPKwHkjVu",
+        "sourceRevision": "48a811e0c9859c450094dbb9d76763120d179174"
+      },
+      {
+        "schemaVersion": 1,
+        "event": "forge.request.completed",
+        "timestamp": "2026-10-29T20:26:30.444Z",
+        "operation": "http",
+        "service": "app",
+        "correlationId": "e9c5c9d6-fd71-4dce-94e2-d0dfc0bccb68",
+        "requestId": "6c681535-fc5b-410a-ad59-27e362bafdaf",
+        "deploymentId": "dpl_FSNXy8XbUxPDpSNdUfGKPKwHkjVu",
+        "sourceRevision": "48a811e0c9859c450094dbb9d76763120d179174",
+        "durationMs": 125.79551199999696,
+        "status": 404
+      }
+    ],
+    "runtime": [
+      {
+        "schemaVersion": 1,
+        "event": "forge.request.completed",
+        "timestamp": "2026-10-29T20:26:35.444Z",
+        "operation": "runtime.issue-worker",
+        "service": "runtime",
+        "correlationId": "e9c5c9d6-fd71-4dce-94e2-d0dfc0bccb68",
+        "requestId": "6a5a6aee-da76-43d5-bae6-564420dc7512",
+        "deploymentId": "dpl_5LRQjGLUcLZwEdcadHUwMUBBBYEn",
+        "sourceRevision": "48a811e0c9859c450094dbb9d76763120d179174",
+        "durationMs": 4.276245999993989,
+        "status": 200
+      },
+      {
+        "schemaVersion": 1,
+        "event": "forge.operation.failed",
+        "timestamp": "2026-10-29T20:26:35.444Z",
+        "operation": "runtime.issue-worker",
+        "service": "runtime",
+        "correlationId": "e9c5c9d6-fd71-4dce-94e2-d0dfc0bccb68",
+        "requestId": "d545efe5-dde6-4951-bf2c-0649195bb84f",
+        "commandId": "0eb16c06-2f6b-4e11-9833-7e72691d6373",
+        "runId": "4cbe93d7-adf9-4805-b0c2-2f47d66a28c9",
+        "deploymentId": "dpl_5LRQjGLUcLZwEdcadHUwMUBBBYEn",
+        "sourceRevision": "48a811e0c9859c450094dbb9d76763120d179174",
+        "durationMs": 0.5702710000041407,
+        "errorCode": "WORKER_EXECUTION_FAILED"
+      },
+      {
+        "schemaVersion": 1,
+        "event": "forge.operation.started",
+        "timestamp": "2026-10-29T20:26:35.443Z",
+        "operation": "runtime.issue-worker",
+        "service": "runtime",
+        "correlationId": "e9c5c9d6-fd71-4dce-94e2-d0dfc0bccb68",
+        "requestId": "d545efe5-dde6-4951-bf2c-0649195bb84f",
+        "commandId": "0eb16c06-2f6b-4e11-9833-7e72691d6373",
+        "runId": "4cbe93d7-adf9-4805-b0c2-2f47d66a28c9",
+        "deploymentId": "dpl_5LRQjGLUcLZwEdcadHUwMUBBBYEn",
+        "sourceRevision": "48a811e0c9859c450094dbb9d76763120d179174"
+      },
+      {
+        "schemaVersion": 1,
+        "event": "forge.request.completed",
+        "timestamp": "2026-10-29T20:26:33.041Z",
+        "operation": "runtime.issue-worker",
+        "service": "runtime",
+        "correlationId": "e9c5c9d6-fd71-4dce-94e2-d0dfc0bccb68",
+        "requestId": "2bb99051-75d1-42ef-8fae-35e72202de6d",
+        "deploymentId": "dpl_5LRQjGLUcLZwEdcadHUwMUBBBYEn",
+        "sourceRevision": "48a811e0c9859c450094dbb9d76763120d179174",
+        "durationMs": 0.2222170000022743,
+        "status": 404
+      }
+    ]
+  },
+  "productionWebObservation": {
+    "url": "https://app.forgenow.tech/api/auth/get-session",
+    "status": 200,
+    "anonymousSession": true,
+    "deploymentId": "dpl_7uqTho9kHJ1AX3ZiaYGCJWY3KtjX",
+    "sourceRevision": "6babe02914c0cb827d1324c2600c5a4af84ce2a5",
+    "correlationId": "7334d7c8-7067-4c36-8410-aed37ee1a046",
+    "requestId": "5e0426fd-cb32-4e4a-be44-749348d260a2",
+    "retainedRequestEventVerified": true
+  },
+  "scope": [
+    "Hosted fault injection verifies the observability enabler; canonical issue persistence remains separate domain work.",
+    "No production runtime deployment, model execution, customer write or customer payload inspection was performed."
+  ],
+  "authority": {
+    "deploymentLocal": true,
+    "expiresAt": "2026-10-29T21:23:25.897376Z",
+    "localRawTokenDestroyedAt": "2026-10-29T20:28:38.482296Z",
+    "projectSettingsChanged": false
+  }
+}

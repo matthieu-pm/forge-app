@@ -46,7 +46,8 @@
     "calls:sync": "turbo run calls:sync --filter=@forge/app",
     "deploy:staging": "bun scripts/deploy-staging.ts",
     "config:check": "bun apps/forge/scripts/check-service-configuration.ts",
-    "postinstall": "node services/agent-runtime/scripts/apply-diagnostic-policy.mjs --if-installed"
+    "postinstall": "node services/agent-runtime/scripts/apply-diagnostic-policy.mjs --if-installed",
+    "observability:check": "bun scripts/check-observability.ts"
   },
   "devDependencies": {
     "prettier": "^3.9.6",
