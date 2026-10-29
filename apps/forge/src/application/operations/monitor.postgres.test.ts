@@ -134,40 +134,40 @@ describe.skipIf(!file)(
         completedAt: completed,
       })
 
-      it("collects real bounded metrics and resets sustained backlog evidence after recovery or a sampling gap", async () => {
-        const store = monitorStore(client)
-        await client.query(
-          "INSERT INTO business_workflow_runs(state) SELECT 'queued' FROM generate_series(1,8000)"
-        )
-        let samples = await store.samples(Date.now())
-        expect(samples.find((row) => row.key === "backlog")).toMatchObject({
-          value: 0.8,
-        })
-        expect(
-          samples.find((row) => row.key === "backlog")!.highSince
-        ).not.toBeNull()
-        expect(
-          samples.find((row) => row.key === "database-slots")!.value
-        ).toBeGreaterThanOrEqual(0)
-        await client.query(
-          "UPDATE operational_metric_health SET observed_at=clock_timestamp()-interval '121 seconds', high_since=clock_timestamp()-interval '1 hour' WHERE key='backlog'"
-        )
-        samples = await store.samples(Date.now())
-        expect(
-          samples.find((row) => row.key === "backlog")!.highSince
-        ).toBeGreaterThan(Date.now() - 10_000)
-        await client.query("DELETE FROM business_workflow_runs")
-        samples = await store.samples(Date.now())
-        expect(samples.find((row) => row.key === "backlog")).toMatchObject({
-          value: 0,
-          highSince: null,
-        })
-      }, 15_000)
       expect((await store.heartbeats())[0].failedAt).toBeGreaterThanOrEqual(
         completed!
       )
     })
 
+    it("collects real bounded metrics and resets sustained backlog evidence after recovery or a sampling gap", async () => {
+      const store = monitorStore(client)
+      await client.query(
+        "INSERT INTO business_workflow_runs(state) SELECT 'queued' FROM generate_series(1,8000)"
+      )
+      let samples = await store.samples(Date.now())
+      expect(samples.find((row) => row.key === "backlog")).toMatchObject({
+        value: 0.8,
+      })
+      expect(
+        samples.find((row) => row.key === "backlog")!.highSince
+      ).not.toBeNull()
+      expect(
+        samples.find((row) => row.key === "database-slots")!.value
+      ).toBeGreaterThanOrEqual(0)
+      await client.query(
+        "UPDATE operational_metric_health SET observed_at=clock_timestamp()-interval '121 seconds', high_since=clock_timestamp()-interval '1 hour' WHERE key='backlog'"
+      )
+      samples = await store.samples(Date.now())
+      expect(
+        samples.find((row) => row.key === "backlog")!.highSince
+      ).toBeGreaterThan(Date.now() - 10_000)
+      await client.query("DELETE FROM business_workflow_runs")
+      samples = await store.samples(Date.now())
+      expect(samples.find((row) => row.key === "backlog")).toMatchObject({
+        value: 0,
+        highSince: null,
+      })
+    }, 15_000)
     it("AC-02: a stale scheduled job reaches an HTTP operator inbox once under concurrent monitors", async () => {
       await client.query(
         "UPDATE operational_job_health SET completed_at=clock_timestamp()-interval '61 minutes',failed_at=NULL WHERE key='agent.retention'"
