@@ -14,10 +14,10 @@ process. Staging retains the separate resource/credential isolation manifest.
 
 | Process/profile | Required configuration | Conditional configuration |
 | --- | --- | --- |
-| App | `DATABASE_URL`, `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET`; production public signup also requires `RESEND_API_KEY`, `RESEND_FROM_EMAIL` | Agent, Calls, billing and desktop server settings below |
+| App | `DATABASE_URL`, `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET`; production public signup also requires `RESEND_API_KEY`, `RESEND_FROM_EMAIL`; staging/production require `BLOB_STORE_ID` and matching `BLOB_READ_WRITE_TOKEN` | Agent, Calls, billing and desktop server settings below |
 | Runtime | `FORGE_APP_ORIGIN`, `FORGE_AGENT_CHANNEL_SECRET` | Local fixture evals may omit these. Provider keys and a database connection belong to the app, which provides the run-bound model proxy. |
 | Jobs: `workflow-health` | `DATABASE_URL` | No web/auth/mail, Calls or release credentials |
-| Jobs: `agent-retention` | `DATABASE_URL` | `BLOB_READ_WRITE_TOKEN` when `FORGE_AGENT_BLOB_ADAPTER=vercel-private` |
+| Jobs: `agent-retention` | `DATABASE_URL` | `BLOB_STORE_ID` and matching `BLOB_READ_WRITE_TOKEN` in staging/production; local storage is development only |
 | Jobs: `calls-sync` | `DATABASE_URL` and enabled Calls settings | Selected providers only; refuses to run when Calls is disabled |
 | Jobs: `product-retention` | `DATABASE_URL` | R2 settings when `FORGE_DESKTOP_RELEASE_ENABLED=true`; disabled desktop retention does not touch release rows or objects |
 | Release: `package`, `prepare` | `FORGE_DESKTOP_APP_ORIGIN` | Production/staging require all four Apple signing/notarization settings; development permits unsigned packages, but rejects partial signing configuration |
@@ -40,7 +40,9 @@ requires `FORGE_AGENT_CAPABILITY_SECRET`; EVE execution additionally requires
 `FORGE_AGENT_LOCAL_INGEST_SECRET`; model connections require
 `FORGE_MODEL_CREDENTIAL_KEK` and `FORGE_AGENT_MODEL_ACCESS_SECRET`. The optional
 `FORGE_AGENT_ARTIFACT_SECRET` falls back to the capability secret when empty or
-unset. The Vercel private blob adapter requires `BLOB_READ_WRITE_TOKEN`.
+unset. Shared private file storage requires `BLOB_STORE_ID` and its matching
+`BLOB_READ_WRITE_TOKEN` for every deployed web process, even with agent UI disabled.
+See [private file storage](private-file-storage.md) for migration and acceptance.
 
 Calls can be explicitly disabled with `FORGE_CALLS_ENABLED=false`. When enabled,
 select `FORGE_CALLS_PROVIDERS=google,teams,zoom` (any supported subset); each

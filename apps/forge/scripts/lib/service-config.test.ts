@@ -11,6 +11,8 @@ import type { ServiceEnvironment } from "../../../../packages/environment/servic
 const secret = "valid-test-secret-" + "a".repeat(32)
 const core = {
   FORGE_ENVIRONMENT: "production",
+  BLOB_STORE_ID: "store_fixture",
+  BLOB_READ_WRITE_TOKEN: "vercel_blob_rw_fixture_private",
   DATABASE_URL:
     "postgresql://operator:private-db-password@db.example.test/forge",
   BETTER_AUTH_URL: "https://app.example.test",
@@ -223,7 +225,11 @@ describe("service-specific startup configuration (FOR-26)", () => {
       variables({ ...agent, FORGE_MODEL_CREDENTIAL_KEK: "x".repeat(44) })
     ).toContain("FORGE_MODEL_CREDENTIAL_KEK")
     expect(
-      variables({ ...agent, FORGE_AGENT_BLOB_ADAPTER: "vercel-private" })
+      variables({
+        ...agent,
+        FORGE_AGENT_BLOB_ADAPTER: "vercel-private",
+        BLOB_READ_WRITE_TOKEN: undefined,
+      })
     ).toContain("BLOB_READ_WRITE_TOKEN")
   })
 
@@ -239,6 +245,8 @@ describe("service-specific startup configuration (FOR-26)", () => {
       "BETTER_AUTH_SECRET",
       "RESEND_API_KEY",
       "RESEND_FROM_EMAIL",
+      "BLOB_STORE_ID",
+      "BLOB_READ_WRITE_TOKEN",
     ])
   })
 

@@ -39,11 +39,7 @@ class MemoryMetadata implements AgentArtifactMetadataStore {
     )
   }
 
-  getAuthorized(
-    _workspaceId: string,
-    _userId: string,
-    artifactId: string
-  ) {
+  getAuthorized(_workspaceId: string, _userId: string, artifactId: string) {
     return Promise.resolve(
       this.records.find((record) => record.id === artifactId) ?? null
     )
@@ -141,6 +137,22 @@ async function fixture(maxBytes = 1024) {
 }
 
 describe("AgentArtifactService", () => {
+  it("rejects tampered artifact bytes before delivery", async () => {
+    const { service, blobs, runId } = await fixture()
+    const file = await service.create(actor, runId, {
+      kind: "file",
+      name: "a.txt",
+      contentType: "text/plain",
+      encoding: "utf8",
+      content: "private",
+    })
+    const reference = [...blobs.records.keys()][0]
+    blobs.records.set(reference, new TextEncoder().encode("changed"))
+    await expect(service.read(actor, file.id)).rejects.toMatchObject({
+      code: "INVALID_ARTIFACT_CONTENT",
+    })
+  })
+
   it("stores bounded content, emits a stable event, and deduplicates replay", async () => {
     const { artifactId, blobs, events, metadata, runId, service } =
       await fixture()

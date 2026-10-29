@@ -95,6 +95,20 @@ function fixture(maxAttachmentBytes = 1024, maxTurnBytes = 2048) {
 }
 
 describe("AgentAttachmentService", () => {
+  it("rejects tampered attachment bytes before model resolution", async () => {
+    const { service, blobs } = fixture()
+    const file = await service.upload(actor, {
+      name: "a.txt",
+      contentType: "text/plain",
+      contentBase64: Buffer.from("private").toString("base64"),
+    })
+    const reference = [...blobs.records.keys()][0]
+    blobs.records.set(reference, new TextEncoder().encode("changed"))
+    await expect(service.resolve(actor, [file.id])).rejects.toMatchObject({
+      code: "INVALID_ATTACHMENT",
+    })
+  })
+
   it("stores private content and resolves it only for the owning actor", async () => {
     const { attachmentId, blobs, metadata, service } = fixture()
     const contentBase64 = Buffer.from("safe").toString("base64")

@@ -43,7 +43,9 @@
     "db:studio": "drizzle-kit studio",
     "calls:sync": "bun scripts/sync-calls.ts",
     "integration:fixtures": "bun scripts/integration-fixtures.ts",
-    "db:rehearse": "bun scripts/rehearse-database-release.ts"
+    "db:rehearse": "bun scripts/rehearse-database-release.ts",
+    "files:verify": "bun scripts/verify-private-file-storage.ts",
+    "files:migrate": "bun scripts/migrate-local-files.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

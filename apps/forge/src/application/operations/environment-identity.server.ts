@@ -1,6 +1,7 @@
 import "@tanstack/react-start/server-only"
 
 import { sql } from "drizzle-orm"
+import { inspectFileStorage } from "../../../../../packages/environment/file-storage"
 import { STAGING } from "../../../../../packages/environment/staging-environment"
 import { stagingServiceFetch } from "../../../../../packages/environment/staging-service-auth"
 
@@ -55,12 +56,12 @@ export async function readEnvironmentIdentity(challenge: string) {
     // Report the selected adapter without exposing its credentials.
     artifacts: {
       adapter:
-        process.env.FORGE_AGENT_BLOB_ADAPTER === "vercel-private"
+        inspectFileStorage(process.env).adapter === "vercel-private"
           ? "vercel-private"
           : "local-filesystem",
       directoryConfigured: Boolean(process.env.FORGE_AGENT_ARTIFACT_DIRECTORY),
       durableBucket:
-        process.env.FORGE_AGENT_BLOB_ADAPTER === "vercel-private"
+        inspectFileStorage(process.env).adapter === "vercel-private"
           ? (process.env.BLOB_STORE_ID ?? null)
           : null,
     },

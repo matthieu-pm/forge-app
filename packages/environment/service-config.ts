@@ -1,4 +1,5 @@
 import { resolveAuthUrl } from "./auth-origin.ts"
+import { inspectFileStorage } from "./file-storage.ts"
 
 /** Server-only configuration contracts. Reports deliberately contain no input values. */
 export type ServiceEnvironment = Record<string, string | undefined>
@@ -159,14 +160,8 @@ export function inspectServiceConfiguration(
       "must be a base64-encoded 32-byte key"
     )
   const blob = () => {
-    if (env.FORGE_AGENT_BLOB_ADAPTER === "vercel-private")
-      required("BLOB_READ_WRITE_TOKEN")
-    else if (
-      env.FORGE_AGENT_BLOB_ADAPTER &&
-      env.FORGE_AGENT_BLOB_ADAPTER !== "local"
-    ) {
-      add("FORGE_AGENT_BLOB_ADAPTER", "must select local or vercel-private")
-    }
+    for (const issue of inspectFileStorage(env).issues)
+      add(issue.variable, issue.requirement)
   }
   const calls = (force = false) => {
     const providers = selectedCallProviders(env)
@@ -296,8 +291,8 @@ export function inspectServiceConfiguration(
         secret("FORGE_AGENT_MODEL_ACCESS_SECRET")
         encryptionKey()
       }
-      blob()
     }
+    blob()
     calls()
     desktopServer()
     const billing = flag("FORGE_BILLING_ENABLED")

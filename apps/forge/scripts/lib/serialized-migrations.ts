@@ -13,7 +13,7 @@ type MigrationClient = {
 }
 
 export type MigrationTarget = {
-  environment: "staging" | "rehearsal"
+  environment: "staging" | "rehearsal" | "file-storage-acceptance"
   branchId: string
   host: string
   database: string

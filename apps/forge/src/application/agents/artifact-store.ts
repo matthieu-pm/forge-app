@@ -28,8 +28,5 @@ export interface AgentArtifactMetadataStore {
   ) => Promise<StoredAgentArtifactRecord | null>
 }
 
-export interface AgentArtifactBlobStore {
-  put: (reference: string, content: Uint8Array) => Promise<void>
-  get: (reference: string) => Promise<Uint8Array | null>
-  delete: (reference: string) => Promise<void>
-}
+/** @deprecated Use the shared file storage interface. */
+export type { FileBlobStore as AgentArtifactBlobStore } from "@/application/files/blob-store"

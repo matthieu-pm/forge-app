@@ -7,11 +7,12 @@ import {
   jsonb,
   pgTable,
   text,
+  timestamp,
   unique,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core"
-import { organizations } from "./auth-schema"
+import { organizations, users } from "./auth-schema"
 import { teams } from "./schema"
 import type { AnyPgColumn } from "drizzle-orm/pg-core"
 
@@ -254,3 +255,49 @@ export const issueHierarchyGuards = pgTable("issue_hierarchy_guards", {
   workspaceId: workspace().primaryKey(),
   version: integer("version").default(0).notNull(),
 })
+
+/** Private file metadata; bytes live in the shared private object store. */
+export const resourceFiles = pgTable(
+  "resource_files",
+  {
+    id: id(),
+    workspaceId: workspace(),
+    createdByUserId: text("created_by_user_id")
+      .notNull()
+      .references(() => users.id),
+    issueId: uuid("issue_id"),
+    documentId: uuid("document_id"),
+    name: text("name").notNull(),
+    contentType: text("content_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    checksum: text("checksum").notNull(),
+    storageReference: text("storage_reference").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (t) => [
+    unique("resource_files_storage_reference_unique").on(t.storageReference),
+    check(
+      "resource_files_one_resource",
+      sql`num_nonnulls(${t.issueId}, ${t.documentId}) = 1`
+    ),
+    check("resource_files_size_positive", sql`${t.sizeBytes} > 0`),
+    check("resource_files_checksum", sql`${t.checksum} ~ '^[a-f0-9]{64}$'`),
+    check(
+      "resource_files_reference",
+      sql`${t.storageReference} ~ '^files/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'`
+    ),
+    foreignKey({
+      name: "resource_files_issue_fk",
+      columns: [t.workspaceId, t.issueId],
+      foreignColumns: [issues.workspaceId, issues.id],
+    }),
+    foreignKey({
+      name: "resource_files_document_fk",
+      columns: [t.workspaceId, t.documentId],
+      foreignColumns: [documents.workspaceId, documents.id],
+    }),
+  ]
+)

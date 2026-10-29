@@ -1,5 +1,6 @@
 import "@tanstack/react-start/server-only"
 import { neon } from "@neondatabase/serverless"
+import { inspectFileStorage } from "../../../../../packages/environment/file-storage"
 import { inspectServiceConfiguration } from "../../../../../packages/environment/service-config"
 import { assertStagingEnvironment } from "../../../../../packages/environment/staging-environment"
 import { stagingServiceFetch } from "../../../../../packages/environment/staging-service-auth"
@@ -58,7 +59,7 @@ export async function checkWebReadiness() {
           },
         }
       : {}),
-    ...(process.env.FORGE_AGENT_BLOB_ADAPTER === "vercel-private"
+    ...(inspectFileStorage(process.env).adapter === "vercel-private"
       ? {
           storage: async () => {
             const { list } = await import("@vercel/blob")

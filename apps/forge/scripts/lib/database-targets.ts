@@ -4,6 +4,10 @@ import { STAGING } from "../../../../packages/environment/staging-environment"
 // Adding a new target requires checking its branch ID with read-only SQL first.
 export const DATABASE_TARGETS = {
   staging: STAGING.database,
+  "file-storage-acceptance": {
+    ...STAGING.database,
+    database: "forge_file_storage_acceptance_v2",
+  },
   rehearsal: {
     branchId: "br-little-pond-zabdmew3",
     host: "ep-fancy-firefly-zacgehbx.c-2.eu-west-2.aws.neon.tech",
