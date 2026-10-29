@@ -1,0 +1,90 @@
+{
+  "date": "2026-10-29",
+  "baseCommit": "1997eb760ca379bcd54aa459fe7509140a63ec70",
+  "committed": true,
+  "deployed": false,
+  "servingDatabaseModified": false,
+  "localConnectionFilesChanged": false,
+  "providerMutation": false,
+  "issues": [
+    "FOR-109",
+    "FOR-110",
+    "FOR-111",
+    "FOR-76"
+  ],
+  "policy": {
+    "anniversary": "Retain original monthly anniversary and original usage period during replacement checkout grace.",
+    "overageCap": "Automatically convert opted-in cap using latest published ECB rate at verified currency cutover, carrying committed capacity without repricing historical charges.",
+    "downgrade": "Keep existing teams/issues; block additions above new limit.",
+    "tax": "Listed monthly seat prices are before tax; add applicable tax at checkout."
+  },
+  "checks": {
+    "appTestsPassed": 1553,
+    "workflowTestsPassed": 4,
+    "postgresBillingCasesPassed": 62,
+    "postgresMembershipCasesPassed": 17,
+    "postgresMigrationFaultCasesPassed": 3,
+    "typecheck": "passed",
+    "changedFileLint": "passed",
+    "format": "passed",
+    "productionBuild": "passed including protected Workflow handlers"
+  },
+  "staging": {
+    "branch": "br-autumn-union-za0opf1e",
+    "database": "forge_staging",
+    "migrations": 36,
+    "newMigrationsApplied": 1
+  },
+  "rehearsal": {
+    "branch": "br-little-pond-zabdmew3",
+    "host": "ep-fancy-firefly-zacgehbx.c-2.eu-west-2.aws.neon.tech",
+    "database": "forge_migration_rehearsal",
+    "migrations": 36,
+    "newMigrationsApplied": 36,
+    "expiresAt": "2026-10-29T15:30:00Z"
+  },
+  "temporaryDefaultBranchResource": {
+    "database": "forge_migration_rehearsal",
+    "cause": "Unsupported CLI --branch-id option ignored; default selected",
+    "userObjectsVerified": 0,
+    "migrationsApplied": 0,
+    "deletedAfterVerification": true,
+    "existingServingDatabaseTouched": false
+  },
+  "routeEnabled": false,
+  "graceEntitlementEnabled": false,
+  "providerChangeScheduled": false,
+  "actualPolarAccess": "No configured local token or available connected Polar capability; secure sandbox setup requested.",
+  "remaining": "Owned source cancellation; actual replacement checkout; explicit bounded grace; durable period adjustment and recurring short-month repair; atomic old/new binding plus cap/quote/capacity ledger; communication/redrive; actual Polar sandbox/candidate verification.",
+  "backlog": {
+    "issues": 136,
+    "edges": 258,
+    "acyclic": true
+  },
+  "sourceSha256": {
+    "apps/forge/drizzle/0035_renewal_billing_anchors.sql": "8e3e98a122a31c4fc51e87e2224dba8ecdcb4b39a30131a04830e7c327dbb7e3",
+    "apps/forge/drizzle/meta/0035_snapshot.json": "7fbdb8b9ec983783d1c706b9fa29b982d9ab9dcb9016ef38e1c8b7ffa88612e9",
+    "apps/forge/drizzle/meta/_journal.json": "42664b4c98b0b6ed20375b059242f6e32e3f77f58f436714a900b891e97cdb62",
+    "apps/forge/scripts/lib/database-targets.ts": "2abc36f10c8a0ec0aad6ebbbf63766a7066719839e5c47f8152823541b5ba924",
+    "apps/forge/src/application/billing/monthly-billing-anchor.test.ts": "ac9197349d65b780481eefab75a78472887b385e0c2214676ee1028e89d8d0db",
+    "apps/forge/src/application/billing/monthly-billing-anchor.ts": "1af3ac47a14cb753e17de19b41914a9f53fc17173d358cde50c9a8d18ed07d9f",
+    "apps/forge/src/application/billing/overage-currency-cutover.test.ts": "8484168cc96286de3c8aae86e8b98cf1cfdeda85156c37c9bf11b39d6531a066",
+    "apps/forge/src/application/billing/overage-currency-cutover.ts": "618009b26692f6710fd57e5a0363500146c997060e16dcbf3c32c9c712a8a651",
+    "apps/forge/src/application/billing/polar-billing-provider.server.test.ts": "480efacd2fdf02fd14822d58846dcb04a7d51069d3190f35498ba8c4672f5206",
+    "apps/forge/src/application/billing/polar-billing-provider.server.ts": "bb4540eeba7b6dd59c90cf2ec6d7481f9ff95de48839b3491206c834bbf62044",
+    "apps/forge/src/application/billing/polar-paid-catalog.ts": "f8086c1de23512f16c8f36b590d9cd071a63542983fa33fca23f19f5cce3e65a",
+    "apps/forge/src/application/billing/polar-replacement-anniversary.server.test.ts": "ad26b8b5319704dc327f6dbe3c9c289b9e3e9025d640e5c4aae5df09ae68764e",
+    "apps/forge/src/application/billing/polar-replacement-anniversary.server.ts": "496879fd4125629432a7501869a08c1b07a1c1b8745116c608f5eb912e72795d",
+    "apps/forge/src/application/billing/renewal-currency-request.server.ts": "0c843dc1d0074aee7d5ce8e4276e289cf4ddd03157b554f60e4f274f869f1c96",
+    "apps/forge/src/application/billing/subscription-reconciliation.postgres.test.ts": "3b6b8143006ed7ee89a3185b7216b139d2a80699184b11172c220aa951247071",
+    "apps/forge/src/application/billing/workspace-overage-money.ts": "7e2373e91ff6ee09ecdd0ec57b2141842d5735c746e7ac8cca1e095aca7c6177",
+    "apps/forge/src/db/schema.ts": "329c159644167294d1d5da738f7b174eb2a4c674281ba54e4148fae09957dc65",
+    "docs/forge-plan-matrix.md": "6413e43c39f3fbb0cbdaa3bf6e5c5f0d4b1d8bbb2c484bec99aa566600ab4e3f",
+    "docs/operations/database-migrations.md": "0aa27842a3cca6ea62e41ae29122a2fa0fd43329a0854764e1918c2eca089887",
+    "docs/overage-currency.md": "e845fc3fa12198cdc12cf4bd5bdc4ecb33b0f7fcc5324e947407c60febfa7efb",
+    "docs/plans/production-readiness-backlog-map.md": "3b02a1383841713bbf2425c7ac4d0d594298fc07ca039f03bf4d7f2d8f61a3de",
+    "docs/plans/production-readiness-linear-backlog.json": "62cf29130b670aa14f3b92f7ed4ba40709c51955f7d8e12dddc3d05c38e0ccc1",
+    "docs/polar-billing.md": "2881d664c12b802c0d639a5323a7da8c3f3d6c76b6cb3c48e49e565692f48ab7",
+    "docs/renewal-currency-change.md": "deeeaf519bcc7b47efc34b857b44078b7aff67caa1cdd03b3b6bafed7b1941d5"
+  }
+}

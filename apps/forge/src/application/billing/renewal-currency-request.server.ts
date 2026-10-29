@@ -13,6 +13,7 @@ import {
   selfServePlanSchema,
 } from "./billing-plan-contract"
 import { PAYMENT_GRACE_MS, subscriptionAccess } from "./subscription-access"
+import { captureMonthlyBillingAnchor } from "./monthly-billing-anchor"
 import type { Actor } from "@/application/actor"
 import { hasWorkspaceRole } from "@/application/authorization"
 import {
@@ -53,6 +54,7 @@ export async function recordVerifiedRenewalCurrencyRequest(
   if (input.periodStart >= input.periodEnd)
     throw new Error("BILLING_CURRENCY_PERIOD_INVALID")
   const target = workspaceBillingCurrency(input.billingCountry).currency
+  const anchor = captureMonthlyBillingAnchor(input.periodStart, input.periodEnd)
   const eventId = `forge.currency-request.${input.requestId}`
   const bodyHash = createHash("sha256")
     .update(
@@ -129,6 +131,8 @@ export async function recordVerifiedRenewalCurrencyRequest(
       renewalMembers: row.renewalMembers,
       renewalPriceMinor: row.renewalPriceMinor,
       providerChangeScheduled: false as const,
+      billingAnchorDay: row.billingAnchorDay,
+      nextRenewalAt: row.nextRenewalAt?.toISOString() ?? null,
       replayed,
     })
     if (priorReceipt) {
@@ -143,6 +147,40 @@ export async function recordVerifiedRenewalCurrencyRequest(
       })
       if (!row || row.workspaceId !== input.workspaceId)
         throw new Error("BILLING_CURRENCY_RECEIPT_INCOMPLETE")
+      // Pre-expansion intents have no recoverable day-of-month in the row.
+      // Only the original matching, freshly verified source period may fill it.
+      if (row.originalPeriodStart === null) {
+        const [captured] = await tx
+          .update(workspaceCurrencyChangeRequests)
+          .set({
+            originalPeriodStart: input.periodStart,
+            billingAnchorDay: anchor.anchorDay,
+            nextRenewalAt: anchor.nextRenewalAt,
+            updatedAt: new Date(),
+          })
+          .where(eq(workspaceCurrencyChangeRequests.id, row.id))
+          .returning()
+        await tx.insert(workspaceSecurityAuditEvents).values({
+          workspaceId: input.workspaceId,
+          actorUserId: actor.userId,
+          action: "billing.currency_change.anchor_captured",
+          target: row.id,
+          outcome: "succeeded",
+          requestId: `forge.currency-anchor.${row.id}`,
+          after: {
+            originalPeriodStart: captured.originalPeriodStart!.toISOString(),
+            billingAnchorDay: captured.billingAnchorDay,
+            nextRenewalAt: captured.nextRenewalAt!.toISOString(),
+          },
+        })
+        return answer(captured, true)
+      }
+      if (
+        row.originalPeriodStart.getTime() !== input.periodStart.getTime() ||
+        row.billingAnchorDay !== anchor.anchorDay ||
+        row.nextRenewalAt?.getTime() !== anchor.nextRenewalAt.getTime()
+      )
+        throw new Error("BILLING_ANCHOR_RECONCILIATION_REQUIRED")
       return answer(row, true)
     }
     const pending = await tx.query.workspaceCurrencyChangeRequests.findFirst({
@@ -186,6 +224,9 @@ export async function recordVerifiedRenewalCurrencyRequest(
           capacity.activeMemberCount
         ),
         effectiveAt: input.periodEnd,
+        originalPeriodStart: input.periodStart,
+        billingAnchorDay: anchor.anchorDay,
+        nextRenewalAt: anchor.nextRenewalAt,
         checkoutGraceEndsAt: new Date(
           input.periodEnd.getTime() + PAYMENT_GRACE_MS
         ),
@@ -209,6 +250,8 @@ export async function recordVerifiedRenewalCurrencyRequest(
         targetCurrency: row.targetCurrency,
         billingCountry: row.billingCountry,
         effectiveAt: row.effectiveAt.toISOString(),
+        billingAnchorDay: row.billingAnchorDay,
+        nextRenewalAt: row.nextRenewalAt!.toISOString(),
         checkoutGraceEndsAt: row.checkoutGraceEndsAt.toISOString(),
         state: row.state,
         providerChangeScheduled: false,

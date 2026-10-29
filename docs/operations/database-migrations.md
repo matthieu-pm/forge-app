@@ -8,7 +8,7 @@ disabled until FOR-25 verifies the actual serving database and source revision.
 | Use | Neon branch | Direct host | Database | Lifecycle |
 | --- | --- | --- | --- | --- |
 | Persistent staging | `br-autumn-union-za0opf1e`, renamed `staging` | `ep-blue-shadow-zauhwkjz.c-2.eu-west-2.aws.neon.tech` | `forge_staging` | No expiry |
-| Disposable rehearsal | `br-empty-waterfall-zay0vqug` | `ep-billowing-night-zan57ux5.c-2.eu-west-2.aws.neon.tech` | `forge_migration_rehearsal` | Expires 2026-10-29 03:30:00 UTC |
+| Disposable rehearsal | `br-little-pond-zabdmew3` | `ep-fancy-firefly-zacgehbx.c-2.eu-west-2.aws.neon.tech` | `forge_migration_rehearsal` | Expires 2026-10-29 15:30:00 UTC |
 
 The persistent staging branch was originally a schema-only root. The current
 rehearsal replaces an expired disposable branch and is an expiring child of
@@ -17,7 +17,7 @@ checkpoint references below describe the retired rehearsal. Before reuse, read-o
 confirmed the isolated branch/database identities and empty application data. New empty
 databases avoid adopting the rowless schema-only copy's empty migration journal.
 At the original checkpoint, staging and rehearsal applied all 29 then-checked-in
-migrations. The latest checkpoint below advances both current targets to 34. No production rows were copied, no branches were manually
+migrations. The latest checkpoint below advances both current targets to 36. No production rows were copied, no branches were manually
 deleted, and the default branch/application connection selection was unchanged.
 
 Staging is a database foundation. Hosted web/runtime, isolated object storage,
@@ -120,3 +120,10 @@ Migration 0033 adds a finite provider-backed unsupported-pause cutoff and aligns
 ## Renewal-currency request migration · 29 October 2026
 
 Migration 0034 adds the durable currency-request history, one-pending-intent index and finite-boundary/fixed-seven-day-deadline constraints. The isolated rehearsal database passed all 35 migrations and 3 full-history ownership/fault cases; exact persistent staging then applied the one pending expansion, now 35. Staging passes 58 billing and 17 real-auth member cases. This does not execute a currency migration or grant checkout grace; no serving/default database or local connection changed. See `docs/renewal-currency-change.md`.
+
+
+## Original monthly anniversary expansion · 29 October 2026
+
+Migration 0035 adds nullable original source period, anchor day and next boundary to durable currency intents, with all-null legacy or fully populated finite/range constraints. Original-day capture requires a matching verified source replay and atomic audit; no guessed data backfill is performed. A fresh empty database on br-little-pond-zabdmew3 passed all 36 migrations and all 3 ownership/fault cases. Exact persistent staging then applied one pending migration. Billing (62) and real-auth membership (17) cases pass.
+
+An initial CLI database-create command used unsupported `--branch-id`; the CLI selected the default branch and created a new empty rehearsal database there. Verified SQL showed that exact new database contained zero user objects, then it was removed. No DDL migration, user data or existing serving database was changed. The correct command uses `--branch` and its returned identity must be verified before migration. The isolated allowlist and actual-SQL identity checks remained mandatory throughout.

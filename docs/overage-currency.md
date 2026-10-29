@@ -95,9 +95,41 @@ FOR-76's atomic ledger/run-reservation contract. Before enabling paid usage:
   sandbox/candidate flows. Bank FX differences do not authorize an added spread.
 
 Currency changes for existing subscriptions are confirmed for next renewal with
-a seven-day replacement-checkout grace deadline; the late-checkout anniversary
-rule and actual cutover/grace executor remain gated. See
+a seven-day replacement-checkout grace deadline; late payment preserves the
+original monthly anniversary. The actual cutover/grace executor remains gated. See
 `docs/renewal-currency-change.md`.
 Public billing, ledger effects, rate retention and provider submission remain
 gated. FOR-109 and FOR-76 stay In Progress. Nothing was pushed or deployed;
 serving/default databases and local connection files were unchanged.
+
+
+## Confirmed cap conversion on a billing-currency change · 29 October 2026
+
+The user selected automatically converting the existing opted-in cap using the
+latest published ECB reference rate. Freeze the quote when the verified currency
+cutover is committed, retain it with the transition and reuse it for retries.
+This conversion does not change the previously approved opt-in, grant payment
+authority or switch on disabled overage.
+
+`planOverageCurrencyCutover` prepares the new currency-tagged policy and carried
+settled/reserved capacity for the same original commercial period. USD → EUR
+divides by USD-per-EUR; EUR → USD multiplies. Use bigint rational intermediates,
+round the cap down to a currency millionth and carried capacity up, and retain
+exact fractions/rate snapshots. This avoids enlarging the approved spending
+ceiling through rounding. Unchanged currencies and zero balances require no
+unnecessary quote; positive cross-currency amounts fail without valid timely FX.
+
+These carried balances are **capacity shadows**, not new charges. Keep old-currency
+invoices, usage-time rates, reservations and settlement identities immutable. If
+a workspace already spent/reserved half its cap during checkout grace, the
+currency change preserves that consumed capacity; it does not grant another cap.
+A disabled or exhausted policy stays unusable. Reconcile late old-currency
+settlements against retained transition fractions under the same ledger lock,
+without billing them again or resetting monthly consumption.
+
+Tests cover both conversion directions, exhausted/disabled/zero policies,
+committed capacity, conservative rounding, frozen repeatability, malformed/stale/
+future/missing quotes, source-currency mismatch, period boundaries and overflow.
+This is prepared arithmetic; atomic policy/quote/capacity persistence with paid
+old/new binding replacement, concurrency/redrive and provider invoicing remain
+FOR-76/FOR-111 release work. No live overage was enabled.

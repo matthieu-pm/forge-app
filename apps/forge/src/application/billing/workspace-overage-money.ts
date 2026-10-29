@@ -24,6 +24,63 @@ function safeNumber(value: bigint) {
   return Number(value)
 }
 
+function verifiedEcbFraction(value: EcbRateSnapshot | undefined, at: Date) {
+  const snapshot = ecbRateSnapshotSchema.parse(value)
+  const observedAt = new Date(snapshot.observedAt)
+  const reference = new Date(`${snapshot.referenceDate}T00:00:00Z`)
+  if (
+    observedAt > at ||
+    reference > observedAt ||
+    at.getTime() - reference.getTime() > 7 * 86400000
+  )
+    throw new Error("BILLING_FX_RATE_UNAVAILABLE_FOR_USAGE")
+  const [whole, fraction = ""] = snapshot.usdPerEur.split(".")
+  const scale = 10n ** BigInt(fraction.length)
+  const units = BigInt(whole) * scale + BigInt(fraction || "0")
+  if (units <= 0n) throw new Error("BILLING_FX_RATE_INVALID")
+  return { snapshot, units, scale }
+}
+
+/** Convert cap/capacity units at cutover; never reprice a historical charge. */
+export function convertBillingCapacity(input: {
+  fromCurrency: BillingCurrency
+  targetCurrency: BillingCurrency
+  amountMicros: number
+  at: Date
+  rate?: EcbRateSnapshot
+  rounding: "down" | "up"
+}) {
+  const fromCurrency = billingCurrencySchema.parse(input.fromCurrency),
+    targetCurrency = billingCurrencySchema.parse(input.targetCurrency),
+    amount = BigInt(moneyMicrosSchema.parse(input.amountMicros)),
+    at = z.date().parse(input.at),
+    rounding = z.enum(["down", "up"]).parse(input.rounding)
+  let numerator = amount,
+    denominator = 1n
+  let rate: EcbRateSnapshot | null = null
+  if (fromCurrency !== targetCurrency && amount > 0n) {
+    const quote = verifiedEcbFraction(input.rate, at)
+    rate = quote.snapshot
+    numerator *= fromCurrency === "usd" ? quote.scale : quote.units
+    denominator = fromCurrency === "usd" ? quote.units : quote.scale
+  }
+  return {
+    fromCurrency,
+    targetCurrency,
+    originalMicros: Number(amount),
+    amountMicros: safeNumber(
+      rounding === "down"
+        ? numerator / denominator
+        : (numerator + denominator - 1n) / denominator
+    ),
+    at: at.toISOString(),
+    rate,
+    rounding,
+    exactNumerator: numerator.toString(),
+    exactDenominator: denominator.toString(),
+  }
+}
+
 /** Trusted server snapshot of the rate available when the provider usage starts. */
 export function convertOverageCost(input: {
   currency: BillingCurrency
@@ -40,20 +97,10 @@ export function convertOverageCost(input: {
     denominator = 1n
   let snapshot: EcbRateSnapshot | null = null
   if (currency === "eur" && usd > 0n) {
-    snapshot = ecbRateSnapshotSchema.parse(input.rate)
-    const observedAt = new Date(snapshot.observedAt)
-    const reference = new Date(`${snapshot.referenceDate}T00:00:00Z`)
-    if (
-      observedAt > incurredAt ||
-      reference > observedAt ||
-      incurredAt.getTime() - reference.getTime() > 7 * 86400000
-    )
-      throw new Error("BILLING_FX_RATE_UNAVAILABLE_FOR_USAGE")
-    const [whole, fraction = ""] = snapshot.usdPerEur.split(".")
-    const scale = 10n ** BigInt(fraction.length)
-    denominator = BigInt(whole) * scale + BigInt(fraction || "0")
-    if (denominator <= 0n) throw new Error("BILLING_FX_RATE_INVALID")
-    numerator = usd * scale
+    const quote = verifiedEcbFraction(input.rate, incurredAt)
+    snapshot = quote.snapshot
+    denominator = quote.units
+    numerator = usd * quote.scale
   }
   const amount =
     rounding === "reservation"

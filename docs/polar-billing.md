@@ -21,7 +21,7 @@ EUR for the 27 EU countries, Iceland, Liechtenstein, Norway, the UK and Switzerl
 USD for other countries accepted by the pinned Polar API. Missing, invalid or
 unsupported country codes require correction before checkout. IP address, locale
 and a separate client currency value are not pricing authority. Changes to existing
-subscription currency remain a separate lifecycle decision.
+subscription currency take effect at renewal through a separately verified replacement checkout; a seven-day checkout grace period keeps the original monthly anniversary.
 The prototype's $12/member copy is not an approved commercial policy.
 
 Seat-price changes take effect at the next renewal, with no mid-cycle subscription
@@ -249,3 +249,13 @@ Confirmed: use period-end cancellation; no pause/resume feature. Provider verifi
 ## Overage currency and usage-time FX · 29 October 2026
 
 Confirmed: overage and cap currency follow EUR/USD subscription currency; included allowance stays USD. Use the latest published ECB daily reference rate with no added spread, fixed for the usage and retained for later billing. The budget helper now checks a separate billing-currency balance rather than adding EUR caps to USD allowances; prepared converter/source helpers pass boundary/rounding/overflow tests and a read-only live source check. Atomic quote/ledger persistence and actual Polar invoice reporting remain FOR-76/release work. See `docs/overage-currency.md`.
+
+
+## Original monthly anniversary during currency replacement · 29 October 2026
+
+A late successful replacement checkout keeps the original billing anniversary. Migration 0035 retains the original source period/day/next boundary. Calendar helpers preserve UTC time through short-month clamping and flag the following correction required when Polar resets its hidden anchor to February 28/29. A read-only verifier checks current pending context, order/checkout/new-subscription identity and paid initial invoice before returning a calendar plan; no provider write, paid rebind, grace activation or fresh first-purchase pool is performed. Source-stop, durable period adjustment/recurring repair, cross-currency overage-cap authority and actual sandbox/candidate execution remain release work. See `docs/renewal-currency-change.md`.
+
+
+## Before-tax pricing and catalog validation · 29 October 2026
+
+The user confirmed Starter EUR/USD 10 and Plus EUR/USD 16 per member before tax, with applicable tax added at checkout. The prepared checkout adapter now fetches the configured catalog product and refuses any active monthly seat price that is not the approved flat per-member amount/currency with explicit exclusive tax behavior. No inherited organization default, inclusive/location tax mode, annual/capped tier, archived product or ambiguous price is accepted. Recheck trusted context after that read, disable discount codes, and use approved catalog prices without ad-hoc overrides. Replacement checkout proof also verifies exclusive tax and matching invoice net/tax/total. Actual sandbox catalog/payment evidence is required; there is no configured Polar token or connected Polar capability in this checkout yet.

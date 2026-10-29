@@ -333,7 +333,7 @@ describe.skipIf(!connection)(
       })
       const migration = await readFile(
         new URL(
-          "../../../drizzle/0034_renewal_currency_requests.sql",
+          "../../../drizzle/0035_renewal_billing_anchors.sql",
           import.meta.url
         ),
         "utf8"
@@ -384,7 +384,15 @@ describe.skipIf(!connection)(
     async function currencyRequestFixture() {
       const id = await workspace(),
         owner = await add(id),
-        paid = snapshot(id)
+        start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)),
+        end = new Date(
+          Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)
+        ),
+        paid = snapshot(id, {
+          currentPeriodStart: start,
+          currentPeriodEnd: end,
+          updatedAt: start,
+        })
       await apply(paid)
       const actor: Actor = {
         workspaceId: id,
@@ -457,6 +465,10 @@ describe.skipIf(!connection)(
         renewalPlan: "starter",
         renewalMembers: 1,
         renewalPriceMinor: 1000,
+        billingAnchorDay: 1,
+        nextRenewalAt: new Date(
+          Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 2, 1)
+        ).toISOString(),
         effectiveAt: f.paid.currentPeriodEnd.toISOString(),
         checkoutGraceEndsAt: new Date(
           f.paid.currentPeriodEnd.getTime() + PAYMENT_GRACE_MS
@@ -480,6 +492,118 @@ describe.skipIf(!connection)(
         ).rows[0].n
       ).toBe(1)
     })
+    it("captures legacy anniversary fields once on concurrent verified replay and preserves entitlements", async () => {
+      const f = await currencyRequestFixture()
+      await f.record(f.actor, f.value)
+      const before = await row(f.id)
+      await pool.query(
+        "UPDATE workspace_currency_change_requests SET original_period_start=NULL,billing_anchor_day=NULL,next_renewal_at=NULL WHERE id=$1",
+        [f.value.requestId]
+      )
+      const results = await Promise.all(
+        Array.from({ length: 5 }, () =>
+          f.service.request(f.actor, f.value.requestId)
+        )
+      )
+      expect(
+        results.every(
+          (r) =>
+            r.replayed && r.billingAnchorDay === 1 && r.nextRenewalAt !== null
+        )
+      ).toBe(true)
+      expect(await row(f.id)).toEqual(before)
+      const counts = (
+        await pool.query(
+          "SELECT (SELECT count(*)::int FROM workspace_security_audit_events WHERE workspace_id=$1 AND action='billing.currency_change.anchor_captured') AS audits,(SELECT count(*)::int FROM billing_event_receipts WHERE workspace_id=$1) AS receipts",
+          [f.id]
+        )
+      ).rows[0]
+      expect(counts).toEqual({ audits: 1, receipts: 2 })
+    })
+
+    it("rolls legacy anchor capture back with its audit and safely retries", async () => {
+      const f = await currencyRequestFixture()
+      await f.record(f.actor, f.value)
+      await pool.query(
+        "UPDATE workspace_currency_change_requests SET original_period_start=NULL,billing_anchor_day=NULL,next_renewal_at=NULL WHERE id=$1",
+        [f.value.requestId]
+      )
+      const constraint = `anchor_audit_${randomUUID().replaceAll("-", "")}`
+      await pool.query(
+        `ALTER TABLE workspace_security_audit_events ADD CONSTRAINT ${constraint} CHECK (action <> 'billing.currency_change.anchor_captured') NOT VALID`
+      )
+      try {
+        await expect(f.record(f.actor, f.value)).rejects.toThrow()
+        expect(
+          (
+            await pool.query(
+              "SELECT original_period_start,billing_anchor_day,next_renewal_at FROM workspace_currency_change_requests WHERE id=$1",
+              [f.value.requestId]
+            )
+          ).rows[0]
+        ).toEqual({
+          original_period_start: null,
+          billing_anchor_day: null,
+          next_renewal_at: null,
+        })
+      } finally {
+        await pool.query(
+          `ALTER TABLE workspace_security_audit_events DROP CONSTRAINT ${constraint}`
+        )
+      }
+      expect((await f.record(f.actor, f.value)).billingAnchorDay).toBe(1)
+    })
+
+    it("rejects partial or impossible anchors at the SQL boundary", async () => {
+      const f = await currencyRequestFixture()
+      await f.record(f.actor, f.value)
+      for (const assignment of [
+        "billing_anchor_day=NULL",
+        "billing_anchor_day=0",
+        "billing_anchor_day=32",
+        "original_period_start=effective_at",
+        "next_renewal_at=effective_at",
+        "next_renewal_at='infinity'",
+      ]) {
+        await expect(
+          pool.query(
+            `UPDATE workspace_currency_change_requests SET ${assignment} WHERE id=$1`,
+            [f.value.requestId]
+          )
+        ).rejects.toMatchObject({ code: "23514" })
+      }
+    })
+
+    it("reads replacement calendar context only for the live privileged owner and current pending binding", async () => {
+      const f = await currencyRequestFixture()
+      await f.record(f.actor, f.value)
+      const { readReplacementAnniversaryContext } =
+        await import("./polar-replacement-anniversary.server")
+      const read = () =>
+        readReplacementAnniversaryContext(f.actor, f.value.requestId, "sandbox")
+      expect(await read()).toMatchObject({
+        requestId: f.value.requestId,
+        sourceSubscriptionId: f.paid.subscriptionId,
+        anchorDay: 1,
+        originalPeriodStart: f.paid.currentPeriodStart,
+      })
+      await pool.query(
+        "UPDATE member SET role='member' WHERE organization_id=$1 AND user_id=$2",
+        [f.id, f.owner]
+      )
+      await expect(read()).rejects.toThrow("REVOKED")
+      await pool.query(
+        "UPDATE member SET role='owner' WHERE organization_id=$1 AND user_id=$2",
+        [f.id, f.owner]
+      )
+      await f.record(f.actor, {
+        ...f.value,
+        requestId: randomUUID(),
+        billingCountry: "US",
+      })
+      await expect(read()).rejects.toThrow("CONTEXT_CHANGED")
+    })
+
     it("preserves intent history while superseding country edits and withdrawing a switch back to the current region", async () => {
       const f = await currencyRequestFixture()
       await f.record(f.actor, f.value)
@@ -616,16 +740,23 @@ describe.skipIf(!connection)(
     it("does not silently move an unfinished request to a later renewal boundary", async () => {
       const f = await currencyRequestFixture()
       await f.record(f.actor, f.value)
-      const nextEnd = new Date(
-        f.paid.currentPeriodEnd.getTime() + 30 * 86400000
+      // Retain an unfinished intent from the preceding actual monthly period.
+      // Do not advance projected paid access into a not-yet-started future term.
+      const previousStart = new Date(f.paid.currentPeriodStart)
+      previousStart.setUTCMonth(previousStart.getUTCMonth() - 1)
+      await pool.query(
+        "UPDATE workspace_currency_change_requests SET requested_at=$2::timestamptz - interval '1 day',original_period_start=$2,effective_at=$3,checkout_grace_ends_at=$3::timestamptz + interval '168 hours',next_renewal_at=$4 WHERE id=$1",
+        [
+          f.value.requestId,
+          previousStart,
+          f.paid.currentPeriodStart,
+          f.paid.currentPeriodEnd,
+        ]
       )
-      await apply({ ...f.paid, updatedAt: now, currentPeriodEnd: nextEnd })
       await expect(
         f.record(f.actor, {
           ...f.value,
           requestId: randomUUID(),
-          periodEnd: nextEnd,
-          providerUpdatedAt: now,
         })
       ).rejects.toThrow("REQUEST_RECONCILIATION_REQUIRED")
     })

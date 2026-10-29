@@ -305,6 +305,11 @@ export const workspaceCurrencyChangeRequests = pgTable(
       mode: "number",
     }).notNull(),
     effectiveAt: timestamp("effective_at", { withTimezone: true }).notNull(),
+    originalPeriodStart: timestamp("original_period_start", {
+      withTimezone: true,
+    }),
+    billingAnchorDay: integer("billing_anchor_day"),
+    nextRenewalAt: timestamp("next_renewal_at", { withTimezone: true }),
     checkoutGraceEndsAt: timestamp("checkout_grace_ends_at", {
       withTimezone: true,
     }).notNull(),
@@ -347,6 +352,10 @@ export const workspaceCurrencyChangeRequests = pgTable(
     deadlineCheck: check(
       "workspace_currency_change_deadline_check",
       sql`isfinite(${t.effectiveAt}) AND isfinite(${t.checkoutGraceEndsAt}) AND ${t.checkoutGraceEndsAt} = ${t.effectiveAt} + interval '168 hours' AND ${t.effectiveAt} > ${t.requestedAt}`
+    ),
+    anchorCheck: check(
+      "workspace_currency_change_anchor_check",
+      sql`(${t.originalPeriodStart} IS NULL AND ${t.billingAnchorDay} IS NULL AND ${t.nextRenewalAt} IS NULL) OR (${t.originalPeriodStart} IS NOT NULL AND isfinite(${t.originalPeriodStart}) AND ${t.originalPeriodStart} < ${t.effectiveAt} AND ${t.billingAnchorDay} IS NOT NULL AND ${t.billingAnchorDay} BETWEEN 1 AND 31 AND ${t.nextRenewalAt} IS NOT NULL AND isfinite(${t.nextRenewalAt}) AND ${t.nextRenewalAt} > ${t.effectiveAt})`
     ),
     stateCheck: check(
       "workspace_currency_change_state_check",

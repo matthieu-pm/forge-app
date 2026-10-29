@@ -2,10 +2,13 @@ import "@tanstack/react-start/server-only"
 import { createPolar } from "@polar-sh/sdk/2026-10"
 import {
   billableMemberCountSchema,
+  monthlyWorkspacePrice,
   selfServePlanSchema,
 } from "./billing-plan-contract"
 import { workspaceBillingIdentity } from "./billing-authority"
 import { workspaceBillingCurrency } from "./billing-country"
+import { verifyPaidCatalog } from "./polar-paid-catalog"
+import type { PaidCatalogProduct } from "./polar-paid-catalog"
 import type { SelfServePlan } from "./billing-plan-contract"
 import type { Polar } from "@polar-sh/sdk/2026-10"
 import type { Actor } from "@/application/actor"
@@ -19,6 +22,7 @@ export type WorkspaceBillingContext = {
 }
 
 type PolarBillingClient = {
+  products: { get: (id: string) => Promise<PaidCatalogProduct> }
   checkouts: {
     create: (
       body: Parameters<Polar["checkouts"]["create"]>[0]
@@ -69,14 +73,31 @@ export class PolarBillingProvider {
     const { country, currency } = workspaceBillingCurrency(
       context.billingCountry
     )
+    monthlyWorkspacePrice(selectedPlan, seats)
+    const productId = this.config.paidProducts[selectedPlan][currency]
+    verifyPaidCatalog(await this.client.products.get(productId), {
+      productId,
+      plan: selectedPlan,
+      currency,
+    })
+    // Re-read authority, country and quantity after catalog I/O; never charge an
+    // obsolete server snapshot because an administrator changed it meanwhile.
+    const fresh = await this.resolveBillingContext(actor)
+    if (
+      fresh.workspaceId !== context.workspaceId ||
+      billableMemberCountSchema.parse(fresh.billableMembers) !== seats ||
+      workspaceBillingCurrency(fresh.billingCountry).country !== country
+    )
+      throw new Error("BILLING_CHECKOUT_CONTEXT_CHANGED")
     const checkout = await this.client.checkouts.create({
-      products: [this.config.paidProducts[selectedPlan][currency]],
+      products: [productId],
       seats,
       min_seats: seats,
       max_seats: seats,
       currency,
       customer_billing_address: { country },
       require_billing_address: true,
+      allow_discount_codes: false,
       // Forge trials are card-free and app-managed. Polar is only for the
       // owner's explicit paid upgrade; never start an auto-converting trial.
       allow_trial: false,

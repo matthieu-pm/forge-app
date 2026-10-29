@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest"
 import { PolarBillingProvider } from "./polar-billing-provider.server"
 import type { Actor } from "@/application/actor"
 import type { EnabledBillingConfig } from "./billing-config.server"
+import type { PaidCatalogProduct } from "./polar-paid-catalog"
 
 const config: EnabledBillingConfig = {
   enabled: true,
@@ -29,6 +30,44 @@ const actor: Actor = {
   scopes: null,
 }
 function fixture() {
+  const product = vi.fn((id: string): Promise<PaidCatalogProduct> => {
+    const plus = Object.values(config.paidProducts.plus).includes(id)
+    const eur =
+      id === config.paidProducts.starter.eur ||
+      id === config.paidProducts.plus.eur
+    return Promise.resolve({
+      id,
+      is_archived: false,
+      is_recurring: true,
+      recurring_interval: "month",
+      recurring_interval_count: 1,
+      prices: [
+        {
+          id: "00000000-0000-4000-8000-000000000005",
+          created_at: "2026-10-01T00:00:00Z",
+          modified_at: null,
+          product_id: id,
+          is_archived: false,
+          source: "catalog",
+          amount_type: "seat_based",
+          price_currency: eur ? "eur" : "usd",
+          tax_behavior: "exclusive",
+          seat_tiers: {
+            minimum_seats: 1,
+            maximum_seats: null,
+            seat_tier_type: "volume",
+            tiers: [
+              {
+                min_seats: 1,
+                max_seats: null,
+                price_per_seat: plus ? 1600 : 1000,
+              },
+            ],
+          },
+        },
+      ],
+    })
+  })
   const checkout = vi.fn().mockResolvedValue({
     id: "checkout",
     url: "https://polar.sh/checkout/fixture",
@@ -44,10 +83,12 @@ function fixture() {
     customer_portal_url: "https://polar.sh/portal/fixture",
   })
   return {
+    product,
     checkout,
     portal,
     context,
     provider: new PolarBillingProvider(config, context, {
+      products: { get: product },
       checkouts: { create: checkout },
       customerSessions: { create: portal },
     }),
@@ -55,11 +96,88 @@ function fixture() {
 }
 
 describe("Polar workspace billing adapter", () => {
+  it.each(["inclusive", "location", null] as const)(
+    "refuses %s catalog tax behavior before creating a checkout",
+    async (tax_behavior) => {
+      const f = fixture(),
+        catalog = await f.product(config.paidProducts.starter.eur)
+      catalog.prices[0].tax_behavior = tax_behavior
+      f.product.mockResolvedValue(catalog)
+      await expect(f.provider.createCheckout(actor, "starter")).rejects.toThrow(
+        "CATALOG_PRICE_MISMATCH"
+      )
+      expect(f.checkout).not.toHaveBeenCalled()
+    }
+  )
+  it.each([
+    "wrong-price",
+    "wrong-currency",
+    "ambiguous-price",
+    "archived-product",
+    "annual",
+    "capped-seats",
+  ])("refuses unapproved catalog configuration: %s", async (mode) => {
+    const f = fixture(),
+      catalog = await f.product(config.paidProducts.starter.eur),
+      price = catalog.prices[0]
+    if (price.amount_type !== "seat_based") throw new Error("fixture")
+    if (mode === "wrong-price") price.seat_tiers.tiers[0].price_per_seat = 900
+    if (mode === "wrong-currency") price.price_currency = "usd"
+    if (mode === "ambiguous-price") catalog.prices.push(structuredClone(price))
+    if (mode === "archived-product") catalog.is_archived = true
+    if (mode === "annual") catalog.recurring_interval = "year"
+    if (mode === "capped-seats") price.seat_tiers.maximum_seats = 10
+    f.product.mockResolvedValue(catalog)
+    await expect(f.provider.createCheckout(actor, "starter")).rejects.toThrow(
+      "CATALOG"
+    )
+    expect(f.checkout).not.toHaveBeenCalled()
+  })
+  it("refuses changed country/member context or revoked authority after catalog reads", async () => {
+    for (const changed of [
+      { workspaceId: "other", billableMembers: 3, billingCountry: "FR" },
+      {
+        workspaceId: actor.workspaceId,
+        billableMembers: 4,
+        billingCountry: "FR",
+      },
+      {
+        workspaceId: actor.workspaceId,
+        billableMembers: 3,
+        billingCountry: "US",
+      },
+    ]) {
+      const f = fixture()
+      f.context
+        .mockResolvedValueOnce({
+          workspaceId: actor.workspaceId,
+          billableMembers: 3,
+          billingCountry: "FR",
+        })
+        .mockResolvedValueOnce(changed)
+      await expect(f.provider.createCheckout(actor, "starter")).rejects.toThrow(
+        "CONTEXT_CHANGED"
+      )
+      expect(f.checkout).not.toHaveBeenCalled()
+    }
+    const f = fixture()
+    f.context
+      .mockResolvedValueOnce({
+        workspaceId: actor.workspaceId,
+        billableMembers: 3,
+        billingCountry: "FR",
+      })
+      .mockRejectedValueOnce(new Error("BILLING_ACTOR_REVOKED"))
+    await expect(f.provider.createCheckout(actor, "starter")).rejects.toThrow(
+      "REVOKED"
+    )
+    expect(f.checkout).not.toHaveBeenCalled()
+  })
   it.each(["starter", "plus"] as const)(
     "keeps hosted trials disabled during manual %s upgrade",
     async (plan) => {
       const { provider, context, checkout } = fixture()
-      context.mockResolvedValueOnce({
+      context.mockResolvedValue({
         workspaceId: actor.workspaceId,
         billableMembers: 3,
         billingCountry: "FR",
@@ -88,6 +206,7 @@ describe("Polar workspace billing adapter", () => {
       currency: "eur",
       customer_billing_address: { country: "FR" },
       require_billing_address: true,
+      allow_discount_codes: false,
       allow_trial: false,
       external_customer_id: "forge:workspace:workspace-a",
       metadata: {
@@ -104,7 +223,7 @@ describe("Polar workspace billing adapter", () => {
   })
   it("selects the configured Plus USD product and refreshed member count", async () => {
     const { provider, context, checkout } = fixture()
-    context.mockResolvedValueOnce({
+    context.mockResolvedValue({
       workspaceId: "workspace-a",
       billableMembers: 5,
       billingCountry: "US",
@@ -121,14 +240,14 @@ describe("Polar workspace billing adapter", () => {
   it("denies invalid quantities and cross-workspace billing snapshots", async () => {
     const { provider, context, checkout } = fixture()
     for (const members of [0, -1, 1.5, Infinity]) {
-      context.mockResolvedValueOnce({
+      context.mockResolvedValue({
         workspaceId: "workspace-a",
         billableMembers: members,
         billingCountry: "FR",
       })
       await expect(provider.createCheckout(actor, "starter")).rejects.toThrow()
     }
-    context.mockResolvedValueOnce({
+    context.mockResolvedValue({
       workspaceId: "workspace-b",
       billableMembers: 3,
       billingCountry: "FR",
@@ -151,7 +270,7 @@ describe("Polar workspace billing adapter", () => {
     "selects EUR for the confirmed %s billing country",
     async (billingCountry) => {
       const { provider, context, checkout } = fixture()
-      context.mockResolvedValueOnce({
+      context.mockResolvedValue({
         workspaceId: actor.workspaceId,
         billableMembers: 3,
         billingCountry,
@@ -167,7 +286,7 @@ describe("Polar workspace billing adapter", () => {
   )
   it("derives pricing from country even if an obsolete currency override is present", async () => {
     const { provider, context, checkout } = fixture()
-    context.mockResolvedValueOnce({
+    context.mockResolvedValue({
       workspaceId: actor.workspaceId,
       billableMembers: 3,
       billingCountry: "US",
@@ -184,7 +303,7 @@ describe("Polar workspace billing adapter", () => {
     "requires a valid billing country before checkout (%j)",
     async (billingCountry) => {
       const { provider, context, checkout } = fixture()
-      context.mockResolvedValueOnce({
+      context.mockResolvedValue({
         workspaceId: actor.workspaceId,
         billableMembers: 3,
         billingCountry,

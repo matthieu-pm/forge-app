@@ -65,5 +65,7 @@
     "docs/plans/production-readiness-backlog-map.md": "418ce7d8a2b7e665f79dd0a48d7a848cbb5a807deb32c1ccb5349e02b2f48055",
     "docs/plans/production-readiness-linear-backlog.json": "791fb5470c6dcd2198fef638aeaf2c1f019179ea0431857cc9e39dec0696e921",
     "docs/renewal-currency-change.md": "e7da906b680344c6e07735489176dcdc9d15ae2bfe0e52d22c905ff5e5bbe553"
-  }
+  },
+  "historical": true,
+  "sourceCommit": "1997eb760ca379bcd54aa459fe7509140a63ec70"
 }

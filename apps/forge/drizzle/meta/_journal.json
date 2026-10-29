@@ -246,6 +246,13 @@
       "when": 1793231534503,
       "tag": "0034_renewal_currency_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1793266594962,
+      "tag": "0035_renewal_billing_anchors",
+      "breakpoints": true
     }
   ]
 }
