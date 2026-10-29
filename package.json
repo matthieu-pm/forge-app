@@ -48,7 +48,7 @@
   "devDependencies": {
     "prettier": "^3.9.6",
     "prettier-plugin-tailwindcss": "^0.8.1",
-    "turbo": "2.10.8"
+    "turbo": "2.11.10"
   },
   "dependencies": {
     "@neon/config": "^1.8.6",

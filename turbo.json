@@ -13,13 +13,16 @@
       "outputs": [".output/**", ".eve/builds/**"]
     },
     "test": {
+      "tags": ["ci"],
       "outputs": []
     },
     "typecheck": {
+      "tags": ["ci"],
       "dependsOn": ["^typecheck"],
       "outputs": []
     },
     "lint": {
+      "tags": ["ci"],
       "dependsOn": ["^lint"],
       "outputs": []
     },
