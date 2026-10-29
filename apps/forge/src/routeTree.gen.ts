@@ -63,9 +63,13 @@ import { Route as WorkspaceTeamsRouteImport } from './routes/workspace/teams'
 import { Route as WorkspaceViewsRouteImport } from './routes/workspace/views'
 import { Route as ApiAgentSplatRouteImport } from './routes/api/agent/$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiHealthLiveRouteImport } from './routes/api/health/live'
+import { Route as ApiHealthReadyRouteImport } from './routes/api/health/ready'
 import { Route as ApiInternalDatabaseReleaseRehearsalRouteImport } from './routes/api/internal/database-release-rehearsal'
 import { Route as ApiInternalEnvironmentRouteImport } from './routes/api/internal/environment'
 import { Route as ApiInternalObservabilityCheckRouteImport } from './routes/api/internal/observability-check'
+import { Route as ApiInternalOperationsCheckRouteImport } from './routes/api/internal/operations-check'
+import { Route as ApiInternalOperationsMonitorRouteImport } from './routes/api/internal/operations-monitor'
 import { Route as ApiV1SplatRouteImport } from './routes/api/v1/$'
 import { Route as SettingsAccountAgentsRouteImport } from './routes/settings.account.agents'
 import { Route as SettingsAccountConnectionsRouteImport } from './routes/settings.account.connections'
@@ -393,6 +397,16 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiHealthLiveRoute = ApiHealthLiveRouteImport.update({
+  id: '/api/health/live',
+  path: '/api/health/live',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiHealthReadyRoute = ApiHealthReadyRouteImport.update({
+  id: '/api/health/ready',
+  path: '/api/health/ready',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiInternalDatabaseReleaseRehearsalRoute =
   ApiInternalDatabaseReleaseRehearsalRouteImport.update({
     id: '/api/internal/database-release-rehearsal',
@@ -408,6 +422,18 @@ const ApiInternalObservabilityCheckRoute =
   ApiInternalObservabilityCheckRouteImport.update({
     id: '/api/internal/observability-check',
     path: '/api/internal/observability-check',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiInternalOperationsCheckRoute =
+  ApiInternalOperationsCheckRouteImport.update({
+    id: '/api/internal/operations-check',
+    path: '/api/internal/operations-check',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiInternalOperationsMonitorRoute =
+  ApiInternalOperationsMonitorRouteImport.update({
+    id: '/api/internal/operations-monitor',
+    path: '/api/internal/operations-monitor',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiV1SplatRoute = ApiV1SplatRouteImport.update({
@@ -765,9 +791,13 @@ export interface FileRoutesByFullPath {
   '/settings/': typeof SettingsIndexRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/health/live': typeof ApiHealthLiveRoute
+  '/api/health/ready': typeof ApiHealthReadyRoute
   '/api/internal/database-release-rehearsal': typeof ApiInternalDatabaseReleaseRehearsalRoute
   '/api/internal/environment': typeof ApiInternalEnvironmentRoute
   '/api/internal/observability-check': typeof ApiInternalObservabilityCheckRoute
+  '/api/internal/operations-check': typeof ApiInternalOperationsCheckRoute
+  '/api/internal/operations-monitor': typeof ApiInternalOperationsMonitorRoute
   '/api/v1/$': typeof ApiV1SplatRoute
   '/settings/account/agents': typeof SettingsAccountAgentsRoute
   '/settings/account/connections': typeof SettingsAccountConnectionsRoute
@@ -875,9 +905,13 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsIndexRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/health/live': typeof ApiHealthLiveRoute
+  '/api/health/ready': typeof ApiHealthReadyRoute
   '/api/internal/database-release-rehearsal': typeof ApiInternalDatabaseReleaseRehearsalRoute
   '/api/internal/environment': typeof ApiInternalEnvironmentRoute
   '/api/internal/observability-check': typeof ApiInternalObservabilityCheckRoute
+  '/api/internal/operations-check': typeof ApiInternalOperationsCheckRoute
+  '/api/internal/operations-monitor': typeof ApiInternalOperationsMonitorRoute
   '/api/v1/$': typeof ApiV1SplatRoute
   '/settings/account/agents': typeof SettingsAccountAgentsRoute
   '/settings/account/connections': typeof SettingsAccountConnectionsRoute
@@ -984,9 +1018,13 @@ export interface FileRoutesById {
   '/settings/': typeof SettingsIndexRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/health/live': typeof ApiHealthLiveRoute
+  '/api/health/ready': typeof ApiHealthReadyRoute
   '/api/internal/database-release-rehearsal': typeof ApiInternalDatabaseReleaseRehearsalRoute
   '/api/internal/environment': typeof ApiInternalEnvironmentRoute
   '/api/internal/observability-check': typeof ApiInternalObservabilityCheckRoute
+  '/api/internal/operations-check': typeof ApiInternalOperationsCheckRoute
+  '/api/internal/operations-monitor': typeof ApiInternalOperationsMonitorRoute
   '/api/v1/$': typeof ApiV1SplatRoute
   '/settings/account/agents': typeof SettingsAccountAgentsRoute
   '/settings/account/connections': typeof SettingsAccountConnectionsRoute
@@ -1098,9 +1136,13 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/api/agent/$'
     | '/api/auth/$'
+    | '/api/health/live'
+    | '/api/health/ready'
     | '/api/internal/database-release-rehearsal'
     | '/api/internal/environment'
     | '/api/internal/observability-check'
+    | '/api/internal/operations-check'
+    | '/api/internal/operations-monitor'
     | '/api/v1/$'
     | '/settings/account/agents'
     | '/settings/account/connections'
@@ -1208,9 +1250,13 @@ export interface FileRouteTypes {
     | '/settings'
     | '/api/agent/$'
     | '/api/auth/$'
+    | '/api/health/live'
+    | '/api/health/ready'
     | '/api/internal/database-release-rehearsal'
     | '/api/internal/environment'
     | '/api/internal/observability-check'
+    | '/api/internal/operations-check'
+    | '/api/internal/operations-monitor'
     | '/api/v1/$'
     | '/settings/account/agents'
     | '/settings/account/connections'
@@ -1316,9 +1362,13 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/api/agent/$'
     | '/api/auth/$'
+    | '/api/health/live'
+    | '/api/health/ready'
     | '/api/internal/database-release-rehearsal'
     | '/api/internal/environment'
     | '/api/internal/observability-check'
+    | '/api/internal/operations-check'
+    | '/api/internal/operations-monitor'
     | '/api/v1/$'
     | '/settings/account/agents'
     | '/settings/account/connections'
@@ -1404,9 +1454,13 @@ export interface RootRouteChildren {
   WorkspaceViewsRoute: typeof WorkspaceViewsRoute
   ApiAgentSplatRoute: typeof ApiAgentSplatRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiHealthLiveRoute: typeof ApiHealthLiveRoute
+  ApiHealthReadyRoute: typeof ApiHealthReadyRoute
   ApiInternalDatabaseReleaseRehearsalRoute: typeof ApiInternalDatabaseReleaseRehearsalRoute
   ApiInternalEnvironmentRoute: typeof ApiInternalEnvironmentRoute
   ApiInternalObservabilityCheckRoute: typeof ApiInternalObservabilityCheckRoute
+  ApiInternalOperationsCheckRoute: typeof ApiInternalOperationsCheckRoute
+  ApiInternalOperationsMonitorRoute: typeof ApiInternalOperationsMonitorRoute
   ApiV1SplatRoute: typeof ApiV1SplatRoute
   WorkspaceInitiativesInitiativeIdRoute: typeof WorkspaceInitiativesInitiativeIdRoute
   WorkspaceInitiativesIndexRoute: typeof WorkspaceInitiativesIndexRoute
@@ -1796,6 +1850,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/health/live': {
+      id: '/api/health/live'
+      path: '/api/health/live'
+      fullPath: '/api/health/live'
+      preLoaderRoute: typeof ApiHealthLiveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/health/ready': {
+      id: '/api/health/ready'
+      path: '/api/health/ready'
+      fullPath: '/api/health/ready'
+      preLoaderRoute: typeof ApiHealthReadyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/internal/database-release-rehearsal': {
       id: '/api/internal/database-release-rehearsal'
       path: '/api/internal/database-release-rehearsal'
@@ -1815,6 +1883,20 @@ declare module '@tanstack/react-router' {
       path: '/api/internal/observability-check'
       fullPath: '/api/internal/observability-check'
       preLoaderRoute: typeof ApiInternalObservabilityCheckRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/operations-check': {
+      id: '/api/internal/operations-check'
+      path: '/api/internal/operations-check'
+      fullPath: '/api/internal/operations-check'
+      preLoaderRoute: typeof ApiInternalOperationsCheckRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/operations-monitor': {
+      id: '/api/internal/operations-monitor'
+      path: '/api/internal/operations-monitor'
+      fullPath: '/api/internal/operations-monitor'
+      preLoaderRoute: typeof ApiInternalOperationsMonitorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/v1/$': {
@@ -2476,10 +2558,14 @@ const rootRouteChildren: RootRouteChildren = {
   WorkspaceViewsRoute: WorkspaceViewsRoute,
   ApiAgentSplatRoute: ApiAgentSplatRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiHealthLiveRoute: ApiHealthLiveRoute,
+  ApiHealthReadyRoute: ApiHealthReadyRoute,
   ApiInternalDatabaseReleaseRehearsalRoute:
     ApiInternalDatabaseReleaseRehearsalRoute,
   ApiInternalEnvironmentRoute: ApiInternalEnvironmentRoute,
   ApiInternalObservabilityCheckRoute: ApiInternalObservabilityCheckRoute,
+  ApiInternalOperationsCheckRoute: ApiInternalOperationsCheckRoute,
+  ApiInternalOperationsMonitorRoute: ApiInternalOperationsMonitorRoute,
   ApiV1SplatRoute: ApiV1SplatRoute,
   WorkspaceInitiativesInitiativeIdRoute: WorkspaceInitiativesInitiativeIdRoute,
   WorkspaceInitiativesIndexRoute: WorkspaceInitiativesIndexRoute,

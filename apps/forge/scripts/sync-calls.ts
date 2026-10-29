@@ -1,10 +1,11 @@
+import { runMonitoredJob } from "./lib/monitored-job"
 import { and, eq, inArray, isNotNull } from "drizzle-orm"
-import { emitTelemetry, runJob } from "../../../packages/telemetry/server"
+import { emitTelemetry } from "../../../packages/telemetry/server"
 import { validateJobEnvironment } from "./lib/script-environment"
 
 validateJobEnvironment("calls-sync")
 
-await runJob("calls.sync", async () => {
+await runMonitoredJob("calls.sync", async () => {
   const { db, callConnections, calls } = await import("@/db")
   const { syncCallConnection, generateCallSummary, sweepCallTranscripts } =
     await import("@/application/calls/calls.server")

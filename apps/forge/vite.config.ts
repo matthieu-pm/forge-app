@@ -35,6 +35,20 @@ const config = defineConfig(({ mode }) => {
       workflow(),
       devtools(),
       nitro({
+        vercel: {
+          config: {
+            version: 3,
+            crons:
+              process.env.FORGE_OPERATIONS_MONITOR_ENABLED === "true"
+                ? [
+                    {
+                      path: "/api/internal/operations-monitor",
+                      schedule: "* * * * *",
+                    },
+                  ]
+                : [],
+          },
+        },
         plugins: [
           resolve(
             import.meta.dirname,

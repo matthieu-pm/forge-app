@@ -1,9 +1,10 @@
-import { emitTelemetry, runJob } from "../../../packages/telemetry/server"
+import { runMonitoredJob } from "./lib/monitored-job"
+import { emitTelemetry } from "../../../packages/telemetry/server"
 import { validateJobEnvironment } from "./lib/script-environment"
 
 validateJobEnvironment("agent-retention")
 
-await runJob("agent.retention", async () => {
+await runMonitoredJob("agent.retention", async () => {
   const { forgeArtifactService, forgeAttachmentService } =
     await import("@/adapters/agents/forge-capabilities.server")
 

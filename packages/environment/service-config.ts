@@ -238,6 +238,33 @@ export function inspectServiceConfiguration(
     }
   }
   if (service === "app") {
+    if (flag("FORGE_OPERATIONS_MONITOR_ENABLED")) {
+      origin("FORGE_OPERATIONS_WEBHOOK_URL", deployed, true)
+      secret("FORGE_OPERATIONS_WEBHOOK_TOKEN")
+      secret("CRON_SECRET")
+      if (
+        env.FORGE_MONITORED_JOBS !== undefined &&
+        (!env.FORGE_MONITORED_JOBS ||
+          env.FORGE_MONITORED_JOBS.split(",").some(
+            (key) =>
+              ![
+                "agent.retention",
+                "product.retention",
+                "workflow.health",
+                "calls.sync",
+              ].includes(key)
+          ))
+      ) {
+        add("FORGE_MONITORED_JOBS", "must select supported scheduled jobs")
+      }
+      for (const name of [
+        "FORGE_MONITOR_OUTBOX",
+        "FORGE_MONITOR_UPLOADS",
+        "FORGE_MONITOR_ACCOUNT_JOURNEY",
+        "FORGE_MONITOR_ISSUE_JOURNEY",
+      ])
+        flag(name)
+    }
     database()
     origin("BETTER_AUTH_URL", deployed, false, resolveAuthUrl(env))
     secret("BETTER_AUTH_SECRET")

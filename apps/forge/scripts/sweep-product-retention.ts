@@ -1,12 +1,13 @@
+import { runMonitoredJob } from "./lib/monitored-job"
 import { DeleteObjectsCommand, S3Client } from "@aws-sdk/client-s3"
 import { and, eq, inArray, lt, or } from "drizzle-orm"
-import { emitTelemetry, runJob } from "../../../packages/telemetry/server"
+import { emitTelemetry } from "../../../packages/telemetry/server"
 import { validateJobEnvironment } from "./lib/script-environment"
 import type { ObjectIdentifier } from "@aws-sdk/client-s3"
 
 validateJobEnvironment("product-retention")
 
-await runJob("product.retention", async () => {
+await runMonitoredJob("product.retention", async () => {
   const {
     businessWorkflowRuns,
     db,

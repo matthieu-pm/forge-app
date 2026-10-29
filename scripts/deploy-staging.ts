@@ -11,7 +11,34 @@ if (service !== "web" && service !== "runtime")
 const rehearsalVersion =
   process.argv[3] === "--rehearsal" ? process.argv[4] : undefined
 const rehearsalArguments: Array<string> = []
+const operations = process.argv[3] === "--operations"
 const observability = process.argv[3] === "--observability"
+if (operations) {
+  const expires = Date.parse(
+    process.env.FORGE_OPERATIONS_CHECK_EXPIRES_AT ?? ""
+  )
+  if (
+    process.argv.length !== 4 ||
+    !Number.isFinite(expires) ||
+    expires <= Date.now() ||
+    expires > Date.now() + 7_200_000 ||
+    !/^[a-f0-9]{64}$/.test(
+      process.env.FORGE_OPERATIONS_CHECK_TOKEN_SHA256 ?? ""
+    ) ||
+    !/^for30_[a-f0-9]{32}$/.test(
+      process.env.FORGE_OPERATIONS_CHECK_SCHEMA ?? ""
+    )
+  )
+    throw new Error(
+      "Operations acceptance requires an isolated schema, hash and expiry within two hours."
+    )
+  for (const key of [
+    "FORGE_OPERATIONS_CHECK_EXPIRES_AT",
+    "FORGE_OPERATIONS_CHECK_TOKEN_SHA256",
+    "FORGE_OPERATIONS_CHECK_SCHEMA",
+  ])
+    rehearsalArguments.push("--env", `${key}=${process.env[key]}`)
+}
 if (observability) {
   const expiry = Date.parse(
     process.env.FORGE_OBSERVABILITY_CHECK_EXPIRES_AT ?? ""
@@ -34,7 +61,7 @@ if (observability) {
     "FORGE_OBSERVABILITY_CHECK_EXPIRES_AT",
   ])
     rehearsalArguments.push("--env", `${key}=${process.env[key]}`)
-} else if (process.argv.length > 3) {
+} else if (!operations && process.argv.length > 3) {
   if (
     service !== "web" ||
     !["old", "bridge", "new"].includes(rehearsalVersion ?? "") ||

@@ -18,6 +18,7 @@ neonConfig.poolQueryViaFetch = new URL(databaseUrl).hostname.endsWith(
   ".neon.tech"
 )
 const client = new Pool({ connectionString: databaseUrl })
+export const databaseClient = client
 
 export const schema = {
   ...appSchema,

@@ -3,6 +3,7 @@ import {
   bigint,
   boolean,
   check,
+  doublePrecision,
   foreignKey,
   index,
   integer,
@@ -1609,6 +1610,33 @@ export const desktopReleaseArtifacts = pgTable(
     ),
   })
 )
+
+// Global operational metadata only; no tenant content or provider errors.
+export const operationalJobHealth = pgTable("operational_job_health", {
+  key: text("key").primaryKey(),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  failedAt: timestamp("failed_at", { withTimezone: true }),
+})
+
+export const operationalAlertDeliveries = pgTable(
+  "operational_alert_deliveries",
+  {
+    id: text("id").primaryKey(),
+    leaseToken: uuid("lease_token").notNull(),
+    leaseUntil: timestamp("lease_until", { withTimezone: true }).notNull(),
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  }
+)
+
+export const operationalMetricHealth = pgTable("operational_metric_health", {
+  key: text("key").primaryKey(),
+  value: doublePrecision("value").notNull(),
+  observedAt: timestamp("observed_at", { withTimezone: true }).notNull(),
+  highSince: timestamp("high_since", { withTimezone: true }),
+})
 
 export const businessWorkflowRuns = pgTable(
   "business_workflow_runs",

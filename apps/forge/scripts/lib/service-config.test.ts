@@ -385,3 +385,27 @@ describe("service-specific startup configuration (FOR-26)", () => {
     }
   )
 })
+
+describe("operational monitor enablement", () => {
+  it("requires routing and scheduler authority only when enabled", () => {
+    const disabled = inspectServiceConfiguration({}, "app")
+    expect(
+      disabled.issues.some(
+        (issue) =>
+          issue.variable.startsWith("FORGE_OPERATIONS") ||
+          issue.variable === "CRON_SECRET"
+      )
+    ).toBe(false)
+    const enabled = inspectServiceConfiguration(
+      { FORGE_OPERATIONS_MONITOR_ENABLED: "true" },
+      "app"
+    )
+    expect(enabled.issues.map((issue) => issue.variable)).toEqual(
+      expect.arrayContaining([
+        "FORGE_OPERATIONS_WEBHOOK_URL",
+        "FORGE_OPERATIONS_WEBHOOK_TOKEN",
+        "CRON_SECRET",
+      ])
+    )
+  })
+})

@@ -1,10 +1,11 @@
+import { runMonitoredJob } from "./lib/monitored-job"
 import { and, eq, inArray, isNull, lte } from "drizzle-orm"
-import { emitTelemetry, runJob } from "../../../packages/telemetry/server"
+import { emitTelemetry } from "../../../packages/telemetry/server"
 import { validateJobEnvironment } from "./lib/script-environment"
 
 validateJobEnvironment("workflow-health")
 
-await runJob("workflow.health", async () => {
+await runMonitoredJob("workflow.health", async () => {
   const { businessWorkflowEffects, businessWorkflowRuns, db } =
     await import("@/db")
 
