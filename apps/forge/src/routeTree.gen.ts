@@ -63,6 +63,7 @@ import { Route as WorkspaceTeamsRouteImport } from './routes/workspace/teams'
 import { Route as WorkspaceViewsRouteImport } from './routes/workspace/views'
 import { Route as ApiAgentSplatRouteImport } from './routes/api/agent/$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiInternalDatabaseReleaseRehearsalRouteImport } from './routes/api/internal/database-release-rehearsal'
 import { Route as ApiInternalEnvironmentRouteImport } from './routes/api/internal/environment'
 import { Route as ApiV1SplatRouteImport } from './routes/api/v1/$'
 import { Route as SettingsAccountAgentsRouteImport } from './routes/settings.account.agents'
@@ -391,6 +392,12 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiInternalDatabaseReleaseRehearsalRoute =
+  ApiInternalDatabaseReleaseRehearsalRouteImport.update({
+    id: '/api/internal/database-release-rehearsal',
+    path: '/api/internal/database-release-rehearsal',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiInternalEnvironmentRoute = ApiInternalEnvironmentRouteImport.update({
   id: '/api/internal/environment',
   path: '/api/internal/environment',
@@ -751,6 +758,7 @@ export interface FileRoutesByFullPath {
   '/settings/': typeof SettingsIndexRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/internal/database-release-rehearsal': typeof ApiInternalDatabaseReleaseRehearsalRoute
   '/api/internal/environment': typeof ApiInternalEnvironmentRoute
   '/api/v1/$': typeof ApiV1SplatRoute
   '/settings/account/agents': typeof SettingsAccountAgentsRoute
@@ -859,6 +867,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsIndexRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/internal/database-release-rehearsal': typeof ApiInternalDatabaseReleaseRehearsalRoute
   '/api/internal/environment': typeof ApiInternalEnvironmentRoute
   '/api/v1/$': typeof ApiV1SplatRoute
   '/settings/account/agents': typeof SettingsAccountAgentsRoute
@@ -966,6 +975,7 @@ export interface FileRoutesById {
   '/settings/': typeof SettingsIndexRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/internal/database-release-rehearsal': typeof ApiInternalDatabaseReleaseRehearsalRoute
   '/api/internal/environment': typeof ApiInternalEnvironmentRoute
   '/api/v1/$': typeof ApiV1SplatRoute
   '/settings/account/agents': typeof SettingsAccountAgentsRoute
@@ -1078,6 +1088,7 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/api/agent/$'
     | '/api/auth/$'
+    | '/api/internal/database-release-rehearsal'
     | '/api/internal/environment'
     | '/api/v1/$'
     | '/settings/account/agents'
@@ -1186,6 +1197,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/api/agent/$'
     | '/api/auth/$'
+    | '/api/internal/database-release-rehearsal'
     | '/api/internal/environment'
     | '/api/v1/$'
     | '/settings/account/agents'
@@ -1292,6 +1304,7 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/api/agent/$'
     | '/api/auth/$'
+    | '/api/internal/database-release-rehearsal'
     | '/api/internal/environment'
     | '/api/v1/$'
     | '/settings/account/agents'
@@ -1378,6 +1391,7 @@ export interface RootRouteChildren {
   WorkspaceViewsRoute: typeof WorkspaceViewsRoute
   ApiAgentSplatRoute: typeof ApiAgentSplatRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiInternalDatabaseReleaseRehearsalRoute: typeof ApiInternalDatabaseReleaseRehearsalRoute
   ApiInternalEnvironmentRoute: typeof ApiInternalEnvironmentRoute
   ApiV1SplatRoute: typeof ApiV1SplatRoute
   WorkspaceInitiativesInitiativeIdRoute: typeof WorkspaceInitiativesInitiativeIdRoute
@@ -1766,6 +1780,13 @@ declare module '@tanstack/react-router' {
       path: '/api/auth/$'
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/database-release-rehearsal': {
+      id: '/api/internal/database-release-rehearsal'
+      path: '/api/internal/database-release-rehearsal'
+      fullPath: '/api/internal/database-release-rehearsal'
+      preLoaderRoute: typeof ApiInternalDatabaseReleaseRehearsalRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/internal/environment': {
@@ -2434,6 +2455,8 @@ const rootRouteChildren: RootRouteChildren = {
   WorkspaceViewsRoute: WorkspaceViewsRoute,
   ApiAgentSplatRoute: ApiAgentSplatRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiInternalDatabaseReleaseRehearsalRoute:
+    ApiInternalDatabaseReleaseRehearsalRoute,
   ApiInternalEnvironmentRoute: ApiInternalEnvironmentRoute,
   ApiV1SplatRoute: ApiV1SplatRoute,
   WorkspaceInitiativesInitiativeIdRoute: WorkspaceInitiativesInitiativeIdRoute,
