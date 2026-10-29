@@ -45,6 +45,10 @@ import { threadModelPreferenceInputSchema } from "@/application/agents/thread-mo
 import { AgentControlPolicyError } from "@/application/agents/agent-control-policy"
 import { AgentAttachmentError } from "@/application/agents/attachment-service.server"
 import { createAgentAttachmentInputSchema } from "@/application/agents/attachment-contract"
+import {
+  emitTelemetry,
+  observeRequest,
+} from "@/application/observability/telemetry.server"
 
 const threadMutationSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("archive") }).strict(),
@@ -112,15 +116,15 @@ function streamEvents(events: AsyncIterable<unknown>) {
             )
           }
           controller.close()
-        } catch (error) {
+        } catch {
+          emitTelemetry("run.failed", "agent.run", {
+            errorCode: "STREAM_FAILED",
+          })
           controller.enqueue(
             encoder.encode(
               `event: transport.error\ndata: ${JSON.stringify({
                 code: "STREAM_FAILED",
-                message:
-                  error instanceof Error
-                    ? error.message
-                    : "The event stream failed.",
+                message: "The event stream failed.",
               })}\n\n`
             )
           )
@@ -191,7 +195,6 @@ function errorResponse(error: unknown) {
         error: {
           code: "INVALID_INPUT",
           message: "The request input is invalid.",
-          issues: error.issues,
         },
       },
       400
@@ -275,7 +278,10 @@ function errorResponse(error: unknown) {
 }
 
 export function createAgentHttpHandler(dependencies: AgentHttpDependencies) {
-  return async function handleAgentHttpRequest(request: Request) {
+  return (request: Request) =>
+    observeRequest(request, "agent_http", () => handleAgentHttpRequest(request))
+
+  async function handleAgentHttpRequest(request: Request) {
     if (!hasValidMutationOrigin(request)) {
       return json(
         {

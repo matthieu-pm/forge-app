@@ -16,6 +16,7 @@ function positiveInteger(value: string | undefined, fallback: number) {
 }
 
 const selectionSchema = z.object({
+  correlationId: z.string().uuid().optional(),
   provider: z.string().min(1).max(100),
   modelId: z.string().min(1).max(255),
   forgeModelAccessToken: z.string().min(20),
@@ -98,6 +99,9 @@ function resolveRunModel(attributes: unknown) {
     apiKey: "forge-run-bound-proxy",
     baseURL,
     headers: {
+      ...(selection.data.correlationId
+        ? { "x-correlation-id": selection.data.correlationId }
+        : {}),
       authorization: `Bearer ${selection.data.forgeModelAccessToken}`,
     },
   })
@@ -110,6 +114,9 @@ function resolveRunModel(attributes: unknown) {
       apiKey: "forge-run-bound-proxy",
       baseURL,
       headers: {
+        ...(selection.data.correlationId
+          ? { "x-correlation-id": selection.data.correlationId }
+          : {}),
         authorization: `Bearer ${selection.data.forgeModelAccessToken}`,
       },
     })(selection.data.modelId)

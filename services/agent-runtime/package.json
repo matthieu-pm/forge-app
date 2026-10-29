@@ -11,9 +11,9 @@
     "build": "node scripts/run-with-root-env.mjs eve build",
     "start": "node scripts/run-with-root-env.mjs eve start",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "node scripts/apply-diagnostic-policy.mjs && vitest run",
     "eval": "node scripts/run-evals.mjs",
-    "eval:live": "eve eval --strict"
+    "eval:live": "node scripts/run-with-root-env.mjs eve eval --strict"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "4.0.33",

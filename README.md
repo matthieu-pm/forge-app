@@ -171,3 +171,6 @@ local development, signing, updates, and release operations.
 - [Desktop releases](docs/operations/desktop-releases.md)
 - [Service configuration readiness](docs/operations/service-configuration.md)
 - [Workflow SDK invitation lifecycle](docs/operations/workflows.md)
+
+Payload-safe request/command/job correlation and metric semantics are documented in
+[the observability operator guide](docs/operations/observability.md).

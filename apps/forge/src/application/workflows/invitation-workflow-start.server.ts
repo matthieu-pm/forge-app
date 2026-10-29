@@ -12,6 +12,10 @@ import {
 import { runWorkflowStartAttempts } from "@/application/workflows/workflow-start-retry"
 import { canRetryInvitationWorkflowRun } from "@/application/workflows/invitation-workflow-policy"
 import { workspaceInvitationLifecycleV1 } from "@/workflows/invitation-workflow"
+import {
+  emitTelemetry,
+  observeOperation,
+} from "@/application/observability/telemetry.server"
 
 export type InvitationWorkflowStartResult =
   | { state: "queued"; businessRunId: string }
@@ -20,19 +24,23 @@ export type InvitationWorkflowStartResult =
 async function enqueueReservedRun(
   businessRunId: string
 ): Promise<InvitationWorkflowStartResult> {
+  emitTelemetry("run.linked", "invitation.start", { businessRunId })
   const queued = await runWorkflowStartAttempts({
     beforeAttempt: async () => {
       return Boolean(await recordWorkflowStartAttempt(businessRunId))
     },
     start: async () => {
-      await start(workspaceInvitationLifecycleV1, [businessRunId])
+      await observeOperation(
+        "invitation.start",
+        () => start(workspaceInvitationLifecycleV1, [businessRunId]),
+        { businessRunId }
+      )
     },
-    onFailure: (error, attempt) => {
-      console.error("[workflow] invitation start attempt failed", {
+    onFailure: (_error, attempt) => {
+      emitTelemetry("operation.failed", "invitation.start", {
         businessRunId,
         attempt,
-        error:
-          error instanceof Error ? error.name : "UnknownWorkflowStartError",
+        errorCode: "WORKFLOW_START_FAILED",
       })
     },
   })

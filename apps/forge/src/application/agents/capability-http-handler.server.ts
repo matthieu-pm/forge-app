@@ -3,6 +3,10 @@ import "@tanstack/react-start/server-only"
 import { capabilityInvocationSchema } from "@/application/agents/capability-contract"
 import { forgeCapabilityGateway } from "@/adapters/agents/forge-capabilities.server"
 import { verifyAgentCapabilityToken } from "@/application/agents/run-token.server"
+import {
+  observeRequest,
+  withCorrelation,
+} from "@/application/observability/telemetry.server"
 
 function bearer(request: Request) {
   const value = request.headers.get("authorization")
@@ -15,6 +19,12 @@ export async function handleCapabilityRequest(
   request: Request,
   capabilityId: string
 ) {
+  return observeRequest(request, "capability_http", () =>
+    handleRequest(request, capabilityId)
+  )
+}
+
+async function handleRequest(request: Request, capabilityId: string) {
   if (request.method !== "POST") {
     return Response.json(
       { error: { code: "METHOD_NOT_ALLOWED" } },
@@ -50,10 +60,12 @@ export async function handleCapabilityRequest(
       idempotencyKey: body.idempotencyKey,
       approvalId: body.approvalId,
     })
-    const result = await forgeCapabilityGateway.invoke(actor, invocation, {
-      runId,
-      abortSignal: request.signal,
-    })
+    const result = await withCorrelation({ runId }, () =>
+      forgeCapabilityGateway.invoke(actor, invocation, {
+        runId,
+        abortSignal: request.signal,
+      })
+    )
     if (!result.ok) {
       return Response.json(
         {

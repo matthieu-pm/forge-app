@@ -1,4 +1,4 @@
-import { describe, expect, it, vi  } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
 
 import type { Actor } from "@/application/actor"
@@ -213,4 +213,78 @@ describe("capability gateway", () => {
       errorCode: "POLICY_BLOCKED",
     })
   })
+})
+
+it("correlates a failed approved write without leaking its input or downstream error (AT-01/AT-02)", async () => {
+  const { observeRequest, observeCommand } =
+    await import("@/application/observability/telemetry.server")
+  const log = vi.spyOn(console, "info").mockImplementation(() => {})
+  try {
+    const privateContent =
+      "sk-fixture-token private transcript https://test/file?sig=secret"
+    const write = gateway(
+      "reversible-write",
+      {
+        approvals: { consume: vi.fn().mockResolvedValue({}) },
+        idempotency: new InMemoryCapabilityIdempotencyStore(),
+      },
+      vi.fn(() =>
+        observeCommand("teams.update", async () => {
+          throw new Error(privateContent)
+        })
+      )
+    )
+    const response = await observeRequest(
+      new Request("https://forge.test/api/agent/capabilities/teams.update", {
+        headers: {
+          authorization: `Bearer ${privateContent}`,
+          "x-correlation-id": RUN_ID,
+        },
+      }),
+      "capability_http",
+      async () => {
+        const result = await write.invoke(
+          actor,
+          {
+            capabilityId: "teams.list",
+            capabilityVersion: "1",
+            input: { limit: 1 },
+            approvalId: "80000000-0000-4000-8000-000000000001",
+            idempotencyKey: privateContent,
+          },
+          { runId: RUN_ID }
+        )
+        return Response.json(result)
+      }
+    )
+    const result = await response.json()
+    expect(result).toMatchObject({
+      ok: false,
+      errorCode: "CAPABILITY_EXECUTION_FAILED",
+    })
+    const logs = log.mock.calls.map(([line]) => JSON.parse(String(line)))
+    const command = logs.find(
+      (record) =>
+        record.operation === "teams.update" &&
+        record.event === "forge.operation.failed"
+    )
+    expect(command).toMatchObject({
+      correlationId: RUN_ID,
+      requestId: response.headers.get("x-request-id"),
+      runId: RUN_ID,
+      commandId: expect.any(String),
+    })
+    expect(logs).toContainEqual(
+      expect.objectContaining({
+        operation: "capability.invoke",
+        commandId: command.commandId,
+        errorCode: "CAPABILITY_EXECUTION_FAILED",
+      })
+    )
+    expect(
+      JSON.stringify(result) + JSON.stringify(log.mock.calls)
+    ).not.toContain(privateContent)
+  } finally {
+    log.mockRestore()
+  }
 })

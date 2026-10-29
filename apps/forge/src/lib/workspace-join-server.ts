@@ -1,6 +1,10 @@
 import "@tanstack/react-start/server-only"
 
 import { randomUUID } from "node:crypto"
+import {
+  currentCorrelation,
+  validId,
+} from "@/application/observability/telemetry.server"
 
 import {
   findApprovedDomainWorkspace,
@@ -30,7 +34,11 @@ export async function joinWorkspaceInviteForRequest(
   const result = await joinWorkspaceWithInvite({
     token,
     userId: session.user.id,
-    requestId: request.headers.get("x-request-id") ?? randomUUID(),
+    requestId:
+      currentCorrelation().requestId ??
+      (validId(request.headers.get("x-request-id"))
+        ? request.headers.get("x-request-id")!
+        : randomUUID()),
   })
   await auth.api.setActiveOrganization({
     headers: request.headers,
@@ -61,7 +69,11 @@ export async function joinApprovedDomainWorkspaceForRequest(
     emailVerified: session.user.emailVerified,
     userId: session.user.id,
     workspaceId,
-    requestId: request.headers.get("x-request-id") ?? randomUUID(),
+    requestId:
+      currentCorrelation().requestId ??
+      (validId(request.headers.get("x-request-id"))
+        ? request.headers.get("x-request-id")!
+        : randomUUID()),
   })
   await auth.api.setActiveOrganization({
     headers: request.headers,

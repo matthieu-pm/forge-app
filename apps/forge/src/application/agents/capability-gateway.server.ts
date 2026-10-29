@@ -16,6 +16,10 @@ import {
   ApprovalError,
   hashApprovalInput,
 } from "@/application/agents/approval-service.server"
+import {
+  observeCommand,
+  withCorrelation,
+} from "@/application/observability/telemetry.server"
 
 export type CapabilityExecutionContext = {
   runId: string
@@ -112,6 +116,18 @@ export class CapabilityGateway {
     invocation: CapabilityInvocation,
     context: CapabilityExecutionContext
   ): Promise<CapabilityResult> {
+    return withCorrelation({ runId: context.runId }, () =>
+      observeCommand("capability.invoke", () =>
+        this.invokeInternal(actor, invocation, context)
+      )
+    )
+  }
+
+  private async invokeInternal(
+    actor: Actor,
+    invocation: CapabilityInvocation,
+    context: CapabilityExecutionContext
+  ): Promise<CapabilityResult> {
     if (
       this.options.allowedCapabilities &&
       !this.options.allowedCapabilities.has(invocation.capabilityId)
@@ -149,13 +165,15 @@ export class CapabilityGateway {
         actor.authentication.kind === "agent" &&
         this.options.approvals?.findApprovedForInvocation
       ) {
-        const approval =
-          await this.options.approvals.findApprovedForInvocation(actor, {
+        const approval = await this.options.approvals.findApprovedForInvocation(
+          actor,
+          {
             runId: context.runId,
             capabilityId: invocation.capabilityId,
             capabilityVersion: invocation.capabilityVersion,
             capabilityInput: invocation.input,
-          })
+          }
+        )
         approvalId = approval?.id
       }
       if (!approvalId) {
@@ -309,10 +327,7 @@ export class CapabilityGateway {
       return {
         ok: false,
         errorCode: "CAPABILITY_EXECUTION_FAILED",
-        errorMessage:
-          error instanceof Error
-            ? error.message
-            : "The capability execution failed.",
+        errorMessage: "The capability execution failed.",
       }
     }
   }

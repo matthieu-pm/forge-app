@@ -80,7 +80,7 @@ describe("OpenAI model proxy", () => {
 
     expect(response.status).toBe(200)
     expect(response.headers.get("content-type")).toContain("text/event-stream")
-    expect(response.headers.get("x-request-id")).toBe("req_123")
+    expect(response.headers.get("x-request-id")).toMatch(/^[0-9a-f-]{36}$/)
     expect(await response.text()).not.toContain("secret-provider-key")
     expect(fetcher).toHaveBeenCalledWith(
       new URL("https://api.openai.com/v1/responses"),

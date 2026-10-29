@@ -1,39 +1,27 @@
 import "@tanstack/react-start/server-only"
 
 import type { Actor } from "@/application/actor"
+import { emitTelemetry } from "@/application/observability/telemetry.server"
 
 export function writeApiAuditEvent({
-  actor,
   operation,
   outcome,
   requestId,
-  resourceId,
 }: {
   actor: Actor
-  operation: string
+  operation: "createTeam" | "updateTeam" | "archiveTeam"
   outcome: "succeeded" | "replayed" | "rejected"
   requestId: string
   resourceId?: string
 }) {
-  const credentialId =
-    actor.authentication.kind === "apiKey"
-      ? actor.authentication.credentialId
-      : actor.authentication.kind === "session"
-        ? actor.authentication.sessionId
-        : actor.authentication.tokenId
-
-  console.info(
-    JSON.stringify({
-      event: "forge.public_api.mutation",
-      timestamp: new Date().toISOString(),
-      requestId,
-      operation,
-      outcome,
-      workspaceId: actor.workspaceId,
-      userId: actor.userId,
-      authenticationKind: actor.authentication.kind,
-      credentialId,
-      resourceId,
-    })
+  // Authentication identifiers and resource/user content do not belong in diagnostics.
+  emitTelemetry(
+    "api.mutation",
+    operation === "createTeam"
+      ? "teams.create"
+      : operation === "updateTeam"
+        ? "teams.update"
+        : "teams.archive",
+    { requestId, outcome }
   )
 }

@@ -327,3 +327,20 @@ describe("EVE event normalizer", () => {
     ])
   })
 })
+
+it("projects failure events without provider messages, bodies or signed URLs", () => {
+  const sensitive =
+    "sk-token private transcript https://files.test/object?sig=secret"
+  const failure = normalizeEveRuntimeEvent(
+    {
+      type: "turn.failed",
+      data: { code: sensitive, message: sensitive, stack: sensitive },
+    },
+    "session-1"
+  )
+  expect(failure[0]).toMatchObject({
+    type: "run.failed",
+    payload: { code: "RUNTIME_EXECUTION_FAILED" },
+  })
+  expect(JSON.stringify(failure)).not.toContain(sensitive)
+})

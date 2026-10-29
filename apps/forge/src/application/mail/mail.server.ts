@@ -3,6 +3,7 @@ import "@tanstack/react-start/server-only"
 import { Resend } from "resend"
 import { assertStagingMailDelivery } from "../../../../../packages/environment/staging-mail"
 import type { ReactNode } from "react"
+import { observeOperation } from "@/application/observability/telemetry.server"
 
 type TransactionalEmail = {
   to: string
@@ -16,6 +17,7 @@ type TransactionalEmail = {
 let resend: Resend | undefined
 
 export class EmailDeliveryError extends Error {
+  readonly code = "EMAIL_DELIVERY_FAILED"
   constructor(
     readonly retryable: boolean,
     readonly statusCode: number | null
@@ -54,7 +56,11 @@ function getFromAddress() {
   return "Forge <onboarding@resend.dev>"
 }
 
-export async function sendTransactionalEmail({
+export function sendTransactionalEmail(input: TransactionalEmail) {
+  return observeOperation("mail.send", () => sendEmail(input))
+}
+
+async function sendEmail({
   to,
   subject,
   text,
@@ -77,10 +83,6 @@ export async function sendTransactionalEmail({
   const { data, error } = result
 
   if (error) {
-    console.error("[mail] Resend rejected an email", {
-      name: error.name,
-      statusCode: error.statusCode,
-    })
     const retryable =
       error.statusCode === null ||
       error.statusCode === 408 ||

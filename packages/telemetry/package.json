@@ -1,0 +1,5 @@
+{
+  "name": "@forge/telemetry",
+  "private": true,
+  "type": "module"
+}

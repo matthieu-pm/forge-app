@@ -9,6 +9,7 @@ import { updateForgeTeam } from "../../src/forge-client.js"
 const authAttributesSchema = z.object({
   workspaceId: z.string().min(1),
   runId: z.string().uuid(),
+  correlationId: z.string().uuid().optional(),
   forgeCapabilityToken: z.string().min(20),
 })
 
@@ -64,9 +65,7 @@ export default defineTool({
   async execute(input, ctx) {
     if (
       ["0", "false", "off", "no"].includes(
-        (process.env.FORGE_FEATURE_AGENT_WRITE_TOOLS ?? "")
-          .trim()
-          .toLowerCase()
+        (process.env.FORGE_FEATURE_AGENT_WRITE_TOOLS ?? "").trim().toLowerCase()
       )
     ) {
       throw new Error("Agent write tools are disabled.")
@@ -81,6 +80,7 @@ export default defineTool({
       {
         workspaceId: attributes.workspaceId,
         runId: attributes.runId,
+        correlationId: attributes.correlationId,
         capabilityToken: attributes.forgeCapabilityToken,
       },
       input,

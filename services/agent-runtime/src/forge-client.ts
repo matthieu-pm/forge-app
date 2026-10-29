@@ -1,3 +1,4 @@
+import { observeOperation } from "../../../packages/telemetry/server.js"
 import { stagingServiceFetch } from "../../../packages/environment/staging-service-auth.js"
 import { z } from "zod"
 
@@ -39,9 +40,27 @@ export type ForgeCaller = {
   workspaceId: string
   runId: string
   capabilityToken: string
+  correlationId?: string
 }
 
 export async function callForgeCapability(
+  caller: ForgeCaller,
+  capability: {
+    id: string
+    version: string
+    input: Record<string, unknown>
+    idempotencyKey?: string
+  },
+  signal?: AbortSignal
+) {
+  return observeOperation(
+    "runtime.callback",
+    () => callCapability(caller, capability, signal),
+    { runId: caller.runId, correlationId: caller.correlationId ?? caller.runId }
+  )
+}
+
+async function callCapability(
   caller: ForgeCaller,
   capability: {
     id: string
@@ -64,6 +83,7 @@ export async function callForgeCapability(
       headers: {
         authorization: `Bearer ${caller.capabilityToken}`,
         "content-type": "application/json",
+        "x-correlation-id": caller.correlationId ?? caller.runId,
         "x-forge-agent-run-id": caller.runId,
         "x-forge-workspace-id": caller.workspaceId,
       },
@@ -76,13 +96,8 @@ export async function callForgeCapability(
     }
   )
   if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as {
-      error?: { code?: string; message?: string }
-    } | null
-    throw new Error(
-      body?.error?.message ??
-        `Forge capability failed with status ${response.status}.`
-    )
+    // Never surface an upstream private body through a tool error/log.
+    throw new Error("Forge capability request failed.")
   }
 
   return (await response.json()) as unknown

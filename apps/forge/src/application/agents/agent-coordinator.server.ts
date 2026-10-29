@@ -53,6 +53,10 @@ import {
   runtimeApprovalPayloadSchema,
 } from "@/application/agents/local-runtime-contract"
 import { assertAgentRunAllowed } from "@/application/agents/agent-control-policy"
+import {
+  correlateIterable,
+  emitTelemetry,
+} from "@/application/observability/telemetry.server"
 
 export class AgentCoordinatorError extends Error {
   constructor(
@@ -93,8 +97,7 @@ function runFailure(error: unknown) {
   return error instanceof AgentRunLimitError
     ? { errorCode: error.code, message: error.message }
     : {
-        errorCode:
-          error instanceof Error ? error.name : "RUNTIME_EXECUTION_FAILED",
+        errorCode: "RUNTIME_EXECUTION_FAILED",
         message: "Forge could not complete this run.",
       }
 }
@@ -576,7 +579,8 @@ export class AgentCoordinator {
       attachments,
     })
 
-    return { run, events }
+    emitTelemetry("run.linked", "agent.run", { runId: run.id })
+    return { run, events: correlateIterable(events, { runId: run.id }) }
   }
 
   async prepareLocalTurn(actor: Actor, input: StartLocalAgentTurnInput) {
@@ -882,7 +886,10 @@ export class AgentCoordinator {
 
     return {
       run,
-      events: this.streamApprovalResolution(actor, run, resolution, decision),
+      events: correlateIterable(
+        this.streamApprovalResolution(actor, run, resolution, decision),
+        { runId: run.id }
+      ),
     }
   }
 
@@ -1047,11 +1054,21 @@ export class AgentCoordinator {
       for await (const runtimeEvent of runtimeEvents) {
         const increment = usageIncrement(runtimeEvent)
         if (increment) {
+          emitTelemetry("run.usage", "agent.run", {
+            runId: run.id,
+            ...increment,
+          })
           usage = addUsage(usage, increment)
           enforceUsageLimits(usage, this.dependencies.controlPolicy)
           await this.dependencies.store.updateRun(run.id, usage)
         }
-        if (runtimeEvent.type === "run.failed") terminalState = "failed"
+        if (runtimeEvent.type === "run.failed") {
+          terminalState = "failed"
+          emitTelemetry("run.failed", "agent.run", {
+            runId: run.id,
+            errorCode: "RUNTIME_EXECUTION_FAILED",
+          })
+        }
         if (runtimeEvent.type === "run.cancelled") terminalState = "cancelled"
         if (
           runtimeEvent.type === "approval.requested" &&
@@ -1119,6 +1136,10 @@ export class AgentCoordinator {
     } catch (error) {
       const completedAt = this.now()
       const failure = runFailure(error)
+      emitTelemetry("run.failed", "agent.run", {
+        runId: run.id,
+        errorCode: failure.errorCode,
+      })
       if (error instanceof AgentRunLimitError) {
         await runtime
           .cancel(
@@ -1143,6 +1164,14 @@ export class AgentCoordinator {
         schemaVersion: 1,
         payload: failure,
       })
+    } finally {
+      emitTelemetry("run.finished", "agent.run", {
+        runId: run.id,
+        durationMs: Math.max(
+          0,
+          this.now().getTime() - (run.startedAt ?? run.createdAt).getTime()
+        ),
+      })
     }
   }
 
@@ -1166,6 +1195,10 @@ export class AgentCoordinator {
     for (const event of initialEvents) yield event
 
     const startedAt = this.now()
+    emitTelemetry("operation.started", "agent.run", {
+      runId: run.id,
+      queueAgeMs: Math.max(0, startedAt.getTime() - run.createdAt.getTime()),
+    })
     await this.dependencies.store.updateRun(run.id, {
       state: "running",
       startedAt,
@@ -1262,11 +1295,21 @@ export class AgentCoordinator {
       )) {
         const increment = usageIncrement(runtimeEvent)
         if (increment) {
+          emitTelemetry("run.usage", "agent.run", {
+            runId: run.id,
+            ...increment,
+          })
           usage = addUsage(usage, increment)
           enforceUsageLimits(usage, this.dependencies.controlPolicy)
           await this.dependencies.store.updateRun(run.id, usage)
         }
-        if (runtimeEvent.type === "run.failed") terminalState = "failed"
+        if (runtimeEvent.type === "run.failed") {
+          terminalState = "failed"
+          emitTelemetry("run.failed", "agent.run", {
+            runId: run.id,
+            errorCode: "RUNTIME_EXECUTION_FAILED",
+          })
+        }
         if (runtimeEvent.type === "run.cancelled") terminalState = "cancelled"
         if (
           runtimeEvent.type === "approval.requested" &&
@@ -1333,6 +1376,10 @@ export class AgentCoordinator {
     } catch (error) {
       const completedAt = this.now()
       const failure = runFailure(error)
+      emitTelemetry("run.failed", "agent.run", {
+        runId: run.id,
+        errorCode: failure.errorCode,
+      })
       if (error instanceof AgentRunLimitError) {
         await runtime
           .cancel(
@@ -1356,6 +1403,14 @@ export class AgentCoordinator {
         type: "run.failed",
         schemaVersion: 1,
         payload: failure,
+      })
+    } finally {
+      emitTelemetry("run.finished", "agent.run", {
+        runId: run.id,
+        durationMs: Math.max(
+          0,
+          this.now().getTime() - (run.startedAt ?? run.createdAt).getTime()
+        ),
       })
     }
   }

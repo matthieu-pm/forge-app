@@ -35,6 +35,10 @@ import {
   members,
   users,
 } from "@/db"
+import {
+  emitTelemetry,
+  observeOperation,
+} from "@/application/observability/telemetry.server"
 
 const day = 86400000
 const canManage = (actor: Actor) => hasWorkspaceRole(actor, ["owner", "admin"])
@@ -371,7 +375,7 @@ export async function summarizeCall(actor: Actor, callId: string) {
   await requireCall(actor, callId)
   return generateCallSummary(callId)
 }
-export async function generateCallSummary(callId: string) {
+async function generateCallSummaryImpl(callId: string) {
   const now = new Date()
   const [call] = await db
     .update(calls)
@@ -388,6 +392,7 @@ export async function generateCallSummary(callId: string) {
       )
     )
     .returning()
+  emitTelemetry(call ? "lease.acquired" : "lease.skipped", "calls.summary")
   if (!call) return
   try {
     const key = process.env.OPENAI_API_KEY
@@ -465,7 +470,7 @@ export async function generateCallSummary(callId: string) {
     )
   }
 }
-export async function syncCallConnection(id: string) {
+async function syncCallConnectionImpl(id: string) {
   const [connection] = await db
     .update(callConnections)
     .set({ syncLeaseAt: new Date() })
@@ -479,6 +484,7 @@ export async function syncCallConnection(id: string) {
       )
     )
     .returning()
+  emitTelemetry(connection ? "lease.acquired" : "lease.skipped", "calls.sync")
   if (!connection) return 0
   if (!connection.secret) {
     await db
@@ -555,18 +561,15 @@ export async function syncCallConnection(id: string) {
       .set({ lastSyncedAt: new Date(), error: null })
       .where(eq(callConnections.id, id))
     return imported
-  } catch (error) {
-    const message =
-      error instanceof Error &&
-      !/fetch|socket|https:|token=|Bearer/i.test(error.message)
-        ? error.message
-        : "Meeting sync failed. Check your connection and try again."
+  } catch {
+    const message = "Meeting sync failed. Check your connection and try again."
     await db
       .update(callConnections)
       .set({ error: message })
       .where(eq(callConnections.id, id))
     throw new Error(message)
   } finally {
+    emitTelemetry("lease.released", "calls.sync")
     await db
       .update(callConnections)
       .set({ syncLeaseAt: null })
@@ -592,3 +595,11 @@ export async function syncCalls(actor: Actor) {
     if (connection.secret) imported += await syncCallConnection(connection.id)
   return imported
 }
+
+export const generateCallSummary = (
+  ...args: Parameters<typeof generateCallSummaryImpl>
+) => observeOperation("calls.summary", () => generateCallSummaryImpl(...args))
+
+export const syncCallConnection = (
+  ...args: Parameters<typeof syncCallConnectionImpl>
+) => observeOperation("calls.sync", () => syncCallConnectionImpl(...args))
