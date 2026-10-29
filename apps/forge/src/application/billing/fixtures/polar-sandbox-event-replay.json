@@ -1,0 +1,25 @@
+{
+  "description": "Sanitized actual sandbox replies to one unpriced zero-cost event, identical replay and changed-metadata replay; pinned 2026-10 API. No meter or metered price attached.",
+  "first": {
+    "status": 200,
+    "body": {
+      "inserted": 1,
+      "duplicates": 0
+    }
+  },
+  "replay": {
+    "status": 200,
+    "body": {
+      "inserted": 0,
+      "duplicates": 1
+    }
+  },
+  "changedPayloadReplay": {
+    "status": 200,
+    "body": {
+      "inserted": 0,
+      "duplicates": 1
+    }
+  },
+  "billableMicros": 0
+}

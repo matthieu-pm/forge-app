@@ -43,6 +43,14 @@ export async function startWorkspaceTrial(actor: Actor, value: unknown) {
         .for("no key update")
     ).at(0)
     if (!workspace) throw new Error("TRIAL_WORKSPACE_NOT_FOUND")
+    // Match user-deletion FK order before locking its membership.
+    const user = (
+      await tx
+        .select({ verified: users.emailVerified })
+        .from(users)
+        .where(eq(users.id, identity.actorUserId))
+        .for("share")
+    ).at(0)
     const member = (
       await tx
         .select({ role: members.role })
@@ -53,13 +61,6 @@ export async function startWorkspaceTrial(actor: Actor, value: unknown) {
             eq(members.userId, identity.actorUserId)
           )
         )
-        .for("share")
-    ).at(0)
-    const user = (
-      await tx
-        .select({ verified: users.emailVerified })
-        .from(users)
-        .where(eq(users.id, identity.actorUserId))
         .for("share")
     ).at(0)
     if (

@@ -63,11 +63,14 @@ updates components of the same identity; late delivery cannot move old debt into
 later Free month. Earlier Free-period usage must remain in its own ledger and be
 included separately when that target period is current.
 
-This helper does not persist/reserve/settle usage. FOR-76 still owns the atomic
-ledger, per-operation pricing/payer/period snapshots, run insertion, late settlement
-and recovery. Do not enable public trials until those paths enforce this contract
-for Agent, Calls and Signals. Paid-to-Free consumption policy is being confirmed
-separately; trial-to-Free policy above is already settled.
+The pure helper does not persist usage. The subsequent internal FOR-76 agent
+ledger now persists reservations, immutable source-period capacity links, atomic
+run/event/audit insertion and idempotent settlement. Real PostgreSQL tests verify
+fresh trial allowance, expiry without cleanup and late settlement into the same
+Free capacity shadow. It has no public/runtime caller yet; live trusted pricing,
+provider dispatch/usage proof, recovery and Calls/Signals remain gated. Paid-to-Free
+policy is also confirmed: carry ending paid-period customer-pool usage into Free,
+with no fresh grant. See `docs/workspace-usage-ledger.md`.
 
 ## Billing interface
 
@@ -101,3 +104,11 @@ collisions, immutable grants/windows/projections, worker-independent SQL/member
 expiry, idempotent cleanup and late expiry preserving paid conversion. Existing
 billing/team and real-auth membership suites are regression evidence, not proof
 that the outstanding usage ledger or public checkout is complete.
+
+
+Subsequent ledger checkpoint · 29 October 2026: migration 0038 brings isolated
+staging/rehearsal to 39 migrations. Twenty-three new ledger and all 12 trial
+PostgreSQL cases pass. Trial start locks user before membership to follow the
+user-deletion FK order. The current implementation evidence is
+`output/production-readiness/usage-ledger-2026-10-29.json`; the prior trial checkpoint
+is retained as historical commit evidence. Public trial start remains unavailable.

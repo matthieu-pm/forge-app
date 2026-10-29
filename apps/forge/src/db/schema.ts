@@ -880,6 +880,215 @@ export const agentRuns = pgTable(
   })
 )
 
+export const workspaceUsagePeriods = pgTable(
+  "workspace_usage_periods",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    periodKey: text("period_key").notNull(),
+    kind: text("kind").notNull(),
+    binding: text("binding").notNull(),
+    startedAt: timestamp("started_at", {
+      withTimezone: true,
+      precision: 3,
+    }).notNull(),
+    endsAt: timestamp("ends_at", {
+      withTimezone: true,
+      precision: 3,
+    }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, precision: 3 })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => ({
+    keyUnique: uniqueIndex("workspace_usage_period_key_unique").on(
+      t.workspaceId,
+      t.periodKey
+    ),
+    bindingUnique: uniqueIndex("workspace_usage_period_binding_unique").on(
+      t.workspaceId,
+      t.id
+    ),
+    kindCheck: check(
+      "workspace_usage_period_kind_check",
+      sql`${t.kind} IN ('free','trial','paid')`
+    ),
+    windowCheck: check(
+      "workspace_usage_period_window_check",
+      sql`isfinite(${t.startedAt}) AND isfinite(${t.endsAt}) AND ${t.startedAt}<${t.endsAt}`
+    ),
+  })
+)
+
+export const workspaceUsageReservations = pgTable(
+  "workspace_usage_reservations",
+  {
+    id: uuid("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    periodId: uuid("period_id").notNull(),
+    requestId: uuid("request_id").notNull(),
+    requestHash: text("request_hash").notNull(),
+    operationId: uuid("operation_id").notNull(),
+    runId: uuid("run_id").references(() => agentRuns.id, {
+      onDelete: "set null",
+    }),
+    actorUserId: text("actor_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    provider: text("provider").notNull(),
+    modelId: text("model_id").notNull(),
+    pricingFingerprint: text("pricing_fingerprint").notNull(),
+    billingMode: text("billing_mode").notNull(),
+    feature: text("feature").default("agent").notNull(),
+    usesPool: boolean("uses_pool").notNull(),
+    maximumCostUsdMicros: bigint("maximum_cost_usd_micros", {
+      mode: "number",
+    }).notNull(),
+    reservedUsdMicros: bigint("reserved_usd_micros", {
+      mode: "number",
+    }).notNull(),
+    settledUsdMicros: bigint("settled_usd_micros", { mode: "number" })
+      .default(0)
+      .notNull(),
+    state: text("state").default("held").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, precision: 3 })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, precision: 3 })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => ({
+    requestUnique: uniqueIndex("workspace_usage_request_unique").on(
+      t.requestId
+    ),
+    operationUnique: uniqueIndex("workspace_usage_operation_unique").on(
+      t.operationId
+    ),
+    periodIndex: index("workspace_usage_reservation_period_idx").on(
+      t.workspaceId,
+      t.periodId
+    ),
+    bindingUnique: uniqueIndex("workspace_usage_reservation_binding_unique").on(
+      t.workspaceId,
+      t.id
+    ),
+    periodBinding: foreignKey({
+      name: "workspace_usage_reservation_period_fk",
+      columns: [t.workspaceId, t.periodId],
+      foreignColumns: [
+        workspaceUsagePeriods.workspaceId,
+        workspaceUsagePeriods.id,
+      ],
+    }).onDelete("cascade"),
+    stateCheck: check(
+      "workspace_usage_reservation_state_check",
+      sql`${t.state} IN ('held','uncertain','settled','released','reconciliation-required')`
+    ),
+    payerCheck: check(
+      "workspace_usage_reservation_payer_check",
+      sql`${t.billingMode} IN ('forge-managed','subscription','token-plan','pay-as-you-go') AND ${t.feature} IN ('agent','calls','signals')`
+    ),
+    moneyCheck: check(
+      "workspace_usage_reservation_money_check",
+      sql`${t.maximumCostUsdMicros} BETWEEN 0 AND 9007199254740991 AND ${t.reservedUsdMicros} BETWEEN 0 AND ${t.maximumCostUsdMicros} AND ${t.settledUsdMicros} BETWEEN 0 AND 9007199254740991`
+    ),
+    stateMoneyCheck: check(
+      "workspace_usage_reservation_state_money_check",
+      sql`(${t.state} IN ('held','uncertain') AND ${t.reservedUsdMicros}=${t.maximumCostUsdMicros} AND ${t.settledUsdMicros}=0) OR (${t.state} IN ('settled','released','reconciliation-required') AND ${t.reservedUsdMicros}=0 AND (${t.state}<>'released' OR ${t.settledUsdMicros}=0))`
+    ),
+    hashesCheck: check(
+      "workspace_usage_reservation_hashes_check",
+      sql`${t.requestHash} ~ '^[a-f0-9]{64}$' AND ${t.pricingFingerprint} ~ '^[a-f0-9]{64}$'`
+    ),
+  })
+)
+
+export const workspaceUsageCarryovers = pgTable(
+  "workspace_usage_carryovers",
+  {
+    sourcePeriodId: uuid("source_period_id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    targetPeriodId: uuid("target_period_id").notNull(),
+    effectiveAt: timestamp("effective_at", {
+      withTimezone: true,
+      precision: 3,
+    }).notNull(),
+    kind: text("kind").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, precision: 3 })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => ({
+    sourceBinding: foreignKey({
+      name: "workspace_usage_carryover_source_fk",
+      columns: [t.workspaceId, t.sourcePeriodId],
+      foreignColumns: [
+        workspaceUsagePeriods.workspaceId,
+        workspaceUsagePeriods.id,
+      ],
+    }).onDelete("cascade"),
+    targetBinding: foreignKey({
+      name: "workspace_usage_carryover_target_fk",
+      columns: [t.workspaceId, t.targetPeriodId],
+      foreignColumns: [
+        workspaceUsagePeriods.workspaceId,
+        workspaceUsagePeriods.id,
+      ],
+    }).onDelete("cascade"),
+    targetIndex: index("workspace_usage_carryover_target_idx").on(
+      t.workspaceId,
+      t.targetPeriodId
+    ),
+    kindCheck: check(
+      "workspace_usage_carryover_kind_check",
+      sql`${t.kind} IN ('trial-expiry','paid-to-free') AND ${t.sourcePeriodId}<>${t.targetPeriodId} AND isfinite(${t.effectiveAt})`
+    ),
+  })
+)
+
+export const workspaceUsageReceipts = pgTable(
+  "workspace_usage_receipts",
+  {
+    eventId: uuid("event_id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    reservationId: uuid("reservation_id").notNull(),
+    bodyHash: text("body_hash").notNull(),
+    result: jsonb("result")
+      .$type<{
+        state: string
+        settledUsdMicros: number
+        reservedUsdMicros: number
+      }>()
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, precision: 3 })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => ({
+    reservationBinding: foreignKey({
+      name: "workspace_usage_receipt_reservation_fk",
+      columns: [t.workspaceId, t.reservationId],
+      foreignColumns: [
+        workspaceUsageReservations.workspaceId,
+        workspaceUsageReservations.id,
+      ],
+    }).onDelete("cascade"),
+    hashCheck: check(
+      "workspace_usage_receipt_hash_check",
+      sql`${t.bodyHash} ~ '^[a-f0-9]{64}$'`
+    ),
+  })
+)
+
 export const agentEvents = pgTable(
   "agent_events",
   {

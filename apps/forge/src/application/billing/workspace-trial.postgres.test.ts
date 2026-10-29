@@ -85,7 +85,10 @@ describe.skipIf(!connection)("durable workspace trials in PostgreSQL", () => {
       ).rows[0]
     ).toEqual({ database: target.database, branch: target.branchId })
     const sql = await readFile(
-      new URL("../../../drizzle/0037_workspace_trials.sql", import.meta.url),
+      new URL(
+        "../../../drizzle/0038_workspace_usage_ledger.sql",
+        import.meta.url
+      ),
       "utf8"
     )
     expect(

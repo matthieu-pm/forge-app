@@ -1,0 +1,120 @@
+{
+  "date": "2026-10-29",
+  "baseCommit": "6d1a87da02bf473b0ac5f15b523630f07343406e",
+  "committed": true,
+  "deployed": false,
+  "completedIssues": [],
+  "continuingIssues": [
+    "FOR-76",
+    "FOR-155",
+    "FOR-110",
+    "FOR-111"
+  ],
+  "checks": {
+    "appTestsPassed": 1639,
+    "workflowTestsPassed": 4,
+    "postgresLedgerCasesPassed": 23,
+    "postgresTrialCasesPassed": 12,
+    "postgresBillingCasesPassed": 62,
+    "postgresTeamCapacityCasesPassed": 23,
+    "postgresMembershipCasesPassed": 17,
+    "postgresMigrationFaultCasesPassed": 3,
+    "newAuthorityCarryoverUnitCasesPassed": 19,
+    "newInvoiceContractUnitCasesPassed": 15,
+    "newPolarAcknowledgementCasesPassed": 12,
+    "typecheck": "passed",
+    "scopedLint": "passed",
+    "format": "passed",
+    "diff": "passed",
+    "productionBuildIncludingProtectedWorkflowHandlers": "passed"
+  },
+  "databaseIdentity": {
+    "default": {
+      "branch": "br-muddy-queen-zaeeysjt",
+      "database": "neondb",
+      "migrationCount": 26,
+      "access": "read-only verification; unchanged"
+    },
+    "staging": {
+      "branch": "br-autumn-union-za0opf1e",
+      "database": "forge_staging",
+      "migrationCount": 39
+    },
+    "rehearsal": {
+      "branch": "br-little-pond-zabdmew3",
+      "database": "forge_migration_rehearsal",
+      "migrationCount": 39
+    }
+  },
+  "policy": {
+    "paidToFree": "Carry ending customer-pool settled/reserved usage; no fresh Free grant.",
+    "overageCadence": "Monthly in arrears; native immediate invoicing on paid plan changes/immediate termination.",
+    "overageOnlyPaymentFailure": "Stop paid overage immediately; retain included allowance if base remains paid. Durable hold/recovery integration next."
+  },
+  "implemented": [
+    "internal atomic run/reservation/event/audit admission with verified live actor/model/membership authority",
+    "immutable original-period operation/payer/pricing history and settlement receipts",
+    "source-derived trial/paid-to-Free committed-capacity links and late settlement without duplicate debits",
+    "uncertain cancellation retains exposure, known overruns recorded for reconciliation, no run-count cap",
+    "prepared cumulative exact-fraction monthly invoice aggregation and single-event acknowledgement validation"
+  ],
+  "sandboxEventEvidence": {
+    "kind": "unpriced zero-cost event",
+    "metersBeforeProbe": 0,
+    "billableMicros": 0,
+    "first": {
+      "inserted": 1,
+      "duplicates": 0
+    },
+    "identicalReplay": {
+      "inserted": 0,
+      "duplicates": 1
+    },
+    "changedMetadataReplay": {
+      "inserted": 0,
+      "duplicates": 1
+    },
+    "fixture": "apps/forge/src/application/billing/fixtures/polar-sandbox-event-replay.json",
+    "financialEffect": "No metered price/catalog/subscription setting/invoice/payment changed."
+  },
+  "migrationRehearsal": "Generated composite-index ordering and PL/pgSQL CASE syntax failures rolled back before staging. Corrected 0038 passed complete 39-migration history and 3 ownership/rollback/hash cases before staging application.",
+  "notComplete": [
+    "public/runtime caller, trusted provider pricing/bounded execution and dispatch/recovery",
+    "provider-derived actual usage and legacy exposure migration",
+    "Calls/Signals admission and paid exclusions",
+    "dual-currency paid-overage consent/cap/quote/outbox/invoice persistence",
+    "separate failed-overage-invoice hold/recovery integration",
+    "serving migration or deployment"
+  ],
+  "guide": "https://linear.app/atriumcrm/document/forge-durable-workspace-usage-ledger-and-downgrade-carryover-937a9df71d00",
+  "sourceSha256": {
+    "apps/forge/drizzle/0038_workspace_usage_ledger.sql": "a292e663dc140909071abc749286a2b8dc2fb095de0c7895fb20e3963ad7c170",
+    "apps/forge/drizzle/meta/0038_snapshot.json": "bfbd7d16698a5f4d99587e3fdfe63e058867180ed2ee20149e7fe94d7bfd174b",
+    "apps/forge/drizzle/meta/_journal.json": "b430f0aa911ffe325a361c11522c462459903f98bb355368e8956694f7ad7aa8",
+    "apps/forge/src/application/billing/fixtures/polar-sandbox-event-replay.json": "c214bd75795ee14d4470063db7828b1d873c169bd219aa46a929dcb0c4498e75",
+    "apps/forge/src/application/billing/overage-invoice-contract.test.ts": "57bd9ded27516470689003b809ba5af9e2688e9e7d9ff463ec586f244272033e",
+    "apps/forge/src/application/billing/overage-invoice-contract.ts": "d901dd3d911dd39f9ee9737fbcbfa576f8dafc94cea7093d48262a83370e03f4",
+    "apps/forge/src/application/billing/paid-usage-carryover.ts": "07f75bd4bd81d974ebb0a934e2a0ec37fb8d38cb5289e76e146521ba9a2f622a",
+    "apps/forge/src/application/billing/polar-usage-event-contract.test.ts": "4c0bc67a4687daf783283f6b7ecc8d411f0aa5487717a9e4dc59cf431d8f14ad",
+    "apps/forge/src/application/billing/polar-usage-event-contract.ts": "44c9ad396f027af1692ab9e27aa9c7c89ed276f467e83dc74995b8186fdb13eb",
+    "apps/forge/src/application/billing/subscription-reconciliation.postgres.test.ts": "1e0b8b392506c8a7430d2d93eb9b4b17050235c9fe446aa6ffe3e54e2576cf41",
+    "apps/forge/src/application/billing/usage-authority.test.ts": "382126b3c99ca7fd0cf0c25e5f1dceadb7206871eda6797e68eb7117f7a12998",
+    "apps/forge/src/application/billing/usage-authority.ts": "96d8fcee9bbd69e9e27932903802274d9c90f6f1d52acb32af834fa8b47af7be",
+    "apps/forge/src/application/billing/usage-ledger.postgres.test.ts": "b003eb0d2ec53756c19d6e6087ea4f4fb16155f58c0aed2c6032fc1a02937cb0",
+    "apps/forge/src/application/billing/usage-ledger.server.ts": "e4347c1fbcf2c110fcbdff0ba41f6df5eaabd807425fd97f2068c1c6b4d3872b",
+    "apps/forge/src/application/billing/workspace-trial.postgres.test.ts": "8bfb61f3c90acf9dcc9c330b4e39f8595410d18797c97cbf15093bdf61f9d302",
+    "apps/forge/src/application/billing/workspace-trial.server.ts": "6c745b52d1f264aca570afa2cbcf31af72fa26050f2b6877e46938e8754df970",
+    "apps/forge/src/application/billing/workspace-usage-period.ts": "ba3d38f64b0114042ea20ab278ba46b55c950d1745eef01a1a0766852aaccd42",
+    "apps/forge/src/application/teams/team-capacity.postgres.test.ts": "c6ccabd76ed7845701b39f88909127cf4cccfa4ffa37b81f682ebc2482211cc4",
+    "apps/forge/src/application/workspace-security/security-policy.ts": "4fc9d5d03b4a0ab9bad50745310b8150b7a3472c82684b9f0a09b82cceeea1eb",
+    "apps/forge/src/db/schema-migrations.test.ts": "ce40586420594af00a67d6ad8b235f117fda0f934bc0c27f7ec11a61c15e883a",
+    "apps/forge/src/db/schema.ts": "63f21d391967123d9bd003428f8e466128adb28f4dfdfc587212ef4562507200",
+    "docs/forge-plan-matrix.md": "5b68db9c9a77f66ae2972caea6140cf7cc749c2711d179edecbc052b02cb35f8",
+    "docs/operations/database-migrations.md": "20c65435a2940155c77a3697358ad2ff455574092677d27d225509736085aa98",
+    "docs/plans/production-readiness-backlog-map.md": "ce9ca71564fb5c15fd2776f8776d7491149f56b70706f05dfbc941bf0d491304",
+    "docs/plans/production-readiness-linear-backlog.json": "ee0c451fa689e862619563faf58f62bff64fab654a60197e7323095784da12b5",
+    "docs/workspace-trials.md": "17e9a2bce9d21fd7e2ee0144acd6c7f65c343c963b07017ec28ef964d0a45143",
+    "docs/workspace-usage-ledger.md": "794d944c29c384f672bb7b031d25aaefcaaaa15d7e7731e5131d307ad5f773cb",
+    "output/production-readiness/workspace-trials-2026-10-29.json": "449bbe66d67b1868e3b82bbb1042922f5f5cae6c6d701d1a90d4f41a8f859dd0"
+  }
+}

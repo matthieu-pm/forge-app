@@ -80,8 +80,8 @@ export function workspaceUsagePeriod(
     workspaceId,
     start,
     end,
-    // The source label is deliberately absent: identical windows cannot mint
-    // separate free/paid pools. Plan-change carryover remains a ledger concern.
+    // Window identity only. The ledger separately binds the authorized fresh
+    // trial/first-paid account; arbitrary plan changes cannot mint a grant.
     key: JSON.stringify([
       "forge.ai-usage-period",
       workspaceId,

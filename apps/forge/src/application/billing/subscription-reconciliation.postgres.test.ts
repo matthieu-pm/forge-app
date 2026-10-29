@@ -334,7 +334,10 @@ describe.skipIf(!connection)(
         branch: target.branchId,
       })
       const migration = await readFile(
-        new URL("../../../drizzle/0037_workspace_trials.sql", import.meta.url),
+        new URL(
+          "../../../drizzle/0038_workspace_usage_ledger.sql",
+          import.meta.url
+        ),
         "utf8"
       )
       const latest = await pool.query(

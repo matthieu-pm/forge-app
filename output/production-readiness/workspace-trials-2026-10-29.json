@@ -94,5 +94,7 @@
     "docs/workspace-trials.md": "8231f1e0757c51cefa05c05d142978da3b37634df2098e4cc5527986d9897064",
     "output/production-readiness/billing-trial-plan-details-2026-10-29.png": "b7eaa295a48587921723471eb1e06245881036152a3a38cb7570fd76a2e1e19b",
     "output/production-readiness/team-capacity-and-polar-sandbox-2026-10-29.json": "8b015bec3b4f982263e18d2e2759feece788aa8eeabeae8836b45ebe2a6ec7ae"
-  }
+  },
+  "historical": true,
+  "sourceCommit": "6d1a87da02bf473b0ac5f15b523630f07343406e"
 }

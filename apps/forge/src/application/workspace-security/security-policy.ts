@@ -36,14 +36,20 @@ export function resolveEntitlements(
   return Object.fromEntries(
     Object.entries(REQUIRED_PLAN).map(([feature, requiredPlan]) => [
       feature,
-      overrides[feature] ??
-        PLAN_RANK[plan] >= PLAN_RANK[requiredPlan],
+      overrides[feature] ?? PLAN_RANK[plan] >= PLAN_RANK[requiredPlan],
     ])
   ) as Record<WorkspaceSecurityFeature, boolean>
 }
 
 function policyAllows(actor: Actor, policy: WorkspacePolicy) {
   return policy === "all-members" || hasWorkspaceRole(actor, ["owner", "admin"])
+}
+
+export function isAgentInvocationAllowed(
+  actor: Actor,
+  settings: Pick<WorkspaceSecuritySettings, "blockGuestAgentAccess">
+) {
+  return !settings.blockGuestAgentAccess || !hasWorkspaceRole(actor, ["guest"])
 }
 
 export function isWorkspaceActionAllowed(
@@ -69,13 +75,8 @@ export function isWorkspaceActionAllowed(
   const policy = policyByAction[action]
   if (policy && !policyAllows(actor, policy)) return false
 
-  if (
-    action === "agents.invoke" &&
-    settings.blockGuestAgentAccess &&
-    hasWorkspaceRole(actor, ["guest"])
-  ) {
-    return false
-  }
+  if (action === "agents.invoke")
+    return isAgentInvocationAllowed(actor, settings)
   if (action === "applications.install") {
     return (
       !settings.reviewThirdPartyApplications ||

@@ -183,9 +183,10 @@ verified on isolated staging. Webhooks remain disabled until remaining lifecycle
 handlers, periodic reconciliation and the billing release gate pass. See
 `docs/subscription-payment-grace.md`.
 
-The local helpers implement fixed Free/trial allowance, paid per-member allowance,
-overage rules and plan/phase/feature/payer usage classification. They are not yet
-connected to the commercial reservation ledger. FOR-153 now has an atomic member
+Fixed Free/trial and paid per-member allowance now feed an internal atomic agent
+reservation ledger on isolated staging, with original-period settlement and
+trial/paid-to-Free carryover. Public runtime, Calls/Signals, trusted provider quote
+and paid-overage integration remain gated. See `docs/workspace-usage-ledger.md`. FOR-153 now has an atomic member
 counter migration and auth/join integration verified against real PostgreSQL;
 production migration/application rollout remains pending. See
 [the member-capacity implementation guide](https://linear.app/atriumcrm/document/atomic-workspace-member-capacity-implementation-and-rollout-a8b750fd4060),
@@ -211,3 +212,18 @@ Tax confirmation · 29 October 2026: listed Starter/Plus prices exclude tax; add
 
 
 Trial expiry carryover confirmed · 29 October 2026: returning to Free after the trial does not grant a fresh US$5 pool. Carry consumed trial usage into Free allowance enforcement while retaining original usage/payer/period history. Starting the trial receives a fresh fixed US$5 pool, independent of prior Free usage. The selected tier stays fixed and only workspaces that have never paid are eligible. Durable redemption/read-time expiry are verified on isolated staging; actual usage carryover and public start remain gated in FOR-155/FOR-76. See `docs/workspace-trials.md`.
+
+
+Paid-to-Free allowance confirmed · 29 October 2026: when paid access ends, carry
+ending paid-period customer-pool settled and reserved usage into the current
+US$5 Free allowance; no fresh Free grant. Keep original charges/payer/periods,
+BYOK and paid Calls/Signals exclusions. The internal agent ledger now persists
+one original-period capacity link; late settlement updates that source instead
+of duplicating usage. A later legitimate signup-anniversary Free month resets
+normally. Public usage/runtime enablement remains gated. See
+`docs/workspace-usage-ledger.md`. Paid overage is monthly in arrears, with native immediate invoicing on paid plan changes/immediate termination.
+
+Failed overage-only invoices are also confirmed: stop new paid overage immediately
+while retaining the included allowance when the base subscription is paid. This
+is separate from the seven-day failed-renewal grace rule; durable payment hold and
+recovery integration is in progress.

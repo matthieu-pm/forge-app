@@ -34,6 +34,10 @@ import {
   workspaceSecuritySettings,
   workspaceTeamCapacity,
   workspaceTrialRedemptions,
+  workspaceUsageCarryovers,
+  workspaceUsagePeriods,
+  workspaceUsageReceipts,
+  workspaceUsageReservations,
 } from "./schema"
 
 type MigrationJournal = {
@@ -99,6 +103,10 @@ describe("database migrations", () => {
       ["workspace_entitlements", workspaceEntitlements],
       ["workspace_team_capacity", workspaceTeamCapacity],
       ["workspace_trial_redemptions", workspaceTrialRedemptions],
+      ["workspace_usage_periods", workspaceUsagePeriods],
+      ["workspace_usage_reservations", workspaceUsageReservations],
+      ["workspace_usage_carryovers", workspaceUsageCarryovers],
+      ["workspace_usage_receipts", workspaceUsageReceipts],
       ["workspace_security_audit_events", workspaceSecurityAuditEvents],
       ["workspace_security_settings", workspaceSecuritySettings],
     ] as const) {

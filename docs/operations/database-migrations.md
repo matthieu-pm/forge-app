@@ -147,3 +147,18 @@ requires an empty application database and exact current function bodies; its
 expected source now includes the 0037 replacement. No guard was bypassed. No
 serving database or database connection pointer changed. See
 `docs/workspace-trials.md`; public start waits for atomic usage enforcement.
+
+
+## Durable usage ledger expansion · 29 October 2026
+
+Migration 0038 adds immutable workspace period, reservation, carryover and
+settlement-receipt history, composite workspace bindings and guarded financial
+state transitions. The rehearsal caught generated foreign keys preceding their
+composite unique indexes, then an unparenthesized PL/pgSQL CASE expression. Both
+attempts rolled back without a journal entry. After correction, all 39 migrations
+and the three ownership/rollback/hash tests passed before exact isolated staging
+applied the one pending expansion. Staging passes 23 ledger, 12 trial, 62 billing
+and 23 team cases; real-auth membership regression is recorded in the checkpoint.
+No serving database, DB connection pointer, provider setting or deployment changed.
+See `docs/workspace-usage-ledger.md` for the internal-only entry point and remaining
+enablement gates.

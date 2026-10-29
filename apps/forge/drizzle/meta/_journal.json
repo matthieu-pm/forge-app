@@ -267,6 +267,13 @@
       "when": 1793271805492,
       "tag": "0037_workspace_trials",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1793273270870,
+      "tag": "0038_workspace_usage_ledger",
+      "breakpoints": true
     }
   ]
 }
