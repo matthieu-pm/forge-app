@@ -9,6 +9,7 @@ const stateSchema = z.object({
   status: z.string(),
   source: z.string().optional(),
   source_reference: z.string().nullable().optional(),
+  trial_redemption_id: z.uuid().nullable().optional(),
   provider_environment: z.string().nullable().optional(),
   refunded_periods: z
     .array(
@@ -54,6 +55,7 @@ export async function readSubscriptionAccessState(workspaceId: string) {
     status: row.status,
     source: row.source,
     sourceReference: row.source_reference,
+    trialRedemptionId: row.trial_redemption_id,
     providerEnvironment: row.provider_environment,
     refundedPeriods: row.refunded_periods,
     paidUpgradeOrderId: row.paid_upgrade_order_id,

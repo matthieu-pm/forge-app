@@ -260,6 +260,13 @@
       "when": 1793268754179,
       "tag": "0036_workspace_team_capacity",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1793271805492,
+      "tag": "0037_workspace_trials",
+      "breakpoints": true
     }
   ]
 }

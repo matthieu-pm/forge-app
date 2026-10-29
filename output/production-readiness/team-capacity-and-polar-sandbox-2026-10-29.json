@@ -170,5 +170,7 @@
     "docs/polar-sandbox-verification.md": "54d6c4b02cc38ca8dc59a3e78939444dd50e934569a28100f3c12b80c88ea7c9",
     "docs/renewal-currency-change.md": "95b3282623e9351350ebb543ba01f429231ac91539149d759a28610aef2ed8cc",
     "docs/workspace-team-capacity.md": "90e11dbc5701e353326216b62147a7fc65fb10a6c1a63397bde3743f68013098"
-  }
+  },
+  "historical": true,
+  "sourceCommit": "7208f524e2ff887d7e4e1d7b5983fae352c625aa"
 }

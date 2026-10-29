@@ -134,3 +134,16 @@ An initial CLI database-create command used unsupported `--branch-id`; the CLI s
 Migration 0036 adds/backfills workspace_team_capacity, effective-plan SQL parity and universal team write triggers. Existing teams are retained, including over-cap grandfathered workspaces. Shared workspace fencing uses NO KEY UPDATE to remain compatible with concurrent FK KEY SHARE; final-slot admission is atomic and cross-workspace moves lock deterministically. All 37 migrations and 3 ownership/fault cases passed on isolated rehearsal before exact staging applied the one pending expansion. Staging passes 23 team-capacity, 62 billing and 17 real-auth membership cases.
 
 An actual Polar sandbox fixture temporarily populated staging during provider verification. The membership harness correctly refused its empty-database precondition while that fixture existed. After the fixture was verified, period-end cancellation confirmed and only its owned workspace/users cleaned up, all 17 membership cases passed. No safety guard was bypassed, no production migration/deployment ran and no database connection setting was changed. See `docs/workspace-team-capacity.md` and `docs/polar-sandbox-verification.md`.
+
+## Workspace trial expansion · 29 October 2026
+
+Migration 0037 adds immutable workspace trial redemption, its compound entitlement
+binding, eligibility/projection triggers and shared read-time SQL expiry. Member
+admission now uses the same effective-plan function as team capacity. All 38
+migrations and the three ownership/rollback/hash cases passed on isolated rehearsal
+before exact staging applied the single pending expansion. Staging passes 12 trial,
+62 billing, 23 team and 17 real-auth membership cases. The membership harness still
+requires an empty application database and exact current function bodies; its
+expected source now includes the 0037 replacement. No guard was bypassed. No
+serving database or database connection pointer changed. See
+`docs/workspace-trials.md`; public start waits for atomic usage enforcement.

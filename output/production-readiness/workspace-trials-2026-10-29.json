@@ -1,0 +1,98 @@
+{
+  "date": "2026-10-29",
+  "baseCommit": "7208f524e2ff887d7e4e1d7b5983fae352c625aa",
+  "committed": true,
+  "deployed": false,
+  "completedIssues": [],
+  "continuingIssues": [
+    "FOR-155",
+    "FOR-76",
+    "FOR-111",
+    "FOR-110",
+    "FOR-27",
+    "FOR-28"
+  ],
+  "checks": {
+    "appTestsPassed": 1593,
+    "workflowTestsPassed": 4,
+    "postgresTrialCasesPassed": 12,
+    "postgresBillingCasesPassed": 62,
+    "postgresTeamCapacityCasesPassed": 23,
+    "postgresMembershipCasesPassed": 17,
+    "postgresMigrationFaultCasesPassed": 3,
+    "carryoverAndBoundaryUnitCasesPassed": 17,
+    "billingServerAndUiCasesPassed": 9,
+    "typecheck": "passed",
+    "scopedLint": "passed",
+    "format": "passed",
+    "diff": "passed",
+    "productionBuildIncludingProtectedWorkflowHandlers": "passed",
+    "reactReview": "authenticated loader, independent server reads in parallel, serializable minimal snapshot, server-only imports, deterministic UTC trial display, native disabled action and existing accessible dialogs verified",
+    "browser": "authenticated localhost Billing loaded actual Free plan/member count; corrected Starter/Plus pre-tax prices, never-paid fixed trial policy and disabled checkout visible",
+    "knownFlake": "One broad run failed the pre-existing review-detail emoji-picker timing case; its 7-case isolated rerun and complete 1593-test app rerun passed without changing Reviews."
+  },
+  "databaseIdentity": {
+    "default": {
+      "branch": "br-muddy-queen-zaeeysjt",
+      "database": "neondb",
+      "migrationCount": 26,
+      "access": "read-only verification; unchanged"
+    },
+    "staging": {
+      "branch": "br-autumn-union-za0opf1e",
+      "database": "forge_staging",
+      "migrationCount": 38
+    },
+    "rehearsal": {
+      "branch": "br-little-pond-zabdmew3",
+      "database": "forge_migration_rehearsal",
+      "migrationCount": 38
+    }
+  },
+  "implemented": [
+    "immutable once-per-never-paid-workspace trial redemption and fixed initial tier/336-hour window",
+    "live verified-email owner/admin transaction checks, replay, global request identity and audit",
+    "compound trial projection binding and eligibility/immutability guards",
+    "TypeScript/SQL exact read-time expiry, shared member/team admission and idempotent cleanup preserving paid conversions",
+    "trial-to-Free committed-capacity shadow contract bound to original expiry anniversary",
+    "protected actual billing summary and corrected pricing/unavailable balance/invoice/checkout UI"
+  ],
+  "notComplete": [
+    "atomic operational usage ledger/run reservations/settlement and actual carryover persistence",
+    "public trial start and end-to-end metered Agent/Calls/Signals trial flow",
+    "public checkout/invoice/return/webhook/release contracts",
+    "serving migration or deployment"
+  ],
+  "pendingDecision": "Paid-to-Free transition: carry ending paid usage into current USD5 Free allowance, or give a fresh Free pool. Trial-to-Free and fresh trial-start rules already confirmed.",
+  "linearGuide": "https://linear.app/atriumcrm/document/forge-workspace-trials-eligibility-immutable-redemption-and-expiry-da0014127b83",
+  "screenshot": "output/production-readiness/billing-trial-plan-details-2026-10-29.png",
+  "sourceSha256": {
+    "apps/forge/drizzle/0037_workspace_trials.sql": "1c3da5b416e88f45b36495a92f2f598b5cb1a74f419a1747e1f2bdaecd84c12e",
+    "apps/forge/drizzle/meta/0037_snapshot.json": "55c31f1623ca7f61d934715c2298a90534caf25626709d475a4052581ee53694",
+    "apps/forge/drizzle/meta/_journal.json": "7cc0fd09a11f10e1e3d80f050908a82c035f90cfa08b95b3fc573d124fceac92",
+    "apps/forge/src/application/billing/member-capacity.postgres.test.ts": "5a7e285d6d4e66de51bd2458eaefd193e931da454f3f20764813146a5d9cc956",
+    "apps/forge/src/application/billing/subscription-access-state.server.ts": "e95d5a9db913cd29f55afcef4440be39e5e6afcb924335811c036c18a48121f7",
+    "apps/forge/src/application/billing/subscription-access.ts": "e3efd84a4bdb3d4b12fcf5bd14ca78ed1aa1953c68e53a711257a5df27b10daf",
+    "apps/forge/src/application/billing/subscription-reconciliation.postgres.test.ts": "c06d8b3a9b0c638fbfedfe6041f429d148e4342673f7a54bf3d08b8656de564b",
+    "apps/forge/src/application/billing/trial-usage-carryover.test.ts": "64590c55948c8cf35c98f71cb41e1fe8b636adf544aabfd9d142b4891708dbb3",
+    "apps/forge/src/application/billing/trial-usage-carryover.ts": "aa9688aab6eb3227065b883b93c6b0a0de6f941dfc91c0a6a115b2122421cffa",
+    "apps/forge/src/application/billing/workspace-trial.postgres.test.ts": "1bd2918e33fe687327a8afb621a49fb8ddf2f6c0921ed2c9972fa3662124cfed",
+    "apps/forge/src/application/billing/workspace-trial.server.ts": "37c6baf554ba9f29e33780efe54a9d81322c2a33daf44628cc420cfcc3da375d",
+    "apps/forge/src/application/teams/team-capacity.postgres.test.ts": "85a7fd565b59e714bfa00241148207f964aa674788706f450ba49801a03a848c",
+    "apps/forge/src/components/billing-settings.test.tsx": "386e18f9fd8e8171f5959259229385529e840863ddc619cf557e8d8f25c9b2e3",
+    "apps/forge/src/components/billing-settings.tsx": "2dceab531adede689451be597c94f369f255be3f1c87fa30528e13346028d89c",
+    "apps/forge/src/db/schema-migrations.test.ts": "b00a42a0cc4a0cc8ca029115a522aa814f1351415adcf7b64aac886a7752db6d",
+    "apps/forge/src/db/schema.ts": "a59d80546f941988be8326dfce32e010e5e0d3f5ea5879dc3701960eff5a51a5",
+    "apps/forge/src/lib/billing-server.test.ts": "b7cae42cf2aea9c13c719dc0a96fe5dd9758867584fcbe79c1621620d5ac37d0",
+    "apps/forge/src/lib/billing-server.ts": "337eff8fa4f5a2b1178fbca2de4b7d15e3f7fb1d7ae2ecf2082e9c7a92dc551b",
+    "apps/forge/src/lib/billing-state.ts": "ffb458303908ec891ba9d14a1ff3ae67813140f6423713175be29e159ec84a4e",
+    "apps/forge/src/routes/settings.billing.tsx": "4bd0d802094a2407d0375f9a410cf14577b48bef2b2a462723c2db3477686edb",
+    "docs/forge-plan-matrix.md": "c15a70c161d506bca19c196f874968aae28a09010dabe9e4250bdeb936265f05",
+    "docs/operations/database-migrations.md": "90bee369edb8f988617b74a991ff45e37ee071782248a9c370fb049b30de492c",
+    "docs/plans/production-readiness-backlog-map.md": "27243c319dbe69ef4b8c4d23e662aa1c4e0b1d54510ea205087c61bd415dee08",
+    "docs/plans/production-readiness-linear-backlog.json": "e93a09983eb25eeefaf7e55b28c9caac91c43a774e195574461d303ec34a10a0",
+    "docs/workspace-trials.md": "8231f1e0757c51cefa05c05d142978da3b37634df2098e4cc5527986d9897064",
+    "output/production-readiness/billing-trial-plan-details-2026-10-29.png": "b7eaa295a48587921723471eb1e06245881036152a3a38cb7570fd76a2e1e19b",
+    "output/production-readiness/team-capacity-and-polar-sandbox-2026-10-29.json": "8b015bec3b4f982263e18d2e2759feece788aa8eeabeae8836b45ebe2a6ec7ae"
+  }
+}

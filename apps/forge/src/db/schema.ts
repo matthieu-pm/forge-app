@@ -3,6 +3,7 @@ import {
   bigint,
   boolean,
   check,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -197,6 +198,60 @@ export const workspaceTeamCapacity = pgTable(
   })
 )
 
+export const workspaceTrialRedemptions = pgTable(
+  "workspace_trial_redemptions",
+  {
+    workspaceId: text("workspace_id")
+      .primaryKey()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    id: uuid("id").defaultRandom().notNull(),
+    initialPlan: text("initial_plan").notNull(),
+    actorUserId: text("actor_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    startRequestId: uuid("start_request_id").notNull(),
+    startBodyHash: text("start_body_hash").notNull(),
+    startedAt: timestamp("started_at", {
+      withTimezone: true,
+      precision: 3,
+    }).notNull(),
+    expiresAt: timestamp("expires_at", {
+      withTimezone: true,
+      precision: 3,
+    }).notNull(),
+    allowanceUsdMicros: bigint("allowance_usd_micros", { mode: "number" })
+      .default(5_000_000)
+      .notNull(),
+  },
+  (t) => ({
+    idUnique: uniqueIndex("workspace_trial_redemption_id_unique").on(t.id),
+    bindingUnique: uniqueIndex("workspace_trial_redemption_binding_unique").on(
+      t.workspaceId,
+      t.id
+    ),
+    requestUnique: uniqueIndex("workspace_trial_redemption_request_unique").on(
+      t.startRequestId
+    ),
+    expiryIndex: index("workspace_trial_redemption_expiry_idx").on(t.expiresAt),
+    planCheck: check(
+      "workspace_trial_redemption_plan_check",
+      sql`${t.initialPlan} IN ('starter','plus')`
+    ),
+    windowCheck: check(
+      "workspace_trial_redemption_window_check",
+      sql`isfinite(${t.startedAt}) AND isfinite(${t.expiresAt}) AND ${t.expiresAt}=${t.startedAt}+interval '336 hours'`
+    ),
+    allowanceCheck: check(
+      "workspace_trial_redemption_allowance_check",
+      sql`${t.allowanceUsdMicros}=5000000`
+    ),
+    hashCheck: check(
+      "workspace_trial_redemption_hash_check",
+      sql`${t.startBodyHash} ~ '^[a-f0-9]{64}$'`
+    ),
+  })
+)
+
 export const workspaceEntitlements = pgTable(
   "workspace_entitlements",
   {
@@ -211,6 +266,7 @@ export const workspaceEntitlements = pgTable(
       .notNull(),
     source: text("source").default("internal").notNull(),
     sourceReference: text("source_reference"),
+    trialRedemptionId: uuid("trial_redemption_id"),
     providerEnvironment: text("provider_environment"),
     providerUpdatedAt: timestamp("provider_updated_at", { withTimezone: true }),
     providerStateHash: text("provider_state_hash"),
@@ -269,6 +325,14 @@ export const workspaceEntitlements = pgTable(
     )
       .on(table.providerEnvironment, table.sourceReference)
       .where(sql`${table.source} = 'polar'`),
+    trialBinding: foreignKey({
+      columns: [table.workspaceId, table.trialRedemptionId],
+      foreignColumns: [
+        workspaceTrialRedemptions.workspaceId,
+        workspaceTrialRedemptions.id,
+      ],
+      name: "workspace_entitlements_trial_binding_fk",
+    }).onDelete("cascade"),
     periodCheck: check(
       "workspace_entitlements_period_check",
       sql`(${table.currentPeriodStart} IS NULL AND ${table.currentPeriodEnd} IS NULL) OR (${table.currentPeriodStart} IS NOT NULL AND ${table.currentPeriodEnd} IS NOT NULL AND isfinite(${table.currentPeriodStart}) AND isfinite(${table.currentPeriodEnd}) AND ${table.currentPeriodStart} < ${table.currentPeriodEnd})`

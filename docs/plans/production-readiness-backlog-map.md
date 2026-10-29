@@ -267,3 +267,16 @@ Checks: **1,553 app + 4 workflow tests; 62 billing + 17 real-auth member cases; 
 **Actual sandbox evidence:** the user's token verified forgeapp; two private plan products hold four approved native EUR/USD exclusive-tax prices. The actual adapter created a fixed-three-seat Starter EUR checkout. Provider confirms EUR 30 + EUR 6 tax paid, one active Starter subscription, canonical paid reconciliation/replay and US$15 allowance arithmetic. Actual owned period-end cancellation/replay preserved the original paid-through boundary. Initial null modified_at and original due_amount semantics were fixed against the real API and captured in a sanitized regression fixture. Portal authority is rechecked before minting/disclosing a hosted session. The app fixture was ownership-checked/cleaned; provider financial records remain with period-end cancellation.
 
 **Current checks:** 1,570 app + 4 workflow; 23 team + 62 billing + 17 real-auth membership PostgreSQL cases; 3 migration ownership/fault cases; 37 isolated migrations; typecheck/scoped lint/format/diff/build. The browser returned to unavailable localhost:3000; actual webhook delivery and a successful in-app return flow are not claimed. Public billing, broader lifecycle/ledger/currency replacement and production release gates remain open. FOR-155 records no fresh Free pool at trial expiry; its starting-pool decision is pending. No new issues or dependency edges were added: 136 issues / 258 edges, acyclic. See `docs/workspace-team-capacity.md`, `docs/polar-sandbox-verification.md` and the current checkpoint JSON.
+
+## Trial implementation checkpoint · 29 October 2026
+
+FOR-155 now has immutable never-paid workspace redemption, fixed tier/14-day
+window, atomic shared entitlement/audit start, verified live owner/admin checks,
+worker-independent read/SQL expiry and safe cleanup. Billing reads actual workspace
+plan/member count and uses agreed prices; public start/checkout remain unavailable.
+The trial usage carryover contract is prepared; FOR-76 still owns its atomic ledger.
+The separate paid-to-Free consumption decision is pending. See
+`docs/workspace-trials.md` and
+`output/production-readiness/workspace-trials-2026-10-29.json`.
+No issue is marked Done solely for these prepared/isolated slices, and no new
+prerequisite edge was added. Existing production release gates remain in effect.

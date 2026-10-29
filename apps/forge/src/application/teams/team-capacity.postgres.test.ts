@@ -34,10 +34,7 @@ describe.skipIf(!connection)("atomic PostgreSQL team capacity", () => {
       branch: target.branchId,
     })
     const migration = await readFile(
-      new URL(
-        "../../../drizzle/0036_workspace_team_capacity.sql",
-        import.meta.url
-      ),
+      new URL("../../../drizzle/0037_workspace_trials.sql", import.meta.url),
       "utf8"
     )
     expect(

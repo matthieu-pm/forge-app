@@ -8,8 +8,9 @@ monthly. The user separately confirmed a 14-day Starter/Plus free trial with no
 payment details and manual upgrade: Forge manages the trial, and no automatic
 charge occurs at expiry. A trial receives one fixed US$5 workspace pool across its
 14-day window, including Calls/Signals usage. Eligibility is once per workspace,
-shared across Starter/Plus and all admins. Durable redemption and anti-abuse
-enforcement still require implementation before launch.
+shared across Starter/Plus and all admins. Only never-paid workspaces are eligible. Keep the initially selected tier fixed.
+Durable redemption/access expiry are implemented on isolated staging; atomic
+usage enforcement and public start remain gated before launch.
 
 This is the commercial feature allocation to implement. A checkmark does not
 establish that Forge has shipped or verified that capability. Existing release
@@ -209,4 +210,4 @@ Original-anniversary confirmation · 29 October 2026: checkout paid within the f
 Tax confirmation · 29 October 2026: listed Starter/Plus prices exclude tax; add applicable tax at checkout. The prepared adapter now verifies the approved monthly seat catalog uses explicit exclusive tax behavior before creating checkout, and rechecks live context after catalog reads. The sandbox catalog is now configured with native EUR/USD exclusive-tax prices; production settings remain unchanged.
 
 
-Trial expiry carryover confirmed · 29 October 2026: returning to Free after the trial does not grant a fresh US$5 pool. Carry consumed trial usage into Free allowance enforcement while retaining original usage/payer/period history. Whether starting the trial deducts prior Free usage or receives its fresh fixed US$5 trial pool remains a pending decision in FOR-155.
+Trial expiry carryover confirmed · 29 October 2026: returning to Free after the trial does not grant a fresh US$5 pool. Carry consumed trial usage into Free allowance enforcement while retaining original usage/payer/period history. Starting the trial receives a fresh fixed US$5 pool, independent of prior Free usage. The selected tier stays fixed and only workspaces that have never paid are eligible. Durable redemption/read-time expiry are verified on isolated staging; actual usage carryover and public start remain gated in FOR-155/FOR-76. See `docs/workspace-trials.md`.

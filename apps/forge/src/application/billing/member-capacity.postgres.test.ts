@@ -246,6 +246,10 @@ describe.skipIf(!testUrl)(
         new URL("../../../drizzle/0033_unsupported_pause.sql", import.meta.url),
         "utf8"
       )
+      const trialMigration = await readFile(
+        new URL("../../../drizzle/0037_workspace_trials.sql", import.meta.url),
+        "utf8"
+      )
       if (installed) {
         // Reuse only an empty, explicitly selected test branch with exactly the
         // checked-in trigger bodies. Do not drop/reset any database objects.
@@ -258,13 +262,14 @@ describe.skipIf(!testUrl)(
           refundMigration +
           terminationMigration +
           upgradeRefundMigration +
-          unsupportedPauseMigration
+          unsupportedPauseMigration +
+          trialMigration
         ).matchAll(
           /CREATE (?:OR REPLACE )?FUNCTION public\.(\w+)[\s\S]*?AS \$\$([\s\S]*?)\$\$;/g
         ))
           latestDefinitions.set(match[1], match)
         const definitions = [...latestDefinitions.values()]
-        expect(definitions).toHaveLength(2)
+        expect(definitions).toHaveLength(6)
         const actual = await pool.query<{ proname: string; prosrc: string }>(
           `SELECT p.proname,p.prosrc FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname=ANY($1::text[])`,
           [definitions.map((match) => match[1])]

@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 
-const basicPlanFeatures = [
+const starterPlanFeatures = [
   "5 teams",
   "Unlimited file upload size",
   "Unlimited issues",
@@ -63,14 +63,25 @@ function BillingCard({
   )
 }
 
-export function BillingSettings() {
+export type BillingSnapshot = {
+  plan: "free" | "basic" | "business" | "enterprise"
+  phase: "free" | "trial" | "paid" | "grace"
+  activeMembers: number
+  trialExpiresAt: string | null
+}
+
+export function BillingSettings({ snapshot }: { snapshot?: BillingSnapshot }) {
+  const planLabel = snapshot
+    ? {
+        free: "Free",
+        basic: "Starter",
+        business: "Plus",
+        enterprise: "Enterprise",
+      }[snapshot.plan]
+    : null
+
   const [plansOpen, setPlansOpen] = React.useState(false)
   const [creditsOpen, setCreditsOpen] = React.useState(false)
-
-  function requestUpgrade() {
-    setPlansOpen(false)
-    toast.success("Your Basic plan upgrade request is ready for checkout.")
-  }
 
   return (
     <>
@@ -114,22 +125,38 @@ export function BillingSettings() {
                 <div className="flex min-h-16 items-center justify-between gap-5 px-4 py-2.5">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium">Free plan</p>
+                      <p className="text-sm font-medium">
+                        {planLabel ? `${planLabel} plan` : "Plan unavailable"}
+                      </p>
                       <Badge
                         variant="secondary"
                         className="h-4 rounded-md px-1.5 text-[10px] leading-none"
                       >
-                        Current
+                        {snapshot?.phase === "trial"
+                          ? "Trial"
+                          : snapshot
+                            ? "Current"
+                            : "Unavailable"}
                       </Badge>
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Free for all users
+                      {snapshot?.phase === "trial" && snapshot.trialExpiresAt
+                        ? `Trial ends ${snapshot.trialExpiresAt.replace("T", " ").replace(".000Z", " UTC")}. Upgrade manually to keep paid features.`
+                        : snapshot?.phase === "grace"
+                          ? "Payment requires attention. Paid access is in its grace period."
+                          : snapshot?.plan === "free"
+                            ? "Up to 5 members; US$5 shared monthly AI allowance."
+                            : snapshot
+                              ? "Workspace subscription"
+                              : "Your current billing details could not be loaded."}
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-5">
                     <div className="text-right">
                       <p className="text-[10px] text-muted-foreground">Users</p>
-                      <p className="text-xs font-medium">1</p>
+                      <p className="text-xs font-medium">
+                        {snapshot?.activeMembers ?? "—"}
+                      </p>
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger
@@ -146,7 +173,11 @@ export function BillingSettings() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="min-w-48">
                         <DropdownMenuGroup>
-                          <DropdownMenuLabel>Free plan</DropdownMenuLabel>
+                          <DropdownMenuLabel>
+                            {planLabel
+                              ? `${planLabel} plan`
+                              : "Plan unavailable"}
+                          </DropdownMenuLabel>
                           <DropdownMenuItem
                             onClick={() =>
                               window.setTimeout(() => setPlansOpen(true), 0)
@@ -192,11 +223,9 @@ export function BillingSettings() {
                 <div className="px-4 py-2.5">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-medium">
-                        Upgrade to Basic plan
-                      </p>
+                      <p className="text-sm font-medium">Starter plan</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
-                        $12 per user/mo
+                        €10 / $10 per member/month, before tax
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -221,7 +250,7 @@ export function BillingSettings() {
                   </div>
 
                   <div className="mt-2.5 grid gap-x-7 gap-y-1 border-t border-border/60 pt-2.5 sm:grid-cols-3">
-                    {basicPlanFeatures.map((feature) => (
+                    {starterPlanFeatures.map((feature) => (
                       <div
                         key={feature}
                         className="flex min-w-0 items-center gap-1.5 text-[11px] leading-4 text-muted-foreground"
@@ -251,7 +280,7 @@ export function BillingSettings() {
                         AI usage and credits
                       </p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
-                        $0.00 remaining
+                        Balance unavailable
                       </p>
                     </div>
                     <HugeiconsIcon
@@ -268,7 +297,7 @@ export function BillingSettings() {
               <h2 className="px-3 text-sm font-semibold">Recent invoices</h2>
               <BillingCard>
                 <div className="flex min-h-14 items-center px-4 py-2.5 text-xs text-muted-foreground">
-                  No invoices yet
+                  Invoice history is not available yet.
                 </div>
               </BillingCard>
             </section>
@@ -279,14 +308,15 @@ export function BillingSettings() {
       <Dialog open={plansOpen} onOpenChange={setPlansOpen}>
         <DialogContent className="gap-5 sm:max-w-[460px]">
           <DialogHeader>
-            <DialogTitle>Upgrade to Basic</DialogTitle>
+            <DialogTitle>Forge plans</DialogTitle>
             <DialogDescription>
-              Unlock more teams, unlimited uploads, admin controls, and coding
-              sessions for $12 per user each month.
+              Starter: €10 / $10 per active member/month. Plus: €16 / $16.
+              Enterprise: custom pricing. Prices exclude applicable tax.
+              Currency follows your billing country.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 rounded-2xl border border-border/70 bg-muted/25 p-4">
-            {basicPlanFeatures.slice(0, 6).map((feature) => (
+            {starterPlanFeatures.slice(0, 6).map((feature) => (
               <div
                 key={feature}
                 className="flex items-center gap-2 text-sm text-foreground"
@@ -300,6 +330,11 @@ export function BillingSettings() {
               </div>
             ))}
           </div>
+          <p className="text-xs text-muted-foreground">
+            Eligible workspaces that have never paid can try Starter or Plus
+            once for 14 days, with a fresh US$5 shared AI pool and no payment
+            details. Trials are not available yet.
+          </p>
           <DialogFooter>
             <DialogClose render={<Button variant="outline" />}>
               Not now
@@ -307,9 +342,9 @@ export function BillingSettings() {
             <Button
               type="button"
               className="bg-[#5e6ad2] text-white hover:bg-[#6b75d8]"
-              onClick={requestUpgrade}
+              disabled
             >
-              Continue to checkout
+              Checkout not available yet
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -328,9 +363,9 @@ export function BillingSettings() {
               <HugeiconsIcon icon={Invoice03Icon} strokeWidth={2} />
             </span>
             <div>
-              <p className="text-sm font-medium">$0.00 remaining</p>
+              <p className="text-sm font-medium">Balance unavailable</p>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                No AI credits have been added to this workspace.
+                Usage balances are not available yet. No balance is assumed.
               </p>
             </div>
           </div>

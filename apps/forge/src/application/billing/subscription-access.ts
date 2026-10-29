@@ -1,3 +1,4 @@
+import { STANDARD_PLAN_TRIAL_DAYS } from "./billing-plan-contract"
 import type { WorkspacePlan } from "@/application/workspace-security/security-contract"
 
 export const PAYMENT_GRACE_MS = 7 * 24 * 60 * 60 * 1000
@@ -6,6 +7,7 @@ export type SubscriptionAccessState = {
   plan: string
   status: string
   sourceReference?: string | null
+  trialRedemptionId?: string | null
   providerEnvironment?: string | null
   refundedPeriods?: Array<{
     orderId: string
@@ -72,6 +74,25 @@ export function subscriptionAccess(
   }
   const plan = securityPlan(state.plan)
   if (plan === "free") return free
+  if (state.source === "forge-trial") {
+    const start = validTime(state.currentPeriodStart),
+      end = validTime(state.currentPeriodEnd)
+    if (
+      state.status !== "trialing" ||
+      !state.trialRedemptionId ||
+      state.sourceReference !== state.trialRedemptionId ||
+      state.providerEnvironment != null ||
+      state.paidActivatedAt != null ||
+      state.cancelAtPeriodEnd ||
+      start === null ||
+      end === null ||
+      end - start !== STANDARD_PLAN_TRIAL_DAYS * 86400000 ||
+      at < start ||
+      at >= end
+    )
+      return free
+    return { plan, phase: "trial" as const, allowsExistingOverage: false }
+  }
   if (isRefundedSubscriptionPeriod(state)) return free
   const cancellationEnd = validTime(state.cancellationPeriodEnd)
   if (
