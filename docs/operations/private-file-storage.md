@@ -116,9 +116,11 @@ All prior journal hashes must remain an exact prefix of the release chain.
 
 FOR-34's production-data rehearsal target is a separate branch copied from the
 verified production branch before migration. It preserves the existing values
-while rehearsing the same checked-in migration chain. The retained branch also
-preserves the pre-release database state; this does not replace FOR-38 recovery
-acceptance or authorize discarding later production writes.
+while rehearsing the same checked-in migration chain. The parent LSN and rehearsal results are recorded as release evidence. The
+rehearsal branch is migrated too; it is not an untouched pre-release schema backup.
+Back out application routing to the previous deployment against the compatible
+expanded schema. This does not replace FOR-38 recovery acceptance or authorize
+discarding later production writes.
 
 The optional `/api/internal/storage` POST probe uses the same expiring,
 SHA-256-checked operator authorization as `/api/internal/environment`. It is
