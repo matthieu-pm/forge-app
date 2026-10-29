@@ -25,6 +25,7 @@
     "preview": "vite preview",
     "test": "vitest run && bun run test:workflow",
     "test:workflow": "vitest run --config vitest.workflow.config.ts",
+    "test:commands:postgres": "vitest run src/application/commands/commands.postgres.test.ts",
     "test:member-capacity:postgres": "bun scripts/test-member-capacity-postgres.mjs",
     "agent:retention": "bun scripts/sweep-agent-retention.ts",
     "product:retention": "bun scripts/sweep-product-retention.ts",

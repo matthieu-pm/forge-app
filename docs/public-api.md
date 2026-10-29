@@ -59,3 +59,13 @@ Additive fields and endpoints may be introduced within `v1`. Removing fields,
 changing meanings, or making optional input required needs a new major URL
 version. The generated contract is available at `/api/openapi.json`, and the
 interactive reference is available at `/api/docs`.
+
+
+Team creation now commits the team, creator membership, command receipt,
+audit/activity and `teams.created.v1` outbox intent atomically. Identical retries
+return the saved response after current authorization; changed input returns
+`IDEMPOTENCY_KEY_REUSED`. Ambiguous legacy receipts return
+`IDEMPOTENCY_RECONCILIATION_REQUIRED`, including after their old expiry. Redacted
+results return `IDEMPOTENCY_RESULT_UNAVAILABLE`. Neither condition permits a second
+effect. See [atomic commands](operations/atomic-commands.md) for migration, legacy
+reconciliation and the exact adapter boundary.

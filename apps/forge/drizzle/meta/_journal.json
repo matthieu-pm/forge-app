@@ -302,6 +302,13 @@
       "when": 1793310523394,
       "tag": "0042_issue_graph_guard_lifecycle",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1793311186490,
+      "tag": "0043_aromatic_jigsaw",
+      "breakpoints": true
     }
   ]
 }

@@ -1,145 +1,103 @@
+import { createHash } from "node:crypto"
 import { beforeEach, describe, expect, it, vi } from "vitest"
-
+import { executeIdempotent } from "./idempotency.server"
+import type * as CommandModule from "@/application/commands/execute-command.server"
 import type { Actor } from "@/application/actor"
-import {
-  IdempotencyConflictError,
-  executeIdempotent,
-} from "@/api/v1/idempotency.server"
+import type { Transaction } from "@/db"
+import { CommandConflictError } from "@/application/commands/execute-command.server"
 
-const mocks = vi.hoisted(() => ({
-  deleteWhere: vi.fn(),
-  insertValues: vi.fn(),
-  reservationReturning: vi.fn(),
-  selectLimit: vi.fn(),
-  updateSet: vi.fn(),
-  updateWhere: vi.fn(),
-}))
-
-vi.mock("@/db", () => ({
-  apiIdempotencyKeys: {
-    id: "id",
-    workspaceId: "workspaceId",
-    credentialId: "credentialId",
-    operationId: "operationId",
-    idempotencyKey: "idempotencyKey",
-    requestHash: "requestHash",
-    expiresAt: "expiresAt",
-  },
-  db: {
-    delete: () => ({ where: mocks.deleteWhere }),
-    insert: () => ({
-      values: (values: unknown) => {
-        mocks.insertValues(values)
-        return {
-          onConflictDoNothing: () => ({
-            returning: mocks.reservationReturning,
-          }),
-        }
-      },
-    }),
-    select: () => ({
-      from: () => ({ where: () => ({ limit: mocks.selectLimit }) }),
-    }),
-    update: () => ({
-      set: (values: unknown) => {
-        mocks.updateSet(values)
-        return { where: mocks.updateWhere }
-      },
-    }),
-  },
-}))
-
-vi.mock("drizzle-orm", () => ({
-  and: vi.fn((...conditions: Array<unknown>) => conditions),
-  eq: vi.fn((column: unknown, value: unknown) => ({ column, value })),
-  lt: vi.fn((column: unknown, value: unknown) => ({ column, value })),
-}))
-
+const mocks = vi.hoisted(() => ({ execute: vi.fn(), rows: vi.fn() }))
+vi.mock(
+  "@/application/commands/execute-command.server",
+  async (importOriginal) => {
+    const actual = await importOriginal<typeof CommandModule>()
+    return { ...actual, executeCommand: mocks.execute }
+  }
+)
+vi.mock("@/db", async () => ({ ...(await import("@/db/schema")), db: {} }))
 const actor: Actor = {
-  userId: "user-1",
-  workspaceId: "workspace-1",
+  userId: "u",
+  workspaceId: "w",
   workspaceRole: "owner",
-  authentication: { kind: "apiKey", credentialId: "key-1" },
+  authentication: { kind: "apiKey", credentialId: "key" },
   scopes: ["teams:read", "teams:write"],
 }
-
-describe("public API idempotency", () => {
-  beforeEach(() => {
-    mocks.deleteWhere.mockResolvedValue(undefined)
-    mocks.reservationReturning.mockResolvedValue([{ id: "reservation-1" }])
-    mocks.updateWhere.mockResolvedValue(undefined)
-  })
-
-  it("reserves, executes, and stores a successful response", async () => {
-    const run = vi.fn().mockResolvedValue({ id: "team-1" })
-
-    await expect(
-      executeIdempotent({
+const input = { name: "Platform" }
+const options = {
+  actor,
+  idempotencyKey: "create-1",
+  operationId: "createTeam",
+  input,
+  status: 201,
+  parse: (v: unknown) => v,
+  authorize: vi.fn(),
+  run: vi.fn(),
+}
+const tx = {
+  select: () => ({ from: () => ({ where: () => ({ for: mocks.rows }) }) }),
+} as unknown as Transaction
+beforeEach(() => {
+  mocks.execute.mockImplementation((o) => o.legacy(tx))
+  mocks.rows.mockResolvedValue([])
+})
+describe("API command adapter", () => {
+  it("delegates the complete transaction contract", async () => {
+    await executeIdempotent(options)
+    expect(mocks.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
         actor,
-        idempotencyKey: "import-1",
-        input: { name: "Platform" },
-        operationId: "createTeam",
-        status: 201,
-        parse: (value) => value as { id: string },
-        run,
+        commandKey: "create-1",
+        operation: "createTeam",
+        authorize: options.authorize,
+        run: options.run,
       })
-    ).resolves.toEqual({ replayed: false, value: { id: "team-1" } })
-
-    expect(run).toHaveBeenCalledOnce()
-    expect(mocks.updateSet).toHaveBeenCalledWith({
-      responseStatus: 201,
-      responseBody: '{"id":"team-1"}',
-    })
-  })
-
-  it("replays the stored response without rerunning the operation", async () => {
-    let capturedHash = ""
-    mocks.reservationReturning.mockImplementationOnce(() => {
-      capturedHash = (
-        mocks.insertValues.mock.calls.at(-1)?.[0] as { requestHash: string }
-      ).requestHash
-      return Promise.resolve([])
-    })
-    mocks.selectLimit.mockImplementation(() =>
-      Promise.resolve([
-        {
-          requestHash: capturedHash,
-          responseBody: '{"id":"team-1"}',
-        },
-      ])
     )
-    const run = vi.fn()
-
-    await expect(
-      executeIdempotent({
-        actor,
-        idempotencyKey: "import-1",
-        input: { name: "Platform" },
-        operationId: "createTeam",
-        status: 201,
-        parse: (value) => value as { id: string },
-        run,
-      })
-    ).resolves.toEqual({ replayed: true, value: { id: "team-1" } })
-    expect(run).not.toHaveBeenCalled()
   })
-
-  it("rejects reuse with another payload", async () => {
-    mocks.reservationReturning.mockResolvedValue([])
-    mocks.selectLimit.mockResolvedValue([
-      { requestHash: "another-hash", responseBody: '{"id":"team-1"}' },
+  it("preserves the original legacy hash and response", async () => {
+    mocks.rows.mockResolvedValue([
+      {
+        requestHash: createHash("sha256")
+          .update(JSON.stringify(input))
+          .digest("hex"),
+        responseBody: '{"id":"original"}',
+        responseStatus: 201,
+      },
     ])
-
+    await expect(executeIdempotent(options)).resolves.toEqual({
+      value: { id: "original" },
+    })
+  })
+  it("rejects ambiguous legacy outcomes regardless of expiry", async () => {
+    mocks.rows.mockResolvedValue([
+      {
+        requestHash: createHash("sha256")
+          .update(JSON.stringify(input))
+          .digest("hex"),
+        responseBody: null,
+        responseStatus: null,
+        expiresAt: new Date(0),
+      },
+    ])
+    await expect(executeIdempotent(options)).rejects.toMatchObject({
+      reason: "ambiguous",
+    })
+  })
+  it("rejects legacy key reuse", async () => {
+    mocks.rows.mockResolvedValue([{ requestHash: "different" }])
+    await expect(executeIdempotent(options)).rejects.toBeInstanceOf(
+      CommandConflictError
+    )
+  })
+  it("requires an API actor", async () => {
     await expect(
       executeIdempotent({
-        actor,
-        idempotencyKey: "import-1",
-        input: { name: "Different" },
-        operationId: "createTeam",
-        status: 201,
-        parse: (value) => value,
-        run: vi.fn(),
+        ...options,
+        actor: {
+          ...actor,
+          authentication: { kind: "session", sessionId: "s" },
+        },
       })
-    ).rejects.toBeInstanceOf(IdempotencyConflictError)
+    ).rejects.toThrow("API-key")
+    expect(mocks.execute).not.toHaveBeenCalled()
   })
 })

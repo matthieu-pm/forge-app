@@ -18,6 +18,7 @@ import type {
   WorkspaceSecuritySettings,
   WorkspaceSecuritySnapshot,
 } from "@/application/workspace-security/security-contract"
+import type { DatabaseExecutor } from "@/db"
 import { hasWorkspaceRole } from "@/application/authorization"
 import { subscriptionAccess } from "@/application/billing/subscription-access"
 import { readSubscriptionAccessState } from "@/application/billing/subscription-access-state.server"
@@ -103,13 +104,16 @@ function toSettings(row: SecurityRow): WorkspaceSecuritySettings {
   }
 }
 
-async function ensureSecurityRow(workspaceId: string) {
-  await db
+async function ensureSecurityRow(
+  workspaceId: string,
+  executor: DatabaseExecutor = db
+) {
+  await executor
     .insert(workspaceSecuritySettings)
     .values({ workspaceId })
     .onConflictDoNothing()
 
-  const row = await db.query.workspaceSecuritySettings.findFirst({
+  const row = await executor.query.workspaceSecuritySettings.findFirst({
     where: eq(workspaceSecuritySettings.workspaceId, workspaceId),
   })
   if (!row) throw new Error("Workspace security settings could not be loaded.")
@@ -599,8 +603,11 @@ export async function executeWorkspaceSecurityCommand(
   }
 }
 
-export async function getWorkspaceSecuritySettings(workspaceId: string) {
-  return toSettings(await ensureSecurityRow(workspaceId))
+export async function getWorkspaceSecuritySettings(
+  workspaceId: string,
+  executor: DatabaseExecutor = db
+) {
+  return toSettings(await ensureSecurityRow(workspaceId, executor))
 }
 
 export async function getWorkspaceApiKeyPolicy(actor: Actor) {
@@ -629,9 +636,13 @@ export async function assertWorkspaceActionAllowed(
 
 export async function canWorkspaceAction(
   actor: Actor,
-  action: WorkspaceSecurityAction
+  action: WorkspaceSecurityAction,
+  executor: DatabaseExecutor = db
 ) {
-  const settings = await getWorkspaceSecuritySettings(actor.workspaceId)
+  const settings = await getWorkspaceSecuritySettings(
+    actor.workspaceId,
+    executor
+  )
   return isWorkspaceActionAllowed(actor, settings, action)
 }
 
