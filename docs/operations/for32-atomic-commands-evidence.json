@@ -1,0 +1,108 @@
+{
+  "issue": "FOR-32",
+  "sourceRevision": "4020be80e746ea4471ecca932ac8bf0706f982d3",
+  "verifiedAt": "2026-10-29T22:16:00Z",
+  "environment": {
+    "environment": "staging",
+    "branchId": "br-autumn-union-za0opf1e",
+    "host": "ep-blue-shadow-zauhwkjz.c-2.eu-west-2.aws.neon.tech",
+    "database": "forge_staging",
+    "applicationRole": "forge_staging_web",
+    "journal": {
+      "exact": true,
+      "total": 44,
+      "expansionHash": "c4fb7178409c87f2c36b6a46a8c4ccd34bf6091d184605c93027a115b774e356"
+    },
+    "cleanup": {
+      "workspaces": 0,
+      "users": 0,
+      "receipts": 0,
+      "audit": 0,
+      "outbox": 0
+    }
+  },
+  "migration": {
+    "file": "apps/forge/drizzle/0043_aromatic_jigsaw.sql",
+    "sha256": "c4fb7178409c87f2c36b6a46a8c4ccd34bf6091d184605c93027a115b774e356",
+    "rehearsal": "Applied expansion in explicit transaction, rolled back, verified command_receipts absent.",
+    "serializedApply": {
+      "applied": 1,
+      "total": 44
+    },
+    "exactRetry": {
+      "applied": 0,
+      "total": 44
+    }
+  },
+  "acceptance": {
+    "AC-01 / AT-01": {
+      "status": "passed",
+      "evidence": [
+        "One team and creator membership, one receipt, one audit/history and one outbox event on retry.",
+        "Original result returned after ordinary replay and real child-process response loss after COMMIT."
+      ]
+    },
+    "AC-02 / AT-02": {
+      "status": "passed",
+      "evidence": [
+        "Changed input returns typed key reuse conflict without additional writes.",
+        "Agent capability changed-input replay returns IDEMPOTENCY_KEY_CONFLICT."
+      ]
+    },
+    "AC-03 / AT-03": {
+      "status": "passed",
+      "evidence": [
+        "Faults before mutation, after mutation, during outbox encoding and at deferred COMMIT leave zero business/receipt/audit/outbox writes.",
+        "Two independent Bun processes using the actual staging application login compete with an observed PostgreSQL lock wait; waiter replays the owner result.",
+        "SIGKILL of the mutation owner rolls back its transaction and permits the waiting process to commit one effect.",
+        "Agent approval consumption, business update, receipt, audit and outbox roll back together after approval consumption and at COMMIT; retry consumes once."
+      ]
+    },
+    "AC-04 / AT-04": {
+      "status": "passed",
+      "evidence": [
+        "Live role/private-team membership, workspace membership, credential enabled/expiry/scopes, session and run state checked before replay.",
+        "Actual concurrent membership deletion waits for an in-flight authorized command, then subsequent replay is denied.",
+        "No business effect is repeated after revocation."
+      ]
+    }
+  },
+  "validation": {
+    "appTests": {
+      "passed": 1891,
+      "skipped": 205,
+      "filesPassed": 250,
+      "filesSkipped": 14
+    },
+    "workflowTests": {
+      "passed": 4
+    },
+    "realPostgres": {
+      "passed": 45,
+      "commands": 24,
+      "tenantIntegrityRegression": 21
+    },
+    "typecheck": "passed workspace app and runtime",
+    "productionBuild": "passed including protected Workflow verification",
+    "changedFileLint": {
+      "errors": 0,
+      "warnings": 7,
+      "notes": "Three pre-existing async fixture-store warnings, one pre-existing gateway-test async warning, and three defensive teardown/rejected callback warnings in the new PostgreSQL suite."
+    },
+    "schemaDrift": "drizzle-kit generate reports no schema changes",
+    "diffCheck": "passed"
+  },
+  "coverage": [
+    "Canonical input hashes with nested object key order and JSON validation.",
+    "Expired legacy API and agent receipts preserve identity and either return an authorized original success or require reconciliation.",
+    "Redacted result tombstones reject replay without repeating effects.",
+    "Database rejects incomplete command commits, rewritten identity/completed results and cross-workspace event links."
+  ],
+  "limits": [
+    "No production database migration, deployment or connection-pointer change.",
+    "Outbox delivery/recovery remains FOR-33.",
+    "Enabled keyed adapters: public API team creation and the registered SQL agent teams.update capability. HTTP PATCH/DELETE keep existing contracts; future keyed domain commands must adopt the shared executor.",
+    "Operator reconciliation is required for unprovable legacy outcomes; they are not automatically re-executed.",
+    "Production rollout requires quiescing legacy separate-step writers; rollback must retain expansion/evidence and disable affected writes."
+  ]
+}
