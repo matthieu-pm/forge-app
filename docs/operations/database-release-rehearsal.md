@@ -63,6 +63,36 @@ the same fencing (or revoke old database access). No generic SQL parser certifie
 arbitrary destructive migrations. This rehearsal accepts the platform protocol,
 not every future schema change or a production promotion.
 
+## Verified checkpoint · 29 October 2026
+
+Source `b6adf722ece4b414f8c7d162fc9a71315b5e1f5d` passed the hosted old →
+bridge → old rollback → new sequence on `forge_staging` /
+`br-autumn-union-za0opf1e`. Immutable builds were
+`dpl_A91rkZvRRoetWPuPy4u1xFbCFbUt` (old),
+`dpl_4GshP43WJ7TkM2kyz1CYyeh1tEUP` (bridge), and
+`dpl_BMn45mhMQpJPPBSDeaSs5cUdSiSp` (new). All were READY and returned the
+expected challenge, run, source revision, version and deployment identity.
+
+The hosted test injected an interrupted backfill, resumed from the committed
+cursor, checked late old writes, rolled the staging alias back to the old build,
+then retired old/bridge access and removed the real legacy column. New-only
+read/write passed after contraction; exact retry applied zero migrations.
+The two PostgreSQL regression cases additionally verify deterministic competing
+owners, in-flight readers and incomplete/changed backfill refusal. Ten focused
+cases passed, including those two real PostgreSQL cases. The full app checkpoint
+passed 1,781 tests; Workflow (4), typechecking, lint on changed files and local/cloud
+builds passed. Final focused unit rerun (8) also passed.
+
+Both staging aliases were restored to `dpl_7J4wUbZbeJC2HRcSNK3um2DJMPEG`.
+Both owned schemas were removed after sentinel preservation; the product journal
+retained the same 39 receipts. Final application counts were zero workspaces,
+users and sessions. The exact automation bypass was revoked, project probe
+variables were absent, and anonymous/revoked-bypass requests both redirected to
+Vercel SSO (302). Local raw tokens and temporary database credentials were removed.
+No production source deployment, database mutation or connection-pointer change
+was performed. Sanitized evidence:
+[for28-database-release-evidence.json](for28-database-release-evidence.json).
+
 ## Run locally against isolated staging
 
 Supply an explicitly selected direct `FORGE_FIXTURE_DATABASE_URL` privately from
@@ -105,8 +135,13 @@ production. Configure per-deployment variables, never project-wide defaults:
 `bun scripts/deploy-staging.ts web --rehearsal old|bridge|new` requires a clean
 committed snapshot and pins the staging project/team explicitly. It creates a
 production-slot deployment **inside the staging project**, with `--skip-domain`.
-The launcher pins JavaScript CLI 50.4.11: native CLI 65.7.0 ignored `--skip-domain`
-and custom metadata during verification, although runtime overrides arrived.
+The launcher pins JavaScript CLI 50.4.11 for reproducibility. During verification,
+the staging alias changed despite `--skip-domain` (with both native 65.7.0 and
+JavaScript 50.4.11); runtime overrides arrived but custom metadata was absent from
+the connector response. Treat neither flags nor upload success as routing evidence.
+Explicitly promote the desired staging build and wait for the alias API **and an
+actual challenge response** to name it before starting the next phase. Promotion
+acknowledgement is asynchronous; overlapping requests can return 409.
 The selected version is immutable deployment configuration; all three adapters
 belong to the same reviewed source revision. Record all deployment IDs and version
 metadata. Promote/roll back only this staging project's stable alias to perform

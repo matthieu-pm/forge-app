@@ -71,8 +71,8 @@ try {
   const result = spawnSync(
     "bunx",
     [
-      // Native CLI 65.7.0 ignored --skip-domain and custom metadata in the
-      // isolated rehearsal. Pin the JS CLI that preserves these release gates.
+      // Keep the uploader reproducible. Neither a successful upload nor
+      // --skip-domain is evidence of current routing; verify the actual alias.
       "--package",
       "vercel@50.4.11",
       "vercel",

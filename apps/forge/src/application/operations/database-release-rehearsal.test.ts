@@ -34,20 +34,22 @@ describe("database release rehearsal boundaries", () => {
   })
   it("refuses changed backfill source and rolls back the chunk", async () => {
     const client = {
-      query: vi.fn(async (sql: string) => ({
-        rows: sql.startsWith("SELECT current_database")
-          ? [
-              {
-                database: STAGING.database.database,
-                branch: STAGING.database.branchId,
-              },
-            ]
-          : sql.includes(" AS acquired")
-            ? [{ acquired: true }]
-            : sql.includes("FOR UPDATE")
-              ? [{ source_hash: "changed" }]
-              : [],
-      })),
+      query: vi.fn((sql: string) =>
+        Promise.resolve({
+          rows: sql.startsWith("SELECT current_database")
+            ? [
+                {
+                  database: STAGING.database.database,
+                  branch: STAGING.database.branchId,
+                },
+              ]
+            : sql.includes(" AS acquired")
+              ? [{ acquired: true }]
+              : sql.includes("FOR UPDATE")
+                ? [{ source_hash: "changed" }]
+                : [],
+        })
+      ),
     }
     await expect(backfillRehearsalChunk(client, randomUUID())).rejects.toThrow(
       "source changed"
