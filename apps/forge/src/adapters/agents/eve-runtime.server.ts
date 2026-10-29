@@ -2,6 +2,7 @@ import "@tanstack/react-start/server-only"
 
 import { SignJWT } from "jose"
 import { z } from "zod"
+import { fetchWithStagingIdentity } from "../../../../../packages/environment/staging-service-auth"
 
 import type { Actor } from "@/application/actor"
 import type {
@@ -60,14 +61,13 @@ export class EveAgentRuntime implements AgentRuntime {
   >()
 
   constructor(private readonly options: EveRuntimeOptions) {
-    this.fetcher = options.fetcher ?? fetch
+    this.fetcher = (input, init) =>
+      fetchWithStagingIdentity(input, init, options.fetcher ?? fetch)
   }
 
   private async createChannelToken(
     input:
-      | StartRuntimeRunInput
-      | ResumeRuntimeRunInput
-      | ReconnectRuntimeRunInput
+      StartRuntimeRunInput | ResumeRuntimeRunInput | ReconnectRuntimeRunInput
   ) {
     const actor: Actor = {
       userId: input.identity.userId,
@@ -244,9 +244,7 @@ export class EveAgentRuntime implements AgentRuntime {
 
   private async *stream(
     input:
-      | StartRuntimeRunInput
-      | ResumeRuntimeRunInput
-      | ReconnectRuntimeRunInput,
+      StartRuntimeRunInput | ResumeRuntimeRunInput | ReconnectRuntimeRunInput,
     cursor: RuntimeCursor,
     channelToken: string
   ): AsyncIterable<RuntimeEvent> {

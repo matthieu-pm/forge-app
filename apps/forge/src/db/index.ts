@@ -1,7 +1,10 @@
 import { Pool, neonConfig } from "@neondatabase/serverless"
 import { drizzle } from "drizzle-orm/neon-serverless"
+import { assertStagingEnvironment } from "../../../../packages/environment/staging-environment"
 import * as appSchema from "./schema"
 import * as authSchema from "./auth-schema"
+
+assertStagingEnvironment(process.env, "web")
 
 const databaseUrl = process.env.DATABASE_URL
 

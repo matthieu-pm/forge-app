@@ -1,0 +1,8 @@
+{
+  "name": "@forge/environment",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@vercel/oidc": "^4.0.4"
+  }
+}

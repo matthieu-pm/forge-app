@@ -1,9 +1,11 @@
 // @vitest-environment node
 import { randomUUID } from "node:crypto"
-import { readFile } from "node:fs/promises"
 import { Pool, neonConfig } from "@neondatabase/serverless"
-import { parse } from "dotenv"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
+import {
+  assertIsolatedTestConnection,
+  verifyIsolatedTestIdentity,
+} from "../../../scripts/lib/isolated-test-database"
 import type { Actor } from "@/application/actor"
 import type * as TeamsModule from "./teams.server"
 import type * as MembersModule from "./team-members.server"
@@ -36,43 +38,10 @@ describe.skipIf(!testUrl)("PostgreSQL private-team read boundaries", () => {
   }
 
   beforeAll(async () => {
-    const url = new URL(testUrl!)
-    expect(url.hostname).toBe(process.env.FORGE_TEST_DATABASE_HOST)
-    expect(url.hostname).not.toContain("-pooler")
-    const configured = [
-      process.env.DATABASE_URL,
-      process.env.DATABASE_URL_UNPOOLED,
-    ]
-    for (const name of [".env", ".env.local"]) {
-      try {
-        const values = parse(
-          await readFile(new URL(`../../../../../${name}`, import.meta.url))
-        )
-        configured.push(values.DATABASE_URL, values.DATABASE_URL_UNPOOLED)
-      } catch (error) {
-        if (!(
-          error &&
-          typeof error === "object" &&
-          "code" in error &&
-          error.code === "ENOENT"
-        ))
-          throw error
-      }
-    }
-    for (const value of configured) {
-      if (value)
-        expect(url.hostname).not.toBe(
-          new URL(value).hostname.replace("-pooler.", ".")
-        )
-    }
-    const branch = process.env.FORGE_TEST_NEON_BRANCH_ID
-    expect(branch).toMatch(/^br-/)
+    const target = assertIsolatedTestConnection(testUrl!)
     neonConfig.webSocketConstructor = WebSocket
     pool = new Pool({ connectionString: testUrl })
-    const identity = await pool.query(
-      "SELECT current_setting('neon.branch_id',true) AS branch"
-    )
-    expect(identity.rows[0].branch).toBe(branch)
+    await verifyIsolatedTestIdentity(pool, target)
     identityVerified = true
 
     vi.stubEnv("DATABASE_URL", testUrl)
@@ -85,6 +54,12 @@ describe.skipIf(!testUrl)("PostgreSQL private-team read boundaries", () => {
         [id]
       )
     }
+    // The visibility matrix needs four teams; use paid capacity on these synthetic workspaces.
+    for (const id of [workspaceId, foreignWorkspaceId])
+      await pool.query(
+        "INSERT INTO public.workspace_entitlements(workspace_id,plan,status) VALUES($1,'basic','active')",
+        [id]
+      )
     for (const id of userIds) {
       await pool.query(
         'INSERT INTO public."user"(id,name,email,email_verified) VALUES($1,$1,$2,true)',

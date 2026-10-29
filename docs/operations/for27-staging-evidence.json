@@ -1,0 +1,37 @@
+{
+  "issue": "FOR-27",
+  "status": "hosted-verification-pending",
+  "date": "2026-10-29",
+  "productionDatabaseMutated": false,
+  "productionDeploymentChanged": false,
+  "isolatedDatabase": {
+    "branchId": "br-autumn-union-za0opf1e",
+    "database": "forge_staging",
+    "appRole": "forge_staging_web"
+  },
+  "privateBlobStore": {
+    "id": "store_HCogFKvO1n2cbJw7",
+    "access": "private",
+    "region": "lhr1",
+    "roundtripAndAnonymousDenial": "passed"
+  },
+  "fixtureLifecycle": {
+    "stagingAdminRole": "passed",
+    "restrictedWebRole": "passed",
+    "sentinelPreserved": true,
+    "ownershipConflictRollback": true,
+    "idempotentSeedAndCleanup": true
+  },
+  "trustedSources": {
+    "method": "dashboard",
+    "userApproved": true,
+    "rules": [
+      "forge-staging production -> forge-staging-runtime production",
+      "forge-staging-runtime production -> forge-staging production"
+    ],
+    "productionProjectsIncluded": false
+  },
+  "remaining": [
+    "Separate OAuth/provider sandbox clients and enabled provider flows"
+  ]
+}

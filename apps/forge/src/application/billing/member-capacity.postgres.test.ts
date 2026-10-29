@@ -3,9 +3,12 @@ import { randomUUID } from "node:crypto"
 import { readFile } from "node:fs/promises"
 import { Pool, neonConfig } from "@neondatabase/serverless"
 import { hashPassword } from "better-auth/crypto"
-import { parse } from "dotenv"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
+import {
+  assertIsolatedTestConnection,
+  verifyIsolatedTestIdentity,
+} from "../../../scripts/lib/isolated-test-database"
 import type * as AuthModule from "@/lib/auth"
 import type * as JoinModule from "@/application/workspace-security/workspace-join.server"
 import type * as TokenModule from "@/application/workspace-security/invite-link-token.server"
@@ -13,7 +16,6 @@ import type * as DatabaseModule from "@/db"
 
 // Explicit opt-in only. Use a fresh schema-only Neon branch, never the app URL.
 const testUrl = process.env.FORGE_TEST_DATABASE_URL
-const branchId = process.env.FORGE_TEST_NEON_BRANCH_ID
 
 describe.skipIf(!testUrl)(
   "atomic PostgreSQL workspace membership capacity",
@@ -138,43 +140,11 @@ describe.skipIf(!testUrl)(
     }
 
     beforeAll(async () => {
-      expect(branchId, "Explicit isolated branch ID is required.").toMatch(
-        /^br-/
-      )
-      const url = new URL(testUrl!)
-      expect(url.hostname).toBe(process.env.FORGE_TEST_DATABASE_HOST)
-      expect(url.hostname).not.toContain("-pooler")
-      // Reject the configured application host even if its database is empty.
-      // Read credentials only for comparison; never log or overwrite them.
-      const configuredUrls = [
-        process.env.DATABASE_URL,
-        process.env.DATABASE_URL_UNPOOLED,
-      ]
-      for (const name of [".env", ".env.local"]) {
-        try {
-          const values = parse(
-            await readFile(new URL(`../../../../../${name}`, import.meta.url))
-          )
-          configuredUrls.push(values.DATABASE_URL, values.DATABASE_URL_UNPOOLED)
-        } catch (error) {
-          if (!(
-            error &&
-            typeof error === "object" &&
-            "code" in error &&
-            error.code === "ENOENT"
-          ))
-            throw error
-        }
-      }
-      for (const configured of configuredUrls) {
-        if (configured)
-          expect(url.hostname).not.toBe(
-            new URL(configured).hostname.replace("-pooler.", ".")
-          )
-      }
+      const target = assertIsolatedTestConnection(testUrl!)
       neonConfig.webSocketConstructor = WebSocket
       pool = new Pool({ connectionString: testUrl, max: 8 })
       cleanup.pool = pool
+      await verifyIsolatedTestIdentity(pool, target)
       const result = await pool.query<{
         branch: string
         users: number
@@ -188,7 +158,7 @@ describe.skipIf(!testUrl)(
       )
       const installed = result.rows[0].existing !== null
       expect(result.rows[0]).toEqual({
-        branch: branchId,
+        branch: target.branchId,
         users: 0,
         workspaces: 0,
         existing: installed ? "workspace_member_capacity" : null,

@@ -1,16 +1,10 @@
 import { spawnSync } from "node:child_process"
 
-for (const key of [
-  "FORGE_TEST_DATABASE_URL",
-  "FORGE_TEST_DATABASE_HOST",
-  "FORGE_TEST_NEON_BRANCH_ID",
-]) {
-  if (!process.env[key]) {
-    console.error(
-      `${key} is required. Use a fresh, isolated schema-only Neon branch.`
-    )
-    process.exit(1)
-  }
+if (!process.env.FORGE_TEST_DATABASE_URL) {
+  console.error(
+    "FORGE_TEST_DATABASE_URL is required. Only the checked-in isolated staging database is accepted."
+  )
+  process.exit(1)
 }
 
 const result = spawnSync(

@@ -1,6 +1,8 @@
 import "@tanstack/react-start/server-only"
 
 import { sql } from "drizzle-orm"
+import { STAGING } from "../../../../../packages/environment/staging-environment"
+import { stagingServiceFetch } from "../../../../../packages/environment/staging-service-auth"
 
 import { db } from "@/db"
 
@@ -18,6 +20,22 @@ export async function readEnvironmentIdentity(challenge: string) {
              (SELECT hash FROM drizzle.__drizzle_migrations ORDER BY created_at DESC, id DESC LIMIT 1) AS migration_hash
     `)
   })
+  let stagingRuntime: unknown = null
+  if (process.env.FORGE_ENVIRONMENT === "staging") {
+    const response = await stagingServiceFetch(
+      new URL("/eve/v1/health", STAGING.runtimeOrigin),
+      { signal: AbortSignal.timeout(10_000) }
+    )
+    if (
+      !response.ok ||
+      !response.headers.get("content-type")?.includes("application/json")
+    )
+      throw new Error("Staging runtime health failed.")
+    const health = (await response.json()) as { ok?: boolean; status?: string }
+    if (health.ok !== true || health.status !== "ready")
+      throw new Error("Staging runtime is not ready.")
+    stagingRuntime = { origin: STAGING.runtimeOrigin, health }
+  }
   const databaseUrl = new URL(process.env.DATABASE_URL!)
   return {
     checkedAt: new Date().toISOString(),
@@ -27,16 +45,24 @@ export async function readEnvironmentIdentity(challenge: string) {
       region: process.env.VERCEL_REGION ?? null,
       environment: process.env.VERCEL_ENV ?? null,
       gitCommit: process.env.VERCEL_GIT_COMMIT_SHA ?? null,
+      sourceRevision: process.env.FORGE_SOURCE_REVISION ?? null,
     },
     database: { host: databaseUrl.hostname, ...result.rows[0] },
+    stagingRuntime,
     runtimeOrigin: process.env.EVE_AGENT_RUNTIME_URL
       ? new URL(process.env.EVE_AGENT_RUNTIME_URL).origin
       : null,
-    // The deployed forge-capabilities adapter constructs LocalArtifactBlobStore.
+    // Report the selected adapter without exposing its credentials.
     artifacts: {
-      adapter: "local-filesystem",
+      adapter:
+        process.env.FORGE_AGENT_BLOB_ADAPTER === "vercel-private"
+          ? "vercel-private"
+          : "local-filesystem",
       directoryConfigured: Boolean(process.env.FORGE_AGENT_ARTIFACT_DIRECTORY),
-      durableBucket: null,
+      durableBucket:
+        process.env.FORGE_AGENT_BLOB_ADAPTER === "vercel-private"
+          ? (process.env.BLOB_STORE_ID ?? null)
+          : null,
     },
   }
 }

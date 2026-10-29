@@ -1,8 +1,12 @@
+import { stagingServiceFetch } from "../../../packages/environment/staging-service-auth.js"
+import { assertStagingEnvironment } from "../../../packages/environment/staging-environment.js"
 import { createAnthropic } from "@ai-sdk/anthropic"
 import { createOpenAI } from "@ai-sdk/openai"
 import { defineAgent, defineDynamic } from "eve"
 import { mockModel } from "eve/evals"
 import { z } from "zod"
+
+assertStagingEnvironment(process.env, "runtime")
 
 function positiveInteger(value: string | undefined, fallback: number) {
   const parsed = Number(value)
@@ -88,6 +92,7 @@ function resolveRunModel(attributes: unknown) {
 
   const baseURL = new URL("/api/agent/runtime/model", forgeOrigin).toString()
   const provider = createOpenAI({
+    fetch: stagingServiceFetch,
     apiKey: "forge-run-bound-proxy",
     baseURL,
     headers: {
@@ -99,6 +104,7 @@ function resolveRunModel(attributes: unknown) {
     selection.data.provider === "custom-anthropic"
   ) {
     return createAnthropic({
+      fetch: stagingServiceFetch,
       apiKey: "forge-run-bound-proxy",
       baseURL,
       headers: {
