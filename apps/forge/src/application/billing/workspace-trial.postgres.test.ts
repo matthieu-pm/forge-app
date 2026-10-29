@@ -1,8 +1,8 @@
 // @vitest-environment node
-import { createHash, randomUUID } from "node:crypto"
-import { readFile } from "node:fs/promises"
+import { randomUUID } from "node:crypto"
 import { Pool, neonConfig } from "@neondatabase/serverless"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
+import { schemaIsReady } from "../operations/readiness-schema"
 import { DATABASE_TARGETS } from "../../../scripts/lib/database-targets"
 import { assertMigrationTarget } from "../../../scripts/lib/serialized-migrations"
 import { subscriptionAccess } from "./subscription-access"
@@ -84,20 +84,7 @@ describe.skipIf(!connection)("durable workspace trials in PostgreSQL", () => {
         )
       ).rows[0]
     ).toEqual({ database: target.database, branch: target.branchId })
-    const sql = await readFile(
-      new URL(
-        "../../../drizzle/0038_workspace_usage_ledger.sql",
-        import.meta.url
-      ),
-      "utf8"
-    )
-    expect(
-      (
-        await pool.query(
-          "SELECT hash FROM drizzle.__drizzle_migrations ORDER BY created_at DESC LIMIT 1"
-        )
-      ).rows[0].hash
-    ).toBe(createHash("sha256").update(sql).digest("hex"))
+    expect(await schemaIsReady(pool)).toBe(true)
     vi.stubEnv("DATABASE_URL", connection)
     database = await import("@/db")
     cleanup.database = database

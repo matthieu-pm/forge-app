@@ -2,6 +2,7 @@ import { Pool, neonConfig } from "@neondatabase/serverless"
 import { drizzle } from "drizzle-orm/neon-serverless"
 import { assertStagingEnvironment } from "../../../../packages/environment/staging-environment"
 import * as appSchema from "./schema"
+import * as planningSchema from "./planning-schema"
 import * as authSchema from "./auth-schema"
 
 assertStagingEnvironment(process.env, "web")
@@ -22,6 +23,7 @@ export const databaseClient = client
 
 export const schema = {
   ...appSchema,
+  ...planningSchema,
   ...authSchema,
 }
 
@@ -29,3 +31,5 @@ export const db = drizzle(client, { schema })
 
 export * from "./schema"
 export * from "./auth-schema"
+
+export * from "./planning-schema"
