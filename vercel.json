@@ -1,6 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "ci": {
+    "jobs": [],
     "bootstrapping": {
       "installCommand": "bun install --frozen-lockfile",
       "installEnv": {
