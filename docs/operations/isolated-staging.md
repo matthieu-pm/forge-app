@@ -190,3 +190,45 @@ rules remain intentionally configured.
 AC-01 and AC-02 are verified for the implemented database/fixture/hosting path.
 At this initial checkpoint, provider/OAuth isolation was pending. The provider
 continuation above supersedes the blanket disabled-integration configuration.
+
+
+## Provider continuation accepted
+
+Source `2f011dbaea8720f4357827e5e00153d2e4330957` is READY on web
+`dpl_7J4wUbZbeJC2HRcSNK3um2DJMPEG` and runtime
+`dpl_BHMZU5ax6gECBzBTQZDyYdJ5K6Ur`. The web model-connections and automatic
+managed-model flags are enabled for the registered OpenAI model; provider policy
+allows OpenAI, with run settings of 4,096 input tokens, 512 output tokens and
+60 seconds. These settings do not claim the atomic spend-admission release work.
+
+The actual hosted authenticated proxy returned a completed response containing
+`FOR27-STAGING-OK` (200, provider storage disabled). The live Resend adapter sent
+only synthetic content to `delivered@resend.dev`; the Polar sandbox catalog read
+passed. Both OAuth token endpoints accepted the registered client identities and
+rejected an intentionally invalid authorization code with `invalid_grant`, rather
+than `invalid_client`. This is a credential/configuration check, not a completed
+personal-account OAuth grant. The hosted callback refused missing state with its
+expected error redirect (303). Personal meeting ingestion and enabled billing
+lifecycle/webhook acceptance remain part of those integrations' release work.
+
+The final hosted fixture again passed sign-in (200), active-workspace selection
+(200) and private attachment upload (201), with actual byte/checksum equality.
+Fresh counts show zero users, organizations, sessions, attachments and Blob objects.
+Both new staging automation bypasses were revoked. Unauthenticated requests now
+redirect to Vercel SSO (302) before reaching either protected service.
+
+The first manual CLI smoke attempt inherited the root production project link
+and generated one production bypass before failing to load the request config.
+It executed no test request. That bypass and its automatic env entry were removed;
+the final API audit confirms zero bypasses in production web and both staging
+projects. Always specify both `VERCEL_PROJECT_ID` and `VERCEL_ORG_ID` for staging
+`vercel curl` commands, as the fixture smoke helper does. `--deployment` alone does
+not select the correct project for automation credentials in CLI 50.4.11.
+
+The latest full app run passed 1,681 tests; 38 focused tests passed after the
+additional staging connection-denial regression. Runtime (15), Workflow (4),
+typechecks and final lint (zero errors, 89 existing warnings) passed. Four live
+provider cases passed across focused runs; both current cloud builds are READY.
+The user explicitly deferred Teams. With that scoped deferral, FOR-27's isolated
+staging and fixture provisioning is complete. See `domains.md` for the requested
+application/website domain layout and the separate production-origin cutover.

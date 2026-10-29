@@ -1,6 +1,6 @@
 {
   "issue": "FOR-27",
-  "status": "partially_verified_provider_isolation_pending",
+  "status": "verified_with_user_deferred_teams",
   "date": "2026-10-29",
   "productionDatabaseMutated": false,
   "productionDeploymentChanged": false,
@@ -31,14 +31,59 @@
     ],
     "productionProjectsIncluded": false
   },
-  "remaining": [
-    "Separate OAuth/provider sandbox clients and enabled provider flows"
-  ],
+  "remaining": [],
   "sourceRevisions": {
-    "web": "6b33cab5d5fafc046e03fcca73f9c7fcbcca5d08",
-    "runtime": "c4eefcf41fdd305bd51d2bea5873a8035bf31d4d"
+    "web": "2f011dbaea8720f4357827e5e00153d2e4330957",
+    "runtime": "2f011dbaea8720f4357827e5e00153d2e4330957"
   },
-  "webProbe": {
+  "hostedUserUpload": {
+    "signIn": 200,
+    "workspaceSelection": 200,
+    "hostedUpload": 201,
+    "actualPrivateBytesMatched": true,
+    "attachmentId": "07487865-317f-4276-b91a-d6e3a834b156",
+    "fixtureRunId": "50d9af61-ef6d-471d-8adb-f208f2dc3c92"
+  },
+  "cleanupCounts": {
+    "workspaces": 0,
+    "users": 0,
+    "sessions": 0,
+    "attachments": 0,
+    "blobObjects": 0
+  },
+  "verification": {
+    "appTests": 1681,
+    "runtimeTests": 15,
+    "workflowTests": 4,
+    "memberCapacityPostgres": 17,
+    "teamVisibilityPostgres": 6,
+    "fixtureLifecyclePostgres": 1,
+    "privateBlobIntegration": 1,
+    "typecheck": "passed",
+    "lint": "passed (0 errors; 89 existing warnings)",
+    "localWebBuild": "Initial checkpoint passed; latest source built successfully on Vercel",
+    "cloudWebBuild": "READY",
+    "cloudRuntimeBuild": "READY",
+    "diffCheck": "passed",
+    "latestFocusedTests": 38,
+    "liveProviderCases": 4
+  },
+  "acceptance": {
+    "AC-01": "Passed on exact staging: A/B seed and bounded cleanup, independent sentinel preservation, ownership-conflict rollback, zero remaining owned rows/objects. Hosted sign-in/workspace selection/private upload also passed.",
+    "AC-02": "Passed: checked-in exact-target/SQL guards reject production identity before mutation, including URL routing overrides. Existing isolated migration and test entry points remain production-disabled."
+  },
+  "denials": {
+    "webWithoutOperatorToken": 404,
+    "webDeniedBodyBytes": 0,
+    "runtimeInfoWithoutApplicationToken": 401,
+    "incorrectProbeAuthority": "covered by existing no-collector unit tests",
+    "crossOriginAttachmentWrite": 403
+  },
+  "productionScope": "At explicit user request, app.forgenow.tech was attached to the existing production web deployment and the apex reserved for the future website. No production source deployment, database migration/test or bucket mutation occurred. The accidental temporary automation bypass was removed and zero remaining bypasses verified.",
+  "deferredByUser": [
+    "Microsoft Teams staging client: user requested skipping it because the current SKEMA account lacks Entra administration access. Teams remains disabled."
+  ],
+  "initialWebProbe": {
     "checkedAt": "2026-10-29T13:17:51.028Z",
     "deployment": {
       "id": "dpl_6TJnVDnrCoFj3Pn6wEE2A1kb2uhi",
@@ -73,7 +118,7 @@
       "durableBucket": "store_HCogFKvO1n2cbJw7"
     }
   },
-  "runtimeProbe": {
+  "initialRuntimeProbe": {
     "deployment": {
       "id": "dpl_9NRUhFR8nrUy2AUoTmJMfcWTj7oa",
       "sourceRevision": "c4eefcf41fdd305bd51d2bea5873a8035bf31d4d"
@@ -114,48 +159,7 @@
       }
     }
   },
-  "hostedUserUpload": {
-    "signIn": 200,
-    "workspaceSelection": 200,
-    "hostedUpload": 201,
-    "actualPrivateBytesMatched": true,
-    "attachmentId": "1cff78b4-2fd3-40a4-ae4e-3a5d0ae72b2a",
-    "fixtureRunId": "f0b027d2-f340-4a10-80b1-c0c82a72a342"
-  },
-  "cleanupCounts": {
-    "workspaces": 0,
-    "users": 0,
-    "sessions": 0,
-    "attachments": 0,
-    "blobObjects": 0
-  },
-  "verification": {
-    "appTests": 1675,
-    "runtimeTests": 15,
-    "workflowTests": 4,
-    "memberCapacityPostgres": 17,
-    "teamVisibilityPostgres": 6,
-    "fixtureLifecyclePostgres": 1,
-    "privateBlobIntegration": 1,
-    "typecheck": "passed",
-    "lint": "passed (0 errors; 89 existing warnings)",
-    "localWebBuild": "passed",
-    "cloudWebBuild": "READY",
-    "cloudRuntimeBuild": "READY",
-    "diffCheck": "passed"
-  },
-  "acceptance": {
-    "AC-01": "Passed on exact staging: A/B seed and bounded cleanup, independent sentinel preservation, ownership-conflict rollback, zero remaining owned rows/objects. Hosted sign-in/workspace selection/private upload also passed.",
-    "AC-02": "Passed: checked-in exact-target/SQL guards reject production identity before mutation, including URL routing overrides. Existing isolated migration and test entry points remain production-disabled."
-  },
-  "denials": {
-    "webWithoutOperatorToken": 404,
-    "webDeniedBodyBytes": 0,
-    "runtimeInfoWithoutApplicationToken": 401,
-    "incorrectProbeAuthority": "covered by existing no-collector unit tests",
-    "crossOriginAttachmentWrite": 403
-  },
-  "probeCleanup": {
+  "initialProbeCleanup": {
     "rawOperatorTokenDestroyed": true,
     "futureDeploymentProbeVariablesRemoved": true,
     "bothTemporaryAutomationBypassesRevoked": true,
@@ -163,5 +167,121 @@
     "capturedDeploymentConfiguration": "Retains hash/expiry until its configured short-lived expiry; raw token was destroyed.",
     "capturedDeploymentProbeExpiresAt": "2026-10-29T13:28:05.076964+00:00"
   },
-  "productionScope": "No production deploy, migration, bucket mutation or environment-pointer change was performed."
+  "finalDeployments": {
+    "web": {
+      "id": "dpl_7J4wUbZbeJC2HRcSNK3um2DJMPEG",
+      "url": "forge-staging-dw6iom8pc-matthieu-pm.vercel.app",
+      "state": "READY"
+    },
+    "runtime": {
+      "id": "dpl_BHMZU5ax6gECBzBTQZDyYdJ5K6Ur",
+      "url": "forge-staging-runtime-3lxro3qjw-matthieu-pm.vercel.app",
+      "state": "READY"
+    }
+  },
+  "providerVerification": {
+    "openai": {
+      "keyName": "forge-staging",
+      "apiProjectId": "proj_c3eIcqr18kXfMsE5E2U48owD",
+      "model": "gpt-5.6-luna",
+      "localAuthenticatedProxy": "passed",
+      "hostedProxyStatus": 200,
+      "hostedResponseStatus": "completed",
+      "syntheticSentinelMatched": true,
+      "store": false
+    },
+    "resend": {
+      "keyId": "0c1fa4fe-0e5b-454c-a8f8-fbfbfe91f692",
+      "permission": "sending_access",
+      "domain": "nexstudio.io",
+      "actualSyntheticSend": "passed",
+      "recipient": "delivered@resend.dev",
+      "unsafeRecipientDenialBeforeNetwork": "passed"
+    },
+    "polar": {
+      "environment": "sandbox",
+      "organizationId": "0d79d64a-419b-490a-ad9f-271a6fce1fc5",
+      "actualCatalogRead": "passed",
+      "billingEnabled": false,
+      "webhooksEnabled": false
+    },
+    "google": {
+      "projectId": "arctic-conduit-513113-k3",
+      "clientId": "761176153286-nf4hqp7ur24q6ebohnhf57k0vj1klg2b.apps.googleusercontent.com",
+      "mode": "Test",
+      "testUsers": 1,
+      "meetApiEnabled": true,
+      "scope": "https://www.googleapis.com/auth/meetings.space.readonly"
+    },
+    "zoom": {
+      "applicationId": "0DLzA3R7TVurM0-JX_G5Og",
+      "name": "Forge staging",
+      "credentials": "Development",
+      "managedBy": "User",
+      "strictRedirects": true,
+      "scope": "cloud_recording:read:list_user_recordings",
+      "state": "Ready for local test"
+    },
+    "oauthCallback": "https://forge-staging-matthieu-pm.vercel.app/api/calls/oauth/callback",
+    "oauthNegativeCodeChecks": {
+      "google": {
+        "status": 400,
+        "error": "invalid_grant",
+        "isInvalidClient": false
+      },
+      "zoom": {
+        "status": 400,
+        "error": "invalid_grant",
+        "isInvalidClient": false
+      }
+    },
+    "unauthenticatedCallbackStatus": 303,
+    "missingOrInvalidStateResult": "connection=error",
+    "limits": "OAuth provisioning and credential acceptance are verified. Personal account consent, real meeting ingestion/refresh and enabled billing lifecycle/webhook flows are not claimed; those remain their integration release evidence."
+  },
+  "finalProtectionAudit": {
+    "production-web": {
+      "bypasses": 0,
+      "authentication": {
+        "deploymentType": "all_except_custom_domains"
+      }
+    },
+    "staging-web": {
+      "bypasses": 0,
+      "authentication": {
+        "deploymentType": "all_except_custom_domains"
+      }
+    },
+    "staging-runtime": {
+      "bypasses": 0,
+      "authentication": {
+        "deploymentType": "all_except_custom_domains"
+      }
+    }
+  },
+  "finalAnonymousAccess": {
+    "web": {
+      "status": 302,
+      "redirectHost": "vercel.com",
+      "redirectPath": "/sso-api",
+      "contentType": "text/plain"
+    },
+    "runtime": {
+      "status": 302,
+      "redirectHost": "vercel.com",
+      "redirectPath": "/sso-api",
+      "contentType": "text/plain"
+    }
+  },
+  "automationCleanupNote": "The first CLI smoke attempt resolved the root production project link and generated one production automation bypass before failing to read its request config. That bypass and its automatic env entry were revoked immediately; the request did not execute. Subsequent smoke commands used explicit staging project/team IDs. Both temporary staging bypasses were revoked after verification. Final API audit confirms zero bypasses in all three projects.",
+  "domainAssignment": {
+    "application": "https://app.forgenow.tech",
+    "website": "https://forgenow.tech",
+    "appProject": "prj_S0XLtdngbexhl2ao7WviBrlMScar",
+    "projectDomainVerified": true,
+    "dnsMisconfigured": false,
+    "httpsRootStatus": 307,
+    "httpsRedirect": "/inbox",
+    "productionAuthenticationCutover": "Not performed; update canonical auth/runtime/provider origins during the production release."
+  }
 }
