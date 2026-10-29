@@ -13,13 +13,38 @@ type MigrationClient = {
 }
 
 export type MigrationTarget = {
-  environment: "staging" | "rehearsal" | "file-storage-acceptance"
+  environment:
+    | "staging"
+    | "rehearsal"
+    | "file-storage-acceptance"
+    | "production-storage-rehearsal"
+    | "production"
   branchId: string
   host: string
   database: string
 }
 
-function assertExpectedTarget(target: MigrationTarget) {
+export type ProductionMigrationRelease = {
+  sourceRevision: string
+  expectedCurrentCount: number
+  expectedCurrentHash: string
+}
+
+function assertExpectedTarget(
+  target: MigrationTarget,
+  release?: ProductionMigrationRelease
+) {
+  if (
+    target.environment === "production" &&
+    (!release ||
+      !/^[a-f0-9]{40}$/.test(release.sourceRevision) ||
+      !Number.isSafeInteger(release.expectedCurrentCount) ||
+      release.expectedCurrentCount < 1 ||
+      !/^[a-f0-9]{64}$/.test(release.expectedCurrentHash))
+  )
+    throw new MigrationSafetyError(
+      "Production requires a source-bound release and expected current journal identity."
+    )
   const targets: Partial<
     Record<string, { branchId: string; host: string; database: string }>
   > = DATABASE_TARGETS
@@ -38,9 +63,10 @@ function assertExpectedTarget(target: MigrationTarget) {
 
 export function assertMigrationTarget(
   connection: string,
-  target: MigrationTarget
+  target: MigrationTarget,
+  release?: ProductionMigrationRelease
 ) {
-  assertExpectedTarget(target)
+  assertExpectedTarget(target, release)
   let url: URL
   try {
     url = new URL(connection)
@@ -90,9 +116,10 @@ export async function runSerializedMigrations(
   client: MigrationClient,
   migrations: Array<MigrationMeta>,
   target: MigrationTarget,
-  journalSchema = "drizzle"
+  journalSchema = "drizzle",
+  release?: ProductionMigrationRelease
 ) {
-  assertExpectedTarget(target)
+  assertExpectedTarget(target, release)
   // Rehearsals use their own journal; never append synthetic releases to app history.
   if (
     journalSchema !== "drizzle" &&
@@ -140,6 +167,16 @@ export async function runSerializedMigrations(
     )
       throw new Error(
         "Migration journal is not an exact prefix of the release's migration hashes. Refusing to guess or replay migrations."
+      )
+    if (
+      target.environment === "production" &&
+      release &&
+      applied.rows.length !== migrations.length &&
+      (applied.rows.length !== release.expectedCurrentCount ||
+        applied.rows.at(-1)?.hash !== release.expectedCurrentHash)
+    )
+      throw new MigrationSafetyError(
+        "Production journal changed since the approved inventory. Refusing migration."
       )
     for (let i = 0; i < migrations.length; i++) {
       if (i && migrations[i].folderMillis <= migrations[i - 1].folderMillis)

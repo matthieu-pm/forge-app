@@ -102,3 +102,31 @@ the reader compares bytes/checksums, probes each anonymous private URL, rejects
 overwrite and tests database scope/immutability. Cleanup deletes only the
 fixture's exact keys and records. A failed cleanup retains its manifest for retry.
 No production pointers, database or bucket are modified by this acceptance suite.
+
+## Source-bound production release
+
+The production database target is the FOR-25 verified direct host/branch/database.
+The generic runner still rejects production by default. A production invocation
+requires a clean Git checkout, `FORGE_MIGRATION_SOURCE_REVISION` matching HEAD,
+and an expected current journal count/hash from the live read-only inventory.
+`FORGE_MIGRATION_EXPECTED_COUNT` and `FORGE_MIGRATION_EXPECTED_HASH` are rechecked
+inside the migration transaction after acquiring the shared migration lock. A
+changed inventory aborts; an exact completed chain permits an idempotent retry.
+All prior journal hashes must remain an exact prefix of the release chain.
+
+FOR-34's production-data rehearsal target is a separate branch copied from the
+verified production branch before migration. It preserves the existing values
+while rehearsing the same checked-in migration chain. The retained branch also
+preserves the pre-release database state; this does not replace FOR-38 recovery
+acceptance or authorize discarding later production writes.
+
+The optional `/api/internal/storage` POST probe uses the same expiring,
+SHA-256-checked operator authorization as `/api/internal/environment`. It is
+disabled without its deployment-only hash/expiry settings. An additional
+`FORGE_STORAGE_CHECK_OBJECT_ID` fixes one random synthetic key; the request cannot
+choose a key or content. `write`, `read`, and `delete` prove private byte storage
+across two application deployments without modifying customer metadata. Verify
+anonymous denial at both the operator route and the synthetic object's direct
+URL. Delete the fixture, remove the local raw operator token, and let the bounded
+deployment authority expire after verification. Never save the probe authority
+as permanent project configuration.

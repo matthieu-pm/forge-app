@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process"
 import { readFile } from "node:fs/promises"
 import { fileURLToPath } from "node:url"
 import { Pool, neonConfig } from "@neondatabase/serverless"
@@ -7,7 +8,10 @@ import {
   assertMigrationTarget,
   runSerializedMigrations,
 } from "./lib/serialized-migrations"
-import type { MigrationTarget } from "./lib/serialized-migrations"
+import type {
+  MigrationTarget,
+  ProductionMigrationRelease,
+} from "./lib/serialized-migrations"
 
 // Explicit process values win over local files, including operator-selected URLs.
 const values: Record<string, string> = {}
@@ -38,7 +42,30 @@ const target: MigrationTarget = {
   host: process.env.FORGE_MIGRATION_HOST ?? "",
   database: process.env.FORGE_MIGRATION_DATABASE ?? "",
 }
-assertMigrationTarget(connection, target)
+let release: ProductionMigrationRelease | undefined
+if (target.environment === "production") {
+  const root = fileURLToPath(new URL("../../..", import.meta.url))
+  const revision = execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd: root,
+    encoding: "utf8",
+  }).trim()
+  if (
+    process.env.FORGE_MIGRATION_SOURCE_REVISION !== revision ||
+    execFileSync("git", ["status", "--porcelain"], {
+      cwd: root,
+      encoding: "utf8",
+    }).trim()
+  )
+    throw new Error(
+      "Production migrations require a clean checkout and explicit approval of its exact source revision."
+    )
+  release = {
+    sourceRevision: revision,
+    expectedCurrentCount: Number(process.env.FORGE_MIGRATION_EXPECTED_COUNT),
+    expectedCurrentHash: process.env.FORGE_MIGRATION_EXPECTED_HASH ?? "",
+  }
+}
+assertMigrationTarget(connection, target, release)
 neonConfig.webSocketConstructor = WebSocket
 const pool = new Pool({ connectionString: connection, max: 1 })
 const client = await pool.connect()
@@ -48,7 +75,9 @@ try {
     readMigrationFiles({
       migrationsFolder: fileURLToPath(new URL("../drizzle", import.meta.url)),
     }),
-    target
+    target,
+    "drizzle",
+    release
   )
   console.log(JSON.stringify({ ...target, ...result }))
 } catch {

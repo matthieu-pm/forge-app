@@ -17,6 +17,9 @@ export async function readEnvironmentIdentity(challenge: string) {
              current_setting('neon.branch_id', true) AS branch,
              current_setting('server_version') AS postgres_version,
              current_setting('transaction_read_only') AS transaction_read_only,
+             (SELECT count(*)::integer FROM agent_artifacts) AS artifact_count,
+             (SELECT count(*)::integer FROM agent_attachments) AS attachment_count,
+             to_regclass('public.resource_files') IS NOT NULL AS resource_files_present,
              (SELECT count(*)::integer FROM drizzle.__drizzle_migrations) AS migration_count,
              (SELECT hash FROM drizzle.__drizzle_migrations ORDER BY created_at DESC, id DESC LIMIT 1) AS migration_hash
     `)
