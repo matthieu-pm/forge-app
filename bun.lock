@@ -126,6 +126,9 @@
         "@vercel/oidc": "^4.0.4",
       },
     },
+    "packages/telemetry": {
+      "name": "@forge/telemetry",
+    },
     "services/agent-runtime": {
       "name": "@forge/agent-runtime",
       "version": "0.1.0",
@@ -483,6 +486,8 @@
     "@forge/app": ["@forge/app@workspace:apps/forge"],
 
     "@forge/environment": ["@forge/environment@workspace:packages/environment"],
+
+    "@forge/telemetry": ["@forge/telemetry@workspace:packages/telemetry"],
 
     "@gar/promisify": ["@gar/promisify@1.1.3", "", {}, "sha512-k2Ty1JcVojjJFwrg/ThKi2ujJ7XNLYaFGNB/bWT9wGR+oSMJHMa5w+CUq6p/pVrKeNNgA7pCqEcjSnHVoqJQFw=="],
 

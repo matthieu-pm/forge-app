@@ -24,6 +24,7 @@ import { slugifyTeamName } from "@/application/teams/team-schemas"
 import { visibleTeamCondition } from "@/application/teams/team-visibility.server"
 import { canWorkspaceAction } from "@/application/workspace-security/workspace-security.server"
 import { db, teamMembers, teams } from "@/db"
+import { observeCommand } from "@/application/observability/telemetry.server"
 
 export type TeamSelector = { id: string } | { slug: string }
 const TEAM_RECOVERY_WINDOW_MS = 30 * 24 * 60 * 60 * 1_000
@@ -132,7 +133,7 @@ function decodeCursor(value: string): TeamCursor | null {
   return null
 }
 
-export async function createTeam(
+async function createTeamImpl(
   actor: Actor,
   input: CreateTeamInput
 ): Promise<CreateTeamResult> {
@@ -354,7 +355,7 @@ export async function listTeams(
   }
 }
 
-export async function restoreTeam(
+async function restoreTeamImpl(
   actor: Actor,
   selector: TeamSelector
 ): Promise<RestoreTeamResult> {
@@ -413,7 +414,7 @@ export async function restoreTeam(
   }
 }
 
-export async function joinTeam(
+async function joinTeamImpl(
   actor: Actor,
   selector: TeamSelector
 ): Promise<
@@ -454,7 +455,7 @@ export async function joinTeam(
   return { ok: true, team: { name: team.name, slug: team.slug } }
 }
 
-export async function leaveTeam(
+async function leaveTeamImpl(
   actor: Actor,
   selector: TeamSelector
 ): Promise<LeaveTeamResult> {
@@ -543,7 +544,7 @@ export async function getTeam(
   return team ? toTeamSummary(team) : null
 }
 
-export async function archiveTeam(
+async function archiveTeamImpl(
   actor: Actor,
   selector: TeamSelector,
   confirmationName?: string
@@ -590,7 +591,7 @@ export async function archiveTeam(
   }
 }
 
-export async function updateTeam(
+async function updateTeamImpl(
   actor: Actor,
   selector: TeamSelector,
   settings: UpdateTeamInput["settings"]
@@ -650,3 +651,21 @@ export async function updateTeam(
     throw error
   }
 }
+
+export const createTeam = (...args: Parameters<typeof createTeamImpl>) =>
+  observeCommand("teams.create", () => createTeamImpl(...args))
+
+export const updateTeam = (...args: Parameters<typeof updateTeamImpl>) =>
+  observeCommand("teams.update", () => updateTeamImpl(...args))
+
+export const archiveTeam = (...args: Parameters<typeof archiveTeamImpl>) =>
+  observeCommand("teams.archive", () => archiveTeamImpl(...args))
+
+export const restoreTeam = (...args: Parameters<typeof restoreTeamImpl>) =>
+  observeCommand("teams.restore", () => restoreTeamImpl(...args))
+
+export const joinTeam = (...args: Parameters<typeof joinTeamImpl>) =>
+  observeCommand("teams.join", () => joinTeamImpl(...args))
+
+export const leaveTeam = (...args: Parameters<typeof leaveTeamImpl>) =>
+  observeCommand("teams.leave", () => leaveTeamImpl(...args))

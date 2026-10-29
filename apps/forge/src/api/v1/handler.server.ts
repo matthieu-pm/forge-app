@@ -7,6 +7,11 @@ import {
   experimental_ZodSmartCoercionPlugin,
 } from "@orpc/zod/zod4"
 
+import {
+  currentCorrelation,
+  observeRequest,
+} from "@/application/observability/telemetry.server"
+
 import { publicApiRouter } from "@/api/v1/router.server"
 
 const handler = new OpenAPIHandler(publicApiRouter, {
@@ -49,12 +54,16 @@ export function isPublicApiEnabled() {
   )
 }
 
-export async function handlePublicApiRequest(request: Request) {
+export function handlePublicApiRequest(request: Request) {
+  return observeRequest(request, "public_api", () => handleRequest(request))
+}
+
+async function handleRequest(request: Request) {
   if (!isPublicApiEnabled()) {
     return new Response("Not Found", { status: 404 })
   }
 
-  const requestId = request.headers.get("x-request-id") ?? crypto.randomUUID()
+  const requestId = currentCorrelation().requestId!
   const { response } = await handler.handle(request, {
     prefix: "/api/v1",
     context: { headers: request.headers, requestId },

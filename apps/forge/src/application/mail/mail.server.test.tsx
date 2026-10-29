@@ -138,7 +138,7 @@ describe("sendTransactionalEmail", () => {
   })
 
   it("does not leak provider errors to callers", async () => {
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+    const errorSpy = vi.spyOn(console, "info").mockImplementation(() => {})
     mocks.send.mockResolvedValue({
       data: null,
       error: {
@@ -163,10 +163,17 @@ describe("sendTransactionalEmail", () => {
       retryable: false,
       statusCode: 422,
     })
-    expect(errorSpy).toHaveBeenCalledWith("[mail] Resend rejected an email", {
-      name: "validation_error",
-      statusCode: 422,
-    })
+    const records = errorSpy.mock.calls.map(([line]) =>
+      JSON.parse(String(line))
+    )
+    expect(records).toContainEqual(
+      expect.objectContaining({
+        event: "forge.operation.failed",
+        operation: "mail.send",
+        errorCode: "EMAIL_DELIVERY_FAILED",
+        status: 422,
+      })
+    )
     expect(JSON.stringify(errorSpy.mock.calls)).not.toContain(
       "Provider-specific detail"
     )

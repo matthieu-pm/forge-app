@@ -301,8 +301,10 @@ export function normalizeEveRuntimeEvent(
         ? "failed"
         : "completed"
     return [
-      ...programCallEvents(result, event, sessionId, occurredAt, streamIndex),
-      ...artifactEvent(result, occurredAt),
+      ...(status === "completed"
+        ? programCallEvents(result, event, sessionId, occurredAt, streamIndex)
+        : []),
+      ...(status === "completed" ? artifactEvent(result, occurredAt) : []),
       {
         sourceEventId: sourceId(
           sessionId,
@@ -319,8 +321,12 @@ export function normalizeEveRuntimeEvent(
           kind: result.kind,
           toolName: result.toolName,
           status: event.data.status,
-          output: result.output,
-          error: event.data.error,
+          ...(status === "failed"
+            ? {
+                error: "The tool execution failed.",
+                code: "CAPABILITY_EXECUTION_FAILED",
+              }
+            : { output: result.output }),
         },
       },
     ]
@@ -402,8 +408,7 @@ export function normalizeEveRuntimeEvent(
               ...(request.action.toolName === "execute_program" &&
               Array.isArray(request.action.input.capabilityManifest)
                 ? {
-                    programManifest:
-                      request.action.input.capabilityManifest,
+                    programManifest: request.action.input.capabilityManifest,
                   }
                 : {}),
             },
@@ -462,8 +467,8 @@ export function normalizeEveRuntimeEvent(
         type: "run.failed",
         occurredAt,
         payload: {
-          code: event.data.code,
-          message: event.data.message,
+          code: "RUNTIME_EXECUTION_FAILED",
+          message: "The agent runtime could not complete this run.",
         },
       },
     ]

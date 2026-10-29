@@ -1,0 +1,23 @@
+{
+  "version": "0.31.0",
+  "files": [
+    {
+      "path": "dist/src/internal/logging.js",
+      "originalSha256": "e9167c5a905401fa725445acca0573e466f10dcd2245790b4f702ce345a8851b",
+      "replacement": "logging.js",
+      "replacementSha256": "ef850bcf9c607e01bae4ecec0961ab0ac6b613214f4b5632ab93a9982b4452a3"
+    },
+    {
+      "path": "dist/src/internal/workflow/builtins.js",
+      "originalSha256": "b5599035ca2cd4cbbe9c6c635a10f74d2fe99ef8451c8c7a23f65c5c3acb9c94",
+      "replacement": "builtins.js",
+      "replacementSha256": "0e850b346194267ddb7c3882e861c1f73d6425f81df8526efa062cc99a08732a"
+    },
+    {
+      "path": "dist/src/runtime/attributes/emit.js",
+      "originalSha256": "fb3db76efa45cb426867be8602b344839efe67289eed1f1aa7d49274e9962361",
+      "replacement": "emit.js",
+      "replacementSha256": "eee05973d53eb2051a19e1950b7bdf091e2f4bae11d2b38864fbf0334c9d17d1"
+    }
+  ]
+}

@@ -35,6 +35,7 @@ describe("Forge EVE channel authentication", () => {
   it("keeps run-bound capability and model proxy credentials in server attributes", async () => {
     process.env.FORGE_AGENT_CHANNEL_SECRET = secret
     const token = signTestToken({
+      correlationId: "00000000-0000-4000-8000-000000000003",
       workspaceId: "workspace-1",
       runId: "00000000-0000-4000-8000-000000000001",
       forgeCapabilityToken: "capability-token-with-enough-length",
@@ -53,6 +54,7 @@ describe("Forge EVE channel authentication", () => {
     ).resolves.toMatchObject({
       principalId: "user-1",
       attributes: {
+        correlationId: "00000000-0000-4000-8000-000000000003",
         provider: "anthropic",
         modelId: "claude-sonnet",
         forgeCapabilityToken: "capability-token-with-enough-length",
@@ -60,4 +62,15 @@ describe("Forge EVE channel authentication", () => {
       },
     })
   })
+})
+
+it("rejects malformed channel credentials without exposing parser exceptions", async () => {
+  process.env.FORGE_AGENT_CHANNEL_SECRET = secret
+  await expect(
+    verifyForgeChannelRequest(
+      new Request("https://runtime.test/eve/v1/session", {
+        headers: { authorization: "Bearer sk-private-fixture" },
+      })
+    )
+  ).resolves.toBeNull()
 })

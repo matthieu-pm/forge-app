@@ -1,5 +1,6 @@
 import { and, eq, inArray, isNull, lte } from "drizzle-orm"
 import { FatalError, RetryableError } from "workflow"
+import { emitTelemetry } from "../../../../packages/telemetry/server"
 
 import { sendWorkspaceInvitationEmail } from "@/application/mail/auth-emails.server"
 import { EmailDeliveryError } from "@/application/mail/mail.server"
@@ -74,12 +75,27 @@ export async function claimInvitationRunStep(
     )
 
   const [run] = await db
-    .select({ sdkRunId: businessWorkflowRuns.sdkRunId })
+    .select({
+      sdkRunId: businessWorkflowRuns.sdkRunId,
+      createdAt: businessWorkflowRuns.createdAt,
+    })
     .from(businessWorkflowRuns)
     .where(eq(businessWorkflowRuns.id, businessRunId))
     .limit(1)
 
-  return run?.sdkRunId === sdkRunId
+  const claimed = run?.sdkRunId === sdkRunId
+  emitTelemetry(
+    claimed ? "operation.completed" : "operation.rejected",
+    "invitation.claim",
+    {
+      businessRunId,
+      correlationId: businessRunId,
+      ...(run
+        ? { queueAgeMs: Math.max(0, now.getTime() - run.createdAt.getTime()) }
+        : {}),
+    }
+  )
+  return claimed
 }
 
 export async function sendInvitationEffectStep(
@@ -217,6 +233,11 @@ export async function sendInvitationEffectStep(
       })
       .where(eq(businessWorkflowEffects.id, effectId))
   } catch (error) {
+    emitTelemetry("operation.failed", "invitation.deliver", {
+      businessRunId,
+      correlationId: businessRunId,
+      errorCode: "EMAIL_DELIVERY_FAILED",
+    })
     await db
       .update(businessWorkflowEffects)
       .set({
@@ -236,9 +257,15 @@ export async function sendInvitationEffectStep(
         }
       )
     }
-    throw error
+    throw new RetryableError("The invitation delivery failed.", {
+      retryAfter: "5s",
+    })
   }
 
+  emitTelemetry("operation.completed", "invitation.deliver", {
+    businessRunId,
+    correlationId: businessRunId,
+  })
   return {
     state: "delivered",
     expiresAt: invitation.expiresAt.toISOString(),
@@ -279,6 +306,12 @@ export async function completeInvitationRunStep(businessRunId: string) {
 
 export async function failInvitationRunStep(businessRunId: string) {
   "use step"
+
+  emitTelemetry("operation.failed", "invitation.fail", {
+    businessRunId,
+    correlationId: businessRunId,
+    errorCode: "WORKFLOW_EXECUTION_FAILED",
+  })
 
   await db
     .update(businessWorkflowRuns)

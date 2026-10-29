@@ -9,6 +9,7 @@ import {
 const authAttributesSchema = z.object({
   workspaceId: z.string().min(1),
   runId: z.string().uuid(),
+  correlationId: z.string().uuid().optional(),
   forgeCapabilityToken: z.string().min(20),
 })
 
@@ -22,9 +23,7 @@ export default defineTool({
     timeoutMs: z.number().int().min(100).max(30_000).default(10_000),
   }),
   approval: ({ toolInput }) =>
-    toolInput?.capabilityManifest.some(
-      (entry) => entry.id === "teams.update"
-    )
+    toolInput?.capabilityManifest.some((entry) => entry.id === "teams.update")
       ? "user-approval"
       : "not-applicable",
   async execute(input, ctx) {
@@ -53,6 +52,7 @@ export default defineTool({
       caller: {
         workspaceId: attributes.workspaceId,
         runId: attributes.runId,
+        correlationId: attributes.correlationId,
         capabilityToken: attributes.forgeCapabilityToken,
       },
       input,

@@ -16,6 +16,10 @@ import {
   isAgentProviderEnabled,
   resolveAgentFeatureFlags,
 } from "@/application/agents/agent-feature-flags"
+import {
+  emitTelemetry,
+  observeRequest,
+} from "@/application/observability/telemetry.server"
 
 const MAX_REQUEST_BYTES = 4 * 1024 * 1024
 const ALLOWED_PATHS = new Set(["responses", "chat/completions", "messages"])
@@ -40,7 +44,6 @@ const SAFE_RESPONSE_HEADERS = [
   "x-ratelimit-remaining-tokens",
   "x-ratelimit-reset-requests",
   "x-ratelimit-reset-tokens",
-  "x-request-id",
 ] as const
 
 type ModelAccessClaims = Awaited<ReturnType<typeof verifyAgentModelAccessToken>>
@@ -195,10 +198,12 @@ export function createOpenAIModelProxy(
   const loadCredential = dependencies.loadCredential ?? defaultLoadCredential
   const fetcher = dependencies.fetcher ?? fetch
 
-  return async function handleOpenAIModelProxyRequest(
-    request: Request,
-    upstreamPath: string
-  ) {
+  return (request: Request, upstreamPath: string) =>
+    observeRequest(request, "model_proxy", () =>
+      handleRequest(request, upstreamPath)
+    )
+
+  async function handleRequest(request: Request, upstreamPath: string) {
     if (request.method !== "POST" || !ALLOWED_PATHS.has(upstreamPath)) {
       return errorResponse(
         405,
@@ -225,6 +230,7 @@ export function createOpenAIModelProxy(
 
     try {
       const claims = await verifyToken(token)
+      emitTelemetry("run.linked", "model_proxy", { runId: claims.runId })
       const body = new Uint8Array(await request.arrayBuffer())
       if (body.byteLength > MAX_REQUEST_BYTES) {
         return errorResponse(

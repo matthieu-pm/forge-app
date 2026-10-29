@@ -16,6 +16,7 @@ import type {
 import { mintAgentModelAccessToken } from "@/application/agents/model-access-token.server"
 import { mintAgentCapabilityToken } from "@/application/agents/run-token.server"
 import { normalizeEveRuntimeEvent } from "@/adapters/agents/eve-event-normalizer"
+import { currentCorrelation } from "@/application/observability/telemetry.server"
 
 const sessionResponseSchema = z.object({
   ok: z.literal(true),
@@ -105,6 +106,7 @@ export class EveAgentRuntime implements AgentRuntime {
     const channelToken = await new SignJWT({
       workspaceId: input.identity.workspaceId,
       runId: input.runId,
+      correlationId: currentCorrelation().correlationId ?? input.runId,
       forgeCapabilityToken: capabilityToken,
       forgeModelAccessToken: modelAccessToken,
       provider: input.model.provider,
@@ -212,6 +214,7 @@ export class EveAgentRuntime implements AgentRuntime {
     const response = await this.fetcher(new URL(path, this.options.baseUrl), {
       method: "POST",
       headers: {
+        "x-correlation-id": currentCorrelation().correlationId ?? input.runId,
         authorization: `Bearer ${channelToken}`,
         "content-type": "application/json",
       },

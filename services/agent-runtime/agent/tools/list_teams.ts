@@ -6,6 +6,7 @@ import { listForgeTeams } from "../../src/forge-client.js"
 const authAttributesSchema = z.object({
   workspaceId: z.string().min(1),
   runId: z.string().uuid(),
+  correlationId: z.string().uuid().optional(),
   forgeCapabilityToken: z.string().min(20),
 })
 
@@ -45,6 +46,7 @@ export default defineTool({
       {
         workspaceId: attributes.workspaceId,
         runId: attributes.runId,
+        correlationId: attributes.correlationId,
         capabilityToken: attributes.forgeCapabilityToken,
       },
       input,

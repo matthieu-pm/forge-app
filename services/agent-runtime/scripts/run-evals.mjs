@@ -5,7 +5,11 @@ import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { spawn } from "node:child_process"
 
+import { applyDiagnosticPolicy } from "./apply-diagnostic-policy.mjs"
+
 import { SignJWT } from "jose"
+
+await applyDiagnosticPolicy()
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const temporaryRoot = await mkdtemp(join(tmpdir(), "forge-eve-eval-"))
