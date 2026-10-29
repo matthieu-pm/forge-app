@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
 
 import { afterEach, describe, expect, it } from "vitest"
@@ -11,6 +12,24 @@ const fixturePath = resolve(
 )
 
 const processes: Array<JsonLineProcess> = []
+
+function isProcessRunning(pid: number) {
+  try {
+    process.kill(pid, 0)
+    // Linux CI containers may leave stopped descendants as zombies until PID 1
+    // reaps them. A zombie still has a PID, but cannot execute any more work.
+    if (process.platform === "linux") {
+      return !/^State:\s+[ZX]\b/m.test(
+        readFileSync(`/proc/${pid}/status`, "utf8")
+      )
+    }
+    return true
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code
+    if (code === "ESRCH" || code === "ENOENT") return false
+    throw error
+  }
+}
 
 function createProcess(
   mode = "normal",
@@ -118,18 +137,12 @@ describe("JsonLineProcess", () => {
         pid: number
       }
 
+      expect(isProcessRunning(result.pid)).toBe(true)
       process_.stop()
 
       await expect
         .poll(
-          () => {
-            try {
-              process.kill(result.pid, 0)
-              return true
-            } catch {
-              return false
-            }
-          },
+          () => isProcessRunning(result.pid),
           { timeout: 3_000 }
         )
         .toBe(false)

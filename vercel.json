@@ -1,0 +1,16 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "ci": {
+    "jobs": [],
+    "bootstrapping": {
+      "installCommand": "bun install --frozen-lockfile",
+      "installEnv": {
+        "ELECTRON_SKIP_BINARY_DOWNLOAD": {
+          "constant": {
+            "value": "1"
+          }
+        }
+      }
+    }
+  }
+}
