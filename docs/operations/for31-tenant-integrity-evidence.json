@@ -1,0 +1,102 @@
+{
+  "version": 1,
+  "issue": "FOR-31",
+  "verifiedAt": "2026-10-29T21:52:01.176156+00:00",
+  "implementationSourceRevision": "8842a44924fcfa51cddcc52e700d4a55746a4016",
+  "target": {
+    "database": "forge_staging",
+    "branchId": "br-autumn-union-za0opf1e",
+    "host": "ep-blue-shadow-zauhwkjz.c-2.eu-west-2.aws.neon.tech",
+    "applicationRole": "forge_staging_web",
+    "productionChanged": false,
+    "deploymentChanged": false,
+    "connectionPointersChanged": false
+  },
+  "migrations": {
+    "previousReceipts": 40,
+    "finalReceipts": 43,
+    "files": [
+      {
+        "file": "apps/forge/drizzle/0040_tenant_integrity.sql",
+        "sha256": "f28e128252ded3c9f689139b9ffc302877ca0c3c65d697f8b7044f92b1be00f0",
+        "createdAt": 1793309720275,
+        "applied": 1,
+        "identicalRetryApplied": 0
+      },
+      {
+        "file": "apps/forge/drizzle/0041_tenant_ownership_hardening.sql",
+        "sha256": "70c1bbe83eba1e34a656449e7d52ecb99792379e992cfe21e68918ee03cce9cd",
+        "createdAt": 1793310076126,
+        "applied": 1,
+        "identicalRetryApplied": 0
+      },
+      {
+        "file": "apps/forge/drizzle/0042_issue_graph_guard_lifecycle.sql",
+        "sha256": "b06929ab0821fe3b21565b4b323e5887fb7cc02e1a7d9804311b5d9c801a0f31",
+        "createdAt": 1793310523394,
+        "applied": 1,
+        "identicalRetryApplied": 0
+      }
+    ],
+    "execution": "Existing SQL-identity-verified serialized runner; each migration applied exactly once and exact retry applied zero; existing receipts preserved.",
+    "unvalidatedForeignKeys": 0,
+    "publicPrimaryKeyIdentityGuards": 60,
+    "drizzleSchemaDrift": false
+  },
+  "acceptance": {
+    "AC-01_AT-01": {
+      "result": "passed",
+      "evidence": "Foreign issue/project INSERT and UPDATE rejected by PostgreSQL; internal service rejects foreign endpoints, forged workspace, stale role, missing scopes and unreadable private targets. Valid same-workspace and shared public/private project commands pass with the ordinary application login."
+    },
+    "AC-02_AT-02": {
+      "result": "passed",
+      "evidence": "Self, deep, multi-row INSERT and UPDATE parent cycles rejected; prior non-null parent and unrelated mutations retained after rollback. Opposing direct SQL writers synchronize after an observed pg_stat_activity lock wait at READ COMMITTED, REPEATABLE READ and SERIALIZABLE; only one edge commits. Guard deletion is denied to the ordinary application role while its workspace exists."
+    },
+    "additional": "Existing team/template/recurrence/call scoped FKs; canonical project-team, initiative-project, label and document endpoints; agent run/thread/model/approval binding; API receipt and usage run binding; immutable IDs/workspaces/indirect workflow parents; same-workspace team membership and revocation cascades."
+  },
+  "validation": {
+    "appTests": {
+      "passed": 1878,
+      "skippedOptInOrExisting": 181
+    },
+    "workflowTests": {
+      "passed": 4
+    },
+    "realPostgresTests": {
+      "distinctPassed": 170,
+      "tenantIntegrity": 21,
+      "operationalMonitor": 6,
+      "membershipCapacity": 17,
+      "teamCapacityAndVisibility": 29,
+      "billingTrialAndUsage": 97
+    },
+    "schemaSnapshotTests": {
+      "passed": 2,
+      "includedInAppTotal": true
+    },
+    "typecheck": "passed",
+    "changedFileLint": {
+      "errors": 0,
+      "warnings": 7,
+      "warningScope": "Existing operational monitor test warnings; no new-source warnings."
+    },
+    "productionBuild": "passed",
+    "gitDiffCheck": "passed",
+    "testFlake": "One concurrent full-suite/build run timed out in unchanged review-detail.test.tsx at party popper. Focused 7-case rerun and independent full 1878+4 rerun passed without modifying the Reviews UI or test."
+  },
+  "cleanup": {
+    "workspaces": 0,
+    "users": 0,
+    "sessions": 0,
+    "issues": 0,
+    "projects": 0,
+    "issueHierarchyGuards": 0,
+    "privateConnectionFileRemoved": true,
+    "fixtureScope": "Exact random fixture workspaces/users only; no production data copied or changed."
+  },
+  "scope": {
+    "implemented": "Database identity/relationship foundation and internal Actor-scoped relation commands.",
+    "separateDelivery": "Public planning persistence and full read/aggregate/transport authorization remain FOR-39/41/42/44/54 and document stories. Browser-local planning drafts were not imported.",
+    "productionReleaseGate": "Existing invalid relations abort migration; inventory older reassignment writers and rehearse representative legacy data before production promotion."
+  }
+}
