@@ -29,6 +29,12 @@ ownership. FOR-144 will implement consent/conflict-aware account import. Strict
 outbound patches reject owner IDs, roles and unknown keys; future server handlers
 must derive identity from the session and enforce authorization independently.
 
+FOR-22's [legacy browser import policy](legacy-browser-import-policy.md) requires
+explicit ownership/destination confirmation, excludes other-account personal
+sources, and allows a conflicting preference field to replace an account value
+only after an explicit choice and a server revision check. Source and recovery
+backups remain intact until reconciliation and separate explicit cleanup.
+
 Verification: focused contract/storage/Preferences integration tests, app TypeScript
 check and ESLint on the modified TypeScript files. These checks establish the pure
 contract and current browser adapter; they do not certify account synchronization
