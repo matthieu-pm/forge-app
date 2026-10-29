@@ -1,5 +1,5 @@
-import { runMonitoredJob } from "./lib/monitored-job"
 import { emitTelemetry } from "../../../packages/telemetry/server"
+import { runMonitoredJob } from "./lib/monitored-job"
 import { validateJobEnvironment } from "./lib/script-environment"
 
 validateJobEnvironment("agent-retention")
