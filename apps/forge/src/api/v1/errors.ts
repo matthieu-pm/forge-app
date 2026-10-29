@@ -26,6 +26,8 @@ export const publicApiErrors = {
         "TEAM_LIMIT",
         "IDENTIFIER_TAKEN",
         "IDEMPOTENCY_KEY_REUSED",
+        "IDEMPOTENCY_RECONCILIATION_REQUIRED",
+        "IDEMPOTENCY_RESULT_UNAVAILABLE",
       ]),
       field: z.enum(["name", "identifier"]).optional(),
     }),

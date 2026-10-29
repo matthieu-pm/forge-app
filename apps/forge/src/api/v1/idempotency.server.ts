@@ -1,125 +1,66 @@
 import "@tanstack/react-start/server-only"
+import { createHash } from "node:crypto"
+import { and, eq } from "drizzle-orm"
+import type { CommandOptions } from "@/application/commands/execute-command.server"
+import { apiIdempotencyKeys } from "@/db"
+import {
+  CommandConflictError,
+  executeCommand,
+} from "@/application/commands/execute-command.server"
 
-import { and, eq, lt } from "drizzle-orm"
+export { CommandConflictError as IdempotencyConflictError }
 
-import type { Actor } from "@/application/actor"
-import { apiIdempotencyKeys, db } from "@/db"
-
-export class IdempotencyConflictError extends Error {
-  constructor(
-    readonly reason: "reused" | "in-progress",
-    message: string
-  ) {
-    super(message)
-    this.name = "IdempotencyConflictError"
-  }
-}
-
-async function requestHash(value: unknown) {
-  const input = new TextEncoder().encode(JSON.stringify(value))
-  const digest = await crypto.subtle.digest("SHA-256", input)
-  return Array.from(new Uint8Array(digest), (byte) =>
-    byte.toString(16).padStart(2, "0")
-  ).join("")
-}
-
+/** Public API adapter; legacy leases are evidence, never permission to repeat. */
 export async function executeIdempotent<T>({
   actor,
   idempotencyKey,
-  input,
   operationId,
-  parse,
-  run,
-  status,
-}: {
-  actor: Actor
+  input,
+  ...options
+}: Omit<CommandOptions<T>, "commandKey" | "operation" | "legacy"> & {
   idempotencyKey: string
-  input: unknown
   operationId: string
-  parse: (value: unknown) => T
-  run: () => Promise<T>
-  status: number
-}): Promise<{ replayed: boolean; value: T }> {
-  if (actor.authentication.kind !== "apiKey") {
+}) {
+  if (actor.authentication.kind !== "apiKey")
     throw new Error("Idempotent API operations require an API-key actor.")
-  }
-
   const credentialId = actor.authentication.credentialId
-  const hash = await requestHash(input)
-  const now = new Date()
-  const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000)
-
-  await db
-    .delete(apiIdempotencyKeys)
-    .where(
-      and(
-        eq(apiIdempotencyKeys.credentialId, credentialId),
-        lt(apiIdempotencyKeys.expiresAt, now)
-      )
-    )
-
-  const reservations = await db
-    .insert(apiIdempotencyKeys)
-    .values({
-      workspaceId: actor.workspaceId,
-      credentialId,
-      operationId,
-      idempotencyKey,
-      requestHash: hash,
-      expiresAt,
-    })
-    .onConflictDoNothing()
-    .returning({ id: apiIdempotencyKeys.id })
-  const reservation = reservations.at(0)
-
-  if (!reservation) {
-    const existingRows = await db
-      .select()
-      .from(apiIdempotencyKeys)
-      .where(
-        and(
-          eq(apiIdempotencyKeys.credentialId, credentialId),
-          eq(apiIdempotencyKeys.operationId, operationId),
-          eq(apiIdempotencyKeys.idempotencyKey, idempotencyKey)
+  return executeCommand({
+    ...options,
+    actor,
+    input,
+    commandKey: idempotencyKey,
+    operation: operationId,
+    legacy: async (tx) => {
+      const existing = (
+        await tx
+          .select()
+          .from(apiIdempotencyKeys)
+          .where(
+            and(
+              eq(apiIdempotencyKeys.workspaceId, actor.workspaceId),
+              eq(apiIdempotencyKeys.credentialId, credentialId),
+              eq(apiIdempotencyKeys.operationId, operationId),
+              eq(apiIdempotencyKeys.idempotencyKey, idempotencyKey)
+            )
+          )
+          .for("share")
+      ).at(0)
+      if (!existing) return null
+      // Preserve the original hash protocol for receipts written by the old wrapper.
+      const hash = createHash("sha256")
+        .update(JSON.stringify(input))
+        .digest("hex")
+      if (existing.requestHash !== hash)
+        throw new CommandConflictError(
+          "reused",
+          "The idempotency key was already used with a different request."
         )
-      )
-      .limit(1)
-    const existing = existingRows.at(0)
-
-    if (!existing || existing.requestHash !== hash) {
-      throw new IdempotencyConflictError(
-        "reused",
-        "The idempotency key was already used with a different request."
-      )
-    }
-
-    if (!existing.responseBody) {
-      throw new IdempotencyConflictError(
-        "in-progress",
-        "A request with this idempotency key is still in progress."
-      )
-    }
-
-    return {
-      replayed: true,
-      value: parse(JSON.parse(existing.responseBody) as unknown),
-    }
-  }
-
-  let value: T
-  try {
-    value = await run()
-  } catch (error) {
-    await db
-      .delete(apiIdempotencyKeys)
-      .where(eq(apiIdempotencyKeys.id, reservation.id))
-    throw error
-  }
-
-  await db
-    .update(apiIdempotencyKeys)
-    .set({ responseStatus: status, responseBody: JSON.stringify(value) })
-    .where(eq(apiIdempotencyKeys.id, reservation.id))
-
-  return { replayed: false, value }
+      if (existing.responseBody === null || existing.responseStatus === null)
+        throw new CommandConflictError(
+          "ambiguous",
+          "The legacy command outcome requires reconciliation before retry."
+        )
+      return { value: options.parse(JSON.parse(existing.responseBody)) }
+    },
+  })
 }

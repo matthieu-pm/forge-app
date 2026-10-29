@@ -52,6 +52,29 @@ function gateway(
 }
 
 describe("capability gateway", () => {
+  it("delegates a registered SQL write to its atomic adapter before legacy approval lookup", async () => {
+    const transactionalWrite = vi
+      .fn()
+      .mockResolvedValue({ ok: true, value: { count: 3 } })
+    const execute = vi.fn()
+    const invocation = {
+      capabilityId: "teams.list",
+      capabilityVersion: "1",
+      input: { limit: 3 },
+      idempotencyKey: "atomic",
+    }
+    await expect(
+      gateway("reversible-write", { transactionalWrite }, execute).invoke(
+        actor,
+        invocation,
+        { runId: RUN_ID }
+      )
+    ).resolves.toEqual({ ok: true, value: { count: 3 } })
+    expect(transactionalWrite).toHaveBeenCalledWith(actor, invocation, {
+      runId: RUN_ID,
+    })
+    expect(execute).not.toHaveBeenCalled()
+  })
   it("validates and invokes a registered read capability", async () => {
     await expect(
       gateway().invoke(
@@ -83,6 +106,36 @@ describe("capability gateway", () => {
     })
   })
 
+  it("preserves completed write identity beyond the old expiry", async () => {
+    let now = new Date("2026-01-01T00:00:00Z")
+    const consume = vi.fn().mockResolvedValue({ state: "consumed" })
+    const execute = vi.fn((_actor: Actor, input: { limit: number }) =>
+      Promise.resolve({ count: input.limit })
+    )
+    const instance = gateway(
+      "reversible-write",
+      {
+        approvals: { consume },
+        idempotency: new InMemoryCapabilityIdempotencyStore(),
+        now: () => now,
+      },
+      execute
+    )
+    const invocation = {
+      capabilityId: "teams.list",
+      capabilityVersion: "1",
+      input: { limit: 3 },
+      idempotencyKey: "expired",
+      approvalId: "80000000-0000-4000-8000-000000000001",
+    }
+    const original = await instance.invoke(actor, invocation, { runId: RUN_ID })
+    now = new Date("2026-01-04T00:00:00Z")
+    expect(await instance.invoke(actor, invocation, { runId: RUN_ID })).toEqual(
+      original
+    )
+    expect(execute).toHaveBeenCalledOnce()
+    expect(consume).toHaveBeenCalledOnce()
+  })
   it("consumes approval once and replays a completed write", async () => {
     const consume = vi.fn().mockResolvedValue({ state: "consumed" })
     const execute = vi.fn((_actor: Actor, input: { limit: number }) =>

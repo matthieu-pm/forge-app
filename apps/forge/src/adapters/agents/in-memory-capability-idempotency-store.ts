@@ -22,10 +22,9 @@ export class InMemoryCapabilityIdempotencyStore implements CapabilityIdempotency
     const key = reservationKey(record)
     const existingId = this.#idsByKey.get(key)
     const existing = existingId ? this.records.get(existingId) : undefined
-    if (existing && existing.expiresAt > record.createdAt) {
+    if (existing) {
       return { kind: "existing" as const, record: existing }
     }
-    if (existingId) this.records.delete(existingId)
     this.records.set(record.id, record)
     this.#idsByKey.set(key, record.id)
     return { kind: "reserved" as const, record }

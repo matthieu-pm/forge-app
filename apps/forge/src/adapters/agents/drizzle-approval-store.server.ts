@@ -2,6 +2,7 @@ import "@tanstack/react-start/server-only"
 
 import { and, eq } from "drizzle-orm"
 
+import type { DatabaseExecutor } from "@/db"
 import type { AgentApprovalStore } from "@/application/agents/approval-store"
 import type {
   AgentApprovalRecord,
@@ -20,8 +21,9 @@ function toRecord(
 }
 
 export class DrizzleAgentApprovalStore implements AgentApprovalStore {
+  constructor(private readonly executor: DatabaseExecutor = db) {}
   async create(record: AgentApprovalRecord) {
-    const rows = await db
+    const rows = await this.executor
       .insert(agentApprovals)
       .values(record)
       .onConflictDoNothing({ target: agentApprovals.id })
@@ -34,7 +36,7 @@ export class DrizzleAgentApprovalStore implements AgentApprovalStore {
   }
 
   async get(approvalId: string) {
-    const rows = await db
+    const rows = await this.executor
       .select()
       .from(agentApprovals)
       .where(eq(agentApprovals.id, approvalId))
@@ -51,7 +53,7 @@ export class DrizzleAgentApprovalStore implements AgentApprovalStore {
     capabilityVersion: string
     inputHash: string
   }) {
-    const rows = await db
+    const rows = await this.executor
       .select()
       .from(agentApprovals)
       .where(
@@ -75,7 +77,7 @@ export class DrizzleAgentApprovalStore implements AgentApprovalStore {
     runId: string
     requestedForUserId: string
   }) {
-    const rows = await db
+    const rows = await this.executor
       .select()
       .from(agentApprovals)
       .where(
@@ -97,7 +99,7 @@ export class DrizzleAgentApprovalStore implements AgentApprovalStore {
     resolvedAt?: Date
     resolvedByUserId?: string
   }) {
-    const rows = await db
+    const rows = await this.executor
       .update(agentApprovals)
       .set({
         state: input.nextState,

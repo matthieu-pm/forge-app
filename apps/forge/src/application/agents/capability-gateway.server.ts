@@ -97,6 +97,11 @@ export class CapabilityGateway {
     private readonly options: {
       approvals?: Pick<ApprovalService, "consume"> &
         Partial<Pick<ApprovalService, "findApprovedForInvocation">>
+      transactionalWrite?: (
+        actor: Actor,
+        invocation: CapabilityInvocation,
+        context: CapabilityExecutionContext
+      ) => Promise<CapabilityResult>
       idempotency?: CapabilityIdempotencyStore
       id?: () => string
       now?: () => Date
@@ -159,6 +164,8 @@ export class CapabilityGateway {
     }
 
     if (definition.descriptor.risk !== "read") {
+      if (this.options.transactionalWrite)
+        return this.options.transactionalWrite(actor, invocation, context)
       let approvalId = invocation.approvalId
       if (
         !approvalId &&

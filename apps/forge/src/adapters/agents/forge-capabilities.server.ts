@@ -1,6 +1,10 @@
 import "@tanstack/react-start/server-only"
 
 import { z } from "zod"
+import {
+  consumeCapabilityCommandApproval,
+  executeCapabilityCommand,
+} from "./drizzle-capability-command.server"
 
 import {
   CapabilityGateway,
@@ -252,6 +256,13 @@ export const forgeCapabilityGateway = new CapabilityGateway(
     createArtifactCapability,
   ]),
   {
+    transactionalWrite: (actor, invocation, context) =>
+      executeCapabilityCommand(
+        actor,
+        invocation,
+        context,
+        consumeCapabilityCommandApproval
+      ),
     approvals: forgeApprovalService,
     idempotency: new DrizzleCapabilityIdempotencyStore(),
     allowedCapabilities: resolveAgentControlPolicy().allowedCapabilities,

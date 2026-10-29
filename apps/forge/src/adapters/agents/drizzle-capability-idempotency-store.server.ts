@@ -1,6 +1,6 @@
 import "@tanstack/react-start/server-only"
 
-import { and, eq, lt } from "drizzle-orm"
+import { and, eq } from "drizzle-orm"
 
 import type {
   CapabilityIdempotencyStore,
@@ -24,15 +24,6 @@ function toRecord(
 
 export class DrizzleCapabilityIdempotencyStore implements CapabilityIdempotencyStore {
   async reserve(record: CapabilityInvocationRecord) {
-    await db
-      .delete(agentCapabilityInvocations)
-      .where(
-        and(
-          eq(agentCapabilityInvocations.workspaceId, record.workspaceId),
-          eq(agentCapabilityInvocations.userId, record.userId),
-          lt(agentCapabilityInvocations.expiresAt, record.createdAt)
-        )
-      )
     const rows = await db
       .insert(agentCapabilityInvocations)
       .values({

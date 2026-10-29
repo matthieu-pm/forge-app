@@ -28,6 +28,9 @@ export const schema = {
 }
 
 export const db = drizzle(client, { schema })
+export type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0]
+/** Repositories accept the caller's executor so every write uses one connection. */
+export type DatabaseExecutor = typeof db | Transaction
 
 export * from "./schema"
 export * from "./auth-schema"

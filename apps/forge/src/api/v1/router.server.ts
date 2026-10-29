@@ -18,6 +18,7 @@ import {
   IdempotencyConflictError,
   executeIdempotent,
 } from "@/api/v1/idempotency.server"
+import { authorizeTeamCreation } from "@/application/teams/team-command-authorization.server"
 import { teamSummarySchema } from "@/application/teams/team-schemas"
 import {
   ApiCredentialError,
@@ -94,10 +95,21 @@ const create = api.teams.create.handler(async ({ context, input, errors }) => {
       operationId: "createTeam",
       status: 201,
       parse: (value) => teamSummarySchema.parse(value),
-      run: async () => {
-        const result = await createTeam(context.actor, input)
+      authorize: authorizeTeamCreation,
+      run: async (tx, actor) => {
+        const result = await createTeam(actor, input, tx)
 
-        if (result.ok) return result.team
+        if (result.ok)
+          return {
+            value: result.team,
+            resource: { type: "team", id: result.team.id },
+            events: [
+              {
+                topic: "teams.created.v1",
+                payload: { teamId: result.team.id },
+              },
+            ],
+          }
         if (result.code === "FORBIDDEN") {
           throw errors.FORBIDDEN({ message: result.message })
         }
@@ -134,10 +146,20 @@ const create = api.teams.create.handler(async ({ context, input, errors }) => {
       outcome: "rejected",
       requestId: context.requestId,
     })
+    if (error instanceof ApplicationAccessError) {
+      throw errors.FORBIDDEN({ message: error.message })
+    }
     if (error instanceof IdempotencyConflictError) {
       throw errors.CONFLICT({
         message: error.message,
-        data: { reason: "IDEMPOTENCY_KEY_REUSED" },
+        data: {
+          reason:
+            error.reason === "reused"
+              ? "IDEMPOTENCY_KEY_REUSED"
+              : error.reason === "ambiguous"
+                ? "IDEMPOTENCY_RECONCILIATION_REQUIRED"
+                : "IDEMPOTENCY_RESULT_UNAVAILABLE",
+        },
       })
     }
     throw error

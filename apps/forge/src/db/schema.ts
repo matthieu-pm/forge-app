@@ -2046,3 +2046,95 @@ export const callNotes = pgTable("call_notes", {
     .defaultNow()
     .notNull(),
 })
+
+/** Durable command identity. Expiry/redaction never grants permission to replay. */
+export const commandReceipts = pgTable(
+  "command_receipts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    principal: text("principal").notNull(),
+    operation: text("operation").notNull(),
+    commandKey: text("command_key").notNull(),
+    inputHash: text("input_hash").notNull(),
+    responseBody: text("response_body"),
+    responseStatus: integer("response_status"),
+    resourceType: text("resource_type"),
+    resourceId: text("resource_id"),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    unique("command_receipts_scope_key_unique").on(
+      t.workspaceId,
+      t.principal,
+      t.operation,
+      t.commandKey
+    ),
+    unique("command_receipts_workspace_id_unique").on(t.workspaceId, t.id),
+    check(
+      "command_receipts_hash_check",
+      sql`${t.inputHash} ~ '^[a-f0-9]{64}$'`
+    ),
+    check(
+      "command_receipts_result_check",
+      sql`(${t.completedAt} IS NULL AND ${t.responseBody} IS NULL AND ${t.responseStatus} IS NULL) OR (${t.completedAt} IS NOT NULL AND ${t.responseStatus} BETWEEN 200 AND 299 AND ${t.resourceId} IS NOT NULL AND ${t.resourceType} IS NOT NULL)`
+    ),
+  ]
+)
+
+/** Immutable command activity is also the durable audit of the accepted write. */
+export const commandAuditEvents = pgTable(
+  "command_audit_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    commandId: uuid("command_id").notNull(),
+    actorUserId: text("actor_user_id").notNull(),
+    operation: text("operation").notNull(),
+    resourceType: text("resource_type").notNull(),
+    resourceId: text("resource_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    unique("command_audit_command_unique").on(t.commandId),
+    foreignKey({
+      name: "command_audit_receipt_fk",
+      columns: [t.workspaceId, t.commandId],
+      foreignColumns: [commandReceipts.workspaceId, commandReceipts.id],
+    }).onDelete("cascade"),
+  ]
+)
+
+/** Intent only: workers deliver committed entries under FOR-33. */
+export const commandOutboxEvents = pgTable(
+  "command_outbox_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    commandId: uuid("command_id").notNull(),
+    ordinal: integer("ordinal").notNull(),
+    topic: text("topic").notNull(),
+    payload: jsonb("payload").notNull().$type<Record<string, unknown>>(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    unique("command_outbox_command_ordinal_unique").on(t.commandId, t.ordinal),
+    foreignKey({
+      name: "command_outbox_receipt_fk",
+      columns: [t.workspaceId, t.commandId],
+      foreignColumns: [commandReceipts.workspaceId, commandReceipts.id],
+    }).onDelete("cascade"),
+    index("command_outbox_created_idx").on(t.createdAt, t.id),
+    check("command_outbox_ordinal_check", sql`${t.ordinal} >= 0`),
+  ]
+)

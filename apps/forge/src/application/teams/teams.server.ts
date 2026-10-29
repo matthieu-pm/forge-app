@@ -2,6 +2,7 @@ import "@tanstack/react-start/server-only"
 
 import { and, asc, eq, gt, isNotNull, isNull, or } from "drizzle-orm"
 
+import type { DatabaseExecutor } from "@/db"
 import type { Actor } from "@/application/actor"
 import type {
   CreateTeamInput,
@@ -135,11 +136,12 @@ function decodeCursor(value: string): TeamCursor | null {
 
 async function createTeamImpl(
   actor: Actor,
-  input: CreateTeamInput
+  input: CreateTeamInput,
+  executor: DatabaseExecutor = db
 ): Promise<CreateTeamResult> {
   if (
     !hasScope(actor, "teams:write") ||
-    !(await canWorkspaceAction(actor, "teams.create"))
+    !(await canWorkspaceAction(actor, "teams.create", executor))
   ) {
     return {
       ok: false,
@@ -160,7 +162,7 @@ async function createTeamImpl(
   }
 
   try {
-    const createdTeam = await db.transaction(async (transaction) => {
+    const createdTeam = await executor.transaction(async (transaction) => {
       const createdTeams = await transaction
         .insert(teams)
         .values({
@@ -594,7 +596,8 @@ async function archiveTeamImpl(
 async function updateTeamImpl(
   actor: Actor,
   selector: TeamSelector,
-  settings: UpdateTeamInput["settings"]
+  settings: UpdateTeamInput["settings"],
+  executor: DatabaseExecutor = db
 ): Promise<UpdateTeamResult> {
   if (!canManageTeams(actor)) {
     return {
@@ -606,7 +609,7 @@ async function updateTeamImpl(
 
   try {
     const { icon, ...teamSettings } = settings
-    const updatedTeams = await db
+    const updatedTeams = await executor
       .update(teams)
       .set({
         ...teamSettings,
