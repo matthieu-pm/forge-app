@@ -48,7 +48,6 @@
     "appVitestPassed": 1893,
     "workflowVitestPassed": 4,
     "runtimeVitestPassed": 25,
-    "appDatabaseCasesSkippedWithoutPrivateFixtureFile": 218,
     "targetedFinalUnitCasesPassed": 63,
     "workspaceTypecheck": "passed",
     "productionBuildAndWorkflowProtection": "passed",
@@ -57,7 +56,8 @@
       "errors": 0,
       "warnings": 32
     },
-    "diffCheck": "passed"
+    "diffCheck": "passed",
+    "appOptInIntegrationCasesSkipped": 218
   },
   "migration": {
     "name": "0044_resource_authorization",
@@ -87,5 +87,6 @@
     "for39FixtureWorkspaces": 0,
     "privateConnectionFileRemoved": true
   },
-  "validationObservation": "An earlier full suite run alongside a build hit the existing Reviews reaction-picker timing assertion. The independent final full rerun passed without changing that UI/test."
+  "validationObservation": "An earlier full suite run alongside a build hit the existing Reviews reaction-picker timing assertion. The independent final full rerun passed without changing that UI/test.",
+  "pullRequest": "https://github.com/matthieu-pm/forge-app/pull/11"
 }
