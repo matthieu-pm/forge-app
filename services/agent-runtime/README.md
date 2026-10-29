@@ -16,3 +16,17 @@ Development:
 3. Run `bun run test`, `bun run typecheck`, and `bun run build` from this
    directory, or use the root Turborepo commands.
 4. Start only EVE with `bun dev:agent` from the repository root.
+
+Production callback verification uses the optional `/internal/environment`
+operator endpoint. It stays disabled unless a deployment has
+`FORGE_ENVIRONMENT_CHECK_TOKEN_SHA256` and a future
+`FORGE_ENVIRONMENT_CHECK_EXPIRES_AT`. An authorized GET supplies a bearer token,
+a 32-character hex `x-environment-check-challenge`, and the canonical HTTPS
+`x-forge-expected-app-origin`. The response reports runtime schema readiness,
+deployment/source identity, and boolean origin-match/reachability results.
+It never returns the configured callback origin or secrets. The callback uses
+only an anonymous GET to `/api/auth/get-session`, follows no redirects, and
+expects a null session. A mismatched origin triggers no callback request.
+Use a short expiry and destroy the operator token after verification; no model
+run, workspace query or database write is needed. Staging retains its separate
+isolated-database operator check.

@@ -1,16 +1,17 @@
-import { defineChannel, GET } from "eve/channels"
+import { GET, defineChannel } from "eve/channels"
 import { handleEnvironmentCheck } from "../../../../packages/environment/operator-check.js"
 import {
-  assertStagingEnvironment,
   STAGING,
+  assertStagingEnvironment,
 } from "../../../../packages/environment/staging-environment.js"
 import { stagingServiceFetch } from "../../../../packages/environment/staging-service-auth.js"
+import { handleProductionEnvironmentCheck } from "../../src/production-environment-check.js"
 
 export default defineChannel({
   routes: [
     GET("/internal/environment", async (request) => {
       if (process.env.FORGE_ENVIRONMENT !== "staging")
-        return new Response(null, { status: 404 })
+        return handleProductionEnvironmentCheck(request)
       return await handleEnvironmentCheck(
         request,
         {
