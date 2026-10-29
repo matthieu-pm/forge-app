@@ -79,6 +79,30 @@ function subscription(): ProviderSubscription {
 }
 
 describe("Polar signed webhook boundary", () => {
+  it("uses verified creation time for an initial subscription whose modified_at is null", () => {
+    const initial = {
+      ...subscription(),
+      status: "active" as const,
+      past_due_at: null,
+      modified_at: null,
+      created_at: "2026-10-25T01:00:00Z",
+    }
+    expect(
+      verifiedPolarSubscriptionSnapshot(config, "w1", id, initial).updatedAt
+    ).toEqual(new Date(initial.created_at))
+    expect(
+      verifiedPolarSubscriptionSnapshot(config, "w1", id, {
+        ...initial,
+        modified_at: "2026-10-28T01:00:00Z",
+      }).updatedAt
+    ).toEqual(new Date("2026-10-28T01:00:00Z"))
+    expect(() =>
+      verifiedPolarSubscriptionSnapshot(config, "w1", id, {
+        ...initial,
+        created_at: "invalid",
+      })
+    ).toThrow()
+  })
   it("verifies the exact bytes and forwards only trusted identity and a digest", async () => {
     const reconcile = vi.fn().mockResolvedValue({})
     expect(

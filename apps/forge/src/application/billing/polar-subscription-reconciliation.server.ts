@@ -27,7 +27,11 @@ export type ProviderSubscription = Pick<
   | "pause_at_period_end"
   | "paused_at"
   | "resumes_at"
-> & { customer: Pick<Subscription["customer"], "external_id"> }
+> & {
+  customer: Pick<Subscription["customer"], "external_id">
+  /** Initial subscriptions can have no modification timestamp. */
+  created_at?: Subscription["created_at"]
+}
 
 export function verifiedPolarSubscriptionSnapshot(
   config: EnabledBillingConfig,
@@ -65,7 +69,7 @@ export function verifiedPolarSubscriptionSnapshot(
       .datetime({ offset: true })
       .transform((v) => new Date(v))
       .parse(value)
-  const updatedAt = date(subscription.modified_at)
+  const updatedAt = date(subscription.modified_at ?? subscription.created_at)
   const end = date(subscription.current_period_end)
   const scheduledPause = z.boolean().parse(subscription.pause_at_period_end)
   const pausedAt =

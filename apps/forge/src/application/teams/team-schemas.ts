@@ -190,6 +190,7 @@ export type CreateTeamErrorCode =
   | "FORBIDDEN"
   | "SLUG_TAKEN"
   | "IDENTIFIER_TAKEN"
+  | "TEAM_LIMIT"
   | "INVALID_INPUT"
   | "UNKNOWN"
 
@@ -229,6 +230,7 @@ export type RestoreTeamResult =
         | "FORBIDDEN"
         | "TEAM_NOT_FOUND"
         | "RESTORE_CONFLICT"
+        | "TEAM_LIMIT"
         | "UNKNOWN"
       message: string
     }

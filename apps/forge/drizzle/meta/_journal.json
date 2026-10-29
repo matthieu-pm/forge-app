@@ -253,6 +253,13 @@
       "when": 1793266594962,
       "tag": "0035_renewal_billing_anchors",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1793268754179,
+      "tag": "0036_workspace_team_capacity",
+      "breakpoints": true
     }
   ]
 }

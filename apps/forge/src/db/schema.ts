@@ -180,6 +180,23 @@ export const workspaceMemberCapacity = pgTable(
   })
 )
 
+// Counts all active teams, including private ones. Triggers guard every write.
+export const workspaceTeamCapacity = pgTable(
+  "workspace_team_capacity",
+  {
+    workspaceId: text("workspace_id")
+      .primaryKey()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    activeTeamCount: integer("active_team_count").default(0).notNull(),
+  },
+  (table) => ({
+    nonnegativeCount: check(
+      "workspace_team_capacity_nonnegative",
+      sql`${table.activeTeamCount} >= 0`
+    ),
+  })
+)
+
 export const workspaceEntitlements = pgTable(
   "workspace_entitlements",
   {

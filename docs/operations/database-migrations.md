@@ -17,7 +17,7 @@ checkpoint references below describe the retired rehearsal. Before reuse, read-o
 confirmed the isolated branch/database identities and empty application data. New empty
 databases avoid adopting the rowless schema-only copy's empty migration journal.
 At the original checkpoint, staging and rehearsal applied all 29 then-checked-in
-migrations. The latest checkpoint below advances both current targets to 36. No production rows were copied, no branches were manually
+migrations. The latest checkpoint below advances both current targets to 37. No production rows were copied, no branches were manually
 deleted, and the default branch/application connection selection was unchanged.
 
 Staging is a database foundation. Hosted web/runtime, isolated object storage,
@@ -127,3 +127,10 @@ Migration 0034 adds the durable currency-request history, one-pending-intent ind
 Migration 0035 adds nullable original source period, anchor day and next boundary to durable currency intents, with all-null legacy or fully populated finite/range constraints. Original-day capture requires a matching verified source replay and atomic audit; no guessed data backfill is performed. A fresh empty database on br-little-pond-zabdmew3 passed all 36 migrations and all 3 ownership/fault cases. Exact persistent staging then applied one pending migration. Billing (62) and real-auth membership (17) cases pass.
 
 An initial CLI database-create command used unsupported `--branch-id`; the CLI selected the default branch and created a new empty rehearsal database there. Verified SQL showed that exact new database contained zero user objects, then it was removed. No DDL migration, user data or existing serving database was changed. The correct command uses `--branch` and its returned identity must be verified before migration. The isolated allowlist and actual-SQL identity checks remained mandatory throughout.
+
+
+## Atomic active-team capacity expansion · 29 October 2026
+
+Migration 0036 adds/backfills workspace_team_capacity, effective-plan SQL parity and universal team write triggers. Existing teams are retained, including over-cap grandfathered workspaces. Shared workspace fencing uses NO KEY UPDATE to remain compatible with concurrent FK KEY SHARE; final-slot admission is atomic and cross-workspace moves lock deterministically. All 37 migrations and 3 ownership/fault cases passed on isolated rehearsal before exact staging applied the one pending expansion. Staging passes 23 team-capacity, 62 billing and 17 real-auth membership cases.
+
+An actual Polar sandbox fixture temporarily populated staging during provider verification. The membership harness correctly refused its empty-database precondition while that fixture existed. After the fixture was verified, period-end cancellation confirmed and only its owned workspace/users cleaned up, all 17 membership cases passed. No safety guard was bypassed, no production migration/deployment ran and no database connection setting was changed. See `docs/workspace-team-capacity.md` and `docs/polar-sandbox-verification.md`.

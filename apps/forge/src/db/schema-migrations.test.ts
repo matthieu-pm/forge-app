@@ -32,6 +32,7 @@ import {
   workspaceEntitlements,
   workspaceSecurityAuditEvents,
   workspaceSecuritySettings,
+  workspaceTeamCapacity,
 } from "./schema"
 
 type MigrationJournal = {
@@ -95,6 +96,7 @@ describe("database migrations", () => {
       ["workspace_approved_domains", workspaceApprovedDomains],
       ["workspace_currency_change_requests", workspaceCurrencyChangeRequests],
       ["workspace_entitlements", workspaceEntitlements],
+      ["workspace_team_capacity", workspaceTeamCapacity],
       ["workspace_security_audit_events", workspaceSecurityAuditEvents],
       ["workspace_security_settings", workspaceSecuritySettings],
     ] as const) {

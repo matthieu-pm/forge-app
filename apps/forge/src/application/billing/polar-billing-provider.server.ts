@@ -122,10 +122,17 @@ export class PolarBillingProvider {
 
   async createPortal(actor: Actor) {
     const identity = workspaceBillingIdentity(actor)
+    const verifyContext = async () => {
+      const current = await this.resolveBillingContext(actor)
+      if (current.workspaceId !== identity.workspaceId)
+        throw new Error("BILLING_PORTAL_CONTEXT_CHANGED")
+    }
+    await verifyContext()
     const session = await this.client.customerSessions.create({
       external_customer_id: identity.externalCustomerId,
       return_url: `${this.config.appUrl}/settings/billing`,
     })
+    await verifyContext()
     return { url: hostedUrl(session.customer_portal_url) }
   }
 }

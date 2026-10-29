@@ -64,7 +64,8 @@ function order(): UpgradeOrder {
     net_amount: 60,
     tax_amount: 12,
     total_amount: 72,
-    due_amount: 0,
+    due_amount: 72,
+    applied_balance_amount: 0,
     refunded_amount: 0,
     refunded_tax_amount: 0,
     created_at: now.toISOString(),
@@ -205,6 +206,35 @@ function fixture(plan: "starter" | "plus" = "starter") {
   }
 }
 describe("paid upgrade evidence", () => {
+  it.each([
+    [0, 72],
+    [-12, 60],
+    [12, 84],
+    [-72, 0],
+    [-90, 0],
+  ])(
+    "accepts paid invoices with applied balance %s and original due amount %s",
+    (balance, due) => {
+      expect(
+        verifiedPaidUpgradeOrder(paymentContext, {
+          ...order(),
+          applied_balance_amount: balance,
+          due_amount: due,
+        })?.orderId
+      ).toBe(orderId)
+    }
+  )
+  it.each([NaN, 0.5, Number.MAX_SAFE_INTEGER + 1])(
+    "refuses invalid applied balance %s",
+    (balance) => {
+      expect(
+        verifiedPaidUpgradeOrder(paymentContext, {
+          ...order(),
+          applied_balance_amount: balance,
+        })
+      ).toBeNull()
+    }
+  )
   it("accepts a paid proration and preserves access after a partial refund", () => {
     expect(verifiedPaidUpgradeOrder(paymentContext, order())?.orderId).toBe(
       orderId
@@ -556,6 +586,7 @@ describe("refund of only a Plus upgrade", () => {
       net_amount: 3000,
       tax_amount: 600,
       total_amount: 3600,
+      due_amount: 3600,
       items: [
         {
           amount: 3000,

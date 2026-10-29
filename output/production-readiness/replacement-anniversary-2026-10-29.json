@@ -86,5 +86,7 @@
     "docs/plans/production-readiness-linear-backlog.json": "62cf29130b670aa14f3b92f7ed4ba40709c51955f7d8e12dddc3d05c38e0ccc1",
     "docs/polar-billing.md": "2881d664c12b802c0d639a5323a7da8c3f3d6c76b6cb3c48e49e565692f48ab7",
     "docs/renewal-currency-change.md": "deeeaf519bcc7b47efc34b857b44078b7aff67caa1cdd03b3b6bafed7b1941d5"
-  }
+  },
+  "historical": true,
+  "sourceCommit": "43d6663ee7b34b3c2c16aab8ed26623c06099304"
 }

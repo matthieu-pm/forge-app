@@ -1,0 +1,60 @@
+{
+  "provenance": {
+    "environment": "sandbox",
+    "apiVersion": "2026-10",
+    "verifiedAt": "2026-10-29T10:23:12.499Z",
+    "workspaceId": "polar-sandbox-readiness-119621b6-3aad-43af-98c0-adb13972a553",
+    "containsCredentials": false
+  },
+  "subscription": {
+    "id": "53d63b6b-e3d0-496d-b7d6-3940ce0ffb44",
+    "product_id": "d8ef908d-ba46-409c-bad2-98cd7e38aea9",
+    "currency": "eur",
+    "status": "active",
+    "created_at": "2026-10-29T10:13:12.671776Z",
+    "modified_at": null,
+    "current_period_start": "2026-10-29T10:13:12.653341Z",
+    "current_period_end": "2026-11-29T10:13:12.653341Z",
+    "recurring_interval": "month",
+    "recurring_interval_count": 1,
+    "past_due_at": null,
+    "cancel_at_period_end": false,
+    "ends_at": null,
+    "ended_at": null,
+    "pause_at_period_end": false,
+    "paused_at": null,
+    "resumes_at": null,
+    "customer": {
+      "external_id": "forge:workspace:polar-sandbox-readiness-119621b6-3aad-43af-98c0-adb13972a553"
+    }
+  },
+  "order": {
+    "id": "58a74b83-05a7-4914-93c2-68a43a9f5f91",
+    "subscription_id": "53d63b6b-e3d0-496d-b7d6-3940ce0ffb44",
+    "product_id": "d8ef908d-ba46-409c-bad2-98cd7e38aea9",
+    "currency": "eur",
+    "billing_reason": "subscription_create",
+    "status": "paid",
+    "paid": true,
+    "net_amount": 3000,
+    "tax_amount": 600,
+    "total_amount": 3600,
+    "due_amount": 3600,
+    "applied_balance_amount": 0,
+    "refunded_amount": 0,
+    "refunded_tax_amount": 0,
+    "created_at": "2026-10-29T10:13:13.671499Z",
+    "checkout_id": "8cc95427-11ac-4250-8f4a-8384238257a2",
+    "customer": {
+      "external_id": "forge:workspace:polar-sandbox-readiness-119621b6-3aad-43af-98c0-adb13972a553"
+    },
+    "items": [
+      {
+        "proration": false,
+        "start_timestamp": "2026-10-29T10:13:12.653341Z",
+        "end_timestamp": "2026-11-29T10:13:12.653341Z",
+        "amount": 3000
+      }
+    ]
+  }
+}

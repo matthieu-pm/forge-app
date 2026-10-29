@@ -103,7 +103,8 @@ const create = api.teams.create.handler(async ({ context, input, errors }) => {
         }
         if (
           result.code === "SLUG_TAKEN" ||
-          result.code === "IDENTIFIER_TAKEN"
+          result.code === "IDENTIFIER_TAKEN" ||
+          result.code === "TEAM_LIMIT"
         ) {
           throw errors.CONFLICT({
             message: result.message,

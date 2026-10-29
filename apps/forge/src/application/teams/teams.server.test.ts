@@ -168,6 +168,25 @@ describe("Teams application module", () => {
     )
   })
 
+  it.each(["create", "restore"])(
+    "returns an actionable private-count-safe capacity error for %s",
+    async (operation) => {
+      mocks.returning.mockRejectedValueOnce({
+        cause: { code: "23514", constraint: "workspace_team_limit" },
+      })
+      const result =
+        operation === "create"
+          ? await createTeam(owner, input)
+          : await restoreTeam(owner, { slug: "engineering" })
+      expect(result).toMatchObject({
+        ok: false,
+        code: "TEAM_LIMIT",
+        message: expect.stringContaining("Archive a team or upgrade"),
+      })
+      expect(result).not.toHaveProperty("count")
+    }
+  )
+
   it.each([
     [{ ...owner, workspaceRole: "member" }, "role"],
     [

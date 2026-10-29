@@ -9,6 +9,7 @@ import {
   replacementAnniversarySchedule,
 } from "./monthly-billing-anchor"
 import { verifiedPolarSubscriptionSnapshot } from "./polar-subscription-reconciliation.server"
+import { consistentPaidInvoiceAmounts } from "./polar-paid-upgrade.server"
 import type { Actor } from "@/application/actor"
 import type { EnabledBillingConfig } from "./billing-config.server"
 import type { ProviderSubscription } from "./polar-subscription-reconciliation.server"
@@ -184,7 +185,7 @@ export class PolarReplacementAnniversaryVerifier {
       order.paid !== true ||
       order.status !== "paid" ||
       order.net_amount !== context.renewalPriceMinor ||
-      order.due_amount !== 0 ||
+      !consistentPaidInvoiceAmounts(order) ||
       order.refunded_amount !== 0 ||
       order.refunded_tax_amount !== 0 ||
       instant(order.created_at) < instant(checkout.created_at) ||

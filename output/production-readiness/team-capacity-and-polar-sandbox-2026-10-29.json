@@ -1,0 +1,174 @@
+{
+  "date": "2026-10-29",
+  "baseCommit": "43d6663ee7b34b3c2c16aab8ed26623c06099304",
+  "committed": true,
+  "deployed": false,
+  "completedIssues": [
+    "FOR-154"
+  ],
+  "continuingIssues": [
+    "FOR-109",
+    "FOR-110",
+    "FOR-111",
+    "FOR-76",
+    "FOR-155"
+  ],
+  "checks": {
+    "appTestsPassed": 1570,
+    "workflowTestsPassed": 4,
+    "postgresTeamCapacityCasesPassed": 23,
+    "postgresBillingCasesPassed": 62,
+    "postgresMembershipCasesPassed": 17,
+    "postgresMigrationFaultCasesPassed": 3,
+    "typecheck": "passed",
+    "scopedLint": "passed",
+    "format": "passed",
+    "productionBuild": "passed including protected Workflow handlers",
+    "secretScan": "passed; local secret file ignored and mode 600"
+  },
+  "databases": [
+    {
+      "database": "forge_staging",
+      "branch": "br-autumn-union-za0opf1e",
+      "migrations": 37
+    },
+    {
+      "database": "forge_migration_rehearsal",
+      "branch": "br-little-pond-zabdmew3",
+      "migrations": 37
+    },
+    {
+      "database": "neondb",
+      "branch": "br-muddy-queen-zaeeysjt",
+      "migrations": 26
+    }
+  ],
+  "sandboxProvider": {
+    "cancellation": {
+      "status": "scheduled",
+      "cancellationEffectiveAt": "2026-11-29T10:13:12.653Z"
+    },
+    "cancellationReplay": {
+      "status": "scheduled",
+      "cancellationEffectiveAt": "2026-11-29T10:13:12.653Z"
+    },
+    "providerCancelAtPeriodEnd": true,
+    "cancellationPeriodEnd": "2026-11-29T10:13:12.653Z",
+    "environment": "sandbox",
+    "organizationId": "0d79d64a-419b-490a-ad9f-271a6fce1fc5",
+    "workspaceId": "polar-sandbox-readiness-119621b6-3aad-43af-98c0-adb13972a553",
+    "checkoutId": "8cc95427-11ac-4250-8f4a-8384238257a2",
+    "orderId": "58a74b83-05a7-4914-93c2-68a43a9f5f91",
+    "subscriptionId": "53d63b6b-e3d0-496d-b7d6-3940ce0ffb44",
+    "checkoutStatus": "succeeded",
+    "orderStatus": "paid",
+    "paid": true,
+    "currency": "eur",
+    "net": 3000,
+    "tax": 600,
+    "total": 3600,
+    "dueAmount": 3600,
+    "appliedBalanceAmount": 0,
+    "seats": 3,
+    "subscriptionStatus": "active",
+    "initialModifiedAt": null,
+    "creationFallback": "2026-10-29T10:13:12.671Z",
+    "firstReconciliation": {
+      "outcome": "applied",
+      "replayed": true,
+      "effectivePlan": "basic"
+    },
+    "secondReconciliation": {
+      "outcome": "applied",
+      "replayed": true,
+      "effectivePlan": "basic"
+    },
+    "access": {
+      "plan": "basic",
+      "phase": "paid",
+      "allowsExistingOverage": true
+    },
+    "paidActivatedAt": "2026-10-29T10:13:12.671Z",
+    "allowanceMicros": 15000000,
+    "currentPeriodStart": "2026-10-29T10:13:12.653Z",
+    "currentPeriodEnd": "2026-11-29T10:13:12.653Z",
+    "verifiedAt": "2026-10-29T10:26:54.047Z",
+    "publicBillingEnabled": false,
+    "actualWebhookDeliveryTested": false,
+    "browserReturn": "localhost:3000 was unavailable; provider status and canonical reconciliation were verified independently",
+    "initialCanonicalApplyObserved": true,
+    "initialCanonicalApplyVerifiedAt": "2026-10-29T10:23:12.499Z",
+    "applicationFixtureCleaned": true,
+    "providerFinancialRecordsRetained": true,
+    "currentFirstReconciliationIsReplayAfterEarlierInitialApply": true,
+    "nonfatalRuntimeDiagnostic": "Bun emitted a tsconfig directory-mismatch diagnostic; commands exited 0 and all explicit provider/database assertions passed."
+  },
+  "sandboxCatalog": {
+    "organization": "forgeapp",
+    "organizationId": "0d79d64a-419b-490a-ad9f-271a6fce1fc5",
+    "products": {
+      "starter": "d8ef908d-ba46-409c-bad2-98cd7e38aea9",
+      "plus": "22d77205-91cc-4886-9e30-02a9ebafe2af"
+    },
+    "nativeCurrencies": [
+      "eur",
+      "usd"
+    ],
+    "monthlySeatPriceMinor": {
+      "starter": 1000,
+      "plus": 1600
+    },
+    "taxBehavior": "exclusive",
+    "publicBillingEnabled": false
+  },
+  "localPolarConfigChanged": true,
+  "localDatabaseConnectionSettingsChanged": false,
+  "productionProviderChanged": false,
+  "servingDatabaseChanged": false,
+  "backlog": {
+    "issues": 136,
+    "edges": 258,
+    "acyclic": true,
+    "newIssuesCreated": 0,
+    "newDependencyEdges": 0
+  },
+  "trial": {
+    "expiryCarryover": "Confirmed: carry usage over, no fresh Free pool.",
+    "startingTrialPool": "Pending user choice: fresh USD5 trial pool versus deduct prior Free consumption."
+  },
+  "remaining": "Public billing/return UI and external webhook delivery; remaining provider lifecycle/repair/currency replacement; atomic usage/cap ledger; trial starting/redemption/expiry; serving identity and production release gates.",
+  "sourceSha256": {
+    ".env.example": "cd00265bd5012163d638fbd95c4d8c603a90f3ee105879070296c20be1a13a54",
+    "apps/forge/drizzle/0036_workspace_team_capacity.sql": "e0cc6e67f28808cd090ded0806aa748126928af383992bb8e6b0f6a60c001231",
+    "apps/forge/drizzle/meta/0036_snapshot.json": "184c3602f91f9405b3c0bfe4039783848c7a231139da412a19de5635564d46f6",
+    "apps/forge/drizzle/meta/_journal.json": "8b5e713f1f4871f65e997fc10f4a055a1635461d65ea6b44ffdd13f1f4f65571",
+    "apps/forge/src/api/v1/errors.ts": "e1c8692a4ba153f8bb61ebf0de3b4f97349db609240945d5b657be598b45a3c4",
+    "apps/forge/src/api/v1/router.server.ts": "34b41874209f0244a94cb9ffc095ee1885262e25573f6d7b980e809ffcbd9851",
+    "apps/forge/src/application/billing/fixtures/polar-sandbox-paid-starter.json": "1ac1742001e5a98bc0d61ed433a5adbb7fe4d5eeb3b404824837c2c8ac1bb89c",
+    "apps/forge/src/application/billing/polar-billing-provider.server.test.ts": "edede56d8393dac55fbd6b276a3cdcbe0fcf92e6a6ca0400c0fa53aaac957979",
+    "apps/forge/src/application/billing/polar-billing-provider.server.ts": "83d292acc418674eee270ae4e3a9391fc07369ebbf5cd9294c75307bb0f7ea99",
+    "apps/forge/src/application/billing/polar-paid-catalog.ts": "125d37635f9a66a12b1e167a23102eab51ae6086cd4820cb3c10a9eba5efa792",
+    "apps/forge/src/application/billing/polar-paid-upgrade.server.ts": "17a3f375724a4ca8d7d89243af0f70bfdf8e4d64181eb5b18052a7dad5976888",
+    "apps/forge/src/application/billing/polar-plan-change.server.test.ts": "e057a14645dda354002ef45748187274905294fcdbc323398f11581410afb45b",
+    "apps/forge/src/application/billing/polar-provider-contract.server.test.ts": "aadc0abeb7cdca6e79774d7f66be05911a8bdc7172839dbc3e8e7777f9560594",
+    "apps/forge/src/application/billing/polar-replacement-anniversary.server.test.ts": "c43be31611c3c19c186ea9f23e5a21d476621dd746dc50694559c97272f55614",
+    "apps/forge/src/application/billing/polar-replacement-anniversary.server.ts": "31a96ef24b939c348d5117480192af7914e88835ecfea1ebbcab5b892758c419",
+    "apps/forge/src/application/billing/polar-subscription-reconciliation.server.ts": "9f1c29e0b2c423fb3129c4df6599e864da0c1ab09660104ba798f006b200547a",
+    "apps/forge/src/application/billing/polar-webhook.server.test.ts": "3f8d72d697656c0d52392f3cac70425146c12c08f2a8226b2041213bb4cbb11e",
+    "apps/forge/src/application/billing/subscription-reconciliation.postgres.test.ts": "85c97017c9a083ceff9e92dc26b81b1617e0d2854687679abf7460cea697d534",
+    "apps/forge/src/application/teams/team-capacity.postgres.test.ts": "bbfc14ed64858c17f4fd8f5972a52baae73e012fd4527e7846778a6805ae12f4",
+    "apps/forge/src/application/teams/team-schemas.ts": "9fff70bc9dd1113a4619354e71c4a7c2549b1fd943d873ef7e64fda48152d34f",
+    "apps/forge/src/application/teams/teams.server.test.ts": "4abec792e920875c38bd0574aad0e0d6210b9b90fb8962a942f9ad8d6dfd6cfc",
+    "apps/forge/src/application/teams/teams.server.ts": "e16c97eb8534d913d7511f556ab454073598b63a7546803a592add95a3f3e690",
+    "apps/forge/src/db/schema-migrations.test.ts": "3ddf10dda183946789ae0cd67e1a24638e673333ba7e87c4f6ebd56fbc2ad93b",
+    "apps/forge/src/db/schema.ts": "02ca72b83868abf579e28b8ac8ad56f27acb8c17dc2993cefeb7c6c19900d5b9",
+    "docs/forge-plan-matrix.md": "7145e21f49716c559094a204aa9d98777e37f2430c5b89dc4316b587067c511b",
+    "docs/operations/database-migrations.md": "a13ef9701349834c923cd6f4b6fd75bad022336c9b4dfe165af2d8317ed603df",
+    "docs/plans/production-readiness-backlog-map.md": "f55b52e44436745f7b911a52851dfce80469d733df9429c9cc970ced92ea248a",
+    "docs/plans/production-readiness-linear-backlog.json": "f9991a43b0cb1eb32d1c6fec6179c9e98cce772f61bcf459d688a8543f8b9bdb",
+    "docs/polar-billing.md": "d6d5e9ffb390d4617f831bebcc80771b7769cc2b55cb4a96aa2fa2eac814d9d0",
+    "docs/polar-sandbox-verification.md": "54d6c4b02cc38ca8dc59a3e78939444dd50e934569a28100f3c12b80c88ea7c9",
+    "docs/renewal-currency-change.md": "95b3282623e9351350ebb543ba01f429231ac91539149d759a28610aef2ed8cc",
+    "docs/workspace-team-capacity.md": "90e11dbc5701e353326216b62147a7fc65fb10a6c1a63397bde3743f68013098"
+  }
+}

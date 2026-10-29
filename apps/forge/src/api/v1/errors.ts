@@ -23,6 +23,7 @@ export const publicApiErrors = {
     data: z.object({
       reason: z.enum([
         "SLUG_TAKEN",
+        "TEAM_LIMIT",
         "IDENTIFIER_TAKEN",
         "IDEMPOTENCY_KEY_REUSED",
       ]),

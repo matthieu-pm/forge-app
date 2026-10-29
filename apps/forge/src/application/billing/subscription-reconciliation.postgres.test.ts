@@ -129,7 +129,8 @@ describe.skipIf(!connection)(
         net_amount: 60,
         tax_amount: 0,
         total_amount: 60,
-        due_amount: 0,
+        due_amount: 60,
+        applied_balance_amount: 0,
         refunded_amount: 0,
         refunded_tax_amount: 0,
         created_at: now.toISOString(),
@@ -225,6 +226,7 @@ describe.skipIf(!connection)(
         net_amount: 1000,
         tax_amount: 0,
         total_amount: 1000,
+        due_amount: 1000,
         items: [
           {
             amount: 1000,
@@ -333,7 +335,7 @@ describe.skipIf(!connection)(
       })
       const migration = await readFile(
         new URL(
-          "../../../drizzle/0035_renewal_billing_anchors.sql",
+          "../../../drizzle/0036_workspace_team_capacity.sql",
           import.meta.url
         ),
         "utf8"

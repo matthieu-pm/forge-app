@@ -16,6 +16,7 @@ export type UpgradeOrder = Pick<
   | "tax_amount"
   | "total_amount"
   | "due_amount"
+  | "applied_balance_amount"
   | "refunded_amount"
   | "refunded_tax_amount"
   | "created_at"
@@ -45,6 +46,42 @@ export type UpgradeOrderClient = {
 const cents = z.number().int().nonnegative().safe()
 const instant = z.iso.datetime({ offset: true }).transform((v) => new Date(v))
 
+/** Polar's due_amount is the original invoice total after applied balance,
+ * not the remaining unpaid balance. Paid/status fields prove payment. */
+export function consistentPaidInvoiceAmounts(
+  order: Pick<
+    UpgradeOrder,
+    | "net_amount"
+    | "tax_amount"
+    | "total_amount"
+    | "due_amount"
+    | "applied_balance_amount"
+    | "refunded_amount"
+    | "refunded_tax_amount"
+  >
+) {
+  if (
+    ![
+      order.net_amount,
+      order.tax_amount,
+      order.total_amount,
+      order.due_amount,
+      order.refunded_amount,
+      order.refunded_tax_amount,
+    ].every((v) => cents.safeParse(v).success) ||
+    !z.number().int().safe().safeParse(order.applied_balance_amount).success
+  )
+    return false
+  const total = BigInt(order.total_amount),
+    due = total + BigInt(order.applied_balance_amount)
+  return (
+    BigInt(order.net_amount) + BigInt(order.tax_amount) === total &&
+    BigInt(order.due_amount) === (due > 0n ? due : 0n) &&
+    order.refunded_amount <= order.net_amount &&
+    order.refunded_tax_amount <= order.tax_amount
+  )
+}
+
 /** Only a current, paid, non-fully-refunded invoice can prove a paid tier upgrade. */
 export function verifiedPaidUpgradeOrder(
   context: UpgradePaymentContext,
@@ -62,20 +99,8 @@ export function verifiedPaidUpgradeOrder(
     )
   )
     return null
-  const values = [
-    order.net_amount,
-    order.tax_amount,
-    order.total_amount,
-    order.due_amount,
-    order.refunded_amount,
-    order.refunded_tax_amount,
-  ].map((v) => cents.safeParse(v))
-  if (values.some((v) => !v.success)) return null
   if (
-    order.due_amount !== 0 ||
-    order.net_amount + order.tax_amount !== order.total_amount ||
-    order.refunded_amount > order.net_amount ||
-    order.refunded_tax_amount > order.tax_amount ||
+    !consistentPaidInvoiceAmounts(order) ||
     (order.total_amount === 0 && order.status !== "paid") ||
     (order.total_amount > 0 &&
       order.refunded_amount + order.refunded_tax_amount >= order.total_amount)

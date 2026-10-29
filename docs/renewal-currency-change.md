@@ -119,10 +119,10 @@ that correction before renewal without resetting allowance or repricing invoices
 Starter's EUR/USD 10 and Plus's EUR/USD 16 per member are **before tax**;
 applicable tax is added at checkout. `PolarBillingProvider` now fetches the
 configured product before creating checkout. Require a live monthly recurring
-product and exactly one active catalog seat-based price: correct currency,
+product and exactly one active catalog seat-based price for each configured currency: correct currency,
 explicit exclusive tax behavior, one flat tier at the approved per-seat price,
 minimum one seat and no commercial maximum. Refuse inclusive/location-dependent
-or inherited/null tax behavior, ambiguous active prices, archived/nonmonthly
+or inherited/null tax behavior, duplicate active prices per currency, archived/nonmonthly
 products, wrong amount/currency or finite seat tiers. CheckoutCreate has no
 explicit tax-behavior override in the pinned SDK, so enforce it on the catalog
 rather than inventing an unsupported request parameter.
@@ -197,3 +197,8 @@ Full source/checkpoint evidence is recorded in
 `output/production-readiness/replacement-anniversary-2026-10-29.json`.
 FOR-109/FOR-110/FOR-111 remain In Progress for the remaining policy and complete
 replacement/grace/public/ledger/provider release requirements. Billing stays disabled.
+
+
+## Subsequent actual sandbox verification · 29 October 2026
+
+The supplied sandbox token now verifies forgeapp, with Starter and Plus products each carrying native EUR and USD seat prices. Polar requires the organization's default currency on every product; the catalog guard now validates one approved active price per supported currency and refuses fallback/ambiguous prices. Creation-time and paid-invoice semantics were corrected against actual provider responses: a new subscription may have modified_at=null, and due_amount retains the original invoice amount after payment. A sanitized actual response fixture prevents regression. See `docs/polar-sandbox-verification.md` for paid initial checkout, canonical reconciliation/replay, period-end cancellation and remaining release limits. This subsequent evidence does not execute original-anniversary currency replacement or its grace/ledger effects.

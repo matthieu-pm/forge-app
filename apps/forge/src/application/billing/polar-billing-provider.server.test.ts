@@ -96,6 +96,34 @@ function fixture() {
 }
 
 describe("Polar workspace billing adapter", () => {
+  it.each(["FR", "US"])(
+    "selects the exact native currency from a shared multi-currency product for %s",
+    async (billingCountry) => {
+      const f = fixture(),
+        catalog = await f.product(config.paidProducts.starter.eur),
+        usd = structuredClone(catalog.prices[0])
+      usd.id = "00000000-0000-4000-8000-000000000006"
+      usd.price_currency = "usd"
+      catalog.prices.push(usd)
+      f.product.mockImplementation((id) =>
+        Promise.resolve({
+          ...catalog,
+          id,
+          prices: catalog.prices.map((p) => ({ ...p, product_id: id })),
+        })
+      )
+      f.context.mockResolvedValue({
+        workspaceId: actor.workspaceId,
+        billableMembers: 3,
+        billingCountry,
+      })
+      await f.provider.createCheckout(actor, "starter")
+      expect(f.checkout.mock.calls[0][0].currency).toBe(
+        billingCountry === "FR" ? "eur" : "usd"
+      )
+      expect(f.checkout.mock.calls[0][0]).not.toHaveProperty("prices")
+    }
+  )
   it.each(["inclusive", "location", null] as const)(
     "refuses %s catalog tax behavior before creating a checkout",
     async (tax_behavior) => {
@@ -265,6 +293,32 @@ describe("Polar workspace billing adapter", () => {
       external_customer_id: "forge:workspace:workspace-b",
       return_url: "https://forge.test/settings/billing",
     })
+  })
+  it("refuses revoked portal authority before creating or disclosing a hosted session", async () => {
+    const f = fixture()
+    f.context.mockRejectedValueOnce(new Error("BILLING_ACTOR_REVOKED"))
+    await expect(f.provider.createPortal(actor)).rejects.toThrow("REVOKED")
+    expect(f.portal).not.toHaveBeenCalled()
+    const g = fixture()
+    g.context
+      .mockResolvedValueOnce({
+        workspaceId: actor.workspaceId,
+        billableMembers: 3,
+        billingCountry: "FR",
+      })
+      .mockRejectedValueOnce(new Error("BILLING_ACTOR_REVOKED"))
+    await expect(g.provider.createPortal(actor)).rejects.toThrow("REVOKED")
+    expect(g.portal).toHaveBeenCalledTimes(1)
+    const h = fixture()
+    h.context.mockResolvedValue({
+      workspaceId: "other",
+      billableMembers: 3,
+      billingCountry: "FR",
+    })
+    await expect(h.provider.createPortal(actor)).rejects.toThrow(
+      "CONTEXT_CHANGED"
+    )
+    expect(h.portal).not.toHaveBeenCalled()
   })
   it.each(["GB", "CH", "NO"])(
     "selects EUR for the confirmed %s billing country",

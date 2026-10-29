@@ -27,6 +27,8 @@ import { db, teamMembers, teams } from "@/db"
 
 export type TeamSelector = { id: string } | { slug: string }
 const TEAM_RECOVERY_WINDOW_MS = 30 * 24 * 60 * 60 * 1_000
+const TEAM_LIMIT_MESSAGE =
+  "Your workspace has reached its plan’s team limit. Archive a team or upgrade your plan to add another."
 
 export type ListTeamsInput = {
   cursor?: string
@@ -197,6 +199,9 @@ export async function createTeam(
     return { ok: true, team: toTeamSummary(createdTeam) }
   } catch (error) {
     const constraint = constraintName(error)
+
+    if (constraint.includes("workspace_team_limit"))
+      return { ok: false, code: "TEAM_LIMIT", message: TEAM_LIMIT_MESSAGE }
 
     if (constraint.includes("teams_workspace_slug_unique")) {
       return {
@@ -388,6 +393,9 @@ export async function restoreTeam(
     return { ok: true, team: toTeamSummary(restoredTeam) }
   } catch (error) {
     const constraint = constraintName(error)
+
+    if (constraint.includes("workspace_team_limit"))
+      return { ok: false, code: "TEAM_LIMIT", message: TEAM_LIMIT_MESSAGE }
 
     if (
       constraint.includes("teams_workspace_slug_unique") ||
