@@ -1,8 +1,8 @@
 // @vitest-environment node
-import { createHash, randomUUID } from "node:crypto"
-import { readFile } from "node:fs/promises"
+import { randomUUID } from "node:crypto"
 import { Pool, neonConfig } from "@neondatabase/serverless"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
+import { schemaIsReady } from "../operations/readiness-schema"
 import { DATABASE_TARGETS } from "../../../scripts/lib/database-targets"
 import { assertMigrationTarget } from "../../../scripts/lib/serialized-migrations"
 import { subscriptionAccess } from "../billing/subscription-access"
@@ -33,20 +33,7 @@ describe.skipIf(!connection)("atomic PostgreSQL team capacity", () => {
       database: target.database,
       branch: target.branchId,
     })
-    const migration = await readFile(
-      new URL(
-        "../../../drizzle/0038_workspace_usage_ledger.sql",
-        import.meta.url
-      ),
-      "utf8"
-    )
-    expect(
-      (
-        await pool.query(
-          "SELECT hash FROM drizzle.__drizzle_migrations ORDER BY created_at DESC LIMIT 1"
-        )
-      ).rows[0].hash
-    ).toBe(createHash("sha256").update(migration).digest("hex"))
+    expect(await schemaIsReady(pool)).toBe(true)
     vi.stubEnv("DATABASE_URL", connection)
     vi.stubEnv("BETTER_AUTH_URL", "http://localhost:3098")
     vi.stubEnv(
@@ -242,7 +229,7 @@ describe.skipIf(!connection)("atomic PostgreSQL team capacity", () => {
     expect(JSON.stringify(result)).not.toContain("private")
     expect(result).not.toHaveProperty("count")
   })
-  it("rolls a denied cross-workspace move back with both counters and permits valid moves/deletion", async () => {
+  it("rejects reparenting even with spare capacity and counts fresh destination identities", async () => {
     const source = await workspace("business"),
       dest = await workspace(),
       team = await rawTeam(source, 0)
@@ -253,17 +240,22 @@ describe.skipIf(!connection)("atomic PostgreSQL team capacity", () => {
         dest.id,
         team.id,
       ])
-    ).rejects.toMatchObject({ constraint: "workspace_team_limit" })
+    ).rejects.toMatchObject({ constraint: "forge_immutable_identity" })
     expect(await count(source.id)).toEqual({ actual: 1, tracked: 1 })
     expect(await count(dest.id)).toEqual({ actual: 2, tracked: 2 })
     await pool.query(
       "DELETE FROM teams WHERE workspace_id=$1 AND identifier='T2'",
       [dest.id]
     )
-    await pool.query("UPDATE teams SET workspace_id=$1 WHERE id=$2", [
-      dest.id,
-      team.id,
-    ])
+    await expect(
+      pool.query("UPDATE teams SET workspace_id=$1 WHERE id=$2", [
+        dest.id,
+        team.id,
+      ])
+    ).rejects.toMatchObject({ constraint: "forge_immutable_identity" })
+    await pool.query("DELETE FROM teams WHERE id=$1", [team.id])
+    const replacement = await rawTeam(dest, 0)
+    expect(replacement.id).not.toBe(team.id)
     expect(await count(source.id)).toEqual({ actual: 0, tracked: 0 })
     expect(await count(dest.id)).toEqual({ actual: 2, tracked: 2 })
   })

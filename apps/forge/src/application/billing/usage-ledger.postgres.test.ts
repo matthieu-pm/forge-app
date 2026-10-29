@@ -1,8 +1,8 @@
 // @vitest-environment node
-import { createHash, randomUUID } from "node:crypto"
-import { readFile } from "node:fs/promises"
+import { randomUUID } from "node:crypto"
 import { Pool, neonConfig } from "@neondatabase/serverless"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
+import { schemaIsReady } from "../operations/readiness-schema"
 import { DATABASE_TARGETS } from "../../../scripts/lib/database-targets"
 import { assertMigrationTarget } from "../../../scripts/lib/serialized-migrations"
 import { workspaceUsagePeriod } from "./workspace-usage-period"
@@ -173,20 +173,7 @@ describe.skipIf(!connection)("atomic PostgreSQL usage ledger", () => {
         )
       ).rows[0]
     ).toEqual({ database: target.database, branch: target.branchId })
-    const migration = await readFile(
-      new URL(
-        "../../../drizzle/0038_workspace_usage_ledger.sql",
-        import.meta.url
-      ),
-      "utf8"
-    )
-    expect(
-      (
-        await pool.query(
-          "SELECT hash FROM drizzle.__drizzle_migrations ORDER BY created_at DESC LIMIT 1"
-        )
-      ).rows[0].hash
-    ).toBe(createHash("sha256").update(migration).digest("hex"))
+    expect(await schemaIsReady(pool)).toBe(true)
     vi.stubEnv("DATABASE_URL", connection)
     cleanup.database = await import("@/db")
     ledger = await import("./usage-ledger.server")

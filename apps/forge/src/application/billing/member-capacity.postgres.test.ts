@@ -423,7 +423,7 @@ describe.skipIf(!testUrl)(
       expect(await count(w.id)).toEqual({ actual: 4, tracked: 4 })
     })
 
-    it("restores capacity on deletion, preserves it on rollback and atomically moves members", async () => {
+    it("restores capacity on deletion, preserves rollback and requires new membership identities for another workspace", async () => {
       const source = await workspace(1),
         destination = await workspace(5)
       await expect(
@@ -431,16 +431,34 @@ describe.skipIf(!testUrl)(
           `UPDATE public.member SET organization_id = $1 WHERE organization_id = $2`,
           [destination.id, source.id]
         )
-      ).rejects.toMatchObject({ constraint: "workspace_free_member_limit" })
+      ).rejects.toMatchObject({ constraint: "forge_immutable_identity" })
       expect(await count(source.id)).toEqual({ actual: 1, tracked: 1 })
       await pool.query(
         `DELETE FROM public.member WHERE organization_id = $1 AND user_id = $2`,
         [destination.id, destination.members[4]]
       )
-      await pool.query(
-        `UPDATE public.member SET organization_id = $1 WHERE organization_id = $2`,
-        [destination.id, source.id]
-      )
+      await expect(
+        pool.query(
+          `UPDATE public.member SET organization_id=$1 WHERE organization_id=$2`,
+          [destination.id, source.id]
+        )
+      ).rejects.toMatchObject({ constraint: "forge_immutable_identity" })
+      const moved = await pool.connect()
+      try {
+        await moved.query("BEGIN")
+        await moved.query(
+          "DELETE FROM public.member WHERE organization_id=$1",
+          [source.id]
+        )
+        await moved.query(
+          "INSERT INTO public.member(id,organization_id,user_id,role) VALUES($1,$2,$3,'member')",
+          [randomUUID(), destination.id, source.members[0]]
+        )
+        await moved.query("COMMIT")
+      } finally {
+        await moved.query("ROLLBACK")
+        moved.release()
+      }
       expect(await count(source.id)).toEqual({ actual: 0, tracked: 0 })
       expect(await count(destination.id)).toEqual({ actual: 5, tracked: 5 })
       const client = await pool.connect()

@@ -43,6 +43,19 @@ import {
   workspaceUsageReservations,
 } from "./schema"
 
+import {
+  documents,
+  initiativeProjects,
+  initiatives,
+  issueHierarchyGuards,
+  issueLabels,
+  issueRelations,
+  issues,
+  projectTeams,
+  projects,
+  resourceLabels,
+} from "./planning-schema"
+
 type MigrationJournal = {
   entries: Array<{ idx: number }>
 }
@@ -79,6 +92,16 @@ describe("database migrations", () => {
       readFileSync(snapshotPath, "utf8")
     ) as MigrationSnapshot
     for (const [tableName, table] of [
+      ["documents", documents],
+      ["initiatives", initiatives],
+      ["initiative_projects", initiativeProjects],
+      ["issue_hierarchy_guards", issueHierarchyGuards],
+      ["issue_labels", issueLabels],
+      ["issue_relations", issueRelations],
+      ["issues", issues],
+      ["projects", projects],
+      ["project_teams", projectTeams],
+      ["resource_labels", resourceLabels],
       ["calls", calls],
       ["call_actions", callActions],
       ["call_notes", callNotes],

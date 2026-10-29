@@ -16,7 +16,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core"
 
-import { apiKeys, organizations, users } from "./auth-schema"
+import { apiKeys, members, organizations, users } from "./auth-schema"
 import type { TranscriptEntry } from "@/lib/calls"
 import type { TemplateDraft } from "@/lib/template-contract"
 import type { RecurringIssueDraft } from "@/lib/recurring-issue-contract"
@@ -545,6 +545,10 @@ export const teams = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => ({
+    workspaceBinding: unique("teams_workspace_id_unique").on(
+      table.workspaceId,
+      table.id
+    ),
     workspaceIdIndex: index("teams_workspace_id_idx").on(table.workspaceId),
     workspaceSlugUnique: uniqueIndex("teams_workspace_slug_unique")
       .on(table.workspaceId, table.slug)
@@ -594,6 +598,16 @@ export const teamMembers = pgTable(
       .notNull(),
   },
   (table) => ({
+    teamBinding: foreignKey({
+      name: "team_members_workspace_team_fk",
+      columns: [table.workspaceId, table.teamId],
+      foreignColumns: [teams.workspaceId, teams.id],
+    }).onDelete("cascade"),
+    memberBinding: foreignKey({
+      name: "team_members_workspace_member_fk",
+      columns: [table.workspaceId, table.userId],
+      foreignColumns: [members.organizationId, members.userId],
+    }).onDelete("cascade"),
     teamUserUnique: unique("team_members_team_user_unique").on(
       table.teamId,
       table.userId
@@ -1815,6 +1829,11 @@ export const teamTemplates = pgTable(
       .notNull(),
   },
   (table) => ({
+    teamBinding: foreignKey({
+      name: "team_templates_workspace_team_fk",
+      columns: [table.workspaceId, table.teamId],
+      foreignColumns: [teams.workspaceId, teams.id],
+    }).onDelete("cascade"),
     teamIndex: index("team_templates_team_idx").on(
       table.workspaceId,
       table.teamId
@@ -1865,6 +1884,11 @@ export const teamRecurringIssues = pgTable(
       .notNull(),
   },
   (table) => ({
+    teamBinding: foreignKey({
+      name: "team_recurring_issues_workspace_team_fk",
+      columns: [table.workspaceId, table.teamId],
+      foreignColumns: [teams.workspaceId, teams.id],
+    }).onDelete("cascade"),
     teamIndex: index("team_recurring_issues_team_idx").on(
       table.workspaceId,
       table.teamId
@@ -1934,6 +1958,11 @@ export const callConnections = pgTable(
     error: text("error"),
   },
   (table) => ({
+    teamBinding: foreignKey({
+      name: "call_connections_workspace_team_fk",
+      columns: [table.workspaceId, table.teamId],
+      foreignColumns: [teams.workspaceId, teams.id],
+    }).onDelete("cascade"),
     accountUnique: unique("call_connections_account_unique").on(
       table.workspaceId,
       table.userId,
@@ -1974,6 +2003,11 @@ export const calls = pgTable(
     summaryLeaseAt: timestamp("summary_lease_at", { withTimezone: true }),
   },
   (table) => ({
+    teamBinding: foreignKey({
+      name: "calls_workspace_team_fk",
+      columns: [table.workspaceId, table.teamId],
+      foreignColumns: [teams.workspaceId, teams.id],
+    }).onDelete("cascade"),
     sourceUnique: unique("calls_source_unique").on(
       table.workspaceId,
       table.provider,

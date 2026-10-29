@@ -281,6 +281,27 @@
       "when": 1793307794586,
       "tag": "0039_absent_blade",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1793309720275,
+      "tag": "0040_tenant_integrity",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1793310076126,
+      "tag": "0041_tenant_ownership_hardening",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1793310523394,
+      "tag": "0042_issue_graph_guard_lifecycle",
+      "breakpoints": true
     }
   ]
 }

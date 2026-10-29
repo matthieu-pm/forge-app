@@ -55,11 +55,8 @@ describe.skipIf(!file)(
       ownsSchema = true
       await client.query(`SET search_path TO ${namespace},public`)
       await client.query("SET statement_timeout='5s'")
-      const journal = JSON.parse(
-        readFileSync("drizzle/meta/_journal.json", "utf8")
-      )
-      const latest = journal.entries.at(-1).tag
-      const migration = readFileSync(`drizzle/${latest}.sql`, "utf8")
+      // Rehearse this feature's DDL, not an unrelated future migration.
+      const migration = readFileSync("drizzle/0039_absent_blade.sql", "utf8")
       for (const statement of migration.split("--> statement-breakpoint"))
         if (statement.trim()) await client.query(statement)
       await client.query(
