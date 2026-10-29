@@ -169,4 +169,5 @@ local development, signing, updates, and release operations.
 - [Data retention and account/workspace deletion policy](docs/data-retention-and-deletion-policy.md)
 - [Turborepo and cache policy](docs/operations/turborepo.md)
 - [Desktop releases](docs/operations/desktop-releases.md)
+- [Service configuration readiness](docs/operations/service-configuration.md)
 - [Workflow SDK invitation lifecycle](docs/operations/workflows.md)

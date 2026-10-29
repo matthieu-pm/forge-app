@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { validateReleaseEnvironment } from "../lib/script-environment"
 
 type ManifestArtifact = {
   architecture: "arm64" | "x64"
@@ -253,6 +254,7 @@ const action = process.argv[2]
 if (action !== "promote" && action !== "pause") {
   throw new Error("The release action must be promote or pause.")
 }
+validateReleaseEnvironment(action)
 const version = semanticVersion(required("CI_COMMIT_TAG"), "CI_COMMIT_TAG")
 
 if (action === "promote") {

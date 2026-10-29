@@ -1,11 +1,13 @@
 import { stagingServiceFetch } from "../../../packages/environment/staging-service-auth.js"
 import { assertStagingEnvironment } from "../../../packages/environment/staging-environment.js"
+import { assertServiceConfiguration } from "../../../packages/environment/service-config.js"
 import { createAnthropic } from "@ai-sdk/anthropic"
 import { createOpenAI } from "@ai-sdk/openai"
 import { defineAgent, defineDynamic } from "eve"
 import { mockModel } from "eve/evals"
 import { z } from "zod"
 
+assertServiceConfiguration(process.env, "runtime")
 assertStagingEnvironment(process.env, "runtime")
 
 function positiveInteger(value: string | undefined, fallback: number) {

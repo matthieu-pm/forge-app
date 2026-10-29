@@ -1,7 +1,8 @@
-import {
-  forgeArtifactService,
-  forgeAttachmentService,
-} from "@/adapters/agents/forge-capabilities.server"
+import { validateJobEnvironment } from "./lib/script-environment"
+
+validateJobEnvironment("agent-retention")
+const { forgeArtifactService, forgeAttachmentService } =
+  await import("@/adapters/agents/forge-capabilities.server")
 
 const [artifacts, attachments] = await Promise.all([
   forgeArtifactService.sweepExpired(new Date(), 1_000),

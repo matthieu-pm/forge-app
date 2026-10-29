@@ -1,12 +1,8 @@
-import { resolve } from "node:path"
-import { config } from "dotenv"
-
 import { and, eq, inArray, isNull, lte } from "drizzle-orm"
+import { validateJobEnvironment } from "./lib/script-environment"
 
-const packageRoot = resolve(import.meta.dirname, "..")
-const repositoryRoot = resolve(packageRoot, "../..")
-config({ path: resolve(repositoryRoot, ".env") })
-config({ path: resolve(repositoryRoot, ".env.local"), override: true })
+
+validateJobEnvironment("workflow-health")
 
 const { businessWorkflowEffects, businessWorkflowRuns, db } =
   await import("@/db")

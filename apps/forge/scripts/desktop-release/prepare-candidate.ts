@@ -9,6 +9,9 @@ import {
 } from "node:fs/promises"
 import { basename, extname, join, resolve } from "node:path"
 import { execa } from "execa"
+import { validateReleaseEnvironment } from "../lib/script-environment"
+
+validateReleaseEnvironment("prepare")
 
 type Architecture = "arm64" | "x64"
 

@@ -24,6 +24,7 @@
         "@better-auth/drizzle-adapter": "1.6.26",
         "@better-auth/electron": "1.6.26",
         "@fontsource-variable/geist": "^5.3.0",
+        "@forge/environment": "workspace:*",
         "@hugeicons/core-free-icons": "^4.2.3",
         "@hugeicons/react": "^1.1.9",
         "@neondatabase/serverless": "^1.1.0",
@@ -131,6 +132,7 @@
       "dependencies": {
         "@ai-sdk/anthropic": "4.0.33",
         "@ai-sdk/openai": "4.0.33",
+        "@forge/environment": "workspace:*",
         "ai": "7.0.55",
         "eve": "0.31.0",
         "jose": "6.2.8",

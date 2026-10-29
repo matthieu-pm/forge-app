@@ -20,7 +20,7 @@ export class ArtifactAccessTokenError extends Error {
 
 function secret() {
   const value =
-    process.env.FORGE_AGENT_ARTIFACT_SECRET ??
+    process.env.FORGE_AGENT_ARTIFACT_SECRET ||
     process.env.FORGE_AGENT_CAPABILITY_SECRET
   if (!value || value.length < 32) {
     throw new Error(

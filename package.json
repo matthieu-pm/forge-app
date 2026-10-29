@@ -44,7 +44,8 @@
     "objectives:check": "bun apps/forge/scripts/check-service-objectives.ts",
     "eval:agent": "turbo run eval --filter=@forge/agent-runtime",
     "calls:sync": "turbo run calls:sync --filter=@forge/app",
-    "deploy:staging": "bun scripts/deploy-staging.ts"
+    "deploy:staging": "bun scripts/deploy-staging.ts",
+    "config:check": "bun apps/forge/scripts/check-service-configuration.ts"
   },
   "devDependencies": {
     "prettier": "^3.9.6",
