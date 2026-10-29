@@ -82,6 +82,9 @@ async function defaultLoadCredential(
       provider: "openai",
     }
   }
+  // Staging exercises only the registered server key; imported/BYOK credentials
+  // must never provide an alternate path to a production provider account.
+  if (process.env.FORGE_ENVIRONMENT === "staging") return null
   const { db, modelCatalogEntries, modelConnections } = await import("@/db")
   const rows = await db
     .select({ connection: modelConnections })

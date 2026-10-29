@@ -1,6 +1,7 @@
 import "@tanstack/react-start/server-only"
 
 import { Resend } from "resend"
+import { assertStagingMailDelivery } from "../../../../../packages/environment/staging-mail"
 import type { ReactNode } from "react"
 
 type TransactionalEmail = {
@@ -61,6 +62,7 @@ export async function sendTransactionalEmail({
   category,
   idempotencyKey,
 }: TransactionalEmail) {
+  assertStagingMailDelivery(process.env, to)
   const message = {
     from: getFromAddress(),
     to,

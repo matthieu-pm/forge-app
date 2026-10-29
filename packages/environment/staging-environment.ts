@@ -1,3 +1,9 @@
+import { createHash } from "node:crypto"
+import {
+  STAGING_CREDENTIAL_DIGESTS,
+  STAGING_INTEGRATIONS,
+} from "./staging-credentials.js"
+
 export const STAGING = {
   webProjectId: "prj_undcmz4aPiL4FuTc69hQoPwWYead",
   runtimeProjectId: "prj_OTylfBHAV8WwAmi3rQ5OWRvGhq6b",
@@ -12,7 +18,7 @@ export const STAGING = {
   },
 } as const
 
-/** Staging currently runs with external integrations disabled; enable only with separate verified sandboxes. */
+/** Fail closed on production resources, unregistered credentials and unsupported providers. */
 export function assertStagingEnvironment(
   env: Record<string, string | undefined>,
   service: "web" | "runtime"
@@ -35,7 +41,7 @@ export function assertStagingEnvironment(
     fail()
   if (
     env.FORGE_ENVIRONMENT !== "staging" ||
-    env.FORGE_EXTERNAL_INTEGRATIONS !== "disabled" ||
+    !["disabled", "sandbox"].includes(env.FORGE_EXTERNAL_INTEGRATIONS ?? "") ||
     env.EVE_EVAL_FIXTURE_MODE === "true"
   )
     fail()
@@ -51,6 +57,37 @@ export function assertStagingEnvironment(
         /^FORGE_(GOOGLE_MEET|MICROSOFT_TEAMS|ZOOM)_CLIENT_(ID|SECRET)$/.test(
           name
         ))
+    )
+      if (
+        service !== "web" ||
+        env.FORGE_EXTERNAL_INTEGRATIONS !== "sandbox" ||
+        !STAGING_CREDENTIAL_DIGESTS[name] ||
+        createHash("sha256").update(value).digest("hex") !==
+          STAGING_CREDENTIAL_DIGESTS[name]
+      )
+        fail()
+  }
+  if (env.FORGE_EXTERNAL_INTEGRATIONS === "sandbox") {
+    if (service !== "web") fail()
+    if (
+      env.OPENAI_API_KEY &&
+      env.FORGE_MANAGED_OPENAI_MODELS !== STAGING_INTEGRATIONS.openaiModel
+    )
+      fail()
+    if (
+      env.RESEND_API_KEY &&
+      env.RESEND_FROM_EMAIL !== STAGING_INTEGRATIONS.mailFrom
+    )
+      fail()
+    if (env.POLAR_ACCESS_TOKEN && env.POLAR_ENVIRONMENT !== "sandbox") fail()
+    if (
+      Boolean(env.FORGE_GOOGLE_MEET_CLIENT_ID) !==
+      Boolean(env.FORGE_GOOGLE_MEET_CLIENT_SECRET)
+    )
+      fail()
+    if (
+      Boolean(env.FORGE_ZOOM_CLIENT_ID) !==
+      Boolean(env.FORGE_ZOOM_CLIENT_SECRET)
     )
       fail()
   }

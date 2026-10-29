@@ -100,10 +100,42 @@ checks byte roundtrip, anonymous denial, duplicate-write refusal and exact-objec
 cleanup. Production continues to use its existing adapter until its owning release.
 Issue-file durability and the complete storage release contract remain FOR-34.
 
-Staging starts with external integrations explicitly disabled. No production mail,
-model, Polar or meeting OAuth credentials were copied. Separate provider/OAuth
-clients and enabled sandbox end-to-end flows remain required before full FOR-27
-completion; disabled integrations are not evidence of those flows passing.
+Staging supports `disabled` and `sandbox` integration modes. The runtime remains
+`disabled` and receives no external provider credentials. Web `sandbox` mode accepts
+only the reviewed SHA-256 credential fingerprints in
+`packages/environment/staging-credentials.ts`. Renaming a production credential
+or changing the declared mode does not satisfy this guard. Credential rotation
+requires registering a new staging credential fingerprint and deploying that
+source before using it. Never commit raw credentials.
+
+The web uses a new OpenAI `forge-staging` key in the Forge API project, a new
+Resend `sending_access` key restricted to `nexstudio.io`, the existing explicitly
+sandbox-only Polar organization, and separate Google/Zoom development OAuth
+clients. Resend accepts only the exact registered sender and the provider's
+`delivered@resend.dev`, `bounced@resend.dev`, or `complained@resend.dev` destinations.
+It refuses other recipients before opening the SDK or performing network I/O.
+The model proxy accepts only the registered managed staging connection and
+`gpt-5.6-luna`; stored/BYOK connections cannot bypass it.
+
+Both meeting clients redirect only to
+`https://forge-staging-matthieu-pm.vercel.app/api/calls/oauth/callback`.
+Google project `arctic-conduit-513113-k3` stays in Test mode with one test operator,
+Meet API enabled, and only `meetings.space.readonly` requested. Zoom application
+`0DLzA3R7TVurM0-JX_G5Og` uses Development credentials, strict redirect matching,
+and only `cloud_recording:read:list_user_recordings`. No app is published.
+Teams remains disabled at the user's request because the current SKEMA account
+cannot administer Entra. Billing and external webhooks stay disabled pending their
+own release stories.
+
+Opt in to actual provider tests from `apps/forge` with
+`FORGE_STAGING_PROVIDER_TEST_ENV=/absolute/ignored/staging-env.json bunx vitest run scripts/lib/staging-providers.integration.test.tsx`.
+The file is validated against the checked-in resource and credential manifests
+before provider I/O. Ordinary test runs skip these cases. The actual test sends
+only synthetic content to Resend's test destination and executes a short model
+response with storage disabled; Polar verification is a read-only sandbox catalog
+request. OAuth authorization construction is checked against exact clients and
+callbacks. This does not claim a personal meeting account grant or transcript
+import; those need an explicit test-account connection and a synthetic meeting.
 
 ## Verification and temporary probes
 
@@ -117,10 +149,10 @@ Only the probe token hash and expiry are configured. Raw operator tokens and
 temporary automation bypasses are removed after verification.
 
 Final counts and deployment identities are recorded with the verification result.
-FOR-27 stays In Progress while provider/OAuth isolation acceptance remains open.
+The source and deployment evidence below distinguish provisioning from enabled application-flow verification.
 
 
-## Hosted checkpoint
+## Initial hosted checkpoint
 
 The web deployment `dpl_6TJnVDnrCoFj3Pn6wEE2A1kb2uhi` serves source
 `6b33cab5d5fafc046e03fcca73f9c7fcbcca5d08`; runtime
@@ -156,6 +188,5 @@ after expiry. Application authorization remains in place. Staging service OIDC
 rules remain intentionally configured.
 
 AC-01 and AC-02 are verified for the implemented database/fixture/hosting path.
-FOR-27 remains In Progress because separate meeting OAuth clients and enabled
-provider sandbox flows have not been provisioned/accepted. The startup guard
-continues to refuse external credentials in this disabled-integration baseline.
+At this initial checkpoint, provider/OAuth isolation was pending. The provider
+continuation above supersedes the blanket disabled-integration configuration.

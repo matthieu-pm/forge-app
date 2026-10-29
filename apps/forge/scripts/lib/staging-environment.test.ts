@@ -71,4 +71,33 @@ describe("staging resource configuration", () => {
       )
     ).toThrow()
   })
+  it("allows sandbox mode without opening access to unregistered credentials", () => {
+    const sandbox = { ...base, FORGE_EXTERNAL_INTEGRATIONS: "sandbox" }
+    expect(() => assertStagingEnvironment(sandbox, "web")).not.toThrow()
+    for (const name of [
+      "OPENAI_API_KEY",
+      "RESEND_API_KEY",
+      "POLAR_ACCESS_TOKEN",
+      "FORGE_GOOGLE_MEET_CLIENT_SECRET",
+      "FORGE_MICROSOFT_TEAMS_CLIENT_ID",
+      "FORGE_ZOOM_CLIENT_SECRET",
+    ]) {
+      expect(() =>
+        assertStagingEnvironment(
+          { ...sandbox, [name]: "copied-production-credential" },
+          "web"
+        )
+      ).toThrow("values are redacted")
+    }
+    expect(() =>
+      assertStagingEnvironment(
+        {
+          ...sandbox,
+          VERCEL_PROJECT_ID: STAGING.runtimeProjectId,
+          FORGE_APP_ORIGIN: STAGING.webOrigin,
+        },
+        "runtime"
+      )
+    ).toThrow()
+  })
 })

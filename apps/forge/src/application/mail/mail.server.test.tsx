@@ -74,6 +74,46 @@ describe("sendTransactionalEmail", () => {
 
     expect(mocks.send).not.toHaveBeenCalled()
   })
+  it.each([
+    "ada@example.com",
+    "delivered@resend.dev,ada@example.com",
+    "Ada <delivered@resend.dev>",
+    "delivered@resend.dev\r\nBcc: ada@example.com",
+  ])("blocks unsafe staging recipient %j before provider I/O", async (to) => {
+    vi.stubEnv("FORGE_ENVIRONMENT", "staging")
+    vi.stubEnv("FORGE_EXTERNAL_INTEGRATIONS", "sandbox")
+    vi.stubEnv("RESEND_FROM_EMAIL", "Forge staging <staging@nexstudio.io>")
+    const { sendTransactionalEmail } =
+      await import("@/application/mail/mail.server")
+    await expect(
+      sendTransactionalEmail({
+        to,
+        subject: "Synthetic staging email",
+        text: "Synthetic fixture",
+        react: <p>Synthetic fixture</p>,
+        category: "email-verification",
+      })
+    ).rejects.toThrow("provider test recipients")
+    expect(mocks.Resend).not.toHaveBeenCalled()
+    expect(mocks.send).not.toHaveBeenCalled()
+  })
+  it("allows the exact provider test recipient in staging", async () => {
+    vi.stubEnv("FORGE_ENVIRONMENT", "staging")
+    vi.stubEnv("FORGE_EXTERNAL_INTEGRATIONS", "sandbox")
+    vi.stubEnv("RESEND_FROM_EMAIL", "Forge staging <staging@nexstudio.io>")
+    mocks.send.mockResolvedValue({ data: { id: "staging-email" }, error: null })
+    const { sendTransactionalEmail } =
+      await import("@/application/mail/mail.server")
+    await expect(
+      sendTransactionalEmail({
+        to: "delivered@resend.dev",
+        subject: "Synthetic staging email",
+        text: "Synthetic fixture",
+        react: <p>Synthetic fixture</p>,
+        category: "email-verification",
+      })
+    ).resolves.toEqual({ id: "staging-email" })
+  })
 
   it("passes a domain idempotency key to Resend", async () => {
     mocks.send.mockResolvedValue({
