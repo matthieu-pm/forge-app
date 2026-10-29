@@ -92,6 +92,12 @@ copies and OpenAI's processing policies are separate from Forge's transcript
 retention setting. The older personal “Calls & transcripts” settings remain
 browser-local preferences/preview; they do not configure native capture.
 
+The [FOR-23 data lifecycle policy](data-retention-and-deletion-policy.md) records
+the independent lifetimes of raw and derived Call data and the selected 30-day
+account/workspace deletion recovery window. Full Call deletion, re-import
+suppression, backup expiry and checkpointed workspace purge still require their
+own implementation evidence; the transcript sweeper alone does not provide them.
+
 ## Verification limits
 
 Provider adapters have mocked API tests. Real OAuth authorization and imports

@@ -82,6 +82,11 @@ Imported mentions, subscriptions, reactions, recurrence, loops and skills cannot
 * Cleanup names exact keys/records and fingerprints, rechecks immediately before removal and refuses a changed snapshot. Never call `localStorage.clear()`, remove other-account sources or delete a mixed key with excluded/uncommitted records. Leave mixed keys intact unless a reviewed adapter safely removes only reconciled records. Backup deletion is a separate explicit action after reconciliation. Completion, sign-out and cutover never imply cleanup consent.
 * Rollback reads backup as a newly reviewed source; it never overwrites a newer server object. Revoked access cannot be bypassed by exporting through an old manifest.
 
+The [FOR-23 lifecycle policy](data-retention-and-deletion-policy.md) defines
+server copy/manifest retention, deletion recovery, backup expiry and restore
+suppression. User-controlled local backups retain this document's separate
+explicit-cleanup rule; re-import cannot revive a deleted destination or identity.
+
 ## Executable contract and delivery boundaries
 
 [`legacy-import-policy.ts`](../apps/forge/src/lib/legacy-import-policy.ts) implements pure review/conflict decisions. Review requires current permission, verified backup and actor/destination/snapshot/selection-bound ownership confirmation. Conflict resolution has no shared-content overwrite outcome; preference patches return a revision guard. Inputs must be validated and derived by trusted adapters. `ready` is a policy result, not an authorization token. Both checks must pass with fresh targets before atomic server writes. Manifest policy version is included in its selection fingerprint; unsupported policy versions require new review.
