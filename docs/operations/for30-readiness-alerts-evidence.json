@@ -1,0 +1,165 @@
+{
+  "schemaVersion": 1,
+  "issue": "FOR-30",
+  "outcome": "passed-in-isolated-staging",
+  "testedSourceRevision": "2b06271e6f0eed118105a62468522c21d9e06f94",
+  "web": {
+    "projectId": "prj_undcmz4aPiL4FuTc69hQoPwWYead",
+    "deploymentId": "dpl_CETvBNj4TByTjRzfBuTLTm3Ea3JR",
+    "origin": "https://forge-staging-matthieu-pm.vercel.app"
+  },
+  "runtime": {
+    "projectId": "prj_OTylfBHAV8WwAmi3rQ5OWRvGhq6b",
+    "deploymentId": "dpl_DSChmWKYGFTeav3khqzVFV5F2zyn",
+    "origin": "https://forge-staging-runtime-matthieu-pm.vercel.app"
+  },
+  "databaseMigration": {
+    "applied": 1,
+    "total": 40
+  },
+  "hostedAcceptance": {
+    "schemaVersion": 1,
+    "checkedAt": "2026-10-29T21:24:57.235Z",
+    "sourceRevision": "2b06271e6f0eed118105a62468522c21d9e06f94",
+    "challenge": "fc898a3988391b963849450c7f1a3a30",
+    "anonymousProbesDenied": true,
+    "health": {
+      "webLive": {
+        "httpStatus": 200,
+        "body": {
+          "status": "ok",
+          "code": "ALIVE"
+        }
+      },
+      "webReady": {
+        "httpStatus": 200,
+        "body": {
+          "status": "ok",
+          "code": "READY"
+        }
+      },
+      "runtimeLive": {
+        "httpStatus": 200,
+        "body": {
+          "status": "ok",
+          "code": "ALIVE"
+        }
+      },
+      "runtimeReady": {
+        "httpStatus": 200,
+        "body": {
+          "status": "ok",
+          "code": "READY"
+        }
+      }
+    },
+    "acceptance": {
+      "challenge": "fc898a3988391b963849450c7f1a3a30",
+      "sourceRevision": "2b06271e6f0eed118105a62468522c21d9e06f94",
+      "deploymentId": "dpl_CETvBNj4TByTjRzfBuTLTm3Ea3JR",
+      "schemaMissing": {
+        "httpStatus": 503,
+        "status": "unhealthy",
+        "code": "SCHEMA_NOT_READY"
+      },
+      "databaseUnavailable": {
+        "httpStatus": 503,
+        "status": "unhealthy",
+        "code": "DATABASE_UNAVAILABLE"
+      },
+      "delivery": {
+        "delivered": 1,
+        "suppressed": 0,
+        "failed": 0
+      },
+      "retry": {
+        "delivered": 0,
+        "suppressed": 1,
+        "failed": 0
+      },
+      "receipts": [
+        {
+          "id": "8a427e0b087e803d9c8191e89caee979854718627a33c19d35910fd2c3b40d58",
+          "deliveredAt": "2026-10-29T21:24:57.032Z"
+        }
+      ]
+    }
+  },
+  "operatorReceiver": {
+    "receivedAt": "2026-10-29T21:24:56.985Z",
+    "retainedVercelLog": {
+      "event": "operator.test-alert.received",
+      "id": "8a427e0b087e803d9c8191e89caee979854718627a33c19d35910fd2c3b40d58",
+      "code": "SWEEP_STALE",
+      "signal": "agent.retention",
+      "severity": "page",
+      "runbookUrl": "https://github.com/matthieu-pm/forge-app/blob/2b06271e6f0eed118105a62468522c21d9e06f94/docs/operations/readiness-and-alerts.md",
+      "sourceRevision": "2b06271e6f0eed118105a62468522c21d9e06f94",
+      "deploymentId": "dpl_DSChmWKYGFTeav3khqzVFV5F2zyn"
+    }
+  },
+  "criteria": {
+    "AC-01/AT-01": {
+      "outcome": "passed",
+      "evidence": [
+        "Required migration journal missing in the isolated owned schema: HTTP 503 SCHEMA_NOT_READY.",
+        "Dedicated SQL client destroyed with the web HTTP shortcut enabled: HTTP 503 DATABASE_UNAVAILABLE.",
+        "Healthy web/runtime liveness and readiness endpoints returned HTTP 200; failure bodies contain fixed codes only."
+      ]
+    },
+    "AC-02/AT-02": {
+      "outcome": "passed",
+      "evidence": [
+        "Seeded successful sweep completion older than the accepted 60-minute page threshold.",
+        "Production evaluator/dispatcher sent one HTTPS page to the separate protected runtime synthetic operator receiver.",
+        "Retained receiver log includes matching delivery ID, SWEEP_STALE, page severity and source-pinned runbook URL.",
+        "PostgreSQL delivery receipt acknowledged acceptance; repeating the rule suppressed a second send."
+      ]
+    }
+  },
+  "validation": {
+    "appTestsPassed": 1878,
+    "workflowTestsPassed": 4,
+    "runtimeTestsPassed": 25,
+    "defaultDatabaseDependentTestsSkipped": 160,
+    "focusedTestsPassedIncludingOptInPostgres": 42,
+    "optInPostgresTestsPassed": 6,
+    "appAndRuntimeTypecheck": "passed",
+    "appAndRuntimeProductionBuild": "passed",
+    "changedAppLint": {
+      "errors": 0,
+      "warnings": 19
+    },
+    "gitDiffCheck": "passed",
+    "transientUnrelatedTest": {
+      "test": "src/components/reviews/review-detail.test.tsx: saves description reactions and attachments with the shared issue controls",
+      "failure": "party popper button was not found during one parallel full-suite run",
+      "focusedRerun": "7 passed",
+      "subsequentFullAppRerun": "1878 passed, 160 skipped; 4 Workflow passed; no changes to review UI/tests"
+    }
+  },
+  "cleanup": {
+    "checkedAt": "2026-10-29T21:26:19.716Z",
+    "identity": {
+      "database": "forge_staging",
+      "branch": "br-autumn-union-za0opf1e"
+    },
+    "ownedSchema": "for30_cc21c10f0f5e48bfa181a05464f08eb7",
+    "ownedSchemaRemoved": true,
+    "migrationCount": 40,
+    "applicationCounts": {
+      "users": 0,
+      "organizations": 0,
+      "sessions": 0
+    },
+    "probeAuthorityExpiresAt": "2026-10-29T23:06:59.727Z",
+    "rawCredentialsRemoved": true
+  },
+  "scope": [
+    "Synthetic isolated staging only; no customer writes, paid model calls or real-person notification.",
+    "Additive migration applied only on verified forge_staging; actual serving production database and deployment unchanged.",
+    "Production monitor routing/scheduling stays opt-in and needs an operator webhook plus an independent monitor watchdog before launch.",
+    "Canonical account/issue journeys and future outbox/upload/inbox collectors remain their owning feature enablement work; absent enabled samples are explicit SIGNAL_MISSING.",
+    "HTTP delivery is at-least-once around crashes; receiver idempotency is required."
+  ]
+}

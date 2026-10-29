@@ -164,3 +164,25 @@ Keep the exact source, immutable deployment IDs, challenge, safe responses,
 retained receiver log, database receipt and cleanup record as acceptance evidence.
 Hosted acceptance proves the enabler in isolated staging. Production alert routing,
 scheduler configuration and independent watchdog remain deployment prerequisites.
+
+## Accepted staging evidence · 29 October 2026
+
+At source `2b06271e6f0eed118105a62468522c21d9e06f94`, both hosted acceptance
+criteria passed. The [evidence record](for30-readiness-alerts-evidence.json) contains
+the exact web/runtime deployments, healthy endpoints, safe 503 fault responses,
+stale-sweep page, retained separate receiver log, SQL receipt and suppressed retry.
+The owned probe schema was removed; local raw operator/database credentials were
+deleted. Staging retains the additive operational tables (40 migrations), with
+zero users, organizations and sessions after cleanup. No production rollout or
+real-person paging is claimed.
+
+The connectivity fixture deliberately closes a connected SQL client. With
+`neonConfig.poolQueryViaFetch=true`, `Pool.query()` can bypass pool lifecycle via
+HTTP even after `Pool.end()`; closing only a pool does not inject a disconnect.
+The opt-in PostgreSQL regression runs with that web setting enabled.
+
+Validation: 1,878 app tests, 4 Workflow tests, 25 runtime tests and 6 separately
+opted-in PostgreSQL tests passed; TypeScript and production builds passed.
+Changed-app lint has zero errors (fixture async/cleanup warnings remain). One
+unrelated review-panel timing assertion failed during a parallel suite run, then
+passed in its focused rerun and the subsequent full app/Workflow run.
