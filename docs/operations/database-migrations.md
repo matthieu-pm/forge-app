@@ -115,3 +115,8 @@ Migration 0032 records paid Plus grant identity and aligns refund-aware Starter 
 ## No-pause migration follow-up · 29 October 2026
 
 Migration 0033 adds a finite provider-backed unsupported-pause cutoff and aligns SQL admission with shared access policy. A fresh empty rehearsal database on the current expiring branch applied all 34 migrations; all 3 ownership/fault cases passed. Only then did the exact persistent staging target apply the one pending migration, now also 34. Current staging tests pass 52 billing and 17 real-auth membership cases. No serving/default database or local connection setting changed; no branches were manually deleted. See `docs/subscription-pause-policy.md`.
+
+
+## Renewal-currency request migration · 29 October 2026
+
+Migration 0034 adds the durable currency-request history, one-pending-intent index and finite-boundary/fixed-seven-day-deadline constraints. The isolated rehearsal database passed all 35 migrations and 3 full-history ownership/fault cases; exact persistent staging then applied the one pending expansion, now 35. Staging passes 58 billing and 17 real-auth member cases. This does not execute a currency migration or grant checkout grace; no serving/default database or local connection changed. See `docs/renewal-currency-change.md`.

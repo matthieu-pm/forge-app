@@ -58,5 +58,7 @@
     "docs/plans/production-readiness-backlog-map.md": "34f8314b07d4dffd6bf4d992a2523afe7a02bc9e3b5529b30686075e99e0d53b",
     "docs/plans/production-readiness-linear-backlog.json": "9ad370149f4c7e3e873e3185e0170e60e52b43baf3bbef038e4d61dd1cfc9eef",
     "docs/polar-billing.md": "3ac28d45c4af12fb660ee5f1b8931e2bcb64a8e108544b736316e8d4b845acad"
-  }
+  },
+  "historical": true,
+  "sourceCommit": "144261245cbdd900571e49f4575f8fdba2e66cd2"
 }

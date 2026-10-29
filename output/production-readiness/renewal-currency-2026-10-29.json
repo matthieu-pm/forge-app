@@ -1,0 +1,69 @@
+{
+  "date": "2026-10-29",
+  "baseCommit": "144261245cbdd900571e49f4575f8fdba2e66cd2",
+  "committed": true,
+  "deployed": false,
+  "servingDatabaseModified": false,
+  "localConnectionFilesChanged": false,
+  "providerMutation": false,
+  "issues": [
+    "FOR-109",
+    "FOR-110",
+    "FOR-111"
+  ],
+  "policy": {
+    "date": "2026-10-29",
+    "policy": "Switch EUR/USD after a billing-country move at next renewal; allow seven-day replacement-checkout grace if incomplete.",
+    "providerConstraint": "Pinned Polar has no paid currency PATCH; programmatic paid creation requires checkout.",
+    "status": "Provider-verified durable request path complete; actual replacement/grace executor and late-checkout anniversary policy remain gated.",
+    "implementation": "First-party owner/admin and confirmed provider country; pending Starter downgrade; workspace/member locks; original boundary + 168h deadline; one pending request with superseded/withdrawn history; atomic audit/receipt; cached-role and changed-body/binding checks; no entitlements or provider effects changed.",
+    "guide": "https://linear.app/atriumcrm/document/forge-renewal-currency-changes-replacement-checkout-and-grace-a37b6a97beb3",
+    "remaining": "Late-checkout billing anniversary; owned source cancellation; actual replacement checkout, explicit bounded grace authority, verified paid binding replacement, overage currency authority, ledger/settlement, messaging/durable effects and Polar sandbox/candidate validation."
+  },
+  "staging": {
+    "project": "raspy-union-96305162",
+    "branch": "br-autumn-union-za0opf1e",
+    "database": "forge_staging",
+    "migrations": 35,
+    "newMigrationsApplied": 1
+  },
+  "rehearsal": {
+    "branch": "br-empty-waterfall-zay0vqug",
+    "database": "forge_migration_rehearsal",
+    "migrations": 35,
+    "newMigrationsApplied": 1,
+    "expiresAt": "2026-10-29T03:30:00Z"
+  },
+  "checks": {
+    "appTestsPassed": 1465,
+    "workflowTestsPassed": 4,
+    "postgresBillingCasesPassed": 58,
+    "postgresMembershipCasesPassed": 17,
+    "postgresMigrationFaultCasesPassed": 3,
+    "typecheck": "passed",
+    "changedFileLint": "passed",
+    "format": "passed",
+    "productionBuild": "passed including protected Workflow handlers"
+  },
+  "routeEnabled": false,
+  "graceEntitlementEnabled": false,
+  "providerChangeScheduled": false,
+  "remaining": "Late-checkout billing anniversary; owned source cancellation; actual replacement checkout, explicit bounded grace authority, verified paid binding replacement, overage currency authority, ledger/settlement, messaging/durable effects and Polar sandbox/candidate validation.",
+  "sourceSha256": {
+    "apps/forge/drizzle/0034_renewal_currency_requests.sql": "201492ca91b2dd97830c3b7fff5943cb3bd44da17cf214f033f18fbcd70e7680",
+    "apps/forge/drizzle/meta/0034_snapshot.json": "a0852bac2aebad9b7ec428396469afe61ec877b052f7fcc28944cab4bfdbaeab",
+    "apps/forge/drizzle/meta/_journal.json": "095e27b1160405b2763e053109336f4490a1762bc358c35ba2388faf86a4db42",
+    "apps/forge/src/application/billing/polar-renewal-currency.server.test.ts": "a6c85c58e77b35d9e280203a5204e636b8f053deb167ab72e05250e4ef7d5da8",
+    "apps/forge/src/application/billing/polar-renewal-currency.server.ts": "67514d8724cdaec043a833d04edea96eacd0a6196d707e69fbd7bdeb282f7c49",
+    "apps/forge/src/application/billing/renewal-currency-request.server.ts": "b2708a05b1458f3014069767edaf69fdcc71dc5caeaa1495d9721e1a4d418a50",
+    "apps/forge/src/application/billing/subscription-reconciliation.postgres.test.ts": "1048c6e0dcacb0abb155dd2e655529c6a69b4089b7c1f853fe226036fc801f49",
+    "apps/forge/src/db/schema-migrations.test.ts": "3cd454d296533a22248d8471667f84a4e13b86148acd0a037800aec4907b3e66",
+    "apps/forge/src/db/schema.ts": "7727797043aecb043dbed778145979bb8abe46cb34a87054ddc40cc2b7e4b1d4",
+    "docs/forge-plan-matrix.md": "25f99b90a18bcbd8125610e1d2d3bad1e04a8c763f9b1ef320ef68e6ac068599",
+    "docs/operations/database-migrations.md": "6dc5e32ca5a65fe1f3aed438f73f579597d4c407600ef3455b3026986fc484e4",
+    "docs/overage-currency.md": "573af5632e2466f1e088ee3e336dac776851f210c48f362d9b916c8fea91d01a",
+    "docs/plans/production-readiness-backlog-map.md": "418ce7d8a2b7e665f79dd0a48d7a848cbb5a807deb32c1ccb5349e02b2f48055",
+    "docs/plans/production-readiness-linear-backlog.json": "791fb5470c6dcd2198fef638aeaf2c1f019179ea0431857cc9e39dec0696e921",
+    "docs/renewal-currency-change.md": "e7da906b680344c6e07735489176dcdc9d15ae2bfe0e52d22c905ff5e5bbe553"
+  }
+}

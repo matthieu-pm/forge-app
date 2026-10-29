@@ -94,7 +94,10 @@ FOR-76's atomic ledger/run-reservation contract. Before enabling paid usage:
   cancellation/refund/period/seat transitions, source freshness alarms and actual
   sandbox/candidate flows. Bank FX differences do not authorize an added spread.
 
-Currency changes for existing subscriptions still require a commercial rule.
+Currency changes for existing subscriptions are confirmed for next renewal with
+a seven-day replacement-checkout grace deadline; the late-checkout anniversary
+rule and actual cutover/grace executor remain gated. See
+`docs/renewal-currency-change.md`.
 Public billing, ledger effects, rate retention and provider submission remain
 gated. FOR-109 and FOR-76 stay In Progress. Nothing was pushed or deployed;
 serving/default databases and local connection files were unchanged.

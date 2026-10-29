@@ -332,7 +332,10 @@ describe.skipIf(!connection)(
         branch: target.branchId,
       })
       const migration = await readFile(
-        new URL("../../../drizzle/0033_unsupported_pause.sql", import.meta.url),
+        new URL(
+          "../../../drizzle/0034_renewal_currency_requests.sql",
+          import.meta.url
+        ),
         "utf8"
       )
       const latest = await pool.query(
@@ -377,6 +380,255 @@ describe.skipIf(!connection)(
         vi.unstubAllEnvs()
       }
     }, 30_000)
+
+    async function currencyRequestFixture() {
+      const id = await workspace(),
+        owner = await add(id),
+        paid = snapshot(id)
+      await apply(paid)
+      const actor: Actor = {
+        workspaceId: id,
+        userId: owner,
+        workspaceRole: "owner",
+        scopes: null,
+        authentication: { kind: "session", sessionId: "fixture" },
+      }
+      const module = await import("./renewal-currency-request.server")
+      const value = {
+        requestId: randomUUID(),
+        workspaceId: id,
+        environment: "sandbox" as const,
+        subscriptionId: paid.subscriptionId,
+        billingCountry: "FR" as const,
+        fromCurrency: "usd" as const,
+        currentPlan: "plus" as const,
+        renewalPlan: "starter" as const,
+        periodStart: paid.currentPeriodStart,
+        periodEnd: paid.currentPeriodEnd,
+        providerUpdatedAt: paid.updatedAt,
+      }
+      const planner = await import("./polar-renewal-currency.server"),
+        context = await import("./plan-change-context.server")
+      const observed = {
+        ...providerSubscription(id, paid),
+        customer: {
+          external_id: `forge:workspace:${id}`,
+          billing_address: { country: "FR" },
+        },
+        pending_update: {
+          id: randomUUID(),
+          created_at: paid.updatedAt.toISOString(),
+          modified_at: null,
+          applies_at: paid.currentPeriodEnd.toISOString(),
+          product_id: config.paidProducts.starter.usd,
+          seats: 1,
+          units: null,
+        },
+      }
+      const service = new planner.PolarRenewalCurrencyPlanner(
+        config,
+        (candidate) => context.readPlanChangeContext(candidate, "sandbox"),
+        () => Promise.resolve(observed)
+      )
+      return {
+        id,
+        owner,
+        paid,
+        actor,
+        value,
+        service,
+        observed,
+        record: module.recordVerifiedRenewalCurrencyRequest,
+      }
+    }
+    it("records one renewal currency intent with frozen seven-day grace and one audit/receipt under concurrent replay", async () => {
+      const f = await currencyRequestFixture(),
+        before = await row(f.id)
+      const results = await Promise.all(
+        Array.from({ length: 6 }, () =>
+          f.service.request(f.actor, f.value.requestId)
+        )
+      )
+      expect(results.every((r) => r.status === "requires-checkout")).toBe(true)
+      expect(results.filter((r) => !r.replayed)).toHaveLength(1)
+      expect(results[0]).toMatchObject({
+        fromCurrency: "usd",
+        targetCurrency: "eur",
+        renewalPlan: "starter",
+        renewalMembers: 1,
+        renewalPriceMinor: 1000,
+        effectiveAt: f.paid.currentPeriodEnd.toISOString(),
+        checkoutGraceEndsAt: new Date(
+          f.paid.currentPeriodEnd.getTime() + PAYMENT_GRACE_MS
+        ).toISOString(),
+      })
+      expect(await row(f.id)).toEqual(before)
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int AS n FROM workspace_currency_change_requests WHERE workspace_id=$1",
+            [f.id]
+          )
+        ).rows[0].n
+      ).toBe(1)
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int AS n FROM workspace_security_audit_events WHERE workspace_id=$1 AND action='billing.currency_change.requested'",
+            [f.id]
+          )
+        ).rows[0].n
+      ).toBe(1)
+    })
+    it("preserves intent history while superseding country edits and withdrawing a switch back to the current region", async () => {
+      const f = await currencyRequestFixture()
+      await f.record(f.actor, f.value)
+      const second = await f.record(f.actor, {
+        ...f.value,
+        requestId: randomUUID(),
+        billingCountry: "CH",
+      })
+      expect(second.status).toBe("requires-checkout")
+      const third = await f.record(f.actor, {
+        ...f.value,
+        requestId: randomUUID(),
+        billingCountry: "US",
+      })
+      expect(third.status).toBe("withdrawn")
+      const rows = (
+        await pool.query(
+          "SELECT state, effective_at, checkout_grace_ends_at FROM workspace_currency_change_requests WHERE workspace_id=$1 ORDER BY requested_at",
+          [f.id]
+        )
+      ).rows
+      expect(rows.map((r) => r.state)).toEqual([
+        "superseded",
+        "superseded",
+        "withdrawn",
+      ])
+      expect(
+        rows.every(
+          (r) =>
+            r.effective_at.getTime() === f.paid.currentPeriodEnd.getTime() &&
+            r.checkout_grace_ends_at.getTime() ===
+              f.paid.currentPeriodEnd.getTime() + PAYMENT_GRACE_MS
+        )
+      ).toBe(true)
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int AS n FROM workspace_currency_change_requests WHERE workspace_id=$1 AND state='requested'",
+            [f.id]
+          )
+        ).rows[0].n
+      ).toBe(0)
+    })
+    it("refuses revoked cached callers, reused request IDs with other countries and changed paid bindings", async () => {
+      const f = await currencyRequestFixture()
+      await f.record(f.actor, f.value)
+      await expect(
+        f.record(f.actor, { ...f.value, billingCountry: "US" })
+      ).rejects.toThrow("EVENT_CONFLICT")
+      await pool.query(
+        "UPDATE member SET role='member' WHERE organization_id=$1 AND user_id=$2",
+        [f.id, f.owner]
+      )
+      await expect(f.record(f.actor, f.value)).rejects.toThrow("REVOKED")
+      await pool.query(
+        "UPDATE member SET role='owner' WHERE organization_id=$1 AND user_id=$2",
+        [f.id, f.owner]
+      )
+      await expect(
+        f.record(f.actor, {
+          ...f.value,
+          subscriptionId: randomUUID(),
+          requestId: randomUUID(),
+        })
+      ).rejects.toThrow("CONTEXT_CHANGED")
+    })
+    it("rolls back currency intent supersession, audit and receipt together on audit failure", async () => {
+      const f = await currencyRequestFixture()
+      await f.record(f.actor, f.value)
+      const key = randomUUID(),
+        constraint = `currency_audit_${randomUUID().replaceAll("-", "")}`
+      await pool.query(
+        `ALTER TABLE workspace_security_audit_events ADD CONSTRAINT ${constraint} CHECK (action <> 'billing.currency_change.requested') NOT VALID`
+      )
+      try {
+        await expect(
+          f.record(f.actor, {
+            ...f.value,
+            requestId: key,
+            billingCountry: "US",
+          })
+        ).rejects.toThrow()
+        expect(
+          (
+            await pool.query(
+              "SELECT state FROM workspace_currency_change_requests WHERE id=$1",
+              [f.value.requestId]
+            )
+          ).rows[0].state
+        ).toBe("requested")
+        expect(
+          (
+            await pool.query(
+              "SELECT count(*)::int AS n FROM workspace_currency_change_requests WHERE id=$1",
+              [key]
+            )
+          ).rows[0].n
+        ).toBe(0)
+      } finally {
+        await pool.query(
+          `ALTER TABLE workspace_security_audit_events DROP CONSTRAINT ${constraint}`
+        )
+      }
+      expect(
+        (
+          await f.record(f.actor, {
+            ...f.value,
+            requestId: key,
+            billingCountry: "US",
+          })
+        ).status
+      ).toBe("withdrawn")
+    })
+    it("persists a newly observed unsupported pause before refusing a currency request", async () => {
+      const f = await currencyRequestFixture()
+      f.observed.status = "paused"
+      f.observed.modified_at = now.toISOString()
+      f.observed.paused_at = failed.toISOString()
+      await expect(
+        f.service.request(f.actor, f.value.requestId)
+      ).rejects.toThrow("NOT_RENEWING")
+      expect((await row(f.id))?.unsupportedPauseAt).toEqual(failed)
+      expect(subscriptionAccess(await row(f.id), now).plan).toBe("free")
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int AS n FROM workspace_currency_change_requests WHERE workspace_id=$1",
+            [f.id]
+          )
+        ).rows[0].n
+      ).toBe(0)
+    })
+
+    it("does not silently move an unfinished request to a later renewal boundary", async () => {
+      const f = await currencyRequestFixture()
+      await f.record(f.actor, f.value)
+      const nextEnd = new Date(
+        f.paid.currentPeriodEnd.getTime() + 30 * 86400000
+      )
+      await apply({ ...f.paid, updatedAt: now, currentPeriodEnd: nextEnd })
+      await expect(
+        f.record(f.actor, {
+          ...f.value,
+          requestId: randomUUID(),
+          periodEnd: nextEnd,
+          providerUpdatedAt: now,
+        })
+      ).rejects.toThrow("REQUEST_RECONCILIATION_REQUIRED")
+    })
 
     it.each(["active", "past_due", "paused"] as const)(
       "records unsupported provider pause against %s access and fences resumed events",

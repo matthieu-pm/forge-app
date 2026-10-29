@@ -283,6 +283,78 @@ export const workspaceEntitlements = pgTable(
   })
 )
 
+export const workspaceCurrencyChangeRequests = pgTable(
+  "workspace_currency_change_requests",
+  {
+    id: uuid("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    actorUserId: text("actor_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    environment: text("environment").notNull(),
+    subscriptionId: uuid("subscription_id").notNull(),
+    billingCountry: text("billing_country").notNull(),
+    fromCurrency: text("from_currency").notNull(),
+    targetCurrency: text("target_currency").notNull(),
+    currentPlan: text("current_plan").notNull(),
+    renewalPlan: text("renewal_plan").notNull(),
+    renewalMembers: integer("renewal_members").notNull(),
+    renewalPriceMinor: bigint("renewal_price_minor", {
+      mode: "number",
+    }).notNull(),
+    effectiveAt: timestamp("effective_at", { withTimezone: true }).notNull(),
+    checkoutGraceEndsAt: timestamp("checkout_grace_ends_at", {
+      withTimezone: true,
+    }).notNull(),
+    state: text("state").notNull(),
+    requestedAt: timestamp("requested_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => ({
+    pendingUnique: uniqueIndex("workspace_currency_change_one_pending")
+      .on(t.workspaceId)
+      .where(sql`${t.state} = 'requested'`),
+    historyIndex: index("workspace_currency_change_history_idx").on(
+      t.workspaceId,
+      t.requestedAt
+    ),
+    environmentCheck: check(
+      "workspace_currency_change_environment_check",
+      sql`${t.environment} IN ('sandbox','production')`
+    ),
+    currencyCheck: check(
+      "workspace_currency_change_currency_check",
+      sql`${t.fromCurrency} IN ('eur','usd') AND ${t.targetCurrency} IN ('eur','usd')`
+    ),
+    countryCheck: check(
+      "workspace_currency_change_country_check",
+      sql`${t.billingCountry} ~ '^[A-Z]{2}$'`
+    ),
+    planCheck: check(
+      "workspace_currency_change_plan_check",
+      sql`${t.currentPlan} IN ('starter','plus') AND ${t.renewalPlan} IN ('starter','plus')`
+    ),
+    quantityCheck: check(
+      "workspace_currency_change_quantity_check",
+      sql`${t.renewalMembers} > 0 AND ${t.renewalPriceMinor} > 0 AND ${t.renewalPriceMinor} <= 9007199254740991`
+    ),
+    deadlineCheck: check(
+      "workspace_currency_change_deadline_check",
+      sql`isfinite(${t.effectiveAt}) AND isfinite(${t.checkoutGraceEndsAt}) AND ${t.checkoutGraceEndsAt} = ${t.effectiveAt} + interval '168 hours' AND ${t.effectiveAt} > ${t.requestedAt}`
+    ),
+    stateCheck: check(
+      "workspace_currency_change_state_check",
+      sql`${t.state} IN ('requested','superseded','withdrawn','unchanged','completed','failed') AND (${t.state} <> 'requested' OR ${t.fromCurrency} <> ${t.targetCurrency})`
+    ),
+  })
+)
+
 export const billingEventReceipts = pgTable(
   "billing_event_receipts",
   {
