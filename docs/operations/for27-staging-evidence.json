@@ -1,6 +1,6 @@
 {
   "issue": "FOR-27",
-  "status": "hosted-verification-pending",
+  "status": "partially_verified_provider_isolation_pending",
   "date": "2026-10-29",
   "productionDatabaseMutated": false,
   "productionDeploymentChanged": false,
@@ -33,5 +33,135 @@
   },
   "remaining": [
     "Separate OAuth/provider sandbox clients and enabled provider flows"
-  ]
+  ],
+  "sourceRevisions": {
+    "web": "6b33cab5d5fafc046e03fcca73f9c7fcbcca5d08",
+    "runtime": "c4eefcf41fdd305bd51d2bea5873a8035bf31d4d"
+  },
+  "webProbe": {
+    "checkedAt": "2026-10-29T13:17:51.028Z",
+    "deployment": {
+      "id": "dpl_6TJnVDnrCoFj3Pn6wEE2A1kb2uhi",
+      "url": "forge-staging-6164kw7ff-matthieu-pm.vercel.app",
+      "region": "iad1",
+      "environment": "production",
+      "gitCommit": "",
+      "sourceRevision": "6b33cab5d5fafc046e03fcca73f9c7fcbcca5d08"
+    },
+    "database": {
+      "host": "ep-blue-shadow-zauhwkjz-pooler.c-2.eu-west-2.aws.neon.tech",
+      "challenge": "f5ff91aa231ab5047a4188ca7c8115be",
+      "database": "forge_staging",
+      "branch": "br-autumn-union-za0opf1e",
+      "postgres_version": "18.6 (4e5fd08)",
+      "transaction_read_only": "on",
+      "migration_count": 39,
+      "migration_hash": "a292e663dc140909071abc749286a2b8dc2fb095de0c7895fb20e3963ad7c170"
+    },
+    "stagingRuntime": {
+      "origin": "https://forge-staging-runtime-matthieu-pm.vercel.app",
+      "health": {
+        "ok": true,
+        "status": "ready",
+        "workflowId": "workflow//eve//workflowEntry"
+      }
+    },
+    "runtimeOrigin": "https://forge-staging-runtime-matthieu-pm.vercel.app",
+    "artifacts": {
+      "adapter": "vercel-private",
+      "directoryConfigured": false,
+      "durableBucket": "store_HCogFKvO1n2cbJw7"
+    }
+  },
+  "runtimeProbe": {
+    "deployment": {
+      "id": "dpl_9NRUhFR8nrUy2AUoTmJMfcWTj7oa",
+      "sourceRevision": "c4eefcf41fdd305bd51d2bea5873a8035bf31d4d"
+    },
+    "callback": {
+      "checkedAt": "2026-10-29T13:18:00.609Z",
+      "deployment": {
+        "id": "dpl_6TJnVDnrCoFj3Pn6wEE2A1kb2uhi",
+        "url": "forge-staging-6164kw7ff-matthieu-pm.vercel.app",
+        "region": "iad1",
+        "environment": "production",
+        "gitCommit": "",
+        "sourceRevision": "6b33cab5d5fafc046e03fcca73f9c7fcbcca5d08"
+      },
+      "database": {
+        "host": "ep-blue-shadow-zauhwkjz-pooler.c-2.eu-west-2.aws.neon.tech",
+        "challenge": "f5ff91aa231ab5047a4188ca7c8115be",
+        "database": "forge_staging",
+        "branch": "br-autumn-union-za0opf1e",
+        "postgres_version": "18.6 (4e5fd08)",
+        "transaction_read_only": "on",
+        "migration_count": 39,
+        "migration_hash": "a292e663dc140909071abc749286a2b8dc2fb095de0c7895fb20e3963ad7c170"
+      },
+      "stagingRuntime": {
+        "origin": "https://forge-staging-runtime-matthieu-pm.vercel.app",
+        "health": {
+          "ok": true,
+          "status": "ready",
+          "workflowId": "workflow//eve//workflowEntry"
+        }
+      },
+      "runtimeOrigin": "https://forge-staging-runtime-matthieu-pm.vercel.app",
+      "artifacts": {
+        "adapter": "vercel-private",
+        "directoryConfigured": false,
+        "durableBucket": "store_HCogFKvO1n2cbJw7"
+      }
+    }
+  },
+  "hostedUserUpload": {
+    "signIn": 200,
+    "workspaceSelection": 200,
+    "hostedUpload": 201,
+    "actualPrivateBytesMatched": true,
+    "attachmentId": "1cff78b4-2fd3-40a4-ae4e-3a5d0ae72b2a",
+    "fixtureRunId": "f0b027d2-f340-4a10-80b1-c0c82a72a342"
+  },
+  "cleanupCounts": {
+    "workspaces": 0,
+    "users": 0,
+    "sessions": 0,
+    "attachments": 0,
+    "blobObjects": 0
+  },
+  "verification": {
+    "appTests": 1675,
+    "runtimeTests": 15,
+    "workflowTests": 4,
+    "memberCapacityPostgres": 17,
+    "teamVisibilityPostgres": 6,
+    "fixtureLifecyclePostgres": 1,
+    "privateBlobIntegration": 1,
+    "typecheck": "passed",
+    "lint": "passed (0 errors; 89 existing warnings)",
+    "localWebBuild": "passed",
+    "cloudWebBuild": "READY",
+    "cloudRuntimeBuild": "READY",
+    "diffCheck": "passed"
+  },
+  "acceptance": {
+    "AC-01": "Passed on exact staging: A/B seed and bounded cleanup, independent sentinel preservation, ownership-conflict rollback, zero remaining owned rows/objects. Hosted sign-in/workspace selection/private upload also passed.",
+    "AC-02": "Passed: checked-in exact-target/SQL guards reject production identity before mutation, including URL routing overrides. Existing isolated migration and test entry points remain production-disabled."
+  },
+  "denials": {
+    "webWithoutOperatorToken": 404,
+    "webDeniedBodyBytes": 0,
+    "runtimeInfoWithoutApplicationToken": 401,
+    "incorrectProbeAuthority": "covered by existing no-collector unit tests",
+    "crossOriginAttachmentWrite": 403
+  },
+  "probeCleanup": {
+    "rawOperatorTokenDestroyed": true,
+    "futureDeploymentProbeVariablesRemoved": true,
+    "bothTemporaryAutomationBypassesRevoked": true,
+    "temporaryRuntimeShareLinkRevoked": true,
+    "capturedDeploymentConfiguration": "Retains hash/expiry until its configured short-lived expiry; raw token was destroyed.",
+    "capturedDeploymentProbeExpiresAt": "2026-10-29T13:28:05.076964+00:00"
+  },
+  "productionScope": "No production deploy, migration, bucket mutation or environment-pointer change was performed."
 }

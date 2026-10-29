@@ -118,3 +118,44 @@ temporary automation bypasses are removed after verification.
 
 Final counts and deployment identities are recorded with the verification result.
 FOR-27 stays In Progress while provider/OAuth isolation acceptance remains open.
+
+
+## Hosted checkpoint
+
+The web deployment `dpl_6TJnVDnrCoFj3Pn6wEE2A1kb2uhi` serves source
+`6b33cab5d5fafc046e03fcca73f9c7fcbcca5d08`; runtime
+`dpl_9NRUhFR8nrUy2AUoTmJMfcWTj7oa` serves source
+`c4eefcf41fdd305bd51d2bea5873a8035bf31d4d`. Both are READY.
+The API rejected Trusted Sources updates as unavailable, so the approved exact
+rules were saved and verified in the dashboard. Screenshots are in
+`output/production-readiness/for27-staging-{trust,web-trust}.jpg`.
+
+Actual protected probes passed web → runtime health and runtime → web → SQL with
+matching challenge and deployment/source identities. SQL is read-only and confirms
+39 migrations on the exact staging branch/database. The restricted web role has
+no superuser, role/database creation or RLS-bypass attribute.
+
+A synthetic fixture owner signed in through the hosted app (200), selected its
+workspace (200), and uploaded an attachment (201). Bytes read privately from the
+actual Blob store match the uploaded content and checksum. An initial request
+using the immutable deployment URL with the stable alias as Origin was correctly
+refused (403); using the stable alias consistently passed. No origin guard was
+weakened. Exact cleanup left zero users, workspaces, sessions, attachments and
+Blob objects. No model/mail/payment call was made.
+
+Final source verification passed 1,675 app, 15 runtime and 4 Workflow tests,
+typechecking, lint (zero errors; existing warnings remain), and local/cloud builds.
+Opt-in real checks additionally passed 17 membership, 6 visibility, 1 fixture
+lifecycle and 1 private Blob case. Full evidence is in
+`docs/operations/for27-staging-evidence.json`.
+
+Both temporary automation bypasses, the temporary runtime share link, future
+probe environment variables and raw local operator token were removed. Captured
+deployments retain only the hash and bounded expiry; they deny the operator probe
+after expiry. Application authorization remains in place. Staging service OIDC
+rules remain intentionally configured.
+
+AC-01 and AC-02 are verified for the implemented database/fixture/hosting path.
+FOR-27 remains In Progress because separate meeting OAuth clients and enabled
+provider sandbox flows have not been provisioned/accepted. The startup guard
+continues to refuse external credentials in this disabled-integration baseline.
