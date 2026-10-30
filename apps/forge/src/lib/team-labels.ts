@@ -1,4 +1,8 @@
 import { z } from "zod"
+import {
+  sharedDefinitionsActive,
+  sharedIssueLabels,
+} from "./issue-definition-cache"
 
 export const LABEL_COLORS = [
   "#5b6478",
@@ -23,7 +27,7 @@ const labelSchema = z.object({
   favorite: z.boolean().optional(),
   archived: z.boolean().optional(),
 })
-const directorySchema = z.object({
+export const teamLabelDirectorySchema = z.object({
   version: z.literal(1),
   labels: z.array(labelSchema),
   groups: z.array(
@@ -41,7 +45,7 @@ const directorySchema = z.object({
 })
 
 export type TeamLabel = z.infer<typeof labelSchema>
-export type TeamLabelDirectory = z.infer<typeof directorySchema>
+export type TeamLabelDirectory = z.infer<typeof teamLabelDirectorySchema>
 export type TeamLabelGroup = TeamLabelDirectory["groups"][number]
 
 // Reference data for the frontend settings experience, until labels have a server model.
@@ -85,7 +89,7 @@ export function teamLabelsStorageKey(teamId: string) {
 }
 
 export function parseTeamLabels(value: string): TeamLabelDirectory {
-  return directorySchema.parse(JSON.parse(value))
+  return teamLabelDirectorySchema.parse(JSON.parse(value))
 }
 
 export function restoreTeamLabelDeletion(
@@ -304,4 +308,14 @@ export const initiativeLabelsStorageKey = "forge:workspace-initiative-labels:v1"
 
 export function initialInitiativeLabels(): TeamLabelDirectory {
   return { version: 1, labels: [], groups: [], inheritedCount: 0 }
+}
+
+// During the shared session, no browser-local directory is consulted.
+export function readTeamIssueLabels(
+  teamId: string,
+  slug = ""
+): TeamLabelDirectory {
+  if (sharedDefinitionsActive()) return sharedIssueLabels(teamId)
+  const raw = localStorage.getItem(teamLabelsStorageKey(teamId))
+  return raw ? parseTeamLabels(raw) : initialTeamLabels(slug)
 }

@@ -23,6 +23,7 @@ import {
   AccountPreferenceProvider,
   PreferenceSyncStatus,
 } from "@/components/account-preference-provider"
+import { IssueDefinitionProvider } from "@/components/issue-definition-provider"
 import { PersonalPreferenceEffects } from "@/components/personal-preference-effects"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { Toaster } from "@/components/ui/sonner"
@@ -106,36 +107,38 @@ function RootLayout() {
   const hasSettingsLayout = pathname.startsWith("/settings")
 
   return (
-    <WorkspaceEmojiProvider>
-      <AgentProvider deferModelSources={pathname !== "/forge"}>
-        <SidebarProvider
-          className={cn(
-            "forge-app-shell relative",
-            pathname === "/inbox" && "forge-inbox-shell",
-            (pathname === "/my-issues" ||
-              /^\/teams\/[^/]+\/issues$/.test(pathname)) &&
-              "forge-issues-shell",
-            hasStandaloneTeamSettingsLayout
-              ? "forge-create-team-shell forge-settings-shell"
-              : hasSettingsLayout
-                ? "forge-settings-shell"
-                : undefined
-          )}
-        >
-          <Activity mode={hasSettingsLayout ? "hidden" : "visible"}>
-            <AppSidebar />
-          </Activity>
-          <Activity mode={hasSettingsLayout ? "visible" : "hidden"}>
-            <SettingsSidebar />
-          </Activity>
-          <AgentContentPane pathname={pathname} />
-          <div className="forge-agent-overlay-layer pointer-events-none absolute top-2 right-2 bottom-8 left-0 z-30 transition-[left] duration-200 ease-linear md:left-(--sidebar-width) md:peer-data-[collapsible=icon]:left-[calc(var(--sidebar-width-icon)+(--spacing(4)))] md:peer-data-[collapsible=offcanvas]:left-0">
-            <AgentShell />
-          </div>
-          <AgentFooterActions />
-        </SidebarProvider>
-      </AgentProvider>
-    </WorkspaceEmojiProvider>
+    <IssueDefinitionProvider>
+      <WorkspaceEmojiProvider>
+        <AgentProvider deferModelSources={pathname !== "/forge"}>
+          <SidebarProvider
+            className={cn(
+              "forge-app-shell relative",
+              pathname === "/inbox" && "forge-inbox-shell",
+              (pathname === "/my-issues" ||
+                /^\/teams\/[^/]+\/issues$/.test(pathname)) &&
+                "forge-issues-shell",
+              hasStandaloneTeamSettingsLayout
+                ? "forge-create-team-shell forge-settings-shell"
+                : hasSettingsLayout
+                  ? "forge-settings-shell"
+                  : undefined
+            )}
+          >
+            <Activity mode={hasSettingsLayout ? "hidden" : "visible"}>
+              <AppSidebar />
+            </Activity>
+            <Activity mode={hasSettingsLayout ? "visible" : "hidden"}>
+              <SettingsSidebar />
+            </Activity>
+            <AgentContentPane pathname={pathname} />
+            <div className="forge-agent-overlay-layer pointer-events-none absolute top-2 right-2 bottom-8 left-0 z-30 transition-[left] duration-200 ease-linear md:left-(--sidebar-width) md:peer-data-[collapsible=icon]:left-[calc(var(--sidebar-width-icon)+(--spacing(4)))] md:peer-data-[collapsible=offcanvas]:left-0">
+              <AgentShell />
+            </div>
+            <AgentFooterActions />
+          </SidebarProvider>
+        </AgentProvider>
+      </WorkspaceEmojiProvider>
+    </IssueDefinitionProvider>
   )
 }
 

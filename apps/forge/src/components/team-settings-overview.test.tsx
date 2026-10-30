@@ -22,7 +22,19 @@ import { TeamTriageSettings } from "./team-triage-settings"
 import { TeamWorkflowsSettings } from "./team-workflows-settings"
 import { TeamIssueStatusesSettings } from "./team-issue-statuses-settings"
 import type { TeamSummary } from "@/lib/team-contract"
+import { defaultDefinitionValue } from "@/lib/issue-definition-contract"
 
+vi.mock("@/components/issue-definition-provider", () => ({
+  useIssueDefinitions: () => ({
+    snapshot: {
+      teamId: "statuses-navigation-team",
+      revision: 0,
+      canManage: false,
+      value: defaultDefinitionValue(),
+    },
+    save: vi.fn(),
+  }),
+}))
 vi.mock("@/lib/team-state", () => ({ deleteTeam: vi.fn() }))
 vi.mock("@/components/agent/agent-provider", () => ({
   useAgent: () => ({ draft: "", setDraft: vi.fn(), openComposer: vi.fn() }),

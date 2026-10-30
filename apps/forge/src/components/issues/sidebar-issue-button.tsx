@@ -6,18 +6,15 @@ import { IssueComposer } from "./issue-composer"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import type { IssueDraft } from "@/lib/team-issues"
+import { readTeamIssueLabels } from "@/lib/team-labels"
 import { ActionIconButton } from "@/components/ui/action-icon-button"
 import { loadTemplates } from "@/lib/template-state"
 import {
   blankIssueDraft,
+  getDefaultIssueStatus,
   getIssueStatuses,
   readIssueStore,
 } from "@/lib/team-issues"
-import {
-  initialTeamLabels,
-  parseTeamLabels,
-  teamLabelsStorageKey,
-} from "@/lib/team-labels"
 
 export function SidebarIssueButton({ pathname }: { pathname: string }) {
   const router = useRouter()
@@ -49,16 +46,12 @@ export function SidebarIssueButton({ pathname }: { pathname: string }) {
       }
       const statuses = getIssueStatuses(team.id)
       const store = readIssueStore(team.id)
-      const rawLabels = localStorage.getItem(teamLabelsStorageKey(team.id))
-      const labels = (
-        rawLabels ? parseTeamLabels(rawLabels) : initialTeamLabels(team.slug)
-      ).labels
+      const labels = readTeamIssueLabels(team.id, team.slug).labels
       setEditor({
         team,
         directory,
         draft: blankIssueDraft(
-          statuses.find((status) => status.group === "unstarted")?.id ??
-            statuses.at(0)?.id
+          getDefaultIssueStatus(team.id) ?? statuses.at(0)?.id
         ),
         labels: labels
           .filter((label) => !label.archived)

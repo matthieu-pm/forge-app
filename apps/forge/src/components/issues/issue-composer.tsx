@@ -16,7 +16,13 @@ import type { IssueDraft, TeamIssue } from "@/lib/team-issues"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import {
+  DEFINITIONS_CHANGED,
+  sharedDefinitionsActive,
+} from "@/lib/issue-definition-cache"
+import { readTeamIssueLabels } from "@/lib/team-labels"
+import {
   blankIssueDraft,
+  getDefaultIssueStatus,
   getIssueStatuses,
   issuePriorities,
   saveIssueDraft,
@@ -84,6 +90,7 @@ export function IssueComposer({
   }, [draft, targetTeam])
   const [statuses, setStatuses] = useState(initialTeamStatuses().statuses)
   const [error, setError] = useState("")
+  const [sharedLabels, setSharedLabels] = useState<Array<string> | null>(null)
   const [expanded, setExpanded] = useState(false)
   const [createMore, setCreateMore] = useState(false)
   const [confirmClose, setConfirmClose] = useState(false)
@@ -103,27 +110,38 @@ export function IssueComposer({
     }
   }, [])
   useEffect(() => {
-    try {
-      const nextStatuses = getIssueStatuses(targetTeam.id)
-      setStatuses(nextStatuses)
-      if (presentation === "inline") {
-        setDraft((current) =>
-          nextStatuses.some((item) => item.id === current.status)
-            ? current
-            : {
-                ...current,
-                status:
-                  nextStatuses.find((item) => item.group === "unstarted")?.id ??
-                  nextStatuses.at(0)?.id ??
-                  current.status,
-              }
+    function refresh() {
+      try {
+        if (sharedDefinitionsActive())
+          setSharedLabels(
+            readTeamIssueLabels(targetTeam.id)
+              .labels.filter((l) => !l.archived)
+              .map((l) => l.name)
+          )
+        const nextStatuses = getIssueStatuses(targetTeam.id)
+        setStatuses(nextStatuses)
+        if (presentation === "inline") {
+          setDraft((current) =>
+            nextStatuses.some((item) => item.id === current.status)
+              ? current
+              : {
+                  ...current,
+                  status:
+                    getDefaultIssueStatus(targetTeam.id) ??
+                    nextStatuses.at(0)?.id ??
+                    current.status,
+                }
+          )
+        }
+      } catch {
+        setError(
+          "This team’s statuses could not be loaded. Existing data has been preserved."
         )
       }
-    } catch {
-      setError(
-        "This team’s statuses could not be loaded. Existing data has been preserved."
-      )
     }
+    refresh()
+    window.addEventListener(DEFINITIONS_CHANGED, refresh)
+    return () => window.removeEventListener(DEFINITIONS_CHANGED, refresh)
   }, [targetTeam.id, presentation])
   function update(patch: Partial<IssueDraft>) {
     setDraft((current) => ({ ...current, ...patch }))
@@ -244,7 +262,9 @@ export function IssueComposer({
   const suggestBug =
     /bug|broken|error|crash|test issue/i.test(
       `${draft.title} ${draft.description}`
-    ) && !draft.labels?.split(",").some((label) => label.trim() === "Bug")
+    ) &&
+    (!sharedDefinitionsActive() || sharedLabels?.includes("Bug")) &&
+    !draft.labels?.split(",").some((label) => label.trim() === "Bug")
   const members = directory?.members ?? []
   const assignee = members.find((member) => member.id === draft.assignee)
   const status = statuses.find((item) => item.id === draft.status)
@@ -342,8 +362,7 @@ export function IssueComposer({
                   setTargetTeam(next)
                   update({
                     status:
-                      nextStatuses.find((item) => item.group === "unstarted")
-                        ?.id ?? nextStatuses[0].id,
+                      getDefaultIssueStatus(next.id) ?? nextStatuses[0].id,
                     assignee: "",
                     parentId: "",
                     cycle: "",
@@ -550,7 +569,9 @@ export function IssueComposer({
             label="Change labels"
             value={draft.labels ?? ""}
             options={[
-              ...new Set(["Bug", "Feature", "Improvement", ...labels]),
+              ...new Set(
+                sharedLabels ?? ["Bug", "Feature", "Improvement", ...labels]
+              ),
             ].map((name) => ({
               value: name,
               label: name,

@@ -24,7 +24,7 @@ const statusSchema = z.object({
   color: z.string().regex(/^#[\da-f]{6}$/i),
 })
 export type TeamStatus = z.infer<typeof statusSchema>
-const directorySchema = z
+export const teamStatusDirectorySchema = z
   .object({
     statuses: z.array(statusSchema),
     defaultId: z.string(),
@@ -49,11 +49,11 @@ const directorySchema = z
       })
     }
   })
-export type TeamStatusDirectory = z.infer<typeof directorySchema>
+export type TeamStatusDirectory = z.infer<typeof teamStatusDirectorySchema>
 export const teamStatusesStorageKey = (teamId: string) =>
   `forge:team-statuses:v1:${teamId}`
 export const parseTeamStatuses = (raw: string) =>
-  directorySchema.parse(JSON.parse(raw))
+  teamStatusDirectorySchema.parse(JSON.parse(raw))
 export function initialTeamStatuses(): TeamStatusDirectory {
   return {
     defaultId: "backlog",

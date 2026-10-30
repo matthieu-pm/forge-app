@@ -121,7 +121,7 @@ export const documentSchema = z
   .nullable()
 export const propertiesSchema = z.object({
   teamIds: z.array(z.string().uuid()).max(100),
-  status: z.string().max(50),
+  status: z.string().max(80),
   estimate: z.string().max(30).nullable().optional(),
   priority: z.enum(["No priority", "Urgent", "High", "Medium", "Low"]),
   assignee: z.string().nullable(),

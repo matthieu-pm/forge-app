@@ -1,4 +1,10 @@
 import { useCallback, useMemo, useSyncExternalStore } from "react"
+import {
+  DEFINITIONS_CHANGED,
+  cachedDefinitions,
+  sharedDefinitionsActive,
+  sharedIssueLabels,
+} from "./issue-definition-cache"
 
 import {
   ISSUES_CHANGED,
@@ -22,7 +28,13 @@ import { useWorkspaceView } from "@/components/account-preference-provider"
 
 const PREFERENCES_CHANGED = "forge:my-issues-preferences-changed"
 function subscribe(notify: () => void) {
-  for (const event of ["storage", "focus", ISSUES_CHANGED, PREFERENCES_CHANGED])
+  for (const event of [
+    "storage",
+    "focus",
+    ISSUES_CHANGED,
+    PREFERENCES_CHANGED,
+    DEFINITIONS_CHANGED,
+  ])
     window.addEventListener(event, notify)
   return () => {
     for (const event of [
@@ -30,6 +42,7 @@ function subscribe(notify: () => void) {
       "focus",
       ISSUES_CHANGED,
       PREFERENCES_CHANGED,
+      DEFINITIONS_CHANGED,
     ])
       window.removeEventListener(event, notify)
   }
@@ -45,7 +58,15 @@ export function useMyIssueData(teams: Array<TeamSummary>) {
               teamIssuesKey(team.id),
               teamStatusesStorageKey(team.id),
               teamLabelsStorageKey(team.id),
-            ].map((key) => localStorage.getItem(key))
+            ].map((key, index) =>
+              sharedDefinitionsActive() && index > 0
+                ? JSON.stringify(
+                    index === 1
+                      ? cachedDefinitions(team.id).value.statuses
+                      : sharedIssueLabels(team.id)
+                  )
+                : localStorage.getItem(key)
+            )
           )
         )
       } catch {

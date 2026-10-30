@@ -1,6 +1,7 @@
 import type { CallAction, CallRecord } from "@/lib/calls"
 import {
   blankIssueDraft,
+  getDefaultIssueStatus,
   getIssueStatuses,
   readIssueStore,
   saveTeamIssue,
@@ -36,7 +37,7 @@ export function createCallIssue(
   if (existing) return existing
   const statuses = getIssueStatuses(call.teamId)
   const status =
-    statuses.find((item) => item.group === "unstarted") ??
+    statuses.find((item) => item.id === getDefaultIssueStatus(call.teamId)) ??
     statuses.find((item) => item.group === "backlog")
   if (!status)
     throw new Error(

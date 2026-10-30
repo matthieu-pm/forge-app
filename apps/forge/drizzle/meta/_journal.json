@@ -351,6 +351,13 @@
       "when": 1793367161697,
       "tag": "0049_recovery_journal",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1793371379040,
+      "tag": "0050_shared_issue_definitions",
+      "breakpoints": true
     }
   ]
 }

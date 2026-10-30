@@ -6,6 +6,17 @@ import type { TeamSummary } from "@/lib/team-contract"
 import type { CycleIssue, CycleIssueDraft } from "@/lib/cycle-issues"
 import type { IssueDraft } from "@/lib/team-issues"
 import type { TemplateDirectory } from "@/lib/template-contract"
+import { DEFINITIONS_CHANGED } from "@/lib/issue-definition-cache"
+import { readTeamIssueLabels } from "@/lib/team-labels"
+import {
+  blankIssueDraft,
+  emptyIssueFilters,
+  getIssueStatuses,
+  issueFields,
+  issuePriorities,
+  useIssueStore,
+  visibleIssues,
+} from "@/lib/team-issues"
 import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import { ContentHeader } from "@/components/ui/content-header"
 import { IssueComposer } from "@/components/issues/issue-composer"
@@ -17,29 +28,12 @@ import {
   IssuePicker,
   issueChip,
 } from "@/components/issues/issue-controls"
-import {
-  blankIssueDraft,
-  emptyIssueFilters,
-  issueFields,
-  issuePriorities,
-  useIssueStore,
-  visibleIssues,
-} from "@/lib/team-issues"
 import { loadTemplates } from "@/lib/template-state"
-import {
-  initialTeamLabels,
-  parseTeamLabels,
-  teamLabelsStorageKey,
-} from "@/lib/team-labels"
 import { OptionSelect } from "@/components/ui/option-select"
 import { useCycleIssues } from "@/lib/cycle-issues"
 import { useCycleIssueView } from "@/lib/cycle-issue-view"
 import { nextCycleStart, useTeamCycles } from "@/lib/team-cycles"
-import {
-  initialTeamStatuses,
-  parseTeamStatuses,
-  teamStatusesStorageKey,
-} from "@/lib/team-statuses"
+import { initialTeamStatuses } from "@/lib/team-statuses"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -129,15 +123,10 @@ export function UpcomingCycle({
   useEffect(() => {
     function load() {
       try {
-        const raw = localStorage.getItem(teamStatusesStorageKey(team.id))
-        setStatuses(
-          (raw ? parseTeamStatuses(raw) : initialTeamStatuses()).statuses
-        )
-        const storedLabels = localStorage.getItem(teamLabelsStorageKey(team.id))
-        const activeLabels = (
-          storedLabels
-            ? parseTeamLabels(storedLabels)
-            : initialTeamLabels(team.slug)
+        setStatuses(getIssueStatuses(team.id))
+        const activeLabels = readTeamIssueLabels(
+          team.id,
+          team.slug
         ).labels.filter((label) => !label.archived)
         setLabels(activeLabels.map((label) => label.name))
         setLabelColors(
@@ -153,9 +142,11 @@ export function UpcomingCycle({
       }
     }
     load()
+    window.addEventListener(DEFINITIONS_CHANGED, load)
     window.addEventListener("storage", load)
     window.addEventListener("focus", load)
     return () => {
+      window.removeEventListener(DEFINITIONS_CHANGED, load)
       window.removeEventListener("storage", load)
       window.removeEventListener("focus", load)
     }

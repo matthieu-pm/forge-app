@@ -10,6 +10,8 @@ import {
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { toast } from "sonner"
+import { WorkflowTransitionRules } from "./workflow-transition-rules"
+import { useIssueDefinitions } from "./issue-definition-provider"
 import type { ReactNode } from "react"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamStatus } from "@/lib/team-statuses"
@@ -18,17 +20,11 @@ import type {
   PullRequestRules,
   TeamWorkflows,
 } from "@/lib/team-workflows"
-import {
-  initialTeamStatuses,
-  parseTeamStatuses,
-  teamStatusesStorageKey,
-} from "@/lib/team-statuses"
+import { definitionValueSchema } from "@/lib/issue-definition-contract"
+import { cachedDefinitions } from "@/lib/issue-definition-cache"
 import {
   branchNameError,
-  initialTeamWorkflows,
-  parseTeamWorkflows,
   pullRequestEvents,
-  teamWorkflowsStorageKey,
   workflowDurations,
 } from "@/lib/team-workflows"
 import { IssueStatusIcon } from "@/components/issue-status-icon"
@@ -216,12 +212,11 @@ function ToggleRow({
 }
 
 export function TeamWorkflowsSettings({ team }: { team: TeamSummary }) {
-  const [settings, setSettings] = React.useState(initialTeamWorkflows)
-  const [statuses, setStatuses] = React.useState(
-    () => initialTeamStatuses().statuses
-  )
-  const [loadError, setLoadError] = React.useState(false)
-  const [ready, setReady] = React.useState(false)
+  const { snapshot, save: persist } = useIssueDefinitions(team.id)
+  const settings = snapshot.value.workflows
+  const statuses = snapshot.value.statuses.statuses
+  const [saving, setSaving] = React.useState(false)
+  const [loadError, setLoadError] = React.useState("")
   const [branchEditor, setBranchEditor] = React.useState<{
     id?: string
     name: string
@@ -241,55 +236,39 @@ export function TeamWorkflowsSettings({ team }: { team: TeamSummary }) {
     setBranchError("")
     requestAnimationFrame(() => branchReturnFocus.current?.focus())
   }
-  const storageKey = teamWorkflowsStorageKey(team.id)
-  const statusesKey = teamStatusesStorageKey(team.id)
-  React.useEffect(() => {
-    function load() {
-      try {
-        const raw = window.localStorage.getItem(storageKey)
-        const statusRaw = window.localStorage.getItem(statusesKey)
-        setSettings(raw ? parseTeamWorkflows(raw) : initialTeamWorkflows())
-        setStatuses(
-          statusRaw
-            ? parseTeamStatuses(statusRaw).statuses
-            : initialTeamStatuses().statuses
-        )
-        setLoadError(false)
-      } catch {
-        setLoadError(true)
-      }
-      setReady(true)
-    }
-    load()
-    function onStorage(event: StorageEvent) {
-      if (
-        event.key === storageKey ||
-        event.key === statusesKey ||
-        event.key === null
-      )
-        load()
-    }
-    window.addEventListener("storage", onStorage)
-    return () => window.removeEventListener("storage", onStorage)
-  }, [storageKey, statusesKey])
-  const disabled = !ready || loadError
-  function save(next: TeamWorkflows) {
+  const disabled = saving || !snapshot.canManage
+  async function save(next: TeamWorkflows) {
     if (disabled) return false
+    setSaving(true)
+    setLoadError("")
     try {
-      window.localStorage.setItem(storageKey, JSON.stringify(next))
-      setSettings(next)
+      await persist({
+        teamId: team.id,
+        expectedRevision: snapshot.revision,
+        value: definitionValueSchema.parse({
+          ...snapshot.value,
+          workflows: next,
+        }),
+        statusReplacements: {},
+        labelReplacements: {},
+      })
       return true
-    } catch {
-      toast.error(
-        "Your workflow settings could not be saved. Please try again."
-      )
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Your workflow settings could not be saved. Please try again."
+      setLoadError(message)
+      toast.error(message)
       return false
+    } finally {
+      setSaving(false)
     }
   }
   function update(patch: Partial<TeamWorkflows>) {
     return save({ ...settings, ...patch })
   }
-  function saveBranch(event: React.FormEvent) {
+  async function saveBranch(event: React.FormEvent) {
     event.preventDefault()
     if (!branchEditor) return
     const name = branchEditor.name.trim()
@@ -318,14 +297,14 @@ export function TeamWorkflowsSettings({ team }: { team: TeamSummary }) {
             rules: { ...settings.pullRequests },
           },
         ]
-    if (update({ branches })) closeBranchEditor()
+    if (await update({ branches })) closeBranchEditor()
     else setBranchError("The branch could not be saved. Please try again.")
   }
-  function removeBranch(branch: BranchWorkflow) {
+  async function removeBranch(branch: BranchWorkflow) {
     if (
-      !update({
+      !(await update({
         branches: settings.branches.filter((item) => item.id !== branch.id),
-      })
+      }))
     )
       return
     toast.success(`Rules for ${branch.name} removed`, {
@@ -333,10 +312,7 @@ export function TeamWorkflowsSettings({ team }: { team: TeamSummary }) {
         label: "Undo",
         onClick: () => {
           try {
-            const raw = window.localStorage.getItem(storageKey)
-            const current = raw
-              ? parseTeamWorkflows(raw)
-              : initialTeamWorkflows()
+            const current = cachedDefinitions(team.id).value.workflows
             if (
               current.branches.some(
                 (item) =>
@@ -366,10 +342,19 @@ export function TeamWorkflowsSettings({ team }: { team: TeamSummary }) {
           </header>
           {loadError && (
             <p role="alert" className="mb-5 px-4 text-sm text-destructive">
-              Saved workflow settings could not be loaded. Your saved data has
-              been preserved. Reload the page to try again.
+              {loadError}
             </p>
           )}
+          {!snapshot.canManage && (
+            <p className="mb-5 px-4 text-sm text-muted-foreground">
+              Only workspace owners and admins can change workflow settings.
+            </p>
+          )}
+          <p className="mb-5 px-4 text-sm text-muted-foreground">
+            These settings are shared. Pull request and scheduled automation
+            execution will be available when their integrations are enabled.
+          </p>
+          <WorkflowTransitionRules teamId={team.id} />
           <div className="space-y-12">
             <section aria-label="Pull request automations">
               <SectionHeading title="Pull request automations">

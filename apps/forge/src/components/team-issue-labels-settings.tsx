@@ -10,6 +10,7 @@ import {
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { toast } from "sonner"
+import { SharedIssueLabelsSettings } from "./shared-issue-definition-settings"
 import type { TeamSummary } from "@/lib/team-contract"
 import type {
   TeamLabel,
@@ -80,7 +81,7 @@ const focusClass =
 const labelRowClass =
   "h-11 border-0 bg-transparent hover:bg-transparent data-[state=selected]:bg-transparent [&>td]:transition-colors [&>td]:duration-100 [&>td:first-child]:rounded-l-[8px] [&>td:last-child]:rounded-r-[8px] hover:[&>td]:bg-muted/30 data-[state=selected]:[&>td]:bg-[#5e6ad2]/20 [&[data-state=selected]+tr[data-state=selected]>td:first-child]:rounded-tl-none [&[data-state=selected]+tr[data-state=selected]>td:last-child]:rounded-tr-none [&[data-state=selected]:has(+tr[data-state=selected])>td:first-child]:rounded-bl-none [&[data-state=selected]:has(+tr[data-state=selected])>td:last-child]:rounded-br-none"
 
-export function TeamIssueLabelsSettings({
+function LocalEntityLabelsSettings({
   team,
   entity = "issue",
 }: {
@@ -1229,5 +1230,16 @@ function LabelEditor({
         </Button>
       </DialogFooter>
     </form>
+  )
+}
+
+export function TeamIssueLabelsSettings(props: {
+  team?: TeamSummary
+  entity?: "issue" | "project" | "initiative"
+}) {
+  return !props.entity || props.entity === "issue" ? (
+    <SharedIssueLabelsSettings team={props.team} />
+  ) : (
+    <LocalEntityLabelsSettings {...props} />
   )
 }

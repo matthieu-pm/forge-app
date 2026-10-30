@@ -20,6 +20,8 @@ import type {
   UploadTarget,
 } from "@/application/files/upload-contract"
 import type { AnyPgColumn } from "drizzle-orm/pg-core"
+import type { DefinitionValue } from "@/lib/issue-definition-contract"
+import type { TeamLabel } from "@/lib/team-labels"
 
 // Canonical identity/relationship foundation. Product adapters must independently
 // authorize an Actor; inserting these rows does not publish browser-local drafts.
@@ -103,6 +105,7 @@ export const issues = pgTable(
     teamId: uuid("team_id").notNull(),
     number: integer("number").notNull(),
     title: text("title").notNull(),
+    statusId: text("status_id").default("backlog").notNull(),
     projectId: uuid("project_id"),
     parentId: uuid("parent_id").references((): AnyPgColumn => issues.id, {
       onDelete: "set null",
@@ -121,6 +124,15 @@ export const issues = pgTable(
       columns: [t.workspaceId, t.teamId],
       foreignColumns: [teams.workspaceId, teams.id],
     }).onDelete("cascade"),
+    foreignKey({
+      name: "issues_status_fk",
+      columns: [t.workspaceId, t.teamId, t.statusId],
+      foreignColumns: [
+        issueStatuses.workspaceId,
+        issueStatuses.teamId,
+        issueStatuses.id,
+      ],
+    }),
     // Single-column SET NULL above clears only the nullable key. Composite NO ACTION
     // checks workspace ownership without ever clearing the issue's workspace.
     foreignKey({
@@ -176,6 +188,7 @@ export const resourceLabels = pgTable(
     workspaceId: workspace(),
     teamId: uuid("team_id"),
     name: text("name").notNull(),
+    definition: jsonb("definition").$type<TeamLabel>(),
   },
   (t) => [
     unique("resource_labels_workspace_id_unique").on(t.workspaceId, t.id),
@@ -212,6 +225,65 @@ export const issueLabels = pgTable(
       name: "issue_labels_label_fk",
       columns: [t.workspaceId, t.labelId],
       foreignColumns: [resourceLabels.workspaceId, resourceLabels.id],
+    }),
+  ]
+)
+
+export const issueStatuses = pgTable(
+  "issue_statuses",
+  {
+    rowId: uuid("row_id").defaultRandom().primaryKey(),
+    id: text("id").notNull(),
+    workspaceId: workspace(),
+    teamId: uuid("team_id").notNull(),
+    name: text("name").notNull(),
+    group: text("status_group").notNull(),
+    description: text("description").default("").notNull(),
+    color: text("color").notNull(),
+    position: integer("position").notNull(),
+  },
+  (t) => [
+    unique("issue_statuses_identity").on(t.workspaceId, t.teamId, t.id),
+    uniqueIndex("issue_statuses_name_unique").on(
+      t.teamId,
+      sql`lower(${t.name})`
+    ),
+    check(
+      "issue_statuses_group",
+      sql`${t.group} IN ('backlog','unstarted','started','completed','canceled','duplicate')`
+    ),
+    check("issue_statuses_color", sql`${t.color} ~ '^#[0-9a-fA-F]{6}$'`),
+    check("issue_statuses_name", sql`length(trim(${t.name})) BETWEEN 1 AND 80`),
+    foreignKey({
+      name: "issue_statuses_team_fk",
+      columns: [t.workspaceId, t.teamId],
+      foreignColumns: [teams.workspaceId, teams.id],
+    }).onDelete("cascade"),
+  ]
+)
+
+// One revision/lock for each workspace-label or team-definition aggregate.
+export const issueDefinitionScopes = pgTable(
+  "issue_definition_scopes",
+  {
+    id: id(),
+    workspaceId: workspace(),
+    teamId: uuid("team_id"),
+    scopeKey: text("scope_key").notNull(),
+    revision: integer("revision").default(0).notNull(),
+    value: jsonb("value").$type<DefinitionValue>().notNull(),
+  },
+  (t) => [
+    unique("issue_definition_scopes_key").on(t.workspaceId, t.scopeKey),
+    check("issue_definition_scopes_revision", sql`${t.revision} >= 0`),
+    check(
+      "issue_definition_scopes_identity",
+      sql`${t.scopeKey} = coalesce(${t.teamId}::text, 'workspace')`
+    ),
+    foreignKey({
+      name: "issue_definition_scopes_team_fk",
+      columns: [t.workspaceId, t.teamId],
+      foreignColumns: [teams.workspaceId, teams.id],
     }).onDelete("cascade"),
   ]
 )

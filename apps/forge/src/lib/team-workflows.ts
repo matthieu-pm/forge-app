@@ -25,7 +25,7 @@ const branchSchema = z.object({
   useRegex: z.boolean().default(false),
 })
 export type BranchWorkflow = z.infer<typeof branchSchema>
-const workflowsSchema = z.object({
+export const workflowsSchema = z.object({
   pullRequests: rulesSchema,
   branches: z
     .array(branchSchema)
