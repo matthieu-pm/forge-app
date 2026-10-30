@@ -1,0 +1,129 @@
+{
+  "issue": "FOR-139",
+  "date": "2026-10-30",
+  "implementationCommit": "f3666c4974700cc0c6cdf877250dad831613604c",
+  "actorPolicy": "All verified actor kinds: session user, API-key owner, agent initiating user. Personal preferences do not confer authority.",
+  "release": {
+    "gate": "FORGE_ASSIGN_STARTED_ISSUES_ENABLED",
+    "default": "false",
+    "requiresPreferenceSync": true,
+    "migrations": [],
+    "productionDeployed": false,
+    "productionGateChanged": false,
+    "publicIssueWriteAdaptersEnabled": false,
+    "packagedElectronCertified": false
+  },
+  "environment": {
+    "database": "forge_issue_creation_acceptance_v3",
+    "branchId": "br-autumn-union-za0opf1e",
+    "applicationRole": "forge_staging_web",
+    "browser": "authenticated headless Chromium",
+    "origins": ["http://localhost:3139", "http://localhost:3140"]
+  },
+  "acceptance": {
+    "AC-01_AT-01": {
+      "result": "passed",
+      "cases": [
+        "session, API key and agent assign to the verified actor",
+        "custom canonical status category using real definition service",
+        "atomic status and assignee column/property update",
+        "one combined activity event and one issue update event",
+        "bulk per-issue eligibility",
+        "visible single/bulk browser effects and persisted opt-in"
+      ]
+    },
+    "AC-02_AT-02": {
+      "result": "passed",
+      "cases": [
+        "existing assignee",
+        "explicit other assignee",
+        "explicit unassignment",
+        "disabled, absent, invalid and unsupported preference",
+        "behavior gate off and preference-sync gate off",
+        "non-start, same-start, between-started and unrelated edits",
+        "executing actor account isolation",
+        "missing write scope and private-team authority",
+        "gate-off disabled UI and server behavior despite stored opt-in"
+      ]
+    },
+    "AC-03_AT-03": {
+      "result": "passed",
+      "cases": [
+        "concurrent start/assignment produces one winner and conflict",
+        "stale start cannot overwrite competing assignee",
+        "visible conflict and explicit rebase retain competing owner",
+        "stale bulk rolls every item back",
+        "concurrent exact retry creates one receipt, audit, revision, activity and event",
+        "replay after preference/gate change does not reevaluate rule",
+        "revoked session/API key/agent cannot replay",
+        "injected audit failure rolls all effects back; exact retry commits once"
+      ]
+    }
+  },
+  "validation": {
+    "appSuite": {
+      "command": "bunx vitest run --maxWorkers=2",
+      "passed": 2219,
+      "skipped": 330
+    },
+    "workflowSuite": {
+      "command": "bun run test:workflow",
+      "passed": 4
+    },
+    "gateAndSettings": {
+      "command": "bunx vitest run src/application/issues/started-assignment.server.test.ts src/components/preferences-settings.test.tsx",
+      "passed": 9
+    },
+    "postgres": {
+      "command": "FORGE_ISSUE_TEST_DATABASE_FILE=<secure-file> bunx vitest run src/application/issues/issues.postgres.test.ts",
+      "passed": 48,
+      "includesPriorFoundationCases": 25,
+      "for139Cases": 23
+    },
+    "browserEnabled": {
+      "command": "FORGE_ISSUE_TEST_DATABASE_FILE=<secure-file> node scripts/verify-started-assignment-browser.mjs",
+      "result": "passed"
+    },
+    "browserDisabled": {
+      "command": "FORGE_STARTED_ASSIGNMENT_EXPECT_DISABLED=true FORGE_ISSUE_TEST_DATABASE_FILE=<secure-file> FORGE_ISSUE_BROWSER_URL=http://localhost:3140 node scripts/verify-started-assignment-browser.mjs",
+      "result": "passed"
+    },
+    "typecheck": "passed",
+    "productionBuildAndProtectedWorkflowHandlers": "passed",
+    "changedFileLint": {
+      "errors": 0,
+      "warnings": 21
+    },
+    "prettier": "passed",
+    "gitDiffCheck": "passed"
+  },
+  "cleanup": {
+    "postgres": "exact captured fixture identities asserted absent after teardown",
+    "browser": "zero fixture users, workspaces, receipts and preferences verified in both enabled and disabled runs",
+    "remaining": {
+      "users": 0,
+      "workspaces": 0,
+      "issues": 0,
+      "preferences": 0,
+      "receipts": 0,
+      "audit": 0,
+      "outbox": 0
+    }
+  },
+  "artifacts": {
+    "contract": "docs/operations/started-issue-assignment.md",
+    "postgresTests": "apps/forge/src/application/issues/issues.postgres.test.ts",
+    "browserScript": "apps/forge/scripts/verify-started-assignment-browser.mjs"
+  },
+  "integrationWithFOR138": {
+    "baseCommit": "ce6f1d3",
+    "appTestsPassed": 2231,
+    "appTestsSkipped": 349,
+    "postgresCombinedPassed": 65,
+    "postgresInteractionCasePassed": 1,
+    "workflowTestsPassed": 4,
+    "typecheck": "passed",
+    "productionBuild": "passed",
+    "policy": "Preserve all-actor creation rules and distinct started-transition rules, including child attribution."
+  }
+}

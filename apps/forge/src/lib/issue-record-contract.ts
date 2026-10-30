@@ -52,6 +52,9 @@ export const issueDraftSchema = triageDraftSchema.extend({
         author: z.string(),
         text: z.string(),
         createdAt: z.string(),
+        automaticAssignment: z
+          .object({ from: z.literal(""), to: z.string() })
+          .optional(),
         field: z
           .enum([
             "status",
