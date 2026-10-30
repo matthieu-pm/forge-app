@@ -3,6 +3,7 @@ import { del, get, put } from "@vercel/blob"
 import { inspectFileStorage } from "../../../../../packages/environment/file-storage"
 import type { FileBlobStore } from "@/application/files/blob-store"
 import { assertFileReference } from "@/application/files/blob-store"
+import { readBoundedFile } from "@/application/files/bounded-file-read.server"
 
 /** Credentials are captured per instance so a process cannot drift to another bucket. */
 export class VercelPrivateFileBlobStore implements FileBlobStore {
@@ -31,16 +32,24 @@ export class VercelPrivateFileBlobStore implements FileBlobStore {
       contentType: "application/octet-stream",
     })
   }
-  async get(reference: string) {
+  async get(
+    reference: string,
+    options?: { maxBytes: number; signal?: AbortSignal }
+  ) {
     const result = await get(this.#path(reference), {
       token: this.#token,
       access: "private",
       useCache: false,
+      abortSignal: options?.signal,
     })
     if (!result) return null
     if (result.statusCode !== 200)
       throw new Error("Unexpected private blob response.")
-    return new Uint8Array(await new Response(result.stream).arrayBuffer())
+    return readBoundedFile(
+      result.stream,
+      options?.maxBytes ?? 100_000_000,
+      options?.signal
+    )
   }
   async delete(reference: string) {
     await del(this.#path(reference), { token: this.#token })

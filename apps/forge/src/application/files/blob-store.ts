@@ -4,7 +4,10 @@
  */
 export interface FileBlobStore {
   put: (reference: string, content: Uint8Array) => Promise<void>
-  get: (reference: string) => Promise<Uint8Array | null>
+  get: (
+    reference: string,
+    options?: { maxBytes: number; signal?: AbortSignal }
+  ) => Promise<Uint8Array | null>
   delete: (reference: string) => Promise<void>
 }
 

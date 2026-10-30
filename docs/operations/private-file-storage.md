@@ -38,8 +38,10 @@ live resource authorization policy before write/read. `createForgeResourceFileSe
 route. FOR-48 owns issue/comment binding and FOR-61 owns document editing; those
 adapters must use the shared persistence seam and the current authorization
 policy. [FOR-35 direct uploads](direct-file-uploads.md) publish validated ready
-metadata through a persisted reservation and atomic finalization; FOR-36 owns download/preview
-policy, FOR-83 runtime transfer, FOR-37 reconciliation/deletion, and FOR-38 recovery.
+metadata through a persisted reservation and atomic finalization;
+[FOR-36 authorized delivery](authorized-file-delivery.md) provides authenticated
+downloads and isolated previews. FOR-83 owns runtime transfer, FOR-37
+reconciliation/deletion, and FOR-38 recovery.
 Existing browser-local issue attachment data is not imported or silently removed
 by this infrastructure change.
 

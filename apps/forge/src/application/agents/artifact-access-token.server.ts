@@ -44,7 +44,9 @@ export async function mintArtifactAccessToken(
     .setIssuer("forge")
     .setAudience("forge-agent-artifact")
     .setIssuedAt()
-    .setExpirationTime(`${Math.max(30, expiresInSeconds)}s`)
+    .setExpirationTime(
+      `${Math.max(1, Math.min(300, Math.floor(expiresInSeconds) || 300))}s`
+    )
     .sign(secret())
 }
 
@@ -59,6 +61,8 @@ export async function verifyArtifactAccessToken(
       issuer: "forge",
       audience: "forge-agent-artifact",
       algorithms: ["HS256"],
+      requiredClaims: ["sub", "iat", "exp"],
+      maxTokenAge: 300,
     })
     const claims = claimsSchema.parse(verified.payload)
     if (
