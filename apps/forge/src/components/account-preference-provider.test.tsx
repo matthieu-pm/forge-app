@@ -13,8 +13,14 @@ import {
   PreferenceSyncStatus,
   usePreferenceGroup,
 } from "./account-preference-provider"
+import { productStorage } from "@/lib/product-storage"
 import { emptyPreferenceSnapshot } from "@/lib/account-preference-contract"
 import { invalidatePreferenceSession } from "@/lib/preference-session-events"
+
+vi.mock("@/components/product-state-provider", () => ({
+  ProductStateProvider: ({ children }: { children: React.ReactNode }) =>
+    children,
+}))
 
 const mocks = vi.hoisted(() => ({
   auth: vi.fn(),
@@ -50,7 +56,7 @@ function identity(userId: string) {
 }
 beforeEach(() => {
   vi.clearAllMocks()
-  localStorage.clear()
+  productStorage.clear()
   mocks.auth.mockResolvedValue(identity("alice"))
   mocks.load.mockResolvedValue({
     status: "ready",

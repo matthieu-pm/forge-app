@@ -1,8 +1,16 @@
 import * as React from "react"
+import { CanonicalEditFeedback } from "./issues/canonical-edit-feedback"
 import type {
   DefinitionCommand,
   DefinitionSnapshot,
 } from "@/lib/issue-definition-contract"
+import {
+  hydrateIssueEdits,
+  resetIssueEdits,
+} from "@/lib/canonical-issue-edit-client"
+import { replaceCanonicalIssues } from "@/lib/canonical-issue-cache"
+import { refreshCanonicalIssues } from "@/lib/canonical-issue-client"
+import { migrateLocalIssues } from "@/lib/canonical-issue-migration"
 import {
   loadIssueDefinitions,
   persistIssueDefinitions,
@@ -29,6 +37,10 @@ export function IssueDefinitionProvider({
   children: React.ReactNode
 }) {
   const [state, setState] = React.useState<State | null>(null)
+  const [migrationErrors, setMigrationErrors] = React.useState<Array<string>>(
+    []
+  )
+  const importRunning = React.useRef(false)
   const [error, setError] = React.useState("")
   const epoch = React.useRef(0)
   const identityEpoch = React.useRef(0)
@@ -47,14 +59,29 @@ export function IssueDefinitionProvider({
         ++identityEpoch.current
       stateRef.current = next
       replaceDefinitionCache(next.snapshots)
+      await refreshCanonicalIssues(next)
+      if (!mounted.current || token !== epoch.current) return
+      if (!importRunning.current) {
+        importRunning.current = true
+        try {
+          setMigrationErrors(
+            await migrateLocalIssues(
+              next.snapshots.flatMap((s) => (s.teamId ? [s.teamId] : []))
+            )
+          )
+        } finally {
+          importRunning.current = false
+        }
+      }
+      if (!mounted.current || token !== epoch.current) return
+      hydrateIssueEdits()
       setState(next)
       setError("")
     } catch {
       if (!mounted.current || token !== epoch.current) return
-      stateRef.current = null
-      ++identityEpoch.current
-      replaceDefinitionCache([])
-      setState(null)
+      // A transient refresh failure must retain the current session and its edits.
+      // Actual identity invalidation is handled by the session event below.
+      if (!stateRef.current) setState(null)
       setError("Shared issue definitions could not be loaded. Try again.")
     }
   }, [])
@@ -67,6 +94,8 @@ export function IssueDefinitionProvider({
       ++identityEpoch.current
       stateRef.current = null
       replaceDefinitionCache([])
+      replaceCanonicalIssues(null)
+      resetIssueEdits()
       setState(null)
       if (phase === "settled") void refresh()
     })
@@ -82,6 +111,8 @@ export function IssueDefinitionProvider({
       window.clearInterval(timer)
       window.removeEventListener("focus", focus)
       replaceDefinitionCache([], false)
+      replaceCanonicalIssues(null, false)
+      resetIssueEdits()
     }
   }, [refresh])
   async function save(
@@ -142,7 +173,34 @@ export function IssueDefinitionProvider({
         </div>
       </main>
     )
-  return <Context.Provider value={{ state, save }}>{children}</Context.Provider>
+  return (
+    <Context.Provider value={{ state, save }}>
+      {migrationErrors.length > 0 && (
+        <aside
+          role="alert"
+          className="border-b border-border bg-muted p-3 text-sm"
+        >
+          <p>
+            Some local issues could not be shared. Their saved copies are
+            preserved.
+          </p>
+          <details>
+            <summary>View import problems ({migrationErrors.length})</summary>
+            <ul>
+              {migrationErrors.map((message, index) => (
+                <li key={index}>{message}</li>
+              ))}
+            </ul>
+          </details>
+          <Button variant="secondary" size="sm" onClick={() => void refresh()}>
+            Retry import
+          </Button>
+        </aside>
+      )}
+      <CanonicalEditFeedback />
+      {children}
+    </Context.Provider>
+  )
 }
 export function useIssueDefinitions(teamId: string | null) {
   const context = React.useContext(Context)

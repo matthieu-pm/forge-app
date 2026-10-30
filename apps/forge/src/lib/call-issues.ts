@@ -1,3 +1,5 @@
+import { createSharedTeamIssue } from "./canonical-issue-client"
+import { canonicalIssuesActive } from "./canonical-issue-cache"
 import type { CallAction, CallRecord } from "@/lib/calls"
 import {
   blankIssueDraft,
@@ -27,7 +29,7 @@ export function findCallIssue(
     issue.links.some((link) => link.url === source)
   )
 }
-export function createCallIssue(
+export async function createCallIssue(
   call: CallRecord,
   action: CallAction,
   origin: string,
@@ -44,14 +46,16 @@ export function createCallIssue(
       "Add an open status to this team’s workflow before creating an issue."
     )
   const source = callActionSource(call.id, action.id, origin)
-  return saveTeamIssue(
-    call.teamId,
-    {
-      ...blankIssueDraft(status.id),
-      title: action.title,
-      description: `Follow-up from ${call.title}.${action.owner ? `\nMentioned owner: ${action.owner}` : ""}\n\nCall: ${source}`,
-      links: [{ title: call.title, url: source }],
-    },
-    { creator }
-  )
+  const draft = {
+    ...blankIssueDraft(status.id),
+    title: action.title,
+    description: `Follow-up from ${call.title}.${action.owner ? `\nMentioned owner: ${action.owner}` : ""}\n\nCall: ${source}`,
+    links: [{ title: call.title, url: source }],
+  }
+  return canonicalIssuesActive()
+    ? createSharedTeamIssue(call.teamId, draft, {
+        commandKey: `call:${call.id}:${action.id}`,
+        legacyId: `call:${call.id}:${action.id}`,
+      })
+    : saveTeamIssue(call.teamId, draft, { creator })
 }

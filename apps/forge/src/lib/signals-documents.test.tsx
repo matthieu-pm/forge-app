@@ -12,10 +12,11 @@ import { teamResourceSchema } from "./team-home-state"
 import { documentChartSchema } from "./document-chart"
 import { documentSchema } from "./template-contract"
 import { signalInsightChart } from "./signals-insight-charts"
+import { productStorage } from "@/lib/product-storage"
 import { richEditorExtensions } from "@/components/templates/rich-editor"
 
 const scope = { workspaceId: "workspace", userId: "user" }
-beforeEach(() => localStorage.clear())
+beforeEach(() => productStorage.clear())
 afterEach(() => {
   cleanup()
   vi.restoreAllMocks()
@@ -98,7 +99,7 @@ describe("Signals draft documents", () => {
     const initial = newSignalDocument(sampleSignalInsights[0])
     const { result, unmount } = renderHook(() => useSignalDocuments(scope))
     const setItem = vi
-      .spyOn(Storage.prototype, "setItem")
+      .spyOn(productStorage, "setItem")
       .mockImplementation(() => {
         throw new Error("Quota")
       })
@@ -128,13 +129,13 @@ describe("Signals draft documents", () => {
     expect(otherWorkspace.result.current.documents).toEqual({})
   })
   it("preserves unreadable saved data and prevents overwriting it", () => {
-    localStorage.setItem(signalDocumentsKey(scope), "not valid JSON")
+    productStorage.setItem(signalDocumentsKey(scope), "not valid JSON")
     const { result } = renderHook(() => useSignalDocuments(scope))
     expect(result.current.readError).toBe(true)
     act(() => {
       result.current.save(newSignalDocument(sampleSignalInsights[0]))
     })
-    expect(localStorage.getItem(signalDocumentsKey(scope))).toBe(
+    expect(productStorage.getItem(signalDocumentsKey(scope))).toBe(
       "not valid JSON"
     )
   })

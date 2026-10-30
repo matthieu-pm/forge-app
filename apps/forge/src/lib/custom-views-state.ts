@@ -6,6 +6,7 @@ import {
 } from "./custom-views"
 import type { WorkspaceViewValues } from "./workspace-preference-contract"
 import type { CustomView } from "./custom-views"
+import { productStorage } from "@/lib/product-storage"
 import { useWorkspaceView } from "@/components/account-preference-provider"
 
 const changed = "forge:custom-views-changed"
@@ -30,7 +31,7 @@ export function useCustomViews(workspaceId: string, userId: string) {
     subscribe,
     useCallback(() => {
       try {
-        return localStorage.getItem(key)
+        return productStorage.getItem(key)
       } catch {
         return "unavailable"
       }
@@ -47,7 +48,7 @@ export function useCustomViews(workspaceId: string, userId: string) {
   function update(transform: (views: Array<CustomView>) => Array<CustomView>) {
     try {
       // Read again at write time so another open view's changes are preserved.
-      const current = parseCustomViews(localStorage.getItem(key))
+      const current = parseCustomViews(productStorage.getItem(key))
       const visible = current.views.map((view) => ({
         ...view,
         favorite: favorites.value.favoriteIds.includes(view.id),
@@ -62,7 +63,7 @@ export function useCustomViews(workspaceId: string, userId: string) {
         !favorites.save({ ...favorites.value, favoriteIds })
       )
         return false
-      localStorage.setItem(
+      productStorage.setItem(
         key,
         JSON.stringify({
           ...current,

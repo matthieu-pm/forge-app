@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { productStorage } from "@/lib/product-storage"
 
 export const signalEventSchema = z.object({
   id: z.string().min(1),
@@ -79,7 +80,7 @@ export function readSignalPreferences(
   userId: string,
   workspaceId: string
 ): SignalPreferences {
-  const stored = window.localStorage.getItem(
+  const stored = productStorage.getItem(
     signalPreferencesStorageKey(userId, workspaceId)
   )
   if (!stored) return structuredClone(defaultSignalPreferences)
@@ -95,7 +96,7 @@ export function writeSignalPreferences(
   workspaceId: string,
   preferences: SignalPreferences
 ) {
-  window.localStorage.setItem(
+  productStorage.setItem(
     signalPreferencesStorageKey(userId, workspaceId),
     JSON.stringify(signalPreferencesSchema.parse(preferences))
   )

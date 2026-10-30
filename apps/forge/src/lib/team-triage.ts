@@ -1,20 +1,20 @@
 import * as React from "react"
-import { z } from "zod"
+import {
+  initialTeamTriage,
+  parseTeamTriage,
+  teamTriageStorageKey,
+  triageSchema,
+} from "./team-triage-contract"
+import type { TeamTriageSettings } from "./team-triage-contract"
+import { productStorage } from "@/lib/product-storage"
 
-const triageSchema = z.object({
-  enabled: z.boolean(),
-  requirePriority: z.boolean(),
-  action: z.enum(["none", "notify", "assign"]).optional(),
-})
-export type TeamTriageSettings = z.infer<typeof triageSchema>
-export const teamTriageStorageKey = (teamId: string) =>
-  `forge:team-triage:v1:${teamId}`
-export const initialTeamTriage = (): TeamTriageSettings => ({
-  enabled: false,
-  requirePriority: false,
-})
-export const parseTeamTriage = (raw: string) =>
-  triageSchema.parse(JSON.parse(raw))
+export {
+  teamTriageStorageKey,
+  initialTeamTriage,
+  parseTeamTriage,
+} from "./team-triage-contract"
+export type { TeamTriageSettings } from "./team-triage-contract"
+
 const changeEvent = "forge:team-triage-changed"
 
 export function useEnabledTeamTriage(teamIds: ReadonlyArray<string>) {
@@ -31,7 +31,7 @@ export function useEnabledTeamTriage(teamIds: ReadonlyArray<string>) {
       JSON.stringify(
         teamIds.filter((id) => {
           try {
-            const raw = window.localStorage.getItem(teamTriageStorageKey(id))
+            const raw = productStorage.getItem(teamTriageStorageKey(id))
             return raw !== null && parseTeamTriage(raw).enabled
           } catch {
             return false
@@ -51,7 +51,7 @@ export function useTeamTriage(teamId: string) {
   React.useEffect(() => {
     function load() {
       try {
-        const raw = window.localStorage.getItem(storageKey)
+        const raw = productStorage.getItem(storageKey)
         setSettings(raw ? parseTeamTriage(raw) : initialTeamTriage())
         setError(null)
       } catch {
@@ -78,12 +78,12 @@ export function useTeamTriage(teamId: string) {
   function update(patch: Partial<TeamTriageSettings>) {
     if (!ready || error) return false
     try {
-      const latest = window.localStorage.getItem(storageKey)
+      const latest = productStorage.getItem(storageKey)
       const next = triageSchema.parse({
         ...(latest ? parseTeamTriage(latest) : settings),
         ...patch,
       })
-      window.localStorage.setItem(storageKey, JSON.stringify(next))
+      productStorage.setItem(storageKey, JSON.stringify(next))
       setSettings(next)
       window.dispatchEvent(new CustomEvent(changeEvent, { detail: storageKey }))
       return true

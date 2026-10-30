@@ -11,6 +11,7 @@ import type {
   AccountPreferenceCommand,
   PreferenceSnapshot,
 } from "./account-preference-contract"
+import { productStorage } from "@/lib/product-storage"
 
 function fixture(userId = "alice") {
   let saved = emptyPreferenceSnapshot(userId)
@@ -193,7 +194,7 @@ describe("FOR-127 shared preference client", () => {
         }),
         save,
       },
-      localStorage
+      productStorage
     )
     await old.refresh()
     old.edit({ "agent.guidance": "private draft" })
@@ -209,34 +210,34 @@ describe("FOR-127 shared preference client", () => {
     await Promise.resolve()
     await old.retry()
     expect(save).toHaveBeenCalledTimes(1)
-    const fresh = fixture("bob").create(localStorage)
+    const fresh = fixture("bob").create(productStorage)
     await fresh.refresh()
     expect(fresh.getSnapshot().groups.agent.guidance).toBe("")
     expect(
-      localStorage.getItem(
+      productStorage.getItem(
         preferenceCacheKey({ kind: "account", userId: "alice" })
       )
     ).not.toContain("late")
   })
   it("validates cache owner/version and does not touch legacy or damaged sources", async () => {
-    localStorage.clear()
-    localStorage.setItem(
+    productStorage.clear()
+    productStorage.setItem(
       "forge.personal-preferences",
       '{"interfaceTheme":"dark"}'
     )
     const key = preferenceCacheKey({ kind: "account", userId: "alice" })
-    localStorage.setItem(
+    productStorage.setItem(
       key,
       JSON.stringify({
         ...emptyPreferenceSnapshot("bob"),
         values: { "agent.guidance": "bob secret" },
       })
     )
-    const client = fixture().create(localStorage)
+    const client = fixture().create(productStorage)
     expect(client.getSnapshot().groups.agent.guidance).toBe("")
     await client.refresh()
     expect(client.getSnapshot().groups.general.interfaceTheme).toBe("system")
-    expect(localStorage.getItem("forge.personal-preferences")).toBe(
+    expect(productStorage.getItem("forge.personal-preferences")).toBe(
       '{"interfaceTheme":"dark"}'
     )
   })

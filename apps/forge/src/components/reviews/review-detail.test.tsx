@@ -9,6 +9,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { Reviews } from "./reviews"
 import type { ReactNode } from "react"
+import { productStorage } from "@/lib/product-storage"
 import { createSimulatedReviews } from "@/lib/reviews-demo"
 import { readReviewEdits, reviewEditsKey } from "@/lib/review-detail"
 
@@ -40,7 +41,7 @@ function openFirst() {
   )
 }
 beforeEach(() => {
-  localStorage.clear()
+  productStorage.clear()
   Element.prototype.scrollIntoView = vi.fn()
   vi.stubGlobal(
     "ResizeObserver",
@@ -101,7 +102,7 @@ describe("Simulated review detail", () => {
     ).toEqual([])
   })
   it("collapses a rich description into a preview without changing its saved content", () => {
-    localStorage.setItem(
+    productStorage.setItem(
       reviewEditsKey(scope),
       JSON.stringify({
         "reviews-demo:248": {
@@ -178,7 +179,9 @@ describe("Simulated review detail", () => {
     ).toBe("true")
     expect(screen.getByText("The draft restoration looks good.")).toBeTruthy()
     expect(
-      localStorage.getItem(reviewEditsKey({ ...scope, workspaceId: "another" }))
+      productStorage.getItem(
+        reviewEditsKey({ ...scope, workspaceId: "another" })
+      )
     ).toBeNull()
   })
   it("submits and restores attachments through the shared issue comment composer", async () => {
@@ -197,7 +200,7 @@ describe("Simulated review detail", () => {
     })
     await within(activity).findByText("review-notes.txt")
     fireEvent.click(screen.getByRole("button", { name: "Submit comment" }))
-    const saved = JSON.parse(localStorage.getItem(reviewEditsKey(scope))!)[
+    const saved = JSON.parse(productStorage.getItem(reviewEditsKey(scope))!)[
       "reviews-demo:248"
     ]
     expect(saved.comments[0].attachments[0]).toMatchObject({
@@ -236,7 +239,7 @@ describe("Simulated review detail", () => {
   })
   it("restores a single merge event from a previously saved preview", () => {
     const createdAt = new Date().toISOString()
-    localStorage.setItem(
+    productStorage.setItem(
       reviewEditsKey(scope),
       JSON.stringify({
         "reviews-demo:248": {

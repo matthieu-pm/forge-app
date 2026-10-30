@@ -11,6 +11,7 @@ import {
   initiativesSettingsStorageKey,
 } from "./initiatives-settings"
 import type { ReactNode } from "react"
+import { productStorage } from "@/lib/product-storage"
 import {
   initialInitiativeLabels,
   initiativeLabelsStorageKey,
@@ -25,7 +26,7 @@ vi.mock("@tanstack/react-router", () => ({
 }))
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }))
 beforeEach(() => {
-  localStorage.clear()
+  productStorage.clear()
   Element.prototype.scrollIntoView = vi.fn()
   vi.stubGlobal(
     "ResizeObserver",
@@ -38,17 +39,17 @@ beforeEach(() => {
 })
 afterEach(() => {
   cleanup()
-  localStorage.clear()
+  productStorage.clear()
 })
 const key = initiativesSettingsStorageKey("test")
 it("persists enablement and disables dependent controls without losing the schedule", () => {
-  localStorage.setItem(
+  productStorage.setItem(
     key,
     JSON.stringify({ enabled: true, schedule: "2-weeks" })
   )
   const { unmount } = render(<InitiativesSettings workspaceId="test" />)
   fireEvent.click(screen.getByRole("switch", { name: "Enable Initiatives" }))
-  expect(JSON.parse(localStorage.getItem(key)!)).toEqual({
+  expect(JSON.parse(productStorage.getItem(key)!)).toEqual({
     enabled: false,
     schedule: "2-weeks",
   })
@@ -82,7 +83,7 @@ it("saves schedule choices and cancels drafts", async () => {
   )
   fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
   expect(screen.getByText("No expectation for updates")).toBeTruthy()
-  expect(localStorage.getItem(key)).toBeNull()
+  expect(productStorage.getItem(key)).toBeNull()
   fireEvent.click(screen.getByRole("button", { name: "Edit" }))
   fireEvent.click(screen.getByRole("combobox"))
   const biweekly = await screen.findByRole("option", { name: "Every 2 weeks" })
@@ -94,15 +95,15 @@ it("saves schedule choices and cancels drafts", async () => {
   )
   fireEvent.click(screen.getByRole("button", { name: "Save" }))
   await waitFor(() =>
-    expect(JSON.parse(localStorage.getItem(key)!).schedule).toBe("2-weeks")
+    expect(JSON.parse(productStorage.getItem(key)!).schedule).toBe("2-weeks")
   )
 })
 it("preserves invalid saved data and prevents writes", () => {
-  localStorage.setItem(key, "invalid")
+  productStorage.setItem(key, "invalid")
   render(<InitiativesSettings workspaceId="test" />)
   expect(screen.getByRole("alert")).toBeTruthy()
   fireEvent.click(screen.getByRole("switch"))
-  expect(localStorage.getItem(key)).toBe("invalid")
+  expect(productStorage.getItem(key)).toBe("invalid")
 })
 it("counts active initiative labels and links to their settings", () => {
   const directory = initialInitiativeLabels()
@@ -116,7 +117,7 @@ it("counts active initiative labels and links to their settings", () => {
     lastApplied: null,
     createdAt: new Date().toISOString(),
   })
-  localStorage.setItem(initiativeLabelsStorageKey, JSON.stringify(directory))
+  productStorage.setItem(initiativeLabelsStorageKey, JSON.stringify(directory))
   render(<InitiativesSettings workspaceId="test" />)
   expect(screen.getByText("1 label")).toBeTruthy()
   expect(

@@ -5,6 +5,7 @@ import type {
   PreviewContext,
   SourceChoice,
 } from "@/lib/legacy-import-preview"
+import { productStorage } from "@/lib/product-storage"
 import { Button } from "@/components/ui/button"
 import { loadLegacyPreviewContext } from "@/lib/legacy-import-state"
 import { describeLegacyKey } from "@/lib/legacy-import-sources"
@@ -81,7 +82,7 @@ export function LegacyImportPreview() {
     }
     const unsubscribe = onPreferenceSessionInvalidated(() =>
       clearReview(
-        "Your account or workspace changed. Preview browser data again."
+        "Your account or workspace changed. Preview saved data again."
       )
     )
     window.addEventListener("storage", changed)
@@ -118,18 +119,18 @@ export function LegacyImportPreview() {
   async function currentPreview(isCurrent: () => boolean) {
     const check = () => {
       if (!isCurrent())
-        throw new Error("This review has ended. Preview browser data again.")
+        throw new Error("This review has ended. Preview saved data again.")
     }
     check()
     if (!preview || stale)
-      throw new Error("Browser data changed. Preview again.")
+      throw new Error("Saved legacy data changed. Preview again.")
     let currentContext: PreviewContext
     try {
       currentContext = await loadLegacyPreviewContext()
     } catch (cause) {
       if (isCurrent())
         clearReview(
-          "Your account or destination could not be verified. Preview browser data again."
+          "Your account or destination could not be verified. Preview saved data again."
         )
       throw cause
     }
@@ -147,7 +148,7 @@ export function LegacyImportPreview() {
       )
     }
     const currentSnapshot = await discoverLegacySources(
-      window.localStorage,
+      productStorage,
       currentContext.actorId
     )
     check()
@@ -155,7 +156,7 @@ export function LegacyImportPreview() {
       setStale(true)
       setReview(null)
       setBackup(null)
-      throw new Error("Browser data changed. Preview again.")
+      throw new Error("Saved legacy data changed. Preview again.")
     }
     return { currentContext, currentSnapshot }
   }
@@ -176,26 +177,28 @@ export function LegacyImportPreview() {
   }
 
   return (
-    <section className="space-y-3" aria-labelledby="browser-data-heading">
+    <section className="space-y-3" aria-labelledby="saved-data-heading">
       <div className="space-y-1 px-3">
-        <h2 id="browser-data-heading" className="text-sm font-semibold">
-          Browser data
+        <h2 id="saved-data-heading" className="text-sm font-semibold">
+          Saved legacy data
         </h2>
         <p className="text-xs leading-4 text-muted-foreground">
-          Review data saved in this browser before moving it to an account or
-          workspace. Preview and backup keep your originals unchanged.
+          Review source snapshots preserved with your account. Existing issues,
+          projects and cycles are migrated automatically when possible; source
+          copies stay available for review.
         </p>
       </div>
       <div className="space-y-4 rounded-2xl border border-border/70 bg-muted/35 p-4">
         <p className="text-sm text-muted-foreground">
-          Discovery starts when you choose Preview. Only supported Forge stores
-          are inspected. Nothing is uploaded.
+          Discovery starts when you choose Preview. Only supported source
+          snapshots are inspected. Review and backup preserve their current
+          content.
         </p>
         <div className="flex flex-wrap gap-2">
           <Button
             disabled={!!busy}
             onClick={() =>
-              void action("Reading browser data…", async (isCurrent) => {
+              void action("Reading saved data…", async (isCurrent) => {
                 setPreview(null)
                 setReview(null)
                 setBackup(null)
@@ -207,7 +210,7 @@ export function LegacyImportPreview() {
                 if (!isCurrent()) return
                 actor.current = context.actorId
                 const snapshot = await discoverLegacySources(
-                  window.localStorage,
+                  productStorage,
                   context.actorId
                 )
                 if (!isCurrent()) return
@@ -216,7 +219,7 @@ export function LegacyImportPreview() {
               })
             }
           >
-            {preview ? "Preview again" : "Preview browser data"}
+            {preview ? "Preview again" : "Preview saved data"}
           </Button>
           {preview ? (
             <Button
@@ -240,7 +243,7 @@ export function LegacyImportPreview() {
         ) : null}
         {stale && preview ? (
           <p role="alert" className="text-sm text-destructive">
-            Browser data changed. Preview again before continuing.
+            Saved legacy data changed. Preview again before continuing.
           </p>
         ) : null}
         {preview ? (
@@ -514,8 +517,8 @@ export function LegacyImportPreview() {
               <p className="text-sm">
                 Select the sources you are entitled to back up. Backups include
                 the exact stored strings, including malformed data and embedded
-                files. They stay on this device until you explicitly remove
-                them; browser storage can be cleared by your browser.
+                files. They are stored privately on the server for your account
+                in this workspace.
               </p>
               <div className="flex flex-wrap gap-2">
                 <Button
@@ -540,7 +543,7 @@ export function LegacyImportPreview() {
                     )
                   }
                 >
-                  Save local backup
+                  Save server backup
                 </Button>
                 {backup ? (
                   <Button
@@ -596,7 +599,7 @@ export function LegacyImportPreview() {
               </div>
               {backup ? (
                 <p role="status" className="text-sm">
-                  Backup saved and verified on this device. A downloadable copy
+                  Backup saved and verified on the server. A downloadable copy
                   is available.
                 </p>
               ) : null}

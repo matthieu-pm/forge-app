@@ -14,6 +14,7 @@ import { Properties } from "./templates/template-controls"
 import { TeamWorkflowsSettings } from "./team-workflows-settings"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { DefinitionSnapshot } from "@/lib/issue-definition-contract"
+import { productStorage } from "@/lib/product-storage"
 import { emptyProperties } from "@/lib/template-contract"
 import {
   defaultDefinitionValue,
@@ -33,6 +34,19 @@ import {
   saveTeamIssue,
 } from "@/lib/team-issues"
 
+vi.mock("@/lib/canonical-issue-client", () => ({
+  refreshCanonicalIssues: vi.fn(async () => ({ records: [] })),
+}))
+vi.mock("@/lib/canonical-issue-migration", () => ({
+  migrateLocalIssues: vi.fn(async () => []),
+}))
+vi.mock("@/lib/canonical-issue-cache", () => ({
+  canonicalIssuesActive: () => false,
+  canonicalIssueState: () => null,
+  canonicalIssueRows: () => [],
+  replaceCanonicalIssues: () => {},
+}))
+
 vi.mock("@/lib/issue-definition-state", () => ({
   loadIssueDefinitions: vi.fn(),
   persistIssueDefinitions: vi.fn(),
@@ -49,7 +63,7 @@ function mount(component: React.ReactNode) {
   return render(<IssueDefinitionProvider>{component}</IssueDefinitionProvider>)
 }
 beforeEach(() => {
-  localStorage.clear()
+  productStorage.clear()
   snapshots = [null, team.id].map((teamId) => ({
     workspaceId: "workspace",
     teamId,
@@ -93,7 +107,7 @@ afterEach(() => {
 describe("shared issue definitions UI", () => {
   it("saves Ready through the authenticated shared command and reloads without touching legacy data", async () => {
     const legacy = "preserved local definitions"
-    localStorage.setItem(teamStatusesStorageKey(team.id), legacy)
+    productStorage.setItem(teamStatusesStorageKey(team.id), legacy)
     const view = mount(<TeamIssueStatusesSettings team={team} />)
     fireEvent.click(
       await screen.findByRole("button", { name: "Add unstarted status" })
@@ -112,13 +126,13 @@ describe("shared issue definitions UI", () => {
       expectedRevision: 0,
     })
     expect(getIssueStatuses(team.id).some((s) => s.name === "Ready")).toBe(true)
-    expect(localStorage.getItem(teamStatusesStorageKey(team.id))).toBe(legacy)
+    expect(productStorage.getItem(teamStatusesStorageKey(team.id))).toBe(legacy)
     view.unmount()
     mount(<TeamIssueStatusesSettings team={team} />)
     await screen.findByText("Ready")
   })
   it("saves Mobile, inherits workspace labels, and starts with no fictional labels", async () => {
-    localStorage.setItem(teamLabelsStorageKey(team.id), "legacy labels")
+    productStorage.setItem(teamLabelsStorageKey(team.id), "legacy labels")
     const workspace = snapshots[0]
     workspace.value.labels.labels = [
       {
@@ -144,7 +158,7 @@ describe("shared issue definitions UI", () => {
     expect(cachedDefinitions(team.id).value.labels.labels[0].name).toBe(
       "Mobile"
     )
-    expect(localStorage.getItem(teamLabelsStorageKey(team.id))).toBe(
+    expect(productStorage.getItem(teamLabelsStorageKey(team.id))).toBe(
       "legacy labels"
     )
   })

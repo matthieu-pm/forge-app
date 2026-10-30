@@ -6,6 +6,7 @@ import type { ViewsSearch } from "./views-page"
 import type { ViewIssuesProps } from "./view-issues"
 import type { ComponentProps } from "react"
 import type { ViewProjects } from "./view-projects"
+import { productStorage } from "@/lib/product-storage"
 import {
   readTestView,
   renderPreferences as render,
@@ -106,7 +107,7 @@ function Harness({ initial = { kind: "issues" } }: { initial?: ViewsSearch }) {
 }
 const read = () =>
   parseCustomViews(
-    localStorage.getItem(customViewsKey(props.workspaceId, user.id))
+    productStorage.getItem(customViewsKey(props.workspaceId, user.id))
   ).views
 const issueConfig = () =>
   JSON.parse(screen.getByTestId("issue-config").textContent)
@@ -122,7 +123,7 @@ async function openOptions(action: string) {
 }
 beforeEach(async () => {
   await setupPreferenceFixture("user")
-  localStorage.clear()
+  productStorage.clear()
   vi.clearAllMocks()
   Element.prototype.scrollIntoView = vi.fn()
   vi.stubGlobal(
@@ -181,7 +182,7 @@ describe("Views pages", () => {
 
   it("edits a saved view as a draft, cancels without saving, then commits subsequent edits", async () => {
     const saved = newCustomView("issues", user.id)
-    localStorage.setItem(
+    productStorage.setItem(
       customViewsKey(props.workspaceId, user.id),
       JSON.stringify({ version: 1, views: [saved] })
     )
@@ -211,7 +212,7 @@ describe("Views pages", () => {
     source.description = "Planning view"
     source.filters = [{ field: "Priority", value: "High" }]
     source.display.layout = "Timeline"
-    localStorage.setItem(
+    productStorage.setItem(
       customViewsKey(props.workspaceId, user.id),
       JSON.stringify({ version: 1, views: [source] })
     )
@@ -267,7 +268,7 @@ describe("Views pages", () => {
   it("keeps issue and project directory tabs separate", async () => {
     const issues = { ...newCustomView("issues", user.id), name: "Bugs" }
     const projects = { ...newCustomView("projects", user.id), name: "Roadmap" }
-    localStorage.setItem(
+    productStorage.setItem(
       customViewsKey(props.workspaceId, user.id),
       JSON.stringify({ version: 1, views: [issues, projects] })
     )
@@ -282,7 +283,7 @@ describe("Views pages", () => {
   it("persists favorites and only removes the selected view after confirming deletion", async () => {
     const first = { ...newCustomView("issues", user.id), name: "Watch list" }
     const second = { ...newCustomView("issues", user.id), name: "Other list" }
-    localStorage.setItem(
+    productStorage.setItem(
       customViewsKey(props.workspaceId, user.id),
       JSON.stringify({ version: 1, views: [first, second] })
     )
@@ -305,7 +306,7 @@ describe("Views pages", () => {
 
   it("disables saving when existing storage is corrupt and preserves the unreadable value", () => {
     const key = customViewsKey(props.workspaceId, user.id)
-    localStorage.setItem(key, "{damaged")
+    productStorage.setItem(key, "{damaged")
     render(<Harness initial={{ kind: "issues", view: "new" }} />)
     expect(screen.getByRole("alert").textContent).toContain("preserved")
     expect(
@@ -313,7 +314,7 @@ describe("Views pages", () => {
         .disabled
     ).toBe(true)
     fireEvent.click(screen.getByRole("button", { name: "Create view" }))
-    expect(localStorage.getItem(key)).toBe("{damaged")
+    expect(productStorage.getItem(key)).toBe("{damaged")
     expect(navigate).not.toHaveBeenCalled()
   })
 })

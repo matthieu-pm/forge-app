@@ -6,6 +6,7 @@ import {
   inboxStatusTypes,
 } from "./inbox-view"
 import type { InboxPreferences } from "./inbox-view"
+import { productStorage } from "@/lib/product-storage"
 
 export type InboxScope = { workspaceId: string; userId: string }
 export const updateKinds = [
@@ -216,7 +217,7 @@ export function visibleInboxEntries(
 
 function readRaw(key: string) {
   try {
-    return localStorage.getItem(key) ?? initialRaw
+    return productStorage.getItem(key) ?? initialRaw
   } catch {
     return "unavailable"
   }
@@ -228,7 +229,7 @@ function writeInbox(
   const key = inboxStorageKey(scope)
   // Parse before writing: corrupt or unavailable storage is never silently replaced.
   const next = transform(parseInbox(readRaw(key)))
-  localStorage.setItem(key, JSON.stringify(next))
+  productStorage.setItem(key, JSON.stringify(next))
   window.dispatchEvent(new Event(changed))
 }
 export function publishInboxUpdate(scope: InboxScope, update: InboxUpdate) {

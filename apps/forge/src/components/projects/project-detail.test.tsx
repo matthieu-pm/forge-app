@@ -12,6 +12,7 @@ import type { ReactNode } from "react"
 import type { InitiativeProject } from "@/lib/initiatives"
 import type { ProjectTab } from "./project-detail"
 import type { TeamSummary } from "@/lib/team-contract"
+import { productStorage } from "@/lib/product-storage"
 import {
   renderPreferences as render,
   setupPreferenceFixture,
@@ -84,14 +85,14 @@ const props = {
   onBack: vi.fn(),
 }
 const read = () =>
-  JSON.parse(localStorage.getItem(initiativesStorageKey("workspace"))!)
+  JSON.parse(productStorage.getItem(initiativesStorageKey("workspace"))!)
 function Page({ initialTab = "overview" }: { initialTab?: ProjectTab }) {
   const [tab, onTab] = useState<ProjectTab>(initialTab)
   return <ProjectDetailPage {...props} tab={tab} onTab={onTab} />
 }
 beforeEach(async () => {
   await setupPreferenceFixture("user")
-  localStorage.clear()
+  productStorage.clear()
   vi.stubGlobal(
     "ResizeObserver",
     class {
@@ -116,7 +117,7 @@ beforeEach(async () => {
     name: "Growth",
     projects: [project],
   })
-  localStorage.setItem(
+  productStorage.setItem(
     initiativesStorageKey("workspace"),
     JSON.stringify(state)
   )
@@ -271,11 +272,9 @@ it("keeps a document draft open when storage fails and saves it on retry", async
     await screen.findByRole("menuitem", { name: /Create new document/ })
   )
   await screen.findByRole("textbox", { name: "Document title" })
-  const storage = vi
-    .spyOn(Storage.prototype, "setItem")
-    .mockImplementation(() => {
-      throw new Error("Quota exceeded")
-    })
+  const storage = vi.spyOn(productStorage, "setItem").mockImplementation(() => {
+    throw new Error("Quota exceeded")
+  })
   fireEvent.change(screen.getByRole("textbox", { name: "Document title" }), {
     target: { value: "Keep this draft" },
   })
@@ -293,7 +292,7 @@ it("keeps a document draft open when storage fails and saves it on retry", async
 it("does not open a new document when its initial save fails", async () => {
   render(<Page />)
   fireEvent.click(screen.getByRole("button", { name: "Add document or link…" }))
-  vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+  vi.spyOn(productStorage, "setItem").mockImplementation(() => {
     throw new Error("Quota exceeded")
   })
   fireEvent.click(
@@ -397,7 +396,7 @@ it("edits milestone metadata, reorders milestones, and filters project issues fr
     { id: "beta", name: "Beta", completed: false },
     { id: "release", name: "Release", completed: false },
   ]
-  localStorage.setItem(
+  productStorage.setItem(
     initiativesStorageKey("workspace"),
     JSON.stringify(state)
   )

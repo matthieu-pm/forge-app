@@ -4,6 +4,7 @@ import * as React from "react"
 import { useBlocker } from "@tanstack/react-router"
 import { z } from "zod"
 import type { TeamSummary } from "@/lib/team-contract"
+import { productStorage } from "@/lib/product-storage"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -34,7 +35,7 @@ export function TeamProjectUpdatesSettings({ team }: { team: TeamSummary }) {
     function load() {
       if (unsaved.current) return
       try {
-        const raw = localStorage.getItem(storageKey)
+        const raw = productStorage.getItem(storageKey)
         setGuidance(raw ? guidanceSchema.parse(JSON.parse(raw)).guidance : "")
         setLoadError("")
       } catch {
@@ -54,7 +55,7 @@ export function TeamProjectUpdatesSettings({ team }: { team: TeamSummary }) {
 
   function save(value: string) {
     try {
-      localStorage.setItem(
+      productStorage.setItem(
         storageKey,
         JSON.stringify(guidanceSchema.parse({ guidance: value }))
       )

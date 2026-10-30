@@ -4,6 +4,7 @@ import { TeamCyclesSettings } from "./team-cycles-settings"
 import { TeamCycles } from "./team-cycles"
 import type { ReactNode } from "react"
 import type { TeamSummary } from "@/lib/team-contract"
+import { productStorage } from "@/lib/product-storage"
 import {
   initialTeamCycles,
   nextCycleStart,
@@ -25,9 +26,9 @@ const team = {
   icon: { kind: "emoji", value: "🔥", color: "#94a3b8" },
 } as TeamSummary
 const key = teamCyclesStorageKey(team.id)
-const saved = () => parseTeamCycles(localStorage.getItem(key)!)
+const saved = () => parseTeamCycles(productStorage.getItem(key)!)
 beforeEach(() => {
-  localStorage.clear()
+  productStorage.clear()
 })
 afterEach(cleanup)
 const enable = () => screen.getByRole("switch", { name: "Enable cycles" })
@@ -77,11 +78,11 @@ describe("team cycles settings", () => {
     const restored = render(<Navigation />)
     expect(screen.getByRole("link", { name: `${team.id} cycles` })).toBeTruthy()
     act(() => {
-      localStorage.setItem(
+      productStorage.setItem(
         key,
         JSON.stringify({ ...initialTeamCycles(), enabled: false })
       )
-      localStorage.setItem(
+      productStorage.setItem(
         teamCyclesStorageKey("other"),
         JSON.stringify({ ...initialTeamCycles(), enabled: true })
       )
@@ -92,15 +93,15 @@ describe("team cycles settings", () => {
     restored.rerender(<Navigation ids={[team.id]} />)
     expect(screen.queryByRole("link", { name: "other cycles" })).toBeNull()
     act(() => {
-      localStorage.setItem(key, "corrupt")
+      productStorage.setItem(key, "corrupt")
       window.dispatchEvent(new StorageEvent("storage", { key }))
     })
     expect(screen.queryByRole("link", { name: `${team.id} cycles` })).toBeNull()
-    expect(localStorage.getItem(key)).toBe("corrupt")
+    expect(productStorage.getItem(key)).toBe("corrupt")
   })
 
   it("opens a schedule using the enabled team's preferences", () => {
-    localStorage.setItem(
+    productStorage.setItem(
       key,
       JSON.stringify({
         ...initialTeamCycles(),
@@ -115,7 +116,7 @@ describe("team cycles settings", () => {
     ).toHaveLength(3)
     expect(screen.getAllByText("1 week cooldown")).toHaveLength(2)
     act(() => {
-      localStorage.removeItem(key)
+      productStorage.removeItem(key)
       window.dispatchEvent(new StorageEvent("storage", { key }))
     })
     expect(screen.getByText("Cycles are disabled")).toBeTruthy()
@@ -140,20 +141,20 @@ describe("team cycles settings", () => {
     const view = render(<TeamCyclesSettings team={team} />)
     fireEvent.click(enable())
     view.unmount()
-    localStorage.setItem(teamCyclesStorageKey("other"), "invalid")
+    productStorage.setItem(teamCyclesStorageKey("other"), "invalid")
     render(<TeamCyclesSettings team={{ ...team, id: "other" }} />)
     expect(screen.getByRole("alert").textContent).toContain("preserved")
     expect(enable().getAttribute("aria-disabled")).toBe("true")
-    expect(localStorage.getItem(teamCyclesStorageKey("other"))).toBe("invalid")
+    expect(productStorage.getItem(teamCyclesStorageKey("other"))).toBe(
+      "invalid"
+    )
     expect(saved().enabled).toBe(true)
   })
   it("leaves the previous value when saving fails", () => {
     render(<TeamCyclesSettings team={team} />)
-    const fail = vi
-      .spyOn(Storage.prototype, "setItem")
-      .mockImplementation(() => {
-        throw new Error("quota")
-      })
+    const fail = vi.spyOn(productStorage, "setItem").mockImplementation(() => {
+      throw new Error("quota")
+    })
     fireEvent.click(enable())
     expect(enable().getAttribute("aria-checked")).toBe("false")
     fail.mockRestore()

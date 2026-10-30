@@ -1,32 +1,21 @@
 import * as React from "react"
-import { z } from "zod"
 import { addDays, addWeeks, format } from "date-fns"
+import {
+  cyclesSchema,
+  initialTeamCycles,
+  parseTeamCycles,
+  teamCyclesStorageKey,
+} from "./team-cycles-contract"
+import type { TeamCyclesSettings } from "./team-cycles-contract"
+import { productStorage } from "@/lib/product-storage"
 
-const cyclesSchema = z.object({
-  enabled: z.boolean(),
-  duration: z.number().int().min(1).max(8),
-  cooldown: z.number().int().min(0).max(4),
-  startDay: z.number().int().min(0).max(6),
-  futureCycles: z.number().int().min(1).max(6),
-  activeIssues: z.boolean(),
-  startedIssues: z.boolean(),
-  completedIssues: z.boolean(),
-})
-export type TeamCyclesSettings = z.infer<typeof cyclesSchema>
-export const teamCyclesStorageKey = (teamId: string) =>
-  `forge:team-cycles:v1:${teamId}`
-export const initialTeamCycles = (): TeamCyclesSettings => ({
-  enabled: false,
-  duration: 2,
-  cooldown: 2,
-  startDay: 1,
-  futureCycles: 2,
-  activeIssues: false,
-  startedIssues: true,
-  completedIssues: true,
-})
-export const parseTeamCycles = (raw: string) =>
-  cyclesSchema.parse(JSON.parse(raw))
+export {
+  teamCyclesStorageKey,
+  initialTeamCycles,
+  parseTeamCycles,
+} from "./team-cycles-contract"
+export type { TeamCyclesSettings } from "./team-cycles-contract"
+
 const changeEvent = "forge:team-cycles-changed"
 
 // Read the same preferences as the settings page, including changes made in
@@ -45,7 +34,7 @@ export function useEnabledTeamCycles(teamIds: ReadonlyArray<string>) {
       JSON.stringify(
         teamIds.filter((id) => {
           try {
-            const raw = window.localStorage.getItem(teamCyclesStorageKey(id))
+            const raw = productStorage.getItem(teamCyclesStorageKey(id))
             return raw !== null && parseTeamCycles(raw).enabled
           } catch {
             return false
@@ -65,7 +54,7 @@ export function useTeamCycles(teamId: string) {
   React.useEffect(() => {
     function load() {
       try {
-        const raw = window.localStorage.getItem(storageKey)
+        const raw = productStorage.getItem(storageKey)
         setSettings(raw ? parseTeamCycles(raw) : initialTeamCycles())
         setError(null)
       } catch {
@@ -93,7 +82,7 @@ export function useTeamCycles(teamId: string) {
     if (!ready || error) return false
     try {
       const next = cyclesSchema.parse({ ...settings, ...patch })
-      window.localStorage.setItem(storageKey, JSON.stringify(next))
+      productStorage.setItem(storageKey, JSON.stringify(next))
       setSettings(next)
       window.dispatchEvent(new CustomEvent(changeEvent, { detail: storageKey }))
       return true

@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { productStorage } from "@/lib/product-storage"
 
 export const projectStatusGroups = [
   { id: "backlog", name: "Backlog", color: "#95a2b3" },
@@ -56,7 +57,7 @@ export function initialProjectStatuses(): ProjectStatusDirectory {
 export const projectStatusesStorageKey = (workspaceId: string) =>
   `forge:project-statuses:v1:${workspaceId}`
 export function readProjectStatuses(workspaceId: string) {
-  const raw = localStorage.getItem(projectStatusesStorageKey(workspaceId))
+  const raw = productStorage.getItem(projectStatusesStorageKey(workspaceId))
   return raw ? directorySchema.parse(JSON.parse(raw)) : initialProjectStatuses()
 }
 export function writeProjectStatuses(
@@ -72,7 +73,7 @@ export function writeProjectStatuses(
     version: current.version + 1,
   })
   try {
-    localStorage.setItem(
+    productStorage.setItem(
       projectStatusesStorageKey(workspaceId),
       JSON.stringify(next)
     )

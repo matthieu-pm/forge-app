@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { productStorage } from "@/lib/product-storage"
 
 export const projectUpdateScheduleSchema = z.enum([
   "none",
@@ -16,9 +17,7 @@ export const projectUpdatesSettingsSchema = z.object({
   schedule: projectUpdateScheduleSchema,
 })
 
-export type ProjectUpdateSchedule = z.infer<
-  typeof projectUpdateScheduleSchema
->
+export type ProjectUpdateSchedule = z.infer<typeof projectUpdateScheduleSchema>
 export type ProjectUpdatesSettings = z.infer<
   typeof projectUpdatesSettingsSchema
 >
@@ -35,7 +34,7 @@ export function readProjectUpdatesSettings(
   workspaceId: string
 ): ProjectUpdatesSettings {
   try {
-    const stored = window.localStorage.getItem(
+    const stored = productStorage.getItem(
       projectUpdatesSettingsStorageKey(workspaceId)
     )
     return stored
@@ -50,7 +49,7 @@ export function writeProjectUpdatesSettings(
   workspaceId: string,
   settings: ProjectUpdatesSettings
 ) {
-  window.localStorage.setItem(
+  productStorage.setItem(
     projectUpdatesSettingsStorageKey(workspaceId),
     JSON.stringify(projectUpdatesSettingsSchema.parse(settings))
   )

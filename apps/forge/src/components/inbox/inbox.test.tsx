@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { Inbox } from "./inbox"
 import { scope, update } from "./inbox-test-fixtures"
 import type { ComponentProps, ReactNode } from "react"
+import { productStorage } from "@/lib/product-storage"
 import {
   readTestView,
   renderPreferences as render,
@@ -36,7 +37,7 @@ vi.mock("@tanstack/react-router", () => ({
 }))
 beforeEach(async () => {
   await setupPreferenceFixture(scope.userId, scope.workspaceId)
-  localStorage.clear()
+  productStorage.clear()
   vi.stubGlobal("requestAnimationFrame", (callback: () => void) => {
     callback()
     return 1
@@ -48,7 +49,7 @@ afterEach(() => {
   vi.useRealTimers()
   vi.unstubAllGlobals()
 })
-const saved = () => parseInbox(localStorage.getItem(inboxStorageKey(scope))!)
+const saved = () => parseInbox(productStorage.getItem(inboxStorageKey(scope))!)
 const key = (value: string) =>
   fireEvent.keyDown(screen.getByRole("main", { name: "Inbox" }), { key: value })
 function seed() {
@@ -164,14 +165,14 @@ describe("Inbox", () => {
     ).toBeNull()
   })
   it("preserves damaged storage and reports failed writes instead of claiming success", () => {
-    localStorage.setItem(inboxStorageKey(scope), "damaged")
+    productStorage.setItem(inboxStorageKey(scope), "damaged")
     const rendered = render(<Inbox scope={scope} />)
     expect(screen.getByRole("alert").textContent).toContain("preserved")
-    expect(localStorage.getItem(inboxStorageKey(scope))).toBe("damaged")
+    expect(productStorage.getItem(inboxStorageKey(scope))).toBe("damaged")
     rendered.unmount()
-    localStorage.setItem(inboxStorageKey(scope), JSON.stringify(newInbox()))
+    productStorage.setItem(inboxStorageKey(scope), JSON.stringify(newInbox()))
     render(<Inbox scope={scope} />)
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    vi.spyOn(productStorage, "setItem").mockImplementation(() => {
       throw new Error("Full")
     })
     fireEvent.click(
@@ -187,7 +188,7 @@ describe("Inbox", () => {
     ).toBeTruthy()
   })
   it("shows the unread empty state and returns to all notifications", () => {
-    localStorage.setItem(
+    productStorage.setItem(
       inboxStorageKey(scope),
       JSON.stringify({
         ...newInbox(),

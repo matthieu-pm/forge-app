@@ -15,6 +15,7 @@ import type {
 } from "@/lib/review-detail"
 import type { Review, ReviewDisplay } from "@/lib/reviews-view"
 import type { InboxScope } from "@/lib/inbox-state"
+import { productStorage } from "@/lib/product-storage"
 import { useWorkspaceView } from "@/components/account-preference-provider"
 import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import {
@@ -103,7 +104,7 @@ export function Reviews({
     }
     setEdits(next)
     try {
-      localStorage.setItem(reviewEditsKey(scope), JSON.stringify(next))
+      productStorage.setItem(reviewEditsKey(scope), JSON.stringify(next))
       setSaveError(false)
     } catch {
       setSaveError(true)

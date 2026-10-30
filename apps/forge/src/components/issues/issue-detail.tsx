@@ -28,6 +28,11 @@ import type { TeamStatus } from "@/lib/team-statuses"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import type { ActivityReferenceKind } from "@/lib/issue-activity"
+import {
+  canonicalIssuesActive,
+  projectDisplayName,
+} from "@/lib/canonical-issue-cache"
+import { createSharedTeamIssue } from "@/lib/canonical-issue-client"
 import { usePreferenceGroup } from "@/components/account-preference-provider"
 import { issuePullRequest, issuePullRequests } from "@/lib/issue-pull-requests"
 import { ContentHeader } from "@/components/ui/content-header"
@@ -169,8 +174,10 @@ export function IssueDetail({
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")}`
   const prompt = `${tool ? `Work on this issue using ${tool}.\n\n` : ""}${id}: ${issue.title}\n\n${issue.description}\n\nStatus: ${statuses.find((s) => s.id === issue.status)?.name}\n${location.href}`
-  function patch(next: Partial<IssueDraft>) {
-    return onUpdate(issue, next)
+  const titleBaseline = useRef(issue),
+    descriptionBaseline = useRef(issue)
+  function patch(next: Partial<IssueDraft>, baseline = issue) {
+    return onUpdate(baseline, next)
   }
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
@@ -303,13 +310,28 @@ export function IssueDetail({
       toast.error(error instanceof Error ? error.message : "Attachment failed")
     }
   }
-  function createChild() {
+  const childSave = useRef<{ signature: string; key: string } | null>(null)
+  const childSaving = useRef(false)
+  async function createChild() {
+    if (childSaving.current) return
+    childSaving.current = true
     try {
-      saveTeamIssue(
-        team.id,
-        { ...childDraft, parentId: issue.id },
-        { creator: userId }
-      )
+      const signature = JSON.stringify([issue.id, childDraft])
+      if (childSave.current?.signature !== signature)
+        childSave.current = { signature, key: crypto.randomUUID() }
+      if (canonicalIssuesActive())
+        await createSharedTeamIssue(
+          team.id,
+          { ...childDraft, parentId: issue.id },
+          { commandKey: childSave.current.key }
+        )
+      else
+        saveTeamIssue(
+          team.id,
+          { ...childDraft, parentId: issue.id },
+          { creator: userId }
+        )
+      childSave.current = null
       setSubOpen(false)
       setChildDraft(blankIssueDraft(childDraft.status))
       toast.success("Sub-issue created")
@@ -319,6 +341,8 @@ export function IssueDetail({
           ? error.message
           : "Sub-issue could not be created"
       )
+    } finally {
+      childSaving.current = false
     }
   }
   function jumpToAttachment(assetId: string) {
@@ -807,18 +831,27 @@ export function IssueDetail({
               <DetailTitle
                 value={issue.title}
                 label="Issue title"
-                onSave={(title) => patch({ title })}
+                onEditingStart={() => {
+                  titleBaseline.current = issue
+                }}
+                onSave={(title) => patch({ title }, titleBaseline.current)}
               />
               <DetailDescription
                 key={issue.id}
                 value={issue.description}
                 document={issue.descriptionDoc}
                 label="Issue description"
+                onEditingStart={() => {
+                  descriptionBaseline.current = issue
+                }}
                 onSave={(description, descriptionDoc) =>
-                  patch({
-                    description,
-                    descriptionDoc: descriptionDoc as Record<string, unknown>,
-                  })
+                  patch(
+                    {
+                      description,
+                      descriptionDoc: descriptionDoc as Record<string, unknown>,
+                    },
+                    descriptionBaseline.current
+                  )
                 }
               />
               <Attachments
@@ -1491,7 +1524,10 @@ export function IssueDetail({
                 value={issue.project ?? ""}
                 options={[
                   { value: "", label: "No project" },
-                  ...projects.map((value) => ({ value, label: value })),
+                  ...projects.map((value) => ({
+                    value,
+                    label: projectDisplayName(value),
+                  })),
                 ]}
                 onChange={(project) => patch({ project })}
                 allowCreate
@@ -1502,7 +1538,9 @@ export function IssueDetail({
               >
                 <IssueIcon name="project" className="size-4" />
                 <span className="truncate">
-                  {issue.project || "Add to project"}
+                  {issue.project
+                    ? projectDisplayName(issue.project)
+                    : "Add to project"}
                 </span>
               </IssuePicker>
               {issue.dueDate && (

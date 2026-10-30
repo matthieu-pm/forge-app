@@ -3,6 +3,7 @@ import {
   defaultCallPreferences,
 } from "./call-preferences-contract"
 import type { CallPreferences } from "./call-preferences-contract"
+import { productStorage } from "@/lib/product-storage"
 
 export * from "./call-preferences-contract"
 export function callPreferencesStorageKey(userId: string) {
@@ -11,9 +12,7 @@ export function callPreferencesStorageKey(userId: string) {
 
 export function readCallPreferences(userId: string): CallPreferences {
   try {
-    const stored = window.localStorage.getItem(
-      callPreferencesStorageKey(userId)
-    )
+    const stored = productStorage.getItem(callPreferencesStorageKey(userId))
     const parsed = callPreferencesSchema
       .partial()
       .safeParse(stored ? JSON.parse(stored) : {})
@@ -29,7 +28,7 @@ export function writeCallPreferences(
   userId: string,
   preferences: CallPreferences
 ) {
-  window.localStorage.setItem(
+  productStorage.setItem(
     callPreferencesStorageKey(userId),
     JSON.stringify(callPreferencesSchema.parse(preferences))
   )

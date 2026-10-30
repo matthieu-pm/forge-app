@@ -1,18 +1,21 @@
 import { useCallback, useMemo, useSyncExternalStore } from "react"
 import { z } from "zod"
+import { createSharedTeamIssue } from "./canonical-issue-client"
+import { canonicalIssuesActive } from "./canonical-issue-cache"
 import {
   ISSUES_CHANGED,
   blankIssueDraft,
   getIssueStatuses,
   issueDraftSchema,
+  issueStoreSnapshot,
   parseIssueStore,
   readIssueStore,
   saveTeamIssue,
   spawnRecurringIssues,
-  teamIssuesKey,
   writeIssueStore,
 } from "./team-issues"
 import type { IssueDraft, TeamIssue } from "./team-issues"
+import { productStorage } from "@/lib/product-storage"
 
 const issueSchema = z.object({
   id: z.string().min(1),
@@ -55,7 +58,7 @@ export function patchCycleIssues(
   patch: Partial<IssueDraft>
 ) {
   const legacy = parseCycleIssues(
-    localStorage.getItem(cycleIssuesKey(teamId)) ?? "[]"
+    productStorage.getItem(cycleIssuesKey(teamId)) ?? "[]"
   )
   const statuses = getIssueStatuses(teamId)
   if (patch.status && !statuses.some((status) => status.id === patch.status))
@@ -176,8 +179,8 @@ export function useCycleIssues(teamId: string, cycle: string) {
     () => {
       try {
         return JSON.stringify([
-          localStorage.getItem(key) ?? "[]",
-          localStorage.getItem(teamIssuesKey(teamId)),
+          productStorage.getItem(key) ?? "[]",
+          issueStoreSnapshot(teamId),
         ])
       } catch {
         return "unavailable"
@@ -213,7 +216,31 @@ export function useCycleIssues(teamId: string, cycle: string) {
     }
   }, [raw, cycle])
 
-  function save(draft: CycleIssueDraft, id?: string) {
+  async function save(
+    draft: CycleIssueDraft,
+    id?: string,
+    baseline?: TeamIssue
+  ) {
+    if (canonicalIssuesActive()) {
+      if (id) {
+        const old = readIssueStore(teamId).issues.find((i) => i.id === id)
+        if (!old || old.cycle !== cycle)
+          throw new Error("This issue is no longer in this cycle.")
+        return issueSchema.parse(
+          saveTeamIssue(
+            teamId,
+            { ...(baseline ?? old), ...draft },
+            { id, baseline: baseline ?? old }
+          )
+        )
+      }
+      const issue = await createSharedTeamIssue(
+        teamId,
+        { ...blankIssueDraft(draft.status), ...draft, cycle },
+        { commandKey: crypto.randomUUID() }
+      )
+      return issueSchema.parse(issue)
+    }
     if (error) throw new Error(error)
     if (id) {
       const canonical = readIssueStore(teamId).issues.find(
@@ -241,7 +268,7 @@ export function useCycleIssues(teamId: string, cycle: string) {
       }
     }
     // Re-read before writing so another window's latest issues are preserved.
-    const current = parseCycleIssues(localStorage.getItem(key) ?? "[]")
+    const current = parseCycleIssues(productStorage.getItem(key) ?? "[]")
     const previous = id
       ? current.find((issue) => issue.id === id && issue.cycle === cycle)
       : undefined
@@ -259,7 +286,7 @@ export function useCycleIssues(teamId: string, cycle: string) {
       cycle,
       createdAt: previous?.createdAt ?? new Date().toISOString(),
     })
-    localStorage.setItem(
+    productStorage.setItem(
       key,
       JSON.stringify(
         previous

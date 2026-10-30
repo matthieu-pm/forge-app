@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { productStorage } from "@/lib/product-storage"
 
 export const reviewDisplaySchema = z.object({
   groupBy: z.enum(["focus", "status", "author", "repository", "none"]),
@@ -68,7 +69,7 @@ export function readReviewDisplay(key: string): ReviewDisplay {
   try {
     const parsed = reviewDisplaySchema
       .partial()
-      .safeParse(JSON.parse(localStorage.getItem(key) ?? "{}"))
+      .safeParse(JSON.parse(productStorage.getItem(key) ?? "{}"))
     return parsed.success
       ? { ...defaultReviewDisplay, ...parsed.data }
       : defaultReviewDisplay

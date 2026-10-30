@@ -7,13 +7,14 @@ import {
   teamHomeKey,
   useTeamHome,
 } from "./team-home-state"
+import { productStorage } from "@/lib/product-storage"
 import {
   renderPreferenceHook as renderHook,
   setupPreferenceFixture,
 } from "@/test/preference-fixture"
 
 beforeEach(async () => {
-  localStorage.clear()
+  productStorage.clear()
   await setupPreferenceFixture("user")
 })
 afterEach(() => {
@@ -43,16 +44,16 @@ describe("team home content", () => {
     )
   })
   it("preserves corrupted data and refuses edits", async () => {
-    localStorage.setItem(teamHomeKey("alpha"), "broken")
+    productStorage.setItem(teamHomeKey("alpha"), "broken")
     const hook = renderHook(() => useTeamHome("alpha"))
     await waitFor(() => expect(hook.result.current.error).toBeTruthy())
     expect(hook.result.current.update(() => emptyTeamHome())).toBe(false)
-    expect(localStorage.getItem(teamHomeKey("alpha"))).toBe("broken")
+    expect(productStorage.getItem(teamHomeKey("alpha"))).toBe("broken")
   })
   it("saves personal favorites independently of browser storage quota", async () => {
     const hook = renderHook(() => useTeamHome("alpha"))
     await waitFor(() => expect(hook.result.current.ready).toBe(true))
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    vi.spyOn(productStorage, "setItem").mockImplementation(() => {
       throw new Error("quota")
     })
     act(() => {

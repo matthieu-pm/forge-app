@@ -1,4 +1,5 @@
 import {
+  act,
   cleanup,
   fireEvent,
   screen,
@@ -9,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { UpcomingCycle } from "./upcoming-cycle"
 import type { ComponentProps } from "react"
 import type { TeamSummary } from "@/lib/team-contract"
+import { productStorage } from "@/lib/product-storage"
 import {
   readTestView,
   renderPreferences as render,
@@ -67,7 +69,7 @@ const team = {
 } as TeamSummary
 beforeEach(async () => {
   await setupPreferenceFixture("user")
-  localStorage.clear()
+  productStorage.clear()
   Element.prototype.scrollIntoView = vi.fn()
   vi.stubGlobal(
     "ResizeObserver",
@@ -77,7 +79,7 @@ beforeEach(async () => {
       disconnect() {}
     }
   )
-  localStorage.setItem(
+  productStorage.setItem(
     teamCyclesStorageKey(team.id),
     JSON.stringify({ ...initialTeamCycles(), enabled: true })
   )
@@ -122,7 +124,9 @@ describe("upcoming cycle", () => {
       screen.getByRole("button", { name: "Open PRO-1 Plan launch" })
     )
     selectOption(screen.getByRole("combobox", { name: "Status" }), "Done")
-    fireEvent.click(screen.getByRole("button", { name: "Save issue" }))
+    await act(async () =>
+      fireEvent.click(screen.getByRole("button", { name: "Save issue" }))
+    )
     const done = screen.getByRole("region", { name: "Done group" })
     expect(
       within(done).getByRole("button", { name: "Open PRO-1 Plan launch" })
@@ -215,8 +219,8 @@ describe("upcoming cycle", () => {
       priority: "No priority",
       createdAt: "2000-01-01T12:00:00.000Z",
     }
-    localStorage.setItem(cycleIssuesKey(team.id), JSON.stringify([old]))
-    localStorage.setItem(
+    productStorage.setItem(cycleIssuesKey(team.id), JSON.stringify([old]))
+    productStorage.setItem(
       cycleIssuesKey("other"),
       JSON.stringify([{ ...old, title: "Another team" }])
     )
@@ -228,18 +232,18 @@ describe("upcoming cycle", () => {
       screen.getByRole("button", { name: "Open PRO-1 Next cycle" })
     ).toBeTruthy()
     expect(
-      parseCycleIssues(localStorage.getItem(cycleIssuesKey(team.id))!)
+      parseCycleIssues(productStorage.getItem(cycleIssuesKey(team.id))!)
     ).toHaveLength(1)
     expect(readIssueStore(team.id).issues[0].title).toBe("Next cycle")
   })
   it("preserves corrupt saved data and blocks editing", () => {
-    localStorage.setItem(cycleIssuesKey(team.id), "invalid")
+    productStorage.setItem(cycleIssuesKey(team.id), "invalid")
     render(<UpcomingCycle team={team} />)
     expect(screen.getByRole("alert").textContent).toContain("preserved")
     expect(
       screen.queryByRole("button", { name: "Create new issue" })
     ).toBeNull()
-    expect(localStorage.getItem(cycleIssuesKey(team.id))).toBe("invalid")
+    expect(productStorage.getItem(cycleIssuesKey(team.id))).toBe("invalid")
   })
   it("keeps a draft open when saving fails", () => {
     render(<UpcomingCycle team={team} />)
@@ -248,7 +252,7 @@ describe("upcoming cycle", () => {
       target: { value: "Unsaved" },
     })
     const setItem = vi
-      .spyOn(Storage.prototype, "setItem")
+      .spyOn(productStorage, "setItem")
       .mockImplementation(() => {
         throw new Error("quota")
       })

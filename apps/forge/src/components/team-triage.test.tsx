@@ -12,6 +12,7 @@ import { TeamTriage } from "./team-triage"
 import { TeamTriageSettings } from "./team-triage-settings"
 import type { ReactNode } from "react"
 import type { TeamSummary } from "@/lib/team-contract"
+import { productStorage } from "@/lib/product-storage"
 import {
   initialTeamTriage,
   teamTriageStorageKey,
@@ -48,21 +49,23 @@ const team = {
   icon: { kind: "emoji", value: "🔥", color: "#94a3b8" },
 } as TeamSummary
 beforeEach(() => {
-  localStorage.clear()
-  localStorage.setItem(
+  productStorage.clear()
+  productStorage.setItem(
     teamTriageStorageKey(team.id),
     JSON.stringify({ ...initialTeamTriage(), enabled: true })
   )
 })
 afterEach(cleanup)
-function create(title: string) {
+async function create(title: string) {
   fireEvent.click(
     screen.getAllByRole("button", { name: "Create triage issue" })[0]
   )
   fireEvent.change(screen.getByRole("textbox", { name: "Issue title" }), {
     target: { value: title },
   })
-  fireEvent.click(screen.getByRole("button", { name: "Create issue" }))
+  await act(async () =>
+    fireEvent.click(screen.getByRole("button", { name: "Create issue" }))
+  )
 }
 function Navigation() {
   const enabled = useEnabledTeamTriage([team.id, "other"])
@@ -82,8 +85,8 @@ function Navigation() {
     </nav>
   )
 }
-describe("team triage", () => {
-  it("updates navigation immediately from the team settings switch", () => {
+describe("team triage", async () => {
+  it("updates navigation immediately from the team settings switch", async () => {
     render(
       <>
         <Navigation />
@@ -104,7 +107,7 @@ describe("team triage", () => {
   })
   it("creates, edits, persists, and snoozes a team issue", async () => {
     const view = render(<TeamTriage team={team} />)
-    create("Investigate request")
+    await create("Investigate request")
     expect(
       screen.getByRole("heading", { name: "Investigate request" })
     ).toBeTruthy()
@@ -112,13 +115,17 @@ describe("team triage", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Issue title" }), {
       target: { value: "Updated request" },
     })
-    fireEvent.click(screen.getByRole("button", { name: "Save issue" }))
+    await act(async () =>
+      fireEvent.click(screen.getByRole("button", { name: "Save issue" }))
+    )
     view.unmount()
     render(<TeamTriage team={team} />)
     fireEvent.click(
       screen.getByRole("button", { name: "Open PRO-T1 Updated request" })
     )
-    fireEvent.click(screen.getByRole("button", { name: "Snooze" }))
+    await act(async () =>
+      fireEvent.click(screen.getByRole("button", { name: "Snooze" }))
+    )
     expect(
       screen.queryByRole("button", { name: "Open PRO-T1 Updated request" })
     ).toBeNull()
@@ -128,14 +135,14 @@ describe("team triage", () => {
       screen.getByRole("button", { name: "Open PRO-T1 Updated request" })
     ).toBeTruthy()
     expect(
-      parseTriageIssues(localStorage.getItem(triageIssuesKey(team.id))!)[0]
+      parseTriageIssues(productStorage.getItem(triageIssuesKey(team.id))!)[0]
         .snoozed
     ).toBe(true)
   })
-  it("gates direct navigation and responds to settings changes", () => {
+  it("gates direct navigation and responds to settings changes", async () => {
     render(<TeamTriage team={team} />)
     act(() => {
-      localStorage.setItem(
+      productStorage.setItem(
         teamTriageStorageKey(team.id),
         JSON.stringify(initialTeamTriage())
       )
@@ -150,28 +157,26 @@ describe("team triage", () => {
       screen.queryByRole("button", { name: "Create triage issue" })
     ).toBeNull()
   })
-  it("isolates team issues and preserves corrupted data", () => {
+  it("isolates team issues and preserves corrupted data", async () => {
     const view = render(<TeamTriage team={team} />)
-    create("Private request")
+    await create("Private request")
     view.unmount()
-    localStorage.setItem(
+    productStorage.setItem(
       teamTriageStorageKey("other"),
       JSON.stringify({ ...initialTeamTriage(), enabled: true })
     )
-    localStorage.setItem(triageIssuesKey("other"), "broken")
+    productStorage.setItem(triageIssuesKey("other"), "broken")
     render(<TeamTriage team={{ ...team, id: "other" }} />)
     expect(screen.queryByText("Private request")).toBeNull()
     expect(screen.getByRole("alert").textContent).toContain("preserved")
-    expect(localStorage.getItem(triageIssuesKey("other"))).toBe("broken")
+    expect(productStorage.getItem(triageIssuesKey("other"))).toBe("broken")
   })
-  it("retains drafts after a storage failure", () => {
+  it("retains drafts after a storage failure", async () => {
     render(<TeamTriage team={team} />)
-    const fail = vi
-      .spyOn(Storage.prototype, "setItem")
-      .mockImplementation(() => {
-        throw new Error("quota")
-      })
-    create("Keep my draft")
+    const fail = vi.spyOn(productStorage, "setItem").mockImplementation(() => {
+      throw new Error("quota")
+    })
+    await create("Keep my draft")
     const dialog = screen.getByRole("dialog")
     expect(within(dialog).getByRole("alert").textContent).toContain(
       "draft is still here"
@@ -185,7 +190,7 @@ describe("team triage", () => {
   })
   it("filters by priority without modifying saved issues", async () => {
     render(<TeamTriage team={team} />)
-    create("Low urgency")
+    await create("Low urgency")
     fireEvent.click(screen.getByRole("button", { name: "Add filter" }))
     fireEvent.click(await screen.findByRole("menuitem", { name: "Priority" }))
     fireEvent.click(await screen.findByRole("menuitem", { name: "Urgent" }))
@@ -193,10 +198,10 @@ describe("team triage", () => {
       screen.queryByRole("button", { name: "Open PRO-T1 Low urgency" })
     ).toBeNull()
     expect(
-      parseTriageIssues(localStorage.getItem(triageIssuesKey(team.id))!)
+      parseTriageIssues(productStorage.getItem(triageIssuesKey(team.id))!)
     ).toHaveLength(1)
   })
-  it("restores a saved draft after remount and clears it after creation", () => {
+  it("restores a saved draft after remount and clears it after creation", async () => {
     const view = render(<TeamTriage team={team} />)
     fireEvent.click(
       screen.getAllByRole("button", { name: "Create triage issue" })[0]
@@ -205,9 +210,9 @@ describe("team triage", () => {
       target: { value: "Resume this" },
     })
     fireEvent.click(screen.getByRole("button", { name: "Save as draft" }))
-    expect(localStorage.getItem(triageIssuesKey(team.id))).toBeNull()
+    expect(productStorage.getItem(triageIssuesKey(team.id))).toBeNull()
     expect(
-      JSON.parse(localStorage.getItem(triageDraftKey(team.id))!).title
+      JSON.parse(productStorage.getItem(triageDraftKey(team.id))!).title
     ).toBe("Resume this")
     view.unmount()
     render(<TeamTriage team={team} />)
@@ -218,8 +223,10 @@ describe("team triage", () => {
       screen.getByRole<HTMLInputElement>("textbox", { name: "Issue title" })
         .value
     ).toBe("Resume this")
-    fireEvent.click(screen.getByRole("button", { name: "Create issue" }))
-    expect(localStorage.getItem(triageDraftKey(team.id))).toBeNull()
+    await act(async () =>
+      fireEvent.click(screen.getByRole("button", { name: "Create issue" }))
+    )
+    expect(productStorage.getItem(triageDraftKey(team.id))).toBeNull()
     fireEvent.click(
       screen.getAllByRole("button", { name: "Create triage issue" })[0]
     )
@@ -228,7 +235,7 @@ describe("team triage", () => {
         .value
     ).toBe("")
   })
-  it("creates consecutive issues without closing the composer", () => {
+  it("creates consecutive issues without closing the composer", async () => {
     render(<TeamTriage team={team} />)
     fireEvent.click(
       screen.getAllByRole("button", { name: "Create triage issue" })[0]
@@ -237,7 +244,9 @@ describe("team triage", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Issue title" }), {
       target: { value: "First request" },
     })
-    fireEvent.click(screen.getByRole("button", { name: "Create issue" }))
+    await act(async () =>
+      fireEvent.click(screen.getByRole("button", { name: "Create issue" }))
+    )
     expect(
       screen.getByRole<HTMLInputElement>("textbox", { name: "Issue title" })
         .value
@@ -245,15 +254,17 @@ describe("team triage", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Issue title" }), {
       target: { value: "Second request" },
     })
-    fireEvent.click(screen.getByRole("button", { name: "Create issue" }))
+    await act(async () =>
+      fireEvent.click(screen.getByRole("button", { name: "Create issue" }))
+    )
     expect(
-      parseTriageIssues(localStorage.getItem(triageIssuesKey(team.id))!).map(
+      parseTriageIssues(productStorage.getItem(triageIssuesKey(team.id))!).map(
         (issue) => issue.title
       )
     ).toEqual(["First request", "Second request"])
   })
-  it("preserves unreadable drafts when saving fails", () => {
-    localStorage.setItem(triageDraftKey(team.id), "corrupt draft")
+  it("preserves unreadable drafts when saving fails", async () => {
+    productStorage.setItem(triageDraftKey(team.id), "corrupt draft")
     render(<TeamTriage team={team} />)
     fireEvent.click(
       screen.getAllByRole("button", { name: "Create triage issue" })[0]
@@ -262,7 +273,9 @@ describe("team triage", () => {
       target: { value: "Keep this too" },
     })
     fireEvent.click(screen.getByRole("button", { name: "Save as draft" }))
-    expect(localStorage.getItem(triageDraftKey(team.id))).toBe("corrupt draft")
+    expect(productStorage.getItem(triageDraftKey(team.id))).toBe(
+      "corrupt draft"
+    )
     expect(
       within(screen.getByRole("dialog")).getByRole("alert").textContent
     ).toContain("preserved")
@@ -323,9 +336,11 @@ describe("team triage", () => {
         screen.getByRole("button", { name: "Remove example.txt" })
       ).toBeTruthy()
     )
-    fireEvent.click(screen.getByRole("button", { name: "Create issue" }))
+    await act(async () =>
+      fireEvent.click(screen.getByRole("button", { name: "Create issue" }))
+    )
     const [issue] = parseTriageIssues(
-      localStorage.getItem(triageIssuesKey(team.id))!
+      productStorage.getItem(triageIssuesKey(team.id))!
     )
     expect(issue).toMatchObject({
       priority: "High",

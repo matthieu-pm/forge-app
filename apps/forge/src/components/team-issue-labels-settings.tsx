@@ -18,6 +18,7 @@ import type {
   TeamLabelGroup,
 } from "@/lib/team-labels"
 import type { TeamLabelRowHandle } from "@/components/team-label-row"
+import { productStorage } from "@/lib/product-storage"
 import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import { OptionSelect } from "@/components/ui/option-select"
 import {
@@ -146,7 +147,7 @@ function LocalEntityLabelsSettings({
     activeStorageKey.current = storageKey
     function load() {
       try {
-        const saved = window.localStorage.getItem(storageKey)
+        const saved = productStorage.getItem(storageKey)
         setLoadError(false)
         setDirectory(
           saved
@@ -164,7 +165,7 @@ function LocalEntityLabelsSettings({
     }
     function loadWorkspaceCount() {
       try {
-        const saved = window.localStorage.getItem(sharedStorageKey)
+        const saved = productStorage.getItem(sharedStorageKey)
         setWorkspaceCount(
           saved
             ? parseTeamLabels(saved).labels.filter((label) => !label.archived)
@@ -194,7 +195,7 @@ function LocalEntityLabelsSettings({
   function save(next: TeamLabelDirectory, key = storageKey) {
     if (loadError) return false
     try {
-      window.localStorage.setItem(key, JSON.stringify(next))
+      productStorage.setItem(key, JSON.stringify(next))
       if (activeStorageKey.current === key) {
         setDirectory(next)
         const updated = next.labels.find((label) => label.id === newLabel?.id)
@@ -394,7 +395,7 @@ function LocalEntityLabelsSettings({
           label: "Undo",
           onClick: () => {
             try {
-              const stored = window.localStorage.getItem(storageKey)
+              const stored = productStorage.getItem(storageKey)
               let restored = stored ? parseTeamLabels(stored) : next
               for (const id of ids) {
                 const result = restoreTeamLabelDeletion(
@@ -454,7 +455,7 @@ function LocalEntityLabelsSettings({
     let original: string | null = null
     let wroteDestination = false
     try {
-      original = window.localStorage.getItem(destinationKey)
+      original = productStorage.getItem(destinationKey)
       const destination = original
         ? parseTeamLabels(original)
         : initialTeamLabels(workspaceView ? team.slug : "")
@@ -481,12 +482,9 @@ function LocalEntityLabelsSettings({
         ...directory,
         labels: directory.labels.filter((label) => !selectedIds.has(label.id)),
       }
-      window.localStorage.setItem(
-        destinationKey,
-        JSON.stringify(nextDestination)
-      )
+      productStorage.setItem(destinationKey, JSON.stringify(nextDestination))
       wroteDestination = true
-      window.localStorage.setItem(storageKey, JSON.stringify(next))
+      productStorage.setItem(storageKey, JSON.stringify(next))
       setDirectory(next)
       setWorkspaceCount(
         (workspaceView ? next : nextDestination).labels.filter(
@@ -502,8 +500,8 @@ function LocalEntityLabelsSettings({
     } catch {
       if (wroteDestination) {
         try {
-          if (original === null) window.localStorage.removeItem(destinationKey)
-          else window.localStorage.setItem(destinationKey, original)
+          if (original === null) productStorage.removeItem(destinationKey)
+          else productStorage.setItem(destinationKey, original)
         } catch {
           toast.error(
             "The destination copy was preserved. Reload before trying again."
@@ -529,7 +527,7 @@ function LocalEntityLabelsSettings({
         label: "Undo",
         onClick: () => {
           try {
-            const stored = window.localStorage.getItem(storageKey)
+            const stored = productStorage.getItem(storageKey)
             let restored = stored ? parseTeamLabels(stored) : next
             for (const id of ids.filter(
               (candidateId) => candidateId !== targetId
@@ -611,7 +609,7 @@ function LocalEntityLabelsSettings({
           label: "Undo",
           onClick: () => {
             try {
-              const stored = window.localStorage.getItem(storageKey)
+              const stored = productStorage.getItem(storageKey)
               const restored = restoreTeamLabelDeletion(
                 stored ? parseTeamLabels(stored) : next,
                 previous,

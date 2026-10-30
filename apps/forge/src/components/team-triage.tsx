@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { Link } from "@tanstack/react-router"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
@@ -8,8 +8,11 @@ import {
   StarIcon,
   UserGroup03Icon,
 } from "@hugeicons/core-free-icons"
+import type { TeamIssue } from "@/lib/issue-record-contract"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TriageDraft, TriageIssue } from "@/lib/triage-issues"
+import { readIssueStore } from "@/lib/team-issues"
+import { productStorage } from "@/lib/product-storage"
 import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import { ContentHeader } from "@/components/ui/content-header"
 import { OptionSelect } from "@/components/ui/option-select"
@@ -75,12 +78,16 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
       return descending ? -result : result
     })
   const selected = visible.find((issue) => issue.id === selectedId)
+  const editingBaseline = useRef<TeamIssue | undefined>(undefined)
   function openEditor(issue?: TriageIssue) {
+    editingBaseline.current = issue
+      ? readIssueStore(team.id).issues.find((row) => row.id === issue.id)
+      : undefined
     setSaveError(null)
     if (issue) setDraft(issue)
     else {
       try {
-        const raw = localStorage.getItem(triageDraftKey(team.id))
+        const raw = productStorage.getItem(triageDraftKey(team.id))
         setDraft(
           raw
             ? triageDraftSchema.parse(JSON.parse(raw))
@@ -97,9 +104,9 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
     setEditingId(issue?.id)
     setEditor(true)
   }
-  function toggleSnooze(issue: TriageIssue) {
+  async function toggleSnooze(issue: TriageIssue) {
     try {
-      save(issue, issue.id, !issue.snoozed)
+      await save(issue, issue.id, !issue.snoozed)
       setSelectedId(undefined)
       setSaveError(null)
     } catch {
@@ -420,9 +427,14 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
         editing={!!editingId}
         error={saveError}
         onError={setSaveError}
-        onSave={() => {
+        onSave={async () => {
           try {
-            const issue = save(draft, editingId)
+            const issue = await save(
+              draft,
+              editingId,
+              undefined,
+              editingBaseline.current
+            )
             setSelectedId(issue.id)
             setSaveError(null)
             return true

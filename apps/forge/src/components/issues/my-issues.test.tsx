@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { MyIssues } from "./my-issues"
 import type { ComponentProps } from "react"
 import type { TeamSummary } from "@/lib/team-contract"
+import { productStorage } from "@/lib/product-storage"
 import {
   readTestView,
   renderPreferences as render,
@@ -117,7 +118,7 @@ function start(
 }
 beforeEach(async () => {
   await setupPreferenceFixture("user")
-  localStorage.clear()
+  productStorage.clear()
   vi.stubGlobal(
     "ResizeObserver",
     class {
@@ -155,7 +156,7 @@ beforeEach(async () => {
 })
 afterEach(() => {
   cleanup()
-  localStorage.clear()
+  productStorage.clear()
   vi.unstubAllGlobals()
 })
 describe("My issues page", () => {
@@ -180,7 +181,7 @@ describe("My issues page", () => {
     expect(readIssueStore(first.id).issues[0].priority).toBe("No priority")
   })
   it("uses separate personal preferences for the details preview and keeps team preferences unchanged", async () => {
-    const firstBefore = localStorage.getItem(teamIssuesKey(first.id))
+    const firstBefore = productStorage.getItem(teamIssuesKey(first.id))
     const page = start()
     await screen.findByRole("button", { name: "Open ONE-1 Assigned first" })
     fireEvent.click(screen.getByRole("button", { name: "Open details" }))
@@ -197,7 +198,7 @@ describe("My issues page", () => {
       issue: readIssueStore(first.id).issues[0].id,
     })
     expect(readTestView("myIssues").details).toBe(true)
-    expect(localStorage.getItem(teamIssuesKey(first.id))).toBe(firstBefore)
+    expect(productStorage.getItem(teamIssuesKey(first.id))).toBe(firstBefore)
   })
   it("shows created/subscribed scopes, and uses the shared composer with self-assignment on Assigned", async () => {
     const page = start({ view: "created" })
@@ -232,13 +233,13 @@ describe("My issues page", () => {
     ).toContain("Assignee: user")
   })
   it("keeps corrupt team data intact while showing the other team's issues and refreshing same-tab updates", async () => {
-    localStorage.setItem(teamIssuesKey(first.id), "invalid saved data")
+    productStorage.setItem(teamIssuesKey(first.id), "invalid saved data")
     start()
     await screen.findByRole("button", { name: "Open TWO-1 Assigned second" })
     expect(screen.getByRole("alert").textContent).toContain(
       "First issues could not be loaded"
     )
-    expect(localStorage.getItem(teamIssuesKey(first.id))).toBe(
+    expect(productStorage.getItem(teamIssuesKey(first.id))).toBe(
       "invalid saved data"
     )
     act(() => {

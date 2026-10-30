@@ -8,10 +8,11 @@ import {
   saveTeamIssue,
 } from "./team-issues"
 import { initialTeamCycles, scheduledTeamCycles } from "./team-cycles"
+import { productStorage } from "@/lib/product-storage"
 
 const team = "cycle-assignments"
 const cycle = "2026-11-02"
-beforeEach(() => localStorage.clear())
+beforeEach(() => productStorage.clear())
 afterEach(cleanup)
 describe("Issue cycle assignments", () => {
   it("persists assignments and changes cycle membership without duplicating an issue", () => {
@@ -48,7 +49,7 @@ describe("Issue cycle assignments", () => {
       priority: "High",
       assignee: "member",
     })
-    expect(localStorage.getItem(cycleIssuesKey(team))).toBeNull()
+    expect(productStorage.getItem(cycleIssuesKey(team))).toBeNull()
     act(() => {
       const current = readIssueStore(team).issues[0]
       saveTeamIssue(team, { ...current, cycle: "" }, { id: issue.id })
@@ -78,7 +79,7 @@ describe("Issue cycle assignments", () => {
       priority: "No priority",
       createdAt: new Date().toISOString(),
     }
-    localStorage.setItem(
+    productStorage.setItem(
       cycleIssuesKey(team),
       JSON.stringify([
         legacy,
@@ -111,7 +112,7 @@ describe("Issue cycle assignments", () => {
       createdAt: new Date().toISOString(),
     }
     const snapshot = JSON.stringify([legacy])
-    localStorage.setItem(cycleIssuesKey(team), snapshot)
+    productStorage.setItem(cycleIssuesKey(team), snapshot)
     const { result } = renderHook(() => useCycleIssues(team, cycle))
     expect(
       result.current.records.find((issue) => issue.id === canonical.id)
@@ -131,7 +132,7 @@ describe("Issue cycle assignments", () => {
     expect(
       readIssueStore(team).issues.every((issue) => issue.priority === "High")
     ).toBe(true)
-    expect(localStorage.getItem(cycleIssuesKey(team))).toBe(snapshot)
+    expect(productStorage.getItem(cycleIssuesKey(team))).toBe(snapshot)
     act(() => {
       result.current.patch([legacy.id], { cycle: "" })
     })
@@ -151,11 +152,9 @@ describe("Issue cycle assignments", () => {
       cycle,
     })
     const { result } = renderHook(() => useCycleIssues(team, cycle))
-    const write = vi
-      .spyOn(Storage.prototype, "setItem")
-      .mockImplementation(() => {
-        throw new Error("quota")
-      })
+    const write = vi.spyOn(productStorage, "setItem").mockImplementation(() => {
+      throw new Error("quota")
+    })
     expect(() =>
       result.current.patch([first.id, second.id], { priority: "High" })
     ).toThrow()

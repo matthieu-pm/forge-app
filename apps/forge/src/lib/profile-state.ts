@@ -1,3 +1,5 @@
+import { productStorage } from "@/lib/product-storage"
+
 export type LocalProfile = {
   title: string
   username: string
@@ -24,7 +26,7 @@ export function readLocalProfile(userId: string, email: string): LocalProfile {
   }
 
   try {
-    const stored = window.localStorage.getItem(profileStorageKey(userId))
+    const stored = productStorage.getItem(profileStorageKey(userId))
     return stored
       ? ({ ...fallbackProfile, ...JSON.parse(stored) } as LocalProfile)
       : fallbackProfile
@@ -34,8 +36,5 @@ export function readLocalProfile(userId: string, email: string): LocalProfile {
 }
 
 export function writeLocalProfile(userId: string, profile: LocalProfile) {
-  window.localStorage.setItem(
-    profileStorageKey(userId),
-    JSON.stringify(profile)
-  )
+  productStorage.setItem(profileStorageKey(userId), JSON.stringify(profile))
 }

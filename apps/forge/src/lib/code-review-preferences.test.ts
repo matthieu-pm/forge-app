@@ -6,14 +6,15 @@ import {
   readCodeReviewPreferences,
   writeCodeReviewPreferences,
 } from "./code-review-preferences"
+import { productStorage } from "@/lib/product-storage"
 
 beforeEach(() => {
-  window.localStorage.clear()
+  productStorage.clear()
   vi.restoreAllMocks()
 })
 describe("code review preferences", () => {
   it("isolates preferences between signed-in users and fills older records", () => {
-    window.localStorage.setItem(
+    productStorage.setItem(
       codeReviewStorageKey("alice"),
       JSON.stringify({ attachmentFormat: "number" })
     )
@@ -31,7 +32,7 @@ describe("code review preferences", () => {
       '{"startOnBranchCopy":"false"}',
       '{"codingTools":["unknown"]}',
     ]) {
-      window.localStorage.setItem(codeReviewStorageKey("alice"), stored)
+      productStorage.setItem(codeReviewStorageKey("alice"), stored)
       expect(readCodeReviewPreferences("alice")).toEqual(
         defaultCodeReviewPreferences
       )
@@ -44,7 +45,7 @@ describe("code review preferences", () => {
     }
     writeCodeReviewPreferences("alice", preferences)
     expect(readCodeReviewPreferences("alice")).toEqual(preferences)
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    vi.spyOn(productStorage, "setItem").mockImplementation(() => {
       throw new Error("Storage full")
     })
     expect(() => writeCodeReviewPreferences("alice", preferences)).toThrow(

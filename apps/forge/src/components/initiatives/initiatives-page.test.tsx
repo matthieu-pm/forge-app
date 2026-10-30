@@ -11,6 +11,7 @@ import { InitiativesPage } from "./initiatives-page"
 import { InitiativeDetail } from "./initiative-detail"
 import type { ComponentProps } from "react"
 import type { Initiative } from "@/lib/initiatives"
+import { productStorage } from "@/lib/product-storage"
 import {
   readTestView,
   renderPreferences as render,
@@ -66,7 +67,7 @@ const agent = vi.hoisted(() => ({ openComposer: vi.fn(), setDraft: vi.fn() }))
 vi.mock("@/components/agent/agent-provider", () => ({ useAgent: () => agent }))
 beforeEach(async () => {
   await setupPreferenceFixture("user")
-  localStorage.clear()
+  productStorage.clear()
   agent.openComposer.mockClear()
   agent.setDraft.mockClear()
   Element.prototype.scrollIntoView = vi.fn()
@@ -96,7 +97,7 @@ const props = {
   onOpen: vi.fn(),
 }
 const saved = () =>
-  JSON.parse(localStorage.getItem(initiativesStorageKey("workspace"))!)
+  JSON.parse(productStorage.getItem(initiativesStorageKey("workspace"))!)
     .initiatives as Array<Initiative>
 function seed(records: Array<Partial<Initiative>>) {
   const state = records.reduce(
@@ -108,7 +109,7 @@ function seed(records: Array<Partial<Initiative>>) {
       }),
     emptyInitiatives()
   )
-  localStorage.setItem(
+  productStorage.setItem(
     initiativesStorageKey("workspace"),
     JSON.stringify(state)
   )
@@ -120,7 +121,9 @@ describe("Initiatives page", () => {
     expect(
       screen.getByRole("button", { name: /Create new initiative/ })
     ).toBeTruthy()
-    expect(localStorage.getItem(initiativesStorageKey("workspace"))).toBeNull()
+    expect(
+      productStorage.getItem(initiativesStorageKey("workspace"))
+    ).toBeNull()
     fireEvent.click(screen.getByRole("button", { name: "New initiative" }))
     fireEvent.change(screen.getByRole("textbox", { name: "Initiative name" }), {
       target: { value: "Launch" },
@@ -159,7 +162,7 @@ describe("Initiatives page", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Initiative name" }), {
       target: { value: "Keep my draft" },
     })
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    vi.spyOn(productStorage, "setItem").mockImplementation(() => {
       throw new Error("quota")
     })
     fireEvent.click(screen.getByRole("button", { name: "Create" }))
@@ -170,7 +173,9 @@ describe("Initiatives page", () => {
       screen.getByRole<HTMLInputElement>("textbox", { name: "Initiative name" })
         .value
     ).toBe("Keep my draft")
-    expect(localStorage.getItem(initiativesStorageKey("workspace"))).toBeNull()
+    expect(
+      productStorage.getItem(initiativesStorageKey("workspace"))
+    ).toBeNull()
   })
   it("edits row properties and persists summary display preferences", async () => {
     seed([{ name: "Launch", ownerId: "user" }, { name: "Unassigned work" }])
@@ -258,7 +263,7 @@ describe("Initiatives page", () => {
   })
   it("respects initiative enablement without hiding or discarding existing records", () => {
     seed([{ name: "Existing" }])
-    localStorage.setItem(
+    productStorage.setItem(
       initiativesSettingsStorageKey("workspace"),
       JSON.stringify({ enabled: false, schedule: "none" })
     )

@@ -5,6 +5,7 @@ import { IssueCyclePicker } from "./issue-cycle-picker"
 import { IssueComposer } from "./issue-composer"
 import type { ReactNode } from "react"
 import type { TeamSummary } from "@/lib/team-contract"
+import { productStorage } from "@/lib/product-storage"
 import {
   initialTeamCycles,
   scheduledTeamCycles,
@@ -33,7 +34,7 @@ const other = { ...team, id: "other", name: "Other team", slug: "other" }
 const settings = { ...initialTeamCycles(), enabled: true }
 const first = () => scheduledTeamCycles(settings)[0].value
 function configure(id: string, enabled: boolean) {
-  localStorage.setItem(
+  productStorage.setItem(
     teamCyclesStorageKey(id),
     JSON.stringify({ ...settings, enabled })
   )
@@ -44,7 +45,7 @@ function configure(id: string, enabled: boolean) {
   )
 }
 beforeEach(() => {
-  localStorage.clear()
+  productStorage.clear()
   Element.prototype.scrollIntoView = vi.fn()
   vi.stubGlobal(
     "ResizeObserver",
@@ -135,9 +136,9 @@ describe("Issue cycle properties", () => {
     expect(readIssueStore(other.id).issues[0].cycle).toBe("")
   })
   it("fails closed for malformed cycle settings without overwriting them", () => {
-    localStorage.setItem(teamCyclesStorageKey(team.id), "broken")
+    productStorage.setItem(teamCyclesStorageKey(team.id), "broken")
     render(<Picker />)
     expect(screen.queryByRole("button", { name: "Change cycle" })).toBeNull()
-    expect(localStorage.getItem(teamCyclesStorageKey(team.id))).toBe("broken")
+    expect(productStorage.getItem(teamCyclesStorageKey(team.id))).toBe("broken")
   })
 })

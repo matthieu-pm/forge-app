@@ -1,0 +1,821 @@
+import "@tanstack/react-start/server-only"
+import { and, asc, eq, inArray, isNull, or, sql } from "drizzle-orm"
+import { z } from "zod"
+import type { InitiativeProject } from "@/lib/initiatives"
+import type { Actor } from "@/application/actor"
+import type { Transaction } from "@/db"
+import type { CreateCanonicalIssue } from "@/lib/canonical-issue-contract"
+import type { TeamIssue } from "@/lib/issue-record-contract"
+import {
+  createCanonicalIssueSchema,
+  legacyIssueSource,
+  legacyProjectSource,
+} from "@/lib/canonical-issue-contract"
+import { commandInputHash } from "@/application/commands/command-input"
+import { withoutUndefined } from "@/lib/canonical-json"
+import {
+  accountPreferences,
+  db,
+  issueCycles,
+  issueDefinitionScopes,
+  issueLabels,
+  issues,
+  members,
+  organizations,
+  projectTeams,
+  projects,
+  resourceLabels,
+  teamIssueNumbers,
+  teamMembers,
+  teams,
+} from "@/db"
+import {
+  ApplicationAccessError,
+  hasWorkspaceRole,
+} from "@/application/authorization"
+import { currentCommandActor } from "@/application/commands/command-actor.server"
+import { executeCommand } from "@/application/commands/execute-command.server"
+import {
+  readableIssueCondition,
+  readableProjectCondition,
+  readableTeamCondition,
+  requireResourceScope,
+} from "@/application/resource-policy.server"
+import { blankIssueDraft, issueSchema } from "@/lib/issue-record-contract"
+import { defaultDefinitionValue } from "@/lib/issue-definition-contract"
+
+async function importedProjectSnapshot(
+  tx: Transaction,
+  actor: Actor,
+  project: InitiativeProject
+) {
+  for (const userId of [
+    ...new Set(
+      [project.leadId, ...(project.memberIds ?? [])].filter(
+        (id): id is string => Boolean(id)
+      )
+    ),
+  ]) {
+    if (
+      !(
+        await tx
+          .select({ id: members.id })
+          .from(members)
+          .where(
+            and(
+              eq(members.organizationId, actor.workspaceId),
+              eq(members.userId, userId)
+            )
+          )
+          .for("share")
+      )[0]
+    )
+      throw new Error(
+        "The project references a member who is no longer in this workspace."
+      )
+  }
+  const now = new Date().toISOString()
+  return {
+    ...project,
+    creatorId: actor.userId,
+    createdAt: now,
+    updatedAt: now,
+    comments: [],
+    updates: [],
+    milestoneEvents: [],
+    legacyFingerprint: commandInputHash(legacyProjectSource(project)),
+  }
+}
+
+export async function requireIssueTeam(
+  tx: Transaction,
+  actor: Actor,
+  teamId: string
+) {
+  requireResourceScope(actor, "issues:read")
+  requireResourceScope(actor, "issues:write")
+  const team = (
+    await tx
+      .select()
+      .from(teams)
+      .where(and(eq(teams.id, teamId), readableTeamCondition(actor, teams.id)))
+      .for("share")
+  )[0]
+  if (!team) throw new ApplicationAccessError()
+  if (
+    team.visibility === "private" &&
+    !hasWorkspaceRole(actor, ["owner", "admin"])
+  ) {
+    const membership = (
+      await tx
+        .select({ id: teamMembers.id })
+        .from(teamMembers)
+        .where(
+          and(
+            eq(teamMembers.workspaceId, actor.workspaceId),
+            eq(teamMembers.teamId, teamId),
+            eq(teamMembers.userId, actor.userId)
+          )
+        )
+        .for("share")
+    )[0]
+    if (!membership) throw new ApplicationAccessError()
+  }
+  return team
+}
+export async function readIssueRows(
+  tx: Transaction,
+  actor: Actor,
+  ids?: Array<string>
+) {
+  requireResourceScope(actor, "issues:read")
+  const rows = await tx
+    .select()
+    .from(issues)
+    .where(
+      and(
+        eq(issues.workspaceId, actor.workspaceId),
+        readableIssueCondition(actor, issues.id),
+        isNull(issues.archivedAt),
+        ids ? inArray(issues.id, ids) : undefined
+      )
+    )
+    .orderBy(asc(issues.number))
+
+  const labels = rows.length
+    ? await tx
+        .select({ issueId: issueLabels.issueId, name: resourceLabels.name })
+        .from(issueLabels)
+        .innerJoin(resourceLabels, eq(issueLabels.labelId, resourceLabels.id))
+        .where(
+          inArray(
+            issueLabels.issueId,
+            rows.map((r) => r.id)
+          )
+        )
+    : []
+  const cycles = await tx
+    .select()
+    .from(issueCycles)
+    .where(
+      and(
+        eq(issueCycles.workspaceId, actor.workspaceId),
+        readableTeamCondition(actor, issueCycles.teamId)
+      )
+    )
+  return rows.map((row) => ({
+    teamId: row.teamId,
+    legacyId: row.legacyId,
+    issue: issueSchema.parse({
+      ...blankIssueDraft(row.statusId),
+      ...row.properties,
+      id: row.id,
+      revision: row.revision,
+      number: row.number,
+      title: row.title,
+      status: row.statusId,
+      assignee: row.assigneeId ?? "",
+      project: row.projectId ?? "",
+      parentId: row.parentId ?? "",
+      cycle: cycles.find((c) => c.id === row.cycleId)?.startDate ?? "",
+      labels: labels
+        .filter((l) => l.issueId === row.id)
+        .map((l) => l.name)
+        .join(","),
+      creator: row.creatorId ?? "",
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+      statusChangedAt: row.properties.status
+        ? ((row.properties as unknown as TeamIssue).statusChangedAt ??
+          row.createdAt.toISOString())
+        : row.createdAt.toISOString(),
+      suggestedLabel: "",
+      completedAt: (row.properties as unknown as TeamIssue).completedAt ?? null,
+    }),
+  }))
+}
+export async function readCanonicalIssues(actor: Actor) {
+  return db.transaction(
+    async (tx) => {
+      const current = await currentCommandActor(tx, actor)
+      requireResourceScope(current, "issues:read")
+      const visibleProjects = await tx
+        .select()
+        .from(projects)
+        .where(
+          and(
+            eq(projects.workspaceId, current.workspaceId),
+            readableProjectCondition(current, projects.id)
+          )
+        )
+      const visibleLinks = await tx
+        .select({
+          projectId: projectTeams.projectId,
+          teamId: projectTeams.teamId,
+        })
+        .from(projectTeams)
+        .where(
+          and(
+            eq(projectTeams.workspaceId, current.workspaceId),
+            readableTeamCondition(current, projectTeams.teamId)
+          )
+        )
+      const visibleProjectIds = new Set(
+        visibleProjects.flatMap((p) => [
+          p.id,
+          ...(p.legacyId ? [p.legacyId] : []),
+        ])
+      )
+      return {
+        workspaceId: current.workspaceId,
+        userId: current.userId,
+        sessionId:
+          current.authentication.kind === "session"
+            ? current.authentication.sessionId
+            : "",
+        records: await readIssueRows(tx, current),
+        projects: visibleProjects.map((project) => ({
+          ...project,
+          properties: {
+            ...project.properties,
+            teamIds: visibleLinks
+              .filter((link) => link.projectId === project.id)
+              .map((link) => link.teamId),
+            dependencyIds: Array.isArray(project.properties.dependencyIds)
+              ? project.properties.dependencyIds.filter(
+                  (id: unknown) =>
+                    typeof id === "string" && visibleProjectIds.has(id)
+                )
+              : [],
+          },
+        })),
+        cycles: await tx
+          .select()
+          .from(issueCycles)
+          .where(
+            and(
+              eq(issueCycles.workspaceId, current.workspaceId),
+              readableTeamCondition(current, issueCycles.teamId)
+            )
+          ),
+      }
+    },
+    { isolationLevel: "repeatable read" }
+  )
+}
+export async function resolveIssueFields(
+  tx: Transaction,
+  current: Actor,
+  input: CreateCanonicalIssue,
+  previous?: TeamIssue
+) {
+  const team = await requireIssueTeam(tx, current, input.teamId)
+  const scope = (
+    await tx
+      .select()
+      .from(issueDefinitionScopes)
+      .where(
+        and(
+          eq(issueDefinitionScopes.workspaceId, current.workspaceId),
+          eq(issueDefinitionScopes.teamId, input.teamId)
+        )
+      )
+      .for("share")
+  )[0]
+  const definitions = scope?.value ?? defaultDefinitionValue()
+  const status = definitions.statuses.statuses.find(
+    (s) => s.id === input.draft.status
+  )
+  if (!status) throw new Error("Choose a status from this team's workflow.")
+  let assignee = input.assigneeId
+  if (assignee === undefined && input.draft.assignee !== undefined)
+    assignee = input.draft.assignee || null
+  let personalAssignee: string | null = null
+  if (
+    current.authentication.kind === "session" &&
+    process.env.FORGE_PERSONAL_PREFERENCE_SYNC_ENABLED === "true"
+  ) {
+    const preference = (
+      await tx
+        .select()
+        .from(accountPreferences)
+        .where(eq(accountPreferences.userId, current.userId))
+        .for("share")
+    )[0]
+    if (
+      preference?.version === 1 &&
+      preference.values["general.autoAssignToSelf"] === true
+    )
+      personalAssignee = current.userId
+  }
+  if (assignee === undefined) assignee = personalAssignee
+  assignee ??= null
+  if (assignee) {
+    const member = (
+      await tx
+        .select({ id: members.id, role: members.role })
+        .from(members)
+        .where(
+          and(
+            eq(members.organizationId, current.workspaceId),
+            eq(members.userId, assignee)
+          )
+        )
+        .for("share")
+    )[0]
+    const privateMember =
+      team.visibility !== "private" ||
+      (member &&
+        hasWorkspaceRole({ ...current, workspaceRole: member.role }, [
+          "owner",
+          "admin",
+        ])) ||
+      (
+        await tx
+          .select({ id: teamMembers.id })
+          .from(teamMembers)
+          .where(
+            and(
+              eq(teamMembers.teamId, input.teamId),
+              eq(teamMembers.userId, assignee)
+            )
+          )
+          .for("share")
+      )[0]
+    if (!member || !privateMember)
+      throw new Error(
+        "Choose an assignee who is a current member of this team."
+      )
+  }
+  let projectId: string | null = null
+  if (input.draft.project) {
+    let project = (
+      await tx
+        .select()
+        .from(projects)
+        .where(
+          and(
+            eq(projects.workspaceId, current.workspaceId),
+            or(
+              sql`${projects.id}::text=${input.draft.project}`,
+              eq(projects.legacyId, input.draft.project),
+              input.projectImport
+                ? eq(projects.legacyId, input.projectImport.id)
+                : undefined,
+              input.projectImport
+                ? sql`${projects.id}::text=${input.projectImport.id}`
+                : undefined
+            ),
+            readableProjectCondition(current, projects.id)
+          )
+        )
+        .for("share")
+    )[0]
+    if (!project && input.projectImport) {
+      requireResourceScope(current, "projects:write")
+      const imported = input.projectImport
+      if (
+        imported.id !== input.draft.project &&
+        imported.name !== input.draft.project
+      )
+        throw new Error("The project import does not match this issue.")
+      const teamIds = [...new Set([...imported.teamIds, input.teamId])].sort()
+      for (const id of teamIds) await requireIssueTeam(tx, current, id)
+      project = (
+        await tx
+          .insert(projects)
+          .values({
+            id: z.uuid().safeParse(imported.id).success
+              ? imported.id
+              : undefined,
+            workspaceId: current.workspaceId,
+            name: imported.name,
+            legacyId: imported.id,
+            properties: {
+              ...(await importedProjectSnapshot(tx, current, imported)),
+              teamIds,
+            },
+          })
+          .returning()
+      )[0]
+      await tx.insert(projectTeams).values(
+        teamIds.map((teamId) => ({
+          workspaceId: current.workspaceId,
+          projectId: project.id,
+          teamId,
+        }))
+      )
+    }
+    if (!project)
+      throw new Error("The linked project could not be found or imported.")
+    const links = await tx
+      .select()
+      .from(projectTeams)
+      .where(eq(projectTeams.projectId, project.id))
+      .for("share")
+    if (links.length && !links.some((l) => l.teamId === input.teamId))
+      throw new Error("Choose a project available to this team.")
+    projectId = project.id
+  }
+  let cycleId: string | null = null
+  if (input.draft.cycle) {
+    let cycle = (
+      await tx
+        .select()
+        .from(issueCycles)
+        .where(
+          and(
+            eq(issueCycles.teamId, input.teamId),
+            eq(issueCycles.startDate, input.draft.cycle)
+          )
+        )
+    )[0]
+    if (!cycle && input.cycleImport) {
+      if (
+        input.cycleImport.startDate !== input.draft.cycle ||
+        input.cycleImport.endDate < input.cycleImport.startDate
+      )
+        throw new Error("Choose a valid cycle date range.")
+      cycle = (
+        await tx
+          .insert(issueCycles)
+          .values({
+            workspaceId: current.workspaceId,
+            teamId: input.teamId,
+            ...input.cycleImport,
+          })
+          .returning()
+      )[0]
+    }
+    if (!cycle)
+      throw new Error("The linked cycle could not be found or imported.")
+    cycleId = cycle.id
+  }
+  let parentId: string | null = null
+  if (input.draft.parentId) {
+    const parent = (
+      await tx
+        .select()
+        .from(issues)
+        .where(
+          and(
+            eq(issues.workspaceId, current.workspaceId),
+            eq(issues.teamId, input.teamId),
+            or(
+              sql`${issues.id}::text=${input.draft.parentId}`,
+              eq(issues.legacyId, input.draft.parentId)
+            ),
+            readableIssueCondition(current, issues.id),
+            isNull(issues.archivedAt)
+          )
+        )
+        .for("share")
+    )[0]
+    if (!parent)
+      throw new Error(
+        "The parent issue is unavailable. Import its parent first."
+      )
+    parentId = parent.id
+  }
+  const names = [
+    ...new Set(
+      (input.draft.labels ?? "")
+        .split(",")
+        .map((n) => n.trim())
+        .filter(Boolean)
+    ),
+  ]
+  const candidates = names.length
+    ? await tx
+        .select()
+        .from(resourceLabels)
+        .where(
+          and(
+            eq(resourceLabels.workspaceId, current.workspaceId),
+            or(
+              isNull(resourceLabels.teamId),
+              eq(resourceLabels.teamId, input.teamId)
+            ),
+            inArray(resourceLabels.name, names)
+          )
+        )
+        .for("share")
+    : []
+  const previousNames = (previous?.labels ?? "").split(",").map((n) => n.trim())
+  const labels = candidates.filter(
+    (l) => !l.definition?.archived || previousNames.includes(l.name)
+  )
+  if (names.some((name) => labels.filter((l) => l.name === name).length !== 1))
+    throw new Error("Choose active, unambiguous labels available to this team.")
+
+  return {
+    status,
+    assignee,
+    personalAssignee,
+    projectId,
+    cycleId,
+    parentId,
+    labels,
+  }
+}
+
+export async function createCanonicalIssue(
+  actor: Actor,
+  raw: CreateCanonicalIssue
+) {
+  const input = createCanonicalIssueSchema.parse(raw)
+  const { commandKey, ...rest } = input
+  const commandInput = withoutUndefined(rest)
+  const legacyFingerprint = input.legacyId
+    ? commandInputHash(legacyIssueSource(input.draft, input.assigneeId))
+    : undefined
+  const result = await executeCommand({
+    actor,
+    commandKey,
+    operation: "issues.create@1",
+    input: commandInput,
+    status: 201,
+    parse: (value) =>
+      z
+        .object({ issueId: z.uuid(), childIds: z.array(z.uuid()) })
+        .strict()
+        .parse(value),
+    authorize: async (tx, current, value) => {
+      await requireIssueTeam(tx, current, input.teamId)
+      if (value) {
+        const found = await tx
+          .select({ id: issues.id })
+          .from(issues)
+          .where(
+            and(
+              inArray(issues.id, [value.issueId, ...value.childIds]),
+              readableIssueCondition(current, issues.id)
+            )
+          )
+        if (found.length !== 1 + value.childIds.length)
+          throw new ApplicationAccessError()
+      }
+    },
+    run: async (tx, current) => {
+      // Shared billing/definition fence first; serializes cross-team capacity, numbering,
+      // imports, and definition replacement without team-to-workspace lock inversion.
+      await tx
+        .select({ id: organizations.id })
+        .from(organizations)
+        .where(eq(organizations.id, current.workspaceId))
+        .for("no key update")
+      await tx.execute(
+        sql`SELECT pg_advisory_xact_lock(hashtextextended(${current.workspaceId},4040))`
+      )
+      if (input.legacyId) {
+        const existing = (
+          await tx
+            .select()
+            .from(issues)
+            .where(
+              and(
+                eq(issues.workspaceId, current.workspaceId),
+                eq(issues.teamId, input.teamId),
+                eq(issues.legacyId, input.legacyId)
+              )
+            )
+        )[0]
+        if (
+          existing &&
+          (existing.properties as unknown as { legacyFingerprint?: string })
+            .legacyFingerprint !== legacyFingerprint
+        )
+          throw new Error(
+            "A different version of this imported issue is already shared. Your source snapshot is preserved on the server."
+          )
+        if (existing)
+          return {
+            value: { issueId: existing.id, childIds: [] },
+            resource: { type: "issue", id: existing.id },
+            events: [],
+          }
+      }
+      const {
+        status,
+        assignee,
+        personalAssignee,
+        projectId,
+        cycleId,
+        parentId,
+        labels,
+      } = await resolveIssueFields(tx, current, input)
+      await tx
+        .insert(teamIssueNumbers)
+        .values({ teamId: input.teamId })
+        .onConflictDoNothing()
+      const number =
+        (
+          await tx
+            .update(teamIssueNumbers)
+            .set({
+              lastNumber: sql`${teamIssueNumbers.lastNumber}+${1 + input.draft.subIssues.length}`,
+            })
+            .where(eq(teamIssueNumbers.teamId, input.teamId))
+            .returning()
+        )[0].lastNumber - input.draft.subIssues.length
+      const now = new Date(),
+        id = crypto.randomUUID()
+      // Local history is imported as a snapshot, never forged as attributable activity.
+      const properties = {
+        ...input.draft,
+        legacyFingerprint,
+        assignee: assignee ?? "",
+        subIssues: [],
+        activity: assignee
+          ? [
+              {
+                id: crypto.randomUUID(),
+                author: current.userId,
+                text: `assigned to ${assignee}`,
+                createdAt: now.toISOString(),
+                field: "assignee" as const,
+                to: assignee,
+              },
+            ]
+          : [],
+        comments: [],
+        reactions: [],
+        favorite: false,
+        subscribers: current.userId,
+        completedAt: status.group === "completed" ? now.toISOString() : null,
+        statusChangedAt: now.toISOString(),
+      }
+      const row = (
+        await tx
+          .insert(issues)
+          .values({
+            id,
+            workspaceId: current.workspaceId,
+            teamId: input.teamId,
+            number,
+            title: input.draft.title,
+            statusId: status.id,
+            projectId,
+            parentId,
+            cycleId,
+            assigneeId: assignee,
+            creatorId: current.userId,
+            properties,
+            legacyId: input.legacyId,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .returning()
+      )[0]
+      if (labels.length)
+        await tx.insert(issueLabels).values(
+          labels.map((l) => ({
+            workspaceId: current.workspaceId,
+            issueId: id,
+            labelId: l.id,
+          }))
+        )
+      const children = input.draft.subIssues.map((title, index) => ({
+        id: crypto.randomUUID(),
+        workspaceId: current.workspaceId,
+        teamId: input.teamId,
+        number: number + index + 1,
+        title,
+        statusId: status.id,
+        parentId: id,
+        creatorId: current.userId,
+        assigneeId: personalAssignee,
+        properties: {
+          ...blankIssueDraft(status.id),
+          assignee: personalAssignee ?? "",
+          completedAt: status.group === "completed" ? now.toISOString() : null,
+          statusChangedAt: now.toISOString(),
+        },
+        createdAt: now,
+        updatedAt: now,
+      }))
+      if (children.length) await tx.insert(issues).values(children)
+      return {
+        value: { issueId: row.id, childIds: children.map((c) => c.id) },
+        resource: { type: "issue", id: row.id },
+        events: [
+          {
+            topic: "issue.created",
+            payload: { issueId: id, teamId: input.teamId },
+          },
+          ...children.map((c) => ({
+            topic: "issue.created",
+            payload: { issueId: c.id, teamId: input.teamId },
+          })),
+        ],
+      }
+    },
+  })
+  // Read current state under live authorization; receipts contain identities only.
+  const state = await readCanonicalIssues(actor)
+  const issue = state.records.find(
+    (r) => r.issue.id === result.value.issueId
+  )?.issue
+  if (!issue) throw new Error("This issue is no longer available.")
+  return { ...result, issue, records: state.records }
+}
+
+export async function importCanonicalProject(
+  actor: Actor,
+  raw: {
+    commandKey: string
+    project: InitiativeProject
+  }
+) {
+  const { initiativeProjectSchema } = await import("@/lib/initiatives")
+  const project = initiativeProjectSchema.parse(raw.project)
+  return executeCommand({
+    actor,
+    commandKey: raw.commandKey,
+    operation: "projects.import@1",
+    input: JSON.parse(JSON.stringify(project)),
+    status: 201,
+    parse: (value) => z.object({ projectId: z.uuid() }).strict().parse(value),
+    authorize: async (tx, current, value) => {
+      requireResourceScope(current, "projects:read")
+      requireResourceScope(current, "projects:write")
+      for (const id of project.teamIds) await requireIssueTeam(tx, current, id)
+      if (
+        value &&
+        !(
+          await tx
+            .select({ id: projects.id })
+            .from(projects)
+            .where(
+              and(
+                eq(projects.id, value.projectId),
+                readableProjectCondition(current, projects.id)
+              )
+            )
+        )[0]
+      )
+        throw new ApplicationAccessError()
+    },
+    run: async (tx, current) => {
+      await tx
+        .select({ id: organizations.id })
+        .from(organizations)
+        .where(eq(organizations.id, current.workspaceId))
+        .for("no key update")
+      const existing = (
+        await tx
+          .select()
+          .from(projects)
+          .where(
+            and(
+              eq(projects.workspaceId, current.workspaceId),
+              or(
+                eq(projects.legacyId, project.id),
+                sql`${projects.id}::text=${project.id}`
+              )
+            )
+          )
+      )[0]
+      if (
+        existing &&
+        existing.properties.legacyFingerprint !==
+          commandInputHash(legacyProjectSource(project))
+      )
+        throw new Error(
+          "A different version of this imported project is already shared. Its source snapshot is preserved on the server."
+        )
+      if (existing)
+        return {
+          value: { projectId: existing.id },
+          resource: { type: "project", id: existing.id },
+          events: [],
+        }
+      const properties = await importedProjectSnapshot(tx, current, project)
+      const row = (
+        await tx
+          .insert(projects)
+          .values({
+            id: z.uuid().safeParse(project.id).success ? project.id : undefined,
+            workspaceId: current.workspaceId,
+            legacyId: project.id,
+            name: project.name,
+            properties,
+          })
+          .returning()
+      )[0]
+      if (project.teamIds.length)
+        await tx.insert(projectTeams).values(
+          [...new Set(project.teamIds)].map((teamId) => ({
+            workspaceId: current.workspaceId,
+            teamId,
+            projectId: row.id,
+          }))
+        )
+      return {
+        value: { projectId: row.id },
+        resource: { type: "project", id: row.id },
+        events: [],
+      }
+    },
+  })
+}

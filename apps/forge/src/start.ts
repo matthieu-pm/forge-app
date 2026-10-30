@@ -13,7 +13,18 @@ const telemetry = createMiddleware().server(async ({ request, next }) => {
         : pathname.startsWith("/api/agent")
           ? "agent_http"
           : "http"
-  return observeRequest(request, operation, async () => (await next()).response)
+  return observeRequest(request, operation, async () => {
+    const response = (await next()).response
+    // Dynamic responses can contain authenticated product data. Keep them out
+    // of browser and intermediary disk caches as well as native app storage.
+    const headers = new Headers(response.headers)
+    headers.set("Cache-Control", "private, no-store")
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    })
+  })
 })
 
 const functionErrors = createMiddleware({ type: "function" }).server(

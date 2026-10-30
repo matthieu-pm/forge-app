@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { productStorage } from "@/lib/product-storage"
 
 export const slaAutomationRuleSchema = z.object({
   id: z.string(),
@@ -50,9 +51,7 @@ export function slaSettingsStorageKey(workspaceId: string) {
 
 export function readSlaSettings(workspaceId: string): SlaSettings {
   try {
-    const stored = window.localStorage.getItem(
-      slaSettingsStorageKey(workspaceId)
-    )
+    const stored = productStorage.getItem(slaSettingsStorageKey(workspaceId))
     const parsed = slaSettingsSchema
       .partial()
       .safeParse(stored ? JSON.parse(stored) : {})
@@ -66,7 +65,7 @@ export function readSlaSettings(workspaceId: string): SlaSettings {
 }
 
 export function writeSlaSettings(workspaceId: string, settings: SlaSettings) {
-  window.localStorage.setItem(
+  productStorage.setItem(
     slaSettingsStorageKey(workspaceId),
     JSON.stringify(slaSettingsSchema.parse(settings))
   )

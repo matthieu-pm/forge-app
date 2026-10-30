@@ -9,6 +9,7 @@ import type {
   NotificationChannel,
   NotificationPreferences,
 } from "./notification-preferences-contract"
+import { productStorage } from "@/lib/product-storage"
 
 export * from "./notification-preferences-contract"
 export function channelSummary(
@@ -31,7 +32,7 @@ export function useNotificationPreferences(userId: string) {
   React.useEffect(() => {
     function load() {
       try {
-        const raw = localStorage.getItem(storageKey)
+        const raw = productStorage.getItem(storageKey)
         setSettings(
           raw
             ? notificationPreferencesSchema.parse(JSON.parse(raw))
@@ -64,12 +65,12 @@ export function useNotificationPreferences(userId: string) {
   ) {
     if (!ready || error) return false
     try {
-      const raw = localStorage.getItem(storageKey)
+      const raw = productStorage.getItem(storageKey)
       const current = raw
         ? notificationPreferencesSchema.parse(JSON.parse(raw))
         : initialNotificationPreferences()
       const next = notificationPreferencesSchema.parse(change(current))
-      localStorage.setItem(storageKey, JSON.stringify(next))
+      productStorage.setItem(storageKey, JSON.stringify(next))
       setSettings(next)
       window.dispatchEvent(new CustomEvent(changeEvent, { detail: storageKey }))
       return true

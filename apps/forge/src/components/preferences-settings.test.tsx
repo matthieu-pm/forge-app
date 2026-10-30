@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { PreferencesSettings } from "./preferences-settings"
+import { productStorage } from "@/lib/product-storage"
 import {
   renderPreferences,
   setupPreferenceFixture,
@@ -10,7 +11,7 @@ import {
 describe("PreferencesSettings themes", () => {
   beforeEach(async () => {
     await setupPreferenceFixture()
-    window.localStorage.clear()
+    productStorage.clear()
     Object.defineProperty(window, "matchMedia", {
       configurable: true,
       value: vi.fn(() => ({

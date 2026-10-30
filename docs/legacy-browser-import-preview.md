@@ -1,5 +1,7 @@
 # Browser migration preview and backup · FOR-53
 
+> **30 October 2026 update — FOR-41/FOR-42:** The product owner expanded scope to server-only persistence for all Forge product data, automatic issue/project/cycle migration, and canonical issue editing. [Current behavior and release guidance](operations/canonical-issues-and-server-storage.md) supersede the device-backup and manual-cutover statements below for the implemented adapters. Backups now use private server records; existing actor-owned device copies are verified on the server before exact-source cleanup. The remaining sections document the earlier FOR-22/FOR-53 contract and separately owned import adapters.
+
 Implemented against `c7ca71d` and the accepted [FOR-22 policy](legacy-browser-import-policy.md). Entry point: **Settings → Import & export → Browser data**. The flow is available on the browser origin and in a desktop renderer using that origin; each profile has its own sources and backups.
 
 ## Behavior
@@ -30,10 +32,10 @@ The downloadable `forge-legacy-review` artifact records policy/schema versions, 
 
 Environment: isolated local macOS worktree, Vitest/jsdom and headless Chromium. No production data, remote database, migration or deployment was used. **111 tests passed across nine files**; TypeScript, ESLint on every changed JavaScript/TypeScript file, production build/prerender, protected Workflow handler verification and `git diff --check` passed. The implementation commit is recorded in the Linear issue and PR.
 
-* **AC-01 / AT-01:** actual issue/label fixtures plus a malformed document report counts, invalid data, references, scopes and destination choices while exact source strings remain unchanged. Tests also cover future schemas, absent stores, mixed stores, unknown/device keys, other-account exclusion, unreadable storage and concurrently changed snapshots.
-* **AC-02 / AT-02:** no initial selections or implicit destinations; missing/invalid paths, destination choices, entitlement confirmations, backup coverage or conflict decisions cannot confirm. Changed identity/session/workspace, membership, visibility, definition revision/permission and source require review. Failed/corrupt backup persistence blocks confirmation. The context endpoint tests exercise authentication failure and inconsistent identity reads.
-* Chromium uses the real component, schemas, SHA-256, IndexedDB and browser download APIs. Its authenticated context and unrelated server functions are stubbed, so it does **not** establish deployed authentication/database acceptance. It verifies exact malformed/Unicode backup download, no other-account leakage, source immutability, confirmation, persistence after reload, account-indexed listing with full payload scans forbidden, cross-tab invalidation, a 390px layout, no browser page errors and no non-GET requests.
-* Production compilation/prerender and Workflow handler verification run with an explicit localhost-only placeholder database URL and build-only auth secret. No database connection is needed for the public prerender.
+- **AC-01 / AT-01:** actual issue/label fixtures plus a malformed document report counts, invalid data, references, scopes and destination choices while exact source strings remain unchanged. Tests also cover future schemas, absent stores, mixed stores, unknown/device keys, other-account exclusion, unreadable storage and concurrently changed snapshots.
+- **AC-02 / AT-02:** no initial selections or implicit destinations; missing/invalid paths, destination choices, entitlement confirmations, backup coverage or conflict decisions cannot confirm. Changed identity/session/workspace, membership, visibility, definition revision/permission and source require review. Failed/corrupt backup persistence blocks confirmation. The context endpoint tests exercise authentication failure and inconsistent identity reads.
+- Chromium uses the real component, schemas, SHA-256, IndexedDB and browser download APIs. Its authenticated context and unrelated server functions are stubbed, so it does **not** establish deployed authentication/database acceptance. It verifies exact malformed/Unicode backup download, no other-account leakage, source immutability, confirmation, persistence after reload, account-indexed listing with full payload scans forbidden, cross-tab invalidation, a 390px layout, no browser page errors and no non-GET requests.
+- Production compilation/prerender and Workflow handler verification run with an explicit localhost-only placeholder database URL and build-only auth secret. No database connection is needed for the public prerender.
 
 Reproduce from `apps/forge`:
 
@@ -45,22 +47,21 @@ node scripts/verify-legacy-import-browser.mjs
 
 The browser script writes fixture-only downloads and screenshots to `/tmp/for53-browser` (override with `FORGE_IMPORT_BROWSER_EVIDENCE`). Native packaged macOS/Electron interaction, Safari/Firefox and a deployed authenticated endpoint are not verified by this evidence. No packaged-client or production rollout acceptance is claimed.
 
-
 ## PR #20 review and release checks · 30 October 2026
 
 Review baseline: `c7ca71d378e02ee30236919320240c5e1e987909` → original implementation `d4846254c457c6172879aa0709eb6a2e24f1fa56`. Independent standards and specification reviews found four concrete P2 defects, all fixed before merge.
 
 ### Standards
 
-* Pending backup exports and saved-backup list completions could outlive their review session. Operation epochs now cancel them on unmount, source invalidation and the existing account/workspace session-change signal. Context-read failures clear private review state. Downloads revalidate live context after asynchronous backup verification, immediately before exporting.
-* Excluded device/other-account storage events could disable an otherwise unchanged review. Both event invalidation and concurrent discovery checks now consider only eligible sources belonging to the reviewed account or ambiguous shared scope.
+- Pending backup exports and saved-backup list completions could outlive their review session. Operation epochs now cancel them on unmount, source invalidation and the existing account/workspace session-change signal. Context-read failures clear private review state. Downloads revalidate live context after asynchronous backup verification, immediately before exporting.
+- Excluded device/other-account storage events could disable an otherwise unchanged review. Both event invalidation and concurrent discovery checks now consider only eligible sources belonging to the reviewed account or ambiguous shared scope.
 
 Standards result: two concrete correctness findings fixed; no hard documented coding-standard violations or remaining actionable findings in follow-up review.
 
 ### Spec
 
-* An unknown key using an inherited object-property name (`constructor`, `__proto__`, etc.) could crash the allowlist lookup and block valid sources. Own-property lookup now excludes these keys without reading their values.
-* Local duplicate candidates included unselected records and records mapped to different destinations. They now compare only explicitly selected paths with the same reviewed destination; destination-server definition collisions remain independently checked.
+- An unknown key using an inherited object-property name (`constructor`, `__proto__`, etc.) could crash the allowlist lookup and block valid sources. Own-property lookup now excludes these keys without reading their values.
+- Local duplicate candidates included unselected records and records mapped to different destinations. They now compare only explicitly selected paths with the same reviewed destination; destination-server definition collisions remain independently checked.
 
 Spec result: two concrete correctness findings fixed; no remaining missing acceptance behavior or material scope creep in follow-up review. Upload execution remains FOR-56.
 

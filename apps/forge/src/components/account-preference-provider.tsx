@@ -1,9 +1,11 @@
 import * as React from "react"
+import { ProductStateProvider } from "./product-state-provider"
 import type {
   WorkspaceViewKind,
   WorkspaceViewValues,
 } from "@/lib/workspace-preference-contract"
 import type { AccountPreferenceGroups } from "@/lib/account-preference-contract"
+import { productStorage } from "@/lib/product-storage"
 import {
   decodeWorkspaceView,
   workspaceViewPrefix,
@@ -89,13 +91,15 @@ export function AccountPreferenceProvider({
       </Context.Provider>
     )
   return (
-    <PreferenceSessionScope
-      key={JSON.stringify(identity)}
-      identity={identity}
-      active={active}
-    >
-      {children}
-    </PreferenceSessionScope>
+    <ProductStateProvider key={JSON.stringify(identity)} identity={identity}>
+      <PreferenceSessionScope
+        key={JSON.stringify(identity)}
+        identity={identity}
+        active={active}
+      >
+        {children}
+      </PreferenceSessionScope>
+    </ProductStateProvider>
   )
 }
 
@@ -120,9 +124,8 @@ function PreferenceSessionScope({
           typeof window === "undefined"
             ? undefined
             : {
-                getItem: (key) => window.localStorage.getItem(key),
-                setItem: (key, value) =>
-                  window.localStorage.setItem(key, value),
+                getItem: (key) => productStorage.getItem(key),
+                setItem: (key, value) => productStorage.setItem(key, value),
               }
         )
     )

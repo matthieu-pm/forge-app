@@ -1,5 +1,6 @@
 import * as React from "react"
 import { z } from "zod"
+import { productStorage } from "@/lib/product-storage"
 
 export const agentSkillSchema = z.object({
   id: z.string().min(1),
@@ -20,14 +21,14 @@ const changeEvent = "forge:team-agent-skills-changed"
 export const parseAgentSkills = (raw: string) =>
   storeSchema.parse(JSON.parse(raw))
 export function readAgentSkills() {
-  const raw = localStorage.getItem(agentSkillsStorageKey)
+  const raw = productStorage.getItem(agentSkillsStorageKey)
   return raw ? parseAgentSkills(raw) : []
 }
 export function writeAgentSkills(
   change: (current: Array<TeamAgentSkill>) => Array<TeamAgentSkill>
 ) {
   const next = storeSchema.parse(change(readAgentSkills()))
-  localStorage.setItem(agentSkillsStorageKey, JSON.stringify(next))
+  productStorage.setItem(agentSkillsStorageKey, JSON.stringify(next))
   window.dispatchEvent(new Event(changeEvent))
 }
 export function replaceAgentSkill(

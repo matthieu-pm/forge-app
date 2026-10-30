@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { IssueRows } from "./issue-list"
 import type { ComponentProps } from "react"
 import type { TeamIssue } from "@/lib/team-issues"
+import { productStorage } from "@/lib/product-storage"
 import { blankIssueDraft, defaultIssueDisplay } from "@/lib/team-issues"
 import { initialTeamStatuses } from "@/lib/team-statuses"
 import {
@@ -90,7 +91,7 @@ function start(overrides: Partial<ComponentProps<typeof IssueRows>> = {}) {
   return props
 }
 beforeEach(() => {
-  localStorage.clear()
+  productStorage.clear()
   vi.stubGlobal(
     "ResizeObserver",
     class {
@@ -207,7 +208,7 @@ describe("issue rows", () => {
   })
   it("shows an assigned cycle after the project and opens its cycle without opening the issue", () => {
     const settings = { ...initialTeamCycles(), enabled: true }
-    localStorage.setItem(
+    productStorage.setItem(
       teamCyclesStorageKey("testing-id"),
       JSON.stringify(settings)
     )
@@ -235,7 +236,7 @@ describe("issue rows", () => {
     fireEvent.click(badge)
     expect(props.onOpen).not.toHaveBeenCalled()
     act(() => {
-      localStorage.setItem(
+      productStorage.setItem(
         teamCyclesStorageKey("testing-id"),
         JSON.stringify({ ...settings, enabled: false })
       )
@@ -247,7 +248,7 @@ describe("issue rows", () => {
   })
   it("uses each issue's team in mixed-team views and keeps older cycle dates identifiable", () => {
     const settings = { ...initialTeamCycles(), enabled: true }
-    localStorage.setItem(
+    productStorage.setItem(
       teamCyclesStorageKey("other-team"),
       JSON.stringify(settings)
     )

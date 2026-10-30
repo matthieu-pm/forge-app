@@ -23,6 +23,7 @@ import { AgentComposer } from "./agent/agent-composer"
 import type { FunctionComponent, ReactNode } from "react"
 import type { TeamDirectoryEntry } from "@/lib/team-contract"
 import type { AgentEvent } from "@/application/agents/event-contract"
+import { productStorage } from "@/lib/product-storage"
 import { WorkspaceTeams } from "@/routes/workspace/teams"
 import { Route as RootRoute } from "@/routes/__root"
 
@@ -130,7 +131,7 @@ const team: TeamDirectoryEntry = {
 }
 
 beforeEach(() => {
-  window.localStorage.clear()
+  productStorage.clear()
   vi.stubGlobal(
     "ResizeObserver",
     class {

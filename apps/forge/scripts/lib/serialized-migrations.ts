@@ -20,6 +20,7 @@ export type MigrationTarget = {
     | "recovery-source"
     | "personal-preference-acceptance"
     | "issue-definition-acceptance"
+    | "issue-creation-acceptance"
     | "production-storage-rehearsal"
     | "production"
   branchId: string

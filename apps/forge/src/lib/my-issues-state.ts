@@ -9,6 +9,7 @@ import {
 import {
   ISSUES_CHANGED,
   initialIssueStore,
+  issueStoreSnapshot,
   parseIssueStore,
   teamIssuesKey,
 } from "./team-issues"
@@ -24,6 +25,7 @@ import {
 } from "./team-labels"
 import type { MyIssuePreferences } from "./my-issues"
 import type { TeamSummary } from "./team-contract"
+import { productStorage } from "@/lib/product-storage"
 import { useWorkspaceView } from "@/components/account-preference-provider"
 
 const PREFERENCES_CHANGED = "forge:my-issues-preferences-changed"
@@ -65,7 +67,9 @@ export function useMyIssueData(teams: Array<TeamSummary>) {
                       ? cachedDefinitions(team.id).value.statuses
                       : sharedIssueLabels(team.id)
                   )
-                : localStorage.getItem(key)
+                : index === 0
+                  ? issueStoreSnapshot(team.id)
+                  : productStorage.getItem(key)
             )
           )
         )

@@ -7,10 +7,11 @@ import {
   loadPersonalPreferences,
   savePersonalPreferences,
 } from "./personal-preferences"
+import { productStorage } from "@/lib/product-storage"
 
 describe("personal preferences", () => {
   beforeEach(() => {
-    window.localStorage.clear()
+    productStorage.clear()
     document.documentElement.classList.remove("dark")
     delete document.documentElement.dataset.forgeTheme
     delete document.documentElement.dataset.forgePointerCursors
@@ -27,7 +28,7 @@ describe("personal preferences", () => {
   })
 
   it("merges stored values with the preference defaults", () => {
-    window.localStorage.setItem(
+    productStorage.setItem(
       PREFERENCES_STORAGE_KEY,
       JSON.stringify({ firstDayOfWeek: "monday", pointerCursors: true })
     )
@@ -40,7 +41,7 @@ describe("personal preferences", () => {
   })
 
   it("falls back to defaults when stored preferences are invalid", () => {
-    window.localStorage.setItem(PREFERENCES_STORAGE_KEY, "{invalid")
+    productStorage.setItem(PREFERENCES_STORAGE_KEY, "{invalid")
 
     expect(loadPersonalPreferences()).toEqual(defaultPersonalPreferences)
   })
@@ -51,42 +52,42 @@ describe("personal preferences", () => {
       fontSize: "huge",
       checkSpelling: "false",
     })
-    window.localStorage.setItem(PREFERENCES_STORAGE_KEY, raw)
+    productStorage.setItem(PREFERENCES_STORAGE_KEY, raw)
     expect(loadPersonalPreferences()).toMatchObject({
       interfaceTheme: "dark",
       fontSize: "default",
       checkSpelling: true,
     })
-    expect(window.localStorage.getItem(PREFERENCES_STORAGE_KEY)).toBe(raw)
+    expect(productStorage.getItem(PREFERENCES_STORAGE_KEY)).toBe(raw)
   })
 
   it("preserves corrupt source before an explicit edit replaces it", () => {
     const raw = "{broken"
-    window.localStorage.setItem(PREFERENCES_STORAGE_KEY, raw)
+    productStorage.setItem(PREFERENCES_STORAGE_KEY, raw)
     savePersonalPreferences({
       ...defaultPersonalPreferences,
       firstDayOfWeek: "monday",
     })
-    const backup = Object.keys(window.localStorage).find((key) =>
-      key.startsWith(`${PREFERENCES_STORAGE_KEY}.recovery.`)
-    )
+    const backup = Array.from({ length: productStorage.length }, (_, i) =>
+      productStorage.key(i)
+    ).find((key) => key.startsWith(`${PREFERENCES_STORAGE_KEY}.recovery.`))
     expect(backup).toBeDefined()
-    expect(window.localStorage.getItem(backup!)).toBe(raw)
+    expect(productStorage.getItem(backup!)).toBe(raw)
     expect(loadPersonalPreferences().firstDayOfWeek).toBe("monday")
   })
 
   it("refuses to overwrite future versions", () => {
     const raw = '{"version":99,"values":{"fontSize":"future"}}'
-    window.localStorage.setItem(PREFERENCES_STORAGE_KEY, raw)
+    productStorage.setItem(PREFERENCES_STORAGE_KEY, raw)
     expect(loadPersonalPreferences()).toEqual(defaultPersonalPreferences)
     expect(() =>
       savePersonalPreferences({ ...defaultPersonalPreferences })
     ).toThrow("newer version")
-    expect(window.localStorage.getItem(PREFERENCES_STORAGE_KEY)).toBe(raw)
+    expect(productStorage.getItem(PREFERENCES_STORAGE_KEY)).toBe(raw)
   })
 
   it("preserves unknown fields and envelope metadata across explicit edits", () => {
-    window.localStorage.setItem(
+    productStorage.setItem(
       PREFERENCES_STORAGE_KEY,
       JSON.stringify({
         version: 1,
@@ -96,7 +97,7 @@ describe("personal preferences", () => {
     )
     savePersonalPreferences({ ...loadPersonalPreferences(), fontSize: "large" })
     expect(
-      JSON.parse(window.localStorage.getItem(PREFERENCES_STORAGE_KEY)!)
+      JSON.parse(productStorage.getItem(PREFERENCES_STORAGE_KEY)!)
     ).toMatchObject({
       version: 1,
       metadata: "retained",
@@ -110,14 +111,14 @@ describe("personal preferences", () => {
 
   it("does not overwrite damaged data when recovery storage fails", () => {
     const raw = "{broken"
-    window.localStorage.setItem(PREFERENCES_STORAGE_KEY, raw)
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    productStorage.setItem(PREFERENCES_STORAGE_KEY, raw)
+    vi.spyOn(productStorage, "setItem").mockImplementation(() => {
       throw new Error("quota")
     })
     expect(() =>
       savePersonalPreferences({ ...defaultPersonalPreferences })
     ).toThrow("quota")
-    expect(window.localStorage.getItem(PREFERENCES_STORAGE_KEY)).toBe(raw)
+    expect(productStorage.getItem(PREFERENCES_STORAGE_KEY)).toBe(raw)
   })
 
   it("applies system theme, font size, and interface flags", () => {

@@ -9,9 +9,10 @@ import {
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
 import { SlaSettings } from "./sla-settings"
+import { productStorage } from "@/lib/product-storage"
 import { readSlaSettings } from "@/lib/sla-settings"
 
-beforeEach(() => window.localStorage.clear())
+beforeEach(() => productStorage.clear())
 afterEach(cleanup)
 
 describe("SLA settings", () => {

@@ -3,6 +3,7 @@ import {
   sharedDefinitionsActive,
   sharedIssueLabels,
 } from "./issue-definition-cache"
+import { productStorage } from "@/lib/product-storage"
 
 export const LABEL_COLORS = [
   "#5b6478",
@@ -316,6 +317,6 @@ export function readTeamIssueLabels(
   slug = ""
 ): TeamLabelDirectory {
   if (sharedDefinitionsActive()) return sharedIssueLabels(teamId)
-  const raw = localStorage.getItem(teamLabelsStorageKey(teamId))
+  const raw = productStorage.getItem(teamLabelsStorageKey(teamId))
   return raw ? parseTeamLabels(raw) : initialTeamLabels(slug)
 }

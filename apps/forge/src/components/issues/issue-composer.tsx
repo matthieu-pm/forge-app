@@ -16,6 +16,12 @@ import type { IssueDraft, TeamIssue } from "@/lib/team-issues"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import {
+  canonicalIssueRows,
+  canonicalIssuesActive,
+  projectDisplayName,
+} from "@/lib/canonical-issue-cache"
+import { createSharedTeamIssue } from "@/lib/canonical-issue-client"
+import {
   DEFINITIONS_CHANGED,
   sharedDefinitionsActive,
 } from "@/lib/issue-definition-cache"
@@ -27,6 +33,7 @@ import {
   issuePriorities,
   saveIssueDraft,
   saveTeamIssue,
+  writeIssueStore,
 } from "@/lib/team-issues"
 import { initialTeamStatuses } from "@/lib/team-statuses"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
@@ -78,6 +85,11 @@ export function IssueComposer({
   presentation?: "dialog" | "inline"
   onDraftChange?: (draft: IssueDraft, team: TeamSummary) => void
 }) {
+  const editBaseline = useRef(
+    issueId
+      ? canonicalIssueRows(team.id).find((r) => r.issue.id === issueId)?.issue
+      : undefined
+  )
   const [targetTeam, setTargetTeam] = useState(team)
   const { data: session } = authClient.useSession()
   const [draft, setDraft] = useState(initial)
@@ -89,6 +101,9 @@ export function IssueComposer({
     draftChange.current?.(draft, targetTeam)
   }, [draft, targetTeam])
   const [statuses, setStatuses] = useState(initialTeamStatuses().statuses)
+  const [saving, setSaving] = useState(false)
+  const saveLock = useRef(false)
+  const pendingCreate = useRef<{ signature: string; key: string } | null>(null)
   const [error, setError] = useState("")
   const [sharedLabels, setSharedLabels] = useState<Array<string> | null>(null)
   const [expanded, setExpanded] = useState(false)
@@ -151,7 +166,7 @@ export function IssueComposer({
     JSON.stringify(draft) !== JSON.stringify(initial) ||
     Boolean(draft.title || draft.description)
   function requestClose() {
-    if (attaching) return
+    if (attaching || saveLock.current) return
     if (dirty) setConfirmClose(true)
     else onClose()
   }
@@ -167,19 +182,36 @@ export function IssueComposer({
       setConfirmClose(false)
     }
   }
-  function submit() {
-    if (attaching) return
+  async function submit() {
+    if (attaching || saveLock.current) return
     if (!draft.title.trim()) {
       setError("Enter an issue title.")
       titleRef.current?.focus()
       return
     }
+    saveLock.current = true
+    setSaving(true)
     try {
-      const issue = saveTeamIssue(targetTeam.id, draft, {
-        id: issueId,
-        draftId,
-        creator: session?.user.id,
-      })
+      const signature = JSON.stringify([targetTeam.id, draft])
+      if (pendingCreate.current?.signature !== signature)
+        pendingCreate.current = { signature, key: crypto.randomUUID() }
+      const issue =
+        canonicalIssuesActive() && !issueId
+          ? await createSharedTeamIssue(targetTeam.id, draft, {
+              commandKey: pendingCreate.current.key,
+            })
+          : saveTeamIssue(targetTeam.id, draft, {
+              id: issueId,
+              baseline: editBaseline.current,
+              draftId,
+              creator: session?.user.id,
+            })
+      pendingCreate.current = null
+      if (!issueId && draftId)
+        writeIssueStore(targetTeam.id, (store) => ({
+          ...store,
+          drafts: store.drafts.filter((d) => d.id !== draftId),
+        }))
       onSaved(issue, targetTeam)
       if (createMore && !issueId) {
         setDraft({
@@ -199,6 +231,9 @@ export function IssueComposer({
           ? `${failure.message} Your draft is still here.`
           : "The issue could not be saved. Your draft is still here. Please try again."
       )
+    } finally {
+      saveLock.current = false
+      if (mounted.current) setSaving(false)
     }
   }
   async function attach(files: Array<File>) {
@@ -387,7 +422,7 @@ export function IssueComposer({
                 type="button"
                 variant="secondary"
                 className={issueChip}
-                disabled={attaching}
+                disabled={attaching || saving}
                 onClick={saveDraft}
               >
                 Save as draft
@@ -535,14 +570,17 @@ export function IssueComposer({
                       (item) => item.id === name || item.name === name
                     )
                 )
-                .map((name) => ({ value: name, label: name })),
+                .map((name) => ({
+                  value: name,
+                  label: projectDisplayName(name),
+                })),
             ]}
-            allowCreate
+            allowCreate={!canonicalIssuesActive()}
             onChange={(value) => update({ project: value, milestone: "" })}
           >
             <IssueIcon name="project" />
             {projectOptions.find((item) => item.id === draft.project)?.name ??
-              (draft.project || "Project")}
+              (draft.project ? projectDisplayName(draft.project) : "Project")}
           </IssuePicker>
           {!!milestones.length &&
             projectOptions.some((project) => project.id === draft.project) && (
@@ -578,7 +616,7 @@ export function IssueComposer({
               icon: <IssueIcon name="label" />,
             }))}
             multiple
-            allowCreate
+            allowCreate={!canonicalIssuesActive()}
             onChange={(value) => update({ labels: value })}
           >
             <IssueIcon name="label" />
@@ -891,7 +929,7 @@ export function IssueComposer({
             size="icon-sm"
             aria-label="Attach images, files, or videos"
             className="rounded-full"
-            disabled={attaching}
+            disabled={attaching || saving}
             onClick={() => fileRef.current?.click()}
           >
             <IssueIcon name="attach" />
@@ -920,13 +958,15 @@ export function IssueComposer({
               size="sm"
               type="submit"
               className={issuePrimary}
-              disabled={attaching}
+              disabled={attaching || saving}
             >
-              {attaching
-                ? "Attaching…"
-                : issueId
-                  ? "Save issue"
-                  : "Create issue"}
+              {saving
+                ? "Creating…"
+                : attaching
+                  ? "Attaching…"
+                  : issueId
+                    ? "Save issue"
+                    : "Create issue"}
             </Button>
           </div>
         </div>

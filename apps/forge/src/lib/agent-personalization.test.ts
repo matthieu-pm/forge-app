@@ -6,6 +6,7 @@ import {
   replacePersonalSkill,
   writePersonalization,
 } from "./agent-personalization"
+import { productStorage } from "@/lib/product-storage"
 
 const skill = {
   id: "review",
@@ -14,7 +15,7 @@ const skill = {
   createdAt: "2026-10-12T12:00:00.000Z",
   revision: 0,
 }
-beforeEach(() => localStorage.clear())
+beforeEach(() => productStorage.clear())
 afterEach(() => vi.restoreAllMocks())
 describe("personal agent settings", () => {
   it("keeps accounts isolated and preserves guidance when skills change", () => {
@@ -61,14 +62,16 @@ describe("personal agent settings", () => {
     ])
   })
   it("preserves corrupted data and previous settings on a storage failure", () => {
-    localStorage.setItem(personalizationStorageKey("a"), "broken")
+    productStorage.setItem(personalizationStorageKey("a"), "broken")
     expect(() =>
       writePersonalization("a", () => ({ guidance: "", skills: [] }))
     ).toThrow()
-    expect(localStorage.getItem(personalizationStorageKey("a"))).toBe("broken")
-    localStorage.removeItem(personalizationStorageKey("a"))
+    expect(productStorage.getItem(personalizationStorageKey("a"))).toBe(
+      "broken"
+    )
+    productStorage.removeItem(personalizationStorageKey("a"))
     writePersonalization("a", () => ({ guidance: "Saved", skills: [] }))
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    vi.spyOn(productStorage, "setItem").mockImplementation(() => {
       throw new Error("quota")
     })
     expect(() =>
