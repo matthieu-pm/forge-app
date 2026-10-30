@@ -334,8 +334,22 @@
     {
       "idx": 47,
       "version": "7",
-      "when": 1793361590297,
-      "tag": "0047_recovery_journal",
+      "when": 1793360984634,
+      "tag": "0047_account_preferences",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1793361753403,
+      "tag": "0048_workspace_preferences",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1793367161697,
+      "tag": "0049_recovery_journal",
       "breakpoints": true
     }
   ]

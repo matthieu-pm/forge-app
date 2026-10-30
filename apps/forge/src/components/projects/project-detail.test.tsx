@@ -2,7 +2,6 @@ import { useState } from "react"
 import {
   cleanup,
   fireEvent,
-  render,
   screen,
   waitFor,
   within,
@@ -13,6 +12,10 @@ import type { ReactNode } from "react"
 import type { InitiativeProject } from "@/lib/initiatives"
 import type { ProjectTab } from "./project-detail"
 import type { TeamSummary } from "@/lib/team-contract"
+import {
+  renderPreferences as render,
+  setupPreferenceFixture,
+} from "@/test/preference-fixture"
 import {
   addInitiative,
   blankInitiative,
@@ -86,7 +89,8 @@ function Page({ initialTab = "overview" }: { initialTab?: ProjectTab }) {
   const [tab, onTab] = useState<ProjectTab>(initialTab)
   return <ProjectDetailPage {...props} tab={tab} onTab={onTab} />
 }
-beforeEach(() => {
+beforeEach(async () => {
+  await setupPreferenceFixture("user")
   localStorage.clear()
   vi.stubGlobal(
     "ResizeObserver",

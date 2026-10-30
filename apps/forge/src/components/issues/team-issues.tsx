@@ -19,6 +19,7 @@ import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import type { IssueDraft, IssueStore, TeamIssue } from "@/lib/team-issues"
 import type { ActivitySearch } from "@/lib/issue-activity"
+import { useWorkspaceView } from "@/components/account-preference-provider"
 import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
 import { ContentHeader } from "@/components/ui/content-header"
@@ -85,7 +86,9 @@ export function TeamIssues({
   search: IssueSearch
   onNavigate: (search: IssueSearch) => void
 }) {
-  const { store, error: storageError } = useIssueStore(team.id)
+  const { store: businessStore, error: storageError } = useIssueStore(team.id)
+  const viewPreferences = useWorkspaceView("teamIssues", team.id)
+  const store = { ...businessStore, ...viewPreferences.value }
   const [statuses, setStatuses] = useState(initialTeamStatuses().statuses)
   const [directory, setDirectory] = useState<TemplateDirectory>()
   const [directoryError, setDirectoryError] = useState(false)
@@ -211,7 +214,30 @@ export function TeamIssues({
   }, [lastCreated])
   function write(update: (store: IssueStore) => IssueStore) {
     try {
-      writeIssueStore(team.id, update)
+      const next = update(store)
+      const pick = (value: IssueStore) => ({
+        display: value.display,
+        defaultDisplay: value.defaultDisplay,
+        filters: value.filters,
+        favorite: value.favorite,
+        notifications: value.notifications,
+        views: value.views,
+      })
+      if (
+        JSON.stringify(pick(next)) !== JSON.stringify(pick(store)) &&
+        !viewPreferences.save(pick(next))
+      )
+        throw new Error("Preferences unavailable")
+      const business = (value: IssueStore) => ({
+        issues: value.issues,
+        drafts: value.drafts,
+        nextNumber: value.nextNumber,
+      })
+      if (JSON.stringify(business(next)) !== JSON.stringify(business(store)))
+        writeIssueStore(team.id, (current) => ({
+          ...update({ ...current, ...viewPreferences.value }),
+          ...pick(current),
+        }))
       setError("")
       return true
     } catch {
@@ -492,7 +518,7 @@ export function TeamIssues({
             >
               <h2 className="text-sm">Issue notifications</h2>
               <p className="text-xs text-muted-foreground">
-                Show notifications for changes in this browser.
+                Choose which issue changes should show notifications.
               </p>
               {["New issues", "Status changes"].map((label) => (
                 <IssueToggle

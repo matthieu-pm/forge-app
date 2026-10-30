@@ -1,4 +1,4 @@
-import { act, cleanup, renderHook } from "@testing-library/react"
+import { act, cleanup } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
   addInitiative,
@@ -9,7 +9,6 @@ import {
   emptyInitiatives,
   initiativeHealth,
   initiativeMatches,
-  initiativePreferencesKey,
   initiativeStoreSchema,
   initiativesSettingsStorageKey,
   initiativesStorageKey,
@@ -21,8 +20,16 @@ import {
 } from "./initiatives"
 import { useInitiatives } from "./initiatives-state"
 import type { Initiative, InitiativeFilter } from "./initiatives"
+import {
+  readTestView,
+  renderPreferenceHook as renderHook,
+  setupPreferenceFixture,
+} from "@/test/preference-fixture"
 
-beforeEach(() => localStorage.clear())
+beforeEach(async () => {
+  localStorage.clear()
+  await setupPreferenceFixture("user")
+})
 afterEach(() => {
   cleanup()
   vi.restoreAllMocks()
@@ -234,9 +241,7 @@ describe("initiative persistence", () => {
     })
     expect(first.result.current.preferences.sidebar).toBe(true)
     expect(second.result.current.preferences.sidebar).toBe(false)
-    expect(
-      localStorage.getItem(initiativePreferencesKey("workspace", "user"))
-    ).toContain("Health")
+    expect(readTestView("initiatives").sidebarTab).toBe("Health")
     first.unmount()
     const restored = renderHook(() => useInitiatives("workspace", "user"))
     expect(restored.result.current.state.initiatives[0].name).toBe("Saved")

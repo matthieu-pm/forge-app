@@ -1,0 +1,90 @@
+{
+  "issue": "FOR-36",
+  "verifiedAt": "2026-10-30T11:46:14.153268+00:00",
+  "implementationRevision": "92e453caa58585d918dfb2fa10ef5534bed6a1ae",
+  "baseRevision": "8e87d5419c993bb2a746f0905e000f51eee46287",
+  "acceptedDecisions": {
+    "confirmedBy": "Matthieu",
+    "confirmedOn": "2026-10-30",
+    "transport": "Authenticated Forge proxy; no bearer storage URLs",
+    "grantSeconds": 300,
+    "revocation": "Current session/resource access before and after storage I/O; an authorized response already underway may finish",
+    "preview": "Script-free sanitized HTML/SVG; CSP sandbox and iframe sandbox without allowances"
+  },
+  "acceptance": {
+    "AT-01": {
+      "status": "passed",
+      "evidence": "Real FOR-35 intent/client-token upload and finalization of a private issue file; authorized HTTP delivery via production lookup and private Blob adapters; exact size/SHA-256 and safe attachment headers.",
+      "sizeBytes": 5242880,
+      "checksum": "dbbe5517996826bd5861ac22b745d21d11219055d89243ca1aea0ad31f552b12"
+    },
+    "AT-02": {
+      "status": "passed",
+      "evidence": "Real SQL private-team/foreign-workspace denial, grant replay denial, session/team/workspace revocation, deletion and retention expiry. Real Chromium/Firefox prove script/parent/cookie isolation, removed navigation/forms, no attacker requests and direct-navigation CSP sandbox."
+    }
+  },
+  "validation": {
+    "app": {
+      "passed": 2070,
+      "skipped": 253,
+      "filesPassed": 259,
+      "filesSkipped": 19
+    },
+    "workflow": {
+      "passed": 4
+    },
+    "newServiceAndRendering": {
+      "passed": 23
+    },
+    "browser": {
+      "passed": 2,
+      "engines": [
+        "Chromium",
+        "Firefox"
+      ]
+    },
+    "isolatedPostgresAndBlob": {
+      "passed": 7
+    },
+    "typecheck": "passed",
+    "productionBuildAndWorkflowProtection": "passed",
+    "changedFileLint": {
+      "errors": 0,
+      "warnings": 13
+    },
+    "diffCheck": "passed"
+  },
+  "isolatedEnvironment": {
+    "projectId": "raspy-union-96305162",
+    "branchId": "br-autumn-union-za0opf1e",
+    "database": "forge_file_storage_acceptance_v2",
+    "applicationRole": "forge_staging_web",
+    "blobStoreId": "store_HCogFKvO1n2cbJw7",
+    "authenticationEdge": "Known fixture Actor; live session, membership, resource policy and ownership/expiry execute real PostgreSQL code",
+    "cleanup": "Suite completed exact fixture object/metadata/intent/user/workspace cleanup; organization count asserted zero",
+    "temporaryCredentialFileRemoved": true
+  },
+  "bounds": {
+    "downloadBytes": 100000000,
+    "previewSourceBytes": 1000000,
+    "storageDeadlineMs": 30000,
+    "sanitizedNesting": 32,
+    "responseChunkBytes": 65536
+  },
+  "verificationNotes": [
+    "An earlier full suite concurrent with a build hit the existing Reviews party-popper timing assertion; the final full suite passed without modifying that test/UI.",
+    "Initial moved-worktree build failed with shared node_modules links, then missing build environment. A frozen independent install and isolated build-only credentials resolved setup; final production build passed."
+  ],
+  "releaseBoundary": {
+    "productionMigration": false,
+    "productionDeployment": false,
+    "hostedAuthenticatedTransferObserved": false,
+    "requiredReleaseSmoke": [
+      "Candidate-hosted authenticated >4.5 MB download",
+      "Hostile preview in actual application iframe",
+      "Old grant denied after private-team/member removal"
+    ],
+    "otherStories": "FOR-48/61 canonical resource binding/editing, FOR-83 model/runtime transfer, FOR-37 reconciliation and FOR-38 recovery retain their own scope."
+  },
+  "operatorGuide": "docs/operations/authorized-file-delivery.md"
+}

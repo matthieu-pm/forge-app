@@ -10,6 +10,7 @@ import {
   integer,
   jsonb,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   unique,
@@ -21,6 +22,69 @@ import { apiKeys, members, organizations, users } from "./auth-schema"
 import type { TranscriptEntry } from "@/lib/calls"
 import type { TemplateDraft } from "@/lib/template-contract"
 import type { RecurringIssueDraft } from "@/lib/recurring-issue-contract"
+
+/** Account choices only. Never workspace authorization or OS capability facts. */
+export const accountPreferences = pgTable(
+  "account_preferences",
+  {
+    userId: text("user_id")
+      .primaryKey()
+      .references(() => users.id, { onDelete: "cascade" }),
+    version: integer("version").default(1).notNull(),
+    revision: integer("revision").default(0).notNull(),
+    values: jsonb("values")
+      .$type<Record<string, unknown>>()
+      .default({})
+      .notNull(),
+    fieldVersions: jsonb("field_versions")
+      .$type<Record<string, number>>()
+      .default({})
+      .notNull(),
+  },
+  (t) => [
+    check(
+      "account_preferences_version_check",
+      sql`${t.version} > 0 AND ${t.revision} >= 0`
+    ),
+    check(
+      "account_preferences_objects_check",
+      sql`jsonb_typeof(${t.values}) = 'object' AND jsonb_typeof(${t.fieldVersions}) = 'object'`
+    ),
+  ]
+)
+
+export const workspacePreferences = pgTable(
+  "workspace_preferences",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    version: integer("version").default(1).notNull(),
+    revision: integer("revision").default(0).notNull(),
+    values: jsonb("values")
+      .$type<Record<string, unknown>>()
+      .default({})
+      .notNull(),
+    fieldVersions: jsonb("field_versions")
+      .$type<Record<string, number>>()
+      .default({})
+      .notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.workspaceId] }),
+    check(
+      "workspace_preferences_version_check",
+      sql`${t.version} > 0 AND ${t.revision} >= 0`
+    ),
+    check(
+      "workspace_preferences_objects_check",
+      sql`jsonb_typeof(${t.values}) = 'object' AND jsonb_typeof(${t.fieldVersions}) = 'object'`
+    ),
+  ]
+)
 
 export const recoveryJournalState = pgTable("recovery_journal_state", {
   id: text("id").primaryKey(),

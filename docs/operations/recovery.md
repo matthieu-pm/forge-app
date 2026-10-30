@@ -77,7 +77,7 @@ restores reject the 35-day ceiling even if an operator retained an old copy.
 
 ## Live deletion boundary
 
-Migration 0047 installs capture triggers on all ordinary public tables, excluding
+Migration 0049 installs capture triggers on all ordinary public tables, excluding
 the recovery metadata itself. The serialized migration runner reinstalls this
 boundary for future tables in the same migration transaction. Capture records
 primary keys, deletion time, storage references and a strict set of suppression
@@ -106,7 +106,7 @@ must not overwrite a newer, more restrictive captured permission.
 
 Activation requires all of the following, in a controlled rollout:
 
-1. Apply migration 0047 to a production-data rehearsal and verify exact retry,
+1. Apply migration 0049 to a production-data rehearsal and verify exact retry,
    schema compatibility and all primary-key/trigger coverage; then apply through
    the production migration release gate.
 2. Deploy the new boundary with `FORGE_RECOVERY_JOURNAL_ENABLED=true`,
@@ -252,7 +252,7 @@ export: stop source traffic, jobs and destructive work first, not just one clien
 The runner uses dedicated `forge_recovery_source` and `forge_recovery_target`
 databases on the verified staging branch, ordinary `forge_staging_web` application
 connections, private London Blob and real R2. It never accepts production data.
-Provision empty databases and private config files, apply the 48-migration chain
+Provision empty databases and private config files, apply the 50-migration chain
 with the registered `recovery-source` migration target, and create a disposable
 recovery identity plus independent synthetic credential/journal keys.
 

@@ -18,6 +18,7 @@ export type MigrationTarget = {
     | "rehearsal"
     | "file-storage-acceptance"
     | "recovery-source"
+    | "personal-preference-acceptance"
     | "production-storage-rehearsal"
     | "production"
   branchId: string

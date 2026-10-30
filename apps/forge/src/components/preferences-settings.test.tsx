@@ -1,10 +1,15 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { fireEvent, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { PreferencesSettings } from "./preferences-settings"
+import {
+  renderPreferences,
+  setupPreferenceFixture,
+} from "@/test/preference-fixture"
 
 describe("PreferencesSettings themes", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    await setupPreferenceFixture()
     window.localStorage.clear()
     Object.defineProperty(window, "matchMedia", {
       configurable: true,
@@ -17,7 +22,7 @@ describe("PreferencesSettings themes", () => {
   })
 
   it("shows theme previews in the appearance controls and choices", async () => {
-    render(<PreferencesSettings />)
+    renderPreferences(<PreferencesSettings />)
 
     const interfaceTheme = screen.getByRole("button", {
       name: "Interface theme",

@@ -2,7 +2,6 @@ import {
   act,
   cleanup,
   fireEvent,
-  render,
   screen,
   waitFor,
 } from "@testing-library/react"
@@ -11,12 +10,16 @@ import { MyIssues } from "./my-issues"
 import type { ComponentProps } from "react"
 import type { TeamSummary } from "@/lib/team-contract"
 import {
+  readTestView,
+  renderPreferences as render,
+  setupPreferenceFixture,
+} from "@/test/preference-fixture"
+import {
   blankIssueDraft,
   readIssueStore,
   saveTeamIssue,
   teamIssuesKey,
 } from "@/lib/team-issues"
-import { myIssuePreferencesKey } from "@/lib/my-issues"
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({
@@ -112,7 +115,8 @@ function start(
   )
   return { ...result, onNavigate }
 }
-beforeEach(() => {
+beforeEach(async () => {
+  await setupPreferenceFixture("user")
   localStorage.clear()
   vi.stubGlobal(
     "ResizeObserver",
@@ -192,10 +196,7 @@ describe("My issues page", () => {
       view: "assigned",
       issue: readIssueStore(first.id).issues[0].id,
     })
-    expect(
-      JSON.parse(localStorage.getItem(myIssuePreferencesKey("workspace:user"))!)
-        .details
-    ).toBe(true)
+    expect(readTestView("myIssues").details).toBe(true)
     expect(localStorage.getItem(teamIssuesKey(first.id))).toBe(firstBefore)
   })
   it("shows created/subscribed scopes, and uses the shared composer with self-assignment on Assigned", async () => {

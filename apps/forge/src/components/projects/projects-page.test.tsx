@@ -1,7 +1,6 @@
 import {
   cleanup,
   fireEvent,
-  render,
   screen,
   waitFor,
   within,
@@ -12,14 +11,17 @@ import type { ReactNode } from "react"
 import type { InitiativeProject } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
 import {
+  readTestView,
+  renderPreferences as render,
+  seedTestView,
+  setupPreferenceFixture,
+} from "@/test/preference-fixture"
+import {
   blankIssueDraft,
   getIssueStatuses,
   saveTeamIssue,
 } from "@/lib/team-issues"
-import {
-  defaultProjectPreferences,
-  projectPreferencesKey,
-} from "@/lib/projects"
+import { projectPreferencesKey } from "@/lib/projects"
 import {
   addInitiative,
   blankInitiative,
@@ -102,7 +104,8 @@ function seed(projects = [project]) {
 }
 const read = () =>
   JSON.parse(localStorage.getItem(initiativesStorageKey(props.workspaceId))!)
-beforeEach(() => {
+beforeEach(async () => {
+  await setupPreferenceFixture("user")
   localStorage.clear()
   Element.prototype.scrollIntoView = vi.fn()
   Element.prototype.scrollTo = vi.fn()
@@ -261,10 +264,7 @@ describe("Projects page", () => {
       project,
       { ...project, id: "second", name: "Other team", teamIds: ["else"] },
     ])
-    localStorage.setItem(
-      projectPreferencesKey(props.workspaceId, user.id, team.id),
-      JSON.stringify({ ...defaultProjectPreferences(), layout: "Board" })
-    )
+    seedTestView("projects", team.id, { layout: "Board" })
     render(<ProjectsPage {...props} team={team} />)
     expect(screen.getByRole("button", { name: "Release" })).toBeTruthy()
     expect(screen.queryByRole("button", { name: "Other team" })).toBeNull()
@@ -396,10 +396,7 @@ describe("Projects page", () => {
         targetDate: "2027-Q1",
       },
     ])
-    localStorage.setItem(
-      projectPreferencesKey(props.workspaceId, user.id),
-      JSON.stringify({ ...defaultProjectPreferences(), layout: "Timeline" })
-    )
+    seedTestView("projects", "main", { layout: "Timeline" })
     render(<ProjectsPage {...props} />)
     expect(screen.getByText("No dates set")).toBeTruthy()
     expect(
@@ -420,11 +417,9 @@ describe("Projects page", () => {
     })
     fireEvent.click(screen.getByRole("button", { name: "Create view" }))
     expect(screen.getByRole("button", { name: "Upcoming" })).toBeTruthy()
-    expect(
-      JSON.parse(
-        localStorage.getItem(projectPreferencesKey(props.workspaceId, user.id))!
-      ).views[0].filters
-    ).toEqual([{ field: "Status", value: "Backlog" }])
+    expect(readTestView("projects").views[0].filters).toEqual([
+      { field: "Status", value: "Backlog" },
+    ])
   })
 })
 it("opens the appropriate detail tab and keeps property editing inline", async () => {

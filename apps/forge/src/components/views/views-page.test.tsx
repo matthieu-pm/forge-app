@@ -1,11 +1,16 @@
 import { useState } from "react"
-import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { cleanup, fireEvent, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { ViewsPage } from "./views-page"
 import type { ViewsSearch } from "./views-page"
 import type { ViewIssuesProps } from "./view-issues"
 import type { ComponentProps } from "react"
 import type { ViewProjects } from "./view-projects"
+import {
+  readTestView,
+  renderPreferences as render,
+  setupPreferenceFixture,
+} from "@/test/preference-fixture"
 import {
   customViewsKey,
   newCustomView,
@@ -115,7 +120,8 @@ async function openOptions(action: string) {
   fireEvent.click(screen.getAllByRole("button", { name: "View options" })[0])
   fireEvent.click(await screen.findByRole("button", { name: action }))
 }
-beforeEach(() => {
+beforeEach(async () => {
+  await setupPreferenceFixture("user")
   localStorage.clear()
   vi.clearAllMocks()
   Element.prototype.scrollIntoView = vi.fn()
@@ -284,7 +290,7 @@ describe("Views pages", () => {
     fireEvent.click(
       screen.getAllByRole("button", { name: "Add to favorites" })[0]
     )
-    expect(read()[0].favorite).toBe(true)
+    expect(readTestView("directory").favoriteIds).toContain(first.id)
     await openOptions("Delete view…")
     expect(screen.getByRole("dialog")).toBeTruthy()
     expect(read()).toHaveLength(2)

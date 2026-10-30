@@ -73,7 +73,8 @@ downloads. Final workspace restrictions use the verified type, so a forged image
 MIME cannot bypass a restricted workspace. Agent inputs retain their supported
 format list and agent feature gate. Classification is not malware scanning or a
 safe-preview decision; all storage objects retain octet-stream transport metadata.
-FOR-36 owns authorized delivery and isolated previews. FOR-48/FOR-61 own canonical
+[FOR-36 authorized delivery](authorized-file-delivery.md) provides authenticated
+downloads and isolated previews. FOR-48/FOR-61 own canonical
 issue/comment UI binding and document editing; browser-local drafts are not
 silently published or imported here.
 

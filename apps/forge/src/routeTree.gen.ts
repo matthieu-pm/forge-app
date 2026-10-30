@@ -63,6 +63,7 @@ import { Route as WorkspaceTeamsRouteImport } from './routes/workspace/teams'
 import { Route as WorkspaceViewsRouteImport } from './routes/workspace/views'
 import { Route as ApiAgentSplatRouteImport } from './routes/api/agent/$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiFilesSplatRouteImport } from './routes/api/files/$'
 import { Route as ApiHealthLiveRouteImport } from './routes/api/health/live'
 import { Route as ApiHealthReadyRouteImport } from './routes/api/health/ready'
 import { Route as ApiInternalDatabaseReleaseRehearsalRouteImport } from './routes/api/internal/database-release-rehearsal'
@@ -399,6 +400,11 @@ const ApiAgentSplatRoute = ApiAgentSplatRouteImport.update({
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiFilesSplatRoute = ApiFilesSplatRouteImport.update({
+  id: '/api/files/$',
+  path: '/api/files/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiHealthLiveRoute = ApiHealthLiveRouteImport.update({
@@ -816,6 +822,7 @@ export interface FileRoutesByFullPath {
   '/settings/': typeof SettingsIndexRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/files/$': typeof ApiFilesSplatRoute
   '/api/health/live': typeof ApiHealthLiveRoute
   '/api/health/ready': typeof ApiHealthReadyRoute
   '/api/internal/database-release-rehearsal': typeof ApiInternalDatabaseReleaseRehearsalRoute
@@ -934,6 +941,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsIndexRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/files/$': typeof ApiFilesSplatRoute
   '/api/health/live': typeof ApiHealthLiveRoute
   '/api/health/ready': typeof ApiHealthReadyRoute
   '/api/internal/database-release-rehearsal': typeof ApiInternalDatabaseReleaseRehearsalRoute
@@ -1051,6 +1059,7 @@ export interface FileRoutesById {
   '/settings/': typeof SettingsIndexRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/files/$': typeof ApiFilesSplatRoute
   '/api/health/live': typeof ApiHealthLiveRoute
   '/api/health/ready': typeof ApiHealthReadyRoute
   '/api/internal/database-release-rehearsal': typeof ApiInternalDatabaseReleaseRehearsalRoute
@@ -1173,6 +1182,7 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/api/agent/$'
     | '/api/auth/$'
+    | '/api/files/$'
     | '/api/health/live'
     | '/api/health/ready'
     | '/api/internal/database-release-rehearsal'
@@ -1291,6 +1301,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/api/agent/$'
     | '/api/auth/$'
+    | '/api/files/$'
     | '/api/health/live'
     | '/api/health/ready'
     | '/api/internal/database-release-rehearsal'
@@ -1407,6 +1418,7 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/api/agent/$'
     | '/api/auth/$'
+    | '/api/files/$'
     | '/api/health/live'
     | '/api/health/ready'
     | '/api/internal/database-release-rehearsal'
@@ -1503,6 +1515,7 @@ export interface RootRouteChildren {
   WorkspaceViewsRoute: typeof WorkspaceViewsRoute
   ApiAgentSplatRoute: typeof ApiAgentSplatRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiFilesSplatRoute: typeof ApiFilesSplatRoute
   ApiHealthLiveRoute: typeof ApiHealthLiveRoute
   ApiHealthReadyRoute: typeof ApiHealthReadyRoute
   ApiInternalDatabaseReleaseRehearsalRoute: typeof ApiInternalDatabaseReleaseRehearsalRoute
@@ -1901,6 +1914,13 @@ declare module '@tanstack/react-router' {
       path: '/api/auth/$'
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/files/$': {
+      id: '/api/files/$'
+      path: '/api/files/$'
+      fullPath: '/api/files/$'
+      preLoaderRoute: typeof ApiFilesSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/health/live': {
@@ -2639,6 +2659,7 @@ const rootRouteChildren: RootRouteChildren = {
   WorkspaceViewsRoute: WorkspaceViewsRoute,
   ApiAgentSplatRoute: ApiAgentSplatRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiFilesSplatRoute: ApiFilesSplatRoute,
   ApiHealthLiveRoute: ApiHealthLiveRoute,
   ApiHealthReadyRoute: ApiHealthReadyRoute,
   ApiInternalDatabaseReleaseRehearsalRoute:
