@@ -1,0 +1,142 @@
+{
+  "date": "2026-10-30",
+  "issue": "FOR-41",
+  "includedIssue": "FOR-42",
+  "pullRequest": "https://github.com/matthieu-pm/forge-app/pull/22",
+  "testedImplementationRevision": "85700aea7fba811f04fc051fe8b75eff81fcc5c7",
+  "baselineRevision": "b7fe21ef20c83d77026ba12e6df30c010d8183d7",
+  "scopeDecisions": [
+    "Automatically publish existing local issues",
+    "Include project and cycle migration",
+    "Persist all Forge product data on the server; authentication cookies remain",
+    "Include canonical editing with visible conflicts"
+  ],
+  "acceptanceTarget": {
+    "branchId": "br-autumn-union-za0opf1e",
+    "database": "forge_issue_creation_acceptance_v3",
+    "applicationRole": "forge_staging_web",
+    "productionDataCopied": false
+  },
+  "migration": {
+    "file": "0051_canonical_issues_and_server_state.sql",
+    "freshApplied": 52,
+    "total": 52,
+    "exactRetryApplied": 0,
+    "staging": {
+      "database": "forge_staging",
+      "before": 45,
+      "applied": 7,
+      "total": 52,
+      "retryApplied": 0
+    },
+    "preview": {
+      "database": "forge_preferences_acceptance",
+      "before": 51,
+      "applied": 1,
+      "total": 52,
+      "retryApplied": 0,
+      "applicationRoleNewTableReadsPassed": true
+    }
+  },
+  "checks": {
+    "app": {
+      "passed": 2217,
+      "skipped": 309,
+      "passedFiles": 274,
+      "skippedFiles": 22
+    },
+    "runtime": {
+      "passed": 37,
+      "files": 9
+    },
+    "workflow": {
+      "passed": 4,
+      "files": 2
+    },
+    "targetedAcceptance": {
+      "passed": 45,
+      "realPostgres": 25,
+      "productStorage": 10,
+      "editQueue": 9,
+      "creationRetry": 1
+    },
+    "workspaceTypecheck": "passed",
+    "workspaceProductionBuild": "passed; protected Workflow handlers verified",
+    "changedFileEslint": {
+      "errors": 0,
+      "warnings": 76
+    },
+    "gitDiffCheck": "passed"
+  },
+  "browser": {
+    "environment": "local server against isolated acceptance PostgreSQL",
+    "contexts": "independent admin/member Better Auth sessions",
+    "passed": [
+      "shared UUID/team number after independent reload",
+      "automatic issue/project/cycle migration and exact native source cleanup",
+      "receipt/reload deduplication",
+      "visible stale edit conflict with private server draft and explicit resolution",
+      "verified IndexedDB backup migration with exact NUL/lone-surrogate preservation",
+      "foreign-account backup excluded and retained",
+      "zero new localStorage/sessionStorage/IndexedDB product writes",
+      "product server responses use no-store caching",
+      "desktop and mobile rendering"
+    ]
+  },
+  "review": {
+    "standards": "No unresolved findings after follow-up",
+    "spec": "No unresolved findings after follow-up",
+    "resolutions": [
+      "Persist all queued batches independently",
+      "Filter unreadable project team/dependency references",
+      "Derive lifecycle timestamps in database trigger with UTC-Z serialization",
+      "Retain exact prepared create payloads across uncertain outcomes",
+      "Only confirmed conflicts can rebase; uncertain outcomes replay their original keys",
+      "Replace a conflict draft in one server slot and retain prepared retry identities",
+      "Lock discard/rebase and preserve edits enqueued during discard"
+    ]
+  },
+  "preview": {
+    "sourceRevision": "85700aea7fba811f04fc051fe8b75eff81fcc5c7",
+    "web": {
+      "deploymentId": "dpl_FhX8LTjnnbPH47DorYRD52U7NPBx",
+      "url": "https://forge-breeducal-matthieu-pm.vercel.app",
+      "build": "READY",
+      "healthStatus": 200,
+      "healthCode": "READY",
+      "cacheControl": "private, no-store"
+    },
+    "runtime": {
+      "deploymentId": "dpl_HXcdUUcdXfGANeimKZhTEdEbkEww",
+      "url": "https://forge-preview-runtime-242t9mzcw-matthieu-pm.vercel.app",
+      "build": "READY",
+      "healthStatus": 200,
+      "healthCode": "READY",
+      "cacheControl": "no-store"
+    }
+  },
+  "cleanup": {
+    "dedicatedAcceptanceDatabases": [
+      "forge_issue_creation_acceptance",
+      "forge_issue_creation_acceptance_v2",
+      "forge_issue_creation_acceptance_v3"
+    ],
+    "remainingFixtures": {
+      "workspaces": 0,
+      "users": 0,
+      "sessions": 0,
+      "issues": 0,
+      "productState": 0
+    }
+  },
+  "production": {
+    "databaseModified": false,
+    "deploymentPromoted": false,
+    "pending": "Exact clean source revision approval for production migration/promotion"
+  },
+  "boundaries": [
+    "General issue comments/reactions, moves/deletion, automatic recurrence execution, started-state personal assignment, public planning REST/MCP and general project/cycle planning mutations retain their owning stories.",
+    "Hosted checks verify build/readiness and role/schema access; the full authenticated browser acceptance ran locally against isolated PostgreSQL.",
+    "Earlier disposable schema iterations v1/v2 are not final release evidence."
+  ]
+}
