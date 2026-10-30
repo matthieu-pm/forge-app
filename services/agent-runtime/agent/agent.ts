@@ -1,3 +1,4 @@
+import { appOrigin } from "../../../packages/environment/preview-environment.js"
 import { stagingServiceFetch } from "../../../packages/environment/staging-service-auth.js"
 import { assertStagingEnvironment } from "../../../packages/environment/staging-environment.js"
 import { assertServiceConfiguration } from "../../../packages/environment/service-config.js"
@@ -86,7 +87,7 @@ const fallbackModel =
 function resolveRunModel(attributes: unknown) {
   if (process.env.EVE_EVAL_FIXTURE_MODE === "true") return null
   const selection = selectionSchema.safeParse(attributes)
-  const forgeOrigin = process.env.FORGE_APP_ORIGIN
+  const forgeOrigin = appOrigin()
   if (!selection.success || !forgeOrigin) {
     throw new Error(
       "Forge rejected a model step without a valid run-bound model selection."

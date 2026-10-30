@@ -1,3 +1,4 @@
+import { runtimeOrigin } from "../../../../../packages/environment/preview-environment"
 import "@tanstack/react-start/server-only"
 import { requireCurrentActor } from "@/application/resource-policy.server"
 
@@ -64,7 +65,7 @@ const getModelConnectionService = () => {
   )
   return modelConnectionService
 }
-const eveRuntimeUrl = process.env.EVE_AGENT_RUNTIME_URL
+const eveRuntimeUrl = runtimeOrigin()
 const eveChannelSecret = process.env.FORGE_AGENT_CHANNEL_SECRET
 const runtimes =
   agentFeatures.agent_eve_runtime && eveRuntimeUrl
