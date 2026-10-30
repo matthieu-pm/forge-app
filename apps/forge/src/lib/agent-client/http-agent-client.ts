@@ -8,10 +8,8 @@ import type {
   ThreadModelPreferenceRecord,
 } from "@/application/agents/thread-model-preference"
 import type { AgentFeatureFlags } from "@/application/agents/agent-feature-flags"
-import type {
-  AgentAttachmentRecord,
-  CreateAgentAttachmentInput,
-} from "@/application/agents/attachment-contract"
+import type { AgentAttachmentRecord } from "@/application/agents/attachment-contract"
+import { uploadFileDirect } from "@/lib/files/direct-upload-client"
 import { agentEventSchema } from "@/application/agents/event-contract"
 import { modelCatalogEntrySchema } from "@/application/agents/model-contract"
 import {
@@ -91,8 +89,7 @@ export async function expectAgentJson<T>(response: Response): Promise<T> {
   return body as T
 }
 
-export const callGlobalFetch: typeof fetch = (input, init) =>
-  fetch(input, init)
+export const callGlobalFetch: typeof fetch = (input, init) => fetch(input, init)
 
 async function* parseSse(response: Response) {
   if (!response.ok) {
@@ -159,21 +156,27 @@ function wait(milliseconds: number) {
 }
 
 export class HttpAgentClient implements AgentClient {
+  private readonly uploadSessions = new Map<
+    string,
+    { commandKey: string; id?: string }
+  >()
   constructor(
     private readonly baseUrl = "/api/agent",
     private readonly fetcher: typeof fetch = callGlobalFetch,
     private readonly recoveryDelayMs = 500
   ) {}
 
-  async uploadAttachment(input: CreateAgentAttachmentInput) {
-    const attachment = await expectAgentJson<WireAgentAttachment>(
-      await this.fetcher(`${this.baseUrl}/attachments`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(input),
-      })
+  async uploadAttachment(
+    input: Parameters<AgentClient["uploadAttachment"]>[0]
+  ) {
+    const attachment = await uploadFileDirect(
+      { ...input, target: { kind: "agent" } },
+      this.fetcher,
+      this.uploadSessions
     )
-    return hydrateAttachment(attachment)
+    if (!attachment.expiresAt)
+      throw new Error("The agent attachment has no expiry.")
+    return hydrateAttachment({ ...attachment, expiresAt: attachment.expiresAt })
   }
 
   async createThread(input: CreateAgentThreadInput) {

@@ -3,6 +3,7 @@ import {
   boolean,
   check,
   foreignKey,
+  index,
   integer,
   jsonb,
   pgTable,
@@ -14,6 +15,10 @@ import {
 } from "drizzle-orm/pg-core"
 import { organizations, users } from "./auth-schema"
 import { teams } from "./schema"
+import type {
+  ReadyUpload,
+  UploadTarget,
+} from "@/application/files/upload-contract"
 import type { AnyPgColumn } from "drizzle-orm/pg-core"
 
 // Canonical identity/relationship foundation. Product adapters must independently
@@ -299,5 +304,78 @@ export const resourceFiles = pgTable(
       columns: [t.workspaceId, t.documentId],
       foreignColumns: [documents.workspaceId, documents.id],
     }),
+  ]
+)
+
+// Pending uploads deliberately outlive deleted users/workspaces/targets so orphan
+// inventory remains recoverable. Only publication creates canonical file FKs.
+export const fileUploadIntents = pgTable(
+  "file_upload_intents",
+  {
+    id: id(),
+    workspaceId: text("workspace_id").notNull(),
+    userId: text("user_id").notNull(),
+    commandKey: uuid("command_key").notNull(),
+    inputHash: text("input_hash").notNull(),
+    target: jsonb("target").$type<UploadTarget>().notNull(),
+    name: text("name").notNull(),
+    contentType: text("content_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    checksum: text("checksum").notNull(),
+    storageReference: text("storage_reference").notNull(),
+    state: text("state")
+      .$type<"pending" | "ready" | "rejected" | "expired">()
+      .default("pending")
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    tokenExpiresAt: timestamp("token_expires_at", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    attempts: jsonb("attempts").$type<Array<number>>().default([]).notNull(),
+    result: jsonb("result").$type<ReadyUpload>(),
+    rejectionReason: text("rejection_reason"),
+    cleanedAt: timestamp("cleaned_at", { withTimezone: true }),
+  },
+  (t) => [
+    index("file_upload_intents_account_usage_idx").on(
+      t.userId,
+      t.state,
+      t.completedAt
+    ),
+    index("file_upload_intents_workspace_usage_idx").on(
+      t.workspaceId,
+      t.state,
+      t.completedAt
+    ),
+    index("file_upload_intents_cleanup_idx").on(
+      t.state,
+      t.cleanedAt,
+      t.expiresAt
+    ),
+    unique("file_upload_intents_command_unique").on(
+      t.workspaceId,
+      t.userId,
+      t.commandKey
+    ),
+    unique("file_upload_intents_reference_unique").on(t.storageReference),
+    check(
+      "file_upload_intents_state",
+      sql`${t.state} IN ('pending','ready','rejected','expired')`
+    ),
+    check(
+      "file_upload_intents_size",
+      sql`${t.sizeBytes} > 0 AND ${t.sizeBytes} <= 100000000`
+    ),
+    check(
+      "file_upload_intents_checksum",
+      sql`${t.checksum} ~ '^[a-f0-9]{64}$'`
+    ),
+    check(
+      "file_upload_intents_ready",
+      sql`(${t.state} = 'ready') = (${t.result} IS NOT NULL)`
+    ),
+    check("file_upload_intents_expiry", sql`${t.expiresAt} > ${t.createdAt}`),
   ]
 )

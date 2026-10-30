@@ -11,15 +11,14 @@ import type {
   ThreadModelPreferenceRecord,
 } from "@/application/agents/thread-model-preference"
 import type { AgentFeatureFlags } from "@/application/agents/agent-feature-flags"
-import type {
-  AgentAttachmentRecord,
-  CreateAgentAttachmentInput,
-} from "@/application/agents/attachment-contract"
+import type { AgentAttachmentRecord } from "@/application/agents/attachment-contract"
 
 export interface AgentClient {
-  uploadAttachment: (
-    input: CreateAgentAttachmentInput
-  ) => Promise<AgentAttachmentRecord>
+  uploadAttachment: (input: {
+    name: string
+    contentType: string
+    file: Blob
+  }) => Promise<AgentAttachmentRecord>
   createThread: (input: CreateAgentThreadInput) => Promise<AgentThreadRecord>
   listThreads: () => Promise<Array<AgentThreadRecord>>
   mutateThread: (

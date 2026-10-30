@@ -169,29 +169,6 @@ function threadTitle(message: string) {
   return compact.length > 56 ? `${compact.slice(0, 53)}…` : compact
 }
 
-function fileToBase64(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader()
-    reader.addEventListener("load", () => {
-      const result = reader.result
-      if (typeof result !== "string") {
-        reject(new Error(`Forge could not read ${file.name}.`))
-        return
-      }
-      const separator = result.indexOf(",")
-      if (separator < 0) {
-        reject(new Error(`Forge could not encode ${file.name}.`))
-        return
-      }
-      resolve(result.slice(separator + 1))
-    })
-    reader.addEventListener("error", () => {
-      reject(new Error(`Forge could not read ${file.name}.`))
-    })
-    reader.readAsDataURL(file)
-  })
-}
-
 function attachmentContentType(file: File) {
   if (file.type) return file.type
   const extension = file.name.split(".").at(-1)?.toLowerCase()
@@ -357,19 +334,17 @@ export function AgentProvider({
       setError(null)
       setUploadingComposerKeys((current) => new Set(current).add(uploadKey))
       try {
-        const uploaded = await Promise.all(
-          nextFiles.map(async (file) =>
-            client.uploadAttachment({
-              name: file.name,
-              contentType: attachmentContentType(file),
-              contentBase64: await fileToBase64(file),
-            })
-          )
-        )
-        setAttachmentsByComposer((current) => ({
-          ...current,
-          [uploadKey]: [...(current[uploadKey] ?? []), ...uploaded],
-        }))
+        for (const file of nextFiles) {
+          const uploaded = await client.uploadAttachment({
+            name: file.name,
+            contentType: attachmentContentType(file),
+            file,
+          })
+          setAttachmentsByComposer((current) => ({
+            ...current,
+            [uploadKey]: [...(current[uploadKey] ?? []), uploaded],
+          }))
+        }
       } catch (uploadError) {
         setError(
           uploadError instanceof Error

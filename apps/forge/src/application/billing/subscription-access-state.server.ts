@@ -1,6 +1,7 @@
 import "@tanstack/react-start/server-only"
 import { eq, sql } from "drizzle-orm"
 import { z } from "zod"
+import type { DatabaseExecutor } from "@/db"
 import { db, workspaceEntitlements } from "@/db"
 
 const date = z.coerce.date().nullable().optional()
@@ -41,8 +42,11 @@ const stateSchema = z.object({
 })
 
 /** Whole-row JSON tolerates the pre-expansion table without selecting absent columns. */
-export async function readSubscriptionAccessState(workspaceId: string) {
-  const rows = await db
+export async function readSubscriptionAccessState(
+  workspaceId: string,
+  executor: DatabaseExecutor = db
+) {
+  const rows = await executor
     .select({ state: sql<unknown>`to_jsonb(${workspaceEntitlements})` })
     .from(workspaceEntitlements)
     .where(eq(workspaceEntitlements.workspaceId, workspaceId))

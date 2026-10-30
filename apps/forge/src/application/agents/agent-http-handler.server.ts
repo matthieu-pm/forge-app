@@ -44,7 +44,6 @@ import {
 import { threadModelPreferenceInputSchema } from "@/application/agents/thread-model-preference"
 import { AgentControlPolicyError } from "@/application/agents/agent-control-policy"
 import { AgentAttachmentError } from "@/application/agents/attachment-service.server"
-import { createAgentAttachmentInputSchema } from "@/application/agents/attachment-contract"
 import {
   emitTelemetry,
   observeRequest,
@@ -554,16 +553,17 @@ export function createAgentHttpHandler(dependencies: AgentHttpDependencies) {
         )
       }
 
-      if (
-        resource === "attachments" &&
-        !id &&
-        request.method === "POST" &&
-        dependencies.attachments
-      ) {
-        const input = createAgentAttachmentInputSchema.parse(
-          await readJson(request)
+      if (resource === "attachments" && !id && request.method === "POST") {
+        return json(
+          {
+            error: {
+              code: "DIRECT_UPLOAD_REQUIRED",
+              message:
+                "Use /api/files/uploads/ to upload bytes directly to storage.",
+            },
+          },
+          410
         )
-        return json(await dependencies.attachments.upload(actor, input), 201)
       }
 
       if (

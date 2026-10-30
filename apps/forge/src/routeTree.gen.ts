@@ -95,6 +95,8 @@ import { Route as WorkspaceInitiativesIndexRouteImport } from './routes/workspac
 import { Route as WorkspaceInitiativesInitiativeIdRouteImport } from './routes/workspace/initiatives/$initiativeId'
 import { Route as ApiBillingPolarWebhookRouteImport } from './routes/api/billing/polar/webhook'
 import { Route as ApiCallsOauthCallbackRouteImport } from './routes/api/calls/oauth/callback'
+import { Route as ApiFilesUploadsIndexRouteImport } from './routes/api/files/uploads/index'
+import { Route as ApiFilesUploadsSplatRouteImport } from './routes/api/files/uploads/$'
 import { Route as ApiInternalDesktopReleasesRouteImport } from './routes/api/internal/desktop/releases'
 import { Route as SettingsTemplatesIssueTemplateIdRouteImport } from './routes/settings.templates.issue.$templateId'
 import { Route as SettingsTemplatesProjectTemplateIdRouteImport } from './routes/settings.templates.project.$templateId'
@@ -567,6 +569,16 @@ const ApiCallsOauthCallbackRoute = ApiCallsOauthCallbackRouteImport.update({
   path: '/api/calls/oauth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiFilesUploadsIndexRoute = ApiFilesUploadsIndexRouteImport.update({
+  id: '/api/files/uploads/',
+  path: '/api/files/uploads/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiFilesUploadsSplatRoute = ApiFilesUploadsSplatRouteImport.update({
+  id: '/api/files/uploads/$',
+  path: '/api/files/uploads/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiInternalDesktopReleasesRoute =
   ApiInternalDesktopReleasesRouteImport.update({
     id: '/api/internal/desktop/releases',
@@ -829,6 +841,7 @@ export interface FileRoutesByFullPath {
   '/workspace/initiatives/': typeof WorkspaceInitiativesIndexRoute
   '/api/billing/polar/webhook': typeof ApiBillingPolarWebhookRoute
   '/api/calls/oauth/callback': typeof ApiCallsOauthCallbackRoute
+  '/api/files/uploads/$': typeof ApiFilesUploadsSplatRoute
   '/api/internal/desktop/releases': typeof ApiInternalDesktopReleasesRouteWithChildren
   '/settings/templates/issue/$templateId': typeof SettingsTemplatesIssueTemplateIdRoute
   '/settings/templates/project/$templateId': typeof SettingsTemplatesProjectTemplateIdRoute
@@ -845,6 +858,7 @@ export interface FileRoutesByFullPath {
   '/settings/teams/$teamSlug/workflows': typeof SettingsTeamsTeamSlugWorkflowsRoute
   '/teams/$teamSlug/cycle/$cycleNumber': typeof TeamsTeamSlugCycleCycleNumberRoute
   '/teams/$teamSlug/cycle/upcoming': typeof TeamsTeamSlugCycleUpcomingRoute
+  '/api/files/uploads/': typeof ApiFilesUploadsIndexRoute
   '/settings/teams/$teamSlug/': typeof SettingsTeamsTeamSlugIndexRoute
   '/api/desktop/updates/darwin/$arch': typeof ApiDesktopUpdatesDarwinArchRoute
   '/settings/teams/$teamSlug/agent-skills/$skillId': typeof SettingsTeamsTeamSlugAgentSkillsSkillIdRoute
@@ -943,6 +957,7 @@ export interface FileRoutesByTo {
   '/workspace/initiatives': typeof WorkspaceInitiativesIndexRoute
   '/api/billing/polar/webhook': typeof ApiBillingPolarWebhookRoute
   '/api/calls/oauth/callback': typeof ApiCallsOauthCallbackRoute
+  '/api/files/uploads/$': typeof ApiFilesUploadsSplatRoute
   '/api/internal/desktop/releases': typeof ApiInternalDesktopReleasesRouteWithChildren
   '/settings/templates/issue/$templateId': typeof SettingsTemplatesIssueTemplateIdRoute
   '/settings/templates/project/$templateId': typeof SettingsTemplatesProjectTemplateIdRoute
@@ -956,6 +971,7 @@ export interface FileRoutesByTo {
   '/settings/teams/$teamSlug/workflows': typeof SettingsTeamsTeamSlugWorkflowsRoute
   '/teams/$teamSlug/cycle/$cycleNumber': typeof TeamsTeamSlugCycleCycleNumberRoute
   '/teams/$teamSlug/cycle/upcoming': typeof TeamsTeamSlugCycleUpcomingRoute
+  '/api/files/uploads': typeof ApiFilesUploadsIndexRoute
   '/settings/teams/$teamSlug': typeof SettingsTeamsTeamSlugIndexRoute
   '/api/desktop/updates/darwin/$arch': typeof ApiDesktopUpdatesDarwinArchRoute
   '/settings/teams/$teamSlug/agent-skills/$skillId': typeof SettingsTeamsTeamSlugAgentSkillsSkillIdRoute
@@ -1058,6 +1074,7 @@ export interface FileRoutesById {
   '/workspace/initiatives/': typeof WorkspaceInitiativesIndexRoute
   '/api/billing/polar/webhook': typeof ApiBillingPolarWebhookRoute
   '/api/calls/oauth/callback': typeof ApiCallsOauthCallbackRoute
+  '/api/files/uploads/$': typeof ApiFilesUploadsSplatRoute
   '/api/internal/desktop/releases': typeof ApiInternalDesktopReleasesRouteWithChildren
   '/settings/templates/issue/$templateId': typeof SettingsTemplatesIssueTemplateIdRoute
   '/settings/templates/project/$templateId': typeof SettingsTemplatesProjectTemplateIdRoute
@@ -1074,6 +1091,7 @@ export interface FileRoutesById {
   '/settings_/teams/$teamSlug/workflows': typeof SettingsTeamsTeamSlugWorkflowsRoute
   '/teams/$teamSlug/cycle/$cycleNumber': typeof TeamsTeamSlugCycleCycleNumberRoute
   '/teams/$teamSlug/cycle/upcoming': typeof TeamsTeamSlugCycleUpcomingRoute
+  '/api/files/uploads/': typeof ApiFilesUploadsIndexRoute
   '/settings_/teams/$teamSlug/': typeof SettingsTeamsTeamSlugIndexRoute
   '/api/desktop/updates/darwin/$arch': typeof ApiDesktopUpdatesDarwinArchRoute
   '/settings_/teams/$teamSlug/agent-skills/$skillId': typeof SettingsTeamsTeamSlugAgentSkillsSkillIdRoute
@@ -1177,6 +1195,7 @@ export interface FileRouteTypes {
     | '/workspace/initiatives/'
     | '/api/billing/polar/webhook'
     | '/api/calls/oauth/callback'
+    | '/api/files/uploads/$'
     | '/api/internal/desktop/releases'
     | '/settings/templates/issue/$templateId'
     | '/settings/templates/project/$templateId'
@@ -1193,6 +1212,7 @@ export interface FileRouteTypes {
     | '/settings/teams/$teamSlug/workflows'
     | '/teams/$teamSlug/cycle/$cycleNumber'
     | '/teams/$teamSlug/cycle/upcoming'
+    | '/api/files/uploads/'
     | '/settings/teams/$teamSlug/'
     | '/api/desktop/updates/darwin/$arch'
     | '/settings/teams/$teamSlug/agent-skills/$skillId'
@@ -1291,6 +1311,7 @@ export interface FileRouteTypes {
     | '/workspace/initiatives'
     | '/api/billing/polar/webhook'
     | '/api/calls/oauth/callback'
+    | '/api/files/uploads/$'
     | '/api/internal/desktop/releases'
     | '/settings/templates/issue/$templateId'
     | '/settings/templates/project/$templateId'
@@ -1304,6 +1325,7 @@ export interface FileRouteTypes {
     | '/settings/teams/$teamSlug/workflows'
     | '/teams/$teamSlug/cycle/$cycleNumber'
     | '/teams/$teamSlug/cycle/upcoming'
+    | '/api/files/uploads'
     | '/settings/teams/$teamSlug'
     | '/api/desktop/updates/darwin/$arch'
     | '/settings/teams/$teamSlug/agent-skills/$skillId'
@@ -1405,6 +1427,7 @@ export interface FileRouteTypes {
     | '/workspace/initiatives/'
     | '/api/billing/polar/webhook'
     | '/api/calls/oauth/callback'
+    | '/api/files/uploads/$'
     | '/api/internal/desktop/releases'
     | '/settings/templates/issue/$templateId'
     | '/settings/templates/project/$templateId'
@@ -1421,6 +1444,7 @@ export interface FileRouteTypes {
     | '/settings_/teams/$teamSlug/workflows'
     | '/teams/$teamSlug/cycle/$cycleNumber'
     | '/teams/$teamSlug/cycle/upcoming'
+    | '/api/files/uploads/'
     | '/settings_/teams/$teamSlug/'
     | '/api/desktop/updates/darwin/$arch'
     | '/settings_/teams/$teamSlug/agent-skills/$skillId'
@@ -1479,7 +1503,9 @@ export interface RootRouteChildren {
   WorkspaceInitiativesIndexRoute: typeof WorkspaceInitiativesIndexRoute
   ApiBillingPolarWebhookRoute: typeof ApiBillingPolarWebhookRoute
   ApiCallsOauthCallbackRoute: typeof ApiCallsOauthCallbackRoute
+  ApiFilesUploadsSplatRoute: typeof ApiFilesUploadsSplatRoute
   ApiInternalDesktopReleasesRoute: typeof ApiInternalDesktopReleasesRouteWithChildren
+  ApiFilesUploadsIndexRoute: typeof ApiFilesUploadsIndexRoute
   ApiDesktopUpdatesDarwinArchRoute: typeof ApiDesktopUpdatesDarwinArchRoute
 }
 
@@ -2087,6 +2113,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCallsOauthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/files/uploads/': {
+      id: '/api/files/uploads/'
+      path: '/api/files/uploads'
+      fullPath: '/api/files/uploads/'
+      preLoaderRoute: typeof ApiFilesUploadsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/files/uploads/$': {
+      id: '/api/files/uploads/$'
+      path: '/api/files/uploads/$'
+      fullPath: '/api/files/uploads/$'
+      preLoaderRoute: typeof ApiFilesUploadsSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/internal/desktop/releases': {
       id: '/api/internal/desktop/releases'
       path: '/api/internal/desktop/releases'
@@ -2592,7 +2632,9 @@ const rootRouteChildren: RootRouteChildren = {
   WorkspaceInitiativesIndexRoute: WorkspaceInitiativesIndexRoute,
   ApiBillingPolarWebhookRoute: ApiBillingPolarWebhookRoute,
   ApiCallsOauthCallbackRoute: ApiCallsOauthCallbackRoute,
+  ApiFilesUploadsSplatRoute: ApiFilesUploadsSplatRoute,
   ApiInternalDesktopReleasesRoute: ApiInternalDesktopReleasesRouteWithChildren,
+  ApiFilesUploadsIndexRoute: ApiFilesUploadsIndexRoute,
   ApiDesktopUpdatesDarwinArchRoute: ApiDesktopUpdatesDarwinArchRoute,
 }
 export const routeTree = rootRouteImport
