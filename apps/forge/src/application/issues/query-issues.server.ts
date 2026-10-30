@@ -303,7 +303,7 @@ export async function queryCanonicalIssues(
       )}),
       ranked AS (SELECT *, row_number() OVER(PARTITION BY facet ORDER BY count DESC,value) rank FROM facets)
       SELECT (SELECT count(*)::int FROM result) total,
-      (SELECT md5(coalesce(string_agg(id::text || ':' || revision::text, ',' ORDER BY id),'')) FROM result) AS "resultRevision",
+      (SELECT md5(coalesce(string_agg(jsonb_build_array(id,revision,status_name,status_position,labels)::text, ',' ORDER BY id),'')) FROM result) AS "resultRevision",
       coalesce((SELECT jsonb_agg(p) FROM (SELECT id,completion_key,completion_time,sort_key,number_key FROM result WHERE ${afterCursor(query, cursor?.values)} ORDER BY ${sql.join(
         orderColumns(query).map(
           (key) =>

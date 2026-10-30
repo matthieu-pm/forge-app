@@ -138,6 +138,15 @@ describe("authorized query client", () => {
     await waitFor(() => expect(hook.result.current.page?.total).toBe(0))
     expect(hook.result.current.records).toEqual([])
   })
+  it("refreshes query totals and groups after a shared workflow or label definition changes", async () => {
+    vi.mocked(loadIssueQuery).mockResolvedValue(JSON.stringify(page("shared")))
+    const hook = renderHook(() => useIssueQuery({ teamIds: [team] }))
+    await waitFor(() => expect(hook.result.current.loading).toBe(false))
+    act(() =>
+      window.dispatchEvent(new Event("forge:issue-definitions-changed"))
+    )
+    await waitFor(() => expect(loadIssueQuery).toHaveBeenCalledTimes(2))
+  })
   it("invalidates the affected team without restarting unrelated queries", async () => {
     const other = "00000000-0000-4000-8000-000000000002"
     vi.mocked(loadIssueQuery).mockResolvedValue(JSON.stringify(page("shared")))

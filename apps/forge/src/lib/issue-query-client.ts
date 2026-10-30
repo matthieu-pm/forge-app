@@ -11,6 +11,7 @@ import {
 } from "./canonical-issue-cache"
 import { loadIssueDetail, loadIssueQuery } from "./canonical-issue-state"
 import { issueQuerySchema } from "./issue-query-contract"
+import { DEFINITIONS_CHANGED } from "./issue-definition-cache"
 import type { IssueQuery, IssueQueryPage } from "./issue-query-contract"
 
 export const ISSUE_QUERIES_INVALIDATED = "forge:issue-queries-invalidated"
@@ -52,13 +53,15 @@ export function invalidateIssueQueries(teamIds?: Array<string>) {
   }
   notify()
 }
-if (typeof window !== "undefined")
+if (typeof window !== "undefined") {
+  window.addEventListener(DEFINITIONS_CHANGED, () => invalidateIssueQueries())
   window.addEventListener(ISSUE_QUERIES_INVALIDATED, (event) => {
     invalidateIssueQueries(
       (event as Event & { detail?: { teamIds?: Array<string> } }).detail
         ?.teamIds
     )
   })
+}
 async function requestPage(key: string, entry: Entry, more: boolean) {
   const identity = canonicalIssueState()
   if (!identity || entry.loading) return

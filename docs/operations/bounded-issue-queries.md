@@ -53,13 +53,14 @@ production provider requires the canonical service before showing its children.
 
 Query keys contain workspace, user, session, identity epoch and normalized input.
 Only requested pages are retained; at most 30 query variants are cached. Creation
-and committed edits invalidate the affected teams and workspace-wide queries.
+and committed edits invalidate the affected teams and workspace-wide queries. Shared workflow/label definition changes also
+invalidate query totals and groups.
 The provider's existing focus/30-second refresh resets protected collections and
 starts a fresh traversal. Logout/workspace/account switches discard old requests.
 No protected issue query is persisted to device storage.
 
-A response includes a revision digest of its authorized matching identities and
-revisions, computed after authorization. When it differs during continuation,
+A response includes a revision digest of its authorized matching identities, issue revisions,
+workflow names/order and canonical label names, computed after authorization. When it differs during continuation,
 the client discards the affected cached traversal and fetches the first page.
 This removes previously displayed private rows after revocation and handles edits
 that change a filter or sort position. A failed continuation also removes retained
