@@ -1,10 +1,13 @@
 import "@tanstack/react-start/server-only"
 
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
+import { mkdir, rm, writeFile } from "node:fs/promises"
+import { createReadStream } from "node:fs"
+import { Readable } from "node:stream"
 import { resolve, sep } from "node:path"
 
 import type { FileBlobStore } from "@/application/files/blob-store"
 import { assertFileReference } from "@/application/files/blob-store"
+import { readBoundedFile } from "@/application/files/bounded-file-read.server"
 
 export class LocalFileBlobStore implements FileBlobStore {
   readonly #root: string
@@ -28,9 +31,19 @@ export class LocalFileBlobStore implements FileBlobStore {
     await writeFile(target, content, { mode: 0o600, flag: "wx" })
   }
 
-  async get(reference: string) {
+  async get(
+    reference: string,
+    options?: { maxBytes: number; signal?: AbortSignal }
+  ) {
     try {
-      return new Uint8Array(await readFile(this.#path(reference)))
+      const stream = Readable.toWeb(
+        createReadStream(this.#path(reference), { signal: options?.signal })
+      ) as ReadableStream<Uint8Array>
+      return await readBoundedFile(
+        stream,
+        options?.maxBytes ?? 100_000_000,
+        options?.signal
+      )
     } catch (error) {
       if (
         error &&

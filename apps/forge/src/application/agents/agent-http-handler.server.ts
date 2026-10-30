@@ -11,6 +11,7 @@ import type { CapabilityGateway } from "@/application/agents/capability-gateway.
 import type { AgentArtifactService } from "@/application/agents/artifact-service.server"
 import type { AgentFeatureFlags } from "@/application/agents/agent-feature-flags"
 import type { AgentAttachmentService } from "@/application/agents/attachment-service.server"
+import { downloadFileResponse } from "@/application/files/file-response.server"
 import { EmailVerificationRequiredError } from "@/lib/email-verification"
 import { AgentCoordinatorError } from "@/application/agents/agent-coordinator.server"
 import {
@@ -592,15 +593,8 @@ export function createAgentHttpHandler(dependencies: AgentHttpDependencies) {
           actor,
           id
         )
-        return new Response(Uint8Array.from(content).buffer, {
-          headers: {
-            "cache-control": "private, no-store",
-            "content-disposition": `attachment; filename*=UTF-8''${encodeURIComponent(artifact.name)}`,
-            "content-length": String(content.byteLength),
-            "content-type": artifact.contentType,
-            "x-content-type-options": "nosniff",
-          },
-        })
+        await verifyArtifactAccessToken(token, actor, id)
+        return downloadFileResponse(artifact, content)
       }
 
       if (resource === "models" && !id && request.method === "GET") {

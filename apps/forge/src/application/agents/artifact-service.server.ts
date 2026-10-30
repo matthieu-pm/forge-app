@@ -174,7 +174,11 @@ export class AgentArtifactService {
       actor.userId,
       artifactId
     )
-    if (!record || record.deletedAt) {
+    if (
+      !record ||
+      record.deletedAt ||
+      (record.retentionExpiresAt && record.retentionExpiresAt <= this.#now())
+    ) {
       throw new AgentArtifactError(
         "ARTIFACT_NOT_FOUND",
         "The artifact was not found."
@@ -201,13 +205,25 @@ export class AgentArtifactService {
       actor.userId,
       artifactId
     )
-    if (!record || record.deletedAt) {
+    if (
+      !record ||
+      record.deletedAt ||
+      (record.retentionExpiresAt && record.retentionExpiresAt <= this.#now())
+    ) {
       throw new AgentArtifactError(
         "ARTIFACT_NOT_FOUND",
         "The artifact was not found."
       )
     }
-    const content = await this.dependencies.blobs.get(record.storageReference)
+    if (record.sizeBytes > 100_000_000)
+      throw new AgentArtifactError(
+        "ARTIFACT_TOO_LARGE",
+        "The artifact exceeds the delivery limit."
+      )
+    const content = await this.dependencies.blobs.get(record.storageReference, {
+      maxBytes: record.sizeBytes,
+      signal: AbortSignal.timeout(30_000),
+    })
     if (!content) {
       throw new AgentArtifactError(
         "ARTIFACT_NOT_FOUND",
@@ -219,6 +235,7 @@ export class AgentArtifactService {
         "INVALID_ARTIFACT_CONTENT",
         "The artifact content failed its integrity check."
       )
+    await this.getMetadata(actor, artifactId)
     return { artifact: publicRecord(record), content }
   }
 
