@@ -12,6 +12,7 @@ The runtime project builds `services/agent-runtime` on Node 24, includes files
 outside that root, and runs the same Eve build as production. Its ignored-build
 command is `test "$VERCEL_ENV" = production`: this Preview-only project does not
 serve a production slot. Both projects keep deployment protection enabled and
+have affected-project skipping disabled so each new branch gets both peers. They
 trust only the peer's `preview` environment to call their own `preview`
 environment. Requests forward short-lived Vercel OIDC identity to the exact
 resolved peer and refuse redirects. Existing application run-bound authorization
