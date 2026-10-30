@@ -62,6 +62,12 @@ does not create a grant.
 
 Canonical planning reads are internal foundation services; public issue/project,
 initiative/document transports and external MCP remain unimplemented/disabled.
+The accepted [external MCP policy](../external-mcp-policy.md) specifies OAuth-only
+inbound access, scoped routine-write delegation, exact-input Forge approvals and
+an independent external execution identity. FOR-92/FOR-93 must implement that
+adapter and its live authority branch; the current session/API-key/agent Actor
+union cannot be cast into external authority. The existing `agent.mcp` workspace
+setting controls outbound connectors and does not enable inbound access.
 There is no implicit external scope for initiatives, documents or labels: their
 internal query contract currently requires a first-party session. Issue/project
 queries require their own read scopes and do not unnecessarily require

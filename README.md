@@ -70,6 +70,10 @@ starts on port 3000 and the EVE runtime starts on `127.0.0.1:2000`.
 - `bun run typecheck` runs TypeScript without emitting files.
 - `bun run format` formats JavaScript and TypeScript files.
 
+The [external MCP policy](docs/external-mcp-policy.md) records the accepted
+transport, client targets, OAuth and write-authority contract (FOR-91). The
+inbound server and client verification remain gated by FOR-92/FOR-93.
+
 ## Database
 
 This project uses Neon Postgres with Drizzle ORM.
