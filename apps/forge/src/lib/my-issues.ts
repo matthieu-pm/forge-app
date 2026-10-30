@@ -4,7 +4,7 @@ import {
   displaySchema,
   emptyIssueFilters,
   filtersSchema,
-} from "./team-issues"
+} from "./issue-view-contract"
 import type { TeamIssue } from "./team-issues"
 
 export const myIssueViews = [

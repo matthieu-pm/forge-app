@@ -19,6 +19,10 @@ import { AgentShell } from "@/components/agent/agent-shell"
 import { SettingsSidebar } from "@/components/settings-sidebar"
 import { DesktopTitleBar } from "@/components/desktop-title-bar"
 import { WorkspaceEmojiProvider } from "@/components/custom-emoji-provider"
+import {
+  AccountPreferenceProvider,
+  PreferenceSyncStatus,
+} from "@/components/account-preference-provider"
 import { PersonalPreferenceEffects } from "@/components/personal-preference-effects"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { Toaster } from "@/components/ui/sonner"
@@ -118,7 +122,6 @@ function RootLayout() {
                 : undefined
           )}
         >
-          <PersonalPreferenceEffects />
           <Activity mode={hasSettingsLayout ? "hidden" : "visible"}>
             <AppSidebar />
           </Activity>
@@ -185,6 +188,12 @@ function AgentRouteContent({
         data-slot="route-viewport"
         className="flex min-h-0 flex-1 flex-col overflow-auto overscroll-contain"
       >
+        {!pathname.startsWith("/settings") && (
+          <>
+            <PreferenceSyncStatus scope="workspace" compact />
+            <PreferenceSyncStatus compact />
+          </>
+        )}
         <Outlet key={pathname} />
       </div>
     </div>
@@ -273,10 +282,13 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <DesktopTitleBar />
-        {children}
-        <HostIntegration />
-        <Toaster />
+        <AccountPreferenceProvider>
+          <PersonalPreferenceEffects />
+          <DesktopTitleBar />
+          {children}
+          <HostIntegration />
+          <Toaster />
+        </AccountPreferenceProvider>
         <TanStackDevtools
           config={{
             position: "bottom-left",

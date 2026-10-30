@@ -2,17 +2,15 @@
 
 import * as React from "react"
 
-import {
-  applyPersonalInterfacePreferences,
-  loadPersonalPreferences,
-} from "@/lib/personal-preferences"
+import { usePreferenceGroup } from "./account-preference-provider"
+import { applyPersonalInterfacePreferences } from "@/lib/personal-preferences"
 import { getForgeHost } from "@/host/forge-host"
 
 export function PersonalPreferenceEffects() {
+  const { preferences } = usePreferenceGroup("general")
   React.useEffect(() => {
     const colorScheme = window.matchMedia("(prefers-color-scheme: dark)")
     const applyPreferences = () => {
-      const preferences = loadPersonalPreferences()
       applyPersonalInterfacePreferences(preferences)
       void getForgeHost().setThemeSource(preferences.interfaceTheme)
     }
@@ -20,7 +18,7 @@ export function PersonalPreferenceEffects() {
     applyPreferences()
     colorScheme.addEventListener("change", applyPreferences)
     return () => colorScheme.removeEventListener("change", applyPreferences)
-  }, [])
+  }, [preferences])
 
   return null
 }

@@ -1,9 +1,5 @@
 import { useCallback, useMemo, useSyncExternalStore } from "react"
-import {
-  defaultMyIssuePreferences,
-  myIssuePreferencesKey,
-  myIssuePreferencesSchema,
-} from "./my-issues"
+
 import {
   ISSUES_CHANGED,
   initialIssueStore,
@@ -22,6 +18,7 @@ import {
 } from "./team-labels"
 import type { MyIssuePreferences } from "./my-issues"
 import type { TeamSummary } from "./team-contract"
+import { useWorkspaceView } from "@/components/account-preference-provider"
 
 const PREFERENCES_CHANGED = "forge:my-issues-preferences-changed"
 function subscribe(notify: () => void) {
@@ -93,42 +90,13 @@ export function useMyIssueData(teams: Array<TeamSummary>) {
     return { contexts, errors, ready: Boolean(snapshot) }
   }, [snapshot, teams])
 }
-export function useMyIssuePreferences(userId: string) {
-  const raw = useSyncExternalStore(
-    subscribe,
-    useCallback(() => {
-      if (!userId) return ""
-      try {
-        return localStorage.getItem(myIssuePreferencesKey(userId)) ?? ""
-      } catch {
-        return "unavailable"
-      }
-    }, [userId]),
-    () => ""
-  )
-  const state = useMemo(() => {
-    try {
-      return {
-        preferences: raw
-          ? myIssuePreferencesSchema.parse(JSON.parse(raw))
-          : defaultMyIssuePreferences(),
-        error: "",
-      }
-    } catch {
-      return {
-        preferences: defaultMyIssuePreferences(),
-        error:
-          "My issues preferences could not be loaded. Saved preferences have been preserved.",
-      }
-    }
-  }, [raw])
-  function save(next: MyIssuePreferences) {
-    if (!userId || state.error) throw new Error("Preferences unavailable")
-    localStorage.setItem(
-      myIssuePreferencesKey(userId),
-      JSON.stringify(myIssuePreferencesSchema.parse(next))
-    )
-    window.dispatchEvent(new Event(PREFERENCES_CHANGED))
+export function useMyIssuePreferences(userId: string, workspaceId?: string) {
+  const sync = useWorkspaceView("myIssues", "main", { userId, workspaceId })
+  return {
+    preferences: sync.value,
+    error: sync.error,
+    save: (next: MyIssuePreferences) => {
+      if (!sync.save(next)) throw new Error("Preferences unavailable")
+    },
   }
-  return { ...state, save }
 }

@@ -69,7 +69,7 @@ export function MyIssues({
   onNavigate: (search: MyIssueSearch) => void
 }) {
   const data = useMyIssueData(teams)
-  const prefs = useMyIssuePreferences(`${workspaceId}:${user.id}`)
+  const prefs = useMyIssuePreferences(user.id, workspaceId)
   const { display, filters, details } = prefs.preferences
   const [directory, setDirectory] = useState<TemplateDirectory>()
   const [directoryError, setDirectoryError] = useState("")

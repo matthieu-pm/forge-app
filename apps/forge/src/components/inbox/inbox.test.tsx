@@ -2,7 +2,6 @@ import {
   act,
   cleanup,
   fireEvent,
-  render,
   screen,
   waitFor,
   within,
@@ -11,6 +10,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { Inbox } from "./inbox"
 import { scope, update } from "./inbox-test-fixtures"
 import type { ComponentProps, ReactNode } from "react"
+import {
+  readTestView,
+  renderPreferences as render,
+  setupPreferenceFixture,
+} from "@/test/preference-fixture"
 import { selectOption } from "@/test-utils/select-option"
 import {
   inboxStorageKey,
@@ -30,7 +34,8 @@ vi.mock("@tanstack/react-router", () => ({
     </a>
   ),
 }))
-beforeEach(() => {
+beforeEach(async () => {
+  await setupPreferenceFixture(scope.userId, scope.workspaceId)
   localStorage.clear()
   vi.stubGlobal("requestAnimationFrame", (callback: () => void) => {
     callback()
@@ -222,7 +227,7 @@ describe("Inbox", () => {
       screen.getByRole("combobox", { name: "Ordering" }),
       "Oldest"
     )
-    expect(saved().preferences).toMatchObject({
+    expect(readTestView("inbox").preferences).toMatchObject({
       priorityEnabled: true,
       priorityInclude: "mentions",
       ordering: "oldest",

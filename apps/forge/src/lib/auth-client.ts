@@ -5,6 +5,7 @@ import {
   inferAdditionalFields,
   organizationClient,
 } from "better-auth/client/plugins"
+import { invalidatePreferenceSession } from "./preference-session-events"
 
 import { desktopCallbackProtocol } from "@/lib/auth-session"
 import { profileUserFields } from "@/lib/profile-fields"
@@ -15,6 +16,15 @@ const desktopProtocol =
     ? desktopCallbackProtocol("")
     : desktopCallbackProtocol(window.location.search)
 
+function changesPreferenceIdentity(url: unknown) {
+  return (
+    typeof url === "string" &&
+    /\/api\/auth\/(?:sign-in(?:\/|$)|sign-up(?:\/|$)|sign-out(?:\?|$)|delete-user(?:\?|$)|organization\/set-active(?:\?|$)|revoke-(?:session|sessions|other-sessions)(?:\?|$))/.test(
+      url
+    )
+  )
+}
+
 export const authClient = createAuthClient({
   fetchOptions: {
     // Clear before and after mutations so an overlapping read cannot retain
@@ -22,6 +32,8 @@ export const authClient = createAuthClient({
     onRequest: (request) => {
       const { method, url, headers } = request
       if (method !== "GET") invalidateNavigationAuthState()
+      if (method !== "GET" && changesPreferenceIdentity(url))
+        invalidatePreferenceSession("start")
       // The SDK's deferred refresh POST has no body, but the auth endpoint
       // requires a JSON content type even for this empty request.
       if (method === "POST" && new URL(url).pathname.endsWith("/get-session")) {
@@ -31,8 +43,12 @@ export const authClient = createAuthClient({
     },
     onSuccess: ({ request }) => {
       if (request.method !== "GET") invalidateNavigationAuthState()
+      if (request.method !== "GET" && changesPreferenceIdentity(request.url))
+        invalidatePreferenceSession("settled")
     },
-    onError: ({ response }) => {
+    onError: ({ request, response }) => {
+      if (response.status === 401 || changesPreferenceIdentity(request?.url))
+        invalidatePreferenceSession("settled")
       if (response.status === 401) invalidateNavigationAuthState()
     },
   },

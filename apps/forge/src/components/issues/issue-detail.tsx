@@ -28,6 +28,7 @@ import type { TeamStatus } from "@/lib/team-statuses"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import type { ActivityReferenceKind } from "@/lib/issue-activity"
+import { usePreferenceGroup } from "@/components/account-preference-provider"
 import { issuePullRequest, issuePullRequests } from "@/lib/issue-pull-requests"
 import { ContentHeader } from "@/components/ui/content-header"
 import { authClient } from "@/lib/auth-client"
@@ -139,8 +140,11 @@ export function IssueDetail({
   const [codingMenuOpen, setCodingMenuOpen] = useState(false)
   const [issueMenuOpen, setIssueMenuOpen] = useState(false)
   const [linkPullRequestOpen, setLinkPullRequestOpen] = useState(false)
-  const [tool, setTool] = useState(
-    () => localStorage.getItem("forge:issue-coding-tool") ?? ""
+  const toolPreferences = usePreferenceGroup("reviews")
+  const [tool, setTool] = useState(toolPreferences.preferences.issueCodingTool)
+  useEffect(
+    () => setTool(toolPreferences.preferences.issueCodingTool),
+    [toolPreferences.preferences.issueCodingTool]
   )
   const file = useRef<HTMLInputElement>(null)
   const children = issues.filter((child) => child.parentId === issue.id)
@@ -1538,15 +1542,19 @@ export function IssueDetail({
           <input
             aria-label="Coding tool name"
             placeholder="e.g. Codex"
+            maxLength={120}
             value={tool}
             onChange={(e) => setTool(e.target.value)}
             className="h-9 rounded border border-border px-3"
           />
           <Button
             onClick={() => {
-              localStorage.setItem("forge:issue-coding-tool", tool)
+              toolPreferences.update({
+                ...toolPreferences.preferences,
+                issueCodingTool: tool,
+              })
               setTools(false)
-              toast.success("Coding tool saved")
+              toast.info("Saving coding tool…")
             }}
           >
             Save

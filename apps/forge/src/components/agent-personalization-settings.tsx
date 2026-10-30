@@ -3,16 +3,17 @@ import { Add01Icon, MoreHorizontalIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Link, useBlocker } from "@tanstack/react-router"
 import { toast } from "sonner"
+import {
+  PreferenceSyncStatus,
+  usePreferenceGroup,
+} from "./account-preference-provider"
 import type {
   AgentPersonalization,
   PersonalSkill,
 } from "@/lib/agent-personalization"
 import {
   personalSkillSchema,
-  personalizationStorageKey,
-  readPersonalization,
   replacePersonalSkill,
-  writePersonalization,
 } from "@/lib/agent-personalization"
 import { loadWorkspaceSecurity } from "@/lib/security-state"
 import { useAgent } from "@/components/agent/agent-provider"
@@ -170,14 +171,12 @@ function SkillEditor({
 }
 export function AgentPersonalizationSettings({ userId }: { userId: string }) {
   const agent = useAgent()
-  const [preferences, setPreferences] = React.useState<AgentPersonalization>({
-    guidance: "",
-    skills: [],
-  })
+  const sync = usePreferenceGroup("agent", userId)
+  const preferences = sync.preferences
   const [guidance, setGuidance] = React.useState("")
   const guidanceRef = React.useRef("")
   const savedGuidance = React.useRef("")
-  const [ready, setReady] = React.useState(false)
+  const ready = sync.editable
   const [error, setError] = React.useState<string | null>(null)
   const [saveStatus, setSaveStatus] = React.useState("")
   const [editor, setEditor] = React.useState<PersonalSkill | "new" | null>(null)
@@ -189,30 +188,20 @@ export function AgentPersonalizationSettings({ userId }: { userId: string }) {
   const dirty = guidance !== preferences.guidance
   useBlocker({ shouldBlockFn: () => dirty, enableBeforeUnload: dirty })
   React.useEffect(() => {
-    function load() {
-      try {
-        const next = readPersonalization(userId)
-        setPreferences(next)
-        if (guidanceRef.current === savedGuidance.current) {
-          setGuidance(next.guidance)
-          guidanceRef.current = next.guidance
-          savedGuidance.current = next.guidance
-        }
-        setError(null)
-      } catch {
-        setError(
-          "Saved personalization could not be loaded. Your data has been preserved. Reload to try again."
-        )
-      }
-      setReady(true)
+    if (guidanceRef.current === savedGuidance.current) {
+      setGuidance(preferences.guidance)
+      guidanceRef.current = preferences.guidance
+      savedGuidance.current = preferences.guidance
     }
-    function storage(event: StorageEvent) {
-      if (event.key === personalizationStorageKey(userId) || event.key === null)
-        load()
-    }
-    load()
-    window.addEventListener("storage", storage)
-    return () => window.removeEventListener("storage", storage)
+  }, [preferences.guidance])
+  React.useEffect(() => {
+    setGuidance("")
+    guidanceRef.current = ""
+    savedGuidance.current = ""
+    setEditor(null)
+    setDeleting(null)
+    setError(null)
+    setSaveStatus("")
   }, [userId])
   React.useEffect(() => {
     let cancelled = false
@@ -229,19 +218,25 @@ export function AgentPersonalizationSettings({ userId }: { userId: string }) {
       cancelled = true
     }
   }, [mcpRefresh])
+  function editPersonalization(
+    change: (current: AgentPersonalization) => AgentPersonalization
+  ) {
+    const next = change(preferences)
+    sync.update(next)
+    return next
+  }
   function saveGuidance() {
     if (!ready || guidance === savedGuidance.current) return
     try {
-      const next = writePersonalization(userId, (current) => {
+      editPersonalization((current) => {
         if (current.guidance !== savedGuidance.current)
           throw new Error(
             "Your guidance changed elsewhere. Reload before saving your draft."
           )
         return { ...current, guidance }
       })
-      setPreferences(next)
       savedGuidance.current = guidance
-      setSaveStatus("Saved on this device")
+      setSaveStatus("")
       setError(null)
     } catch (reason) {
       setError(
@@ -262,25 +257,20 @@ export function AgentPersonalizationSettings({ userId }: { userId: string }) {
     })
     if (!parsed.success) throw new Error(parsed.error.issues[0].message)
     const skill = parsed.data
-    const next = writePersonalization(userId, (current) =>
+    editPersonalization((current) =>
       original
         ? replacePersonalSkill(current, original, skill)
         : { ...current, skills: [...current.skills, skill] }
     )
-    setPreferences(next)
     setEditor(null)
-    toast.success(original ? "Skill updated" : "Skill created")
   }
   function deleteSkill() {
     if (!deleting) return
     try {
-      setPreferences(
-        writePersonalization(userId, (current) =>
-          replacePersonalSkill(current, deleting, null)
-        )
+      editPersonalization((current) =>
+        replacePersonalSkill(current, deleting, null)
       )
       setDeleting(null)
-      toast.success("Skill deleted")
     } catch (reason) {
       toast.error(
         reason instanceof Error
@@ -298,6 +288,7 @@ export function AgentPersonalizationSettings({ userId }: { userId: string }) {
             Your personal settings for Forge Agent
           </p>
         </header>
+        <PreferenceSyncStatus />
         <div>
           <Section
             title="Guidance"
@@ -469,7 +460,7 @@ export function AgentPersonalizationSettings({ userId }: { userId: string }) {
           <DialogHeader>
             <DialogTitle>Delete {deleting?.name}?</DialogTitle>
             <DialogDescription>
-              This removes the saved skill from this account on this device.
+              This removes the saved skill from your account.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

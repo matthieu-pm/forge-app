@@ -1,0 +1,691 @@
+{
+  "issue": "FOR-127",
+  "confirmedScope": [
+    "all Personal settings pages",
+    "workspace-specific view choices"
+  ],
+  "account": {
+    "scope": "account",
+    "fields": [
+      "general.defaultHomeView",
+      "general.displayNames",
+      "general.firstDayOfWeek",
+      "general.convertEmoticons",
+      "general.submitCommentsWith",
+      "general.fontSize",
+      "general.pointerCursors",
+      "general.underlineLinks",
+      "general.interfaceTheme",
+      "general.lightTheme",
+      "general.darkTheme",
+      "general.notificationBadge",
+      "general.checkSpelling",
+      "general.autoAssignToSelf",
+      "general.assignStartedIssues",
+      "calls.recordingMode",
+      "calls.recordingContent",
+      "calls.language",
+      "calls.speakerLabels",
+      "calls.timestamps",
+      "calls.removeFillers",
+      "calls.generateSummary",
+      "calls.summaryFormat",
+      "calls.summaryDetail",
+      "calls.actionItems",
+      "calls.decisions",
+      "calls.instructions",
+      "reviews.issueCodingTool",
+      "reviews.codeTheme",
+      "reviews.attachmentFormat",
+      "reviews.startOnBranchCopy",
+      "reviews.startOnToolOpen",
+      "reviews.pullRequestTool",
+      "reviews.codingTools",
+      "notifications.priorityInbox",
+      "notifications.priorityTypes",
+      "notifications.channels.desktop.enabled",
+      "notifications.channels.desktop.types",
+      "notifications.channels.mobile.enabled",
+      "notifications.channels.mobile.types",
+      "notifications.channels.email.enabled",
+      "notifications.channels.email.types",
+      "notifications.channels.slack.enabled",
+      "notifications.channels.slack.types",
+      "notifications.updates.sidebar",
+      "notifications.updates.changelog",
+      "notifications.updates.marketing",
+      "notifications.updates.invite",
+      "notifications.updates.legal",
+      "notifications.updates.dpa",
+      "agent.guidance",
+      "agent.skills"
+    ],
+    "defaults": {
+      "general": {
+        "defaultHomeView": "agent",
+        "displayNames": "username",
+        "firstDayOfWeek": "sunday",
+        "convertEmoticons": true,
+        "submitCommentsWith": "command-enter",
+        "fontSize": "default",
+        "pointerCursors": false,
+        "underlineLinks": false,
+        "interfaceTheme": "system",
+        "lightTheme": "light",
+        "darkTheme": "dark",
+        "notificationBadge": "unread",
+        "checkSpelling": true,
+        "autoAssignToSelf": false,
+        "assignStartedIssues": false
+      },
+      "calls": {
+        "recordingMode": "manual",
+        "recordingContent": "audio",
+        "language": "auto",
+        "speakerLabels": true,
+        "timestamps": true,
+        "removeFillers": true,
+        "generateSummary": true,
+        "summaryFormat": "bullets",
+        "summaryDetail": "concise",
+        "actionItems": true,
+        "decisions": true,
+        "instructions": ""
+      },
+      "reviews": {
+        "issueCodingTool": "",
+        "codeTheme": "forge-dark",
+        "attachmentFormat": "title",
+        "startOnBranchCopy": true,
+        "startOnToolOpen": true,
+        "pullRequestTool": "github",
+        "codingTools": [
+          "vscode",
+          "cursor"
+        ]
+      },
+      "notifications": {
+        "priorityInbox": false,
+        "priorityTypes": [
+          "assignments",
+          "status",
+          "mentions",
+          "comments",
+          "replies",
+          "reactions",
+          "due-dates",
+          "issue-updates",
+          "project-updates",
+          "project-status",
+          "milestones"
+        ],
+        "channels": {
+          "desktop": {
+            "enabled": true,
+            "types": [
+              "assignments",
+              "status",
+              "mentions",
+              "comments",
+              "replies",
+              "reactions",
+              "due-dates",
+              "issue-updates",
+              "project-updates",
+              "project-status",
+              "milestones",
+              "cycles",
+              "documents",
+              "subscriptions"
+            ]
+          },
+          "mobile": {
+            "enabled": true,
+            "types": [
+              "assignments",
+              "status",
+              "mentions",
+              "comments",
+              "replies",
+              "reactions",
+              "due-dates",
+              "issue-updates",
+              "project-updates",
+              "project-status",
+              "milestones",
+              "cycles",
+              "documents",
+              "subscriptions",
+              "team-updates",
+              "agent-updates"
+            ]
+          },
+          "email": {
+            "enabled": true,
+            "types": [
+              "assignments",
+              "status",
+              "mentions",
+              "comments",
+              "replies",
+              "reactions",
+              "due-dates",
+              "issue-updates",
+              "project-updates",
+              "project-status",
+              "milestones",
+              "cycles",
+              "documents",
+              "subscriptions",
+              "team-updates",
+              "agent-updates"
+            ]
+          },
+          "slack": {
+            "enabled": false,
+            "types": [
+              "assignments",
+              "status",
+              "mentions",
+              "comments",
+              "replies",
+              "reactions",
+              "due-dates",
+              "issue-updates",
+              "project-updates",
+              "project-status",
+              "milestones",
+              "cycles",
+              "documents",
+              "subscriptions",
+              "team-updates",
+              "agent-updates"
+            ]
+          }
+        },
+        "updates": {
+          "sidebar": false,
+          "changelog": false,
+          "marketing": false,
+          "invite": true,
+          "legal": true,
+          "dpa": false
+        }
+      },
+      "agent": {
+        "guidance": "",
+        "skills": []
+      }
+    }
+  },
+  "workspace": {
+    "scope": "account+workspace",
+    "resourceKeys": "JSON tuple cache scope; percent-encoded resource identifiers for each view",
+    "groups": {
+      "inbox": {
+        "fields": [
+          "preferences.priorityEnabled",
+          "preferences.priorityInclude",
+          "preferences.badgeCount",
+          "preferences.groupBy",
+          "preferences.ordering",
+          "preferences.showSnoozed",
+          "preferences.unreadFirst",
+          "filters.type",
+          "filters.from",
+          "filters.project",
+          "filters.priority",
+          "filters.status",
+          "unreadOnly",
+          "priorityTab"
+        ],
+        "defaults": {
+          "preferences": {
+            "priorityEnabled": false,
+            "priorityInclude": "all",
+            "badgeCount": "all",
+            "groupBy": "none",
+            "ordering": "newest",
+            "showSnoozed": false,
+            "unreadFirst": false
+          },
+          "filters": {
+            "type": [],
+            "from": [],
+            "project": [],
+            "priority": [],
+            "status": []
+          },
+          "unreadOnly": false,
+          "priorityTab": "priority"
+        }
+      },
+      "myIssues": {
+        "fields": [
+          "display.layout",
+          "display.group",
+          "display.subgroup",
+          "display.order",
+          "display.descending",
+          "display.groupDescending",
+          "display.completedByRecency",
+          "display.showSubIssues",
+          "display.nested",
+          "display.showEmpty",
+          "display.properties",
+          "display.showPullRequests",
+          "defaultDisplay.layout",
+          "defaultDisplay.group",
+          "defaultDisplay.subgroup",
+          "defaultDisplay.order",
+          "defaultDisplay.descending",
+          "defaultDisplay.groupDescending",
+          "defaultDisplay.completedByRecency",
+          "defaultDisplay.showSubIssues",
+          "defaultDisplay.nested",
+          "defaultDisplay.showEmpty",
+          "defaultDisplay.properties",
+          "defaultDisplay.showPullRequests",
+          "filters.match",
+          "filters.rules",
+          "version",
+          "details"
+        ],
+        "defaults": {
+          "display": {
+            "layout": "list",
+            "group": "Status",
+            "subgroup": "No grouping",
+            "order": "Priority",
+            "descending": false,
+            "groupDescending": false,
+            "completedByRecency": false,
+            "showSubIssues": true,
+            "nested": "Show matching",
+            "showEmpty": false,
+            "properties": [
+              "ID",
+              "Status",
+              "Assignee",
+              "Priority",
+              "Project",
+              "Due date",
+              "Labels",
+              "Created"
+            ]
+          },
+          "defaultDisplay": {
+            "layout": "list",
+            "group": "Status",
+            "subgroup": "No grouping",
+            "order": "Priority",
+            "descending": false,
+            "groupDescending": false,
+            "completedByRecency": false,
+            "showSubIssues": true,
+            "nested": "Show matching",
+            "showEmpty": false,
+            "properties": [
+              "ID",
+              "Status",
+              "Assignee",
+              "Priority",
+              "Project",
+              "Due date",
+              "Labels",
+              "Created"
+            ]
+          },
+          "filters": {
+            "match": "all",
+            "rules": []
+          },
+          "version": 1,
+          "details": false
+        }
+      },
+      "teamIssues": {
+        "fields": [
+          "display.layout",
+          "display.group",
+          "display.subgroup",
+          "display.order",
+          "display.descending",
+          "display.groupDescending",
+          "display.completedByRecency",
+          "display.showSubIssues",
+          "display.nested",
+          "display.showEmpty",
+          "display.properties",
+          "display.showPullRequests",
+          "defaultDisplay.layout",
+          "defaultDisplay.group",
+          "defaultDisplay.subgroup",
+          "defaultDisplay.order",
+          "defaultDisplay.descending",
+          "defaultDisplay.groupDescending",
+          "defaultDisplay.completedByRecency",
+          "defaultDisplay.showSubIssues",
+          "defaultDisplay.nested",
+          "defaultDisplay.showEmpty",
+          "defaultDisplay.properties",
+          "defaultDisplay.showPullRequests",
+          "filters.match",
+          "filters.rules",
+          "favorite",
+          "notifications",
+          "views"
+        ],
+        "defaults": {
+          "display": {
+            "layout": "list",
+            "group": "Status",
+            "subgroup": "No grouping",
+            "order": "Priority",
+            "descending": false,
+            "groupDescending": false,
+            "completedByRecency": false,
+            "showSubIssues": true,
+            "nested": "Show matching",
+            "showEmpty": false,
+            "properties": [
+              "ID",
+              "Status",
+              "Assignee",
+              "Priority",
+              "Project",
+              "Due date",
+              "Labels",
+              "Created"
+            ]
+          },
+          "defaultDisplay": {
+            "layout": "list",
+            "group": "Status",
+            "subgroup": "No grouping",
+            "order": "Priority",
+            "descending": false,
+            "groupDescending": false,
+            "completedByRecency": false,
+            "showSubIssues": true,
+            "nested": "Show matching",
+            "showEmpty": false,
+            "properties": [
+              "ID",
+              "Status",
+              "Assignee",
+              "Priority",
+              "Project",
+              "Due date",
+              "Labels",
+              "Created"
+            ]
+          },
+          "filters": {
+            "match": "all",
+            "rules": []
+          },
+          "favorite": false,
+          "notifications": [],
+          "views": []
+        }
+      },
+      "cycles": {
+        "fields": [
+          "display.layout",
+          "display.group",
+          "display.subgroup",
+          "display.order",
+          "display.descending",
+          "display.groupDescending",
+          "display.completedByRecency",
+          "display.showSubIssues",
+          "display.nested",
+          "display.showEmpty",
+          "display.properties",
+          "display.showPullRequests",
+          "defaultDisplay.layout",
+          "defaultDisplay.group",
+          "defaultDisplay.subgroup",
+          "defaultDisplay.order",
+          "defaultDisplay.descending",
+          "defaultDisplay.groupDescending",
+          "defaultDisplay.completedByRecency",
+          "defaultDisplay.showSubIssues",
+          "defaultDisplay.nested",
+          "defaultDisplay.showEmpty",
+          "defaultDisplay.properties",
+          "defaultDisplay.showPullRequests",
+          "filters.match",
+          "filters.rules",
+          "favorite"
+        ],
+        "defaults": {
+          "display": {
+            "layout": "list",
+            "group": "Status",
+            "subgroup": "No grouping",
+            "order": "Priority",
+            "descending": false,
+            "groupDescending": false,
+            "completedByRecency": false,
+            "showSubIssues": true,
+            "nested": "Show matching",
+            "showEmpty": false,
+            "properties": [
+              "ID",
+              "Status",
+              "Assignee",
+              "Priority",
+              "Project",
+              "Due date",
+              "Labels",
+              "Created"
+            ]
+          },
+          "defaultDisplay": {
+            "layout": "list",
+            "group": "Status",
+            "subgroup": "No grouping",
+            "order": "Priority",
+            "descending": false,
+            "groupDescending": false,
+            "completedByRecency": false,
+            "showSubIssues": true,
+            "nested": "Show matching",
+            "showEmpty": false,
+            "properties": [
+              "ID",
+              "Status",
+              "Assignee",
+              "Priority",
+              "Project",
+              "Due date",
+              "Labels",
+              "Created"
+            ]
+          },
+          "filters": {
+            "match": "all",
+            "rules": []
+          },
+          "favorite": false
+        }
+      },
+      "reviews": {
+        "fields": [
+          "display.groupBy",
+          "display.orderBy",
+          "display.closedReviews",
+          "display.showDrafts",
+          "display.showTeamReviews",
+          "display.properties",
+          "filters.status",
+          "filters.author",
+          "filters.repository",
+          "filters.content"
+        ],
+        "defaults": {
+          "display": {
+            "groupBy": "focus",
+            "orderBy": "importance",
+            "closedReviews": "day",
+            "showDrafts": true,
+            "showTeamReviews": true,
+            "properties": [
+              "timestamp"
+            ]
+          },
+          "filters": {
+            "status": "all",
+            "author": "all",
+            "repository": "all",
+            "content": ""
+          }
+        }
+      },
+      "projects": {
+        "fields": [
+          "layout",
+          "grouping",
+          "ordering",
+          "descending",
+          "closed",
+          "properties",
+          "sidebar",
+          "favoriteIds",
+          "subscribedIds",
+          "detailSidebar",
+          "sidebarTab",
+          "views"
+        ],
+        "defaults": {
+          "layout": "List",
+          "grouping": "No grouping",
+          "ordering": "Manual",
+          "descending": false,
+          "closed": "All",
+          "properties": [
+            "Health",
+            "Priority",
+            "Lead",
+            "Target date",
+            "Issues",
+            "Status"
+          ],
+          "sidebar": false,
+          "favoriteIds": [],
+          "subscribedIds": [],
+          "detailSidebar": false,
+          "sidebarTab": "Health",
+          "views": []
+        }
+      },
+      "initiatives": {
+        "fields": [
+          "grouping",
+          "ordering",
+          "descending",
+          "properties",
+          "sidebar",
+          "sidebarTab",
+          "favoriteIds",
+          "subscribedIds",
+          "detailSidebar"
+        ],
+        "defaults": {
+          "grouping": "No grouping",
+          "ordering": "Manual",
+          "descending": false,
+          "properties": [
+            "Description",
+            "Priority",
+            "Owner",
+            "Target date",
+            "Projects",
+            "Health",
+            "Active projects"
+          ],
+          "sidebar": false,
+          "sidebarTab": "Owner",
+          "favoriteIds": [],
+          "subscribedIds": [],
+          "detailSidebar": false
+        }
+      },
+      "directory": {
+        "fields": [
+          "favoriteIds",
+          "ordering",
+          "descending",
+          "properties"
+        ],
+        "defaults": {
+          "favoriteIds": [],
+          "ordering": "Name",
+          "descending": false,
+          "properties": [
+            "Owner"
+          ]
+        }
+      },
+      "teamHome": {
+        "fields": [
+          "favorite",
+          "collapsedSectionIds",
+          "favoriteResourceIds"
+        ],
+        "defaults": {
+          "favorite": false,
+          "collapsedSectionIds": [],
+          "favoriteResourceIds": []
+        }
+      }
+    }
+  },
+  "other": [
+    {
+      "classification": "existing account identity/security records",
+      "settings": [
+        "profile name, username, title and avatar",
+        "email/password, session revocation and API keys",
+        "connected accounts/provider credentials"
+      ],
+      "source": [
+        "src/components/profile-settings.tsx",
+        "src/components/account-security-settings.tsx",
+        "src/lib/auth.ts"
+      ],
+      "handling": "Existing authenticated services remain authoritative; not preference patches."
+    },
+    {
+      "classification": "workspace/team policy and business records",
+      "settings": [
+        "Signals collection/consent rules",
+        "workspace fiscal, team statuses/cycles/triage/workflows/labels/templates",
+        "project/initiative settings and resources",
+        "issues, comments, review edits, inbox entries/unread state",
+        "shared/custom view definitions and ownership/visibility"
+      ],
+      "handling": "Not user preference values; source records are never uploaded by these adapters. FOR-127 syncs display/filter/favorite choices only."
+    },
+    {
+      "classification": "device-only capability and transient UI state",
+      "settings": [
+        "OS notification/microphone/recording permissions and installed coding tools",
+        "window geometry, pane/sidebar widths, open tabs and composer drafts",
+        "selection, open popovers/dialogs and onboarding walkthrough state"
+      ],
+      "handling": "Local runtime facts and session UI; excluded from account/workspace patch schemas."
+    },
+    {
+      "classification": "unavailable controls",
+      "settings": [
+        "sidebar customization",
+        "desktop link handling",
+        "GitHub code-access-gated switches"
+      ],
+      "handling": "No new preference control or implementation claim; owning behavior stories govern enablement."
+    }
+  ]
+}

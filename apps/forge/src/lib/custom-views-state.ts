@@ -1,11 +1,12 @@
 import { useCallback, useMemo, useSyncExternalStore } from "react"
-import { z } from "zod"
 import {
   customViewSchema,
   customViewsKey,
   parseCustomViews,
 } from "./custom-views"
+import type { WorkspaceViewValues } from "./workspace-preference-contract"
 import type { CustomView } from "./custom-views"
+import { useWorkspaceView } from "@/components/account-preference-provider"
 
 const changed = "forge:custom-views-changed"
 const errorMessage =
@@ -20,6 +21,10 @@ function subscribe(notify: () => void) {
 }
 
 export function useCustomViews(workspaceId: string, userId: string) {
+  const favorites = useWorkspaceView("directory", "main", {
+    workspaceId,
+    userId,
+  })
   const key = customViewsKey(workspaceId, userId)
   const raw = useSyncExternalStore(
     subscribe,
@@ -43,8 +48,32 @@ export function useCustomViews(workspaceId: string, userId: string) {
     try {
       // Read again at write time so another open view's changes are preserved.
       const current = parseCustomViews(localStorage.getItem(key))
-      const views = transform(current.views)
-      localStorage.setItem(key, JSON.stringify({ ...current, views }))
+      const visible = current.views.map((view) => ({
+        ...view,
+        favorite: favorites.value.favoriteIds.includes(view.id),
+      }))
+      const views = transform(visible)
+      const favoriteIds = views
+        .filter((view) => view.favorite)
+        .map((view) => view.id)
+      if (
+        JSON.stringify(favoriteIds) !==
+          JSON.stringify(favorites.value.favoriteIds) &&
+        !favorites.save({ ...favorites.value, favoriteIds })
+      )
+        return false
+      localStorage.setItem(
+        key,
+        JSON.stringify({
+          ...current,
+          views: views.map((view) => ({
+            ...view,
+            favorite:
+              current.views.find((previous) => previous.id === view.id)
+                ?.favorite ?? false,
+          })),
+        })
+      )
       window.dispatchEvent(new Event(changed))
       return true
     } catch {
@@ -67,66 +96,30 @@ export function useCustomViews(workspaceId: string, userId: string) {
   function remove(id: string) {
     return update((views) => views.filter((view) => view.id !== id))
   }
-  return { ...result, save, remove }
+  return {
+    ...result,
+    views: result.views.map((view) => ({
+      ...view,
+      favorite: favorites.value.favoriteIds.includes(view.id),
+    })),
+    save,
+    remove,
+  }
 }
 
-const directoryPreferencesSchema = z.object({
-  ordering: z.enum(["Name", "Created", "Updated"]),
-  descending: z.boolean(),
-  properties: z.array(z.enum(["Owner", "Created", "Updated"])),
-})
-export type CustomViewDirectoryPreferences = z.infer<
-  typeof directoryPreferencesSchema
+export type CustomViewDirectoryPreferences = Omit<
+  WorkspaceViewValues<"directory">,
+  "favoriteIds"
 >
-const defaultDirectoryPreferences = (): CustomViewDirectoryPreferences => ({
-  ordering: "Name",
-  descending: false,
-  properties: ["Owner"],
-})
-function parseDirectoryPreferences(raw: string | null) {
-  return raw === null
-    ? defaultDirectoryPreferences()
-    : directoryPreferencesSchema.parse(JSON.parse(raw))
-}
-
 export function useCustomViewDirectoryPreferences(
   workspaceId: string,
   userId: string
 ) {
-  const key = `${customViewsKey(workspaceId, userId)}:directory`
-  const raw = useSyncExternalStore(
-    subscribe,
-    useCallback(() => {
-      try {
-        return localStorage.getItem(key)
-      } catch {
-        return "unavailable"
-      }
-    }, [key]),
-    () => null
-  )
-  const result = useMemo(() => {
-    try {
-      return { ...parseDirectoryPreferences(raw), error: "" }
-    } catch {
-      return {
-        ...defaultDirectoryPreferences(),
-        error:
-          "View directory preferences could not be loaded. Your saved settings have been preserved.",
-      }
-    }
-  }, [raw])
-  function save(preferences: CustomViewDirectoryPreferences) {
-    try {
-      // Check the current value as another tab may have written since rendering.
-      parseDirectoryPreferences(localStorage.getItem(key))
-      const next = directoryPreferencesSchema.parse(preferences)
-      localStorage.setItem(key, JSON.stringify(next))
-      window.dispatchEvent(new Event(changed))
-      return true
-    } catch {
-      return false
-    }
+  const sync = useWorkspaceView("directory", "main", { workspaceId, userId })
+  return {
+    ...sync.value,
+    error: sync.error,
+    save: (next: CustomViewDirectoryPreferences) =>
+      sync.save({ ...sync.value, ...next }),
   }
-  return { ...result, save }
 }

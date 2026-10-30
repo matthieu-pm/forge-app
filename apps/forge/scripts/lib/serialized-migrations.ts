@@ -17,6 +17,7 @@ export type MigrationTarget = {
     | "staging"
     | "rehearsal"
     | "file-storage-acceptance"
+    | "personal-preference-acceptance"
     | "production-storage-rehearsal"
     | "production"
   branchId: string
