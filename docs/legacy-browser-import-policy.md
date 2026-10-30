@@ -93,7 +93,7 @@ explicit-cleanup rule; re-import cannot revive a deleted destination or identity
 
 | Follow-up owner | Required implementation/evidence |
 | --- | --- |
-| FOR-53 | Read-only discovery/preview, backup, malformed/future source preservation and exact ownership/destination/selection confirmation. |
+| FOR-53 | [Implemented preview and backup](legacy-browser-import-preview.md): read-only discovery, malformed/future source preservation and exact ownership/destination/selection confirmation. Upload execution remains FOR-56. |
 | FOR-56 | Trusted manifests, live permissions, scoped aliases, atomic idempotency and restart-safe batches/files; overlaps and revoked membership. |
 | FOR-57 | Reconciliation, every issue entry point cutover, no dual writes and snapshot-checked explicit cleanup. |
 | FOR-126 | Enabled planning/document/view adapters with relationship/visibility preservation. |
