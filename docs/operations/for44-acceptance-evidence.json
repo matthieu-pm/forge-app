@@ -1,0 +1,120 @@
+{
+  "issue": "FOR-44",
+  "date": "2026-10-30",
+  "implementationRevision": "c4ccb7ef3e99cc0de4e140bf271a69726c7722bb",
+  "baseRevision": "d29b03f",
+  "branch": "dev/for-44-issue-relationships",
+  "environment": {
+    "service": "local first-party web server with two independent Better Auth sessions",
+    "database": "forge_auto_assignment_acceptance",
+    "neonBranch": "br-autumn-union-za0opf1e",
+    "productionChanged": false
+  },
+  "acceptedPolicy": {
+    "crossTeam": "allowed within workspace when both endpoints are accessible",
+    "parentCycles": "rejected",
+    "blockingCycles": "rejected, including retained unavailable endpoints",
+    "related": "symmetric unordered pair",
+    "recoverableDeletion": "retain edges, hide unavailable endpoints, show on restore",
+    "permanentDeletion": "detach incident links and orphan direct children; preserve child identities",
+    "lifecycleBoundary": "Current active marker is archived_at; FOR-45 owns the dedicated deletion/restore workflow."
+  },
+  "acceptance": {
+    "AC-01_AT-01": {
+      "passed": true,
+      "checks": [
+        "A blocked by B persists across reloads and independent accounts",
+        "B displays reciprocal blocks A",
+        "unlinking either direction removes both views"
+      ]
+    },
+    "AC-02_AT-02": {
+      "passed": true,
+      "checks": [
+        "ancestor parent cycle rejected by relationship command",
+        "canonical edit cycle rejected without partial property/history/receipt writes",
+        "blocking cycles rejected for transitive, multi-row and concurrent writes"
+      ]
+    },
+    "additional": [
+      "cross-team composition/reparent/detach",
+      "symmetric related-link no-op and exact receipt replay",
+      "current revisions required for both endpoints",
+      "private-team and cross-tenant denial, including receipt replay",
+      "redacted parent preserved during unrelated property edit",
+      "private drafts evicted on team revocation",
+      "bounded reciprocal reads/search independent of issue-list pages",
+      "live API-key/agent scopes use the same canonical command",
+      "recoverable hide/restore and permanent FK detach behavior",
+      "immediate refresh after composer child creation",
+      "lost committed response survives reload and replays one receipt/effect"
+    ]
+  },
+  "validation": {
+    "appUnit": {
+      "command": "bun x vitest run --maxWorkers=4",
+      "passed": 2239,
+      "skipped": 369,
+      "filesPassed": 277,
+      "filesSkipped": 22
+    },
+    "workflow": {
+      "command": "bun run test:workflow",
+      "passed": 4
+    },
+    "canonicalPostgres": {
+      "command": "FORGE_ISSUE_QUERY_TEST_DATABASE_FILE=<private connection file> bun x vitest run src/application/issues/issues.postgres.test.ts",
+      "passed": 85,
+      "note": "Full suite after parent-redaction regression fix. Subsequent strengthened cross-team composition/hidden-detachment assertions passed in the final focused run."
+    },
+    "finalRelationshipPostgres": {
+      "command": "FORGE_ISSUE_RELATIONSHIP_TEST_DATABASE_FILE=<private connection file> bun run test:issue-relationships:postgres",
+      "passed": 13,
+      "notSelected": 72
+    },
+    "browser": {
+      "command": "FORGE_ISSUE_RELATIONSHIP_TEST_DATABASE_FILE=<private connection file> bun run test:issue-relationships:browser",
+      "passed": true,
+      "checks": [
+        "two independent Better Auth sessions",
+        "reciprocal cross-team blocking after reload",
+        "unlink from reciprocal endpoint",
+        "cross-team parent/sub-issue reciprocity",
+        "cycle rejection retains records",
+        "visible stale-revision resolution",
+        "soft-delete hides and restore returns links",
+        "private endpoints omitted from reads/search",
+        "direct issue detail independent of list page",
+        "new sub-issue appears immediately",
+        "lost committed response survives reload and replays exactly once"
+      ],
+      "cleanup": {
+        "workspaces": 0,
+        "users": 0,
+        "receipts": 0
+      }
+    },
+    "typecheck": {
+      "passed": true
+    },
+    "lint": {
+      "errors": 0,
+      "warnings": 23,
+      "scope": "changed source and test/script files; warnings are in existing code in touched files"
+    },
+    "productionBuild": {
+      "passed": true,
+      "workflowHandlersVerified": true
+    }
+  },
+  "migration": {
+    "name": "0053_issue_relationships",
+    "countBefore": 53,
+    "countAfter": 54,
+    "applied": 1,
+    "exactRetryApplied": 0,
+    "sha256": "0df4ab2d2d9324874180834780d65f76481722ed8319ddb07e400405e8f26a0a",
+    "productionApplied": false
+  },
+  "releaseBoundary": "PR implementation only. Apply the serialized migration on an approved release target before serving this code; no production promotion performed."
+}

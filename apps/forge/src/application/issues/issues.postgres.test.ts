@@ -14,6 +14,7 @@ import {
 } from "vitest"
 import { DATABASE_TARGETS } from "../../../scripts/lib/database-targets"
 import { assertMigrationTarget } from "../../../scripts/lib/serialized-migrations"
+import type { IssueRelationshipKind } from "@/lib/issue-relationship-contract"
 import type { IssueChanges } from "@/lib/canonical-issue-edit-contract"
 import type * as QueryService from "./query-issues.server"
 import type * as Editing from "./edit-issues.server"
@@ -24,6 +25,7 @@ import type * as Database from "@/db"
 import { blankIssueDraft } from "@/lib/issue-record-contract"
 
 const autoAssignmentFile =
+  process.env.FORGE_ISSUE_RELATIONSHIP_TEST_DATABASE_FILE ??
   process.env.FORGE_ISSUE_QUERY_TEST_DATABASE_FILE ??
   process.env.FORGE_AUTO_ASSIGNMENT_TEST_DATABASE_FILE
 const file = autoAssignmentFile ?? process.env.FORGE_ISSUE_TEST_DATABASE_FILE
@@ -1952,5 +1954,602 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
       ])
       await expect(queryIssues(f.actors[1], {})).rejects.toThrow()
     }, 30000)
+  })
+  describe("FOR-44 canonical relationships", () => {
+    async function relationInput(
+      a: string,
+      b: string,
+      kind: IssueRelationshipKind = "blockedBy",
+      action: "add" | "remove" = "add"
+    ) {
+      const rows = (
+        await pool.query(
+          "SELECT id,revision FROM issues WHERE id=ANY($1::uuid[])",
+          [[a, b]]
+        )
+      ).rows
+      return {
+        commandKey: randomUUID(),
+        issueId: a,
+        targetId: b,
+        expectedRevision: rows.find((r) => r.id === a).revision,
+        expectedTargetRevision: rows.find((r) => r.id === b).revision,
+        kind,
+        action,
+      }
+    }
+    async function pair(
+      f: Awaited<ReturnType<typeof fixture>>,
+      crossTeam = false
+    ) {
+      const a = await service.createCanonicalIssue(
+        f.actors[0],
+        command(f.teamId, "Issue A")
+      )
+      const b = await service.createCanonicalIssue(
+        f.actors[0],
+        command(crossTeam ? f.secondTeam : f.teamId, "Issue B")
+      )
+      return [a.issue.id, b.issue.id] as const
+    }
+    it("normalizes uppercase endpoint UUIDs before command identity and lookup", async () => {
+      const f = await fixture(),
+        [a, b] = await pair(f),
+        r = await import("./issue-relationships.server")
+      const input = await relationInput(a, b, "related")
+      const result = await r.changeIssueRelationship(f.actors[0], {
+        ...input,
+        issueId: a.toUpperCase(),
+        targetId: b.toUpperCase(),
+      })
+      expect(result.status).toBe("saved")
+      expect(await r.changeIssueRelationship(f.actors[0], input)).toMatchObject(
+        { status: "saved", replayed: true }
+      )
+    }, 30000)
+    it("persists reciprocal cross-team blocking information and replays one audited command (AT-01)", async () => {
+      const f = await fixture(),
+        [a, b] = await pair(f, true),
+        r = await import("./issue-relationships.server")
+      const input = await relationInput(a, b)
+      const saved = await r.changeIssueRelationship(f.actors[1], input)
+      expect(saved.status).toBe("saved")
+      expect(await r.changeIssueRelationship(f.actors[1], input)).toMatchObject(
+        { status: "saved", replayed: true }
+      )
+      expect(
+        (await r.readIssueRelationships(f.actors[1], { issueId: a }))
+          .relationships
+      ).toMatchObject([{ kind: "blockedBy", issue: { id: b } }])
+      expect(
+        (await r.readIssueRelationships(f.actors[0], { issueId: b }))
+          .relationships
+      ).toMatchObject([{ kind: "blocks", issue: { id: a } }])
+      const receipt = (
+        await pool.query(
+          "SELECT id FROM command_receipts WHERE command_key=$1",
+          [input.commandKey]
+        )
+      ).rows
+      expect(receipt).toHaveLength(1)
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int n FROM command_audit_events WHERE command_id=$1",
+            [receipt[0].id]
+          )
+        ).rows[0].n
+      ).toBe(1)
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int n FROM command_outbox_events WHERE command_id=$1",
+            [receipt[0].id]
+          )
+        ).rows[0].n
+      ).toBe(2)
+      await r.changeIssueRelationship(
+        f.actors[0],
+        await relationInput(b, a, "blocks", "remove")
+      )
+      expect(
+        (await r.readIssueRelationships(f.actors[1], { issueId: a }))
+          .relationships
+      ).toEqual([])
+      expect(
+        (await r.readIssueRelationships(f.actors[1], { issueId: b }))
+          .relationships
+      ).toEqual([])
+    }, 30000)
+    it("keeps related links symmetric and idempotent from either endpoint", async () => {
+      const f = await fixture(),
+        [a, b] = await pair(f, true),
+        r = await import("./issue-relationships.server")
+      await r.changeIssueRelationship(
+        f.actors[0],
+        await relationInput(a, b, "related")
+      )
+      await r.changeIssueRelationship(
+        f.actors[1],
+        await relationInput(b, a, "related")
+      )
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int n FROM issue_relations WHERE workspace_id=$1",
+            [f.workspaceId]
+          )
+        ).rows[0].n
+      ).toBe(1)
+      expect(
+        (await r.readIssueRelationships(f.actors[1], { issueId: b }))
+          .relationships
+      ).toMatchObject([{ kind: "related", issue: { id: a } }])
+      await r.changeIssueRelationship(
+        f.actors[1],
+        await relationInput(b, a, "related", "remove")
+      )
+      expect(
+        (await r.readIssueRelationships(f.actors[0], { issueId: a }))
+          .relationships
+      ).toEqual([])
+    }, 30000)
+    it("supports cross-team parents, sub-issues, reparenting and detachment", async () => {
+      const f = await fixture(),
+        [a, b] = await pair(f, true),
+        r = await import("./issue-relationships.server")
+      const c = (
+        await service.createCanonicalIssue(
+          f.actors[0],
+          command(f.teamId, "New parent")
+        )
+      ).issue.id
+      await r.changeIssueRelationship(
+        f.actors[1],
+        await relationInput(a, b, "parent")
+      )
+      expect(
+        (await r.readIssueRelationships(f.actors[0], { issueId: b }))
+          .relationships
+      ).toMatchObject([{ kind: "child", issue: { id: a } }])
+      const previous = (
+        await r.readIssueRelationships(f.actors[0], { issueId: b })
+      ).issue.revision
+      await r.changeIssueRelationship(
+        f.actors[0],
+        await relationInput(c, a, "child")
+      )
+      expect(
+        (await r.readIssueRelationships(f.actors[1], { issueId: b }))
+          .relationships
+      ).toEqual([])
+      expect(
+        (await r.readIssueRelationships(f.actors[0], { issueId: b })).issue
+          .revision
+      ).toBeGreaterThan(previous)
+      await r.changeIssueRelationship(
+        f.actors[1],
+        await relationInput(a, c, "parent", "remove")
+      )
+      expect(
+        (await r.readIssueRelationships(f.actors[0], { issueId: c }))
+          .relationships
+      ).toEqual([])
+      const composed = await service.createCanonicalIssue(f.actors[1], {
+        ...command(f.teamId, "Cross-team composer child"),
+        draft: { ...draft("Cross-team composer child"), parentId: b },
+      })
+      expect(composed.issue.parentId).toBe(b)
+      expect(
+        (await r.readIssueRelationships(f.actors[1], { issueId: b }))
+          .relationships
+      ).toMatchObject([{ kind: "child", issue: { id: composed.issue.id } }])
+    }, 30000)
+    it("rejects ancestor cycles through relationship and canonical edit commands without corrupting records (AT-02)", async () => {
+      const f = await fixture(),
+        [a, b] = await pair(f),
+        r = await import("./issue-relationships.server")
+      await r.changeIssueRelationship(
+        f.actors[0],
+        await relationInput(a, b, "child")
+      )
+      const before = (
+        await pool.query(
+          "SELECT id,parent_id,revision,properties FROM issues WHERE workspace_id=$1 ORDER BY id",
+          [f.workspaceId]
+        )
+      ).rows
+      const input = await relationInput(a, b, "parent")
+      expect(await r.changeIssueRelationship(f.actors[1], input)).toMatchObject(
+        { status: "invalid", message: expect.stringContaining("cycle") }
+      )
+      expect(
+        (
+          await pool.query(
+            "SELECT id,parent_id,revision,properties FROM issues WHERE workspace_id=$1 ORDER BY id",
+            [f.workspaceId]
+          )
+        ).rows
+      ).toEqual(before)
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int n FROM command_receipts WHERE command_key=$1",
+            [input.commandKey]
+          )
+        ).rows[0].n
+      ).toBe(0)
+      await expect(
+        editing.editCanonicalIssues(f.actors[1], {
+          commandKey: randomUUID(),
+          teamId: f.teamId,
+          edits: [
+            {
+              issueId: a,
+              expectedRevision: input.expectedRevision,
+              changes: { parentId: b, title: "Must roll back" },
+            },
+          ],
+        })
+      ).rejects.toThrow("relationship controls")
+      expect(
+        (await pool.query("SELECT title FROM issues WHERE id=$1", [a])).rows[0]
+          .title
+      ).toBe("Issue A")
+    }, 30000)
+    it("rejects transitive blocking cycles and direct SQL multi-row cycles atomically", async () => {
+      const f = await fixture(),
+        [a, b] = await pair(f),
+        r = await import("./issue-relationships.server")
+      const c = (
+        await service.createCanonicalIssue(
+          f.actors[0],
+          command(f.teamId, "Issue C")
+        )
+      ).issue.id
+      await r.changeIssueRelationship(
+        f.actors[0],
+        await relationInput(a, b, "blocks")
+      )
+      await r.changeIssueRelationship(
+        f.actors[0],
+        await relationInput(b, c, "blocks")
+      )
+      expect(
+        await r.changeIssueRelationship(
+          f.actors[1],
+          await relationInput(c, a, "blocks")
+        )
+      ).toMatchObject({ status: "invalid" })
+      await expect(
+        pool.query(
+          "INSERT INTO issue_relations(workspace_id,issue_id,related_issue_id,kind) VALUES($1,$2,$3,'blocks')",
+          [f.workspaceId, c, a]
+        )
+      ).rejects.toMatchObject({
+        code: "23514",
+        constraint: "issue_relations_blocks_acyclic",
+      })
+      await pool.query("DELETE FROM issue_relations WHERE workspace_id=$1", [
+        f.workspaceId,
+      ])
+      await expect(
+        pool.query(
+          "INSERT INTO issue_relations(workspace_id,issue_id,related_issue_id,kind) VALUES($1,$2,$3,'blocks'),($1,$3,$4,'blocks'),($1,$4,$2,'blocks')",
+          [f.workspaceId, a, b, c]
+        )
+      ).rejects.toMatchObject({ code: "23514" })
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int n FROM issue_relations WHERE workspace_id=$1",
+            [f.workspaceId]
+          )
+        ).rows[0].n
+      ).toBe(0)
+    }, 30000)
+    it("serializes opposite concurrent commands and returns an explicit conflict", async () => {
+      const f = await fixture(),
+        [a, b] = await pair(f),
+        r = await import("./issue-relationships.server")
+      const one = await relationInput(a, b, "blocks"),
+        two = await relationInput(b, a, "blocks")
+      const results = await Promise.all([
+        r.changeIssueRelationship(f.actors[0], one),
+        r.changeIssueRelationship(f.actors[1], two),
+      ])
+      expect(results.map((v) => v.status).sort()).toEqual(["conflict", "saved"])
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int n FROM issue_relations WHERE workspace_id=$1",
+            [f.workspaceId]
+          )
+        ).rows[0].n
+      ).toBe(1)
+    }, 30000)
+    it("fences stale repeatable-read snapshots during opposite direct SQL inserts", async () => {
+      const f = await fixture(),
+        [a, b] = await pair(f)
+      const clients = await Promise.all([pool.connect(), pool.connect()])
+      try {
+        for (const client of clients) {
+          await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ")
+          await client.query(
+            "SELECT version FROM issue_hierarchy_guards WHERE workspace_id=$1",
+            [f.workspaceId]
+          )
+        }
+        const insert = async (i: number, from: string, to: string) => {
+          try {
+            await clients[i].query(
+              "INSERT INTO issue_relations(workspace_id,issue_id,related_issue_id,kind) VALUES($1,$2,$3,'blocks')",
+              [f.workspaceId, from, to]
+            )
+            await clients[i].query("COMMIT")
+            return "saved"
+          } catch (error) {
+            await clients[i].query("ROLLBACK")
+            return (error as { code: string }).code
+          }
+        }
+        expect(
+          (await Promise.all([insert(0, a, b), insert(1, b, a)])).sort()
+        ).toEqual(["40001", "saved"])
+      } finally {
+        for (const client of clients) client.release()
+      }
+    }, 30000)
+    it("rejects stale target revisions and requires an explicit new command to rebase", async () => {
+      const f = await fixture(),
+        [a, b] = await pair(f),
+        r = await import("./issue-relationships.server")
+      const input = await relationInput(a, b)
+      await pool.query("UPDATE issues SET title='New B' WHERE id=$1", [b])
+      const conflict = await r.changeIssueRelationship(f.actors[1], input)
+      expect(conflict.status).toBe("conflict")
+      expect(conflict.records?.find((v) => v.issue.id === b)?.issue.title).toBe(
+        "New B"
+      )
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int n FROM issue_relations WHERE workspace_id=$1",
+            [f.workspaceId]
+          )
+        ).rows[0].n
+      ).toBe(0)
+      expect(
+        (
+          await r.changeIssueRelationship(
+            f.actors[1],
+            await relationInput(a, b)
+          )
+        ).status
+      ).toBe("saved")
+    }, 30000)
+    it("rejects cross-tenant and revoked private-team references, including receipt replay", async () => {
+      const f = await fixture(),
+        other = await fixture(),
+        [a, b] = await pair(f, true),
+        r = await import("./issue-relationships.server")
+      const foreign = (
+        await service.createCanonicalIssue(
+          other.actors[0],
+          command(other.teamId)
+        )
+      ).issue.id
+      await expect(
+        r.changeIssueRelationship(f.actors[1], await relationInput(a, foreign))
+      ).rejects.toMatchObject({ code: "FORBIDDEN" })
+      const input = await relationInput(a, b, "parent")
+      await r.changeIssueRelationship(f.actors[1], input)
+      const visibleRevision = (
+        await r.readIssueRelationships(f.actors[1], { issueId: a })
+      ).resultRevision
+      const searchRevision = (
+        await r.searchRelationshipIssues(f.actors[1], {
+          issueId: a,
+          search: "Issue B",
+        })
+      ).resultRevision
+      await pool.query("UPDATE teams SET visibility='private' WHERE id=$1", [
+        f.secondTeam,
+      ])
+      await expect(
+        r.changeIssueRelationship(f.actors[1], input)
+      ).rejects.toMatchObject({ code: "FORBIDDEN" })
+      await expect(
+        r.readIssueRelationships(f.actors[1], { issueId: b })
+      ).rejects.toMatchObject({ code: "FORBIDDEN" })
+      expect(
+        (await r.readIssueRelationships(f.actors[1], { issueId: a }))
+          .relationships
+      ).toEqual([])
+      expect(
+        (await r.readIssueRelationships(f.actors[1], { issueId: a }))
+          .resultRevision
+      ).not.toBe(visibleRevision)
+      expect(
+        (
+          await r.searchRelationshipIssues(f.actors[1], {
+            issueId: a,
+            search: "Issue B",
+          })
+        ).resultRevision
+      ).not.toBe(searchRevision)
+      const records = (await service.readCanonicalIssues(f.actors[1])).records
+      const current = records.find((v) => v.issue.id === a)!.issue
+      expect(current.parentId).toBe("")
+      await editing.editCanonicalIssues(f.actors[1], {
+        teamId: f.teamId,
+        commandKey: randomUUID(),
+        edits: [
+          {
+            issueId: a,
+            expectedRevision: current.revision!,
+            changes: { title: "Unrelated edit" },
+          },
+        ],
+      })
+      expect(
+        (await pool.query("SELECT parent_id FROM issues WHERE id=$1", [a]))
+          .rows[0].parent_id
+      ).toBe(b)
+      const latestRevision = (
+        await pool.query("SELECT revision FROM issues WHERE id=$1", [a])
+      ).rows[0].revision
+      await expect(
+        editing.editCanonicalIssues(f.actors[1], {
+          teamId: f.teamId,
+          commandKey: randomUUID(),
+          edits: [
+            {
+              issueId: a,
+              expectedRevision: latestRevision,
+              changes: { parentId: "" },
+            },
+          ],
+        })
+      ).rejects.toThrow("relationship controls")
+      expect(
+        (
+          await r.searchRelationshipIssues(f.actors[1], {
+            issueId: a,
+            search: "Issue B",
+          })
+        ).issues
+      ).toEqual([])
+    }, 30000)
+    it("retains hidden relationships for restore and detaches on permanent deletion without deleting children", async () => {
+      const f = await fixture(),
+        [a, b] = await pair(f, true),
+        r = await import("./issue-relationships.server")
+      await r.changeIssueRelationship(
+        f.actors[0],
+        await relationInput(a, b, "parent")
+      )
+      await r.changeIssueRelationship(
+        f.actors[0],
+        await relationInput(a, b, "blockedBy")
+      )
+      await pool.query("UPDATE issues SET archived_at=now() WHERE id=$1", [b])
+      expect(
+        (await r.readIssueRelationships(f.actors[1], { issueId: a }))
+          .relationships
+      ).toEqual([])
+      expect(
+        (await service.readCanonicalIssues(f.actors[1])).records.find(
+          (v) => v.issue.id === a
+        )?.issue.parentId
+      ).toBe("")
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int n FROM issue_relations WHERE workspace_id=$1",
+            [f.workspaceId]
+          )
+        ).rows[0].n
+      ).toBe(1)
+      await pool.query("UPDATE issues SET archived_at=null WHERE id=$1", [b])
+      expect(
+        (
+          await r.readIssueRelationships(f.actors[1], { issueId: a })
+        ).relationships
+          .map((v) => v.kind)
+          .sort()
+      ).toEqual(["blockedBy", "parent"])
+      await pool.query("DELETE FROM issues WHERE id=$1", [b])
+      expect(
+        (await r.readIssueRelationships(f.actors[1], { issueId: a }))
+          .relationships
+      ).toEqual([])
+      expect(
+        (await pool.query("SELECT parent_id FROM issues WHERE id=$1", [a])).rows
+      ).toEqual([{ parent_id: null }])
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int n FROM issue_relations WHERE workspace_id=$1",
+            [f.workspaceId]
+          )
+        ).rows[0].n
+      ).toBe(0)
+    }, 30000)
+    it("pages relationships and search independently of issue-list pages, filtering hidden rows first", async () => {
+      const f = await fixture("enterprise"),
+        r = await import("./issue-relationships.server")
+      await seed(f.workspaceId, f.teamId, 65)
+      const rows = (
+        await pool.query(
+          "SELECT id FROM issues WHERE workspace_id=$1 ORDER BY number",
+          [f.workspaceId]
+        )
+      ).rows
+      const a = rows[0].id
+      await pool.query(
+        "INSERT INTO issue_relations(workspace_id,issue_id,related_issue_id,kind) SELECT workspace_id,$1,id,'related' FROM issues WHERE workspace_id=$2 AND id<>$1",
+        [a, f.workspaceId]
+      )
+      const first = await r.readIssueRelationships(f.actors[1], {
+          issueId: a,
+          limit: 50,
+        }),
+        second = await r.readIssueRelationships(f.actors[1], {
+          issueId: a,
+          limit: 50,
+          cursor: first.nextCursor!,
+        })
+      expect(first.relationships).toHaveLength(50)
+      expect(second.relationships).toHaveLength(14)
+      expect(second.nextCursor).toBeNull()
+      expect(
+        new Set(
+          [...first.relationships, ...second.relationships].map(
+            (v) => v.issue.id
+          )
+        ).size
+      ).toBe(64)
+      const search = await r.searchRelationshipIssues(f.actors[1], {
+          issueId: a,
+        }),
+        more = await r.searchRelationshipIssues(f.actors[1], {
+          issueId: a,
+          after: search.nextCursor!,
+        })
+      expect(search.issues).toHaveLength(20)
+      expect(more.issues).toHaveLength(20)
+      expect(
+        (
+          await r.searchRelationshipIssues(f.actors[1], {
+            issueId: a,
+            search: "Fixture 65",
+          })
+        ).issues
+      ).toHaveLength(1)
+      await expect(
+        r.readIssueRelationships(f.actors[1], { issueId: a, limit: 101 })
+      ).rejects.toThrow()
+    }, 30000)
+    it.each(["apiKey", "agent"] as const)(
+      "uses the same relationship command for %s actors and checks scopes",
+      async (kind) => {
+        const f = await fixture(),
+          [a, b] = await pair(f),
+          r = await import("./issue-relationships.server"),
+          actor = await credentialActor(f, kind)
+        const input = await relationInput(a, b, "related")
+        expect((await r.changeIssueRelationship(actor, input)).status).toBe(
+          "saved"
+        )
+        await expect(
+          r.changeIssueRelationship(
+            { ...actor, scopes: ["issues:read"] },
+            input
+          )
+        ).rejects.toMatchObject({ code: "FORBIDDEN" })
+      },
+      30000
+    )
   })
 })

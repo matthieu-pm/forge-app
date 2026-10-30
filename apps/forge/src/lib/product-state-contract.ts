@@ -79,7 +79,7 @@ export function legacyStorageScope(key: string): {
     }
     if (
       (m = key.match(
-        /^forge:(?:team-[^:]+|triage-issues|cycle-issues|triage-draft):v\d+:([0-9a-f-]{36})$/
+        /^forge:(?:team-[^:]+|triage-issues|cycle-issues|triage-draft):v\d+:([0-9a-f-]{36})(?::[0-9a-f-]{36})?$/
       ))
     )
       return { teamId: m[1] }

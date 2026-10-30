@@ -1,0 +1,102 @@
+{
+  "issue": "FOR-44",
+  "pullRequest": "https://github.com/matthieu-pm/forge-app/pull/26",
+  "date": "2026-10-30",
+  "originalHead": "b00e0042a9dd7ea509583cf8fabf4c4569b9cb05",
+  "reviewedImplementation": "74af8c7fb3789e16ed7cf1f72c7d008b8449bcd4",
+  "base": "d29b03f82e1cc43d39bfe7a0842eeac901b6a196",
+  "review": {
+    "standards": {
+      "findings": 4,
+      "unresolved": 0
+    },
+    "spec": {
+      "findings": 2,
+      "unresolved": 0
+    },
+    "note": "Spec findings overlap the access-freshness and recovery-race findings on the Standards axis. Both independent reviewers rechecked the fixes."
+  },
+  "fixes": [
+    "authorized result digests restart relationship and search continuation after visible identities/revisions change",
+    "focus/provider refresh clears and revalidates picker/selection/draft labels and rejects late responses",
+    "rebase/retry/discard hold one operation lock before their first await",
+    "changed parents rejected by generic property-edit transport; hierarchy changes use the relationship command",
+    "endpoint UUID normalization precedes comparisons, hashing and lookup; mixed-case exact replay verified"
+  ],
+  "validation": {
+    "applicationTests": {
+      "passed": 2245,
+      "skipped": 370,
+      "filesPassed": 278,
+      "filesSkipped": 22
+    },
+    "workflowTests": {
+      "passed": 4
+    },
+    "canonicalPostgres": {
+      "passed": 86
+    },
+    "finalFocusedPostgres": {
+      "passed": 14,
+      "notSelected": 72,
+      "note": "Includes strengthened actual SQL result-digest revocation assertions."
+    },
+    "uiRegressions": {
+      "passed": 6,
+      "checks": [
+        "retained relationship continuation revocation",
+        "open picker selection clearing",
+        "retained search continuation revocation",
+        "private retained-draft label invalidation",
+        "delayed rebase excludes discard/double apply",
+        "delayed discard excludes rebase"
+      ]
+    },
+    "browser": {
+      "issue": "FOR-44",
+      "environment": {
+        "database": "forge_auto_assignment_acceptance",
+        "branch": "br-autumn-union-za0opf1e"
+      },
+      "passed": true,
+      "checks": [
+        "two independent Better Auth sessions",
+        "reciprocal cross-team blocking after reload",
+        "unlink from reciprocal endpoint",
+        "cross-team parent/sub-issue reciprocity",
+        "cycle rejection retains records",
+        "visible stale-revision resolution",
+        "soft-delete hides and restore returns links",
+        "private endpoints omitted from reads/search",
+        "revocation between pages removes retained private relationships",
+        "focus revocation clears open picker results and selection",
+        "direct issue detail independent of list page",
+        "new sub-issue appears immediately",
+        "lost committed response survives reload and replays exactly once"
+      ]
+    },
+    "typecheck": "passed",
+    "changedFileLint": {
+      "errors": 0,
+      "existingWarnings": 2
+    },
+    "productionBuild": "passed with protected Workflow handlers verified"
+  },
+  "cleanup": {
+    "browserWorkspaces": 0,
+    "browserUsers": 0,
+    "browserReceipts": 0,
+    "interruptedIsolatedFixtures": "owned exact fixture IDs removed before sequential canonical rerun"
+  },
+  "productionPreflight": {
+    "database": "neondb",
+    "branch": "br-muddy-queen-zaeeysjt",
+    "currentMigrationCount": 53,
+    "currentMigrationHash": "5b06f652804acc7793b052956282936512b846309ca26c1be6f395719c0cd562",
+    "blockingCycles": false,
+    "webAndRuntimeHealth": "HTTP 200 ALIVE/READY",
+    "servingWebDeployment": "dpl_66mXVBWjztF1DbnxzWG9487GEZck",
+    "servingWebRevision": "d29b03f82e1cc43d39bfe7a0842eeac901b6a196"
+  },
+  "releaseBoundary": "All review/acceptance checks pass. This file precedes production migration/merge/deployment. Final production IDs and smoke results are recorded on FOR-44."
+}

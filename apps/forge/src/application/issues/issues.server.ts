@@ -1,5 +1,14 @@
 import "@tanstack/react-start/server-only"
-import { and, asc, eq, inArray, isNull, or, sql } from "drizzle-orm"
+import {
+  and,
+  asc,
+  eq,
+  getTableColumns,
+  inArray,
+  isNull,
+  or,
+  sql,
+} from "drizzle-orm"
 import { z } from "zod"
 import { startedAssignmentEnabled } from "./started-assignment.server"
 import type { InitiativeProject } from "@/lib/initiatives"
@@ -151,8 +160,16 @@ export async function readIssueRows(
   ids?: Array<string>
 ) {
   requireResourceScope(actor, "issues:read")
+  // Keep the correlated outer reference qualified: Drizzle's single-table
+  // selection otherwise strips Column qualifiers inside nested SQL fragments.
+  const parentColumn = sql`"issues"."parent_id"`
   const rows = await tx
-    .select()
+    .select({
+      ...getTableColumns(issues),
+      parentId: sql<
+        string | null
+      >`CASE WHEN ${readableIssueCondition(actor, parentColumn)} AND EXISTS (SELECT 1 FROM issues parent WHERE parent.id=${parentColumn} AND parent.archived_at IS NULL) THEN ${parentColumn} ELSE NULL END`,
+    })
     .from(issues)
     .where(
       and(
@@ -519,10 +536,12 @@ export async function resolveIssueFields(
         .where(
           and(
             eq(issues.workspaceId, current.workspaceId),
-            eq(issues.teamId, input.teamId),
             or(
               sql`${issues.id}::text=${input.draft.parentId}`,
-              eq(issues.legacyId, input.draft.parentId)
+              and(
+                eq(issues.teamId, input.teamId),
+                eq(issues.legacyId, input.draft.parentId)
+              )
             ),
             readableIssueCondition(current, issues.id),
             isNull(issues.archivedAt)
@@ -534,6 +553,7 @@ export async function resolveIssueFields(
       throw new Error(
         "The parent issue is unavailable. Import its parent first."
       )
+    await requireIssueTeam(tx, current, parent.teamId)
     parentId = parent.id
   }
   const names = [
