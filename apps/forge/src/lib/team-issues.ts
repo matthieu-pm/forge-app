@@ -1,6 +1,12 @@
 import { useCallback, useMemo, useSyncExternalStore } from "react"
 import { z } from "zod"
 import {
+  cachedDefinitions,
+  sharedDefinitionsActive,
+  sharedIssueLabels,
+} from "./issue-definition-cache"
+import { canTransition } from "./issue-definition-contract"
+import {
   defaultIssueDisplay,
   displaySchema,
   emptyIssueFilters,
@@ -162,12 +168,46 @@ export function writeIssueStore(
   teamId: string,
   update: (current: IssueStore) => IssueStore
 ) {
-  const next = storeSchema.parse(update(readIssueStore(teamId)))
+  const previous = readIssueStore(teamId)
+  const next = storeSchema.parse(update(previous))
+  if (sharedDefinitionsActive()) {
+    const definitions = cachedDefinitions(teamId).value
+    const labels = sharedIssueLabels(teamId).labels.filter((l) => !l.archived)
+    for (const issue of next.issues) {
+      const old = previous.issues.find((i) => i.id === issue.id)
+      if (!old || old.status !== issue.status) {
+        if (!definitions.statuses.statuses.some((s) => s.id === issue.status))
+          throw new Error("Choose a status from this team's workflow.")
+        if (
+          old &&
+          !canTransition(definitions.transitions, old.status, issue.status)
+        )
+          throw new Error(
+            "This status transition is not allowed by the team workflow."
+          )
+      }
+      const added = (issue.labels ?? "")
+        .split(",")
+        .map((l) => l.trim())
+        .filter(
+          (l) =>
+            l &&
+            !(old?.labels ?? "")
+              .split(",")
+              .map((n) => n.trim())
+              .includes(l)
+        )
+      if (added.some((name) => !labels.some((l) => l.name === name)))
+        throw new Error("Choose active labels available to this team.")
+    }
+  }
   localStorage.setItem(teamIssuesKey(teamId), JSON.stringify(next))
   window.dispatchEvent(new Event(ISSUES_CHANGED))
   return next
 }
 export function getIssueStatuses(teamId: string): Array<TeamStatus> {
+  if (sharedDefinitionsActive())
+    return cachedDefinitions(teamId).value.statuses.statuses
   const raw = localStorage.getItem(teamStatusesStorageKey(teamId))
   return (raw ? parseTeamStatuses(raw) : initialTeamStatuses()).statuses
 }
@@ -595,4 +635,11 @@ export function issueGroupValue(
   if (group === "Labels")
     return issue.labels?.split(",")[0]?.trim() || "No label"
   return "All issues"
+}
+
+export function getDefaultIssueStatus(teamId: string) {
+  if (sharedDefinitionsActive())
+    return cachedDefinitions(teamId).value.statuses.defaultId
+  const raw = localStorage.getItem(teamStatusesStorageKey(teamId))
+  return (raw ? parseTeamStatuses(raw) : initialTeamStatuses()).defaultId
 }

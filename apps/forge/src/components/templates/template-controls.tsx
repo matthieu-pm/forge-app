@@ -22,6 +22,13 @@ import type {
 } from "@/lib/template-contract"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamLabelDirectory } from "@/lib/team-labels"
+import { IssueStatusIcon } from "@/components/issue-status-icon"
+import {
+  DEFINITIONS_CHANGED,
+  cachedDefinitions,
+  sharedDefinitionsActive,
+  sharedIssueLabels,
+} from "@/lib/issue-definition-cache"
 import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
@@ -361,6 +368,10 @@ export function useTemplateLabels(team?: TeamSummary, project = false) {
   })
   React.useEffect(() => {
     function load() {
+      if (!project && sharedDefinitionsActive()) {
+        setDirectory(sharedIssueLabels(team?.id ?? null))
+        return
+      }
       const base = initialTeamLabels(team?.slug ?? "")
       let local = team && !project ? base : { ...base, labels: [], groups: [] }
       let workspace: TeamLabelDirectory = { ...base, labels: [], groups: [] }
@@ -384,8 +395,12 @@ export function useTemplateLabels(team?: TeamSummary, project = false) {
       })
     }
     load()
+    window.addEventListener(DEFINITIONS_CHANGED, load)
     window.addEventListener("storage", load)
-    return () => window.removeEventListener("storage", load)
+    return () => {
+      window.removeEventListener("storage", load)
+      window.removeEventListener(DEFINITIONS_CHANGED, load)
+    }
   }, [team?.id, team?.slug, project])
   return directory.labels
     .filter((l) => !l.archived)
@@ -498,16 +513,28 @@ export function Properties({
     detail: t.identifier,
     icon: <TeamSidebarIcon icon={t.icon} name={t.name} />,
   }))
-  const statusChoices = (
-    project
-      ? ["Backlog", "To do", "In Progress", "Completed", "Canceled"]
-      : ["Backlog", "Todo", "In Progress", "In Review", "Done", "Canceled"]
-  ).map((status, i) => ({
-    value: status,
-    label: status,
-    icon: <StatusIcon status={status} />,
-    detail: String(i + 1),
-  }))
+  const selectedStatusTeam =
+    directory.teams.find((t) => t.id === value.teamIds[0]) ?? team
+  const sharedStatuses =
+    !project && sharedDefinitionsActive() && selectedStatusTeam
+      ? cachedDefinitions(selectedStatusTeam.id).value.statuses.statuses
+      : null
+  const statusChoices = sharedStatuses
+    ? sharedStatuses.map((status, i) => ({
+        value: status.name,
+        label: status.name,
+        icon: <IssueStatusIcon group={status.group} color={status.color} />,
+        detail: String(i + 1),
+      }))
+    : (project
+        ? ["Backlog", "To do", "In Progress", "Completed", "Canceled"]
+        : ["Backlog", "Todo", "In Progress", "In Review", "Done", "Canceled"]
+      ).map((status, i) => ({
+        value: status,
+        label: status,
+        icon: <StatusIcon status={status} />,
+        detail: String(i + 1),
+      }))
   const priorities = ["No priority", "Urgent", "High", "Medium", "Low"].map(
     (p, i) => ({
       value: p,
@@ -572,12 +599,20 @@ export function Properties({
           label="Change status"
           placeholder="Change status..."
           shortcut={project ? "P then S" : "S"}
-          value={value.status}
+          value={
+            sharedStatuses?.find(
+              (s) => s.id === value.status || s.name === value.status
+            )?.name ?? value.status
+          }
           options={statusChoices}
           onChange={(selected) => patch("status", selected ?? "Backlog")}
         >
           <StatusIcon status={value.status} />
-          {value.status}
+          {sharedStatuses
+            ? (sharedStatuses.find(
+                (s) => s.id === value.status || s.name === value.status
+              )?.name ?? "Status unavailable")
+            : value.status}
         </Picker>
       )}
       <Picker

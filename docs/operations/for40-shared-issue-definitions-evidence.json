@@ -1,0 +1,121 @@
+{
+  "issue": "FOR-40",
+  "verifiedAt": "2026-10-30",
+  "implementationRevision": "9cf72ed48694616667187adc710be6afcc5dcdd3",
+  "environment": {
+    "branchId": "br-autumn-union-za0opf1e",
+    "database": "forge_issue_definitions_acceptance_v3",
+    "applicationRole": "forge_staging_web",
+    "browserOrigin": "http://localhost:3040"
+  },
+  "decisions": {
+    "workflowScope": "Shared automation settings and allowed-transition rules; provider/job execution remains with owning stories.",
+    "legacyData": "Shared defaults and empty labels; preserve local data without import/publication.",
+    "authority": "Current workspace owner/admin role; resource read/write scopes required."
+  },
+  "acceptance": {
+    "AC-01/AT-01": {
+      "status": "passed",
+      "evidence": "Independent admin/member service and real Better Auth browser sessions reload Ready and Mobile; members receive read-only controls."
+    },
+    "AC-02/AT-02": {
+      "status": "passed",
+      "evidence": "Referenced deletion rejects without replacement; explicit canonical status/label replacement migrates atomically, with label-assignment deduplication."
+    }
+  },
+  "validation": {
+    "app": {
+      "passed": 2120,
+      "skipped": 284,
+      "filesPassed": 267,
+      "command": "bunx vitest run",
+      "note": "Environment-gated suites remain skipped in the ordinary run; the 19 FOR-40 PostgreSQL cases were explicitly run separately."
+    },
+    "workflow": {
+      "passed": 4,
+      "command": "bun run --cwd apps/forge test:workflow"
+    },
+    "postgres": {
+      "passed": 19,
+      "command": "FORGE_DEFINITION_TEST_DATABASE_FILE=<private file> bunx vitest run src/application/issue-definitions/definitions.postgres.test.ts",
+      "coverage": [
+        "two-user catalog reload",
+        "referenced deletion and replacement",
+        "label merge deduplication",
+        "forged role denial",
+        "session/workspace/scope binding",
+        "private-team filtering",
+        "revision concurrency",
+        "durable replay/input conflict",
+        "live admin revocation",
+        "audit-fault transaction rollback",
+        "canonical and SQL transition enforcement",
+        "archived/team-label assignment",
+        "private usage-count redaction",
+        "team-bound foreign keys",
+        "dangling rule/group rejection",
+        "saved template/recurring reference validation",
+        "concurrent template/deletion serialization",
+        "recovery-enabled deletion event publication"
+      ]
+    },
+    "browser": {
+      "status": "passed",
+      "checks": [
+        "real Better Auth sign-in for admin and member",
+        "Ready shared after reload",
+        "Mobile shared after reload",
+        "member controls read only",
+        "workspace label inheritance",
+        "allowed transition persistence",
+        "referenced deletion rejected",
+        "explicit replacement migrates canonical assignment",
+        "desktop and mobile screenshots",
+        "no browser runtime errors"
+      ],
+      "environment": {
+        "database": "forge_issue_definitions_acceptance_v3",
+        "branch": "br-autumn-union-za0opf1e"
+      }
+    },
+    "typecheck": {
+      "status": "passed",
+      "scope": "whole workspace"
+    },
+    "build": {
+      "status": "passed",
+      "workflowHandlers": "protected verification passed"
+    },
+    "lint": {
+      "errors": 0,
+      "warnings": 20,
+      "scope": "changed TypeScript/TSX/MJS files"
+    },
+    "schemaDrift": "No schema changes, nothing to migrate",
+    "diffCheck": "passed"
+  },
+  "migration": {
+    "file": "apps/forge/drizzle/0050_shared_issue_definitions.sql",
+    "sha256": "5b1e7881939b499de34ad903735b20c265fdf036347ad452c058c92981ac99bc",
+    "initialApplied": 51,
+    "journalEntries": 51,
+    "exactRetryApplied": 0,
+    "productionApplied": false
+  },
+  "cleanup": {
+    "fixtureWorkspaces": 0,
+    "fixtureUsers": 0,
+    "fixtureReceipts": 0,
+    "browser": {
+      "cleanup": 0
+    }
+  },
+  "boundaries": [
+    "No production migration, deployment, merge or connection-pointer change was performed.",
+    "Canonical issue composer persistence and migration remain FOR-41.",
+    "Public planning REST/MCP adapters remain unavailable.",
+    "Saved templates/recurring configurations must be updated before deleting a definition they reference.",
+    "Recovery journal backend is stubbed in its isolated acceptance case; real PostgreSQL capture and application pool publication run.",
+    "Legacy browser-local issue data is preserved and never published by these tests."
+  ]
+}

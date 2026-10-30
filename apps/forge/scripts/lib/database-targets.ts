@@ -18,6 +18,10 @@ export const DATABASE_TARGETS = {
     ...STAGING.database,
     database: "forge_recovery_source",
   },
+  "issue-definition-acceptance": {
+    ...STAGING.database,
+    database: "forge_issue_definitions_acceptance_v3",
+  },
   "personal-preference-acceptance": {
     ...STAGING.database,
     database: "forge_preferences_acceptance",

@@ -19,6 +19,7 @@ export type MigrationTarget = {
     | "file-storage-acceptance"
     | "recovery-source"
     | "personal-preference-acceptance"
+    | "issue-definition-acceptance"
     | "production-storage-rehearsal"
     | "production"
   branchId: string

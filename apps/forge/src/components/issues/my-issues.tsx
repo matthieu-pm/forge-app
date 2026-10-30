@@ -12,18 +12,20 @@ import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import type { IssueDraft, TeamIssue } from "@/lib/team-issues"
 import type { MyIssuePreferences, MyIssueSearch } from "@/lib/my-issues"
+import { sharedDefinitionsActive } from "@/lib/issue-definition-cache"
+import {
+  blankIssueDraft,
+  emptyIssueFilters,
+  getDefaultIssueStatus,
+  issueFields,
+  saveTeamIssue,
+  visibleIssues,
+} from "@/lib/team-issues"
 import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
 import { ContentHeader } from "@/components/ui/content-header"
 import { isMyIssue, myIssueActivity, myIssueViews } from "@/lib/my-issues"
 import { useMyIssueData, useMyIssuePreferences } from "@/lib/my-issues-state"
-import {
-  blankIssueDraft,
-  emptyIssueFilters,
-  issueFields,
-  saveTeamIssue,
-  visibleIssues,
-} from "@/lib/team-issues"
 import { loadTemplates } from "@/lib/template-state"
 import { Button } from "@/components/ui/button"
 import {
@@ -188,9 +190,12 @@ export function MyIssues({
       team: context.team,
       draft: {
         ...blankIssueDraft(
-          context.statuses.find((status) => status.group === "unstarted")?.id ??
-            context.statuses.at(0)?.id ??
-            "todo"
+          sharedDefinitionsActive()
+            ? getDefaultIssueStatus(context.team.id)
+            : (context.statuses.find((status) => status.group === "unstarted")
+                ?.id ??
+                context.statuses.at(0)?.id ??
+                "todo")
         ),
         assignee: search.view === "assigned" ? user.id : "",
         ...patch,

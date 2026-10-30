@@ -19,13 +19,12 @@ import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import type { IssueDraft, IssueStore, TeamIssue } from "@/lib/team-issues"
 import type { ActivitySearch } from "@/lib/issue-activity"
-import { useWorkspaceView } from "@/components/account-preference-provider"
-import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
-import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
-import { ContentHeader } from "@/components/ui/content-header"
+import { DEFINITIONS_CHANGED } from "@/lib/issue-definition-cache"
+import { readTeamIssueLabels } from "@/lib/team-labels"
 import {
   blankIssueDraft,
   emptyIssueFilters,
+  getDefaultIssueStatus,
   getIssueStatuses,
   issueFields,
   issuePriorities,
@@ -35,12 +34,11 @@ import {
   visibleIssues,
   writeIssueStore,
 } from "@/lib/team-issues"
+import { useWorkspaceView } from "@/components/account-preference-provider"
+import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
+import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
+import { ContentHeader } from "@/components/ui/content-header"
 import { initialTeamStatuses } from "@/lib/team-statuses"
-import {
-  initialTeamLabels,
-  parseTeamLabels,
-  teamLabelsStorageKey,
-} from "@/lib/team-labels"
 import { loadTemplates } from "@/lib/template-state"
 import { Button } from "@/components/ui/button"
 import {
@@ -140,9 +138,9 @@ export function TeamIssues({
     function refresh() {
       try {
         setStatuses(getIssueStatuses(team.id))
-        const raw = localStorage.getItem(teamLabelsStorageKey(team.id))
-        const activeLabels = (
-          raw ? parseTeamLabels(raw) : initialTeamLabels(team.slug)
+        const activeLabels = readTeamIssueLabels(
+          team.id,
+          team.slug
         ).labels.filter((label) => !label.archived)
         setLabels(activeLabels.map((label) => label.name))
         setLabelColors(
@@ -157,6 +155,7 @@ export function TeamIssues({
       }
     }
     refresh()
+    window.addEventListener(DEFINITIONS_CHANGED, refresh)
     window.addEventListener("storage", refresh)
     window.addEventListener("focus", refresh)
     void loadTemplates({ data: { slug: team.slug } })
@@ -171,6 +170,7 @@ export function TeamIssues({
       })
     return () => {
       active = false
+      window.removeEventListener(DEFINITIONS_CHANGED, refresh)
       window.removeEventListener("storage", refresh)
       window.removeEventListener("focus", refresh)
     }
@@ -273,13 +273,7 @@ export function TeamIssues({
     )
   }
   function openNew(patch: Partial<IssueDraft> = {}) {
-    const defaultStatus =
-      statuses.find(
-        (status) =>
-          status.group === (scope === "backlog" ? "backlog" : "unstarted")
-      )?.id ??
-      statuses.at(0)?.id ??
-      "todo"
+    const defaultStatus = getDefaultIssueStatus(team.id)
     setEditor({
       draft: { ...blankIssueDraft(defaultStatus), ...patch },
       key: crypto.randomUUID(),

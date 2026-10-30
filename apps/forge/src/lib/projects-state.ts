@@ -1,4 +1,9 @@
 import { useCallback, useMemo, useSyncExternalStore } from "react"
+import {
+  DEFINITIONS_CHANGED,
+  cachedDefinitions,
+  sharedDefinitionsActive,
+} from "./issue-definition-cache"
 
 import {
   ISSUES_CHANGED,
@@ -42,6 +47,7 @@ export function useProjectIssueStats(
         "focus",
         ISSUES_CHANGED,
         "forge:team-statuses-changed",
+        DEFINITIONS_CHANGED,
       ]
       for (const event of events) window.addEventListener(event, notify)
       return () => {
@@ -54,7 +60,9 @@ export function useProjectIssueStats(
           (JSON.parse(keys) as Array<string>).map((id) => [
             id,
             localStorage.getItem(teamIssuesKey(id)),
-            localStorage.getItem(teamStatusesStorageKey(id)),
+            sharedDefinitionsActive()
+              ? JSON.stringify(cachedDefinitions(id).value.statuses)
+              : localStorage.getItem(teamStatusesStorageKey(id)),
           ])
         )
       } catch {

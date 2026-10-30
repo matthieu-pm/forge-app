@@ -32,6 +32,9 @@ vi.mock("@/lib/team-state", () => ({
   leaveTeam: vi.fn(),
 }))
 vi.mock("@/lib/auth-state", () => ({ protectedRouteBeforeLoad: vi.fn() }))
+vi.mock("@/components/issue-definition-provider", () => ({
+  IssueDefinitionProvider: ({ children }: { children: ReactNode }) => children,
+}))
 vi.mock("@/components/custom-emoji-provider", () => ({
   WorkspaceEmojiProvider: ({ children }: { children: ReactNode }) => children,
   useCustomEmojis: () => ({ emojis: [] }),
@@ -286,9 +289,7 @@ describe("internal navigation without document reloads", () => {
         name: "Open model and effort settings",
       })
     )
-    fireEvent.click(
-      await screen.findByRole("button", { name: /Providers/ })
-    )
+    fireEvent.click(await screen.findByRole("button", { name: /Providers/ }))
     await waitFor(() =>
       expect(router.state.location.pathname).toBe("/settings/ai")
     )
