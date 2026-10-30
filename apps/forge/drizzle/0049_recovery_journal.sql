@@ -34,6 +34,7 @@ LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public AS $$
 DECLARE old_row jsonb; new_row jsonb; row_identity jsonb; changes jsonb := '{}'::jsonb;
   field text; operation uuid; event_action text;
 BEGIN
+  IF TG_OP='INSERT' AND TG_TABLE_NAME NOT IN ('workspace_security_settings','call_settings') THEN RETURN NEW; END IF;
   IF NOT EXISTS(SELECT 1 FROM public.recovery_journal_state WHERE id='singleton' AND enabled) THEN
     IF TG_OP='DELETE' THEN RETURN OLD; ELSE RETURN NEW; END IF;
   END IF;
@@ -49,13 +50,19 @@ BEGIN
     END LOOP;
     IF old_row ? 'transcript' AND old_row->'transcript' IS DISTINCT FROM new_row->'transcript' AND new_row->'transcript'='[]'::jsonb THEN changes:=changes||jsonb_build_object('transcript','[]'::jsonb); END IF;
     IF old_row ? 'state' AND old_row->'state' IS DISTINCT FROM new_row->'state' AND new_row->>'state' IN ('rejected','expired','cancelled','deleted','revoked','deleting') THEN changes:=changes||jsonb_build_object('state',new_row->'state'); END IF;
-    IF TG_TABLE_NAME='workspace_security_settings' THEN changes:=new_row-'workspace_id'-'updated_by_user_id'-'created_at'-'updated_at'; END IF;
+    IF TG_TABLE_NAME='workspace_security_settings' AND (TG_OP='INSERT' OR new_row-'updated_by_user_id'-'created_at'-'updated_at' IS DISTINCT FROM old_row-'updated_by_user_id'-'created_at'-'updated_at') THEN
+      changes:=new_row-'workspace_id'-'updated_by_user_id'-'created_at'-'updated_at'; event_action:='upsert';
+    END IF;
+    IF TG_TABLE_NAME='call_settings' AND (TG_OP='INSERT' OR old_row->'retention_days' IS DISTINCT FROM new_row->'retention_days') THEN
+      changes:=jsonb_build_object('retention_days',new_row->'retention_days'); event_action:='upsert';
+    END IF;
     IF changes='{}'::jsonb THEN RETURN NEW; END IF;
   END IF;
   operation:=NULLIF(current_setting('forge.recovery_operation',true),'')::uuid;
   IF operation IS NULL OR NOT EXISTS(SELECT 1 FROM public.recovery_operations WHERE id=operation) THEN
     RAISE EXCEPTION 'RECOVERY_JOURNAL_REQUIRED: destructive changes require an independently prepared operation';
   END IF;
+  IF TG_OP='INSERT' THEN old_row:=new_row; END IF;
   SELECT jsonb_object_agg(a.attname,old_row->a.attname ORDER BY a.attname) INTO row_identity
     FROM pg_index i JOIN pg_attribute a ON a.attrelid=i.indrelid AND a.attnum=ANY(i.indkey)
     WHERE i.indrelid=TG_RELID AND i.indisprimary;
@@ -74,7 +81,7 @@ DECLARE tab record;
 BEGIN
   FOR tab IN SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename NOT LIKE 'recovery\_%' ESCAPE '\' LOOP
     EXECUTE format('DROP TRIGGER IF EXISTS forge_recovery_capture ON public.%I',tab.tablename);
-    EXECUTE format('CREATE TRIGGER forge_recovery_capture AFTER DELETE OR UPDATE ON public.%I FOR EACH ROW EXECUTE FUNCTION public.forge_capture_recovery_event()',tab.tablename);
+    EXECUTE format('CREATE TRIGGER forge_recovery_capture AFTER INSERT OR DELETE OR UPDATE ON public.%I FOR EACH ROW EXECUTE FUNCTION public.forge_capture_recovery_event()',tab.tablename);
   END LOOP;
 END $$;
 --> statement-breakpoint

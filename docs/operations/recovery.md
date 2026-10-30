@@ -6,6 +6,8 @@ restore, reconciliation and a destructive synthetic rehearsal. On 30 October
 recovery key, and live deletion-journal integration. The user subsequently chose
 to **leave qualification against the 100 GB launch workload open**. Functional
 results are not a capacity result, a production activation or launch approval.
+The user requested closing FOR-38's implementation delivery after review and
+merge; the open 100 GB recovery criterion is tracked explicitly under FOR-115.
 
 The source-bound functional result is recorded in `for38-recovery-evidence.json`.
 FOR-24 still requires RPO at most 3,600 seconds and RTO at most 14,400 seconds.
@@ -90,7 +92,14 @@ operation before destructive SQL. Its database receipt and events commit with
 the mutation. R2 chunks and completion are then persisted before the caller can
 receive success. This includes Better Auth, model/provider disconnection,
 workspace cascades, file-retention metadata, membership removal and access-policy
-changes. Reads and updates that do not touch the capture fields retain their
+changes. Conflict-update inserts follow the same prepare/commit/publication path,
+including provider reconnection. First workspace security and transcript-retention
+policies are captured as restricted policy upserts so replay can restore a policy
+row absent from the checkpoint before enforcing original transcript deadlines.
+Policies for workspaces absent from the checkpoint do not create new parents.
+Callback callers receive the same final commit/publication result as Promise
+callers; uncertain checked-out transactions are destroyed on release.
+Reads and updates that do not touch the capture fields retain their
 existing path. Destructive DDL belongs to the operator migration workflow.
 
 An unavailable journal prevents accepting a new destructive operation. A lost

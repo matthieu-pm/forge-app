@@ -81,6 +81,7 @@ type Fixture = {
   postBackupIssue: string
   postBackupFile?: string
   postBackupReference?: string
+  retainedCall: string
 }
 let fixture: Fixture
 if (phase === "seed") {
@@ -105,6 +106,7 @@ if (phase === "seed") {
     deletedModel: randomUUID(),
     deletedWorkspace: `${marker}-deleted-workspace`,
     postBackupIssue: randomUUID(),
+    retainedCall: randomUUID(),
   }
   await writeFile(file, JSON.stringify(fixture), { flag: "wx", mode: 0o600 })
 } else fixture = JSON.parse(await readFile(file, "utf8"))
@@ -246,9 +248,19 @@ try {
           "INSERT INTO public.session(id,token,user_id,expires_at,active_organization_id) VALUES($1,$1,$2,now()+interval '2 hours',$3)",
           [fixture.revokedSession, fixture.user, fixture.workspace]
         )
+
         await pool.query(
           "INSERT INTO public.teams(id,workspace_id,slug,identifier,name,icon_kind,icon_value,color,timezone,created_by_user_id) VALUES($1,$2,'F38','F38','Recovery fixture','icon','fixture','#000000','UTC',$3)",
           [fixture.team, fixture.workspace, fixture.user]
+        )
+        await pool.query(
+          `INSERT INTO public.calls(id,workspace_id,team_id,provider,external_id,title,started_at,transcript,summary,decisions) VALUES($1,$2,$3,'zoom',$4,'Retention recovery fixture',now()-interval '8 days','[{"text":"expired synthetic transcript"}]'::jsonb,'Retained derived summary','["Retained derived decision"]'::jsonb)`,
+          [
+            fixture.retainedCall,
+            fixture.workspace,
+            fixture.team,
+            fixture.retainedCall,
+          ]
         )
         await pool.query(
           "INSERT INTO public.issues(id,workspace_id,team_id,number,title) VALUES($1,$3,$4,1,'Recovered issue'),($2,$3,$4,2,'Deleted after backup')",
@@ -473,6 +485,30 @@ try {
         const a = await actor(fixture.user)
         assert.equal(a.workspaceId, fixture.workspace)
         const { eq } = await import("drizzle-orm")
+        // The source can die after policy commit and before its normal sweeper.
+        // Replay must recover a first policy row before enforcing deadlines.
+        await database.db
+          .insert(database.callSettings)
+          .values({ workspaceId: fixture.workspace, retentionDays: 7 })
+          .onConflictDoUpdate({
+            target: database.callSettings.workspaceId,
+            set: { retentionDays: 7 },
+          })
+        // Existing provider reconnects use this same conflict-update SQL path.
+        await database.db
+          .insert(database.callConnections)
+          .values({
+            id: fixture.meeting,
+            workspaceId: fixture.workspace,
+            userId: fixture.user,
+            teamId: fixture.team,
+            provider: "zoom",
+            oauthVerifier: "synthetic-reconnect-verifier",
+          })
+          .onConflictDoUpdate({
+            target: database.callConnections.id,
+            set: { oauthVerifier: "synthetic-reconnect-verifier" },
+          })
         await database.db
           .delete(database.sessions)
           .where(eq(database.sessions.id, fixture.revokedSession))
@@ -529,6 +565,8 @@ try {
             credentialDeleted: true,
             workspaceCascadeDeleted: true,
             securityPolicyChanged: true,
+            firstRetentionPolicyCommitted: true,
+            providerReconnectUpsert: true,
             postBackupIssueAcknowledged: true,
             postBackupFileAcknowledged: true,
             acknowledgedAt: new Date().toISOString(),
@@ -639,6 +677,24 @@ try {
           digest((await artifacts.read(a, fixture.artifact!)).content),
           digest(bytes)
         )
+        const retainedCall = (
+          await pool.query(
+            "SELECT transcript,summary,decisions FROM public.calls WHERE id=$1",
+            [fixture.retainedCall]
+          )
+        ).rows[0]
+        assert.deepEqual(retainedCall.transcript, [])
+        assert.equal(retainedCall.summary, "Retained derived summary")
+        assert.deepEqual(retainedCall.decisions, ["Retained derived decision"])
+        assert.equal(
+          (
+            await pool.query(
+              "SELECT retention_days FROM public.call_settings WHERE workspace_id=$1",
+              [fixture.workspace]
+            )
+          ).rows[0].retention_days,
+          7
+        )
         assert.equal(
           digest(
             Buffer.from(
@@ -703,6 +759,9 @@ try {
             revokedSessionDenied: true,
             deletedIssueSuppressed: true,
             wrongKeyDenied: true,
+            firstRetentionPolicyReplayed: true,
+            expiredTranscriptRemoved: true,
+            derivedCallDataRetained: true,
             expectedPostCheckpointLoss: { issues: 1, files: 1 },
             validatedAt: new Date().toISOString(),
             processId: process.pid,

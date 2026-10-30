@@ -56,6 +56,7 @@ export const patchFields = [
   "external_loop_sources_enabled",
   "mcp_servers_enabled",
   "hipaa_enabled",
+  "retention_days",
 ] as const
 export const recoveryEvent = z
   .object({
@@ -63,7 +64,7 @@ export const recoveryEvent = z
     sequence: z.number().int().positive(),
     table: identifier,
     key: z.record(identifier, scalar).refine((x) => Object.keys(x).length > 0),
-    action: z.enum(["delete", "patch"]),
+    action: z.enum(["delete", "patch", "upsert"]),
     patch: z.partialRecord(z.enum(patchFields), z.json()).nullable(),
     storageReference: z.string().nullable(),
     at: z.string().datetime(),
@@ -85,10 +86,23 @@ export const recoveryEvent = z
         message: "Delete patches must be absent.",
       })
     if (
-      event.action === "patch" &&
+      event.action !== "delete" &&
       (!event.patch || Object.keys(event.patch).length === 0)
     )
       ctx.addIssue({ code: "custom", message: "A patch is required." })
+    if (
+      event.action === "upsert" &&
+      (!["workspace_security_settings", "call_settings"].includes(
+        event.table
+      ) ||
+        Object.keys(event.key).join() !== "workspace_id" ||
+        (event.table === "call_settings" &&
+          Object.keys(event.patch ?? {}).join() !== "retention_days"))
+    )
+      ctx.addIssue({
+        code: "custom",
+        message: "Only workspace policy rows can be recovered by upsert.",
+      })
     for (const [key, value] of Object.entries(event.patch ?? {})) {
       if (secrets.includes(key) && value !== null)
         ctx.addIssue({

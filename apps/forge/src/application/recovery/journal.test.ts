@@ -54,4 +54,18 @@ describe("FOR-38 independent suppression records", () => {
       "SIGNATURE"
     )
   })
+  it("allows policy creation replay without allowing arbitrary row creation", () => {
+    const policy = {
+      ...event,
+      table: "call_settings",
+      key: { workspace_id: "workspace" },
+      action: "upsert",
+      patch: { retention_days: 7 },
+    }
+    expect(recoveryEvent.parse(policy).action).toBe("upsert")
+    expect(() => recoveryEvent.parse({ ...policy, table: "account" })).toThrow()
+    expect(() =>
+      recoveryEvent.parse({ ...policy, patch: { secret: null } })
+    ).toThrow()
+  })
 })

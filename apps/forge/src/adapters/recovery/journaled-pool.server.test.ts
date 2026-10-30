@@ -40,7 +40,8 @@ function fixture() {
         text === "COMMIT" && commitAsRollback ? "ROLLBACK" : text.split(" ")[0],
     }
   })
-  const client = { query, release: vi.fn() }
+  const release = vi.fn()
+  const client = { query, release }
   const pool = {
     connect: vi.fn(async () => client),
     query: vi.fn(async (text: string) => query(text)),
@@ -67,6 +68,7 @@ function fixture() {
   return {
     pool,
     client,
+    release,
     backend,
     order,
     fail: {
@@ -86,6 +88,78 @@ function fixture() {
   }
 }
 describe("FOR-38 live deletion SQL boundary", () => {
+  it("prepares provider and billing conflict updates before SQL", async () => {
+    for (const text of [
+      "INSERT INTO call_connections(id) VALUES($1) ON CONFLICT(id) DO UPDATE SET oauth_verifier=$2",
+      "INSERT INTO workspace_entitlements(workspace_id) VALUES($1) ON CONFLICT(workspace_id) DO UPDATE SET status=$2",
+    ]) {
+      const f = fixture()
+      await f.pool.query(text, [randomUUID(), "test"])
+      expect(f.order.indexOf("R2 prepared")).toBeGreaterThan(-1)
+      expect(f.order.indexOf("R2 prepared")).toBeLessThan(f.order.indexOf(text))
+      expect(f.backend.complete).toHaveBeenCalledOnce()
+    }
+  })
+  it("waits for commit and independent publication before invoking a mutation callback", async () => {
+    const f = fixture()
+    await new Promise<void>((resolve, reject) => {
+      f.pool.query("DELETE FROM session", (error: Error | null) => {
+        if (error) {
+          reject(error)
+          return
+        }
+        try {
+          expect(f.order).toContain("COMMIT")
+          expect(f.order).toContain("R2 completed")
+          resolve()
+        } catch (e) {
+          reject(e)
+        }
+      })
+    })
+  })
+  it.each([undefined, false] as const)(
+    "destroys an uncertain explicit connection on release(%s)",
+    async (argument) => {
+      const f = fixture(),
+        client = await f.pool.connect()
+      await client.query("BEGIN")
+      await client.query("DELETE FROM session")
+      f.fail.commit()
+      await expect(client.query("COMMIT")).rejects.toThrow("lost commit")
+      client.release(argument)
+      expect(f.release).toHaveBeenCalledWith(expect.any(Error))
+      expect(f.backend.abort).not.toHaveBeenCalled()
+    }
+  )
+  it("returns publication failure through a mutation callback", async () => {
+    const f = fixture()
+    vi.mocked(f.backend.complete).mockRejectedValue(new Error("R2 unavailable"))
+    await new Promise<void>((resolve, reject) => {
+      f.pool.query("DELETE FROM session", (error: Error | null) => {
+        try {
+          expect(error?.message).toContain("PUBLICATION_PENDING")
+          resolve()
+        } catch (e) {
+          reject(e)
+        }
+      })
+    })
+  })
+  it("prepares first policy inserts, leaving ordinary insert-do-nothing on the fast path", async () => {
+    const f = fixture()
+    await f.pool.query(
+      'INSERT INTO "public"."call_settings" (workspace_id,retention_days) VALUES ($1,$2)',
+      ["workspace", 7]
+    )
+    expect(f.backend.prepare).toHaveBeenCalledOnce()
+    const other = fixture()
+    await other.pool.query(
+      "INSERT INTO session(id) VALUES($1) ON CONFLICT DO NOTHING",
+      ["session"]
+    )
+    expect(other.backend.prepare).not.toHaveBeenCalled()
+  })
   it("prepares outside the DB before deletion, commits SQL, then completes before acknowledgement", async () => {
     const f = fixture()
     await f.pool.query("DELETE FROM session WHERE id=$1", [randomUUID()])
@@ -95,7 +169,7 @@ describe("FOR-38 live deletion SQL boundary", () => {
     expect(f.order.indexOf("COMMIT")).toBeLessThan(
       f.order.indexOf("R2 completed")
     )
-    expect(f.client.release).toHaveBeenCalledOnce()
+    expect(f.release).toHaveBeenCalledOnce()
   })
   it("does not mutate the DB if independent preparation fails", async () => {
     const f = fixture()
@@ -121,7 +195,7 @@ describe("FOR-38 live deletion SQL boundary", () => {
     )
     expect(f.backend.complete).not.toHaveBeenCalled()
     expect(f.backend.abort).not.toHaveBeenCalled()
-    expect(f.client.release).toHaveBeenCalledWith(expect.any(Error))
+    expect(f.release).toHaveBeenCalledWith(expect.any(Error))
   })
   it("leaves an unresolved prepare after an unsuccessful rollback", async () => {
     const f = fixture()

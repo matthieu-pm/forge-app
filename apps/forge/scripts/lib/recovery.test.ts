@@ -66,6 +66,21 @@ const manifest = () =>
     credentialCounts: { model: 1, meeting: 1 },
   }) as RecoveryManifest
 describe("FOR-38 encrypted backup entries", () => {
+  it("recovers an empty artifact and still authenticates its tag", async () => {
+    const dir = await temporary(),
+      key = randomBytes(32)
+    const entry = await encryptEntry(dir, "empty-artifact", [], key)
+    await decryptEntry(dir, entry, join(dir, "empty"), key)
+    expect(await readFile(join(dir, "empty"))).toHaveLength(0)
+    const path = join(dir, "empty-artifact.aes"),
+      bytes = await readFile(path)
+    bytes[bytes.length - 1] ^= 1
+    await writeFile(path, bytes)
+    await expect(
+      decryptEntry(dir, entry, join(dir, "corrupt-empty"), key)
+    ).rejects.toThrow("INTEGRITY")
+    await expect(readFile(join(dir, "corrupt-empty"))).rejects.toThrow()
+  })
   it("streams a binary entry and authenticates exact bytes", async () => {
     const dir = await temporary(),
       key = randomBytes(32),
@@ -170,6 +185,56 @@ describe("FOR-38 encrypted backup entries", () => {
   })
 })
 describe("FOR-38 journal and timing gates", () => {
+  it.each([true, false])(
+    "replays the first retention policy only for a captured workspace (parent=%s)",
+    async (parentExists) => {
+      const client = {
+        query: vi.fn(async (sql: string) => {
+          if (sql.includes("to_regclass")) return { rows: [{ table: null }] }
+          if (sql.startsWith("SELECT a.attname"))
+            return { rows: [{ attname: "workspace_id" }] }
+          if (sql.startsWith("SELECT id FROM public.organization"))
+            return { rows: parentExists ? [{ id: "workspace" }] : [] }
+          return { rows: [] }
+        }),
+      }
+      const journal = signJournal(
+        {
+          version: 1,
+          source,
+          from: "2026-10-30T10:00:00.000Z",
+          through: "2026-10-30T10:01:00.000Z",
+          entries: [
+            {
+              sequence: 1,
+              at: "2026-10-30T10:01:00.000Z",
+              change: {
+                id: randomUUID(),
+                sequence: 1,
+                at: "2026-10-30T10:00:30.000Z",
+                table: "call_settings",
+                key: { workspace_id: "workspace" },
+                action: "upsert",
+                patch: { retention_days: 7 },
+                storageReference: null,
+              },
+            },
+          ],
+        },
+        randomBytes(32)
+      )
+      await replayDeletionJournal(client, journal)
+      const inserts = client.query.mock.calls.filter(([sql]) =>
+        sql.startsWith('INSERT INTO public."call_settings"')
+      )
+      expect(inserts).toHaveLength(parentExists ? 1 : 0)
+      if (parentExists)
+        expect(inserts[0]).toEqual([
+          expect.stringContaining('ON CONFLICT ("workspace_id") DO UPDATE'),
+          ["workspace", 7],
+        ])
+    }
+  )
   it("does not widen a captured role when an older event was published late", async () => {
     const eventId = randomUUID()
     let role = "member"

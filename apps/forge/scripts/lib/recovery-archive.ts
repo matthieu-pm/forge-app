@@ -8,7 +8,7 @@ import { createReadStream, createWriteStream } from "node:fs"
 import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { pipeline } from "node:stream/promises"
-import { Transform } from "node:stream"
+import { Readable, Transform } from "node:stream"
 
 const format = "forge-recovery-v1"
 export const digest = (bytes: string | Uint8Array) =>
@@ -111,7 +111,9 @@ export async function decryptEntry(
   })
   try {
     await pipeline(
-      createReadStream(source, { start: 12, end: size - 17 }),
+      size === 28
+        ? Readable.from([])
+        : createReadStream(source, { start: 12, end: size - 17 }),
       decipher,
       measure,
       createWriteStream(partial, { flags: "wx", mode: 0o600 })

@@ -507,16 +507,34 @@ export async function replayDeletionJournal(
           )
         else {
           const patches = Object.entries(event.patch!)
+          const patchValues = patches.map(([, value]) =>
+            Array.isArray(value) || (value && typeof value === "object")
+              ? JSON.stringify(value)
+              : value
+          )
+          if (event.action === "upsert") {
+            // A workspace created after the checkpoint is allowed RPO loss. Its
+            // policy must not invent the missing parent. Captured workspaces
+            // must receive even their first post-checkpoint policy row.
+            if (
+              !(
+                await client.query(
+                  "SELECT id FROM public.organization WHERE id=$1",
+                  [event.key.workspace_id]
+                )
+              ).rows.length
+            )
+              continue
+            const names = [...columns, ...patches.map(([name]) => name)]
+            await client.query(
+              `INSERT INTO public.${quoteIdentifier(event.table)} (${names.map(quoteIdentifier).join(",")}) VALUES (${names.map((_, index) => `$${index + 1}`).join(",")}) ON CONFLICT (${columns.map(quoteIdentifier).join(",")}) DO UPDATE SET ${patches.map(([column]) => `${quoteIdentifier(column)}=EXCLUDED.${quoteIdentifier(column)}`).join(",")}`,
+              [...values, ...patchValues]
+            )
+            continue
+          }
           await client.query(
             `UPDATE public.${quoteIdentifier(event.table)} SET ${patches.map(([column], index) => `${quoteIdentifier(column)}=$${values.length + index + 1}`).join(",")} WHERE ${where}`,
-            [
-              ...values,
-              ...patches.map(([, value]) =>
-                Array.isArray(value) || (value && typeof value === "object")
-                  ? JSON.stringify(value)
-                  : value
-              ),
-            ]
+            [...values, ...patchValues]
           )
         }
         if (event.storageReference) {

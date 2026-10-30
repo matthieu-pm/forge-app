@@ -255,8 +255,9 @@ try {
     const path = join(downloaded, `${entry}.aes`)
     await rename(path, `${path}.withheld`)
     try {
-      await assert.rejects(restoreRecovery(restoreInput))
-      negativeCases.push({ name, failures: [`missing:${entry}`] })
+      const failure = `RECOVERY_ENTRY_MISSING:${entry}`
+      await assert.rejects(restoreRecovery(restoreInput), { message: failure })
+      negativeCases.push({ name, failures: [failure] })
     } finally {
       await rename(`${path}.withheld`, path)
     }

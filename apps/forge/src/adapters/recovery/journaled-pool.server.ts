@@ -25,11 +25,28 @@ const dangerous = (text: string) => {
   if (/^\s*(?:truncate|drop)\s/i.test(text))
     throw new Error("RECOVERY_DDL_OPERATOR_ONLY")
   if (/^\s*delete\s/i.test(text)) return true
+  if (/^\s*insert\s/i.test(text))
+    return (
+      /^\s*insert\s+into\s+(?:"?public"?\s*\.\s*)?"?(?:call_settings|workspace_security_settings)"?(?:\s|\()/i.test(
+        text
+      ) || /\bon\s+conflict\b[\s\S]*\bdo\s+update\b/i.test(text)
+    )
   if (!/^\s*update\s/i.test(text)) return false
   const assignments =
     text.split(/\bSET\b/i)[1]?.split(/\bWHERE\b|\bRETURNING\b/i)[0] ?? ""
   return patchFields.some((field) =>
     new RegExp(`(?:^|[,\\s])"?${field}"?\\s*=`, "i").test(assignments)
+  )
+}
+
+// Pool/PoolClient advertise both callback and Promise overloads. A callback must
+// observe the same COMMIT/publication outcome as an awaited mutation.
+function queryWithCallback(query: Query, args: Array<any>) {
+  const callback = args.at(-1)
+  if (typeof callback !== "function") return query(...args)
+  void query(...args.slice(0, -1)).then(
+    (result) => callback(null, result),
+    (error) => callback(error)
   )
 }
 
@@ -128,7 +145,15 @@ export function journalDatabasePool(
     const state: State = { transaction: false, committed: false }
     const savepoints = new Map<string, string | undefined>()
     states.set(client, state)
-    client.query = (async (...args: Array<any>) => {
+    const release = client.release.bind(client)
+    client.release = (error) =>
+      release(
+        error ||
+          (state.transaction
+            ? new Error("RECOVERY_TRANSACTION_UNCERTAIN")
+            : undefined)
+      )
+    const execute = async (...args: Array<any>) => {
       const text = textOf(args[0])
       if (/^\s*(?:BEGIN|START TRANSACTION)\b/i.test(text)) {
         const result = await query(...args)
@@ -220,7 +245,9 @@ export function journalDatabasePool(
         }
         throw error
       }
-    }) as typeof client.query
+    }
+    client.query = ((...args: Array<any>) =>
+      queryWithCallback(execute, args)) as typeof client.query
     return client
   }
   pool.connect = ((callback?: (...args: Array<any>) => void) => {
@@ -233,7 +260,7 @@ export function journalDatabasePool(
     }
     return instrumentedConnect()
   }) as typeof pool.connect
-  pool.query = (async (...args: Array<any>) => {
+  const executePoolQuery = async (...args: Array<any>) => {
     if (!dangerous(textOf(args[0]))) return originalPoolQuery(...args)
     const client = await instrumentedConnect()
     try {
@@ -247,7 +274,9 @@ export function journalDatabasePool(
           : undefined
       )
     }
-  }) as typeof pool.query
+  }
+  pool.query = ((...args: Array<any>) =>
+    queryWithCallback(executePoolQuery, args)) as typeof pool.query
   return pool
 }
 
