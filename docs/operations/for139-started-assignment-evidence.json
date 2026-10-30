@@ -114,5 +114,16 @@
     "contract": "docs/operations/started-issue-assignment.md",
     "postgresTests": "apps/forge/src/application/issues/issues.postgres.test.ts",
     "browserScript": "apps/forge/scripts/verify-started-assignment-browser.mjs"
+  },
+  "integrationWithFOR138": {
+    "baseCommit": "ce6f1d3",
+    "appTestsPassed": 2231,
+    "appTestsSkipped": 349,
+    "postgresCombinedPassed": 65,
+    "postgresInteractionCasePassed": 1,
+    "workflowTestsPassed": 4,
+    "typecheck": "passed",
+    "productionBuild": "passed",
+    "policy": "Preserve all-actor creation rules and distinct started-transition rules, including child attribution."
   }
 }

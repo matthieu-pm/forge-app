@@ -22,6 +22,10 @@ export const DATABASE_TARGETS = {
     ...STAGING.database,
     database: "forge_issue_creation_acceptance_v3",
   },
+  "auto-assignment-acceptance": {
+    ...STAGING.database,
+    database: "forge_auto_assignment_acceptance",
+  },
   "issue-definition-acceptance": {
     ...STAGING.database,
     database: "forge_issue_definitions_acceptance_v3",
