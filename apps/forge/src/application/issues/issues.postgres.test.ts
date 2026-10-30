@@ -2,9 +2,19 @@
 import { randomUUID } from "node:crypto"
 import { readFileSync } from "node:fs"
 import { Pool, neonConfig } from "@neondatabase/serverless"
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest"
 import { DATABASE_TARGETS } from "../../../scripts/lib/database-targets"
 import { assertMigrationTarget } from "../../../scripts/lib/serialized-migrations"
+import type { IssueChanges } from "@/lib/canonical-issue-edit-contract"
 import type * as Editing from "./edit-issues.server"
 import type { Actor } from "@/application/actor"
 import type * as Service from "./issues.server"
@@ -127,6 +137,29 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
         await pool.query("DELETE FROM organization WHERE id=$1", [id])
       for (const id of users)
         await pool.query('DELETE FROM "user" WHERE id=$1', [id])
+      expect(
+        (
+          await pool.query(
+            `SELECT
+        (SELECT count(*)::int FROM "user" WHERE id=ANY($1)) users,
+        (SELECT count(*)::int FROM organization WHERE id=ANY($2)) workspaces,
+        (SELECT count(*)::int FROM issues WHERE workspace_id=ANY($2)) issues,
+        (SELECT count(*)::int FROM account_preferences WHERE user_id=ANY($1)) preferences,
+        (SELECT count(*)::int FROM command_receipts WHERE workspace_id=ANY($2)) receipts,
+        (SELECT count(*)::int FROM command_audit_events WHERE workspace_id=ANY($2)) audit,
+        (SELECT count(*)::int FROM command_outbox_events WHERE workspace_id=ANY($2)) outbox`,
+            [users, workspaces]
+          )
+        ).rows[0]
+      ).toEqual({
+        users: 0,
+        workspaces: 0,
+        issues: 0,
+        preferences: 0,
+        receipts: 0,
+        audit: 0,
+        outbox: 0,
+      })
       await pool.end()
     }
     await database?.databaseClient.end()
@@ -887,4 +920,453 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
         ?.value
     ).toBe(value)
   }, 30000)
+  describe("FOR-139 started assignment", () => {
+    beforeEach(async () => {
+      vi.stubEnv("FORGE_ASSIGN_STARTED_ISSUES_ENABLED", "true")
+      await pool.query(
+        "DELETE FROM account_preferences WHERE user_id=ANY($1)",
+        [users]
+      )
+      await pool.query(
+        `INSERT INTO account_preferences(user_id,values) VALUES($1,'{"general.assignStartedIssues":true}')`,
+        [users[0]]
+      )
+    })
+    afterEach(async () => {
+      vi.stubEnv("FORGE_ASSIGN_STARTED_ISSUES_ENABLED", "false")
+      vi.stubEnv("FORGE_PERSONAL_PREFERENCE_SYNC_ENABLED", "true")
+      await pool.query(
+        "DELETE FROM account_preferences WHERE user_id=ANY($1)",
+        [users]
+      )
+    })
+    async function startInput(
+      f: Awaited<ReturnType<typeof fixture>>,
+      assignee?: string
+    ) {
+      const created = await service.createCanonicalIssue(f.actors[0], {
+        ...command(f.teamId),
+        assigneeId: assignee ?? null,
+      })
+      return {
+        commandKey: randomUUID(),
+        teamId: f.teamId,
+        edits: [
+          {
+            issueId: created.issue.id,
+            expectedRevision: 0,
+            changes: { status: "in-progress" } as IssueChanges,
+          },
+        ],
+      }
+    }
+    async function counts(workspace: string, key: string) {
+      return (
+        await pool.query(
+          `SELECT
+        (SELECT count(*)::int FROM command_receipts WHERE workspace_id=$1 AND command_key=$2) receipts,
+        (SELECT count(*)::int FROM command_audit_events a JOIN command_receipts r ON a.command_id=r.id WHERE r.workspace_id=$1 AND r.command_key=$2) audit,
+        (SELECT count(*)::int FROM command_outbox_events o JOIN command_receipts r ON o.command_id=r.id WHERE r.workspace_id=$1 AND r.command_key=$2) outbox`,
+          [workspace, key]
+        )
+      ).rows[0]
+    }
+    it.each(["session", "apiKey", "agent"] as const)(
+      "AT-01: %s atomically assigns once; replay ignores preference changes and rejects revoked authority",
+      async (kind) => {
+        const f = await fixture(),
+          input = await startInput(f)
+        let actor = f.actors[0]
+        if (kind === "apiKey") {
+          const id = randomUUID()
+          await pool.query(
+            "INSERT INTO apikey(id,config_id,reference_id,key,permissions,metadata) VALUES($1,'forge-api',$2,$3,$4,$5)",
+            [
+              id,
+              users[0],
+              randomUUID(),
+              JSON.stringify({ issues: ["read", "write"] }),
+              JSON.stringify({ workspaceId: f.workspaceId }),
+            ]
+          )
+          actor = {
+            ...actor,
+            authentication: { kind, credentialId: id },
+            scopes: ["issues:read", "issues:write"],
+          }
+        }
+        if (kind === "agent") {
+          const thread = randomUUID(),
+            run = randomUUID()
+          await pool.query(
+            "INSERT INTO agent_threads(id,workspace_id,created_by_user_id) VALUES($1,$2,$3)",
+            [thread, f.workspaceId, users[0]]
+          )
+          await pool.query(
+            "INSERT INTO agent_runs(id,thread_id,initiated_by_user_id,execution_kind,requested_selection,state) VALUES($1,$2,$3,'forge-native','{}','running')",
+            [run, thread, users[0]]
+          )
+          actor = {
+            ...actor,
+            authentication: { kind, runId: run, tokenId: randomUUID() },
+            scopes: ["issues:read", "issues:write"],
+          }
+        }
+        const results = await Promise.all([
+          editing.editCanonicalIssues(actor, input),
+          editing.editCanonicalIssues(actor, input),
+        ])
+        expect(results.map((r) => r.replayed).sort()).toEqual([false, true])
+        const issue = results[0].records[0].issue
+        expect(issue).toMatchObject({
+          status: "in-progress",
+          assignee: users[0],
+          revision: 1,
+        })
+        expect(issue.activity).toHaveLength(1)
+        expect(issue.activity[0]).toMatchObject({
+          author: users[0],
+          field: "status",
+          from: "todo",
+          to: "in-progress",
+          automaticAssignment: { from: "", to: users[0] },
+        })
+        expect(issue.activity[0].text).toContain("self-assigned")
+        const row = (
+          await pool.query(
+            "SELECT assignee_id,properties FROM issues WHERE id=$1",
+            [issue.id]
+          )
+        ).rows[0]
+        expect(row.assignee_id).toBe(users[0])
+        expect(row.properties.assignee).toBe(users[0])
+        await pool.query(
+          "UPDATE account_preferences SET values='{}' WHERE user_id=$1",
+          [users[0]]
+        )
+        vi.stubEnv("FORGE_ASSIGN_STARTED_ISSUES_ENABLED", "false")
+        expect((await editing.editCanonicalIssues(actor, input)).replayed).toBe(
+          true
+        )
+        expect(await counts(f.workspaceId, input.commandKey)).toEqual({
+          receipts: 1,
+          audit: 1,
+          outbox: 1,
+        })
+        if (actor.authentication.kind === "apiKey")
+          await pool.query("UPDATE apikey SET enabled=false WHERE id=$1", [
+            actor.authentication.credentialId,
+          ])
+        else if (actor.authentication.kind === "agent")
+          await pool.query(
+            "UPDATE agent_runs SET state='cancelled' WHERE id=$1",
+            [actor.authentication.runId]
+          )
+        else
+          await pool.query("DELETE FROM session WHERE id=$1", [
+            actor.authentication.sessionId,
+          ])
+        await expect(
+          editing.editCanonicalIssues(actor, input)
+        ).rejects.toThrow()
+      },
+      30000
+    )
+    it.each([
+      "existing",
+      "explicit-other",
+      "explicit-empty",
+      "disabled",
+      "missing",
+      "invalid",
+      "future",
+      "gate-off",
+      "sync-off",
+      "non-start",
+      "same-start",
+      "between-started",
+      "unrelated",
+    ])(
+      "AT-02: preserves assignment for %s",
+      async (scenario) => {
+        const f = await fixture(),
+          input = await startInput(
+            f,
+            scenario === "existing" ? users[1] : undefined
+          ),
+          edit = input.edits[0]
+        if (scenario === "explicit-other") edit.changes.assignee = users[1]
+        if (scenario === "explicit-empty") edit.changes.assignee = ""
+        if (scenario === "disabled")
+          await pool.query(
+            `UPDATE account_preferences SET values='{"general.assignStartedIssues":false,"general.autoAssignToSelf":true}' WHERE user_id=$1`,
+            [users[0]]
+          )
+        if (scenario === "missing")
+          await pool.query("DELETE FROM account_preferences WHERE user_id=$1", [
+            users[0],
+          ])
+        if (scenario === "invalid")
+          await pool.query(
+            `UPDATE account_preferences SET values='{"general.assignStartedIssues":"true"}' WHERE user_id=$1`,
+            [users[0]]
+          )
+        if (scenario === "future")
+          await pool.query(
+            "UPDATE account_preferences SET version=99 WHERE user_id=$1",
+            [users[0]]
+          )
+        if (scenario === "gate-off")
+          vi.stubEnv("FORGE_ASSIGN_STARTED_ISSUES_ENABLED", "false")
+        if (scenario === "sync-off")
+          vi.stubEnv("FORGE_PERSONAL_PREFERENCE_SYNC_ENABLED", "false")
+        if (scenario === "non-start") edit.changes.status = "done"
+        if (scenario === "same-start" || scenario === "between-started") {
+          await pool.query(
+            "UPDATE issues SET status_id='in-progress' WHERE id=$1",
+            [edit.issueId]
+          )
+          edit.expectedRevision = 1
+          if (scenario === "between-started") edit.changes.status = "in-review"
+        }
+        if (scenario === "unrelated") edit.changes = { priority: "High" }
+        const result = await editing.editCanonicalIssues(f.actors[0], input)
+        expect(result.status).toBe("saved")
+        expect(result.records[0].issue.assignee).toBe(
+          ["existing", "explicit-other"].includes(scenario) ? users[1] : ""
+        )
+        expect(
+          result.records[0].issue.activity.some((a) => a.automaticAssignment)
+        ).toBe(false)
+      },
+      30000
+    )
+    it.each(["scope", "private-team"])(
+      "AT-02: opt-in never grants missing %s authority",
+      async (reason) => {
+        const f = await fixture(),
+          input = await startInput(f)
+        await pool.query(
+          `INSERT INTO account_preferences(user_id,values) VALUES($1,'{"general.assignStartedIssues":true}')`,
+          [users[1]]
+        )
+        const actor = {
+          ...f.actors[1],
+          scopes: reason === "scope" ? (["issues:read"] as const) : null,
+        }
+        if (reason === "private-team")
+          await pool.query(
+            "UPDATE teams SET visibility='private' WHERE id=$1",
+            [f.teamId]
+          )
+        await expect(
+          editing.editCanonicalIssues(actor, input)
+        ).rejects.toThrow()
+        expect(
+          (await service.readCanonicalIssues(f.actors[0])).records[0].issue
+        ).toMatchObject({ status: "todo", assignee: "", revision: 0 })
+        expect(await counts(f.workspaceId, input.commandKey)).toEqual({
+          receipts: 0,
+          audit: 0,
+          outbox: 0,
+        })
+      },
+      30000
+    )
+    it("AT-01: uses custom canonical categories and the executing actor's own preference", async () => {
+      const f = await fixture(),
+        input = await startInput(f),
+        { defaultDefinitionValue } =
+          await import("@/lib/issue-definition-contract"),
+        value = defaultDefinitionValue()
+      const status = value.statuses.statuses.find(
+        (s) => s.id === "in-progress"
+      )!
+      value.statuses.statuses.push({
+        ...status,
+        id: "custom-building",
+        name: "Making progress",
+      })
+      const { saveIssueDefinitions } =
+        await import("@/application/issue-definitions/definitions.server")
+      const actor = f.actors[0]
+      if (actor.authentication.kind !== "session")
+        throw new Error("Session required")
+      await saveIssueDefinitions(actor, {
+        workspaceId: f.workspaceId,
+        sessionId: actor.authentication.sessionId,
+        teamId: f.teamId,
+        commandKey: randomUUID(),
+        expectedRevision: 0,
+        value,
+        statusReplacements: {},
+        labelReplacements: {},
+      })
+      input.edits[0].expectedRevision =
+        (await service.readCanonicalIssues(actor)).records[0].issue.revision ??
+        0
+      input.edits[0].changes.status = "custom-building"
+      expect(
+        (await editing.editCanonicalIssues(f.actors[1], input)).records[0].issue
+          .assignee
+      ).toBe("")
+      const next = await startInput(f)
+      next.edits[0].changes.status = "custom-building"
+      const assigned = await editing.editCanonicalIssues(f.actors[0], next)
+      expect(assigned.records[0].issue.assignee).toBe(users[0])
+      expect(assigned.records[0].issue.activity[0].text).toContain(
+        "Making progress"
+      )
+    }, 30000)
+    it("AT-03: stale start cannot overwrite a competing assignee; rebase preserves the winner", async () => {
+      const f = await fixture(),
+        input = await startInput(f),
+        id = input.edits[0].issueId
+      await editing.editCanonicalIssues(f.actors[1], {
+        teamId: f.teamId,
+        commandKey: randomUUID(),
+        edits: [
+          { issueId: id, expectedRevision: 0, changes: { assignee: users[1] } },
+        ],
+      })
+      const stale = await editing.editCanonicalIssues(f.actors[0], input)
+      expect(stale.status).toBe("conflict")
+      expect(stale.records[0].issue).toMatchObject({
+        status: "todo",
+        assignee: users[1],
+        revision: 1,
+      })
+      expect(await counts(f.workspaceId, input.commandKey)).toEqual({
+        receipts: 0,
+        audit: 0,
+        outbox: 0,
+      })
+      const saved = await editing.editCanonicalIssues(f.actors[0], {
+        ...input,
+        commandKey: randomUUID(),
+        edits: [{ ...input.edits[0], expectedRevision: 1 }],
+      })
+      expect(saved.records[0].issue).toMatchObject({
+        status: "in-progress",
+        assignee: users[1],
+        revision: 2,
+      })
+    }, 30000)
+    it("AT-03: racing start and assignment have one winner and a conflict", async () => {
+      const f = await fixture(),
+        input = await startInput(f),
+        id = input.edits[0].issueId
+      const results = await Promise.all([
+        editing.editCanonicalIssues(f.actors[0], input),
+        editing.editCanonicalIssues(f.actors[1], {
+          teamId: f.teamId,
+          commandKey: randomUUID(),
+          edits: [
+            {
+              issueId: id,
+              expectedRevision: 0,
+              changes: { assignee: users[1] },
+            },
+          ],
+        }),
+      ])
+      expect(results.map((r) => r.status).sort()).toEqual(["conflict", "saved"])
+      const current = (await service.readCanonicalIssues(f.actors[0]))
+        .records[0].issue
+      expect(current.revision).toBe(1)
+      expect(current.assignee).toBe(
+        results[0].status === "saved" ? users[0] : users[1]
+      )
+      expect(current.activity).toHaveLength(1)
+    }, 30000)
+    it("AT-01/03: bulk evaluates per issue and stale items roll the whole batch back", async () => {
+      const f = await fixture(),
+        a = await startInput(f),
+        b = await startInput(f, users[1]),
+        c = await startInput(f),
+        input = { ...a, edits: [...a.edits, ...b.edits, ...c.edits] }
+      input.edits[2].changes.assignee = ""
+      const result = await editing.editCanonicalIssues(f.actors[0], input)
+      expect(result.records.map((r) => r.issue.assignee)).toEqual([
+        users[0],
+        users[1],
+        "",
+      ])
+      expect(await counts(f.workspaceId, input.commandKey)).toEqual({
+        receipts: 1,
+        audit: 1,
+        outbox: 3,
+      })
+      const d = await startInput(f),
+        e = await startInput(f)
+      await pool.query("UPDATE issues SET assignee_id=$2 WHERE id=$1", [
+        e.edits[0].issueId,
+        users[1],
+      ])
+      const stale = { ...d, edits: [...d.edits, ...e.edits] }
+      expect(
+        (await editing.editCanonicalIssues(f.actors[0], stale)).status
+      ).toBe("conflict")
+      expect(
+        (await service.readCanonicalIssues(f.actors[0])).records.find(
+          (r) => r.issue.id === d.edits[0].issueId
+        )!.issue
+      ).toMatchObject({
+        status: "todo",
+        assignee: "",
+        revision: 0,
+        activity: [],
+      })
+      expect(await counts(f.workspaceId, stale.commandKey)).toEqual({
+        receipts: 0,
+        audit: 0,
+        outbox: 0,
+      })
+    }, 30000)
+    it("AT-01/03: audit failure rolls back status, assignment and history; retry commits once", async () => {
+      const f = await fixture(),
+        input = await startInput(f)
+      await pool.query(
+        `CREATE FUNCTION for139_reject_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.workspace_id='${f.workspaceId}' THEN RAISE EXCEPTION 'for139 audit failure'; END IF; RETURN NEW; END $$`
+      )
+      await pool.query(
+        "CREATE TRIGGER for139_reject_audit BEFORE INSERT ON command_audit_events FOR EACH ROW EXECUTE FUNCTION for139_reject_audit()"
+      )
+      try {
+        await expect(
+          editing.editCanonicalIssues(f.actors[0], input)
+        ).rejects.toThrow()
+      } finally {
+        await pool.query(
+          "DROP TRIGGER for139_reject_audit ON command_audit_events"
+        )
+        await pool.query("DROP FUNCTION for139_reject_audit()")
+      }
+      expect(
+        (await service.readCanonicalIssues(f.actors[0])).records[0].issue
+      ).toMatchObject({
+        status: "todo",
+        assignee: "",
+        revision: 0,
+        activity: [],
+      })
+      expect(await counts(f.workspaceId, input.commandKey)).toEqual({
+        receipts: 0,
+        audit: 0,
+        outbox: 0,
+      })
+      expect(
+        (await editing.editCanonicalIssues(f.actors[0], input)).records[0].issue
+          .assignee
+      ).toBe(users[0])
+      expect(
+        (await editing.editCanonicalIssues(f.actors[0], input)).replayed
+      ).toBe(true)
+      expect(await counts(f.workspaceId, input.commandKey)).toEqual({
+        receipts: 1,
+        audit: 1,
+        outbox: 1,
+      })
+    }, 30000)
+  })
 })

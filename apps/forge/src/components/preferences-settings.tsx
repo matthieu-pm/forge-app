@@ -25,6 +25,7 @@ import { Switch } from "@/components/ui/switch"
 import { applyPersonalInterfacePreferences } from "@/lib/personal-preferences"
 import { getForgeHost } from "@/host/forge-host"
 import { cn } from "@/lib/utils"
+import { loadStartedAssignmentAvailability } from "@/lib/account-preference-state"
 
 type ThemePreviewPalette = {
   accent: string
@@ -260,6 +261,21 @@ function PreferenceSelect<TValue extends string>({
 export function PreferencesSettings() {
   const sync = usePreferenceGroup("general")
   const preferences = sync.preferences
+  const [startedAssignmentAvailable, setStartedAssignmentAvailable] =
+    React.useState(false)
+  React.useEffect(() => {
+    let active = true
+    void loadStartedAssignmentAvailability()
+      .then((enabled) => {
+        if (active) setStartedAssignmentAvailable(enabled)
+      })
+      .catch(() => {
+        /* Keep the control unavailable until verified. */
+      })
+    return () => {
+      active = false
+    }
+  }, [])
   React.useEffect(() => {
     applyPersonalInterfacePreferences(preferences)
     void getForgeHost().setThemeSource(preferences.interfaceTheme)
@@ -571,10 +587,15 @@ export function PreferencesSettings() {
                 </PreferenceRow>
                 <PreferenceRow
                   label="On move to started status, assign to yourself"
-                  description="When you move an unassigned issue to started, it will be automatically assigned to you"
+                  description={
+                    startedAssignmentAvailable
+                      ? "When you, your API keys or your agents move an unassigned issue into started, assign it to you unless an assignee is explicitly chosen"
+                      : "This automation is currently unavailable"
+                  }
                 >
                   <Switch
                     checked={preferences.assignStartedIssues}
+                    disabled={!startedAssignmentAvailable}
                     onCheckedChange={(checked) =>
                       updatePreference("assignStartedIssues", checked)
                     }

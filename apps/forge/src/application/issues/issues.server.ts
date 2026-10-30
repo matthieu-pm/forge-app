@@ -1,6 +1,7 @@
 import "@tanstack/react-start/server-only"
 import { and, asc, eq, inArray, isNull, or, sql } from "drizzle-orm"
 import { z } from "zod"
+import { startedAssignmentEnabled } from "./started-assignment.server"
 import type { InitiativeProject } from "@/lib/initiatives"
 import type { Actor } from "@/application/actor"
 import type { Transaction } from "@/db"
@@ -43,6 +44,7 @@ import {
 } from "@/application/resource-policy.server"
 import { blankIssueDraft, issueSchema } from "@/lib/issue-record-contract"
 import { defaultDefinitionValue } from "@/lib/issue-definition-contract"
+import { ACCOUNT_PREFERENCE_VERSION } from "@/lib/account-preference-contract"
 
 async function importedProjectSnapshot(
   tx: Transaction,
@@ -267,7 +269,7 @@ export async function resolveIssueFields(
   tx: Transaction,
   current: Actor,
   input: CreateCanonicalIssue,
-  previous?: TeamIssue
+  edit?: { before: TeamIssue; assignmentExplicit: boolean }
 ) {
   const team = await requireIssueTeam(tx, current, input.teamId)
   const scope = (
@@ -291,9 +293,24 @@ export async function resolveIssueFields(
   if (assignee === undefined && input.draft.assignee !== undefined)
     assignee = input.draft.assignee || null
   let personalAssignee: string | null = null
+  const previousStatus =
+    edit &&
+    definitions.statuses.statuses.find((s) => s.id === edit.before.status)
+  const enteringStarted = Boolean(
+    edit &&
+    !edit.assignmentExplicit &&
+    !edit.before.assignee &&
+    previousStatus &&
+    previousStatus.group !== "started" &&
+    status.group === "started" &&
+    startedAssignmentEnabled()
+  )
+  let assignedOnStart = false
   if (
-    current.authentication.kind === "session" &&
-    process.env.FORGE_PERSONAL_PREFERENCE_SYNC_ENABLED === "true"
+    enteringStarted ||
+    (!edit &&
+      current.authentication.kind === "session" &&
+      process.env.FORGE_PERSONAL_PREFERENCE_SYNC_ENABLED === "true")
   ) {
     const preference = (
       await tx
@@ -303,10 +320,19 @@ export async function resolveIssueFields(
         .for("share")
     )[0]
     if (
-      preference?.version === 1 &&
+      !edit &&
+      preference?.version === ACCOUNT_PREFERENCE_VERSION &&
       preference.values["general.autoAssignToSelf"] === true
     )
       personalAssignee = current.userId
+    if (
+      enteringStarted &&
+      preference?.version === ACCOUNT_PREFERENCE_VERSION &&
+      preference.values["general.assignStartedIssues"] === true
+    ) {
+      assignee = current.userId
+      assignedOnStart = true
+    }
   }
   if (assignee === undefined) assignee = personalAssignee
   assignee ??= null
@@ -501,7 +527,9 @@ export async function resolveIssueFields(
         )
         .for("share")
     : []
-  const previousNames = (previous?.labels ?? "").split(",").map((n) => n.trim())
+  const previousNames = (edit?.before.labels ?? "")
+    .split(",")
+    .map((n) => n.trim())
   const labels = candidates.filter(
     (l) => !l.definition?.archived || previousNames.includes(l.name)
   )
@@ -512,6 +540,7 @@ export async function resolveIssueFields(
     status,
     assignee,
     personalAssignee,
+    assignedOnStart,
     projectId,
     cycleId,
     parentId,

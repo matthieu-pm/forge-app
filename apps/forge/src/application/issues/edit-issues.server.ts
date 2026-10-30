@@ -108,8 +108,11 @@ export async function editCanonicalIssues(actor: Actor, raw: EditIssueBatch) {
               projectImport: edit.projectImport,
               cycleImport: edit.cycleImport,
             },
-            before
+            { before, assignmentExplicit: edit.changes.assignee !== undefined }
           )
+          // The automation is part of this edit, never a second command. Persist
+          // its resulting assignment in both canonical columns and properties.
+          draft.assignee = resolved.assignee ?? ""
           if (edit.changes.subscribers !== undefined) {
             const subscribers = [
               ...new Set(
@@ -142,8 +145,14 @@ export async function editCanonicalIssues(actor: Actor, raw: EditIssueBatch) {
             .map(([field, value]) => ({
               id: crypto.randomUUID(),
               author: current.userId,
-              text: `updated ${field}`,
+              text:
+                field === "status" && resolved.assignedOnStart
+                  ? `moved to ${resolved.status.name} and self-assigned the issue`
+                  : `updated ${field}`,
               createdAt: now,
+              ...(field === "status" && resolved.assignedOnStart
+                ? { automaticAssignment: { from: "", to: current.userId } }
+                : {}),
               ...([
                 "status",
                 "priority",

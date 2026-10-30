@@ -3,6 +3,23 @@ import { createServerFn } from "@tanstack/react-start"
 import { accountPreferenceCommandSchema } from "./account-preference-contract"
 import type { PreferenceLoadResult } from "./account-preference-contract"
 
+export const loadStartedAssignmentAvailability = createServerFn({
+  method: "GET",
+}).handler(async () => {
+  const [
+    { getRequest, setResponseHeader },
+    { requireSessionActor },
+    { startedAssignmentEnabled },
+  ] = await Promise.all([
+    import("@tanstack/react-start/server"),
+    import("@/adapters/auth/session-actor.server"),
+    import("@/application/issues/started-assignment.server"),
+  ])
+  setResponseHeader("Cache-Control", "private, no-store")
+  await requireSessionActor(getRequest())
+  return startedAssignmentEnabled()
+})
+
 export const loadAccountPreferences = createServerFn({ method: "GET" })
   .validator(
     z
