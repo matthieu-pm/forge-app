@@ -2,7 +2,15 @@
 import { randomUUID } from "node:crypto"
 import { readFileSync } from "node:fs"
 import { Pool, neonConfig } from "@neondatabase/serverless"
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest"
 import { DATABASE_TARGETS } from "../../../scripts/lib/database-targets"
 import { assertMigrationTarget } from "../../../scripts/lib/serialized-migrations"
 import type * as Editing from "./edit-issues.server"
@@ -12,12 +20,14 @@ import type * as ProductService from "../product-state/product-state.server"
 import type * as Database from "@/db"
 import { blankIssueDraft } from "@/lib/issue-record-contract"
 
-const file = process.env.FORGE_ISSUE_TEST_DATABASE_FILE
+const autoAssignmentFile = process.env.FORGE_AUTO_ASSIGNMENT_TEST_DATABASE_FILE
+const file = autoAssignmentFile ?? process.env.FORGE_ISSUE_TEST_DATABASE_FILE
 
 describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
   const marker = `for41-${randomUUID()}`
   const users = [`${marker}-admin`, `${marker}-member`]
   const workspaces: Array<string> = []
+  const credentials: Array<string> = []
   let editing: typeof Editing
   let pool: Pool,
     service: typeof Service,
@@ -87,10 +97,10 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
     const { connection, applicationConnection } = JSON.parse(
       readFileSync(file!, "utf8")
     )
-    const target = {
-      environment: "issue-creation-acceptance" as const,
-      ...DATABASE_TARGETS["issue-creation-acceptance"],
-    }
+    const environment = autoAssignmentFile
+      ? "auto-assignment-acceptance"
+      : "issue-creation-acceptance"
+    const target = { environment, ...DATABASE_TARGETS[environment] } as const
     assertMigrationTarget(connection, target)
     assertMigrationTarget(
       applicationConnection.replace("-pooler.", "."),
@@ -117,12 +127,76 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
         [userId, `${userId}@example.test`]
       )
   }, 30000)
+  beforeEach(async () => {
+    await pool.query("DELETE FROM account_preferences WHERE user_id=ANY($1)", [
+      users,
+    ])
+  })
+  async function preference(
+    userId: string,
+    value: unknown = true,
+    version = 1
+  ) {
+    await pool.query(
+      "INSERT INTO account_preferences(user_id,version,values) VALUES($1,$2,$3) ON CONFLICT(user_id) DO UPDATE SET version=EXCLUDED.version,values=EXCLUDED.values",
+      [userId, version, { "general.autoAssignToSelf": value }]
+    )
+  }
+  async function credentialActor(
+    f: Awaited<ReturnType<typeof fixture>>,
+    kind: "session" | "apiKey" | "agent"
+  ): Promise<Actor> {
+    const owner = f.actors[1]
+    if (kind === "session") return owner
+    if (kind === "apiKey") {
+      const id = randomUUID()
+      credentials.push(id)
+      await pool.query(
+        "INSERT INTO apikey(id,config_id,reference_id,key,permissions,metadata) VALUES($1,'forge-api',$2,$1,$3,$4)",
+        [
+          id,
+          owner.userId,
+          JSON.stringify({ issues: ["read", "write"] }),
+          JSON.stringify({ workspaceId: f.workspaceId }),
+        ]
+      )
+      return {
+        ...owner,
+        authentication: { kind, credentialId: id },
+        scopes: ["issues:read", "issues:write"],
+      }
+    }
+    const threadId = randomUUID(),
+      runId = randomUUID()
+    await pool.query(
+      "INSERT INTO agent_threads(id,workspace_id,created_by_user_id) VALUES($1,$2,$3)",
+      [threadId, f.workspaceId, owner.userId]
+    )
+    await pool.query(
+      "INSERT INTO agent_runs(id,thread_id,initiated_by_user_id,state,execution_kind,requested_selection) VALUES($1,$2,$3,'running','forge-native','{}')",
+      [runId, threadId, owner.userId]
+    )
+    return {
+      ...owner,
+      authentication: { kind, runId, tokenId: randomUUID() },
+      scopes: ["issues:read", "issues:write"],
+    }
+  }
+  const assignment = (actor: Actor) => [
+    {
+      author: actor.userId,
+      field: "assignee",
+      to: actor.userId,
+      text: `assigned to ${actor.userId}`,
+    },
+  ]
   afterAll(async () => {
     if (pool) {
       await pool.query(
         "DROP TRIGGER IF EXISTS for41_reject_audit ON command_audit_events"
       )
       await pool.query("DROP FUNCTION IF EXISTS for41_reject_audit()")
+      await pool.query("DELETE FROM apikey WHERE id=ANY($1)", [credentials])
       for (const id of workspaces)
         await pool.query("DELETE FROM organization WHERE id=$1", [id])
       for (const id of users)
@@ -277,6 +351,7 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
     const input = command(f.teamId),
       first = await service.createCanonicalIssue(f.actors[0], input)
     expect(first.issue.assignee).toBe(users[0])
+    expect(first.issue.activity).toMatchObject(assignment(f.actors[0]))
     expect(
       (
         await service.createCanonicalIssue(f.actors[0], {
@@ -300,6 +375,234 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
     expect(
       (await service.createCanonicalIssue(f.actors[0], input)).issue.assignee
     ).toBe(users[0])
+  }, 30000)
+  it.each(["session", "apiKey", "agent"] as const)(
+    "FOR-138 AT-01/03: %s uses its verified owner, commits child history once and replays after preference changes",
+    async (kind) => {
+      const f = await fixture(),
+        actor = await credentialActor(f, kind)
+      await preference(actor.userId)
+      const input = {
+        ...command(f.teamId),
+        draft: { ...draft(), subIssues: ["Child"] },
+      }
+      const [first, retry] = await Promise.all([
+        service.createCanonicalIssue(actor, input),
+        service.createCanonicalIssue(actor, input),
+      ])
+      expect(first.value).toEqual(retry.value)
+      for (const row of first.records) {
+        expect(row.issue.assignee).toBe(actor.userId)
+        expect(row.issue.creator).toBe(actor.userId)
+        expect(row.issue.activity).toMatchObject(assignment(actor))
+        expect(row.issue.activity).toHaveLength(1)
+      }
+      await preference(actor.userId, false)
+      const replay = await service.createCanonicalIssue(actor, input)
+      expect(replay.replayed).toBe(true)
+      expect(replay.records).toEqual(first.records)
+      const counts = (
+        await pool.query(
+          "SELECT (SELECT count(*)::int FROM issues WHERE workspace_id=$1) issues,(SELECT count(*)::int FROM command_receipts WHERE workspace_id=$1) receipts,(SELECT count(*)::int FROM command_audit_events WHERE workspace_id=$1 AND actor_user_id=$2) audit,(SELECT count(*)::int FROM command_outbox_events WHERE workspace_id=$1) outbox",
+          [f.workspaceId, actor.userId]
+        )
+      ).rows[0]
+      expect(counts).toEqual({ issues: 2, receipts: 1, audit: 1, outbox: 2 })
+      expect(
+        (await service.createCanonicalIssue(actor, command(f.teamId))).issue
+          .assignee
+      ).toBe("")
+    },
+    30000
+  )
+  it.each(["session", "apiKey", "agent"] as const)(
+    "FOR-138 AT-02: %s preserves explicit null, draft-unassigned and explicit other owner",
+    async (kind) => {
+      const f = await fixture(),
+        actor = await credentialActor(f, kind)
+      await preference(actor.userId)
+      for (const patch of [
+        { assigneeId: null },
+        { draft: { ...draft(), assignee: "" } },
+        { assigneeId: users[0] },
+        { draft: { ...draft(), assignee: users[0] } },
+        { assigneeId: null, draft: { ...draft(), assignee: users[0] } },
+      ]) {
+        const created = await service.createCanonicalIssue(actor, {
+          ...command(f.teamId),
+          ...patch,
+        })
+        const expected =
+          "assigneeId" in patch
+            ? (patch.assigneeId ?? "")
+            : patch.draft.assignee
+        expect(created.issue.assignee).toBe(expected)
+        expect(created.issue.activity).toHaveLength(expected ? 1 : 0)
+      }
+    },
+    30000
+  )
+  it.each([
+    [false, 1],
+    ["true", 1],
+    [null, 1],
+    [true, 2],
+  ])(
+    "FOR-138 AT-02: preference %s at version %s safely disables automation",
+    async (value, version) => {
+      const f = await fixture()
+      await preference(users[0], value, version)
+      const result = await service.createCanonicalIssue(
+        f.actors[0],
+        command(f.teamId)
+      )
+      expect(result.issue.assignee).toBe("")
+      expect(result.issue.activity).toEqual([])
+    },
+    30000
+  )
+  it("FOR-138 AT-02: absent preference and disabled sync leave omitted assignment empty", async () => {
+    const f = await fixture()
+    expect(
+      (await service.createCanonicalIssue(f.actors[0], command(f.teamId))).issue
+        .assignee
+    ).toBe("")
+    await preference(users[0])
+    vi.stubEnv("FORGE_PERSONAL_PREFERENCE_SYNC_ENABLED", "false")
+    try {
+      const result = await service.createCanonicalIssue(f.actors[0], {
+        ...command(f.teamId),
+        draft: { ...draft(), subIssues: ["Child"] },
+      })
+      expect(
+        result.records.every(
+          (r) => !r.issue.assignee && r.issue.activity.length === 0
+        )
+      ).toBe(true)
+      expect(
+        (
+          await service.createCanonicalIssue(f.actors[0], {
+            ...command(f.teamId),
+            assigneeId: users[1],
+          })
+        ).issue.assignee
+      ).toBe(users[1])
+    } finally {
+      vi.stubEnv("FORGE_PERSONAL_PREFERENCE_SYNC_ENABLED", "true")
+    }
+  }, 30000)
+  it.each(["session", "apiKey", "agent"] as const)(
+    "FOR-138 AT-03: %s loses private-team and workspace authority on fresh requests and replay",
+    async (kind) => {
+      const f = await fixture(),
+        actor = await credentialActor(f, kind)
+      await preference(actor.userId)
+      await pool.query("UPDATE teams SET visibility='private' WHERE id=$1", [
+        f.teamId,
+      ])
+      await pool.query(
+        "INSERT INTO team_members(id,workspace_id,team_id,user_id,role) VALUES($1,$2,$3,$4,'member')",
+        [randomUUID(), f.workspaceId, f.teamId, actor.userId]
+      )
+      const input = command(f.teamId)
+      expect(
+        (await service.createCanonicalIssue(actor, input)).issue.assignee
+      ).toBe(actor.userId)
+      await pool.query("DELETE FROM team_members WHERE team_id=$1", [f.teamId])
+      await expect(
+        service.createCanonicalIssue(actor, command(f.teamId))
+      ).rejects.toThrow()
+      await expect(service.createCanonicalIssue(actor, input)).rejects.toThrow()
+      await pool.query("UPDATE teams SET visibility='workspace' WHERE id=$1", [
+        f.teamId,
+      ])
+      await pool.query(
+        "DELETE FROM member WHERE organization_id=$1 AND user_id=$2",
+        [f.workspaceId, actor.userId]
+      )
+      await expect(service.createCanonicalIssue(actor, input)).rejects.toThrow()
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int n FROM issues WHERE workspace_id=$1",
+            [f.workspaceId]
+          )
+        ).rows[0].n
+      ).toBe(1)
+    },
+    30000
+  )
+  it.each(["apiKey", "agent"] as const)(
+    "FOR-138 AT-02/03: %s cannot forge an owner or bypass scopes/revocation",
+    async (kind) => {
+      const f = await fixture(),
+        actor = await credentialActor(f, kind)
+      await preference(users[0])
+      await preference(actor.userId)
+      await expect(
+        service.createCanonicalIssue(
+          { ...actor, userId: users[0] },
+          command(f.teamId)
+        )
+      ).rejects.toThrow()
+      await expect(
+        service.createCanonicalIssue(
+          { ...actor, scopes: ["issues:read"] },
+          command(f.teamId)
+        )
+      ).rejects.toThrow()
+      const input = command(f.teamId)
+      await service.createCanonicalIssue(actor, input)
+      if (actor.authentication.kind === "apiKey")
+        await pool.query("UPDATE apikey SET enabled=false WHERE id=$1", [
+          actor.authentication.credentialId,
+        ])
+      else if (actor.authentication.kind === "agent")
+        await pool.query(
+          "UPDATE agent_runs SET state='cancelled' WHERE id=$1",
+          [actor.authentication.runId]
+        )
+      await expect(service.createCanonicalIssue(actor, input)).rejects.toThrow()
+      await expect(
+        service.createCanonicalIssue(actor, command(f.teamId))
+      ).rejects.toThrow()
+    },
+    30000
+  )
+  it("FOR-138: adding a child during edit assigns only the new child with attributable history", async () => {
+    const f = await fixture()
+    const parent = await service.createCanonicalIssue(f.actors[0], {
+      ...command(f.teamId),
+      assigneeId: null,
+    })
+    await preference(users[0])
+    const input = {
+      commandKey: randomUUID(),
+      teamId: f.teamId,
+      edits: [
+        {
+          issueId: parent.issue.id,
+          expectedRevision: 0,
+          changes: { subIssues: ["New child"] },
+        },
+      ],
+    }
+    const edited = await editing.editCanonicalIssues(f.actors[0], input)
+    expect(edited.status).toBe("saved")
+    const records = (await service.readCanonicalIssues(f.actors[0])).records
+    expect(
+      records.find((r) => r.issue.id === parent.issue.id)!.issue.assignee
+    ).toBe("")
+    const child = records.find(
+      (r) => r.issue.parentId === parent.issue.id
+    )!.issue
+    expect(child.assignee).toBe(users[0])
+    expect(child.activity).toMatchObject(assignment(f.actors[0]))
+    expect(child.activity).toHaveLength(1)
+    await editing.editCanonicalIssues(f.actors[0], input)
+    expect((await service.readCanonicalIssues(f.actors[0])).records).toEqual(
+      records
+    )
   }, 30000)
   it("rejects changed-input command reuse, removed membership and private-team access", async () => {
     const f = await fixture(),
@@ -468,8 +771,13 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
         .number
     ).toBe(251)
   }, 30000)
-  it("rolls back a canonical issue and numbering when audit insertion fails", async () => {
+  it("rolls back auto-assignment, child history and numbering when audit insertion fails", async () => {
     const f = await fixture()
+    await preference(users[0])
+    const input = {
+      ...command(f.teamId),
+      draft: { ...draft(), subIssues: ["Child"] },
+    }
     await pool.query(
       "CREATE FUNCTION for41_reject_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Injected audit failure'; END $$"
     )
@@ -478,7 +786,7 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
     )
     try {
       await expect(
-        service.createCanonicalIssue(f.actors[0], command(f.teamId))
+        service.createCanonicalIssue(f.actors[0], input)
       ).rejects.toThrow()
     } finally {
       await pool.query(
@@ -500,10 +808,14 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
           )
         ).rows[0].n
       ).toBe(0)
-    expect(
-      (await service.createCanonicalIssue(f.actors[0], command(f.teamId))).issue
-        .number
-    ).toBe(1)
+    const retry = await service.createCanonicalIssue(f.actors[0], input)
+    expect(retry.issue.number).toBe(1)
+    expect(retry.records).toHaveLength(2)
+    for (const row of retry.records) {
+      expect(row.issue.assignee).toBe(users[0])
+      expect(row.issue.activity).toMatchObject(assignment(f.actors[0]))
+      expect(row.issue.activity).toHaveLength(1)
+    }
   }, 30000)
   it("preserves differing legacy issue/project versions as conflicts without overwriting shared data", async () => {
     const f = await fixture(),
@@ -556,6 +868,8 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
       )!.issue
       expect(child.assignee).toBe(users[0])
       expect(child.creator).toBe(users[0])
+      expect(child.activity).toMatchObject(assignment(f.actors[0]))
+      expect(child.activity).toHaveLength(1)
     } finally {
       await pool.query(
         "UPDATE account_preferences SET values='{}' WHERE user_id=$1",

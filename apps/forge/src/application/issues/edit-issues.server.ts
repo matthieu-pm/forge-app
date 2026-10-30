@@ -2,6 +2,7 @@ import "@tanstack/react-start/server-only"
 import { and, eq, inArray, isNull, sql } from "drizzle-orm"
 import { z } from "zod"
 import {
+  initialAssignmentActivity,
   readIssueRows,
   requireIssueTeam,
   resolveIssueFields,
@@ -237,7 +238,15 @@ export async function editCanonicalIssues(actor: Actor, raw: EditIssueBatch) {
                     parentId: row.id,
                     assigneeId: childResolved.assignee,
                     creatorId: current.userId,
-                    properties: childDraft,
+                    properties: {
+                      ...childDraft,
+                      assignee: childResolved.assignee ?? "",
+                      activity: initialAssignmentActivity(
+                        current,
+                        childResolved.assignee,
+                        new Date(now)
+                      ),
+                    },
                   })
                   .returning()
               )[0]
