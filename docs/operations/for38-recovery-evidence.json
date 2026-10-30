@@ -153,7 +153,6 @@
     "database": "forge_recovery_target"
   },
   "providerReadback": {
-    "verifiedAt": "2026-10-30T13:33:50Z",
     "accountId": "6ef2f63b419136eed4d57d84700cbc30",
     "buckets": [
       {
@@ -226,7 +225,8 @@
         },
         "publicManagedEndpointEnabled": false
       }
-    ]
+    ],
+    "verificationPhase": "During final candidate validation on 30 October 2026"
   },
   "expiryProbe": {
     "method": "New synthetic object with backdated original-capture key; actual R2 DELETE and HEAD disappearance",
