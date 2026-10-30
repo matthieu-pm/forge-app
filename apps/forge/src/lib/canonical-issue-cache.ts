@@ -25,6 +25,12 @@ let active = false
 let epoch = 0
 const optimistic = new Map<string, TeamIssue>()
 const suppressed = new Map<string, number>()
+export function canonicalSuppressionSnapshot() {
+  return [...suppressed.keys()].sort().join(",")
+}
+export function isCanonicalIssueSuppressed(id: string) {
+  return suppressed.has(id)
+}
 export function canonicalIssueEpoch() {
   return epoch
 }

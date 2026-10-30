@@ -37,7 +37,7 @@ Team issue lists expose **Archived and deleted**. Deleted rows show their exact
 recovery deadline and whether they restore to archive. Archived rows support
 unarchive and recoverable deletion. Normal issue options support archive and a
 confirmation for deletion. Direct unavailable links show a safe availability
-message. Session/workspace changes and stale responses are fenced in the client.
+message. Session/workspace changes and stale responses are fenced in the client. Open inbox snapshots hide immediately when a confirmed lifecycle command suppresses their issue; their recoverable history remains intact.
 
 ## Active-issue capacity
 

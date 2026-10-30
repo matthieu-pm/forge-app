@@ -5,6 +5,10 @@ import {
   reduceInbox,
   visibleInboxEntries,
 } from "./inbox-state"
+import {
+  replaceCanonicalIssues,
+  suppressCanonicalIssueRecord,
+} from "./canonical-issue-cache"
 import { scope, update } from "@/components/inbox/inbox-test-fixtures"
 
 const options = {
@@ -14,6 +18,23 @@ const options = {
   now: Date.parse("2026-10-23T12:00:00Z"),
 }
 describe("inbox update delivery", () => {
+  it("FOR-45: suppresses retained inbox snapshots immediately without erasing recoverable history", () => {
+    const state = receiveInboxUpdate(newInbox(), scope, update())
+    try {
+      suppressCanonicalIssueRecord("issue-1", 3)
+      expect(
+        visibleInboxEntries(state, options).filter((entry) => entry.issue)
+      ).toHaveLength(0)
+      expect(
+        state.entries.find((entry) => entry.issue)?.issue?.title
+      ).toBeTruthy()
+    } finally {
+      replaceCanonicalIssues(null)
+    }
+    expect(
+      visibleInboxEntries(state, options).filter((entry) => entry.issue)
+    ).toHaveLength(1)
+  })
   it("groups the four update types by issue, deduplicates events and reopens read entries", () => {
     let state = receiveInboxUpdate(newInbox(), scope, update())
     state = reduceInbox(state, {
