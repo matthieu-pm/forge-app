@@ -1,0 +1,154 @@
+{
+  "issue": "FOR-35",
+  "verifiedAt": "2026-10-30",
+  "sourceRevision": "aa89d807201f1ee46c74802043b4184f82f7749a",
+  "environment": {
+    "database": "forge_file_storage_acceptance_v2",
+    "branchId": "br-autumn-union-za0opf1e",
+    "applicationRole": "forge_staging_web",
+    "privateBlobStore": "store_HCogFKvO1n2cbJw7",
+    "productionModified": false
+  },
+  "acceptance": {
+    "AC-01 / AT-01": {
+      "status": "passed",
+      "evidence": "Real 5 MiB scoped direct private upload; concurrent/repeated finalize produces one ready file, receipt/audit/outbox effect; actual browser client through the bounded HTTP handler publishes a ready agent attachment; no oversized app request."
+    },
+    "AC-02 / AT-02": {
+      "status": "passed",
+      "evidence": "Stored bytes exceeding the declared reservation and wrong SHA-256 are rejected without canonical metadata, release capacity and retain cleanup inventory. Transient/missing-object failures remain resumable."
+    },
+    "AC-03 / AT-03": {
+      "status": "passed",
+      "evidence": "Membership, session and target revocation/deletion after intent and membership revocation during storage verification deny publication. Private-team access is required at intent and finalize. Rejected/expired state cannot become ready; failed deletion retries exact recorded keys."
+    },
+    "AC-04 / AT-04": {
+      "status": "passed",
+      "evidence": "Real private 10,000,000-byte Free fixture finalizes; a 10,000,001-byte stored object with the same declaration fails. Oversized intent refused. Genuine paid >10 MB fixture succeeds under 100 MB operational ceiling; browser plan/URL overrides refused."
+    },
+    "AC-05 / AT-05": {
+      "status": "passed",
+      "evidence": "Real paid file of 10,000,001 bytes retains integrity-checked authorized ResourceFileService reads after Free downgrade; cross-workspace/revoked reads deny access. Ready finalize replay remains stable, old oversized paid intent fails, new exact 10 MB Free upload succeeds."
+    }
+  },
+  "additionalCoverage": [
+    "Scoped private token cannot write another key or overwrite; anonymous storage reads denied",
+    "Four pending intents/account across workspaces and sixteen/workspace under concurrent admission",
+    "Rolling 1 GB/account and 10 GB/workspace reservations plus completions; rejected reservation release",
+    "Five token issuances per intent/hour with fixed original expiry",
+    "Byte-derived type/workspace restrictions, valid/invalid JSON, confirmed generic binary fallback",
+    "Lost finalize response reuses intent without duplicate byte upload; partial UI selection success remains visible"
+  ],
+  "checks": {
+    "app": {
+      "command": "bun x vitest run",
+      "filesPassed": 258,
+      "filesSkipped": 17,
+      "testsPassed": 2047,
+      "testsSkipped": 244,
+      "note": "Default optional integration suites are conditional; FOR-35 PostgreSQL cases run separately below."
+    },
+    "postgres": {
+      "command": "FORGE_UPLOAD_TEST_DATABASE_FILE=<mode-0600-credentials> bun x vitest run src/adapters/files/uploads.postgres.test.ts",
+      "filesPassed": 1,
+      "testsPassed": 19
+    },
+    "focused": {
+      "testsPassed": 55,
+      "filesPassed": 6
+    },
+    "workflow": {
+      "command": "bun run test:workflow",
+      "testsPassed": 4,
+      "filesPassed": 2
+    },
+    "typecheck": "passed",
+    "productionBuildAndProtectedWorkflowHandlers": "passed",
+    "changedFileEslint": {
+      "errors": 0,
+      "warnings": 47
+    },
+    "schemaDrift": "No schema changes, nothing to migrate",
+    "gitDiffCheck": "passed"
+  },
+  "migration": {
+    "name": "0046_previous_green_goblin",
+    "isolatedApplied": 1,
+    "exactRetryApplied": 0,
+    "journalCount": 47,
+    "productionApplied": false
+  },
+  "cleanup": {
+    "identity": {
+      "database": "forge_file_storage_acceptance_v2",
+      "branch": "br-autumn-union-za0opf1e"
+    },
+    "counts": {
+      "workspaces": 0,
+      "users": 0,
+      "intents": 0,
+      "resource_files": 0,
+      "agent_files": 0
+    },
+    "journal": {
+      "count": 47
+    },
+    "stagingBlobCount": 0,
+    "blobHasMore": false,
+    "localPrivateCredentialFilesRemoved": true
+  },
+  "bounds": {
+    "httpAuthenticationEdge": "Synthetic fixture Actor; live persisted sessions/membership/target policy is real PostgreSQL. Actual browser rendering and hosted authentication are not claimed.",
+    "negativeObjectFixtures": "Harness-only storage RW credential deliberately bypasses upload grants to test actual-byte finalization.",
+    "otherStories": "FOR-36 preview/download transport, FOR-48/61 resource UI binding/editing, FOR-83 runtime transfer, FOR-37 comprehensive orphan/multipart/deletion reconciliation, FOR-38 recovery remain with their owners.",
+    "release": "No production migration, deployment or connection pointer change. Source-bound migration/promotion is a separate gate."
+  },
+  "sourceSha256": {
+    "apps/forge/drizzle/0046_previous_green_goblin.sql": "c3f89061ea67a99469032e27362dc0e36acfd026ef21cec47a34ae39fc6c690d",
+    "apps/forge/drizzle/meta/0046_snapshot.json": "f18ef973746d0f23fa711b76b3679258cead3c749a21f21b2b17bd8163c0147d",
+    "apps/forge/drizzle/meta/_journal.json": "009db9813c40054b5e9eb5f126c8f5b6d5b88e08604d5c530ac541c6ab8fc361",
+    "apps/forge/package.json": "8ac97e70b45c7b98a479378876317c2cc41b5fbf54b4a66b8f52648340003b32",
+    "apps/forge/scripts/sweep-agent-retention.ts": "0dc30428c3e25b42c33c6b14845c0e30d3fed0d294f1ea8d7d2b530f55017319",
+    "apps/forge/src/adapters/files/direct-upload-transport.server.ts": "ed48ba855e5192fcffb260e2cd5ef3ef2ec3e724169c0a810be9e070340530ab",
+    "apps/forge/src/adapters/files/drizzle-upload-store.server.ts": "9b0a9104d70f371cd792898b2937087cf600a218d984ddfa45ecd656d9ddcdd3",
+    "apps/forge/src/adapters/files/forge-upload-service.server.ts": "7d004a33cf0462f747116028b33fb29600f1ee797657f1a7902c3c9d9ca937f9",
+    "apps/forge/src/adapters/files/upload-authorization.server.ts": "3eef0549d62be0cfd0e6d82c65d4285684bbb129c7e26bf18be402d4972a55d9",
+    "apps/forge/src/adapters/files/upload-http-production.server.ts": "9743288d7eadf23ce02f02ef90a728a9df95684ed4828f692c18e28bbfe387b9",
+    "apps/forge/src/adapters/files/uploads.postgres.test.ts": "fceda018c021ca0171f732b402e481f649f52485e80a7b426d5630e656af61d2",
+    "apps/forge/src/adapters/files/write-local-upload.server.ts": "843955ab335fc003d688c32a65ad1891ea20bce2f8c103ea05e53c01cfbe3d62",
+    "apps/forge/src/application/agents/agent-http-handler.server.test.ts": "0a53050687bcb6c5b40563179c696daac68a0457a77d6ead17b7638abc1729ef",
+    "apps/forge/src/application/agents/agent-http-handler.server.ts": "fa434799e60e873a707fef46b9d61db9ad0712b94ff8e85671f5d6b2122eff2b",
+    "apps/forge/src/application/billing/subscription-access-state.server.ts": "6fc843f6fe7811d6f6a4c5ebe32840748ca7473bb26f15a69ebb60029c763b16",
+    "apps/forge/src/application/files/upload-contract.ts": "5a66af2685e615055c2e34fa7a978d34ef668ccafaf8551985a6146935feb41c",
+    "apps/forge/src/application/files/upload-http-handler.server.ts": "61c39af5e975716c5f6ccf097b016aa5598da88092d734eca19e1448202b4651",
+    "apps/forge/src/application/files/upload-service.server.test.ts": "98db37b8a146ff36a4da7313459c1d2b24d8516a35bb0e359a63517d243f300e",
+    "apps/forge/src/application/files/upload-service.server.ts": "9de7829f11dee6817406c801c2738608ceb9f980f0b8dae87b3e0854ba2f4373",
+    "apps/forge/src/application/files/upload-store.ts": "aafb14e1313fcd80ee775cb27862c0c2aadeb5e29619a821ef7ec0ec704cc48e",
+    "apps/forge/src/application/files/upload-type.server.ts": "c2c5bfc1a3bd224cfcc8930e0a3f87e1241440091a1c4ce092fa52632fbf1364",
+    "apps/forge/src/application/operations/migrations.generated.json": "49537b7203afa7b649c78a8e76f8c28584703692eb430d5ffd0b5d6755af7859",
+    "apps/forge/src/components/agent/agent-provider.tsx": "900be3693de1c6389a76c7cf482515a8fd4086ea5e1a79a69284005e960c3d20",
+    "apps/forge/src/components/agent/agent-shell.test.tsx": "0a30f6c82f08c227d109ad13c7b99b8e3df6e47831e75726f3375f604f2fb4d0",
+    "apps/forge/src/db/planning-schema.ts": "6b393cc088687eab5b81a90bab1e97e77fd8440e2cfa0a8c0636c999e0621b81",
+    "apps/forge/src/lib/agent-client/agent-client.ts": "d545143094ed3697aa7068da7e7901a5e6272067fad1678c1a9b15e6f1df06a2",
+    "apps/forge/src/lib/agent-client/http-agent-client.ts": "6a9017c86f8a4104bf0d297c7db30c1ecfefd92301139bf5a5e94d40681c59d0",
+    "apps/forge/src/lib/files/direct-upload-client.test.ts": "16a9828b9bb1b78fb910639ebe828e78ed0caee01f27b77cfe5b4a3685446b9c",
+    "apps/forge/src/lib/files/direct-upload-client.ts": "399942f80d96d9f470ecea3661dfc747341f61871b353c6173902d215bd0634a",
+    "apps/forge/src/routeTree.gen.ts": "d94c7d8eeaf59897ba7687a5086c0a3a7ab7154e7120aa6fc4c6a36b8adb753a",
+    "apps/forge/src/routes/api/files/uploads/$.ts": "365cea8229ff3b5c0c8482b1bbe01b291d15c2a07f5b9706e4c6907b33685533",
+    "apps/forge/src/routes/api/files/uploads/index.ts": "b1589a5b09f7027c3612aa88dbd4efccdf64d095e9e7985d36bc82636892cc70",
+    "bun.lock": "01560b816b855944d8207ce7381a82ceadc85889e74565812eb7856c7e5b164a",
+    "docs/operations/direct-file-uploads.md": "a105f33fd551707acadcd2587f9da385dcca041495edbca502c97922be991cb3",
+    "docs/operations/private-file-storage.md": "fab7f749ac0a33ab2adb83879ed733ab6325391066483097ac2e8cc58061d7b3",
+    "docs/operations/service-objectives.md": "ca861104b5e25688b81cc834d57d787886c4c18e5fa55c94a181ded8199efb2d"
+  },
+  "verificationLogSha256": {
+    "for35-all-tests-final.log": "8eb8ebdd298e17d6b96f3a750f0ff50bf74cb05db2aab4cd3bf44e01f6eda36d",
+    "for35-postgres-final.log": "607ffcd4a44119ced2a07162cb40aed0f1860d79f88139ec4b96e4a17fb610e2",
+    "for35-focused-final.log": "e866408271f671ae730324d6088f807c5c6682822ad1570b812097e8728170e2",
+    "for35-workflow.log": "213c17fe9ffa2c0487465251d7f0364d51592d6241bdb6aa7c24199a7157d949",
+    "for35-types-final.log": "8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92",
+    "for35-lint-final.log": "c5be6ce2dccd24c9bbd2172c8e55833a7cddd67a03a1f5228c577a472d5e8ee6",
+    "for35-build-final.log": "1a46ee946cbd93f1c498cdfb9555050fdbd27238613f613a611ce00f00b22ba4",
+    "for35-drift.log": "6289ce40c707a55f86869d99bbe899441fde5d893df479a4eb56c66cb088c4e0"
+  }
+}

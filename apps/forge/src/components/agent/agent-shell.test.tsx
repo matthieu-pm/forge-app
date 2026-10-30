@@ -628,6 +628,31 @@ describe("AgentShell", () => {
     ).toBeNull()
   })
 
+  test("keeps completed attachments visible when a later file in the selection fails", async () => {
+    const client = new FakeAgentClient(),
+      upload = client.uploadAttachment
+    vi.spyOn(client, "uploadAttachment")
+      .mockImplementationOnce(upload)
+      .mockRejectedValueOnce(new Error("Upload failed"))
+    render(
+      <AgentProvider client={client}>
+        <ForgeAgentHome />
+        <AgentShell />
+      </AgentProvider>
+    )
+    fireEvent.change(screen.getByLabelText("Choose files to attach"), {
+      target: {
+        files: [
+          new File(["safe"], "notes.txt", { type: "text/plain" }),
+          new File(["other"], "other.txt", { type: "text/plain" }),
+        ],
+      },
+    })
+    await screen.findByText("Upload failed")
+    expect(screen.getByText("notes.txt")).toBeTruthy()
+    expect(screen.queryByText("other.txt")).toBeNull()
+  })
+
   test("preserves the draft and attachments when a provider rate limits the turn", async () => {
     const client = new FakeAgentClient()
     client.rateLimitNextTurn = true

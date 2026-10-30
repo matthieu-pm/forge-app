@@ -174,7 +174,7 @@ describe("agent HTTP transport", () => {
     expect(createThread).not.toHaveBeenCalled()
   })
 
-  it("uploads bounded attachments through the authenticated endpoint", async () => {
+  it("retires base64 attachment requests before reading their bodies", async () => {
     const { handler, uploadAttachment } = fixture()
     const response = await handler(
       new Request("http://forge.test/api/agent/attachments", {
@@ -191,13 +191,11 @@ describe("agent HTTP transport", () => {
       })
     )
 
-    expect(response.status).toBe(201)
+    expect(response.status).toBe(410)
     await expect(response.json()).resolves.toMatchObject({
-      id: "00000000-0000-4000-8000-000000000099",
-      name: "notes.txt",
-      sizeBytes: 4,
+      error: { code: "DIRECT_UPLOAD_REQUIRED" },
     })
-    expect(uploadAttachment).toHaveBeenCalledOnce()
+    expect(uploadAttachment).not.toHaveBeenCalled()
   })
 
   it("creates and lists threads through authenticated JSON endpoints", async () => {

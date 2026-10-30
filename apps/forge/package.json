@@ -2,7 +2,7 @@
   "name": "@forge/app",
   "productName": "Forge",
   "version": "0.1.0",
-  "description": "Forge \u2014 one shared product across the web and macOS.",
+  "description": "Forge — one shared product across the web and macOS.",
   "main": ".electron-build/main.js",
   "private": true,
   "type": "module",
@@ -54,6 +54,7 @@
     "@better-auth/drizzle-adapter": "1.6.26",
     "@better-auth/electron": "1.6.26",
     "@fontsource-variable/geist": "^5.3.0",
+    "@forge/environment": "workspace:*",
     "@hugeicons/core-free-icons": "^4.2.3",
     "@hugeicons/react": "^1.1.9",
     "@neondatabase/serverless": "^1.1.0",
@@ -90,6 +91,7 @@
     "drizzle-orm": "^0.45.2",
     "embla-carousel-react": "^8.6.0",
     "emojibase-data": "17.0.0",
+    "file-type": "^22.3.0",
     "framer-motion": "^13.0.0",
     "input-otp": "^1.4.2",
     "jose": "6.2.8",
@@ -112,8 +114,7 @@
     "undici": "8.10.0",
     "vaul": "^1.1.2",
     "workflow": "4.8.0",
-    "zod": "^4.4.3",
-    "@forge/environment": "workspace:*"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@electron-forge/cli": "7.11.2",

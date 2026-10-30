@@ -137,10 +137,13 @@ FOR-68/71/74/147 durable jobs, sync and retention; FOR-75/76 agent policy/admiss
 FOR-24 decides objectives; it does not close these delivery/release gates or
 change production configuration. FOR-123 remains the launch approval gate.
 
-The current agent attachment adapter defaults to 5 MiB and accepts base64 JSON;
-it does not yet implement the commercial 10 MB Free allocation or the accepted
-paid direct-upload ceiling. FOR-35 must replace that transport and reconcile
-limits before file release evidence qualifies. No limits are changed here.
+FOR-35 replaces the browser agent attachment transport with validated direct
+uploads and enforces the accepted decimal 10 MB Free / 100 MB paid operational
+limits, pending-intent capacity and rolling byte reservations. See
+[the upload operator guide](direct-file-uploads.md) and source-bound acceptance
+evidence. Legacy internal server-owned upload helpers and agent-runtime payload
+bounds are separate; production promotion and full file release evidence remain
+explicit release gates.
 
 Run the offline evidence check from the repository root:
 
