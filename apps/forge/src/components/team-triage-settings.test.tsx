@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { TeamTriageSettings } from "./team-triage-settings"
 import type { ReactNode } from "react"
 import type { TeamSummary } from "@/lib/team-contract"
+import { productStorage } from "@/lib/product-storage"
 import { selectOption } from "@/test-utils/select-option"
 import { parseTeamTriage, teamTriageStorageKey } from "@/lib/team-triage"
 
@@ -18,9 +19,9 @@ const team = {
   icon: { kind: "emoji", value: "🔥", color: "#94a3b8" },
 } as TeamSummary
 const key = teamTriageStorageKey(team.id)
-const saved = () => parseTeamTriage(localStorage.getItem(key)!)
+const saved = () => parseTeamTriage(productStorage.getItem(key)!)
 beforeEach(() => {
-  localStorage.clear()
+  productStorage.clear()
 })
 afterEach(cleanup)
 const enable = () =>
@@ -46,20 +47,20 @@ describe("team triage settings", () => {
     const view = render(<TeamTriageSettings team={team} />)
     fireEvent.click(enable())
     view.unmount()
-    localStorage.setItem(teamTriageStorageKey("other"), "invalid")
+    productStorage.setItem(teamTriageStorageKey("other"), "invalid")
     render(<TeamTriageSettings team={{ ...team, id: "other" }} />)
     expect(screen.getByRole("alert").textContent).toContain("preserved")
     expect(enable().getAttribute("aria-disabled")).toBe("true")
-    expect(localStorage.getItem(teamTriageStorageKey("other"))).toBe("invalid")
+    expect(productStorage.getItem(teamTriageStorageKey("other"))).toBe(
+      "invalid"
+    )
     expect(saved().enabled).toBe(true)
   })
   it("leaves the previous value when saving fails", () => {
     render(<TeamTriageSettings team={team} />)
-    const fail = vi
-      .spyOn(Storage.prototype, "setItem")
-      .mockImplementation(() => {
-        throw new Error("quota")
-      })
+    const fail = vi.spyOn(productStorage, "setItem").mockImplementation(() => {
+      throw new Error("quota")
+    })
     fireEvent.click(enable())
     expect(enable().getAttribute("aria-checked")).toBe("false")
     fail.mockRestore()

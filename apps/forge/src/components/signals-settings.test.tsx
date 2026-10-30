@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { SignalsSettings } from "./signals-settings"
+import { productStorage } from "@/lib/product-storage"
 import {
   defaultSignalPreferences,
   readSignalPreferences,
@@ -11,7 +12,7 @@ import {
 afterEach(cleanup)
 beforeEach(() => {
   vi.restoreAllMocks()
-  window.localStorage.clear()
+  productStorage.clear()
 })
 const mount = () =>
   render(<SignalsSettings userId="alice" workspaceId="workspace-a" />)
@@ -142,7 +143,7 @@ describe("Signals settings", () => {
 
   it("does not apply an unsaved update when storage fails", () => {
     mount()
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    vi.spyOn(productStorage, "setItem").mockImplementation(() => {
       throw new Error("Storage unavailable")
     })
     fireEvent.click(screen.getByRole("switch", { name: "Page views" }))
@@ -157,7 +158,7 @@ describe("Signals settings", () => {
 
   it("retains an event draft after a failed save", () => {
     mount()
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    vi.spyOn(productStorage, "setItem").mockImplementation(() => {
       throw new Error("Storage unavailable")
     })
     addEvent("onboarding_completed")
@@ -172,7 +173,7 @@ describe("Signals settings", () => {
   })
 
   it("keeps corrupt settings intact and prevents silent overwrites", () => {
-    window.localStorage.setItem(
+    productStorage.setItem(
       signalPreferencesStorageKey("alice", "workspace-a"),
       "{invalid"
     )
@@ -184,7 +185,7 @@ describe("Signals settings", () => {
         .getAttribute("aria-disabled")
     ).toBe("true")
     expect(
-      window.localStorage.getItem(
+      productStorage.getItem(
         signalPreferencesStorageKey("alice", "workspace-a")
       )
     ).toBe("{invalid")

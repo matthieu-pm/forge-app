@@ -4,6 +4,7 @@ import type { JSONContent } from "@tiptap/core"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import type { TriageDraft } from "@/lib/triage-issues"
+import { productStorage } from "@/lib/product-storage"
 import { OptionSelect } from "@/components/ui/option-select"
 import { loadTemplates } from "@/lib/template-state"
 import {
@@ -109,7 +110,7 @@ export function TriageIssueComposer({
   editing: boolean
   error: string | null
   onError: (message: string | null) => void
-  onSave: () => boolean
+  onSave: () => boolean | Promise<boolean>
 }) {
   const [expanded, setExpanded] = useState(false)
   const [createMore, setCreateMore] = useState(false)
@@ -140,36 +141,49 @@ export function TriageIssueComposer({
   function update(patch: Partial<TriageDraft>) {
     onDraftChange({ ...draft, ...patch })
   }
-  function submit() {
-    if (!draft.title.trim() || attaching || !onSave()) return
-    if (!editing) {
-      try {
-        const key = triageDraftKey(team.id)
-        const saved = localStorage.getItem(key)
-        if (saved && triageDraftSchema.safeParse(JSON.parse(saved)).success)
-          localStorage.removeItem(key)
-      } catch {
-        /* The issue is saved; do not repeat the creation. */
+  const [saving, setSaving] = useState(false)
+  const saveLock = useRef(false)
+  async function submit() {
+    if (!draft.title.trim() || attaching || saveLock.current) return
+    saveLock.current = true
+    setSaving(true)
+    try {
+      if (!(await onSave())) return
+      if (!editing) {
+        try {
+          const key = triageDraftKey(team.id)
+          const saved = productStorage.getItem(key)
+          if (saved && triageDraftSchema.safeParse(JSON.parse(saved)).success)
+            productStorage.removeItem(key)
+        } catch {
+          /* The issue is saved; do not repeat the creation. */
+        }
       }
+      if (!editing) {
+        onDraftChange({
+          ...draft,
+          title: "",
+          description: "",
+          attachments: [],
+          templateName: undefined,
+        })
+      }
+      if (createMore && !editing) titleRef.current?.focus()
+      else onOpenChange(false)
+    } finally {
+      saveLock.current = false
+      setSaving(false)
     }
-    if (!editing) {
-      onDraftChange({
-        ...draft,
-        title: "",
-        description: "",
-        attachments: [],
-        templateName: undefined,
-      })
-    }
-    if (createMore && !editing) titleRef.current?.focus()
-    else onOpenChange(false)
   }
   function saveDraft() {
     try {
       const key = triageDraftKey(team.id)
-      const previous = localStorage.getItem(key)
+      const previous = productStorage.getItem(key)
       if (previous) triageDraftSchema.parse(JSON.parse(previous))
-      localStorage.setItem(key, JSON.stringify(triageDraftSchema.parse(draft)))
+      productStorage.setItem(
+        key,
+        JSON.stringify(triageDraftSchema.parse(draft))
+      )
       onError(null)
       onOpenChange(false)
     } catch {
@@ -346,7 +360,7 @@ export function TriageIssueComposer({
                   variant="secondary"
                   className={chip}
                   onClick={saveDraft}
-                  disabled={attaching}
+                  disabled={attaching || saving}
                 >
                   Save as draft
                 </Button>
@@ -595,7 +609,7 @@ export function TriageIssueComposer({
               variant="secondary"
               size="icon-sm"
               aria-label="Attach images, files, or videos"
-              disabled={attaching}
+              disabled={attaching || saving}
               onClick={() => fileRef.current?.click()}
             >
               <Glyph name="dependency" />

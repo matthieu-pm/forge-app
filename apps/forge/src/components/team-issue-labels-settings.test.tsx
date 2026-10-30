@@ -8,6 +8,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { TeamIssueLabelsSettings } from "./team-issue-labels-settings"
 import type { ReactNode } from "react"
+import { productStorage } from "@/lib/product-storage"
 import {
   parseTeamLabels,
   projectLabelsStorageKey,
@@ -36,11 +37,11 @@ beforeEach(() => {
     }
   )
   Element.prototype.scrollIntoView = vi.fn()
-  window.localStorage.clear()
+  productStorage.clear()
 })
 afterEach(() => {
   cleanup()
-  window.localStorage.clear()
+  productStorage.clear()
 })
 
 describe("project labels using shared label controls", () => {
@@ -51,7 +52,7 @@ describe("project labels using shared label controls", () => {
       groups: [],
       inheritedCount: 0,
     })
-    localStorage.setItem(workspaceLabelsStorageKey, issueData)
+    productStorage.setItem(workspaceLabelsStorageKey, issueData)
     const view = render(<TeamIssueLabelsSettings entity="project" />)
     expect(
       screen.getByRole("heading", { name: "Project labels" })
@@ -77,12 +78,12 @@ describe("project labels using shared label controls", () => {
     fireEvent.change(input, { target: { value: "Next quarter" } })
     fireEvent.keyDown(input, { key: "Enter" })
     const saved = parseTeamLabels(
-      localStorage.getItem(projectLabelsStorageKey)!
+      productStorage.getItem(projectLabelsStorageKey)!
     )
     expect(saved.labels[0].groupId).toBe(
       saved.groups.find((group) => group.name === "Roadmap")?.id
     )
-    expect(localStorage.getItem(workspaceLabelsStorageKey)).toBe(issueData)
+    expect(productStorage.getItem(workspaceLabelsStorageKey)).toBe(issueData)
     view.unmount()
     render(<TeamIssueLabelsSettings entity="project" />)
     fireEvent.click(
@@ -106,9 +107,9 @@ it("starts initiative labels empty and saves without changing issue or project l
   fireEvent.change(name, { target: { value: "Strategic" } })
   fireEvent.keyDown(name, { key: "Enter" })
   expect(
-    parseTeamLabels(localStorage.getItem(initiativeKey)!).labels[0].name
+    parseTeamLabels(productStorage.getItem(initiativeKey)!).labels[0].name
   ).toBe("Strategic")
-  expect(localStorage.getItem(workspaceLabelsStorageKey)).toBeNull()
-  expect(localStorage.getItem(projectLabelsStorageKey)).toBeNull()
+  expect(productStorage.getItem(workspaceLabelsStorageKey)).toBeNull()
+  expect(productStorage.getItem(projectLabelsStorageKey)).toBeNull()
   expect(screen.queryByText("No labels found")).toBeNull()
 })

@@ -1,5 +1,6 @@
 import { z } from "zod"
 import type { Review } from "./reviews-view"
+import { productStorage } from "@/lib/product-storage"
 
 export type DiffLine = {
   kind: "context" | "add" | "remove"
@@ -117,7 +118,7 @@ export function readReviewEdits(key: string): Record<string, ReviewEdit> {
   try {
     const result = z
       .record(z.string(), reviewEditSchema)
-      .safeParse(JSON.parse(localStorage.getItem(key) ?? "{}"))
+      .safeParse(JSON.parse(productStorage.getItem(key) ?? "{}"))
     return result.success ? result.data : {}
   } catch {
     return {}

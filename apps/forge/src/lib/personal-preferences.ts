@@ -4,6 +4,7 @@ import {
   personalPreferencesSchema,
 } from "./personal-preference-contract"
 import type { PersonalPreferences } from "./personal-preference-contract"
+import { productStorage } from "@/lib/product-storage"
 
 export const PREFERENCES_STORAGE_KEY = "forge.personal-preferences"
 
@@ -19,7 +20,7 @@ export type {
 export function loadPersonalPreferences(): PersonalPreferences {
   try {
     return parsePersonalPreferences(
-      window.localStorage.getItem(PREFERENCES_STORAGE_KEY)
+      productStorage.getItem(PREFERENCES_STORAGE_KEY)
     ).preferences
   } catch {
     return parsePersonalPreferences(null).preferences
@@ -31,7 +32,7 @@ export function savePersonalPreferences(
   preferences: PersonalPreferences
 ): void {
   const validated = personalPreferencesSchema.parse(preferences)
-  const storage = window.localStorage
+  const storage = productStorage
   const raw = storage.getItem(PREFERENCES_STORAGE_KEY)
   const previous = parsePersonalPreferences(raw)
   if (previous.status === "unsupported") {

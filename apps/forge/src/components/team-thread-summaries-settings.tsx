@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router"
 import * as React from "react"
 import { toast } from "sonner"
 import type { TeamSummary } from "@/lib/team-contract"
+import { productStorage } from "@/lib/product-storage"
 import { Switch } from "@/components/ui/switch"
 
 const focusClass =
@@ -25,7 +26,7 @@ export function TeamThreadSummariesSettings({
   React.useEffect(() => {
     function load() {
       try {
-        const raw = localStorage.getItem(storageKey)
+        const raw = productStorage.getItem(storageKey)
         if (raw !== null && raw !== "true" && raw !== "false")
           throw new Error("Invalid preference")
         setEnabled(raw !== "false")
@@ -47,7 +48,7 @@ export function TeamThreadSummariesSettings({
   function save(value: boolean) {
     if (!available || !canManage || !ready || error) return
     try {
-      localStorage.setItem(storageKey, JSON.stringify(value))
+      productStorage.setItem(storageKey, JSON.stringify(value))
       setEnabled(value)
     } catch {
       toast.error(

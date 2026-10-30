@@ -20,6 +20,7 @@ import {
 } from "./initiatives"
 import { useInitiatives } from "./initiatives-state"
 import type { Initiative, InitiativeFilter } from "./initiatives"
+import { productStorage } from "@/lib/product-storage"
 import {
   readTestView,
   renderPreferenceHook as renderHook,
@@ -27,7 +28,7 @@ import {
 } from "@/test/preference-fixture"
 
 beforeEach(async () => {
-  localStorage.clear()
+  productStorage.clear()
   await setupPreferenceFixture("user")
 })
 afterEach(() => {
@@ -249,15 +250,15 @@ describe("initiative persistence", () => {
   })
   it("preserves damaged data, rejects writes, and does not replace it with defaults", () => {
     const key = initiativesStorageKey("workspace")
-    localStorage.setItem(key, "damaged")
+    productStorage.setItem(key, "damaged")
     const hook = renderHook(() => useInitiatives("workspace", "user"))
     expect(hook.result.current.error).toContain("preserved")
     expect(hook.result.current.update(() => emptyInitiatives())).toBe(false)
-    expect(localStorage.getItem(key)).toBe("damaged")
+    expect(productStorage.getItem(key)).toBe("damaged")
   })
   it("keeps the previous records and reports failure when storage cannot be written", () => {
     const hook = renderHook(() => useInitiatives("workspace", "user"))
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    vi.spyOn(productStorage, "setItem").mockImplementation(() => {
       throw new Error("quota")
     })
     act(() => {
@@ -277,11 +278,11 @@ describe("initiative persistence", () => {
       ...blankInitiative("user"),
       name: "Existing",
     })
-    localStorage.setItem(
+    productStorage.setItem(
       initiativesStorageKey("workspace"),
       JSON.stringify(state)
     )
-    localStorage.setItem(
+    productStorage.setItem(
       initiativesSettingsStorageKey("workspace"),
       JSON.stringify({ enabled: false, schedule: "2-weeks" })
     )
@@ -290,7 +291,7 @@ describe("initiative persistence", () => {
     expect(hook.result.current.state.initiatives).toHaveLength(1)
     expect(hook.result.current.update(() => emptyInitiatives())).toBe(false)
     expect(
-      JSON.parse(localStorage.getItem(initiativesStorageKey("workspace"))!)
+      JSON.parse(productStorage.getItem(initiativesStorageKey("workspace"))!)
         .initiatives
     ).toHaveLength(1)
   })

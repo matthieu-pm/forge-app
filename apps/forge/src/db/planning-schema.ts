@@ -21,6 +21,7 @@ import type {
 } from "@/application/files/upload-contract"
 import type { AnyPgColumn } from "drizzle-orm/pg-core"
 import type { DefinitionValue } from "@/lib/issue-definition-contract"
+import type { IssueDraft } from "@/lib/issue-record-contract"
 import type { TeamLabel } from "@/lib/team-labels"
 
 // Canonical identity/relationship foundation. Product adapters must independently
@@ -37,8 +38,16 @@ export const projects = pgTable(
     id: id(),
     workspaceId: workspace(),
     name: text("name").notNull(),
+    legacyId: text("legacy_id"),
+    properties: jsonb("properties")
+      .$type<Record<string, unknown>>()
+      .default({})
+      .notNull(),
   },
-  (t) => [unique("projects_workspace_id_unique").on(t.workspaceId, t.id)]
+  (t) => [
+    unique("projects_workspace_id_unique").on(t.workspaceId, t.id),
+    unique("projects_legacy_unique").on(t.workspaceId, t.legacyId),
+  ]
 )
 
 export const projectTeams = pgTable(
@@ -97,14 +106,58 @@ export const initiativeProjects = pgTable(
   ]
 )
 
+export const issueCycles = pgTable(
+  "issue_cycles",
+  {
+    id: id(),
+    workspaceId: workspace(),
+    teamId: uuid("team_id").notNull(),
+    startDate: text("start_date").notNull(),
+    endDate: text("end_date").notNull(),
+  },
+  (t) => [
+    unique("issue_cycles_team_start").on(t.teamId, t.startDate),
+    unique("issue_cycles_workspace_identity").on(t.workspaceId, t.teamId, t.id),
+    foreignKey({
+      name: "issue_cycles_team_fk",
+      columns: [t.workspaceId, t.teamId],
+      foreignColumns: [teams.workspaceId, teams.id],
+    }).onDelete("cascade"),
+    check(
+      "issue_cycles_dates",
+      sql`${t.startDate} ~ '^\\d{4}-\\d{2}-\\d{2}$' AND ${t.endDate} >= ${t.startDate}`
+    ),
+  ]
+)
+
 export const issues = pgTable(
   "issues",
   {
     id: id(),
     workspaceId: workspace(),
     teamId: uuid("team_id").notNull(),
+    revision: integer("revision").default(0).notNull(),
     number: integer("number").notNull(),
     title: text("title").notNull(),
+    assigneeId: text("assignee_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    creatorId: text("creator_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    properties: jsonb("properties")
+      .$type<IssueDraft>()
+      .notNull()
+      .default({} as IssueDraft),
+    cycleId: uuid("cycle_id"),
+    legacyId: text("legacy_id"),
     statusId: text("status_id").default("backlog").notNull(),
     projectId: uuid("project_id"),
     parentId: uuid("parent_id").references((): AnyPgColumn => issues.id, {
@@ -113,6 +166,16 @@ export const issues = pgTable(
   },
   (t) => [
     unique("issues_workspace_id_unique").on(t.workspaceId, t.id),
+    unique("issues_team_legacy_unique").on(t.workspaceId, t.teamId, t.legacyId),
+    foreignKey({
+      name: "issues_cycle_fk",
+      columns: [t.workspaceId, t.teamId, t.cycleId],
+      foreignColumns: [
+        issueCycles.workspaceId,
+        issueCycles.teamId,
+        issueCycles.id,
+      ],
+    }),
     unique("issues_team_number_unique").on(t.teamId, t.number),
     check("issues_number_positive", sql`${t.number} > 0`),
     check(
@@ -451,3 +514,50 @@ export const fileUploadIntents = pgTable(
     check("file_upload_intents_expiry", sql`${t.expiresAt} > ${t.createdAt}`),
   ]
 )
+
+export const workspaceIssueCapacity = pgTable(
+  "workspace_issue_capacity",
+  {
+    workspaceId: workspace().primaryKey(),
+    activeCount: integer("active_count").default(0).notNull(),
+  },
+  (t) => [
+    check("workspace_issue_capacity_nonnegative", sql`${t.activeCount} >= 0`),
+  ]
+)
+
+// Durable replacement for legacy browser stores. Namespace and scope are resolved
+// by the application; clients never choose an owner or grant shared authority.
+export const productState = pgTable(
+  "product_state",
+  {
+    id: id(),
+    workspaceId: workspace(),
+    ownerId: text("owner_id").notNull(),
+    ownerUserId: text("owner_user_id").references(() => users.id, {
+      onDelete: "cascade",
+    }),
+    teamId: uuid("team_id"),
+    key: text("key").notNull(),
+    value: text("value"),
+    revision: integer("revision").default(0).notNull(),
+  },
+  (t) => [
+    unique("product_state_scope_key").on(t.workspaceId, t.ownerId, t.key),
+    foreignKey({
+      name: "product_state_team_fk",
+      columns: [t.workspaceId, t.teamId],
+      foreignColumns: [teams.workspaceId, teams.id],
+    }).onDelete("cascade"),
+    check(
+      "product_state_owner_scope",
+      sql`(${t.ownerId}='workspace' AND ${t.ownerUserId} IS NULL) OR (${t.ownerUserId} IS NOT NULL AND ${t.ownerId}='user:' || ${t.ownerUserId})`
+    ),
+  ]
+)
+export const teamIssueNumbers = pgTable("team_issue_numbers", {
+  teamId: uuid("team_id")
+    .primaryKey()
+    .references(() => teams.id, { onDelete: "cascade" }),
+  lastNumber: integer("last_number").default(0).notNull(),
+})

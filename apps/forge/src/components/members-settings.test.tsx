@@ -12,6 +12,7 @@ import type {
   WorkspaceAccessSummary,
   WorkspaceMemberSummary,
 } from "@/lib/member-contract"
+import { productStorage } from "@/lib/product-storage"
 
 vi.mock("@tanstack/react-router", () => ({
   useRouter: () => ({ invalidate: vi.fn().mockResolvedValue(undefined) }),
@@ -107,7 +108,7 @@ const access: WorkspaceAccessSummary = {
 
 afterEach(() => {
   cleanup()
-  window.localStorage.clear()
+  productStorage.clear()
 })
 
 describe("MembersSettings", () => {

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { Reviews } from "./reviews"
 import type { ReactNode } from "react"
 import type { Review } from "@/lib/reviews-view"
+import { productStorage } from "@/lib/product-storage"
 import {
   readTestView,
   renderPreferences as render,
@@ -39,7 +40,7 @@ const entries: Array<Review> = [
 ]
 beforeEach(async () => {
   await setupPreferenceFixture("me")
-  localStorage.clear()
+  productStorage.clear()
   vi.stubGlobal(
     "ResizeObserver",
     class {

@@ -10,6 +10,7 @@ import {
   saveProjectStatus,
   writeProjectStatuses,
 } from "./project-statuses"
+import { productStorage } from "@/lib/product-storage"
 
 const custom = {
   id: "review",
@@ -18,7 +19,7 @@ const custom = {
   color: "#4cb782",
   description: "Review before shipping",
 }
-beforeEach(() => localStorage.clear())
+beforeEach(() => productStorage.clear())
 afterEach(() => vi.restoreAllMocks())
 describe("project status settings", () => {
   it("initializes all five groups and keeps workspace settings isolated", () => {
@@ -71,7 +72,7 @@ describe("project status settings", () => {
         deleteProjectStatus(current, "review")
       )
     ).toThrow("changed elsewhere")
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    vi.spyOn(productStorage, "setItem").mockImplementation(() => {
       throw new Error("quota")
     })
     expect(() =>
@@ -82,9 +83,11 @@ describe("project status settings", () => {
     expect(readProjectStatuses("a").statuses.at(-1)?.name).toBe("In Review")
   })
   it("preserves corrupted saved data instead of replacing it with defaults", () => {
-    localStorage.setItem(projectStatusesStorageKey("a"), "broken")
+    productStorage.setItem(projectStatusesStorageKey("a"), "broken")
     expect(() => writeProjectStatuses("a", 0, (current) => current)).toThrow()
-    expect(localStorage.getItem(projectStatusesStorageKey("a"))).toBe("broken")
+    expect(productStorage.getItem(projectStatusesStorageKey("a"))).toBe(
+      "broken"
+    )
   })
   it("keeps deleted data recoverable when restoration hits a duplicate name", () => {
     let current = saveProjectStatus(initialProjectStatuses(), custom)

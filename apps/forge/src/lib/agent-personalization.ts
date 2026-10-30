@@ -6,10 +6,11 @@ import type {
   AgentPersonalization,
   PersonalSkill,
 } from "./agent-personalization-contract"
+import { productStorage } from "@/lib/product-storage"
 
 export * from "./agent-personalization-contract"
 export function readPersonalization(userId: string): AgentPersonalization {
-  const raw = localStorage.getItem(personalizationStorageKey(userId))
+  const raw = productStorage.getItem(personalizationStorageKey(userId))
   return raw
     ? personalizationSchema.parse(JSON.parse(raw))
     : { guidance: "", skills: [] }
@@ -19,7 +20,10 @@ export function writePersonalization(
   update: (current: AgentPersonalization) => AgentPersonalization
 ) {
   const next = personalizationSchema.parse(update(readPersonalization(userId)))
-  localStorage.setItem(personalizationStorageKey(userId), JSON.stringify(next))
+  productStorage.setItem(
+    personalizationStorageKey(userId),
+    JSON.stringify(next)
+  )
   return next
 }
 export function replacePersonalSkill(

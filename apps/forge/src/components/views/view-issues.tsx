@@ -251,7 +251,7 @@ export function ViewIssues({
       saveTeamIssue(
         context.team.id,
         { ...issue, ...patch },
-        { id: issue.id, creator: user.id }
+        { id: issue.id, creator: user.id, baseline: issue }
       )
       setError("")
       return true

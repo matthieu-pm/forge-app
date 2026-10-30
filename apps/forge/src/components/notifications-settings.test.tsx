@@ -2,6 +2,7 @@ import { cleanup, fireEvent, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { NotificationPreferencesPage } from "./notifications-settings"
 import type { ReactNode } from "react"
+import { productStorage } from "@/lib/product-storage"
 import {
   readTestPreferences,
   renderPreferences,
@@ -35,7 +36,7 @@ vi.mock("@tanstack/react-router", () => ({
   ),
 }))
 beforeEach(async () => {
-  localStorage.clear()
+  productStorage.clear()
   await setupPreferenceFixture()
 })
 afterEach(cleanup)

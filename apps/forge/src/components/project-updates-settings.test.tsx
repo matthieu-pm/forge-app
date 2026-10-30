@@ -9,12 +9,13 @@ import {
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
 import { ProjectUpdatesSettings } from "./project-updates-settings"
+import { productStorage } from "@/lib/product-storage"
 import {
   readProjectUpdatesSettings,
   writeProjectUpdatesSettings,
 } from "@/lib/project-updates-settings"
 
-beforeEach(() => window.localStorage.clear())
+beforeEach(() => productStorage.clear())
 afterEach(cleanup)
 
 describe("Project updates settings", () => {
@@ -41,9 +42,7 @@ describe("Project updates settings", () => {
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
 
     expect(screen.queryByRole("combobox")).toBeNull()
-    expect(readProjectUpdatesSettings("workspace-one").schedule).toBe(
-      "2-weeks"
-    )
+    expect(readProjectUpdatesSettings("workspace-one").schedule).toBe("2-weeks")
   })
 
   it("saves a selected update cadence", async () => {
@@ -70,9 +69,7 @@ describe("Project updates settings", () => {
 
   it("keeps update schedules isolated per workspace", async () => {
     writeProjectUpdatesSettings("workspace-one", { schedule: "4-weeks" })
-    const view = render(
-      <ProjectUpdatesSettings workspaceId="workspace-one" />
-    )
+    const view = render(<ProjectUpdatesSettings workspaceId="workspace-one" />)
 
     expect(await screen.findByText("Every 4 weeks")).toBeTruthy()
     view.rerender(<ProjectUpdatesSettings workspaceId="workspace-two" />)

@@ -1,5 +1,15 @@
+import type { IssueChanges } from "./canonical-issue-edit-contract"
+import {
+  changesBetween,
+  enqueueIssueEdits,
+} from "./canonical-issue-edit-client"
 import { useCallback, useMemo, useSyncExternalStore } from "react"
 import { z } from "zod"
+import {
+  canonicalIssueRows,
+  canonicalIssuesActive,
+  projectDisplayName,
+} from "./canonical-issue-cache"
 import {
   cachedDefinitions,
   sharedDefinitionsActive,
@@ -12,114 +22,35 @@ import {
   emptyIssueFilters,
   filtersSchema,
 } from "./issue-view-contract"
+import {
+  blankIssueDraft,
+  issueDraftSchema,
+  issueSchema,
+} from "./issue-record-contract"
 import type { TeamStatus } from "@/lib/team-statuses"
 import type {
   IssueDisplay,
   IssueField,
   IssueFilters,
 } from "./issue-view-contract"
+import type { IssueDraft, TeamIssue } from "./issue-record-contract"
 import {
   initialTeamStatuses,
   parseTeamStatuses,
   teamStatusesStorageKey,
 } from "@/lib/team-statuses"
-import {
-  issuePullRequests,
-  pullRequestMetadataSchema,
-} from "@/lib/issue-pull-requests"
-import { triageDraftSchema, triagePriorities } from "@/lib/triage-issues"
+import { issuePullRequests } from "@/lib/issue-pull-requests"
+import { triagePriorities } from "@/lib/triage-record-contract"
+import { productStorage } from "@/lib/product-storage"
 
 export { triagePriorities as issuePriorities }
 export * from "./issue-view-contract"
-const linkSchema = z.object({
-  pullRequest: pullRequestMetadataSchema.optional(),
-  title: z.string().max(200),
-  url: z
-    .string()
-    .url()
-    .refine((url) => /^https?:\/\//i.test(url), "Use an http or https link."),
-})
-const reactionSchema = z.object({
-  emoji: z.string(),
-  users: z.array(z.string()),
-})
-const commentSchema = z.object({
-  id: z.string(),
-  parentId: z.string().default(""),
-  attachmentId: z.string().default(""),
-  attachmentName: z.string().max(255).optional(),
-  resolved: z.boolean().default(false),
-  author: z.string(),
-  body: z.string().max(10000),
-  createdAt: z.string().datetime(),
-  edited: z.boolean().default(false),
-  deleted: z.boolean().default(false),
-  attachments: triageDraftSchema.shape.attachments,
-  reactions: z.array(reactionSchema).default([]),
-})
-export const issueDraftSchema = triageDraftSchema.extend({
-  status: z.string().min(1),
-  cycle: z.string().default(""),
-  parentId: z.string().default(""),
-  links: z.array(linkSchema).default([]),
-  subIssues: z.array(z.string().trim().min(1).max(240)).default([]),
-  recurrence: z.enum(["", "daily", "weekly", "monthly"]).default(""),
-  agent: z.string().default(""),
-  agentSession: z.string().default(""),
-  subscribers: z.string().default(""),
-  milestone: z.string().default(""),
-  autoClosed: z.boolean().default(false),
-  descriptionDoc: z.record(z.string(), z.unknown()).nullable().default(null),
-  reactions: z.array(reactionSchema).default([]),
-  comments: z.array(commentSchema).default([]),
-  activity: z
-    .array(
-      z.object({
-        id: z.string(),
-        author: z.string(),
-        text: z.string(),
-        createdAt: z.string(),
-        field: z
-          .enum([
-            "status",
-            "priority",
-            "assignee",
-            "labels",
-            "project",
-            "cycle",
-          ])
-          .optional(),
-        link: linkSchema.optional(),
-        linkAction: z.enum(["linked", "unlinked"]).optional(),
-        from: z.string().optional(),
-        to: z.string().optional(),
-      })
-    )
-    .default([]),
-  favorite: z.boolean().default(false),
-})
-export type IssueDraft = z.infer<typeof issueDraftSchema>
-export const blankIssueDraft = (status = "todo"): IssueDraft =>
-  issueDraftSchema.parse({
-    title: "",
-    description: "",
-    status,
-    priority: "No priority",
-    dueDate: "",
-  })
-const issueSchema = issueDraftSchema.extend({
-  id: z.string(),
-  number: z.number().int().positive(),
-  title: z.string().trim().min(1).max(240),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-  statusChangedAt: z.string().datetime(),
-  creator: z.string(),
-  suggestedLabel: z.string(),
-  completedAt: z.string().nullable(),
-  recurrenceSpawned: z.boolean().default(false),
-})
-export type TeamIssue = z.infer<typeof issueSchema>
+export {
+  issueDraftSchema,
+  blankIssueDraft,
+  issueSchema,
+} from "./issue-record-contract"
+export type { IssueDraft, TeamIssue } from "./issue-record-contract"
 const viewSchema = z.object({
   id: z.string(),
   name: z.string().trim().min(1).max(60),
@@ -160,9 +91,38 @@ export const teamIssuesKey = (teamId: string) =>
 export const parseIssueStore = (raw: string) =>
   storeSchema.parse(JSON.parse(raw))
 export const ISSUES_CHANGED = "forge:team-issues-changed"
-export function readIssueStore(teamId: string): IssueStore {
-  const raw = localStorage.getItem(teamIssuesKey(teamId))
+export function readLocalIssueStore(teamId: string): IssueStore {
+  const raw = productStorage.getItem(teamIssuesKey(teamId))
   return raw ? parseIssueStore(raw) : initialIssueStore()
+}
+export function readIssueStore(teamId: string): IssueStore {
+  const local = readLocalIssueStore(teamId)
+  if (!canonicalIssuesActive()) return local
+  const records = canonicalIssueRows(teamId)
+  const rawFavorites = productStorage.getItem(
+    `forge:team-issue-favorites:v1:${teamId}`
+  )
+  const favorites = new Set<string>(
+    rawFavorites
+      ? JSON.parse(rawFavorites)
+      : records
+          .filter((r) =>
+            local.issues.some((i) => i.id === r.legacyId && i.favorite)
+          )
+          .map((r) => r.issue.id)
+  )
+  return {
+    ...local,
+    issues: records.map((r) => ({
+      ...r.issue,
+      favorite: favorites.has(r.issue.id),
+    })),
+  }
+}
+export function issueStoreSnapshot(teamId: string) {
+  if (!canonicalIssuesActive())
+    return productStorage.getItem(teamIssuesKey(teamId)) ?? ""
+  return JSON.stringify(readIssueStore(teamId))
 }
 export function writeIssueStore(
   teamId: string,
@@ -170,6 +130,20 @@ export function writeIssueStore(
 ) {
   const previous = readIssueStore(teamId)
   const next = storeSchema.parse(update(previous))
+  const canonicalEdits: Array<{ before: TeamIssue; changes: IssueChanges }> = []
+  if (canonicalIssuesActive()) {
+    for (const old of previous.issues) {
+      const changed = next.issues.find((i) => i.id === old.id)
+      if (!changed)
+        throw new Error("Deleting shared issues is not available yet.")
+      const changes = changesBetween(old, changed)
+      if (Object.keys(changes).length)
+        canonicalEdits.push({ before: old, changes })
+    }
+    const known = new Set(previous.issues.map((i) => i.id))
+    if (next.issues.some((i) => !known.has(i.id)))
+      throw new Error("Create shared issues through the issue composer.")
+  }
   if (sharedDefinitionsActive()) {
     const definitions = cachedDefinitions(teamId).value
     const labels = sharedIssueLabels(teamId).labels.filter((l) => !l.archived)
@@ -201,21 +175,72 @@ export function writeIssueStore(
         throw new Error("Choose active labels available to this team.")
     }
   }
-  localStorage.setItem(teamIssuesKey(teamId), JSON.stringify(next))
+  if (
+    canonicalIssuesActive() &&
+    next.issues.some(
+      (i) => i.favorite !== previous.issues.find((p) => p.id === i.id)?.favorite
+    )
+  )
+    productStorage.setItem(
+      `forge:team-issue-favorites:v1:${teamId}`,
+      JSON.stringify(next.issues.filter((i) => i.favorite).map((i) => i.id))
+    )
+  if (canonicalEdits.length) enqueueIssueEdits(teamId, canonicalEdits)
+  const local = canonicalIssuesActive()
+    ? {
+        ...next,
+        issues: readLocalIssueStore(teamId).issues.map(
+          (old) => next.issues.find((i) => i.id === old.id) ?? old
+        ),
+      }
+    : next
+  productStorage.setItem(teamIssuesKey(teamId), JSON.stringify(local))
   window.dispatchEvent(new Event(ISSUES_CHANGED))
   return next
 }
 export function getIssueStatuses(teamId: string): Array<TeamStatus> {
   if (sharedDefinitionsActive())
     return cachedDefinitions(teamId).value.statuses.statuses
-  const raw = localStorage.getItem(teamStatusesStorageKey(teamId))
+  const raw = productStorage.getItem(teamStatusesStorageKey(teamId))
   return (raw ? parseTeamStatuses(raw) : initialTeamStatuses()).statuses
 }
 export function saveTeamIssue(
   teamId: string,
   draft: IssueDraft,
-  options: { id?: string; draftId?: string; creator?: string } = {}
+  options: {
+    id?: string
+    draftId?: string
+    creator?: string
+    baseline?: TeamIssue
+  } = {}
 ) {
+  if (canonicalIssuesActive() && !options.id)
+    throw new Error("Create shared issues through the issue composer.")
+  if (canonicalIssuesActive() && options.id) {
+    const current = readIssueStore(teamId).issues.find(
+      (i) => i.id === options.id
+    )
+    if (!current) throw new Error("This issue is no longer available.")
+    const before = options.baseline ?? current
+    const next = issueSchema.parse({
+      ...before,
+      ...draft,
+      title: draft.title.trim(),
+    })
+    const changes = changesBetween(before, next)
+    if (before.favorite !== next.favorite) {
+      const favorites = readIssueStore(teamId)
+        .issues.filter((i) => (i.id === before.id ? next.favorite : i.favorite))
+        .map((i) => i.id)
+      productStorage.setItem(
+        `forge:team-issue-favorites:v1:${teamId}`,
+        JSON.stringify(favorites)
+      )
+    }
+    if (Object.keys(changes).length)
+      enqueueIssueEdits(teamId, [{ before, changes }])
+    return readIssueStore(teamId).issues.find((i) => i.id === before.id)!
+  }
   let saved: TeamIssue | undefined
   const statuses = getIssueStatuses(teamId)
   const status = statuses.find((item) => item.id === draft.status)
@@ -361,6 +386,8 @@ export function moveTeamIssue(
   targetId: string,
   issueId: string
 ) {
+  if (canonicalIssuesActive())
+    throw new Error("Moving shared issues between teams is not available yet.")
   if (sourceId === targetId) return
   const source = readIssueStore(sourceId)
   const root = source.issues.find((issue) => issue.id === issueId)
@@ -417,6 +444,7 @@ export function spawnRecurringIssues(
   statuses: Array<TeamStatus>,
   now: string
 ): IssueStore {
+  if (canonicalIssuesActive()) return store
   const pending =
     statuses.find((status) => status.group === "unstarted") ??
     statuses.find((status) => status.group === "backlog")
@@ -490,7 +518,7 @@ export function useIssueStore(teamId: string) {
     subscribe,
     () => {
       try {
-        return localStorage.getItem(teamIssuesKey(teamId)) ?? ""
+        return issueStoreSnapshot(teamId)
       } catch {
         return "unavailable"
       }
@@ -631,7 +659,8 @@ export function issueGroupValue(
       members.find((member) => member.id === issue.assignee)?.name ??
       (issue.assignee || "Unassigned")
     )
-  if (group === "Project") return issue.project || "No project"
+  if (group === "Project")
+    return issue.project ? projectDisplayName(issue.project) : "No project"
   if (group === "Labels")
     return issue.labels?.split(",")[0]?.trim() || "No label"
   return "All issues"
@@ -640,6 +669,6 @@ export function issueGroupValue(
 export function getDefaultIssueStatus(teamId: string) {
   if (sharedDefinitionsActive())
     return cachedDefinitions(teamId).value.statuses.defaultId
-  const raw = localStorage.getItem(teamStatusesStorageKey(teamId))
+  const raw = productStorage.getItem(teamStatusesStorageKey(teamId))
   return (raw ? parseTeamStatuses(raw) : initialTeamStatuses()).defaultId
 }

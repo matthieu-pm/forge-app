@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, expect, it, vi } from "vitest"
 import { InitiativesPage } from "./initiatives-page"
 import type { ComponentProps } from "react"
+import { productStorage } from "@/lib/product-storage"
 import {
   addInitiative,
   blankInitiative,
@@ -50,7 +51,7 @@ const props = {
 }
 const key = initiativesStorageKey(props.workspaceId)
 beforeEach(() => {
-  localStorage.clear()
+  productStorage.clear()
   Element.prototype.scrollIntoView = vi.fn()
   Element.prototype.scrollTo = vi.fn()
   vi.stubGlobal(
@@ -72,7 +73,7 @@ it("edits initiative icons and colors from the row, preserves edits after remoun
     ...blankInitiative("user"),
     name: "Launch",
   })
-  localStorage.setItem(key, JSON.stringify(state))
+  productStorage.setItem(key, JSON.stringify(state))
   const first = render(<InitiativesPage {...props} />)
   const navigate = vi.fn()
   screen
@@ -91,7 +92,7 @@ it("edits initiative icons and colors from the row, preserves edits after remoun
   })
   fireEvent.click(await screen.findByRole("button", { name: "Rocket 01" }))
   expect(navigate).not.toHaveBeenCalled()
-  expect(JSON.parse(localStorage.getItem(key)!).initiatives[0].icon).toEqual({
+  expect(JSON.parse(productStorage.getItem(key)!).initiatives[0].icon).toEqual({
     kind: "icon",
     value: "Rocket01Icon",
     color: "#22c55e",

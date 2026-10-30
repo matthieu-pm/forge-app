@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { CodeReviewsSettings } from "./code-reviews-settings"
+import { productStorage } from "@/lib/product-storage"
 import {
   failPreferenceSaves,
   readTestPreferences,
@@ -12,7 +13,7 @@ import {
 afterEach(cleanup)
 beforeEach(async () => {
   await setupPreferenceFixture()
-  window.localStorage.clear()
+  productStorage.clear()
   vi.restoreAllMocks()
 })
 describe("Code & reviews", () => {

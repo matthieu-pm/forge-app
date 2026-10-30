@@ -8,6 +8,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { SignalsInbox } from "./signals-inbox"
 import type { ReactNode } from "react"
+import { productStorage } from "@/lib/product-storage"
 import { readIssueStore } from "@/lib/team-issues"
 import { sampleSignalInsights } from "@/lib/signals-insights"
 import { signalDocumentsKey } from "@/lib/signals-documents"
@@ -41,7 +42,7 @@ vi.mock("@tanstack/react-router", () => ({
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
 
 beforeEach(() => {
-  localStorage.clear()
+  productStorage.clear()
   Element.prototype.scrollIntoView = vi.fn()
   vi.stubGlobal(
     "ResizeObserver",
@@ -104,7 +105,7 @@ describe("Signals insight inbox", () => {
     ).toBeTruthy()
     expect(screen.getByRole("cell", { name: "131" })).toBeTruthy()
     const saved = JSON.parse(
-      localStorage.getItem(
+      productStorage.getItem(
         signalDocumentsKey({ userId: "user", workspaceId: "workspace" })
       )!
     )

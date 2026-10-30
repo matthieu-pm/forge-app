@@ -15,10 +15,11 @@ import {
   writeIssueStore,
 } from "./team-issues"
 import { initialTeamStatuses } from "./team-statuses"
+import { productStorage } from "@/lib/product-storage"
 
 const team = "issue-page-tests"
 const statuses = initialTeamStatuses().statuses
-beforeEach(() => localStorage.clear())
+beforeEach(() => productStorage.clear())
 describe("team issues", () => {
   it("records the previous and next property values for readable activity after reload", () => {
     const issue = saveTeamIssue(team, { ...blankIssueDraft(), title: "Review" })
@@ -96,24 +97,22 @@ describe("team issues", () => {
   })
   it("preserves stored data when validation or quota fails", () => {
     saveTeamIssue(team, { ...blankIssueDraft(), title: "Keep me" })
-    const original = localStorage.getItem(teamIssuesKey(team))
+    const original = productStorage.getItem(teamIssuesKey(team))
     expect(() => saveTeamIssue(team, blankIssueDraft())).toThrow()
-    expect(localStorage.getItem(teamIssuesKey(team))).toBe(original)
-    const set = vi
-      .spyOn(Storage.prototype, "setItem")
-      .mockImplementation(() => {
-        throw new Error("quota")
-      })
+    expect(productStorage.getItem(teamIssuesKey(team))).toBe(original)
+    const set = vi.spyOn(productStorage, "setItem").mockImplementation(() => {
+      throw new Error("quota")
+    })
     expect(() =>
       saveTeamIssue(team, { ...blankIssueDraft(), title: "Failed" })
     ).toThrow()
     set.mockRestore()
-    expect(localStorage.getItem(teamIssuesKey(team))).toBe(original)
+    expect(productStorage.getItem(teamIssuesKey(team))).toBe(original)
   })
   it("does not overwrite corrupted stores", () => {
-    localStorage.setItem(teamIssuesKey(team), "invalid")
+    productStorage.setItem(teamIssuesKey(team), "invalid")
     expect(() => writeIssueStore(team, () => initialIssueStore())).toThrow()
-    expect(localStorage.getItem(teamIssuesKey(team))).toBe("invalid")
+    expect(productStorage.getItem(teamIssuesKey(team))).toBe("invalid")
   })
   it("filters labels exactly and combines all/any conditions", () => {
     const issue = saveTeamIssue(team, {
@@ -311,9 +310,9 @@ describe("team issues", () => {
       ...blankIssueDraft(),
       title: "Safe move",
     })
-    const setItem = Storage.prototype.setItem
+    const setItem = productStorage.setItem
     const spy = vi
-      .spyOn(Storage.prototype, "setItem")
+      .spyOn(productStorage, "setItem")
       .mockImplementation(function (this: Storage, key, value) {
         if (key === teamIssuesKey(team)) throw new Error("quota")
         setItem.call(this, key, value)

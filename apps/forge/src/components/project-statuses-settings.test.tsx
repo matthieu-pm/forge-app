@@ -7,6 +7,7 @@ import {
   waitFor,
 } from "@testing-library/react"
 import { ProjectStatusesSettings } from "./project-statuses-settings"
+import { productStorage } from "@/lib/product-storage"
 import {
   projectStatusesStorageKey,
   readProjectStatuses,
@@ -29,7 +30,7 @@ vi.mock("@tanstack/react-router", () => ({
     </a>
   ),
 }))
-beforeEach(() => localStorage.clear())
+beforeEach(() => productStorage.clear())
 afterEach(() => {
   cleanup()
   vi.restoreAllMocks()
@@ -85,7 +86,7 @@ it("rejects duplicate names, keeps an unsaved edit on a storage failure and canc
       target: { value: "Planned work" },
     }
   )
-  vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+  vi.spyOn(productStorage, "setItem").mockImplementation(() => {
     throw new Error("quota")
   })
   fireEvent.click(screen.getByRole("button", { name: "Save" }))
@@ -128,7 +129,7 @@ it("disables destructive actions on the final status in a group", async () => {
   expect(item.getAttribute("aria-disabled")).toBe("true")
 })
 it("preserves corrupt settings and disables edits while showing a recovery message", async () => {
-  localStorage.setItem(projectStatusesStorageKey("a"), "broken")
+  productStorage.setItem(projectStatusesStorageKey("a"), "broken")
   render(<ProjectStatusesSettings workspaceId="a" />)
   await waitFor(() =>
     expect(screen.getByRole("alert").textContent).toContain("preserved")

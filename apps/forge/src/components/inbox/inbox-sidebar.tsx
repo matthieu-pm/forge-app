@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react"
 import type { CSSProperties, PointerEvent, ReactNode } from "react"
 import type { InboxScope } from "@/lib/inbox-state"
+import { productStorage } from "@/lib/product-storage"
 import { cn } from "@/lib/utils"
 
 const MIN_SCALE = 0.8
@@ -37,7 +38,7 @@ export function InboxSidebar({
 
   useEffect(() => {
     try {
-      const saved = Number(localStorage.getItem(storageKey) ?? 1)
+      const saved = Number(productStorage.getItem(storageKey) ?? 1)
       setScale(Number.isFinite(saved) ? clamp(saved) : 1)
     } catch {
       setScale(1)
@@ -60,7 +61,7 @@ export function InboxSidebar({
     const bounded = clamp(next)
     setScale(bounded)
     try {
-      localStorage.setItem(storageKey, String(bounded))
+      productStorage.setItem(storageKey, String(bounded))
     } catch {
       // Resizing remains available when local preferences cannot be stored.
     }

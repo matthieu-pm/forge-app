@@ -14,6 +14,7 @@ import {
 } from "./team-issues"
 import type { InitiativeProject } from "./initiatives"
 import type { TeamIssue } from "./team-issues"
+import { productStorage } from "@/lib/product-storage"
 
 export type ProjectMilestone = NonNullable<
   InitiativeProject["milestones"]
@@ -84,7 +85,7 @@ export function relocateProjectMilestone({
   convert?: boolean
 }) {
   const key = initiativesStorageKey(workspaceId)
-  const stored = localStorage.getItem(key)
+  const stored = productStorage.getItem(key)
   if (!stored) throw new Error("Project data is unavailable.")
   let state = initiativeStoreSchema.parse(JSON.parse(stored))
   const catalog = initiativeProjectCatalog(state)
@@ -153,7 +154,7 @@ export function relocateProjectMilestone({
     })
     .filter(({ matching }) => matching.length)
   for (const { id } of changes)
-    snapshots.set(teamIssuesKey(id), localStorage.getItem(teamIssuesKey(id)))
+    snapshots.set(teamIssuesKey(id), productStorage.getItem(teamIssuesKey(id)))
   try {
     for (const { id, store, matching } of changes) {
       const ids = new Set(matching.map((issue) => issue.id))
@@ -171,14 +172,14 @@ export function relocateProjectMilestone({
         ),
       }))
     }
-    localStorage.setItem(
+    productStorage.setItem(
       key,
       JSON.stringify(initiativeStoreSchema.parse(state))
     )
   } catch (error) {
     for (const [snapshotKey, value] of snapshots) {
-      if (value === null) localStorage.removeItem(snapshotKey)
-      else localStorage.setItem(snapshotKey, value)
+      if (value === null) productStorage.removeItem(snapshotKey)
+      else productStorage.setItem(snapshotKey, value)
     }
     window.dispatchEvent(new Event(ISSUES_CHANGED))
     throw error

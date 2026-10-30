@@ -15,6 +15,7 @@ import type { LocalAgentRuntime } from "@/host/forge-host"
 import type { AgentClient } from "@/lib/agent-client/agent-client"
 import type { AgentFeatureFlags } from "@/application/agents/agent-feature-flags"
 import type { AgentAttachmentRecord } from "@/application/agents/attachment-contract"
+import { productStorage } from "@/lib/product-storage"
 import {
   CODEX_LOCAL_CONNECTION_ID,
   DesktopAgentClient,
@@ -419,7 +420,7 @@ export function AgentProvider({
   }, [modelSourcesLoaded, models])
 
   React.useEffect(() => {
-    const stored = window.localStorage.getItem(OPEN_THREADS_KEY)
+    const stored = productStorage.getItem(OPEN_THREADS_KEY)
     if (stored) {
       try {
         const ids = JSON.parse(stored) as unknown
@@ -428,11 +429,11 @@ export function AgentProvider({
           setActiveThreadId(ids.at(-1) ?? null)
         }
       } catch {
-        window.localStorage.removeItem(OPEN_THREADS_KEY)
+        productStorage.removeItem(OPEN_THREADS_KEY)
       }
     }
 
-    const storedComposer = window.localStorage.getItem(COMPOSER_STATE_KEY)
+    const storedComposer = productStorage.getItem(COMPOSER_STATE_KEY)
     if (storedComposer) {
       try {
         const parsed = JSON.parse(storedComposer) as Partial<ComposerState>
@@ -455,7 +456,7 @@ export function AgentProvider({
               : {},
         })
       } catch {
-        window.localStorage.removeItem(COMPOSER_STATE_KEY)
+        productStorage.removeItem(COMPOSER_STATE_KEY)
       }
     }
 
@@ -629,14 +630,11 @@ export function AgentProvider({
   )
 
   React.useEffect(() => {
-    window.localStorage.setItem(OPEN_THREADS_KEY, JSON.stringify(openThreadIds))
+    productStorage.setItem(OPEN_THREADS_KEY, JSON.stringify(openThreadIds))
   }, [openThreadIds])
 
   React.useEffect(() => {
-    window.localStorage.setItem(
-      COMPOSER_STATE_KEY,
-      JSON.stringify(composerState)
-    )
+    productStorage.setItem(COMPOSER_STATE_KEY, JSON.stringify(composerState))
   }, [composerState])
 
   const addOpenThread = React.useCallback((threadId: string) => {

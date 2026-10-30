@@ -10,6 +10,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 import { toast } from "sonner"
 import { z } from "zod"
+import { productStorage } from "@/lib/product-storage"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import {
@@ -62,7 +63,7 @@ export function InitiativesSettings({ workspaceId }: { workspaceId: string }) {
   React.useEffect(() => {
     function load() {
       try {
-        const raw = localStorage.getItem(key)
+        const raw = productStorage.getItem(key)
         setSettings(raw ? settingsSchema.parse(JSON.parse(raw)) : defaults)
         setError("")
       } catch {
@@ -71,7 +72,7 @@ export function InitiativesSettings({ workspaceId }: { workspaceId: string }) {
         )
       }
       try {
-        const raw = localStorage.getItem(initiativeLabelsStorageKey)
+        const raw = productStorage.getItem(initiativeLabelsStorageKey)
         setLabelCount(
           raw
             ? parseTeamLabels(raw).labels.filter((label) => !label.archived)
@@ -99,7 +100,7 @@ export function InitiativesSettings({ workspaceId }: { workspaceId: string }) {
   function save(next: Settings) {
     if (!ready || error) return false
     try {
-      localStorage.setItem(key, JSON.stringify(settingsSchema.parse(next)))
+      productStorage.setItem(key, JSON.stringify(settingsSchema.parse(next)))
       setSettings(next)
       return true
     } catch {

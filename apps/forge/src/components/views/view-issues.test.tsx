@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { ViewIssues } from "./view-issues"
 import type { ComponentProps } from "react"
 import type { TeamSummary } from "@/lib/team-contract"
+import { productStorage } from "@/lib/product-storage"
 import {
   blankIssueDraft,
   defaultIssueDisplay,
@@ -120,7 +121,7 @@ function start(overrides: Partial<ComponentProps<typeof ViewIssues>> = {}) {
   return { ...render(<ViewIssues {...props} />), props }
 }
 beforeEach(() => {
-  localStorage.clear()
+  productStorage.clear()
   vi.stubGlobal(
     "ResizeObserver",
     class {
@@ -154,7 +155,7 @@ beforeEach(() => {
 })
 afterEach(() => {
   cleanup()
-  localStorage.clear()
+  productStorage.clear()
   vi.unstubAllGlobals()
 })
 describe("Custom view issue collection", () => {
@@ -172,7 +173,7 @@ describe("Custom view issue collection", () => {
     expect(readIssueStore(first.id).issues[0].priority).toBe("No priority")
   })
   it("previews filters without rewriting team preferences and reports actual visible metrics", async () => {
-    const firstBefore = localStorage.getItem(teamIssuesKey(first.id))
+    const firstBefore = productStorage.getItem(teamIssuesKey(first.id))
     const page = start({
       filters: {
         match: "all",
@@ -200,7 +201,7 @@ describe("Custom view issue collection", () => {
       screen.getByRole("button", { name: "Remove Priority filter" })
     )
     expect(page.props.onFiltersChange).toHaveBeenCalledWith(emptyIssueFilters())
-    expect(localStorage.getItem(teamIssuesKey(first.id))).toBe(firstBefore)
+    expect(productStorage.getItem(teamIssuesKey(first.id))).toBe(firstBefore)
   })
   it("limits team views and creation to their selected team", async () => {
     start({ team: second })

@@ -9,33 +9,44 @@ export function DetailTitle({
   onSave,
   label,
   editable = true,
+  onEditingStart,
   className,
 }: {
   value: string
   onSave: (value: string) => boolean | void
   label: string
   editable?: boolean
+  onEditingStart?: () => void
   className?: string
 }) {
   const [title, setTitle] = useState(value)
   const canceled = useRef(false)
-  useEffect(() => setTitle(value), [value])
+  const dirty = useRef(false)
+  useEffect(() => {
+    if (!dirty.current) setTitle(value)
+  }, [value])
   return (
     <input
       aria-label={label}
       readOnly={!editable}
       value={title}
       maxLength={240}
-      onChange={(event) => setTitle(event.target.value)}
+      onChange={(event) => {
+        if (!dirty.current) onEditingStart?.()
+        dirty.current = true
+        setTitle(event.target.value)
+      }}
       onBlur={() => {
         if (canceled.current) {
           canceled.current = false
+          dirty.current = false
           setTitle(value)
           return
         }
         const next = title.trim()
         if (!next || (next !== value && onSave(next) === false)) setTitle(value)
         else setTitle(next)
+        dirty.current = false
       }}
       onKeyDown={(event) => {
         if (event.nativeEvent.isComposing) return
@@ -80,12 +91,14 @@ export function DetailDescription({
   label,
   onSave,
   editable = true,
+  onEditingStart,
 }: {
   value: string
   document?: Record<string, unknown> | null
   label: string
   onSave: (text: string, document: JSONContent) => boolean | void
   editable?: boolean
+  onEditingStart?: () => void
 }) {
   const [doc, setDoc] = useState<JSONContent>(() => document ?? plainDoc(value))
   const editor = useRef<Editor | null>(null)
@@ -123,6 +136,7 @@ export function DetailDescription({
       <RichEditor
         value={doc}
         onChange={(next) => {
+          if (!latest.current.dirty) onEditingStart?.()
           latest.current = { doc: next, dirty: true }
           setDoc(next)
         }}

@@ -21,6 +21,7 @@ import type {
   ThreadModelPreferenceInput,
   ThreadModelPreferenceRecord,
 } from "@/application/agents/thread-model-preference"
+import { productStorage } from "@/lib/product-storage"
 import { ForgeAgentHome } from "@/components/agent/forge-agent-home"
 import { AgentFooterActions } from "@/components/agent/agent-footer-actions"
 import { AgentProvider, useAgent } from "@/components/agent/agent-provider"
@@ -283,7 +284,7 @@ function RecoveryStatus() {
 
 describe("AgentShell", () => {
   beforeEach(() => {
-    window.localStorage.clear()
+    productStorage.clear()
     vi.stubGlobal(
       "ResizeObserver",
       class {
@@ -570,7 +571,7 @@ describe("AgentShell", () => {
 
   test("falls back to Auto when a persisted model is no longer available", async () => {
     const client = new FakeAgentClient()
-    window.localStorage.setItem(
+    productStorage.setItem(
       "forge.agent.composer-state.v1",
       JSON.stringify({
         drafts: { __new__: "Test" },

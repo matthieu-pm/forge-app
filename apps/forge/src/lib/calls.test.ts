@@ -9,6 +9,7 @@ import {
 import { createCallIssue } from "./call-issues"
 import { readIssueStore } from "./team-issues"
 import type { CallRecord } from "./calls"
+import { productStorage } from "@/lib/product-storage"
 
 export const sampleCall: CallRecord = {
   id: "c27aa38f-e45a-4291-87d9-d029c084d369",
@@ -40,7 +41,7 @@ export const sampleCall: CallRecord = {
   ],
   notes: [],
 }
-beforeEach(() => localStorage.clear())
+beforeEach(() => productStorage.clear())
 describe("native transcript normalization", () => {
   it("keeps timestamps, speakers and multiline text from VTT and SRT", () => {
     expect(
@@ -100,14 +101,14 @@ describe("native transcript normalization", () => {
   })
 })
 describe("call action to Forge issue", () => {
-  it("creates one issue per action with a durable call backlink and preserves the mentioned owner as context", () => {
-    const first = createCallIssue(
+  it("creates one issue per action with a durable call backlink and preserves the mentioned owner as context", async () => {
+    const first = await createCallIssue(
       sampleCall,
       sampleCall.actions[0],
       "http://localhost:3000",
       "user-1"
     )
-    const second = createCallIssue(
+    const second = await createCallIssue(
       sampleCall,
       sampleCall.actions[0],
       "http://localhost:3000",

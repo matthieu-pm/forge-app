@@ -22,6 +22,7 @@ import type {
 } from "@/lib/template-contract"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamLabelDirectory } from "@/lib/team-labels"
+import { productStorage } from "@/lib/product-storage"
 import { IssueStatusIcon } from "@/components/issue-status-icon"
 import {
   DEFINITIONS_CHANGED,
@@ -378,10 +379,10 @@ export function useTemplateLabels(team?: TeamSummary, project = false) {
       try {
         const saved =
           team && !project
-            ? localStorage.getItem(teamLabelsStorageKey(team.id))
+            ? productStorage.getItem(teamLabelsStorageKey(team.id))
             : null
         if (saved) local = parseTeamLabels(saved)
-        const shared = localStorage.getItem(
+        const shared = productStorage.getItem(
           project ? projectLabelsStorageKey : workspaceLabelsStorageKey
         )
         if (shared) workspace = parseTeamLabels(shared)

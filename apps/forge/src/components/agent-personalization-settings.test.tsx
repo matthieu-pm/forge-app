@@ -7,6 +7,7 @@ import {
   within,
 } from "@testing-library/react"
 import { AgentPersonalizationSettings } from "./agent-personalization-settings"
+import { productStorage } from "@/lib/product-storage"
 import {
   externalPreferenceEdit,
   failPreferenceSaves,
@@ -49,7 +50,7 @@ vi.mock("@tanstack/react-router", () => ({
 }))
 beforeEach(async () => {
   await setupPreferenceFixture()
-  localStorage.clear()
+  productStorage.clear()
   vi.clearAllMocks()
   mocks.security.mockResolvedValue({ settings: { mcpServersEnabled: false } })
 })

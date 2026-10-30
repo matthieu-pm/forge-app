@@ -1,37 +1,24 @@
 import { useCallback, useMemo, useSyncExternalStore } from "react"
 import { z } from "zod"
+import {
+  canonicalIssueRows,
+  canonicalIssuesActive,
+} from "./canonical-issue-cache"
+import { createSharedTeamIssue } from "./canonical-issue-client"
+import { blankIssueDraft } from "./issue-record-contract"
+import {
+  getDefaultIssueStatus,
+  saveTeamIssue,
+  readIssueStore,
+} from "./team-issues"
+import { triageDraftSchema, triagePriorities } from "./triage-record-contract"
+import type { TeamIssue } from "./issue-record-contract"
+import type { TriageDraft } from "./triage-record-contract"
+import { productStorage } from "@/lib/product-storage"
 
-export const triagePriorities = [
-  "No priority",
-  "Urgent",
-  "High",
-  "Medium",
-  "Low",
-] as const
-export const triageDraftSchema = z.object({
-  title: z.string().max(240),
-  description: z.string().max(10000),
-  priority: z.enum(triagePriorities),
-  dueDate: z.string().regex(/^$|^\d{4}-\d{2}-\d{2}$/),
-  assignee: z.string().max(200).optional(),
-  project: z.string().max(200).optional(),
-  labels: z.string().max(1000).optional(),
-  templateName: z.string().max(200).optional(),
-  attachments: z
-    .array(
-      z.object({
-        id: z.string().optional(),
-        width: z.number().min(20).max(100).optional(),
-        name: z.string().max(255),
-        data: z
-          .string()
-          .max(2800000)
-          .regex(/^data:[a-zA-Z0-9.+/-]*;base64,[a-zA-Z0-9+/=]*$/),
-      })
-    )
-    .max(5)
-    .optional(),
-})
+export { triagePriorities, triageDraftSchema } from "./triage-record-contract"
+export type { TriageDraft } from "./triage-record-contract"
+
 export const triageDraftKey = (teamId: string) =>
   `forge:triage-draft:v1:${teamId}`
 const schema = triageDraftSchema.extend({
@@ -45,12 +32,12 @@ const schema = triageDraftSchema.extend({
   createdAt: z.string().datetime(),
 })
 export type TriageIssue = z.infer<typeof schema>
-export type TriageDraft = z.infer<typeof triageDraftSchema>
 export const triageIssuesKey = (teamId: string) =>
   `forge:triage-issues:v1:${teamId}`
 export const parseTriageIssues = (raw: string) =>
   z.array(schema).parse(JSON.parse(raw))
 const changed = "forge:triage-issues-changed"
+const pendingTriage = new Map<string, { signature: string; key: string }>()
 
 export function useTriageIssues(teamId: string) {
   const key = triageIssuesKey(teamId)
@@ -58,14 +45,22 @@ export function useTriageIssues(teamId: string) {
     useCallback((notify) => {
       window.addEventListener("storage", notify)
       window.addEventListener(changed, notify)
+      window.addEventListener("forge:team-issues-changed", notify)
       return () => {
         window.removeEventListener("storage", notify)
         window.removeEventListener(changed, notify)
+        window.removeEventListener("forge:team-issues-changed", notify)
       }
     }, []),
     () => {
       try {
-        return localStorage.getItem(key) ?? "[]"
+        if (canonicalIssuesActive())
+          return JSON.stringify(
+            canonicalIssueRows(teamId)
+              .filter((r) => r.issue.triage)
+              .map((r) => ({ ...r.issue, snoozed: r.issue.snoozed }))
+          )
+        return productStorage.getItem(key) ?? "[]"
       } catch {
         return "unavailable"
       }
@@ -83,9 +78,41 @@ export function useTriageIssues(teamId: string) {
       }
     }
   }, [raw])
-  function save(draft: TriageDraft, id?: string, snoozed?: boolean) {
+  async function save(
+    draft: TriageDraft,
+    id?: string,
+    snoozed?: boolean,
+    baseline?: TeamIssue
+  ) {
+    if (canonicalIssuesActive()) {
+      if (id) {
+        const old = readIssueStore(teamId).issues.find((i) => i.id === id)
+        if (!old) throw new Error("This issue is no longer available.")
+        const updated = saveTeamIssue(
+          teamId,
+          { ...(baseline ?? old), ...draft, snoozed: snoozed ?? old.snoozed },
+          { id, baseline: baseline ?? old }
+        )
+        return schema.parse(updated)
+      }
+      const signature = JSON.stringify(draft)
+      if (pendingTriage.get(teamId)?.signature !== signature)
+        pendingTriage.set(teamId, { signature, key: crypto.randomUUID() })
+      const issue = await createSharedTeamIssue(
+        teamId,
+        {
+          ...blankIssueDraft(getDefaultIssueStatus(teamId)),
+          ...draft,
+          triage: true,
+          snoozed: false,
+        },
+        { commandKey: pendingTriage.get(teamId)!.key }
+      )
+      pendingTriage.delete(teamId)
+      return schema.parse({ ...issue, snoozed: false })
+    }
     if (state.error) throw new Error(state.error)
-    const current = parseTriageIssues(localStorage.getItem(key) ?? "[]")
+    const current = parseTriageIssues(productStorage.getItem(key) ?? "[]")
     const previous = current.find((issue) => issue.id === id)
     if (id && !previous) throw new Error("This issue is no longer available.")
     const issue = schema.parse({
@@ -97,7 +124,7 @@ export function useTriageIssues(teamId: string) {
       createdAt: previous?.createdAt ?? new Date().toISOString(),
       snoozed: snoozed ?? previous?.snoozed ?? false,
     })
-    localStorage.setItem(
+    productStorage.setItem(
       key,
       JSON.stringify(
         previous

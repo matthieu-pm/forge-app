@@ -8,13 +8,14 @@ import {
 import {
   ISSUES_CHANGED,
   getIssueStatuses,
+  issueStoreSnapshot,
   parseIssueStore,
-  teamIssuesKey,
 } from "./team-issues"
 import { teamStatusesStorageKey } from "./team-statuses"
 import type { TeamSummary } from "./team-contract"
 import type { InitiativeProject } from "./initiatives"
 import type { MilestoneIssue } from "./project-milestones"
+import { productStorage } from "@/lib/product-storage"
 import { useWorkspaceView } from "@/components/account-preference-provider"
 
 export type ProjectIssueStat = {
@@ -59,10 +60,10 @@ export function useProjectIssueStats(
         return JSON.stringify(
           (JSON.parse(keys) as Array<string>).map((id) => [
             id,
-            localStorage.getItem(teamIssuesKey(id)),
+            issueStoreSnapshot(id),
             sharedDefinitionsActive()
               ? JSON.stringify(cachedDefinitions(id).value.statuses)
-              : localStorage.getItem(teamStatusesStorageKey(id)),
+              : productStorage.getItem(teamStatusesStorageKey(id)),
           ])
         )
       } catch {

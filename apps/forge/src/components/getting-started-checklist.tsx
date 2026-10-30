@@ -14,6 +14,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { useEffect, useState } from "react"
 
 import type { ComponentProps } from "react"
+import { productStorage } from "@/lib/product-storage"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -54,16 +55,14 @@ export function GettingStartedChecklist() {
 
   useEffect(() => {
     try {
-      if (
-        window.localStorage.getItem(CHECKLIST_COMPLETE_STORAGE_KEY) === "true"
-      ) {
+      if (productStorage.getItem(CHECKLIST_COMPLETE_STORAGE_KEY) === "true") {
         setCompletedSteps(new Set(checklistSteps.map((_, index) => index)))
         return
       }
-      if (window.localStorage.getItem(CHECKLIST_SEEN_STORAGE_KEY)) return
+      if (productStorage.getItem(CHECKLIST_SEEN_STORAGE_KEY)) return
 
       setOpen(true)
-      window.localStorage.setItem(CHECKLIST_SEEN_STORAGE_KEY, "true")
+      productStorage.setItem(CHECKLIST_SEEN_STORAGE_KEY, "true")
     } catch {
       // Keep the checklist usable when storage is unavailable.
       setOpen(true)
@@ -77,7 +76,7 @@ export function GettingStartedChecklist() {
     if (!complete) return
     setOpen(false)
     try {
-      window.localStorage.setItem(CHECKLIST_COMPLETE_STORAGE_KEY, "true")
+      productStorage.setItem(CHECKLIST_COMPLETE_STORAGE_KEY, "true")
     } catch {
       // Completion still hides the checklist for this session.
     }

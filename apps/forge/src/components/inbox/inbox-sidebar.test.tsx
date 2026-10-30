@@ -8,9 +8,10 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { InboxSidebar } from "./inbox-sidebar"
 import { scope } from "./inbox-test-fixtures"
+import { productStorage } from "@/lib/product-storage"
 
 beforeEach(() => {
-  localStorage.clear()
+  productStorage.clear()
   vi.stubGlobal(
     "PointerEvent",
     class extends MouseEvent {
@@ -105,12 +106,12 @@ describe("Inbox sidebar resizing", () => {
     fireEvent.pointerCancel(handle, { pointerId: 1 })
     expect(handle.getAttribute("aria-valuenow")).toBe("100")
     expect(document.documentElement.style.cursor).toBe("")
-    expect(localStorage.length).toBe(0)
+    expect(productStorage.length).toBe(0)
   })
 
   it("continues resizing when storing the preference is unavailable", () => {
     const { handle } = start()
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    vi.spyOn(productStorage, "setItem").mockImplementation(() => {
       throw new Error("Storage unavailable")
     })
     fireEvent.keyDown(handle, { key: "End" })

@@ -6,6 +6,7 @@ import {
   replaceAgentSkill,
   writeAgentSkills,
 } from "./team-agent-skills"
+import { productStorage } from "@/lib/product-storage"
 
 const skill = {
   id: "skill-a",
@@ -15,7 +16,7 @@ const skill = {
   createdAt: "2026-10-12T12:00:00.000Z",
   revision: 0,
 }
-beforeEach(() => localStorage.clear())
+beforeEach(() => productStorage.clear())
 afterEach(() => vi.restoreAllMocks())
 describe("agent skill persistence", () => {
   it("saves, edits and moves a skill without losing another team's records", () => {
@@ -46,11 +47,11 @@ describe("agent skill persistence", () => {
     expect(readAgentSkills()[0].instructions).toBe("New instructions")
   })
   it("preserves corrupt data and previous values when writes fail", () => {
-    localStorage.setItem(agentSkillsStorageKey, "invalid")
+    productStorage.setItem(agentSkillsStorageKey, "invalid")
     expect(() => writeAgentSkills(() => [skill])).toThrow()
-    expect(localStorage.getItem(agentSkillsStorageKey)).toBe("invalid")
-    localStorage.setItem(agentSkillsStorageKey, JSON.stringify([skill]))
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    expect(productStorage.getItem(agentSkillsStorageKey)).toBe("invalid")
+    productStorage.setItem(agentSkillsStorageKey, JSON.stringify([skill]))
+    vi.spyOn(productStorage, "setItem").mockImplementation(() => {
       throw new Error("quota")
     })
     expect(() =>

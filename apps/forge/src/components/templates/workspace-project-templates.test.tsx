@@ -18,6 +18,7 @@ import { WorkspaceProjectTemplates } from "./workspace-project-templates"
 import { TemplateEditor } from "./template-editor"
 import { useTemplateLabels } from "./template-controls"
 import type { SavedTemplate, TemplateDirectory } from "@/lib/template-contract"
+import { productStorage } from "@/lib/product-storage"
 import {
   projectLabelsStorageKey,
   workspaceLabelsStorageKey,
@@ -55,7 +56,7 @@ function record(kind: "issue" | "project", name: string): SavedTemplate {
 afterEach(() => {
   cleanup()
   vi.clearAllMocks()
-  localStorage.clear()
+  productStorage.clear()
 })
 async function setup(data = directory) {
   vi.spyOn(window, "scrollTo").mockImplementation(() => {})
@@ -208,8 +209,8 @@ describe("Workspace project template flow", () => {
       inheritedCount: 0,
       labels: [label],
     }
-    localStorage.setItem(projectLabelsStorageKey, JSON.stringify(labels))
-    localStorage.setItem(
+    productStorage.setItem(projectLabelsStorageKey, JSON.stringify(labels))
+    productStorage.setItem(
       workspaceLabelsStorageKey,
       JSON.stringify({
         ...labels,

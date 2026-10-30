@@ -400,9 +400,9 @@ export function CallDetail({
                               size="xs"
                               className="col-start-2 justify-self-start text-muted-foreground sm:col-start-3 sm:row-start-1"
                               disabled={Boolean(issueError)}
-                              onClick={() => {
+                              onClick={async () => {
                                 try {
-                                  const created = createCallIssue(
+                                  const created = await createCallIssue(
                                     call,
                                     action,
                                     window.location.origin,

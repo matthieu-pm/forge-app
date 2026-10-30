@@ -1,5 +1,6 @@
 import { z } from "zod"
 import type { CallRecord } from "./calls"
+import { productStorage } from "@/lib/product-storage"
 
 const meetings = [
   {
@@ -245,7 +246,7 @@ export function readSimulatedCall(
 ): CallRecord {
   try {
     const edit = editSchema.parse(
-      JSON.parse(localStorage.getItem(key(call, creator)) ?? "null")
+      JSON.parse(productStorage.getItem(key(call, creator)) ?? "null")
     )
     return {
       ...call,
@@ -260,7 +261,7 @@ export function readSimulatedCall(
   }
 }
 export function saveSimulatedCall(call: CallRecord, creator: string) {
-  localStorage.setItem(
+  productStorage.setItem(
     key(call, creator),
     JSON.stringify({
       completed: call.actions

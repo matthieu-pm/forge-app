@@ -358,6 +358,41 @@
       "when": 1793371379040,
       "tag": "0050_shared_issue_definitions",
       "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1793374524439,
+      "tag": "0051_canonical_issue_creation",
+      "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1793374927148,
+      "tag": "0052_server_product_state",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1793376489280,
+      "tag": "0053_product_state_ownership",
+      "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1793377295836,
+      "tag": "0054_canonical_issue_revisions",
+      "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1793377761047,
+      "tag": "0055_issue_actor_lifecycle",
+      "breakpoints": true
     }
   ]
 }

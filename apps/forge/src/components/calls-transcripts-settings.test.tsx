@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, screen, within } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { CallsTranscriptsSettings } from "./calls-transcripts-settings"
+import { productStorage } from "@/lib/product-storage"
 import {
   failPreferenceSaves,
   readTestPreferences,
@@ -18,7 +19,7 @@ afterEach(cleanup)
 beforeEach(async () => {
   await setupPreferenceFixture()
   vi.restoreAllMocks()
-  window.localStorage.clear()
+  productStorage.clear()
 })
 
 describe("Calls and transcripts settings", () => {
@@ -118,9 +119,9 @@ describe("Calls and transcripts settings", () => {
   })
 
   it("recovers from malformed data and merges partial stored preferences", () => {
-    window.localStorage.setItem(callPreferencesStorageKey("alice"), "{bad json")
+    productStorage.setItem(callPreferencesStorageKey("alice"), "{bad json")
     expect(readCallPreferences("alice")).toEqual(defaultCallPreferences)
-    window.localStorage.setItem(
+    productStorage.setItem(
       callPreferencesStorageKey("alice"),
       JSON.stringify({ language: "fr" })
     )
@@ -128,7 +129,7 @@ describe("Calls and transcripts settings", () => {
       ...defaultCallPreferences,
       language: "fr",
     })
-    window.localStorage.setItem(
+    productStorage.setItem(
       callPreferencesStorageKey("alice"),
       JSON.stringify({ recordingMode: "invalid" })
     )

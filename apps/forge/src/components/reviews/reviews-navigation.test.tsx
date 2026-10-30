@@ -16,11 +16,12 @@ import {
   createRouter,
 } from "@tanstack/react-router"
 import { Reviews } from "./reviews"
+import { productStorage } from "@/lib/product-storage"
 
 const scope = { workspaceId: "workspace", userId: "me" }
 
 beforeEach(() => {
-  localStorage.clear()
+  productStorage.clear()
   vi.spyOn(window, "scrollTo").mockImplementation(() => {})
   vi.stubGlobal(
     "ResizeObserver",

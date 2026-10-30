@@ -11,6 +11,7 @@ import { ResourceEditor, TeamOverview } from "./team-home"
 import { TeamDocuments } from "./team-home-documents"
 import { TeamLoops } from "./team-home-loops"
 import type { TeamSummary } from "@/lib/team-contract"
+import { productStorage } from "@/lib/product-storage"
 import { updateTeam } from "@/lib/team-state"
 import { emptyTeamHome, teamHomeKey } from "@/lib/team-home-state"
 import { newTeamDocument } from "@/lib/team-documents"
@@ -92,7 +93,7 @@ const team: TeamSummary = {
   createdAt: "2026-10-12",
 }
 beforeEach(() => {
-  localStorage.clear()
+  productStorage.clear()
   vi.stubGlobal(
     "ResizeObserver",
     class {
@@ -177,11 +178,12 @@ describe("team home workflows", () => {
       screen.getByLabelText<HTMLTextAreaElement>("Document content").value
     ).toBe("Keep the existing shell.")
     expect(
-      JSON.parse(localStorage.getItem(teamHomeKey(team.id))!).resources[0].title
+      JSON.parse(productStorage.getItem(teamHomeKey(team.id))!).resources[0]
+        .title
     ).toBe("Decision log")
     expect(
-      JSON.parse(localStorage.getItem(teamHomeKey(team.id))!).resources[0].owner
-        .name
+      JSON.parse(productStorage.getItem(teamHomeKey(team.id))!).resources[0]
+        .owner.name
     ).toBe("Matthieu")
   })
   it("retains failed autosaves, blocks returning to the list, and retries without losing content", () => {
@@ -190,17 +192,15 @@ describe("team home workflows", () => {
       title: "Saved plan",
       content: "Original notes",
     }
-    localStorage.setItem(
+    productStorage.setItem(
       teamHomeKey(team.id),
       JSON.stringify({ ...emptyTeamHome(), resources: [resource] })
     )
     render(<TeamDocuments team={team} />)
     fireEvent.click(screen.getByRole("button", { name: "Saved plan" }))
-    const write = vi
-      .spyOn(Storage.prototype, "setItem")
-      .mockImplementation(() => {
-        throw new Error("Storage full")
-      })
+    const write = vi.spyOn(productStorage, "setItem").mockImplementation(() => {
+      throw new Error("Storage full")
+    })
     fireEvent.change(screen.getByLabelText("Document title"), {
       target: { value: "Unsaved plan" },
     })
@@ -212,13 +212,15 @@ describe("team home workflows", () => {
       screen.getByLabelText<HTMLInputElement>("Document title").value
     ).toBe("Unsaved plan")
     expect(
-      JSON.parse(localStorage.getItem(teamHomeKey(team.id))!).resources[0].title
+      JSON.parse(productStorage.getItem(teamHomeKey(team.id))!).resources[0]
+        .title
     ).toBe("Saved plan")
     write.mockRestore()
     fireEvent.click(screen.getByRole("button", { name: "Try again" }))
     expect(screen.queryByRole("alert")).toBeNull()
     expect(
-      JSON.parse(localStorage.getItem(teamHomeKey(team.id))!).resources[0].title
+      JSON.parse(productStorage.getItem(teamHomeKey(team.id))!).resources[0]
+        .title
     ).toBe("Unsaved plan")
     expect(
       screen.getByLabelText<HTMLTextAreaElement>("Document content").value
@@ -241,7 +243,7 @@ describe("team home workflows", () => {
       ...emptyTeamHome(),
       resources: [second, first],
     })
-    localStorage.setItem(teamHomeKey(team.id), original)
+    productStorage.setItem(teamHomeKey(team.id), original)
     render(<TeamDocuments team={team} />)
     const before = (left: string, right: string) =>
       Boolean(
@@ -262,7 +264,7 @@ describe("team home workflows", () => {
       screen.getByRole("button", { name: "Expand Team documents" })
     )
     expect(screen.getByRole("button", { name: "A notes" })).toBeTruthy()
-    expect(localStorage.getItem(teamHomeKey(team.id))).toBe(original)
+    expect(productStorage.getItem(teamHomeKey(team.id))).toBe(original)
   })
   it("handles a missing document deep link without creating or changing records", () => {
     const onOpenDocument = vi.fn()
@@ -278,7 +280,7 @@ describe("team home workflows", () => {
     )
     fireEvent.click(screen.getByRole("button", { name: "Back to documents" }))
     expect(onOpenDocument).toHaveBeenCalledWith(undefined)
-    expect(localStorage.getItem(teamHomeKey(team.id))).toBeNull()
+    expect(productStorage.getItem(teamHomeKey(team.id))).toBeNull()
   })
   it("rejects unsafe link schemes before saving", () => {
     const update = vi.fn(() => true)
@@ -345,7 +347,7 @@ describe("team home workflows", () => {
       expect(screen.getByRole("button", { name: "Friday wrap" })).toBeTruthy()
     )
     expect(
-      JSON.parse(localStorage.getItem(teamHomeKey(team.id))!).loops[0].trigger
+      JSON.parse(productStorage.getItem(teamHomeKey(team.id))!).loops[0].trigger
     ).toBe("Weekly schedule")
     expect(screen.getByText("Draft · On this device")).toBeTruthy()
   })

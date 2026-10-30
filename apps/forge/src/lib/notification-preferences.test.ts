@@ -6,8 +6,9 @@ import {
   notificationPreferencesKey,
   useNotificationPreferences,
 } from "./notification-preferences"
+import { productStorage } from "@/lib/product-storage"
 
-beforeEach(() => localStorage.clear())
+beforeEach(() => productStorage.clear())
 afterEach(cleanup)
 
 describe("notification preferences", () => {
@@ -34,7 +35,7 @@ describe("notification preferences", () => {
     const second = renderHook(() => useNotificationPreferences("first"))
     const external = initialNotificationPreferences()
     external.updates.changelog = true
-    localStorage.setItem(
+    productStorage.setItem(
       notificationPreferencesKey("first"),
       JSON.stringify(external)
     )
@@ -52,18 +53,18 @@ describe("notification preferences", () => {
 
   it("preserves corrupt storage and rejects writes instead of overwriting it", () => {
     const key = notificationPreferencesKey("first")
-    localStorage.setItem(key, "invalid")
+    productStorage.setItem(key, "invalid")
     const view = renderHook(() => useNotificationPreferences("first"))
     expect(view.result.current.error).toContain("preserved")
     expect(view.result.current.update(initialNotificationPreferences)).toBe(
       false
     )
-    expect(localStorage.getItem(key)).toBe("invalid")
+    expect(productStorage.getItem(key)).toBe("invalid")
   })
 
   it("retains the visible value when persistence fails", () => {
     const view = renderHook(() => useNotificationPreferences("first"))
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    vi.spyOn(productStorage, "setItem").mockImplementation(() => {
       throw new Error("quota")
     })
     let saved = true

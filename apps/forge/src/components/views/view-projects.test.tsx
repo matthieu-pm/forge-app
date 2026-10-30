@@ -12,6 +12,7 @@ import type { ComponentProps } from "react"
 import type { InitiativeProject } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { ViewProjectMetricGroups } from "./view-projects"
+import { productStorage } from "@/lib/product-storage"
 import { defaultProjectPreferences } from "@/lib/projects"
 import {
   addInitiative,
@@ -69,7 +70,7 @@ function seed(projects = [project]) {
     name: "Growth",
     projects,
   })
-  localStorage.setItem(
+  productStorage.setItem(
     initiativesStorageKey(base.workspaceId),
     JSON.stringify(state)
   )
@@ -84,9 +85,9 @@ function start(overrides: Partial<ComponentProps<typeof ViewProjects>> = {}) {
   return { ...render(<ViewProjects {...props} />), props }
 }
 const read = () =>
-  JSON.parse(localStorage.getItem(initiativesStorageKey(base.workspaceId))!)
+  JSON.parse(productStorage.getItem(initiativesStorageKey(base.workspaceId))!)
 beforeEach(() => {
-  localStorage.clear()
+  productStorage.clear()
   Element.prototype.scrollIntoView = vi.fn()
   vi.stubGlobal(
     "ResizeObserver",

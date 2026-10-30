@@ -20,6 +20,7 @@ import type { AppNavChild } from "@/lib/app-navigation"
 import type { DesktopTabsState } from "@/lib/desktop-tabs"
 import type { SidebarState } from "@/lib/sidebar-events"
 import type { TeamSummary } from "@/lib/team-contract"
+import { productStorage } from "@/lib/product-storage"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { ForgeLogo } from "@/components/forge-logo"
 import { Button } from "@/components/ui/button"
@@ -317,7 +318,7 @@ function DesktopTitleBarChrome() {
     if (!window.forgeDesktop) return
 
     try {
-      const saved = JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? "null")
+      const saved = JSON.parse(productStorage.getItem(STORAGE_KEY) ?? "null")
       setTabState(restoreDesktopTabs(saved, currentPath))
     } catch {
       setTabState(createDesktopTabs(currentPath))
@@ -331,7 +332,7 @@ function DesktopTitleBarChrome() {
 
   useEffect(() => {
     if (!window.forgeDesktop) return
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(tabState))
+    productStorage.setItem(STORAGE_KEY, JSON.stringify(tabState))
   }, [tabState])
 
   useEffect(() => {

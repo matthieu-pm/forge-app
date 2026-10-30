@@ -1,3 +1,5 @@
+"use client"
+
 import * as React from "react"
 import { Delete02Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -5,6 +7,7 @@ import { Link, useRouter } from "@tanstack/react-router"
 import { toast } from "sonner"
 
 import type { WorkspaceSummary } from "@/lib/auth-types"
+import { productStorage } from "@/lib/product-storage"
 import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 import { AvatarPicker } from "@/components/avatar-picker"
 import {
@@ -29,10 +32,6 @@ import {
 import { Input } from "@/components/ui/input"
 import { authClient } from "@/lib/auth-client"
 import { cn } from "@/lib/utils"
-
-;
-
-("use client")
 
 type SaveStatus = "idle" | "saving" | "saved" | "error"
 
@@ -182,9 +181,7 @@ export function WorkspaceSettings({
   const confirmationMatches = confirmationName.trim() === workspace.name
 
   React.useEffect(() => {
-    const stored = window.localStorage.getItem(
-      fiscalMonthStorageKey(workspace.id)
-    )
+    const stored = productStorage.getItem(fiscalMonthStorageKey(workspace.id))
     if (fiscalMonthOptions.includes(stored as FiscalMonth)) {
       setFiscalMonth(stored as FiscalMonth)
     }
@@ -291,7 +288,7 @@ export function WorkspaceSettings({
   function updateFiscalMonth(value: string) {
     const nextMonth = value as FiscalMonth
     setFiscalMonth(nextMonth)
-    window.localStorage.setItem(fiscalMonthStorageKey(workspace.id), nextMonth)
+    productStorage.setItem(fiscalMonthStorageKey(workspace.id), nextMonth)
     toast.success("Fiscal year settings updated.")
   }
 

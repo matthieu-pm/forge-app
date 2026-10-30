@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Link } from "@tanstack/react-router"
 import { addWeeks, format } from "date-fns"
 import { toast } from "sonner"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { CycleIssue, CycleIssueDraft } from "@/lib/cycle-issues"
-import type { IssueDraft } from "@/lib/team-issues"
+import type { IssueDraft, TeamIssue } from "@/lib/team-issues"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import { DEFINITIONS_CHANGED } from "@/lib/issue-definition-cache"
 import { readTeamIssueLabels } from "@/lib/team-labels"
@@ -161,7 +161,9 @@ export function UpcomingCycle({
       cycle,
     })
   }
+  const editingBaseline = useRef<TeamIssue | undefined>(undefined)
   function edit(issue: CycleIssue) {
+    editingBaseline.current = records.find((row) => row.id === issue.id)
     setDraft(issue)
     setEditingId(issue.id)
     setSaveError(null)
@@ -620,10 +622,14 @@ export function UpcomingCycle({
           </DialogDescription>
           <form
             className="space-y-4"
-            onSubmit={(event) => {
+            onSubmit={async (event) => {
               event.preventDefault()
               try {
-                const issue = save(draft, editingId)
+                const issue = await save(
+                  draft,
+                  editingId,
+                  editingBaseline.current
+                )
                 setEditor(false)
                 toast.success(editingId ? "Issue updated" : "Issue created", {
                   description: `${issueNumber(issue)} — ${issue.title}`,

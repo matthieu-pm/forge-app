@@ -7,6 +7,7 @@ import type { JSONContent } from "@tiptap/core"
 import type { SignalInsight } from "./signals-insights"
 import type { TeamResource } from "./team-home-state"
 import type { InboxScope } from "./inbox-state"
+import { productStorage } from "@/lib/product-storage"
 
 const draftsSchema = z.record(z.string(), teamResourceSchema)
 const paragraph = (text: string): JSONContent => ({
@@ -63,7 +64,7 @@ export function useSignalDocuments(scope: InboxScope) {
   useEffect(() => {
     setReady(false)
     try {
-      const raw = localStorage.getItem(key)
+      const raw = productStorage.getItem(key)
       const saved = raw ? draftsSchema.parse(JSON.parse(raw)) : {}
       latest.current = saved
       setDocuments(saved)
@@ -87,7 +88,7 @@ export function useSignalDocuments(scope: InboxScope) {
   }, [error, readError])
   function persist(next: Record<string, TeamResource>) {
     try {
-      localStorage.setItem(key, JSON.stringify(draftsSchema.parse(next)))
+      productStorage.setItem(key, JSON.stringify(draftsSchema.parse(next)))
       setError("")
       return true
     } catch {

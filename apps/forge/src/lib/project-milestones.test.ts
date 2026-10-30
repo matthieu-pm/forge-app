@@ -17,6 +17,7 @@ import {
   teamIssuesKey,
 } from "./team-issues"
 import type { InitiativeProject } from "./initiatives"
+import { productStorage } from "@/lib/product-storage"
 
 const first = {
   id: "m1",
@@ -40,7 +41,7 @@ const target: InitiativeProject = {
   milestones: [],
 }
 const key = initiativesStorageKey("workspace")
-const read = () => JSON.parse(localStorage.getItem(key)!)
+const read = () => JSON.parse(productStorage.getItem(key)!)
 const relocate = (
   options: Partial<Parameters<typeof relocateProjectMilestone>[0]> = {}
 ) =>
@@ -54,8 +55,8 @@ const relocate = (
   })
 beforeEach(() => {
   vi.restoreAllMocks()
-  localStorage.clear()
-  localStorage.setItem(
+  productStorage.clear()
+  productStorage.setItem(
     key,
     JSON.stringify({
       ...emptyInitiatives(),
@@ -175,11 +176,11 @@ it("restores exact project and issue data if persisting a move fails", () => {
     project: "source",
     milestone: "m1",
   })
-  const beforeProject = localStorage.getItem(key),
-    beforeIssues = localStorage.getItem(teamIssuesKey("team"))
-  const original = Storage.prototype.setItem
+  const beforeProject = productStorage.getItem(key),
+    beforeIssues = productStorage.getItem(teamIssuesKey("team"))
+  const original = productStorage.setItem
   let failed = false
-  vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (
+  vi.spyOn(productStorage, "setItem").mockImplementation(function (
     this: Storage,
     k,
     v
@@ -191,6 +192,6 @@ it("restores exact project and issue data if persisting a move fails", () => {
     original.call(this, k, v)
   })
   expect(() => relocate({ targetId: "target" })).toThrow("Full")
-  expect(localStorage.getItem(key)).toBe(beforeProject)
-  expect(localStorage.getItem(teamIssuesKey("team"))).toBe(beforeIssues)
+  expect(productStorage.getItem(key)).toBe(beforeProject)
+  expect(productStorage.getItem(teamIssuesKey("team"))).toBe(beforeIssues)
 })

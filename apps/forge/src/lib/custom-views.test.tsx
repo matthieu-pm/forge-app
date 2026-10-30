@@ -11,13 +11,14 @@ import {
   useCustomViewDirectoryPreferences,
   useCustomViews,
 } from "./custom-views-state"
+import { productStorage } from "@/lib/product-storage"
 import {
   renderPreferenceHook as renderHook,
   setupPreferenceFixture,
 } from "@/test/preference-fixture"
 
 beforeEach(async () => {
-  localStorage.clear()
+  productStorage.clear()
   await setupPreferenceFixture("user")
 })
 
@@ -117,7 +118,7 @@ describe("Custom view persistence", () => {
     const { result } = renderHook(() => useCustomViews("workspace", "user"))
     const first = newCustomView("issues", "user")
     const second = newCustomView("projects", "user")
-    localStorage.setItem(
+    productStorage.setItem(
       customViewsKey("workspace", "user"),
       JSON.stringify({ version: 1, views: [first] })
     )
@@ -129,7 +130,7 @@ describe("Custom view persistence", () => {
       second.id,
     ])
     const third = newCustomView("issues", "user")
-    localStorage.setItem(
+    productStorage.setItem(
       customViewsKey("workspace", "user"),
       JSON.stringify({ version: 1, views: [...result.current.views, third] })
     )
@@ -144,12 +145,12 @@ describe("Custom view persistence", () => {
 
   it("preserves corrupt data on save and delete and reports the loading failure", () => {
     const key = customViewsKey("workspace", "user")
-    localStorage.setItem(key, "{broken")
+    productStorage.setItem(key, "{broken")
     const { result } = renderHook(() => useCustomViews("workspace", "user"))
     expect(result.current.error).toContain("preserved")
     expect(result.current.save(newCustomView("issues", "user"))).toBe(false)
     expect(result.current.remove("anything")).toBe(false)
-    expect(localStorage.getItem(key)).toBe("{broken")
+    expect(productStorage.getItem(key)).toBe("{broken")
   })
 
   it("rejects invalid edits without altering the valid store and handles failed storage writes", () => {
@@ -158,16 +159,16 @@ describe("Custom view persistence", () => {
     act(() => {
       result.current.save(view)
     })
-    const before = localStorage.getItem(customViewsKey("workspace", "user"))
+    const before = productStorage.getItem(customViewsKey("workspace", "user"))
     expect(result.current.save({ ...view, name: "" })).toBe(false)
-    expect(localStorage.getItem(customViewsKey("workspace", "user"))).toBe(
+    expect(productStorage.getItem(customViewsKey("workspace", "user"))).toBe(
       before
     )
-    vi.spyOn(Storage.prototype, "setItem").mockImplementationOnce(() => {
+    vi.spyOn(productStorage, "setItem").mockImplementationOnce(() => {
       throw new Error("Quota exceeded")
     })
     expect(result.current.remove(view.id)).toBe(false)
-    expect(localStorage.getItem(customViewsKey("workspace", "user"))).toBe(
+    expect(productStorage.getItem(customViewsKey("workspace", "user"))).toBe(
       before
     )
   })
@@ -177,7 +178,7 @@ describe("Custom view directory preferences", () => {
   it("persists ordering and columns across remounts without changing saved view definitions or another user's settings", () => {
     const view = newCustomView("issues", "user")
     const key = customViewsKey("workspace", "user")
-    localStorage.setItem(key, JSON.stringify({ version: 1, views: [view] }))
+    productStorage.setItem(key, JSON.stringify({ version: 1, views: [view] }))
     const hook = renderHook(() =>
       useCustomViewDirectoryPreferences("workspace", "user")
     )
@@ -200,7 +201,7 @@ describe("Custom view directory preferences", () => {
       properties: ["Created", "Updated"],
       error: "",
     })
-    expect(parseCustomViews(localStorage.getItem(key)).views).toEqual([view])
+    expect(parseCustomViews(productStorage.getItem(key)).views).toEqual([view])
     const other = renderHook(() =>
       useCustomViewDirectoryPreferences("workspace", "other")
     )
@@ -216,7 +217,7 @@ describe("Custom view directory preferences", () => {
     const { result } = renderHook(() =>
       useCustomViewDirectoryPreferences("workspace", "user")
     )
-    localStorage.setItem(key, "{broken")
+    productStorage.setItem(key, "{broken")
     expect(
       result.current.save({
         ordering: "Created",
@@ -224,10 +225,10 @@ describe("Custom view directory preferences", () => {
         properties: ["Owner"],
       })
     ).toBe(true)
-    expect(localStorage.getItem(key)).toBe("{broken")
+    expect(productStorage.getItem(key)).toBe("{broken")
     act(() => window.dispatchEvent(new Event("storage")))
     expect(result.current.error).toBe("")
     expect(result.current.properties).toEqual(["Owner"])
-    expect(localStorage.getItem(key)).toBe("{broken")
+    expect(productStorage.getItem(key)).toBe("{broken")
   })
 })

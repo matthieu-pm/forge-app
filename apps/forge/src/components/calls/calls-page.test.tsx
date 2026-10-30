@@ -11,6 +11,7 @@ import { CallDetail } from "./call-detail"
 import type { ComponentProps } from "react"
 import type { CallRecord, CallsDirectory } from "@/lib/calls"
 import type { TeamSummary } from "@/lib/team-contract"
+import { productStorage } from "@/lib/product-storage"
 import { addNote, loadCall, updateCallAction } from "@/lib/calls-state"
 import { selectOption } from "@/test-utils/select-option"
 import { readIssueStore } from "@/lib/team-issues"
@@ -95,7 +96,7 @@ const directory: CallsDirectory = {
 }
 afterEach(cleanup)
 beforeEach(() => {
-  localStorage.clear()
+  productStorage.clear()
   vi.clearAllMocks()
   vi.mocked(loadCall).mockResolvedValue(call)
 })
@@ -131,7 +132,9 @@ describe("Calls", () => {
     fireEvent.keyDown(resize, { key: "ArrowRight" })
     expect(resize.getAttribute("aria-valuenow")).toBe("105")
     expect(
-      localStorage.getItem('forge:calls-sidebar-width:v1:["workspace","user"]')
+      productStorage.getItem(
+        'forge:calls-sidebar-width:v1:["workspace","user"]'
+      )
     ).toBe("1.05")
   })
   it("populates an empty directory with usable samples and persists local notes and actions", async () => {

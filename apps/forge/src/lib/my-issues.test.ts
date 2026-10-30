@@ -8,8 +8,9 @@ import {
   readMyIssueSearch,
 } from "./my-issues"
 import { blankIssueDraft, saveTeamIssue } from "./team-issues"
+import { productStorage } from "@/lib/product-storage"
 
-beforeEach(() => localStorage.clear())
+beforeEach(() => productStorage.clear())
 describe("My issues scope", () => {
   it("matches exact identities and separates assigned, created, and subscribed issues", () => {
     const issue = saveTeamIssue(

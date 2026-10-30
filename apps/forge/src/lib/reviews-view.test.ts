@@ -8,6 +8,7 @@ import {
   visibleReviews,
 } from "./reviews-view"
 import type { Review } from "./reviews-view"
+import { productStorage } from "@/lib/product-storage"
 
 const now = Date.parse("2026-10-27T12:00:00Z")
 const review = (overrides: Partial<Review> = {}): Review => ({
@@ -114,15 +115,15 @@ describe("Reviews view", () => {
   })
   it("isolates and validates saved display preferences", () => {
     const key = reviewDisplayKey({ userId: "me", workspaceId: "one" })
-    localStorage.setItem(key, JSON.stringify({ showDrafts: false }))
+    productStorage.setItem(key, JSON.stringify({ showDrafts: false }))
     expect(readReviewDisplay(key).showDrafts).toBe(false)
     expect(
       readReviewDisplay(reviewDisplayKey({ userId: "me", workspaceId: "two" }))
         .showDrafts
     ).toBe(true)
-    localStorage.setItem(key, '{"groupBy":"invalid"}')
+    productStorage.setItem(key, '{"groupBy":"invalid"}')
     expect(readReviewDisplay(key)).toEqual(defaultReviewDisplay)
-    localStorage.setItem(key, "not json")
+    productStorage.setItem(key, "not json")
     expect(readReviewDisplay(key)).toEqual(defaultReviewDisplay)
   })
 })

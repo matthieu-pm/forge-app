@@ -10,6 +10,7 @@ import { SidebarIssueButton } from "./sidebar-issue-button"
 import type { ComponentProps } from "react"
 import type { IssueComposer } from "./issue-composer"
 import type { TeamSummary } from "@/lib/team-contract"
+import { productStorage } from "@/lib/product-storage"
 
 const mocks = vi.hoisted(() => ({
   load: vi.fn(),
@@ -49,7 +50,7 @@ const skema = { ...forge, id: "skema", slug: "skema", name: "SKEMA" }
 
 beforeEach(() => {
   vi.clearAllMocks()
-  localStorage.clear()
+  productStorage.clear()
   mocks.load.mockResolvedValue({
     teams: [forge, skema],
     templates: [],

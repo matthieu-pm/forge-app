@@ -1,6 +1,7 @@
 import * as React from "react"
 import { z } from "zod"
 import { documentSchema } from "./template-contract"
+import { productStorage } from "@/lib/product-storage"
 import { useWorkspaceView } from "@/components/account-preference-provider"
 
 export const teamResourceSchema = z.object({
@@ -88,7 +89,7 @@ export function useTeamHome(teamId: string) {
   React.useEffect(() => {
     const load = () => {
       try {
-        const raw = localStorage.getItem(key)
+        const raw = productStorage.getItem(key)
         setState(raw ? teamHomeSchema.parse(JSON.parse(raw)) : emptyTeamHome())
         setError(null)
       } catch {
@@ -131,7 +132,7 @@ export function useTeamHome(teamId: string) {
   function update(reducer: (current: TeamHomeState) => TeamHomeState) {
     if (!ready || error) return false
     try {
-      const raw = localStorage.getItem(key),
+      const raw = productStorage.getItem(key),
         current = raw ? teamHomeSchema.parse(JSON.parse(raw)) : emptyTeamHome()
       const next = teamHomeSchema.parse(reducer(overlay(current)))
       const personal = {
@@ -165,7 +166,7 @@ export function useTeamHome(teamId: string) {
         })),
       }
       if (JSON.stringify(business) !== JSON.stringify(current)) {
-        localStorage.setItem(key, JSON.stringify(business))
+        productStorage.setItem(key, JSON.stringify(business))
         setState(business)
         window.dispatchEvent(new CustomEvent(changed, { detail: key }))
       }

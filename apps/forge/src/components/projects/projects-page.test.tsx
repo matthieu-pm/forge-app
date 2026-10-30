@@ -10,6 +10,7 @@ import { ProjectsPage } from "./projects-page"
 import type { ReactNode } from "react"
 import type { InitiativeProject } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
+import { productStorage } from "@/lib/product-storage"
 import {
   readTestView,
   renderPreferences as render,
@@ -97,16 +98,16 @@ function seed(projects = [project]) {
     name: "Growth",
     projects,
   })
-  localStorage.setItem(
+  productStorage.setItem(
     initiativesStorageKey(props.workspaceId),
     JSON.stringify(state)
   )
 }
 const read = () =>
-  JSON.parse(localStorage.getItem(initiativesStorageKey(props.workspaceId))!)
+  JSON.parse(productStorage.getItem(initiativesStorageKey(props.workspaceId))!)
 beforeEach(async () => {
   await setupPreferenceFixture("user")
-  localStorage.clear()
+  productStorage.clear()
   Element.prototype.scrollIntoView = vi.fn()
   Element.prototype.scrollTo = vi.fn()
   vi.stubGlobal(
@@ -162,7 +163,7 @@ describe("Projects page", () => {
     )
   })
   it("creates while initiatives are disabled and persists after remount", async () => {
-    localStorage.setItem(
+    productStorage.setItem(
       initiativesSettingsStorageKey(props.workspaceId),
       JSON.stringify({ enabled: false, schedule: "none" })
     )
@@ -193,7 +194,7 @@ describe("Projects page", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Project name" }), {
       target: { value: "Keep draft" },
     })
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    vi.spyOn(productStorage, "setItem").mockImplementation(() => {
       throw new Error("quota")
     })
     fireEvent.click(screen.getByRole("button", { name: "Create project" }))
@@ -207,19 +208,19 @@ describe("Projects page", () => {
         .some((item) => item.textContent.includes("draft has been kept"))
     ).toBe(true)
     expect(
-      localStorage.getItem(initiativesStorageKey(props.workspaceId))
+      productStorage.getItem(initiativesStorageKey(props.workspaceId))
     ).toBeNull()
   })
   it("keeps corrupt storage intact and disables writes", () => {
-    localStorage.setItem(initiativesStorageKey(props.workspaceId), "broken")
+    productStorage.setItem(initiativesStorageKey(props.workspaceId), "broken")
     render(<ProjectsPage {...props} />)
     expect(
       screen.getByRole<HTMLButtonElement>("button", { name: "New project" })
         .disabled
     ).toBe(true)
-    expect(localStorage.getItem(initiativesStorageKey(props.workspaceId))).toBe(
-      "broken"
-    )
+    expect(
+      productStorage.getItem(initiativesStorageKey(props.workspaceId))
+    ).toBe("broken")
   })
   it("edits a shared project using inline priority controls", async () => {
     seed()
@@ -270,7 +271,7 @@ describe("Projects page", () => {
     expect(screen.queryByRole("button", { name: "Other team" })).toBeNull()
     expect(screen.getByRole("heading", { name: /Backlog/ })).toBeTruthy()
     expect(
-      localStorage.getItem(projectPreferencesKey(props.workspaceId, user.id))
+      productStorage.getItem(projectPreferencesKey(props.workspaceId, user.id))
     ).toBeNull()
   })
   it("selects rows independently and updates the selected projects across initiatives", async () => {
@@ -319,7 +320,7 @@ describe("Projects page", () => {
   })
   it("keeps the selection and saved data if a bulk update cannot be saved", async () => {
     seed()
-    const before = localStorage.getItem(
+    const before = productStorage.getItem(
       initiativesStorageKey(props.workspaceId)
     )
     render(<ProjectsPage {...props} />)
@@ -332,13 +333,13 @@ describe("Projects page", () => {
         name: "Change status for selected projects",
       })
     )
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    vi.spyOn(productStorage, "setItem").mockImplementation(() => {
       throw new Error("quota")
     })
     fireEvent.click(screen.getByRole("option", { name: "Completed" }))
-    expect(localStorage.getItem(initiativesStorageKey(props.workspaceId))).toBe(
-      before
-    )
+    expect(
+      productStorage.getItem(initiativesStorageKey(props.workspaceId))
+    ).toBe(before)
     expect(
       screen.getByRole("toolbar", { name: "Selected projects" }).textContent
     ).toContain("1 selected")

@@ -285,7 +285,11 @@ export function TeamIssues({
   }
   function updateIssue(issue: TeamIssue, patch: Partial<IssueDraft>) {
     try {
-      saveTeamIssue(team.id, { ...issue, ...patch }, { id: issue.id })
+      saveTeamIssue(
+        team.id,
+        { ...issue, ...patch },
+        { id: issue.id, baseline: issue }
+      )
       if (
         patch.status &&
         patch.status !== issue.status &&
