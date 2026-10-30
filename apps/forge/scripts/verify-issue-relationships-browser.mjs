@@ -312,9 +312,68 @@ try {
       exact: true,
     })
   ).toBeVisible({ timeout: 30000 })
+  // Revoke access between relationship pages without navigating away.
+  await pool.query(
+    "INSERT INTO issues(workspace_id,team_id,number,title) SELECT $1,$2,n,'Private continuation '||n FROM generate_series(2,56) n",
+    [marker, otherTeam]
+  )
+  await pool.query(
+    "INSERT INTO issue_relations(workspace_id,issue_id,related_issue_id,kind) SELECT workspace_id,$1,id,'related' FROM issues WHERE workspace_id=$2 AND team_id=$3 AND id<>$1 ON CONFLICT DO NOTHING",
+    [a, marker, otherTeam]
+  )
+  await go(member, "engineering", a)
+  await expect(
+    panel(member).getByRole("button", {
+      name: "Load more relationships",
+      exact: true,
+    })
+  ).toBeVisible()
+  await expect(
+    panel(member)
+      .getByRole("link", { name: /Private continuation/ })
+      .first()
+  ).toBeVisible()
   await pool.query("UPDATE teams SET visibility='private' WHERE id=$1", [
     otherTeam,
   ])
+  await panel(member)
+    .getByRole("button", { name: "Load more relationships", exact: true })
+    .click()
+  await expect(
+    panel(member).getByRole("link", { name: /Private continuation/ })
+  ).toHaveCount(0)
+  await expect(
+    panel(member).getByRole("link", {
+      name: "Open DES-1 Relationship Beta",
+      exact: true,
+    })
+  ).toHaveCount(0)
+  await expect(
+    panel(member).getByRole("link", {
+      name: "Open ENG-2 Relationship Gamma",
+      exact: true,
+    })
+  ).toHaveCount(2)
+  // Revoke while the selected private search result is still on screen.
+  await pool.query("UPDATE teams SET visibility='workspace' WHERE id=$1", [
+    otherTeam,
+  ])
+  await member.reload()
+  await expect(
+    panel(member).getByRole("button", { name: "Add relationship", exact: true })
+  ).toBeVisible({ timeout: 30000 })
+  await panel(member)
+    .getByRole("button", { name: "Add relationship", exact: true })
+    .click()
+  await panel(member)
+    .getByRole("textbox", { name: "Search relationship issues", exact: true })
+    .fill("Relationship Beta")
+  await panel(member)
+    .getByRole("button", { name: /DES-1.*Relationship Beta/ })
+    .click()
+  await expect(
+    panel(member).getByRole("button", { name: "Link issue", exact: true })
+  ).toBeEnabled()
   const bodies = []
   member.on("response", (response) => {
     if (response.url().includes("_serverFn"))
@@ -323,28 +382,43 @@ try {
         .then((body) => bodies.push(body))
         .catch(() => {})
   })
-  await go(member, "engineering", a)
+  await pool.query("UPDATE teams SET visibility='private' WHERE id=$1", [
+    otherTeam,
+  ])
+  await member.evaluate(() => window.dispatchEvent(new Event("focus")))
+  await expect(
+    panel(member).getByRole("button", { name: /DES-1.*Relationship Beta/ })
+  ).toHaveCount(0)
+  await expect(
+    panel(member).getByRole("button", { name: "Link issue", exact: true })
+  ).toBeDisabled()
+  // The global provider may remount detail while refreshing protected caches.
   await expect(
     panel(member).getByRole("link", {
       name: "Open ENG-2 Relationship Gamma",
       exact: true,
     })
   ).toHaveCount(2)
-  await expect(
-    panel(member).getByRole("link", {
-      name: "Open DES-1 Relationship Beta",
-      exact: true,
-    })
-  ).toHaveCount(0)
-  await panel(member)
-    .getByRole("button", { name: "Add relationship", exact: true })
-    .click()
+  if (
+    (await panel(member)
+      .getByRole("textbox", { name: "Search relationship issues", exact: true })
+      .count()) === 0
+  )
+    await panel(member)
+      .getByRole("button", { name: "Add relationship", exact: true })
+      .click()
   await panel(member)
     .getByRole("textbox", { name: "Search relationship issues", exact: true })
     .fill("Relationship Beta")
   await expect(
     panel(member).getByText("No matching issues.", { exact: true })
   ).toBeVisible()
+  await expect(
+    panel(member).getByRole("link", {
+      name: "Open DES-1 Relationship Beta",
+      exact: true,
+    })
+  ).toHaveCount(0)
   expect(bodies.join("\n")).not.toContain("Relationship Beta")
   expect(errors).toEqual([])
   await member.screenshot({
@@ -365,6 +439,8 @@ try {
         "visible stale-revision resolution",
         "soft-delete hides and restore returns links",
         "private endpoints omitted from reads/search",
+        "revocation between pages removes retained private relationships",
+        "focus revocation clears open picker results and selection",
         "direct issue detail independent of list page",
         "new sub-issue appears immediately",
         "lost committed response survives reload and replays exactly once",

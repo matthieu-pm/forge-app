@@ -7,6 +7,7 @@ import type {
   ChangeIssueRelationship,
   IssueRelationshipKind,
   IssueRelationshipPage,
+  IssueRelationshipSearchPage,
   RelationshipIssue,
 } from "@/lib/issue-relationship-contract"
 import {
@@ -31,10 +32,7 @@ type Draft = {
   conflict?: boolean
   rejected?: boolean
 }
-type SearchPage = {
-  issues: Array<RelationshipIssue>
-  nextCursor: string | null
-}
+type SearchPage = IssueRelationshipSearchPage
 
 /** Detail-owned queries also work for issues outside the current list page. */
 export function IssueRelationships({
@@ -54,6 +52,8 @@ export function IssueRelationships({
   const [readError, setReadError] = useState("")
   const [draftTarget, setDraftTarget] = useState<RelationshipIssue>()
   const searchRequest = useRef(0)
+  const draftRequest = useRef(0)
+  const [accessRefresh, setAccessRefresh] = useState(0)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const busy = useRef(false)
@@ -90,9 +90,21 @@ export function IssueRelationships({
       current.sessionId === identity.sessionId
     )
   }
+  function invalidateEndpoints() {
+    searchRequest.current++
+    draftRequest.current++
+    setSearchPage(undefined)
+    setTarget(undefined)
+    setDraftTarget(undefined)
+    setAccessRefresh((value) => value + 1)
+  }
   async function refresh(cursor?: string) {
     if (!identity) return
     const token = ++request.current
+    if (!cursor) {
+      setPage(undefined)
+      invalidateEndpoints()
+    }
     setLoading(true)
     try {
       const next = JSON.parse(
@@ -106,6 +118,10 @@ export function IssueRelationships({
         })
       ) as IssueRelationshipPage
       if (!active() || token !== request.current) return
+      if (cursor && page && page.resultRevision !== next.resultRevision) {
+        await refresh()
+        return
+      }
       setPage((previous) => ({
         ...next,
         relationships:
@@ -138,6 +154,9 @@ export function IssueRelationships({
     window.addEventListener("forge:issue-queries-invalidated", reload)
     return () => {
       mounted.current = false
+      request.current++
+      searchRequest.current++
+      draftRequest.current++
       window.removeEventListener("focus", reload)
       window.removeEventListener("forge:issue-queries-invalidated", reload)
     }
@@ -176,8 +195,9 @@ export function IssueRelationships({
       current = false
       window.clearTimeout(timer)
     }
-  }, [open, search, scope, issue.id])
+  }, [open, search, scope, issue.id, accessRefresh])
   useEffect(() => {
+    const token = ++draftRequest.current
     setDraftTarget(undefined)
     if (!draft || !identity) return
     let current = true
@@ -190,7 +210,7 @@ export function IssueRelationships({
       },
     })
       .then((raw) => {
-        if (current && active())
+        if (current && active() && token === draftRequest.current)
           setDraftTarget((JSON.parse(raw) as IssueRelationshipPage).issue)
       })
       .catch(() => {
@@ -199,7 +219,7 @@ export function IssueRelationships({
     return () => {
       current = false
     }
-  }, [draft?.input.targetId, scope])
+  }, [draft?.input.targetId, scope, accessRefresh])
   async function moreSearch() {
     if (!identity || !searchPage?.nextCursor || searchLoading) return
     const token = searchRequest.current
@@ -216,7 +236,11 @@ export function IssueRelationships({
           },
         })
       ) as SearchPage
-      if (active() && token === searchRequest.current)
+      if (active() && token === searchRequest.current) {
+        if (searchPage.resultRevision !== next.resultRevision) {
+          await refresh()
+          return
+        }
         setSearchPage({
           ...next,
           issues: [
@@ -228,17 +252,37 @@ export function IssueRelationships({
             ).values(),
           ],
         })
+      }
     } catch {
-      if (active())
+      if (active() && token === searchRequest.current) {
+        setSearchPage(undefined)
+        setTarget(undefined)
         setSearchError("More issues could not be loaded. Try again.")
+      }
     } finally {
-      if (active()) setSearchLoading(false)
+      if (active() && token === searchRequest.current) setSearchLoading(false)
     }
   }
-  async function submit(next: Draft) {
-    if (!identity || busy.current) return
+  function beginAction() {
+    if (!active() || busy.current) return false
     busy.current = true
     setSaving(true)
+    return true
+  }
+  function finishAction() {
+    busy.current = false
+    if (active()) setSaving(false)
+  }
+  async function submit(next: Draft) {
+    if (!beginAction()) return
+    try {
+      await persistDraft(next)
+    } finally {
+      finishAction()
+    }
+  }
+  async function persistDraft(next: Draft) {
+    if (!identity) return
     setDraft(next)
     setError("")
     try {
@@ -291,9 +335,6 @@ export function IssueRelationships({
             ? failure.message
             : "The change could not be confirmed. Your saved change is available to retry."
         )
-    } finally {
-      busy.current = false
-      if (active()) setSaving(false)
     }
   }
   function change(
@@ -315,7 +356,7 @@ export function IssueRelationships({
     })
   }
   async function rebase() {
-    if (!draft?.conflict || !identity || busy.current) return
+    if (!draft?.conflict || !identity || !beginAction()) return
     try {
       const source = JSON.parse(
         await loadIssueRelationships({
@@ -336,7 +377,7 @@ export function IssueRelationships({
         })
       ) as IssueRelationshipPage
       if (active())
-        await submit({
+        await persistDraft({
           input: {
             ...draft.input,
             commandKey: crypto.randomUUID(),
@@ -349,31 +390,33 @@ export function IssueRelationships({
         setError(
           "The latest issues could not be loaded. Your change is retained."
         )
+    } finally {
+      finishAction()
     }
   }
   async function discard() {
-    if (saving || !draft || !identity) return
+    if (!draft || !identity || !beginAction()) return
     try {
       // Dropping a draft never reverses an already committed relationship.
-      const latest = JSON.parse(
-        await loadIssueRelationships({
-          data: {
-            workspaceId: identity.workspaceId,
-            sessionId: identity.sessionId,
-            issueId: issue.id,
-          },
-        })
-      ) as IssueRelationshipPage
+      await loadIssueRelationships({
+        data: {
+          workspaceId: identity.workspaceId,
+          sessionId: identity.sessionId,
+          issueId: issue.id,
+        },
+      })
       if (!active()) return
       await saveProductValue(key, null)
       if (active()) {
-        setPage(latest)
         setDraft(undefined)
         setError("")
+        await refresh()
       }
     } catch {
       if (active())
         setError("The saved change could not be cleared. Try again.")
+    } finally {
+      finishAction()
     }
   }
   return (

@@ -104,24 +104,11 @@ export async function editCanonicalIssues(actor: Actor, raw: EditIssueBatch) {
             before = originals.find((r) => r.issue.id === edit.issueId)!.issue
           if (
             edit.changes.parentId !== undefined &&
-            row.parentId &&
-            edit.changes.parentId !== row.parentId
-          ) {
-            const previousParent = (
-              await tx
-                .select({ teamId: issues.teamId })
-                .from(issues)
-                .where(
-                  and(
-                    eq(issues.id, row.parentId),
-                    isNull(issues.archivedAt),
-                    readableIssueCondition(current, issues.id)
-                  )
-                )
-            ).at(0)
-            if (!previousParent) throw new ApplicationAccessError()
-            await requireIssueTeam(tx, current, previousParent.teamId)
-          }
+            edit.changes.parentId !== (row.parentId ?? "")
+          )
+            throw new Error(
+              "Use relationship controls to change an issue's parent."
+            )
           const draft = { ...before, ...edit.changes, subIssues: [] }
           const resolved = await resolveIssueFields(
             tx,

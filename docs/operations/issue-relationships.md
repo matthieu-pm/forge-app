@@ -1,12 +1,14 @@
 # Canonical issue relationships · FOR-44
 
-Issue detail manages one parent, existing/new sub-issues, symmetric related links, and directed blocking links. Both endpoints must be active and readable in the current workspace; cross-team links are permitted. Changes require `issues:read` and `issues:write`, live membership, and the current revision of both endpoints. A stale revision returns current authorized records and leaves the draft available for explicit reconciliation.
+Issue detail manages one parent, existing/new sub-issues, symmetric related links, and directed blocking links. Both endpoints must be active and readable in the current workspace; cross-team links are permitted. Changes require `issues:read` and `issues:write`, live membership, and the current revision of both endpoints. A stale revision returns current authorized records and leaves the draft available for explicit reconciliation. Generic property edits reject parent changes; existing hierarchy mutations use the relationship command. New child composition remains supported. Endpoint UUIDs are normalized before comparison, hashing and lookup.
 
 The product owner confirmed these rules in the implementation conversation on 30 October 2026. Parent and blocking graphs must be acyclic. Related links may form cycles and use one logical unordered pair. Reparenting detaches the old parent and updates its revision/history/events as part of the same command.
 
 `changeIssueRelationship` is the canonical transport-independent command. Its receipt, mutation, attributable history and outbox events commit together. An exact retry reauthorizes every affected issue and returns the original receipt without repeating the effect. Browser commands are bound to the authenticated session/workspace; clients retain the original command in private server-backed product storage before dispatch. Unknown outcomes replay that original command. Only a definitive conflict permits an explicit rebase with a new command key.
 
 Reciprocal reads and target search authorize before pagination. Detail reads do not depend on which list page is loaded. Hidden or archived targets contribute no identifier/title to relationship results. Canonical issue records redact unavailable parent IDs, and an unrelated edit preserves the underlying hidden relationship. Activity messages intentionally omit target identities so later visibility revocation cannot leak private issue details through history.
+
+Relationship and target-search pages carry an authorized result digest from the same repeatable-read snapshot as their rows. Continuation restarts if the digest changes, discarding previously displayed results. Focus/provider invalidation revalidates all endpoint projections, including an open picker, selected target and retained-draft label; late requests cannot restore cleared data. Rebase, retry and discard share an operation lock acquired before their first asynchronous read/storage write. Relationship queries have a five-second SQL timeout.
 
 ## Deletion boundary
 

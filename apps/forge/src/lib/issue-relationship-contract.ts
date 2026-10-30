@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+const issueIdSchema = z.uuid().transform((value) => value.toLowerCase())
+
 export const issueRelationshipKind = z.enum([
   "parent",
   "child",
@@ -10,7 +12,7 @@ export const issueRelationshipKind = z.enum([
 export type IssueRelationshipKind = z.infer<typeof issueRelationshipKind>
 export const relationshipQuerySchema = z
   .object({
-    issueId: z.uuid(),
+    issueId: issueIdSchema,
     cursor: z
       .string()
       .regex(/^(parent|child|related|blocks|blockedBy):[0-9a-f-]{36}$/)
@@ -21,9 +23,9 @@ export const relationshipQuerySchema = z
 export const changeRelationshipSchema = z
   .object({
     commandKey: z.uuid(),
-    issueId: z.uuid(),
+    issueId: issueIdSchema,
     expectedRevision: z.number().int().nonnegative(),
-    targetId: z.uuid(),
+    targetId: issueIdSchema,
     expectedTargetRevision: z.number().int().nonnegative(),
     kind: issueRelationshipKind,
     action: z.enum(["add", "remove"]),
@@ -44,6 +46,7 @@ export type RelationshipIssue = {
   number: number
 }
 export type IssueRelationshipPage = {
+  resultRevision: string
   issue: RelationshipIssue
   relationships: Array<{
     kind: IssueRelationshipKind
@@ -66,9 +69,9 @@ export const browserRelationshipQuerySchema = relationshipQuerySchema
   .strict()
 export const relationshipSearchSchema = z
   .object({
-    issueId: z.uuid(),
+    issueId: issueIdSchema,
     search: z.string().trim().max(200).default(""),
-    after: z.uuid().optional(),
+    after: issueIdSchema.optional(),
   })
   .strict()
 export const browserRelationshipSearchSchema = relationshipSearchSchema
@@ -82,3 +85,9 @@ export const browserChangeRelationshipSchema =
     workspaceId: z.string().min(1),
     sessionId: z.string().min(1),
   })
+
+export type IssueRelationshipSearchPage = {
+  issues: Array<RelationshipIssue>
+  nextCursor: string | null
+  resultRevision: string
+}

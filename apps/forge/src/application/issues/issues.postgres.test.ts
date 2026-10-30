@@ -1992,6 +1992,21 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
       )
       return [a.issue.id, b.issue.id] as const
     }
+    it("normalizes uppercase endpoint UUIDs before command identity and lookup", async () => {
+      const f = await fixture(),
+        [a, b] = await pair(f),
+        r = await import("./issue-relationships.server")
+      const input = await relationInput(a, b, "related")
+      const result = await r.changeIssueRelationship(f.actors[0], {
+        ...input,
+        issueId: a.toUpperCase(),
+        targetId: b.toUpperCase(),
+      })
+      expect(result.status).toBe("saved")
+      expect(await r.changeIssueRelationship(f.actors[0], input)).toMatchObject(
+        { status: "saved", replayed: true }
+      )
+    }, 30000)
     it("persists reciprocal cross-team blocking information and replays one audited command (AT-01)", async () => {
       const f = await fixture(),
         [a, b] = await pair(f, true),
@@ -2176,7 +2191,7 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
             },
           ],
         })
-      ).rejects.toThrow("cycle")
+      ).rejects.toThrow("relationship controls")
       expect(
         (await pool.query("SELECT title FROM issues WHERE id=$1", [a])).rows[0]
           .title
@@ -2329,6 +2344,15 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
       ).rejects.toMatchObject({ code: "FORBIDDEN" })
       const input = await relationInput(a, b, "parent")
       await r.changeIssueRelationship(f.actors[1], input)
+      const visibleRevision = (
+        await r.readIssueRelationships(f.actors[1], { issueId: a })
+      ).resultRevision
+      const searchRevision = (
+        await r.searchRelationshipIssues(f.actors[1], {
+          issueId: a,
+          search: "Issue B",
+        })
+      ).resultRevision
       await pool.query("UPDATE teams SET visibility='private' WHERE id=$1", [
         f.secondTeam,
       ])
@@ -2342,6 +2366,18 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
         (await r.readIssueRelationships(f.actors[1], { issueId: a }))
           .relationships
       ).toEqual([])
+      expect(
+        (await r.readIssueRelationships(f.actors[1], { issueId: a }))
+          .resultRevision
+      ).not.toBe(visibleRevision)
+      expect(
+        (
+          await r.searchRelationshipIssues(f.actors[1], {
+            issueId: a,
+            search: "Issue B",
+          })
+        ).resultRevision
+      ).not.toBe(searchRevision)
       const records = (await service.readCanonicalIssues(f.actors[1])).records
       const current = records.find((v) => v.issue.id === a)!.issue
       expect(current.parentId).toBe("")
@@ -2375,7 +2411,7 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
             },
           ],
         })
-      ).rejects.toMatchObject({ code: "FORBIDDEN" })
+      ).rejects.toThrow("relationship controls")
       expect(
         (
           await r.searchRelationshipIssues(f.actors[1], {

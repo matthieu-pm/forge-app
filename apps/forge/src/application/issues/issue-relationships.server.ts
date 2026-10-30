@@ -280,6 +280,7 @@ export async function readIssueRelationships(
     async (tx) => {
       const current = await currentCommandActor(tx, actor)
       const [issue] = await visibleEndpoints(tx, current, [input.issueId])
+      await tx.execute(sql`SET LOCAL statement_timeout = '5s'`)
       const result = await tx.execute(sql`
       WITH edges(kind,target_id) AS (
         SELECT 'parent', parent_id FROM issues WHERE id=${input.issueId} AND workspace_id=${current.workspaceId} AND parent_id IS NOT NULL
@@ -287,20 +288,31 @@ export async function readIssueRelationships(
         UNION SELECT kind, related_issue_id FROM issue_relations WHERE issue_id=${input.issueId} AND workspace_id=${current.workspaceId} AND kind IN ('related','blocks')
         UNION SELECT CASE WHEN kind='blocks' THEN 'blockedBy' ELSE kind END, issue_id FROM issue_relations WHERE related_issue_id=${input.issueId} AND workspace_id=${current.workspaceId} AND kind IN ('related','blocks')
       )
-      SELECT e.kind, i.id,i.title,i.revision,i.team_id AS "teamId",t.slug AS "teamSlug",t.identifier,i.number
-      FROM edges e JOIN issues i ON i.id=e.target_id JOIN teams t ON t.id=i.team_id
-      WHERE i.workspace_id=${current.workspaceId} AND i.archived_at IS NULL AND ${readableIssueCondition(current, sql`i.id`)}
-        AND (e.kind || ':' || i.id::text) COLLATE "C" > ${input.cursor ?? ""} COLLATE "C"
-      ORDER BY (e.kind || ':' || i.id::text) COLLATE "C" LIMIT ${input.limit + 1}
+      , visible AS (
+        SELECT e.kind, i.id,i.title,i.revision,i.team_id AS "teamId",t.slug AS "teamSlug",t.identifier,i.number
+        FROM edges e JOIN issues i ON i.id=e.target_id JOIN teams t ON t.id=i.team_id
+        WHERE i.workspace_id=${current.workspaceId} AND i.archived_at IS NULL AND ${readableIssueCondition(current, sql`i.id`)}
+      )
+      SELECT
+        (SELECT md5(coalesce(string_agg(jsonb_build_array(kind,id,revision,"teamSlug",identifier)::text, ',' ORDER BY kind COLLATE "C",id),'')) FROM visible) AS "resultRevision",
+        coalesce((SELECT jsonb_agg(p ORDER BY p.kind COLLATE "C",p.id) FROM (
+          SELECT * FROM visible WHERE (kind || ':' || id::text) COLLATE "C" > ${input.cursor ?? ""} COLLATE "C"
+          ORDER BY (kind || ':' || id::text) COLLATE "C" LIMIT ${input.limit + 1}
+        ) p),'[]'::jsonb) AS rows
     `)
-      const rows = result.rows as Array<
-        RelationshipIssue & {
-          kind: IssueRelationshipPage["relationships"][number]["kind"]
-        }
-      >
+      const response = result.rows[0] as {
+        resultRevision: string
+        rows: Array<
+          RelationshipIssue & {
+            kind: IssueRelationshipPage["relationships"][number]["kind"]
+          }
+        >
+      }
+      const rows = response.rows
       const page = rows.slice(0, input.limit)
       return {
         issue,
+        resultRevision: response.resultRevision,
         relationships: page.map(({ kind, ...target }) => ({
           kind,
           issue: target,
@@ -320,29 +332,36 @@ export async function searchRelationshipIssues(
   raw: z.input<typeof relationshipSearchSchema>
 ) {
   const input = relationshipSearchSchema.parse(raw)
-  return db.transaction(async (tx) => {
-    const current = await currentCommandActor(tx, actor)
-    await visibleEndpoints(tx, current, [input.issueId])
-    const pattern = `%${input.search.replace(/[\\%_]/g, "\\$&")}%`
-    const rows = await tx
-      .select(summary)
-      .from(issues)
-      .innerJoin(teams, eq(teams.id, issues.teamId))
-      .where(
-        and(
-          eq(issues.workspaceId, current.workspaceId),
-          isNull(issues.archivedAt),
-          readableIssueCondition(current, issues.id),
-          sql`${issues.id}<>${input.issueId}`,
-          input.after ? sql`${issues.id}>${input.after}` : undefined,
-          sql`(${issues.title} ILIKE ${pattern} OR (${teams.identifier} || '-' || ${issues.number}::text) ILIKE ${pattern})`
-        )
+  return db.transaction(
+    async (tx) => {
+      const current = await currentCommandActor(tx, actor)
+      await visibleEndpoints(tx, current, [input.issueId])
+      const pattern = `%${input.search.replace(/[\\%_]/g, "\\$&")}%`
+      await tx.execute(sql`SET LOCAL statement_timeout = '5s'`)
+      const result = await tx.execute(sql`
+      WITH visible AS (
+        SELECT i.id,i.title,i.revision,i.team_id AS "teamId",t.slug AS "teamSlug",t.identifier,i.number
+        FROM issues i JOIN teams t ON t.id=i.team_id
+        WHERE i.workspace_id=${current.workspaceId} AND i.archived_at IS NULL
+          AND ${readableIssueCondition(current, sql`i.id`)} AND i.id<>${input.issueId}
+          AND (i.title ILIKE ${pattern} OR (t.identifier || '-' || i.number::text) ILIKE ${pattern})
       )
-      .orderBy(issues.id)
-      .limit(21)
-    return {
-      issues: rows.slice(0, 20),
-      nextCursor: rows.length > 20 ? rows[19].id : null,
-    }
-  })
+      SELECT
+        (SELECT md5(coalesce(string_agg(jsonb_build_array(id,revision,"teamSlug",identifier)::text, ',' ORDER BY id),'')) FROM visible) AS "resultRevision",
+        coalesce((SELECT jsonb_agg(p ORDER BY p.id) FROM (
+          SELECT * FROM visible ${input.after ? sql`WHERE id>${input.after}::uuid` : sql``} ORDER BY id LIMIT 21
+        ) p),'[]'::jsonb) AS rows
+    `)
+      const response = result.rows[0] as {
+        resultRevision: string
+        rows: Array<RelationshipIssue>
+      }
+      return {
+        issues: response.rows.slice(0, 20),
+        resultRevision: response.resultRevision,
+        nextCursor: response.rows.length > 20 ? response.rows[19].id : null,
+      }
+    },
+    { isolationLevel: "repeatable read" }
+  )
 }
