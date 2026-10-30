@@ -117,6 +117,7 @@ export const accountPreferenceCommandSchema = z
   .object({
     sessionId: z.string().min(1).max(255),
     scope: z.enum(["account", "workspace"]).optional(),
+    expectedWorkspaceId: z.string().min(1).max(255).optional(),
     commandKey: z.string().uuid(),
     version: z.literal(ACCOUNT_PREFERENCE_VERSION),
     patch: z.record(z.string(), z.unknown()),
@@ -124,6 +125,12 @@ export const accountPreferenceCommandSchema = z
   })
   .strict()
   .superRefine((input, context) => {
+    if (input.scope === "workspace" && !input.expectedWorkspaceId)
+      context.addIssue({
+        code: "custom",
+        message:
+          "Workspace preference patches require their originating workspace.",
+      })
     const keys = Object.keys(input.patch)
     if (!keys.length || keys.length > 500)
       context.addIssue({

@@ -171,6 +171,7 @@ export class AccountPreferenceClient {
     )
     const validated = accountPreferenceCommandSchema.parse({
       sessionId: this.identity.sessionId,
+      expectedWorkspaceId: this.identity.workspaceId,
       ...(this.identity.scope === "workspace"
         ? { scope: "workspace" as const }
         : {}),
@@ -193,6 +194,7 @@ export class AccountPreferenceClient {
     this.running = true
     this.command ??= {
       sessionId: this.identity.sessionId,
+      expectedWorkspaceId: this.identity.workspaceId,
       ...(this.identity.scope === "workspace"
         ? { scope: "workspace" as const }
         : {}),

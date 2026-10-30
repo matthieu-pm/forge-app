@@ -73,8 +73,9 @@ then uses FOR-32's transaction executor and FOR-39's live session/membership
 locks. API keys and agents cannot invoke this personal session adapter. Caller
 owner IDs, policy/permission fields, unknown keys (including nested metadata),
 invalid values and missing field versions are rejected. The request also binds
-the originating session ID, preventing a stale queue from being delivered under
-a different login. Response headers are `Cache-Control: private, no-store`.
+the originating session ID and workspace precondition, preventing a stale queue
+from being delivered under a different login or active workspace. Workspace
+patches require that precondition even when the session ID stays unchanged. Response headers are `Cache-Control: private, no-store`.
 
 Each known leaf has a version, initially zero. SQL locks the scoped row and
 compares only the patched field versions. Independent changes survive either

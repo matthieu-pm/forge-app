@@ -45,6 +45,7 @@ describe.skipIf(!file)("FOR-127 real PostgreSQL acceptance", () => {
   ): AccountPreferenceCommand {
     return {
       sessionId,
+      expectedWorkspaceId: workspace,
       commandKey: randomUUID(),
       version: 1,
       patch,
@@ -386,6 +387,38 @@ describe.skipIf(!file)("FOR-127 real PostgreSQL acceptance", () => {
     expect(
       (await service.readAccountPreferences(actor())).values
     ).not.toHaveProperty("inbox.main.preferences.ordering")
+  })
+  it("rejects a queued workspace write after the same session switches active workspace", async () => {
+    const command = {
+      ...input({ "inbox.main.unreadOnly": true }),
+      scope: "workspace" as const,
+      expectedWorkspaceId: workspace,
+    }
+    await pool.query(
+      "UPDATE session SET active_organization_id=$2 WHERE id=$1",
+      [sessionA, workspace2]
+    )
+    try {
+      await expect(
+        service.patchAccountPreferences(
+          actor(alice, sessionA, workspace2),
+          command
+        )
+      ).rejects.toThrow()
+    } finally {
+      await pool.query(
+        "UPDATE session SET active_organization_id=$2 WHERE id=$1",
+        [sessionA, workspace]
+      )
+    }
+    expect(
+      (
+        await service.readAccountPreferences(
+          actor(alice, sessionWorkspace2, workspace2),
+          "workspace"
+        )
+      ).values
+    ).toEqual({})
   })
   it("workspace field races preserve independent edits and deny account fields, policy and business records", async () => {
     const results = await Promise.all([

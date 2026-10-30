@@ -86,6 +86,11 @@ export async function patchAccountPreferences(
   assertPreferenceSyncEnabled()
   const input = accountPreferenceCommandSchema.parse(raw)
   assertPreferenceSession(actor, input.sessionId)
+  if (
+    input.expectedWorkspaceId &&
+    input.expectedWorkspaceId !== actor.workspaceId
+  )
+    throw new ApplicationAccessError()
   const scope = input.scope ?? "account"
   // Session binding prevents a queued request being sent under a different login.
   // It is not part of the durable identity, allowing a proven retry after refresh.

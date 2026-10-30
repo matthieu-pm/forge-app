@@ -30,6 +30,7 @@ describe("workspace personal view contract", () => {
             commandKey: crypto.randomUUID(),
             version: 1,
             scope: "workspace",
+            expectedWorkspaceId: "workspace",
             patch: { [key]: value },
             expectedVersions: { [key]: 0 },
           }).success,
@@ -79,6 +80,7 @@ describe("workspace personal view contract", () => {
         commandKey: crypto.randomUUID(),
         version: 1,
         scope: "workspace",
+        expectedWorkspaceId: "workspace",
         patch,
         expectedVersions: { "teamIssues.main.filters.rules": 0 },
       }).success
