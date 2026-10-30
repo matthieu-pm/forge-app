@@ -1,6 +1,8 @@
 import { Pool, neonConfig } from "@neondatabase/serverless"
 import { drizzle } from "drizzle-orm/neon-serverless"
 import { assertStagingEnvironment } from "../../../../packages/environment/staging-environment"
+import { configuredDeletionJournal } from "../adapters/recovery/r2-deletion-journal.server"
+import { journalDatabasePool } from "../adapters/recovery/journaled-pool.server"
 import * as appSchema from "./schema"
 import * as planningSchema from "./planning-schema"
 import * as authSchema from "./auth-schema"
@@ -19,6 +21,14 @@ neonConfig.poolQueryViaFetch = new URL(databaseUrl).hostname.endsWith(
   ".neon.tech"
 )
 const client = new Pool({ connectionString: databaseUrl })
+const deletionJournal = configuredDeletionJournal()
+if (deletionJournal)
+  journalDatabasePool(
+    client,
+    deletionJournal,
+    databaseUrl,
+    process.env.BLOB_STORE_ID ?? ""
+  )
 export const databaseClient = client
 
 export const schema = {

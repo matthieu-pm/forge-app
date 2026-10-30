@@ -1,6 +1,7 @@
 import { relations, sql } from "drizzle-orm"
 import {
   bigint,
+  bigserial,
   boolean,
   check,
   doublePrecision,
@@ -83,6 +84,55 @@ export const workspacePreferences = pgTable(
       sql`jsonb_typeof(${t.values}) = 'object' AND jsonb_typeof(${t.fieldVersions}) = 'object'`
     ),
   ]
+)
+
+export const recoveryJournalState = pgTable("recovery_journal_state", {
+  id: text("id").primaryKey(),
+  enabled: boolean("enabled").default(false).notNull(),
+})
+export const recoveryOperations = pgTable(
+  "recovery_operations",
+  {
+    id: uuid("id").primaryKey(),
+    startedAt: timestamp("started_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+  },
+  (table) => ({
+    publishedIndex: index("recovery_operations_published_idx").on(
+      table.publishedAt
+    ),
+  })
+)
+export const recoveryEvents = pgTable(
+  "recovery_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    sequence: bigserial("sequence", { mode: "number" }).notNull(),
+    operationId: uuid("operation_id")
+      .notNull()
+      .references(() => recoveryOperations.id, { onDelete: "restrict" }),
+    tableName: text("table_name").notNull(),
+    rowKey: jsonb("row_key")
+      .$type<Record<string, string | number | boolean | null>>()
+      .notNull(),
+    action: text("action").notNull(),
+    patch: jsonb("patch").$type<Record<string, unknown>>(),
+    storageReference: text("storage_reference"),
+    occurredAt: timestamp("occurred_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    operationIndex: index("recovery_events_operation_idx").on(
+      table.operationId,
+      table.sequence
+    ),
+    sequenceUnique: unique("recovery_events_sequence_unique").on(
+      table.sequence
+    ),
+  })
 )
 
 export const workspaceSecuritySettings = pgTable(

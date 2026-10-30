@@ -14,12 +14,34 @@ await runMonitoredJob("product.retention", async () => {
     desktopReleaseArtifacts,
     desktopReleases,
     teams,
+    recoveryOperations,
+    recoveryEvents,
   } = await import("@/db")
 
   const now = new Date()
   const workflowCutoff = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1_000)
   const releaseCutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1_000)
   const teamCutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1_000)
+  // Unpublished/ambiguous operations cannot age out. The recovery horizon is
+  // 35 days; these independently completed minimal receipts remain 365 days.
+  if (process.env.FORGE_RECOVERY_JOURNAL_ENABLED === "true") {
+    const cutoff = new Date(now.getTime() - 365 * 86400000)
+    const expired = await db
+      .select({ id: recoveryOperations.id })
+      .from(recoveryOperations)
+      .where(lt(recoveryOperations.publishedAt, cutoff))
+      .limit(1000)
+    if (expired.length)
+      await db.transaction(async (tx) => {
+        const ids = expired.map((row) => row.id)
+        await tx
+          .delete(recoveryEvents)
+          .where(inArray(recoveryEvents.operationId, ids))
+        await tx
+          .delete(recoveryOperations)
+          .where(inArray(recoveryOperations.id, ids))
+      })
+  }
 
   const deletedWorkflowRuns = await db
     .delete(businessWorkflowRuns)

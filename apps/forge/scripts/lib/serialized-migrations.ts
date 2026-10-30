@@ -17,6 +17,7 @@ export type MigrationTarget = {
     | "staging"
     | "rehearsal"
     | "file-storage-acceptance"
+    | "recovery-source"
     | "personal-preference-acceptance"
     | "production-storage-rehearsal"
     | "production"
@@ -190,6 +191,15 @@ export async function runSerializedMigrations(
         `INSERT INTO ${journalSchema}.__drizzle_migrations(hash,created_at) VALUES($1,$2)`,
         [migrations[i].hash, migrations[i].folderMillis]
       )
+    }
+    // Future tables join the same recovery capture boundary in the migration
+    // transaction. Older releases without this installer keep their behavior.
+    if (journalSchema === "drizzle") {
+      const installer = await client.query(
+        "SELECT to_regprocedure('public.forge_install_recovery_triggers()') AS installer"
+      )
+      if (installer.rows[0]?.installer)
+        await client.query("SELECT public.forge_install_recovery_triggers()")
     }
     await client.query("COMMIT")
     inTransaction = false

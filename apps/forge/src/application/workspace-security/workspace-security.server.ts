@@ -109,6 +109,11 @@ async function ensureSecurityRow(
   workspaceId: string,
   executor: DatabaseExecutor = db
 ) {
+  const existing = await executor.query.workspaceSecuritySettings.findFirst({
+    where: eq(workspaceSecuritySettings.workspaceId, workspaceId),
+  })
+  if (existing) return existing
+
   await executor
     .insert(workspaceSecuritySettings)
     .values({ workspaceId })

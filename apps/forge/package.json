@@ -47,9 +47,13 @@
     "files:verify": "bun scripts/verify-private-file-storage.ts",
     "files:migrate": "bun scripts/migrate-local-files.ts",
     "test:preferences:postgres": "vitest run src/application/preferences/preferences.postgres.test.ts",
-    "test:preferences:browser": "node scripts/verify-personal-preferences-browser.mjs"
+    "test:preferences:browser": "node scripts/verify-personal-preferences-browser.mjs",
+    "recovery:run": "bun scripts/recovery.ts",
+    "recovery:rehearse": "bun scripts/rehearse-recovery.ts",
+    "recovery:maintenance": "bun scripts/recovery-maintenance.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "3.1104.0",
     "@base-ui/react": "^1.7.0",
     "@better-auth/api-key": "1.6.26",
     "@better-auth/core": "1.6.26",
@@ -120,7 +124,6 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@aws-sdk/client-s3": "3.1104.0",
     "@electron-forge/cli": "7.11.2",
     "@electron-forge/maker-dmg": "7.11.2",
     "@electron-forge/maker-zip": "7.11.2",
