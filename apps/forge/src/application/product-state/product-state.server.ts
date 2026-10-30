@@ -116,7 +116,7 @@ export async function readProductState(
         if ((await scope(tx, current, row.key)) === row.ownerId)
           entries.push({
             key: row.key,
-            value: row.value,
+            value: row.encodedValue===null?null:JSON.parse(row.encodedValue) as string,
             revision: row.revision,
           })
       } catch {
@@ -131,6 +131,7 @@ export async function readProductState(
           ? actor.authentication.sessionId
           : "",
       entries,
+      teamIds:(await tx.select({id:teams.id}).from(teams).where(readableTeamCondition(current,teams.id))).map(t=>t.id),
     }
   })
 }
@@ -179,7 +180,7 @@ export async function saveProductState(actor: Actor, raw: ProductStateCommand) {
             )?.[1] ??
             null,
           key: input.key,
-          value: null,
+          encodedValue: null,
         })
         .onConflictDoNothing()
       const predicate = and(
@@ -191,7 +192,7 @@ export async function saveProductState(actor: Actor, raw: ProductStateCommand) {
         await tx.select().from(productState).where(predicate).for("update")
       )[0]
       if (row.revision !== input.expectedRevision) {
-        if (row.value === input.value)
+        if ((row.encodedValue===null?null:JSON.parse(row.encodedValue)) === input.value)
           return {
             value: { revision: row.revision },
             resource: { type: "productState", id: row.id },
@@ -203,7 +204,7 @@ export async function saveProductState(actor: Actor, raw: ProductStateCommand) {
       }
       await tx
         .update(productState)
-        .set({ value: input.value, revision: row.revision + 1 })
+        .set({ encodedValue: input.value===null?null:JSON.stringify(input.value), revision: row.revision + 1 })
         .where(predicate)
       return {
         value: { revision: row.revision + 1 },

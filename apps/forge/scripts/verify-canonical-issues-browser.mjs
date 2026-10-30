@@ -8,7 +8,7 @@ const config = JSON.parse(readFileSync(file, "utf8")),
   url = new URL(config.connection)
 if (
   url.hostname !== "ep-blue-shadow-zauhwkjz.c-2.eu-west-2.aws.neon.tech" ||
-  decodeURIComponent(url.pathname) !== "/forge_issue_creation_acceptance" ||
+  decodeURIComponent(url.pathname) !== "/forge_issue_creation_acceptance_v2" ||
   url.searchParams.get("sslmode") !== "require"
 )
   throw new Error("Only the dedicated acceptance database is allowed")
@@ -36,7 +36,7 @@ try {
     )
   ).rows[0]
   if (
-    identity.database !== "forge_issue_creation_acceptance" ||
+    identity.database !== "forge_issue_creation_acceptance_v2" ||
     identity.branch !== "br-autumn-union-za0opf1e"
   )
     throw new Error("Wrong database")
@@ -282,11 +282,11 @@ try {
   await member.getByRole("textbox",{name:"Issue title",exact:true}).press("Enter")
   await expect(member.getByRole("button",{name:"Apply my edits to latest",exact:true})).toBeVisible({timeout:30000})
   if((await pool.query("SELECT title FROM issues WHERE workspace_id=$1 AND number=2",[marker])).rows[0].title!=="Admin title")throw new Error("A stale edit overwrote shared data")
-  const savedDrafts=(await pool.query("SELECT count(*)::int n FROM product_state WHERE workspace_id=$1 AND owner_user_id=$2 AND key LIKE 'forge:team-issue-edit-drafts:%' AND value IS NOT NULL",[marker,users[1]])).rows[0].n
+  const savedDrafts=(await pool.query("SELECT count(*)::int n FROM product_state WHERE workspace_id=$1 AND owner_user_id=$2 AND key LIKE 'forge:team-issue-edit-drafts:%' AND encoded_value IS NOT NULL",[marker,users[1]])).rows[0].n
   if(savedDrafts!==1)throw new Error("The conflicting edit did not retain a server draft")
   await member.getByRole("button",{name:"Apply my edits to latest",exact:true}).click()
   await expect.poll(async()=>(await pool.query("SELECT title FROM issues WHERE workspace_id=$1 AND number=2",[marker])).rows[0]?.title,{timeout:30000}).toBe("Member resolved title")
-  await expect.poll(async()=>(await pool.query("SELECT count(*)::int n FROM product_state WHERE workspace_id=$1 AND key LIKE 'forge:team-issue-edit-drafts:%' AND value IS NOT NULL",[marker])).rows[0].n,{timeout:30000}).toBe(0)
+  await expect.poll(async()=>(await pool.query("SELECT count(*)::int n FROM product_state WHERE workspace_id=$1 AND key LIKE 'forge:team-issue-edit-drafts:%' AND encoded_value IS NOT NULL",[marker])).rows[0].n,{timeout:30000}).toBe(0)
   await admin.reload()
   await expect(admin.getByRole("textbox",{name:"Issue title",exact:true})).toHaveValue("Member resolved title",{timeout:60000})
   await member.goto(`${base}/teams/engineering/issues?view=all`)

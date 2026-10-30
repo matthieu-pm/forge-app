@@ -1,5 +1,0 @@
-ALTER TABLE "product_state" ADD COLUMN "owner_user_id" text;--> statement-breakpoint
-ALTER TABLE "product_state" ADD COLUMN "team_id" uuid;--> statement-breakpoint
-ALTER TABLE "product_state" ADD CONSTRAINT "product_state_owner_user_id_user_id_fk" FOREIGN KEY ("owner_user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "product_state" ADD CONSTRAINT "product_state_team_fk" FOREIGN KEY ("workspace_id","team_id") REFERENCES "public"."teams"("workspace_id","id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "product_state" ADD CONSTRAINT "product_state_owner_scope" CHECK (("product_state"."owner_id"='workspace' AND "product_state"."owner_user_id" IS NULL) OR ("product_state"."owner_user_id" IS NOT NULL AND "product_state"."owner_id"='user:' || "product_state"."owner_user_id"));

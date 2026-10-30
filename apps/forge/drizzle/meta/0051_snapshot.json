@@ -1,5 +1,5 @@
 {
-  "id": "a38189ea-efd3-432a-a649-762d207ec523",
+  "id": "7fe98073-94eb-4ae1-b289-7c160fae111c",
   "prevId": "19abc76f-183a-415d-b1c4-23a5f5888e7b",
   "version": "7",
   "dialect": "postgresql",
@@ -8900,6 +8900,13 @@
           "primaryKey": false,
           "notNull": true
         },
+        "revision": {
+          "name": "revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
         "number": {
           "name": "number",
           "type": "integer",
@@ -9008,7 +9015,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "set null",
           "onUpdate": "no action"
         },
         "issues_creator_id_user_id_fk": {
@@ -9021,7 +9028,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "set null",
           "onUpdate": "no action"
         },
         "issues_parent_id_issues_id_fk": {
@@ -9154,6 +9161,126 @@
         "issues_not_self_parent": {
           "name": "issues_not_self_parent",
           "value": "\"issues\".\"parent_id\" IS NULL OR \"issues\".\"parent_id\" <> \"issues\".\"id\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.product_state": {
+      "name": "product_state",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "owner_user_id": {
+          "name": "owner_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "team_id": {
+          "name": "team_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "encoded_value": {
+          "name": "encoded_value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revision": {
+          "name": "revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "product_state_workspace_id_organization_id_fk": {
+          "name": "product_state_workspace_id_organization_id_fk",
+          "tableFrom": "product_state",
+          "tableTo": "organization",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "product_state_owner_user_id_user_id_fk": {
+          "name": "product_state_owner_user_id_user_id_fk",
+          "tableFrom": "product_state",
+          "tableTo": "user",
+          "columnsFrom": [
+            "owner_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "product_state_team_fk": {
+          "name": "product_state_team_fk",
+          "tableFrom": "product_state",
+          "tableTo": "teams",
+          "columnsFrom": [
+            "workspace_id",
+            "team_id"
+          ],
+          "columnsTo": [
+            "workspace_id",
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "product_state_scope_key": {
+          "name": "product_state_scope_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "workspace_id",
+            "owner_id",
+            "key"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "product_state_owner_scope": {
+          "name": "product_state_owner_scope",
+          "value": "(\"product_state\".\"owner_id\"='workspace' AND \"product_state\".\"owner_user_id\" IS NULL) OR (\"product_state\".\"owner_user_id\" IS NOT NULL AND \"product_state\".\"owner_id\"='user:' || \"product_state\".\"owner_user_id\")"
         }
       },
       "isRLSEnabled": false
@@ -9617,6 +9744,46 @@
           ]
         }
       },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.team_issue_numbers": {
+      "name": "team_issue_numbers",
+      "schema": "",
+      "columns": {
+        "team_id": {
+          "name": "team_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "last_number": {
+          "name": "last_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "team_issue_numbers_team_id_teams_id_fk": {
+          "name": "team_issue_numbers_team_id_teams_id_fk",
+          "tableFrom": "team_issue_numbers",
+          "tableTo": "teams",
+          "columnsFrom": [
+            "team_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

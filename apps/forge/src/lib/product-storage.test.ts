@@ -162,4 +162,13 @@ describe("server product persistence and one-way browser migration", () => {
     )
     expect(storageStatus()).toEqual({ pending: 0, error: "" })
   })
+ it("excludes another account, workspace and unknown keys before reading native payloads",async()=>{
+  window.localStorage.setItem("forge:profile:other","SECRET")
+  window.localStorage.setItem("forge:workspace:other:initiatives:v1","SECRET")
+  window.localStorage.setItem("forge:unknown-token","SECRET")
+  const reads=vi.spyOn(Storage.prototype,"getItem")
+  expect(await migrateBrowserData()).toEqual([])
+  expect(reads.mock.calls.some(([key])=>["forge:profile:other","forge:workspace:other:initiatives:v1","forge:unknown-token"].includes(key))).toBe(false)
+ })
+
 })

@@ -1,3 +1,4 @@
+import {productStorage} from "@/lib/product-storage"
 import { webcrypto } from "node:crypto"
 import {
   act,
@@ -73,10 +74,10 @@ function context(): PreviewContext {
 }
 beforeEach(() => {
   saved.clear()
-  localStorage.clear()
+  productStorage.clear()
   vi.clearAllMocks()
   vi.mocked(loadLegacyPreviewContext).mockResolvedValue(context())
-  localStorage.setItem(
+  productStorage.setItem(
     key,
     JSON.stringify({
       ...initialIssueStore(),
@@ -98,7 +99,7 @@ beforeEach(() => {
   )
 })
 async function preview() {
-  fireEvent.click(screen.getByRole("button", { name: "Preview browser data" }))
+  fireEvent.click(screen.getByRole("button", { name: "Preview saved data" }))
   await screen.findByText("Destination workspace:")
   await waitFor(() =>
     expect(
@@ -121,7 +122,7 @@ async function selectAndBackUp() {
   fireEvent.click(
     screen.getByRole("checkbox", { name: /I am entitled to import/ })
   )
-  fireEvent.click(screen.getByRole("button", { name: "Save local backup" }))
+  fireEvent.click(screen.getByRole("button", { name: "Save server backup" }))
   await screen.findByText(/Backup saved and verified/)
 }
 
@@ -133,12 +134,12 @@ describe("browser data review UI", () => {
     expect(screen.queryByText("A real legacy issue")).toBeNull()
   })
   it("starts unselected and exposes counts, invalid data and destination choices without changing originals", async () => {
-    localStorage.setItem(
+    productStorage.setItem(
       'forge:signal-documents:v1:["workspace","alice"]',
       "{broken"
     )
-    localStorage.setItem("forge:profile:bob", '{"displayName":"PRIVATE"}')
-    const before = { ...localStorage }
+    productStorage.setItem("forge:profile:bob", '{"displayName":"PRIVATE"}')
+    const before = sourceSnapshot()
     render(<LegacyImportPreview />)
     await preview()
     expect(screen.getByText(/1 other-account sources excluded/)).toBeTruthy()
@@ -154,10 +155,10 @@ describe("browser data review UI", () => {
         .getAllByRole("checkbox")
         .every((input) => !(input as HTMLInputElement).checked)
     ).toBe(true)
-    expect({ ...localStorage }).toEqual(before)
+    expect(sourceSnapshot()).toEqual(before)
   })
   it("saves a verified backup, confirms exact choices, downloads real artifacts and keeps originals", async () => {
-    const before = { ...localStorage }
+    const before = sourceSnapshot()
     render(<LegacyImportPreview />)
     await preview()
     await selectAndBackUp()
@@ -173,7 +174,7 @@ describe("browser data review UI", () => {
       entries: [{ key, raw: before[key] }],
     })
     expect(screen.queryByRole("button", { name: /^Import$/ })).toBeNull()
-    expect({ ...localStorage }).toEqual(before)
+    expect(sourceSnapshot()).toEqual(before)
   })
   it("invalidates confirmation when selection, destination, or cross-tab source changes", async () => {
     render(<LegacyImportPreview />)
@@ -195,7 +196,7 @@ describe("browser data review UI", () => {
     ).toBe(false)
     fireEvent(window, new StorageEvent("storage", { key }))
     expect(screen.getByRole("alert").textContent).toContain(
-      "Browser data changed"
+      "Saved legacy data changed"
     )
     expect(
       screen.getByRole<HTMLButtonElement>("button", {
@@ -223,15 +224,15 @@ describe("browser data review UI", () => {
     render(<LegacyImportPreview />)
     await preview()
     await selectAndBackUp()
-    localStorage.setItem(key, "{changed")
+    productStorage.setItem(key, "{changed")
     fireEvent.click(
       screen.getByRole("button", { name: "Confirm selected choices" })
     )
     expect(
-      await screen.findByText("Browser data changed. Preview again.")
+      await screen.findByText("Saved legacy data changed. Preview again.")
     ).toBeTruthy()
     expect(screen.queryByText(/Choices confirmed for this snapshot/)).toBeNull()
-    expect(localStorage.getItem(key)).toBe("{changed")
+    expect(productStorage.getItem(key)).toBe("{changed")
     expect(saved.size).toBe(1)
   })
   it("keeps confirmation disabled when the backup write fails", async () => {
@@ -243,7 +244,7 @@ describe("browser data review UI", () => {
     fireEvent.click(
       screen.getByRole("checkbox", { name: "Back up this source: Team issues" })
     )
-    fireEvent.click(screen.getByRole("button", { name: "Save local backup" }))
+    fireEvent.click(screen.getByRole("button", { name: "Save server backup" }))
     await screen.findByRole("alert")
     expect(screen.getByRole("alert").textContent).toContain(
       "QuotaExceededError"
@@ -256,7 +257,7 @@ describe("browser data review UI", () => {
         name: "Confirm selected choices",
       }).disabled
     ).toBe(true)
-    expect(localStorage.getItem(key)).toContain("A real legacy issue")
+    expect(productStorage.getItem(key)).toContain("A real legacy issue")
   })
   it("keeps reviews valid when excluded device or other-account stores change", async () => {
     render(<LegacyImportPreview />)
@@ -347,11 +348,13 @@ describe("browser data review UI", () => {
     await screen.findByRole("button", { name: /Download backup from/ })
     fireEvent.click(screen.getByRole("button", { name: "Cancel review" }))
     expect(saved.size).toBe(1)
-    expect(localStorage.getItem(key)).toContain("A real legacy issue")
+    expect(productStorage.getItem(key)).toContain("A real legacy issue")
     expect(
-      within(screen.getByRole("region", { name: "Browser data" })).queryByRole(
+      within(screen.getByRole("region", { name: "Saved legacy data" })).queryByRole(
         "checkbox"
       )
     ).toBeNull()
   })
 })
+
+function sourceSnapshot(){return Object.fromEntries(Array.from({length:productStorage.length},(_,index)=>{const key=productStorage.key(index)!;return [key,productStorage.getItem(key)]}))}

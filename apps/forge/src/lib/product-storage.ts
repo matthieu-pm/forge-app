@@ -11,10 +11,12 @@ type Pending = {
   commandKey: string
   revision?: number
   recoveryCommandKey?: string
+  recoveryValue?:string
 }
 let pending: Array<Pending> = []
 let running = false
 let error = ""
+let definitiveFailure=false
 export const PRODUCT_STORAGE_CHANGED = "forge:product-storage-changed"
 function notify(key: string | null = null) {
   if (typeof window !== "undefined") {
@@ -33,6 +35,7 @@ export function resetProductStorage() {
   pending = []
   running = false
   error = ""
+  definitiveFailure=false
   notify()
 }
 export function initializeProductStorage(snapshot: ProductStateSnapshot) {
@@ -85,6 +88,7 @@ export async function flushProductStorage() {
       notify(p.key)
     }
   } catch (failure) {
+    definitiveFailure=failure instanceof Error && /^(\[|Only workspace admins|This data changed in another session)/.test(failure.message)
     if (token === generation)
       error =
         failure instanceof Error && !failure.message.startsWith("[")
@@ -162,10 +166,11 @@ export async function preservePendingAndReload() {
           sessionId: binding.sessionId,
           commandKey: p.recoveryCommandKey,
           key: `forge:pending-recovery:v1:${p.commandKey}`,
-          value: JSON.stringify({
+          value: p.recoveryValue??=JSON.stringify({
             key: p.key,
             value: p.value,
             expectedRevision: p.revision ?? 0,
+            createdAt:new Date().toISOString(),
           }),
           expectedRevision: 0,
         },
@@ -179,6 +184,7 @@ export async function preservePendingAndReload() {
       snapshot.workspaceId !== binding.workspaceId
     )
       throw new Error("The active session changed.")
+    for(const p of pending)if(snapshot.entries.find(entry=>entry.key===`forge:pending-recovery:v1:${p.commandKey}`)?.value!==p.recoveryValue)throw new Error("The saved recovery copy could not be verified.")
     initializeProductStorage(snapshot)
     return true
   } catch (failure) {
@@ -195,3 +201,7 @@ export async function preservePendingAndReload() {
     }
   }
 }
+
+export function productStorageIdentity(){return identity?{workspaceId:identity.workspaceId,userId:identity.userId,sessionId:identity.sessionId,teamIds:identity.teamIds}:null}
+
+export function productStorageFailureIsDefinitive(){return definitiveFailure}

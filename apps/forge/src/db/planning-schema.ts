@@ -539,7 +539,7 @@ export const productState = pgTable(
     }),
     teamId: uuid("team_id"),
     key: text("key").notNull(),
-    value: text("value"),
+    encodedValue: text("encoded_value"),
     revision: integer("revision").default(0).notNull(),
   },
   (t) => [

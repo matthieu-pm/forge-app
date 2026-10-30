@@ -398,7 +398,7 @@ export function inspectLegacySource(
       )
     if (source.kind === "issues")
       result.exclusions.push(
-        "Only issues and their embedded history are selected. Drafts, saved views, display, favorites and notification preferences remain local."
+        "Only issues and their embedded history are selected. Drafts, saved views, display, favorites and notification preferences are stored privately with your account and excluded from this selection."
       )
     if (
       ["issues", "triage", "cycles", "labels", "statuses"].includes(source.kind)
