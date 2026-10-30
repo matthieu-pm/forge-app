@@ -1,5 +1,6 @@
 import { resolveAuthUrl } from "./auth-origin.ts"
 import { inspectFileStorage } from "./file-storage.ts"
+import { appOrigin, runtimeOrigin } from "./preview-environment.ts"
 
 /** Server-only configuration contracts. Reports deliberately contain no input values. */
 export type ServiceEnvironment = Record<string, string | undefined>
@@ -228,7 +229,7 @@ export function inspectServiceConfiguration(
   if (service === "runtime") {
     // Production providers are called through the web's run-bound proxy, not local API keys.
     if (env.EVE_EVAL_FIXTURE_MODE !== "true") {
-      origin("FORGE_APP_ORIGIN")
+      origin("FORGE_APP_ORIGIN", deployed, false, appOrigin(env))
       secret("FORGE_AGENT_CHANNEL_SECRET")
     }
   }
@@ -279,7 +280,7 @@ export function inspectServiceConfiguration(
         agentFlag("FORGE_FEATURE_AGENT_EVE_RUNTIME") &&
         env.AGENT_FAKE_RUNTIME_ENABLED !== "true"
       ) {
-        origin("EVE_AGENT_RUNTIME_URL")
+        origin("EVE_AGENT_RUNTIME_URL", deployed, false, runtimeOrigin(env))
         secret("FORGE_AGENT_CHANNEL_SECRET")
         secret("FORGE_AGENT_MODEL_ACCESS_SECRET")
       }

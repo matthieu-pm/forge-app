@@ -1,5 +1,10 @@
 import { createHash } from "node:crypto"
 import {
+  assertPreviewEnvironment,
+  isPreviewProfile,
+  PREVIEW,
+} from "./preview-environment.js"
+import {
   STAGING_CREDENTIAL_DIGESTS,
   STAGING_INTEGRATIONS,
 } from "./staging-credentials.js"
@@ -23,6 +28,13 @@ export function assertStagingEnvironment(
   env: Record<string, string | undefined>,
   service: "web" | "runtime"
 ) {
+  if (
+    isPreviewProfile(env) ||
+    env.VERCEL_PROJECT_ID === PREVIEW.runtimeProjectId ||
+    (env.VERCEL_PROJECT_ID === PREVIEW.webProjectId &&
+      env.VERCEL_ENV === "preview")
+  )
+    return assertPreviewEnvironment(env, service)
   const isStagingProject = [
     STAGING.webProjectId as string,
     STAGING.runtimeProjectId as string,
