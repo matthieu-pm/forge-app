@@ -59,8 +59,11 @@ all 52 account fields and 136 workspace leaf templates, their defaults and scope
 
 An account choice is not an entitlement or an instruction to bypass workspace
 policy. Saving a recording or notification choice does not start recording or
-deliver notifications. Calendar, assignment, editor, sidebar and desktop-link
-behavior still belongs to the corresponding FOR-129–140 stories. Unavailable
+deliver notifications. Calendar, editor, sidebar and desktop-link
+behavior still belongs to the corresponding FOR-129–140 stories. Creation
+assignment is implemented by FOR-138 as described in
+[the auto-assignment contract](issue-auto-assignment-contract.md); started-state
+assignment remains FOR-139. Unavailable
 controls remain unavailable. Shared/custom view definitions retain their existing
 ownership/visibility contract; only personal display/filter/favorite choices are
 preferences. Local business records are never sent as preference patches.

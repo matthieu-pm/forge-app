@@ -48,6 +48,8 @@
     "files:migrate": "bun scripts/migrate-local-files.ts",
     "test:preferences:postgres": "vitest run src/application/preferences/preferences.postgres.test.ts",
     "test:preferences:browser": "node scripts/verify-personal-preferences-browser.mjs",
+    "test:auto-assignment:postgres": "vitest run src/application/issues/issues.postgres.test.ts",
+    "test:auto-assignment:browser": "node scripts/verify-auto-assignment-browser.mjs",
     "recovery:run": "bun scripts/recovery.ts",
     "recovery:rehearse": "bun scripts/rehearse-recovery.ts",
     "recovery:maintenance": "bun scripts/recovery-maintenance.ts"

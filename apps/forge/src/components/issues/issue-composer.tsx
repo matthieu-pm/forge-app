@@ -398,7 +398,7 @@ export function IssueComposer({
                   update({
                     status:
                       getDefaultIssueStatus(next.id) ?? nextStatuses[0].id,
-                    assignee: "",
+                    assignee: draft.assignee === "" ? "" : undefined,
                     parentId: "",
                     cycle: "",
                   })
