@@ -1,0 +1,288 @@
+{
+  "version": 1,
+  "issue": "FOR-38",
+  "sourceRevision": "20fbc2766642fbce981554445594cfed8bb2a5b5",
+  "environment": "isolated synthetic Neon + Vercel private Blob + independent Cloudflare R2",
+  "source": {
+    "branchId": "br-autumn-union-za0opf1e",
+    "host": "ep-blue-shadow-zauhwkjz.c-2.eu-west-2.aws.neon.tech",
+    "database": "forge_recovery_source",
+    "storeId": "store_HCogFKvO1n2cbJw7"
+  },
+  "target": {
+    "branchId": "br-autumn-union-za0opf1e",
+    "host": "ep-blue-shadow-zauhwkjz.c-2.eu-west-2.aws.neon.tech",
+    "database": "forge_recovery_target",
+    "storeId": "store_HCogFKvO1n2cbJw7"
+  },
+  "backup": {
+    "anonymousBackupStatus": 400,
+    "id": "182047b3-1862-4f79-87fe-563a56c01382",
+    "capturedAt": "2026-10-30T13:34:08.656Z",
+    "completedAt": "2026-10-30T13:34:17.689Z",
+    "expiresAt": "2026-12-04T13:34:08.656Z",
+    "prefix": "sets/2026-10-30T13-34-08Z/182047b3-1862-4f79-87fe-563a56c01382",
+    "files": 9,
+    "descriptorSha256": "96642987d610e916a33918fe462598e60079fb6049840c1c83f929d1cb1f5cd5"
+  },
+  "journal": {
+    "bucket": "forge-recovery-deletion-journal",
+    "object": "journal/2026-10-30T13-35-01.730Z-4ca6e3b8366632a2b74fa7dc130072c19915fdd9eda2427f1e220bbd14c1c317.json",
+    "entries": 18,
+    "through": "2026-10-30T13:35:01.730Z"
+  },
+  "destruction": {
+    "phase": "destroy-source",
+    "sourceUnavailable": true,
+    "objectsRemoved": 5,
+    "database": "forge_recovery_source"
+  },
+  "liveMutations": {
+    "phase": "mutate",
+    "ordinaryDatabaseRole": true,
+    "sessionRevoked": true,
+    "issueDeleted": true,
+    "credentialDeleted": true,
+    "workspaceCascadeDeleted": true,
+    "securityPolicyChanged": true,
+    "postBackupIssueAcknowledged": true,
+    "postBackupFileAcknowledged": true,
+    "acknowledgedAt": "2026-10-30T13:34:48.873Z"
+  },
+  "crash": {
+    "phase": "crash-commit",
+    "exitCode": 86
+  },
+  "reconciliation": {
+    "passed": true,
+    "failures": [],
+    "tables": 71,
+    "files": 4,
+    "credentialCounts": {
+      "model": 2,
+      "meeting": 1
+    }
+  },
+  "expiry": {
+    "filesSuppressed": 0,
+    "checkedAt": "2026-10-30T13:35:53.168Z"
+  },
+  "negativeCases": [
+    {
+      "name": "committed-process-crash-before-journal-publication",
+      "failures": [
+        "RECOVERY_JOURNAL_UNRESOLVED"
+      ]
+    },
+    {
+      "name": "missing-file-entry",
+      "failures": [
+        "missing:file-085c85e0150fa455f9a41cb86fee25446458a37720ea421541e70acd52dc40aa"
+      ]
+    },
+    {
+      "name": "missing-credential-key-entry",
+      "failures": [
+        "missing:credential-key"
+      ]
+    },
+    {
+      "name": "tampered-deletion-journal",
+      "failures": [
+        "RECOVERY_JOURNAL_SIGNATURE"
+      ]
+    },
+    {
+      "name": "missing-restored-key",
+      "failures": [
+        "key:missing:FORGE_MODEL_CREDENTIAL_KEK"
+      ]
+    },
+    {
+      "name": "wrong-restored-key",
+      "failures": [
+        "RECOVERY_CREDENTIALS_UNREADABLE:model_connections:57967966-18fe-40fe-9774-b5f05d6c98e5,call_connections:82d3ca2c-38f4-4bfd-9bc7-3214d3cc6a6e"
+      ]
+    },
+    {
+      "name": "missing-restored-file",
+      "failures": [
+        "file:missing:1e5b4b1a-2bd8-44fc-8bde-9d5a9c8c7b48/bcc52c83-14e2-44f2-bebb-6756e9388dfd"
+      ]
+    },
+    {
+      "name": "changed-restored-row",
+      "failures": [
+        "table:rows:public.issues"
+      ]
+    }
+  ],
+  "journeys": {
+    "phase": "validate",
+    "authenticated": true,
+    "issueListAndGet": true,
+    "fileClasses": 4,
+    "credentialClasses": 2,
+    "foreignWorkspaceDenied": true,
+    "revokedSessionDenied": true,
+    "deletedIssueSuppressed": true,
+    "wrongKeyDenied": true,
+    "expectedPostCheckpointLoss": {
+      "issues": 1,
+      "files": 1
+    },
+    "validatedAt": "2026-10-30T13:36:28.758Z",
+    "processId": 23036
+  },
+  "incidentAt": "2026-10-30T13:35:01.730Z",
+  "rpoSeconds": 53.074,
+  "rtoSeconds": 87.028,
+  "failures": [],
+  "passed": true,
+  "scope": {
+    "synthetic": true,
+    "productionChanged": false,
+    "capacityBenchmark": false,
+    "productionScheduleVerified": false,
+    "deletionProducersVerified": true
+  },
+  "cleanup": {
+    "phase": "cleanup",
+    "sourceUnavailable": false,
+    "objectsRemoved": 5,
+    "database": "forge_recovery_target"
+  },
+  "providerReadback": {
+    "verifiedAt": "2026-10-30T13:33:50Z",
+    "accountId": "6ef2f63b419136eed4d57d84700cbc30",
+    "buckets": [
+      {
+        "bucket": "forge-recovery-backups",
+        "location": "WEUR",
+        "lifecycle": {
+          "rules": [
+            {
+              "id": "abort-incomplete-uploads-within-24h",
+              "enabled": true,
+              "conditions": {
+                "prefix": ""
+              },
+              "abortMultipartUploadsTransition": {
+                "condition": {
+                  "type": "Age",
+                  "maxAge": 86400
+                }
+              }
+            },
+            {
+              "id": "expire-recovery-sets-before-35-days",
+              "enabled": true,
+              "conditions": {
+                "prefix": "sets/"
+              },
+              "deleteObjectsTransition": {
+                "condition": {
+                  "type": "Age",
+                  "maxAge": 2851200
+                }
+              }
+            }
+          ]
+        },
+        "publicManagedEndpointEnabled": false
+      },
+      {
+        "bucket": "forge-recovery-deletion-journal",
+        "location": "WEUR",
+        "lifecycle": {
+          "rules": [
+            {
+              "id": "abort-incomplete-uploads-within-24h",
+              "enabled": true,
+              "conditions": {
+                "prefix": ""
+              },
+              "abortMultipartUploadsTransition": {
+                "condition": {
+                  "type": "Age",
+                  "maxAge": 86400
+                }
+              }
+            },
+            {
+              "id": "expire-minimal-journal-after-365-days",
+              "enabled": true,
+              "conditions": {
+                "prefix": "journal/"
+              },
+              "deleteObjectsTransition": {
+                "condition": {
+                  "type": "Age",
+                  "maxAge": 31536000
+                }
+              }
+            }
+          ]
+        },
+        "publicManagedEndpointEnabled": false
+      }
+    ]
+  },
+  "expiryProbe": {
+    "method": "New synthetic object with backdated original-capture key; actual R2 DELETE and HEAD disappearance",
+    "key": "sets/2026-09-01T00-00-00Z/48efedd2-3d08-446b-a93d-c3d10b049d05/expiry-probe.aes",
+    "checked": 21,
+    "deleted": 1,
+    "verifiedAt": "2026-10-30T13:29:46.280Z",
+    "headStatus": 404,
+    "providerLifecycleWaited": false
+  },
+  "operatorCLI": {
+    "unsealKeysFromR2Set": true,
+    "idempotentProtectedKeyOutput": true,
+    "exportCurrentIndependentJournalAfterSourceLoss": true,
+    "requiresSourceWritesStopped": true
+  },
+  "migrationVerification": {
+    "count": 50,
+    "firstApplied": 50,
+    "exactRetryApplied": 0,
+    "schemaGenerator": "No schema changes",
+    "recoveryMigration": "0049_recovery_journal"
+  },
+  "checks": {
+    "appTests": {
+      "passed": 2132,
+      "skipped": 265
+    },
+    "workflowTests": {
+      "passed": 4
+    },
+    "typecheck": "passed",
+    "focusedLint": "passed",
+    "productionBuild": "passed",
+    "frozenDependencyInstall": "passed"
+  },
+  "acceptance": {
+    "AT-01": "Passed for the small synthetic functional workload; launch-scale qualification remains open.",
+    "AT-02": "Passed: explicit missing entry/key/object and corrupt key/row/journal failures."
+  },
+  "qualification": {
+    "fullScale100GB": "open \u2014 user explicitly selected finish implementation and defer this qualification",
+    "productionActivation": "not performed",
+    "recurringProductionCaptureAndAlerts": "not verified",
+    "productionPasswordManagerKeyCustody": "not provisioned; rehearsal uses a disposable fixture identity",
+    "hostedBrowserAndNativeJourneys": "not exercised; actual authenticated application services and Better Auth exercised",
+    "replacementBlobStore": "not exercised; original objects removed and restored in the same private staging store",
+    "journalHorizon": "Includes recent operations from earlier synthetic runs of this dedicated source identity, as well as the current run.",
+    "productionReleaseGate": "open"
+  },
+  "workload": {
+    "databaseTables": 71,
+    "privateFiles": 4,
+    "fileBytesTotal": 180,
+    "modelCredentials": 2,
+    "meetingCredentials": 1,
+    "capacityBenchmark": false
+  }
+}
