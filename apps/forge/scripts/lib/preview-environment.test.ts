@@ -76,6 +76,7 @@ describe("isolated Preview services", () => {
     }
   )
   it.each([
+    { FORGE_RESOURCE_PROFILE: undefined, FORGE_ENVIRONMENT: undefined },
     { VERCEL_ENV: "production" },
     { VERCEL_PROJECT_ID: "prj_unregistered" },
     { VERCEL_RELATED_PROJECTS: "invalid" },

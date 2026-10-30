@@ -1,7 +1,6 @@
 import "@tanstack/react-start/server-only"
 
 import { sql } from "drizzle-orm"
-import { getVercelOidcToken } from "@vercel/oidc"
 import { inspectFileStorage } from "../../../../../packages/environment/file-storage"
 import { STAGING } from "../../../../../packages/environment/staging-environment"
 import { stagingServiceFetch } from "../../../../../packages/environment/staging-service-auth"
@@ -32,20 +31,6 @@ export async function readEnvironmentIdentity(challenge: string) {
   let stagingRuntime: unknown = null
   const preview = isPreviewProfile(process.env)
   const peerOrigin = runtimeOrigin()
-  let serviceIdentity: unknown = null
-  if (preview) {
-    // Only nonsecret workload metadata is returned by this expiring operator probe.
-    const token = await getVercelOidcToken()
-    const claims = JSON.parse(
-      Buffer.from(token.split(".")[1], "base64url").toString()
-    ) as Record<string, unknown>
-    serviceIdentity = {
-      projectId: claims.project_id,
-      environment: claims.environment,
-      issuer: claims.iss,
-      expiresAt: claims.exp,
-    }
-  }
   if (process.env.FORGE_ENVIRONMENT === "staging") {
     const response = await stagingServiceFetch(
       new URL(
@@ -57,35 +42,20 @@ export async function readEnvironmentIdentity(challenge: string) {
     if (
       !response.ok ||
       !response.headers.get("content-type")?.includes("application/json")
-    ) {
-      if (!preview) throw new Error("Staging runtime health failed.")
-      // The bounded operator check reports the failed hop without response bodies
-      // or credentials. Public readiness still fails closed on this dependency.
-      stagingRuntime = {
-        origin: peerOrigin,
-        status: response.status,
-        protectionCode: response.headers.get("x-vercel-error"),
-        ready: false,
-      }
-      await response.body?.cancel()
-    } else {
-      const health = (await response.json()) as {
-        ok?: boolean
-        status?: string
-        code?: string
-      }
-      if (
-        preview
-          ? health.code !== "READY"
-          : health.ok !== true || health.status !== "ready"
-      )
-        throw new Error("Staging runtime is not ready.")
-      stagingRuntime = {
-        origin: peerOrigin ?? STAGING.runtimeOrigin,
-        status: response.status,
-        health,
-      }
+    )
+      throw new Error("Staging runtime health failed.")
+    const health = (await response.json()) as {
+      ok?: boolean
+      status?: string
+      code?: string
     }
+    if (
+      preview
+        ? health.code !== "READY"
+        : health.ok !== true || health.status !== "ready"
+    )
+      throw new Error("Staging runtime is not ready.")
+    stagingRuntime = { origin: peerOrigin ?? STAGING.runtimeOrigin, health }
   }
   const databaseUrl = new URL(process.env.DATABASE_URL!)
   return {
@@ -100,7 +70,6 @@ export async function readEnvironmentIdentity(challenge: string) {
     },
     database: { host: databaseUrl.hostname, ...result.rows[0] },
     stagingRuntime,
-    serviceIdentity,
     runtimeOrigin: peerOrigin ? new URL(peerOrigin).origin : null,
     // Report the selected adapter without exposing its credentials.
     artifacts: {

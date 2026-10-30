@@ -6,7 +6,9 @@ Standard Git PR previews use the `preview` resource profile. The web project is
 Both apps declare their peer in their root `vercel.json`. Vercel injects
 `VERCEL_RELATED_PROJECTS`; only its matching `preview.branch` host is accepted.
 There is no production-host fallback. CLI deployments do not support Related
-Projects and are intentionally insufficient for this profile.
+Projects and are intentionally insufficient for this profile. The API target
+`staging` also differs from native Preview for Trusted Sources matching; use
+Git-triggered Preview deployments rather than widening the trust rules.
 
 The runtime project builds `services/agent-runtime` on Node 24, includes files
 outside that root, and runs the same Eve build as production. Its ignored-build

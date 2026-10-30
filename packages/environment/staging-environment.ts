@@ -30,7 +30,9 @@ export function assertStagingEnvironment(
 ) {
   if (
     isPreviewProfile(env) ||
-    env.VERCEL_PROJECT_ID === PREVIEW.runtimeProjectId
+    env.VERCEL_PROJECT_ID === PREVIEW.runtimeProjectId ||
+    (env.VERCEL_PROJECT_ID === PREVIEW.webProjectId &&
+      env.VERCEL_ENV === "preview")
   )
     return assertPreviewEnvironment(env, service)
   const isStagingProject = [

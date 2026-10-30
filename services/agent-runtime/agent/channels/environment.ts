@@ -60,7 +60,10 @@ export default defineChannel({
           return {
             deployment: {
               id: process.env.VERCEL_DEPLOYMENT_ID ?? null,
-              sourceRevision: process.env.FORGE_SOURCE_REVISION ?? null,
+              sourceRevision:
+                process.env.FORGE_SOURCE_REVISION ??
+                process.env.VERCEL_GIT_COMMIT_SHA ??
+                null,
             },
             callback,
           }
