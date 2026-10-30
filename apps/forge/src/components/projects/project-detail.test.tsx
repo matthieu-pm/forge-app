@@ -448,7 +448,7 @@ it("edits milestone metadata, reorders milestones, and filters project issues fr
   fireEvent.click(screen.getByRole("button", { name: "Open project details" }))
   const sidebar = screen.getByLabelText("Project sidebar")
   fireEvent.click(
-    await within(sidebar).findByRole("button", { name: /Private beta.*1/ })
+    await within(sidebar).findByRole("button", { name: /^Private beta.*1/ })
   )
   await screen.findByRole("button", { name: /Open FOR-1 Beta work/ })
   expect(screen.queryByRole("button", { name: /Open .*Other work/ })).toBeNull()

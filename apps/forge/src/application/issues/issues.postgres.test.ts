@@ -2554,6 +2554,217 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
     )
   })
   describe("FOR-45 lifecycle", () => {
+    it("returns live availability when old lifecycle commands are replayed after another actor changes state", async () => {
+      const f = await fixture(),
+        id = (
+          await service.createCanonicalIssue(f.actors[1], command(f.teamId))
+        ).issue.id,
+        l = await lifecycle()
+      const deletion = {
+        commandKey: randomUUID(),
+        teamId: f.teamId,
+        issueId: id,
+        expectedRevision: await revision(id),
+        action: "delete" as const,
+      }
+      await l.changeIssueLifecycle(f.actors[1], deletion)
+      const restoration = {
+        ...deletion,
+        commandKey: randomUUID(),
+        expectedRevision: await revision(id),
+        action: "restore" as const,
+      }
+      await l.changeIssueLifecycle(f.actors[1], restoration)
+      expect(await l.changeIssueLifecycle(f.actors[1], deletion)).toMatchObject(
+        {
+          replayed: true,
+          value: { active: true, revision: await revision(id) },
+        }
+      )
+      await change(f, id, "delete", f.actors[0])
+      expect(
+        await l.changeIssueLifecycle(f.actors[1], restoration)
+      ).toMatchObject({
+        replayed: true,
+        value: { active: false, revision: await revision(id) },
+      })
+    }, 30000)
+    it("suppresses mixed edit/recovery copies, preserves recoverable drafts, and checkpoints bounded purge cleanup", async () => {
+      const f = await fixture(),
+        a = (
+          await service.createCanonicalIssue(
+            f.actors[1],
+            command(f.teamId, "Private source")
+          )
+        ).issue.id,
+        b = (
+          await service.createCanonicalIssue(
+            f.actors[1],
+            command(f.teamId, "Unrelated source")
+          )
+        ).issue.id
+      const draftKey = `forge:team-issue-edit-drafts:v1:${f.teamId}:${randomUUID()}`
+      const value = JSON.stringify({
+        commandKey: randomUUID(),
+        teamId: f.teamId,
+        edits: [
+          {
+            issueId: a,
+            expectedRevision: 0,
+            changes: { description: "Hidden draft body" },
+          },
+          {
+            issueId: b,
+            expectedRevision: 0,
+            changes: { title: "Keep live draft" },
+          },
+        ],
+      })
+      const wrapperKey = `forge:pending-recovery:v1:${randomUUID()}`,
+        wrapper = JSON.stringify({
+          key: draftKey,
+          value,
+          createdAt: new Date().toISOString(),
+        })
+      const save = async (key: string, raw: string, expectedRevision = 0) =>
+        product.saveProductState(f.actors[1], {
+          workspaceId: f.workspaceId,
+          sessionId:
+            f.actors[1].authentication.kind === "session"
+              ? f.actors[1].authentication.sessionId
+              : "",
+          commandKey: randomUUID(),
+          key,
+          value: raw,
+          expectedRevision,
+        })
+      await save(draftKey, value)
+      await save(wrapperKey, wrapper)
+      await change(f, a, "delete")
+      let snapshot = await product.readProductState(f.actors[1])
+      expect(JSON.stringify(snapshot.entries)).not.toContain(
+        "Hidden draft body"
+      )
+      expect(JSON.stringify(snapshot.entries)).not.toContain("Keep live draft")
+      const projected = snapshot.entries.find((row) => row.key === draftKey)!
+      expect(projected.value).toBeNull()
+      await save(draftKey, value, projected.revision)
+      await expect(
+        save(
+          draftKey,
+          JSON.stringify({
+            ...JSON.parse(value),
+            edits: JSON.parse(value).edits.slice(1),
+          }),
+          projected.revision + 1
+        )
+      ).rejects.toThrow("Restore or explicitly discard")
+      await change(f, a, "restore")
+      snapshot = await product.readProductState(f.actors[1])
+      expect(
+        snapshot.entries.find((row) => row.key === draftKey)?.value
+      ).toContain("Hidden draft body")
+      // New deletion gets an expired original clock without renewing an existing marker.
+      await pool.query(
+        "UPDATE issues SET deleted_at=clock_timestamp()-interval '721 hours' WHERE id=$1",
+        [a]
+      )
+      for (let n = 0; n < 7; n++)
+        await save(
+          `forge:inbox:v1:${randomUUID()}`,
+          JSON.stringify({ entries: [] })
+        )
+      await pool.query(
+        "INSERT INTO product_state(workspace_id,owner_id,owner_user_id,key,encoded_value) VALUES($1,$2,$3,$4,$5)",
+        [
+          f.workspaceId,
+          `user:${users[1]}`,
+          users[1],
+          `forge:inbox:v1:${randomUUID()}`,
+          JSON.stringify("unrelated malformed legacy copy"),
+        ]
+      )
+      const { purgeDeletedIssues } = await import("./purge-issues.server"),
+        blobs = { delete: vi.fn().mockResolvedValue(undefined) }
+      await purgeDeletedIssues(blobs)
+      const checkpoint = (
+        await pool.query(
+          "SELECT purge_copy_cursor,purged_at FROM issues WHERE id=$1",
+          [a]
+        )
+      ).rows[0]
+      expect(checkpoint.purge_copy_cursor).not.toBeNull()
+      expect(checkpoint.purged_at).toBeNull()
+      for (let n = 0; n < 5; n++) await purgeDeletedIssues(blobs)
+      expect(
+        (await pool.query("SELECT purged_at FROM issues WHERE id=$1", [a]))
+          .rows[0].purged_at
+      ).not.toBeNull()
+      expect(
+        JSON.stringify(
+          (
+            await pool.query(
+              "SELECT encoded_value FROM product_state WHERE workspace_id=$1",
+              [f.workspaceId]
+            )
+          ).rows
+        )
+      ).not.toContain("Hidden draft body")
+      const latest = (
+        await pool.query(
+          "SELECT revision FROM product_state WHERE workspace_id=$1 AND key=$2",
+          [f.workspaceId, draftKey]
+        )
+      ).rows[0].revision
+      await save(draftKey, value, latest)
+      expect(
+        JSON.stringify(
+          (
+            await pool.query(
+              "SELECT encoded_value FROM product_state WHERE workspace_id=$1 AND key=$2",
+              [f.workspaceId, draftKey]
+            )
+          ).rows
+        )
+      ).not.toContain("Hidden draft body")
+    }, 30000)
+    it("reconciles expired issue copies on isolated restore before releasing the target", async () => {
+      const f = await fixture(),
+        id = (
+          await service.createCanonicalIssue(
+            f.actors[1],
+            command(f.teamId, "Expired restored body")
+          )
+        ).issue.id
+      await pool.query(
+        "UPDATE issues SET deleted_at=clock_timestamp()-interval '721 hours' WHERE id=$1",
+        [id]
+      )
+      const { enforceRestoredDeadlines } =
+        await import("../../../scripts/lib/recovery")
+      const client = await pool.connect()
+      try {
+        await enforceRestoredDeadlines(client, {
+          delete: vi.fn().mockResolvedValue(undefined),
+          get: vi.fn().mockResolvedValue(null),
+          put: vi.fn(),
+        })
+      } finally {
+        client.release()
+      }
+      expect(
+        (
+          await pool.query(
+            "SELECT title,properties,purged_at FROM issues WHERE id=$1",
+            [id]
+          )
+        ).rows[0]
+      ).toMatchObject({
+        title: "",
+        properties: {},
+        purged_at: expect.any(Date),
+      })
+    }, 30000)
     it("fences internal file publication when issue deletion happens during byte upload", async () => {
       const f = await fixture(),
         id = (

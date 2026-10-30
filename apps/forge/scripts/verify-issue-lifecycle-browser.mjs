@@ -294,7 +294,18 @@ try {
 } finally {
   await browser?.close()
   if (verified) {
-    await pool.query("DELETE FROM organization WHERE id=$1", [marker])
+    // Closing the browser does not cancel already-running server transactions.
+    // Retry only serialization/deadlock rollbacks of this exact owned fixture.
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await pool.query("DELETE FROM organization WHERE id=$1", [marker])
+        break
+      } catch (error) {
+        if (attempt >= 4 || !["40P01", "40001"].includes(error?.code))
+          throw error
+        await new Promise((resolve) => setTimeout(resolve, 200 * (attempt + 1)))
+      }
+    }
     await pool.query('DELETE FROM "user" WHERE id=ANY($1)', [users])
     const leftovers = (
       await pool.query(

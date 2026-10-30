@@ -1,28 +1,34 @@
 import "@tanstack/react-start/server-only"
-import { and, eq, inArray, isNull, or, sql } from "drizzle-orm"
-import type { FileBlobStore } from "@/application/files/blob-store"
+import { and, eq, gt, inArray, isNull, or, sql } from "drizzle-orm"
 import {
-  db,
+  filterIssueCopy,
+  issueCopyPrefixes,
+} from "../product-state/issue-copies"
+import type { FileBlobStore } from "@/application/files/blob-store"
+import type { db as DefaultDatabase } from "@/db"
+import {
   documents,
   fileUploadIntents,
   issueLabels,
   issueRelations,
   issues,
-  organizations,
   productState,
   resourceFiles,
-} from "@/db"
+} from "@/db/planning-schema"
+import { organizations } from "@/db/auth-schema"
 
 /** Bounded, leased SQL checkpoints surround idempotent byte deletes. Restore
  * closes at the deadline, independently of worker availability. A failure keeps
  * the owning tombstone and every unfinished storage reference for the retry. */
 export async function purgeDeletedIssues(
   blobs: Pick<FileBlobStore, "delete">,
-  limit = 25
+  limit = 25,
+  executor?: Omit<typeof DefaultDatabase, "$client">
 ) {
+  const database = executor ?? (await import("@/db")).db
   if (!Number.isInteger(limit) || limit < 1 || limit > 100)
     throw new Error("Invalid purge batch size.")
-  const due = await db
+  const due = await database
     .select({ id: issues.id, workspaceId: issues.workspaceId })
     .from(issues)
     .where(
@@ -38,7 +44,7 @@ export async function purgeDeletedIssues(
     failed = 0
   for (const target of due) {
     const token = crypto.randomUUID()
-    const claimed = await db.transaction(async (tx) => {
+    const claimed = await database.transaction(async (tx) => {
       await tx
         .select({ id: organizations.id })
         .from(organizations)
@@ -68,7 +74,7 @@ export async function purgeDeletedIssues(
     if (!claimed) continue
     try {
       // Shared documents survive through their independent workspace grant.
-      const ownedDocs = db
+      const ownedDocs = database
         .select({ id: documents.id })
         .from(documents)
         .where(
@@ -85,14 +91,14 @@ export async function purgeDeletedIssues(
           inArray(resourceFiles.documentId, ownedDocs)
         )
       )
-      const files = await db
+      const files = await database
         .select()
         .from(resourceFiles)
         .where(fileCondition)
         .limit(100)
       for (const file of files) {
         await blobs.delete(file.storageReference)
-        await db
+        await database
           .delete(resourceFiles)
           .where(
             and(
@@ -103,7 +109,7 @@ export async function purgeDeletedIssues(
       }
       // Unpublished bytes also belong to the deleted resource. Publication is
       // already fenced by the live resource predicate and its row lock.
-      const intents = await db
+      const intents = await database
         .select()
         .from(fileUploadIntents)
         .where(
@@ -118,11 +124,11 @@ export async function purgeDeletedIssues(
         .limit(100)
       for (const intent of intents) {
         await blobs.delete(intent.storageReference)
-        await db
+        await database
           .delete(fileUploadIntents)
           .where(eq(fileUploadIntents.id, intent.id))
       }
-      const completed = await db.transaction(async (tx) => {
+      const completed = await database.transaction(async (tx) => {
         await tx
           .select({ id: organizations.id })
           .from(organizations)
@@ -147,6 +153,65 @@ export async function purgeDeletedIssues(
           await tx
             .update(issues)
             .set({ purgeLeaseUntil: null, purgeToken: null })
+            .where(eq(issues.id, target.id))
+          return
+        }
+        // Keyset checkpoint is atomic with each bounded group of copy writes.
+        // Copy writers take the same workspace fence and suppress inactive IDs,
+        // so a stale save cannot refill already-scanned rows or cursor holes.
+        const copies = await tx
+          .select()
+          .from(productState)
+          .where(
+            and(
+              eq(productState.workspaceId, target.workspaceId),
+              or(
+                ...issueCopyPrefixes.map(
+                  (prefix) => sql`${productState.key} LIKE ${prefix + "%"}`
+                )
+              ),
+              row.purgeCopyCursor
+                ? gt(productState.id, row.purgeCopyCursor)
+                : undefined
+            )
+          )
+          .orderBy(productState.id)
+          .limit(5)
+          .for("update")
+        for (const copy of copies) {
+          if (copy.encodedValue === null) continue
+          let value: string | null
+          try {
+            value = filterIssueCopy(
+              copy.key,
+              JSON.parse(copy.encodedValue) as string | null,
+              (id) => id !== target.id
+            )
+          } catch {
+            // Unsupported unrelated local state cannot stall every purge in the
+            // workspace. Related malformed copies are discarded; normal reads
+            // already quarantine all malformed known copy protocols.
+            if (
+              !copy.encodedValue.toLowerCase().includes(target.id.toLowerCase())
+            )
+              continue
+            value = null
+          }
+          const encoded = value === null ? null : JSON.stringify(value)
+          if (encoded !== copy.encodedValue)
+            await tx
+              .update(productState)
+              .set({ encodedValue: encoded, revision: copy.revision + 1 })
+              .where(eq(productState.id, copy.id))
+        }
+        if (copies.length === 5) {
+          await tx
+            .update(issues)
+            .set({
+              purgeCopyCursor: copies[4].id,
+              purgeLeaseUntil: null,
+              purgeToken: null,
+            })
             .where(eq(issues.id, target.id))
           return
         }
@@ -186,44 +251,6 @@ export async function purgeDeletedIssues(
               eq(issues.parentId, target.id)
             )
           )
-        // Remove retained automatic inbox copies from every recipient. Reads
-        // and future writes also filter them through live issue authorization.
-        const inboxes = await tx
-          .select()
-          .from(productState)
-          .where(
-            and(
-              eq(productState.workspaceId, target.workspaceId),
-              sql`${productState.key} LIKE 'forge:inbox:v1:%'`
-            )
-          )
-          .for("update")
-        for (const inbox of inboxes) {
-          if (!inbox.encodedValue) continue
-          try {
-            const value = JSON.parse(JSON.parse(inbox.encodedValue)) as {
-              entries?: Array<{ issue?: { id?: string } | null }>
-              unsubscribedIssueIds?: Array<string>
-            }
-            if (!value.entries?.some((entry) => entry.issue?.id === target.id))
-              continue
-            value.entries = value.entries.filter(
-              (entry) => entry.issue?.id !== target.id
-            )
-            value.unsubscribedIssueIds = value.unsubscribedIssueIds?.filter(
-              (id) => id !== target.id
-            )
-            await tx
-              .update(productState)
-              .set({
-                encodedValue: JSON.stringify(JSON.stringify(value)),
-                revision: inbox.revision + 1,
-              })
-              .where(eq(productState.id, inbox.id))
-          } catch {
-            throw new Error("An inbox copy could not be reconciled.")
-          }
-        }
         await tx
           .update(issues)
           .set({
@@ -246,7 +273,7 @@ export async function purgeDeletedIssues(
     } catch {
       failed++
       // Never persist provider errors that might contain private URLs/credentials.
-      await db
+      await database
         .update(issues)
         .set({
           purgeError: "Issue purge failed; retry pending.",

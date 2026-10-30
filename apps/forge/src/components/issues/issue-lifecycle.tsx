@@ -8,6 +8,7 @@ import {
   canonicalIssueEpoch,
   canonicalIssueState,
   removeCanonicalIssueRecords,
+  restoreCanonicalIssueVisibility,
   suppressCanonicalIssueRecord,
 } from "@/lib/canonical-issue-cache"
 import {
@@ -67,7 +68,7 @@ export function useIssueLifecycle() {
             sessionId: identity.sessionId,
           },
         })
-      ) as { status: string; value?: { revision: number } }
+      ) as { status: string; value?: { revision: number; active?: boolean } }
       if (!active()) return false
       if (result.status === "conflict") {
         retry.current = undefined
@@ -77,7 +78,13 @@ export function useIssueLifecycle() {
         return false
       }
       retry.current = undefined
-      if (
+      if (result.value?.active !== undefined)
+        restoreCanonicalIssueVisibility(
+          input.issueId,
+          result.value.revision,
+          result.value.active
+        )
+      else if (
         (input.action === "delete" || input.action === "archive") &&
         result.value
       )

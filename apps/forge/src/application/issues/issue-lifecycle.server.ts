@@ -27,7 +27,7 @@ export async function changeIssueLifecycle(
     const result = await executeCommand({
       actor,
       commandKey: input.commandKey,
-      operation: "issues.lifecycle@1",
+      operation: "issues.lifecycle@2",
       input,
       status: 200,
       parse: (value) =>
@@ -35,6 +35,7 @@ export async function changeIssueLifecycle(
           .object({
             issueId: z.uuid(),
             revision: z.number().int().nonnegative(),
+            active: z.boolean(),
           })
           .strict()
           .parse(value),
@@ -123,11 +124,19 @@ export async function changeIssueLifecycle(
               },
             })
             .where(eq(issues.id, row.id))
-            .returning({ revision: issues.revision })
+            .returning({
+              revision: issues.revision,
+              archivedAt: issues.archivedAt,
+              deletedAt: issues.deletedAt,
+            })
         ).at(0)
         if (!updated) throw new Error("The issue could not be changed.")
         return {
-          value: { issueId: row.id, revision: updated.revision },
+          value: {
+            issueId: row.id,
+            revision: updated.revision,
+            active: !updated.archivedAt && !updated.deletedAt,
+          },
           resource: { type: "issue", id: row.id },
           events: [
             {
@@ -138,7 +147,36 @@ export async function changeIssueLifecycle(
         }
       },
     })
-    return { status: "saved" as const, ...result }
+    // A receipt proves an effect, not current availability. Another actor may
+    // have deleted/restored the issue since an uncertain response was committed.
+    const value = await db.transaction(async (tx) => {
+      const current = await currentCommandActor(tx, actor)
+      await requireIssueTeam(tx, current, input.teamId)
+      const row = (
+        await tx
+          .select({
+            issueId: issues.id,
+            revision: issues.revision,
+            deletedAt: issues.deletedAt,
+            archivedAt: issues.archivedAt,
+          })
+          .from(issues)
+          .where(
+            and(
+              eq(issues.id, input.issueId),
+              eq(issues.teamId, input.teamId),
+              readableIssueCondition(current, issues.id, true)
+            )
+          )
+      ).at(0)
+      if (!row) throw new ApplicationAccessError()
+      return {
+        issueId: row.issueId,
+        revision: row.revision,
+        active: !row.deletedAt && !row.archivedAt,
+      }
+    })
+    return { status: "saved" as const, replayed: result.replayed, value }
   } catch (error) {
     if (error instanceof LifecycleConflict)
       return { status: "conflict" as const }

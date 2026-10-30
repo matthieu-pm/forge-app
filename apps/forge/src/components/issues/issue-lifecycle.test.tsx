@@ -3,8 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { useIssueLifecycle } from "./issue-lifecycle"
 import {
   canonicalIssueRows,
+  isCanonicalIssueSuppressed,
   mergeCanonicalIssueRecords,
   replaceCanonicalIssues,
+  suppressCanonicalIssueRecord,
 } from "@/lib/canonical-issue-cache"
 import { persistIssueLifecycle } from "@/lib/issue-lifecycle-state"
 import { blankIssueDraft } from "@/lib/issue-record-contract"
@@ -56,6 +58,45 @@ afterEach(() => {
   replaceCanonicalIssues(null)
 })
 describe("FOR-45 lifecycle client", () => {
+  it("releases inbox suppression on active restore without fetching a list row, while rejecting older responses", async () => {
+    suppressCanonicalIssueRecord(issueId, 4)
+    vi.mocked(persistIssueLifecycle).mockResolvedValue(
+      JSON.stringify({ status: "saved", value: { revision: 5, active: true } })
+    )
+    const { result } = renderHook(() => useIssueLifecycle())
+    await act(async () => {
+      expect(
+        await result.current.change({
+          ...input,
+          expectedRevision: 4,
+          action: "restore",
+        })
+      ).toBe(true)
+    })
+    expect(canonicalIssueRows(teamId)).toHaveLength(0)
+    expect(isCanonicalIssueSuppressed(issueId)).toBe(false)
+    act(() => {
+      mergeCanonicalIssueRecords([record])
+      suppressCanonicalIssueRecord(issueId, 4)
+    })
+    expect(canonicalIssueRows(teamId)).toHaveLength(0)
+    expect(isCanonicalIssueSuppressed(issueId)).toBe(false)
+  })
+  it("keeps inbox suppression when deletion is restored into archive", async () => {
+    suppressCanonicalIssueRecord(issueId, 4)
+    vi.mocked(persistIssueLifecycle).mockResolvedValue(
+      JSON.stringify({ status: "saved", value: { revision: 5, active: false } })
+    )
+    const { result } = renderHook(() => useIssueLifecycle())
+    await act(async () => {
+      await result.current.change({
+        ...input,
+        expectedRevision: 4,
+        action: "restore",
+      })
+    })
+    expect(isCanonicalIssueSuppressed(issueId)).toBe(true)
+  })
   it("retains the command key after an uncertain response and suppresses late stale rows after success", async () => {
     vi.mocked(persistIssueLifecycle)
       .mockRejectedValueOnce(new Error("Network interrupted"))

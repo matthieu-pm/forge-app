@@ -234,6 +234,7 @@ export function inspectServiceConfiguration(
     }
   }
   if (service === "app") {
+    if (flag("FORGE_ISSUE_RETENTION_ENABLED")) secret("FORGE_ISSUE_RETENTION_SECRET")
     if (flag("FORGE_OPERATIONS_MONITOR_ENABLED")) {
       origin("FORGE_OPERATIONS_WEBHOOK_URL", deployed, true)
       secret("FORGE_OPERATIONS_WEBHOOK_TOKEN")
@@ -248,6 +249,7 @@ export function inspectServiceConfiguration(
                 "product.retention",
                 "workflow.health",
                 "calls.sync",
+                "issues.retention",
               ].includes(key)
           ))
       ) {

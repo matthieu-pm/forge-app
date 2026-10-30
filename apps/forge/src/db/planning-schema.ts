@@ -159,6 +159,7 @@ export const issues = pgTable(
     purgeToken: uuid("purge_token"),
     purgeAttempts: integer("purge_attempts").default(0).notNull(),
     purgeError: text("purge_error"),
+    purgeCopyCursor: uuid("purge_copy_cursor"),
     properties: jsonb("properties")
       .$type<IssueDraft>()
       .notNull()

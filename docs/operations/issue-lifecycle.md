@@ -52,7 +52,15 @@ Concurrent create/restore/unarchive can consume a released slot only once.
 
 ## Purge operation and retries
 
-The existing monitored `product:retention` job calls `purgeDeletedIssues`. Each
+The authenticated `/api/internal/issue-retention` handler is invoked hourly by
+[the issue-retention GitHub Actions workflow](../../.github/workflows/issue-retention.yml).
+The user selected this scheduler because the existing Vercel Hobby plan permits
+only daily cron jobs ([Vercel limits](https://vercel.com/docs/cron-jobs/usage-and-pricing)).
+The workflow runs only on this repository's `main`, has no GitHub token permissions,
+does not check out code, refuses redirects, and uses a dedicated endpoint secret.
+Each run drains at most twelve bounded calls. The endpoint records successful or
+failed `issues.retention` heartbeats; failures return 503 without provider details.
+The existing manual `product:retention` job also calls the same leased worker. Each
 invocation claims at most 25 due issues, with a 10-minute lease and a unique worker
 token. A failed attempt records a redacted error and a five-minute backoff. An
 operator can rerun the same job after the lease/backoff expires. Inspect
@@ -61,8 +69,19 @@ operator can rerun the same job after the lease/backoff expires. Inspect
 The job reports failure while attempts require retry; it cannot report them as
 successful deletion.
 
-Each resource batch removes at most 100 canonical file references and 100 upload
-intents. Storage keys remain until an idempotent byte deletion succeeds. A crash
+Each resource batch removes at most 100 canonical file references, 100 upload
+intents and five saved-copy rows. `purge_copy_cursor` advances with those copy
+writes in the same transaction; a subsequent invocation resumes after that ID.
+Copy writers take the same organization fence before their row lock, so stale
+saves cannot refill already-processed rows. Known inbox, issue edit/relationship
+draft and nested recovery/conflict protocols use one namespace-aware filter.
+Unrelated local import sources are not reclassified by arbitrary UUIDs in text.
+Malformed unrelated copies are quarantined from reads and cannot stall a purge.
+Recoverable inbox history remains retained across saves of filtered projections.
+Exact-input edit commands with unavailable endpoints are quarantined whole;
+replacement requires restore or explicit discard. After purge, remaining edits
+are inert `requiresReview` proposals. The client cannot execute them until the
+user reviews latest state and explicitly creates a fresh command identity. Storage keys remain until an idempotent byte deletion succeeds. A crash
 between the byte delete and metadata checkpoint safely retries the same key.
 Private document files are included; independently shared documents/files are
 preserved. Publication already requires live target authorization under row
@@ -81,20 +100,28 @@ cache in the enabled implementation.
 or a final all-copies deletion receipt. The existing FOR-38/FOR-23 recovery journal
 captures deletion markers and dependent metadata deletions; isolated disaster
 recovery must replay those before enabling access. An old snapshot cannot
-reauthorize the issue, and due rows are scrubbed again. Backup-expiry verification
+reauthorize the issue. Isolated restore drains expired issue bodies, files and
+saved copies through the same worker on the explicitly injected target client
+before releasing the target for user access. Old source leases are abandoned only
+in that isolated target; failures keep recovery closed. A lifecycle schema missing
+the copy checkpoint requires migration before restored access can be enabled. Backup-expiry verification
 and final receipt expiration remain under the existing recovery/lifecycle policy.
 
 ## Release and rollback
 
-Apply migrations 54 and 55 through the serialized migration runner before enabling
+Apply migrations 54, 55 and 56 through the serialized migration runner before enabling
 the new application build. Migration 55 enforces elapsed-hour recovery and
-irreversible purge boundaries at the database layer. Both migrations were tested
+irreversible purge boundaries at the database layer; migration 56 adds the durable
+saved-copy cleanup cursor. Both migrations were tested
 on the dedicated `forge_auto_assignment_acceptance` database on branch
 `br-autumn-union-za0opf1e`; production is not modified by this PR.
 
-Product-retention jobs now require the same private Blob store ID/token as file
-retention in staging/production. Keep the existing scheduler and monitored job
-identity; no additional browser or public purge endpoint is exposed. Monitor job
+Retention uses the same private Blob store ID/token as file retention in
+staging/production. Set `FORGE_ISSUE_RETENTION_ENABLED=true` and a Secret
+`FORGE_ISSUE_RETENTION_SECRET` on the production web project; bind the same secret
+to the repository's Actions secret of that name. Preview stays disabled. There
+is no browser purge operation. The internal invoker returns 404 without its exact
+Bearer secret and never accepts resource IDs or user-supplied purge deadlines. Monitor job
 health and pending/error rows after release. Storage failures must retain the
 owning tombstone and references.
 
@@ -125,3 +152,12 @@ workspace/users/receipts. PostgreSQL cases trace AT-01 to preserved authorized
 content, AT-02 to failure-resumable purge and safe links, and AT-04 to atomic
 capacity/refused restore/replay. Client tests cover interrupted responses, stale
 late records and workspace changes.
+
+## Review follow-up · 31 October 2026
+
+Both review axes are recorded in [the review report](for45-review.md). Lifecycle
+acknowledgments return freshly authorized current availability after execution or
+receipt replay. Client visibility follows that live revision even if the original
+command's action differs; revision floors reject older acknowledgments and body
+responses. Successful restore/unarchive releases inbox suppression immediately,
+including for issues outside the active list filter or page.

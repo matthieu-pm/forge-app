@@ -97,3 +97,11 @@ Run these in each target environment. Never infer the production runtime's
 `FORGE_APP_ORIGIN` from the web alias or local dotenv files; FOR-25's discovery
 does not prove the deployed callback setting. Full release acceptance still
 requires the actual serving environment and named candidate evidence.
+
+Issue retention (FOR-45) is enabled on the web service with
+`FORGE_ISSUE_RETENTION_ENABLED=true` and the dedicated Secret
+`FORGE_ISSUE_RETENTION_SECRET`. The hourly GitHub Actions workflow authenticates
+only the bounded internal issue-retention route with the repository secret of the
+same name. Preview does not enable this invoker. `issues.retention` records its
+own operational heartbeat; it does not attest execution of the other product
+retention classes.

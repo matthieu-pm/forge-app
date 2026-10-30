@@ -2,6 +2,11 @@ import { randomUUID } from "node:crypto"
 import { mkdtemp, readFile, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { drizzle } from "drizzle-orm/neon-serverless"
+import * as appSchema from "../../src/db/schema"
+import * as authSchema from "../../src/db/auth-schema"
+import * as planningSchema from "../../src/db/planning-schema"
+import { purgeDeletedIssues } from "../../src/application/issues/purge-issues.server"
 import {
   readCredentialCoverage,
   verifyCredentialCoverage,
@@ -31,6 +36,7 @@ import {
   recoveryPool,
   verifyDatabase,
 } from "./recovery-database"
+import type { PoolClient } from "@neondatabase/serverless"
 import type { z } from "zod"
 import type {
   DeletionJournal,
@@ -614,7 +620,56 @@ export async function enforceRestoredDeadlines(
     if (await blobs.get(reference))
       throw new Error(`RECOVERY_EXPIRED_FILE_STILL_PRESENT:${reference}`)
   }
+  // Abandon source leases only in this isolated target, then drain expired
+  // issue bodies/copies before the caller can enable recovered user access.
+  let issuesPurged = 0
+  const lifecycle = (
+    await client.query(
+      "SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='issues' AND column_name='purge_copy_cursor') present"
+    )
+  ).rows[0]?.present
+  const deletedMarker = (
+    await client.query(
+      "SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='issues' AND column_name='deleted_at') present"
+    )
+  ).rows[0]?.present
+  if (deletedMarker && !lifecycle)
+    throw new Error("RECOVERY_ISSUE_LIFECYCLE_MIGRATION_REQUIRED")
+  if (lifecycle) {
+    await client.query(
+      "UPDATE public.issues SET purge_lease_until=NULL,purge_token=NULL WHERE deleted_at+interval '720 hours'<=clock_timestamp() AND purged_at IS NULL"
+    )
+    const database = drizzle(client as PoolClient, {
+      schema: { ...appSchema, ...planningSchema, ...authSchema },
+    })
+    for (let batch = 0; ; batch++) {
+      const due = Number(
+        (
+          await client.query(
+            "SELECT count(*)::int count FROM public.issues WHERE deleted_at+interval '720 hours'<=clock_timestamp() AND purged_at IS NULL"
+          )
+        ).rows[0]?.count ?? 0
+      )
+      if (!due) break
+      if (batch >= 10000)
+        throw new Error("RECOVERY_ISSUE_PURGE_RESUME_REQUIRED")
+      const result = await purgeDeletedIssues(
+        {
+          delete: async (reference) => {
+            await blobs.delete(reference)
+            if (await blobs.get(reference))
+              throw new Error("RECOVERY_EXPIRED_ISSUE_FILE_STILL_PRESENT")
+          },
+        },
+        25,
+        database
+      )
+      if (result.failed) throw new Error("RECOVERY_EXPIRED_ISSUE_PURGE_FAILED")
+      issuesPurged += result.purged
+    }
+  }
   return {
+    issuesPurged,
     filesSuppressed: expired.length,
     checkedAt: new Date().toISOString(),
   }
