@@ -4,6 +4,11 @@ Forge exposes a versioned HTTP interface at `/api/v1`. It is implemented with
 oRPC contracts and an OpenAPI handler inside the existing TanStack Start
 deployment; it is not a separate backend.
 
+External MCP uses the separate [FOR-91 access policy](external-mcp-policy.md).
+Its accepted first-release authentication is OAuth only; REST API keys do not
+authorize MCP. The MCP read server and write executor remain gated by FOR-92
+and FOR-93, including actual client compatibility verification.
+
 ## Authentication
 
 Create an API key from **Settings → API**. The secret is shown once, stored as a
