@@ -1,0 +1,119 @@
+{
+  "date": "2026-10-30",
+  "issue": "FOR-138",
+  "testedImplementationRevision": "7a85db25cc8b5fd741baf57afc71507e3df79437",
+  "baselineRevision": "3acce4d522fa10250d41ca61d1ef8294187646ad",
+  "policyDecision": {
+    "confirmedBy": "Matthieu in implementation chat, 30 October 2026",
+    "eligibleActors": [
+      "verified human session",
+      "verified API-key human owner",
+      "verified delegated-run human owner"
+    ],
+    "explicitAssignmentAlwaysWins": true,
+    "childTitlesHaveIndependentOmittedAssignment": true,
+    "releaseGate": "FORGE_PERSONAL_PREFERENCE_SYNC_ENABLED"
+  },
+  "environment": {
+    "kind": "local authenticated browser and real PostgreSQL on dedicated empty staging-branch database",
+    "branchId": "br-autumn-union-za0opf1e",
+    "database": "forge_auto_assignment_acceptance",
+    "applicationRole": "forge_staging_web",
+    "productionDataCopied": false,
+    "sourceMigrationsApplied": 52,
+    "exactMigrationRetryApplied": 0,
+    "schemaMigrationAdded": false
+  },
+  "acceptance": {
+    "AC-01_AT-01": {
+      "passed": true,
+      "evidence": [
+        "session/key/agent verified owners assigned from server preference",
+        "parent and child attributable activity committed with issue",
+        "children created during editing assigned without changing unassigned parent",
+        "dialog and inline composer assignment intent regression tests",
+        "real Better Auth browser preference save and assigned parent/child creation"
+      ]
+    },
+    "AC-02_AT-02": {
+      "passed": true,
+      "evidence": [
+        "explicit null, draft empty string and explicit other member preserved for all three actor types",
+        "missing/false/invalid/future-schema preference disables automation",
+        "disabled preference-sync gate preserves explicit assignment and disables inferred parent/child assignment",
+        "forged credential owner and insufficient scopes rejected",
+        "private-team/workspace access checked",
+        "real browser explicit unassigned/other owner and disabled preference checks"
+      ]
+    },
+    "AC-03_AT-03": {
+      "passed": true,
+      "evidence": [
+        "concurrent exact retry returns same parent and child identities",
+        "preference changes do not alter committed replay assignment/history",
+        "one receipt and audit, one created event per issue",
+        "removed private-team/workspace membership denies fresh create and replay",
+        "revoked credentials/stopped runs deny fresh create and replay",
+        "injected audit failure rolls back assigned parent, child, numbering, receipt and events; same-key retry commits once"
+      ]
+    }
+  },
+  "checks": {
+    "app": {
+      "passed": 2223,
+      "skipped": 326,
+      "passedFiles": 275,
+      "skippedFiles": 22,
+      "command": "vitest run --maxWorkers=4"
+    },
+    "runtime": {
+      "passed": 37,
+      "files": 9
+    },
+    "workflow": {
+      "passed": 4,
+      "files": 2
+    },
+    "realPostgres": {
+      "passed": 42,
+      "files": 1
+    },
+    "focusedComposerAndClient": {
+      "passed": 7,
+      "files": 2
+    },
+    "workspaceTypecheck": "passed",
+    "workspaceBuild": "passed; protected Workflow handlers verified",
+    "changedFileLint": {
+      "errors": 0,
+      "warnings": 23
+    },
+    "formatting": "passed",
+    "gitDiffCheck": "passed",
+    "browser": "passed"
+  },
+  "verificationNotes": [
+    "Initial unconstrained parallel app run had three unchanged Reviews failures; all seven Reviews cases passed in focused rerun and the full suite passed with four workers.",
+    "Local build uses isolated database credentials and an explicit production build environment to satisfy prerender configuration.",
+    "Interrupted initial run on the original FOR-41 acceptance database was stopped when another chat was detected; only this run's exact fixture marker was cleaned. Final acceptance used its own dedicated database.",
+    "Linear agent-context/learning endpoints are advertised but return Tool not found; durable contract and evidence are in the repository."
+  ],
+  "cleanup": {
+    "remainingUsers": 0,
+    "remainingWorkspaces": 0,
+    "remainingSessions": 0,
+    "remainingIssues": 0,
+    "remainingPreferences": 0,
+    "remainingReceipts": 0,
+    "remainingAudit": 0,
+    "remainingOutbox": 0,
+    "remainingApiKeys": 0,
+    "remainingRuns": 0,
+    "remainingThreads": 0
+  },
+  "boundaries": [
+    "No production migration, deployment, promotion or merge performed.",
+    "Disabled public planning REST/MCP adapters remain unavailable.",
+    "Started-state assignment, recurrence execution and packaged-desktop certification remain separate scope."
+  ]
+}
