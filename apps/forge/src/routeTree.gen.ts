@@ -70,6 +70,7 @@ import { Route as ApiInternalEnvironmentRouteImport } from './routes/api/interna
 import { Route as ApiInternalObservabilityCheckRouteImport } from './routes/api/internal/observability-check'
 import { Route as ApiInternalOperationsCheckRouteImport } from './routes/api/internal/operations-check'
 import { Route as ApiInternalOperationsMonitorRouteImport } from './routes/api/internal/operations-monitor'
+import { Route as ApiInternalRecoveryKeyExportRouteImport } from './routes/api/internal/recovery-key-export'
 import { Route as ApiInternalStorageRouteImport } from './routes/api/internal/storage'
 import { Route as ApiV1SplatRouteImport } from './routes/api/v1/$'
 import { Route as SettingsAccountAgentsRouteImport } from './routes/settings.account.agents'
@@ -437,6 +438,12 @@ const ApiInternalOperationsMonitorRoute =
   ApiInternalOperationsMonitorRouteImport.update({
     id: '/api/internal/operations-monitor',
     path: '/api/internal/operations-monitor',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiInternalRecoveryKeyExportRoute =
+  ApiInternalRecoveryKeyExportRouteImport.update({
+    id: '/api/internal/recovery-key-export',
+    path: '/api/internal/recovery-key-export',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiInternalStorageRoute = ApiInternalStorageRouteImport.update({
@@ -816,6 +823,7 @@ export interface FileRoutesByFullPath {
   '/api/internal/observability-check': typeof ApiInternalObservabilityCheckRoute
   '/api/internal/operations-check': typeof ApiInternalOperationsCheckRoute
   '/api/internal/operations-monitor': typeof ApiInternalOperationsMonitorRoute
+  '/api/internal/recovery-key-export': typeof ApiInternalRecoveryKeyExportRoute
   '/api/internal/storage': typeof ApiInternalStorageRoute
   '/api/v1/$': typeof ApiV1SplatRoute
   '/settings/account/agents': typeof SettingsAccountAgentsRoute
@@ -933,6 +941,7 @@ export interface FileRoutesByTo {
   '/api/internal/observability-check': typeof ApiInternalObservabilityCheckRoute
   '/api/internal/operations-check': typeof ApiInternalOperationsCheckRoute
   '/api/internal/operations-monitor': typeof ApiInternalOperationsMonitorRoute
+  '/api/internal/recovery-key-export': typeof ApiInternalRecoveryKeyExportRoute
   '/api/internal/storage': typeof ApiInternalStorageRoute
   '/api/v1/$': typeof ApiV1SplatRoute
   '/settings/account/agents': typeof SettingsAccountAgentsRoute
@@ -1049,6 +1058,7 @@ export interface FileRoutesById {
   '/api/internal/observability-check': typeof ApiInternalObservabilityCheckRoute
   '/api/internal/operations-check': typeof ApiInternalOperationsCheckRoute
   '/api/internal/operations-monitor': typeof ApiInternalOperationsMonitorRoute
+  '/api/internal/recovery-key-export': typeof ApiInternalRecoveryKeyExportRoute
   '/api/internal/storage': typeof ApiInternalStorageRoute
   '/api/v1/$': typeof ApiV1SplatRoute
   '/settings/account/agents': typeof SettingsAccountAgentsRoute
@@ -1170,6 +1180,7 @@ export interface FileRouteTypes {
     | '/api/internal/observability-check'
     | '/api/internal/operations-check'
     | '/api/internal/operations-monitor'
+    | '/api/internal/recovery-key-export'
     | '/api/internal/storage'
     | '/api/v1/$'
     | '/settings/account/agents'
@@ -1287,6 +1298,7 @@ export interface FileRouteTypes {
     | '/api/internal/observability-check'
     | '/api/internal/operations-check'
     | '/api/internal/operations-monitor'
+    | '/api/internal/recovery-key-export'
     | '/api/internal/storage'
     | '/api/v1/$'
     | '/settings/account/agents'
@@ -1402,6 +1414,7 @@ export interface FileRouteTypes {
     | '/api/internal/observability-check'
     | '/api/internal/operations-check'
     | '/api/internal/operations-monitor'
+    | '/api/internal/recovery-key-export'
     | '/api/internal/storage'
     | '/api/v1/$'
     | '/settings/account/agents'
@@ -1497,6 +1510,7 @@ export interface RootRouteChildren {
   ApiInternalObservabilityCheckRoute: typeof ApiInternalObservabilityCheckRoute
   ApiInternalOperationsCheckRoute: typeof ApiInternalOperationsCheckRoute
   ApiInternalOperationsMonitorRoute: typeof ApiInternalOperationsMonitorRoute
+  ApiInternalRecoveryKeyExportRoute: typeof ApiInternalRecoveryKeyExportRoute
   ApiInternalStorageRoute: typeof ApiInternalStorageRoute
   ApiV1SplatRoute: typeof ApiV1SplatRoute
   WorkspaceInitiativesInitiativeIdRoute: typeof WorkspaceInitiativesInitiativeIdRoute
@@ -1936,6 +1950,13 @@ declare module '@tanstack/react-router' {
       path: '/api/internal/operations-monitor'
       fullPath: '/api/internal/operations-monitor'
       preLoaderRoute: typeof ApiInternalOperationsMonitorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/recovery-key-export': {
+      id: '/api/internal/recovery-key-export'
+      path: '/api/internal/recovery-key-export'
+      fullPath: '/api/internal/recovery-key-export'
+      preLoaderRoute: typeof ApiInternalRecoveryKeyExportRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/internal/storage': {
@@ -2626,6 +2647,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiInternalObservabilityCheckRoute: ApiInternalObservabilityCheckRoute,
   ApiInternalOperationsCheckRoute: ApiInternalOperationsCheckRoute,
   ApiInternalOperationsMonitorRoute: ApiInternalOperationsMonitorRoute,
+  ApiInternalRecoveryKeyExportRoute: ApiInternalRecoveryKeyExportRoute,
   ApiInternalStorageRoute: ApiInternalStorageRoute,
   ApiV1SplatRoute: ApiV1SplatRoute,
   WorkspaceInitiativesInitiativeIdRoute: WorkspaceInitiativesInitiativeIdRoute,

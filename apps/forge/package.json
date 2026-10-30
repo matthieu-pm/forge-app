@@ -2,7 +2,7 @@
   "name": "@forge/app",
   "productName": "Forge",
   "version": "0.1.0",
-  "description": "Forge — one shared product across the web and macOS.",
+  "description": "Forge \u2014 one shared product across the web and macOS.",
   "main": ".electron-build/main.js",
   "private": true,
   "type": "module",
@@ -45,9 +45,13 @@
     "integration:fixtures": "bun scripts/integration-fixtures.ts",
     "db:rehearse": "bun scripts/rehearse-database-release.ts",
     "files:verify": "bun scripts/verify-private-file-storage.ts",
-    "files:migrate": "bun scripts/migrate-local-files.ts"
+    "files:migrate": "bun scripts/migrate-local-files.ts",
+    "recovery:run": "bun scripts/recovery.ts",
+    "recovery:rehearse": "bun scripts/rehearse-recovery.ts",
+    "recovery:maintenance": "bun scripts/recovery-maintenance.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "3.1104.0",
     "@base-ui/react": "^1.7.0",
     "@better-auth/api-key": "1.6.26",
     "@better-auth/core": "1.6.26",
@@ -123,7 +127,6 @@
     "@electron-forge/plugin-fuses": "7.11.2",
     "@electron-forge/shared-types": "7.11.2",
     "@electron/fuses": "2.1.3",
-    "@aws-sdk/client-s3": "3.1104.0",
     "@playwright/test": "1.62.1",
     "@react-email/render": "2.1.0",
     "@tanstack/devtools-vite": "^0.8.3",

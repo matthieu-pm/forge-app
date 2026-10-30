@@ -14,6 +14,10 @@ export const DATABASE_TARGETS = {
     database: "neondb",
   },
   staging: STAGING.database,
+  "recovery-source": {
+    ...STAGING.database,
+    database: "forge_recovery_source",
+  },
   "file-storage-acceptance": {
     ...STAGING.database,
     database: "forge_file_storage_acceptance_v2",
