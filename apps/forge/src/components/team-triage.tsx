@@ -1,6 +1,4 @@
-import { readIssueStore } from "@/lib/team-issues"
-import type { TeamIssue } from "@/lib/issue-record-contract"
-import { useState, useRef } from "react"
+import { useRef, useState } from "react"
 import { Link } from "@tanstack/react-router"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
@@ -10,8 +8,10 @@ import {
   StarIcon,
   UserGroup03Icon,
 } from "@hugeicons/core-free-icons"
+import type { TeamIssue } from "@/lib/issue-record-contract"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TriageDraft, TriageIssue } from "@/lib/triage-issues"
+import { readIssueStore } from "@/lib/team-issues"
 import { productStorage } from "@/lib/product-storage"
 import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import { ContentHeader } from "@/components/ui/content-header"

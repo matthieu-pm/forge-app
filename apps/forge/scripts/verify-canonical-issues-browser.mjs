@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { readFileSync, mkdirSync } from "node:fs"
 import { chromium, expect } from "@playwright/test"
 import { Pool, neonConfig } from "@neondatabase/serverless"
@@ -8,7 +9,7 @@ const config = JSON.parse(readFileSync(file, "utf8")),
   url = new URL(config.connection)
 if (
   url.hostname !== "ep-blue-shadow-zauhwkjz.c-2.eu-west-2.aws.neon.tech" ||
-  decodeURIComponent(url.pathname) !== "/forge_issue_creation_acceptance_v2" ||
+  decodeURIComponent(url.pathname) !== "/forge_issue_creation_acceptance_v3" ||
   url.searchParams.get("sslmode") !== "require"
 )
   throw new Error("Only the dedicated acceptance database is allowed")
@@ -36,7 +37,7 @@ try {
     )
   ).rows[0]
   if (
-    identity.database !== "forge_issue_creation_acceptance_v2" ||
+    identity.database !== "forge_issue_creation_acceptance_v3" ||
     identity.branch !== "br-autumn-union-za0opf1e"
   )
     throw new Error("Wrong database")
@@ -104,6 +105,14 @@ try {
   const errors = []
   admin.on("pageerror", (e) => errors.push(e.message))
   member.on("pageerror", (e) => errors.push(e.message))
+  for (const page of [admin, member])
+    page.on("response", (response) => {
+      if (
+        response.url().includes("/_serverFn/") &&
+        !response.headers()["cache-control"]?.includes("no-store")
+      )
+        errors.push("Product server response allowed caching")
+    })
   const projectId = crypto.randomUUID(),
     legacyId = crypto.randomUUID()
   const display = {
@@ -200,6 +209,67 @@ try {
     }),
     "forge:desktop-tabs": JSON.stringify({ migrationExample: true }),
   }
+  // Seed an existing device backup before enabling write guards. App migration
+  // may read/delete this database, but must never add or put product records.
+  const checksum = (value) =>
+    createHash("sha256").update(JSON.stringify(value)).digest("hex")
+  const rawBackup = "malformed\0\ud800text\udfff"
+  const ownBody = {
+    format: "forge-legacy-backup",
+    version: 1,
+    policyVersion: 1,
+    id: crypto.randomUUID(),
+    actorId: users[0],
+    createdAt: now,
+    sourceFingerprint: checksum(["source", rawBackup]),
+    entries: [
+      {
+        key: `forge:profile:${users[0]}`,
+        raw: rawBackup,
+        checksum: checksum(rawBackup),
+        version: "1",
+      },
+    ],
+  }
+  const ownBackup = { ...ownBody, checksum: checksum(ownBody) }
+  const foreignBody = { ...ownBody, id: crypto.randomUUID(), actorId: users[1] }
+  const foreignBackup = { ...foreignBody, checksum: checksum(foreignBody) }
+  await admin.goto(`${base}/api/health/live`)
+  await admin.evaluate(
+    async (backups) => {
+      await new Promise((resolve, reject) => {
+        const request = indexedDB.open("forge-legacy-backups-v1", 1)
+        request.onupgradeneeded = () => {
+          const store = request.result.createObjectStore("backups", {
+            keyPath: "id",
+          })
+          store.createIndex("actorId", "actorId")
+        }
+        request.onerror = () => reject(request.error)
+        request.onsuccess = () => {
+          const db = request.result,
+            tx = db.transaction("backups", "readwrite")
+          for (const backup of backups) tx.objectStore("backups").add(backup)
+          tx.oncomplete = () => {
+            db.close()
+            resolve()
+          }
+          tx.onerror = () => reject(tx.error)
+        }
+      })
+    },
+    [ownBackup, foreignBackup]
+  )
+  for (const page of [admin, member])
+    await page.addInitScript(() => {
+      window.__indexedProductWrites = []
+      for (const method of ["add", "put"]) {
+        IDBObjectStore.prototype[method] = function () {
+          window.__indexedProductWrites.push(method)
+          throw new Error("IndexedDB product writes forbidden")
+        }
+      }
+    })
   await admin.addInitScript(
     ({ sources }) => {
       if (window.top !== window) return
@@ -208,7 +278,7 @@ try {
         native.call(localStorage, key, value)
       window.__productStorageWrites = []
       Storage.prototype.setItem = function (key, value) {
-        if (/^forge[:.]/.test(key)) {
+        if (/^forge[:.]/.test(key) || key.startsWith('["forge.preferences",')) {
           window.__productStorageWrites.push(key)
           throw new Error("Persistent browser write forbidden")
         }
@@ -221,7 +291,7 @@ try {
     const native = Storage.prototype.setItem
     window.__productStorageWrites = []
     Storage.prototype.setItem = function (key, value) {
-      if (/^forge[:.]/.test(key)) {
+      if (/^forge[:.]/.test(key) || key.startsWith('["forge.preferences",')) {
         window.__productStorageWrites.push(key)
         throw new Error("Persistent browser write forbidden")
       }
@@ -242,6 +312,37 @@ try {
       )
     )
     .toEqual([])
+  const backupRow = (
+    await pool.query(
+      "SELECT encoded_value FROM product_state WHERE workspace_id=$1 AND owner_user_id=$2 AND key=$3",
+      [marker, users[0], `forge:legacy-backup:v1:${ownBackup.id}`]
+    )
+  ).rows[0]
+  if (
+    !backupRow ||
+    JSON.parse(JSON.parse(backupRow.encoded_value)).entries[0].raw !== rawBackup
+  )
+    throw new Error("Server backup did not preserve exact UTF16 source")
+  const deviceBackups = await admin.evaluate(
+    async () =>
+      new Promise((resolve, reject) => {
+        const request = indexedDB.open("forge-legacy-backups-v1")
+        request.onerror = () => reject(request.error)
+        request.onsuccess = () => {
+          const db = request.result,
+            tx = db.transaction("backups", "readonly"),
+            get = tx.objectStore("backups").getAll()
+          get.onsuccess = () => resolve(get.result)
+          tx.oncomplete = () => db.close()
+          get.onerror = () => reject(get.error)
+        }
+      })
+  )
+  if (
+    deviceBackups.some((backup) => backup.id === ownBackup.id) ||
+    !deviceBackups.some((backup) => backup.id === foreignBackup.id)
+  )
+    throw new Error("Backup cleanup crossed an account boundary")
   const imported = (
     await pool.query(
       "SELECT id,number,project_id,cycle_id FROM issues WHERE workspace_id=$1 AND legacy_id=$2",
@@ -273,24 +374,94 @@ try {
   await expect(
     admin.getByRole("button", { name: /Open ENG-2 Canonical browser issue/ })
   ).toBeVisible({ timeout: 60000 })
-  await admin.getByRole("button",{name:/Open ENG-2 Canonical browser issue/}).click()
-  await member.getByRole("button",{name:/Open ENG-2 Canonical browser issue/}).click()
-  await member.getByRole("textbox",{name:"Issue title",exact:true}).fill("Member resolved title")
-  await admin.getByRole("textbox",{name:"Issue title",exact:true}).fill("Admin title")
-  await admin.getByRole("textbox",{name:"Issue title",exact:true}).press("Enter")
-  await expect.poll(async()=>(await pool.query("SELECT title FROM issues WHERE workspace_id=$1 AND number=2",[marker])).rows[0]?.title,{timeout:30000}).toBe("Admin title")
-  await member.getByRole("textbox",{name:"Issue title",exact:true}).press("Enter")
-  await expect(member.getByRole("button",{name:"Apply my edits to latest",exact:true})).toBeVisible({timeout:30000})
-  if((await pool.query("SELECT title FROM issues WHERE workspace_id=$1 AND number=2",[marker])).rows[0].title!=="Admin title")throw new Error("A stale edit overwrote shared data")
-  const savedDrafts=(await pool.query("SELECT count(*)::int n FROM product_state WHERE workspace_id=$1 AND owner_user_id=$2 AND key LIKE 'forge:team-issue-edit-drafts:%' AND encoded_value IS NOT NULL",[marker,users[1]])).rows[0].n
-  if(savedDrafts!==1)throw new Error("The conflicting edit did not retain a server draft")
-  await member.getByRole("button",{name:"Apply my edits to latest",exact:true}).click()
-  await expect.poll(async()=>(await pool.query("SELECT title FROM issues WHERE workspace_id=$1 AND number=2",[marker])).rows[0]?.title,{timeout:30000}).toBe("Member resolved title")
-  await expect.poll(async()=>(await pool.query("SELECT count(*)::int n FROM product_state WHERE workspace_id=$1 AND key LIKE 'forge:team-issue-edit-drafts:%' AND encoded_value IS NOT NULL",[marker])).rows[0].n,{timeout:30000}).toBe(0)
+  await admin
+    .getByRole("button", { name: /Open ENG-2 Canonical browser issue/ })
+    .click()
+  await member
+    .getByRole("button", { name: /Open ENG-2 Canonical browser issue/ })
+    .click()
+  await member
+    .getByRole("textbox", { name: "Issue title", exact: true })
+    .fill("Member resolved title")
+  await admin
+    .getByRole("textbox", { name: "Issue title", exact: true })
+    .fill("Admin title")
+  await admin
+    .getByRole("textbox", { name: "Issue title", exact: true })
+    .press("Enter")
+  await expect
+    .poll(
+      async () =>
+        (
+          await pool.query(
+            "SELECT title FROM issues WHERE workspace_id=$1 AND number=2",
+            [marker]
+          )
+        ).rows[0]?.title,
+      { timeout: 30000 }
+    )
+    .toBe("Admin title")
+  await member
+    .getByRole("textbox", { name: "Issue title", exact: true })
+    .press("Enter")
+  await expect(
+    member.getByRole("button", {
+      name: "Apply my edits to latest",
+      exact: true,
+    })
+  ).toBeVisible({ timeout: 30000 })
+  if (
+    (
+      await pool.query(
+        "SELECT title FROM issues WHERE workspace_id=$1 AND number=2",
+        [marker]
+      )
+    ).rows[0].title !== "Admin title"
+  )
+    throw new Error("A stale edit overwrote shared data")
+  const savedDrafts = (
+    await pool.query(
+      "SELECT count(*)::int n FROM product_state WHERE workspace_id=$1 AND owner_user_id=$2 AND key LIKE 'forge:team-issue-edit-drafts:%' AND encoded_value IS NOT NULL",
+      [marker, users[1]]
+    )
+  ).rows[0].n
+  if (savedDrafts !== 1)
+    throw new Error("The conflicting edit did not retain a server draft")
+  await member
+    .getByRole("button", { name: "Apply my edits to latest", exact: true })
+    .click()
+  await expect
+    .poll(
+      async () =>
+        (
+          await pool.query(
+            "SELECT title FROM issues WHERE workspace_id=$1 AND number=2",
+            [marker]
+          )
+        ).rows[0]?.title,
+      { timeout: 30000 }
+    )
+    .toBe("Member resolved title")
+  await expect
+    .poll(
+      async () =>
+        (
+          await pool.query(
+            "SELECT count(*)::int n FROM product_state WHERE workspace_id=$1 AND key LIKE 'forge:team-issue-edit-drafts:%' AND encoded_value IS NOT NULL",
+            [marker]
+          )
+        ).rows[0].n,
+      { timeout: 30000 }
+    )
+    .toBe(0)
   await admin.reload()
-  await expect(admin.getByRole("textbox",{name:"Issue title",exact:true})).toHaveValue("Member resolved title",{timeout:60000})
+  await expect(
+    admin.getByRole("textbox", { name: "Issue title", exact: true })
+  ).toHaveValue("Member resolved title", { timeout: 60000 })
   await member.goto(`${base}/teams/engineering/issues?view=all`)
-  await expect(member.getByRole("button",{name:/Open ENG-2 Member resolved title/})).toBeVisible({timeout:60000})
+  await expect(
+    member.getByRole("button", { name: /Open ENG-2 Member resolved title/ })
+  ).toBeVisible({ timeout: 60000 })
   const count = (
     await pool.query(
       "SELECT count(*)::int n FROM issues WHERE workspace_id=$1",
@@ -301,6 +472,8 @@ try {
   for (const page of [admin, member]) {
     const writes = await page.evaluate(() => window.__productStorageWrites)
     if (writes.length) throw new Error(`Native writes ${writes.join(",")}`)
+    if ((await page.evaluate(() => window.__indexedProductWrites)).length)
+      throw new Error("Native IndexedDB writes")
   }
   for (const page of [admin, member])
     await expect(
@@ -328,18 +501,27 @@ try {
         "real admin/member sessions",
         "automatic browser migration and source removal",
         "project/cycle relation migration",
+        "existing IndexedDB backup migrated with exact UTF16 preservation and foreign account exclusion",
         "AC-01 shared identity after reload",
         "reload deduplication",
         "zero native product storage writes",
-        "desktop/mobile","FOR-42 visible conflict with durable draft and explicit rebase",
+        "desktop/mobile",
+        "FOR-42 visible conflict with durable draft and explicit rebase",
       ],
       issueCount: count,
       importedIssue: imported,
     })
   )
+} catch (error) {
+  console.error(error)
+  throw error
 } finally {
   await browser?.close()
   if (verified) {
+    // Match command authorization lock order while in-flight requests finish.
+    await pool.query("DELETE FROM session WHERE active_organization_id=$1", [
+      marker,
+    ])
     await pool.query("DELETE FROM organization WHERE id=$1", [marker])
     for (const id of users)
       await pool.query('DELETE FROM "user" WHERE id=$1', [id])

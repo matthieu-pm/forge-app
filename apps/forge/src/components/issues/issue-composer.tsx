@@ -16,8 +16,8 @@ import type { IssueDraft, TeamIssue } from "@/lib/team-issues"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import {
-  canonicalIssuesActive,
   canonicalIssueRows,
+  canonicalIssuesActive,
   projectDisplayName,
 } from "@/lib/canonical-issue-cache"
 import { createSharedTeamIssue } from "@/lib/canonical-issue-client"

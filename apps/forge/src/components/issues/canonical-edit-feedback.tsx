@@ -2,13 +2,14 @@ import { useSyncExternalStore } from "react"
 import type { IssueChanges } from "@/lib/canonical-issue-edit-contract"
 import type { TeamIssue } from "@/lib/issue-record-contract"
 import {
+  ISSUE_EDITS_CHANGED,
   applyEditsToLatest,
   flushIssueEdits,
-  ISSUE_EDITS_CHANGED,
   issueEditSnapshot,
   useLatestIssueVersions,
 } from "@/lib/canonical-issue-edit-client"
 import { Button } from "@/components/ui/button"
+
 const subscribe = (notify: () => void) => {
   window.addEventListener(ISSUE_EDITS_CHANGED, notify)
   return () => window.removeEventListener(ISSUE_EDITS_CHANGED, notify)
@@ -64,13 +65,15 @@ export function CanonicalEditFeedback() {
               Retry issue edits
             </Button>
           )}
-          <Button
-            size="sm"
-            disabled={status.running}
-            onClick={() => void applyEditsToLatest()}
-          >
-            Apply my edits to latest
-          </Button>
+          {status.conflict && (
+            <Button
+              size="sm"
+              disabled={status.running}
+              onClick={() => void applyEditsToLatest()}
+            >
+              Apply my edits to latest
+            </Button>
+          )}
           <Button
             size="sm"
             variant="secondary"

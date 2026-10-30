@@ -1,4 +1,3 @@
-import type * as ProductStorage from "./product-storage"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
   canonicalIssueRows,
@@ -7,15 +6,18 @@ import {
 } from "./canonical-issue-cache"
 import { blankIssueDraft, issueSchema } from "./issue-record-contract"
 import {
+  applyEditsToLatest,
   enqueueIssueEdits,
   flushIssueEdits,
   hydrateIssueEdits,
   issueEditSnapshot,
   resetIssueEdits,
-  applyEditsToLatest,
+  useLatestIssueVersions,
 } from "./canonical-issue-edit-client"
 import { persistCanonicalIssueEdits } from "./canonical-issue-state"
 import { productStorage, saveProductValue } from "./product-storage"
+import type * as ProductStorage from "./product-storage"
+
 vi.mock("./canonical-issue-state", () => ({
   persistCanonicalIssueEdits: vi.fn(),
   persistCanonicalIssue: vi.fn(),
@@ -200,6 +202,166 @@ describe("canonical issue edit queue", () => {
     expect(JSON.parse(issueEditSnapshot()).pending).toBe(1)
     expect(persistCanonicalIssueEdits).not.toHaveBeenCalled()
     expect(canonicalIssueRows(teamId)[0].issue.title).toBe("Original")
+  })
+  it("persists batches queued behind a conflict and restores each without executing", async () => {
+    let resolve!: (value: string) => void
+    vi.mocked(persistCanonicalIssueEdits).mockImplementationOnce(
+      () =>
+        new Promise((r) => {
+          resolve = r
+        })
+    )
+    enqueueIssueEdits(teamId, [
+      { before: original, changes: { title: "First" } },
+    ])
+    await vi.waitFor(() =>
+      expect(persistCanonicalIssueEdits).toHaveBeenCalledTimes(1)
+    )
+    enqueueIssueEdits(teamId, [
+      { before: original, changes: { description: "Second" } },
+    ])
+    resolve(
+      JSON.stringify({
+        status: "conflict",
+        records: [{ teamId, issue: { ...original, revision: 1 } }],
+      })
+    )
+    await vi.waitFor(() =>
+      expect(JSON.parse(issueEditSnapshot()).conflict).toBe(true)
+    )
+    resetIssueEdits()
+    hydrateIssueEdits()
+    expect(
+      JSON.parse(issueEditSnapshot()).drafts.map(
+        (draft: { changes: unknown }) => draft.changes
+      )
+    ).toEqual([{ title: "First" }, { description: "Second" }])
+    expect(persistCanonicalIssueEdits).toHaveBeenCalledTimes(1)
+  })
+  it("replaces a conflict draft in one slot and retains its identity through a save failure", async () => {
+    vi.mocked(persistCanonicalIssueEdits).mockResolvedValueOnce(
+      JSON.stringify({
+        status: "conflict",
+        records: [{ teamId, issue: { ...original, revision: 1 } }],
+      })
+    )
+    enqueueIssueEdits(teamId, [
+      { before: original, changes: { subIssues: ["Child"] } },
+    ])
+    await vi.waitFor(() =>
+      expect(JSON.parse(issueEditSnapshot()).conflict).toBe(true)
+    )
+    const initialKeys = Array.from(
+      { length: productStorage.length },
+      (_, index) => productStorage.key(index)
+    )
+    vi.mocked(saveProductValue).mockImplementationOnce(async (key, value) => {
+      productStorage.setItem(key, value!)
+      throw new Error("Acknowledgment lost")
+    })
+    await applyEditsToLatest()
+    expect(persistCanonicalIssueEdits).toHaveBeenCalledTimes(1)
+    expect(
+      Array.from({ length: productStorage.length }, (_, index) =>
+        productStorage.key(index)
+      )
+    ).toEqual(initialKeys)
+    const prepared = JSON.parse(productStorage.getItem(initialKeys[0])!)
+    resetIssueEdits()
+    hydrateIssueEdits()
+    expect(JSON.parse(issueEditSnapshot()).pending).toBe(1)
+    vi.mocked(persistCanonicalIssueEdits).mockResolvedValueOnce(
+      JSON.stringify({
+        status: "saved",
+        records: [{ teamId, issue: { ...original, revision: 2 } }],
+      })
+    )
+    await flushIssueEdits()
+    expect(
+      vi.mocked(persistCanonicalIssueEdits).mock.calls[1][0].data.commandKey
+    ).toBe(prepared.commandKey)
+  })
+  it("keeps edits enqueued while an earlier draft is being discarded", async () => {
+    vi.mocked(persistCanonicalIssueEdits).mockRejectedValueOnce(
+      new Error("Offline")
+    )
+    enqueueIssueEdits(teamId, [
+      { before: original, changes: { title: "Discard me" } },
+    ])
+    await vi.waitFor(() =>
+      expect(JSON.parse(issueEditSnapshot()).error).toBe("Offline")
+    )
+    let finish!: () => void
+    vi.mocked(saveProductValue).mockImplementationOnce(
+      (key) =>
+        new Promise<void>((resolve) => {
+          finish = () => {
+            productStorage.removeItem(key)
+            resolve()
+          }
+        })
+    )
+    const discard = useLatestIssueVersions()
+    enqueueIssueEdits(teamId, [
+      { before: original, changes: { description: "Keep me" } },
+    ])
+    let respond!: (response: string) => void
+    vi.mocked(persistCanonicalIssueEdits).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          respond = resolve
+        })
+    )
+    finish()
+    await discard
+    await vi.waitFor(() =>
+      expect(persistCanonicalIssueEdits).toHaveBeenCalledTimes(2)
+    )
+    expect(JSON.parse(issueEditSnapshot()).drafts).toHaveLength(1)
+    expect(JSON.parse(issueEditSnapshot()).drafts[0].changes).toEqual({
+      description: "Keep me",
+    })
+    const keys = Array.from({ length: productStorage.length }, (_, index) =>
+      productStorage.key(index)
+    )
+    expect(keys).toHaveLength(1)
+    respond(
+      JSON.stringify({
+        status: "saved",
+        records: [
+          {
+            teamId,
+            issue: { ...original, description: "Keep me", revision: 1 },
+          },
+        ],
+      })
+    )
+    await vi.waitFor(() =>
+      expect(JSON.parse(issueEditSnapshot()).pending).toBe(0)
+    )
+  })
+  it("never replaces an uncertain command key with a rebase, including child additions", async () => {
+    vi.mocked(persistCanonicalIssueEdits).mockRejectedValueOnce(
+      new Error("Response lost")
+    )
+    enqueueIssueEdits(teamId, [
+      { before: original, changes: { subIssues: ["Child"] } },
+    ])
+    await vi.waitFor(() =>
+      expect(JSON.parse(issueEditSnapshot()).error).toBe("Response lost")
+    )
+    await applyEditsToLatest()
+    expect(persistCanonicalIssueEdits).toHaveBeenCalledTimes(1)
+    vi.mocked(persistCanonicalIssueEdits).mockResolvedValueOnce(
+      JSON.stringify({
+        status: "saved",
+        records: [{ teamId, issue: { ...original, revision: 1 } }],
+      })
+    )
+    await flushIssueEdits()
+    expect(vi.mocked(persistCanonicalIssueEdits).mock.calls[1][0]).toEqual(
+      vi.mocked(persistCanonicalIssueEdits).mock.calls[0][0]
+    )
   })
   it("ignores a completed write after the active identity changes", async () => {
     let resolve!: (value: string) => void

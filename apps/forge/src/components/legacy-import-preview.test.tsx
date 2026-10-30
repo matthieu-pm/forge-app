@@ -1,4 +1,3 @@
-import {productStorage} from "@/lib/product-storage"
 import { webcrypto } from "node:crypto"
 import {
   act,
@@ -21,6 +20,7 @@ import {
 } from "vitest"
 import { LegacyImportPreview } from "./legacy-import-preview"
 import type { LegacyBackup, PreviewContext } from "@/lib/legacy-import-preview"
+import { productStorage } from "@/lib/product-storage"
 import { loadLegacyPreviewContext } from "@/lib/legacy-import-state"
 import {
   browserBackupRepository,
@@ -350,11 +350,18 @@ describe("browser data review UI", () => {
     expect(saved.size).toBe(1)
     expect(productStorage.getItem(key)).toContain("A real legacy issue")
     expect(
-      within(screen.getByRole("region", { name: "Saved legacy data" })).queryByRole(
-        "checkbox"
-      )
+      within(
+        screen.getByRole("region", { name: "Saved legacy data" })
+      ).queryByRole("checkbox")
     ).toBeNull()
   })
 })
 
-function sourceSnapshot(){return Object.fromEntries(Array.from({length:productStorage.length},(_,index)=>{const key=productStorage.key(index)!;return [key,productStorage.getItem(key)]}))}
+function sourceSnapshot() {
+  return Object.fromEntries(
+    Array.from({ length: productStorage.length }, (_, index) => {
+      const key = productStorage.key(index)
+      return [key, productStorage.getItem(key)]
+    })
+  )
+}

@@ -1,9 +1,9 @@
-import type { IssueDraft } from "./issue-record-contract"
-import type { InitiativeProject } from "./initiatives"
 import { z } from "zod"
 import { canonicalCommandInput, withoutUndefined } from "./canonical-json"
 import { issueDraftSchema } from "./issue-record-contract"
 import { initiativeProjectSchema } from "./initiatives"
+import type { InitiativeProject } from "./initiatives"
+import type { IssueDraft } from "./issue-record-contract"
 
 export const createCanonicalIssueSchema = z
   .object({

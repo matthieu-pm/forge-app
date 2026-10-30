@@ -1,10 +1,9 @@
-import type { IssueChanges } from "./canonical-issue-edit-contract"
+import { useCallback, useMemo, useSyncExternalStore } from "react"
+import { z } from "zod"
 import {
   changesBetween,
   enqueueIssueEdits,
 } from "./canonical-issue-edit-client"
-import { useCallback, useMemo, useSyncExternalStore } from "react"
-import { z } from "zod"
 import {
   canonicalIssueRows,
   canonicalIssuesActive,
@@ -27,6 +26,7 @@ import {
   issueDraftSchema,
   issueSchema,
 } from "./issue-record-contract"
+import type { IssueChanges } from "./canonical-issue-edit-contract"
 import type { TeamStatus } from "@/lib/team-statuses"
 import type {
   IssueDisplay,

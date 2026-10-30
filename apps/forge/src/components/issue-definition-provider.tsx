@@ -1,13 +1,13 @@
-import { CanonicalEditFeedback } from "./issues/canonical-edit-feedback"
-import {
-  hydrateIssueEdits,
-  resetIssueEdits,
-} from "@/lib/canonical-issue-edit-client"
 import * as React from "react"
+import { CanonicalEditFeedback } from "./issues/canonical-edit-feedback"
 import type {
   DefinitionCommand,
   DefinitionSnapshot,
 } from "@/lib/issue-definition-contract"
+import {
+  hydrateIssueEdits,
+  resetIssueEdits,
+} from "@/lib/canonical-issue-edit-client"
 import { replaceCanonicalIssues } from "@/lib/canonical-issue-cache"
 import { refreshCanonicalIssues } from "@/lib/canonical-issue-client"
 import { migrateLocalIssues } from "@/lib/canonical-issue-migration"
@@ -79,12 +79,9 @@ export function IssueDefinitionProvider({
       setError("")
     } catch {
       if (!mounted.current || token !== epoch.current) return
-      stateRef.current = null
-      ++identityEpoch.current
-      replaceDefinitionCache([])
-      replaceCanonicalIssues(null)
-      resetIssueEdits()
-      setState(null)
+      // A transient refresh failure must retain the current session and its edits.
+      // Actual identity invalidation is handled by the session event below.
+      if (!stateRef.current) setState(null)
       setError("Shared issue definitions could not be loaded. Try again.")
     }
   }, [])

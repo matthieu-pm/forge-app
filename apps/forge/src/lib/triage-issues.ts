@@ -8,8 +8,8 @@ import { createSharedTeamIssue } from "./canonical-issue-client"
 import { blankIssueDraft } from "./issue-record-contract"
 import {
   getDefaultIssueStatus,
-  saveTeamIssue,
   readIssueStore,
+  saveTeamIssue,
 } from "./team-issues"
 import { triageDraftSchema, triagePriorities } from "./triage-record-contract"
 import type { TeamIssue } from "./issue-record-contract"

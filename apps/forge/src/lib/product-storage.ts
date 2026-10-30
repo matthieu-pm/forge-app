@@ -1,8 +1,13 @@
 import { loadProductState, persistProductState } from "./product-state-server"
+import { legacyStorageScope } from "./product-state-contract"
 import type { ProductStateSnapshot } from "./product-state-contract"
 
 let identity: Omit<ProductStateSnapshot, "entries"> | null = null
 let generation = 0
+let mutationEpoch = 0
+export function productStorageRefreshToken() {
+  return mutationEpoch
+}
 const values = new Map<string, string>(),
   revisions = new Map<string, number>()
 type Pending = {
@@ -11,12 +16,12 @@ type Pending = {
   commandKey: string
   revision?: number
   recoveryCommandKey?: string
-  recoveryValue?:string
+  recoveryValue?: string
 }
 let pending: Array<Pending> = []
 let running = false
 let error = ""
-let definitiveFailure=false
+let definitiveFailure = false
 export const PRODUCT_STORAGE_CHANGED = "forge:product-storage-changed"
 function notify(key: string | null = null) {
   if (typeof window !== "undefined") {
@@ -35,7 +40,7 @@ export function resetProductStorage() {
   pending = []
   running = false
   error = ""
-  definitiveFailure=false
+  definitiveFailure = false
   notify()
 }
 export function initializeProductStorage(snapshot: ProductStateSnapshot) {
@@ -47,15 +52,37 @@ export function initializeProductStorage(snapshot: ProductStateSnapshot) {
   }
   notify()
 }
-export function refreshProductStorage(snapshot: ProductStateSnapshot) {
+export function refreshProductStorage(
+  snapshot: ProductStateSnapshot,
+  requestToken = mutationEpoch
+) {
   if (
     !identity ||
     snapshot.workspaceId !== identity.workspaceId ||
     snapshot.sessionId !== identity.sessionId
   )
     return
+  const present = new Set(snapshot.entries.map((entry) => entry.key))
+  for (const key of values.keys()) {
+    const teamId = legacyStorageScope(key).teamId
+    const revoked =
+      teamId && snapshot.teamIds && !snapshot.teamIds.includes(teamId)
+    if (
+      revoked ||
+      (requestToken === mutationEpoch &&
+        !present.has(key) &&
+        !pending.some((p) => p.key === key))
+    ) {
+      values.delete(key)
+      if (!revoked) revisions.delete(key)
+    }
+  }
+  identity = { ...identity, teamIds: snapshot.teamIds }
   for (const e of snapshot.entries)
-    if (!pending.some((p) => p.key === e.key)) {
+    if (
+      !pending.some((p) => p.key === e.key) &&
+      e.revision >= (revisions.get(e.key) ?? 0)
+    ) {
       if (e.value === null) values.delete(e.key)
       else values.set(e.key, e.value)
       revisions.set(e.key, e.revision)
@@ -66,6 +93,7 @@ export async function flushProductStorage() {
   if (running || !identity) return
   running = true
   error = ""
+  definitiveFailure = false
   const token = generation
   try {
     while (pending.length && token === generation) {
@@ -83,17 +111,23 @@ export async function flushProductStorage() {
         },
       })
       if (token !== generation) return
+      mutationEpoch++
       revisions.set(p.key, result.value.revision)
       pending.shift()
       notify(p.key)
     }
   } catch (failure) {
-    definitiveFailure=failure instanceof Error && /^(\[|Only workspace admins|This data changed in another session)/.test(failure.message)
-    if (token === generation)
+    if (token === generation) {
+      definitiveFailure =
+        failure instanceof Error &&
+        /^(\[|Only workspace admins|This data changed in another session)/.test(
+          failure.message
+        )
       error =
         failure instanceof Error && !failure.message.startsWith("[")
           ? failure.message
           : "Changes could not be saved. They remain in this session."
+    }
   } finally {
     if (token === generation) {
       running = false
@@ -123,6 +157,7 @@ export const productStorage = {
       return
     }
     if (values.get(key) === value) return
+    mutationEpoch++
     values.set(key, value)
     pending.push({ key, value, commandKey: crypto.randomUUID() })
     notify(key)
@@ -135,6 +170,7 @@ export const productStorage = {
       return
     }
     if (!values.has(key)) return
+    mutationEpoch++
     values.delete(key)
     pending.push({ key, value: null, commandKey: crypto.randomUUID() })
     notify(key)
@@ -166,12 +202,12 @@ export async function preservePendingAndReload() {
           sessionId: binding.sessionId,
           commandKey: p.recoveryCommandKey,
           key: `forge:pending-recovery:v1:${p.commandKey}`,
-          value: p.recoveryValue??=JSON.stringify({
+          value: (p.recoveryValue ??= JSON.stringify({
             key: p.key,
             value: p.value,
             expectedRevision: p.revision ?? 0,
-            createdAt:new Date().toISOString(),
-          }),
+            createdAt: new Date().toISOString(),
+          })),
           expectedRevision: 0,
         },
       })
@@ -184,7 +220,13 @@ export async function preservePendingAndReload() {
       snapshot.workspaceId !== binding.workspaceId
     )
       throw new Error("The active session changed.")
-    for(const p of pending)if(snapshot.entries.find(entry=>entry.key===`forge:pending-recovery:v1:${p.commandKey}`)?.value!==p.recoveryValue)throw new Error("The saved recovery copy could not be verified.")
+    for (const p of pending)
+      if (
+        snapshot.entries.find(
+          (entry) => entry.key === `forge:pending-recovery:v1:${p.commandKey}`
+        )?.value !== p.recoveryValue
+      )
+        throw new Error("The saved recovery copy could not be verified.")
     initializeProductStorage(snapshot)
     return true
   } catch (failure) {
@@ -202,6 +244,17 @@ export async function preservePendingAndReload() {
   }
 }
 
-export function productStorageIdentity(){return identity?{workspaceId:identity.workspaceId,userId:identity.userId,sessionId:identity.sessionId,teamIds:identity.teamIds}:null}
+export function productStorageIdentity() {
+  return identity
+    ? {
+        workspaceId: identity.workspaceId,
+        userId: identity.userId,
+        sessionId: identity.sessionId,
+        teamIds: identity.teamIds,
+      }
+    : null
+}
 
-export function productStorageFailureIsDefinitive(){return definitiveFailure}
+export function productStorageFailureIsDefinitive() {
+  return definitiveFailure
+}

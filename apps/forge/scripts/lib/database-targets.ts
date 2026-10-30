@@ -20,7 +20,7 @@ export const DATABASE_TARGETS = {
   },
   "issue-creation-acceptance": {
     ...STAGING.database,
-    database: "forge_issue_creation_acceptance_v2",
+    database: "forge_issue_creation_acceptance_v3",
   },
   "issue-definition-acceptance": {
     ...STAGING.database,

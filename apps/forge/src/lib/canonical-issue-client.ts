@@ -86,6 +86,14 @@ export function prepareIssueRelations(
   }
   return { projectImport, cycleImport }
 }
+const preparedCreates = new Map<
+  string,
+  {
+    intent: string
+    data: CreateCanonicalIssue & { workspaceId: string; sessionId: string }
+  }
+>()
+
 export async function createSharedTeamIssue(
   teamId: string,
   draft: IssueDraft,
@@ -94,14 +102,29 @@ export async function createSharedTeamIssue(
   const before = canonicalIssueState()
   if (!before)
     throw new Error("Shared issues are unavailable. Reload to try again.")
-  const data = {
+  const intent = JSON.stringify({
     teamId,
     draft,
-    ...options,
-    ...prepareIssueRelations(teamId, draft),
+    options,
     workspaceId: before.workspaceId,
     sessionId: before.sessionId,
-  }
+  })
+  const retained = preparedCreates.get(options.commandKey)
+  if (retained && retained.intent !== intent)
+    throw new Error(
+      "This creation is waiting for confirmation. Retry its original draft before changing it."
+    )
+  const data =
+    retained?.data ??
+    structuredClone({
+      teamId,
+      draft,
+      ...options,
+      ...prepareIssueRelations(teamId, draft),
+      workspaceId: before.workspaceId,
+      sessionId: before.sessionId,
+    })
+  preparedCreates.set(options.commandKey, { intent, data })
   const result = JSON.parse(await persistCanonicalIssue({ data })) as {
     issue: TeamIssue
     records: CanonicalSnapshot["records"]
@@ -116,5 +139,6 @@ export async function createSharedTeamIssue(
     )
   // A fresh authoritative snapshot includes imported projects/cycles as well.
   await refreshCanonicalIssues(before)
+  preparedCreates.delete(options.commandKey)
   return result.issue
 }

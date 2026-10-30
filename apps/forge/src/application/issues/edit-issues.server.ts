@@ -1,6 +1,11 @@
 import "@tanstack/react-start/server-only"
 import { and, eq, inArray, isNull, sql } from "drizzle-orm"
 import { z } from "zod"
+import {
+  readIssueRows,
+  requireIssueTeam,
+  resolveIssueFields,
+} from "./issues.server"
 import type { Actor } from "@/application/actor"
 import type { EditIssueBatch } from "@/lib/canonical-issue-edit-contract"
 import {
@@ -15,14 +20,10 @@ import { ApplicationAccessError } from "@/application/authorization"
 import { executeCommand } from "@/application/commands/execute-command.server"
 import { currentCommandActor } from "@/application/commands/command-actor.server"
 import { readableIssueCondition } from "@/application/resource-policy.server"
-import {
-  readIssueRows,
-  requireIssueTeam,
-  resolveIssueFields,
-} from "./issues.server"
 import { blankIssueDraft } from "@/lib/issue-record-contract"
 import { editIssueBatchSchema } from "@/lib/canonical-issue-edit-contract"
 import { withoutUndefined } from "@/lib/canonical-json"
+
 class IssueEditConflict extends Error {}
 export async function editCanonicalIssues(actor: Actor, raw: EditIssueBatch) {
   const input = editIssueBatchSchema.parse(raw),
@@ -90,7 +91,7 @@ export async function editCanonicalIssues(actor: Actor, raw: EditIssueBatch) {
             "These issues changed in another session."
           )
         const originals = await readIssueRows(tx, current, ids),
-          createdIds: string[] = [],
+          createdIds: Array<string> = [],
           events: Array<{ topic: string; payload: Record<string, unknown> }> =
             []
         for (const edit of input.edits) {
@@ -187,15 +188,13 @@ export async function editCanonicalIssues(actor: Actor, raw: EditIssueBatch) {
               )
             )
           if (resolved.labels.length)
-            await tx
-              .insert(issueLabels)
-              .values(
-                resolved.labels.map((label) => ({
-                  workspaceId: current.workspaceId,
-                  issueId: row.id,
-                  labelId: label.id,
-                }))
-              )
+            await tx.insert(issueLabels).values(
+              resolved.labels.map((label) => ({
+                workspaceId: current.workspaceId,
+                issueId: row.id,
+                labelId: label.id,
+              }))
+            )
           events.push({
             topic: "issue.updated",
             payload: { issueId: row.id, teamId: input.teamId },

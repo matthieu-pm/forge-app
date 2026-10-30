@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react"
 import type { ReactNode } from "react"
 import type { ProductStateSnapshot } from "@/lib/product-state-contract"
+import { hasPendingIssueEdits } from "@/lib/canonical-issue-edit-client"
 import { loadProductState } from "@/lib/product-state-server"
 import {
   PRODUCT_STORAGE_CHANGED,
   flushProductStorage,
   initializeProductStorage,
   preservePendingAndReload,
+  productStorageRefreshToken,
   refreshProductStorage,
   resetProductStorage,
   storageStatus,
@@ -33,6 +35,7 @@ export function ProductStateProvider({
       if (initializing) return
       initializing = true
       try {
+        const requestToken = productStorageRefreshToken()
         const snapshot = await loadProductState()
         if (!active) return
         if (
@@ -43,7 +46,7 @@ export function ProductStateProvider({
         if (initial) {
           initializeProductStorage(snapshot)
           setMigration(await migrateBrowserData())
-        } else refreshProductStorage(snapshot)
+        } else refreshProductStorage(snapshot, requestToken)
         if (active) {
           setReady(true)
           setError("")
@@ -56,7 +59,7 @@ export function ProductStateProvider({
     }
     const focus = () => void load(false)
     const beforeUnload = (event: BeforeUnloadEvent) => {
-      if (storageStatus().pending) {
+      if (storageStatus().pending || hasPendingIssueEdits()) {
         event.preventDefault()
         event.returnValue = ""
       }

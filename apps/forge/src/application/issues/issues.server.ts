@@ -1,18 +1,18 @@
 import "@tanstack/react-start/server-only"
+import { and, asc, eq, inArray, isNull, or, sql } from "drizzle-orm"
+import { z } from "zod"
 import type { InitiativeProject } from "@/lib/initiatives"
-import { withoutUndefined } from "@/lib/canonical-json"
-import { commandInputHash } from "@/application/commands/command-input"
+import type { Actor } from "@/application/actor"
+import type { Transaction } from "@/db"
+import type { CreateCanonicalIssue } from "@/lib/canonical-issue-contract"
+import type { TeamIssue } from "@/lib/issue-record-contract"
 import {
   createCanonicalIssueSchema,
   legacyIssueSource,
   legacyProjectSource,
 } from "@/lib/canonical-issue-contract"
-import { and, asc, eq, inArray, isNull, or, sql } from "drizzle-orm"
-import { z } from "zod"
-import type { Actor } from "@/application/actor"
-import type { Transaction } from "@/db"
-import type { CreateCanonicalIssue } from "@/lib/canonical-issue-contract"
-import type { TeamIssue } from "@/lib/issue-record-contract"
+import { commandInputHash } from "@/application/commands/command-input"
+import { withoutUndefined } from "@/lib/canonical-json"
 import {
   accountPreferences,
   db,
@@ -199,6 +199,33 @@ export async function readCanonicalIssues(actor: Actor) {
     async (tx) => {
       const current = await currentCommandActor(tx, actor)
       requireResourceScope(current, "issues:read")
+      const visibleProjects = await tx
+        .select()
+        .from(projects)
+        .where(
+          and(
+            eq(projects.workspaceId, current.workspaceId),
+            readableProjectCondition(current, projects.id)
+          )
+        )
+      const visibleLinks = await tx
+        .select({
+          projectId: projectTeams.projectId,
+          teamId: projectTeams.teamId,
+        })
+        .from(projectTeams)
+        .where(
+          and(
+            eq(projectTeams.workspaceId, current.workspaceId),
+            readableTeamCondition(current, projectTeams.teamId)
+          )
+        )
+      const visibleProjectIds = new Set(
+        visibleProjects.flatMap((p) => [
+          p.id,
+          ...(p.legacyId ? [p.legacyId] : []),
+        ])
+      )
       return {
         workspaceId: current.workspaceId,
         userId: current.userId,
@@ -207,15 +234,21 @@ export async function readCanonicalIssues(actor: Actor) {
             ? current.authentication.sessionId
             : "",
         records: await readIssueRows(tx, current),
-        projects: await tx
-          .select()
-          .from(projects)
-          .where(
-            and(
-              eq(projects.workspaceId, current.workspaceId),
-              readableProjectCondition(current, projects.id)
-            )
-          ),
+        projects: visibleProjects.map((project) => ({
+          ...project,
+          properties: {
+            ...project.properties,
+            teamIds: visibleLinks
+              .filter((link) => link.projectId === project.id)
+              .map((link) => link.teamId),
+            dependencyIds: Array.isArray(project.properties.dependencyIds)
+              ? project.properties.dependencyIds.filter(
+                  (id: unknown) =>
+                    typeof id === "string" && visibleProjectIds.has(id)
+                )
+              : [],
+          },
+        })),
         cycles: await tx
           .select()
           .from(issueCycles)

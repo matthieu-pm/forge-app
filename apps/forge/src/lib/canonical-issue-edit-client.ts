@@ -1,17 +1,11 @@
 import { prepareIssueRelations } from "./canonical-issue-client"
-import type { TeamIssue } from "./issue-record-contract"
-import type {
-  EditIssueBatch,
-  IssueChanges,
-} from "./canonical-issue-edit-contract"
-import type { CanonicalSnapshot } from "./canonical-issue-cache"
 import {
   editIssueBatchSchema,
   issueChangesSchema,
 } from "./canonical-issue-edit-contract"
 import {
-  canonicalIssueRows,
   canonicalIssueEpoch,
+  canonicalIssueRows,
   canonicalIssueState,
   clearOptimisticIssue,
   mergeCanonicalIssueRecords,
@@ -19,9 +13,20 @@ import {
 } from "./canonical-issue-cache"
 import { persistCanonicalIssueEdits } from "./canonical-issue-state"
 import { productStorage, saveProductValue } from "./product-storage"
+import type { CanonicalSnapshot } from "./canonical-issue-cache"
+import type {
+  EditIssueBatch,
+  IssueChanges,
+} from "./canonical-issue-edit-contract"
+import type { TeamIssue } from "./issue-record-contract"
+
 export const ISSUE_EDITS_CHANGED = "forge:issue-edits-changed"
-type Pending = { input: EditIssueBatch; sourceKey: string }
-let queue: Pending[] = [],
+type Pending = {
+  input: EditIssueBatch
+  sourceKey: string
+  preparedRebase?: boolean
+}
+let queue: Array<Pending> = [],
   running = false,
   error = "",
   conflict = false,
@@ -39,6 +44,9 @@ export function resetIssueEdits() {
   error = ""
   conflict = false
   notify()
+}
+export function hasPendingIssueEdits() {
+  return queue.length > 0
 }
 export function issueEditSnapshot() {
   return JSON.stringify({
@@ -63,8 +71,8 @@ export function hydrateIssueEdits() {
   const state = canonicalIssueState()
   if (!state) return
   for (let index = 0; index < productStorage.length; index++) {
-    const key = productStorage.key(index)!
-    if (!key.startsWith("forge:team-issue-edit-drafts:v1:")) continue
+    const key = productStorage.key(index)
+    if (!key?.startsWith("forge:team-issue-edit-drafts:v1:")) continue
     const raw = productStorage.getItem(key)
     if (!raw) continue
     try {
@@ -108,7 +116,10 @@ export function enqueueIssueEdits(
       ...prepareIssueRelations(teamId, { ...before, ...changes }),
     })),
   })
-  queue.push({ input, sourceKey: keyFor(input) })
+  const sourceKey = keyFor(input)
+  queue.push({ input, sourceKey })
+  // Persist every batch independently, including batches behind a blocked head.
+  productStorage.setItem(sourceKey, JSON.stringify(input))
   for (const edit of edits)
     setOptimisticIssue(
       optimisticFor(
@@ -152,8 +163,9 @@ export async function flushIssueEdits() {
       mergeCanonicalIssueRecords(response.records)
       if (response.status === "conflict") {
         conflict = true
+        for (const item of queue) item.preparedRebase = false
         error =
-          "These issues changed in another session. Your edits are saved for review."
+          "These issues changed in another session. Your edits are retained for review."
         for (const item of queue)
           for (const edit of item.input.edits)
             clearOptimisticIssue(edit.issueId)
@@ -187,62 +199,98 @@ export async function flushIssueEdits() {
 }
 export async function useLatestIssueVersions() {
   if (running) return
-  const token = epoch
+  const token = epoch,
+    discarded = [...queue]
+  running = true
+  notify()
+  let ready = false
   try {
-    for (const pending of queue) await saveProductValue(pending.sourceKey, null)
-    if (token !== epoch) return
-    for (const pending of queue)
-      for (const edit of pending.input.edits) clearOptimisticIssue(edit.issueId)
-    queue = []
+    for (const pending of discarded) {
+      await saveProductValue(pending.sourceKey, null)
+      if (token !== epoch) return
+    }
+    queue = queue.filter((pending) => !discarded.includes(pending))
+    for (const pending of discarded)
+      for (const edit of pending.input.edits)
+        if (
+          !queue.some((item) =>
+            item.input.edits.some((next) => next.issueId === edit.issueId)
+          )
+        )
+          clearOptimisticIssue(edit.issueId)
     conflict = false
     error = ""
-    notify()
+    ready = true
   } catch {
-    error = "Saved edits could not be cleared. Retry when connected."
-    notify()
+    if (token === epoch)
+      error = "Saved edits could not be cleared. Retry when connected."
+  } finally {
+    if (token === epoch) {
+      running = false
+      notify()
+    }
   }
+  if (ready && token === epoch) void flushIssueEdits()
 }
 export async function applyEditsToLatest() {
-  if (running) return
+  // An uncertain response must replay its original command before any rebase.
+  if (running || !conflict) return
   const state = canonicalIssueState()
   if (!state) return
   const token = epoch,
-    next: Pending[] = [],
     versions = new Map(state.records.map((r) => [r.issue.id, r.issue]))
+  running = true
+  notify()
+  let ready = false
   try {
     for (const pending of queue) {
-      const input = {
-        ...pending.input,
-        commandKey: crypto.randomUUID(),
-        edits: pending.input.edits.map((edit) => {
-          const before = versions.get(edit.issueId)
-          if (!before) throw new Error("An issue is no longer available.")
-          versions.set(edit.issueId, optimisticFor(before, edit.changes))
-          return { ...edit, expectedRevision: before.revision ?? 0 }
-        }),
+      if (!pending.preparedRebase) {
+        pending.input = {
+          ...pending.input,
+          commandKey: crypto.randomUUID(),
+          edits: pending.input.edits.map((edit) => {
+            const before = versions.get(edit.issueId)
+            if (!before) throw new Error("An issue is no longer available.")
+            return { ...edit, expectedRevision: before.revision ?? 0 }
+          }),
+        }
+        pending.preparedRebase = true
       }
-      const sourceKey = keyFor(input)
-      await saveProductValue(sourceKey, JSON.stringify(input))
-      next.push({ input, sourceKey })
+      for (const edit of pending.input.edits) {
+        const before = versions.get(edit.issueId)
+        if (before)
+          versions.set(edit.issueId, optimisticFor(before, edit.changes))
+      }
+      // Replace the same durable draft slot. Never expose two generations after
+      // a partial save or a reload, and retain the prepared identity on retry.
+      await saveProductValue(pending.sourceKey, JSON.stringify(pending.input))
+      if (token !== epoch) return
     }
-    for (const pending of queue) await saveProductValue(pending.sourceKey, null)
-    if (token !== epoch) return
-    queue = next
     conflict = false
     error = ""
-    for (const issue of versions.values())
-      if (queue.some((q) => q.input.edits.some((e) => e.issueId === issue.id)))
-        setOptimisticIssue(issue)
-    notify()
-    void flushIssueEdits()
+    for (const pending of queue)
+      for (const edit of pending.input.edits) {
+        const before = state.records.find(
+          (record) => record.issue.id === edit.issueId
+        )?.issue
+        if (before) setOptimisticIssue(optimisticFor(before, edit.changes))
+      }
+    ready = true
   } catch (failure) {
-    error =
-      failure instanceof Error
-        ? failure.message
-        : "Edits could not be prepared. Your saved drafts are preserved."
-    notify()
+    if (token === epoch)
+      error =
+        failure instanceof Error
+          ? failure.message
+          : "Edits could not be prepared. Your saved drafts are preserved."
+  } finally {
+    if (token === epoch) {
+      running = false
+      notify()
+    }
   }
+  if (ready && token === epoch) void flushIssueEdits()
 }
+
 export function changesBetween(
   before: TeamIssue,
   after: TeamIssue

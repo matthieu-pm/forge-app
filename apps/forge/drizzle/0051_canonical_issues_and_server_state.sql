@@ -144,8 +144,8 @@ BEGIN
  NEW.revision:=OLD.revision+1;
  NEW.updated_at:=clock_timestamp();
  IF NEW.status_id IS DISTINCT FROM OLD.status_id THEN
-  NEW.properties:=jsonb_set(NEW.properties,'{statusChangedAt}',to_jsonb(NEW.updated_at),true);
-  NEW.properties:=jsonb_set(NEW.properties,'{completedAt}',CASE WHEN EXISTS(SELECT 1 FROM issue_statuses WHERE workspace_id=NEW.workspace_id AND team_id=NEW.team_id AND id=NEW.status_id AND status_group='completed') THEN to_jsonb(NEW.updated_at) ELSE 'null'::jsonb END,true);
+  NEW.properties:=jsonb_set(NEW.properties,'{statusChangedAt}',to_jsonb(to_char(NEW.updated_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')),true);
+  NEW.properties:=jsonb_set(NEW.properties,'{completedAt}',CASE WHEN EXISTS(SELECT 1 FROM issue_statuses WHERE workspace_id=NEW.workspace_id AND team_id=NEW.team_id AND id=NEW.status_id AND status_group='completed') THEN to_jsonb(to_char(NEW.updated_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')) ELSE 'null'::jsonb END,true);
  END IF;
  RETURN NEW;
 END $$;

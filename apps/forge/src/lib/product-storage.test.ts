@@ -4,6 +4,7 @@ import {
   initializeProductStorage,
   preservePendingAndReload,
   productStorage,
+  productStorageRefreshToken,
   refreshProductStorage,
   resetProductStorage,
   saveProductValue,
@@ -143,16 +144,26 @@ describe("server product persistence and one-way browser migration", () => {
     )
     productStorage.setItem("forge:desktop-tabs", "my pending version")
     await vi.waitFor(() => expect(storageStatus().error).toBe("Stale revision"))
-    vi.mocked(loadProductState).mockResolvedValue({
+    vi.mocked(loadProductState).mockImplementation(async () => ({
       ...identity,
       entries: [
+        ...vi
+          .mocked(persistProductState)
+          .mock.calls.filter(([{ data }]) =>
+            data.key.startsWith("forge:pending-recovery:")
+          )
+          .map(([{ data }]) => ({
+            key: data.key,
+            value: data.value,
+            revision: 1,
+          })),
         {
           key: "forge:desktop-tabs",
           value: "latest server version",
           revision: 3,
         },
       ],
-    })
+    }))
     await preservePendingAndReload()
     const recovery = vi.mocked(persistProductState).mock.calls[1][0].data
     expect(recovery.key).toMatch(/^forge:pending-recovery:/)
@@ -162,13 +173,47 @@ describe("server product persistence and one-way browser migration", () => {
     )
     expect(storageStatus()).toEqual({ pending: 0, error: "" })
   })
- it("excludes another account, workspace and unknown keys before reading native payloads",async()=>{
-  window.localStorage.setItem("forge:profile:other","SECRET")
-  window.localStorage.setItem("forge:workspace:other:initiatives:v1","SECRET")
-  window.localStorage.setItem("forge:unknown-token","SECRET")
-  const reads=vi.spyOn(Storage.prototype,"getItem")
-  expect(await migrateBrowserData()).toEqual([])
-  expect(reads.mock.calls.some(([key])=>["forge:profile:other","forge:workspace:other:initiatives:v1","forge:unknown-token"].includes(key))).toBe(false)
- })
-
+  it("does not regress acknowledged writes when an older refresh completes", async () => {
+    const token = productStorageRefreshToken()
+    await saveProductValue("forge:desktop-tabs", "new")
+    refreshProductStorage({ ...identity, entries: [] }, token)
+    expect(productStorage.getItem("forge:desktop-tabs")).toBe("new")
+    refreshProductStorage({
+      ...identity,
+      entries: [{ key: "forge:desktop-tabs", value: "old", revision: 0 }],
+    })
+    expect(productStorage.getItem("forge:desktop-tabs")).toBe("new")
+    refreshProductStorage({ ...identity, entries: [] })
+    expect(productStorage.getItem("forge:desktop-tabs")).toBeNull()
+  })
+  it("removes a revoked team's cached source on an authorized refresh", () => {
+    const teamId = "60109b0b-7cd4-4097-9883-196a80ff2493",
+      key = `forge:team-issues:v1:${teamId}`
+    initializeProductStorage({
+      ...identity,
+      teamIds: [teamId],
+      entries: [{ key, value: "private", revision: 1 }],
+    })
+    refreshProductStorage({ ...identity, teamIds: [], entries: [] })
+    expect(productStorage.getItem(key)).toBeNull()
+  })
+  it("excludes another account, workspace and unknown keys before reading native payloads", async () => {
+    window.localStorage.setItem("forge:profile:other", "SECRET")
+    window.localStorage.setItem(
+      "forge:workspace:other:initiatives:v1",
+      "SECRET"
+    )
+    window.localStorage.setItem("forge:unknown-token", "SECRET")
+    const reads = vi.spyOn(Storage.prototype, "getItem")
+    expect(await migrateBrowserData()).toEqual([])
+    expect(
+      reads.mock.calls.some(([key]) =>
+        [
+          "forge:profile:other",
+          "forge:workspace:other:initiatives:v1",
+          "forge:unknown-token",
+        ].includes(key)
+      )
+    ).toBe(false)
+  })
 })

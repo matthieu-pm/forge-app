@@ -1,13 +1,14 @@
 import "@tanstack/react-start/server-only"
-import { parseTeamCycles } from "@/lib/team-cycles-contract"
-import { parseTeamTriage } from "@/lib/team-triage-contract"
 import { and, eq, or } from "drizzle-orm"
+import { z } from "zod"
 import type { Actor } from "@/application/actor"
 import type { Transaction } from "@/db"
 import type {
   ProductStateCommand,
   ProductStateSnapshot,
 } from "@/lib/product-state-contract"
+import { parseTeamCycles } from "@/lib/team-cycles-contract"
+import { parseTeamTriage } from "@/lib/team-triage-contract"
 import { db, productState, teamMembers, teams } from "@/db"
 import {
   ApplicationAccessError,
@@ -20,7 +21,6 @@ import {
   isProductStorageKey,
   productStateCommandSchema,
 } from "@/lib/product-state-contract"
-import { z } from "zod"
 
 function session(
   actor: Actor,
@@ -116,7 +116,10 @@ export async function readProductState(
         if ((await scope(tx, current, row.key)) === row.ownerId)
           entries.push({
             key: row.key,
-            value: row.encodedValue===null?null:JSON.parse(row.encodedValue) as string,
+            value:
+              row.encodedValue === null
+                ? null
+                : (JSON.parse(row.encodedValue) as string),
             revision: row.revision,
           })
       } catch {
@@ -131,7 +134,12 @@ export async function readProductState(
           ? actor.authentication.sessionId
           : "",
       entries,
-      teamIds:(await tx.select({id:teams.id}).from(teams).where(readableTeamCondition(current,teams.id))).map(t=>t.id),
+      teamIds: (
+        await tx
+          .select({ id: teams.id })
+          .from(teams)
+          .where(readableTeamCondition(current, teams.id))
+      ).map((t) => t.id),
     }
   })
 }
@@ -192,7 +200,10 @@ export async function saveProductState(actor: Actor, raw: ProductStateCommand) {
         await tx.select().from(productState).where(predicate).for("update")
       )[0]
       if (row.revision !== input.expectedRevision) {
-        if ((row.encodedValue===null?null:JSON.parse(row.encodedValue)) === input.value)
+        if (
+          (row.encodedValue === null ? null : JSON.parse(row.encodedValue)) ===
+          input.value
+        )
           return {
             value: { revision: row.revision },
             resource: { type: "productState", id: row.id },
@@ -204,7 +215,11 @@ export async function saveProductState(actor: Actor, raw: ProductStateCommand) {
       }
       await tx
         .update(productState)
-        .set({ encodedValue: input.value===null?null:JSON.stringify(input.value), revision: row.revision + 1 })
+        .set({
+          encodedValue:
+            input.value === null ? null : JSON.stringify(input.value),
+          revision: row.revision + 1,
+        })
         .where(predicate)
       return {
         value: { revision: row.revision + 1 },

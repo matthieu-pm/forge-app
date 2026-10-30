@@ -1,4 +1,3 @@
-import {productStorage} from "@/lib/product-storage"
 import * as React from "react"
 import type {
   LegacyBackup,
@@ -6,6 +5,7 @@ import type {
   PreviewContext,
   SourceChoice,
 } from "@/lib/legacy-import-preview"
+import { productStorage } from "@/lib/product-storage"
 import { Button } from "@/components/ui/button"
 import { loadLegacyPreviewContext } from "@/lib/legacy-import-state"
 import { describeLegacyKey } from "@/lib/legacy-import-sources"
@@ -183,12 +183,16 @@ export function LegacyImportPreview() {
           Saved legacy data
         </h2>
         <p className="text-xs leading-4 text-muted-foreground">
-          Review source snapshots preserved with your account. Existing issues, projects and cycles are migrated automatically when possible; source copies stay available for review.
+          Review source snapshots preserved with your account. Existing issues,
+          projects and cycles are migrated automatically when possible; source
+          copies stay available for review.
         </p>
       </div>
       <div className="space-y-4 rounded-2xl border border-border/70 bg-muted/35 p-4">
         <p className="text-sm text-muted-foreground">
-          Discovery starts when you choose Preview. Only supported source snapshots are inspected. Review and backup preserve their current content.
+          Discovery starts when you choose Preview. Only supported source
+          snapshots are inspected. Review and backup preserve their current
+          content.
         </p>
         <div className="flex flex-wrap gap-2">
           <Button
@@ -513,7 +517,8 @@ export function LegacyImportPreview() {
               <p className="text-sm">
                 Select the sources you are entitled to back up. Backups include
                 the exact stored strings, including malformed data and embedded
-                files. They are stored privately on the server for your account in this workspace.
+                files. They are stored privately on the server for your account
+                in this workspace.
               </p>
               <div className="flex flex-wrap gap-2">
                 <Button

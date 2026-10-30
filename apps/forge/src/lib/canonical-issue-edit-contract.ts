@@ -1,6 +1,7 @@
-import { initiativeProjectSchema } from "./initiatives"
 import { z } from "zod"
+import { initiativeProjectSchema } from "./initiatives"
 import { issueDraftSchema } from "./issue-record-contract"
+
 export const issueChangesSchema = z
   .object({
     title: z.string().trim().min(1).max(240).optional(),

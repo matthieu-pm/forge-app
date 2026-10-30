@@ -42,6 +42,7 @@ vi.mock("@/lib/canonical-issue-migration", () => ({
 }))
 vi.mock("@/lib/canonical-issue-cache", () => ({
   canonicalIssuesActive: () => false,
+  canonicalIssueState: () => null,
   canonicalIssueRows: () => [],
   replaceCanonicalIssues: () => {},
 }))

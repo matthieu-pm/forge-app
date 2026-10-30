@@ -1,11 +1,11 @@
 // @vitest-environment node
-import type * as Editing from "./edit-issues.server"
 import { randomUUID } from "node:crypto"
 import { readFileSync } from "node:fs"
 import { Pool, neonConfig } from "@neondatabase/serverless"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 import { DATABASE_TARGETS } from "../../../scripts/lib/database-targets"
 import { assertMigrationTarget } from "../../../scripts/lib/serialized-migrations"
+import type * as Editing from "./edit-issues.server"
 import type { Actor } from "@/application/actor"
 import type * as Service from "./issues.server"
 import type * as ProductService from "../product-state/product-state.server"
@@ -792,5 +792,99 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
     await expect(
       editing.editCanonicalIssues(f.actors[1], input)
     ).rejects.toThrow()
+  }, 30000)
+  it("derives lifecycle timestamps for completion and reopening in the database", async () => {
+    const f = await fixture(),
+      created = await service.createCanonicalIssue(
+        f.actors[0],
+        command(f.teamId)
+      )
+    const saved = await editing.editCanonicalIssues(f.actors[0], {
+      teamId: f.teamId,
+      commandKey: randomUUID(),
+      edits: [
+        {
+          issueId: created.issue.id,
+          expectedRevision: 0,
+          changes: { status: "done" },
+        },
+      ],
+    })
+    expect(saved.records[0].issue.completedAt).not.toBeNull()
+    expect(saved.records[0].issue.statusChangedAt).not.toBe(
+      created.issue.statusChangedAt
+    )
+    const reopened = await editing.editCanonicalIssues(f.actors[0], {
+      teamId: f.teamId,
+      commandKey: randomUUID(),
+      edits: [
+        {
+          issueId: created.issue.id,
+          expectedRevision: 1,
+          changes: { status: "todo" },
+        },
+      ],
+    })
+    expect(reopened.records[0].issue.completedAt).toBeNull()
+    expect(reopened.records[0].issue.statusChangedAt).not.toBe(
+      saved.records[0].issue.statusChangedAt
+    )
+  }, 30000)
+  it("omits private team and hidden project relationships from project responses", async () => {
+    const f = await fixture(),
+      hidden = randomUUID(),
+      visible = randomUUID()
+    await pool.query("UPDATE teams SET visibility='private' WHERE id=$1", [
+      f.secondTeam,
+    ])
+    await pool.query(
+      "INSERT INTO projects(id,workspace_id,name,properties) VALUES($1,$3,'Visible',$4),($2,$3,'Hidden','{}')",
+      [
+        visible,
+        hidden,
+        f.workspaceId,
+        JSON.stringify({
+          teamIds: [f.teamId, f.secondTeam],
+          dependencyIds: [hidden],
+        }),
+      ]
+    )
+    for (const [projectId, teamId] of [
+      [visible, f.teamId],
+      [visible, f.secondTeam],
+      [hidden, f.secondTeam],
+    ])
+      await pool.query(
+        "INSERT INTO project_teams(workspace_id,project_id,team_id) VALUES($1,$2,$3)",
+        [f.workspaceId, projectId, teamId]
+      )
+    const result = await service.readCanonicalIssues(f.actors[1])
+    expect(result.projects).toHaveLength(1)
+    expect(result.projects[0].properties).toMatchObject({
+      teamIds: [f.teamId],
+      dependencyIds: [],
+    })
+    expect(JSON.stringify(result.projects)).not.toContain(f.secondTeam)
+    expect(JSON.stringify(result.projects)).not.toContain(hidden)
+  }, 30000)
+  it("preserves NUL and malformed UTF16 in private server source copies", async () => {
+    const f = await fixture(),
+      actor = f.actors[0]
+    if (actor.authentication.kind !== "session")
+      throw new Error("Session required")
+    const value = "raw\0\ud800text\udfff"
+    await product.saveProductState(actor, {
+      workspaceId: f.workspaceId,
+      sessionId: actor.authentication.sessionId,
+      commandKey: randomUUID(),
+      key: "forge:desktop-tabs",
+      value,
+      expectedRevision: 0,
+    })
+    const snapshot = await product.readProductState(actor)
+    expect(
+      snapshot.entries.find((entry) => entry.key === "forge:desktop-tabs")
+        ?.value
+    ).toBe(value)
   }, 30000)
 })
