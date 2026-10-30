@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
   monthlyWorkspacePrice,
+  newUploadPlanAdmission,
   pooledWorkspaceLimit,
   selfServePlanSchema,
   workspaceMemberCapacity,
@@ -51,6 +52,21 @@ describe("workspace member pricing and shared allowance", () => {
   it("keeps Enterprise out of self-serve checkout", () => {
     expect(selfServePlanSchema.safeParse("enterprise").success).toBe(false)
     expect(selfServePlanSchema.safeParse("free").success).toBe(false)
+  })
+  it("admits new Free uploads through 10 MB exactly and rejects larger or invalid sizes", () => {
+    expect(newUploadPlanAdmission("free", 10_000_000)).toEqual({
+      allowed: true,
+      limitBytes: 10_000_000,
+    })
+    expect(newUploadPlanAdmission("free", 10_000_001).allowed).toBe(false)
+    for (const size of [0, -1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])
+      expect(() => newUploadPlanAdmission("free", size)).toThrow()
+    expect(() => newUploadPlanAdmission("basic" as never, 1)).toThrow()
+    for (const plan of ["starter", "plus", "enterprise"] as const)
+      expect(newUploadPlanAdmission(plan, 10_000_001)).toEqual({
+        allowed: true,
+        limitBytes: null,
+      })
   })
   it("rejects fractional, negative and overflowed counts or allowances", () => {
     for (const count of [0, -1, 1.5, Infinity]) {

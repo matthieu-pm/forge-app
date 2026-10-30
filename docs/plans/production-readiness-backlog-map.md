@@ -9,7 +9,7 @@ Based on the [production readiness review](<https://linear.app/atriumcrm/documen
 * **258 prerequisite relationships** in the maintained graph, all internal. The original 133-issue audit read every native relationship; subsequent selected-release and plan-limit changes were read back. The current local graph was checked for cycles and duplicate titles; this is not a fresh whole-backlog remote audit.
 * **57 Core production**, **73 Feature gated**, **6 Later expansion** items.
 * **75 High**, **55 Medium**, **6 Low** priorities. High blocks its labeled launch scope; Medium is required before enabling the corresponding feature; Low is later expansion. Priority is not a delivery date.
-* Implementation tracking: **FOR-21, FOR-128 and FOR-153 Done**; **FOR-20, FOR-25, FOR-27, FOR-28, FOR-39, FOR-75, FOR-76, FOR-97, FOR-109, FOR-110, FOR-111 and FOR-155 In Progress**. Other live statuses are authoritative in Linear. No assignees, estimates, sprints or deadlines were invented.
+* Implementation tracking: **FOR-21, FOR-109, FOR-128 and FOR-153 Done**; **FOR-20, FOR-25, FOR-27, FOR-28, FOR-39, FOR-75, FOR-76, FOR-97, FOR-110, FOR-111 and FOR-155 In Progress**. Other live statuses are authoritative in Linear. No assignees, estimates, sprints or deadlines were invented.
 * The graph is acyclic. Every pre-launch core item reaches the core launch gate. The user selected web collaboration, Forge agent, macOS and paid billing, so their conditional gates are now mandatory for this selected release.
 * No active issue depends on the removed preference project. The audit found no exact duplicate tickets to delete; overlapping responsibilities were separated.
 
@@ -293,3 +293,18 @@ provider usage, Calls/Signals, legacy exposure and paid-overage currency/consent
 invoicing remain required. FOR-76 and FOR-155 stay In Progress. Paid-overage invoicing is monthly in arrears with native immediate-invoice exceptions for paid plan changes/immediate termination. No native prerequisite edge was added. See
 `docs/workspace-usage-ledger.md` and
 `output/production-readiness/usage-ledger-2026-10-29.json`.
+
+
+## Commercial decision contract complete — 30 October 2026
+
+FOR-109 now has a consolidated [commercial policy](../billing-commercial-policy.md)
+and a linked Linear document covering all plan entitlements, subscription/usage
+transitions, event precedence and required communications. The last explicit
+downgrade decision keeps existing files accessible; Free's 10 MB limit applies
+only to new uploads/finalization. Numeric/upload policy and Billing notices are
+covered by 554 passing billing/UI/server tests (114 PostgreSQL cases skipped in
+this local run), TypeScript, scoped lint/format and production build checks.
+FOR-35 carries the new upload/finalize/download acceptance cases. The checkout,
+projection, usage/runtime, trial and full lifecycle release work remain in their
+existing issues. This decision completion does not enable billing or approve a
+production launch.

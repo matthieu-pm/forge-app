@@ -1,5 +1,10 @@
 # Forge launch plans: entitlements and usage
 
+The consolidated [commercial policy](billing-commercial-policy.md) records the final
+accepted lifecycle, downgrade and communication rules as of 30 October 2026. It
+supersedes historical open-decision wording below. Implementation/release gates
+remain separate.
+
 Source: the user's three Linear Plans screenshots and explicit decisions in this
 conversation, 28 October 2026. Screenshot Basic maps to Forge Starter; Business
 maps to Forge Plus. The user's overrides below take precedence over screenshot
@@ -172,7 +177,7 @@ Usage reservations/settlement must bind workspace, period, trusted plan, feature
 and payer snapshots. Free exhaustion blocks additional metered agent/Calls/Signals
 work; paid Calls/Signals must still pass independent safety/admission controls.
 Existing consumption must survive membership changes, retries and plan transitions.
-Starter→Plus upgrades now take effect after successful immediate prorated payment; Plus→Starter downgrades take effect at renewal. Failed upgrade payment retains the original Starter contract. A full refund of only that upgrade charge restores verified, already-paid Starter access through its original boundary. The fully refunded upgrade also renews on Starter; verified provider scheduling preserves existing renewal seats and retries safely. Other plan-change carryover decisions remain open. Cancellation and full/partial current-period refund timing are confirmed below. Member grandfathering on downgrade is confirmed above. Team and active-issue downgrades retain existing access and block creation/import or unarchiving above the new cap; existing content is not deleted or concealed. Upload over-capacity transitions still need rules. Currency changes are confirmed for next renewal, with a seven-day replacement-checkout grace deadline. Late checkout keeps the original monthly anniversary. The actual provider replacement/grace executor and durable short-month renewal correction remain gated. See `docs/renewal-currency-change.md`. EUR overage/caps and usage-time ECB
+Starter→Plus upgrades now take effect after successful immediate prorated payment; Plus→Starter downgrades take effect at renewal. Failed upgrade payment retains the original Starter contract. A full refund of only that upgrade charge restores verified, already-paid Starter access through its original boundary. The fully refunded upgrade also renews on Starter; verified provider scheduling preserves existing renewal seats and retries safely. Paid-tier changes retain the original period and consumption; paid-to-Free carryover is confirmed below. Cancellation and full/partial current-period refund timing are confirmed below. Member grandfathering on downgrade is confirmed above. Team and active-issue downgrades retain existing access and block creation/import or unarchiving above the new cap; existing content is not deleted or concealed. Existing files, including those over 10 MB, remain accessible on downgrade; the Free 10 MB size cap applies only to new uploads and finalization, including replacement/re-upload. Normal access/retention controls still apply. Currency changes are confirmed for next renewal, with a seven-day replacement-checkout grace deadline. Late checkout keeps the original monthly anniversary. The actual provider replacement/grace executor and durable short-month renewal correction remain gated. See `docs/renewal-currency-change.md`. EUR overage/caps and usage-time ECB
 reference conversion are confirmed; durable ledger/invoice integration remains
 required before live billing. See `docs/overage-currency.md`.
 
@@ -213,7 +218,7 @@ Original-anniversary confirmation · 29 October 2026: checkout paid within the f
 Tax confirmation · 29 October 2026: listed Starter/Plus prices exclude tax; add applicable tax at checkout. The prepared adapter now verifies the approved monthly seat catalog uses explicit exclusive tax behavior before creating checkout, and rechecks live context after catalog reads. The sandbox catalog is now configured with native EUR/USD exclusive-tax prices; production settings remain unchanged.
 
 
-Trial expiry carryover confirmed · 29 October 2026: returning to Free after the trial does not grant a fresh US$5 pool. Carry consumed trial usage into Free allowance enforcement while retaining original usage/payer/period history. Starting the trial receives a fresh fixed US$5 pool, independent of prior Free usage. The selected tier stays fixed and only workspaces that have never paid are eligible. Durable redemption/read-time expiry are verified on isolated staging; actual usage carryover and public start remain gated in FOR-155/FOR-76. See `docs/workspace-trials.md`.
+Trial expiry carryover confirmed · 29 October 2026: returning to Free after the trial does not grant a fresh US$5 pool. Carry consumed trial usage into Free allowance enforcement while retaining original usage/payer/period history. Starting the trial receives a fresh fixed US$5 pool, independent of prior Free usage. The selected tier stays fixed and only workspaces that have never paid are eligible. Durable redemption/read-time expiry are verified on isolated staging; internal usage carryover is verified in the ledger checkpoint below; public start/runtime integration remain gated in FOR-155/FOR-76. See `docs/workspace-trials.md`.
 
 
 Paid-to-Free allowance confirmed · 29 October 2026: when paid access ends, carry
