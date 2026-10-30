@@ -115,3 +115,6 @@ uses two real Better Auth browser contexts, checks 50/100/121 pagination during
 creation, private search isolation, content search, direct details, assigned
 issues, board totals, and removal of loaded rows after private access is revoked.
 It deletes its fixtures and verifies zero remaining workspaces/users/receipts.
+
+Final commands, results, tested implementation revision and environment are recorded
+in [the FOR-43 acceptance evidence](for43-acceptance-evidence.json).

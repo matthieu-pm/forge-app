@@ -1,0 +1,118 @@
+{
+  "issue": "FOR-43",
+  "date": "2026-10-30",
+  "implementationRevision": "d33190b5e58f8ae39f75afdedd3ea2d0ee7bb380",
+  "baseRevision": "b29ee16",
+  "branch": "dev/for-43-bounded-queries",
+  "environment": {
+    "service": "local first-party web server with two real Better Auth sessions",
+    "database": "forge_auto_assignment_acceptance",
+    "neonBranch": "br-autumn-union-za0opf1e",
+    "productionChanged": false
+  },
+  "acceptance": {
+    "AC-01_AT-01": {
+      "passed": true,
+      "checks": [
+        "stable 50/100/121 traversal while another actor creates",
+        "creation cutoff excludes the new issue until refresh",
+        "exact authorized totals and no duplicated IDs"
+      ]
+    },
+    "AC-02_AT-02": {
+      "passed": true,
+      "checks": [
+        "private-only search returns no issue payload, title, description, identifier, count, facet or group to a nonmember",
+        "revoked private membership is checked on continuation",
+        "previously displayed private rows are discarded in the browser"
+      ]
+    },
+    "additional": [
+      "all six sort options in both directions",
+      "nested expansion inside authorized domain",
+      "literal percent/underscore search",
+      "actor/filter-bound, malformed and expired cursors",
+      "revoked sessions",
+      "cross-team status names and canonical label grouping",
+      "late old-session responses",
+      "affected-team invalidation",
+      "definition invalidation",
+      "milestone relocation/convert/delete guard writes nothing"
+    ]
+  },
+  "validation": {
+    "appUnit": {
+      "command": "bun x vitest run --maxWorkers=4",
+      "passed": 2238,
+      "skipped": 356,
+      "filesPassed": 277,
+      "filesSkipped": 22
+    },
+    "workflow": {
+      "command": "bun run test:workflow",
+      "passed": 4
+    },
+    "canonicalPostgresBaseline": {
+      "passed": 71,
+      "note": "Full canonical issue suite before the final grouping regression case was added. The final six-case FOR-43 run below includes that regression."
+    },
+    "finalQueryPostgres": {
+      "command": "FORGE_ISSUE_QUERY_TEST_DATABASE_FILE=<private connection file> bun run test:issues:postgres -- -t FOR-43",
+      "passed": 6,
+      "otherCasesNotSelected": 66
+    },
+    "browser": {
+      "command": "FORGE_ISSUE_QUERY_TEST_DATABASE_FILE=<private connection file> bun run test:issue-queries:browser",
+      "passed": true,
+      "checks": [
+        "two independent Better Auth sessions",
+        "50/100/121 pagination during creation",
+        "private search response isolation",
+        "content search",
+        "direct detail",
+        "bounded assigned view",
+        "board totals",
+        "loaded private rows removed on revocation"
+      ],
+      "cleanup": {
+        "workspaces": 0,
+        "users": 0,
+        "receipts": 0
+      }
+    },
+    "typecheck": {
+      "passed": true
+    },
+    "lint": {
+      "errors": 0,
+      "warnings": 22,
+      "scope": "changed application source/scripts; remaining warnings are existing code in touched files"
+    },
+    "productionBuild": {
+      "passed": true,
+      "protectedWorkflowHandlersVerified": true
+    },
+    "retryNote": "One existing review emoji-picker test timed out during a concurrent build/test run. Full app reruns with four workers passed; no unrelated code was changed."
+  },
+  "migration": {
+    "file": "apps/forge/drizzle/0052_bounded_issue_queries.sql",
+    "isolatedApply": 1,
+    "exactRetryApply": 0,
+    "totalReceipts": 53,
+    "productionApplied": false
+  },
+  "acceptedDecision": {
+    "source": "explicit user response in the implementation chat",
+    "choice": "Keep FOR-43 focused; block milestone relocation until FOR-58 provides a transactional command. Conversion and deletion share that guard."
+  },
+  "review": {
+    "method": "self-review of authorization, query bounds, cursor ordering, invalidation, affected consumers and AC/AT coverage",
+    "unresolvedFindings": []
+  },
+  "releaseBoundary": [
+    "PR review/merge and production migration/deployment remain separate",
+    "resumable change events remain FOR-95",
+    "public planning/MCP transports remain disabled",
+    "transactional milestone relocation remains FOR-58"
+  ]
+}
