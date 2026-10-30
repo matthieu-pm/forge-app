@@ -1,7 +1,11 @@
 import { fireEvent, render, screen } from "@testing-library/react"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { ImportExportSettings } from "./import-export-settings"
+
+// The preview has its own interaction suite. Keep this controls-only test from
+// starting a real lazy server-function import during environment teardown.
+vi.mock("./legacy-import-preview", () => ({ LegacyImportPreview: () => null }))
 
 describe("ImportExportSettings", () => {
   it("renders the import sources and export controls from the reference", async () => {

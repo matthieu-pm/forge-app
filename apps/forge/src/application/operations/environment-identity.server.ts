@@ -4,6 +4,10 @@ import { sql } from "drizzle-orm"
 import { inspectFileStorage } from "../../../../../packages/environment/file-storage"
 import { STAGING } from "../../../../../packages/environment/staging-environment"
 import { stagingServiceFetch } from "../../../../../packages/environment/staging-service-auth"
+import {
+  isPreviewProfile,
+  runtimeOrigin,
+} from "../../../../../packages/environment/preview-environment"
 
 import { db } from "@/db"
 
@@ -25,9 +29,14 @@ export async function readEnvironmentIdentity(challenge: string) {
     `)
   })
   let stagingRuntime: unknown = null
+  const preview = isPreviewProfile(process.env)
+  const peerOrigin = runtimeOrigin()
   if (process.env.FORGE_ENVIRONMENT === "staging") {
     const response = await stagingServiceFetch(
-      new URL("/eve/v1/health", STAGING.runtimeOrigin),
+      new URL(
+        preview ? "/health/ready" : "/eve/v1/health",
+        peerOrigin ?? STAGING.runtimeOrigin
+      ),
       { signal: AbortSignal.timeout(10_000) }
     )
     if (
@@ -35,10 +44,18 @@ export async function readEnvironmentIdentity(challenge: string) {
       !response.headers.get("content-type")?.includes("application/json")
     )
       throw new Error("Staging runtime health failed.")
-    const health = (await response.json()) as { ok?: boolean; status?: string }
-    if (health.ok !== true || health.status !== "ready")
+    const health = (await response.json()) as {
+      ok?: boolean
+      status?: string
+      code?: string
+    }
+    if (
+      preview
+        ? health.code !== "READY"
+        : health.ok !== true || health.status !== "ready"
+    )
       throw new Error("Staging runtime is not ready.")
-    stagingRuntime = { origin: STAGING.runtimeOrigin, health }
+    stagingRuntime = { origin: peerOrigin ?? STAGING.runtimeOrigin, health }
   }
   const databaseUrl = new URL(process.env.DATABASE_URL!)
   return {
@@ -53,9 +70,7 @@ export async function readEnvironmentIdentity(challenge: string) {
     },
     database: { host: databaseUrl.hostname, ...result.rows[0] },
     stagingRuntime,
-    runtimeOrigin: process.env.EVE_AGENT_RUNTIME_URL
-      ? new URL(process.env.EVE_AGENT_RUNTIME_URL).origin
-      : null,
+    runtimeOrigin: peerOrigin ? new URL(peerOrigin).origin : null,
     // Report the selected adapter without exposing its credentials.
     artifacts: {
       adapter:

@@ -5,6 +5,11 @@ import {
   STAGING,
 } from "../../../../packages/environment/staging-environment.js"
 import { stagingServiceFetch } from "../../../../packages/environment/staging-service-auth.js"
+import {
+  appOrigin,
+  isPreviewProfile,
+  PREVIEW,
+} from "../../../../packages/environment/preview-environment.js"
 
 import { handleProductionEnvironmentCheck } from "../../src/production-environment-check.js"
 
@@ -21,8 +26,9 @@ export default defineChannel({
         },
         async (challenge) => {
           assertStagingEnvironment(process.env, "runtime")
+          const preview = isPreviewProfile(process.env)
           const response = await stagingServiceFetch(
-            new URL("/api/internal/environment", STAGING.webOrigin),
+            new URL("/api/internal/environment", appOrigin()!),
             {
               headers: {
                 authorization: request.headers.get("authorization")!,
@@ -45,14 +51,19 @@ export default defineChannel({
           }
           if (
             callback.database?.challenge !== challenge ||
-            callback.database.branch !== STAGING.database.branchId ||
-            callback.database.database !== STAGING.database.database
+            callback.database.branch !==
+              (preview ? PREVIEW : STAGING).database.branchId ||
+            callback.database.database !==
+              (preview ? PREVIEW : STAGING).database.database
           )
             throw new Error("Staging callback identity mismatch.")
           return {
             deployment: {
               id: process.env.VERCEL_DEPLOYMENT_ID ?? null,
-              sourceRevision: process.env.FORGE_SOURCE_REVISION ?? null,
+              sourceRevision:
+                process.env.FORGE_SOURCE_REVISION ??
+                process.env.VERCEL_GIT_COMMIT_SHA ??
+                null,
             },
             callback,
           }

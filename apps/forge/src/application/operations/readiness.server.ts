@@ -1,5 +1,6 @@
 import "@tanstack/react-start/server-only"
 import { neon } from "@neondatabase/serverless"
+import { runtimeOrigin } from "../../../../../packages/environment/preview-environment"
 import { inspectFileStorage } from "../../../../../packages/environment/file-storage"
 import { inspectServiceConfiguration } from "../../../../../packages/environment/service-config"
 import { assertStagingEnvironment } from "../../../../../packages/environment/staging-environment"
@@ -39,7 +40,7 @@ export async function checkWebReadiness() {
       ? {
           runtime: async () => {
             const response = await stagingServiceFetch(
-              new URL("/health/ready", process.env.EVE_AGENT_RUNTIME_URL),
+              new URL("/health/ready", runtimeOrigin()),
               { redirect: "error", signal: AbortSignal.timeout(4_000) }
             )
             if (

@@ -1,3 +1,4 @@
+import { appOrigin } from "../../../packages/environment/preview-environment.js"
 import { observeOperation } from "../../../packages/telemetry/server.js"
 import { stagingServiceFetch } from "../../../packages/environment/staging-service-auth.js"
 import { z } from "zod"
@@ -70,7 +71,7 @@ async function callCapability(
   },
   signal?: AbortSignal
 ) {
-  const origin = process.env.FORGE_APP_ORIGIN
+  const origin = appOrigin()
   if (!origin) throw new Error("FORGE_APP_ORIGIN is not configured.")
 
   const response = await stagingServiceFetch(
