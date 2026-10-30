@@ -12,6 +12,8 @@ import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import type { IssueDraft, TeamIssue } from "@/lib/team-issues"
 import type { MyIssuePreferences, MyIssueSearch } from "@/lib/my-issues"
+import { IssueQueryFooter } from "@/components/issues/issue-query-footer"
+import { useIssueQuery, useQueriedIssue } from "@/lib/issue-query-client"
 import { sharedDefinitionsActive } from "@/lib/issue-definition-cache"
 import {
   blankIssueDraft,
@@ -70,9 +72,11 @@ export function MyIssues({
   search: MyIssueSearch
   onNavigate: (search: MyIssueSearch) => void
 }) {
-  const data = useMyIssueData(teams)
   const prefs = useMyIssuePreferences(user.id, workspaceId)
   const { display, filters, details } = prefs.preferences
+  const query = useIssueQuery({ personal: search.view, filters, display })
+  const detail = useQueriedIssue(search.issue)
+  const data = useMyIssueData(teams)
   const [directory, setDirectory] = useState<TemplateDirectory>()
   const [directoryError, setDirectoryError] = useState("")
   const [error, setError] = useState("")
@@ -122,11 +126,15 @@ export function MyIssues({
     isMyIssue(issue, search.view, user.id)
   )
   // Keep the personal scope intact when "Show all" expands nested issues.
-  const visible = visibleIssues(mine, "all", statuses, filters, display)
+  const visible = query.enabled
+    ? query.records.map((r) => r.issue)
+    : visibleIssues(mine, "all", statuses, filters, display)
   const selectedVisible = selected.filter((id) =>
     visible.some((issue) => issue.id === id)
   )
-  const current = allIssues.find((issue) => issue.id === search.issue)
+  const current = query.enabled
+    ? detail?.issue
+    : allIssues.find((issue) => issue.id === search.issue)
   const currentContext = current ? contexts.get(current.id) : undefined
   const preview =
     visible.find((issue) => issue.id === previewId) ??
@@ -305,6 +313,7 @@ export function MyIssues({
         </PageTabs>
         <div className="flex shrink-0 items-center gap-1.5">
           <IssueFilters
+            facets={query.page?.facets}
             issues={mine}
             statuses={statuses}
             members={members}
@@ -394,7 +403,7 @@ export function MyIssues({
         </div>
       )}
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        {!data.ready ? (
+        {!data.ready || (query.enabled && query.loading && !query.page) ? (
           <div role="status" className="p-8 text-sm text-muted-foreground">
             Loading My issues…
           </div>
@@ -481,6 +490,7 @@ export function MyIssues({
           </div>
         ) : (
           <IssueRows
+            serverGroups={query.page?.groups}
             issues={visible}
             allIssues={allIssues}
             identifier={teams[0]?.identifier ?? ""}
@@ -562,6 +572,7 @@ export function MyIssues({
           </aside>
         )}
       </div>
+      <IssueQueryFooter query={query} />
       {selectedVisible.length > 0 && (
         <div
           aria-label="Selected issue actions"

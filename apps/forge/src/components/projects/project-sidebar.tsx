@@ -9,6 +9,7 @@ import type { ReactNode } from "react"
 import type { InitiativePerson, InitiativeProject } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { IssueField } from "@/lib/team-issues"
+import { useIssueQuery } from "@/lib/issue-query-client"
 import { useMyIssueData } from "@/lib/my-issues-state"
 import { projectIcon } from "@/components/initiatives/initiative-projects"
 import {
@@ -87,6 +88,7 @@ export function ProjectSidebar({
   const [breakdown, setBreakdown] = useState<"Assignees" | "Labels" | "Teams">(
     "Assignees"
   )
+  const query = useIssueQuery({ project: project.id, limit: 1 })
   const data = useMyIssueData(teams)
   const rows = data.contexts.flatMap((context) =>
     context.issues
@@ -98,11 +100,13 @@ export function ProjectSidebar({
       )
       .map((issue) => ({ issue, context }))
   )
-  const completed = rows.filter(
-    ({ issue, context }) =>
-      context.statuses.find((status) => status.id === issue.status)?.group ===
-      "completed"
-  ).length
+  const completed = query.enabled
+    ? (query.page?.projectTotals.reduce((n, r) => n + r.completed, 0) ?? 0)
+    : rows.filter(
+        ({ issue, context }) =>
+          context.statuses.find((status) => status.id === issue.status)
+            ?.group === "completed"
+      ).length
   const groups = new Map<
     string,
     {
@@ -156,6 +160,42 @@ export function ProjectSidebar({
               ? "labels"
               : "teamId",
         value: key,
+      })
+    }
+  }
+  const total = query.enabled ? (query.page?.total ?? 0) : rows.length
+  if (query.enabled) {
+    groups.clear()
+    const facet =
+      breakdown === "Assignees"
+        ? "assignee"
+        : breakdown === "Labels"
+          ? "labels"
+          : "team"
+    for (const row of query.page?.facets[facet] ?? []) {
+      const person = people.find((p) => p.id === row.value)
+      const context = data.contexts.find((c) => c.team.id === row.value)
+      groups.set(row.value, {
+        value: row.value,
+        count: row.count,
+        label:
+          facet === "assignee"
+            ? (person?.name ?? (row.value || "Unassigned"))
+            : facet === "team"
+              ? (context?.team.name ?? row.value)
+              : row.value || "No label",
+        icon: (
+          <IssueIcon
+            name={
+              facet === "assignee"
+                ? "person"
+                : facet === "team"
+                  ? "layers"
+                  : "label"
+            }
+          />
+        ),
+        field: facet === "team" ? "teamId" : facet,
       })
     }
   }
@@ -265,7 +305,7 @@ export function ProjectSidebar({
             <div className="mb-4 grid grid-cols-2 gap-3 text-xs">
               <div>
                 <span className="text-muted-foreground">Scope</span>
-                <p className="mt-1">{rows.length}</p>
+                <p className="mt-1">{total}</p>
               </div>
               <div>
                 <span className="text-muted-foreground">Completed</span>
@@ -302,7 +342,7 @@ export function ProjectSidebar({
                   </span>
                 </Button>
               ))}
-              {!rows.length && (
+              {!total && (
                 <p className="py-1 text-xs text-muted-foreground/70">
                   No issues added yet.
                 </p>

@@ -6,6 +6,8 @@ import type { TeamSummary } from "@/lib/team-contract"
 import type { CycleIssue, CycleIssueDraft } from "@/lib/cycle-issues"
 import type { IssueDraft, TeamIssue } from "@/lib/team-issues"
 import type { TemplateDirectory } from "@/lib/template-contract"
+import { IssueQueryFooter } from "@/components/issues/issue-query-footer"
+import { useIssueQuery } from "@/lib/issue-query-client"
 import { DEFINITIONS_CHANGED } from "@/lib/issue-definition-cache"
 import { readTeamIssueLabels } from "@/lib/team-labels"
 import {
@@ -186,7 +188,10 @@ export function UpcomingCycle({
       toast.error("Cycle view preferences could not be saved")
     else if (patch.filters || patch.display) setSelected([])
   }
-  const visible = visibleIssues(records, "all", statuses, filters, display)
+  const query = useIssueQuery({ teamIds: [team.id], cycle, filters, display })
+  const visible = query.enabled
+    ? query.records.map((r) => r.issue)
+    : visibleIssues(records, "all", statuses, filters, display)
   const chosen = selected.filter((id) =>
     visible.some((issue) => issue.id === id)
   )
@@ -476,6 +481,7 @@ export function UpcomingCycle({
               </div>
             ) : (
               <IssueRows
+                serverGroups={query.page?.groups}
                 showCycleBadge={false}
                 issues={visible}
                 allIssues={records}
@@ -524,7 +530,9 @@ export function UpcomingCycle({
               <dl className="mt-6 grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <dt className="text-muted-foreground">Scope</dt>
-                  <dd className="mt-1">{issues.length}</dd>
+                  <dd className="mt-1">
+                    {query.enabled ? (query.page?.total ?? 0) : issues.length}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-muted-foreground">Completed</dt>
@@ -713,6 +721,7 @@ export function UpcomingCycle({
           </form>
         </DialogContent>
       </Dialog>
+      <IssueQueryFooter query={query} />
     </main>
   )
 }

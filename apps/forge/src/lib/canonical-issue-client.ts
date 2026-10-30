@@ -1,6 +1,7 @@
 import {
   canonicalIssueEpoch,
   canonicalIssueState,
+  mergeCanonicalIssueRecords,
   replaceCanonicalIssues,
 } from "./canonical-issue-cache"
 import {
@@ -139,6 +140,7 @@ export async function createSharedTeamIssue(
     )
   // A fresh authoritative snapshot includes imported projects/cycles as well.
   await refreshCanonicalIssues(before)
+  mergeCanonicalIssueRecords(result.records)
   preparedCreates.delete(options.commandKey)
   return result.issue
 }

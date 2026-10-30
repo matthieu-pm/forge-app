@@ -480,7 +480,8 @@ export function ProjectCollection(props: Props) {
               items.map((project) => {
                 const milestone = currentProjectMilestone(
                   project,
-                  props.stats.get(project.id)?.milestoneIssues
+                  props.stats.get(project.id)?.milestoneIssues,
+                  props.stats.get(project.id)?.milestoneCounts
                 )
                 return (
                   <DirectoryTableRow

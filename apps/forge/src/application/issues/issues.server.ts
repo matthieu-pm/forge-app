@@ -175,6 +175,7 @@ export async function readIssueRows(
             rows.map((r) => r.id)
           )
         )
+        .orderBy(asc(resourceLabels.name))
     : []
   const cycles = await tx
     .select()
@@ -182,7 +183,13 @@ export async function readIssueRows(
     .where(
       and(
         eq(issueCycles.workspaceId, actor.workspaceId),
-        readableTeamCondition(actor, issueCycles.teamId)
+        readableTeamCondition(actor, issueCycles.teamId),
+        ids
+          ? inArray(
+              issueCycles.id,
+              rows.flatMap((r) => (r.cycleId ? [r.cycleId] : []))
+            )
+          : undefined
       )
     )
   return rows.map((row) => ({
@@ -216,7 +223,7 @@ export async function readIssueRows(
     }),
   }))
 }
-export async function readCanonicalIssues(actor: Actor) {
+export async function readCanonicalIssues(actor: Actor, metadataOnly = false) {
   return db.transaction(
     async (tx) => {
       const current = await currentCommandActor(tx, actor)
@@ -255,7 +262,7 @@ export async function readCanonicalIssues(actor: Actor) {
           current.authentication.kind === "session"
             ? current.authentication.sessionId
             : "",
-        records: await readIssueRows(tx, current),
+        records: metadataOnly ? [] : await readIssueRows(tx, current),
         projects: visibleProjects.map((project) => ({
           ...project,
           properties: {
@@ -757,12 +764,16 @@ export async function createCanonicalIssue(
     },
   })
   // Read current state under live authorization; receipts contain identities only.
-  const state = await readCanonicalIssues(actor)
-  const issue = state.records.find(
-    (r) => r.issue.id === result.value.issueId
-  )?.issue
+  const records = await db.transaction(async (tx) => {
+    const current = await currentCommandActor(tx, actor)
+    return readIssueRows(tx, current, [
+      result.value.issueId,
+      ...result.value.childIds,
+    ])
+  })
+  const issue = records.find((r) => r.issue.id === result.value.issueId)?.issue
   if (!issue) throw new Error("This issue is no longer available.")
-  return { ...result, issue, records: state.records }
+  return { ...result, issue, records }
 }
 
 export async function importCanonicalProject(

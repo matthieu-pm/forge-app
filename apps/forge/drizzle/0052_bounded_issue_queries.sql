@@ -1,0 +1,2 @@
+CREATE INDEX "issues_workspace_active_created_idx" ON "issues" USING btree ("workspace_id","created_at","id") WHERE "issues"."archived_at" IS NULL;--> statement-breakpoint
+CREATE INDEX "issues_team_active_created_idx" ON "issues" USING btree ("workspace_id","team_id","created_at","id") WHERE "issues"."archived_at" IS NULL;

@@ -18,6 +18,7 @@ export const issueFields = {
   subscribers: "Subscribers",
   autoClosed: "Auto-closed",
   content: "Content",
+  description: "Description",
   links: "Links",
   templateName: "Template",
 } as const

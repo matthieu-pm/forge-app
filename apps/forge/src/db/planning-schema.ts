@@ -165,6 +165,12 @@ export const issues = pgTable(
     }),
   },
   (t) => [
+    index("issues_workspace_active_created_idx")
+      .on(t.workspaceId, t.createdAt, t.id)
+      .where(sql`${t.archivedAt} IS NULL`),
+    index("issues_team_active_created_idx")
+      .on(t.workspaceId, t.teamId, t.createdAt, t.id)
+      .where(sql`${t.archivedAt} IS NULL`),
     unique("issues_workspace_id_unique").on(t.workspaceId, t.id),
     unique("issues_team_legacy_unique").on(t.workspaceId, t.teamId, t.legacyId),
     foreignKey({

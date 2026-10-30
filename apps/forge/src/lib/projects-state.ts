@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useSyncExternalStore } from "react"
+import { useIssueQuery } from "./issue-query-client"
 import {
   DEFINITIONS_CHANGED,
   cachedDefinitions,
@@ -12,6 +13,7 @@ import {
   parseIssueStore,
 } from "./team-issues"
 import { teamStatusesStorageKey } from "./team-statuses"
+import type { IssueQueryPage } from "./issue-query-contract"
 import type { TeamSummary } from "./team-contract"
 import type { InitiativeProject } from "./initiatives"
 import type { MilestoneIssue } from "./project-milestones"
@@ -22,6 +24,7 @@ export type ProjectIssueStat = {
   count: number
   completed: number
   milestoneIssues?: Array<MilestoneIssue>
+  milestoneCounts?: IssueQueryPage["rollups"]
 }
 
 export function useProjectPreferences(
@@ -72,7 +75,12 @@ export function useProjectIssueStats(
     }, [keys]),
     () => "[]"
   )
-  return useMemo(() => {
+  const query = useIssueQuery({
+    teamIds: teams.map((t) => t.id),
+    project: projects.length === 1 ? projects[0].id : undefined,
+    limit: 1,
+  })
+  const local = useMemo(() => {
     const stats = new Map<string, ProjectIssueStat>()
     try {
       for (const [teamId, stored] of JSON.parse(raw) as Array<
@@ -117,4 +125,26 @@ export function useProjectIssueStats(
       }
     }
   }, [raw, projects])
+  if (!query.enabled) return local
+  const stats = new Map<string, ProjectIssueStat>()
+  for (const project of projects) {
+    const rollups =
+      query.page?.rollups.filter((r) => r.project === project.id) ?? []
+    const total = query.page?.projectTotals.find(
+      (r) => r.project === project.id
+    )
+    stats.set(project.id, {
+      count: total?.count ?? 0,
+      completed: total?.completed ?? 0,
+      milestoneCounts: rollups,
+    })
+  }
+  return {
+    stats,
+    error:
+      query.error ||
+      (query.page?.facetsTruncated
+        ? "Issue breakdowns are limited. Filter to one project for more detail."
+        : ""),
+  }
 }

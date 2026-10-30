@@ -12,6 +12,8 @@ import type {
   TeamIssue,
 } from "@/lib/team-issues"
 import type { ProjectMilestone } from "@/lib/project-milestones"
+import { IssueQueryFooter } from "@/components/issues/issue-query-footer"
+import { useIssueQuery } from "@/lib/issue-query-client"
 import { NO_MILESTONE, matchesMilestone } from "@/lib/project-milestones"
 import { MilestoneMark } from "@/components/ui/milestone-mark"
 import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
@@ -99,6 +101,21 @@ export function ViewIssues({
   hideCount = false,
   toolbarClassName,
 }: ViewIssuesProps) {
+  const query = useIssueQuery({
+    teamIds: team
+      ? [team.id]
+      : teamIds?.length
+        ? teamIds
+        : teams.map((t) => t.id),
+    project: project?.id,
+    milestone: milestone
+      ? milestone.id === NO_MILESTONE
+        ? [""]
+        : [milestone.id, milestone.name, ...(milestone.aliases ?? [])]
+      : undefined,
+    filters,
+    display,
+  })
   const data = useMyIssueData(teams)
   const [directory, setDirectory] = useState<TemplateDirectory>()
   const [directoryError, setDirectoryError] = useState("")
@@ -177,7 +194,10 @@ export function ViewIssues({
         .map((status) => [status.id, status])
     ).values(),
   ]
-  const visible = visibleIssues(allIssues, "all", statuses, filters, display)
+  const visible = query.enabled
+    ? query.records.map((r) => r.issue)
+    : visibleIssues(allIssues, "all", statuses, filters, display)
+  const total = query.enabled ? (query.page?.total ?? 0) : visible.length
   const current = allIssues.find((issue) => issue.id === opened)
   const currentContext = current
     ? scoped.find((context) =>
@@ -228,6 +248,27 @@ export function ViewIssues({
     if (context)
       count("Teams", context.team.id ?? context.team.slug, context.team.name)
   }
+  if (query.enabled) {
+    const facet = query.page?.facets
+    groups.Assignees = (facet?.assignee ?? []).map((r) => ({
+      ...r,
+      label:
+        members.find((m) => m.id === r.value)?.name ??
+        (r.value || "Unassigned"),
+    }))
+    groups.Labels = (facet?.labels ?? []).map((r) => ({
+      ...r,
+      label: r.value || "No label",
+    }))
+    groups.Projects = (facet?.project ?? []).map((r) => ({
+      ...r,
+      label: r.value || "No project",
+    }))
+    groups.Teams = (facet?.team ?? []).map((r) => ({
+      ...r,
+      label: teams.find((t) => t.id === r.value)?.name ?? r.value,
+    }))
+  }
   for (const group of Object.values(groups))
     group.sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
   const metricsSnapshot = JSON.stringify(groups)
@@ -236,11 +277,11 @@ export function ViewIssues({
     callbacks.current = { onCountChange, onMetricsChange }
   })
   useEffect(() => {
-    callbacks.current.onCountChange?.(visible.length)
+    callbacks.current.onCountChange?.(total)
     callbacks.current.onMetricsChange?.(
       JSON.parse(metricsSnapshot) as ViewIssueMetricGroups
     )
-  }, [visible.length, metricsSnapshot])
+  }, [total, metricsSnapshot])
 
   function update(issue: TeamIssue, patch: Partial<IssueDraft>) {
     const context = scoped.find((item) =>
@@ -324,7 +365,7 @@ export function ViewIssues({
     >
       {!hideCount && (
         <span className="text-xs text-muted-foreground" role="status">
-          {visible.length} {visible.length === 1 ? "issue" : "issues"}
+          {total} {total === 1 ? "issue" : "issues"}
         </span>
       )}
       <div className="flex items-center gap-1.5">
@@ -340,6 +381,7 @@ export function ViewIssues({
           </Button>
         )}
         <IssueFilters
+          facets={query.page?.facets}
           issues={allIssues}
           statuses={statuses}
           members={members}
@@ -410,12 +452,13 @@ export function ViewIssues({
           </Button>
         </div>
       )}
-      {!data.ready ? (
+      {!data.ready || (query.enabled && query.loading && !query.page) ? (
         <div role="status" className="p-8 text-sm text-muted-foreground">
           Loading issues…
         </div>
       ) : visible.length ? (
         <IssueRows
+          serverGroups={query.page?.groups}
           issues={visible}
           allIssues={allIssues}
           identifier={scoped[0]?.team.identifier ?? ""}
@@ -496,6 +539,7 @@ export function ViewIssues({
           </p>
         </IllustratedEmptyState>
       )}
+      <IssueQueryFooter query={query} />
       {selectedVisible.length > 0 && (
         <div
           aria-label="Selected issue actions"

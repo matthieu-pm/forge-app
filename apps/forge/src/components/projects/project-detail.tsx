@@ -12,6 +12,7 @@ import type { ProjectResource } from "@/lib/project-resources"
 import type { InitiativePerson, InitiativeProject } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { ActivityEntry } from "@/components/initiatives/initiative-activity"
+import { useIssueQuery } from "@/lib/issue-query-client"
 import { updateProjectResources } from "@/lib/project-resources"
 import { useMyIssueData } from "@/lib/my-issues-state"
 import {
@@ -237,6 +238,7 @@ function ProjectDetail({
   const comments = project.comments ?? []
   const milestones = project.milestones ?? []
   const selectedMilestone = onMilestoneFilter ? milestoneFilter : localMilestone
+  const milestoneQuery = useIssueQuery({ project: project.id, limit: 1 })
   const milestoneData = useMyIssueData(teams)
   const milestoneRows = milestoneData.contexts.flatMap((context) =>
     context.issues
@@ -259,6 +261,10 @@ function ProjectDetail({
     project,
     catalog,
     rows: milestoneRows,
+    canRelocate: !milestoneQuery.enabled,
+    counts: milestoneQuery.enabled
+      ? (milestoneQuery.page?.rollups ?? [])
+      : undefined,
     writable: store.writable && !milestoneData.errors.length,
     selected: selectedMilestone,
     onChange: (next: ProjectMilestone) =>

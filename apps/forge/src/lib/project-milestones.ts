@@ -1,4 +1,5 @@
 import { format, isValid, parseISO } from "date-fns"
+import { canonicalIssuesActive } from "./canonical-issue-cache"
 import { initiativeProjectCatalog } from "./initiative-projects"
 import {
   initiativeStoreSchema,
@@ -12,6 +13,7 @@ import {
   teamIssuesKey,
   writeIssueStore,
 } from "./team-issues"
+import type { IssueQueryPage } from "./issue-query-contract"
 import type { InitiativeProject } from "./initiatives"
 import type { TeamIssue } from "./team-issues"
 import { productStorage } from "@/lib/product-storage"
@@ -43,26 +45,36 @@ export function matchesMilestone(
 }
 export function milestoneProgress(
   milestone: ProjectMilestone,
-  rows: Array<MilestoneIssue>
+  rows: Array<MilestoneIssue>,
+  counts?: IssueQueryPage["rollups"]
 ) {
   const issues = rows.filter(({ issue }) =>
     matchesMilestone(milestone, issue.milestone)
   )
-  const completed = issues.filter((row) => row.completed).length
+  const matchingCounts = counts?.filter((r) =>
+    matchesMilestone(milestone, r.milestone)
+  )
+  const count = matchingCounts
+    ? matchingCounts.reduce((n, r) => n + r.count, 0)
+    : issues.length
+  const completed = matchingCounts
+    ? matchingCounts.reduce((n, r) => n + r.completed, 0)
+    : issues.filter((row) => row.completed).length
   return {
-    count: issues.length,
+    count,
     completed,
-    percent: issues.length ? Math.round((completed / issues.length) * 100) : 0,
+    percent: count ? Math.round((completed / count) * 100) : 0,
   }
 }
 export function currentProjectMilestone(
   project: InitiativeProject,
-  rows?: Array<MilestoneIssue>
+  rows?: Array<MilestoneIssue>,
+  counts?: IssueQueryPage["rollups"]
 ) {
   return project.milestones?.find(
     (milestone) =>
       !milestone.completed &&
-      (!rows || milestoneProgress(milestone, rows).percent < 100)
+      (!rows || milestoneProgress(milestone, rows, counts).percent < 100)
   )
 }
 
@@ -84,6 +96,10 @@ export function relocateProjectMilestone({
   targetId?: string
   convert?: boolean
 }) {
+  if (canonicalIssuesActive())
+    throw new Error(
+      "Moving, converting or deleting shared milestones is unavailable until all issue assignments can be updated together."
+    )
   const key = initiativesStorageKey(workspaceId)
   const stored = productStorage.getItem(key)
   if (!stored) throw new Error("Project data is unavailable.")

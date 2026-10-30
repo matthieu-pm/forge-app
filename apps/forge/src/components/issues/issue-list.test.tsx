@@ -107,6 +107,16 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
+it("shows the authorized group total across unloaded pages", () => {
+  start({
+    issues: [parent],
+    allIssues: [parent],
+    serverGroups: [{ group: "All issues", subgroup: "All issues", count: 121 }],
+  })
+  expect(screen.getByText("121")).toBeTruthy()
+  expect(screen.getByRole("button", { name: /Open TES-1 Parent/ })).toBeTruthy()
+})
+
 describe("issue rows", () => {
   it("nests children after the parent while preserving the right edge of every row", () => {
     start()

@@ -52,7 +52,9 @@
     "test:auto-assignment:browser": "node scripts/verify-auto-assignment-browser.mjs",
     "recovery:run": "bun scripts/recovery.ts",
     "recovery:rehearse": "bun scripts/rehearse-recovery.ts",
-    "recovery:maintenance": "bun scripts/recovery-maintenance.ts"
+    "recovery:maintenance": "bun scripts/recovery-maintenance.ts",
+    "test:issues:postgres": "vitest run src/application/issues/issues.postgres.test.ts",
+    "test:issue-queries:browser": "node scripts/verify-issue-queries-browser.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1104.0",

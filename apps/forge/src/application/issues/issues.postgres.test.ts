@@ -15,6 +15,7 @@ import {
 import { DATABASE_TARGETS } from "../../../scripts/lib/database-targets"
 import { assertMigrationTarget } from "../../../scripts/lib/serialized-migrations"
 import type { IssueChanges } from "@/lib/canonical-issue-edit-contract"
+import type * as QueryService from "./query-issues.server"
 import type * as Editing from "./edit-issues.server"
 import type { Actor } from "@/application/actor"
 import type * as Service from "./issues.server"
@@ -22,7 +23,9 @@ import type * as ProductService from "../product-state/product-state.server"
 import type * as Database from "@/db"
 import { blankIssueDraft } from "@/lib/issue-record-contract"
 
-const autoAssignmentFile = process.env.FORGE_AUTO_ASSIGNMENT_TEST_DATABASE_FILE
+const autoAssignmentFile =
+  process.env.FORGE_ISSUE_QUERY_TEST_DATABASE_FILE ??
+  process.env.FORGE_AUTO_ASSIGNMENT_TEST_DATABASE_FILE
 const file = autoAssignmentFile ?? process.env.FORGE_ISSUE_TEST_DATABASE_FILE
 
 describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
@@ -30,6 +33,7 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
   const users = [`${marker}-admin`, `${marker}-member`]
   const workspaces: Array<string> = []
   const credentials: Array<string> = []
+  let queryIssues: typeof QueryService.queryCanonicalIssues
   let editing: typeof Editing
   let pool: Pool,
     service: typeof Service,
@@ -121,6 +125,7 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
     vi.stubEnv("FORGE_PERSONAL_PREFERENCE_SYNC_ENABLED", "true")
     database = await import("@/db")
     service = await import("./issues.server")
+    queryIssues = (await import("./query-issues.server")).queryCanonicalIssues
     editing = await import("./edit-issues.server")
     product = await import("../product-state/product-state.server")
     for (const userId of users)
@@ -1716,6 +1721,236 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
         audit: 1,
         outbox: 1,
       })
+    }, 30000)
+  })
+  describe("FOR-43 bounded authorized issue queries", () => {
+    it("AT-01: stable pages and counts across a concurrent create, with an ID tie-breaker", async () => {
+      const f = await fixture("enterprise")
+      await seed(f.workspaceId, f.teamId, 121)
+      const query = { teamIds: [f.teamId], limit: 25 } as const
+      const first = await queryIssues(f.actors[1], {
+        ...query,
+        teamIds: [...query.teamIds],
+      })
+      expect(first.records).toHaveLength(25)
+      expect(first.total).toBe(121)
+      expect(first.facets.team).toEqual([{ value: f.teamId, count: 121 }])
+      const created = await service.createCanonicalIssue(
+        f.actors[0],
+        command(f.secondTeam, "New after first page")
+      )
+      // Move fixture to the requested team with a free, unique number.
+      await pool.query("UPDATE issues SET team_id=$1,number=122 WHERE id=$2", [
+        f.teamId,
+        created.issue.id,
+      ])
+      const ids = first.records.map((r) => r.issue.id)
+      let cursor = first.nextCursor
+      while (cursor) {
+        const next = await queryIssues(f.actors[1], {
+          ...query,
+          teamIds: [...query.teamIds],
+          cursor,
+        })
+        expect(next.total).toBe(121)
+        ids.push(...next.records.map((r) => r.issue.id))
+        cursor = next.nextCursor
+      }
+      expect(ids).toHaveLength(121)
+      expect(new Set(ids).size).toBe(121)
+      expect(ids).not.toContain(created.issue.id)
+      expect(
+        (await queryIssues(f.actors[1], { teamIds: [f.teamId] })).total
+      ).toBe(122)
+    }, 30000)
+    it("AT-02: private matches disclose no titles, descriptions, identifiers, counts or facets", async () => {
+      const f = await fixture()
+      await pool.query("UPDATE teams SET visibility='private' WHERE id=$1", [
+        f.secondTeam,
+      ])
+      await service.createCanonicalIssue(
+        f.actors[0],
+        command(f.secondTeam, "Private secret needle")
+      )
+      const result = await queryIssues(f.actors[1], { search: "secret needle" })
+      expect(result.records).toEqual([])
+      expect(result.total).toBe(0)
+      expect(result.groups).toEqual([])
+      expect(
+        Object.values(result.facets).every((rows) => rows.length === 0)
+      ).toBe(true)
+      expect(JSON.stringify(result)).not.toContain("Private secret")
+      expect(JSON.stringify(result)).not.toContain(f.secondTeam)
+      expect(
+        (await queryIssues(f.actors[0], { search: "secret needle" })).total
+      ).toBe(1)
+    }, 30000)
+    it("rechecks private membership on continuation and binds cursors to actor and filter", async () => {
+      const f = await fixture()
+      await seed(f.workspaceId, f.secondTeam, 4)
+      await pool.query("UPDATE teams SET visibility='private' WHERE id=$1", [
+        f.secondTeam,
+      ])
+      await pool.query(
+        "INSERT INTO team_members(workspace_id,team_id,user_id) VALUES($1,$2,$3)",
+        [f.workspaceId, f.secondTeam, users[1]]
+      )
+      const first = await queryIssues(f.actors[1], { limit: 2 })
+      expect(first.total).toBe(4)
+      await expect(
+        queryIssues(f.actors[0], { limit: 2, cursor: first.nextCursor! })
+      ).rejects.toThrow("another query")
+      await expect(
+        queryIssues(f.actors[1], {
+          limit: 2,
+          search: "changed",
+          cursor: first.nextCursor!,
+        })
+      ).rejects.toThrow("another query")
+      await pool.query("DELETE FROM team_members WHERE team_id=$1", [
+        f.secondTeam,
+      ])
+      const next = await queryIssues(f.actors[1], {
+        limit: 2,
+        cursor: first.nextCursor!,
+      })
+      expect(next.records).toEqual([])
+      expect(next.total).toBe(0)
+      expect(Object.values(next.facets).flat()).toEqual([])
+    }, 30000)
+    it("runs supported filters and literal search on the server, including authorized nested expansion", async () => {
+      const f = await fixture()
+      const parent = await service.createCanonicalIssue(f.actors[0], {
+        ...command(f.teamId, "Literal 100%_needle"),
+        draft: {
+          ...draft("Literal 100%_needle"),
+          priority: "High",
+          description: "Search this bounded description",
+          subIssues: ["Child that does not match"],
+        },
+      })
+      const { defaultIssueDisplay } = await import("@/lib/issue-view-contract")
+      const filters = {
+        match: "all" as const,
+        rules: [
+          {
+            id: "priority",
+            field: "priority" as const,
+            operator: "is" as const,
+            value: "High",
+          },
+        ],
+      }
+      const result = await queryIssues(f.actors[1], {
+        teamIds: [f.teamId],
+        search: "100%_needle",
+        filters,
+      })
+      expect(result.records.map((r) => r.issue.id)).toEqual([parent.issue.id])
+      expect(
+        (await queryIssues(f.actors[1], { search: "bounded description" }))
+          .total
+      ).toBe(1)
+      const expanded = await queryIssues(f.actors[1], {
+        search: "100%_needle",
+        display: { ...defaultIssueDisplay(), nested: "Show all" },
+      })
+      expect(expanded.total).toBe(2)
+      expect(
+        (
+          await queryIssues(f.actors[1], {
+            search: "100%_needle",
+            display: { ...defaultIssueDisplay(), showSubIssues: false },
+          })
+        ).total
+      ).toBe(1)
+      expect(
+        (await queryIssues(f.actors[1], { personal: "created" })).total
+      ).toBe(0)
+      expect(
+        (await queryIssues(f.actors[0], { personal: "created" })).total
+      ).toBe(2)
+      for (const order of [
+        "Priority",
+        "Created",
+        "Updated",
+        "Due date",
+        "Title",
+        "Status",
+      ] as const) {
+        for (const descending of [false, true]) {
+          const q = {
+            limit: 1,
+            display: { ...defaultIssueDisplay(), order, descending },
+          }
+          const a = await queryIssues(f.actors[1], q)
+          const b = await queryIssues(f.actors[1], {
+            ...q,
+            cursor: a.nextCursor!,
+          })
+          expect(a.records[0].issue.id).not.toBe(b.records[0].issue.id)
+          expect(b.nextCursor).toBeNull()
+        }
+      }
+    }, 30000)
+    it("keeps board group totals consistent with team status names and canonical label order", async () => {
+      const f = await fixture()
+      await pool.query(
+        "UPDATE issue_statuses SET name='Ready' WHERE team_id=$1 AND id='todo'",
+        [f.teamId]
+      )
+      await pool.query(
+        "INSERT INTO resource_labels(workspace_id,team_id,name) VALUES($1,$2,'Zebra'),($1,$2,'Alpha')",
+        [f.workspaceId, f.teamId]
+      )
+      await service.createCanonicalIssue(f.actors[0], {
+        ...command(f.teamId, "Labeled"),
+        draft: { ...draft("Labeled"), labels: "Zebra,Alpha" },
+      })
+      await service.createCanonicalIssue(
+        f.actors[0],
+        command(f.secondTeam, "Other team")
+      )
+      const { defaultIssueDisplay } = await import("@/lib/issue-view-contract")
+      const statuses = await queryIssues(f.actors[1], {})
+      expect(statuses.groups.map((g) => g.group).sort()).toEqual([
+        "Ready",
+        "Todo",
+      ])
+      const labels = await queryIssues(f.actors[1], {
+        teamIds: [f.teamId],
+        display: { ...defaultIssueDisplay(), group: "Labels" },
+      })
+      expect(labels.records[0].issue.labels).toBe("Alpha,Zebra")
+      expect(labels.groups).toEqual([
+        { group: "Alpha", subgroup: "All issues", count: 1 },
+      ])
+    }, 30000)
+    it("rejects oversized requests, malformed/expired cursors and revoked sessions", async () => {
+      const f = await fixture()
+      await seed(f.workspaceId, f.teamId, 3)
+      await expect(queryIssues(f.actors[1], { limit: 101 })).rejects.toThrow()
+      await expect(
+        queryIssues(f.actors[1], { search: "x".repeat(201) })
+      ).rejects.toThrow()
+      await expect(
+        queryIssues(f.actors[1], { cursor: "not-a-cursor" })
+      ).rejects.toThrow()
+      const first = await queryIssues(f.actors[1], { limit: 1 })
+      const decoded = JSON.parse(
+        Buffer.from(first.nextCursor!, "base64url").toString()
+      )
+      decoded.expires = 0
+      await expect(
+        queryIssues(f.actors[1], {
+          limit: 1,
+          cursor: Buffer.from(JSON.stringify(decoded)).toString("base64url"),
+        })
+      ).rejects.toThrow("expired")
+      await pool.query("DELETE FROM session WHERE id=$1", [
+        (f.actors[1].authentication as { sessionId: string }).sessionId,
+      ])
+      await expect(queryIssues(f.actors[1], {})).rejects.toThrow()
     }, 30000)
   })
 })

@@ -19,6 +19,8 @@ import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import type { IssueDraft, IssueStore, TeamIssue } from "@/lib/team-issues"
 import type { ActivitySearch } from "@/lib/issue-activity"
+import { IssueQueryFooter } from "@/components/issues/issue-query-footer"
+import { useIssueQuery, useQueriedIssue } from "@/lib/issue-query-client"
 import { DEFINITIONS_CHANGED } from "@/lib/issue-definition-cache"
 import { readTeamIssueLabels } from "@/lib/team-labels"
 import {
@@ -93,6 +95,12 @@ export function TeamIssues({
   const [labels, setLabels] = useState<Array<string>>([])
   const [labelColors, setLabelColors] = useState<Record<string, string>>({})
   const [error, setError] = useState("")
+  const [queryText, setQueryText] = useState("")
+  const [searchTerm, setSearchTerm] = useState("")
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSearchTerm(queryText), 250)
+    return () => window.clearTimeout(timer)
+  }, [queryText])
   const [details, setDetails] = useState(Boolean(search.issue))
   const [selected, setSelected] = useState<Array<string>>([])
   const [editor, setEditor] = useState<{
@@ -123,11 +131,23 @@ export function TeamIssues({
     : (customView?.filters ?? store.filters)
   const display = customView?.display ?? store.display
   const members = directory?.members ?? []
-  const visible = visibleIssues(store.issues, scope, statuses, filters, display)
+  const query = useIssueQuery({
+    teamIds: [team.id],
+    scope,
+    filters,
+    display,
+    search: searchTerm,
+  })
+  const detail = useQueriedIssue(search.issue)
+  const visible = query.enabled
+    ? query.records.map((r) => r.issue)
+    : visibleIssues(store.issues, scope, statuses, filters, display)
   const selectedVisible = selected.filter((id) =>
     visible.some((issue) => issue.id === id)
   )
-  const current = store.issues.find((issue) => issue.id === search.issue)
+  const current = query.enabled
+    ? detail?.issue
+    : store.issues.find((issue) => issue.id === search.issue)
   const projects = [
     ...new Set(
       store.issues.map((issue) => issue.project ?? "").filter(Boolean)
@@ -424,7 +444,7 @@ export function TeamIssues({
     return () => window.removeEventListener("keydown", shortcut)
   })
   const copyState = emptyCopy[scope]
-  const isFiltered = filters.rules.length > 0
+  const isFiltered = filters.rules.length > 0 || Boolean(queryText)
   if (current)
     return (
       <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background md:rounded-2xl">
@@ -583,7 +603,16 @@ export function TeamIssues({
           </Button>
         </PageTabs>
         <div className="flex shrink-0 items-center gap-1.5">
+          <input
+            aria-label="Search issues"
+            placeholder="Search issues…"
+            maxLength={200}
+            value={queryText}
+            onChange={(event) => setQueryText(event.target.value)}
+            className="h-7 w-40 rounded-md border border-border bg-transparent px-2 text-xs"
+          />
           <IssueFilters
+            facets={query.page?.facets}
             issues={store.issues}
             statuses={statuses}
             members={members}
@@ -659,7 +688,11 @@ export function TeamIssues({
       )}
       <div className="relative flex min-h-0 flex-1">
         <div className="flex min-w-0 flex-1 flex-col">
-          {!visible.length && !display.showEmpty ? (
+          {query.enabled && query.loading && !query.page ? (
+            <p role="status" className="p-8 text-sm text-muted-foreground">
+              Loading issues…
+            </p>
+          ) : !visible.length && !display.showEmpty ? (
             <IllustratedEmptyState
               kind="issues"
               title={isFiltered ? "No matching issues" : copyState.title}
@@ -713,6 +746,7 @@ export function TeamIssues({
           ) : (
             <IssueRows
               issues={visible}
+              serverGroups={query.page?.groups}
               allIssues={store.issues}
               identifier={team.identifier}
               team={team}
@@ -738,6 +772,7 @@ export function TeamIssues({
         {details && (
           <IssueDetailsPanel
             issues={visible}
+            facets={query.page?.facets}
             members={members}
             labelColors={labelColors}
             onClose={() => setDetails(false)}
@@ -755,6 +790,7 @@ export function TeamIssues({
           />
         )}
       </div>
+      <IssueQueryFooter query={query} />
       {selectedVisible.length > 0 && (
         <div
           aria-label="Selected issue actions"
