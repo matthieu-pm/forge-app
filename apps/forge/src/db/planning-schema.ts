@@ -165,6 +165,7 @@ export const issues = pgTable(
     }),
   },
   (t) => [
+    index("issues_parent_idx").on(t.workspaceId, t.parentId, t.id),
     index("issues_workspace_active_created_idx")
       .on(t.workspaceId, t.createdAt, t.id)
       .where(sql`${t.archivedAt} IS NULL`),
@@ -227,6 +228,12 @@ export const issueRelations = pgTable(
     kind: text("kind").notNull(),
   },
   (t) => [
+    index("issue_relations_target_idx").on(
+      t.workspaceId,
+      t.relatedIssueId,
+      t.kind,
+      t.issueId
+    ),
     unique("issue_relations_pair_unique").on(
       t.issueId,
       t.relatedIssueId,

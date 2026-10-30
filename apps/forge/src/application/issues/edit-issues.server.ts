@@ -1,6 +1,7 @@
 import "@tanstack/react-start/server-only"
 import { and, eq, inArray, isNull, sql } from "drizzle-orm"
 import { z } from "zod"
+import { relationshipErrorMessage } from "./relationship-errors"
 import {
   initialAssignmentActivity,
   readIssueRows,
@@ -67,6 +68,9 @@ export async function editCanonicalIssues(actor: Actor, raw: EditIssueBatch) {
         await tx.execute(
           sql`SELECT pg_advisory_xact_lock(hashtextextended(${current.workspaceId},4040))`
         )
+        await tx.execute(
+          sql`SELECT public.forge_lock_issue_graph(${current.workspaceId})`
+        )
         const rows = await tx
           .select()
           .from(issues)
@@ -98,6 +102,26 @@ export async function editCanonicalIssues(actor: Actor, raw: EditIssueBatch) {
         for (const edit of input.edits) {
           const row = rows.find((r) => r.id === edit.issueId)!,
             before = originals.find((r) => r.issue.id === edit.issueId)!.issue
+          if (
+            edit.changes.parentId !== undefined &&
+            row.parentId &&
+            edit.changes.parentId !== row.parentId
+          ) {
+            const previousParent = (
+              await tx
+                .select({ teamId: issues.teamId })
+                .from(issues)
+                .where(
+                  and(
+                    eq(issues.id, row.parentId),
+                    isNull(issues.archivedAt),
+                    readableIssueCondition(current, issues.id)
+                  )
+                )
+            ).at(0)
+            if (!previousParent) throw new ApplicationAccessError()
+            await requireIssueTeam(tx, current, previousParent.teamId)
+          }
           const draft = { ...before, ...edit.changes, subIssues: [] }
           const resolved = await resolveIssueFields(
             tx,
@@ -177,7 +201,10 @@ export async function editCanonicalIssues(actor: Actor, raw: EditIssueBatch) {
               assigneeId: resolved.assignee,
               projectId: resolved.projectId,
               cycleId: resolved.cycleId,
-              parentId: resolved.parentId,
+              parentId:
+                edit.changes.parentId === undefined
+                  ? row.parentId
+                  : resolved.parentId,
               properties: {
                 ...row.properties,
                 ...draft,
@@ -280,7 +307,11 @@ export async function editCanonicalIssues(actor: Actor, raw: EditIssueBatch) {
     })
     return { status: "saved" as const, replayed: result.replayed, records }
   } catch (error) {
-    if (!(error instanceof IssueEditConflict)) throw error
+    if (!(error instanceof IssueEditConflict)) {
+      const message = relationshipErrorMessage(error)
+      if (message) throw new Error(message)
+      throw error
+    }
     const records = await db.transaction(async (tx) => {
       const current = await currentCommandActor(tx, actor)
       await requireIssueTeam(tx, current, input.teamId)

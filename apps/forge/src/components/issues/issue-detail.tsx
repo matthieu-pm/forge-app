@@ -23,12 +23,14 @@ import {
 } from "./issue-pull-request"
 import { IssueLabelPicker } from "./issue-label-picker"
 import { IssueCyclePicker } from "./issue-cycle-picker"
+import { IssueRelationships } from "./issue-relationships"
 import type { IssueDraft, TeamIssue } from "@/lib/team-issues"
 import type { TeamStatus } from "@/lib/team-statuses"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import type { ActivityReferenceKind } from "@/lib/issue-activity"
 import {
+  canonicalIssueEpoch,
   canonicalIssuesActive,
   projectDisplayName,
 } from "@/lib/canonical-issue-cache"
@@ -152,7 +154,10 @@ export function IssueDetail({
     [toolPreferences.preferences.issueCodingTool]
   )
   const file = useRef<HTMLInputElement>(null)
-  const children = issues.filter((child) => child.parentId === issue.id)
+  const shared = canonicalIssuesActive()
+  const children = shared
+    ? []
+    : issues.filter((child) => child.parentId === issue.id)
   const completed = children.filter(
     (child) =>
       statuses.find((s) => s.id === child.status)?.group === "completed"
@@ -939,6 +944,13 @@ export function IssueDetail({
                   }}
                 />
               </div>
+              {shared && (
+                <IssueRelationships
+                  key={`${issue.id}:${canonicalIssueEpoch()}`}
+                  issue={issue}
+                  teamId={team.id}
+                />
+              )}
               <section aria-label="Sub-issues" className="mb-5">
                 {children.length > 0 ? (
                   <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">

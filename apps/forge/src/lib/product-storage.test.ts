@@ -42,6 +42,19 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 describe("server product persistence and one-way browser migration", () => {
+  it("evicts issue relationship drafts after team revocation even during an older refresh", () => {
+    const teamId = "00000000-0000-4000-8000-000000000001"
+    const issueId = "00000000-0000-4000-8000-000000000002"
+    const key = `forge:team-relationship-draft:v1:${teamId}:${issueId}`
+    initializeProductStorage({
+      ...identity,
+      teamIds: [teamId],
+      entries: [{ key, value: "private retained command", revision: 1 }],
+    })
+    refreshProductStorage({ ...identity, teamIds: [], entries: [] }, -1)
+    expect(productStorage.getItem(key)).toBeNull()
+  })
+
   it("saves through an identity-bound command without native storage writes", async () => {
     const native = vi
       .spyOn(Storage.prototype, "setItem")
