@@ -162,7 +162,7 @@ export function hasRetainedCommandCopy(
       (data.value === null || typeof data.value === "string") &&
       hasRetainedCommandCopy(
         data.key,
-        data.value as string | null,
+        data.value,
         retained,
         depth + 1
       )
