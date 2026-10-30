@@ -1,0 +1,41 @@
+{
+  "issue": "FOR-109",
+  "date": "2026-10-30",
+  "environment": "local source and component tests; no database target",
+  "baseRevision": "a5a767df9701e0112011d7af94c68c662549a183",
+  "branch": "dev/for-109-commercial-policy",
+  "decision": "Keep existing files accessible on downgrade; apply Free 10 MB only to new uploads/finalization.",
+  "verification": {
+    "billingTests": {
+      "command": "bunx vitest run src/application/billing src/lib/billing-server.test.ts src/components/billing-settings.test.tsx",
+      "passedFiles": 30,
+      "passedTests": 554,
+      "skippedPostgresFiles": 4,
+      "skippedPostgresTests": 114
+    },
+    "typecheck": "bun run typecheck: passed",
+    "eslint": "eight changed TypeScript/TSX files: passed",
+    "prettier": "eight changed TypeScript/TSX files: passed",
+    "build": "bun run build: passed; protected Workflow handlers verified",
+    "diff": "git diff --check: passed"
+  },
+  "sourceSha256": {
+    "apps/forge/src/application/billing/billing-plan-contract.ts": "e015790855479218487b619a03d15bc70e3de6201705be7d25f12bdb9dd13a39",
+    "apps/forge/src/application/billing/billing-plan-contract.test.ts": "97a861983fa90791037cbae945de595a1059a236813d74257ed76364eba313a8",
+    "apps/forge/src/application/billing/billing-notices.ts": "b018e596356042845abfab2a8f50a4634b9e90c91f2acb6b4cb4e11d77b481ae",
+    "apps/forge/src/application/billing/billing-notices.test.ts": "1cc0c17e61945daf69f4fffe7438c04744d24d9d1ba954386e9e97239007d005",
+    "apps/forge/src/lib/billing-server.ts": "d05e82f8ae6f75f5bf8f7925c58e1e37201445ec2788c3f4c96d84df05b52215",
+    "apps/forge/src/lib/billing-server.test.ts": "5219a0b3802e83db8f532c9071fe711c8b7a1c03f290efd3620a5fab93f4a27c",
+    "apps/forge/src/components/billing-settings.tsx": "16c618067f122966d573e4396d53227dccf55b9e392e4e4a3067701e725c3c85",
+    "apps/forge/src/components/billing-settings.test.tsx": "872c8633b01e65362b958fd89f934d7682139c521487dbc4036b56e5799c3f97",
+    "docs/forge-plan-matrix.md": "4411582c87b97afe0b066c32bb5da2712e66234c0236aefe44e24ebbf29d3872",
+    "docs/billing-commercial-policy.md": "0891103c2871632cdf35177083f3617002fe864b3331758713bead97f2d9bd01",
+    "docs/plans/production-readiness-backlog-map.md": "1e4c20ba187ad5a40257a81c64f1dc0362ad0065dcb80f3c9c5cdf01afa7b149"
+  },
+  "releaseLimits": [
+    "Billing remains disabled.",
+    "No serving migration, deployment or provider mutation.",
+    "Upload/finalize integration remains FOR-35.",
+    "Checkout, authoritative reconciliation, usage/runtime, trial and full lifecycle certification remain in existing implementation/release issues."
+  ]
+}

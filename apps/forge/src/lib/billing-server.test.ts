@@ -37,7 +37,54 @@ describe("billing server snapshot", () => {
       phase: "free",
       activeMembers: 7,
       trialExpiresAt: null,
+      notices: [
+        {
+          code: "free-capacity",
+          effectiveAt: null,
+          message: expect.stringContaining("fewer than 5"),
+        },
+      ],
     })
+  })
+  it("returns cancellation and grace messages from persisted state with one server clock", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2026-10-30T12:00:00Z"))
+    const failed = new Date("2026-10-29T12:00:00Z")
+    const graceEnd = new Date("2026-11-05T12:00:00Z")
+    const cancelEnd = new Date("2026-11-29T12:00:00Z")
+    mocks.state.mockResolvedValue({
+      plan: "plus",
+      source: "polar",
+      status: "past_due",
+      paidActivatedAt: new Date("2026-09-29T12:00:00Z"),
+      paymentFailedAt: failed,
+      graceExpiresAt: graceEnd,
+      cancelAtPeriodEnd: true,
+      cancellationPeriodEnd: cancelEnd,
+    })
+    try {
+      const result = await getWorkspaceBillingForRequest(
+        new Request(
+          "http://localhost/settings/billing?graceExpiresAt=2099-01-01"
+        )
+      )
+      expect(result).toMatchObject({
+        plan: "business",
+        phase: "grace",
+        notices: [
+          { code: "payment-grace", effectiveAt: graceEnd.toISOString() },
+          { code: "cancellation", effectiveAt: cancelEnd.toISOString() },
+        ],
+      })
+      vi.setSystemTime(graceEnd)
+      const expired = await getWorkspaceBillingForRequest(
+        new Request("http://localhost/settings/billing")
+      )
+      expect(expired.plan).toBe("free")
+      expect(expired.notices.map((n) => n.code)).toEqual(["free-capacity"])
+    } finally {
+      vi.useRealTimers()
+    }
   })
   it("does not read billing data when session authorization fails", async () => {
     mocks.actor.mockRejectedValue(new Error("UNAUTHORIZED"))

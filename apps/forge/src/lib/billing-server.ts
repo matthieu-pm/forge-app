@@ -3,6 +3,7 @@ import { count, eq } from "drizzle-orm"
 import { requireSessionActor } from "@/adapters/auth/session-actor.server"
 import { readSubscriptionAccessState } from "@/application/billing/subscription-access-state.server"
 import { subscriptionAccess } from "@/application/billing/subscription-access"
+import { workspaceBillingNotices } from "@/application/billing/billing-notices"
 import { db, members } from "@/db"
 
 export async function getWorkspaceBillingForRequest(request: Request) {
@@ -14,11 +15,14 @@ export async function getWorkspaceBillingForRequest(request: Request) {
       .from(members)
       .where(eq(members.organizationId, actor.workspaceId)),
   ])
-  const access = subscriptionAccess(state)
+  const now = new Date()
+  const access = subscriptionAccess(state, now)
+  const activeMembers = counts.at(0)?.members ?? 0
   return {
     plan: access.plan,
     phase: access.phase,
-    activeMembers: counts.at(0)?.members ?? 0,
+    activeMembers,
+    notices: workspaceBillingNotices(state, activeMembers, now),
     trialExpiresAt:
       access.phase === "trial"
         ? (state?.currentPeriodEnd?.toISOString() ?? null)

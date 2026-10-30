@@ -104,4 +104,31 @@ describe("BillingSettings", () => {
     expect(screen.getByText(/workspaces that have never paid/)).toBeTruthy()
     expect(screen.queryByText(/upgrade request is ready/)).toBeNull()
   })
+  it("renders the server's lifecycle notice and exact boundary", () => {
+    render(
+      <BillingSettings
+        snapshot={{
+          plan: "basic",
+          phase: "paid",
+          activeMembers: 7,
+          trialExpiresAt: null,
+          notices: [
+            {
+              code: "cancellation",
+              message:
+                "Existing members and files remain accessible after cancellation.",
+              effectiveAt: "2026-11-29T12:00:00.000Z",
+            },
+          ],
+        }}
+      />
+    )
+    expect(
+      screen.getByText(
+        "Existing members and files remain accessible after cancellation."
+      )
+    ).toBeTruthy()
+    const boundary = screen.getByText("2026-11-29 12:00:00 UTC")
+    expect(boundary.getAttribute("datetime")).toBe("2026-11-29T12:00:00.000Z")
+  })
 })

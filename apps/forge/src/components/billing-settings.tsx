@@ -10,6 +10,7 @@ import {
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { toast } from "sonner"
+import type { BillingNotice } from "@/application/billing/billing-notices"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -68,6 +69,7 @@ export type BillingSnapshot = {
   phase: "free" | "trial" | "paid" | "grace"
   activeMembers: number
   trialExpiresAt: string | null
+  notices?: Array<BillingNotice>
 }
 
 export function BillingSettings({ snapshot }: { snapshot?: BillingSnapshot }) {
@@ -217,6 +219,23 @@ export function BillingSettings({ snapshot }: { snapshot?: BillingSnapshot }) {
                     </DropdownMenu>
                   </div>
                 </div>
+                {snapshot?.notices?.map((notice) => (
+                  <div
+                    key={notice.code}
+                    className="border-t border-border/60 px-4 py-3 text-xs text-muted-foreground"
+                  >
+                    <p>{notice.message}</p>
+                    {notice.effectiveAt && (
+                      <p className="mt-1 font-medium text-foreground">
+                        <time dateTime={notice.effectiveAt}>
+                          {notice.effectiveAt
+                            .replace("T", " ")
+                            .replace(/\.\d{3}Z$/, " UTC")}
+                        </time>
+                      </p>
+                    )}
+                  </div>
+                ))}
               </BillingCard>
 
               <BillingCard>
