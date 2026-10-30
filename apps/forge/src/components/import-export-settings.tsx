@@ -18,9 +18,11 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 
-;
-
-("use client")
+const LegacyImportPreview = React.lazy(() =>
+  import("./legacy-import-preview").then((module) => ({
+    default: module.LegacyImportPreview,
+  }))
+)
 
 type ImportSource = "Asana" | "Shortcut" | "GitHub" | "Jira" | "Linear"
 type PrivateTeamSelection = "None" | "All private teams"
@@ -152,6 +154,16 @@ export function ImportExportSettings() {
           <h1 className="forge-page-header forge-settings-header">
             Import &amp; export
           </h1>
+
+          <React.Suspense
+            fallback={
+              <p className="text-sm text-muted-foreground">
+                Loading browser data tools…
+              </p>
+            }
+          >
+            <LegacyImportPreview />
+          </React.Suspense>
 
           <section className="space-y-3">
             <SectionHeading
