@@ -72,6 +72,49 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 describe("canonical issue edit queue", () => {
+  it("requires explicit latest-state review before submitting a scrubbed recovery proposal with a fresh identity", async () => {
+    const commandKey = crypto.randomUUID()
+    productStorage.setItem(
+      `forge:team-issue-edit-drafts:v1:${teamId}:${commandKey}`,
+      JSON.stringify({
+        commandKey,
+        teamId,
+        edits: [
+          {
+            issueId: id,
+            expectedRevision: 0,
+            changes: { description: "Remaining draft" },
+          },
+        ],
+        requiresReview: true,
+      })
+    )
+    hydrateIssueEdits()
+    await flushIssueEdits()
+    expect(persistCanonicalIssueEdits).not.toHaveBeenCalled()
+    expect(JSON.parse(issueEditSnapshot()).conflict).toBe(true)
+    vi.mocked(persistCanonicalIssueEdits).mockResolvedValue(
+      JSON.stringify({
+        status: "saved",
+        records: [
+          {
+            teamId,
+            issue: { ...original, description: "Remaining draft", revision: 1 },
+          },
+        ],
+      })
+    )
+    await applyEditsToLatest()
+    await vi.waitFor(() =>
+      expect(persistCanonicalIssueEdits).toHaveBeenCalledOnce()
+    )
+    expect(
+      vi.mocked(persistCanonicalIssueEdits).mock.calls[0][0].data.commandKey
+    ).not.toBe(commandKey)
+    await vi.waitFor(() =>
+      expect(JSON.parse(issueEditSnapshot()).pending).toBe(0)
+    )
+  })
   it("persists a retry draft before sending an optimistic, version-bound edit", async () => {
     let resolve!: (value: string) => void
     vi.mocked(persistCanonicalIssueEdits).mockImplementationOnce(

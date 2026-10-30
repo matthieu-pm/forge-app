@@ -24,6 +24,7 @@ import {
 import { IssueLabelPicker } from "./issue-label-picker"
 import { IssueCyclePicker } from "./issue-cycle-picker"
 import { IssueRelationships } from "./issue-relationships"
+import { useIssueLifecycle } from "./issue-lifecycle"
 import type { IssueDraft, TeamIssue } from "@/lib/team-issues"
 import type { TeamStatus } from "@/lib/team-statuses"
 import type { TeamSummary } from "@/lib/team-contract"
@@ -155,6 +156,19 @@ export function IssueDetail({
   )
   const file = useRef<HTMLInputElement>(null)
   const shared = canonicalIssuesActive()
+  const lifecycle = useIssueLifecycle()
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  async function changeLifecycle(action: "delete" | "archive") {
+    if (
+      await lifecycle.change({
+        teamId: team.id,
+        issueId: issue.id,
+        expectedRevision: issue.revision ?? 0,
+        action,
+      })
+    )
+      onBack()
+  }
   const children = shared
     ? []
     : issues.filter((child) => child.parentId === issue.id)
@@ -752,9 +766,70 @@ export function IssueDetail({
               <IssueIcon name="branch" />
               Link pull request…
             </DropdownMenuItem>
+            {shared && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  disabled={lifecycle.pending}
+                  onClick={() => void changeLifecycle("archive")}
+                >
+                  Archive issue
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={lifecycle.pending}
+                  onClick={() => setDeleteOpen(true)}
+                >
+                  Delete issue…
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </ContentHeader>
+      {lifecycle.error && (
+        <p role="alert" className="px-6 py-2 text-sm text-destructive">
+          {lifecycle.error}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => window.location.reload()}
+          >
+            Reload issue
+          </Button>
+        </p>
+      )}
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent>
+          <DialogTitle>Delete this issue?</DialogTitle>
+          <DialogDescription>
+            It will disappear from lists, search and old links immediately. You
+            can restore it from Archived and deleted for 30 days. Sub-issues
+            remain available.
+          </DialogDescription>
+          {lifecycle.error && (
+            <p role="alert" className="text-sm text-destructive">
+              {lifecycle.error}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => window.location.reload()}
+              >
+                Reload issue
+              </Button>
+            </p>
+          )}
+          <Button
+            variant="destructive"
+            disabled={lifecycle.pending}
+            onClick={() => void changeLifecycle("delete")}
+          >
+            {lifecycle.pending ? "Deleting…" : "Delete issue"}
+          </Button>
+          <Button variant="ghost" onClick={() => setDeleteOpen(false)}>
+            Cancel
+          </Button>
+        </DialogContent>
+      </Dialog>
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="z-10 ml-auto flex w-fit shrink-0 gap-1 bg-background/90 px-3 py-2">
           {(

@@ -54,8 +54,12 @@ export function readableProjectCondition(
   return sql`EXISTS (SELECT 1 FROM projects authz_project WHERE authz_project.id = ${projectId} AND authz_project.workspace_id = ${actor.workspaceId} AND ${currentMemberCondition(actor)} AND (NOT EXISTS (SELECT 1 FROM project_teams authz_pt WHERE authz_pt.project_id = authz_project.id) OR EXISTS (SELECT 1 FROM project_teams authz_pt WHERE authz_pt.project_id = authz_project.id AND authz_pt.workspace_id = ${actor.workspaceId} AND ${readableTeamCondition(actor, sql`authz_pt.team_id`)})))`
 }
 
-export function readableIssueCondition(actor: Actor, issueId: SQLWrapper): SQL {
-  return sql`EXISTS (SELECT 1 FROM issues authz_issue WHERE authz_issue.id = ${issueId} AND authz_issue.workspace_id = ${actor.workspaceId} AND ${readableTeamCondition(actor, sql`authz_issue.team_id`)})`
+export function readableIssueCondition(
+  actor: Actor,
+  issueId: SQLWrapper,
+  includeInactive = false
+): SQL {
+  return sql`EXISTS (SELECT 1 FROM issues authz_issue WHERE authz_issue.id = ${issueId} AND authz_issue.workspace_id = ${actor.workspaceId} AND ${includeInactive ? sql`true` : sql`authz_issue.deleted_at IS NULL AND authz_issue.archived_at IS NULL`} AND authz_issue.purged_at IS NULL AND ${readableTeamCondition(actor, sql`authz_issue.team_id`)})`
 }
 
 export function readableDocumentCondition(

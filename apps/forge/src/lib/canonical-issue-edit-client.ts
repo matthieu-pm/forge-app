@@ -76,9 +76,17 @@ export function hydrateIssueEdits() {
     const raw = productStorage.getItem(key)
     if (!raw) continue
     try {
-      const input = editIssueBatchSchema.parse(JSON.parse(raw))
+      const stored = JSON.parse(raw)
+      const { requiresReview, ...original } = stored
+      const input = editIssueBatchSchema.parse(original)
       if (queue.some((q) => q.input.commandKey === input.commandKey)) continue
       queue.push({ input, sourceKey: key })
+      if (requiresReview === true) {
+        conflict = true
+        error =
+          "Some saved issue edits require review after deletion. Review the latest versions before applying the remaining edits."
+        continue
+      }
       error =
         "Saved issue edits are waiting. Retry them or use the latest shared version."
     } catch {

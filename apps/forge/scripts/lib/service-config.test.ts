@@ -286,9 +286,21 @@ describe("service-specific startup configuration (FOR-26)", () => {
       assertServiceConfiguration(env, "jobs", { job: "workflow-health" }).ready
     ).toBe(true)
     expect(
-      assertServiceConfiguration(env, "jobs", { job: "product-retention" })
-        .ready
+      assertServiceConfiguration(
+        {
+          ...env,
+          BLOB_STORE_ID: core.BLOB_STORE_ID,
+          BLOB_READ_WRITE_TOKEN: core.BLOB_READ_WRITE_TOKEN,
+        },
+        "jobs",
+        { job: "product-retention" }
+      ).ready
     ).toBe(true)
+    expect(
+      inspectServiceConfiguration(env, "jobs", {
+        job: "product-retention",
+      }).issues.map((issue) => issue.variable)
+    ).toEqual(["BLOB_STORE_ID", "BLOB_READ_WRITE_TOKEN"])
     expect(
       inspectServiceConfiguration(
         { ...env, FORGE_DESKTOP_RELEASE_ENABLED: "true" },

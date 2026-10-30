@@ -234,6 +234,7 @@ export function inspectServiceConfiguration(
     }
   }
   if (service === "app") {
+    if (flag("FORGE_ISSUE_RETENTION_ENABLED")) secret("FORGE_ISSUE_RETENTION_SECRET")
     if (flag("FORGE_OPERATIONS_MONITOR_ENABLED")) {
       origin("FORGE_OPERATIONS_WEBHOOK_URL", deployed, true)
       secret("FORGE_OPERATIONS_WEBHOOK_TOKEN")
@@ -248,6 +249,7 @@ export function inspectServiceConfiguration(
                 "product.retention",
                 "workflow.health",
                 "calls.sync",
+                "issues.retention",
               ].includes(key)
           ))
       ) {
@@ -334,7 +336,7 @@ export function inspectServiceConfiguration(
     database()
     if (!options.job) add("FORGE_CONFIG_JOB", "must select a job profile")
     if (options.job === "calls-sync") calls(true)
-    if (options.job === "agent-retention") blob()
+    if (options.job === "agent-retention" || options.job === "product-retention") blob()
     if (
       options.job === "product-retention" &&
       flag("FORGE_DESKTOP_RELEASE_ENABLED")

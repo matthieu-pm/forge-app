@@ -1,0 +1,150 @@
+{
+  "issue": "FOR-45",
+  "verifiedOn": "2026-10-30",
+  "implementationRevision": "32a993d91e3a3105743e68f6534d4ba00bdcf352",
+  "baseRevision": "1e677cc70d1c36591801bbaa1fd2632310ba90c9",
+  "environment": {
+    "application": "local macOS / Vite production build and Playwright",
+    "database": {
+      "database": "forge_auto_assignment_acceptance",
+      "branch": "br-autumn-union-za0opf1e"
+    },
+    "productionChanged": false
+  },
+  "acceptedDecision": "Existing authorized issue editors may delete and restore issues. Recovery lasts 720 elapsed hours; children survive and archive state is preserved.",
+  "validation": [
+    {
+      "command": "bun x vitest run",
+      "sourceRevision": "8a5203f085f7ccc3b35b3a3ff942cc8f5978ba10",
+      "passed": 2250,
+      "skipped": 376,
+      "passedFiles": 279
+    },
+    {
+      "command": "FORGE_ISSUE_LIFECYCLE_TEST_DATABASE_FILE=<private file> bun x vitest run src/application/issues/issues.postgres.test.ts",
+      "sourceRevision": "b6366f499f59e0b451a3d398df3daf0cd46e47da",
+      "passed": 92
+    },
+    {
+      "command": "FORGE_ISSUE_LIFECYCLE_TEST_DATABASE_FILE=<private file> bun run test:issue-lifecycle:postgres",
+      "sourceRevision": "32a993d91e3a3105743e68f6534d4ba00bdcf352",
+      "passed": 7,
+      "coverage": [
+        "AT-01 preservation and read/search/subscription/file/inbox/relation suppression",
+        "AT-02 retryable byte deletion and private dependent scrubbing",
+        "AT-04 capacity rejection, create/restore and create/unarchive races, exact replay accounting",
+        "stale revision, revoked membership, private teams and credential scopes",
+        "exact SQL recovery deadline",
+        "deletion during asynchronous internal file upload refuses metadata publication and cleans bytes"
+      ]
+    },
+    {
+      "command": "bun x vitest run src/application/files src/adapters/files src/components/issues/issue-lifecycle.test.tsx src/lib/inbox-state.test.ts",
+      "sourceRevision": "32a993d91e3a3105743e68f6534d4ba00bdcf352",
+      "passed": 63,
+      "skipped": 35
+    },
+    {
+      "command": "bun run test:workflow",
+      "passed": 4
+    },
+    {
+      "command": "bun run typecheck",
+      "sourceRevision": "32a993d91e3a3105743e68f6534d4ba00bdcf352",
+      "passed": true
+    },
+    {
+      "command": "ESLint on changed TypeScript/TSX/scripts",
+      "passed": true,
+      "note": "No errors; existing warnings remain in unchanged lines."
+    },
+    {
+      "command": "bun run build",
+      "sourceRevision": "32a993d91e3a3105743e68f6534d4ba00bdcf352",
+      "passed": true,
+      "workflowHandlersVerified": true
+    },
+    {
+      "command": "FORGE_ISSUE_LIFECYCLE_TEST_DATABASE_FILE=<private file> bun run test:issue-lifecycle:browser",
+      "sourceRevision": "b6366f499f59e0b451a3d398df3daf0cd46e47da",
+      "passed": true,
+      "checks": [
+        "two real Better Auth sessions",
+        "member deletes and restores",
+        "second account old link hides private content",
+        "comments survive restore",
+        "archive and unarchive from recovery dialog",
+        "archived issue deletion and restore preserve archive state",
+        "stale revision refusal preserves concurrent edit"
+      ],
+      "cleanup": {
+        "workspaces": 0,
+        "users": 0,
+        "receipts": 0
+      }
+    },
+    {
+      "command": "serialized migration runner on dedicated acceptance target",
+      "appliedMigrations": [
+        54,
+        55
+      ],
+      "retry": {
+        "environment": "auto-assignment-acceptance",
+        "branchId": "br-autumn-union-za0opf1e",
+        "host": "ep-blue-shadow-zauhwkjz.c-2.eu-west-2.aws.neon.tech",
+        "database": "forge_auto_assignment_acceptance",
+        "applied": 0,
+        "total": 56
+      }
+    },
+    {
+      "command": "git diff --check",
+      "passed": true
+    }
+  ],
+  "operations": {
+    "runbook": "docs/operations/issue-lifecycle.md",
+    "retentionJob": "product.retention",
+    "requiresReleaseMigrations": [
+      54,
+      55
+    ],
+    "jobPrivateBlobCredentialsRequired": true,
+    "onlinePurgeIsNotBackupExpiryEvidence": true,
+    "rollbackMustPreserveDeletedIssueReadPredicates": true
+  },
+  "sourceSha256": {
+    "apps/forge/drizzle/0054_issue_lifecycle.sql": "b577f4bfe9907fce4b2460ea2be127c47b4de6458efbaae493f43b853cf3e42e",
+    "apps/forge/drizzle/0055_issue_recovery_elapsed.sql": "73c6d77f2448e28e3c6104a9e679c469956764e1d81775c380acf7ef6a7895d6",
+    "apps/forge/drizzle/meta/0054_snapshot.json": "13dc8c63e24caeeb9a2a53c6fed6709cd5d6af8239c274daf2c5323f757125d9",
+    "apps/forge/drizzle/meta/0055_snapshot.json": "04239f8860a5bda8e9a6f335a6c9a3e85c66fd7ca66e654d7b9d5697e84a36e4",
+    "apps/forge/drizzle/meta/_journal.json": "ae17c9b60362a942196dfe830c9ea7891fcafa51d6605f106a70097a94b47b3d",
+    "apps/forge/package.json": "98f90bb8efe6d8ee6bbebdc7cf6c06def26de1f322f955b675b7811f26b51daa",
+    "apps/forge/scripts/lib/service-config.test.ts": "40ff094456678232e75fc2c3586fb23f0e4862b6885314f11d84861aff649cf6",
+    "apps/forge/scripts/sweep-product-retention.ts": "de6edd66b51386c78bbff8af8029d45f29e0a538624edbf72180900160a6b95d",
+    "apps/forge/scripts/verify-issue-lifecycle-browser.mjs": "c59b6cf7424381f5a45da86749594539826f402dce587b37847c19950e58bb33",
+    "apps/forge/src/adapters/files/drizzle-resource-file-store.server.ts": "a9b17c6314ef7da39c0224e438f968a98aeaef5c1b800cab078634d24e2df8fc",
+    "apps/forge/src/application/issues/issue-lifecycle.server.ts": "1329820067286687b8780950b3aa275d79afc8b8a87b1eaa3f5dec9642520a4f",
+    "apps/forge/src/application/issues/issues.postgres.test.ts": "80ae6d5552137702bf9abd337c5c8b790297f7bfbdd312198760c14459f8def7",
+    "apps/forge/src/application/issues/purge-issues.server.ts": "d32bc630541a8db56611bfff82f4e5b44e49a8d659e5de838276fa61bbe767b9",
+    "apps/forge/src/application/issues/query-issues.server.ts": "96b27bc803b919f75b6d23c95bcf248d08d1963be2169b2c2019afdcea529e07",
+    "apps/forge/src/application/operations/migrations.generated.json": "05108e0c73abeaa47e117246c69f98329087d49f8db8365cba12e678a48cb416",
+    "apps/forge/src/application/product-state/product-state.server.ts": "0a52296fd2adf1f53d60e838d32ef125d4c10bcc3ffa21bcbfc0d6939ae41031",
+    "apps/forge/src/application/resource-policy.server.ts": "6c05ce5cb9c0f57d62f8d80e71259a4e9fd996b254ef5709ca53c24b2ac7e355",
+    "apps/forge/src/components/issues/issue-detail.tsx": "6efc7ebdc08edd7dafb6eff591a784ceaf4000ffbccae0ea3772f41de6699b1f",
+    "apps/forge/src/components/issues/issue-lifecycle.test.tsx": "4d512b3277325430775e9df4c87ad0e451db7240d568bc43eb423048fb257db3",
+    "apps/forge/src/components/issues/issue-lifecycle.tsx": "b52903f4d3bcc5e031e0f468a52ec25ab28284e6bf6ddd40a0514645b0e3ac95",
+    "apps/forge/src/components/issues/team-issues.tsx": "23db77921fb6843ee2293cdbb893c69359f23a8fbd8e951597fe2d8218fe4e31",
+    "apps/forge/src/db/planning-schema.ts": "ba16f12e2624cd6d886c06145cf26a139954819fbc502abf4bd01bba230fdbd4",
+    "apps/forge/src/lib/canonical-issue-cache.ts": "ad62d820be1d6989eb55075e067c8f93cdf247b119a78ff3d7b1cb3262c096ca",
+    "apps/forge/src/lib/inbox-state.test.ts": "7848161ab0f6be2593a6cebc679b874f51ce2c5c4f29c61b6be17109b2f25334",
+    "apps/forge/src/lib/inbox-state.ts": "8e9e9332baadad1bcc772339e062de7a4d9e762368bd4103de2ef2d49ce1a2f2",
+    "apps/forge/src/lib/issue-lifecycle-contract.ts": "5727d79e35c373017819d6c47b7353f6653365f0a66a5e6272c58381aadd5abe",
+    "apps/forge/src/lib/issue-lifecycle-state.ts": "648c65515bbc948440396c6cb03d0c362e8af785a9a2daf66324beb820bc635a",
+    "apps/forge/src/lib/issue-query-client.ts": "3083ae710a37ec1c314a878a624f953e24137205d40afb8926af65a0659a67b2",
+    "docs/operations/issue-lifecycle.md": "fc93a984bfc635ecc4f151e9af0c1b63db2ee043c819d9b87019d7dd2033335c",
+    "docs/operations/service-configuration.md": "10f9f39217bcc0d59c218964488c75f6968507b1deb96920f8b9580ab5eea6aa",
+    "packages/environment/service-config.ts": "147120fd8dfc79cc7c7c0d02a1a9b3922ab70126c1a5378aebac5e76cbdf3646"
+  }
+}

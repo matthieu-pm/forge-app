@@ -1,6 +1,11 @@
 import { useCallback, useMemo, useSyncExternalStore } from "react"
 import { z } from "zod"
 import {
+  CANONICAL_ISSUES_CHANGED,
+  canonicalSuppressionSnapshot,
+  isCanonicalIssueSuppressed,
+} from "./canonical-issue-cache"
+import {
   defaultInboxPreferences,
   inboxPreferencesSchema,
   inboxStatusTypes,
@@ -190,6 +195,8 @@ export function visibleInboxEntries(
 ) {
   return state.entries
     .filter((entry) => {
+      if (entry.issue && isCanonicalIssueSuppressed(entry.issue.id))
+        return false
       const snoozed =
         entry.snoozedUntil !== null && entry.snoozedUntil > options.now
       if (
@@ -236,6 +243,14 @@ export function publishInboxUpdate(scope: InboxScope, update: InboxUpdate) {
   writeInbox(scope, (state) => receiveInboxUpdate(state, scope, update))
 }
 export function useInbox(scope: InboxScope) {
+  const suppression = useSyncExternalStore(
+    useCallback((notify) => {
+      window.addEventListener(CANONICAL_ISSUES_CHANGED, notify)
+      return () => window.removeEventListener(CANONICAL_ISSUES_CHANGED, notify)
+    }, []),
+    canonicalSuppressionSnapshot,
+    () => ""
+  )
   const key = inboxStorageKey(scope)
   const raw = useSyncExternalStore(
     useCallback((notify) => {
@@ -251,7 +266,17 @@ export function useInbox(scope: InboxScope) {
   )
   const result = useMemo(() => {
     try {
-      return { state: parseInbox(raw), error: null }
+      const state = parseInbox(raw)
+      return {
+        state: {
+          ...state,
+          entries: state.entries.filter(
+            (entry) =>
+              !entry.issue || !isCanonicalIssueSuppressed(entry.issue.id)
+          ),
+        },
+        error: null,
+      }
     } catch {
       return {
         state: {
@@ -263,7 +288,7 @@ export function useInbox(scope: InboxScope) {
           "Your inbox could not be loaded. Saved data has been preserved. Check that browser storage is available, then reload.",
       }
     }
-  }, [raw])
+  }, [raw, suppression])
   return {
     ...result,
     dispatch: (action: InboxAction) =>

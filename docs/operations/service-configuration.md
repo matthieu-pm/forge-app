@@ -19,7 +19,7 @@ process. Staging retains the separate resource/credential isolation manifest.
 | Jobs: `workflow-health` | `DATABASE_URL` | No web/auth/mail, Calls or release credentials |
 | Jobs: `agent-retention` | `DATABASE_URL` | `BLOB_STORE_ID` and matching `BLOB_READ_WRITE_TOKEN` in staging/production; local storage is development only |
 | Jobs: `calls-sync` | `DATABASE_URL` and enabled Calls settings | Selected providers only; refuses to run when Calls is disabled |
-| Jobs: `product-retention` | `DATABASE_URL` | R2 settings when `FORGE_DESKTOP_RELEASE_ENABLED=true`; disabled desktop retention does not touch release rows or objects |
+| Jobs: `product-retention` | `DATABASE_URL` | `BLOB_STORE_ID` and matching `BLOB_READ_WRITE_TOKEN` for issue purge in staging/production; R2 settings when `FORGE_DESKTOP_RELEASE_ENABLED=true` |
 | Release: `package`, `prepare` | `FORGE_DESKTOP_APP_ORIGIN` | Production/staging require all four Apple signing/notarization settings; development permits unsigned packages, but rejects partial signing configuration |
 | Release: `upload` | R2 settings, `FORGE_RELEASE_API_ORIGIN`, `FORGE_DESKTOP_RELEASE_API_SECRET` | No app database, mail or Apple credentials |
 | Release: `promote` | `FORGE_RELEASE_API_ORIGIN`, `FORGE_DESKTOP_RELEASE_API_SECRET`, `FORGE_DESKTOP_DOWNLOAD_ORIGIN` | No upload or signing credentials |
@@ -97,3 +97,11 @@ Run these in each target environment. Never infer the production runtime's
 `FORGE_APP_ORIGIN` from the web alias or local dotenv files; FOR-25's discovery
 does not prove the deployed callback setting. Full release acceptance still
 requires the actual serving environment and named candidate evidence.
+
+Issue retention (FOR-45) is enabled on the web service with
+`FORGE_ISSUE_RETENTION_ENABLED=true` and the dedicated Secret
+`FORGE_ISSUE_RETENTION_SECRET`. The hourly GitHub Actions workflow authenticates
+only the bounded internal issue-retention route with the repository secret of the
+same name. Preview does not enable this invoker. `issues.retention` records its
+own operational heartbeat; it does not attest execution of the other product
+retention classes.

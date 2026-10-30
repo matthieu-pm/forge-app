@@ -1,0 +1,55 @@
+name: Issue retention
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: production-issue-retention
+  cancel-in-progress: false
+
+jobs:
+  purge:
+    if: github.repository == 'matthieu-pm/forge-app' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      FORGE_ISSUE_RETENTION_SECRET: ${{ secrets.FORGE_ISSUE_RETENTION_SECRET }}
+    steps:
+      - name: Drain bounded issue-retention batches
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request
+          secret = os.environ.get('FORGE_ISSUE_RETENTION_SECRET', '')
+          if len(secret) < 32:
+              raise SystemExit('Issue retention secret is missing.')
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, *args, **kwargs):
+                  return None
+          opener = urllib.request.build_opener(NoRedirect)
+          purged = 0
+          pending = True
+          for batch in range(12):
+              request = urllib.request.Request(
+                  'https://app.forgenow.tech/api/internal/issue-retention',
+                  headers={'Authorization': 'Bearer ' + secret},
+              )
+              try:
+                  with opener.open(request, timeout=40) as response:
+                      data = json.loads(response.read(4096))
+                  if type(data.get('purged')) is not int or data.get('failed') != 0:
+                      raise ValueError('Invalid retention outcome')
+                  purged += data['purged']
+                  pending = data.get('pending', False)
+                  if type(pending) is not bool:
+                      raise ValueError('Invalid pending indicator')
+                  if not pending:
+                      break
+              except Exception:
+                  raise SystemExit('Issue retention failed; checkpoints remain available for retry.')
+          print(json.dumps({'purged': purged, 'pending': pending}))
+          PY

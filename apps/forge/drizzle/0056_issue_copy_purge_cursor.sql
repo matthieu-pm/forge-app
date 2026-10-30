@@ -1,0 +1,1 @@
+ALTER TABLE "issues" ADD COLUMN "purge_copy_cursor" uuid;

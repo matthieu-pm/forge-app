@@ -24,6 +24,25 @@ let state: CanonicalSnapshot | null = null
 let active = false
 let epoch = 0
 const optimistic = new Map<string, TeamIssue>()
+const suppressed = new Map<string, number>()
+const revisionFloors = new Map<string, number>()
+export function canonicalSuppressionSnapshot() {
+  return [...suppressed.keys()].sort().join(",")
+}
+export function isCanonicalIssueSuppressed(id: string) {
+  return suppressed.has(id)
+}
+function acceptCanonicalIssueRecord(issue: TeamIssue) {
+  const revision = issue.revision ?? 0
+  if (
+    revision < (revisionFloors.get(issue.id) ?? 0) ||
+    revision <= (suppressed.get(issue.id) ?? -1)
+  )
+    return false
+  suppressed.delete(issue.id)
+  revisionFloors.set(issue.id, revision)
+  return true
+}
 export function canonicalIssueEpoch() {
   return epoch
 }
@@ -46,6 +65,8 @@ export function replaceCanonicalIssues(
   if (changed) {
     epoch++
     optimistic.clear()
+    suppressed.clear()
+    revisionFloors.clear()
   } else if (next.records.length) {
     const previous = new Map(state!.records.map((r) => [r.issue.id, r]))
     next.records = next.records.map((r) => {
@@ -58,6 +79,13 @@ export function replaceCanonicalIssues(
       if (!next.records.some((r) => r.issue.id === id)) optimistic.delete(id)
   }
   state = next
+    ? {
+        ...next,
+        records: next.records.filter((r) =>
+          acceptCanonicalIssueRecord(r.issue)
+        ),
+      }
+    : null
   active = enabled
   if (typeof window !== "undefined") {
     window.dispatchEvent(new Event("forge:issue-queries-invalidated"))
@@ -104,6 +132,11 @@ function notifyIssues() {
   }
 }
 export function setOptimisticIssue(issue: TeamIssue) {
+  if (
+    isCanonicalIssueSuppressed(issue.id) ||
+    (issue.revision ?? 0) < (revisionFloors.get(issue.id) ?? 0)
+  )
+    return
   optimistic.set(issue.id, issue)
   notifyIssues()
 }
@@ -118,6 +151,7 @@ export function mergeCanonicalIssueRecords(
   if (!state) return
   const byId = new Map(state.records.map((r) => [r.issue.id, r]))
   for (const record of records) {
+    if (!acceptCanonicalIssueRecord(record.issue)) continue
     const old = byId.get(record.issue.id)
     if (!old || (record.issue.revision ?? 0) >= (old.issue.revision ?? 0))
       byId.set(record.issue.id, record)
@@ -129,6 +163,28 @@ export function mergeCanonicalIssueRecords(
         detail: { teamIds: [...new Set(records.map((r) => r.teamId))] },
       })
     )
+  notifyIssues()
+}
+
+/** A delayed edit/read response must not reintroduce a deleted or archived row.
+ * A subsequent authorized restore has a higher revision and clears the fence. */
+export function suppressCanonicalIssueRecord(id: string, revision: number) {
+  if (revision < (revisionFloors.get(id) ?? 0)) return
+  revisionFloors.set(id, revision)
+  suppressed.set(id, Math.max(revision, suppressed.get(id) ?? -1))
+  removeCanonicalIssueRecords([id])
+}
+
+export function restoreCanonicalIssueVisibility(
+  id: string,
+  revision: number,
+  active: boolean
+) {
+  if (revision < (revisionFloors.get(id) ?? 0)) return
+  revisionFloors.set(id, revision)
+  if (active) suppressed.delete(id)
+  else suppressed.set(id, revision)
+  removeCanonicalIssueRecords([id])
   notifyIssues()
 }
 
