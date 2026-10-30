@@ -2554,6 +2554,55 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
     )
   })
   describe("FOR-45 lifecycle", () => {
+    it("fences internal file publication when issue deletion happens during byte upload", async () => {
+      const f = await fixture(),
+        id = (
+          await service.createCanonicalIssue(f.actors[1], command(f.teamId))
+        ).issue.id
+      const { createForgeResourceFileService } =
+        await import("@/adapters/files/forge-resource-file-service.server")
+      let started!: () => void, release!: () => void
+      const uploading = new Promise<void>((resolve) => {
+          started = resolve
+        }),
+        gate = new Promise<void>((resolve) => {
+          release = resolve
+        })
+      const blobs = {
+        put: vi.fn(async () => {
+          started()
+          await gate
+        }),
+        get: vi.fn(),
+        delete: vi.fn().mockResolvedValue(undefined),
+      }
+      const creating = createForgeResourceFileService(blobs).create(
+        f.actors[1],
+        { kind: "issue", id },
+        {
+          name: "late.txt",
+          contentType: "text/plain",
+          content: new TextEncoder().encode("late bytes"),
+        }
+      )
+      // Attach rejection handling before unblocking the upload.
+      const outcome = creating.then(
+        () => "saved",
+        () => "rejected"
+      )
+      await uploading
+      await change(f, id, "delete")
+      release()
+      expect(await outcome).toBe("rejected")
+      expect(blobs.delete).toHaveBeenCalledOnce()
+      expect(
+        (
+          await pool.query("SELECT id FROM resource_files WHERE issue_id=$1", [
+            id,
+          ])
+        ).rowCount
+      ).toBe(0)
+    }, 30000)
     it("restoration and cross-team creation compete for the same last slot, with exact replay accounting", async () => {
       const f = await fixture()
       await seed(f.workspaceId, f.teamId, 250)

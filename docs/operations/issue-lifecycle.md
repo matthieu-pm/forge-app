@@ -66,7 +66,9 @@ intents. Storage keys remain until an idempotent byte deletion succeeds. A crash
 between the byte delete and metadata checkpoint safely retries the same key.
 Private document files are included; independently shared documents/files are
 preserved. Publication already requires live target authorization under row
-locks. When the batch is drained, one fenced transaction removes private
+locks. Internal file imports also lock the target during their final metadata
+write: deletion during an asynchronous byte upload refuses publication and
+cleans up the uncommitted bytes. When the batch is drained, one fenced transaction removes private
 documents, issue labels, incident relationships and inbox copies, detaches
 children and scrubs issue content. The canonical issue retains only suppression
 identity, numbering/status references, lifecycle timestamps and minimal purge
