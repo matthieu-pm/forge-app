@@ -24,6 +24,7 @@ let state: CanonicalSnapshot | null = null
 let active = false
 let epoch = 0
 const optimistic = new Map<string, TeamIssue>()
+const suppressed = new Map<string, number>()
 export function canonicalIssueEpoch() {
   return epoch
 }
@@ -46,6 +47,7 @@ export function replaceCanonicalIssues(
   if (changed) {
     epoch++
     optimistic.clear()
+    suppressed.clear()
   } else if (next.records.length) {
     const previous = new Map(state!.records.map((r) => [r.issue.id, r]))
     next.records = next.records.map((r) => {
@@ -58,6 +60,13 @@ export function replaceCanonicalIssues(
       if (!next.records.some((r) => r.issue.id === id)) optimistic.delete(id)
   }
   state = next
+    ? {
+        ...next,
+        records: next.records.filter(
+          (r) => (r.issue.revision ?? 0) > (suppressed.get(r.issue.id) ?? -1)
+        ),
+      }
+    : null
   active = enabled
   if (typeof window !== "undefined") {
     window.dispatchEvent(new Event("forge:issue-queries-invalidated"))
@@ -104,6 +113,7 @@ function notifyIssues() {
   }
 }
 export function setOptimisticIssue(issue: TeamIssue) {
+  if ((issue.revision ?? 0) <= (suppressed.get(issue.id) ?? -1)) return
   optimistic.set(issue.id, issue)
   notifyIssues()
 }
@@ -118,6 +128,9 @@ export function mergeCanonicalIssueRecords(
   if (!state) return
   const byId = new Map(state.records.map((r) => [r.issue.id, r]))
   for (const record of records) {
+    if ((record.issue.revision ?? 0) <= (suppressed.get(record.issue.id) ?? -1))
+      continue
+    suppressed.delete(record.issue.id)
     const old = byId.get(record.issue.id)
     if (!old || (record.issue.revision ?? 0) >= (old.issue.revision ?? 0))
       byId.set(record.issue.id, record)
@@ -130,6 +143,13 @@ export function mergeCanonicalIssueRecords(
       })
     )
   notifyIssues()
+}
+
+/** A delayed edit/read response must not reintroduce a deleted or archived row.
+ * A subsequent authorized restore has a higher revision and clears the fence. */
+export function suppressCanonicalIssueRecord(id: string, revision: number) {
+  suppressed.set(id, Math.max(revision, suppressed.get(id) ?? -1))
+  removeCanonicalIssueRecords([id])
 }
 
 export function removeCanonicalIssueRecords(ids: Array<string>) {

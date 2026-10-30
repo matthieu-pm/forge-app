@@ -210,6 +210,7 @@ export function useQueriedIssue(id?: string) {
         )
           return
         const records = JSON.parse(raw) as IssueQueryPage["records"]
+        if (!records.length) removeCanonicalIssueRecords([id])
         mergeCanonicalIssueRecords(records, false)
         setResult({ key, record: records[0] })
       })

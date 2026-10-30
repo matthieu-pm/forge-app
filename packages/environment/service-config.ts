@@ -334,7 +334,7 @@ export function inspectServiceConfiguration(
     database()
     if (!options.job) add("FORGE_CONFIG_JOB", "must select a job profile")
     if (options.job === "calls-sync") calls(true)
-    if (options.job === "agent-retention") blob()
+    if (options.job === "agent-retention" || options.job === "product-retention") blob()
     if (
       options.job === "product-retention" &&
       flag("FORGE_DESKTOP_RELEASE_ENABLED")

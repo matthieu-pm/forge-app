@@ -152,6 +152,13 @@ export const issues = pgTable(
       .defaultNow()
       .notNull(),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    purgeStartedAt: timestamp("purge_started_at", { withTimezone: true }),
+    purgedAt: timestamp("purged_at", { withTimezone: true }),
+    purgeLeaseUntil: timestamp("purge_lease_until", { withTimezone: true }),
+    purgeToken: uuid("purge_token"),
+    purgeAttempts: integer("purge_attempts").default(0).notNull(),
+    purgeError: text("purge_error"),
     properties: jsonb("properties")
       .$type<IssueDraft>()
       .notNull()

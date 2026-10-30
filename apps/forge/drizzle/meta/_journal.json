@@ -379,6 +379,20 @@
       "when": 1793393541422,
       "tag": "0053_issue_relationships",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1793398662117,
+      "tag": "0054_issue_lifecycle",
+      "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1793398966471,
+      "tag": "0055_issue_recovery_elapsed",
+      "breakpoints": true
     }
   ]
 }

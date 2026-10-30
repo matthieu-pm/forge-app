@@ -1,5 +1,5 @@
 import "@tanstack/react-start/server-only"
-import { and, eq, or } from "drizzle-orm"
+import { and, eq, inArray, or } from "drizzle-orm"
 import { z } from "zod"
 import type { Actor } from "@/application/actor"
 import type { Transaction } from "@/db"
@@ -9,12 +9,15 @@ import type {
 } from "@/lib/product-state-contract"
 import { parseTeamCycles } from "@/lib/team-cycles-contract"
 import { parseTeamTriage } from "@/lib/team-triage-contract"
-import { db, productState, teamMembers, teams } from "@/db"
+import { db, issues, productState, teamMembers, teams } from "@/db"
 import {
   ApplicationAccessError,
   hasWorkspaceRole,
 } from "@/application/authorization"
-import { readableTeamCondition } from "@/application/resource-policy.server"
+import {
+  readableIssueCondition,
+  readableTeamCondition,
+} from "@/application/resource-policy.server"
 import { currentCommandActor } from "@/application/commands/command-actor.server"
 import { executeCommand } from "@/application/commands/execute-command.server"
 import {
@@ -92,6 +95,51 @@ async function scope(
   }
   return shared ? "workspace" : `user:${actor.userId}`
 }
+async function visibleInboxValue(
+  tx: Transaction,
+  current: Actor,
+  key: string,
+  value: string | null
+) {
+  if (!value || !key.startsWith("forge:inbox:v1:")) return value
+  const inbox = JSON.parse(value) as {
+    entries?: Array<{ issue?: { id?: string } | null }>
+  }
+  const ids = [
+    ...new Set(
+      (inbox.entries ?? []).flatMap((e) =>
+        e.issue?.id && z.uuid().safeParse(e.issue.id).success
+          ? [e.issue.id]
+          : []
+      )
+    ),
+  ]
+  if (ids.length > 5000)
+    throw new Error("Inbox snapshot exceeds the supported limit.")
+  const visible = new Set(
+    ids.length
+      ? (
+          await tx
+            .select({ id: issues.id })
+            .from(issues)
+            .where(
+              and(
+                inArray(issues.id, ids),
+                readableIssueCondition(current, issues.id)
+              )
+            )
+        ).map((r) => r.id)
+      : []
+  )
+  inbox.entries = (inbox.entries ?? []).filter(
+    (e) =>
+      !e.issue?.id ||
+      !z.uuid().safeParse(e.issue.id).success ||
+      visible.has(e.issue.id)
+  )
+  return JSON.stringify(inbox)
+}
+
 export async function readProductState(
   actor: Actor
 ): Promise<ProductStateSnapshot> {
@@ -113,15 +161,21 @@ export async function readProductState(
     const entries: ProductStateSnapshot["entries"] = []
     for (const row of rows) {
       try {
-        if ((await scope(tx, current, row.key)) === row.ownerId)
+        if ((await scope(tx, current, row.key)) === row.ownerId) {
+          const value = await visibleInboxValue(
+            tx,
+            current,
+            row.key,
+            row.encodedValue === null
+              ? null
+              : (JSON.parse(row.encodedValue) as string)
+          )
           entries.push({
             key: row.key,
-            value:
-              row.encodedValue === null
-                ? null
-                : (JSON.parse(row.encodedValue) as string),
+            value,
             revision: row.revision,
           })
+        }
       } catch {
         /* Revoked/private resources are omitted. */
       }
@@ -213,11 +267,11 @@ export async function saveProductState(actor: Actor, raw: ProductStateCommand) {
           "This data changed in another session. Your pending changes are preserved in this session; reload the latest version before retrying."
         )
       }
+      const value = await visibleInboxValue(tx, current, input.key, input.value)
       await tx
         .update(productState)
         .set({
-          encodedValue:
-            input.value === null ? null : JSON.stringify(input.value),
+          encodedValue: value === null ? null : JSON.stringify(value),
           revision: row.revision + 1,
         })
         .where(predicate)

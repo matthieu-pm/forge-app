@@ -25,6 +25,7 @@ import type * as Database from "@/db"
 import { blankIssueDraft } from "@/lib/issue-record-contract"
 
 const autoAssignmentFile =
+  process.env.FORGE_ISSUE_LIFECYCLE_TEST_DATABASE_FILE ??
   process.env.FORGE_ISSUE_RELATIONSHIP_TEST_DATABASE_FILE ??
   process.env.FORGE_ISSUE_QUERY_TEST_DATABASE_FILE ??
   process.env.FORGE_AUTO_ASSIGNMENT_TEST_DATABASE_FILE
@@ -2551,5 +2552,540 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
       },
       30000
     )
+  })
+  describe("FOR-45 lifecycle", () => {
+    it("restoration and cross-team creation compete for the same last slot, with exact replay accounting", async () => {
+      const f = await fixture()
+      await seed(f.workspaceId, f.teamId, 250)
+      const id = (
+        await pool.query(
+          "SELECT id FROM issues WHERE workspace_id=$1 LIMIT 1",
+          [f.workspaceId]
+        )
+      ).rows[0].id
+      await change(f, id, "delete")
+      const l = await lifecycle(),
+        input = {
+          commandKey: randomUUID(),
+          teamId: f.teamId,
+          issueId: id,
+          expectedRevision: await revision(id),
+          action: "restore" as const,
+        }
+      const outcomes = await Promise.allSettled([
+        l.changeIssueLifecycle(f.actors[1], input),
+        service.createCanonicalIssue(f.actors[0], command(f.secondTeam)),
+      ])
+      expect(
+        outcomes.filter((result) => result.status === "fulfilled")
+      ).toHaveLength(1)
+      if (outcomes[0].status === "fulfilled")
+        expect(await l.changeIssueLifecycle(f.actors[1], input)).toMatchObject({
+          replayed: true,
+        })
+      expect(
+        (
+          await pool.query(
+            "SELECT active_count FROM workspace_issue_capacity WHERE workspace_id=$1",
+            [f.workspaceId]
+          )
+        ).rows[0].active_count
+      ).toBe(250)
+      const archived = {
+        commandKey: randomUUID(),
+        teamId: f.teamId,
+        issueId: (
+          await pool.query(
+            "SELECT id FROM issues WHERE workspace_id=$1 AND team_id=$2 AND deleted_at IS NULL LIMIT 1",
+            [f.workspaceId, f.teamId]
+          )
+        ).rows[0].id,
+        expectedRevision: 0,
+        action: "archive" as const,
+      }
+      archived.expectedRevision = await revision(archived.issueId)
+      await l.changeIssueLifecycle(f.actors[1], archived)
+      expect(await l.changeIssueLifecycle(f.actors[1], archived)).toMatchObject(
+        { replayed: true }
+      )
+      expect(
+        (
+          await pool.query(
+            "SELECT active_count FROM workspace_issue_capacity WHERE workspace_id=$1",
+            [f.workspaceId]
+          )
+        ).rows[0].active_count
+      ).toBe(249)
+    }, 30000)
+    const lifecycle = () => import("./issue-lifecycle.server")
+    const revision = async (id: string) =>
+      (await pool.query("SELECT revision FROM issues WHERE id=$1", [id]))
+        .rows[0].revision as number
+    async function change(
+      f: Awaited<ReturnType<typeof fixture>>,
+      id: string,
+      action: "delete" | "restore" | "archive" | "unarchive",
+      actor = f.actors[1]
+    ) {
+      return (await lifecycle()).changeIssueLifecycle(actor, {
+        commandKey: randomUUID(),
+        teamId: f.teamId,
+        issueId: id,
+        expectedRevision: await revision(id),
+        action,
+      })
+    }
+    it("AT-01: member delete/restore preserves comments and subscriptions, suppresses search, files and relationships", async () => {
+      const f = await fixture(),
+        id = (
+          await service.createCanonicalIssue(
+            f.actors[1],
+            command(f.teamId, "Recoverable secret")
+          )
+        ).issue.id
+      await pool.query(
+        "UPDATE issues SET properties=properties || $2::jsonb WHERE id=$1",
+        [
+          id,
+          JSON.stringify({
+            subscribers: users.join(","),
+            comments: [
+              {
+                id: randomUUID(),
+                author: users[1],
+                body: "Private comment",
+                createdAt: new Date().toISOString(),
+              },
+            ],
+          }),
+        ]
+      )
+      const child = (
+        await service.createCanonicalIssue(f.actors[1], {
+          ...command(f.teamId),
+          draft: { ...draft("Surviving child"), parentId: id },
+        })
+      ).issue.id
+      await pool.query(
+        "INSERT INTO issue_relations(workspace_id,issue_id,related_issue_id,kind) VALUES($1,$2,$3,'related')",
+        [f.workspaceId, id, child]
+      )
+      const fileId = randomUUID()
+      await pool.query(
+        "INSERT INTO resource_files(id,workspace_id,created_by_user_id,issue_id,name,content_type,size_bytes,checksum,storage_reference) VALUES($1,$2,$3,$4,'private.txt','text/plain',1,$5,$6)",
+        [
+          fileId,
+          f.workspaceId,
+          users[1],
+          id,
+          "a".repeat(64),
+          `files/${randomUUID()}`,
+        ]
+      )
+      const { lookupAuthorizedFile } =
+          await import("@/adapters/files/file-delivery-lookup.server"),
+        lookup = () =>
+          lookupAuthorizedFile(f.actors[1], { kind: "resources", id: fileId })
+      expect(await lookup()).not.toBeNull()
+      const inboxKey = `forge:inbox:v1:${JSON.stringify([f.workspaceId, users[1]])}`
+      const inboxValue = JSON.stringify({
+        entries: [
+          { id: `issue:${id}`, issue: { id, title: "Recoverable secret" } },
+        ],
+        unsubscribedIssueIds: [],
+      })
+      await pool.query(
+        "INSERT INTO product_state(workspace_id,owner_id,owner_user_id,key,encoded_value) VALUES($1,$2,$3,$4,$5)",
+        [
+          f.workspaceId,
+          `user:${users[1]}`,
+          users[1],
+          inboxKey,
+          JSON.stringify(inboxValue),
+        ]
+      )
+      const input = {
+          commandKey: randomUUID(),
+          teamId: f.teamId,
+          issueId: id,
+          expectedRevision: await revision(id),
+          action: "delete" as const,
+        },
+        l = await lifecycle()
+      expect((await l.changeIssueLifecycle(f.actors[1], input)).status).toBe(
+        "saved"
+      )
+      expect(await l.changeIssueLifecycle(f.actors[1], input)).toMatchObject({
+        status: "saved",
+        replayed: true,
+      })
+      const { getPlanningResource } =
+          await import("../planning/queries.server"),
+        rel = await import("./issue-relationships.server")
+      expect(await getPlanningResource(f.actors[1], "issue", id)).toBeNull()
+      expect(await lookup()).toBeNull()
+      expect(
+        (await product.readProductState(f.actors[1])).entries.find(
+          (e) => e.key === inboxKey
+        )?.value
+      ).not.toContain("Recoverable secret")
+      expect(
+        (await service.readCanonicalIssues(f.actors[1])).records.some(
+          (r) => r.issue.id === id
+        )
+      ).toBe(false)
+      expect(
+        (await queryIssues(f.actors[1], { search: "Recoverable secret" }))
+          .records
+      ).toHaveLength(0)
+      const { defaultIssueDisplay } = await import("@/lib/issue-view-contract")
+      expect(
+        (
+          await queryIssues(f.actors[1], { personal: "subscribed" })
+        ).records.map((r) => r.issue.id)
+      ).not.toContain(id)
+      expect(
+        (
+          await queryIssues(f.actors[1], {
+            search: "Surviving child",
+            display: { ...defaultIssueDisplay(), showSubIssues: false },
+          })
+        ).records.map((r) => r.issue.id)
+      ).toContain(child)
+      expect(
+        (await rel.readIssueRelationships(f.actors[1], { issueId: child }))
+          .relationships
+      ).toHaveLength(0)
+      expect(
+        (
+          await l.listInactiveIssues(f.actors[1], {
+            teamId: f.teamId,
+            kind: "deleted",
+          })
+        ).items[0]
+      ).toMatchObject({ id, title: "Recoverable secret" })
+      await change(f, id, "restore")
+      const restored = (
+        await service.readCanonicalIssues(f.actors[1])
+      ).records.find((r) => r.issue.id === id)!.issue
+      expect(restored.comments[0].body).toBe("Private comment")
+      expect(restored.subscribers).toBe(users.join(","))
+      expect(
+        (await product.readProductState(f.actors[1])).entries.find(
+          (e) => e.key === inboxKey
+        )?.value
+      ).toContain("Recoverable secret")
+      expect(await lookup()).not.toBeNull()
+      expect(
+        (
+          await rel.readIssueRelationships(f.actors[1], { issueId: child })
+        ).relationships.map((r) => r.issue.id)
+      ).toContain(id)
+    }, 30000)
+    it("AT-04: capacity rejection preserves records and create/unarchive atomically compete for one slot", async () => {
+      const f = await fixture()
+      await seed(f.workspaceId, f.teamId, 250, 1)
+      const archived = (
+        await pool.query(
+          "SELECT id FROM issues WHERE workspace_id=$1 AND archived_at IS NOT NULL",
+          [f.workspaceId]
+        )
+      ).rows[0].id
+      await expect(change(f, archived, "unarchive")).rejects.toThrow(
+        "250 active"
+      )
+      expect(
+        (
+          await pool.query("SELECT archived_at FROM issues WHERE id=$1", [
+            archived,
+          ])
+        ).rows[0].archived_at
+      ).not.toBeNull()
+      const active = (
+        await pool.query(
+          "SELECT id FROM issues WHERE workspace_id=$1 AND archived_at IS NULL LIMIT 1",
+          [f.workspaceId]
+        )
+      ).rows[0].id
+      await change(f, active, "delete")
+      await service.createCanonicalIssue(
+        f.actors[1],
+        command(f.secondTeam, "Fills slot")
+      )
+      await expect(change(f, active, "restore")).rejects.toThrow("250 active")
+      expect(
+        (
+          await pool.query("SELECT deleted_at FROM issues WHERE id=$1", [
+            active,
+          ])
+        ).rows[0].deleted_at
+      ).not.toBeNull()
+      await change(f, archived, "delete")
+      await change(f, archived, "restore")
+      const release = (
+        await pool.query(
+          "SELECT id FROM issues WHERE workspace_id=$1 AND team_id=$2 AND archived_at IS NULL AND deleted_at IS NULL LIMIT 1",
+          [f.workspaceId, f.teamId]
+        )
+      ).rows[0].id
+      await change(f, release, "archive")
+      const l = await lifecycle(),
+        input = {
+          commandKey: randomUUID(),
+          teamId: f.teamId,
+          issueId: archived,
+          expectedRevision: await revision(archived),
+          action: "unarchive" as const,
+        }
+      const results = await Promise.allSettled([
+        l.changeIssueLifecycle(f.actors[1], input),
+        service.createCanonicalIssue(
+          f.actors[0],
+          command(f.secondTeam, "Competing create")
+        ),
+      ])
+      expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1)
+      if (results[0].status === "fulfilled")
+        expect(await l.changeIssueLifecycle(f.actors[1], input)).toMatchObject({
+          replayed: true,
+        })
+      expect(
+        (
+          await pool.query(
+            "SELECT active_count FROM workspace_issue_capacity WHERE workspace_id=$1",
+            [f.workspaceId]
+          )
+        ).rows[0].active_count
+      ).toBe(250)
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int n FROM issues WHERE workspace_id=$1 AND archived_at IS NULL AND deleted_at IS NULL",
+            [f.workspaceId]
+          )
+        ).rows[0].n
+      ).toBe(250)
+    }, 30000)
+    it("rejects stale revisions, private-team access, missing scopes and revoked actors", async () => {
+      const f = await fixture(),
+        id = (
+          await service.createCanonicalIssue(f.actors[1], command(f.teamId))
+        ).issue.id,
+        l = await lifecycle()
+      const input = {
+        commandKey: randomUUID(),
+        teamId: f.teamId,
+        issueId: id,
+        expectedRevision: await revision(id),
+        action: "delete" as const,
+      }
+      await pool.query(
+        "UPDATE issues SET title='Concurrent update' WHERE id=$1",
+        [id]
+      )
+      expect(await l.changeIssueLifecycle(f.actors[1], input)).toEqual({
+        status: "conflict",
+      })
+      const api = await credentialActor(f, "apiKey")
+      await expect(
+        l.changeIssueLifecycle(
+          { ...api, scopes: ["issues:read"] },
+          { ...input, expectedRevision: await revision(id) }
+        )
+      ).rejects.toMatchObject({ code: "FORBIDDEN" })
+      await pool.query("UPDATE teams SET visibility='private' WHERE id=$1", [
+        f.teamId,
+      ])
+      await expect(change(f, id, "delete")).rejects.toMatchObject({
+        code: "FORBIDDEN",
+      })
+      await pool.query("UPDATE teams SET visibility='workspace' WHERE id=$1", [
+        f.teamId,
+      ])
+      await pool.query(
+        "DELETE FROM member WHERE organization_id=$1 AND user_id=$2",
+        [f.workspaceId, users[1]]
+      )
+      await expect(change(f, id, "delete")).rejects.toMatchObject({
+        code: "FORBIDDEN",
+      })
+    }, 30000)
+    it("refuses recovery at the exact SQL deadline even if the worker is late", async () => {
+      const f = await fixture(),
+        id = (
+          await service.createCanonicalIssue(f.actors[1], command(f.teamId))
+        ).issue.id
+      await pool.query(
+        "UPDATE issues SET deleted_at=clock_timestamp()-interval '30 days' WHERE id=$1",
+        [id]
+      )
+      await expect(change(f, id, "restore")).rejects.toThrow("recovery period")
+      expect(
+        (
+          await (
+            await lifecycle()
+          ).listInactiveIssues(f.actors[1], {
+            teamId: f.teamId,
+            kind: "deleted",
+          })
+        ).items
+      ).toHaveLength(0)
+      await expect(
+        pool.query("UPDATE issues SET deleted_at=null WHERE id=$1", [id])
+      ).rejects.toMatchObject({ constraint: "issue_recovery_expired" })
+    }, 30000)
+    it("AT-02: purge retries failed bytes before scrubbing private dependents; old links stay unavailable", async () => {
+      const f = await fixture(),
+        id = (
+          await service.createCanonicalIssue(
+            f.actors[1],
+            command(f.teamId, "Private purge body")
+          )
+        ).issue.id
+      const child = (
+        await service.createCanonicalIssue(f.actors[1], {
+          ...command(f.teamId),
+          draft: { ...draft("Survivor"), parentId: id },
+        })
+      ).issue.id
+      const doc = randomUUID(),
+        shared = randomUUID(),
+        fileId = randomUUID(),
+        ref = `files/${randomUUID()}`
+      await pool.query(
+        "INSERT INTO documents(id,workspace_id,title,issue_id,shared_with_workspace,body) VALUES($1,$3,'Private',$4,false,'{}'),($2,$3,'Shared',$4,true,'{}')",
+        [doc, shared, f.workspaceId, id]
+      )
+      await pool.query(
+        "INSERT INTO resource_files(id,workspace_id,created_by_user_id,document_id,name,content_type,size_bytes,checksum,storage_reference) VALUES($1,$2,$3,$4,'secret.txt','text/plain',1,$5,$6)",
+        [fileId, f.workspaceId, users[1], doc, "b".repeat(64), ref]
+      )
+      await pool.query(
+        "INSERT INTO issue_relations(workspace_id,issue_id,related_issue_id,kind) VALUES($1,$2,$3,'related')",
+        [f.workspaceId, id, child]
+      )
+      await pool.query(
+        "UPDATE issues SET deleted_at=clock_timestamp()-interval '31 days' WHERE id=$1",
+        [id]
+      )
+      const inboxKey = `forge:inbox:v1:${JSON.stringify([f.workspaceId, users[1]])}`
+      const inboxValue = JSON.stringify({
+        entries: [
+          { id: `issue:${id}`, issue: { id, title: "Private purge body" } },
+        ],
+        unsubscribedIssueIds: [],
+      })
+      await pool.query(
+        "INSERT INTO product_state(workspace_id,owner_id,owner_user_id,key,encoded_value) VALUES($1,$2,$3,$4,$5)",
+        [
+          f.workspaceId,
+          `user:${users[1]}`,
+          users[1],
+          inboxKey,
+          JSON.stringify(inboxValue),
+        ]
+      )
+      const { purgeDeletedIssues } = await import("./purge-issues.server"),
+        remove = vi.fn().mockRejectedValue(new Error("secret provider failure"))
+      expect(
+        (await purgeDeletedIssues({ delete: remove })).failed
+      ).toBeGreaterThan(0)
+      const stalled = (
+        await pool.query(
+          "SELECT purge_started_at,purged_at,purge_error FROM issues WHERE id=$1",
+          [id]
+        )
+      ).rows[0]
+      expect(stalled.purge_started_at).not.toBeNull()
+      expect(stalled.purged_at).toBeNull()
+      expect(stalled.purge_error).not.toContain("secret")
+      await expect(change(f, id, "restore")).rejects.toThrow("recovery period")
+      expect(
+        (
+          await pool.query("SELECT id FROM resource_files WHERE id=$1", [
+            fileId,
+          ])
+        ).rowCount
+      ).toBe(1)
+      await pool.query("UPDATE issues SET purge_lease_until=null WHERE id=$1", [
+        id,
+      ])
+      remove.mockResolvedValue(undefined)
+      expect(
+        (await purgeDeletedIssues({ delete: remove })).purged
+      ).toBeGreaterThan(0)
+      const purged = (
+        await pool.query(
+          "SELECT title,properties,purged_at FROM issues WHERE id=$1",
+          [id]
+        )
+      ).rows[0]
+      expect(purged.title).toBe("")
+      expect(purged.properties).toEqual({})
+      const snapshot = (
+        await pool.query(
+          "SELECT encoded_value,revision FROM product_state WHERE workspace_id=$1 AND key=$2",
+          [f.workspaceId, inboxKey]
+        )
+      ).rows[0]
+      expect(snapshot.encoded_value).not.toContain("Private purge body")
+      await product.saveProductState(f.actors[1], {
+        workspaceId: f.workspaceId,
+        sessionId:
+          f.actors[1].authentication.kind === "session"
+            ? f.actors[1].authentication.sessionId
+            : "",
+        commandKey: randomUUID(),
+        key: inboxKey,
+        value: inboxValue,
+        expectedRevision: snapshot.revision,
+      })
+      expect(
+        (
+          await pool.query(
+            "SELECT encoded_value FROM product_state WHERE workspace_id=$1 AND key=$2",
+            [f.workspaceId, inboxKey]
+          )
+        ).rows[0].encoded_value
+      ).not.toContain("Private purge body")
+
+      expect(purged.purged_at).not.toBeNull()
+      expect(
+        (await pool.query("SELECT id FROM documents WHERE id=$1", [doc]))
+          .rowCount
+      ).toBe(0)
+      expect(
+        (
+          await pool.query("SELECT issue_id FROM documents WHERE id=$1", [
+            shared,
+          ])
+        ).rows[0].issue_id
+      ).toBe(id)
+      expect(
+        (await pool.query("SELECT parent_id FROM issues WHERE id=$1", [child]))
+          .rows[0].parent_id
+      ).toBeNull()
+      expect(
+        (
+          await pool.query("SELECT id FROM resource_files WHERE id=$1", [
+            fileId,
+          ])
+        ).rowCount
+      ).toBe(0)
+      expect(
+        (
+          await pool.query(
+            "SELECT id FROM issue_relations WHERE issue_id=$1 OR related_issue_id=$1",
+            [id]
+          )
+        ).rowCount
+      ).toBe(0)
+      const { getPlanningResource } = await import("../planning/queries.server")
+      expect(await getPlanningResource(f.actors[1], "issue", id)).toBeNull()
+      await expect(change(f, id, "restore")).rejects.toMatchObject({
+        code: "FORBIDDEN",
+      })
+      expect((await purgeDeletedIssues({ delete: remove })).purged).toBe(0)
+    }, 30000)
   })
 })

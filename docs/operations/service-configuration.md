@@ -19,7 +19,7 @@ process. Staging retains the separate resource/credential isolation manifest.
 | Jobs: `workflow-health` | `DATABASE_URL` | No web/auth/mail, Calls or release credentials |
 | Jobs: `agent-retention` | `DATABASE_URL` | `BLOB_STORE_ID` and matching `BLOB_READ_WRITE_TOKEN` in staging/production; local storage is development only |
 | Jobs: `calls-sync` | `DATABASE_URL` and enabled Calls settings | Selected providers only; refuses to run when Calls is disabled |
-| Jobs: `product-retention` | `DATABASE_URL` | R2 settings when `FORGE_DESKTOP_RELEASE_ENABLED=true`; disabled desktop retention does not touch release rows or objects |
+| Jobs: `product-retention` | `DATABASE_URL` | `BLOB_STORE_ID` and matching `BLOB_READ_WRITE_TOKEN` for issue purge in staging/production; R2 settings when `FORGE_DESKTOP_RELEASE_ENABLED=true` |
 | Release: `package`, `prepare` | `FORGE_DESKTOP_APP_ORIGIN` | Production/staging require all four Apple signing/notarization settings; development permits unsigned packages, but rejects partial signing configuration |
 | Release: `upload` | R2 settings, `FORGE_RELEASE_API_ORIGIN`, `FORGE_DESKTOP_RELEASE_API_SECRET` | No app database, mail or Apple credentials |
 | Release: `promote` | `FORGE_RELEASE_API_ORIGIN`, `FORGE_DESKTOP_RELEASE_API_SECRET`, `FORGE_DESKTOP_DOWNLOAD_ORIGIN` | No upload or signing credentials |

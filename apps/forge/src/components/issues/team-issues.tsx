@@ -12,6 +12,7 @@ import {
 } from "./issue-controls"
 import { IssueComposer } from "./issue-composer"
 import { IssueDetail } from "./issue-detail"
+import { IssueRecovery } from "./issue-lifecycle"
 import { IssueFilters } from "./issue-filters"
 import { IssueRows } from "./issue-list"
 import { IssueDetailsPanel } from "./issue-details-panel"
@@ -564,8 +565,21 @@ export function TeamIssues({
             <IssueIcon name="add" />
             New issue
           </Button>
+          {query.enabled && <IssueRecovery teamId={team.id} />}
         </div>
       </ContentHeader>
+      {search.issue && query.enabled && !current && (
+        <div role="status" className="px-4 py-2 text-sm text-muted-foreground">
+          This issue is unavailable or you no longer have access.{" "}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onNavigate({ ...search, issue: undefined })}
+          >
+            Return to issues
+          </Button>
+        </div>
+      )}
       <div className="flex min-h-11 shrink-0 items-center justify-between gap-2 px-2 py-2">
         <PageTabs aria-label="Issue views">
           {[

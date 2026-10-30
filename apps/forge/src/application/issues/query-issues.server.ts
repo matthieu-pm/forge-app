@@ -16,6 +16,7 @@ import { issueQuerySchema } from "@/lib/issue-query-contract"
 import { db, issues } from "@/db"
 import { currentCommandActor } from "@/application/commands/command-actor.server"
 import {
+  readableIssueCondition,
   readableTeamCondition,
   requireResourceScope,
 } from "@/application/resource-policy.server"
@@ -168,6 +169,7 @@ export async function queryCanonicalIssues(
         sql`${issues.workspaceId} = ${current.workspaceId}`,
         readableTeamCondition(current, issues.teamId),
         sql`${issues.archivedAt} IS NULL`,
+        sql`${issues.deletedAt} IS NULL`,
         sql`${issues.createdAt} <= ${snapshot}::timestamptz`,
       ]
       if (query.teamIds)
@@ -237,7 +239,7 @@ export async function queryCanonicalIssues(
                   ? sql`created_sort`
                   : sql`updated_sort`
       const cte = sql`WITH RECURSIVE authorized AS MATERIALIZED (
-      SELECT issues.id, issues.revision, issues.number, issues.team_id, issues.title, coalesce(issues.parent_id::text,'') parent,
+      SELECT issues.id, issues.revision, issues.number, issues.team_id, issues.title, CASE WHEN ${readableIssueCondition(current, sql`issues.parent_id`)} THEN coalesce(issues.parent_id::text,'') ELSE '' END parent,
       issues.properties, issues.status_id, coalesce(s.name,issues.status_id) status_name, coalesce(s.status_group,'backlog') status_group,
       coalesce(s.position,0) status_position, coalesce(issues.assignee_id,'') assignee,
       coalesce(issues.creator_id,'') creator, coalesce(issues.project_id::text,'') project,

@@ -19,6 +19,11 @@ await runMonitoredJob("product.retention", async () => {
   } = await import("@/db")
 
   const now = new Date()
+  const [{ purgeDeletedIssues }, { createFileBlobStore }] = await Promise.all([
+    import("../src/application/issues/purge-issues.server"),
+    import("../src/adapters/files/file-blob-store.server"),
+  ])
+  const issuePurge = await purgeDeletedIssues(createFileBlobStore())
   const workflowCutoff = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1_000)
   const releaseCutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1_000)
   const teamCutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1_000)
@@ -147,8 +152,11 @@ await runMonitoredJob("product.retention", async () => {
     }
   }
 
+  if (issuePurge.failed)
+    throw new Error(`${issuePurge.failed} issue purges require retry.`)
   emitTelemetry("job.health", "product.retention", {
     count:
+      issuePurge.purged +
       deletedWorkflowRuns.length +
       expiredDesktopReleases +
       permanentlyDeletedTeams.length,
