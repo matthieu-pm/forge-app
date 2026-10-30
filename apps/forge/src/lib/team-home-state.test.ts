@@ -1,4 +1,4 @@
-import { act, cleanup, renderHook, waitFor } from "@testing-library/react"
+import { act, cleanup, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
   emptyTeamHome,
@@ -7,8 +7,15 @@ import {
   teamHomeKey,
   useTeamHome,
 } from "./team-home-state"
+import {
+  renderPreferenceHook as renderHook,
+  setupPreferenceFixture,
+} from "@/test/preference-fixture"
 
-beforeEach(() => localStorage.clear())
+beforeEach(async () => {
+  localStorage.clear()
+  await setupPreferenceFixture("user")
+})
 afterEach(() => {
   cleanup()
   vi.restoreAllMocks()
@@ -42,7 +49,7 @@ describe("team home content", () => {
     expect(hook.result.current.update(() => emptyTeamHome())).toBe(false)
     expect(localStorage.getItem(teamHomeKey("alpha"))).toBe("broken")
   })
-  it("does not report a save or alter state when storage is full", async () => {
+  it("saves personal favorites independently of browser storage quota", async () => {
     const hook = renderHook(() => useTeamHome("alpha"))
     await waitFor(() => expect(hook.result.current.ready).toBe(true))
     vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
@@ -51,9 +58,9 @@ describe("team home content", () => {
     act(() => {
       expect(
         hook.result.current.update((s) => ({ ...s, favorite: true }))
-      ).toBe(false)
+      ).toBe(true)
     })
-    expect(hook.result.current.state.favorite).toBe(false)
+    expect(hook.result.current.state.favorite).toBe(true)
   })
   it("keeps documents when removing their section", () => {
     const resource = {

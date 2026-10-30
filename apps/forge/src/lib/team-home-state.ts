@@ -1,6 +1,7 @@
 import * as React from "react"
 import { z } from "zod"
 import { documentSchema } from "./template-contract"
+import { useWorkspaceView } from "@/components/account-preference-provider"
 
 export const teamResourceSchema = z.object({
   id: z.string(),
@@ -79,6 +80,7 @@ export function removeHomeSection(
 }
 const changed = "forge:team-home-changed"
 export function useTeamHome(teamId: string) {
+  const sync = useWorkspaceView("teamHome", teamId)
   const key = teamHomeKey(teamId)
   const [state, setState] = React.useState(emptyTeamHome)
   const [ready, setReady] = React.useState(false)
@@ -112,21 +114,66 @@ export function useTeamHome(teamId: string) {
       window.removeEventListener(changed, sync)
     }
   }, [key])
+  function overlay(current: TeamHomeState): TeamHomeState {
+    return {
+      ...current,
+      favorite: sync.value.favorite,
+      sections: current.sections.map((section) => ({
+        ...section,
+        collapsed: sync.value.collapsedSectionIds.includes(section.id),
+      })),
+      resources: current.resources.map((resource) => ({
+        ...resource,
+        favorite: sync.value.favoriteResourceIds.includes(resource.id),
+      })),
+    }
+  }
   function update(reducer: (current: TeamHomeState) => TeamHomeState) {
     if (!ready || error) return false
     try {
-      const raw = localStorage.getItem(key)
-      const next = teamHomeSchema.parse(
-        reducer(raw ? teamHomeSchema.parse(JSON.parse(raw)) : emptyTeamHome())
+      const raw = localStorage.getItem(key),
+        current = raw ? teamHomeSchema.parse(JSON.parse(raw)) : emptyTeamHome()
+      const next = teamHomeSchema.parse(reducer(overlay(current)))
+      const personal = {
+        favorite: next.favorite,
+        collapsedSectionIds: next.sections
+          .filter((section) => section.collapsed)
+          .map((section) => section.id),
+        favoriteResourceIds: next.resources
+          .filter((resource) => resource.favorite)
+          .map((resource) => resource.id),
+      }
+      if (
+        JSON.stringify(personal) !== JSON.stringify(sync.value) &&
+        !sync.save(personal)
       )
-      localStorage.setItem(key, JSON.stringify(next))
-      setState(next)
-      window.dispatchEvent(new CustomEvent(changed, { detail: key }))
+        return false
+      const business = {
+        ...next,
+        favorite: current.favorite,
+        sections: next.sections.map((section) => ({
+          ...section,
+          collapsed:
+            current.sections.find((previous) => previous.id === section.id)
+              ?.collapsed ?? false,
+        })),
+        resources: next.resources.map((resource) => ({
+          ...resource,
+          favorite:
+            current.resources.find((previous) => previous.id === resource.id)
+              ?.favorite ?? false,
+        })),
+      }
+      if (JSON.stringify(business) !== JSON.stringify(current)) {
+        localStorage.setItem(key, JSON.stringify(business))
+        setState(business)
+        window.dispatchEvent(new CustomEvent(changed, { detail: key }))
+      }
       return true
     } catch {
       return false
     }
   }
-  return { state, ready, error, update }
+  return { state: overlay(state), ready, error, update }
 }
 export type HomeStore = ReturnType<typeof useTeamHome>

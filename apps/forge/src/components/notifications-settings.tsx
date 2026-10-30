@@ -11,6 +11,10 @@ import {
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { toast } from "sonner"
+import {
+  PreferenceSyncStatus,
+  usePreferenceGroup,
+} from "./account-preference-provider"
 import type { ReactNode } from "react"
 import type {
   NotificationChannel,
@@ -21,7 +25,6 @@ import {
   channelSummary,
   notificationChannels,
   notificationTypes,
-  useNotificationPreferences,
 } from "@/lib/notification-preferences"
 import { authClient } from "@/lib/auth-client"
 import { Switch } from "@/components/ui/switch"
@@ -164,8 +167,20 @@ export function NotificationPreferencesPage({
   userId: string
   channel?: NotificationDetail
 }) {
-  const { settings, ready, error, update } = useNotificationPreferences(userId)
-  const disabled = !ready || !!error
+  const sync = usePreferenceGroup("notifications", userId)
+  const settings = sync.preferences,
+    ready = sync.editable
+  function update(
+    change: (current: NotificationPreferences) => NotificationPreferences
+  ) {
+    try {
+      sync.update(change(settings))
+      return true
+    } catch {
+      return false
+    }
+  }
+  const disabled = !ready
   function save(
     change: (current: NotificationPreferences) => NotificationPreferences
   ) {
@@ -207,11 +222,8 @@ export function NotificationPreferencesPage({
               : `${channels[channel].title} notifications`
             : "Notifications"}
         </h1>
-        {error && (
-          <p role="alert" className="mb-4 px-4 text-sm text-destructive">
-            {error}
-          </p>
-        )}
+        <PreferenceSyncStatus />
+
         {channel ? (
           <>
             <div className={cardClass}>

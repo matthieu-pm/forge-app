@@ -1,4 +1,4 @@
-import { act, renderHook } from "@testing-library/react"
+import { act } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
   customViewSchema,
@@ -11,8 +11,15 @@ import {
   useCustomViewDirectoryPreferences,
   useCustomViews,
 } from "./custom-views-state"
+import {
+  renderPreferenceHook as renderHook,
+  setupPreferenceFixture,
+} from "@/test/preference-fixture"
 
-beforeEach(() => localStorage.clear())
+beforeEach(async () => {
+  localStorage.clear()
+  await setupPreferenceFixture("user")
+})
 
 describe("Custom view definitions", () => {
   it("keeps issue and project filters and display settings in their own validated branches", () => {
@@ -204,7 +211,7 @@ describe("Custom view directory preferences", () => {
     })
   })
 
-  it("preserves malformed directory settings and refuses edits even when corruption occurs after rendering", () => {
+  it("preserves malformed legacy settings while saving new account choices", () => {
     const key = `${customViewsKey("workspace", "user")}:directory`
     const { result } = renderHook(() =>
       useCustomViewDirectoryPreferences("workspace", "user")
@@ -216,10 +223,10 @@ describe("Custom view directory preferences", () => {
         descending: false,
         properties: ["Owner"],
       })
-    ).toBe(false)
+    ).toBe(true)
     expect(localStorage.getItem(key)).toBe("{broken")
     act(() => window.dispatchEvent(new Event("storage")))
-    expect(result.current.error).toContain("preserved")
+    expect(result.current.error).toBe("")
     expect(result.current.properties).toEqual(["Owner"])
     expect(localStorage.getItem(key)).toBe("{broken")
   })

@@ -31,6 +31,7 @@ import type {
   InboxScope,
   InboxView,
 } from "@/lib/inbox-state"
+import { useWorkspaceView } from "@/components/account-preference-provider"
 import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import { ContentHeader } from "@/components/ui/content-header"
 import { Button } from "@/components/ui/button"
@@ -87,14 +88,38 @@ function tomorrow() {
 }
 
 export function Inbox({ scope }: { scope: InboxScope }) {
-  const { state, error, dispatch } = useInbox(scope)
+  const inbox = useInbox(scope)
+  const sync = useWorkspaceView("inbox", "main", scope)
+  const state = { ...inbox.state, preferences: sync.value.preferences }
+  const error = inbox.error
+  const dispatch = (action: Parameters<typeof inbox.dispatch>[0]) => {
+    if (action.type === "preferences") {
+      if (
+        !sync.save({
+          ...sync.value,
+          preferences: { ...sync.value.preferences, ...action.changes },
+        })
+      )
+        setActionError("View preferences could not be saved")
+      return
+    }
+    inbox.dispatch(action)
+  }
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [view, setView] = useState<InboxView>("inbox")
-  const [filters, setFilters] = useState(emptyInboxFilters)
-  const [priorityTab, setPriorityTab] = useState<"priority" | "other">(
-    "priority"
-  )
-  const [unreadOnly, setUnreadOnly] = useState(false)
+  const { filters, priorityTab, unreadOnly } = sync.value
+  const setFilters = (next: typeof filters) => {
+    if (!sync.save({ ...sync.value, filters: next }))
+      setActionError("View preferences could not be saved")
+  }
+  const setPriorityTab = (next: typeof priorityTab) => {
+    if (!sync.save({ ...sync.value, priorityTab: next }))
+      setActionError("View preferences could not be saved")
+  }
+  const setUnreadOnly = (next: boolean) => {
+    if (!sync.save({ ...sync.value, unreadOnly: next }))
+      setActionError("View preferences could not be saved")
+  }
   const [filterOpen, setFilterOpen] = useState(false)
   const [snoozeOpen, setSnoozeOpen] = useState(false)
   const [customDate, setCustomDate] = useState("")

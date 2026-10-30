@@ -1,15 +1,13 @@
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react"
+import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { Reviews } from "./reviews"
 import type { ReactNode } from "react"
 import type { Review } from "@/lib/reviews-view"
-import { reviewDisplayKey } from "@/lib/reviews-view"
+import {
+  readTestView,
+  renderPreferences as render,
+  setupPreferenceFixture,
+} from "@/test/preference-fixture"
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ children, to, ...props }: { children: ReactNode; to: string }) => (
@@ -39,7 +37,8 @@ const entries: Array<Review> = [
     url: "https://github.com/forge/app/pull/12",
   },
 ]
-beforeEach(() => {
+beforeEach(async () => {
+  await setupPreferenceFixture("me")
   localStorage.clear()
   vi.stubGlobal(
     "ResizeObserver",
@@ -93,9 +92,7 @@ describe("Reviews", () => {
     const toggle = await screen.findByRole("switch", { name: "Show drafts" })
     fireEvent.click(toggle)
     await waitFor(() =>
-      expect(
-        JSON.parse(localStorage.getItem(reviewDisplayKey(scope))!).showDrafts
-      ).toBe(false)
+      expect(readTestView("reviews").display.showDrafts).toBe(false)
     )
     page.unmount()
     render(<Reviews scope={scope} view="created" />)

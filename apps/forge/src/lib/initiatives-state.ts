@@ -4,7 +4,6 @@ import {
   defaultInitiativesSettings,
   emptyInitiatives,
   initiativePreferencesKey,
-  initiativePreferencesSchema,
   initiativeStoreSchema,
   initiativesSettingsSchema,
   initiativesSettingsStorageKey,
@@ -17,7 +16,8 @@ import {
   parseTeamLabels,
   projectLabelsStorageKey,
 } from "./team-labels"
-import type { InitiativePreferences, InitiativeStore } from "./initiatives"
+import type { InitiativeStore } from "./initiatives"
+import { useWorkspaceView } from "@/components/account-preference-provider"
 
 const changed = "forge:initiatives-changed"
 function subscribe(notify: () => void) {
@@ -33,6 +33,7 @@ export function useInitiatives(
   userId: string,
   scope: "initiatives" | "projects" = "initiatives"
 ) {
+  const sync = useWorkspaceView("initiatives", "main", { workspaceId, userId })
   const dataKey = initiativesStorageKey(workspaceId)
   const preferencesKey = initiativePreferencesKey(workspaceId, userId)
   const settingsKey = initiativesSettingsStorageKey(workspaceId)
@@ -86,15 +87,6 @@ export function useInitiatives(
         "Saved initiatives could not be loaded. Your data has been preserved."
     }
     try {
-      if (values[1])
-        result.preferences = initiativePreferencesSchema.parse(
-          JSON.parse(values[1])
-        )
-    } catch {
-      result.preferencesError =
-        "Saved display options could not be loaded. Your preferences have been preserved."
-    }
-    try {
       if (values[2])
         result.settings = initiativesSettingsSchema.parse(JSON.parse(values[2]))
     } catch {
@@ -145,23 +137,12 @@ export function useInitiatives(
       return false
     }
   }
-  function savePreferences(preferences: InitiativePreferences) {
-    if (!data.ready || data.preferencesError) return false
-    try {
-      localStorage.setItem(
-        preferencesKey,
-        JSON.stringify(initiativePreferencesSchema.parse(preferences))
-      )
-      window.dispatchEvent(new Event(changed))
-      return true
-    } catch {
-      return false
-    }
-  }
   return {
     ...data,
     update,
-    savePreferences,
+    preferences: sync.value,
+    preferencesError: sync.error,
+    savePreferences: sync.save,
     writable:
       data.ready &&
       !data.error &&

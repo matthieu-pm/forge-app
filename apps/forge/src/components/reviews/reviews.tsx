@@ -1,7 +1,11 @@
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Link } from "@tanstack/react-router"
 import { Fragment, useEffect, useMemo, useRef, useState } from "react"
-import { ArrowDown01Icon, ArrowRight01Icon, Cancel01Icon } from "@hugeicons/core-free-icons"
+import {
+  ArrowDown01Icon,
+  ArrowRight01Icon,
+  Cancel01Icon,
+} from "@hugeicons/core-free-icons"
 import { ReviewDisplayOptions, ReviewFiltersMenu } from "./review-controls"
 import { ReviewDetail, ReviewStatusIcon } from "./review-detail"
 import type {
@@ -11,6 +15,7 @@ import type {
 } from "@/lib/review-detail"
 import type { Review, ReviewDisplay } from "@/lib/reviews-view"
 import type { InboxScope } from "@/lib/inbox-state"
+import { useWorkspaceView } from "@/components/account-preference-provider"
 import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import {
   applyReviewEdit,
@@ -20,11 +25,8 @@ import {
 } from "@/lib/review-detail"
 import { createSimulatedReviewDetail } from "@/lib/review-detail-demo"
 import {
-  defaultReviewDisplay,
   emptyReviewFilters,
   hasReviewFilters,
-  readReviewDisplay,
-  reviewDisplayKey,
   reviewGroup,
   visibleReviews,
 } from "@/lib/reviews-view"
@@ -64,8 +66,11 @@ export function Reviews({
   currentUserName?: string
   onOpenAgent?: (review: Review) => void
 }) {
-  const [display, setDisplay] = useState<ReviewDisplay>(defaultReviewDisplay)
-  const [filters, setFilters] = useState(emptyReviewFilters)
+  const sync = useWorkspaceView("reviews", "main", scope)
+  const { display, filters } = sync.value
+  const setFilters = (next: typeof filters) => {
+    if (!sync.save({ ...sync.value, filters: next })) setSaveError(true)
+  }
   const [filterOpen, setFilterOpen] = useState(false)
   const [displayOpen, setDisplayOpen] = useState(false)
   const [localSelection, setLocalSelection] = useState<ReviewSearch>(
@@ -114,9 +119,8 @@ export function Reviews({
   }
   const [saveError, setSaveError] = useState(false)
   const root = useRef<HTMLElement>(null)
-  const key = reviewDisplayKey(scope)
+  const key = JSON.stringify(scope)
   useEffect(() => {
-    setDisplay(readReviewDisplay(key))
     setEdits(simulated ? readReviewEdits(reviewEditsKey(scope)) : {})
     root.current?.focus({ preventScroll: true })
   }, [key, simulated, scope.workspaceId, scope.userId])
@@ -154,13 +158,7 @@ export function Reviews({
     groups.set(group, [...(groups.get(group) ?? []), review])
   }
   function updateDisplay(next: ReviewDisplay) {
-    setDisplay(next)
-    try {
-      localStorage.setItem(key, JSON.stringify(next))
-      setSaveError(false)
-    } catch {
-      setSaveError(true)
-    }
+    if (!sync.save({ ...sync.value, display: next })) setSaveError(true)
   }
   return (
     <main
@@ -314,7 +312,15 @@ export function Reviews({
                       className="flex h-7 w-full items-center gap-2 rounded-md bg-muted/35 px-2 text-left text-xs font-medium text-muted-foreground"
                     >
                       <span>{group}</span>
-                      <HugeiconsIcon icon={collapsedGroups.includes(group) ? ArrowRight01Icon : ArrowDown01Icon} aria-hidden="true" className="size-3 shrink-0 opacity-50" />
+                      <HugeiconsIcon
+                        icon={
+                          collapsedGroups.includes(group)
+                            ? ArrowRight01Icon
+                            : ArrowDown01Icon
+                        }
+                        aria-hidden="true"
+                        className="size-3 shrink-0 opacity-50"
+                      />
                       <span className="ml-auto text-[10px] opacity-50">
                         {reviews.length}
                       </span>

@@ -3,6 +3,10 @@
 import * as React from "react"
 import { toast } from "sonner"
 
+import {
+  PreferenceSyncStatus,
+  usePreferenceGroup,
+} from "./account-preference-provider"
 import type {
   DarkTheme,
   LightTheme,
@@ -18,12 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Switch } from "@/components/ui/switch"
-import {
-  applyPersonalInterfacePreferences,
-  defaultPersonalPreferences,
-  loadPersonalPreferences,
-  savePersonalPreferences,
-} from "@/lib/personal-preferences"
+import { applyPersonalInterfacePreferences } from "@/lib/personal-preferences"
 import { getForgeHost } from "@/host/forge-host"
 import { cn } from "@/lib/utils"
 
@@ -259,16 +258,12 @@ function PreferenceSelect<TValue extends string>({
 }
 
 export function PreferencesSettings() {
-  const [preferences, setPreferences] = React.useState<PersonalPreferences>(
-    defaultPersonalPreferences
-  )
-
+  const sync = usePreferenceGroup("general")
+  const preferences = sync.preferences
   React.useEffect(() => {
-    const storedPreferences = loadPersonalPreferences()
-    setPreferences(storedPreferences)
-    applyPersonalInterfacePreferences(storedPreferences)
-    void getForgeHost().setThemeSource(storedPreferences.interfaceTheme)
-  }, [])
+    applyPersonalInterfacePreferences(preferences)
+    void getForgeHost().setThemeSource(preferences.interfaceTheme)
+  }, [preferences])
 
   React.useEffect(() => {
     if (preferences.interfaceTheme !== "system") return
@@ -283,18 +278,11 @@ export function PreferencesSettings() {
     key: TKey,
     value: PersonalPreferences[TKey]
   ) {
-    const nextPreferences = { ...preferences, [key]: value }
     try {
-      savePersonalPreferences(nextPreferences)
+      sync.update({ ...preferences, [key]: value })
     } catch {
-      toast.error(
-        "Your preferences could not be saved. Your previous data has been preserved."
-      )
-      return
+      toast.error("Your preferences could not be saved. Retry your changes.")
     }
-    setPreferences(nextPreferences)
-    applyPersonalInterfacePreferences(nextPreferences)
-    void getForgeHost().setThemeSource(nextPreferences.interfaceTheme)
   }
 
   return (
@@ -305,100 +293,223 @@ export function PreferencesSettings() {
             Preferences
           </h1>
 
-          <Section title="General">
-            <SettingsCard>
-              <PreferenceRow
-                label="Default home view"
-                description="Select which view to display when launching Forge"
-              >
-                <PreferenceSelect
-                  ariaLabel="Default home view"
-                  value={preferences.defaultHomeView}
-                  onValueChange={(value) =>
-                    updatePreference("defaultHomeView", value)
-                  }
-                  options={[
-                    { value: "agent", label: "Forge Agent (default)" },
-                    { value: "inbox", label: "Inbox" },
-                    { value: "my-issues", label: "My issues" },
-                  ]}
-                />
-              </PreferenceRow>
-              <PreferenceRow
-                label="Display names"
-                description="Select how names are displayed in the Forge interface"
-              >
-                <PreferenceSelect
-                  ariaLabel="Display names"
-                  value={preferences.displayNames}
-                  onValueChange={(value) =>
-                    updatePreference("displayNames", value)
-                  }
-                  options={[
-                    { value: "username", label: "Username" },
-                    { value: "full-name", label: "Full name" },
-                  ]}
-                />
-              </PreferenceRow>
-              <PreferenceRow
-                label="First day of the week"
-                description="Used for date pickers"
-              >
-                <PreferenceSelect
-                  ariaLabel="First day of the week"
-                  value={preferences.firstDayOfWeek}
-                  onValueChange={(value) =>
-                    updatePreference("firstDayOfWeek", value)
-                  }
-                  options={[
-                    { value: "sunday", label: "Sunday" },
-                    { value: "monday", label: "Monday" },
-                    { value: "saturday", label: "Saturday" },
-                  ]}
-                />
-              </PreferenceRow>
-              <PreferenceRow
-                label="Convert text emoticons into emojis"
-                description={
-                  <>
-                    Strings like <span className="font-medium">:)</span> will be
-                    converted to 🙂
-                  </>
-                }
-              >
-                <Switch
-                  checked={preferences.convertEmoticons}
-                  onCheckedChange={(checked) =>
-                    updatePreference("convertEmoticons", checked)
-                  }
-                  aria-label="Convert text emoticons into emojis"
-                />
-              </PreferenceRow>
-              <PreferenceRow
-                label="Send comments on…"
-                description="Choose which key press is used to submit comments"
-              >
-                <PreferenceSelect
-                  ariaLabel="Send comments on"
-                  value={preferences.submitCommentsWith}
-                  onValueChange={(value) =>
-                    updatePreference("submitCommentsWith", value)
-                  }
-                  options={[
-                    { value: "command-enter", label: "⌘ + Enter" },
-                    { value: "enter", label: "Enter" },
-                  ]}
-                />
-              </PreferenceRow>
-            </SettingsCard>
-          </Section>
-
-          <Section title="Interface and theme">
-            <div className="space-y-2">
+          <PreferenceSyncStatus />
+          <fieldset disabled={!sync.editable} className="min-w-0 space-y-10">
+            <Section title="General">
               <SettingsCard>
                 <PreferenceRow
-                  label="App sidebar"
-                  description="Customize sidebar item visibility, ordering, and badge style"
+                  label="Default home view"
+                  description="Select which view to display when launching Forge"
+                >
+                  <PreferenceSelect
+                    ariaLabel="Default home view"
+                    value={preferences.defaultHomeView}
+                    onValueChange={(value) =>
+                      updatePreference("defaultHomeView", value)
+                    }
+                    options={[
+                      { value: "agent", label: "Forge Agent (default)" },
+                      { value: "inbox", label: "Inbox" },
+                      { value: "my-issues", label: "My issues" },
+                    ]}
+                  />
+                </PreferenceRow>
+                <PreferenceRow
+                  label="Display names"
+                  description="Select how names are displayed in the Forge interface"
+                >
+                  <PreferenceSelect
+                    ariaLabel="Display names"
+                    value={preferences.displayNames}
+                    onValueChange={(value) =>
+                      updatePreference("displayNames", value)
+                    }
+                    options={[
+                      { value: "username", label: "Username" },
+                      { value: "full-name", label: "Full name" },
+                    ]}
+                  />
+                </PreferenceRow>
+                <PreferenceRow
+                  label="First day of the week"
+                  description="Used for date pickers"
+                >
+                  <PreferenceSelect
+                    ariaLabel="First day of the week"
+                    value={preferences.firstDayOfWeek}
+                    onValueChange={(value) =>
+                      updatePreference("firstDayOfWeek", value)
+                    }
+                    options={[
+                      { value: "sunday", label: "Sunday" },
+                      { value: "monday", label: "Monday" },
+                      { value: "saturday", label: "Saturday" },
+                    ]}
+                  />
+                </PreferenceRow>
+                <PreferenceRow
+                  label="Convert text emoticons into emojis"
+                  description={
+                    <>
+                      Strings like <span className="font-medium">:)</span> will
+                      be converted to 🙂
+                    </>
+                  }
+                >
+                  <Switch
+                    checked={preferences.convertEmoticons}
+                    onCheckedChange={(checked) =>
+                      updatePreference("convertEmoticons", checked)
+                    }
+                    aria-label="Convert text emoticons into emojis"
+                  />
+                </PreferenceRow>
+                <PreferenceRow
+                  label="Send comments on…"
+                  description="Choose which key press is used to submit comments"
+                >
+                  <PreferenceSelect
+                    ariaLabel="Send comments on"
+                    value={preferences.submitCommentsWith}
+                    onValueChange={(value) =>
+                      updatePreference("submitCommentsWith", value)
+                    }
+                    options={[
+                      { value: "command-enter", label: "⌘ + Enter" },
+                      { value: "enter", label: "Enter" },
+                    ]}
+                  />
+                </PreferenceRow>
+              </SettingsCard>
+            </Section>
+
+            <Section title="Interface and theme">
+              <div className="space-y-2">
+                <SettingsCard>
+                  <PreferenceRow
+                    label="App sidebar"
+                    description="Customize sidebar item visibility, ordering, and badge style"
+                  >
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="rounded-lg px-2.5 text-xs"
+                      onClick={() =>
+                        toast.info("Sidebar customization is coming soon.")
+                      }
+                    >
+                      Customize
+                    </Button>
+                  </PreferenceRow>
+                  <PreferenceRow
+                    label="Font size"
+                    description="Adjust the size of text across the app"
+                  >
+                    <PreferenceSelect
+                      ariaLabel="Font size"
+                      value={preferences.fontSize}
+                      onValueChange={(value) =>
+                        updatePreference("fontSize", value)
+                      }
+                      options={[
+                        { value: "small", label: "Small" },
+                        { value: "default", label: "Default" },
+                        { value: "large", label: "Large" },
+                      ]}
+                    />
+                  </PreferenceRow>
+                  <PreferenceRow
+                    label="Use pointer cursors"
+                    description="Change the cursor to a pointer when hovering over interactive elements"
+                  >
+                    <Switch
+                      checked={preferences.pointerCursors}
+                      onCheckedChange={(checked) =>
+                        updatePreference("pointerCursors", checked)
+                      }
+                      aria-label="Use pointer cursors"
+                    />
+                  </PreferenceRow>
+                  <PreferenceRow
+                    label="Underline links"
+                    description="Always underline links in text content"
+                  >
+                    <Switch
+                      checked={preferences.underlineLinks}
+                      onCheckedChange={(checked) =>
+                        updatePreference("underlineLinks", checked)
+                      }
+                      aria-label="Underline links"
+                    />
+                  </PreferenceRow>
+                </SettingsCard>
+
+                <SettingsCard>
+                  <PreferenceRow
+                    label="Interface theme"
+                    description="Select or customize your interface color scheme"
+                  >
+                    <PreferenceSelect
+                      ariaLabel="Interface theme"
+                      value={preferences.interfaceTheme}
+                      onValueChange={(value) =>
+                        updatePreference("interfaceTheme", value)
+                      }
+                      options={[
+                        {
+                          value: "system",
+                          label: "System preference",
+                          preview: systemThemePreview,
+                        },
+                        {
+                          value: "light",
+                          label: "Light",
+                          preview: themePreviews[preferences.lightTheme],
+                        },
+                        {
+                          value: "dark",
+                          label: "Dark",
+                          preview: themePreviews[preferences.darkTheme],
+                        },
+                      ]}
+                    />
+                  </PreferenceRow>
+                  <PreferenceRow
+                    label="Light"
+                    description="Theme to use for light system appearance"
+                  >
+                    <PreferenceSelect
+                      ariaLabel="Light theme"
+                      value={preferences.lightTheme}
+                      onValueChange={(value) =>
+                        updatePreference("lightTheme", value)
+                      }
+                      options={lightThemeOptions}
+                    />
+                  </PreferenceRow>
+                  <PreferenceRow
+                    label="Dark"
+                    description="Theme to use for dark system appearance"
+                  >
+                    <PreferenceSelect
+                      ariaLabel="Dark theme"
+                      value={preferences.darkTheme}
+                      onValueChange={(value) =>
+                        updatePreference("darkTheme", value)
+                      }
+                      options={darkThemeOptions}
+                    />
+                  </PreferenceRow>
+                </SettingsCard>
+              </div>
+            </Section>
+
+            <Section title="Desktop application">
+              <SettingsCard>
+                <PreferenceRow
+                  label="Open in desktop app"
+                  description="Automatically open links in the desktop app when possible"
                 >
                   <Button
                     type="button"
@@ -406,193 +517,73 @@ export function PreferencesSettings() {
                     size="sm"
                     className="rounded-lg px-2.5 text-xs"
                     onClick={() =>
-                      toast.info("Sidebar customization is coming soon.")
+                      toast.info("Desktop link preferences are managed on web.")
                     }
                   >
-                    Customize
+                    Manage on Web
                   </Button>
                 </PreferenceRow>
                 <PreferenceRow
-                  label="Font size"
-                  description="Adjust the size of text across the app"
+                  label="App notification badge"
+                  description="Show a badge on Forge's icon to indicate unread notifications"
                 >
                   <PreferenceSelect
-                    ariaLabel="Font size"
-                    value={preferences.fontSize}
+                    ariaLabel="App notification badge"
+                    value={preferences.notificationBadge}
                     onValueChange={(value) =>
-                      updatePreference("fontSize", value)
+                      updatePreference("notificationBadge", value)
                     }
                     options={[
-                      { value: "small", label: "Small" },
-                      { value: "default", label: "Default" },
-                      { value: "large", label: "Large" },
+                      { value: "unread", label: "Unread indicator" },
+                      { value: "count", label: "Unread count" },
+                      { value: "off", label: "Off" },
                     ]}
                   />
                 </PreferenceRow>
                 <PreferenceRow
-                  label="Use pointer cursors"
-                  description="Change the cursor to a pointer when hovering over interactive elements"
+                  label="Check spelling"
+                  description="Check for spelling errors while typing"
                 >
                   <Switch
-                    checked={preferences.pointerCursors}
+                    checked={preferences.checkSpelling}
                     onCheckedChange={(checked) =>
-                      updatePreference("pointerCursors", checked)
+                      updatePreference("checkSpelling", checked)
                     }
-                    aria-label="Use pointer cursors"
-                  />
-                </PreferenceRow>
-                <PreferenceRow
-                  label="Underline links"
-                  description="Always underline links in text content"
-                >
-                  <Switch
-                    checked={preferences.underlineLinks}
-                    onCheckedChange={(checked) =>
-                      updatePreference("underlineLinks", checked)
-                    }
-                    aria-label="Underline links"
+                    aria-label="Check spelling"
                   />
                 </PreferenceRow>
               </SettingsCard>
+            </Section>
 
+            <Section title="Automations and workflows">
               <SettingsCard>
                 <PreferenceRow
-                  label="Interface theme"
-                  description="Select or customize your interface color scheme"
+                  label="Auto-assign to self"
+                  description="When creating new issues, always assign them to yourself by default"
                 >
-                  <PreferenceSelect
-                    ariaLabel="Interface theme"
-                    value={preferences.interfaceTheme}
-                    onValueChange={(value) =>
-                      updatePreference("interfaceTheme", value)
+                  <Switch
+                    checked={preferences.autoAssignToSelf}
+                    onCheckedChange={(checked) =>
+                      updatePreference("autoAssignToSelf", checked)
                     }
-                    options={[
-                      {
-                        value: "system",
-                        label: "System preference",
-                        preview: systemThemePreview,
-                      },
-                      {
-                        value: "light",
-                        label: "Light",
-                        preview: themePreviews[preferences.lightTheme],
-                      },
-                      {
-                        value: "dark",
-                        label: "Dark",
-                        preview: themePreviews[preferences.darkTheme],
-                      },
-                    ]}
+                    aria-label="Auto-assign new issues to self"
                   />
                 </PreferenceRow>
                 <PreferenceRow
-                  label="Light"
-                  description="Theme to use for light system appearance"
+                  label="On move to started status, assign to yourself"
+                  description="When you move an unassigned issue to started, it will be automatically assigned to you"
                 >
-                  <PreferenceSelect
-                    ariaLabel="Light theme"
-                    value={preferences.lightTheme}
-                    onValueChange={(value) =>
-                      updatePreference("lightTheme", value)
+                  <Switch
+                    checked={preferences.assignStartedIssues}
+                    onCheckedChange={(checked) =>
+                      updatePreference("assignStartedIssues", checked)
                     }
-                    options={lightThemeOptions}
-                  />
-                </PreferenceRow>
-                <PreferenceRow
-                  label="Dark"
-                  description="Theme to use for dark system appearance"
-                >
-                  <PreferenceSelect
-                    ariaLabel="Dark theme"
-                    value={preferences.darkTheme}
-                    onValueChange={(value) =>
-                      updatePreference("darkTheme", value)
-                    }
-                    options={darkThemeOptions}
+                    aria-label="Assign started issues to self"
                   />
                 </PreferenceRow>
               </SettingsCard>
-            </div>
-          </Section>
-
-          <Section title="Desktop application">
-            <SettingsCard>
-              <PreferenceRow
-                label="Open in desktop app"
-                description="Automatically open links in the desktop app when possible"
-              >
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="rounded-lg px-2.5 text-xs"
-                  onClick={() =>
-                    toast.info("Desktop link preferences are managed on web.")
-                  }
-                >
-                  Manage on Web
-                </Button>
-              </PreferenceRow>
-              <PreferenceRow
-                label="App notification badge"
-                description="Show a badge on Forge's icon to indicate unread notifications"
-              >
-                <PreferenceSelect
-                  ariaLabel="App notification badge"
-                  value={preferences.notificationBadge}
-                  onValueChange={(value) =>
-                    updatePreference("notificationBadge", value)
-                  }
-                  options={[
-                    { value: "unread", label: "Unread indicator" },
-                    { value: "count", label: "Unread count" },
-                    { value: "off", label: "Off" },
-                  ]}
-                />
-              </PreferenceRow>
-              <PreferenceRow
-                label="Check spelling"
-                description="Check for spelling errors while typing"
-              >
-                <Switch
-                  checked={preferences.checkSpelling}
-                  onCheckedChange={(checked) =>
-                    updatePreference("checkSpelling", checked)
-                  }
-                  aria-label="Check spelling"
-                />
-              </PreferenceRow>
-            </SettingsCard>
-          </Section>
-
-          <Section title="Automations and workflows">
-            <SettingsCard>
-              <PreferenceRow
-                label="Auto-assign to self"
-                description="When creating new issues, always assign them to yourself by default"
-              >
-                <Switch
-                  checked={preferences.autoAssignToSelf}
-                  onCheckedChange={(checked) =>
-                    updatePreference("autoAssignToSelf", checked)
-                  }
-                  aria-label="Auto-assign new issues to self"
-                />
-              </PreferenceRow>
-              <PreferenceRow
-                label="On move to started status, assign to yourself"
-                description="When you move an unassigned issue to started, it will be automatically assigned to you"
-              >
-                <Switch
-                  checked={preferences.assignStartedIssues}
-                  onCheckedChange={(checked) =>
-                    updatePreference("assignStartedIssues", checked)
-                  }
-                  aria-label="Assign started issues to self"
-                />
-              </PreferenceRow>
-            </SettingsCard>
-          </Section>
+            </Section>
+          </fieldset>
         </div>
       </div>
     </main>

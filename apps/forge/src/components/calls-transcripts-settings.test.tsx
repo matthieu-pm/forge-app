@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  within,
-} from "@testing-library/react"
+import { cleanup, fireEvent, screen, within } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { CallsTranscriptsSettings } from "./calls-transcripts-settings"
+import {
+  failPreferenceSaves,
+  readTestPreferences,
+  renderPreferences,
+  setupPreferenceFixture,
+} from "@/test/preference-fixture"
 import {
   callPreferencesStorageKey,
   defaultCallPreferences,
@@ -15,22 +15,23 @@ import {
 } from "@/lib/call-preferences"
 
 afterEach(cleanup)
-beforeEach(() => {
+beforeEach(async () => {
+  await setupPreferenceFixture()
   vi.restoreAllMocks()
   window.localStorage.clear()
 })
 
 describe("Calls and transcripts settings", () => {
   it("persists preferences across remounts without sharing them between users", () => {
-    const first = render(<CallsTranscriptsSettings userId="alice" />)
+    const first = renderPreferences(<CallsTranscriptsSettings userId="alice" />)
     fireEvent.click(screen.getByRole("switch", { name: "Timestamps" }))
     fireEvent.change(screen.getByLabelText("Custom instructions"), {
       target: { value: "Focus on customer feedback." },
     })
-    expect(readCallPreferences("alice").timestamps).toBe(false)
-    expect(readCallPreferences("bob")).toEqual(defaultCallPreferences)
+    expect(readTestPreferences("alice").calls.timestamps).toBe(false)
+    expect(readTestPreferences("bob").calls).toEqual(defaultCallPreferences)
     first.unmount()
-    render(<CallsTranscriptsSettings userId="alice" />)
+    renderPreferences(<CallsTranscriptsSettings userId="alice" />)
     expect(
       screen
         .getByRole("switch", { name: "Timestamps" })
@@ -42,19 +43,19 @@ describe("Calls and transcripts settings", () => {
   })
 
   it("saves recording and language selections", () => {
-    render(<CallsTranscriptsSettings userId="alice" />)
+    renderPreferences(<CallsTranscriptsSettings userId="alice" />)
     fireEvent.click(screen.getByRole("button", { name: "Start recording" }))
     fireEvent.click(
       screen.getByRole("menuitemradio", { name: "Ask me each time" })
     )
-    expect(readCallPreferences("alice").recordingMode).toBe("ask")
+    expect(readTestPreferences("alice").calls.recordingMode).toBe("ask")
     fireEvent.click(screen.getByRole("button", { name: "Spoken language" }))
     fireEvent.click(screen.getByRole("menuitemradio", { name: "French" }))
-    expect(readCallPreferences("alice").language).toBe("fr")
+    expect(readTestPreferences("alice").calls.language).toBe("fr")
   })
 
   it("updates the sample transcript and summary from formatting choices", () => {
-    render(<CallsTranscriptsSettings userId="alice" />)
+    renderPreferences(<CallsTranscriptsSettings userId="alice" />)
     const preview = screen.getByRole("region", { name: "Output preview" })
     fireEvent.click(screen.getByRole("switch", { name: "Speaker labels" }))
     fireEvent.click(screen.getByRole("switch", { name: "Timestamps" }))
@@ -72,7 +73,7 @@ describe("Calls and transcripts settings", () => {
   })
 
   it("disables summary customization and preserves choices when summaries are off", () => {
-    render(<CallsTranscriptsSettings userId="alice" />)
+    renderPreferences(<CallsTranscriptsSettings userId="alice" />)
     fireEvent.change(screen.getByLabelText("Custom instructions"), {
       target: { value: "Keep it short." },
     })
@@ -88,7 +89,7 @@ describe("Calls and transcripts settings", () => {
         .getAttribute("aria-disabled")
     ).toBe("true")
     fireEvent.click(screen.getByRole("switch", { name: "Action items" }))
-    expect(readCallPreferences("alice").actionItems).toBe(true)
+    expect(readTestPreferences("alice").calls.actionItems).toBe(true)
     expect(
       within(
         screen.getByRole("region", { name: "Output preview" })
@@ -100,19 +101,20 @@ describe("Calls and transcripts settings", () => {
     ).toBe("Keep it short.")
   })
 
-  it("shows a save error without applying an unsaved setting", () => {
-    render(<CallsTranscriptsSettings userId="alice" />)
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-      throw new Error("Storage unavailable")
-    })
+  it("shows unsaved state and retries an offline account save", async () => {
+    renderPreferences(<CallsTranscriptsSettings userId="alice" />)
+    failPreferenceSaves("alice")
     fireEvent.click(screen.getByRole("switch", { name: "Speaker labels" }))
-    expect(screen.getByRole("alert").textContent).toContain("Could not save")
+    await screen.findByRole("alert")
+    expect(screen.getByRole("alert").textContent).toContain("not saved")
     expect(
       screen
         .getByRole("switch", { name: "Speaker labels" })
         .getAttribute("aria-checked")
-    ).toBe("true")
-    expect(screen.getByRole("status").textContent).not.toContain("Saved")
+    ).toBe("false")
+    failPreferenceSaves("alice", false)
+    fireEvent.click(screen.getByRole("button", { name: "Retry preferences" }))
+    await screen.findByText("Preferences saved to your account")
   })
 
   it("recovers from malformed data and merges partial stored preferences", () => {

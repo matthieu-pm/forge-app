@@ -2,7 +2,6 @@ import { useState } from "react"
 import {
   cleanup,
   fireEvent,
-  render,
   screen,
   waitFor,
   within,
@@ -13,10 +12,14 @@ import { InitiativeDetail } from "./initiative-detail"
 import type { ComponentProps } from "react"
 import type { Initiative } from "@/lib/initiatives"
 import {
+  readTestView,
+  renderPreferences as render,
+  setupPreferenceFixture,
+} from "@/test/preference-fixture"
+import {
   addInitiative,
   blankInitiative,
   emptyInitiatives,
-  initiativePreferencesKey,
   initiativesSettingsStorageKey,
   initiativesStorageKey,
 } from "@/lib/initiatives"
@@ -61,7 +64,8 @@ vi.mock("@/components/templates/rich-editor", () => ({
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
 const agent = vi.hoisted(() => ({ openComposer: vi.fn(), setDraft: vi.fn() }))
 vi.mock("@/components/agent/agent-provider", () => ({ useAgent: () => agent }))
-beforeEach(() => {
+beforeEach(async () => {
+  await setupPreferenceFixture("user")
   localStorage.clear()
   agent.openComposer.mockClear()
   agent.setDraft.mockClear()
@@ -183,11 +187,7 @@ describe("Initiatives page", () => {
     expect(
       screen.getByRole("button", { name: "Update missing: 2 initiatives" })
     ).toBeTruthy()
-    expect(
-      JSON.parse(
-        localStorage.getItem(initiativePreferencesKey("workspace", "user"))!
-      ).sidebarTab
-    ).toBe("Health")
+    expect(readTestView("initiatives").sidebarTab).toBe("Health")
     page.unmount()
     render(<InitiativesPage {...props} />)
     expect(screen.getByRole("button", { name: "Close sidebar" })).toBeTruthy()
@@ -447,9 +447,7 @@ describe("Initiative detail interactions", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Open Initiative details" })
     )
-    const preferences = JSON.parse(
-      localStorage.getItem(initiativePreferencesKey("workspace", "user"))!
-    )
+    const preferences = readTestView("initiatives")
     expect(preferences.favoriteIds).toEqual([saved()[0].id])
     expect(preferences.detailSidebar).toBe(true)
     fireEvent.click(screen.getByRole("button", { name: "Add new view" }))

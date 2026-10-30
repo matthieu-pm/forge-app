@@ -1,8 +1,12 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { cleanup, fireEvent, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { NotificationPreferencesPage } from "./notifications-settings"
 import type { ReactNode } from "react"
-import { notificationPreferencesKey } from "@/lib/notification-preferences"
+import {
+  readTestPreferences,
+  renderPreferences,
+  setupPreferenceFixture,
+} from "@/test/preference-fixture"
 
 vi.mock("@/lib/auth-client", () => ({
   authClient: { useSession: () => ({ data: null }) },
@@ -30,12 +34,15 @@ vi.mock("@tanstack/react-router", () => ({
     </a>
   ),
 }))
-beforeEach(() => localStorage.clear())
+beforeEach(async () => {
+  localStorage.clear()
+  await setupPreferenceFixture()
+})
 afterEach(cleanup)
 
 describe("notification settings interactions", () => {
   it("enables priority configuration only when the inbox preference is on", () => {
-    render(<NotificationPreferencesPage userId="test" />)
+    renderPreferences(<NotificationPreferencesPage userId="test" />)
     const priority = screen.getByText("Priority notifications").closest("a")!
     expect(priority.getAttribute("aria-disabled")).toBe("true")
     fireEvent.click(screen.getByRole("switch", { name: "Priority inbox" }))
@@ -46,7 +53,7 @@ describe("notification settings interactions", () => {
   })
 
   it("retains chosen types across disabling and re-enabling a channel", () => {
-    const view = render(
+    const view = renderPreferences(
       <NotificationPreferencesPage userId="test" channel="desktop" />
     )
     fireEvent.click(screen.getByRole("checkbox", { name: "Assignments" }))
@@ -66,20 +73,18 @@ describe("notification settings interactions", () => {
         .getAttribute("aria-checked")
     ).toBe("false")
     view.unmount()
-    render(<NotificationPreferencesPage userId="test" />)
+    renderPreferences(<NotificationPreferencesPage userId="test" />)
     expect(
       screen.getByText("Enabled for status changes, mentions, 11 others")
     ).toBeDefined()
   })
 
   it("saves update toggles while preserving the other defaults", () => {
-    render(<NotificationPreferencesPage userId="test" />)
+    renderPreferences(<NotificationPreferencesPage userId="test" />)
     fireEvent.click(
       screen.getByRole("switch", { name: "Changelog newsletter" })
     )
-    const saved = JSON.parse(
-      localStorage.getItem(notificationPreferencesKey("test"))!
-    )
+    const saved = readTestPreferences("test").notifications
     expect(saved.updates).toEqual({
       sidebar: false,
       changelog: true,

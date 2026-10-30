@@ -1,7 +1,6 @@
 import {
   cleanup,
   fireEvent,
-  render,
   screen,
   waitFor,
   within,
@@ -10,10 +9,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { UpcomingCycle } from "./upcoming-cycle"
 import type { ComponentProps } from "react"
 import type { TeamSummary } from "@/lib/team-contract"
+import {
+  readTestView,
+  renderPreferences as render,
+  setupPreferenceFixture,
+} from "@/test/preference-fixture"
 import { selectOption } from "@/test-utils/select-option"
 import { cycleIssuesKey, parseCycleIssues } from "@/lib/cycle-issues"
 import { initialTeamCycles, teamCyclesStorageKey } from "@/lib/team-cycles"
-import { cycleIssueViewKey } from "@/lib/cycle-issue-view"
 import {
   blankIssueDraft,
   readIssueStore,
@@ -62,7 +65,8 @@ const team = {
   name: "Product",
   identifier: "PRO",
 } as TeamSummary
-beforeEach(() => {
+beforeEach(async () => {
+  await setupPreferenceFixture("user")
   localStorage.clear()
   Element.prototype.scrollIntoView = vi.fn()
   vi.stubGlobal(
@@ -163,9 +167,8 @@ describe("upcoming cycle", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Board" }))
     expect(screen.getByLabelText("Issue board")).toBeTruthy()
     expect(
-      JSON.parse(
-        localStorage.getItem(cycleIssueViewKey(team.id, assigned.cycle))!
-      ).display.layout
+      readTestView("cycles", JSON.stringify([team.id, assigned.cycle])).display
+        .layout
     ).toBe("board")
     view.unmount()
     render(<UpcomingCycle team={team} />)

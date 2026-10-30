@@ -5,14 +5,12 @@ import {
   GithubIcon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { toast } from "sonner"
+import {
+  PreferenceSyncStatus,
+  usePreferenceGroup,
+} from "./account-preference-provider"
 import type { CodeReviewPreferences } from "@/lib/code-review-preferences"
 import { DropdownChevron } from "@/components/ui/dropdown-chevron"
-import {
-  defaultCodeReviewPreferences,
-  readCodeReviewPreferences,
-  writeCodeReviewPreferences,
-} from "@/lib/code-review-preferences"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -177,29 +175,19 @@ function GatedSwitch({ label, checked }: { label: string; checked: boolean }) {
 }
 
 export function CodeReviewsSettings({ userId }: { userId: string }) {
-  const [preferences, setPreferences] = React.useState(
-    defaultCodeReviewPreferences
-  )
-  const [loaded, setLoaded] = React.useState(false)
+  const sync = usePreferenceGroup("reviews", userId)
+  const preferences = sync.preferences
+  const loaded = sync.editable
   const [dialog, setDialog] = React.useState<
     "access" | "theme" | "tools" | null
   >(null)
-  React.useEffect(() => {
-    setPreferences(readCodeReviewPreferences(userId))
-    setLoaded(true)
-  }, [userId])
   function update<TKey extends keyof CodeReviewPreferences>(
     key: TKey,
     value: CodeReviewPreferences[TKey]
   ) {
-    const next = { ...preferences, [key]: value }
-    try {
-      writeCodeReviewPreferences(userId, next)
-      setPreferences(next)
-    } catch {
-      toast.error("Could not save this preference. Please try again.")
-    }
+    sync.update({ ...preferences, [key]: value })
   }
+
   return (
     <main className="forge-settings-scroll">
       <div className="forge-settings-content">
@@ -209,6 +197,7 @@ export function CodeReviewsSettings({ userId }: { userId: string }) {
             Review GitHub pull requests and agent code diffs in Forge
           </p>
         </header>
+        <PreferenceSyncStatus />
         <Card>
           <Row
             label="Enable code reviews"

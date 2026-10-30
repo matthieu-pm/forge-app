@@ -1,11 +1,10 @@
 import * as React from "react"
+import {
+  PreferenceSyncStatus,
+  usePreferenceGroup,
+} from "./account-preference-provider"
 import type { CallPreferences } from "@/lib/call-preferences"
 import { DropdownChevron } from "@/components/ui/dropdown-chevron"
-import {
-  defaultCallPreferences,
-  readCallPreferences,
-  writeCallPreferences,
-} from "@/lib/call-preferences"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
@@ -195,31 +194,14 @@ function TranscriptPreview({ preferences }: { preferences: CallPreferences }) {
 }
 
 export function CallsTranscriptsSettings({ userId }: { userId: string }) {
-  const [preferences, setPreferences] = React.useState(defaultCallPreferences)
-  const [loaded, setLoaded] = React.useState(false)
-  const [status, setStatus] = React.useState("")
-  const [error, setError] = React.useState("")
-  React.useEffect(() => {
-    setPreferences(readCallPreferences(userId))
-    setLoaded(true)
-  }, [userId])
-
+  const sync = usePreferenceGroup("calls", userId)
+  const preferences = sync.preferences
+  const loaded = sync.editable
   function update<TKey extends keyof CallPreferences>(
     key: TKey,
     value: CallPreferences[TKey]
   ) {
-    const next = { ...preferences, [key]: value }
-    try {
-      writeCallPreferences(userId, next)
-      setPreferences(next)
-      setError("")
-      setStatus("Saved on this device")
-    } catch {
-      setStatus("")
-      setError(
-        "Could not save your changes. Check that browser storage is available and try again."
-      )
-    }
+    sync.update({ ...preferences, [key]: value })
   }
 
   return (
@@ -233,18 +215,9 @@ export function CallsTranscriptsSettings({ userId }: { userId: string }) {
         </header>
         <div className="mx-4 rounded-lg border border-border/60 px-3 py-2.5 text-xs leading-5 text-muted-foreground">
           Call recording is coming to Forge. Set your preferences now; they’re
-          saved only on this device and won’t start a recording.
+          saved to your account and won’t start a recording.
         </div>
-        <div className="px-4 pt-2">
-          <p role="status" className="min-h-4 text-xs text-muted-foreground">
-            {status || "Changes save automatically"}
-          </p>
-          {error && (
-            <p role="alert" className="mt-2 text-xs text-destructive">
-              {error}
-            </p>
-          )}
-        </div>
+        <PreferenceSyncStatus />
         <fieldset disabled={!loaded} className="min-w-0">
           <legend className="sr-only">Call and transcript preferences</legend>
           <Section

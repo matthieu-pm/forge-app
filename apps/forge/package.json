@@ -2,7 +2,7 @@
   "name": "@forge/app",
   "productName": "Forge",
   "version": "0.1.0",
-  "description": "Forge — one shared product across the web and macOS.",
+  "description": "Forge \u2014 one shared product across the web and macOS.",
   "main": ".electron-build/main.js",
   "private": true,
   "type": "module",
@@ -45,7 +45,9 @@
     "integration:fixtures": "bun scripts/integration-fixtures.ts",
     "db:rehearse": "bun scripts/rehearse-database-release.ts",
     "files:verify": "bun scripts/verify-private-file-storage.ts",
-    "files:migrate": "bun scripts/migrate-local-files.ts"
+    "files:migrate": "bun scripts/migrate-local-files.ts",
+    "test:preferences:postgres": "vitest run src/application/preferences/preferences.postgres.test.ts",
+    "test:preferences:browser": "node scripts/verify-personal-preferences-browser.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
