@@ -11,8 +11,10 @@ import {
 import { ActivityReference } from "./issue-activity-row"
 import { IssuePullRequestLink } from "./issue-pull-request"
 import { IssueCycleBadge } from "./issue-cycle-badge"
+import type { IssueQueryPage } from "@/lib/issue-query-contract"
 import type { IssueDisplay, IssueDraft, TeamIssue } from "@/lib/team-issues"
 import type { TeamStatus } from "@/lib/team-statuses"
+import { blankIssueDraft } from "@/lib/issue-record-contract"
 import { issuePullRequest, issuePullRequests } from "@/lib/issue-pull-requests"
 import { ActionHint } from "@/components/ui/action-icon-button"
 import { issueGroupValue, issuePriorities } from "@/lib/team-issues"
@@ -217,6 +219,7 @@ export type IssueRowContext = {
   issues: Array<TeamIssue>
 }
 export function IssueRows({
+  serverGroups,
   issues,
   allIssues,
   identifier,
@@ -234,6 +237,7 @@ export function IssueRows({
   onUpdate,
   onCreate,
 }: {
+  serverGroups?: IssueQueryPage["groups"]
   issues: Array<TeamIssue>
   allIssues: Array<TeamIssue>
   identifier: string
@@ -277,6 +281,32 @@ export function IssueRows({
       context?.members ?? members
     )
     groups.set(key, [...(groups.get(key) ?? []), issue])
+  }
+  function serverGroupName(value: string, group: IssueDisplay["group"]) {
+    if (group === "Status") return value
+    const field = {
+      Status: "status",
+      Priority: "priority",
+      Assignee: "assignee",
+      Project: "project",
+      Labels: "labels",
+      "No grouping": "title",
+    }[group]
+    return issueGroupValue(
+      { ...blankIssueDraft(), [field]: value } as TeamIssue,
+      group,
+      statuses,
+      members
+    )
+  }
+  const totals = new Map<string, number>()
+  const subTotals = new Map<string, number>()
+  for (const row of serverGroups ?? []) {
+    const group = serverGroupName(row.group, display.group)
+    const sub = serverGroupName(row.subgroup, display.subgroup)
+    totals.set(group, (totals.get(group) ?? 0) + row.count)
+    subTotals.set(JSON.stringify([group, sub]), row.count)
+    if (!groups.has(group)) groups.set(group, [])
   }
   let entries = [...groups.entries()]
   if (display.group === "Status")
@@ -730,7 +760,7 @@ export function IssueRows({
                   !board && "ml-1"
                 )}
               >
-                {items.length}
+                {totals.get(name) ?? items.length}
               </span>
               <Button
                 variant="ghost"
@@ -749,12 +779,21 @@ export function IssueRows({
                   : [...subgroups].map(([sub, children]) => (
                       <div key={sub}>
                         <h3 className="px-3 py-2 text-xs text-muted-foreground">
-                          {sub} <span>{children.length}</span>
+                          {sub}{" "}
+                          <span>
+                            {subTotals.get(JSON.stringify([name, sub])) ??
+                              children.length}
+                          </span>
                         </h3>
                         {rows(children)}
                       </div>
                     ))}
-                {!items.length && (
+                {!items.length && (totals.get(name) ?? 0) > 0 && (
+                  <p className="p-4 text-xs text-muted-foreground">
+                    Load more issues to view this group.
+                  </p>
+                )}
+                {!items.length && !(totals.get(name) ?? 0) && (
                   <button
                     className="w-full rounded-lg border border-dashed border-border/50 p-4 text-xs text-muted-foreground hover:bg-muted"
                     onClick={() => onCreate(patchFor(name))}

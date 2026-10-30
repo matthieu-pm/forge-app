@@ -41,11 +41,12 @@ export function replaceCanonicalIssues(
     !next ||
     !state ||
     next.workspaceId !== state.workspaceId ||
+    next.userId !== state.userId ||
     next.sessionId !== state.sessionId
   if (changed) {
     epoch++
     optimistic.clear()
-  } else {
+  } else if (next.records.length) {
     const previous = new Map(state!.records.map((r) => [r.issue.id, r]))
     next.records = next.records.map((r) => {
       const old = previous.get(r.issue.id)
@@ -59,6 +60,7 @@ export function replaceCanonicalIssues(
   state = next
   active = enabled
   if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("forge:issue-queries-invalidated"))
     window.dispatchEvent(new Event(CANONICAL_ISSUES_CHANGED))
     window.dispatchEvent(new Event("forge:team-issues-changed"))
   }
@@ -110,7 +112,8 @@ export function clearOptimisticIssue(issueId: string) {
   notifyIssues()
 }
 export function mergeCanonicalIssueRecords(
-  records: CanonicalSnapshot["records"]
+  records: CanonicalSnapshot["records"],
+  invalidate = true
 ) {
   if (!state) return
   const byId = new Map(state.records.map((r) => [r.issue.id, r]))
@@ -120,5 +123,22 @@ export function mergeCanonicalIssueRecords(
       byId.set(record.issue.id, record)
   }
   state = { ...state, records: [...byId.values()] }
+  if (invalidate && typeof window !== "undefined")
+    window.dispatchEvent(
+      new CustomEvent("forge:issue-queries-invalidated", {
+        detail: { teamIds: [...new Set(records.map((r) => r.teamId))] },
+      })
+    )
+  notifyIssues()
+}
+
+export function removeCanonicalIssueRecords(ids: Array<string>) {
+  if (!state || !ids.length) return
+  const removed = new Set(ids)
+  state = {
+    ...state,
+    records: state.records.filter((r) => !removed.has(r.issue.id)),
+  }
+  for (const id of ids) optimistic.delete(id)
   notifyIssues()
 }

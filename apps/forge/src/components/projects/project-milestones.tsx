@@ -3,6 +3,7 @@ import { format, isValid, parseISO } from "date-fns"
 import { toast } from "sonner"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { PencilEdit02Icon } from "@hugeicons/core-free-icons"
+import type { IssueQueryPage } from "@/lib/issue-query-contract"
 import type { InitiativeProject } from "@/lib/initiatives"
 import type { MilestoneIssue, ProjectMilestone } from "@/lib/project-milestones"
 import {
@@ -107,6 +108,8 @@ function MilestoneDatePicker({
 export type MilestoneControls = {
   project: InitiativeProject
   catalog: Array<InitiativeProject>
+  canRelocate?: boolean
+  counts?: IssueQueryPage["rollups"]
   rows: Array<MilestoneIssue>
   writable: boolean
   selected?: string
@@ -227,7 +230,9 @@ function MilestoneActions({
             )
           })}
           <DropdownMenuSub>
-            <DropdownMenuSubTrigger disabled={!props.writable}>
+            <DropdownMenuSubTrigger
+              disabled={!props.writable || props.canRelocate === false}
+            >
               <MilestoneMark />
               Move milestone to
             </DropdownMenuSubTrigger>
@@ -248,7 +253,7 @@ function MilestoneActions({
             </DropdownMenuSubContent>
           </DropdownMenuSub>
           <DropdownMenuItem
-            disabled={!props.writable}
+            disabled={!props.writable || props.canRelocate === false}
             onClick={() => props.onRelocate(milestone.id, undefined, true)}
           >
             <IssueIcon name="project" />
@@ -256,7 +261,7 @@ function MilestoneActions({
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            disabled={!props.writable}
+            disabled={!props.writable || props.canRelocate === false}
             variant="destructive"
             onClick={() => props.onRelocate(milestone.id)}
           >
@@ -315,7 +320,11 @@ function MilestoneActions({
 export function ProjectMilestoneSummary(props: MilestoneControls) {
   const [dragged, setDragged] = useState<string>()
   const milestones = props.project.milestones ?? []
-  const current = currentProjectMilestone(props.project, props.rows)
+  const current = currentProjectMilestone(
+    props.project,
+    props.rows,
+    props.counts
+  )
   function reorder(target: string) {
     if (!dragged || dragged === target) return
     const next = [...milestones]
@@ -329,7 +338,7 @@ export function ProjectMilestoneSummary(props: MilestoneControls) {
   return (
     <div className="space-y-1">
       {milestones.map((milestone) => {
-        const progress = milestoneProgress(milestone, props.rows)
+        const progress = milestoneProgress(milestone, props.rows, props.counts)
         return (
           <div
             key={milestone.id}
@@ -435,7 +444,11 @@ export function ProjectMilestones(props: OverviewProps) {
   const [dragged, setDragged] = useState<string>()
   const root = useRef<HTMLElement>(null)
   const milestones = props.project.milestones ?? []
-  const current = currentProjectMilestone(props.project, props.rows)
+  const current = currentProjectMilestone(
+    props.project,
+    props.rows,
+    props.counts
+  )
   useEffect(() => {
     if (props.editingId) {
       const element = root.current?.querySelector<HTMLInputElement>(
@@ -460,7 +473,7 @@ export function ProjectMilestones(props: OverviewProps) {
         </h2>
       )}
       {milestones.map((milestone) => {
-        const progress = milestoneProgress(milestone, props.rows),
+        const progress = milestoneProgress(milestone, props.rows, props.counts),
           expanded = !collapsed.includes(milestone.id)
         return (
           <Collapsible

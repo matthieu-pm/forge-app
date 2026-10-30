@@ -5,6 +5,8 @@ import { Link01Icon } from "@hugeicons/core-free-icons"
 import { ProviderMark, callField } from "./call-dialogs"
 import type { CallRecord } from "@/lib/calls"
 import type { TeamSummary } from "@/lib/team-contract"
+import { IssueQueryFooter } from "@/components/issues/issue-query-footer"
+import { useIssueQuery } from "@/lib/issue-query-client"
 import { pageTabClass } from "@/components/ui/page-tabs"
 import { ContentHeader } from "@/components/ui/content-header"
 import { ActionIconButton } from "@/components/ui/action-icon-button"
@@ -42,6 +44,20 @@ export function CallDetail({
   const [note, setNote] = useState("")
   const [kind, setKind] = useState<"note" | "follow-up">("note")
   const [busy, setBusy] = useState("")
+  const issueQuery = useIssueQuery({
+    teamIds: [team.id],
+    filters: {
+      match: "all",
+      rules: [
+        {
+          id: "call",
+          field: "links",
+          operator: "contains",
+          value: `/workspace/calls?call=${encodeURIComponent(call.id)}`,
+        },
+      ],
+    },
+  })
   const { store, error: issueError } = useIssueStore(team.id)
   async function run(key: string, action: () => Promise<unknown>) {
     setBusy(key)
@@ -630,6 +646,7 @@ export function CallDetail({
           )}
         </div>
       </div>
+      <IssueQueryFooter query={issueQuery} />
     </article>
   )
 }

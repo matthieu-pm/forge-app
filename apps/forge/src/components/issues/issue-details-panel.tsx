@@ -1,5 +1,6 @@
 import { useId, useState } from "react"
 import { AssigneeMark, IssueIcon, PriorityMark } from "./issue-controls"
+import type { IssueQueryPage } from "@/lib/issue-query-contract"
 import type { KeyboardEvent } from "react"
 import type { IssueFilter, TeamIssue } from "@/lib/team-issues"
 import type { TemplateDirectory } from "@/lib/template-contract"
@@ -15,11 +16,13 @@ const tabs = [
 
 export function IssueDetailsPanel({
   issues,
+  facets,
   members,
   labelColors,
   onFilter,
   onClose,
 }: {
+  facets?: IssueQueryPage["facets"]
   issues: Array<TeamIssue>
   members: TemplateDirectory["members"]
   labelColors: Record<string, string>
@@ -44,6 +47,10 @@ export function IssueDetailsPanel({
         : [issue[tab.field] ?? ""]
     for (const value of values.length ? values : [""])
       counts.set(value, (counts.get(value) ?? 0) + 1)
+  }
+  if (facets) {
+    counts.clear()
+    for (const row of facets[tab.field]) counts.set(row.value, row.count)
   }
   function label(value: string) {
     return tab.field === "assignee"

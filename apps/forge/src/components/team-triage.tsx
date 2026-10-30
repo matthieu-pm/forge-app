@@ -11,6 +11,9 @@ import {
 import type { TeamIssue } from "@/lib/issue-record-contract"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TriageDraft, TriageIssue } from "@/lib/triage-issues"
+import { IssueQueryFooter } from "@/components/issues/issue-query-footer"
+import { defaultIssueDisplay } from "@/lib/issue-view-contract"
+import { useIssueQuery } from "@/lib/issue-query-client"
 import { readIssueStore } from "@/lib/team-issues"
 import { productStorage } from "@/lib/product-storage"
 import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
@@ -58,25 +61,44 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
   const [draft, setDraft] = useState<TriageDraft>(emptyDraft)
   const [saveError, setSaveError] = useState<string | null>(null)
   const failure = settingsError ?? error
-  const visible = issues
-    .filter(
-      (issue) =>
-        (showSnoozed || !issue.snoozed) && matchesTriageFilters(issue, filters)
-    )
-    .sort((a, b) => {
-      const result =
+  const query = useIssueQuery({
+    teamIds: [team.id],
+    triage: true,
+    showSnoozed,
+    filters,
+    display: {
+      ...defaultIssueDisplay(),
+      order:
         ordering === "priority"
-          ? { "No priority": 0, Urgent: 4, High: 3, Medium: 2, Low: 1 }[
-              a.priority
-            ] -
-            { "No priority": 0, Urgent: 4, High: 3, Medium: 2, Low: 1 }[
-              b.priority
-            ]
+          ? "Priority"
           : ordering === "due"
-            ? (a.dueDate || "9999").localeCompare(b.dueDate || "9999")
-            : a.createdAt.localeCompare(b.createdAt)
-      return descending ? -result : result
-    })
+            ? "Due date"
+            : "Created",
+      descending: ordering === "priority" ? !descending : descending,
+    },
+  })
+  const visible = query.enabled
+    ? query.records.map((r) => r.issue)
+    : issues
+        .filter(
+          (issue) =>
+            (showSnoozed || !issue.snoozed) &&
+            matchesTriageFilters(issue, filters)
+        )
+        .sort((a, b) => {
+          const result =
+            ordering === "priority"
+              ? { "No priority": 0, Urgent: 4, High: 3, Medium: 2, Low: 1 }[
+                  a.priority
+                ] -
+                { "No priority": 0, Urgent: 4, High: 3, Medium: 2, Low: 1 }[
+                  b.priority
+                ]
+              : ordering === "due"
+                ? (a.dueDate || "9999").localeCompare(b.dueDate || "9999")
+                : a.createdAt.localeCompare(b.createdAt)
+          return descending ? -result : result
+        })
   const selected = visible.find((issue) => issue.id === selectedId)
   const editingBaseline = useRef<TeamIssue | undefined>(undefined)
   function openEditor(issue?: TriageIssue) {
@@ -117,6 +139,7 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
     return (
       <main className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
         Loading triage…
+        <IssueQueryFooter query={query} />
       </main>
     )
   if (failure)
@@ -125,6 +148,7 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
         <p role="alert" className="text-sm text-destructive">
           {failure}
         </p>
+        <IssueQueryFooter query={query} />
       </main>
     )
   if (!settings.enabled)
@@ -138,6 +162,7 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
         >
           Enable triage in team settings
         </Link>
+        <IssueQueryFooter query={query} />
       </main>
     )
   return (
@@ -446,6 +471,7 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
           }
         }}
       />
+      <IssueQueryFooter query={query} />
     </main>
   )
 }

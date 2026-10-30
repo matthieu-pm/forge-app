@@ -365,6 +365,13 @@
       "when": 1793379614124,
       "tag": "0051_canonical_issues_and_server_state",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1793390781570,
+      "tag": "0052_bounded_issue_queries",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest"
+import { replaceCanonicalIssues } from "./canonical-issue-cache"
 import {
   currentProjectMilestone,
   matchesMilestone,
@@ -194,4 +195,24 @@ it("restores exact project and issue data if persisting a move fails", () => {
   expect(() => relocate({ targetId: "target" })).toThrow("Full")
   expect(productStorage.getItem(key)).toBe(beforeProject)
   expect(productStorage.getItem(teamIssuesKey("team"))).toBe(beforeIssues)
+})
+
+it("blocks relocation, conversion and deletion before any shared assignment or project is changed", () => {
+  const before = productStorage.getItem(key)
+  replaceCanonicalIssues({
+    workspaceId: "workspace",
+    userId: "user",
+    sessionId: "session",
+    records: [],
+    projects: [],
+    cycles: [],
+  })
+  try {
+    for (const options of [{ targetId: "target" }, { convert: true }, {}]) {
+      expect(() => relocate(options)).toThrow("all issue assignments")
+      expect(productStorage.getItem(key)).toBe(before)
+    }
+  } finally {
+    replaceCanonicalIssues(null, false)
+  }
 })

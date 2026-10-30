@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { IssueIcon, StatusMark, issuePrimary } from "./issue-controls"
+import type { IssueQueryPage } from "@/lib/issue-query-contract"
 import type {
   IssueFilters as Filters,
   IssueField,
@@ -77,11 +78,13 @@ const newRule = (field: IssueField = "priority"): IssueFilter => ({
 })
 export function IssueFilters({
   issues,
+  facets,
   statuses,
   members,
   value,
   onChange,
 }: {
+  facets?: IssueQueryPage["facets"]
   issues: Array<TeamIssue>
   statuses: Array<TeamStatus>
   members: Array<{ id: string; name: string }>
@@ -131,6 +134,10 @@ export function IssueFilters({
       return issues
         .filter((issue) => !issue.parentId)
         .map((issue) => ({ value: issue.id, label: issue.title }))
+    if (facets && (field === "project" || field === "labels"))
+      return facets[field]
+        .filter((r) => r.value)
+        .map((r) => ({ value: r.value, label: r.value }))
     return [
       ...new Set(
         issues
