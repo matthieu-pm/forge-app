@@ -1,9 +1,9 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "vitest"
 import {
+  PREVIEW,
   appOrigin,
   assertPreviewEnvironment,
-  PREVIEW,
   previewPeerOrigin,
   runtimeOrigin,
 } from "../../../../packages/environment/preview-environment"

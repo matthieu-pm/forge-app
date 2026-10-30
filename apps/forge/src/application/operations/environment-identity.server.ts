@@ -42,20 +42,34 @@ export async function readEnvironmentIdentity(challenge: string) {
     if (
       !response.ok ||
       !response.headers.get("content-type")?.includes("application/json")
-    )
-      throw new Error("Staging runtime health failed.")
-    const health = (await response.json()) as {
-      ok?: boolean
-      status?: string
-      code?: string
+    ) {
+      if (!preview) throw new Error("Staging runtime health failed.")
+      // The bounded operator check reports the failed hop without response bodies
+      // or credentials. Public readiness still fails closed on this dependency.
+      stagingRuntime = {
+        origin: peerOrigin,
+        status: response.status,
+        ready: false,
+      }
+      await response.body?.cancel()
+    } else {
+      const health = (await response.json()) as {
+        ok?: boolean
+        status?: string
+        code?: string
+      }
+      if (
+        preview
+          ? health.code !== "READY"
+          : health.ok !== true || health.status !== "ready"
+      )
+        throw new Error("Staging runtime is not ready.")
+      stagingRuntime = {
+        origin: peerOrigin ?? STAGING.runtimeOrigin,
+        status: response.status,
+        health,
+      }
     }
-    if (
-      preview
-        ? health.code !== "READY"
-        : health.ok !== true || health.status !== "ready"
-    )
-      throw new Error("Staging runtime is not ready.")
-    stagingRuntime = { origin: peerOrigin ?? STAGING.runtimeOrigin, health }
   }
   const databaseUrl = new URL(process.env.DATABASE_URL!)
   return {
