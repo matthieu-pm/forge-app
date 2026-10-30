@@ -1,5 +1,6 @@
 import { webcrypto } from "node:crypto"
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -23,9 +24,12 @@ import { loadLegacyPreviewContext } from "@/lib/legacy-import-state"
 import {
   browserBackupRepository,
   downloadLegacyFile,
+  listBrowserBackups,
 } from "@/lib/legacy-import-backup"
 import { defaultDefinitionValue } from "@/lib/issue-definition-contract"
 import { blankIssueDraft, initialIssueStore } from "@/lib/team-issues"
+
+import { invalidatePreferenceSession } from "@/lib/preference-session-events"
 
 const saved = vi.hoisted(() => new Map<string, LegacyBackup>())
 vi.mock("@/lib/legacy-import-state", () => ({
@@ -253,6 +257,80 @@ describe("browser data review UI", () => {
       }).disabled
     ).toBe(true)
     expect(localStorage.getItem(key)).toContain("A real legacy issue")
+  })
+  it("keeps reviews valid when excluded device or other-account stores change", async () => {
+    render(<LegacyImportPreview />)
+    await preview()
+    for (const excluded of [
+      "forge.agent.composer-state.v1",
+      "forge:profile:bob",
+      "unrelated-token",
+    ])
+      fireEvent(window, new StorageEvent("storage", { key: excluded }))
+    expect(screen.queryByRole("alert")).toBeNull()
+    expect(
+      screen.getByRole<HTMLInputElement>("checkbox", {
+        name: "Back up this source: Team issues",
+      }).disabled
+    ).toBe(false)
+  })
+  it.each(["unmount", "session change", "source change"])(
+    "cancels pending backup downloads on %s",
+    async (change) => {
+      const view = render(<LegacyImportPreview />)
+      await preview()
+      await selectAndBackUp()
+      let finish!: (value: unknown) => void
+      vi.mocked(browserBackupRepository.get).mockReturnValueOnce(
+        new Promise((resolve) => {
+          finish = resolve
+        })
+      )
+      fireEvent.click(
+        screen.getByRole("button", { name: "Download verified backup" })
+      )
+      await waitFor(() =>
+        expect(browserBackupRepository.get).toHaveBeenCalledTimes(2)
+      )
+      if (change === "unmount") view.unmount()
+      if (change === "session change")
+        act(() => invalidatePreferenceSession("start"))
+      if (change === "source change")
+        fireEvent(window, new StorageEvent("storage", { key }))
+      await act(async () => {
+        finish([...saved.values()][0])
+        await new Promise((resolve) => setTimeout(resolve, 30))
+      })
+      expect(downloadLegacyFile).not.toHaveBeenCalled()
+      if (change === "session change")
+        expect(screen.queryByText("A real legacy issue")).toBeNull()
+    }
+  )
+  it("does not repopulate a backup listing after the session changes", async () => {
+    render(<LegacyImportPreview />)
+    await preview()
+    await selectAndBackUp()
+    let finish!: (value: Array<LegacyBackup>) => void
+    vi.mocked(listBrowserBackups).mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve
+      })
+    )
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Find saved backups for this account",
+      })
+    )
+    await waitFor(() => expect(listBrowserBackups).toHaveBeenCalledOnce())
+    act(() => invalidatePreferenceSession("start"))
+    await act(() => {
+      finish([...saved.values()])
+      return Promise.resolve()
+    })
+    expect(
+      screen.queryByRole("button", { name: /Download backup from/ })
+    ).toBeNull()
+    expect(screen.queryByText("A real legacy issue")).toBeNull()
   })
   it("finds retained backups after remount and cancellation leaves the backup and originals intact", async () => {
     const view = render(<LegacyImportPreview />)

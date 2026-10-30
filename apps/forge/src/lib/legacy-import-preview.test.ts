@@ -203,6 +203,22 @@ describe("FOR-53 source inventory and read-only preview (AC-01 / AT-01)", () => 
       })
     }
   )
+  it("excludes inherited property names without blocking valid sources", async () => {
+    seed()
+    for (const name of [
+      "constructor",
+      "__proto__",
+      "toString",
+      "hasOwnProperty",
+    ])
+      localStorage.setItem(`forge:${name}:v1:team`, "UNRELATED")
+    const snapshot = await discoverLegacySources(localStorage, "alice")
+    expect(snapshot.excludedUnknown).toBe(4)
+    expect(snapshot.sources.some((source) => source.key === issueKey)).toBe(
+      true
+    )
+    expect(JSON.stringify(snapshot)).not.toContain("UNRELATED")
+  })
   it("preserves unsupported future schemas and missing stores without generating fixtures", async () => {
     expect(
       (await discoverLegacySources(localStorage, "alice")).sources
@@ -234,6 +250,37 @@ describe("FOR-53 source inventory and read-only preview (AC-01 / AT-01)", () => 
     expect(inspected.counts.invalidRecordsOrFields).toBeGreaterThan(0)
     expect(inspected.records).toEqual([])
   })
+  it("ignores concurrent excluded-key additions but rejects newly added eligible sources", async () => {
+    seed()
+    const reader = {
+      get length() {
+        return localStorage.length
+      },
+      key: (index: number) => localStorage.key(index),
+      getItem: (key: string) => {
+        localStorage.setItem("forge.agent.composer-state.v1", "draft")
+        return localStorage.getItem(key)
+      },
+    }
+    await expect(discoverLegacySources(reader, "alice")).resolves.toMatchObject(
+      { actorId: "alice" }
+    )
+    await expect(
+      discoverLegacySources(
+        {
+          get length() {
+            return localStorage.length
+          },
+          key: reader.key,
+          getItem: (key: string) => {
+            localStorage.setItem("forge:profile:alice", "{}")
+            return localStorage.getItem(key)
+          },
+        },
+        "alice"
+      )
+    ).rejects.toThrow("changed")
+  })
   it("rejects storage failures and a snapshot that changes during discovery", async () => {
     seed()
     const reader = {
@@ -250,7 +297,10 @@ describe("FOR-53 source inventory and read-only preview (AC-01 / AT-01)", () => 
     await expect(
       discoverLegacySources(
         {
-          ...reader,
+          get length() {
+            return localStorage.length
+          },
+          key: reader.key,
           getItem: (key) => {
             reads++
             return reads > localStorage.length
@@ -414,22 +464,62 @@ describe("specific destination and ownership confirmation (AC-02 / AT-02)", () =
     input.currentSnapshot = input.snapshot
     input.backup = await preserveLegacyBackup(
       input.snapshot,
-      [issueKey],
+      [issueKey, "forge:cycle-issues:v1:legacy-team"],
       repository()
     )
+    input.choices.push({
+      ...choices()[0],
+      key: "forge:cycle-issues:v1:legacy-team",
+      paths: ["records/0"],
+    })
     expect(
       previewCandidates(
         input.snapshot.sources.find((s) => s.key === issueKey)!,
         "team",
         input.context,
-        input.snapshot.sources
+        input.snapshot.sources,
+        input.choices
       )
     ).toHaveLength(1)
     await expect(confirmLegacyPreview(input)).rejects.toThrow("conflict")
     input.choices[0].conflicts["issues/0"] = "keep-both"
+    input.choices[1].conflicts["records/0"] = "keep-both"
     await expect(confirmLegacyPreview(input)).resolves.toMatchObject({
       execution: "unavailable",
     })
+  })
+  it("ignores local overlaps from unselected records or different destinations", async () => {
+    const input = await fixture()
+    const otherKey = "forge:team-issues:v1:other-team"
+    localStorage.setItem(otherKey, localStorage.getItem(issueKey)!)
+    const snapshot = await discoverLegacySources(localStorage, "alice")
+    const source = snapshot.sources.find((s) => s.key === issueKey)!
+    expect(
+      previewCandidates(
+        source,
+        "team",
+        input.context,
+        snapshot.sources,
+        choices()
+      )
+    ).toEqual([])
+    const different = [
+      ...choices(),
+      { ...choices()[0], key: otherKey, teamId: "other-destination" },
+    ]
+    expect(
+      previewCandidates(
+        source,
+        "team",
+        input.context,
+        snapshot.sources,
+        different
+      )
+    ).toEqual([])
+    const same = [...choices(), { ...choices()[0], key: otherKey }]
+    expect(
+      previewCandidates(source, "team", input.context, snapshot.sources, same)
+    ).toHaveLength(1)
   })
   it("requires admin permission and a non-overwrite decision for destination definition conflicts", async () => {
     const input = await fixture()

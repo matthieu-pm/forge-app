@@ -44,3 +44,24 @@ node scripts/verify-legacy-import-browser.mjs
 ```
 
 The browser script writes fixture-only downloads and screenshots to `/tmp/for53-browser` (override with `FORGE_IMPORT_BROWSER_EVIDENCE`). Native packaged macOS/Electron interaction, Safari/Firefox and a deployed authenticated endpoint are not verified by this evidence. No packaged-client or production rollout acceptance is claimed.
+
+
+## PR #20 review and release checks · 30 October 2026
+
+Review baseline: `c7ca71d378e02ee30236919320240c5e1e987909` → original implementation `d4846254c457c6172879aa0709eb6a2e24f1fa56`. Independent standards and specification reviews found four concrete P2 defects, all fixed before merge.
+
+### Standards
+
+* Pending backup exports and saved-backup list completions could outlive their review session. Operation epochs now cancel them on unmount, source invalidation and the existing account/workspace session-change signal. Context-read failures clear private review state. Downloads revalidate live context after asynchronous backup verification, immediately before exporting.
+* Excluded device/other-account storage events could disable an otherwise unchanged review. Both event invalidation and concurrent discovery checks now consider only eligible sources belonging to the reviewed account or ambiguous shared scope.
+
+Standards result: two concrete correctness findings fixed; no hard documented coding-standard violations or remaining actionable findings in follow-up review.
+
+### Spec
+
+* An unknown key using an inherited object-property name (`constructor`, `__proto__`, etc.) could crash the allowlist lookup and block valid sources. Own-property lookup now excludes these keys without reading their values.
+* Local duplicate candidates included unselected records and records mapped to different destinations. They now compare only explicitly selected paths with the same reviewed destination; destination-server definition collisions remain independently checked.
+
+Spec result: two concrete correctness findings fixed; no remaining missing acceptance behavior or material scope creep in follow-up review. Upload execution remains FOR-56.
+
+Regression coverage includes unknown-key coexistence, same/different/unselected destination overlaps, eligible versus excluded concurrent source additions, pending-download cancellation on unmount/session/source changes, session-state clearing, and stale backup-list completion. The targeted acceptance/regression command above now passes **119 tests across nine files**. The complete app suite passes **2,172 tests across 270 files**, with 284 environment-gated cases in 21 files skipped; the separate Workflow suite passes all four cases. TypeScript, changed-file ESLint and the Chromium fixture also pass. The merged revision, Vercel deployment/alias identity, health checks and production limitations are recorded in FOR-53 when the release completes.

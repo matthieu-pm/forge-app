@@ -61,7 +61,10 @@ export function describeLegacyKey(key: string): SourceDescriptor | null {
     "team-thread-summaries": ["Thread summary settings", "deferred"],
     "team-project-updates": ["Project update settings", "deferred"],
   }
-  if ((m = key.match(/^forge:([^:]+):v(\d+):([^:]+)$/)) && teamStores[m[1]]) {
+  if (
+    (m = key.match(/^forge:([^:]+):v(\d+):([^:]+)$/)) &&
+    Object.hasOwn(teamStores, m[1])
+  ) {
     const [title, kind, parse] = teamStores[m[1]]!
     return {
       title,

@@ -82,14 +82,28 @@ export async function discoverLegacySources(
       checksum: await legacyChecksum(raw),
     })
   }
-  // Detect concurrent writers while checksums were calculated; never certify a torn scan.
+  // Only eligible source changes invalidate this scan. Other accounts and device
+  // state may change concurrently without becoming part of the reviewed snapshot.
+  const currentKeys = Array.from({ length: storage.length }, (_, index) =>
+    storage.key(index)
+  )
+    .filter((key): key is string => {
+      if (key === null) return false
+      const source = describeLegacyKey(key)
+      return Boolean(
+        source &&
+        source.kind !== "device" &&
+        (!source.accountHint || source.accountHint === actorId)
+      )
+    })
+    .sort()
   if (
-    storage.length !== keys.length ||
-    Array.from({ length: storage.length }, (_, i) => storage.key(i))
-      .filter((key): key is string => key !== null)
-      .sort()
-      .some((key, i) => keys[i] !== key) ||
-    sources.some((s) => storage.getItem(s.key) !== s.raw)
+    currentKeys.length !== sources.length ||
+    sources.some(
+      (source, index) =>
+        source.key !== currentKeys[index] ||
+        storage.getItem(source.key) !== source.raw
+    )
   )
     throw new Error("Browser data changed. Preview again.")
   return {
@@ -122,9 +136,15 @@ export function previewCandidates(
   source: LegacySource,
   teamId: string | null,
   context: PreviewContext,
-  sources: Array<LegacySource> = [source]
+  sources: Array<LegacySource> = [source],
+  choices: Array<SourceChoice> = []
 ): Array<PreviewCandidate> {
   const target = context.definitions.find((d) => d.teamId === teamId)
+  const selected = new Map(
+    choices
+      .filter((choice) => choice.teamId === teamId)
+      .map((choice) => [choice.key, new Set(choice.paths)])
+  )
   return source.records.flatMap((r) => {
     const definition = source.kind === "labels" || source.kind === "statuses"
     const directory =
@@ -149,14 +169,17 @@ export function previewCandidates(
         },
       ]
     if (
+      selected.get(source.key)?.has(r.path) &&
       sources.some(
         (otherSource) =>
+          selected.has(otherSource.key) &&
           (otherSource.kind === source.kind ||
             (["issues", "triage", "cycles"].includes(otherSource.kind) &&
               ["issues", "triage", "cycles"].includes(source.kind))) &&
           otherSource.records.some(
             (other) =>
               (otherSource !== source || other.path !== r.path) &&
+              selected.get(otherSource.key)?.has(other.path) &&
               (source.kind !== "labels" ||
                 other.path.split("/")[0] === r.path.split("/")[0]) &&
               (other.id === r.id || other.title === r.title)
@@ -376,7 +399,8 @@ export async function confirmLegacyPreview(input: {
       source,
       choice.teamId,
       context,
-      snapshot.sources
+      snapshot.sources,
+      choices
     )) {
       if (
         choice.paths.includes(candidate.path) &&

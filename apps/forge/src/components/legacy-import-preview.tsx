@@ -8,6 +8,7 @@ import type {
 import { Button } from "@/components/ui/button"
 import { loadLegacyPreviewContext } from "@/lib/legacy-import-state"
 import { describeLegacyKey } from "@/lib/legacy-import-sources"
+import { onPreferenceSessionInvalidated } from "@/lib/preference-session-events"
 import {
   confirmLegacyPreview,
   discoverLegacySources,
@@ -44,54 +45,103 @@ export function LegacyImportPreview() {
   const [stale, setStale] = React.useState(false)
   const epoch = React.useRef(0)
   const active = React.useRef(true)
+  const actor = React.useRef<string | null>(null)
+
+  const clearReview = React.useCallback((message: string | null = null) => {
+    epoch.current++
+    actor.current = null
+    setPreview(null)
+    setBackup(null)
+    setReview(null)
+    setSavedBackups([])
+    setChoices([])
+    setBackupKeys([])
+    setStale(false)
+    setBusy(null)
+    setError(message)
+  }, [])
 
   React.useEffect(() => {
     active.current = true
     function changed(event: StorageEvent) {
-      if (event.key === null || describeLegacyKey(event.key)) {
+      const source = event.key === null ? null : describeLegacyKey(event.key)
+      if (
+        actor.current &&
+        (event.key === null ||
+          (source &&
+            source.kind !== "device" &&
+            (!source.accountHint || source.accountHint === actor.current)))
+      ) {
         epoch.current++
         setStale(true)
         setReview(null)
         setBackup(null)
+        setBusy(null)
       }
     }
+    const unsubscribe = onPreferenceSessionInvalidated(() =>
+      clearReview(
+        "Your account or workspace changed. Preview browser data again."
+      )
+    )
     window.addEventListener("storage", changed)
     return () => {
       active.current = false
       epoch.current++
+      unsubscribe()
       window.removeEventListener("storage", changed)
     }
-  }, [])
+  }, [clearReview])
 
-  async function action(label: string, run: () => Promise<void>) {
+  async function action(
+    label: string,
+    run: (isCurrent: () => boolean) => Promise<void>
+  ) {
+    const token = ++epoch.current
+    const isCurrent = () => active.current && token === epoch.current
     setBusy(label)
     setError(null)
     try {
-      await run()
+      await run(isCurrent)
     } catch (cause) {
-      if (active.current)
+      if (isCurrent())
         setError(
           cause instanceof Error
             ? cause.message
             : "The preview could not be completed. Originals are unchanged."
         )
     } finally {
-      if (active.current) setBusy(null)
+      if (isCurrent()) setBusy(null)
     }
   }
 
-  async function currentPreview() {
+  async function currentPreview(isCurrent: () => boolean) {
+    const check = () => {
+      if (!isCurrent())
+        throw new Error("This review has ended. Preview browser data again.")
+    }
+    check()
     if (!preview || stale)
       throw new Error("Browser data changed. Preview again.")
-    const currentContext = await loadLegacyPreviewContext()
-    if (
-      (await legacyChecksum(currentContext)) !==
+    let currentContext: PreviewContext
+    try {
+      currentContext = await loadLegacyPreviewContext()
+    } catch (cause) {
+      if (isCurrent())
+        clearReview(
+          "Your account or destination could not be verified. Preview browser data again."
+        )
+      throw cause
+    }
+    check()
+    const sameContext =
+      (await legacyChecksum(currentContext)) ===
       (await legacyChecksum(preview.context))
-    ) {
-      setPreview(null)
-      setBackup(null)
-      setReview(null)
-      setSavedBackups([])
+    check()
+    if (!sameContext) {
+      clearReview(
+        "The account, destination or permissions changed. Preview again."
+      )
       throw new Error(
         "The account, destination or permissions changed. Preview again."
       )
@@ -100,6 +150,7 @@ export function LegacyImportPreview() {
       window.localStorage,
       currentContext.actorId
     )
+    check()
     if (currentSnapshot.fingerprint !== preview.snapshot.fingerprint) {
       setStale(true)
       setReview(null)
@@ -144,20 +195,22 @@ export function LegacyImportPreview() {
           <Button
             disabled={!!busy}
             onClick={() =>
-              void action("Reading browser data…", async () => {
-                const token = ++epoch.current
+              void action("Reading browser data…", async (isCurrent) => {
                 setPreview(null)
                 setReview(null)
                 setBackup(null)
                 setChoices([])
                 setBackupKeys([])
                 setSavedBackups([])
+                actor.current = null
                 const context = await loadLegacyPreviewContext()
+                if (!isCurrent()) return
+                actor.current = context.actorId
                 const snapshot = await discoverLegacySources(
                   window.localStorage,
                   context.actorId
                 )
-                if (!active.current || token !== epoch.current) return
+                if (!isCurrent()) return
                 setPreview({ snapshot, context })
                 setStale(false)
               })
@@ -169,16 +222,7 @@ export function LegacyImportPreview() {
             <Button
               variant="ghost"
               disabled={!!busy}
-              onClick={() => {
-                epoch.current++
-                setPreview(null)
-                setReview(null)
-                setBackup(null)
-                setChoices([])
-                setBackupKeys([])
-                setSavedBackups([])
-                setError(null)
-              }}
+              onClick={() => clearReview()}
             >
               Cancel review
             </Button>
@@ -236,7 +280,8 @@ export function LegacyImportPreview() {
                 source,
                 choice ? choice.teamId : "",
                 preview.context,
-                preview.snapshot.sources
+                preview.snapshot.sources,
+                choices
               )
               const canSelect =
                 source.status === "supported" && source.records.length > 0
@@ -477,19 +522,22 @@ export function LegacyImportPreview() {
                   variant="secondary"
                   disabled={!!busy || stale || !backupKeys.length}
                   onClick={() =>
-                    void action("Saving and verifying backup…", async () => {
-                      const token = epoch.current
-                      await currentPreview()
-                      const saved = await preserveLegacyBackup(
-                        preview.snapshot,
-                        backupKeys,
-                        browserBackupRepository
-                      )
-                      if (!active.current || token !== epoch.current) return
-                      await currentPreview()
-                      setBackup(saved)
-                      setReview(null)
-                    })
+                    void action(
+                      "Saving and verifying backup…",
+                      async (isCurrent) => {
+                        const token = epoch.current
+                        await currentPreview(isCurrent)
+                        const saved = await preserveLegacyBackup(
+                          preview.snapshot,
+                          backupKeys,
+                          browserBackupRepository
+                        )
+                        if (!active.current || token !== epoch.current) return
+                        await currentPreview(isCurrent)
+                        setBackup(saved)
+                        setReview(null)
+                      }
+                    )
                   }
                 >
                   Save local backup
@@ -499,8 +547,8 @@ export function LegacyImportPreview() {
                     variant="secondary"
                     disabled={!!busy || stale}
                     onClick={() =>
-                      void action("Verifying download…", async () => {
-                        await currentPreview()
+                      void action("Verifying download…", async (isCurrent) => {
+                        await currentPreview(isCurrent)
                         const verified = await verifyLegacyBackup(
                           await browserBackupRepository.get(backup.id)
                         )
@@ -508,6 +556,9 @@ export function LegacyImportPreview() {
                           throw new Error(
                             "Backup verification failed. Save a new backup."
                           )
+                        if (!isCurrent()) return
+                        await currentPreview(isCurrent)
+                        if (!isCurrent()) return
                         downloadLegacyFile(
                           verified,
                           `forge-browser-backup-${verified.id}.json`
@@ -526,9 +577,9 @@ export function LegacyImportPreview() {
                     !choices.some((c) => c.paths.length)
                   }
                   onClick={() =>
-                    void action("Checking your choices…", async () => {
+                    void action("Checking your choices…", async (isCurrent) => {
                       const token = epoch.current
-                      const current = await currentPreview()
+                      const current = await currentPreview(isCurrent)
                       const confirmed = await confirmLegacyPreview({
                         ...preview,
                         ...current,
@@ -559,8 +610,9 @@ export function LegacyImportPreview() {
                     variant="secondary"
                     disabled={!!busy || stale}
                     onClick={() =>
-                      void action("Checking review…", async () => {
-                        await currentPreview()
+                      void action("Checking review…", async (isCurrent) => {
+                        await currentPreview(isCurrent)
+                        if (!isCurrent()) return
                         downloadLegacyFile(
                           review,
                           "forge-browser-import-review.json"
@@ -576,11 +628,12 @@ export function LegacyImportPreview() {
                 variant="ghost"
                 disabled={!!busy}
                 onClick={() =>
-                  void action("Loading saved backups…", async () => {
-                    const current = await currentPreview()
-                    setSavedBackups(
-                      await listBrowserBackups(current.currentContext.actorId)
+                  void action("Loading saved backups…", async (isCurrent) => {
+                    const current = await currentPreview(isCurrent)
+                    const saved = await listBrowserBackups(
+                      current.currentContext.actorId
                     )
+                    if (isCurrent()) setSavedBackups(saved)
                   })
                 }
               >
@@ -600,20 +653,27 @@ export function LegacyImportPreview() {
                     variant="secondary"
                     disabled={!!busy}
                     onClick={() =>
-                      void action("Verifying saved backup…", async () => {
-                        const { currentContext } = await currentPreview()
-                        const verified = await verifyLegacyBackup(
-                          await browserBackupRepository.get(saved.id)
-                        )
-                        if (verified.actorId !== currentContext.actorId)
-                          throw new Error(
-                            "Sign into the account that created this backup."
+                      void action(
+                        "Verifying saved backup…",
+                        async (isCurrent) => {
+                          const { currentContext } =
+                            await currentPreview(isCurrent)
+                          const verified = await verifyLegacyBackup(
+                            await browserBackupRepository.get(saved.id)
                           )
-                        downloadLegacyFile(
-                          verified,
-                          `forge-browser-backup-${verified.id}.json`
-                        )
-                      })
+                          if (verified.actorId !== currentContext.actorId)
+                            throw new Error(
+                              "Sign into the account that created this backup."
+                            )
+                          if (!isCurrent()) return
+                          await currentPreview(isCurrent)
+                          if (!isCurrent()) return
+                          downloadLegacyFile(
+                            verified,
+                            `forge-browser-backup-${verified.id}.json`
+                          )
+                        }
+                      )
                     }
                   >
                     Download backup from{" "}
