@@ -30,3 +30,9 @@ The broad run during implementation finished with 2,297 passing, 388 skipped and
 ## Approved behavior
 
 Persistent device drafts were chosen by the user in the implementation conversation. Recovery is scoped to the server-verified account/workspace, retains original command identities and baselines, and never authenticates from device data. A fully offline reload requires reconnection to verify identity before protected drafts can be shown. Storage failures are visible and do not claim reload recovery. See [the operations note](../../operations/protected-session-cache.md) for the complete policy.
+
+## Integration with updated main
+
+The PR was rebased onto `00fe108091b00d9ce730597bedc4fe45e595613a` (FOR-47 reactions/subscriptions) after the initial checks. Integrated implementation commit: `310c5fac23eeb30ddb34ca4bae5e638bec2e39ce`. The only conflict was the adjacent package-script additions; both engagement commands and the new cache-scope command are retained. The edit queue's generation guard remains alongside FOR-47's discussion behavior.
+
+Post-rebase verification passed: 11 files / 61 integration tests, the app TypeScript check, and the production build with protected Workflow verification. The integration run covers engagement client/hooks/inbox subscriptions plus issue edits/queries, product draft recovery, preferences, creation recovery, navigation auth and request generations. Original browser acceptance above applies to the unchanged FOR-52 implementation behavior; the rebase adds the merged FOR-47 base and its scripts.
