@@ -30,7 +30,9 @@ const autoAssignmentFile =
   process.env.FORGE_ISSUE_RELATIONSHIP_TEST_DATABASE_FILE ??
   process.env.FORGE_ISSUE_QUERY_TEST_DATABASE_FILE ??
   process.env.FORGE_AUTO_ASSIGNMENT_TEST_DATABASE_FILE
-const historyFile = process.env.FORGE_ISSUE_HISTORY_TEST_DATABASE_FILE
+const historyFile =
+  process.env.FORGE_MY_ISSUES_TEST_DATABASE_FILE ??
+  process.env.FORGE_ISSUE_HISTORY_TEST_DATABASE_FILE
 const triageFile = process.env.FORGE_TRIAGE_TEST_DATABASE_FILE
 const file =
   historyFile ??
@@ -5043,6 +5045,223 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
       } finally {
         await f.cleanup()
       }
+    }, 30000)
+  })
+  describe("FOR-51 shared personal issue queues", () => {
+    async function secondSession(f: Awaited<ReturnType<typeof fixture>>) {
+      const sessionId = randomUUID()
+      await pool.query(
+        "INSERT INTO session(id,token,user_id,active_organization_id,expires_at) VALUES($1,$1,$2,$3,now()+interval '1 day')",
+        [sessionId, users[1], f.workspaceId]
+      )
+      return {
+        ...f.actors[1],
+        authentication: { kind: "session" as const, sessionId },
+      }
+    }
+    it("AT-01: Alice assigns a canonical issue and Bob's independent sessions query and edit the same ID", async () => {
+      const f = await fixture()
+      const bob2 = await secondSession(f)
+      const created = await service.createCanonicalIssue(f.actors[0], {
+        ...command(f.teamId, "Assigned across devices"),
+        assigneeId: users[1],
+      })
+      for (const actor of [f.actors[1], bob2]) {
+        const result = await queryIssues(actor, { personal: "assigned" })
+        expect(result.total).toBe(1)
+        expect(result.records).toEqual(created.records)
+        expect(result.userId).toBe(users[1])
+      }
+      const edited = await editing.editCanonicalIssues(bob2, {
+        teamId: f.teamId,
+        commandKey: randomUUID(),
+        edits: [
+          {
+            issueId: created.issue.id,
+            expectedRevision: created.issue.revision!,
+            changes: { title: "Edited from My issues", priority: "High" },
+          },
+        ],
+      })
+      expect(edited.status).toBe("saved")
+      for (const actor of f.actors) {
+        const result = await queryIssues(
+          actor,
+          actor.userId === users[1]
+            ? { personal: "assigned" }
+            : { teamIds: [f.teamId] }
+        )
+        expect(result.records[0].issue).toMatchObject({
+          id: created.issue.id,
+          number: created.issue.number,
+          title: "Edited from My issues",
+          priority: "High",
+        })
+      }
+      const reassigned = await editing.editCanonicalIssues(f.actors[0], {
+        teamId: f.teamId,
+        commandKey: randomUUID(),
+        edits: [
+          {
+            issueId: created.issue.id,
+            expectedRevision: edited.records[0].issue.revision!,
+            changes: { assignee: users[0] },
+          },
+        ],
+      })
+      expect(reassigned.status).toBe("saved")
+      expect((await queryIssues(bob2, { personal: "assigned" })).total).toBe(0)
+      expect(
+        (await queryIssues(f.actors[0], { personal: "assigned" })).records[0]
+          .issue.id
+      ).toBe(created.issue.id)
+    }, 30000)
+
+    it("created/subscribed tabs use the live actor, durable owned subscriptions, server filters and bounded pagination", async () => {
+      const f = await fixture(),
+        bob2 = await secondSession(f)
+      const { commandIssueEngagement } =
+        await import("./issue-engagement.server")
+      const own = await service.createCanonicalIssue(f.actors[1], {
+        ...command(f.teamId, "Bob created"),
+        assigneeId: null,
+      })
+      const other = await service.createCanonicalIssue(f.actors[0], {
+        ...command(f.secondTeam, "Alice created"),
+        assigneeId: null,
+      })
+      const subscribe = {
+        teamId: f.secondTeam,
+        issueId: other.issue.id,
+        commandKey: randomUUID(),
+        action: "subscription" as const,
+        subscribed: true,
+      }
+      await commandIssueEngagement(f.actors[1], subscribe)
+      expect(
+        (await queryIssues(bob2, { personal: "created" })).records.map(
+          (r) => r.issue.id
+        )
+      ).toEqual([own.issue.id])
+      const first = await queryIssues(bob2, {
+        personal: "subscribed",
+        limit: 1,
+      })
+      expect(first.total).toBe(2)
+      const last = await queryIssues(bob2, {
+        personal: "subscribed",
+        limit: 1,
+        cursor: first.nextCursor!,
+      })
+      expect(last.nextCursor).toBeNull()
+      expect(
+        new Set([...first.records, ...last.records].map((r) => r.issue.id))
+      ).toEqual(new Set([own.issue.id, other.issue.id]))
+      const filtered = await queryIssues(bob2, {
+        personal: "subscribed",
+        filters: {
+          match: "all",
+          rules: [
+            {
+              id: "creator",
+              field: "creator",
+              operator: "is",
+              value: users[0],
+            },
+          ],
+        },
+      })
+      expect(filtered.records.map((r) => r.issue.id)).toEqual([other.issue.id])
+      // Caller-supplied identity cannot override the session-derived queue actor.
+      await expect(
+        queryIssues(bob2, { personal: "created", userId: users[0] } as never)
+      ).rejects.toThrow()
+      await commandIssueEngagement(bob2, {
+        ...subscribe,
+        commandKey: randomUUID(),
+        subscribed: false,
+      })
+      expect(
+        (
+          await queryIssues(f.actors[1], { personal: "subscribed" })
+        ).records.map((r) => r.issue.id)
+      ).toEqual([own.issue.id])
+      expect(
+        (
+          await queryIssues(f.actors[0], { personal: "subscribed" })
+        ).records.map((r) => r.issue.id)
+      ).toEqual([other.issue.id])
+    }, 30000)
+
+    it("AT-02: revocation removes private identities, details, counts and facets from every personal scope and rejects edits", async () => {
+      const f = await fixture(),
+        bob2 = await secondSession(f)
+      await pool.query("UPDATE teams SET visibility='private' WHERE id=$1", [
+        f.teamId,
+      ])
+      await pool.query(
+        "INSERT INTO team_members(workspace_id,team_id,user_id) VALUES($1,$2,$3)",
+        [f.workspaceId, f.teamId, users[1]]
+      )
+      const own = await service.createCanonicalIssue(f.actors[1], {
+        ...command(f.teamId, "Private personal sentinel"),
+        assigneeId: users[1],
+      })
+      const other = await service.createCanonicalIssue(f.actors[0], {
+        ...command(f.secondTeam, "Public assigned"),
+        assigneeId: users[1],
+      })
+      const scopes = ["assigned", "created", "subscribed", "activity"] as const
+      for (const personal of scopes)
+        expect(
+          (await queryIssues(bob2, { personal })).records.some(
+            (r) => r.issue.id === own.issue.id
+          )
+        ).toBe(true)
+      await pool.query(
+        "DELETE FROM team_members WHERE team_id=$1 AND user_id=$2",
+        [f.teamId, users[1]]
+      )
+      for (const personal of scopes) {
+        const result = await queryIssues(bob2, { personal })
+        expect(JSON.stringify(result)).not.toContain(own.issue.id)
+        expect(JSON.stringify(result)).not.toContain(
+          "Private personal sentinel"
+        )
+        expect(JSON.stringify(result)).not.toContain(f.teamId)
+        expect(result.total).toBe(personal === "assigned" ? 1 : 0)
+        const targeted = await queryIssues(bob2, {
+          personal,
+          teamIds: [f.teamId],
+        })
+        expect(targeted.records).toEqual([])
+        expect(targeted.total).toBe(0)
+        expect(targeted.groups).toEqual([])
+        expect(Object.values(targeted.facets).flat()).toEqual([])
+      }
+      const details = await database.db.transaction((tx) =>
+        service.readIssueRows(tx, bob2, [own.issue.id, other.issue.id])
+      )
+      expect(details.map((r) => r.issue.id)).toEqual([other.issue.id])
+      await expect(
+        editing.editCanonicalIssues(bob2, {
+          teamId: f.teamId,
+          commandKey: randomUUID(),
+          edits: [
+            {
+              issueId: own.issue.id,
+              expectedRevision: own.issue.revision!,
+              changes: { title: "Forbidden" },
+            },
+          ],
+        })
+      ).rejects.toThrow()
+      await pool.query("DELETE FROM session WHERE id=$1", [
+        bob2.authentication.sessionId,
+      ])
+      await expect(
+        queryIssues(bob2, { personal: "assigned" })
+      ).rejects.toThrow()
     }, 30000)
   })
   describe("FOR-47 reactions and subscriptions", () => {

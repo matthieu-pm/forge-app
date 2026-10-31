@@ -26,6 +26,13 @@ let epoch = 0
 const optimistic = new Map<string, TeamIssue>()
 const suppressed = new Map<string, number>()
 const revisionFloors = new Map<string, number>()
+let removalEpoch = 0
+const removedAt = new Map<string, number>()
+// Explicit eviction is different from a metadata-only bootstrap refresh. Detail
+// hooks may retain an editor across the latter, but never across the former.
+export function canonicalIssueRemovalEpoch(id?: string) {
+  return id ? (removedAt.get(id) ?? 0) : removalEpoch
+}
 export function canonicalSuppressionSnapshot() {
   return [...suppressed.keys()].sort().join(",")
 }
@@ -67,6 +74,8 @@ export function replaceCanonicalIssues(
     optimistic.clear()
     suppressed.clear()
     revisionFloors.clear()
+    removedAt.clear()
+    removalEpoch++
   } else if (next.records.length) {
     const previous = new Map(state!.records.map((r) => [r.issue.id, r]))
     next.records = next.records.map((r) => {
@@ -190,6 +199,8 @@ export function restoreCanonicalIssueVisibility(
 
 export function removeCanonicalIssueRecords(ids: Array<string>) {
   if (!state || !ids.length) return
+  removalEpoch++
+  for (const id of ids) removedAt.set(id, removalEpoch)
   const removed = new Set(ids)
   state = {
     ...state,

@@ -9,6 +9,7 @@ import {
 } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
+  canonicalIssueState,
   replaceCanonicalIssues,
   suppressCanonicalIssueRecord,
 } from "./canonical-issue-cache"
@@ -303,4 +304,107 @@ it("ignores a failed obsolete revalidation when a newer refresh is pending", asy
   expect(hook.result.current?.issue.id).toBe(id)
   await act(async () => finish(JSON.stringify(page(id).records)))
   expect(hook.result.current?.issue.id).toBe(id)
+})
+
+describe("FOR-51 personal queue cache revocation", () => {
+  it.each(["assigned", "created", "subscribed"] as const)(
+    "an explicit %s refresh purges the cached row and retained detail even if the new page is empty",
+    async (personal) => {
+      const id = crypto.randomUUID()
+      vi.mocked(loadIssueQuery).mockResolvedValueOnce(JSON.stringify(page(id)))
+      vi.mocked(loadIssueDetail).mockResolvedValueOnce(
+        JSON.stringify(page(id).records)
+      )
+      const queue = renderHook(() => useIssueQuery({ personal }))
+      const detail = renderHook(() => useQueriedIssue(id))
+      await waitFor(() => expect(queue.result.current.records).toHaveLength(1))
+      await waitFor(() => expect(detail.result.current?.issue.id).toBe(id))
+      vi.mocked(loadIssueQuery).mockResolvedValue(
+        JSON.stringify({ ...page(id), records: [], total: 0 })
+      )
+      vi.mocked(loadIssueDetail).mockResolvedValue("[]")
+      act(() => queue.result.current.refresh())
+      expect(detail.result.current).toBeUndefined()
+      expect(canonicalIssueState()?.records).toEqual([])
+      await waitFor(() => expect(queue.result.current.page?.total).toBe(0))
+      expect(queue.result.current.records).toEqual([])
+      expect(canonicalIssueState()?.records).toEqual([])
+    }
+  )
+
+  it.each(["empty", "failure"])(
+    "a %s detail revalidation evicts all cached personal tabs, fences delayed reads and recovers after access returns",
+    async (outcome) => {
+      const id = crypto.randomUUID()
+      vi.mocked(loadIssueQuery).mockResolvedValue(JSON.stringify(page(id)))
+      vi.mocked(loadIssueDetail).mockResolvedValue(
+        JSON.stringify(page(id).records)
+      )
+      const assigned = renderHook(() => useIssueQuery({ personal: "assigned" }))
+      const subscribed = renderHook(() =>
+        useIssueQuery({ personal: "subscribed" })
+      )
+      const detail = renderHook(() => useQueriedIssue(id))
+      const secondDetail = renderHook(() => useQueriedIssue(id))
+      await waitFor(() =>
+        expect(assigned.result.current.records).toHaveLength(1)
+      )
+      await waitFor(() =>
+        expect(subscribed.result.current.records).toHaveLength(1)
+      )
+      await waitFor(() =>
+        expect(secondDetail.result.current?.issue.id).toBe(id)
+      )
+      let finishOld!: (value: string) => void
+      let deny!: () => void
+      // Queue reads began before the denial; returning them later must not
+      // restore rows or counts. Keep the second detail request pending too.
+      vi.mocked(loadIssueQuery)
+        .mockImplementationOnce(
+          () =>
+            new Promise((resolve) => {
+              finishOld = resolve
+            })
+        )
+        .mockResolvedValue(
+          JSON.stringify({ ...page(id), records: [], total: 0 })
+        )
+      vi.mocked(loadIssueDetail)
+        .mockImplementationOnce(
+          () =>
+            new Promise((resolve, reject) => {
+              deny = () =>
+                outcome === "empty"
+                  ? resolve("[]")
+                  : reject(new Error("revoked"))
+            })
+        )
+        .mockReturnValueOnce(new Promise(() => {}))
+      act(() => invalidateIssueQueries())
+      await waitFor(() => expect(loadIssueDetail).toHaveBeenCalledTimes(4))
+      await act(async () => deny())
+      expect(detail.result.current).toBeUndefined()
+      expect(secondDetail.result.current).toBeUndefined()
+      expect(canonicalIssueState()?.records).toEqual([])
+      await act(async () => finishOld(JSON.stringify(page(id))))
+      await waitFor(() => expect(assigned.result.current.loading).toBe(false))
+      expect(assigned.result.current.page?.total).toBe(0)
+      expect(subscribed.result.current.records).toEqual([])
+      expect(canonicalIssueState()?.records).toEqual([])
+
+      // Access may be restored without changing the issue revision.
+      vi.mocked(loadIssueQuery).mockResolvedValue(JSON.stringify(page(id)))
+      vi.mocked(loadIssueDetail).mockResolvedValue(
+        JSON.stringify(page(id).records)
+      )
+      act(() => invalidateIssueQueries())
+      await waitFor(() =>
+        expect(assigned.result.current.records).toHaveLength(1)
+      )
+      await waitFor(() => expect(detail.result.current?.issue.id).toBe(id))
+      await waitFor(() =>
+        expect(secondDetail.result.current?.issue.id).toBe(id)
+      )
+    }
+  )
 })

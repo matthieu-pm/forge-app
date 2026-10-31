@@ -69,7 +69,8 @@ Future adapters that retain pages must honor this result-revision contract.
 
 This is polling and mutation invalidation. Resumable change events remain FOR-95.
 It does not enable external MCP or public planning APIs. FOR-50 adds canonical
-triage lifecycle decisions. Subscriber commands remain separately owned.
+triage lifecycle decisions. FOR-47 owns durable subscriber commands. FOR-51 documents personal-view refresh
+and cache eviction in [Shared personal issue views](shared-personal-issue-views.md).
 
 ## Accepted milestone boundary
 
