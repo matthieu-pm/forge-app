@@ -33,3 +33,13 @@ Summary: Standards initially found two correctness issues, Specification found t
 Production inventory before cutover: application `forge-app` (`prj_S0XLtdngbexhl2ao7WviBrlMScar`) in team `team_KddvwwnftxOOhP8UymRnP0PX`; serving source `884445a`; database `neondb`, branch `br-muddy-queen-zaeeysjt`; 57 migration entries ending in `e13f8413a909e5764238c01209393a002b449cb14645d77d8d7bccc184f5c88a`. Both production services' documented live/ready endpoints returned HTTP 200. This inventory is evidence, not a deployment claim.
 
 Exact PR checks, production migration, deployment IDs, hosted acceptance, cleanup, and post-release scans are recorded in the FOR-48 Linear release comments after they finish.
+
+## Concurrent release integration
+
+FOR-47 and FOR-50 merged during review; their issue controls, private engagement drafts, triage contracts, and regression suites are preserved. That combined state passed 2,326 application and 126 PostgreSQL tests plus file/engagement browser acceptance.
+
+FOR-49 then merged with the already-released immutable `0057_issue_history` migration. The unreleased attachment migrations are now `0058_issue_file_bindings` and `0059_issue_upload_binding_backfill`; their SQL contents and hashes are unchanged. Canonical history contains 60 entries. Drizzle generation reports no schema differences.
+
+The two isolated staging-branch databases used by this PR had previously applied the provisional attachment sequence. Under the migration lock, their exact old hashes and identities were verified, the missing history migration was applied, and only the unreleased attachment receipt timestamp was aligned with the canonical order. No data or migration receipt was deleted. Both now match all 60 canonical hashes/timestamps and the normal serialized runner replays with zero changes. Production history was never rewritten; its strict source-bound runner will append only the two attachment migrations after released history.
+
+Final integrated source, checks, production deployment, and hosted acceptance are recorded in Linear before completion.

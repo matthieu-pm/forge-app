@@ -48,7 +48,7 @@ The subsequent review fixed identity, unmount, and creation recovery issues. See
 
 ## Release
 
-Apply `0057_issue_file_bindings` and `0058_issue_upload_binding_backfill` with the existing serialized migration runner before serving the new code. Internal resource files preserve their existing NULL-state contract; old direct issue uploads are backfilled to unbound, and a late old-process finalizer is handled safely by the new code. Production migration approval and deployment are separate from this PR.
+Apply `0058_issue_file_bindings` and `0059_issue_upload_binding_backfill` with the existing serialized migration runner before serving the new code. Internal resource files preserve their existing NULL-state contract; old direct issue uploads are backfilled to unbound, and a late old-process finalizer is handled safely by the new code. Production migration approval and deployment are separate from this PR.
 
 Rolling back to code that predates FOR-48 would not enforce detach/comment-file revocation. Keep the new delivery checks when preparing any rollback after attachment writes have been enabled.
 

@@ -8,12 +8,16 @@ import {
 } from "./lib/serialized-migrations"
 
 const { connection } = JSON.parse(
-  readFileSync(process.env.FORGE_ISSUE_TEST_DATABASE_FILE!, "utf8")
+  readFileSync(
+    (process.env.FORGE_ISSUE_HISTORY_TEST_DATABASE_FILE ??
+      process.env.FORGE_ISSUE_TEST_DATABASE_FILE)!,
+    "utf8"
+  )
 )
-const target = {
-  environment: "issue-creation-acceptance" as const,
-  ...DATABASE_TARGETS["issue-creation-acceptance"],
-}
+const environment = process.env.FORGE_ISSUE_HISTORY_TEST_DATABASE_FILE
+  ? "issue-history-acceptance"
+  : "issue-creation-acceptance"
+const target = { environment, ...DATABASE_TARGETS[environment] } as const
 assertMigrationTarget(connection, target)
 neonConfig.webSocketConstructor = WebSocket
 const pool = new Pool({ connectionString: connection }),

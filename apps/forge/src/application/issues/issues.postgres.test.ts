@@ -30,9 +30,13 @@ const autoAssignmentFile =
   process.env.FORGE_ISSUE_RELATIONSHIP_TEST_DATABASE_FILE ??
   process.env.FORGE_ISSUE_QUERY_TEST_DATABASE_FILE ??
   process.env.FORGE_AUTO_ASSIGNMENT_TEST_DATABASE_FILE
+const historyFile = process.env.FORGE_ISSUE_HISTORY_TEST_DATABASE_FILE
 const triageFile = process.env.FORGE_TRIAGE_TEST_DATABASE_FILE
 const file =
-  triageFile ?? autoAssignmentFile ?? process.env.FORGE_ISSUE_TEST_DATABASE_FILE
+  historyFile ??
+  triageFile ??
+  autoAssignmentFile ??
+  process.env.FORGE_ISSUE_TEST_DATABASE_FILE
 
 describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
   const marker = `for41-${randomUUID()}`
@@ -109,11 +113,13 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
     const { connection, applicationConnection } = JSON.parse(
       readFileSync(file!, "utf8")
     )
-    const environment = triageFile
-      ? "triage-acceptance"
-      : autoAssignmentFile
-        ? "auto-assignment-acceptance"
-        : "issue-creation-acceptance"
+    const environment = historyFile
+      ? "issue-history-acceptance"
+      : triageFile
+        ? "triage-acceptance"
+        : autoAssignmentFile
+          ? "auto-assignment-acceptance"
+          : "issue-creation-acceptance"
     const target = { environment, ...DATABASE_TARGETS[environment] } as const
     assertMigrationTarget(connection, target)
     assertMigrationTarget(
@@ -3624,6 +3630,584 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
       await expect(
         editing.editCanonicalIssues(f.actors[1], input)
       ).rejects.toThrow()
+    }, 30000)
+  })
+  describe("FOR-49 committed issue history", () => {
+    async function setup() {
+      const f = await fixture()
+      const created = await service.createCanonicalIssue(
+        f.actors[0],
+        command(f.teamId)
+      )
+      const issue = created.records[0].issue
+      const history = await import("./issue-history.server")
+      const comments = await import("./issue-comments.server")
+      return { ...f, issue, history, comments }
+    }
+    it("AT-01/02: status then comment are ordered, attributable and replayed once for two collaborators", async () => {
+      const f = await setup()
+      const edit = {
+        commandKey: randomUUID(),
+        teamId: f.teamId,
+        edits: [
+          {
+            issueId: f.issue.id,
+            expectedRevision: f.issue.revision!,
+            changes: { status: "done" },
+          },
+        ],
+      }
+      await editing.editCanonicalIssues(f.actors[0], edit)
+      const comment = {
+        commandKey: randomUUID(),
+        teamId: f.teamId,
+        issueId: f.issue.id,
+        commentId: randomUUID(),
+        action: "create" as const,
+        expectedVersion: 0,
+        parentId: "",
+        document: {
+          type: "doc",
+          content: [
+            {
+              type: "paragraph",
+              content: [{ type: "text", text: "Committed discussion" }],
+            },
+          ],
+        },
+      }
+      await f.comments.commandIssueComment(f.actors[1], comment)
+      await Promise.all([
+        editing.editCanonicalIssues(f.actors[0], edit),
+        f.comments.commandIssueComment(f.actors[1], comment),
+      ])
+      for (const actor of f.actors) {
+        const page = await f.history.queryIssueHistory(actor, {
+          issueId: f.issue.id,
+        })
+        expect(page.nextCursor).toBeNull()
+        expect(page.entries.map((e) => e.topic)).toEqual([
+          "issue.comment.created",
+          "issue.updated",
+          "issue.created",
+        ])
+        expect(page.entries[0]).toMatchObject({
+          actor: { userId: users[1], name: users[1], kind: "session" },
+          commentId: comment.commentId,
+        })
+        expect(page.entries[1]).toMatchObject({
+          actor: { userId: users[0], kind: "session" },
+          changes: [{ field: "status", from: "todo", to: "done" }],
+        })
+        expect(JSON.stringify(page)).not.toContain("Committed discussion")
+      }
+      // Mutable compatibility arrays are never the source of the committed projection.
+      await pool.query(
+        "UPDATE issues SET properties=properties || $2::jsonb WHERE id=$1",
+        [
+          f.issue.id,
+          JSON.stringify({
+            activity: [
+              { author: "Forged", createdAt: "1900-01-01", text: "Fake" },
+            ],
+          }),
+        ]
+      )
+      const page = await f.history.queryIssueHistory(f.actors[0], {
+        issueId: f.issue.id,
+      })
+      expect(page.entries).toHaveLength(3)
+      expect(JSON.stringify(page)).not.toContain("Forged")
+      await pool.query('UPDATE "user" SET name=$2 WHERE id=$1', [
+        users[1],
+        "Renamed member",
+      ])
+      expect(
+        (
+          await f.history.queryIssueHistory(f.actors[0], {
+            issueId: f.issue.id,
+          })
+        ).entries[0].actor.name
+      ).toBe(users[1])
+      await pool.query('UPDATE "user" SET name=id WHERE id=$1', [users[1]])
+      await expect(
+        f.comments.commandIssueComment(f.actors[0], {
+          ...comment,
+          commandKey: randomUUID(),
+          actorId: users[1],
+        } as never)
+      ).rejects.toThrow()
+      await expect(
+        editing.editCanonicalIssues(f.actors[0], {
+          ...edit,
+          commandKey: randomUUID(),
+          createdAt: "1900-01-01",
+        } as never)
+      ).rejects.toThrow()
+    }, 30000)
+    it("uses stable, scope-bound keyset cursors across appends and enforces every live access check", async () => {
+      const f = await setup()
+      const first = await f.history.queryIssueHistory(f.actors[0], {
+        issueId: f.issue.id,
+        limit: 1,
+      })
+      // Add a second event to create a cursor; then a new event outside its older traversal.
+      await editing.editCanonicalIssues(f.actors[0], {
+        commandKey: randomUUID(),
+        teamId: f.teamId,
+        edits: [
+          {
+            issueId: f.issue.id,
+            expectedRevision: f.issue.revision!,
+            changes: { priority: "High" },
+          },
+        ],
+      })
+      const start = await f.history.queryIssueHistory(f.actors[0], {
+        issueId: f.issue.id,
+        limit: 1,
+      })
+      expect(start.nextCursor).toBeTruthy()
+      const row = (
+        await database.db.transaction((tx) =>
+          service.readIssueRows(tx, f.actors[0], [f.issue.id])
+        )
+      )[0].issue
+      await editing.editCanonicalIssues(f.actors[0], {
+        commandKey: randomUUID(),
+        teamId: f.teamId,
+        edits: [
+          {
+            issueId: f.issue.id,
+            expectedRevision: row.revision!,
+            changes: { priority: "Low" },
+          },
+        ],
+      })
+      const older = await f.history.queryIssueHistory(f.actors[0], {
+        issueId: f.issue.id,
+        limit: 1,
+        cursor: start.nextCursor!,
+      })
+      expect(older.entries.map((e) => e.id)).toEqual(
+        first.entries.map((e) => e.id)
+      )
+      expect(older.nextCursor).toBeNull()
+      const second = await service.createCanonicalIssue(
+        f.actors[0],
+        command(f.teamId)
+      )
+      await expect(
+        f.history.queryIssueHistory(f.actors[0], {
+          issueId: second.issue.id,
+          cursor: start.nextCursor!,
+        })
+      ).rejects.toThrow("another view")
+      await expect(
+        f.history.queryIssueHistory(f.actors[1], {
+          issueId: f.issue.id,
+          cursor: start.nextCursor!,
+        })
+      ).rejects.toThrow("another view")
+      await expect(
+        f.history.queryIssueHistory(f.actors[0], {
+          issueId: f.issue.id,
+          cursor: "bad",
+        })
+      ).rejects.toThrow("Invalid history cursor")
+      const other = await fixture()
+      await expect(
+        f.history.queryIssueHistory(other.actors[0], { issueId: f.issue.id })
+      ).rejects.toThrow()
+      await pool.query("UPDATE teams SET visibility='private' WHERE id=$1", [
+        f.teamId,
+      ])
+      await expect(
+        f.history.queryIssueHistory(f.actors[1], { issueId: f.issue.id })
+      ).rejects.toThrow()
+      await pool.query("UPDATE issues SET deleted_at=now() WHERE id=$1", [
+        f.issue.id,
+      ])
+      await expect(
+        f.history.queryIssueHistory(f.actors[0], {
+          issueId: f.issue.id,
+          cursor: start.nextCursor!,
+        })
+      ).rejects.toThrow()
+    }, 30000)
+    it("projects merged triage and engagement commands through the same versioned history without retry duplicates", async () => {
+      const f = await fixture(),
+        input = command(f.teamId)
+      input.draft.triage = true
+      input.draft.snoozed = true
+      const created = await service.createCanonicalIssue(f.actors[0], input)
+      await editing.editCanonicalIssues(f.actors[0], {
+        commandKey: randomUUID(),
+        teamId: f.teamId,
+        edits: [
+          {
+            issueId: created.issue.id,
+            expectedRevision: created.issue.revision!,
+            triageDecision: "accept",
+            changes: { status: "todo", assignee: users[1] },
+          },
+        ],
+      })
+      const { commandIssueEngagement } =
+        await import("./issue-engagement.server")
+      const subscription = {
+        commandKey: randomUUID(),
+        teamId: f.teamId,
+        issueId: created.issue.id,
+        action: "subscription" as const,
+        subscribed: true,
+      }
+      const reaction = {
+        commandKey: randomUUID(),
+        teamId: f.teamId,
+        issueId: created.issue.id,
+        action: "reaction" as const,
+        emoji: "🎉",
+        present: true,
+      }
+      await commandIssueEngagement(f.actors[1], subscription)
+      await commandIssueEngagement(f.actors[1], reaction)
+      await commandIssueEngagement(f.actors[1], subscription)
+      await commandIssueEngagement(f.actors[1], reaction)
+      const { queryIssueHistory } = await import("./issue-history.server")
+      const page = await queryIssueHistory(f.actors[0], {
+        issueId: created.issue.id,
+      })
+      expect(page.entries.map((entry) => entry.topic)).toEqual([
+        "issue.reaction.changed",
+        "issue.subscription.changed",
+        "issue.triage.accepted",
+        "issue.updated",
+        "issue.created",
+      ])
+      expect(page.entries.slice(0, 2).map((entry) => entry.actor)).toEqual(
+        Array(2).fill({ userId: users[1], name: users[1], kind: "session" })
+      )
+      expect(page.entries[2].actor.userId).toBe(users[0])
+    }, 30000)
+    it("rechecks issue access in the history SELECT when private-team access is revoked after its initial guard", async () => {
+      const f = await setup()
+      await pool.query("UPDATE teams SET visibility='private' WHERE id=$1", [
+        f.teamId,
+      ])
+      await pool.query(
+        "INSERT INTO team_members(id,workspace_id,team_id,user_id,role) VALUES($1,$2,$3,$4,'member')",
+        [randomUUID(), f.workspaceId, f.teamId, users[1]]
+      )
+      const transaction = database.db.transaction.bind(database.db)
+      let revoked = false
+      const spy = vi
+        .spyOn(database.db, "transaction")
+        .mockImplementationOnce((callback, config) =>
+          transaction(async (tx) => {
+            const execute = tx.execute.bind(tx)
+            // The initial resource guard has already run when history executes.
+            // This separate connection commits the revocation at that exact boundary.
+            vi.spyOn(tx, "execute").mockImplementationOnce((query) => {
+              const statement = execute(query)
+              const run = statement.execute.bind(statement)
+              statement.execute = async () => {
+                await pool.query(
+                  "DELETE FROM team_members WHERE team_id=$1 AND user_id=$2",
+                  [f.teamId, users[1]]
+                )
+                revoked = true
+                return run()
+              }
+              return statement
+            })
+            return callback(tx)
+          }, config)
+        )
+      try {
+        await expect(
+          f.history.queryIssueHistory(f.actors[1], { issueId: f.issue.id })
+        ).rejects.toMatchObject({ code: "FORBIDDEN" })
+        expect(revoked).toBe(true)
+      } finally {
+        spy.mockRestore()
+      }
+    }, 30000)
+    it.each(["actor name", "property value"])(
+      "commits valid Unicode when %s crosses its history metadata bound",
+      async (kind) => {
+        const f = await fixture()
+        try {
+          if (kind === "actor name")
+            await pool.query('UPDATE "user" SET name=$2 WHERE id=$1', [
+              users[0],
+              "a".repeat(199) + "😀",
+            ])
+          const created = await service.createCanonicalIssue(
+            f.actors[0],
+            command(f.teamId)
+          )
+          const history = await import("./issue-history.server")
+          if (kind === "actor name") {
+            const page = await history.queryIssueHistory(f.actors[1], {
+              issueId: created.issue.id,
+            })
+            expect(page.entries[0].actor).toMatchObject({
+              name: "a".repeat(199),
+              kind: "session",
+            })
+          } else {
+            const milestone = "a".repeat(999) + "😀"
+            const changed = await editing.editCanonicalIssues(f.actors[0], {
+              teamId: f.teamId,
+              commandKey: randomUUID(),
+              edits: [
+                {
+                  issueId: created.issue.id,
+                  expectedRevision: created.issue.revision!,
+                  changes: { milestone },
+                },
+              ],
+            })
+            expect(changed.status).toBe("saved")
+            expect(changed.records[0].issue.milestone).toBe(milestone)
+            const next = await editing.editCanonicalIssues(f.actors[0], {
+              teamId: f.teamId,
+              commandKey: randomUUID(),
+              edits: [
+                {
+                  issueId: created.issue.id,
+                  expectedRevision: changed.records[0].issue.revision!,
+                  changes: { milestone: "Next" },
+                },
+              ],
+            })
+            expect(next.status).toBe("saved")
+            const page = await history.queryIssueHistory(f.actors[1], {
+              issueId: created.issue.id,
+            })
+            expect(page.entries[0].changes).toEqual([
+              { field: "milestone", from: "a".repeat(999), to: "Next" },
+            ])
+            expect(page.entries[1].changes).toEqual([
+              { field: "milestone", from: "", to: "a".repeat(999) },
+            ])
+          }
+        } finally {
+          await pool.query('UPDATE "user" SET name=id WHERE id=$1', [users[0]])
+        }
+      },
+      30000
+    )
+    it("records comment moderation once without bodies, and rejects updates to committed facts", async () => {
+      const f = await setup(),
+        commentId = randomUUID()
+      const base = {
+        teamId: f.teamId,
+        issueId: f.issue.id,
+        commentId,
+        parentId: "",
+      }
+      await f.comments.commandIssueComment(f.actors[1], {
+        ...base,
+        commandKey: randomUUID(),
+        action: "create",
+        expectedVersion: 0,
+        document: {
+          type: "doc",
+          content: [
+            {
+              type: "paragraph",
+              content: [{ type: "text", text: "Private body" }],
+            },
+          ],
+        },
+      })
+      const remove = {
+        ...base,
+        commandKey: randomUUID(),
+        action: "delete" as const,
+        expectedVersion: 0,
+      }
+      await f.comments.commandIssueComment(f.actors[0], remove)
+      await f.comments.commandIssueComment(f.actors[0], remove)
+      const page = await f.history.queryIssueHistory(f.actors[1], {
+        issueId: f.issue.id,
+      })
+      expect(page.entries.map((e) => e.topic)).toEqual([
+        "issue.comment.deleted",
+        "issue.comment.created",
+        "issue.created",
+      ])
+      expect(page.entries[0].actor.userId).toBe(users[0])
+      expect(JSON.stringify(page)).not.toContain("Private body")
+      await expect(
+        pool.query(
+          "UPDATE command_outbox_events SET payload='{}' WHERE id=$1",
+          [page.entries[0].id]
+        )
+      ).rejects.toThrow("immutable")
+      await expect(
+        pool.query(
+          "UPDATE command_audit_events SET actor_user_id='forged' WHERE workspace_id=$1",
+          [f.workspaceId]
+        )
+      ).rejects.toThrow("immutable")
+    }, 30000)
+    it("purges history snapshots in bounded batches at the owning issue deadline while preserving minimal audit", async () => {
+      const f = await setup()
+      await pool.query(
+        `INSERT INTO command_outbox_events(workspace_id,command_id,ordinal,topic,payload)
+        SELECT r.workspace_id,r.id,n,'issue.updated',jsonb_build_object('issueId',$2::text)
+        FROM command_receipts r CROSS JOIN generate_series(1,105) n WHERE r.workspace_id=$1 AND r.operation='issues.create@1'`,
+        [f.workspaceId, f.issue.id]
+      )
+      await pool.query(
+        "UPDATE issues SET deleted_at=clock_timestamp()-interval '721 hours' WHERE id=$1",
+        [f.issue.id]
+      )
+      const { purgeDeletedIssues } = await import("./purge-issues.server")
+      const remove = vi.fn().mockResolvedValue(undefined)
+      expect(await purgeDeletedIssues({ delete: remove }, 1)).toMatchObject({
+        purged: 0,
+        failed: 0,
+      })
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int n FROM command_outbox_events WHERE workspace_id=$1",
+            [f.workspaceId]
+          )
+        ).rows[0].n
+      ).toBe(6)
+      expect(await purgeDeletedIssues({ delete: remove }, 1)).toMatchObject({
+        purged: 1,
+        failed: 0,
+      })
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int n FROM command_outbox_events WHERE workspace_id=$1",
+            [f.workspaceId]
+          )
+        ).rows[0].n
+      ).toBe(0)
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int n FROM command_audit_events WHERE workspace_id=$1",
+            [f.workspaceId]
+          )
+        ).rows[0].n
+      ).toBe(1)
+    }, 30000)
+    it("preserves authenticated API-key and delegated-agent attribution and rejects revoked history scopes", async () => {
+      for (const kind of ["apiKey", "agent"] as const) {
+        const f = await fixture(),
+          actor = await credentialActor(f, kind)
+        const created = await service.createCanonicalIssue(
+          actor,
+          command(f.teamId)
+        )
+        const history = await import("./issue-history.server")
+        const page = await history.queryIssueHistory(f.actors[1], {
+          issueId: created.issue.id,
+        })
+        expect(page.entries[0].actor).toMatchObject({
+          userId: actor.userId,
+          kind,
+        })
+        if (actor.authentication.kind === "apiKey")
+          expect(JSON.stringify(page)).not.toContain(
+            actor.authentication.credentialId
+          )
+        else if (actor.authentication.kind === "agent")
+          expect(JSON.stringify(page)).not.toContain(actor.authentication.runId)
+        await expect(
+          history.queryIssueHistory(
+            { ...actor, scopes: [] },
+            { issueId: created.issue.id }
+          )
+        ).rejects.toThrow()
+      }
+    }, 30000)
+    it("marks imports without projecting forged historical attribution and supports legacy committed rows", async () => {
+      const f = await fixture()
+      const result = await service.createCanonicalIssue(f.actors[0], {
+        ...command(f.teamId),
+        legacyId: "legacy-history",
+        draft: {
+          ...draft(),
+          activity: [
+            {
+              id: randomUUID(),
+              author: "Forged local author",
+              text: "forged",
+              createdAt: "1900-01-01T00:00:00Z",
+            },
+          ],
+        },
+      })
+      const history = await import("./issue-history.server")
+      const page = await history.queryIssueHistory(f.actors[1], {
+        issueId: result.issue.id,
+      })
+      expect(page.entries[0]).toMatchObject({
+        origin: "import",
+        actor: { userId: users[0] },
+      })
+      expect(JSON.stringify(page)).not.toContain("Forged")
+      const { executeCommand } =
+        await import("../commands/execute-command.server")
+      await executeCommand({
+        actor: f.actors[0],
+        commandKey: randomUUID(),
+        operation: "fixture.legacy@1",
+        input: {},
+        status: 200,
+        parse: () => ({}),
+        authorize: async () => {},
+        run: async () => ({
+          value: {},
+          resource: { type: "issue", id: result.issue.id },
+          events: [],
+        }),
+      })
+      // A legacy fact has no version envelope. Its actor still comes from committed audit.
+      await pool.query(
+        `INSERT INTO command_outbox_events(workspace_id,command_id,ordinal,topic,payload)
+        SELECT workspace_id,id,0,'issue.updated',jsonb_build_object('issueId',$2::text) FROM command_receipts WHERE workspace_id=$1 AND operation='fixture.legacy@1'`,
+        [f.workspaceId, result.issue.id]
+      )
+      const legacy = await history.queryIssueHistory(f.actors[0], {
+        issueId: result.issue.id,
+      })
+      expect(
+        legacy.entries.find((e) => e.topic === "issue.updated")
+      ).toMatchObject({
+        actor: { userId: users[0], kind: "unknown" },
+        changes: [],
+      })
+      await pool.query(
+        `INSERT INTO command_outbox_events(workspace_id,command_id,ordinal,topic,payload,created_at)
+        SELECT r.workspace_id,r.id,n,'issue.updated',jsonb_build_object('issueId',$2::text),
+          '2020-01-01T00:00:00.123456Z'::timestamptz + CASE WHEN n=3 THEN interval '1 microsecond' ELSE interval '0' END
+        FROM command_receipts r CROSS JOIN generate_series(1,3) n WHERE r.workspace_id=$1 AND r.operation='fixture.legacy@1'`,
+        [f.workspaceId, result.issue.id]
+      )
+      const seen: Array<string> = []
+      let cursor: string | undefined
+      do {
+        const chunk = await history.queryIssueHistory(f.actors[0], {
+          issueId: result.issue.id,
+          limit: 1,
+          cursor,
+        })
+        seen.push(...chunk.entries.map((e) => e.id))
+        cursor = chunk.nextCursor ?? undefined
+      } while (cursor)
+      expect(seen).toHaveLength(5)
+      expect(new Set(seen).size).toBe(5)
     }, 30000)
   })
   describe("FOR-46 durable comments and mentions", () => {

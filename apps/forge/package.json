@@ -66,7 +66,9 @@
     "test:issue-files:postgres": "vitest run src/application/issues/issues.postgres.test.ts -t FOR-48",
     "test:issue-files:browser": "node scripts/verify-issue-files-browser.mjs",
     "test:issue-engagement:postgres": "vitest run src/application/issues/issues.postgres.test.ts -t FOR-47",
-    "test:issue-engagement:browser": "node scripts/verify-issue-engagement-browser.mjs"
+    "test:issue-engagement:browser": "node scripts/verify-issue-engagement-browser.mjs",
+    "test:issue-history:postgres": "vitest run src/application/issues/issues.postgres.test.ts -t FOR-49",
+    "test:issue-history:browser": "node scripts/verify-issue-history-browser.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1104.0",

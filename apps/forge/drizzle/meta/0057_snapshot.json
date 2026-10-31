@@ -1,5 +1,5 @@
 {
-  "id": "2e9f1af8-3c4f-4f65-8e81-156b50214e0d",
+  "id": "df7dd3af-1c62-42f1-9d47-dd95a99587dc",
   "prevId": "50f64ac8-3957-4f4a-863b-c0843ec5e6a6",
   "version": "7",
   "dialect": "postgresql",
@@ -2648,6 +2648,39 @@
         "command_outbox_created_idx": {
           "name": "command_outbox_created_idx",
           "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "command_outbox_issue_history_idx": {
+          "name": "command_outbox_issue_history_idx",
+          "columns": [
+            {
+              "expression": "workspace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "(\"payload\"->>'issueId')",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            },
             {
               "expression": "created_at",
               "isExpression": false,
@@ -9660,18 +9693,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "attachment_state": {
-          "name": "attachment_state",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "comment_id": {
-          "name": "comment_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
         "name": {
           "name": "name",
           "type": "text",
@@ -9787,14 +9808,6 @@
       },
       "policies": {},
       "checkConstraints": {
-        "resource_files_attachment_state": {
-          "name": "resource_files_attachment_state",
-          "value": "\"resource_files\".\"attachment_state\" IS NULL OR (\"resource_files\".\"issue_id\" IS NOT NULL AND \"resource_files\".\"attachment_state\" IN ('unbound','attached','detached'))"
-        },
-        "resource_files_comment_owner": {
-          "name": "resource_files_comment_owner",
-          "value": "\"resource_files\".\"comment_id\" IS NULL OR (\"resource_files\".\"attachment_state\" IN ('attached','detached') AND \"resource_files\".\"issue_id\" IS NOT NULL)"
-        },
         "resource_files_one_resource": {
           "name": "resource_files_one_resource",
           "value": "num_nonnulls(\"resource_files\".\"issue_id\", \"resource_files\".\"document_id\") = 1"

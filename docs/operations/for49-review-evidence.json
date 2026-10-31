@@ -1,0 +1,90 @@
+{
+  "issue": "FOR-49",
+  "pr": "https://github.com/matthieu-pm/forge-app/pull/32",
+  "reviewedOriginalHead": "053a88d3d6df754eb0ed05e8fefa75f91f46e54b",
+  "review": {
+    "standards": {
+      "findings": 2,
+      "resolved": 2,
+      "worstSeverity": "P1",
+      "additionalFindingsOnRereview": 0
+    },
+    "spec": {
+      "findings": 1,
+      "resolved": 1,
+      "worstSeverity": "P1",
+      "additionalFindingsOnRereview": 0
+    }
+  },
+  "fixes": [
+    {
+      "severity": "P1",
+      "finding": "History authorization and data were read in separate statements without visibility in the data SELECT.",
+      "reproduction": "A separate connection revoked private-team membership after the initial guard. The original query returned a protected event.",
+      "resolution": "Apply live visibility in the data SELECT and recheck empty results to deny revoked pagination and clear old client entries."
+    },
+    {
+      "severity": "P2",
+      "finding": "UTF-16 truncation could split a supplementary character and make PostgreSQL reject valid command metadata as invalid JSONB.",
+      "reproduction": "Actual issue creation with a 199-character prefix plus emoji in the actor name and editing a milestone with a 999-character prefix plus emoji both failed before the fix.",
+      "resolution": "Bound history text without retaining a cut high surrogate; cover actor snapshots, legacy names, and both property-change values."
+    }
+  ],
+  "ui": "Resolve project and subscriber history values to current names; unavailable members display Former member.",
+  "validation": {
+    "app": {
+      "passed": 2295,
+      "skipped": 397,
+      "filesPassed": 286,
+      "filesSkipped": 22
+    },
+    "postgresIssues": {
+      "passed": 113,
+      "historySpecific": 9,
+      "environment": {
+        "database": "forge_issue_history_acceptance",
+        "branch": "br-autumn-union-za0opf1e"
+      }
+    },
+    "workflow": {
+      "passed": 4
+    },
+    "migrationSchemaReadiness": {
+      "passed": 18
+    },
+    "browser": {
+      "environment": "local production Node build with two authenticated sessions and isolated acceptance database",
+      "passed": true,
+      "fixtureCleanup": {
+        "workspaces": 0,
+        "users": 0,
+        "receipts": 0
+      }
+    },
+    "productionBuild": "passed",
+    "typecheck": "passed",
+    "changedFileLint": "zero errors; pre-existing warnings in older modules",
+    "diffCheck": "passed"
+  },
+  "migrationRehearsal": {
+    "identity": {
+      "database": "neondb",
+      "branch": "br-bitter-feather-za3lxg4n"
+    },
+    "ledgerCount": 58,
+    "migrationApplied": 1,
+    "retryApplied": 0,
+    "indexPresent": true,
+    "immutableTriggers": 2,
+    "committedAuditUpdateRejected": true,
+    "priorReleasePrefixCompatible": true,
+    "expiresAt": "2026-10-31T17:00:00Z"
+  },
+  "productionAtReview": {
+    "changed": false,
+    "deployment": "dpl_56FQAFZuAJgnHEaMMMa5Ug5dmMwt",
+    "source": "884445aab3a2e800f2fd4298bc581e182f0fa336",
+    "ledgerCount": 57
+  },
+  "limits": "Production migration and release occur after the final reviewed head passes preview checks. Existing unverifiable events are not backfilled."
+}
