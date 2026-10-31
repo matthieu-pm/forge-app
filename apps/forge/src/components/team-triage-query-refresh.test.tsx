@@ -155,7 +155,9 @@ it("retains the decision and reviewed revision through actual query invalidation
   await waitFor(() => expect(assignee.hasAttribute("disabled")).toBe(false))
   fireEvent.change(assignee, { target: { value: "bob" } })
   fireEvent.change(
-    screen.getByRole("combobox", { name: "Acceptance status" }),
+    screen.getByRole<HTMLSelectElement>("combobox", {
+      name: "Acceptance status",
+    }),
     { target: { value: "todo" } }
   )
   let resolve!: (value: string) => void
@@ -169,27 +171,21 @@ it("retains the decision and reviewed revision through actual query invalidation
   act(() => snapshot([]))
   await screen.findByText("Loading issues…")
   expect(
-    (
-      screen.getByRole("combobox", {
-        name: "Triage assignee",
-      })
-    ).value
+    screen.getByRole<HTMLSelectElement>("combobox", {
+      name: "Triage assignee",
+    }).value
   ).toBe("bob")
   await act(async () => resolve(JSON.stringify(page(4))))
   await screen.findByText("1 of 1 issues")
   expect(
-    (
-      screen.getByRole("combobox", {
-        name: "Acceptance status",
-      })
-    ).value
+    screen.getByRole<HTMLSelectElement>("combobox", {
+      name: "Acceptance status",
+    }).value
   ).toBe("todo")
   expect(
-    (
-      screen.getByRole("combobox", {
-        name: "Triage assignee",
-      })
-    ).value
+    screen.getByRole<HTMLSelectElement>("combobox", {
+      name: "Triage assignee",
+    }).value
   ).toBe("bob")
   fireEvent.click(screen.getByRole("button", { name: "Accept issue" }))
   await waitFor(() =>
