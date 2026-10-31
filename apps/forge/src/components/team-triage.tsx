@@ -1,4 +1,4 @@
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Link } from "@tanstack/react-router"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
@@ -103,7 +103,25 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
                 : a.createdAt.localeCompare(b.createdAt)
           return descending ? -result : result
         })
-  const selected = visible.find((issue) => issue.id === selectedId)
+  const candidate = visible.find((issue) => issue.id === selectedId)
+  const selectionEpoch = canonicalIssueEpoch()
+  const retainedSelection = useRef<{
+    epoch: number
+    issue: TriageIssue
+  } | null>(null)
+  useEffect(() => {
+    if (candidate)
+      retainedSelection.current = { epoch: selectionEpoch, issue: candidate }
+  }, [candidate, selectionEpoch])
+  // Query invalidation temporarily empties the page. Keep the mounted decision
+  // editor and its reviewed revision until the replacement page is authoritative.
+  const selected =
+    candidate ??
+    (query.loading &&
+    retainedSelection.current?.epoch === selectionEpoch &&
+    retainedSelection.current.issue.id === selectedId
+      ? retainedSelection.current.issue
+      : undefined)
   const editingBaseline = useRef<TeamIssue | undefined>(undefined)
   function openEditor(issue?: TriageIssue) {
     editingBaseline.current =

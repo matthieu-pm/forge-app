@@ -273,7 +273,7 @@ try {
   await loser.getByText("Review saved issue edits").click()
   await expect(loser.getByText(/already left triage/)).toBeVisible()
   await loser.screenshot({ path: "/tmp/for50-conflict.png", fullPage: true })
-  await loser.getByRole("button", { name: "Use latest shared version" }).click()
+  await loser.getByRole("button", { name: "Discard unavailable triage decisions" }).click()
   await expect(
     loser.getByText(/These issues changed in another session/)
   ).toHaveCount(0)

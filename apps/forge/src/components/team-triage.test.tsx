@@ -235,7 +235,9 @@ describe("FOR-50 canonical triage screen", () => {
     fireEvent.click(screen.getByText("Review saved issue edits"))
     expect(screen.getByText(/already left triage/)).toBeTruthy()
     fireEvent.click(
-      screen.getByRole("button", { name: "Use latest shared version" })
+      screen.getByRole("button", {
+        name: "Discard unavailable triage decisions",
+      })
     )
     await waitFor(() => expect(screen.queryByRole("alert")).toBeNull())
   })

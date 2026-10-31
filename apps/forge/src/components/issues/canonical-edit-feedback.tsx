@@ -4,6 +4,7 @@ import type { TeamIssue } from "@/lib/issue-record-contract"
 import {
   ISSUE_EDITS_CHANGED,
   applyEditsToLatest,
+  discardUnavailableTriageDecisions,
   flushIssueEdits,
   issueEditSnapshot,
   useLatestIssueVersions,
@@ -66,6 +67,18 @@ export function CanonicalEditFeedback() {
               Retry issue edits
             </Button>
           )}
+          {status.conflict &&
+            status.drafts.some(
+              (draft) => draft.triageDecision && !draft.latest?.triage
+            ) && (
+              <Button
+                size="sm"
+                disabled={status.running}
+                onClick={() => void discardUnavailableTriageDecisions()}
+              >
+                Discard unavailable triage decisions
+              </Button>
+            )}
           {status.conflict && (
             <Button
               size="sm"
@@ -99,9 +112,11 @@ export function CanonicalEditFeedback() {
               {draft.triageDecision && (
                 <p>
                   Your triage decision: {draft.triageDecision}.{" "}
-                  {draft.latest?.triage
-                    ? "Still in triage."
-                    : "This issue has already left triage. Use the latest shared version."}
+                  {!draft.latest
+                    ? "Check the latest issue state before reviewing this decision."
+                    : draft.latest.triage
+                      ? "Still in triage."
+                      : "This issue has already left triage. Use the latest shared version."}
                 </p>
               )}
               <table className="mt-1 w-full text-left text-xs">
