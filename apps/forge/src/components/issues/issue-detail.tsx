@@ -1544,15 +1544,31 @@ export function IssueDetail({
                   <IssueHistory
                     issueId={issue.id}
                     revision={issue.revision ?? 0}
-                    valueLabel={(field, value) =>
-                      field === "status"
-                        ? (statuses.find((status) => status.id === value)
-                            ?.name ?? value)
-                        : field === "assignee"
-                          ? (members.find((member) => member.id === value)
-                              ?.name ?? value)
-                          : value
-                    }
+                    valueLabel={(field, value) => {
+                      if (!value) return ""
+                      if (field === "status")
+                        return (
+                          statuses.find((status) => status.id === value)
+                            ?.name ?? value
+                        )
+                      if (field === "assignee")
+                        return (
+                          members.find((member) => member.id === value)?.name ??
+                          "Former member"
+                        )
+                      if (field === "project") return projectDisplayName(value)
+                      if (field === "subscribers")
+                        return value
+                          .split(",")
+                          .map(
+                            (subscriberId) =>
+                              members.find(
+                                (member) => member.id === subscriberId.trim()
+                              )?.name ?? "Former member"
+                          )
+                          .join(", ")
+                      return value
+                    }}
                   />
                 )}
                 {!shared && (

@@ -2,6 +2,7 @@ import "@tanstack/react-start/server-only"
 import { createHash } from "node:crypto"
 import { and, eq, sql } from "drizzle-orm"
 import { z } from "zod"
+import type { Transaction } from "@/db"
 import type { Actor } from "@/application/actor"
 import type { IssueHistoryPage } from "@/lib/issue-history-contract"
 import { db, issues } from "@/db"
@@ -12,6 +13,7 @@ import {
   requireResourceScope,
 } from "@/application/resource-policy.server"
 import {
+  boundedHistoryText,
   issueHistoryEnvelopeSchema,
   issueHistoryQuerySchema,
 } from "@/lib/issue-history-contract"
@@ -28,6 +30,23 @@ const cursorSchema = z
   })
   .strict()
 
+async function requireHistoryIssue(
+  tx: Transaction,
+  actor: Actor,
+  issueId: string
+) {
+  const issue = (
+    await tx
+      .select({ id: issues.id, legacyId: issues.legacyId })
+      .from(issues)
+      .where(
+        and(eq(issues.id, issueId), readableIssueCondition(actor, issues.id))
+      )
+  ).at(0)
+  if (!issue) throw new ApplicationAccessError()
+  return issue
+}
+
 export async function queryIssueHistory(
   actor: Actor,
   raw: z.input<typeof issueHistoryQuerySchema>
@@ -36,18 +55,7 @@ export async function queryIssueHistory(
   return db.transaction(async (tx) => {
     const current = await currentCommandActor(tx, actor)
     requireResourceScope(current, "issues:read")
-    const issue = (
-      await tx
-        .select({ id: issues.id, legacyId: issues.legacyId })
-        .from(issues)
-        .where(
-          and(
-            eq(issues.id, input.issueId),
-            readableIssueCondition(current, issues.id)
-          )
-        )
-    ).at(0)
-    if (!issue) throw new ApplicationAccessError()
+    const issue = await requireHistoryIssue(tx, current, input.issueId)
     const binding = createHash("sha256")
       .update(
         JSON.stringify({
@@ -80,6 +88,7 @@ export async function queryIssueHistory(
       JOIN command_receipts r ON r.id=e.command_id AND r.workspace_id=e.workspace_id AND r.completed_at IS NOT NULL
       LEFT JOIN "user" u ON u.id=a.actor_user_id
       WHERE e.workspace_id=${current.workspaceId} AND e.payload->>'issueId'=${input.issueId}
+        AND ${readableIssueCondition(current, sql`${input.issueId}::uuid`)}
         AND e.topic LIKE 'issue.%' AND e.topic <> 'issue.comment.mentioned'
         ${cursor ? sql`AND (e.created_at,e.id) < (${cursor.time}::timestamptz,${cursor.id}::uuid)` : sql``}
       ORDER BY e.created_at DESC,e.id DESC LIMIT ${input.limit + 1}
@@ -92,6 +101,9 @@ export async function queryIssueHistory(
       actor_user_id: string
       actor_name: string
     }>
+    // A denied data read must fail rather than look like an empty older page:
+    // the client clears protected entries on failure instead of merging stale rows.
+    if (!rows.length) await requireHistoryIssue(tx, current, input.issueId)
     const page = rows.slice(0, input.limit)
     const last = page.at(-1)
     return {
@@ -109,7 +121,7 @@ export async function queryIssueHistory(
             userId: row.actor_user_id,
             name: trusted
               ? details.data.actor.name
-              : row.actor_name.slice(0, 200),
+              : boundedHistoryText(row.actor_name, 200),
             kind: trusted ? details.data.actor.kind : "unknown",
           },
           origin: trusted

@@ -11,7 +11,10 @@ import {
   db,
   users,
 } from "@/db"
-import { issueHistoryDetailsSchema } from "@/lib/issue-history-contract"
+import {
+  boundedHistoryText,
+  issueHistoryDetailsSchema,
+} from "@/lib/issue-history-contract"
 
 export class CommandConflictError extends Error {
   constructor(
@@ -136,13 +139,15 @@ export async function executeCommand<T>(
       resourceId: result.resource.id,
     })
     if (result.events.length) {
-      const actorName =
+      const actorName = boundedHistoryText(
         (
           await tx
             .select({ name: users.name })
             .from(users)
             .where(eq(users.id, currentActor.userId))
-        )[0]?.name.slice(0, 200) ?? "Member"
+        )[0]?.name ?? "Member",
+        200
+      )
       await tx.insert(commandOutboxEvents).values(
         result.events.map((event, ordinal) => ({
           workspaceId: actor.workspaceId,

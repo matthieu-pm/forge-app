@@ -1,5 +1,11 @@
 import { z } from "zod"
 
+/** Keep UTF-16 schema bounds without splitting a supplementary character into
+ * an unpaired surrogate, which PostgreSQL correctly refuses in JSONB. */
+export function boundedHistoryText(value: string, limit: number) {
+  return value.slice(0, limit).replace(/[\uD800-\uDBFF]$/, "")
+}
+
 /** Versioned, body-free envelope in the existing committed outbox. Producers may
  * add new topics without inventing actors or a parallel audit writer. */
 export const issueHistoryDetailsSchema = z

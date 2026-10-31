@@ -3557,6 +3557,115 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
         })
       ).rejects.toThrow()
     }, 30000)
+    it("rechecks issue access in the history SELECT when private-team access is revoked after its initial guard", async () => {
+      const f = await setup()
+      await pool.query("UPDATE teams SET visibility='private' WHERE id=$1", [
+        f.teamId,
+      ])
+      await pool.query(
+        "INSERT INTO team_members(id,workspace_id,team_id,user_id,role) VALUES($1,$2,$3,$4,'member')",
+        [randomUUID(), f.workspaceId, f.teamId, users[1]]
+      )
+      const transaction = database.db.transaction.bind(database.db)
+      let revoked = false
+      const spy = vi
+        .spyOn(database.db, "transaction")
+        .mockImplementationOnce((callback, config) =>
+          transaction(async (tx) => {
+            const execute = tx.execute.bind(tx)
+            // The initial resource guard has already run when history executes.
+            // This separate connection commits the revocation at that exact boundary.
+            vi.spyOn(tx, "execute").mockImplementationOnce((query) => {
+              const statement = execute(query)
+              const run = statement.execute.bind(statement)
+              statement.execute = async () => {
+                await pool.query(
+                  "DELETE FROM team_members WHERE team_id=$1 AND user_id=$2",
+                  [f.teamId, users[1]]
+                )
+                revoked = true
+                return run()
+              }
+              return statement
+            })
+            return callback(tx)
+          }, config)
+        )
+      try {
+        await expect(
+          f.history.queryIssueHistory(f.actors[1], { issueId: f.issue.id })
+        ).rejects.toMatchObject({ code: "FORBIDDEN" })
+        expect(revoked).toBe(true)
+      } finally {
+        spy.mockRestore()
+      }
+    }, 30000)
+    it.each(["actor name", "property value"])(
+      "commits valid Unicode when %s crosses its history metadata bound",
+      async (kind) => {
+        const f = await fixture()
+        try {
+          if (kind === "actor name")
+            await pool.query('UPDATE "user" SET name=$2 WHERE id=$1', [
+              users[0],
+              "a".repeat(199) + "😀",
+            ])
+          const created = await service.createCanonicalIssue(
+            f.actors[0],
+            command(f.teamId)
+          )
+          const history = await import("./issue-history.server")
+          if (kind === "actor name") {
+            const page = await history.queryIssueHistory(f.actors[1], {
+              issueId: created.issue.id,
+            })
+            expect(page.entries[0].actor).toMatchObject({
+              name: "a".repeat(199),
+              kind: "session",
+            })
+          } else {
+            const milestone = "a".repeat(999) + "😀"
+            const changed = await editing.editCanonicalIssues(f.actors[0], {
+              teamId: f.teamId,
+              commandKey: randomUUID(),
+              edits: [
+                {
+                  issueId: created.issue.id,
+                  expectedRevision: created.issue.revision!,
+                  changes: { milestone },
+                },
+              ],
+            })
+            expect(changed.status).toBe("saved")
+            expect(changed.records[0].issue.milestone).toBe(milestone)
+            const next = await editing.editCanonicalIssues(f.actors[0], {
+              teamId: f.teamId,
+              commandKey: randomUUID(),
+              edits: [
+                {
+                  issueId: created.issue.id,
+                  expectedRevision: changed.records[0].issue.revision!,
+                  changes: { milestone: "Next" },
+                },
+              ],
+            })
+            expect(next.status).toBe("saved")
+            const page = await history.queryIssueHistory(f.actors[1], {
+              issueId: created.issue.id,
+            })
+            expect(page.entries[0].changes).toEqual([
+              { field: "milestone", from: "a".repeat(999), to: "Next" },
+            ])
+            expect(page.entries[1].changes).toEqual([
+              { field: "milestone", from: "", to: "a".repeat(999) },
+            ])
+          }
+        } finally {
+          await pool.query('UPDATE "user" SET name=id WHERE id=$1', [users[0]])
+        }
+      },
+      30000
+    )
     it("records comment moderation once without bodies, and rejects updates to committed facts", async () => {
       const f = await setup(),
         commentId = randomUUID()

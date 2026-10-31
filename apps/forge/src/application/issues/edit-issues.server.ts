@@ -24,6 +24,7 @@ import { currentCommandActor } from "@/application/commands/command-actor.server
 import { readableIssueCondition } from "@/application/resource-policy.server"
 import { blankIssueDraft } from "@/lib/issue-record-contract"
 import { editIssueBatchSchema } from "@/lib/canonical-issue-edit-contract"
+import { boundedHistoryText } from "@/lib/issue-history-contract"
 import { withoutUndefined } from "@/lib/canonical-json"
 
 class IssueEditConflict extends Error {}
@@ -260,11 +261,14 @@ export async function editCanonicalIssues(actor: Actor, raw: EditIssueBatch) {
                     return {
                       field: field === "descriptionDoc" ? "description" : field,
                       from: retainValue
-                        ? String(
-                            before[field as keyof typeof before] ?? ""
-                          ).slice(0, 1000)
+                        ? boundedHistoryText(
+                            String(before[field as keyof typeof before] ?? ""),
+                            1000
+                          )
                         : "",
-                      to: retainValue ? String(value ?? "").slice(0, 1000) : "",
+                      to: retainValue
+                        ? boundedHistoryText(String(value ?? ""), 1000)
+                        : "",
                     }
                   })
                   .concat(
