@@ -3763,6 +3763,150 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
     }, 30000)
   })
   describe("FOR-48 durable issue and comment files", () => {
+    it("keeps discarded creation sources tombstoned even with the newest product revision", async () => {
+      const f = await fixture("enterprise")
+      const input = {
+        ...command(f.teamId),
+        draft: {
+          ...draft("Discard is durable"),
+          attachments: [
+            {
+              name: "evidence.txt",
+              data: "data:text/plain;base64,ZXZpZGVuY2U=",
+            },
+          ],
+        },
+      }
+      const created = (await service.createCanonicalIssue(f.actors[0], input))
+        .issue
+      const key = `forge:file-draft:v1:${created.id}:creation`
+      const source = (await product.readProductState(f.actors[0])).entries.find(
+        (e) => e.key === key
+      )!
+      const auth = f.actors[0].authentication
+      const save = (value: string | null, expectedRevision: number) =>
+        product.saveProductState(f.actors[0], {
+          workspaceId: f.workspaceId,
+          sessionId: auth.kind === "session" ? auth.sessionId : "",
+          commandKey: randomUUID(),
+          key,
+          value,
+          expectedRevision,
+        })
+      await save(null, source.revision)
+      const discarded = (
+        await product.readProductState(f.actors[0])
+      ).entries.find((e) => e.key === key)!
+      await expect(save(source.value, discarded.revision)).rejects.toThrow(
+        "discarded"
+      )
+      expect(
+        (await product.readProductState(f.actors[0])).entries.find(
+          (e) => e.key === key
+        )
+      ).toMatchObject({ value: null, revision: discarded.revision })
+    }, 30000)
+    it("refuses a binding from a discarded creation job", async () => {
+      const f = await fileFixture()
+      try {
+        const input = {
+          ...command(f.teamId),
+          draft: {
+            ...draft("Discard pending source"),
+            attachments: [
+              {
+                name: "evidence.txt",
+                data: "data:text/plain;base64,ZXZpZGVuY2U=",
+              },
+            ],
+          },
+        }
+        const created = (await service.createCanonicalIssue(f.actors[0], input))
+          .issue
+        const uploaded = await f.ready(f.actors[0], created.id)
+        await pool.query(
+          "UPDATE product_state SET encoded_value=NULL,revision=revision+1 WHERE workspace_id=$1 AND key=$2",
+          [f.workspaceId, `forge:file-draft:v1:${created.id}:creation`]
+        )
+        await expect(
+          f.commandIssueFiles(f.actors[0], {
+            ...f.attach([uploaded.id]),
+            issueId: created.id,
+            creationKey: input.commandKey,
+            creationIndex: 0,
+          })
+        ).rejects.toThrow("discarded")
+        const records = await database.db.transaction((tx) =>
+          service.readIssueRows(tx, f.actors[0], [created.id])
+        )
+        expect(records[0].issue.attachments).toEqual([])
+      } finally {
+        await f.cleanup()
+      }
+    }, 30000)
+
+    it("atomically saves creation file recovery source with the issue and scopes it to the author", async () => {
+      const f = await fixture("enterprise")
+      const input = {
+        ...command(f.teamId),
+        draft: {
+          ...draft("Recover upload after creation"),
+          attachments: [
+            {
+              name: "evidence.txt",
+              data: "data:text/plain;base64,ZXZpZGVuY2U=",
+            },
+          ],
+        },
+      }
+      const result = await service.createCanonicalIssue(f.actors[0], input)
+      expect(result.issue.attachments).toEqual([])
+      const key = `forge:file-draft:v1:${result.issue.id}:creation`
+      const owned = (await product.readProductState(f.actors[0])).entries.find(
+        (e) => e.key === key
+      )
+      expect(JSON.parse(owned!.value!)).toMatchObject({
+        issueId: result.issue.id,
+        teamId: f.teamId,
+        files: input.draft.attachments,
+        completed: false,
+      })
+      expect(
+        (await product.readProductState(f.actors[1])).entries.find(
+          (e) => e.key === key
+        )
+      ).toBeUndefined()
+      await service.createCanonicalIssue(f.actors[0], input)
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int count FROM issues WHERE workspace_id=$1",
+            [f.workspaceId]
+          )
+        ).rows[0].count
+      ).toBe(1)
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int count FROM product_state WHERE workspace_id=$1 AND key=$2",
+            [f.workspaceId, key]
+          )
+        ).rows[0].count
+      ).toBe(1)
+      await pool.query("UPDATE teams SET visibility='private' WHERE id=$1", [
+        f.teamId,
+      ])
+      await pool.query(
+        "UPDATE member SET role='member' WHERE organization_id=$1 AND user_id=$2",
+        [f.workspaceId, users[0]]
+      )
+      expect(
+        (await product.readProductState(f.actors[0])).entries.find(
+          (e) => e.key === key
+        )
+      ).toMatchObject({ value: null })
+    }, 30000)
+
     async function fileFixture() {
       const f = await fixture("enterprise")
       const issue = (

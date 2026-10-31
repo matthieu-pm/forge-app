@@ -296,6 +296,72 @@ try {
     data: "",
     name: "created-evidence.txt",
   })
+  let expired = false
+  await admin.route("**/api/files/uploads/*/finalize", async (route) => {
+    const intent = new URL(route.request().url()).pathname.split("/").at(-2)
+    if (!expired) {
+      expired = true
+      await pool.query(
+        "UPDATE file_upload_intents SET state='expired',expires_at=created_at+interval '1 millisecond' WHERE id=$1 AND workspace_id=$2 AND state='pending'",
+        [intent, marker]
+      )
+    }
+    await route.continue()
+  })
+  await admin.goto(`${base}/teams/engineering/issues?view=all`)
+  await admin.getByRole("button", { name: "New issue", exact: true }).click()
+  await admin
+    .getByRole("textbox", { name: "Issue title", exact: true })
+    .fill("Recover refused creation files")
+  await admin.getByLabel("Issue attachments", { exact: true }).setInputFiles({
+    name: "retry-creation.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("Recoverable creation source"),
+  })
+  await admin.getByRole("button", { name: "Create issue", exact: true }).click()
+  await expect(
+    admin.getByLabel("Issue attachments", { exact: true })
+  ).toHaveCount(0, { timeout: 60000 })
+  const pending = (
+    await pool.query(
+      "SELECT id,properties FROM issues WHERE workspace_id=$1 AND title='Recover refused creation files'",
+      [marker]
+    )
+  ).rows
+  expect(pending).toHaveLength(1)
+  expect(pending[0].properties.attachments).toHaveLength(0)
+  await admin.goto(
+    `${base}/teams/engineering/issues?view=all&issue=${pending[0].id}`
+  )
+  await expect(
+    admin.getByRole("button", { name: "Finish file uploads", exact: true })
+  ).toBeVisible({ timeout: 60000 })
+  await admin.reload()
+  await expect(
+    admin.getByRole("button", { name: "Finish file uploads", exact: true })
+  ).toBeVisible({ timeout: 60000 })
+  expect(expired).toBe(true)
+  await admin.unroute("**/api/files/uploads/*/finalize")
+  await admin
+    .getByRole("button", { name: "Finish file uploads", exact: true })
+    .click()
+  await expect(
+    admin.getByRole("button", {
+      name: "Download retry-creation.txt",
+      exact: true,
+    })
+  ).toBeVisible({ timeout: 60000 })
+  await expect(
+    admin.getByRole("button", { name: "Finish file uploads", exact: true })
+  ).toHaveCount(0)
+  expect(
+    (
+      await pool.query(
+        "SELECT count(*)::int n FROM issues WHERE workspace_id=$1 AND title='Recover refused creation files'",
+        [marker]
+      )
+    ).rows[0].n
+  ).toBe(1)
   await pool.query("UPDATE teams SET visibility='private' WHERE id=$1", [
     teamId,
   ])
@@ -322,6 +388,7 @@ try {
         "detach invalidates issued grant",
         "lost binding response replays once after reload",
         "issue creation publishes durable files",
+        "expired creation upload survives reload and restarts without a duplicate issue",
         "private team access revokes file grants",
       ],
     })
@@ -331,7 +398,7 @@ try {
   if (verified) {
     const files = (
       await pool.query(
-        "SELECT storage_reference FROM resource_files WHERE workspace_id=$1",
+        "SELECT storage_reference FROM resource_files WHERE workspace_id=$1 UNION SELECT storage_reference FROM file_upload_intents WHERE workspace_id=$1",
         [marker]
       )
     ).rows

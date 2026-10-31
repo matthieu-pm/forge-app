@@ -59,6 +59,19 @@ export function createUploadHttpHandler(deps: {
       if (!origin || new URL(origin).origin !== new URL(request.url).origin)
         throw new ApplicationAccessError("The request origin is not allowed.")
       const actor = await deps.getActor(request)
+      const expectedSession = request.headers.get("x-forge-upload-session")
+      const expectedWorkspace = request.headers.get("x-forge-upload-workspace")
+      if (
+        (expectedSession || expectedWorkspace) &&
+        (!expectedSession ||
+          !expectedWorkspace ||
+          actor.authentication.kind !== "session" ||
+          actor.authentication.sessionId !== expectedSession ||
+          actor.workspaceId !== expectedWorkspace)
+      )
+        throw new ApplicationAccessError(
+          "The active session changed. Start the upload again."
+        )
       const path = new URL(request.url).pathname.replace(/\/$/, "")
       const match =
         /^\/api\/files\/uploads(?:\/([a-f0-9-]+)\/(token|finalize|cancel|bytes))?$/.exec(

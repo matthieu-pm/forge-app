@@ -120,7 +120,7 @@ export async function createSharedTeamIssue(
     retained?.data ??
     structuredClone({
       teamId,
-      draft: options.legacyId ? draft : { ...draft, attachments: [] },
+      draft,
       ...options,
       ...prepareIssueRelations(teamId, draft),
       workspaceId: before.workspaceId,
@@ -139,16 +139,36 @@ export async function createSharedTeamIssue(
     throw new Error(
       "The active session changed. Reload to view the saved issue."
     )
-  // Refresh related metadata before file commands merge their final issue rows.
-  await refreshCanonicalIssues(before)
+  // The confirmed receipt is creation success. Attachment completion is a
+  // private, issue-scoped job, never a reason to create a second issue.
+  mergeCanonicalIssueRecords(result.records)
+  try {
+    await refreshCanonicalIssues(before)
+  } catch {
+    if (
+      canonicalIssueState()?.sessionId !== before.sessionId ||
+      canonicalIssueState()?.workspaceId !== before.workspaceId
+    )
+      throw new Error("The active session changed.")
+  }
   mergeCanonicalIssueRecords(result.records)
   if (!options.legacyId && draft.attachments?.length) {
-    await finishCreatedIssueFiles(
-      teamId,
-      result.issue.id,
-      draft.attachments,
-      options.commandKey
-    )
+    try {
+      await finishCreatedIssueFiles(
+        teamId,
+        result.issue.id,
+        draft.attachments,
+        options.commandKey,
+        true
+      )
+    } catch {
+      if (
+        canonicalIssueState()?.sessionId !== before.sessionId ||
+        canonicalIssueState()?.workspaceId !== before.workspaceId
+      )
+        throw new Error("The active session changed.")
+      // The source was saved with the issue transaction. Its UI offers retry or discard.
+    }
   }
   preparedCreates.delete(options.commandKey)
   return (

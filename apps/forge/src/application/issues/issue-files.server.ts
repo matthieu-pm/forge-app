@@ -6,7 +6,13 @@ import type { Actor } from "@/application/actor"
 import type { Transaction } from "@/db"
 import type { IssueFileCommand } from "@/lib/issue-file-contract"
 import type { IssueDraft } from "@/lib/issue-record-contract"
-import { db, fileUploadIntents, issues, resourceFiles } from "@/db"
+import {
+  db,
+  fileUploadIntents,
+  issues,
+  productState,
+  resourceFiles,
+} from "@/db"
 import {
   ApplicationAccessError,
   hasWorkspaceRole,
@@ -14,7 +20,11 @@ import {
 import { executeCommand } from "@/application/commands/execute-command.server"
 import { currentCommandActor } from "@/application/commands/command-actor.server"
 import { readableIssueCondition } from "@/application/resource-policy.server"
-import { issueFileCommandSchema } from "@/lib/issue-file-contract"
+import {
+  creationFileJobKey,
+  creationFileJobSchema,
+  issueFileCommandSchema,
+} from "@/lib/issue-file-contract"
 import { withoutUndefined } from "@/lib/canonical-json"
 
 export class IssueFileInputError extends Error {}
@@ -162,6 +172,48 @@ export async function commandIssueFiles(actor: Actor, raw: IssueFileCommand) {
         throw new IssueFileInputError(
           "This comment changed. Reload before changing its files."
         )
+      if (
+        input.creationKey !== undefined ||
+        input.creationIndex !== undefined
+      ) {
+        if (
+          !input.creationKey ||
+          input.creationIndex === undefined ||
+          input.action !== "attach" ||
+          input.commentId
+        )
+          throw new IssueFileInputError("Invalid creation recovery command.")
+        const [saved] = await tx
+          .select()
+          .from(productState)
+          .where(
+            and(
+              eq(productState.workspaceId, current.workspaceId),
+              eq(productState.ownerId, `user:${current.userId}`),
+              eq(productState.key, creationFileJobKey(row.id))
+            )
+          )
+          .for("update")
+        let job
+        try {
+          job = creationFileJobSchema.parse(
+            JSON.parse(JSON.parse(saved?.encodedValue ?? "null"))
+          )
+        } catch {
+          /* Missing/discarded source. */
+        }
+        if (
+          !job ||
+          job.completed ||
+          job.creationKey !== input.creationKey ||
+          job.teamId !== input.teamId ||
+          job.next !== input.creationIndex ||
+          input.creationIndex >= job.files.length
+        )
+          throw new IssueFileInputError(
+            "The pending file job changed or was discarded. Reload the issue."
+          )
+      }
       let attachments = [
         ...((comment ? comment.attachments : row.properties.attachments) ?? []),
       ]

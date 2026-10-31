@@ -12,12 +12,16 @@ import {
 } from "@/components/ui/dialog"
 import { canonicalIssueEpoch } from "@/lib/canonical-issue-cache"
 import {
+  discardCreationFileJob,
+  finishCreatedIssueFiles,
   issueFileDraftKey,
   issueFileUrl,
+  issueUploadContext,
+  readCreationFileJob,
   sendIssueFiles,
 } from "@/lib/issue-file-client"
 import { issueFileCommandSchema } from "@/lib/issue-file-contract"
-import { productStorage } from "@/lib/product-storage"
+import { PRODUCT_STORAGE_CHANGED, productStorage } from "@/lib/product-storage"
 import { uploadFileDirect } from "@/lib/files/direct-upload-client"
 
 export function DurableIssueFiles(props: {
@@ -60,6 +64,14 @@ function FileList({
       return undefined
     }
   })
+  const [creationJob, setCreationJob] = useState(() =>
+    readCreationFileJob(issueId)
+  )
+  useEffect(() => {
+    const update = () => setCreationJob(readCreationFileJob(issueId))
+    window.addEventListener(PRODUCT_STORAGE_CHANGED, update)
+    return () => window.removeEventListener(PRODUCT_STORAGE_CHANGED, update)
+  }, [issueId])
   const [preview, setPreview] = useState<{ name: string; url: string }>()
   useEffect(
     () => () => {
@@ -182,6 +194,41 @@ function FileList({
           )}
         </div>
       ))}
+      {canEdit && !commentId && creationJob && !creationJob.completed && (
+        <div
+          role="status"
+          className="space-y-2 rounded-lg border border-border p-3 text-sm"
+        >
+          <p>
+            The issue was created. {creationJob.files.length - creationJob.next}{" "}
+            file upload(s) still need attention.
+          </p>
+          <Button
+            size="sm"
+            disabled={pending}
+            onClick={() =>
+              void run(() =>
+                finishCreatedIssueFiles(
+                  creationJob.teamId,
+                  issueId,
+                  creationJob.files,
+                  creationJob.creationKey
+                )
+              )
+            }
+          >
+            Finish file uploads
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={pending}
+            onClick={() => void run(() => discardCreationFileJob(issueId))}
+          >
+            Discard pending files
+          </Button>
+        </div>
+      )}
       {canEdit && (
         <>
           <FileUploadPicker
@@ -266,9 +313,18 @@ export function FileUploadPicker({
 }) {
   const epoch = canonicalIssueEpoch(),
     busy = useRef(false),
+    lifetime = useRef<AbortController | null>(null),
     ownSessions = useRef<UploadSessions>(new Map())
   const input = useRef<HTMLInputElement>(null),
     [error, setError] = useState("")
+  useEffect(() => {
+    const controller = new AbortController()
+    lifetime.current = controller
+    return () => {
+      controller.abort()
+      if (lifetime.current === controller) lifetime.current = null
+    }
+  }, [])
   return (
     <>
       <Button
@@ -288,7 +344,21 @@ export function FileUploadPicker({
         onChange={(event) => {
           const file = event.target.files?.[0]
           event.target.value = ""
-          if (!file || busy.current || epoch !== canonicalIssueEpoch()) return
+          const controller = lifetime.current
+          if (
+            !file ||
+            !controller ||
+            disabled ||
+            count >= 5 ||
+            busy.current ||
+            epoch !== canonicalIssueEpoch()
+          )
+            return
+          const context = issueUploadContext(controller.signal)
+          const active = () =>
+            lifetime.current === controller &&
+            !controller.signal.aborted &&
+            epoch === canonicalIssueEpoch()
           busy.current = true
           setError("")
           onBusy(true)
@@ -300,13 +370,14 @@ export function FileUploadPicker({
               target: { kind: "issue", id: issueId },
             },
             undefined,
-            sessions ?? ownSessions.current
+            sessions ?? ownSessions.current,
+            context
           )
             .then(async (ready) => {
-              if (epoch === canonicalIssueEpoch()) await onReady(ready)
+              if (active()) await onReady(ready)
             })
             .catch((failure) => {
-              if (epoch === canonicalIssueEpoch())
+              if (active())
                 setError(
                   failure instanceof Error
                     ? failure.message
@@ -315,7 +386,7 @@ export function FileUploadPicker({
             })
             .finally(() => {
               busy.current = false
-              if (epoch === canonicalIssueEpoch()) onBusy(false)
+              if (active()) onBusy(false)
             })
         }}
       />

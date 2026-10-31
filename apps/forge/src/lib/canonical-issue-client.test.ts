@@ -114,11 +114,60 @@ it("uploads creation files after metadata refresh and returns the final durable 
   expect(await createSharedTeamIssue(teamId, draft, options)).toEqual(final)
   expect(
     vi.mocked(persistCanonicalIssue).mock.calls[0][0].data.draft.attachments
-  ).toEqual([])
+  ).toEqual(draft.attachments)
   expect(finishCreatedIssueFiles).toHaveBeenCalledWith(
     teamId,
     id,
     draft.attachments,
-    options.commandKey
+    options.commandKey,
+    true
   )
+})
+
+it("returns the committed issue when attachment completion or metadata refresh fails", async () => {
+  const teamId = crypto.randomUUID(),
+    id = crypto.randomUUID()
+  const state = {
+    workspaceId: "workspace",
+    sessionId: "session",
+    userId: "user",
+    records: [],
+    projects: [],
+    cycles: [],
+  }
+  replaceCanonicalIssues(state)
+  const draft = {
+    ...blankIssueDraft("todo"),
+    title: "Already created",
+    attachments: [
+      { name: "refused.txt", data: "data:text/plain;base64,ZXZpZGVuY2U=" },
+    ],
+  }
+  const issue = issueSchema.parse({
+    ...draft,
+    attachments: [],
+    id,
+    number: 1,
+    creator: "user",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    statusChangedAt: new Date().toISOString(),
+    suggestedLabel: "",
+    completedAt: null,
+  })
+  vi.mocked(loadCanonicalIssues).mockRejectedValue(
+    new Error("Offline metadata")
+  )
+  vi.mocked(persistCanonicalIssue).mockResolvedValue(
+    JSON.stringify({ issue, records: [{ teamId, issue }] })
+  )
+  vi.mocked(finishCreatedIssueFiles).mockRejectedValue(
+    new Error("File type refused")
+  )
+  expect(
+    await createSharedTeamIssue(teamId, draft, {
+      commandKey: crypto.randomUUID(),
+    })
+  ).toEqual(issue)
+  expect(persistCanonicalIssue).toHaveBeenCalledTimes(1)
 })
