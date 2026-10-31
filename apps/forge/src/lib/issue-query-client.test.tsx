@@ -8,7 +8,10 @@ import {
   waitFor,
 } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { replaceCanonicalIssues } from "./canonical-issue-cache"
+import {
+  replaceCanonicalIssues,
+  suppressCanonicalIssueRecord,
+} from "./canonical-issue-cache"
 import {
   invalidateIssueQueries,
   useIssueQuery,
@@ -253,4 +256,51 @@ it("immediately hides another identity's detail and ignores its late refresh", a
   expect(hook.result.current).toBeUndefined()
   await act(async () => finish(JSON.stringify(page(id).records)))
   expect(hook.result.current).toBeUndefined()
+})
+
+it("immediately hides a known deleted detail while its revalidation is pending", async () => {
+  const id = crypto.randomUUID()
+  vi.mocked(loadIssueDetail).mockResolvedValueOnce(
+    JSON.stringify(page(id).records)
+  )
+  const hook = renderHook(() => useQueriedIssue(id))
+  await waitFor(() => expect(hook.result.current?.issue.id).toBe(id))
+  vi.mocked(loadIssueDetail).mockReturnValueOnce(new Promise(() => {}))
+  act(() => {
+    suppressCanonicalIssueRecord(id, 1)
+    invalidateIssueQueries()
+  })
+  expect(hook.result.current).toBeUndefined()
+})
+
+it("ignores a failed obsolete revalidation when a newer refresh is pending", async () => {
+  const id = crypto.randomUUID()
+  let reject!: (error: Error) => void
+  let finish!: (value: string) => void
+  vi.mocked(loadIssueDetail)
+    .mockResolvedValueOnce(JSON.stringify(page(id).records))
+    .mockImplementationOnce(
+      () =>
+        new Promise((_resolve, fail) => {
+          reject = fail
+        })
+    )
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve
+        })
+    )
+  const hook = renderHook(() => useQueriedIssue(id))
+  await waitFor(() => expect(hook.result.current?.issue.id).toBe(id))
+  act(() => invalidateIssueQueries())
+  await waitFor(() => expect(loadIssueDetail).toHaveBeenCalledTimes(2))
+  await act(async () => {
+    invalidateIssueQueries()
+    reject(new Error("Obsolete failure"))
+    await Promise.resolve()
+  })
+  expect(hook.result.current?.issue.id).toBe(id)
+  await act(async () => finish(JSON.stringify(page(id).records)))
+  expect(hook.result.current?.issue.id).toBe(id)
 })
