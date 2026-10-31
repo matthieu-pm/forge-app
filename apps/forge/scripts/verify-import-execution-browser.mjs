@@ -1,32 +1,72 @@
 import { rm } from "node:fs/promises"
 import { resolve } from "node:path"
-import { readFileSync } from "node:fs"
+import { readFileSync, writeFileSync } from "node:fs"
+import { execFileSync } from "node:child_process"
+import { del, get } from "@vercel/blob"
 import { chromium, expect } from "@playwright/test"
 import { Pool, neonConfig } from "@neondatabase/serverless"
 import { hashPassword } from "better-auth/crypto"
-const connectionFile = process.env.FORGE_ISSUE_HISTORY_TEST_DATABASE_FILE
+// Production verification requires the exact reviewed source plus explicit private targets.
+const production = Boolean(
+  process.env.FORGE_IMPORT_PRODUCTION_AUTHORIZED_REVISION
+)
+const revision = execFileSync("git", ["rev-parse", "HEAD"], {
+  encoding: "utf8",
+}).trim()
+if (
+  production &&
+  (process.env.FORGE_IMPORT_PRODUCTION_AUTHORIZED_REVISION !== revision ||
+    execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim())
+)
+  throw new Error("A clean, exact authorized release revision is required")
+const connectionFile = production
+  ? process.env.FORGE_IMPORT_PRODUCTION_DATABASE_FILE
+  : process.env.FORGE_ISSUE_HISTORY_TEST_DATABASE_FILE
 if (!connectionFile)
-  throw new Error("FORGE_ISSUE_HISTORY_TEST_DATABASE_FILE is required")
+  throw new Error("An explicit acceptance database file is required")
 const config = JSON.parse(readFileSync(connectionFile, "utf8")),
   url = new URL(config.connection)
+const expectedHost = production
+  ? "ep-lingering-bread-zazpwrxp.c-2.eu-west-2.aws.neon.tech"
+  : "ep-blue-shadow-zauhwkjz.c-2.eu-west-2.aws.neon.tech"
+const expectedDatabase = production
+  ? "neondb"
+  : "forge_issue_history_acceptance"
+const expectedBranch = production
+  ? "br-muddy-queen-zaeeysjt"
+  : "br-autumn-union-za0opf1e"
 if (
-  url.hostname !== "ep-blue-shadow-zauhwkjz.c-2.eu-west-2.aws.neon.tech" ||
-  url.pathname !== "/forge_issue_history_acceptance" ||
+  url.hostname !== expectedHost ||
+  url.pathname !== `/${expectedDatabase}` ||
   url.searchParams.get("sslmode") !== "require"
 )
-  throw new Error("Only the dedicated acceptance database is allowed")
-const base = process.env.FORGE_IMPORT_BROWSER_URL ?? "http://localhost:3156",
+  throw new Error("Wrong acceptance database")
+const base = production
+    ? "https://app.forgenow.tech"
+    : (process.env.FORGE_IMPORT_BROWSER_URL ?? "http://localhost:3156"),
   baseUrl = new URL(base)
 if (
-  baseUrl.protocol !== "http:" ||
-  !["localhost", "127.0.0.1"].includes(baseUrl.hostname) ||
-  baseUrl.username ||
-  baseUrl.password
+  !production &&
+  (baseUrl.protocol !== "http:" ||
+    !["localhost", "127.0.0.1"].includes(baseUrl.hostname) ||
+    baseUrl.username ||
+    baseUrl.password)
 )
   throw new Error("A local acceptance server is required")
+const blob = production
+  ? JSON.parse(
+      readFileSync(process.env.FORGE_IMPORT_PRODUCTION_BLOB_FILE, "utf8")
+    )
+  : null
+if (
+  blob &&
+  (blob.storeId !== "store_z6l5eIW5xSJCsoUL" ||
+    blob.token.split("_")[3] !== blob.storeId.slice(6))
+)
+  throw new Error("Wrong production byte store")
 neonConfig.webSocketConstructor = WebSocket
 const pool = new Pool({ connectionString: config.connection }),
-  marker = `for56-browser-${crypto.randomUUID()}`,
+  marker = `for56-${production ? "production-" : ""}browser-${crypto.randomUUID()}`,
   teamId = crypto.randomUUID(),
   password = crypto.randomUUID(),
   users = [`${marker}-alice`, `${marker}-bob`]
@@ -38,12 +78,15 @@ try {
       "SELECT current_database() db,current_setting('neon.branch_id',true) branch"
     )
   ).rows[0]
-  if (
-    identity.db !== "forge_issue_history_acceptance" ||
-    identity.branch !== "br-autumn-union-za0opf1e"
-  )
+  if (identity.db !== expectedDatabase || identity.branch !== expectedBranch)
     throw new Error("Wrong database")
   verified = true
+  if (production)
+    writeFileSync(
+      "/tmp/for56-production-fixture.json",
+      JSON.stringify({ marker, users, teamId, revision }),
+      { mode: 0o600 }
+    )
   await pool.query(
     "INSERT INTO organization(id,name,slug) VALUES($1,'FOR56 Acceptance',$1)",
     [marker]
@@ -87,6 +130,8 @@ try {
       priority: "No priority",
       dueDate: "",
       parentId: "",
+      project: "legacy-project",
+      cycle: "2026-10-01",
       createdAt: now,
       updatedAt: now,
       statusChangedAt: now,
@@ -113,7 +158,92 @@ try {
       ]
     )
   }
+  await pool.query(
+    "INSERT INTO product_state(workspace_id,owner_id,owner_user_id,key,encoded_value) VALUES($1,$2,$3,$4,$5)",
+    [
+      marker,
+      `user:${users[0]}`,
+      users[0],
+      `forge:workspace:${marker}:initiatives:v1`,
+      JSON.stringify(
+        JSON.stringify({
+          version: 1,
+          initiatives: [],
+          workspaceProjects: [
+            {
+              id: "legacy-project",
+              name: "Browser imported project",
+              teamIds: [teamId],
+              status: "Planned",
+              health: "On track",
+              leadId: users[0],
+            },
+          ],
+        })
+      ),
+    ]
+  )
+  await pool.query(
+    "INSERT INTO product_state(workspace_id,owner_id,key,encoded_value) VALUES($1,'workspace',$2,$3)",
+    [
+      marker,
+      `forge:team-cycles:v1:${teamId}`,
+      JSON.stringify(
+        JSON.stringify({
+          enabled: false,
+          timezone: "Asia/Tokyo",
+          duration: 3,
+          cooldown: 2,
+          startDay: 1,
+          futureCycles: 2,
+          activeIssues: false,
+          startedIssues: true,
+          completedIssues: true,
+        })
+      ),
+    ]
+  )
+  const publishedId = crypto.randomUUID(),
+    published = {
+      ...record,
+      id: "published",
+      title: "Published legacy issue",
+      description: "Browser source version",
+      project: "",
+      cycle: "",
+      attachments: [
+        {
+          id: "source-anchor",
+          name: "published.txt",
+          data: record.attachments[0].data,
+          width: 40,
+        },
+      ],
+    }
+  await pool.query(
+    "INSERT INTO issues(id,workspace_id,team_id,number,title,status_id,creator_id,legacy_id,properties) VALUES($1,$2,$3,99,$4,'todo',$5,'published',$6)",
+    [
+      publishedId,
+      marker,
+      teamId,
+      published.title,
+      users[0],
+      {
+        ...published,
+        description: "Existing shared body",
+        comments: [],
+        attachments: [
+          { ...published.attachments[0], id: "shared-anchor", width: 60 },
+        ],
+      },
+    ]
+  )
+  await pool.query(
+    "INSERT INTO team_issue_numbers(team_id,last_number) VALUES($1,99) ON CONFLICT(team_id) DO UPDATE SET last_number=99",
+    [teamId]
+  )
   await saveSource(users[0], [
+    published,
     record,
     {
       ...record,
@@ -164,7 +294,7 @@ try {
         ).rows[0].n,
       { timeout: 60000 }
     )
-    .toBe(2)
+    .toBe(3)
   await expect
     .poll(
       async () =>
@@ -179,13 +309,58 @@ try {
     .toBe(1)
   const rows = (
       await pool.query(
-        "SELECT id,parent_id,legacy_id,properties FROM issues WHERE workspace_id=$1",
+        "SELECT id,parent_id,project_id,cycle_id,legacy_id,properties FROM issues WHERE workspace_id=$1",
         [marker]
       )
     ).rows,
     parent = rows.find((r) => r.legacy_id === "legacy-parent"),
     child = rows.find((r) => r.legacy_id === "legacy-child")
   expect(child.parent_id).toBe(parent.id)
+  const project = (
+    await pool.query(
+      "SELECT id FROM projects WHERE workspace_id=$1 AND legacy_id='legacy-project'",
+      [marker]
+    )
+  ).rows[0]
+  expect(parent.project_id).toBe(project.id)
+  expect(child.project_id).toBe(project.id)
+  const cycle = (
+    await pool.query(
+      "SELECT id,start_date,end_date,timezone FROM issue_cycles WHERE team_id=$1",
+      [teamId]
+    )
+  ).rows[0]
+  expect(cycle).toMatchObject({
+    start_date: "2026-10-01",
+    end_date: "2026-10-21",
+    timezone: "Asia/Tokyo",
+  })
+  expect(parent.cycle_id).toBe(cycle.id)
+  expect(child.cycle_id).toBe(cycle.id)
+  await alice
+    .getByRole("button", { name: "Convert existing files", exact: true })
+    .click()
+  await expect
+    .poll(
+      async () =>
+        (
+          await pool.query(
+            "SELECT properties->'attachments'->0->>'fileId' id FROM issues WHERE id=$1",
+            [publishedId]
+          )
+        ).rows[0].id,
+      { timeout: 60000 }
+    )
+    .toBeTruthy()
+  const converted = (
+    await pool.query("SELECT properties FROM issues WHERE id=$1", [publishedId])
+  ).rows[0].properties
+  expect(converted.description).toBe("Existing shared body")
+  expect(converted.attachments[0]).toMatchObject({
+    id: "shared-anchor",
+    width: 60,
+    data: "",
+  })
   expect(parent.properties.attachments[0].data).toBe("")
   const grant = await contexts[1].request.post(
     `${base}/api/files/resources/${parent.properties.attachments[0].fileId}/grant`,
@@ -206,7 +381,7 @@ try {
         [marker]
       )
     ).rows[0].n
-  ).toBe(2)
+  ).toBe(3)
   await saveSource(users[1], [
     {
       ...record,
@@ -243,7 +418,7 @@ try {
         ).rows[0].n,
       { timeout: 60000 }
     )
-    .toBe(3)
+    .toBe(4)
   expect(
     (
       await pool.query(
@@ -263,7 +438,7 @@ try {
         [marker]
       )
     ).rows[0].n
-  ).toBe(3)
+  ).toBe(4)
   await bob.setViewportSize({ width: 390, height: 844 })
   await bob.screenshot({
     path: "/tmp/for56-browser-mobile.png",
@@ -278,9 +453,14 @@ try {
   console.log(
     JSON.stringify({
       passed: true,
+      revision,
+      production,
       checks: [
         "real authenticated automatic import",
         "parent remapping",
+        "canonical project membership",
+        "saved-settings cycle reconstruction",
+        "same-issue conversion preserves shared fields, anchors and width",
         "verified durable file",
         "reload replay",
         "cross-profile conflict review",
@@ -296,26 +476,47 @@ try {
   if (verified) {
     const files = (
       await pool.query(
-        "SELECT storage_reference FROM resource_files WHERE workspace_id=$1",
+        "SELECT storage_reference FROM resource_files WHERE workspace_id=$1 UNION SELECT storage_reference FROM file_upload_intents WHERE workspace_id=$1",
         [marker]
       )
     ).rows
     for (const file of files) {
       if (!/^files\/[0-9a-f-]{36}$/.test(file.storage_reference))
         throw new Error("Unexpected fixture file reference")
-      await rm(
-        resolve(
-          process.env.FORGE_IMPORT_BROWSER_FILES ?? "/tmp/for56-browser-files",
-          file.storage_reference
-        ),
-        { force: true }
-      )
+      if (production) {
+        await del(`forge/${file.storage_reference}`, { token: blob.token })
+        if (
+          await get(`forge/${file.storage_reference}`, {
+            token: blob.token,
+            access: "private",
+            useCache: false,
+          })
+        )
+          throw new Error("Fixture bytes remain")
+      } else
+        await rm(
+          resolve(
+            process.env.FORGE_IMPORT_BROWSER_FILES ??
+              "/tmp/for56-browser-files",
+            file.storage_reference
+          ),
+          { force: true }
+        )
     }
     await pool.query("DELETE FROM file_upload_intents WHERE workspace_id=$1", [
       marker,
     ])
     await pool.query("DELETE FROM organization WHERE id=$1", [marker])
     await pool.query('DELETE FROM "user" WHERE id=ANY($1)', [users])
+    const leftovers = (
+      await pool.query(
+        'SELECT (SELECT count(*)::int FROM organization WHERE id=$1) workspaces,(SELECT count(*)::int FROM "user" WHERE id=ANY($2)) users,(SELECT count(*)::int FROM legacy_imports WHERE workspace_id=$1) manifests,(SELECT count(*)::int FROM command_receipts WHERE workspace_id=$1) receipts',
+        [marker, users]
+      )
+    ).rows[0]
+    if (Object.values(leftovers).some((value) => value !== 0))
+      throw new Error("Fixture cleanup incomplete")
+    console.log(JSON.stringify({ cleanup: leftovers }))
   }
   await pool.end()
 }

@@ -46,6 +46,12 @@ export const DATABASE_TARGETS = {
     host: "ep-shy-fog-zayf42ev.c-2.eu-west-2.aws.neon.tech",
     database: "neondb",
   },
+  // Verified production clone for FOR-56; expires 2026-11-01 03:39:03 UTC.
+  "import-rehearsal": {
+    branchId: "br-winter-tooth-zao6xzyk",
+    host: "ep-still-violet-zarbhw72.c-2.eu-west-2.aws.neon.tech",
+    database: "neondb",
+  },
   // Verified integrated production clone for FOR-54; expires 2026-11-01 00:34:05 UTC.
   "project-rehearsal": {
     branchId: "br-empty-sun-zagd0klv",
