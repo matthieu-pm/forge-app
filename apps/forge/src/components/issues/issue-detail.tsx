@@ -12,6 +12,7 @@ import {
 import { InlineIssueProperties, IssueSubProgress } from "./issue-list"
 import { Attachments, attachmentId } from "./issue-attachments"
 import { ActivityReference, ActivityRow } from "./issue-activity-row"
+import { DurableIssueFiles } from "./durable-issue-files"
 import { SharedCommentInput } from "./shared-comment-input"
 import { SafeCommentContent } from "./safe-comment-content"
 import { CommentInput, readFiles } from "./issue-comment-input"
@@ -763,12 +764,23 @@ export function IssueDetail({
           )}
           {!comment.deleted && (
             <>
-              <Attachments
-                items={comment.attachments ?? []}
-                onChange={(attachments) =>
-                  changeComment(comment, { attachments })
-                }
-              />
+              {shared ? (
+                <DurableIssueFiles
+                  teamId={team.id}
+                  issueId={issue.id}
+                  commentId={comment.id}
+                  version={comment.version ?? 0}
+                  canEdit={comment.author === userId || canModerate}
+                  items={comment.attachments ?? []}
+                />
+              ) : (
+                <Attachments
+                  items={comment.attachments ?? []}
+                  onChange={(attachments) =>
+                    changeComment(comment, { attachments })
+                  }
+                />
+              )}
               {comment.reactions.length > 0 && (
                 <Reactions
                   items={comment.reactions}
@@ -1098,53 +1110,61 @@ export function IssueDetail({
                   )
                 }
               />
-              <Attachments
-                items={issue.attachments ?? []}
-                onChange={(attachments) => patch({ attachments })}
-                threadId={activeAttachment}
-                onThreadChange={setActiveAttachment}
-                hasThread={(assetId) =>
-                  issue.comments.some(
-                    (comment) =>
-                      comment.attachmentId === assetId && !comment.deleted
-                  )
-                }
-                renderThread={(item, assetId) => {
-                  const roots = issue.comments.filter(
-                    (comment) =>
-                      comment.attachmentId === assetId && !comment.parentId
-                  )
-                  return (
-                    <>
-                      <div className="flex items-center gap-2 border-b border-border/50 px-3 py-2 text-xs text-muted-foreground">
-                        <IssueIcon name="comment" />
-                        <span className="min-w-0 flex-1 truncate">
-                          {item.name}
-                        </span>
-                        <ActionIconButton
-                          size="icon-xs"
-                          label="Close attachment thread"
-                          onClick={() => setActiveAttachment("")}
-                        >
-                          <IssueIcon name="close" />
-                        </ActionIconButton>
-                      </div>
-                      {roots.map((comment) =>
-                        renderComment(comment, false, true)
-                      )}
-                      {!roots.length && (
-                        <CommentInput
-                          autoFocus
-                          avatar={user ?? undefined}
-                          onSubmit={(body, files) =>
-                            addComment(body, files, "", assetId)
-                          }
-                        />
-                      )}
-                    </>
-                  )
-                }}
-              />
+              {shared ? (
+                <DurableIssueFiles
+                  teamId={team.id}
+                  issueId={issue.id}
+                  items={issue.attachments ?? []}
+                />
+              ) : (
+                <Attachments
+                  items={issue.attachments ?? []}
+                  onChange={(attachments) => patch({ attachments })}
+                  threadId={activeAttachment}
+                  onThreadChange={setActiveAttachment}
+                  hasThread={(assetId) =>
+                    issue.comments.some(
+                      (comment) =>
+                        comment.attachmentId === assetId && !comment.deleted
+                    )
+                  }
+                  renderThread={(item, assetId) => {
+                    const roots = issue.comments.filter(
+                      (comment) =>
+                        comment.attachmentId === assetId && !comment.parentId
+                    )
+                    return (
+                      <>
+                        <div className="flex items-center gap-2 border-b border-border/50 px-3 py-2 text-xs text-muted-foreground">
+                          <IssueIcon name="comment" />
+                          <span className="min-w-0 flex-1 truncate">
+                            {item.name}
+                          </span>
+                          <ActionIconButton
+                            size="icon-xs"
+                            label="Close attachment thread"
+                            onClick={() => setActiveAttachment("")}
+                          >
+                            <IssueIcon name="close" />
+                          </ActionIconButton>
+                        </div>
+                        {roots.map((comment) =>
+                          renderComment(comment, false, true)
+                        )}
+                        {!roots.length && (
+                          <CommentInput
+                            autoFocus
+                            avatar={user ?? undefined}
+                            onSubmit={(body, files) =>
+                              addComment(body, files, "", assetId)
+                            }
+                          />
+                        )}
+                      </>
+                    )
+                  }}
+                />
+              )}
               {issue.links
                 .filter((link) => !issuePullRequest(link))
                 .map((link, index) => (
@@ -1192,13 +1212,15 @@ export function IssueDetail({
                   }
                   onChange={(reactions) => patch({ reactions })}
                 />
-                <ActionIconButton
-                  size="icon-sm"
-                  label="Attach images, files, or videos"
-                  onClick={() => file.current?.click()}
-                >
-                  <IssueIcon name="attach" />
-                </ActionIconButton>
+                {!shared && (
+                  <ActionIconButton
+                    size="icon-sm"
+                    label="Attach images, files, or videos"
+                    onClick={() => file.current?.click()}
+                  >
+                    <IssueIcon name="attach" />
+                  </ActionIconButton>
+                )}
                 <input
                   ref={file}
                   hidden

@@ -17,6 +17,10 @@ import type { Transaction } from "@/db"
 import type { CreateCanonicalIssue } from "@/lib/canonical-issue-contract"
 import type { TeamIssue } from "@/lib/issue-record-contract"
 import {
+  creationFileJobKey,
+  creationFileJobSchema,
+} from "@/lib/issue-file-contract"
+import {
   createCanonicalIssueSchema,
   legacyIssueSource,
   legacyProjectSource,
@@ -32,6 +36,7 @@ import {
   issues,
   members,
   organizations,
+  productState,
   projectTeams,
   projects,
   resourceLabels,
@@ -717,6 +722,7 @@ export async function createCanonicalIssue(
       const properties = {
         ...input.draft,
         legacyFingerprint,
+        attachments: input.legacyId ? input.draft.attachments : [],
         assignee: assignee ?? "",
         subIssues: [],
         activity: initialAssignmentActivity(current, assignee, now),
@@ -749,6 +755,26 @@ export async function createCanonicalIssue(
           })
           .returning()
       )[0]
+      if (!input.legacyId && input.draft.attachments?.length) {
+        if (current.authentication.kind !== "session")
+          throw new ApplicationAccessError()
+        await tx.insert(productState).values({
+          workspaceId: current.workspaceId,
+          ownerId: `user:${current.userId}`,
+          ownerUserId: current.userId,
+          key: creationFileJobKey(id),
+          encodedValue: JSON.stringify(
+            JSON.stringify(
+              creationFileJobSchema.parse({
+                issueId: id,
+                teamId: input.teamId,
+                creationKey: input.commandKey,
+                files: input.draft.attachments,
+              })
+            )
+          ),
+        })
+      }
       if (labels.length)
         await tx.insert(issueLabels).values(
           labels.map((l) => ({

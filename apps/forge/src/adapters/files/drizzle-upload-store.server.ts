@@ -272,6 +272,7 @@ export class DrizzleUploadStore implements UploadStore {
             storageReference: row.storageReference,
             createdAt: now,
             issueId: row.target.kind === "issue" ? row.target.id : null,
+            attachmentState: row.target.kind === "issue" ? "unbound" : null,
             documentId: row.target.kind === "document" ? row.target.id : null,
           })
         }

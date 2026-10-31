@@ -1,3 +1,4 @@
+import { protectedSessionEpoch } from "./protected-session"
 import { stableJson } from "./stable-json"
 import { onPreferenceSessionInvalidated } from "./preference-session-events"
 import {
@@ -16,6 +17,7 @@ import {
   scheduledTeamCycles,
   teamCyclesStorageKey,
 } from "./team-cycles"
+import { finishCreatedIssueFiles } from "./issue-file-client"
 import type { CreateCanonicalIssue } from "./canonical-issue-contract"
 import type { CanonicalSnapshot } from "./canonical-issue-cache"
 import type { IssueDraft, TeamIssue } from "./issue-record-contract"
@@ -103,6 +105,7 @@ export async function createSharedTeamIssue(
   options: { commandKey: string; legacyId?: string; assigneeId?: string | null }
 ) {
   const epoch = canonicalIssueEpoch()
+  const protectedEpoch = protectedSessionEpoch()
   const before = canonicalIssueState()
   if (!before)
     throw new Error("Shared issues are unavailable. Reload to try again.")
@@ -140,7 +143,10 @@ export async function createSharedTeamIssue(
   }
   preparedCreates.set(options.commandKey, { intent, data })
   await saveProductValue(recoveryKey, JSON.stringify({ intent, data }))
-  if (epoch !== canonicalIssueEpoch())
+  if (
+    epoch !== canonicalIssueEpoch() ||
+    protectedEpoch !== protectedSessionEpoch()
+  )
     throw new Error("The active session changed.")
   const result = JSON.parse(await persistCanonicalIssue({ data })) as {
     issue: TeamIssue
@@ -149,6 +155,7 @@ export async function createSharedTeamIssue(
   const after = canonicalIssueState()
   if (
     epoch !== canonicalIssueEpoch() ||
+    protectedEpoch !== protectedSessionEpoch() ||
     after?.userId !== before.userId ||
     after?.workspaceId !== before.workspaceId ||
     after.sessionId !== before.sessionId
@@ -156,14 +163,56 @@ export async function createSharedTeamIssue(
     throw new Error(
       "The active session changed. Reload to view the saved issue."
     )
-  // A fresh authoritative snapshot includes imported projects/cycles as well.
-  await refreshCanonicalIssues(before)
+  // The confirmed receipt is creation success. Attachment completion is a
+  // private, issue-scoped job, never a reason to create a second issue.
   mergeCanonicalIssueRecords(result.records)
-  await saveProductValue(recoveryKey, null)
-  if (epoch !== canonicalIssueEpoch())
-    throw new Error("The active session changed.")
+  const assertCurrent = () => {
+    const current = canonicalIssueState()
+    if (
+      epoch !== canonicalIssueEpoch() ||
+      protectedEpoch !== protectedSessionEpoch() ||
+      current?.userId !== before.userId ||
+      current?.sessionId !== before.sessionId ||
+      current?.workspaceId !== before.workspaceId
+    )
+      throw new Error("The active session changed.")
+  }
+  // Acknowledgement cleanup can fail offline after the creation has committed.
+  // Keep its exact replay journal without reporting a failed creation.
+  try {
+    await saveProductValue(recoveryKey, null)
+  } catch {
+    assertCurrent()
+  }
+  assertCurrent()
+  try {
+    await refreshCanonicalIssues(before)
+  } catch {
+    assertCurrent()
+  }
+  assertCurrent()
+  mergeCanonicalIssueRecords(result.records)
+  if (!options.legacyId && draft.attachments?.length) {
+    try {
+      await finishCreatedIssueFiles(
+        teamId,
+        result.issue.id,
+        draft.attachments,
+        options.commandKey,
+        true
+      )
+    } catch {
+      assertCurrent()
+      // The source was saved with the issue transaction. Its UI offers retry or discard.
+    }
+  }
+  assertCurrent()
+
   preparedCreates.delete(options.commandKey)
-  return result.issue
+  return (
+    canonicalIssueState()?.records.find((r) => r.issue.id === result.issue.id)
+      ?.issue ?? result.issue
+  )
 }
 
 if (typeof window !== "undefined")

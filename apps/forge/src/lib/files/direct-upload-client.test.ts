@@ -97,3 +97,50 @@ describe("direct upload browser transport", () => {
     expect(sessions.size).toBe(0)
   })
 })
+
+it("rejects an identity change during file reading before any HTTP or provider upload", async () => {
+  const f = fixture()
+  let active = true
+  const original = f.input.file.arrayBuffer.bind(f.input.file)
+  vi.spyOn(f.input.file, "arrayBuffer").mockImplementation(async () => {
+    const bytes = await original()
+    active = false
+    return bytes
+  })
+  const providerCalls = vi.mocked(put).mock.calls.length
+  await expect(
+    uploadFileDirect(f.input, f.fetcher, new Map(), {
+      assertCurrent() {
+        if (!active) throw new Error("Session changed")
+      },
+    })
+  ).rejects.toThrow("Session changed")
+  expect(f.fetcher).not.toHaveBeenCalled()
+  expect(vi.mocked(put).mock.calls.length).toBe(providerCalls)
+})
+it("binds every metadata request to the expected session and stops before bytes on an identity change", async () => {
+  const f = fixture(),
+    headers = {
+      "x-forge-upload-session": "alice",
+      "x-forge-upload-workspace": "workspace",
+    }
+  let current = true
+  const fetcher = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+    expect(new Headers(init?.headers).get("x-forge-upload-session")).toBe(
+      "alice"
+    )
+    const response = await f.fetcher(url, init)
+    if (String(url).endsWith("/token")) current = false
+    return response
+  }) as unknown as typeof fetch
+  const providerCalls = vi.mocked(put).mock.calls.length
+  await expect(
+    uploadFileDirect(f.input, fetcher, new Map(), {
+      headers,
+      assertCurrent() {
+        if (!current) throw new Error("Session changed")
+      },
+    })
+  ).rejects.toThrow("Session changed")
+  expect(vi.mocked(put).mock.calls.length).toBe(providerCalls)
+})

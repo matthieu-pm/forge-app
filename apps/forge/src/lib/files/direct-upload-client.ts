@@ -16,6 +16,12 @@ export class UploadClientError extends Error {
   }
 }
 export type UploadSessions = Map<string, { commandKey: string; id?: string }>
+export type UploadContext = {
+  assertCurrent: () => void
+  headers?: Record<string, string>
+  signal?: AbortSignal
+  commandKey?: string
+}
 async function responseJson<T>(response: Response): Promise<T> {
   const value = (await response.json()) as T & {
     error?: { code?: string; message?: string }
@@ -36,19 +42,23 @@ export async function uploadFileDirect(
     target: UploadTarget
   },
   fetcher: typeof fetch = globalThis.fetch.bind(globalThis),
-  sessions: UploadSessions = new Map()
+  sessions: UploadSessions = new Map(),
+  context?: UploadContext
 ) {
+  context?.assertCurrent()
   if (input.file.size <= 0 || input.file.size > UPLOAD_LIMITS.maxBytes)
     throw new UploadClientError(
       "INVALID_UPLOAD",
       `Files must contain between 1 and ${UPLOAD_LIMITS.maxBytes} bytes (100 MB). Your plan may have a lower limit.`
     )
   const bytes = await input.file.arrayBuffer()
+  context?.assertCurrent()
   const checksum = [
     ...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
   ]
     .map((value) => value.toString(16).padStart(2, "0"))
     .join("")
+  context?.assertCurrent()
   const key = JSON.stringify([
     input.target,
     input.name,
@@ -57,16 +67,19 @@ export async function uploadFileDirect(
     checksum,
   ])
   const session = sessions.get(key) ?? {
-    commandKey: crypto.randomUUID(),
+    commandKey: context?.commandKey ?? crypto.randomUUID(),
     id: undefined as string | undefined,
   }
   sessions.set(key, session)
-  const post = <T>(path: string, body: unknown) =>
-    fetcher(`/api/files/uploads${path}`, {
+  const post = <T>(path: string, body: unknown) => {
+    context?.assertCurrent()
+    return fetcher(`/api/files/uploads${path}`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...context?.headers },
       body: JSON.stringify(body),
+      signal: context?.signal,
     }).then(responseJson<T>)
+  }
   const finalize = () => post<ReadyUpload>(`/${session.id}/finalize`, {})
   try {
     if (session.id) {
@@ -110,19 +123,25 @@ export async function uploadFileDirect(
     }
     const grant = result.upload
     try {
+      context?.assertCurrent()
       if (grant.adapter === "vercel-private") {
         await put(grant.pathname, input.file, {
           access: "private",
           token: grant.token,
           contentType: "application/octet-stream",
           multipart: input.file.size > 8_000_000,
+          abortSignal: context?.signal,
         })
       } else {
         await responseJson(
           await fetcher(grant.url, {
             method: "PUT",
-            headers: { "content-type": "application/octet-stream" },
+            headers: {
+              "content-type": "application/octet-stream",
+              ...context?.headers,
+            },
             body: input.file,
+            signal: context?.signal,
           })
         )
       }

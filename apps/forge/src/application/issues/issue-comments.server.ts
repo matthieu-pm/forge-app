@@ -1,6 +1,7 @@
 import "@tanstack/react-start/server-only"
 import { and, eq, ilike, inArray, sql } from "drizzle-orm"
 import { z } from "zod"
+import { IssueFileInputError, bindIssueFiles } from "./issue-files.server"
 import { readIssueRows, requireIssueTeam } from "./issues.server"
 import type { Actor } from "@/application/actor"
 import type { Transaction } from "@/db"
@@ -251,6 +252,15 @@ export async function commandIssueComment(
                         input.action === "delete" ? current.userId : null,
                     }),
               }
+        if (input.uploadIds?.length)
+          comment.attachments = await bindIssueFiles(
+            tx,
+            current,
+            row.id,
+            input.uploadIds,
+            comment.attachments ?? [],
+            comment.id
+          )
         if (index < 0) comments.push(comment)
         else comments[index] = comment
         await tx
@@ -299,7 +309,10 @@ export async function commandIssueComment(
     // Only an error thrown INSIDE run proves this exact command rolled back.
     // Authorization can fail before receipt lookup or after a committed write;
     // those uncertain outcomes must retain the original retry identity.
-    if (error instanceof CommentInputError)
+    if (
+      error instanceof CommentInputError ||
+      error instanceof IssueFileInputError
+    )
       return {
         status: "rejected" as const,
         message: error.message,

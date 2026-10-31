@@ -297,6 +297,16 @@ export async function saveProductState(actor: Actor, raw: ProductStateCommand) {
       const row = (
         await tx.select().from(productState).where(predicate).for("update")
       )[0]
+      // Creation uniquely inserts this source in the issue transaction. A
+      // discarded source is a tombstone, even if another tab refreshes its CAS revision.
+      if (
+        /^forge:file-draft:v1:[0-9a-f-]{36}:creation$/.test(input.key) &&
+        input.value !== null &&
+        row.encodedValue === null
+      )
+        throw new ApplicationAccessError(
+          "The pending file source was discarded."
+        )
       if (row.revision !== input.expectedRevision) {
         if (
           (row.encodedValue === null ? null : JSON.parse(row.encodedValue)) ===

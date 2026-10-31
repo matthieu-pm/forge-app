@@ -236,3 +236,36 @@ describe("validated direct uploads", () => {
     ).toBe("application/octet-stream")
   })
 })
+
+it.each(["/", "/token", "/finalize", "/bytes"])(
+  "denies an upload selected by another session at %s before metadata or bytes",
+  async (operation) => {
+    const f = fixture(),
+      writeLocal = vi.fn()
+    const handler = createUploadHttpHandler({
+      getActor: async () => actor,
+      service: f.service,
+      writeLocal,
+    })
+    const path =
+      operation === "/"
+        ? "/api/files/uploads/"
+        : `/api/files/uploads/${f.intent.id}${operation}`
+    const response = await handler(
+      new Request(`https://forge.test${path}`, {
+        method: operation === "/bytes" ? "PUT" : "POST",
+        headers: {
+          origin: "https://forge.test",
+          "x-forge-upload-session": "old-session",
+          "x-forge-upload-workspace": actor.workspaceId,
+        },
+        body: "{}",
+      })
+    )
+    expect(response.status).toBe(403)
+    expect(f.store.create).not.toHaveBeenCalled()
+    expect(f.store.prepare).not.toHaveBeenCalled()
+    expect(f.transport.grant).not.toHaveBeenCalled()
+    expect(writeLocal).not.toHaveBeenCalled()
+  }
+)

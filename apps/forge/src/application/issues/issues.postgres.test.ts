@@ -4624,6 +4624,427 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
       expect(events.map((e) => e.recipient)).toEqual([...users].sort())
     }, 30000)
   })
+  describe("FOR-48 durable issue and comment files", () => {
+    it("keeps discarded creation sources tombstoned even with the newest product revision", async () => {
+      const f = await fixture("enterprise")
+      const input = {
+        ...command(f.teamId),
+        draft: {
+          ...draft("Discard is durable"),
+          attachments: [
+            {
+              name: "evidence.txt",
+              data: "data:text/plain;base64,ZXZpZGVuY2U=",
+            },
+          ],
+        },
+      }
+      const created = (await service.createCanonicalIssue(f.actors[0], input))
+        .issue
+      const key = `forge:file-draft:v1:${created.id}:creation`
+      const source = (await product.readProductState(f.actors[0])).entries.find(
+        (e) => e.key === key
+      )!
+      const auth = f.actors[0].authentication
+      const save = (value: string | null, expectedRevision: number) =>
+        product.saveProductState(f.actors[0], {
+          workspaceId: f.workspaceId,
+          sessionId: auth.kind === "session" ? auth.sessionId : "",
+          commandKey: randomUUID(),
+          key,
+          value,
+          expectedRevision,
+        })
+      await save(null, source.revision)
+      const discarded = (
+        await product.readProductState(f.actors[0])
+      ).entries.find((e) => e.key === key)!
+      await expect(save(source.value, discarded.revision)).rejects.toThrow(
+        "discarded"
+      )
+      expect(
+        (await product.readProductState(f.actors[0])).entries.find(
+          (e) => e.key === key
+        )
+      ).toMatchObject({ value: null, revision: discarded.revision })
+    }, 30000)
+    it("refuses a binding from a discarded creation job", async () => {
+      const f = await fileFixture()
+      try {
+        const input = {
+          ...command(f.teamId),
+          draft: {
+            ...draft("Discard pending source"),
+            attachments: [
+              {
+                name: "evidence.txt",
+                data: "data:text/plain;base64,ZXZpZGVuY2U=",
+              },
+            ],
+          },
+        }
+        const created = (await service.createCanonicalIssue(f.actors[0], input))
+          .issue
+        const uploaded = await f.ready(f.actors[0], created.id)
+        await pool.query(
+          "UPDATE product_state SET encoded_value=NULL,revision=revision+1 WHERE workspace_id=$1 AND key=$2",
+          [f.workspaceId, `forge:file-draft:v1:${created.id}:creation`]
+        )
+        await expect(
+          f.commandIssueFiles(f.actors[0], {
+            ...f.attach([uploaded.id]),
+            issueId: created.id,
+            creationKey: input.commandKey,
+            creationIndex: 0,
+          })
+        ).rejects.toThrow("discarded")
+        const records = await database.db.transaction((tx) =>
+          service.readIssueRows(tx, f.actors[0], [created.id])
+        )
+        expect(records[0].issue.attachments).toEqual([])
+      } finally {
+        await f.cleanup()
+      }
+    }, 30000)
+
+    it("atomically saves creation file recovery source with the issue and scopes it to the author", async () => {
+      const f = await fixture("enterprise")
+      const input = {
+        ...command(f.teamId),
+        draft: {
+          ...draft("Recover upload after creation"),
+          attachments: [
+            {
+              name: "evidence.txt",
+              data: "data:text/plain;base64,ZXZpZGVuY2U=",
+            },
+          ],
+        },
+      }
+      const result = await service.createCanonicalIssue(f.actors[0], input)
+      expect(result.issue.attachments).toEqual([])
+      const key = `forge:file-draft:v1:${result.issue.id}:creation`
+      const owned = (await product.readProductState(f.actors[0])).entries.find(
+        (e) => e.key === key
+      )
+      expect(JSON.parse(owned!.value!)).toMatchObject({
+        issueId: result.issue.id,
+        teamId: f.teamId,
+        files: input.draft.attachments,
+        completed: false,
+      })
+      expect(
+        (await product.readProductState(f.actors[1])).entries.find(
+          (e) => e.key === key
+        )
+      ).toBeUndefined()
+      await service.createCanonicalIssue(f.actors[0], input)
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int count FROM issues WHERE workspace_id=$1",
+            [f.workspaceId]
+          )
+        ).rows[0].count
+      ).toBe(1)
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int count FROM product_state WHERE workspace_id=$1 AND key=$2",
+            [f.workspaceId, key]
+          )
+        ).rows[0].count
+      ).toBe(1)
+      await pool.query("UPDATE teams SET visibility='private' WHERE id=$1", [
+        f.teamId,
+      ])
+      await pool.query(
+        "UPDATE member SET role='member' WHERE organization_id=$1 AND user_id=$2",
+        [f.workspaceId, users[0]]
+      )
+      expect(
+        (await product.readProductState(f.actors[0])).entries.find(
+          (e) => e.key === key
+        )
+      ).toMatchObject({ value: null })
+    }, 30000)
+
+    async function fileFixture() {
+      const f = await fixture("enterprise")
+      const issue = (
+        await service.createCanonicalIssue(f.actors[0], command(f.teamId))
+      ).issue
+      const { commandIssueFiles } = await import("./issue-files.server")
+      const { commandIssueComment } = await import("./issue-comments.server")
+      const { DrizzleUploadStore } =
+        await import("@/adapters/files/drizzle-upload-store.server")
+      const { UploadService } =
+        await import("@/application/files/upload-service.server")
+      const { FileDeliveryService } =
+        await import("@/application/files/file-delivery-service.server")
+      const { lookupAuthorizedFile } =
+        await import("@/adapters/files/file-delivery-lookup.server")
+      const { LocalFileBlobStore } =
+        await import("@/adapters/files/local-file-blob-store.server")
+      const { mkdtemp, rm } = await import("node:fs/promises")
+      const { tmpdir } = await import("node:os")
+      const { join } = await import("node:path")
+      const directory = await mkdtemp(join(tmpdir(), "for48-")),
+        blobs = new LocalFileBlobStore(directory)
+      vi.stubEnv(
+        "FORGE_AGENT_ARTIFACT_SECRET",
+        "for48-isolated-acceptance-signing-secret"
+      )
+      const upload = new UploadService(new DrizzleUploadStore(), {
+        grant: async () => {
+          throw new Error("Not used")
+        },
+        read: async (ref) => {
+          const bytes = await blobs.get(ref)
+          return bytes ? new Blob([bytes]).stream() : null
+        },
+        delete: (ref) => blobs.delete(ref),
+      })
+      async function ready(
+        actor = f.actors[0],
+        target = issue.id,
+        finalize = true
+      ) {
+        const content = new TextEncoder().encode(
+          "FOR-48 verified evidence " + randomUUID()
+        )
+        const { fileChecksum } =
+          await import("@/application/files/file-integrity.server")
+        const intent = await upload.create(actor, {
+          commandKey: randomUUID(),
+          target: { kind: "issue", id: target },
+          name: "evidence.txt",
+          contentType: "text/plain",
+          sizeBytes: content.byteLength,
+          checksum: fileChecksum(content),
+        })
+        const [row] = (
+          await pool.query(
+            "SELECT storage_reference FROM file_upload_intents WHERE id=$1",
+            [intent.id]
+          )
+        ).rows
+        await blobs.put(row.storage_reference, content)
+        if (finalize) await upload.finalize(actor, intent.id)
+        return { id: intent.id, content }
+      }
+      return {
+        ...f,
+        issue,
+        blobs,
+        ready,
+        upload,
+        commandIssueFiles,
+        commandIssueComment,
+        delivery: () =>
+          new FileDeliveryService({
+            lookup: lookupAuthorizedFile,
+            blobs: new LocalFileBlobStore(directory),
+          }),
+        attach: (
+          ids: Array<string>,
+          commentId?: string,
+          expectedVersion?: number
+        ) => ({
+          commandKey: randomUUID(),
+          teamId: f.teamId,
+          issueId: issue.id,
+          action: "attach" as const,
+          fileIds: ids,
+          commentId,
+          expectedVersion,
+        }),
+        cleanup: async () => {
+          await pool.query(
+            "DELETE FROM file_upload_intents WHERE workspace_id=$1",
+            [f.workspaceId]
+          )
+          await rm(directory, { recursive: true, force: true })
+        },
+      }
+    }
+    it("AT-01 persists verified bytes across service replacement, collaborator reads, replay and detach", async () => {
+      const f = await fileFixture()
+      try {
+        const file = await f.ready(),
+          input = f.attach([file.id]),
+          target = { kind: "resources" as const, id: file.id }
+        await expect(
+          f.delivery().grant(f.actors[1], target, "download")
+        ).rejects.toThrow("unavailable")
+        // Simulate an old process finalizing between migration and code rollout.
+        await pool.query(
+          "UPDATE resource_files SET attachment_state=NULL WHERE id=$1",
+          [file.id]
+        )
+        await expect(
+          f.delivery().grant(f.actors[1], target, "download")
+        ).rejects.toThrow("unavailable")
+        const saved = await f.commandIssueFiles(f.actors[0], input)
+        expect(saved.records[0].issue.attachments?.[0]).toMatchObject({
+          fileId: file.id,
+          data: "",
+          name: "evidence.txt",
+        })
+        expect(await f.commandIssueFiles(f.actors[0], input)).toMatchObject({
+          replayed: true,
+        })
+        const grant = await f.delivery().grant(f.actors[1], target, "download")
+        const token = new URL(grant.url, "http://forge.test").searchParams.get(
+          "token"
+        )!
+        expect(
+          (await f.delivery().read(f.actors[1], target, "download", token))
+            .content
+        ).toEqual(file.content)
+        await f.commandIssueFiles(f.actors[1], {
+          ...f.attach([file.id]),
+          action: "detach",
+        })
+        await expect(
+          f.delivery().read(f.actors[1], target, "download", token)
+        ).rejects.toThrow("unavailable")
+        const row = (
+          await pool.query(
+            "SELECT attachment_state,storage_reference FROM resource_files WHERE id=$1",
+            [file.id]
+          )
+        ).rows[0]
+        expect(row.attachment_state).toBe("detached")
+        expect(await f.blobs.get(row.storage_reference)).toEqual(file.content)
+      } finally {
+        await f.cleanup()
+      }
+    }, 30000)
+    it("AT-02 rejects pending, foreign-user, foreign-issue and reused uploads atomically", async () => {
+      const f = await fileFixture()
+      try {
+        const pending = await f.ready(undefined, undefined, false)
+        await expect(
+          f.commandIssueFiles(f.actors[0], f.attach([pending.id]))
+        ).rejects.toThrow("not ready")
+        const foreignUser = await f.ready(f.actors[1])
+        await expect(
+          f.commandIssueFiles(f.actors[0], f.attach([foreignUser.id]))
+        ).rejects.toThrow("not ready")
+        const other = (
+          await service.createCanonicalIssue(f.actors[0], command(f.teamId))
+        ).issue
+        const foreignIssue = await f.ready(f.actors[0], other.id)
+        await expect(
+          f.commandIssueFiles(f.actors[0], f.attach([foreignIssue.id]))
+        ).rejects.toThrow("not ready")
+        const good = await f.ready()
+        await expect(
+          f.commandIssueFiles(f.actors[0], f.attach([good.id, pending.id]))
+        ).rejects.toThrow("not ready")
+        const records = await database.db.transaction((tx) =>
+          service.readIssueRows(tx, f.actors[0], [f.issue.id])
+        )
+        expect(records[0].issue.attachments).toHaveLength(0)
+        await f.commandIssueFiles(f.actors[0], f.attach([good.id]))
+        await expect(
+          f.commandIssueFiles(f.actors[0], f.attach([good.id]))
+        ).rejects.toThrow("not ready")
+        const target = { kind: "resources" as const, id: good.id },
+          grant = await f.delivery().grant(f.actors[1], target, "download")
+        const token = new URL(grant.url, "http://forge.test").searchParams.get(
+          "token"
+        )!
+        await pool.query("UPDATE teams SET visibility='private' WHERE id=$1", [
+          f.teamId,
+        ])
+        await expect(
+          f.delivery().read(f.actors[1], target, "download", token)
+        ).rejects.toThrow("unavailable")
+        await expect(
+          f.commandIssueFiles(f.actors[1], f.attach([foreignUser.id]))
+        ).rejects.toThrow()
+      } finally {
+        await f.cleanup()
+      }
+    }, 30000)
+    it("binds comment files atomically, enforces moderation/version and revokes deleted comment grants", async () => {
+      const f = await fileFixture()
+      try {
+        const file = await f.ready(),
+          commentId = randomUUID()
+        const { commentFromText } = await import("@/lib/comment-rich-text")
+        const input = {
+          commandKey: randomUUID(),
+          teamId: f.teamId,
+          issueId: f.issue.id,
+          action: "create" as const,
+          commentId,
+          parentId: "",
+          expectedVersion: 0,
+          document: commentFromText("Evidence attached"),
+          uploadIds: [file.id],
+        }
+        expect(await f.commandIssueComment(f.actors[0], input)).toMatchObject({
+          status: "saved",
+        })
+        expect(await f.commandIssueComment(f.actors[0], input)).toMatchObject({
+          status: "saved",
+          replayed: true,
+        })
+        const target = { kind: "resources" as const, id: file.id },
+          grant = await f.delivery().grant(f.actors[1], target, "download")
+        const token = new URL(grant.url, "http://forge.test").searchParams.get(
+          "token"
+        )!
+        await expect(
+          f.commandIssueFiles(f.actors[1], {
+            ...f.attach([file.id], commentId, 0),
+            action: "detach",
+          })
+        ).rejects.toThrow()
+        await expect(
+          f.commandIssueFiles(f.actors[0], {
+            ...f.attach([file.id], commentId, 1),
+            action: "detach",
+          })
+        ).rejects.toThrow("changed")
+        const { uploadIds: _u, document: _d, ...moderation } = input
+        expect(
+          await f.commandIssueComment(f.actors[0], {
+            ...moderation,
+            action: "delete",
+            commandKey: randomUUID(),
+          })
+        ).toMatchObject({ status: "saved" })
+        await expect(
+          f.delivery().read(f.actors[1], target, "download", token)
+        ).rejects.toThrow("unavailable")
+        expect(
+          await f.commandIssueComment(f.actors[0], {
+            ...moderation,
+            action: "restore",
+            expectedVersion: 1,
+            commandKey: randomUUID(),
+          })
+        ).toMatchObject({ status: "saved" })
+        expect(
+          (await f.delivery().read(f.actors[1], target, "download", token))
+            .content
+        ).toEqual(file.content)
+        await f.commandIssueFiles(f.actors[0], {
+          ...f.attach([file.id], commentId, 2),
+          action: "detach",
+        })
+        await expect(
+          f.delivery().read(f.actors[1], target, "download", token)
+        ).rejects.toThrow("unavailable")
+      } finally {
+        await f.cleanup()
+      }
+    }, 30000)
+  })
   describe("FOR-47 reactions and subscriptions", () => {
     const engagement = () => import("./issue-engagement.server")
     async function setup() {

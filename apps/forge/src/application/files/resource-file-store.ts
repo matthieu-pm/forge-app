@@ -11,6 +11,8 @@ export type StoredResourceFile = {
   storageReference: string
   createdAt: Date
   deletedAt: Date | null
+  attachmentState?: "unbound" | "attached" | "detached" | null
+  commentId?: string | null
 }
 export interface ResourceFileMetadataStore {
   create: (record: StoredResourceFile) => Promise<StoredResourceFile>
