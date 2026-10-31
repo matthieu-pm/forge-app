@@ -63,7 +63,7 @@
       }
     },
     "build": "passed",
-    "typecheck": "passed",
+    "typecheck": "Passed on final integrated implementation after using typed HTMLSelectElement queries in the refresh regression.",
     "changedFileLint": {
       "errors": 0,
       "warnings": 4
@@ -74,5 +74,38 @@
   "release": {
     "merged": false,
     "productionChanged": false
+  },
+  "integratedBase": "00fe108091b00d9ce730597bedc4fe45e595613a",
+  "integratedImplementation": "f2bd0cc64687bcbc761661b85b44b96905e5da0a",
+  "integrationValidation": {
+    "app": {
+      "passed": 2306,
+      "failed": 0,
+      "skipped": 404
+    },
+    "postgresTriageAndEngagement": {
+      "passed": 16,
+      "failed": 0,
+      "database": "forge_triage_acceptance"
+    },
+    "workflow": {
+      "passed": 4,
+      "failed": 0
+    },
+    "typecheck": "passed",
+    "productionBuild": "passed",
+    "changedFileLint": {
+      "errors": 0,
+      "warnings": 2
+    },
+    "browser": {
+      "passed": true,
+      "environment": "Combined FOR-47 and FOR-50 production Node build with two real Better Auth sessions",
+      "cleanup": {
+        "workspaces": 0,
+        "users": 0,
+        "receipts": 0
+      }
+    }
   }
 }
