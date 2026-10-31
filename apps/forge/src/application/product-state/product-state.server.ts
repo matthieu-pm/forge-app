@@ -34,6 +34,7 @@ import {
 } from "@/application/resource-policy.server"
 import { currentCommandActor } from "@/application/commands/command-actor.server"
 import { executeCommand } from "@/application/commands/execute-command.server"
+import { projectCommandPrefix } from "@/lib/shared-project-contract"
 import {
   isProductStorageKey,
   productStateCommandSchema,
@@ -238,6 +239,16 @@ export async function readProductState(
 export async function saveProductState(actor: Actor, raw: ProductStateCommand) {
   const input = productStateCommandSchema.parse(raw)
   session(actor, input.workspaceId, input.sessionId)
+  if (input.key.startsWith(projectCommandPrefix)) {
+    if (input.value === null) throw new ApplicationAccessError()
+    const { saveCanonicalProjects } =
+      await import("@/application/planning/projects.server")
+    return saveCanonicalProjects(
+      actor,
+      input.commandKey,
+      JSON.parse(input.value)
+    )
+  }
   if (input.value !== null) {
     if (input.key.startsWith("forge:team-cycles:v1:"))
       parseTeamCycles(input.value)

@@ -39,6 +39,7 @@ export const projects = pgTable(
     workspaceId: workspace(),
     name: text("name").notNull(),
     legacyId: text("legacy_id"),
+    revision: integer("revision").default(0).notNull(),
     properties: jsonb("properties")
       .$type<Record<string, unknown>>()
       .default({})

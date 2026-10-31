@@ -46,6 +46,7 @@ import {
 } from "@/db"
 import {
   ApplicationAccessError,
+  hasScope,
   hasWorkspaceRole,
 } from "@/application/authorization"
 import { currentCommandActor } from "@/application/commands/command-actor.server"
@@ -168,9 +169,13 @@ export async function readIssueRows(
   // Keep the correlated outer reference qualified: Drizzle's single-table
   // selection otherwise strips Column qualifiers inside nested SQL fragments.
   const parentColumn = sql`"issues"."parent_id"`
+  const projectColumn = sql`"issues"."project_id"`
   const rows = await tx
     .select({
       ...getTableColumns(issues),
+      projectId: sql<
+        string | null
+      >`CASE WHEN ${readableProjectCondition(actor, projectColumn)} THEN ${projectColumn} ELSE NULL END`,
       parentId: sql<
         string | null
       >`CASE WHEN ${readableIssueCondition(actor, parentColumn)} AND EXISTS (SELECT 1 FROM issues parent WHERE parent.id=${parentColumn} AND parent.archived_at IS NULL) THEN ${parentColumn} ELSE NULL END`,
@@ -267,7 +272,8 @@ export async function readCanonicalIssues(actor: Actor, metadataOnly = false) {
         .where(
           and(
             eq(projects.workspaceId, current.workspaceId),
-            readableProjectCondition(current, projects.id)
+            readableProjectCondition(current, projects.id),
+            hasScope(current, "projects:read") ? undefined : sql`false`
           )
         )
       const visibleLinks = await tx

@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { onPreferenceSessionInvalidated } from "./preference-session-events"
+import { projectCommandPrefix } from "./shared-project-key"
 import { loadProductState, persistProductState } from "./product-state-server"
 import {
   isProductStorageKey,
@@ -42,6 +43,31 @@ function notify(key: string | null = null) {
 }
 export function storageStatus() {
   return { pending: pending.length, error, deviceError, restored }
+}
+export function pendingProjectDrafts() {
+  return pending
+    .filter((p) => p.key.startsWith(projectCommandPrefix))
+    .map((p) => {
+      try {
+        return JSON.parse(p.value ?? "[]") as unknown
+      } catch {
+        return p.value
+      }
+    })
+}
+export function savedProjectDrafts() {
+  return [...values].flatMap(([key, value]) => {
+    if (!key.startsWith("forge:pending-recovery:v1:")) return []
+    try {
+      const draft = JSON.parse(value)
+      return typeof draft.key === "string" &&
+        draft.key.startsWith(projectCommandPrefix)
+        ? [{ key, changes: JSON.parse(draft.value) as unknown }]
+        : []
+    } catch {
+      return []
+    }
+  })
 }
 export function resetProductStorage() {
   generation++
@@ -132,6 +158,13 @@ export async function flushProductStorage() {
         },
       })
       if (token !== generation) return
+      if (p.key.startsWith(projectCommandPrefix)) {
+        const { refreshCanonicalIssues } =
+          await import("./canonical-issue-client")
+        await refreshCanonicalIssues(binding)
+        if (token !== generation) return
+        values.delete(p.key)
+      }
       mutationEpoch++
       revisions.set(p.key, result.value.revision)
       pending.shift()
@@ -263,6 +296,12 @@ export async function preservePendingAndReload() {
     }
     const snapshot = await loadProductState()
     if (token !== generation) return
+    if (recovering.some((p) => p.key.startsWith(projectCommandPrefix))) {
+      const { refreshCanonicalIssues } =
+        await import("./canonical-issue-client")
+      await refreshCanonicalIssues(binding)
+      if (token !== generation) return
+    }
     if (
       snapshot.userId !== binding.userId ||
       snapshot.sessionId !== binding.sessionId ||

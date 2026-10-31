@@ -204,6 +204,7 @@ export function ProjectsPage({
     display.error,
     directoryError,
     actionError,
+    store.mutationError,
     issueStats.error,
   ].filter(Boolean)
   const summaryField =
@@ -628,13 +629,16 @@ export function ProjectsPage({
                   setPreferences({ ...preferences, closed: "All" })
               }
               if (creating && onOpenProject) onOpenProject(project)
-              toast.success(creating ? "Project created" : "Project saved", {
-                description: project.name,
-                action: {
-                  label: "View project",
-                  onClick: () => openProject(project),
-                },
-              })
+              toast.success(
+                creating ? "Project creation queued" : "Project changes queued",
+                {
+                  description: project.name,
+                  action: {
+                    label: "View project",
+                    onClick: () => openProject(project),
+                  },
+                }
+              )
             }
             return saved
           }}
@@ -663,8 +667,9 @@ export function ProjectsPage({
               sidebar for a breakdown by health, initiative, team, or lead.
             </p>
             <p>
-              Projects are saved in this browser for the current workspace. They
-              do not sync between devices.
+              Projects are shared with your workspace. Changes sync after the
+              server confirms them. Private team issues remain visible only to
+              people with access to that team.
             </p>
           </div>
         </DialogContent>

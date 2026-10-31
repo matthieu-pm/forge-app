@@ -107,7 +107,7 @@ export function ProjectDetailPage(props: Props) {
         <div className="p-8">
           <p role={store.error ? "alert" : "status"}>
             {store.error ||
-              "This project is no longer available on this device."}
+              "This project is no longer available in this workspace."}
           </p>
           <Button variant="secondary" className="mt-4" onClick={props.onBack}>
             Back to projects
@@ -647,12 +647,14 @@ function ProjectDetail({
         </div>
       </div>
       {(error ||
+        store.mutationError ||
         store.error ||
         directoryError ||
         stats.error ||
         preferences.error) && (
         <p role="alert" className="px-6 py-2 text-xs text-destructive">
-          {error ||
+          {store.mutationError ||
+            error ||
             store.error ||
             directoryError ||
             stats.error ||

@@ -94,6 +94,7 @@ export const initiativeResourcesSchema = z
 
 export const initiativeProjectSchema = z.object({
   id: z.string().min(1),
+  revision: z.number().int().nonnegative().optional(),
   name: z.string().trim().min(1).max(200),
   status: z.enum([
     "Backlog",
