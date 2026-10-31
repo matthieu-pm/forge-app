@@ -69,7 +69,9 @@
     "test:issue-engagement:browser": "node scripts/verify-issue-engagement-browser.mjs",
     "test:issue-history:postgres": "vitest run src/application/issues/issues.postgres.test.ts -t FOR-49",
     "test:issue-history:browser": "node scripts/verify-issue-history-browser.mjs",
-    "test:cache-scope:browser": "node scripts/verify-cache-scope-browser.mjs"
+    "test:cache-scope:browser": "node scripts/verify-cache-scope-browser.mjs",
+    "test:cycles:postgres": "vitest run src/application/issues/issues.postgres.test.ts -t FOR-55",
+    "test:cycles:browser": "node scripts/verify-cycles-browser.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1104.0",

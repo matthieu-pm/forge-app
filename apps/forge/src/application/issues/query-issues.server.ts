@@ -195,7 +195,7 @@ export async function queryCanonicalIssues(
         )
       if (query.cycle !== undefined)
         domain.push(
-          sql`EXISTS(SELECT 1 FROM issue_cycles c WHERE c.id = ${issues.cycleId} AND c.start_date = ${query.cycle})`
+          sql`EXISTS(SELECT 1 FROM issue_cycles c WHERE c.id = ${issues.cycleId} AND (c.id::text = ${query.cycle} OR c.start_date = ${query.cycle}))`
         )
       if (query.milestone)
         domain.push(

@@ -3,7 +3,7 @@ import { UpcomingCycle } from "@/components/upcoming-cycle"
 
 export const Route = createFileRoute("/teams/$teamSlug/cycle/$cycleNumber")({
   beforeLoad: ({ params }) => {
-    if (!/^[1-6]$/.test(params.cycleNumber)) throw notFound()
+    if (!/^[1-9]\d{0,8}$/.test(params.cycleNumber)) throw notFound()
   },
   component: CyclePage,
 })

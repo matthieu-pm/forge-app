@@ -5,11 +5,7 @@ import {
   issueChip,
   issuePropertyControl,
 } from "./issue-controls"
-import {
-  scheduledTeamCycles,
-  useEnabledTeamCycles,
-  useTeamCycles,
-} from "@/lib/team-cycles"
+import { useEnabledTeamCycles, useTeamCycles } from "@/lib/team-cycles"
 import { cn } from "@/lib/utils"
 
 export function IssueCyclePicker({
@@ -24,9 +20,11 @@ export function IssueCyclePicker({
   property?: boolean
 }) {
   const enabled = useEnabledTeamCycles([teamId]).has(teamId)
-  const { settings, ready, error } = useTeamCycles(teamId)
-  if (!enabled || !ready || error) return null
-  const cycles = scheduledTeamCycles(settings)
+  const { settings, ready, error, cycles: storedCycles } = useTeamCycles(teamId)
+  if (!enabled || !settings.enabled || !ready || error) return null
+  const cycles = storedCycles.filter(
+    (c) => c.state !== "Past" || c.value === value
+  )
   const selected = cycles.find((cycle) => cycle.value === value)
   const previous = parseISO(value)
   const previousLabel = isValid(previous)
@@ -45,7 +43,7 @@ export function IssueCyclePicker({
           : []),
         ...cycles.map((cycle) => ({
           value: cycle.value,
-          label: `Cycle ${cycle.number} · ${cycle.number === 1 ? "Upcoming" : "Planned"} · ${format(cycle.start, "MMM d")}–${format(cycle.end, "MMM d")}`,
+          label: `Cycle ${cycle.number} · ${cycle.state} · ${format(cycle.start, "MMM d")}–${format(cycle.end, "MMM d")}`,
           icon: <IssueIcon name="clock" />,
         })),
       ]}
