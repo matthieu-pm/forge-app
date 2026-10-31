@@ -26,12 +26,24 @@ import type { CanonicalSnapshot } from "./canonical-issue-cache"
 import type { IssueDraft, TeamIssue } from "./issue-record-contract"
 import { productStorage, saveProductValue } from "@/lib/product-storage"
 
+// Metadata reads share one cache. A slow response must not restore a project
+// removed by a newer authorized read under the same session identity.
+let metadataRequestSequence = 0
 export async function refreshCanonicalIssues(identity: {
   workspaceId: string
   sessionId: string
 }) {
+  const request = ++metadataRequestSequence
   const token = canonicalIssueEpoch()
-  const state = JSON.parse(await loadCanonicalIssues()) as CanonicalSnapshot
+  const protectedEpoch = protectedSessionEpoch()
+  const response = await loadCanonicalIssues()
+  if (protectedEpoch !== protectedSessionEpoch())
+    throw new Error("The active session changed.")
+  if (request !== metadataRequestSequence)
+    throw new Error(
+      "The workspace refreshed while loading. Retry to confirm your saved changes."
+    )
+  const state = JSON.parse(response) as CanonicalSnapshot
   if (
     state.workspaceId !== identity.workspaceId ||
     state.sessionId !== identity.sessionId

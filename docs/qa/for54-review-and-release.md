@@ -43,3 +43,11 @@ FOR-55 merged as `d732759` during the final review and released `0060_shared_cyc
 Both sets of package scripts, project/cycle cache fields and command paths are retained. The isolated issue-history acceptance database had the provisional project migration; under the migration lock its exact prior journal was verified, the released cycle SQL was applied, and only the unreleased project receipt timestamp was aligned to the canonical order. No receipt or data was deleted. Normal migration replay then applied zero changes at 62 entries. Production history was never rewritten.
 
 A fresh integrated production clone, `br-empty-sun-zagd0klv`, starts from the already released cycle schema. It is the current `project-rehearsal` allowlist target and expires automatically on 1 November 2026 at 00:34:05 UTC. The original clone remains a historical pre-integration check and expires separately. Integrated verification and final release results are recorded in Linear.
+
+## FOR-51 cache integration and final metadata fence
+
+FOR-51 then merged as `62d8be4`. Its issue read-generation, removal and fresh-authorized-read fences are preserved alongside project revision handling. There are no additional schema changes.
+
+The final cache re-review found one further privacy race: an older metadata response could restore a project after a newer response removed it following revocation. Metadata requests now have a monotonically increasing sequence and check the protected-session epoch before publishing a response. Superseded save refreshes reject while retaining the exact queued command for retry. Three focused regressions cover reverse response order, session retirement before canonical reset, and successful exact-command reconciliation. This gives four distinct review findings in total; all are fixed.
+
+The integrated cycle/project PostgreSQL run passed **153 cases**. The final application checks and hosted production results are attached to FOR-54 with the exact release revision.
