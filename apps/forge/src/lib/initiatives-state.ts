@@ -27,8 +27,8 @@ import {
   parseTeamLabels,
   projectLabelsStorageKey,
 } from "./team-labels"
-import type { InitiativeStore } from "./initiatives"
 import { protectedSessionEpoch } from "./protected-session"
+import type { InitiativeStore } from "./initiatives"
 import { productStorage, productStorageIdentity } from "@/lib/product-storage"
 import { useWorkspaceView } from "@/components/account-preference-provider"
 
