@@ -9,14 +9,17 @@ import {
 
 const { connection } = JSON.parse(
   readFileSync(
-    (process.env.FORGE_ISSUE_HISTORY_TEST_DATABASE_FILE ??
+    (process.env.FORGE_CYCLE_TEST_DATABASE_FILE ??
+      process.env.FORGE_ISSUE_HISTORY_TEST_DATABASE_FILE ??
       process.env.FORGE_ISSUE_TEST_DATABASE_FILE)!,
     "utf8"
   )
 )
-const environment = process.env.FORGE_ISSUE_HISTORY_TEST_DATABASE_FILE
-  ? "issue-history-acceptance"
-  : "issue-creation-acceptance"
+const environment = process.env.FORGE_CYCLE_TEST_DATABASE_FILE
+  ? "cycle-acceptance"
+  : process.env.FORGE_ISSUE_HISTORY_TEST_DATABASE_FILE
+    ? "issue-history-acceptance"
+    : "issue-creation-acceptance"
 const target = { environment, ...DATABASE_TARGETS[environment] } as const
 assertMigrationTarget(connection, target)
 neonConfig.webSocketConstructor = WebSocket

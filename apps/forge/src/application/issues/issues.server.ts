@@ -16,6 +16,7 @@ import type { Actor } from "@/application/actor"
 import type { Transaction } from "@/db"
 import type { CreateCanonicalIssue } from "@/lib/canonical-issue-contract"
 import type { TeamIssue } from "@/lib/issue-record-contract"
+import { lockTeamCycles } from "@/application/cycles/cycles.server"
 import {
   creationFileJobKey,
   creationFileJobSchema,
@@ -239,7 +240,7 @@ export async function readIssueRows(
       assignee: row.assigneeId ?? "",
       project: row.projectId ?? "",
       parentId: row.parentId ?? "",
-      cycle: cycles.find((c) => c.id === row.cycleId)?.startDate ?? "",
+      cycle: cycles.find((c) => c.id === row.cycleId)?.id ?? "",
       labels: labels
         .filter((l) => l.issueId === row.id)
         .map((l) => l.name)
@@ -511,6 +512,7 @@ export async function resolveIssueFields(
   }
   let cycleId: string | null = null
   if (input.draft.cycle) {
+    await lockTeamCycles(tx, input.teamId)
     let cycle = (
       await tx
         .select()
@@ -518,11 +520,15 @@ export async function resolveIssueFields(
         .where(
           and(
             eq(issueCycles.teamId, input.teamId),
-            eq(issueCycles.startDate, input.draft.cycle)
+            eq(issueCycles.workspaceId, current.workspaceId),
+            or(
+              eq(sql`${issueCycles.id}::text`, input.draft.cycle),
+              eq(issueCycles.startDate, input.draft.cycle)
+            )
           )
         )
     )[0]
-    if (!cycle && input.cycleImport) {
+    if (!cycle && input.cycleImport && input.legacyId) {
       if (
         input.cycleImport.startDate !== input.draft.cycle ||
         input.cycleImport.endDate < input.cycleImport.startDate
@@ -535,6 +541,7 @@ export async function resolveIssueFields(
             workspaceId: current.workspaceId,
             teamId: input.teamId,
             ...input.cycleImport,
+            timezone: team.timezone,
           })
           .returning()
       )[0]

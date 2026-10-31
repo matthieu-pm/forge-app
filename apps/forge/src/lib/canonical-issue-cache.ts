@@ -18,6 +18,8 @@ export type CanonicalSnapshot = {
     teamId: string
     startDate: string
     endDate: string
+    number?: number
+    timezone?: string
   }>
 }
 let state: CanonicalSnapshot | null = null
@@ -123,6 +125,20 @@ export function projectDisplayName(value: string) {
     state?.projects.find((p) => p.id === value || p.legacyId === value)?.name ??
     value
   )
+}
+
+export function cycleDisplayName(value: string) {
+  if (!value) return ""
+  const cycle = state?.cycles.find(
+    (c) => c.id === value || c.startDate === value
+  )
+  if (cycle)
+    return cycle.number
+      ? `Cycle ${cycle.number}`
+      : `Cycle starting ${cycle.startDate}`
+  return /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? `Cycle starting ${value}`
+    : "Assigned cycle"
 }
 
 function notifyIssues() {

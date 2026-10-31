@@ -57,6 +57,19 @@ export function patchCycleIssues(
   ids: Array<string>,
   patch: Partial<IssueDraft>
 ) {
+  if (canonicalIssuesActive()) {
+    const current = readIssueStore(teamId).issues
+    if (
+      ids.some((id) => !current.some((i) => i.id === id && i.cycle === cycle))
+    )
+      throw new Error("This issue is no longer in this cycle.")
+    return writeIssueStore(teamId, (state) => ({
+      ...state,
+      issues: state.issues.map((issue) =>
+        ids.includes(issue.id) ? { ...issue, ...patch } : issue
+      ),
+    }))
+  }
   const legacy = parseCycleIssues(
     productStorage.getItem(cycleIssuesKey(teamId)) ?? "[]"
   )
@@ -194,7 +207,7 @@ export function useCycleIssues(teamId: string, cycle: string) {
         string,
         string | null,
       ]
-      const legacy = parseCycleIssues(legacyRaw)
+      const legacy = canonicalIssuesActive() ? [] : parseCycleIssues(legacyRaw)
       const canonical = canonicalRaw ? parseIssueStore(canonicalRaw).issues : []
       // An issue moved out of a cycle must also suppress its older cycle snapshot.
       const canonicalIds = new Set(canonical.map((issue) => issue.id))

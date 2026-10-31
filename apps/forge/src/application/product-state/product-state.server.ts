@@ -14,6 +14,10 @@ import type {
   ProductStateCommand,
   ProductStateSnapshot,
 } from "@/lib/product-state-contract"
+import {
+  ensureTeamCycles,
+  lockTeamCycles,
+} from "@/application/cycles/cycles.server"
 import { parseTeamCycles } from "@/lib/team-cycles-contract"
 import { parseTeamTriage } from "@/lib/team-triage-contract"
 import {
@@ -265,6 +269,10 @@ export async function saveProductState(actor: Actor, raw: ProductStateCommand) {
     },
     run: async (tx, current) => {
       const ownerId = await scope(tx, current, input.key, true)
+      const cycleTeamId = input.key.match(
+        /^forge:team-cycles:v1:([0-9a-f-]{36})$/
+      )?.[1]
+      if (cycleTeamId) await lockTeamCycles(tx, cycleTeamId)
       if (isIssueCopyKey(input.key))
         await tx
           .select({ id: organizations.id })
@@ -337,6 +345,19 @@ export async function saveProductState(actor: Actor, raw: ProductStateCommand) {
           revision: row.revision + 1,
         })
         .where(predicate)
+      if (cycleTeamId && input.value) {
+        const settings = parseTeamCycles(input.value)
+        const team = (
+          await tx.select().from(teams).where(eq(teams.id, cycleTeamId))
+        )[0]
+        await ensureTeamCycles(
+          tx,
+          current.workspaceId,
+          cycleTeamId,
+          settings,
+          settings.timezone ?? team.timezone
+        )
+      }
       return {
         value: { revision: row.revision + 1 },
         resource: { type: "productState", id: row.id },

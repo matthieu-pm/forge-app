@@ -15,7 +15,7 @@ export const issueChangesSchema = z
     project: z.string().max(200).optional(),
     labels: z.string().max(1000).optional(),
     dueDate: issueDraftSchema.shape.dueDate.optional(),
-    cycle: z.union([z.iso.date(), z.literal("")]).optional(),
+    cycle: z.union([z.uuid(), z.iso.date(), z.literal("")]).optional(),
     parentId: z.union([z.uuid(), z.literal("")]).optional(),
     links: issueDraftSchema.shape.links.removeDefault().max(100).optional(),
     recurrence: issueDraftSchema.shape.recurrence.removeDefault().optional(),

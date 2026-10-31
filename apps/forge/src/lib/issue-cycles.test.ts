@@ -7,6 +7,7 @@ import {
   readIssueStore,
   saveTeamIssue,
 } from "./team-issues"
+import { replaceCanonicalIssues } from "./canonical-issue-cache"
 import { initialTeamCycles, scheduledTeamCycles } from "./team-cycles"
 import { productStorage } from "@/lib/product-storage"
 
@@ -181,6 +182,49 @@ describe("Issue cycle assignments", () => {
     moveTeamIssue(team, "other", issue.id)
     expect(readIssueStore("other").issues[0].cycle).toBe("")
     expect(readIssueStore(team).issues).toHaveLength(0)
+  })
+  it("renders canonical IDs without resurrecting legacy cycle-only snapshots", () => {
+    const issue = saveTeamIssue(team, {
+      ...blankIssueDraft(),
+      title: "Canonical imported work",
+      cycle,
+    })
+    productStorage.setItem(
+      cycleIssuesKey(team),
+      JSON.stringify([
+        { ...issue, id: "old-cycle-only-id", title: "Old snapshot" },
+      ])
+    )
+    const state = {
+      workspaceId: "workspace",
+      userId: "member",
+      sessionId: "session",
+      projects: [],
+      cycles: [],
+      records: [{ teamId: team, legacyId: "old-cycle-only-id", issue }],
+    }
+    replaceCanonicalIssues(state)
+    try {
+      const { result } = renderHook(() => useCycleIssues(team, cycle))
+      expect(result.current.records.map((i) => i.id)).toEqual([issue.id])
+      act(() =>
+        replaceCanonicalIssues({
+          ...state,
+          records: [
+            {
+              ...state.records[0],
+              issue: { ...issue, cycle: "", revision: 1 },
+            },
+          ],
+        })
+      )
+      expect(result.current.records).toHaveLength(0)
+      expect(productStorage.getItem(cycleIssuesKey(team))).toContain(
+        "Old snapshot"
+      )
+    } finally {
+      replaceCanonicalIssues(null, false)
+    }
   })
   it("uses the same schedule and cooldown as cycle planning", () => {
     const dates = scheduledTeamCycles(

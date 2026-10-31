@@ -66,9 +66,11 @@ export function prepareIssueRelations(
   }
   let cycleImport: CreateCanonicalIssue["cycleImport"]
   if (
-    draft.cycle &&
+    /^\d{4}-\d{2}-\d{2}$/.test(draft.cycle) &&
     !state.cycles.some(
-      (c) => c.teamId === teamId && c.startDate === draft.cycle
+      (c) =>
+        c.teamId === teamId &&
+        (c.id === draft.cycle || c.startDate === draft.cycle)
     )
   ) {
     const raw = productStorage.getItem(teamCyclesStorageKey(teamId))
