@@ -1,3 +1,6 @@
+import { protectedSessionEpoch } from "./protected-session"
+import { stableJson } from "./stable-json"
+import { onPreferenceSessionInvalidated } from "./preference-session-events"
 import {
   canonicalIssueEpoch,
   canonicalIssueState,
@@ -18,7 +21,7 @@ import { finishCreatedIssueFiles } from "./issue-file-client"
 import type { CreateCanonicalIssue } from "./canonical-issue-contract"
 import type { CanonicalSnapshot } from "./canonical-issue-cache"
 import type { IssueDraft, TeamIssue } from "./issue-record-contract"
-import { productStorage } from "@/lib/product-storage"
+import { productStorage, saveProductValue } from "@/lib/product-storage"
 
 export async function refreshCanonicalIssues(identity: {
   workspaceId: string
@@ -101,22 +104,29 @@ export async function createSharedTeamIssue(
   draft: IssueDraft,
   options: { commandKey: string; legacyId?: string; assigneeId?: string | null }
 ) {
+  const epoch = canonicalIssueEpoch()
+  const protectedEpoch = protectedSessionEpoch()
   const before = canonicalIssueState()
   if (!before)
     throw new Error("Shared issues are unavailable. Reload to try again.")
-  const intent = JSON.stringify({
+  const intent = stableJson({
     teamId,
     draft,
     options,
     workspaceId: before.workspaceId,
-    sessionId: before.sessionId,
+    userId: before.userId,
   })
-  const retained = preparedCreates.get(options.commandKey)
+  const recoveryKey = `forge:team-issue-create-intent:v1:${teamId}:${options.commandKey}`
+  let retained = preparedCreates.get(options.commandKey)
+  if (!retained) {
+    const raw = productStorage.getItem(recoveryKey)
+    if (raw) retained = JSON.parse(raw)
+  }
   if (retained && retained.intent !== intent)
     throw new Error(
       "This creation is waiting for confirmation. Retry its original draft before changing it."
     )
-  const data =
+  const prepared =
     retained?.data ??
     structuredClone({
       teamId,
@@ -126,13 +136,27 @@ export async function createSharedTeamIssue(
       workspaceId: before.workspaceId,
       sessionId: before.sessionId,
     })
+  const data = {
+    ...prepared,
+    workspaceId: before.workspaceId,
+    sessionId: before.sessionId,
+  }
   preparedCreates.set(options.commandKey, { intent, data })
+  await saveProductValue(recoveryKey, JSON.stringify({ intent, data }))
+  if (
+    epoch !== canonicalIssueEpoch() ||
+    protectedEpoch !== protectedSessionEpoch()
+  )
+    throw new Error("The active session changed.")
   const result = JSON.parse(await persistCanonicalIssue({ data })) as {
     issue: TeamIssue
     records: CanonicalSnapshot["records"]
   }
   const after = canonicalIssueState()
   if (
+    epoch !== canonicalIssueEpoch() ||
+    protectedEpoch !== protectedSessionEpoch() ||
+    after?.userId !== before.userId ||
     after?.workspaceId !== before.workspaceId ||
     after.sessionId !== before.sessionId
   )
@@ -142,15 +166,31 @@ export async function createSharedTeamIssue(
   // The confirmed receipt is creation success. Attachment completion is a
   // private, issue-scoped job, never a reason to create a second issue.
   mergeCanonicalIssueRecords(result.records)
-  try {
-    await refreshCanonicalIssues(before)
-  } catch {
+  const assertCurrent = () => {
+    const current = canonicalIssueState()
     if (
-      canonicalIssueState()?.sessionId !== before.sessionId ||
-      canonicalIssueState()?.workspaceId !== before.workspaceId
+      epoch !== canonicalIssueEpoch() ||
+      protectedEpoch !== protectedSessionEpoch() ||
+      current?.userId !== before.userId ||
+      current?.sessionId !== before.sessionId ||
+      current?.workspaceId !== before.workspaceId
     )
       throw new Error("The active session changed.")
   }
+  // Acknowledgement cleanup can fail offline after the creation has committed.
+  // Keep its exact replay journal without reporting a failed creation.
+  try {
+    await saveProductValue(recoveryKey, null)
+  } catch {
+    assertCurrent()
+  }
+  assertCurrent()
+  try {
+    await refreshCanonicalIssues(before)
+  } catch {
+    assertCurrent()
+  }
+  assertCurrent()
   mergeCanonicalIssueRecords(result.records)
   if (!options.legacyId && draft.attachments?.length) {
     try {
@@ -162,17 +202,18 @@ export async function createSharedTeamIssue(
         true
       )
     } catch {
-      if (
-        canonicalIssueState()?.sessionId !== before.sessionId ||
-        canonicalIssueState()?.workspaceId !== before.workspaceId
-      )
-        throw new Error("The active session changed.")
+      assertCurrent()
       // The source was saved with the issue transaction. Its UI offers retry or discard.
     }
   }
+  assertCurrent()
+
   preparedCreates.delete(options.commandKey)
   return (
     canonicalIssueState()?.records.find((r) => r.issue.id === result.issue.id)
       ?.issue ?? result.issue
   )
 }
+
+if (typeof window !== "undefined")
+  onPreferenceSessionInvalidated(() => preparedCreates.clear())

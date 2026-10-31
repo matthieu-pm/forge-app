@@ -1,3 +1,4 @@
+import { protectedSessionEpoch } from "./protected-session"
 import {
   canonicalIssueEpoch,
   canonicalIssueState,
@@ -83,6 +84,7 @@ export async function issueFileUrl(
 
 /** Bind every app request to the identity that selected the private bytes. */
 export function issueUploadContext(signal?: AbortSignal): UploadContext {
+  const protectedEpoch = protectedSessionEpoch()
   const identity = canonicalIssueState(),
     epoch = canonicalIssueEpoch()
   if (!identity) throw new Error("Reload before uploading files.")
@@ -93,7 +95,11 @@ export function issueUploadContext(signal?: AbortSignal): UploadContext {
       "x-forge-upload-workspace": identity.workspaceId,
     },
     assertCurrent() {
-      if (epoch !== canonicalIssueEpoch() || signal?.aborted)
+      if (
+        epoch !== canonicalIssueEpoch() ||
+        protectedEpoch !== protectedSessionEpoch() ||
+        signal?.aborted
+      )
         throw new Error(
           "The upload was cancelled or the active session changed."
         )

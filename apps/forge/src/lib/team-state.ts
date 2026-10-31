@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start"
+import { protectedSessionEpoch } from "./protected-session"
 
 import {
   createTeamInputSchema,
@@ -41,6 +42,7 @@ export const loadTeamDirectory = createServerFn({ method: "GET" })
 
 type TeamList = Awaited<ReturnType<typeof loadTeams>>
 
+let pendingTeamEpoch = -1
 let pendingClientTeamList: Promise<TeamList> | undefined
 
 export function listTeams(): Promise<TeamList> {
@@ -48,7 +50,8 @@ export function listTeams(): Promise<TeamList> {
     return loadTeams()
   }
 
-  if (pendingClientTeamList) {
+  const epoch = protectedSessionEpoch()
+  if (pendingClientTeamList && pendingTeamEpoch === epoch) {
     return pendingClientTeamList
   }
 
@@ -57,6 +60,7 @@ export function listTeams(): Promise<TeamList> {
       pendingClientTeamList = undefined
     }
   })
+  pendingTeamEpoch = epoch
   pendingClientTeamList = request
   return request
 }

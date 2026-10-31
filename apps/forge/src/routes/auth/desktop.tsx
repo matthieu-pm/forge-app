@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { createFileRoute } from "@tanstack/react-router"
 
+import { useProtectedIdentity } from "@/components/account-preference-provider"
+import { protectedSessionEpoch } from "@/lib/protected-session"
 import { LoginForm } from "@/components/login-form"
 import { SignupForm } from "@/components/signup-form"
 import { Button } from "@/components/ui/button"
@@ -77,6 +79,7 @@ function AuthPageFrame({
 function DesktopAuthorizationPage() {
   const search = Route.useSearch()
   const sessionState = authClient.useSession()
+  const verified = useProtectedIdentity()
   const transferStarted = useRef(false)
   const [mode, setMode] = useState<"login" | "signup">("login")
   const [manualCode, setManualCode] = useState<string | null>(null)
@@ -101,12 +104,14 @@ function DesktopAuthorizationPage() {
     if (
       !authorizationQuery ||
       !sessionState.data?.user ||
+      verified?.userId !== sessionState.data.user.id ||
       transferStarted.current
     ) {
       return
     }
 
     transferStarted.current = true
+    const epoch = protectedSessionEpoch()
     setTransferError(null)
     void authClient.electron
       .transferUser({
@@ -115,6 +120,7 @@ function DesktopAuthorizationPage() {
         },
       })
       .then(({ error }) => {
+        if (epoch !== protectedSessionEpoch()) return
         if (error) {
           transferStarted.current = false
           setTransferError(error.message ?? "Unable to connect to Forge.")
@@ -127,12 +133,18 @@ function DesktopAuthorizationPage() {
         }
       })
       .catch((error: unknown) => {
+        if (epoch !== protectedSessionEpoch()) return
         transferStarted.current = false
         setTransferError(
           error instanceof Error ? error.message : "Unable to connect to Forge."
         )
       })
-  }, [authorizationQuery, sessionState.data?.user, transferAttempt])
+  }, [
+    authorizationQuery,
+    sessionState.data?.user,
+    transferAttempt,
+    verified?.userId,
+  ])
 
   if (!authorizationQuery) {
     return (

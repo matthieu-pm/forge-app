@@ -1,4 +1,5 @@
 import { createMiddleware, createStart } from "@tanstack/react-start"
+import { inProtectedSession } from "@/lib/protected-session"
 
 const telemetry = createMiddleware().server(async ({ request, next }) => {
   const { observeRequest } =
@@ -27,6 +28,22 @@ const telemetry = createMiddleware().server(async ({ request, next }) => {
   })
 })
 
+const protectedSession = createMiddleware({ type: "function" }).client(
+  async ({ next, fetch: customFetch }) => {
+    return inProtectedSession(async (signal) =>
+      next({
+        fetch: (url, init) =>
+          (customFetch ?? globalThis.fetch)(url, {
+            ...init,
+            signal: init?.signal
+              ? AbortSignal.any([signal, init.signal])
+              : signal,
+          }),
+      })
+    )
+  }
+)
+
 const functionErrors = createMiddleware({ type: "function" }).server(
   async ({ next }) => {
     const { sanitizeServerFunctionError } =
@@ -41,5 +58,5 @@ const functionErrors = createMiddleware({ type: "function" }).server(
 
 export const startInstance = createStart(() => ({
   requestMiddleware: [telemetry],
-  functionMiddleware: [functionErrors],
+  functionMiddleware: [protectedSession, functionErrors],
 }))

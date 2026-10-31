@@ -11,6 +11,7 @@ import type { ReactNode } from "react"
 import type { TeamSummary } from "@/lib/team-contract"
 import { createSharedTeamIssue } from "@/lib/canonical-issue-client"
 import { replaceCanonicalIssues } from "@/lib/canonical-issue-cache"
+import { productStorage } from "@/lib/product-storage"
 import { blankIssueDraft } from "@/lib/team-issues"
 
 vi.mock("@tanstack/react-router", () => ({
@@ -125,4 +126,63 @@ it("an explicit No assignee selection reaches the command as unassigned", async 
   fireEvent.click(screen.getByRole("button", { name: "Create issue" }))
   await waitFor(() => expect(createSharedTeamIssue).toHaveBeenCalledTimes(1))
   expect(vi.mocked(createSharedTeamIssue).mock.calls[0][1].assignee).toBe("")
+})
+
+it("retains the original creation identity while preserving newer typing as a separate draft", async () => {
+  vi.mocked(createSharedTeamIssue).mockRejectedValueOnce(
+    new Error("Response lost")
+  )
+  render(
+    <IssueComposer
+      team={team}
+      initial={{ ...blankIssueDraft(), title: "Uncertain original" }}
+      labels={[]}
+      projects={[]}
+      onClose={vi.fn()}
+      onSaved={vi.fn()}
+      onDraftSaved={vi.fn()}
+    />
+  )
+  fireEvent.click(screen.getByRole("button", { name: "Create issue" }))
+  await screen.findByText(/Response lost/)
+  const originalKey = vi.mocked(createSharedTeamIssue).mock.calls[0][2]
+    .commandKey
+  fireEvent.change(screen.getByRole("textbox", { name: "Issue title" }), {
+    target: { value: "Newer typing" },
+  })
+  fireEvent.click(
+    screen.getByRole("button", { name: "Restore original draft to retry" })
+  )
+  expect(
+    screen.getByRole<HTMLInputElement>("textbox", { name: "Issue title" }).value
+  ).toBe("Uncertain original")
+  fireEvent.click(screen.getByRole("button", { name: "Create issue" }))
+  await waitFor(() => expect(createSharedTeamIssue).toHaveBeenCalledTimes(2))
+  expect(vi.mocked(createSharedTeamIssue).mock.calls[1][2].commandKey).toBe(
+    originalKey
+  )
+})
+
+it("recovers unpublished edit-dialog input on reopening without submitting it", () => {
+  productStorage.clear()
+  const props = {
+    team,
+    issueId: "existing",
+    initial: { ...blankIssueDraft(), title: "Existing issue" },
+    labels: [],
+    projects: [],
+    onClose: vi.fn(),
+    onSaved: vi.fn(),
+    onDraftSaved: vi.fn(),
+  }
+  const first = render(<IssueComposer {...props} />)
+  fireEvent.change(screen.getByRole("textbox", { name: "Issue title" }), {
+    target: { value: "Unpublished offline edit" },
+  })
+  first.unmount()
+  render(<IssueComposer {...props} />)
+  expect(
+    screen.getByRole<HTMLInputElement>("textbox", { name: "Issue title" }).value
+  ).toBe("Unpublished offline edit")
+  expect(createSharedTeamIssue).not.toHaveBeenCalled()
 })

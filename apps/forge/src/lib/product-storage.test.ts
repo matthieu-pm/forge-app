@@ -55,14 +55,14 @@ describe("server product persistence and one-way browser migration", () => {
     expect(productStorage.getItem(key)).toBeNull()
   })
 
-  it("saves through an identity-bound command without native storage writes", async () => {
+  it("saves through an identity-bound command when device recovery storage is unavailable", async () => {
     const native = vi
       .spyOn(Storage.prototype, "setItem")
       .mockImplementation(() => {
         throw new Error("Forbidden")
       })
     await saveProductValue("forge:desktop-tabs", "tabs")
-    expect(native).not.toHaveBeenCalled()
+    expect(native).toHaveBeenCalled()
     expect(persistProductState).toHaveBeenCalledWith({
       data: expect.objectContaining({
         workspaceId: "workspace",
@@ -71,7 +71,7 @@ describe("server product persistence and one-way browser migration", () => {
         expectedRevision: 0,
       }),
     })
-    expect(storageStatus()).toEqual({ pending: 0, error: "" })
+    expect(storageStatus()).toMatchObject({ pending: 0, error: "" })
   })
   it("retains failed saves in memory and retries the exact command", async () => {
     vi.mocked(persistProductState).mockRejectedValueOnce(new Error("Offline"))
@@ -184,7 +184,7 @@ describe("server product persistence and one-way browser migration", () => {
     expect(productStorage.getItem("forge:desktop-tabs")).toBe(
       "latest server version"
     )
-    expect(storageStatus()).toEqual({ pending: 0, error: "" })
+    expect(storageStatus()).toMatchObject({ pending: 0, error: "" })
   })
   it("does not regress acknowledged writes when an older refresh completes", async () => {
     const token = productStorageRefreshToken()
@@ -229,4 +229,209 @@ describe("server product persistence and one-way browser migration", () => {
       )
     ).toBe(false)
   })
+})
+
+describe("FOR-52 scoped device draft recovery", () => {
+  it("restores an offline write after reload only for its verified account/workspace, without auto saving", async () => {
+    vi.mocked(persistProductState).mockRejectedValue(new Error("Offline"))
+    productStorage.setItem("forge:comment-draft:v1:issue:root", "Alice draft")
+    await vi.waitFor(() => expect(storageStatus().error).toBe("Offline"))
+    const original = vi.mocked(persistProductState).mock.calls[0][0]
+    resetProductStorage()
+    initializeProductStorage({ ...identity, userId: "bob" })
+    expect(productStorage.getItem(original.data.key)).toBeNull()
+    initializeProductStorage({ ...identity, workspaceId: "another" })
+    expect(productStorage.getItem(original.data.key)).toBeNull()
+    initializeProductStorage({ ...identity, sessionId: "new-session" })
+    expect(productStorage.getItem(original.data.key)).toBe("Alice draft")
+    expect(storageStatus()).toMatchObject({ pending: 1, restored: true })
+    expect(storageStatus().error).toContain("Unsaved")
+    expect(persistProductState).toHaveBeenCalledTimes(1)
+    vi.mocked(persistProductState).mockResolvedValue({
+      replayed: true,
+      value: { revision: 1 },
+    })
+    await flushProductStorage()
+    expect(vi.mocked(persistProductState).mock.calls[1][0]).toEqual({
+      data: { ...original.data, sessionId: "new-session" },
+    })
+    expect(storageStatus().pending).toBe(0)
+    expect(
+      localStorage.getItem('["forge.unsaved-drafts",1,"user","workspace"]')
+    ).toBeNull()
+  })
+  it("keeps the retry identity when the old server commit completes after switching away and back", async () => {
+    let finish!: (value: {
+      replayed: boolean
+      value: { revision: number }
+    }) => void
+    vi.mocked(persistProductState).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve
+        })
+    )
+    const request = saveProductValue("forge:desktop-tabs", "Private draft")
+    const rejection = expect(request).rejects.toThrow("active session changed")
+    await vi.waitFor(() => expect(persistProductState).toHaveBeenCalled())
+    initializeProductStorage({ ...identity, userId: "bob" })
+    finish({ replayed: false, value: { revision: 1 } })
+    await rejection
+    expect(productStorage.getItem("forge:desktop-tabs")).toBeNull()
+    initializeProductStorage({
+      ...identity,
+      entries: [
+        { key: "forge:desktop-tabs", value: "Private draft", revision: 1 },
+      ],
+    })
+    await flushProductStorage()
+    expect(vi.mocked(persistProductState).mock.calls[1][0]).toEqual(
+      vi.mocked(persistProductState).mock.calls[0][0]
+    )
+  })
+  it("does not journal protected read cache data", () => {
+    initializeProductStorage({
+      ...identity,
+      entries: [
+        { key: "forge:desktop-tabs", value: "Read only secret", revision: 1 },
+      ],
+    })
+    expect(localStorage.length).toBe(0)
+  })
+})
+
+it("preserves another tab's unconfirmed draft when this tab acknowledges its own write", async () => {
+  vi.mocked(persistProductState).mockRejectedValueOnce(new Error("Offline"))
+  productStorage.setItem("forge:desktop-tabs", "our draft")
+  await vi.waitFor(() => expect(storageStatus().error).toBe("Offline"))
+  const key = '["forge.unsaved-drafts",1,"user","workspace"]'
+  const journal = {
+    version: 1,
+    userId: identity.userId,
+    workspaceId: identity.workspaceId,
+    pending: [] as Array<{ key: string; value: string; commandKey: string }>,
+  }
+  const sibling = {
+    key: "forge:comment-draft:v1:another:root",
+    value: "other tab draft",
+    commandKey: crypto.randomUUID(),
+  }
+  journal.pending.push(sibling)
+  localStorage.setItem(key, JSON.stringify(journal))
+  await flushProductStorage()
+  expect(JSON.parse(localStorage.getItem(key)!).pending).toEqual([sibling])
+})
+it("preserves malformed device recovery data without overwriting it", () => {
+  const key = '["forge.unsaved-drafts",1,"user","workspace"]'
+  localStorage.setItem(key, "unsupported recovery copy")
+  initializeProductStorage(identity)
+  productStorage.setItem("forge:desktop-tabs", "new draft")
+  expect(localStorage.getItem(key)).toBe("unsupported recovery copy")
+  expect(storageStatus().deviceError).toContain("only in this tab")
+})
+
+it("retains edits made during recovery copies and the final snapshot read, including after another reload", async () => {
+  const key = "forge:desktop-tabs",
+    other = "forge:other-draft"
+  let rejectInitial!: (error: Error) => void
+  vi.mocked(persistProductState).mockImplementationOnce(
+    () =>
+      new Promise((_, reject) => {
+        rejectInitial = reject
+      })
+  )
+  productStorage.setItem(key, "original")
+  productStorage.setItem(key, "tail before recovery")
+  rejectInitial(new Error("Offline"))
+  await vi.waitFor(() => expect(storageStatus().error).toBe("Offline"))
+  let releaseCopy!: (value: {
+    replayed: boolean
+    value: { revision: number }
+  }) => void
+  vi.mocked(persistProductState).mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        releaseCopy = resolve
+      })
+  )
+  let releaseSnapshot!: (
+    value: Awaited<ReturnType<typeof loadProductState>>
+  ) => void
+  vi.mocked(loadProductState).mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        releaseSnapshot = resolve
+      })
+  )
+  const recovering = preservePendingAndReload()
+  productStorage.setItem(key, "typing during recovery copy")
+  releaseCopy({ replayed: false, value: { revision: 1 } })
+  await vi.waitFor(() => expect(loadProductState).toHaveBeenCalledTimes(1))
+  productStorage.setItem(other, "typing during snapshot")
+  const snapshot = {
+    ...identity,
+    entries: vi
+      .mocked(persistProductState)
+      .mock.calls.filter(([{ data }]) =>
+        data.key.startsWith("forge:pending-recovery:")
+      )
+      .map(([{ data }]) => ({
+        key: data.key,
+        value: data.value!,
+        revision: 1,
+      })),
+  }
+  releaseSnapshot(snapshot)
+  await expect(recovering).resolves.toBe(true)
+  expect(productStorage.getItem(key)).toBe("typing during recovery copy")
+  expect(productStorage.getItem(other)).toBe("typing during snapshot")
+  expect(storageStatus().pending).toBe(2)
+  resetProductStorage()
+  initializeProductStorage(snapshot)
+  expect(productStorage.getItem(key)).toBe("typing during recovery copy")
+  expect(productStorage.getItem(other)).toBe("typing during snapshot")
+  expect(storageStatus().pending).toBe(2)
+})
+
+it("keeps both tabs' drafts when independent writes interleave before either is visible", async () => {
+  vi.mocked(persistProductState).mockRejectedValue(new Error("Offline"))
+  const write = Storage.prototype.setItem
+  const siblingId = crypto.randomUUID()
+  const siblingKey = JSON.stringify([
+    "forge.unsaved-draft",
+    1,
+    identity.userId,
+    identity.workspaceId,
+    siblingId,
+  ])
+  let injected = false
+  vi.spyOn(Storage.prototype, "setItem").mockImplementation((key, value) => {
+    if (!injected && key.startsWith('["forge.unsaved-draft",')) {
+      injected = true
+      write.call(
+        window.localStorage,
+        siblingKey,
+        JSON.stringify({
+          version: 1,
+          userId: identity.userId,
+          workspaceId: identity.workspaceId,
+          pending: [
+            {
+              key: "forge:other-tab",
+              value: "Sibling draft",
+              commandKey: siblingId,
+              createdAt: Date.now(),
+            },
+          ],
+        })
+      )
+    }
+    write.call(window.localStorage, key, value)
+  })
+  productStorage.setItem("forge:this-tab", "Our draft")
+  await vi.waitFor(() => expect(storageStatus().error).toBe("Offline"))
+  resetProductStorage()
+  initializeProductStorage(identity)
+  expect(productStorage.getItem("forge:this-tab")).toBe("Our draft")
+  expect(productStorage.getItem("forge:other-tab")).toBe("Sibling draft")
 })

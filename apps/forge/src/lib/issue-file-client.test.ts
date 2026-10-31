@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import { retireProtectedSession } from "./protected-session"
 import {
   discardCreationFileJob,
   finishCreatedIssueFiles,
+  issueUploadContext,
   sendIssueFiles,
 } from "./issue-file-client"
 import { UploadClientError } from "./files/direct-upload-client"
@@ -262,4 +264,11 @@ it("rotates a definitively expired upload attempt while retaining its original s
   await finishCreatedIssueFiles(input.teamId, input.issueId, [], "create-key")
   expect(mock.upload.mock.calls[1][3].commandKey).not.toBe(terminalKey)
   expect(mock.persist).toHaveBeenCalledOnce()
+})
+
+it("stops selected bytes as soon as the protected session retires, before cache reset", () => {
+  const context = issueUploadContext()
+  context.assertCurrent?.()
+  retireProtectedSession()
+  expect(() => context.assertCurrent?.()).toThrow("session changed")
 })

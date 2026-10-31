@@ -12,6 +12,7 @@ import {
   AccountPreferenceProvider,
   PreferenceSyncStatus,
   usePreferenceGroup,
+  useProtectedIdentity,
 } from "./account-preference-provider"
 import { productStorage } from "@/lib/product-storage"
 import { emptyPreferenceSnapshot } from "@/lib/account-preference-contract"
@@ -145,4 +146,47 @@ describe("preference session lifecycle", () => {
     ).toBe(true)
     expect(mocks.save).not.toHaveBeenCalled()
   })
+})
+
+it("revalidates workspace-less account loader data before exposing the next account", async () => {
+  const { registerProtectedRouteReset } =
+    await import("@/lib/protected-session")
+  let loader = "Alice approved workspace",
+    release!: () => void
+  const reset = vi
+    .fn()
+    .mockResolvedValueOnce(undefined)
+    .mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          release = () => {
+            loader = "Bob approved workspace"
+            resolve()
+          }
+        })
+    )
+  const stop = registerProtectedRouteReset(reset)
+  function AuthenticatedPage() {
+    const verified = useProtectedIdentity()
+    return <p>{verified ? `${verified.userId}: ${loader}` : "Verifying"}</p>
+  }
+  mocks.auth.mockResolvedValue({ ...identity("alice"), workspace: null })
+  try {
+    render(
+      <AccountPreferenceProvider>
+        <AuthenticatedPage />
+      </AccountPreferenceProvider>
+    )
+    await screen.findByText("alice: Alice approved workspace")
+    mocks.auth.mockResolvedValue({ ...identity("bob"), workspace: null })
+    act(() => invalidatePreferenceSession("start"))
+    expect(screen.queryByText(/Alice approved/)).toBeNull()
+    act(() => invalidatePreferenceSession("settled"))
+    await waitFor(() => expect(reset).toHaveBeenCalledTimes(2))
+    expect(screen.queryByText(/Alice approved/)).toBeNull()
+    await act(async () => release())
+    await screen.findByText("bob: Bob approved workspace")
+  } finally {
+    stop()
+  }
 })

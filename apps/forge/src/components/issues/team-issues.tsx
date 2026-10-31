@@ -376,7 +376,7 @@ export function TeamIssues({
     ) {
       setSelected([])
       setCommands(false)
-      toast.success("Issues updated")
+      toast.info("Issue changes are waiting for server confirmation.")
     }
   }
   function askForge() {
@@ -947,7 +947,7 @@ export function TeamIssues({
           onClose={() => setEditor(undefined)}
           onSaved={(issue, savedTeam) => {
             if (!editor.id) setLastCreated({ issue, team: savedTeam })
-            else toast.success("Issue updated")
+            else toast.info("Issue changes are waiting for server confirmation.")
           }}
           onDraftSaved={() => toast.success("Draft saved")}
         />

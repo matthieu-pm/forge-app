@@ -5,7 +5,12 @@ import type {
   WorkspaceViewValues,
 } from "@/lib/workspace-preference-contract"
 import type { AccountPreferenceGroups } from "@/lib/account-preference-contract"
-import { productStorage } from "@/lib/product-storage"
+import {
+  protectedSessionEpoch,
+  resetProtectedRoutes,
+  retireProtectedSession,
+} from "@/lib/protected-session"
+import { productStorage, resetProductStorage } from "@/lib/product-storage"
 import {
   decodeWorkspaceView,
   workspaceViewPrefix,
@@ -23,6 +28,16 @@ import {
 import { onPreferenceSessionInvalidated } from "@/lib/preference-session-events"
 import { Button } from "@/components/ui/button"
 
+type ProtectedIdentity = {
+  userId: string
+  sessionId: string
+  workspaceId: string | null
+}
+const ProtectedIdentityContext = React.createContext<ProtectedIdentity | null>(
+  null
+)
+export const useProtectedIdentity = () =>
+  React.useContext(ProtectedIdentityContext)
 const WorkspaceContext = React.createContext<AccountPreferenceClient | null>(
   null
 )
@@ -32,29 +47,42 @@ export function AccountPreferenceProvider({
 }: {
   children: React.ReactNode
 }) {
-  const [identity, setIdentity] = React.useState<null | {
-    userId: string
-    sessionId: string
-    workspaceId: string
-  }>(null)
+  const [identity, setIdentity] = React.useState<ProtectedIdentity | null>(null)
   const active = React.useRef<Array<AccountPreferenceClient>>([])
   React.useEffect(() => {
     let epoch = 0,
       mounted = true
+    let verified: ProtectedIdentity | null = null
+    let transitioning = false
     async function verify() {
+      if (transitioning) return
       const token = ++epoch
       try {
         const state = await getAuthState()
         if (!mounted || epoch !== token) return
         const workspaceId = state.workspace?.id
         const next =
-          state.user && state.session && workspaceId
+          state.user && state.session
             ? {
                 userId: state.user.id,
                 sessionId: state.session.id,
-                workspaceId,
+                workspaceId: workspaceId ?? null,
               }
             : null
+        if (JSON.stringify(verified) !== JSON.stringify(next)) {
+          retireProtectedSession()
+          resetProductStorage()
+          setIdentity(null)
+          const scopeEpoch = protectedSessionEpoch()
+          await resetProtectedRoutes()
+          if (
+            !mounted ||
+            epoch !== token ||
+            scopeEpoch !== protectedSessionEpoch()
+          )
+            return
+          verified = next
+        }
         setIdentity((previous) =>
           JSON.stringify(previous) === JSON.stringify(next) ? previous : next
         )
@@ -64,6 +92,9 @@ export function AccountPreferenceProvider({
     }
     const unsubscribe = onPreferenceSessionInvalidated((phase) => {
       ++epoch
+      transitioning = phase === "start"
+      verified = null
+      resetProductStorage()
       for (const client of active.current) client.dispose()
       setIdentity(null)
       if (phase === "settled") void verify()
@@ -73,6 +104,7 @@ export function AccountPreferenceProvider({
     }
     const interval = window.setInterval(focus, 30_000)
     window.addEventListener("focus", focus)
+    window.addEventListener("online", focus)
     void verify()
     return () => {
       mounted = false
@@ -80,24 +112,33 @@ export function AccountPreferenceProvider({
       unsubscribe()
       window.clearInterval(interval)
       window.removeEventListener("focus", focus)
+      window.removeEventListener("online", focus)
     }
   }, [])
-  if (!identity)
+  if (!identity || !identity.workspaceId)
     return (
       <Context.Provider value={null}>
         <WorkspaceContext.Provider value={null}>
-          {children}
+          <ProtectedIdentityContext.Provider value={identity}>
+            {children}
+          </ProtectedIdentityContext.Provider>
         </WorkspaceContext.Provider>
       </Context.Provider>
     )
+  const workspaceIdentity = { ...identity, workspaceId: identity.workspaceId }
   return (
-    <ProductStateProvider key={JSON.stringify(identity)} identity={identity}>
+    <ProductStateProvider
+      key={JSON.stringify(identity)}
+      identity={workspaceIdentity}
+    >
       <PreferenceSessionScope
         key={JSON.stringify(identity)}
-        identity={identity}
+        identity={workspaceIdentity}
         active={active}
       >
-        {children}
+        <ProtectedIdentityContext.Provider value={identity}>
+          {children}
+        </ProtectedIdentityContext.Provider>
       </PreferenceSessionScope>
     </ProductStateProvider>
   )

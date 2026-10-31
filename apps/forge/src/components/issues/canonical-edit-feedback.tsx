@@ -55,6 +55,7 @@ export function CanonicalEditFeedback() {
       role={status.error ? "alert" : "status"}
       className="relative z-[70] border-b border-border bg-muted p-3 text-sm"
     >
+      <p>Unsaved issue changes — waiting for server confirmation.</p>
       <p>{status.error || "Saving issue changes…"}</p>
       {status.error && (
         <div className="mt-2 flex flex-wrap gap-2">
@@ -105,7 +106,7 @@ export function CanonicalEditFeedback() {
       )}
       {status.error && (
         <details className="mt-2">
-          <summary>Review saved issue edits</summary>
+          <summary>Review unsaved issue edits</summary>
           {status.drafts.map((draft, index) => (
             <div key={`${draft.issueId}:${index}`} className="mt-2">
               <p className="font-medium">{draft.title}</p>

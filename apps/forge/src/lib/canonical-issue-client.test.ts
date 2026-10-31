@@ -1,4 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest"
+import * as ProductStorage from "./product-storage"
 import { createSharedTeamIssue } from "./canonical-issue-client"
 import { finishCreatedIssueFiles } from "./issue-file-client"
 import { blankIssueDraft, issueSchema } from "./issue-record-contract"
@@ -19,6 +20,7 @@ vi.mock("./issue-file-client", () => ({ finishCreatedIssueFiles: vi.fn() }))
 afterEach(() => {
   replaceCanonicalIssues(null, false)
   vi.resetAllMocks()
+  vi.restoreAllMocks()
 })
 it("replays an identical prepared create after its response is lost and a relation appears", async () => {
   const teamId = crypto.randomUUID(),
@@ -124,7 +126,10 @@ it("uploads creation files after metadata refresh and returns the final durable 
   )
 })
 
-it("returns the committed issue when attachment completion or metadata refresh fails", async () => {
+it("returns the committed issue when acknowledgement, attachment completion, or metadata refresh fails", async () => {
+  vi.spyOn(ProductStorage, "saveProductValue")
+    .mockResolvedValueOnce(undefined)
+    .mockRejectedValueOnce(new Error("Offline acknowledgement"))
   const teamId = crypto.randomUUID(),
     id = crypto.randomUUID()
   const state = {

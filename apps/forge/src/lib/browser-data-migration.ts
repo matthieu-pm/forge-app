@@ -1,3 +1,4 @@
+import { protectedSessionEpoch } from "./protected-session"
 import {
   isLegacyProductStorageKey,
   legacyStorageScope,
@@ -14,11 +15,13 @@ import {
 // authenticated server record, then remove exactly the bytes we verified.
 export async function migrateBrowserData() {
   const failures: Array<string> = []
+  const epoch = protectedSessionEpoch()
   for (const storage of [window.localStorage, window.sessionStorage]) {
     const keys = Array.from({ length: storage.length }, (_, i) =>
       storage.key(i)
     ).filter((k): k is string => Boolean(k && isLegacyProductStorageKey(k)))
     for (const key of keys) {
+      if (epoch !== protectedSessionEpoch()) return failures
       const identity = productStorageIdentity(),
         hint = legacyStorageScope(key)
       if (!identity) return failures
@@ -47,8 +50,10 @@ export async function migrateBrowserData() {
             })
           )
         } else await saveProductValue(key, raw)
+        if (epoch !== protectedSessionEpoch()) return failures
         if (storage.getItem(key) === raw) storage.removeItem(key)
       } catch {
+        if (epoch !== protectedSessionEpoch()) return failures
         if (
           productStorageFailureIsDefinitive() &&
           (await preservePendingAndReload())
@@ -65,6 +70,7 @@ export async function migrateBrowserData() {
       }
     }
   }
+  if (epoch !== protectedSessionEpoch()) return failures
   try {
     failures.push(...(await migrateExistingDeviceBackups()))
   } catch {
