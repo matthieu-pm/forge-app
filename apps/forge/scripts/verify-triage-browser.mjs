@@ -175,6 +175,7 @@ try {
   await member.getByRole("option", { name: "Todo", exact: true }).click()
   await member.getByRole("combobox", { name: "Triage assignee" }).click()
   await member.getByRole("option", { name: "Bob Member", exact: true }).click()
+  await member.screenshot({ path: "/tmp/for50-decision.png", fullPage: true })
   await member
     .getByRole("button", { name: "Accept issue", exact: true })
     .click()
@@ -313,6 +314,9 @@ try {
       exact: true,
     })
   ).toBeVisible({ timeout: 60000 })
+  await expect(
+    member.getByRole("button", { name: "Accept issue", exact: true })
+  ).toBeEnabled()
   await member.screenshot({ path: "/tmp/for50-triage.png", fullPage: true })
   await admin.reload()
   await expect(

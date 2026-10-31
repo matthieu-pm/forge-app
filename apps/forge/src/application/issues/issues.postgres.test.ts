@@ -3400,6 +3400,21 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
         (await queryIssues(f.actors[1], { teamIds: [f.teamId], triage: false }))
           .total
       ).toBe(0)
+      expect(
+        (
+          await queryIssues(f.actors[1], {
+            teamIds: [f.teamId],
+            triage: true,
+            showSnoozed: true,
+            filters: {
+              match: "all",
+              rules: [
+                { id: "source", field: "links", operator: "set", value: "" },
+              ],
+            },
+          })
+        ).total
+      ).toBe(1)
       const results = await Promise.all([
         editing.editCanonicalIssues(f.actors[0], input),
         editing.editCanonicalIssues(f.actors[0], input),
