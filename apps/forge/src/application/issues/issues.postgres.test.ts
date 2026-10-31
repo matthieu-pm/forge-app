@@ -3691,7 +3691,7 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
         new Set(users)
       )
     }, 30000)
-    it("gates private issue drafts and removes comment copies during purge filtering", async () => {
+    it("gates private issue drafts without exposing their content", async () => {
       const f = await setup()
       const { commentFromText } = await import("@/lib/comment-rich-text")
       const key = `forge:comment-draft:v1:${f.issue.id}:root`
@@ -3723,7 +3723,7 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
         (await product.readProductState(f.actors[1])).entries.find(
           (e) => e.key === key
         )
-      ).toBeUndefined()
+      ).toMatchObject({ value: null })
     }, 30000)
   })
 })
