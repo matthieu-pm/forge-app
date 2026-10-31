@@ -1654,7 +1654,8 @@ export function IssueDetail({
                           "Former member"
                         )
                       if (field === "project") return projectDisplayName(value)
-                      if (field === "cycle") return cycleDisplayName(value)
+                      if (field === "cycle")
+                        return cycleDisplayName(value, team.id)
                       if (field === "subscribers")
                         return value
                           .split(",")

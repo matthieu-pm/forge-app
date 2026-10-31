@@ -32,18 +32,70 @@ onPreferenceSessionInvalidated(() => {
   entries.clear()
   if (typeof window !== "undefined") notify()
 })
+function sameScope(
+  a: Pick<SharedCycleSnapshot, "workspaceId" | "userId" | "sessionId">,
+  b: Pick<SharedCycleSnapshot, "workspaceId" | "userId" | "sessionId">
+) {
+  return (
+    a.workspaceId === b.workspaceId &&
+    a.userId === b.userId &&
+    a.sessionId === b.sessionId
+  )
+}
+function mergeCycles(
+  older: SharedCycleSnapshot["cycles"],
+  newer: SharedCycleSnapshot["cycles"]
+) {
+  return [...new Map([...older, ...newer].map((c) => [c.id, c])).values()].sort(
+    (a, b) => a.startDate.localeCompare(b.startDate)
+  )
+}
+function publishSnapshot(entry: Entry, next: SharedCycleSnapshot) {
+  // Different numbered pages share settings. Never let an earlier read regress
+  // a revision already confirmed by another mounted or cached view.
+  let newest = next
+  for (const other of entries.values())
+    if (
+      other.teamId === entry.teamId &&
+      other.snapshot &&
+      sameScope(other.snapshot, next) &&
+      other.snapshot.revision > newest.revision
+    )
+      newest = other.snapshot
+  entry.snapshot = {
+    ...newest,
+    cycles: mergeCycles(next.cycles, newest.cycles),
+  }
+  for (const other of entries.values()) {
+    if (
+      other === entry ||
+      other.teamId !== entry.teamId ||
+      !other.snapshot ||
+      !sameScope(other.snapshot, next)
+    )
+      continue
+    other.request++
+    other.loading = undefined
+    other.snapshot = {
+      ...entry.snapshot,
+      cycles: mergeCycles(other.snapshot.cycles, entry.snapshot.cycles),
+    }
+    if (!other.intent) other.error = undefined
+  }
+}
 export function sharedCyclesEnabled(teamId: string) {
   const identity = canonicalIssueState()
+  if (!identity) return undefined
+  let newest: SharedCycleSnapshot | undefined
   for (const entry of entries.values())
     if (
+      entry.teamId === teamId &&
       entry.snapshot &&
-      entry.snapshot.workspaceId === identity?.workspaceId &&
-      entry.snapshot.userId === identity?.userId &&
-      entry.snapshot.sessionId === identity?.sessionId &&
-      entry.teamId === teamId
+      sameScope(entry.snapshot, identity) &&
+      (!newest || entry.snapshot.revision > newest.revision)
     )
-      return entry.snapshot.settings.enabled
-  return undefined
+      newest = entry.snapshot
+  return newest?.settings.enabled
 }
 export function useSharedTeamCycles(
   teamId: string,
@@ -88,7 +140,7 @@ export function useSharedTeamCycles(
           entry.request !== request
         )
           return
-        entry.snapshot = snapshot
+        publishSnapshot(entry, snapshot)
         if (!entry.intent) entry.error = undefined
       } catch {
         if (current() && entry.request === request) {
@@ -167,25 +219,6 @@ export function useSharedTeamCycles(
       entry.error = undefined
       entry.pending = false
       await refresh()
-      for (const [otherKey, other] of entries)
-        if (
-          otherKey !== key &&
-          other.teamId === teamId &&
-          other.snapshot?.sessionId === identity.sessionId &&
-          other.snapshot.workspaceId === identity.workspaceId &&
-          entry.snapshot
-        ) {
-          other.snapshot = {
-            ...entry.snapshot,
-            cycles: [
-              ...new Map(
-                [...other.snapshot.cycles, ...entry.snapshot.cycles].map(
-                  (c) => [c.id, c]
-                )
-              ).values(),
-            ],
-          }
-        }
       notify()
       window.dispatchEvent(new Event("forge:team-cycles-changed"))
       return true
@@ -224,7 +257,10 @@ export function useSharedTeamCycles(
     pending: !!entry?.pending,
     update,
     retry: async () => {
-      if (entry?.intent) return update(entry.intent.patch, true)
+      if (entry?.intent) {
+        if (!entry.snapshot) await refresh()
+        return update(entry.intent.patch, true)
+      }
       await refresh()
       return !!entry?.snapshot
     },

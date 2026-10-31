@@ -127,10 +127,10 @@ export function projectDisplayName(value: string) {
   )
 }
 
-export function cycleDisplayName(value: string) {
+export function cycleDisplayName(value: string, teamId: string) {
   if (!value) return ""
   const cycle = state?.cycles.find(
-    (c) => c.id === value || c.startDate === value
+    (c) => c.teamId === teamId && (c.id === value || c.startDate === value)
   )
   if (cycle)
     return cycle.number
