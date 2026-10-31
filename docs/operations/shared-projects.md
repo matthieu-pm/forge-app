@@ -1,5 +1,7 @@
 # Shared projects · FOR-54
 
+Implementation results and the tested source revision are recorded in [the acceptance evidence](for54-acceptance-evidence.json).
+
 Projects created in workspace/team directories and project/initiative composers use canonical workspace records. The directory, detail view, issue composer and issue properties use the same project UUID. Issue membership remains `issues.project_id`; there is no second project issue list. Browser projections are temporary and refresh on focus, periodically, and after a confirmed project command.
 
 ## Permissions and conflicts
