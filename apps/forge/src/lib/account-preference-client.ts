@@ -43,6 +43,7 @@ export class AccountPreferenceClient {
   private state: PreferenceClientState
   private cacheKey: string
   private cacheWritable = true
+  private draftKey: string
   constructor(
     readonly identity: PreferenceIdentity,
     private transport: PreferenceTransport,
@@ -54,6 +55,7 @@ export class AccountPreferenceClient {
         ? { workspaceId: identity.workspaceId }
         : {}),
     }
+    this.draftKey = `forge:preference-draft:v1:${identity.scope ?? "account"}:${encodeURIComponent(identity.userId)}:${encodeURIComponent(identity.workspaceId)}`
     this.cacheKey = preferenceCacheKey(
       identity.scope === "workspace"
         ? {
@@ -90,6 +92,68 @@ export class AccountPreferenceClient {
       message: "Loading your preferences…",
       conflicts: [],
       pending: false,
+    }
+    try {
+      const raw = JSON.parse(storage?.getItem(this.draftKey) ?? "null")
+      if (
+        raw &&
+        raw.userId === identity.userId &&
+        raw.workspaceId === identity.workspaceId
+      ) {
+        const command = accountPreferenceCommandSchema.parse({
+          ...raw.command,
+          sessionId: identity.sessionId,
+          expectedWorkspaceId: identity.workspaceId,
+        })
+        const all = accountPreferenceCommandSchema.parse({
+          ...command,
+          patch: raw.pending,
+          expectedVersions: raw.expected,
+        })
+        this.command = command
+        this.pending = all.patch
+        this.expected = all.expectedVersions
+        this.publish(
+          raw.conflict ? "conflict" : "error",
+          "Unsaved preferences recovered from this device. Review and retry when connected."
+        )
+      }
+    } catch {
+      /* Preserve unsupported drafts for recovery by a compatible client. */
+    }
+  }
+  private retainDraft() {
+    if (!this.active) return
+    try {
+      if (Object.keys(this.pending).length)
+        this.command ??= {
+          sessionId: this.identity.sessionId,
+          expectedWorkspaceId: this.identity.workspaceId,
+          ...(this.identity.scope === "workspace"
+            ? { scope: "workspace" as const }
+            : {}),
+          commandKey: crypto.randomUUID(),
+          version: 1,
+          patch: { ...this.pending },
+          expectedVersions: { ...this.expected },
+        }
+      this.storage?.setItem(
+        this.draftKey,
+        JSON.stringify(
+          Object.keys(this.pending).length
+            ? {
+                userId: this.identity.userId,
+                workspaceId: this.identity.workspaceId,
+                pending: this.pending,
+                expected: this.expected,
+                command: this.command,
+                conflict: this.state.status === "conflict",
+              }
+            : null
+        )
+      )
+    } catch {
+      /* The product storage layer reports device failures globally. */
     }
   }
   subscribe = (listener: () => void) => {
@@ -204,6 +268,7 @@ export class AccountPreferenceClient {
       expectedVersions: { ...this.expected },
     }
     const command = this.command
+    this.retainDraft()
     try {
       const result = await this.transport.save(command)
       if (!this.active) return
@@ -251,6 +316,7 @@ export class AccountPreferenceClient {
       )
     } finally {
       this.running = false
+      this.retainDraft()
     }
     if (this.active && this.state.status === "saving") void this.flush()
   }
@@ -266,6 +332,7 @@ export class AccountPreferenceClient {
     this.pending = {}
     this.expected = {}
     this.command = null
+    this.retainDraft()
     this.publish("loading", "Loading saved preferences…")
     await this.refresh()
   }

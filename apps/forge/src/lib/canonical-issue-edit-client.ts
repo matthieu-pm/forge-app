@@ -169,6 +169,7 @@ export async function flushIssueEdits() {
     ) {
       const pending = queue[0]
       await saveProductValue(pending.sourceKey, JSON.stringify(pending.input))
+      if (token !== epoch || identityToken !== canonicalIssueEpoch()) return
       const response = JSON.parse(
         await persistCanonicalIssueEdits({
           data: {

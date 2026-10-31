@@ -33,6 +33,16 @@ vi.mock("@/lib/team-state", () => ({
   leaveTeam: vi.fn(),
 }))
 vi.mock("@/lib/auth-state", () => ({ protectedRouteBeforeLoad: vi.fn() }))
+vi.mock("@/components/account-preference-provider", () => ({
+  AccountPreferenceProvider: ({ children }: { children: ReactNode }) =>
+    children,
+  PreferenceSyncStatus: () => null,
+  useProtectedIdentity: () => ({
+    userId: "tester",
+    workspaceId: "workspace",
+    sessionId: "session",
+  }),
+}))
 vi.mock("@/components/issue-definition-provider", () => ({
   IssueDefinitionProvider: ({ children }: { children: ReactNode }) => children,
 }))

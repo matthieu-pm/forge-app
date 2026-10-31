@@ -1,3 +1,5 @@
+import { stableJson } from "./stable-json"
+import { onPreferenceSessionInvalidated } from "./preference-session-events"
 import {
   canonicalIssueEpoch,
   canonicalIssueState,
@@ -17,7 +19,7 @@ import {
 import type { CreateCanonicalIssue } from "./canonical-issue-contract"
 import type { CanonicalSnapshot } from "./canonical-issue-cache"
 import type { IssueDraft, TeamIssue } from "./issue-record-contract"
-import { productStorage } from "@/lib/product-storage"
+import { productStorage, saveProductValue } from "@/lib/product-storage"
 
 export async function refreshCanonicalIssues(identity: {
   workspaceId: string
@@ -100,22 +102,28 @@ export async function createSharedTeamIssue(
   draft: IssueDraft,
   options: { commandKey: string; legacyId?: string; assigneeId?: string | null }
 ) {
+  const epoch = canonicalIssueEpoch()
   const before = canonicalIssueState()
   if (!before)
     throw new Error("Shared issues are unavailable. Reload to try again.")
-  const intent = JSON.stringify({
+  const intent = stableJson({
     teamId,
     draft,
     options,
     workspaceId: before.workspaceId,
-    sessionId: before.sessionId,
+    userId: before.userId,
   })
-  const retained = preparedCreates.get(options.commandKey)
+  const recoveryKey = `forge:team-issue-create-intent:v1:${teamId}:${options.commandKey}`
+  let retained = preparedCreates.get(options.commandKey)
+  if (!retained) {
+    const raw = productStorage.getItem(recoveryKey)
+    if (raw) retained = JSON.parse(raw)
+  }
   if (retained && retained.intent !== intent)
     throw new Error(
       "This creation is waiting for confirmation. Retry its original draft before changing it."
     )
-  const data =
+  const prepared =
     retained?.data ??
     structuredClone({
       teamId,
@@ -125,13 +133,23 @@ export async function createSharedTeamIssue(
       workspaceId: before.workspaceId,
       sessionId: before.sessionId,
     })
+  const data = {
+    ...prepared,
+    workspaceId: before.workspaceId,
+    sessionId: before.sessionId,
+  }
   preparedCreates.set(options.commandKey, { intent, data })
+  await saveProductValue(recoveryKey, JSON.stringify({ intent, data }))
+  if (epoch !== canonicalIssueEpoch())
+    throw new Error("The active session changed.")
   const result = JSON.parse(await persistCanonicalIssue({ data })) as {
     issue: TeamIssue
     records: CanonicalSnapshot["records"]
   }
   const after = canonicalIssueState()
   if (
+    epoch !== canonicalIssueEpoch() ||
+    after?.userId !== before.userId ||
     after?.workspaceId !== before.workspaceId ||
     after.sessionId !== before.sessionId
   )
@@ -141,6 +159,12 @@ export async function createSharedTeamIssue(
   // A fresh authoritative snapshot includes imported projects/cycles as well.
   await refreshCanonicalIssues(before)
   mergeCanonicalIssueRecords(result.records)
+  await saveProductValue(recoveryKey, null)
+  if (epoch !== canonicalIssueEpoch())
+    throw new Error("The active session changed.")
   preparedCreates.delete(options.commandKey)
   return result.issue
 }
+
+if (typeof window !== "undefined")
+  onPreferenceSessionInvalidated(() => preparedCreates.clear())

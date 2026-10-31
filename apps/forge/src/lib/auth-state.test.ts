@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import { retireProtectedSession } from "@/lib/protected-session"
 
 import {
   getNavigationAuthState,
@@ -97,5 +98,18 @@ describe("auth route guards", () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+it("FOR-52 never reuses navigation auth data from a retired tab/session generation", async () => {
+  invalidateNavigationAuthState()
+  mocks.getAuthState.mockResolvedValueOnce({ user: { id: "alice" } })
+  await expect(getNavigationAuthState()).resolves.toEqual({
+    user: { id: "alice" },
+  })
+  mocks.getAuthState.mockResolvedValueOnce({ user: { id: "bob" } })
+  retireProtectedSession()
+  await expect(getNavigationAuthState()).resolves.toEqual({
+    user: { id: "bob" },
   })
 })

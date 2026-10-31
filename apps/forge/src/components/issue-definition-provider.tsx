@@ -5,6 +5,11 @@ import type {
   DefinitionSnapshot,
 } from "@/lib/issue-definition-contract"
 import {
+  invalidatePreferenceSession,
+  onPreferenceSessionInvalidated,
+} from "@/lib/preference-session-events"
+import { productStorageIdentity } from "@/lib/product-storage"
+import {
   hydrateIssueEdits,
   resetIssueEdits,
 } from "@/lib/canonical-issue-edit-client"
@@ -16,7 +21,6 @@ import {
   persistIssueDefinitions,
 } from "@/lib/issue-definition-state"
 import { replaceDefinitionCache } from "@/lib/issue-definition-cache"
-import { onPreferenceSessionInvalidated } from "@/lib/preference-session-events"
 import { Button } from "@/components/ui/button"
 
 type State = {
@@ -51,6 +55,16 @@ export function IssueDefinitionProvider({
     try {
       const next = await loadIssueDefinitions()
       if (!mounted.current || token !== epoch.current) return
+      const verified = productStorageIdentity()
+      if (
+        verified &&
+        (verified.userId !== next.userId ||
+          verified.workspaceId !== next.workspaceId ||
+          verified.sessionId !== next.sessionId)
+      ) {
+        invalidatePreferenceSession("settled")
+        return
+      }
       if (
         stateRef.current &&
         (stateRef.current.workspaceId !== next.workspaceId ||

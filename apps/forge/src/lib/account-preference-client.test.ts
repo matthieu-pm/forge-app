@@ -291,3 +291,26 @@ describe("FOR-127 shared preference client", () => {
     expect(client.getSnapshot().status).toBe("ready")
   })
 })
+
+it("FOR-52 restores unsaved preference edits after reload without publishing or crossing accounts", async () => {
+  productStorage.clear()
+  const f = fixture()
+  const old = f.create(productStorage)
+  await old.refresh()
+  f.save.mockRejectedValueOnce(new Error("Offline"))
+  old.edit({ "agent.guidance": "offline preference draft" })
+  await vi.waitFor(() => expect(old.getSnapshot().status).toBe("error"))
+  const original = f.save.mock.calls[0][0]
+  old.dispose()
+  const reloaded = f.create(productStorage)
+  expect(reloaded.getSnapshot()).toMatchObject({
+    status: "error",
+    pending: true,
+    values: { "agent.guidance": "offline preference draft" },
+  })
+  expect(f.save).toHaveBeenCalledTimes(1)
+  const other = fixture("bob").create(productStorage)
+  expect(other.getSnapshot().values["agent.guidance"]).toBeUndefined()
+  await reloaded.retry()
+  expect(f.save.mock.calls[1][0]).toEqual(original)
+})

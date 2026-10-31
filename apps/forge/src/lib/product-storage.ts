@@ -1,5 +1,10 @@
+import { z } from "zod"
+import { onPreferenceSessionInvalidated } from "./preference-session-events"
 import { loadProductState, persistProductState } from "./product-state-server"
-import { legacyStorageScope } from "./product-state-contract"
+import {
+  isProductStorageKey,
+  legacyStorageScope,
+} from "./product-state-contract"
 import type { ProductStateSnapshot } from "./product-state-contract"
 
 let identity: Omit<ProductStateSnapshot, "entries"> | null = null
@@ -22,6 +27,10 @@ let pending: Array<Pending> = []
 let running = false
 let error = ""
 let definitiveFailure = false
+let deviceError = ""
+let restored = false
+let journalWritable = true
+const ownedDrafts = new Set<string>()
 export const PRODUCT_STORAGE_CHANGED = "forge:product-storage-changed"
 function notify(key: string | null = null) {
   if (typeof window !== "undefined") {
@@ -30,7 +39,7 @@ function notify(key: string | null = null) {
   }
 }
 export function storageStatus() {
-  return { pending: pending.length, error }
+  return { pending: pending.length, error, deviceError, restored }
 }
 export function resetProductStorage() {
   generation++
@@ -41,15 +50,23 @@ export function resetProductStorage() {
   running = false
   error = ""
   definitiveFailure = false
+  deviceError = ""
+  restored = false
+  journalWritable = true
+  ownedDrafts.clear()
   notify()
 }
-export function initializeProductStorage(snapshot: ProductStateSnapshot) {
+export function initializeProductStorage(
+  snapshot: ProductStateSnapshot,
+  restore = true
+) {
   resetProductStorage()
   identity = snapshot
   for (const e of snapshot.entries) {
     if (e.value !== null) values.set(e.key, e.value)
     revisions.set(e.key, e.revision)
   }
+  if (restore) restoreDeviceDrafts()
   notify()
 }
 export function refreshProductStorage(
@@ -58,6 +75,7 @@ export function refreshProductStorage(
 ) {
   if (
     !identity ||
+    snapshot.userId !== identity.userId ||
     snapshot.workspaceId !== identity.workspaceId ||
     snapshot.sessionId !== identity.sessionId
   )
@@ -100,6 +118,7 @@ export async function flushProductStorage() {
       const p = pending[0],
         binding = identity
       p.revision ??= revisions.get(p.key) ?? 0
+      persistDeviceDrafts()
       const result = await persistProductState({
         data: {
           workspaceId: binding.workspaceId,
@@ -114,6 +133,7 @@ export async function flushProductStorage() {
       mutationEpoch++
       revisions.set(p.key, result.value.revision)
       pending.shift()
+      persistDeviceDrafts()
       notify(p.key)
     }
   } catch (failure) {
@@ -135,8 +155,19 @@ export async function flushProductStorage() {
     }
   }
 }
-// Memory-only synchronous projection for existing controls. Durability is exclusively
-// authenticated server storage; the global provider displays saving/errors.
+function queueChange(key: string, value: string | null) {
+  const tail = pending.at(-1)
+  // Never rewrite a command whose outcome is uncertain. Unsent typing can be
+  // coalesced so offline editing does not grow a journal per keystroke.
+  if (tail?.key === key && tail.revision === undefined) tail.value = value
+  else {
+    const commandKey = crypto.randomUUID()
+    ownedDrafts.add(commandKey)
+    pending.push({ key, value, commandKey })
+  }
+}
+// Synchronous projection for existing controls. Server confirmation and device
+// recovery are separate; pending writes are always labeled unsaved.
 export const productStorage = {
   get length() {
     return values.size
@@ -159,7 +190,8 @@ export const productStorage = {
     if (values.get(key) === value) return
     mutationEpoch++
     values.set(key, value)
-    pending.push({ key, value, commandKey: crypto.randomUUID() })
+    queueChange(key, value)
+    persistDeviceDrafts()
     notify(key)
     void flushProductStorage()
   },
@@ -172,17 +204,20 @@ export const productStorage = {
     if (!values.has(key)) return
     mutationEpoch++
     values.delete(key)
-    pending.push({ key, value: null, commandKey: crypto.randomUUID() })
+    queueChange(key, null)
+    persistDeviceDrafts()
     notify(key)
     void flushProductStorage()
   },
 }
 export async function saveProductValue(key: string, value: string | null) {
+  const token = generation
   if (value === null) productStorage.removeItem(key)
   else productStorage.setItem(key, value)
   await flushProductStorage()
   // A caller must never remove a migration source before its actual queued save completes.
   while (running) await new Promise((resolve) => setTimeout(resolve, 10))
+  if (token !== generation) throw new Error("The active session changed.")
   if (pending.some((p) => p.key === key) || error)
     throw new Error(error || "The server copy has not been confirmed.")
 }
@@ -196,18 +231,20 @@ export async function preservePendingAndReload() {
   try {
     for (const p of pending) {
       p.recoveryCommandKey ??= crypto.randomUUID()
+      p.recoveryValue ??= JSON.stringify({
+        key: p.key,
+        value: p.value,
+        expectedRevision: p.revision ?? 0,
+        createdAt: new Date().toISOString(),
+      })
+      persistDeviceDrafts()
       await persistProductState({
         data: {
           workspaceId: binding.workspaceId,
           sessionId: binding.sessionId,
           commandKey: p.recoveryCommandKey,
           key: `forge:pending-recovery:v1:${p.commandKey}`,
-          value: (p.recoveryValue ??= JSON.stringify({
-            key: p.key,
-            value: p.value,
-            expectedRevision: p.revision ?? 0,
-            createdAt: new Date().toISOString(),
-          })),
+          value: p.recoveryValue,
           expectedRevision: 0,
         },
       })
@@ -216,6 +253,7 @@ export async function preservePendingAndReload() {
     const snapshot = await loadProductState()
     if (token !== generation) return
     if (
+      snapshot.userId !== binding.userId ||
       snapshot.sessionId !== binding.sessionId ||
       snapshot.workspaceId !== binding.workspaceId
     )
@@ -227,7 +265,9 @@ export async function preservePendingAndReload() {
         )?.value !== p.recoveryValue
       )
         throw new Error("The saved recovery copy could not be verified.")
-    initializeProductStorage(snapshot)
+    pending = []
+    persistDeviceDrafts()
+    initializeProductStorage(snapshot, false)
     return true
   } catch (failure) {
     if (token === generation)
@@ -258,3 +298,96 @@ export function productStorageIdentity() {
 export function productStorageFailureIsDefinitive() {
   return definitiveFailure
 }
+
+// Only unconfirmed writes are journaled, never read caches. The key is selected
+// after server verification; account/workspace metadata is checked again on read.
+const draftJournalKey = (scope: { userId: string; workspaceId: string }) =>
+  JSON.stringify(["forge.unsaved-drafts", 1, scope.userId, scope.workspaceId])
+const deviceDraftSchema = z.object({
+  version: z.literal(1),
+  userId: z.string(),
+  workspaceId: z.string(),
+  pending: z.array(
+    z.object({
+      key: z.string().min(1).max(500).refine(isProductStorageKey),
+      value: z.string().max(20_000_000).nullable(),
+      commandKey: z.uuid(),
+      revision: z.number().int().nonnegative().optional(),
+      recoveryCommandKey: z.uuid().optional(),
+      recoveryValue: z.string().optional(),
+    })
+  ),
+})
+function readDeviceDrafts() {
+  if (!identity) return []
+  const raw = localStorage.getItem(draftJournalKey(identity))
+  if (!raw) return []
+  const journal = deviceDraftSchema.parse(JSON.parse(raw))
+  if (
+    journal.userId !== identity.userId ||
+    journal.workspaceId !== identity.workspaceId
+  )
+    throw new Error()
+  return journal.pending
+}
+function persistDeviceDrafts() {
+  if (!identity || typeof window === "undefined") return
+  try {
+    if (!journalWritable) throw new Error()
+    const key = draftJournalKey(identity)
+    // Preserve inaccessible drafts and other tabs' writes. Remove only receipts
+    // this tab owns, after their server acknowledgement.
+    const others = readDeviceDrafts().filter(
+      (item) => !ownedDrafts.has(item.commandKey)
+    )
+    const retained = [...others, ...pending]
+    if (retained.length)
+      localStorage.setItem(
+        key,
+        JSON.stringify({
+          version: 1,
+          userId: identity.userId,
+          workspaceId: identity.workspaceId,
+          pending: retained,
+        })
+      )
+    else localStorage.removeItem(key)
+    deviceError = ""
+  } catch {
+    deviceError =
+      "Unsaved changes are only in this tab. Device storage is unavailable; keep this tab open."
+  }
+}
+function restoreDeviceDrafts() {
+  if (!identity || typeof window === "undefined") return
+  try {
+    const recovered = readDeviceDrafts()
+    // Membership is live. Retain inaccessible drafts on disk without exposing them.
+    pending = recovered.filter((item) => {
+      const hint = legacyStorageScope(item.key)
+      return (
+        (!hint.userId || hint.userId === identity!.userId) &&
+        (!hint.workspaceId || hint.workspaceId === identity!.workspaceId) &&
+        (!hint.teamId ||
+          !identity!.teamIds ||
+          identity!.teamIds.includes(hint.teamId))
+      )
+    })
+    for (const item of pending) {
+      ownedDrafts.add(item.commandKey)
+      // Preserve the original baseline and retry identity through reloads.
+      if (item.value === null) values.delete(item.key)
+      else values.set(item.key, item.value)
+    }
+    restored = pending.length > 0
+    if (restored)
+      error =
+        "Unsaved drafts recovered from this device. Review and retry saving when connected."
+  } catch {
+    journalWritable = false
+    deviceError =
+      "Device drafts could not be read. The original copy is preserved."
+  }
+}
+if (typeof window !== "undefined")
+  onPreferenceSessionInvalidated(() => resetProductStorage())

@@ -8,7 +8,10 @@ import {
   createSharedTeamIssue,
   refreshCanonicalIssues,
 } from "./canonical-issue-client"
-import { canonicalIssueState } from "./canonical-issue-cache"
+import {
+  canonicalIssueEpoch,
+  canonicalIssueState,
+} from "./canonical-issue-cache"
 import { getDefaultIssueStatus, readLocalIssueStore } from "./team-issues"
 import {
   cycleIssueRecord,
@@ -24,6 +27,7 @@ import { productStorage } from "@/lib/product-storage"
 // the checkpoint, so reloads and other tabs can resume without duplicate writes.
 export async function migrateLocalIssues(teamIds: Array<string>) {
   const failures: Array<string> = []
+  const epoch = canonicalIssueEpoch()
   const state = canonicalIssueState()
   if (state) {
     const raw = productStorage.getItem(initiativesStorageKey(state.workspaceId))
@@ -38,7 +42,8 @@ export async function migrateLocalIssues(teamIds: Array<string>) {
             ].map((p) => [p.id, p])
           ).values(),
         ]
-        for (const project of projects)
+        for (const project of projects) {
+          if (epoch !== canonicalIssueEpoch()) return failures
           if (
             !state.projects.some(
               (p) => p.id === project.id || p.legacyId === project.id
@@ -59,7 +64,9 @@ export async function migrateLocalIssues(teamIds: Array<string>) {
               )
             }
           }
+        }
         for (const project of projects) {
+          if (epoch !== canonicalIssueEpoch()) return failures
           const existing = state.projects.find(
             (p) => p.id === project.id || p.legacyId === project.id
           )
@@ -80,6 +87,7 @@ export async function migrateLocalIssues(teamIds: Array<string>) {
       }
   }
   for (const teamId of teamIds) {
+    if (epoch !== canonicalIssueEpoch()) return failures
     let records: Array<TeamIssue> = []
     try {
       const local = readLocalIssueStore(teamId).issues
@@ -112,6 +120,7 @@ export async function migrateLocalIssues(teamIds: Array<string>) {
     }
     const pending = new Map(records.map((i) => [i.id, i]))
     while (pending.size) {
+      if (epoch !== canonicalIssueEpoch()) return failures
       const next = [...pending.values()].find(
         (i) => !i.parentId || !pending.has(i.parentId)
       )
