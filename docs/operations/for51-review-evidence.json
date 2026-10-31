@@ -1,0 +1,109 @@
+{
+  "issue": "FOR-51",
+  "pullRequest": "https://github.com/matthieu-pm/forge-app/pull/35",
+  "date": "2026-10-31",
+  "base": "7eae3fe185e3ab8e6bab54963976ce179376a6fb",
+  "initialReviewedHead": "282544add004a4a1c826be2e1e18dbe0061bdc1e",
+  "reviewedImplementation": "451cf9a915672a28d9b3ee4c6436479d86fbcf6d",
+  "reviewAxes": {
+    "standards": {
+      "findings": 0,
+      "remainingFindings": 0
+    },
+    "specification": {
+      "initialFindings": 1,
+      "followupRaceFindings": 2,
+      "remainingFindings": 0
+    }
+  },
+  "resolvedFindings": [
+    {
+      "requirement": "AC-02",
+      "problem": "Query invalidation left old private canonical records cached when no detail hook was mounted.",
+      "fix": "Discard targeted collection and cached-detail records on invalidation, preserving the mounted editor projection until its own authorized read settles. Retain only fresh committed records through mutation invalidation.",
+      "reproduction": "Empty and failed replacement-query regressions both failed before the fix."
+    },
+    {
+      "requirement": "AC-02",
+      "problem": "Delayed mutation acknowledgements and metadata-only snapshot replacement could refill discarded private rows.",
+      "fix": "Fence discarded IDs until a fresh authorized read. Fence omitted IDs before metadata replacement. Confirmed mutation receipts still clear recovery drafts.",
+      "regressions": [
+        "Delayed successful engagement response after hard eviction leaves cache empty and clears retry draft.",
+        "Generic invalidation followed by delayed mutation cannot refill cache.",
+        "Metadata-only replacement followed by delayed mutation stays empty, then same-revision authorized read restores access."
+      ]
+    },
+    {
+      "requirement": "AC-01/AC-02 integration",
+      "problem": "Creation relied on restoring receipt projections after metadata refresh; reauthorization could itself be superseded by a later invalidation.",
+      "fix": "Read the created ID under live authorization after metadata refresh and guard its response with identity, read generation and hard-removal epoch. Never turn a confirmed creation into failure.",
+      "regressions": [
+        "Authorized creation returns the final durable attachment projection.",
+        "Denied and invalidated-during-read creation remains confirmed once, without restoring cached private records."
+      ]
+    }
+  ],
+  "validation": {
+    "app": {
+      "passed": 2369,
+      "failed": 0,
+      "skipped": 423,
+      "filesPassed": 294,
+      "filesSkipped": 22,
+      "command": "cd apps/forge && bun x vitest run --maxWorkers=4"
+    },
+    "focused": {
+      "passed": 59,
+      "failed": 0,
+      "scope": "Query cache, creation, engagement, editing, My issues UI and lifecycle"
+    },
+    "postgresRegression": {
+      "passed": 19,
+      "failed": 0,
+      "skippedUnselected": 120,
+      "database": "forge_issue_history_acceptance",
+      "neonBranch": "br-autumn-union-za0opf1e",
+      "command": "cd apps/forge && FORGE_MY_ISSUES_TEST_DATABASE_FILE=<isolated-config> bun x vitest run src/application/issues/issues.postgres.test.ts -t 'FOR-51|FOR-43|FOR-47'"
+    },
+    "browser": {
+      "passed": true,
+      "environment": "Local production Node artifact; three real Better Auth sessions",
+      "checks": [
+        "Alice assigns and two independent Bob browsers open the same canonical ID",
+        "My issues edits shared with team detail and another device",
+        "Created and Subscribed tabs use durable actor-owned state",
+        "Subscribe/unsubscribe changes propagate through focus refresh",
+        "Assigned details preview uses the canonical row",
+        "Authorized focus and periodic refresh retain the same personal comment editor and unsent text",
+        "Private membership revocation removes list, preview and full detail",
+        "SPA tab switches cannot resurrect revoked personal issues",
+        "No browser page errors"
+      ],
+      "cleanup": {
+        "workspaces": 0,
+        "users": 0,
+        "receipts": 0
+      }
+    },
+    "workflow": {
+      "passed": 4,
+      "failed": 0
+    },
+    "build": "passed including HTTP 200 prerender and protected Workflow handler verification",
+    "typecheck": "passed",
+    "changedFileLint": {
+      "errors": 0,
+      "warnings": 14
+    },
+    "formatAndDiff": "passed"
+  },
+  "interruptedRuns": "Earlier broad tests crossed a macOS sleep interval and failed with worker/test wall-clock timeouts and disconnected SQL sessions. Power logs confirmed suspension. Those runs are excluded from acceptance; the final fresh runs above passed.",
+  "previewGate": "Verify both forge-app and forge-preview-runtime READY and successful checks at final pushed head before merge; test protected live/ready endpoints.",
+  "release": {
+    "authorization": "User explicitly requested review, fixes, merge, production deployment, release verification and FOR-51 update in this chat.",
+    "migrationRequired": false,
+    "configurationChangeRequired": false,
+    "rollbackDeployment": "dpl_5SPWU9JL1TJLffe2C7b11bc4qC4L",
+    "status": "Final reviewed implementation passed local acceptance; production deployment and hosted evidence recorded in Linear after release."
+  }
+}
