@@ -156,6 +156,12 @@ try {
     preview.locator("iframe").contentFrame().locator("body")
   ).toContainText("FOR-48 durable issue evidence")
   await admin.keyboard.press("Escape")
+  // Cross the real periodic metadata refresh while a comment upload is pending.
+  // The open editor and the selected bytes must survive revalidation.
+  await member.route("**/api/files/uploads/*/token", async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 32_000))
+    await route.continue().catch(() => {})
+  })
   const composer = member.getByRole("textbox", { name: "Comment", exact: true })
   await composer.fill("Comment evidence")
   const draftComposer = member
@@ -170,7 +176,8 @@ try {
     })
   await expect(
     draftComposer.getByText("comment-evidence.txt", { exact: true })
-  ).toBeVisible()
+  ).toBeVisible({ timeout: 60000 })
+  await member.unroute("**/api/files/uploads/*/token")
   await expect(
     draftComposer.getByRole("button", { name: "Submit comment", exact: true })
   ).toBeEnabled()

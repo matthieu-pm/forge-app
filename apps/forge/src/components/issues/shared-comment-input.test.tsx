@@ -8,8 +8,13 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { SharedCommentInput } from "./shared-comment-input"
 import type * as CommentClient from "@/lib/issue-comment-client"
+import { uploadFileDirect } from "@/lib/files/direct-upload-client"
 import { commentFromText } from "@/lib/comment-rich-text"
 import { replaceCanonicalIssues } from "@/lib/canonical-issue-cache"
+
+vi.mock("@/lib/files/direct-upload-client", () => ({
+  uploadFileDirect: vi.fn(),
+}))
 
 const storage = vi.hoisted(() => ({ getItem: vi.fn(), setItem: vi.fn() }))
 const requests = vi.hoisted(() => ({ send: vi.fn(), mentions: vi.fn() }))
@@ -240,5 +245,27 @@ describe("FOR-46 private comment draft isolation", () => {
     expect(
       JSON.stringify(requests.send.mock.calls[0][0].document)
     ).not.toContain('"mention"')
+  })
+})
+
+it("checkpoints the current comment before an upload cancels its debounce", async () => {
+  vi.mocked(uploadFileDirect).mockReturnValueOnce(new Promise(() => {}))
+  render(
+    <SharedCommentInput
+      {...props}
+      comment={{ id: crypto.randomUUID(), body: "Fresh draft", version: 0 }}
+    />
+  )
+  await screen.findByRole("textbox", { name: "Edit comment" })
+  storage.setItem.mockClear()
+  fireEvent.change(screen.getByLabelText("Upload attachment"), {
+    target: { files: [new File(["evidence"], "evidence.txt")] },
+  })
+  expect(uploadFileDirect).toHaveBeenCalledOnce()
+  expect(storage.setItem).toHaveBeenCalledOnce()
+  expect(JSON.parse(storage.setItem.mock.calls[0][1])).toMatchObject({
+    issueId: props.issueId,
+    document: commentFromText("Fresh draft"),
+    uploads: [],
   })
 })

@@ -186,7 +186,10 @@ export function useQueriedIssue(id?: string) {
     ? `${canonicalIssueEpoch()}:${state.workspaceId}:${state.userId}:${state.sessionId}`
     : ""
   const invalidation = generation
-  const key = `${scope}:${id}:${invalidation}`
+  // Refreshing the same authorized detail must not unmount its private editor
+  // or cancel selected uploads. Identity/ID changes still hide it immediately;
+  // an empty or failed revalidation clears it when that response arrives.
+  const key = `${scope}:${id}`
   const [result, setResult] = useState<{
     key: string
     record?: IssueQueryPage["records"][number]

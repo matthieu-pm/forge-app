@@ -1,8 +1,20 @@
-import { act, cleanup, renderHook, waitFor } from "@testing-library/react"
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+} from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { replaceCanonicalIssues } from "./canonical-issue-cache"
-import { invalidateIssueQueries, useIssueQuery } from "./issue-query-client"
-import { loadIssueQuery } from "./canonical-issue-state"
+import {
+  invalidateIssueQueries,
+  useIssueQuery,
+  useQueriedIssue,
+} from "./issue-query-client"
+import { loadIssueDetail, loadIssueQuery } from "./canonical-issue-state"
 import { blankIssueDraft } from "./issue-record-contract"
 import type { IssueQueryPage } from "./issue-query-contract"
 
@@ -59,6 +71,7 @@ function page(id: string, nextCursor: string | null = null): IssueQueryPage {
 }
 beforeEach(() => {
   vi.mocked(loadIssueQuery).mockReset()
+  vi.mocked(loadIssueDetail).mockReset()
   replaceCanonicalIssues(structuredClone(identity))
   invalidateIssueQueries()
 })
@@ -162,4 +175,82 @@ describe("authorized query client", () => {
       vi.mocked(loadIssueQuery).mock.calls[2][0].data.query.teamIds
     ).toEqual([team])
   })
+})
+
+it("keeps the open editor mounted through metadata refresh while revalidating its detail", async () => {
+  const id = crypto.randomUUID()
+  let finish!: (value: string) => void
+  vi.mocked(loadIssueDetail)
+    .mockResolvedValueOnce(JSON.stringify(page(id).records))
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve
+        })
+    )
+  function Detail() {
+    const record = useQueriedIssue(id)
+    return record ? <input aria-label="Private comment draft" /> : null
+  }
+  render(<Detail />)
+  const editor = await screen.findByLabelText("Private comment draft")
+  fireEvent.change(editor, {
+    target: { value: "Keep selected evidence and text" },
+  })
+  act(() => replaceCanonicalIssues(structuredClone(identity)))
+  await waitFor(() => expect(loadIssueDetail).toHaveBeenCalledTimes(2))
+  expect(screen.getByLabelText("Private comment draft")).toBe(editor)
+  expect((editor as HTMLInputElement).value).toBe(
+    "Keep selected evidence and text"
+  )
+  await act(async () => finish(JSON.stringify(page(id).records)))
+  expect(screen.getByLabelText("Private comment draft")).toBe(editor)
+})
+
+it.each(["empty", "failure"])(
+  "hides the retained detail after a confirmed %s revalidation",
+  async (outcome) => {
+    const id = crypto.randomUUID()
+    vi.mocked(loadIssueDetail).mockResolvedValueOnce(
+      JSON.stringify(page(id).records)
+    )
+    const hook = renderHook(() => useQueriedIssue(id))
+    await waitFor(() => expect(hook.result.current?.issue.id).toBe(id))
+    if (outcome === "empty")
+      vi.mocked(loadIssueDetail).mockResolvedValueOnce("[]")
+    else
+      vi.mocked(loadIssueDetail).mockRejectedValueOnce(
+        new Error("Access revoked")
+      )
+    act(() => invalidateIssueQueries())
+    await waitFor(() => expect(hook.result.current).toBeUndefined())
+  }
+)
+
+it("immediately hides another identity's detail and ignores its late refresh", async () => {
+  const id = crypto.randomUUID()
+  let finish!: (value: string) => void
+  vi.mocked(loadIssueDetail)
+    .mockResolvedValueOnce(JSON.stringify(page(id).records))
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve
+        })
+    )
+    .mockResolvedValueOnce("[]")
+  const hook = renderHook(() => useQueriedIssue(id))
+  await waitFor(() => expect(hook.result.current?.issue.id).toBe(id))
+  act(() => invalidateIssueQueries())
+  await waitFor(() => expect(loadIssueDetail).toHaveBeenCalledTimes(2))
+  act(() =>
+    replaceCanonicalIssues({
+      ...identity,
+      userId: "bob",
+      sessionId: "session-b",
+    })
+  )
+  expect(hook.result.current).toBeUndefined()
+  await act(async () => finish(JSON.stringify(page(id).records)))
+  expect(hook.result.current).toBeUndefined()
 })
