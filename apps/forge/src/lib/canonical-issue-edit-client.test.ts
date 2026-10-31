@@ -439,4 +439,89 @@ describe("canonical issue edit queue", () => {
     await new Promise((r) => setTimeout(r, 0))
     expect(canonicalIssueState()!.records).toEqual([])
   })
+  it("FOR-50 replays an uncertain triage decision with its original command and reviewed revision", async () => {
+    const before = { ...original, triage: true, snoozed: true }
+    replaceCanonicalIssues({
+      ...snapshot(),
+      records: [{ teamId, issue: before }],
+    })
+    vi.mocked(persistCanonicalIssueEdits).mockRejectedValueOnce(
+      new Error("Response lost")
+    )
+    enqueueIssueEdits(teamId, [
+      {
+        before,
+        triageDecision: "accept",
+        changes: { status: "todo", assignee: "" },
+      },
+    ])
+    await vi.waitFor(() =>
+      expect(JSON.parse(issueEditSnapshot()).error).toBe("Response lost")
+    )
+    const input = vi.mocked(persistCanonicalIssueEdits).mock.calls[0][0].data
+    expect(input.edits[0]).toMatchObject({
+      expectedRevision: 0,
+      triageDecision: "accept",
+      changes: { assignee: "" },
+    })
+    expect(canonicalIssueRows(teamId)[0].issue).toMatchObject({
+      id,
+      triage: false,
+      snoozed: false,
+    })
+    vi.mocked(persistCanonicalIssueEdits).mockResolvedValueOnce(
+      JSON.stringify({
+        status: "saved",
+        records: [
+          {
+            teamId,
+            issue: { ...before, triage: false, snoozed: false, revision: 1 },
+          },
+        ],
+      })
+    )
+    await flushIssueEdits()
+    expect(vi.mocked(persistCanonicalIssueEdits).mock.calls[1][0].data).toEqual(
+      input
+    )
+    expect(JSON.parse(issueEditSnapshot()).pending).toBe(0)
+  })
+  it("FOR-50 cannot rebase a losing decision after another triager decided", async () => {
+    const before = { ...original, triage: true }
+    replaceCanonicalIssues({
+      ...snapshot(),
+      records: [{ teamId, issue: before }],
+    })
+    vi.mocked(persistCanonicalIssueEdits).mockResolvedValue(
+      JSON.stringify({
+        status: "conflict",
+        records: [
+          {
+            teamId,
+            issue: {
+              ...before,
+              triage: false,
+              status: "canceled",
+              revision: 1,
+            },
+          },
+        ],
+      })
+    )
+    enqueueIssueEdits(teamId, [
+      {
+        before,
+        triageDecision: "accept",
+        changes: { status: "todo", assignee: "" },
+      },
+    ])
+    await vi.waitFor(() =>
+      expect(JSON.parse(issueEditSnapshot()).conflict).toBe(true)
+    )
+    await applyEditsToLatest()
+    expect(persistCanonicalIssueEdits).toHaveBeenCalledTimes(1)
+    expect(JSON.parse(issueEditSnapshot()).error).toContain(
+      "already left triage"
+    )
+  })
 })

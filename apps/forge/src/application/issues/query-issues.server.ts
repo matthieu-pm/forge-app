@@ -201,6 +201,10 @@ export async function queryCanonicalIssues(
         domain.push(
           sql`coalesce(${issues.properties}->>'milestone','') IN (${sql.join(query.milestone.length ? query.milestone.map((v) => sql`${v}`) : [sql`''`], sql`,`)})`
         )
+      if (query.triage === false)
+        domain.push(
+          sql`coalesce(${issues.properties}->>'triage','false') <> 'true'`
+        )
       if (query.triage) {
         domain.push(sql`${issues.properties}->>'triage' = 'true'`)
         if (!query.showSnoozed)

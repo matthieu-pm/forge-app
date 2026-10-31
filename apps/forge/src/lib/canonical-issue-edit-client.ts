@@ -95,11 +95,16 @@ export function hydrateIssueEdits() {
   }
   notify()
 }
-function optimisticFor(before: TeamIssue, changes: IssueChanges): TeamIssue {
+function optimisticFor(
+  before: TeamIssue,
+  changes: IssueChanges,
+  triageDecision?: "accept" | "decline"
+): TeamIssue {
   const now = new Date().toISOString()
   return {
     ...before,
     ...changes,
+    ...(triageDecision ? { triage: false, snoozed: false } : {}),
     subIssues: [],
     revision: (before.revision ?? 0) + 1,
     updatedAt: now,
@@ -111,16 +116,21 @@ function optimisticFor(before: TeamIssue, changes: IssueChanges): TeamIssue {
 }
 export function enqueueIssueEdits(
   teamId: string,
-  edits: Array<{ before: TeamIssue; changes: IssueChanges }>
+  edits: Array<{
+    before: TeamIssue
+    changes: IssueChanges
+    triageDecision?: "accept" | "decline"
+  }>
 ) {
   if (!edits.length) return
   const input = editIssueBatchSchema.parse({
     commandKey: crypto.randomUUID(),
     teamId,
-    edits: edits.map(({ before, changes }) => ({
+    edits: edits.map(({ before, changes, triageDecision }) => ({
       issueId: before.id,
       expectedRevision: before.revision ?? 0,
       changes,
+      ...(triageDecision ? { triageDecision } : {}),
       ...prepareIssueRelations(teamId, { ...before, ...changes }),
     })),
   })
@@ -133,7 +143,8 @@ export function enqueueIssueEdits(
       optimisticFor(
         canonicalIssueRows(teamId).find((r) => r.issue.id === edit.before.id)
           ?.issue ?? edit.before,
-        edit.changes
+        edit.changes,
+        edit.triageDecision
       )
     )
   notify()
@@ -259,6 +270,10 @@ export async function applyEditsToLatest() {
           edits: pending.input.edits.map((edit) => {
             const before = versions.get(edit.issueId)
             if (!before) throw new Error("An issue is no longer available.")
+            if (edit.triageDecision && !before.triage)
+              throw new Error(
+                "This issue has already left triage. Use the latest shared version."
+              )
             return { ...edit, expectedRevision: before.revision ?? 0 }
           }),
         }
@@ -267,7 +282,10 @@ export async function applyEditsToLatest() {
       for (const edit of pending.input.edits) {
         const before = versions.get(edit.issueId)
         if (before)
-          versions.set(edit.issueId, optimisticFor(before, edit.changes))
+          versions.set(
+            edit.issueId,
+            optimisticFor(before, edit.changes, edit.triageDecision)
+          )
       }
       // Replace the same durable draft slot. Never expose two generations after
       // a partial save or a reload, and retain the prepared identity on retry.
@@ -281,7 +299,10 @@ export async function applyEditsToLatest() {
         const before = state.records.find(
           (record) => record.issue.id === edit.issueId
         )?.issue
-        if (before) setOptimisticIssue(optimisticFor(before, edit.changes))
+        if (before)
+          setOptimisticIssue(
+            optimisticFor(before, edit.changes, edit.triageDecision)
+          )
       }
     ready = true
   } catch (failure) {

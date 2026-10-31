@@ -21,7 +21,6 @@ export const issueChangesSchema = z
     recurrence: issueDraftSchema.shape.recurrence.removeDefault().optional(),
     subscribers: issueDraftSchema.shape.subscribers.removeDefault().optional(),
     milestone: issueDraftSchema.shape.milestone.removeDefault().optional(),
-    triage: z.boolean().optional(),
     snoozed: z.boolean().optional(),
     subIssues: z.array(z.string().trim().min(1).max(240)).max(100).optional(),
   })
@@ -38,6 +37,7 @@ export const editIssueBatchSchema = z
             issueId: z.uuid(),
             expectedRevision: z.number().int().nonnegative(),
             changes: issueChangesSchema,
+            triageDecision: z.enum(["accept", "decline"]).optional(),
             projectImport: initiativeProjectSchema.optional(),
             cycleImport: z
               .object({ startDate: z.iso.date(), endDate: z.iso.date() })

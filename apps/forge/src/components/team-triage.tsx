@@ -14,7 +14,11 @@ import type { TriageDraft, TriageIssue } from "@/lib/triage-issues"
 import { IssueQueryFooter } from "@/components/issues/issue-query-footer"
 import { defaultIssueDisplay } from "@/lib/issue-view-contract"
 import { useIssueQuery } from "@/lib/issue-query-client"
-import { readIssueStore } from "@/lib/team-issues"
+import { TriageDecisionControls } from "@/components/triage-decision-controls"
+import {
+  canonicalIssueEpoch,
+  canonicalIssuesActive,
+} from "@/lib/canonical-issue-cache"
 import { productStorage } from "@/lib/product-storage"
 import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import { ContentHeader } from "@/components/ui/content-header"
@@ -78,7 +82,7 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
     },
   })
   const visible = query.enabled
-    ? query.records.map((r) => r.issue)
+    ? query.records.map((r) => r.issue).filter((issue) => issue.triage)
     : issues
         .filter(
           (issue) =>
@@ -102,9 +106,8 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
   const selected = visible.find((issue) => issue.id === selectedId)
   const editingBaseline = useRef<TeamIssue | undefined>(undefined)
   function openEditor(issue?: TriageIssue) {
-    editingBaseline.current = issue
-      ? readIssueStore(team.id).issues.find((row) => row.id === issue.id)
-      : undefined
+    editingBaseline.current =
+      issue && "revision" in issue ? (issue as TeamIssue) : undefined
     setSaveError(null)
     if (issue) setDraft(issue)
     else {
@@ -128,7 +131,7 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
   }
   async function toggleSnooze(issue: TriageIssue) {
     try {
-      await save(issue, issue.id, !issue.snoozed)
+      await save(issue, issue.id, !issue.snoozed, issue as TeamIssue)
       setSelectedId(undefined)
       setSaveError(null)
     } catch {
@@ -300,7 +303,7 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
           {visible.map((issue) => (
             <button
               key={issue.id}
-              aria-label={`Open ${team.identifier}-T${issue.number} ${issue.title}`}
+              aria-label={`Open ${team.identifier}-${issue.number} ${issue.title}`}
               aria-pressed={selectedId === issue.id}
               onClick={() => setSelectedId(issue.id)}
               className={`flex w-full flex-col gap-1 border-b border-border/40 px-4 py-3 text-left text-sm outline-none hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset ${selectedId === issue.id ? "bg-muted/60" : ""}`}
@@ -309,7 +312,7 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
               <span className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                 {properties.includes("ID") && (
                   <span>
-                    {team.identifier}-T{issue.number}
+                    {team.identifier}-{issue.number}
                   </span>
                 )}
                 {issue.priority !== "No priority" && (
@@ -342,7 +345,7 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
         {selected ? (
           <article className="mx-auto w-full max-w-3xl p-6 sm:p-10">
             <p className="mb-4 text-xs text-muted-foreground">
-              {team.identifier}-T{selected.number} · Triage
+              {team.identifier}-{selected.number} · Triage
             </p>
             <h2 className="text-xl font-medium">{selected.title}</h2>
             <p className="mt-5 text-sm whitespace-pre-wrap text-muted-foreground">
@@ -370,6 +373,23 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
                 )}
               </dl>
             )}
+            {"links" in selected &&
+              (selected as TeamIssue).links.length > 0 && (
+                <ul className="mt-5 space-y-2" aria-label="Source references">
+                  {(selected as TeamIssue).links.map((link) => (
+                    <li key={link.url}>
+                      <a
+                        className="text-xs underline underline-offset-4"
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {link.title || link.url}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
             {!!selected.attachments?.length && (
               <ul className="mt-5 space-y-2">
                 {selected.attachments.map((file, index) => (
@@ -384,6 +404,13 @@ export function TeamTriage({ team }: { team: TeamSummary }) {
                   </li>
                 ))}
               </ul>
+            )}
+            {canonicalIssuesActive() && (
+              <TriageDecisionControls
+                key={`${canonicalIssueEpoch()}:${selected.id}`}
+                team={team}
+                issue={selected as TeamIssue}
+              />
             )}
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <span className="text-xs text-muted-foreground">

@@ -43,6 +43,7 @@ export function CanonicalEditFeedback() {
     drafts: Array<{
       issueId: string
       title: string
+      triageDecision?: "accept" | "decline"
       changes: IssueChanges
       latest?: TeamIssue
     }>
@@ -68,7 +69,12 @@ export function CanonicalEditFeedback() {
           {status.conflict && (
             <Button
               size="sm"
-              disabled={status.running}
+              disabled={
+                status.running ||
+                status.drafts.some(
+                  (draft) => draft.triageDecision && !draft.latest?.triage
+                )
+              }
               onClick={() => void applyEditsToLatest()}
             >
               Apply my edits to latest
@@ -90,6 +96,14 @@ export function CanonicalEditFeedback() {
           {status.drafts.map((draft, index) => (
             <div key={`${draft.issueId}:${index}`} className="mt-2">
               <p className="font-medium">{draft.title}</p>
+              {draft.triageDecision && (
+                <p>
+                  Your triage decision: {draft.triageDecision}.{" "}
+                  {draft.latest?.triage
+                    ? "Still in triage."
+                    : "This issue has already left triage. Use the latest shared version."}
+                </p>
+              )}
               <table className="mt-1 w-full text-left text-xs">
                 <thead>
                   <tr>
