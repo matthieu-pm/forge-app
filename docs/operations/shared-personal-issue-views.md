@@ -15,6 +15,9 @@ Subscribed. Direct links resolve independently of the current tab's loaded page.
 ## Refresh and eviction
 
 Committed writes invalidate personal queries as well as the owning team's views.
+Invalidation discards targeted collection records, including cached details with no
+mounted reader. A mutation retains only its newly committed records. Open editors
+keep their local projection until authorized detail revalidation settles.
 Other devices refresh on focus and through the existing 30-second provider poll.
 There is no new push transport; resumable events remain FOR-95.
 
@@ -23,7 +26,11 @@ variants containing those records before starting a new authorized read. Empty o
 failed detail revalidation evicts that issue from the canonical cache and affected
 query pages. Removal generations prevent delayed pre-eviction page responses and
 retained detail hooks from restoring private records or stale counts. New authorized
-reads can recover access even if the issue revision is unchanged.
+reads can recover access even if the issue revision is unchanged. Delayed mutation
+acknowledgements cannot repopulate discarded rows; confirmed receipts still clear
+their retry drafts. Metadata-only snapshots fence omitted rows as well. Creation
+rechecks the created issue after its metadata refresh before caching it again; a
+failed access check does not report a confirmed creation as failed.
 
 Routine metadata refresh revalidates open details while retaining the editor and
 its owning team context. It preserves unsent text and selected uploads until an

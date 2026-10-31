@@ -3,12 +3,15 @@ import { stableJson } from "./stable-json"
 import { onPreferenceSessionInvalidated } from "./preference-session-events"
 import {
   canonicalIssueEpoch,
+  canonicalIssueReadGeneration,
+  canonicalIssueRemovalEpoch,
   canonicalIssueState,
   mergeCanonicalIssueRecords,
   replaceCanonicalIssues,
 } from "./canonical-issue-cache"
 import {
   loadCanonicalIssues,
+  loadIssueDetail,
   persistCanonicalIssue,
 } from "./canonical-issue-state"
 import { initiativeStoreSchema, initiativesStorageKey } from "./initiatives"
@@ -187,6 +190,26 @@ export async function createSharedTeamIssue(
   assertCurrent()
   try {
     await refreshCanonicalIssues(before)
+    assertCurrent()
+    // The metadata bootstrap discards issue rows. Reauthorize the created ID
+    // rather than restoring a receipt projection that may predate access loss.
+    const readEpoch = canonicalIssueRemovalEpoch(result.issue.id)
+    const readGeneration = canonicalIssueReadGeneration()
+    const records = JSON.parse(
+      await loadIssueDetail({
+        data: {
+          workspaceId: before.workspaceId,
+          sessionId: before.sessionId,
+          id: result.issue.id,
+        },
+      })
+    ) as CanonicalSnapshot["records"]
+    assertCurrent()
+    if (
+      readEpoch === canonicalIssueRemovalEpoch(result.issue.id) &&
+      readGeneration === canonicalIssueReadGeneration()
+    )
+      mergeCanonicalIssueRecords(records, false, readEpoch)
   } catch {
     assertCurrent()
   }

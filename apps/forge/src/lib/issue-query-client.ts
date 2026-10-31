@@ -7,6 +7,7 @@ import {
   canonicalIssueRows,
   canonicalIssueState,
   canonicalIssuesActive,
+  clearCanonicalIssueQueryRecords,
   isCanonicalIssueSuppressed,
   mergeCanonicalIssueRecords,
   removeCanonicalIssueRecords,
@@ -49,10 +50,13 @@ function evictRecords(ids: Array<string>) {
   for (const [key, entry] of entries)
     if (entry.page?.records.some((r) => removed.has(r.issue.id)))
       entries.delete(key)
-  removeCanonicalIssueRecords(ids)
+  removeCanonicalIssueRecords(ids, { requireAuthorizedRead: true })
   notify()
 }
-export function invalidateIssueQueries(teamIds?: Array<string>) {
+export function invalidateIssueQueries(
+  teamIds?: Array<string>,
+  retainedIssueIds: Array<string> = []
+) {
   generation++
   for (const [key, entry] of entries) {
     if (
@@ -62,15 +66,18 @@ export function invalidateIssueQueries(teamIds?: Array<string>) {
     )
       entries.delete(key)
   }
+  clearCanonicalIssueQueryRecords(teamIds, retainedIssueIds)
   notify()
 }
 if (typeof window !== "undefined") {
   window.addEventListener(DEFINITIONS_CHANGED, () => invalidateIssueQueries())
   window.addEventListener(ISSUE_QUERIES_INVALIDATED, (event) => {
-    invalidateIssueQueries(
-      (event as Event & { detail?: { teamIds?: Array<string> } }).detail
-        ?.teamIds
-    )
+    const detail = (
+      event as Event & {
+        detail?: { teamIds?: Array<string>; retainedIssueIds?: Array<string> }
+      }
+    ).detail
+    invalidateIssueQueries(detail?.teamIds, detail?.retainedIssueIds)
   })
 }
 async function requestPage(key: string, entry: Entry, more: boolean) {
@@ -134,7 +141,7 @@ async function requestPage(key: string, entry: Entry, more: boolean) {
           ]
         : page.records
     entry.page = { ...page, records }
-    mergeCanonicalIssueRecords(page.records, false)
+    mergeCanonicalIssueRecords(page.records, false, removalEpoch)
   } catch {
     if (entries.get(key) === entry) {
       // Never keep protected rows after an authorization/refresh failure.
@@ -239,7 +246,7 @@ export function useQueriedIssue(id?: string) {
           return
         const records = JSON.parse(raw) as IssueQueryPage["records"]
         if (!records.length) evictRecords([id])
-        mergeCanonicalIssueRecords(records, false)
+        mergeCanonicalIssueRecords(records, false, removalEpoch)
         setResult({ key, removalEpoch, record: records[0] })
       })
       .catch(() => {

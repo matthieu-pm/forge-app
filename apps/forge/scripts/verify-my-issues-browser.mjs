@@ -234,6 +234,14 @@ try {
   await expect(title(bob2)).toHaveValue("Edited in My issues", {
     timeout: 60000,
   })
+  const comment = bob2.getByRole("textbox", { name: "Comment", exact: true })
+  await comment.fill("Unsent personal comment survives refresh")
+  const editor = await comment.elementHandle()
+  await bob2.evaluate(() => window.dispatchEvent(new Event("focus")))
+  // Cross an actual metadata polling interval as well as the focus refresh.
+  await bob2.waitForTimeout(32_000)
+  expect(await editor.evaluate((node) => node.isConnected)).toBe(true)
+  await expect(comment).toHaveText("Unsent personal comment survives refresh")
   await pool.query("UPDATE teams SET visibility='private' WHERE id=$1", [
     teamId,
   ])
@@ -276,6 +284,7 @@ try {
         "Created and Subscribed tabs use durable actor-owned state",
         "Subscribe/unsubscribe changes propagate through focus refresh",
         "Assigned details preview uses the canonical row",
+        "Authorized focus and periodic refresh retain the same personal comment editor and unsent text",
         "Private membership revocation removes list, preview and full detail",
         "SPA tab switches cannot resurrect revoked personal issues",
         "No browser page errors",

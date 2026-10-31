@@ -10,6 +10,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
   canonicalIssueState,
+  mergeCanonicalIssueRecords,
   replaceCanonicalIssues,
   suppressCanonicalIssueRecord,
 } from "./canonical-issue-cache"
@@ -407,4 +408,85 @@ describe("FOR-51 personal queue cache revocation", () => {
       )
     }
   )
+})
+
+it.each(["empty", "failure"])(
+  "FOR-51 review: invalidation clears cached private rows after a replacement %s without an open detail",
+  async (outcome) => {
+    const id = crypto.randomUUID()
+    vi.mocked(loadIssueQuery).mockResolvedValueOnce(JSON.stringify(page(id)))
+    const queue = renderHook(() => useIssueQuery({ personal: "assigned" }))
+    await waitFor(() => expect(queue.result.current.records).toHaveLength(1))
+    expect(canonicalIssueState()?.records).toHaveLength(1)
+    if (outcome === "empty")
+      vi.mocked(loadIssueQuery).mockResolvedValueOnce(
+        JSON.stringify({ ...page(id), records: [], total: 0 })
+      )
+    else vi.mocked(loadIssueQuery).mockRejectedValueOnce(new Error("revoked"))
+    act(() => invalidateIssueQueries([team]))
+    await waitFor(() => expect(queue.result.current.loading).toBe(false))
+    expect(queue.result.current.records).toEqual([])
+    expect(canonicalIssueState()?.records).toEqual([])
+    // An acknowledgement from before invalidation cannot refill the cache.
+    act(() => mergeCanonicalIssueRecords(page(id).records))
+    expect(canonicalIssueState()?.records).toEqual([])
+    expect(loadIssueDetail).not.toHaveBeenCalled()
+  }
+)
+
+it("FOR-51 review: mutation invalidation retains its committed record and mounted editor while discarding other cached details", async () => {
+  const id = crypto.randomUUID()
+  const original = page(id).records[0]
+  vi.mocked(loadIssueDetail)
+    .mockResolvedValueOnce(JSON.stringify([original]))
+    .mockReturnValueOnce(new Promise(() => {}))
+  function Detail() {
+    const record = useQueriedIssue(id)
+    return record ? (
+      <>
+        <input aria-label="Retained mutation draft" />
+        <span>{record.issue.title}</span>
+      </>
+    ) : null
+  }
+  render(<Detail />)
+  const editor = await screen.findByLabelText("Retained mutation draft")
+  fireEvent.change(editor, {
+    target: { value: "Unsent text and uploads stay here" },
+  })
+  const other = page(crypto.randomUUID()).records[0]
+  const unrelated = {
+    ...page(crypto.randomUUID()).records[0],
+    teamId: crypto.randomUUID(),
+  }
+  act(() => mergeCanonicalIssueRecords([other, unrelated], false))
+  const updated = {
+    ...original,
+    issue: { ...original.issue, title: "Committed title", revision: 2 },
+  }
+  act(() => mergeCanonicalIssueRecords([updated]))
+  await waitFor(() => expect(loadIssueDetail).toHaveBeenCalledTimes(2))
+  expect(screen.getByLabelText("Retained mutation draft")).toBe(editor)
+  expect((editor as HTMLInputElement).value).toBe(
+    "Unsent text and uploads stay here"
+  )
+  expect(screen.getByText("Committed title")).toBeTruthy()
+  expect(
+    canonicalIssueState()
+      ?.records.map((r) => r.issue.id)
+      .sort()
+  ).toEqual([id, unrelated.issue.id].sort())
+})
+
+it("FOR-51 review: metadata-only replacement fences delayed mutation records until a fresh authorized read", async () => {
+  const id = crypto.randomUUID()
+  const record = page(id).records[0]
+  act(() => mergeCanonicalIssueRecords([record], false))
+  act(() => replaceCanonicalIssues(structuredClone(identity)))
+  act(() => mergeCanonicalIssueRecords([record]))
+  expect(canonicalIssueState()?.records).toEqual([])
+  vi.mocked(loadIssueDetail).mockResolvedValueOnce(JSON.stringify([record]))
+  const detail = renderHook(() => useQueriedIssue(id))
+  await waitFor(() => expect(detail.result.current?.issue.id).toBe(id))
+  expect(canonicalIssueState()?.records).toEqual([record])
 })
