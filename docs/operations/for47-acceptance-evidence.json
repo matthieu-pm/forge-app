@@ -1,0 +1,153 @@
+{
+  "issue": "FOR-47",
+  "date": "2026-10-31",
+  "implementationCommit": "b014c9aa016dc4d5311bc4ec64dedc4148f13ba3",
+  "baseCommit": "884445aab3a2e800f2fd4298bc581e182f0fa336",
+  "environment": {
+    "production": false,
+    "database": "forge_auto_assignment_acceptance",
+    "neonBranch": "br-autumn-union-za0opf1e",
+    "browserOrigin": "http://localhost:3147",
+    "browserServer": "Production Node build served locally with generated auth secret; agent UI, Calls and billing disabled"
+  },
+  "acceptedDecision": {
+    "source": "Matthieu in the implementation conversation, 31 October 2026",
+    "policy": "Unsubscribing suppresses optional issue updates. Assignments and direct mentions remain independent, subject to account notification settings. Creator subscription remains; commenting/reacting does not resubscribe."
+  },
+  "acceptance": [
+    {
+      "criterion": "AC-01",
+      "test": "AT-01",
+      "result": "passed",
+      "evidence": [
+        "Three real Better Auth sessions include two independently signed-in browser contexts for Bob. The same subscription and one owned reaction appear after the second login.",
+        "Separate users share an emoji reaction without replacing one another; subscriptions persist after reload.",
+        "Actor ownership is derived server-side. Admins cannot replace subscriber lists or inject another user into a reaction command."
+      ]
+    },
+    {
+      "criterion": "AC-02",
+      "test": "AT-02",
+      "result": "passed",
+      "evidence": [
+        "A post-commit reaction-removal response is dropped in the browser; reload restores the exact pending command. Retry does not resurrect the removed reaction or duplicate the outbox event.",
+        "Unsubscribing preserves discussion and suppresses optional notification eligibility. Later comment producers still emit direct mention events.",
+        "The server delivery policy independently admits authorized direct mentions/assignments and applies current per-channel notification settings. Self-events, revoked membership/private-team access and inactive issues are ineligible.",
+        "Concurrent exact requests commit one state transition/event. A fresh desired-state no-op emits no event or revision. Equivalent emoji presentation forms deduplicate."
+      ]
+    }
+  ],
+  "checks": {
+    "postgresTargeted": {
+      "passed": 10,
+      "failed": 0,
+      "command": "FORGE_ISSUE_ENGAGEMENT_TEST_DATABASE_FILE=<isolated-config> bun run --cwd apps/forge test:issue-engagement:postgres",
+      "checks": [
+        "Concurrent exact retries and two readers",
+        "Unsubscribe, delayed replay and later mention event",
+        "Multiple actors, concurrent comment edits and issue-description reactions",
+        "Forged ownership and subscriber-list edit rejection",
+        "Invalid emoji and deleted/missing comment rejection",
+        "Live private-team, session, workspace and scope revocation",
+        "Account notification channel settings and self-event suppression",
+        "Atomic audit-failure rollback",
+        "Owned API-key/delegated actors and issue lifecycle gates",
+        "Equivalent emoji presentation forms"
+      ]
+    },
+    "postgresRegression": {
+      "passed": 112,
+      "failed": 2,
+      "errors": 3,
+      "command": "FORGE_ISSUE_ENGAGEMENT_TEST_DATABASE_FILE=<isolated-config> bun run --cwd apps/forge test:issues:postgres",
+      "note": "The broad run had long execution stalls, followed by WebSocket connection loss and timeouts. Both failed cases were FOR-47 tests and passed in the subsequent complete 10-case targeted run. All 104 earlier issue regression cases passed. This was not a clean single broad invocation."
+    },
+    "appRegression": {
+      "passed": 2292,
+      "failed": 2,
+      "skipped": 398,
+      "workerStartupErrors": 1,
+      "command": "bunx vitest run --maxWorkers=2 --testTimeout=20000",
+      "note": "The broad run experienced long execution stalls. Two timed-out UI cases and the file whose worker failed to start were rerun together: 26 tests passed in issue-list.test.tsx, workspace/-teams.test.tsx and views-page.test.tsx. No unrelated product code was changed to address these interruptions."
+    },
+    "appRegressionRerun": {
+      "passed": 26,
+      "failed": 0
+    },
+    "focusedClientHookCopyInbox": {
+      "passed": 29,
+      "failed": 0,
+      "note": "Includes exact retry persistence, account/session fencing, pending versus uncertain feedback, issue-copy filtering, canonical inbox ownership and legacy inbox regression. The final type-only disabled-attribute assertion was rerun separately."
+    },
+    "browser": {
+      "passed": true,
+      "command": "FORGE_ISSUE_ENGAGEMENT_TEST_DATABASE_FILE=<isolated-config> bun run --cwd apps/forge test:issue-engagement:browser",
+      "checks": [
+        "Three real sessions",
+        "Two independent browser contexts for Bob",
+        "Shared owned reactions and persistent subscriptions",
+        "No shared subscriber list editor",
+        "Unsubscribe and later mention producer event",
+        "Post-commit lost response, reload and exact replay",
+        "Mobile viewport with no horizontal overflow",
+        "No page errors"
+      ],
+      "cleanup": {
+        "workspaces": 0,
+        "users": 0,
+        "receipts": 0
+      }
+    },
+    "build": {
+      "result": "passed",
+      "checks": [
+        "Production Vite/Node output",
+        "Root prerender HTTP 200",
+        "Protected Workflow handler verification"
+      ]
+    },
+    "workflow": {
+      "passed": 4,
+      "failed": 0
+    },
+    "typecheck": {
+      "result": "passed",
+      "command": "bun run --cwd apps/forge typecheck"
+    },
+    "lint": {
+      "errors": 0,
+      "warnings": 21,
+      "scope": "All changed TypeScript/TSX files and browser acceptance script"
+    },
+    "gitDiffCheck": "passed",
+    "finalInboxAssertion": {
+      "passed": 2,
+      "failed": 0
+    }
+  },
+  "storageAndEvents": {
+    "storage": "Existing canonical issues.properties JSON aggregate, serialized by graph/row locks; no schema change.",
+    "command": "issues.engagement@1",
+    "events": [
+      "issue.reaction.changed",
+      "issue.subscription.changed"
+    ],
+    "retryState": "Private authenticated product state under forge:issue-engagement-draft:v1:<issueId>, included in issue-copy authorization/recovery/purge filtering.",
+    "recipientContract": "Internal server-only issueNotificationEligibility for committed events; live access, subscription and channel policy. No client recipient-selection endpoint."
+  },
+  "boundaries": {
+    "notificationDelivery": [
+      "FOR-33",
+      "FOR-65"
+    ],
+    "publicApiPublication": "FOR-87"
+  },
+  "rollout": {
+    "schemaMigrationRequired": false,
+    "configurationChangeRequired": false,
+    "merged": false,
+    "deployed": false,
+    "status": "Ready for pull request review"
+  },
+  "reviewFollowup": "for47-review-evidence.json"
+}
