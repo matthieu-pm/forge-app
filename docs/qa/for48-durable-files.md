@@ -42,6 +42,10 @@ This verifies persistence through process/service replacement and browser reload
 
 Reproduce targeted checks with `bun run test:issue-files:postgres` and `bun run test:issue-files:browser` from `apps/forge`; configure the dedicated acceptance connection file using the environment variables documented in the scripts. The browser runner requires a local app and a dedicated `/tmp/for48-...` file directory.
 
+## Review follow-up
+
+The subsequent review fixed identity, unmount, and creation recovery issues. See [the review evidence](for48-review-and-release.md) for the final implementation and checks.
+
 ## Release
 
 Apply `0057_issue_file_bindings` and `0058_issue_upload_binding_backfill` with the existing serialized migration runner before serving the new code. Internal resource files preserve their existing NULL-state contract; old direct issue uploads are backfilled to unbound, and a late old-process finalizer is handled safely by the new code. Production migration approval and deployment are separate from this PR.
