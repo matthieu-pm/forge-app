@@ -27,6 +27,7 @@ export type MigrationTarget = {
     | "triage-acceptance"
     | "issue-history-acceptance"
     | "issue-history-rehearsal"
+    | "project-rehearsal"
     | "production-storage-rehearsal"
     | "production"
   branchId: string

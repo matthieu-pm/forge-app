@@ -52,6 +52,7 @@ import {
 import { cn } from "@/lib/utils"
 import { ProjectInitiativePicker } from "@/components/projects/project-initiative-picker"
 import { ProjectRowIcon } from "@/components/projects/project-row-icon"
+import { canonicalIssuesActive } from "@/lib/canonical-issue-cache"
 
 export const projectStatuses = [
   "Backlog",
@@ -95,6 +96,7 @@ export function ProjectDialog({
   onClose: () => void
   onAsk: (text: string) => void
 }) {
+  const sharedMode = canonicalIssuesActive()
   const [draft, setDraft] = useState<InitiativeProject>(
     () =>
       project ?? {
@@ -147,6 +149,17 @@ export function ProjectDialog({
     labelIds: draft.labelIds ?? [],
   }
   function submit() {
+    if (
+      sharedMode &&
+      project &&
+      catalog.find((value) => value.id === project.id)?.revision !==
+        draft.revision
+    ) {
+      setError(
+        "This project changed while you were editing. Your draft is kept. Review the latest project before saving."
+      )
+      return
+    }
     const result = initiativeProjectSchema.safeParse(draft)
     if (!result.success) {
       setError(result.error.issues[0]?.message ?? "Check the project details.")
@@ -172,6 +185,30 @@ export function ProjectDialog({
         "The project could not be saved. Your draft has been kept. Try again."
       )
   }
+  if (
+    sharedMode &&
+    project &&
+    !catalog.some((value) => value.id === project.id)
+  )
+    return (
+      <Dialog
+        open
+        onOpenChange={(open) => {
+          if (!open) onClose()
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Project unavailable</DialogTitle>
+            <DialogDescription>
+              This project is no longer available. Your edits cannot be saved
+              while access is unavailable.
+            </DialogDescription>
+          </DialogHeader>
+          <Button onClick={onClose}>Close</Button>
+        </DialogContent>
+      </Dialog>
+    )
   return (
     <>
       <Dialog
@@ -312,6 +349,22 @@ export function ProjectDialog({
                   "Lead"}
               </IssuePicker>
               <IssuePicker
+                label="Change project teams"
+                multiple
+                value={draft.teamIds.join(",")}
+                options={teams.map((team) => ({
+                  value: team.id,
+                  label: team.name,
+                }))}
+                onChange={(value) =>
+                  set({ teamIds: value.split(",").filter(Boolean) })
+                }
+                className="h-6 rounded-full border border-border/40 bg-muted/50 px-2 text-xs"
+              >
+                <IssueIcon name="person" />
+                Teams
+              </IssuePicker>
+              <IssuePicker
                 label="Change project members"
                 multiple
                 value={(draft.memberIds ?? []).join(",")}
@@ -349,44 +402,48 @@ export function ProjectDialog({
                   <InitiativeMark item={item} />
                   {item.name}
                 </span>
-              ) : (
+              ) : !sharedMode ? (
                 <ProjectInitiativePicker
                   initiatives={initiatives ?? []}
                   value={initiativeIds}
                   onChange={setInitiativeIds}
                 />
+              ) : null}
+              {!sharedMode && (
+                <InitiativePropertyPicker
+                  item={propertyItem}
+                  property="labels"
+                  people={people}
+                  teams={teams}
+                  labels={labels}
+                  onChange={(patch) => set({ labelIds: patch.labelIds })}
+                />
               )}
-              <InitiativePropertyPicker
-                item={propertyItem}
-                property="labels"
-                people={people}
-                teams={teams}
-                labels={labels}
-                onChange={(patch) => set({ labelIds: patch.labelIds })}
-              />
-              <IssuePicker
-                label="Add project dependencies"
-                multiple
-                value={(draft.dependencyIds ?? []).join(",")}
-                options={catalog
-                  .filter((value) => value.id !== draft.id)
-                  .map((value) => ({ value: value.id, label: value.name }))}
-                onChange={(value) =>
-                  set({
-                    dependencyIds: value
-                      .split(",")
-                      .map((id) => id.trim())
-                      .filter(Boolean),
-                  })
-                }
-                className="h-6 rounded-full border border-border/40 bg-muted/50 px-2 text-xs"
-              >
-                <IssueIcon name="branch" />
-                Dependencies
-                {draft.dependencyIds?.length
-                  ? ` (${draft.dependencyIds.length})`
-                  : ""}
-              </IssuePicker>
+              {!sharedMode && (
+                <IssuePicker
+                  label="Add project dependencies"
+                  multiple
+                  value={(draft.dependencyIds ?? []).join(",")}
+                  options={catalog
+                    .filter((value) => value.id !== draft.id)
+                    .map((value) => ({ value: value.id, label: value.name }))}
+                  onChange={(value) =>
+                    set({
+                      dependencyIds: value
+                        .split(",")
+                        .map((id) => id.trim())
+                        .filter(Boolean),
+                    })
+                  }
+                  className="h-6 rounded-full border border-border/40 bg-muted/50 px-2 text-xs"
+                >
+                  <IssueIcon name="branch" />
+                  Dependencies
+                  {draft.dependencyIds?.length
+                    ? ` (${draft.dependencyIds.length})`
+                    : ""}
+                </IssuePicker>
+              )}
             </div>
             <RichEditor
               label="Project description"
@@ -399,85 +456,90 @@ export function ProjectDialog({
               }
               className="min-h-36 flex-1 py-6"
             />
-            <div className="mt-auto shrink-0 rounded-lg border border-border/50 p-3">
-              <button
-                type="button"
-                onClick={() => setMilestoneOpen((value) => !value)}
-                aria-expanded={milestoneOpen}
-                className="flex w-full items-center justify-between text-xs"
-              >
-                Milestones
-                <IssueIcon name={milestoneOpen ? "down" : "add"} />
-              </button>
-              {milestoneOpen && (
-                <div className="mt-3 space-y-2">
-                  {(draft.milestones ?? []).map((milestone, index) => (
-                    <div key={milestone.id} className="flex items-center gap-2">
-                      <Checkbox
-                        aria-label={`Complete milestone ${index + 1}`}
-                        checked={milestone.completed}
-                        onCheckedChange={(completed) =>
-                          set({
-                            milestones: draft.milestones?.map((value) =>
-                              value.id === milestone.id
-                                ? { ...value, completed }
-                                : value
-                            ),
-                          })
-                        }
-                      />
-                      <Input
-                        aria-label={`Milestone ${index + 1} name`}
-                        value={milestone.name}
-                        maxLength={200}
-                        onChange={(event) =>
-                          set({
-                            milestones: draft.milestones?.map((value) =>
-                              value.id === milestone.id
-                                ? { ...value, name: event.target.value }
-                                : value
-                            ),
-                          })
-                        }
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon-xs"
-                        aria-label={`Remove milestone ${index + 1}`}
-                        onClick={() =>
-                          set({
-                            milestones: draft.milestones?.filter(
-                              (value) => value.id !== milestone.id
-                            ),
-                          })
-                        }
+            {!sharedMode && (
+              <div className="mt-auto shrink-0 rounded-lg border border-border/50 p-3">
+                <button
+                  type="button"
+                  onClick={() => setMilestoneOpen((value) => !value)}
+                  aria-expanded={milestoneOpen}
+                  className="flex w-full items-center justify-between text-xs"
+                >
+                  Milestones
+                  <IssueIcon name={milestoneOpen ? "down" : "add"} />
+                </button>
+                {milestoneOpen && (
+                  <div className="mt-3 space-y-2">
+                    {(draft.milestones ?? []).map((milestone, index) => (
+                      <div
+                        key={milestone.id}
+                        className="flex items-center gap-2"
                       >
-                        <IssueIcon name="close" />
-                      </Button>
-                    </div>
-                  ))}
-                  <Button
-                    variant="ghost"
-                    size="xs"
-                    onClick={() =>
-                      set({
-                        milestones: [
-                          ...(draft.milestones ?? []),
-                          {
-                            id: crypto.randomUUID(),
-                            name: "",
-                            completed: false,
-                          },
-                        ],
-                      })
-                    }
-                  >
-                    <IssueIcon name="add" />
-                    Add milestone
-                  </Button>
-                </div>
-              )}
-            </div>
+                        <Checkbox
+                          aria-label={`Complete milestone ${index + 1}`}
+                          checked={milestone.completed}
+                          onCheckedChange={(completed) =>
+                            set({
+                              milestones: draft.milestones?.map((value) =>
+                                value.id === milestone.id
+                                  ? { ...value, completed }
+                                  : value
+                              ),
+                            })
+                          }
+                        />
+                        <Input
+                          aria-label={`Milestone ${index + 1} name`}
+                          value={milestone.name}
+                          maxLength={200}
+                          onChange={(event) =>
+                            set({
+                              milestones: draft.milestones?.map((value) =>
+                                value.id === milestone.id
+                                  ? { ...value, name: event.target.value }
+                                  : value
+                              ),
+                            })
+                          }
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
+                          aria-label={`Remove milestone ${index + 1}`}
+                          onClick={() =>
+                            set({
+                              milestones: draft.milestones?.filter(
+                                (value) => value.id !== milestone.id
+                              ),
+                            })
+                          }
+                        >
+                          <IssueIcon name="close" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      onClick={() =>
+                        set({
+                          milestones: [
+                            ...(draft.milestones ?? []),
+                            {
+                              id: crypto.randomUUID(),
+                              name: "",
+                              completed: false,
+                            },
+                          ],
+                        })
+                      }
+                    >
+                      <IssueIcon name="add" />
+                      Add milestone
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
             {error && (
               <p role="alert" className="mt-3 text-xs text-destructive">
                 {error}

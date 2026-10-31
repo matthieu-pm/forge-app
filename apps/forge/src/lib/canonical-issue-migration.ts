@@ -39,7 +39,9 @@ export async function migrateLocalIssues(teamIds: Array<string>) {
             [
               ...sources.workspaceProjects,
               ...sources.initiatives.flatMap((i) => i.projects),
-            ].map((p) => [p.id, p])
+            ]
+              .filter((p) => p.revision === undefined)
+              .map((p) => [p.id, p])
           ).values(),
         ]
         for (const project of projects) {

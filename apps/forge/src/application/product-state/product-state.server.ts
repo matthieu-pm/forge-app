@@ -1,6 +1,7 @@
 import "@tanstack/react-start/server-only"
 import { and, eq, inArray, or } from "drizzle-orm"
 import { z } from "zod"
+import { filterProjectCopy, projectCopyIds } from "./project-copies"
 import {
   filterIssueCopy,
   hasRetainedCommandCopy,
@@ -25,6 +26,7 @@ import {
   issues,
   organizations,
   productState,
+  projects,
   teamMembers,
   teams,
 } from "@/db"
@@ -34,10 +36,12 @@ import {
 } from "@/application/authorization"
 import {
   readableIssueCondition,
+  readableProjectCondition,
   readableTeamCondition,
 } from "@/application/resource-policy.server"
 import { currentCommandActor } from "@/application/commands/command-actor.server"
 import { executeCommand } from "@/application/commands/execute-command.server"
+import { projectCommandPrefix } from "@/lib/shared-project-contract"
 import {
   isProductStorageKey,
   productStateCommandSchema,
@@ -204,13 +208,30 @@ export async function readProductState(
     for (const row of rows) {
       try {
         if ((await scope(tx, current, row.key)) === row.ownerId) {
+          const original =
+            row.encodedValue === null
+              ? null
+              : (JSON.parse(row.encodedValue) as string)
+          const projectIds = projectCopyIds(row.key, original)
+          const readable = projectIds.length
+            ? await tx
+                .select({ id: projects.id })
+                .from(projects)
+                .where(
+                  and(
+                    inArray(projects.id, projectIds),
+                    readableProjectCondition(current, projects.id)
+                  )
+                )
+            : []
+          const projectValue = filterProjectCopy(row.key, original, (id) =>
+            readable.some((project) => project.id === id)
+          )
           const value = await visibleIssueCopyValue(
             tx,
             current,
             row.key,
-            row.encodedValue === null
-              ? null
-              : (JSON.parse(row.encodedValue) as string)
+            projectValue
           )
           entries.push({
             key: row.key,
@@ -242,6 +263,16 @@ export async function readProductState(
 export async function saveProductState(actor: Actor, raw: ProductStateCommand) {
   const input = productStateCommandSchema.parse(raw)
   session(actor, input.workspaceId, input.sessionId)
+  if (input.key.startsWith(projectCommandPrefix)) {
+    if (input.value === null) throw new ApplicationAccessError()
+    const { saveCanonicalProjects } =
+      await import("@/application/planning/projects.server")
+    return saveCanonicalProjects(
+      actor,
+      input.commandKey,
+      JSON.parse(input.value)
+    )
+  }
   if (input.value !== null) {
     if (input.key.startsWith("forge:team-cycles:v1:"))
       parseTeamCycles(input.value)

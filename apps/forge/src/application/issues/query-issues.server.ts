@@ -17,6 +17,7 @@ import { db, issues } from "@/db"
 import { currentCommandActor } from "@/application/commands/command-actor.server"
 import {
   readableIssueCondition,
+  readableProjectCondition,
   readableTeamCondition,
   requireResourceScope,
 } from "@/application/resource-policy.server"
@@ -191,7 +192,7 @@ export async function queryCanonicalIssues(
         )
       if (query.project !== undefined)
         domain.push(
-          sql`coalesce(${issues.projectId}::text, '') = ${query.project}`
+          sql`coalesce(CASE WHEN ${readableProjectCondition(current, issues.projectId)} THEN ${issues.projectId}::text END, '') = ${query.project}`
         )
       if (query.cycle !== undefined)
         domain.push(
@@ -254,7 +255,7 @@ export async function queryCanonicalIssues(
       SELECT issues.id, issues.revision, issues.number, issues.team_id, issues.title, CASE WHEN ${readableIssueCondition(current, sql`issues.parent_id`)} THEN coalesce(issues.parent_id::text,'') ELSE '' END parent,
       issues.properties, issues.status_id, coalesce(s.name,issues.status_id) status_name, coalesce(s.status_group,'backlog') status_group,
       coalesce(s.position,0) status_position, coalesce(issues.assignee_id,'') assignee,
-      coalesce(issues.creator_id,'') creator, coalesce(issues.project_id::text,'') project,
+      coalesce(issues.creator_id,'') creator, CASE WHEN ${readableProjectCondition(current, sql`issues.project_id`)} THEN coalesce(issues.project_id::text,'') ELSE '' END project,
       coalesce(issues.properties->>'priority','No priority') priority,
       CASE issues.properties->>'priority' WHEN 'Urgent' THEN '0' WHEN 'High' THEN '1' WHEN 'Medium' THEN '2' WHEN 'Low' THEN '3' ELSE '4' END priority_rank,
       coalesce(issues.properties->>'description','') description,

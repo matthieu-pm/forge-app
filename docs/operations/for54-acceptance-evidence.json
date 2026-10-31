@@ -1,0 +1,63 @@
+{
+  "issue": "FOR-54",
+  "implementationCommit": "3c46444f1e6ab9fcfd964adbbcc82e953982c648",
+  "date": "2026-10-31",
+  "environment": {
+    "database": "forge_issue_history_acceptance",
+    "branch": "br-autumn-union-za0opf1e",
+    "applicationRole": "forge_staging_web",
+    "browserOrigin": "http://localhost:3154",
+    "productionChanged": false
+  },
+  "acceptance": {
+    "AC-01": {
+      "passed": true,
+      "evidence": [
+        "Member-created project and core edits are visible to a second actor",
+        "Project issue composer persists canonical issue membership",
+        "Directory/detail, issue query and authorized project totals agree",
+        "Shared state survives browser reload"
+      ]
+    },
+    "AC-02": {
+      "passed": true,
+      "evidence": [
+        "Inaccessible private issue creation and membership edits are denied",
+        "Private issue IDs, titles, team links and derived counts are excluded",
+        "Foreign/private-only projects, missing scopes and revoked actors are denied",
+        "Visible edits preserve hidden participating teams",
+        "Legacy unreadable project references are redacted before issue responses and aggregates"
+      ]
+    }
+  },
+  "validation": {
+    "fullApplicationSuite": { "passed": 2360, "skipped": 428 },
+    "finalFocusedClientAndProjectUiSuite": { "passed": 49 },
+    "postgresIssueAndProjectRegression": { "passed": 143 },
+    "finalProjectPostgresSuite": { "passed": 8 },
+    "workflowSuite": { "passed": 4 },
+    "typecheck": "passed",
+    "changedFileEslint": { "errors": 0, "warnings": 41 },
+    "productionBuildAndWorkflowHandlers": "passed",
+    "twoSessionBrowserAcceptance": "passed",
+    "browserErrors": [],
+    "browserFixtureCleanup": { "workspaces": 0, "users": 0, "receipts": 0 },
+    "additionalChecks": [
+      "Atomic competing revisions and stale bulk rollback",
+      "Idempotent command identity and revoked replay authorization",
+      "Private draft recovery, review and explicit rebase",
+      "Stale metadata responses cannot overwrite newer project revisions",
+      "Canonical directory remains authoritative after revocation or malformed private legacy data"
+    ]
+  },
+  "migration": "0060_shared_projects.sql",
+  "artifacts": [
+    "docs/qa/shared-projects/for54-conflict.png",
+    "docs/qa/shared-projects/for54-shared-project.png"
+  ],
+  "remainingScope": [
+    "Review, merge and verified schema/application rollout",
+    "Advanced project metadata remains FOR-58",
+    "Public project API and agent transports remain FOR-88 and FOR-81"
+  ]
+}

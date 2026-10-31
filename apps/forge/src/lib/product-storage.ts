@@ -1,5 +1,7 @@
 import { z } from "zod"
 import { onPreferenceSessionInvalidated } from "./preference-session-events"
+import { projectCommandPrefix } from "./shared-project-key"
+import { canonicalIssueState } from "./canonical-issue-cache"
 import { loadProductState, persistProductState } from "./product-state-server"
 import {
   isProductStorageKey,
@@ -42,6 +44,54 @@ function notify(key: string | null = null) {
 }
 export function storageStatus() {
   return { pending: pending.length, error, deviceError, restored }
+}
+function visibleProjectDraft(value: unknown) {
+  const current = canonicalIssueState()
+  if (
+    !identity ||
+    !current ||
+    current.workspaceId !== identity.workspaceId ||
+    current.userId !== identity.userId ||
+    current.sessionId !== identity.sessionId ||
+    !Array.isArray(value)
+  )
+    return false
+  return value.every(
+    (change) =>
+      change &&
+      typeof change === "object" &&
+      typeof change.id === "string" &&
+      (change.expectedRevision === null ||
+        current.projects.some((project) => project.id === change.id))
+  )
+}
+export function pendingProjectDrafts() {
+  return pending
+    .filter((p) => p.key.startsWith(projectCommandPrefix))
+    .map((p) => {
+      try {
+        const draft: unknown = JSON.parse(p.value ?? "[]")
+        return visibleProjectDraft(draft) ? draft : null
+      } catch {
+        return null
+      }
+    })
+    .filter((value) => value !== null)
+}
+export function savedProjectDrafts() {
+  return [...values].flatMap(([key, value]) => {
+    if (!key.startsWith("forge:pending-recovery:v1:")) return []
+    try {
+      const draft = JSON.parse(value)
+      return typeof draft.key === "string" &&
+        draft.key.startsWith(projectCommandPrefix) &&
+        visibleProjectDraft(JSON.parse(draft.value))
+        ? [{ key, changes: JSON.parse(draft.value) as unknown }]
+        : []
+    } catch {
+      return []
+    }
+  })
 }
 export function resetProductStorage() {
   generation++
@@ -132,6 +182,13 @@ export async function flushProductStorage() {
         },
       })
       if (token !== generation) return
+      if (p.key.startsWith(projectCommandPrefix)) {
+        const { refreshCanonicalIssues } =
+          await import("./canonical-issue-client")
+        await refreshCanonicalIssues(binding)
+        if (token !== generation) return
+        values.delete(p.key)
+      }
       mutationEpoch++
       revisions.set(p.key, result.value.revision)
       pending.shift()
@@ -263,6 +320,12 @@ export async function preservePendingAndReload() {
     }
     const snapshot = await loadProductState()
     if (token !== generation) return
+    if (recovering.some((p) => p.key.startsWith(projectCommandPrefix))) {
+      const { refreshCanonicalIssues } =
+        await import("./canonical-issue-client")
+      await refreshCanonicalIssues(binding)
+      if (token !== generation) return
+    }
     if (
       snapshot.userId !== binding.userId ||
       snapshot.sessionId !== binding.sessionId ||

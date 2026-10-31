@@ -11,6 +11,7 @@ export type CanonicalSnapshot = {
     id: string
     name: string
     legacyId: string | null
+    revision?: number
     properties: Record<string, unknown>
   }>
   cycles: Array<{
@@ -117,6 +118,13 @@ export function replaceCanonicalIssues(
   state = next
     ? {
         ...next,
+        projects: next.projects.map((project) => {
+          const previous =
+            !changed && state?.projects.find((p) => p.id === project.id)
+          return previous && (previous.revision ?? 0) > (project.revision ?? 0)
+            ? previous
+            : project
+        }),
         records: next.records.filter((r) =>
           acceptCanonicalIssueRecord(r.issue)
         ),
@@ -139,6 +147,7 @@ export function canonicalProjects(
         ...p.properties,
         id: p.id,
         name: p.name,
+        revision: p.revision ?? 0,
         teamIds: (p.properties.teamIds as Array<string> | undefined) ?? [],
         status: p.properties.status ?? "Backlog",
         health: p.properties.health ?? "On track",
