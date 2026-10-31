@@ -1,0 +1,95 @@
+{
+  "issue": "FOR-55",
+  "implementationRevision": "d3f976f9c52fd53d29f7142720c14a7dc1a0ffba",
+  "verifiedAt": "2026-10-31",
+  "environment": {
+    "kind": "isolated PostgreSQL and local web app",
+    "database": "forge_cycles_acceptance",
+    "branchId": "br-autumn-union-za0opf1e",
+    "browserOrigin": "http://localhost:3155",
+    "browserTimezones": [
+      "America/Los_Angeles",
+      "Asia/Tokyo"
+    ]
+  },
+  "acceptedDecision": "Existing cycle IDs, numbers, dates, timezones, and membership are preserved. Schedule changes apply to newly created windows.",
+  "acceptance": {
+    "AT-01": {
+      "passed": true,
+      "checks": [
+        "same canonical issue UUID across authenticated members",
+        "same stored inclusive dates and IANA timezone across browser timezones",
+        "stable numbered links",
+        "server scope and completion aggregates"
+      ]
+    },
+    "AT-02": {
+      "passed": true,
+      "checks": [
+        "racing issue assignments return one saved result and one conflict",
+        "foreign-team, foreign-workspace and missing cycles rejected",
+        "stale schedule revisions rejected with visible explicit retry",
+        "invalid dates/timezones rejected",
+        "private-team access and revoked membership rechecked",
+        "idempotent command replay does not duplicate issues or windows"
+      ]
+    }
+  },
+  "validation": {
+    "appVitest": {
+      "passedFiles": 296,
+      "passedTests": 2364,
+      "skippedFiles": 22,
+      "skippedTests": 428
+    },
+    "workflowVitest": {
+      "passedFiles": 2,
+      "passedTests": 4
+    },
+    "postgresRegression": {
+      "passedTests": 144,
+      "note": "Broad regression run preceded final localized aggregate/timezone polish; final targeted acceptance below covers those changes."
+    },
+    "finalPostgresAcceptance": {
+      "passedTests": 9,
+      "selection": "FOR-55 plus legacy project/cycle import regression",
+      "includesPopulatedMigrationRehearsal": true
+    },
+    "browser": {
+      "passed": true,
+      "mobileViewport": {
+        "width": 390,
+        "height": 844
+      },
+      "horizontalOverflow": false,
+      "pageErrors": 0,
+      "fixtureCleanup": {
+        "workspaces": 0,
+        "users": 0,
+        "receipts": 0
+      }
+    },
+    "typecheck": "passed",
+    "lint": "passed with warnings; no errors",
+    "productionBuild": "passed including prerender and protected Workflow handler verification",
+    "gitDiffCheck": "passed"
+  },
+  "migration": {
+    "name": "0060_shared_cycles",
+    "hash": "8f405643ec41fdee4e3b20ae493e0d864277db2208274b33766ffc84a712cc1e",
+    "appliedToIsolatedDatabase": true,
+    "populatedLegacyBackfillPreservedIdsAndDates": true
+  },
+  "artifacts": [
+    "apps/forge/scripts/verify-cycles-browser.mjs",
+    "apps/forge/src/application/issues/issues.postgres.test.ts",
+    "apps/forge/src/lib/shared-cycle-client.test.ts",
+    "apps/forge/src/lib/cycle-calendar.test.ts",
+    "docs/operations/shared-cycles.md"
+  ],
+  "notClaimed": [
+    "production migration/deployment",
+    "packaged macOS acceptance",
+    "FOR-69 rollover/carryover or status-based automation"
+  ]
+}
