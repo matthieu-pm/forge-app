@@ -30,6 +30,7 @@ export type ImportFile = {
 export type ImportEntry = {
   id: string
   sourceKey: string
+  sourceChecksum?: string
   path: string
   legacyId: string
   kind: "issue" | "project"

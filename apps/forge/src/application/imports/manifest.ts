@@ -119,6 +119,7 @@ export function buildImportManifest(input: {
           const entry: ImportEntry = {
             id: commandInputHash([source.key, source.checksum, path]),
             sourceKey: source.key,
+            sourceChecksum: source.checksum,
             path,
             kind: projectSource ? "project" : "issue",
             teamId: teamMatch?.[2] ?? "",

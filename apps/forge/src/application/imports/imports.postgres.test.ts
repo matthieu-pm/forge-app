@@ -593,7 +593,7 @@ describe.skipIf(!file)("FOR-56 real PostgreSQL imports", () => {
           issue("published", {
             title: "Published legacy issue",
             description: "Source body",
-            attachments: [attachment],
+            attachments: [{ ...attachment, id: "source-profile-anchor" }],
           }),
         ])
       )
@@ -700,4 +700,302 @@ describe.skipIf(!file)("FOR-56 real PostgreSQL imports", () => {
     },
     30000
   )
+  async function decide(
+    actor: Actor,
+    m: ImportSnapshot,
+    entryId: string,
+    choice: "keep-both" | "keep-server"
+  ) {
+    const entry = m.entries.find((e) => e.id === entryId)!
+    return service.chooseImportConflict(actor, {
+      workspaceId: actor.workspaceId,
+      sessionId: (actor.authentication as { sessionId: string }).sessionId,
+      id: m.id,
+      revision: m.revision,
+      entryId,
+      choice,
+      conflictFingerprint: entry.conflict!.fingerprint,
+    })
+  }
+  async function retry(actor: Actor, m: ImportSnapshot) {
+    return service.retryImportRecords(actor, {
+      workspaceId: actor.workspaceId,
+      sessionId: (actor.authentication as { sessionId: string }).sessionId,
+      id: m.id,
+      revision: m.revision,
+    })
+  }
+  it("PR38 review: maps children within their exact preserved source snapshot", async () => {
+    const f = await fixture(),
+      key = `forge:team-issues:v1:${f.teamId}`
+    const old = [
+      issue("parent", { title: "Old parent", description: "old parent body" }),
+      issue("old-child", { title: "Old child", parentId: "parent" }),
+    ]
+    const newer = [
+      issue("parent", { title: "New parent", description: "new parent body" }),
+      issue("new-child", { title: "New child", parentId: "parent" }),
+    ]
+    await source(f, old)
+    await pool.query(
+      "INSERT INTO product_state(workspace_id,owner_id,owner_user_id,key,encoded_value) VALUES($1,$2,$3,$4,$5)",
+      [
+        f.workspaceId,
+        `user:${f.actors[0].userId}`,
+        f.actors[0].userId,
+        `forge:legacy-conflict:v1:${randomUUID()}`,
+        JSON.stringify(
+          JSON.stringify({
+            key,
+            value: JSON.stringify({ version: 1, issues: newer }),
+            importedAt: new Date().toISOString(),
+          })
+        ),
+      ]
+    )
+    let m = await finish(
+      f.actors[0],
+      (await service.prepareImport(f.actors[0]))!
+    )
+    const conflict = m.entries.find(
+      (e) => e.legacyId === "parent" && e.state === "review"
+    )!
+    m = await finish(
+      f.actors[0],
+      await decide(f.actors[0], m, conflict.id, "keep-both")
+    )
+    m = await finish(f.actors[0], await retry(f.actors[0], m))
+    for (const child of m.entries.filter((e) => e.legacyId.endsWith("child"))) {
+      expect(child.state).toBe("saved")
+      const parent = m.entries.find(
+        (e) =>
+          e.legacyId === "parent" && e.sourceChecksum === child.sourceChecksum
+      )!
+      expect(
+        (
+          await pool.query("SELECT parent_id FROM issues WHERE id=$1", [
+            child.canonicalId,
+          ])
+        ).rows[0].parent_id
+      ).toBe(parent.canonicalId)
+    }
+  }, 30000)
+  it("PR38 review: unchanged child aliases require review when the remapped parent changes", async () => {
+    const f = await fixture(),
+      child = issue("child", { title: "Stable child", parentId: "parent" })
+    const old = await finish(
+      f.actors[0],
+      await source(f, [issue("parent", { title: "Parent one" }), child])
+    )
+    let m = await finish(
+      f.actors[0],
+      await source(f, [issue("parent", { title: "Parent two" }), child])
+    )
+    const parent = m.entries.find((e) => e.legacyId === "parent")!
+    m = await finish(
+      f.actors[0],
+      await decide(f.actors[0], m, parent.id, "keep-both")
+    )
+    m = await finish(f.actors[0], await retry(f.actors[0], m))
+    const childEntry = m.entries.find((e) => e.legacyId === "child")!
+    expect(childEntry.state).toBe("review")
+    m = await finish(
+      f.actors[0],
+      await decide(f.actors[0], m, childEntry.id, "keep-both")
+    )
+    const savedChild = m.entries.find((e) => e.legacyId === "child")!
+    expect(savedChild.canonicalId).not.toBe(
+      old.entries.find((e) => e.legacyId === "child")!.canonicalId
+    )
+    expect(
+      (
+        await pool.query("SELECT parent_id FROM issues WHERE id=$1", [
+          savedChild.canonicalId,
+        ])
+      ).rows[0].parent_id
+    ).toBe(m.entries.find((e) => e.legacyId === "parent")!.canonicalId)
+  }, 30000)
+  it("PR38 review: conflict details redact inaccessible parent identities", async () => {
+    const f = await fixture(),
+      privateTeam = randomUUID(),
+      { createCanonicalIssue } = await import("../issues/issues.server")
+    await pool.query(
+      "INSERT INTO teams(id,workspace_id,name,slug,identifier,visibility,icon_kind,icon_value,color,timezone,created_by_user_id) VALUES($1,$2,'Secret','secret','SEC','private','emoji','x','#94a3b8','UTC',$3)",
+      [privateTeam, f.workspaceId, userIds[0]]
+    )
+    const parent = await createCanonicalIssue(f.actors[0], {
+      teamId: privateTeam,
+      commandKey: randomUUID(),
+      draft: { ...blankIssueDraft("todo"), title: "Hidden parent" },
+    })
+    await createCanonicalIssue(f.actors[0], {
+      teamId: f.teamId,
+      commandKey: randomUUID(),
+      legacyId: "public-child",
+      draft: {
+        ...blankIssueDraft("todo"),
+        title: "Public child",
+        parentId: parent.issue.id,
+      },
+    })
+    const m = await finish(
+      f.actors[1],
+      await source(
+        f,
+        [issue("public-child", { title: "Public child" })],
+        f.actors[1]
+      )
+    )
+    expect(m.entries[0].state).toBe("review")
+    expect(JSON.stringify(m)).not.toContain(parent.issue.id)
+  }, 30000)
+  async function readyImportFiles(
+    f: Awaited<ReturnType<typeof fixture>>,
+    m: ImportSnapshot
+  ) {
+    const [{ DrizzleUploadStore }, { UploadService }] = await Promise.all([
+      import("@/adapters/files/drizzle-upload-store.server"),
+      import("@/application/files/upload-service.server"),
+    ])
+    vi.stubEnv(
+      "FORGE_AGENT_ARTIFACT_SECRET",
+      "for56-isolated-acceptance-secret"
+    )
+    const contents = new Map<string, Uint8Array>()
+    const upload = new UploadService(new DrizzleUploadStore(), {
+      grant: async () => {
+        throw new Error("Not used")
+      },
+      read: async (ref) =>
+        new Blob([contents.get(ref)! as Uint8Array<ArrayBuffer>]).stream(),
+      delete: async () => {},
+    })
+    const entry = m.entries[0],
+      inputs = []
+    for (const [index, file] of entry.files.entries()) {
+      const intent = await upload.create(f.actors[0], {
+        commandKey: randomUUID(),
+        target: { kind: "issue", id: entry.canonicalId! },
+        name: file.name,
+        contentType: file.contentType,
+        sizeBytes: file.sizeBytes,
+        checksum: file.checksum,
+      })
+      const ref = (
+        await pool.query(
+          "SELECT storage_reference FROM file_upload_intents WHERE id=$1",
+          [intent.id]
+        )
+      ).rows[0].storage_reference
+      contents.set(ref, Buffer.from(file.data.split(",")[1], "base64"))
+      await upload.finalize(f.actors[0], intent.id)
+      inputs.push({
+        workspaceId: f.workspaceId,
+        sessionId: (f.actors[0].authentication as { sessionId: string })
+          .sessionId,
+        id: m.id,
+        revision: m.revision,
+        entryId: entry.id,
+        index,
+        fileId: intent.id,
+      })
+    }
+    return inputs
+  }
+  it.each([true, false])(
+    "PR38 review: concurrent file finalization avoids target-lock deadlock; same=%s",
+    async (same) => {
+      const f = await fixture(),
+        m = await finish(
+          f.actors[0],
+          await source(f, [
+            issue("files", {
+              attachments: [
+                {
+                  name: "a.txt",
+                  data: `data:text/plain;base64,${Buffer.from("hello-one").toString("base64")}`,
+                },
+                {
+                  name: "b.txt",
+                  data: `data:text/plain;base64,${Buffer.from("hello-two").toString("base64")}`,
+                },
+              ],
+            }),
+          ])
+        )
+      const inputs = await readyImportFiles(f, m),
+        barrier = await pool.connect()
+      await barrier.query("BEGIN")
+      await barrier.query("SELECT public.forge_lock_issue_graph($1)", [
+        f.workspaceId,
+      ])
+      const calls = [
+        service.finalizeImportFile(f.actors[0], inputs[0]),
+        service.finalizeImportFile(f.actors[0], inputs[same ? 0 : 1]),
+      ]
+      const outcomes = Promise.allSettled(calls)
+      try {
+        await vi.waitFor(
+          async () =>
+            expect(
+              (
+                await pool.query(
+                  "SELECT count(*)::int n FROM pg_stat_activity WHERE datname=current_database() AND wait_event_type='Lock'"
+                )
+              ).rows[0].n
+            ).toBeGreaterThanOrEqual(2),
+          { timeout: 10000 }
+        )
+      } finally {
+        await barrier.query("ROLLBACK")
+        barrier.release()
+      }
+      const results = await outcomes
+      for (const result of results)
+        if (result.status === "rejected")
+          expect(String(result.reason?.message)).toContain(
+            "Import progress changed"
+          )
+      if (same)
+        expect(results.every((r) => r.status === "fulfilled")).toBe(true)
+      const latest = await service.readImport(f.actors[0], m.id)
+      if (!same && latest.entries[0].files[1].fileId === undefined)
+        await service.finalizeImportFile(f.actors[0], {
+          ...inputs[1],
+          revision: latest.revision,
+        })
+      expect(
+        (
+          await pool.query(
+            "SELECT jsonb_array_length(properties->'attachments') n FROM issues WHERE id=$1",
+            [m.entries[0].canonicalId]
+          )
+        ).rows[0].n
+      ).toBe(same ? 1 : 2)
+    },
+    30000
+  )
+  it("PR38 review: file checkpoints do not acknowledge unrelated shared edits", async () => {
+    const f = await fixture(),
+      record = issue("edited-file", {
+        attachments: [
+          {
+            name: "a.txt",
+            data: `data:text/plain;base64,${Buffer.from("hello-one").toString("base64")}`,
+          },
+        ],
+      })
+    const m = await finish(f.actors[0], await source(f, [record])),
+      [input] = await readyImportFiles(f, m)
+    await pool.query(
+      "UPDATE issues SET title='Newer shared title' WHERE id=$1",
+      [m.entries[0].canonicalId]
+    )
+    await service.finalizeImportFile(f.actors[0], input)
+    const overlap = await finish(
+      f.actors[1],
+      await source(f, [record], f.actors[1])
+    )
+    expect(overlap.entries[0].state).toBe("review")
+  }, 30000)
 })

@@ -47,6 +47,7 @@ import {
   parseTeamCycles,
   teamCyclesStorageKey,
 } from "@/lib/team-cycles-contract"
+import { issueAttachmentAnchor } from "@/lib/issue-file-contract"
 import { defaultDefinitionValue } from "@/lib/issue-definition-contract"
 import {
   importChoiceSchema,
@@ -162,6 +163,7 @@ async function hydrate(
       }
     }
     if (original) {
+      entry.sourceChecksum = original.sourceChecksum
       entry.sourceValid = original.sourceValid
       entry.draft = original.draft
       entry.project = original.project
@@ -395,16 +397,18 @@ async function target(
   tx: Transaction,
   actor: Actor,
   entry: ImportEntry,
-  id: string
+  id: string,
+  lock = false
 ): Promise<{
   id: string
   title: string
   revision: number
   fingerprint: string
   details: Record<string, string>
+  relationships?: { parentId: string | null; projectId: string | null }
 } | null> {
   if (entry.kind === "issue") {
-    const [row] = await tx
+    const query = tx
       .select()
       .from(issues)
       .where(
@@ -415,7 +419,33 @@ async function target(
           isNull(issues.archivedAt)
         )
       )
-      .for("share")
+    const [row] = await (lock ? query.for("share") : query)
+    const parent = row?.parentId
+      ? (
+          await tx
+            .select({ id: issues.id })
+            .from(issues)
+            .where(
+              and(
+                eq(issues.id, row.parentId),
+                readableIssueCondition(actor, issues.id)
+              )
+            )
+        )[0]
+      : undefined
+    const project = row?.projectId
+      ? (
+          await tx
+            .select({ id: projects.id })
+            .from(projects)
+            .where(
+              and(
+                eq(projects.id, row.projectId),
+                readableProjectCondition(actor, projects.id)
+              )
+            )
+        )[0]
+      : undefined
     return row
       ? {
           id: row.id,
@@ -425,22 +455,23 @@ async function target(
             status: row.statusId,
             assignee: row.assigneeId ?? "Unassigned",
             labels: row.properties.labels ?? "",
-            project: row.projectId ?? "",
+            project: project?.id ?? "",
             cycle: row.cycleId ?? "",
-            parent: row.parentId ?? "",
+            parent: parent?.id ?? "",
           },
+          relationships: { parentId: row.parentId, projectId: row.projectId },
           revision: row.revision,
           fingerprint: commandInputHash(JSON.parse(JSON.stringify(row))),
         }
       : null
   }
-  const [row] = await tx
+  const query = tx
     .select()
     .from(projects)
     .where(
       and(eq(projects.id, id), readableProjectCondition(actor, projects.id))
     )
-    .for("share")
+  const [row] = await (lock ? query.for("share") : query)
   return row
     ? {
         id: row.id,
@@ -516,15 +547,48 @@ async function recordAlias(
       set: { canonicalId: id, targetFingerprint: row.fingerprint },
     })
 }
-async function reconcile(tx: Transaction, actor: Actor, entry: ImportEntry) {
+async function reconcile(
+  tx: Transaction,
+  actor: Actor,
+  manifest: ImportManifest,
+  entry: ImportEntry
+) {
+  const mapping =
+    entry.kind === "issue" && entry.draft
+      ? {
+          parentId:
+            (await reference(
+              tx,
+              actor,
+              manifest,
+              entry,
+              "issue",
+              entry.draft.parentId
+            )) || null,
+          projectId:
+            (await reference(
+              tx,
+              actor,
+              manifest,
+              entry,
+              "project",
+              entry.draft.project ?? ""
+            )) || null,
+        }
+      : undefined
   const aliases = await tx
     .select()
     .from(legacyImportAliases)
     .where(aliasScope(actor, entry))
   const exact = aliases.find((a) => a.fingerprint === entry.fingerprint)
   if (exact) {
-    const row = await target(tx, actor, entry, exact.canonicalId)
-    if (row?.fingerprint === exact.targetFingerprint) {
+    const row = await target(tx, actor, entry, exact.canonicalId, true)
+    if (
+      row?.fingerprint === exact.targetFingerprint &&
+      (!mapping ||
+        (row.relationships?.parentId === mapping.parentId &&
+          row.relationships.projectId === mapping.projectId))
+    ) {
       if (entry.files.length) {
         const [issue] = await tx
           .select()
@@ -589,7 +653,7 @@ async function reconcile(tx: Transaction, actor: Actor, entry: ImportEntry) {
     ...aliases.map((a) => a.canonicalId),
     ...possible.map((p) => p.id),
   ])) {
-    const row = await target(tx, actor, entry, id)
+    const row = await target(tx, actor, entry, id, true)
     if (row) candidates.push(row)
   }
   if (!aliases.length && !possible.length) {
@@ -598,7 +662,12 @@ async function reconcile(tx: Transaction, actor: Actor, entry: ImportEntry) {
   }
   const fingerprint = commandInputHash(
     JSON.parse(
-      JSON.stringify({ source: entry.fingerprint, aliases, candidates })
+      JSON.stringify({
+        source: entry.fingerprint,
+        mapping,
+        aliases,
+        candidates,
+      })
     )
   )
   entry.conflict = {
@@ -643,6 +712,31 @@ async function reconcile(tx: Transaction, actor: Actor, entry: ImportEntry) {
   }
   return { both: true }
 }
+function referenceEntries(
+  manifest: ImportManifest,
+  entry: ImportEntry,
+  kind: "issue" | "project",
+  legacyId: string
+) {
+  if (!legacyId) return []
+  const local = manifest.entries.filter(
+    (e) =>
+      e.kind === kind &&
+      (kind === "project" || e.teamId === entry.teamId) &&
+      e.legacyId === legacyId
+  )
+  const sameSnapshot = local.filter(
+    (e) =>
+      e.sourceKey === entry.sourceKey &&
+      e.sourceChecksum === entry.sourceChecksum
+  )
+  const sameSource = local.filter((e) => e.sourceKey === entry.sourceKey)
+  return sameSnapshot.length
+    ? sameSnapshot
+    : sameSource.length
+      ? sameSource
+      : local
+}
 async function reference(
   tx: Transaction,
   actor: Actor,
@@ -652,14 +746,7 @@ async function reference(
   legacyId: string
 ) {
   if (!legacyId) return ""
-  const local = manifest.entries.filter(
-    (e) =>
-      e.kind === kind &&
-      (kind === "project" || e.teamId === entry.teamId) &&
-      e.legacyId === legacyId
-  )
-  const sameSource = local.filter((e) => e.sourceKey === entry.sourceKey)
-  const selected = sameSource.length ? sameSource : local
+  const selected = referenceEntries(manifest, entry, kind, legacyId)
   const ids = [
     ...new Set(
       selected
@@ -937,17 +1024,20 @@ export async function runImportBatch(
         const index = pending.findIndex(
           (e) =>
             e.kind === "project" ||
-            !manifest.entries.some(
-              (other) =>
-                other.id !== e.id &&
-                !other.canonicalId &&
-                other.state !== "skipped" &&
-                ((other.kind === "issue" &&
-                  other.teamId === e.teamId &&
-                  other.legacyId === e.draft?.parentId) ||
-                  (other.kind === "project" &&
-                    other.legacyId === e.draft?.project))
-            )
+            [
+              ...referenceEntries(
+                manifest,
+                e,
+                "issue",
+                e.draft?.parentId ?? ""
+              ),
+              ...referenceEntries(
+                manifest,
+                e,
+                "project",
+                e.draft?.project ?? ""
+              ),
+            ].every((other) => other.canonicalId || other.state === "skipped")
         )
         if (index < 0) {
           for (const entry of pending) {
@@ -965,7 +1055,7 @@ export async function runImportBatch(
               throw new Error(
                 "The source record is invalid. Correct its retained source before importing."
               )
-            const result = await reconcile(nested, current, entry)
+            const result = await reconcile(nested, current, manifest, entry)
             if (result.blocked) return
             if (result.skip) {
               entry.state = "skipped"
@@ -1160,6 +1250,7 @@ export async function finalizeImportFile(
         )
       let existingAttachments = row.properties.attachments ?? []
       let legacyWidth = source.width
+      let legacyAnchor = source.legacyId
       if (entry.replaceLegacyFiles) {
         const index = existingAttachments.findIndex((file) => {
           if (file.fileId) return false
@@ -1176,7 +1267,7 @@ export async function finalizeImportFile(
         })
         if (index < 0) {
           entry.state = "pending"
-          await reconcile(tx, current, entry)
+          await reconcile(tx, current, manifest, entry)
           entry.message =
             "The existing legacy file changed or was removed. Review the shared issue before retrying."
           await save(tx, manifest)
@@ -1187,6 +1278,7 @@ export async function finalizeImportFile(
           }
         }
         legacyWidth = existingAttachments[index].width
+        legacyAnchor = issueAttachmentAnchor(existingAttachments[index])
         existingAttachments = existingAttachments.filter(
           (_, position) => position !== index
         )
@@ -1202,7 +1294,7 @@ export async function finalizeImportFile(
         file.fileId === input.fileId
           ? {
               ...file,
-              id: source.legacyId ?? file.id,
+              id: legacyAnchor ?? file.id,
               ...(legacyWidth ? { width: legacyWidth } : {}),
             }
           : file
@@ -1221,7 +1313,11 @@ export async function finalizeImportFile(
           and(
             aliasScope(current, entry),
             eq(legacyImportAliases.fingerprint, entry.fingerprint),
-            eq(legacyImportAliases.canonicalId, row.id)
+            eq(legacyImportAliases.canonicalId, row.id),
+            eq(
+              legacyImportAliases.targetFingerprint,
+              commandInputHash(JSON.parse(JSON.stringify(row)))
+            )
           )
         )
       await save(tx, manifest)
