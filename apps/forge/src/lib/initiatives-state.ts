@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState, useSyncExternalStore } from "react"
 import {
   CANONICAL_ISSUES_CHANGED,
+  canonicalIssueState,
   canonicalIssuesActive,
   canonicalProjects,
 } from "./canonical-issue-cache"
@@ -27,7 +28,8 @@ import {
   projectLabelsStorageKey,
 } from "./team-labels"
 import type { InitiativeStore } from "./initiatives"
-import { productStorage } from "@/lib/product-storage"
+import { protectedSessionEpoch } from "./protected-session"
+import { productStorage, productStorageIdentity } from "@/lib/product-storage"
 import { useWorkspaceView } from "@/components/account-preference-provider"
 
 const changed = "forge:initiatives-changed"
@@ -44,6 +46,8 @@ export function useInitiatives(
   userId: string,
   scope: "initiatives" | "projects" = "initiatives"
 ) {
+  const renderSession = productStorageIdentity()?.sessionId
+  const renderEpoch = protectedSessionEpoch()
   const [mutationError, setMutationError] = useState("")
   const sync = useWorkspaceView("initiatives", "main", { workspaceId, userId })
   const dataKey = initiativesStorageKey(workspaceId)
@@ -203,7 +207,32 @@ export function useInitiatives(
       return false
     try {
       setMutationError("")
+      const binding = productStorageIdentity()
+      if (
+        renderEpoch !== protectedSessionEpoch() ||
+        (renderSession && binding?.sessionId !== renderSession)
+      )
+        throw new Error(
+          "The active session changed. Reopen this project before saving."
+        )
+      if (
+        binding &&
+        (binding.workspaceId !== workspaceId || binding.userId !== userId)
+      )
+        throw new Error(
+          "The active workspace changed. Reopen this project before saving."
+        )
       if (canonicalIssuesActive()) {
+        const current = canonicalIssueState()
+        if (
+          !current ||
+          current.workspaceId !== workspaceId ||
+          current.userId !== userId ||
+          (binding && current.sessionId !== binding.sessionId)
+        )
+          throw new Error(
+            "The active session changed. Reopen this project before saving."
+          )
         const next = initiativeStoreSchema.parse(reducer(data.state))
         if (
           scope === "projects" &&

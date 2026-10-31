@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { onPreferenceSessionInvalidated } from "./preference-session-events"
 import { projectCommandPrefix } from "./shared-project-key"
+import { canonicalIssueState } from "./canonical-issue-cache"
 import { loadProductState, persistProductState } from "./product-state-server"
 import {
   isProductStorageKey,
@@ -44,16 +45,38 @@ function notify(key: string | null = null) {
 export function storageStatus() {
   return { pending: pending.length, error, deviceError, restored }
 }
+function visibleProjectDraft(value: unknown) {
+  const current = canonicalIssueState()
+  if (
+    !identity ||
+    !current ||
+    current.workspaceId !== identity.workspaceId ||
+    current.userId !== identity.userId ||
+    current.sessionId !== identity.sessionId ||
+    !Array.isArray(value)
+  )
+    return false
+  return value.every(
+    (change) =>
+      change &&
+      typeof change === "object" &&
+      typeof change.id === "string" &&
+      (change.expectedRevision === null ||
+        current.projects.some((project) => project.id === change.id))
+  )
+}
 export function pendingProjectDrafts() {
   return pending
     .filter((p) => p.key.startsWith(projectCommandPrefix))
     .map((p) => {
       try {
-        return JSON.parse(p.value ?? "[]") as unknown
+        const draft: unknown = JSON.parse(p.value ?? "[]")
+        return visibleProjectDraft(draft) ? draft : null
       } catch {
-        return p.value
+        return null
       }
     })
+    .filter((value) => value !== null)
 }
 export function savedProjectDrafts() {
   return [...values].flatMap(([key, value]) => {
@@ -61,7 +84,8 @@ export function savedProjectDrafts() {
     try {
       const draft = JSON.parse(value)
       return typeof draft.key === "string" &&
-        draft.key.startsWith(projectCommandPrefix)
+        draft.key.startsWith(projectCommandPrefix) &&
+        visibleProjectDraft(JSON.parse(draft.value))
         ? [{ key, changes: JSON.parse(draft.value) as unknown }]
         : []
     } catch {

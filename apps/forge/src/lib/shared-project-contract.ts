@@ -55,6 +55,10 @@ export function sharedProjectChanges(
   const result: ProjectChanges = []
   for (const project of next) {
     const old = previous.get(project.id)
+    if (old && project.revision !== old.revision)
+      throw new Error(
+        "This project changed while you were editing. Your draft is kept. Review the latest project before saving."
+      )
     const changes: Record<string, unknown> = {}
     for (const [key, value] of Object.entries(project)) {
       if (

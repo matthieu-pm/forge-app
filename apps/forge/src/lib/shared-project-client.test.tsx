@@ -12,6 +12,7 @@ import {
   pendingProjectDrafts,
   preservePendingAndReload,
   resetProductStorage,
+  savedProjectDrafts,
   storageStatus,
 } from "./product-storage"
 import { loadProductState, persistProductState } from "./product-state-server"
@@ -77,6 +78,114 @@ afterEach(() => {
   replaceCanonicalIssues(null, false)
 })
 describe("FOR-54 shared project client", () => {
+  it("rejects a stale full form after background refresh instead of silently rebasing it", () => {
+    const hook = renderHook(() =>
+      useInitiatives(identity.workspaceId, identity.userId, "projects")
+    )
+    const opened = hook.result.current.state.workspaceProjects[0]
+    act(() =>
+      replaceCanonicalIssues(
+        snapshot({ ...shared, revision: 3, summary: "Bob's newer summary" })
+      )
+    )
+    act(() =>
+      expect(
+        hook.result.current.update((state) => ({
+          ...state,
+          workspaceProjects: [{ ...opened, status: "Active" }],
+        }))
+      ).toBe(false)
+    )
+    expect(hook.result.current.mutationError).toContain(
+      "changed while you were editing"
+    )
+    expect(persistProductState).not.toHaveBeenCalled()
+    expect(canonicalProjects(identity.workspaceId)[0].summary).toBe(
+      "Bob's newer summary"
+    )
+  })
+  it("hides immutable pending and saved batches after project revocation without deleting their originals", async () => {
+    const hook = renderHook(() =>
+      useInitiatives(identity.workspaceId, identity.userId, "projects")
+    )
+    act(() => {
+      hook.result.current.update((state) => ({
+        ...state,
+        workspaceProjects: [{ ...shared, summary: "Private retained work" }],
+      }))
+    })
+    await waitFor(() => expect(storageStatus().error).toBe("Offline"))
+    const command = vi.mocked(persistProductState).mock.calls[0][0].data
+    expect(pendingProjectDrafts()).toHaveLength(1)
+    act(() => replaceCanonicalIssues({ ...snapshot(), projects: [] }))
+    expect(pendingProjectDrafts()).toEqual([])
+    expect(storageStatus().pending).toBe(1)
+    act(() =>
+      initializeProductStorage(
+        {
+          ...identity,
+          entries: [
+            {
+              key: "forge:pending-recovery:v1:copy",
+              value: JSON.stringify({ key: command.key, value: command.value }),
+              revision: 1,
+            },
+          ],
+        },
+        false
+      )
+    )
+    expect(savedProjectDrafts()).toEqual([])
+    act(() => replaceCanonicalIssues(snapshot()))
+    expect(savedProjectDrafts()).toHaveLength(1)
+    expect(JSON.stringify(savedProjectDrafts())).toContain(
+      "Private retained work"
+    )
+  })
+  it("rejects an old workspace callback before enqueueing a project command under a new identity", () => {
+    const hook = renderHook(() =>
+      useInitiatives(identity.workspaceId, identity.userId, "projects")
+    )
+    const update = hook.result.current.update
+    act(() => {
+      initializeProductStorage(
+        { ...identity, workspaceId: "other-workspace", entries: [] },
+        false
+      )
+      replaceCanonicalIssues({ ...snapshot(), workspaceId: "other-workspace" })
+    })
+    act(() =>
+      expect(
+        update((state) => ({
+          ...state,
+          workspaceProjects: [{ ...shared, name: "Late autosave" }],
+        }))
+      ).toBe(false)
+    )
+    expect(persistProductState).not.toHaveBeenCalled()
+  })
+  it("rejects a retired session callback even when the new session has the same user and workspace", () => {
+    const hook = renderHook(() =>
+      useInitiatives(identity.workspaceId, identity.userId, "projects")
+    )
+    const update = hook.result.current.update
+    act(() => {
+      initializeProductStorage(
+        { ...identity, sessionId: "new-session", entries: [] },
+        false
+      )
+      replaceCanonicalIssues({ ...snapshot(), sessionId: "new-session" })
+    })
+    act(() =>
+      expect(
+        update((state) => ({
+          ...state,
+          workspaceProjects: [{ ...shared, name: "Old-session autosave" }],
+        }))
+      ).toBe(false)
+    )
+    expect(persistProductState).not.toHaveBeenCalled()
+  })
   it("keeps canonical projects available when a private legacy source is malformed", () => {
     initializeProductStorage(
       {

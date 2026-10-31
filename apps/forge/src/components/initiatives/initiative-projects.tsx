@@ -149,6 +149,17 @@ export function ProjectDialog({
     labelIds: draft.labelIds ?? [],
   }
   function submit() {
+    if (
+      sharedMode &&
+      project &&
+      catalog.find((value) => value.id === project.id)?.revision !==
+        draft.revision
+    ) {
+      setError(
+        "This project changed while you were editing. Your draft is kept. Review the latest project before saving."
+      )
+      return
+    }
     const result = initiativeProjectSchema.safeParse(draft)
     if (!result.success) {
       setError(result.error.issues[0]?.message ?? "Check the project details.")
@@ -174,6 +185,30 @@ export function ProjectDialog({
         "The project could not be saved. Your draft has been kept. Try again."
       )
   }
+  if (
+    sharedMode &&
+    project &&
+    !catalog.some((value) => value.id === project.id)
+  )
+    return (
+      <Dialog
+        open
+        onOpenChange={(open) => {
+          if (!open) onClose()
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Project unavailable</DialogTitle>
+            <DialogDescription>
+              This project is no longer available. Your edits cannot be saved
+              while access is unavailable.
+            </DialogDescription>
+          </DialogHeader>
+          <Button onClick={onClose}>Close</Button>
+        </DialogContent>
+      </Dialog>
+    )
   return (
     <>
       <Dialog

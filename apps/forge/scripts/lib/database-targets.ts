@@ -36,6 +36,12 @@ export const DATABASE_TARGETS = {
     host: "ep-shy-fog-zayf42ev.c-2.eu-west-2.aws.neon.tech",
     database: "neondb",
   },
+  // Verified production clone for FOR-54; expires 2026-11-01 00:23:57 UTC.
+  "project-rehearsal": {
+    branchId: "br-solitary-moon-zab3thpd",
+    host: "ep-autumn-leaf-za11vueo.c-2.eu-west-2.aws.neon.tech",
+    database: "neondb",
+  },
   "auto-assignment-acceptance": {
     ...STAGING.database,
     database: "forge_auto_assignment_acceptance",

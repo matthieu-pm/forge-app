@@ -387,4 +387,60 @@ describe.skipIf(!file)("FOR-54 shared projects on PostgreSQL", () => {
       (await queries.queryCanonicalIssues(f.actors[1], { project: id })).records
     ).toEqual([])
   }, 30000)
+  it("hides saved project recovery content after revocation and restores the exact private original after access returns", async () => {
+    const f = await fixture(),
+      id = randomUUID(),
+      actor = f.actors[1]
+    await save(actor, create(id, [f.teamId]))
+    const { readProductState, saveProductState } =
+      await import("../product-state/product-state.server")
+    const key = `forge:pending-recovery:v1:${randomUUID()}`
+    const value = JSON.stringify({
+      key: `forge:project-command:v1:${randomUUID()}`,
+      value: JSON.stringify([
+        {
+          id,
+          expectedRevision: (await project(actor, id))!.revision,
+          changes: {
+            name: "Secret retained title",
+            summary: "Secret retained summary",
+          },
+        },
+      ]),
+    })
+    await saveProductState(actor, {
+      workspaceId: f.workspaceId,
+      sessionId: (actor.authentication as { sessionId: string }).sessionId,
+      commandKey: randomUUID(),
+      key,
+      value,
+      expectedRevision: 0,
+    })
+    expect(
+      (await readProductState(actor)).entries.find((entry) => entry.key === key)
+        ?.value
+    ).toBe(value)
+    await pool.query("UPDATE teams SET visibility='private' WHERE id=$1", [
+      f.teamId,
+    ])
+    const hidden = await readProductState(actor)
+    expect(hidden.entries.find((entry) => entry.key === key)?.value).toBeNull()
+    expect(JSON.stringify(hidden)).not.toContain("Secret retained")
+    expect(
+      (
+        await pool.query(
+          "SELECT encoded_value FROM product_state WHERE workspace_id=$1 AND key=$2",
+          [f.workspaceId, key]
+        )
+      ).rows[0].encoded_value
+    ).toBe(JSON.stringify(value))
+    await pool.query(
+      "INSERT INTO team_members(id,workspace_id,team_id,user_id,role) VALUES($1,$2,$3,$4,'member')",
+      [randomUUID(), f.workspaceId, f.teamId, actor.userId]
+    )
+    expect(
+      (await readProductState(actor)).entries.find((entry) => entry.key === key)
+        ?.value
+    ).toBe(value)
+  }, 30000)
 })

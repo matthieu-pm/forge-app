@@ -249,6 +249,35 @@ try {
     member.getByText("Saved project draft", { exact: true })
   ).toBeVisible({ timeout: 30000 })
   await expect(summary).toHaveValue("Bob edited the shared plan")
+  // Revocation hides the recovered private content without destroying its
+  // original server copy. Regrant makes that exact proposal available again.
+  await pool.query("UPDATE teams SET visibility='private' WHERE id=$1", [
+    teamId,
+  ])
+  await pool.query("DELETE FROM team_members WHERE team_id=$1 AND user_id=$2", [
+    teamId,
+    users[1],
+  ])
+  await member.reload()
+  await expect(
+    member.getByText("This project is no longer available in this workspace.", {
+      exact: true,
+    })
+  ).toBeVisible({ timeout: 60000 })
+  await expect(
+    member.getByText("Saved project draft", { exact: true })
+  ).toHaveCount(0)
+  await expect(
+    member.getByText("Bob conflict draft", { exact: true })
+  ).toHaveCount(0)
+  await pool.query(
+    "INSERT INTO team_members(id,workspace_id,team_id,user_id,role) VALUES($1,$2,$3,$4,'member')",
+    [crypto.randomUUID(), marker, teamId, users[1]]
+  )
+  await member.reload()
+  await expect(
+    member.getByText("Saved project draft", { exact: true })
+  ).toBeVisible({ timeout: 60000 })
   await member.getByText("Saved project draft", { exact: true }).click()
   await member
     .getByRole("button", { name: "Apply draft to latest project", exact: true })
@@ -303,6 +332,7 @@ try {
         "member edits shared core fields",
         "hidden team link retained",
         "conflict draft recovery and explicit rebase",
+        "revoked recovery content hidden and restored after regrant",
         "reload retains shared state",
       ],
     })

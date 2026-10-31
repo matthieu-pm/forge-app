@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Link } from "@tanstack/react-router"
 import { toast } from "sonner"
 import { format } from "date-fns"
@@ -50,10 +50,7 @@ import {
   ActivityComposer,
   blankActivityDraft,
 } from "@/components/initiatives/initiative-activity"
-import {
-  DetailDescription,
-  DetailTitle,
-} from "@/components/issues/detail-content"
+import { DetailDescription } from "@/components/issues/detail-content"
 import { IssueIcon } from "@/components/issues/issue-controls"
 import { ViewIssues } from "@/components/views/view-issues"
 import { defaultIssueDisplay, emptyIssueFilters } from "@/lib/team-issues"
@@ -72,6 +69,74 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 export type ProjectTab = "overview" | "activity" | "issues"
+
+/** A refresh can update the shared project while this field is being edited.
+ * Keep both the input and the revision it started from until it is saved or
+ * explicitly cancelled; a rejected save must not replace the user's text. */
+function ProjectTextField({
+  value,
+  revision,
+  label,
+  editable,
+  onSave,
+  className,
+  placeholder,
+  maxLength,
+  required = false,
+}: {
+  value: string
+  revision?: number
+  label: string
+  editable: boolean
+  onSave: (value: string, revision?: number) => boolean
+  className: string
+  placeholder?: string
+  maxLength: number
+  required?: boolean
+}) {
+  const [draft, setDraft] = useState(value)
+  const baseline = useRef<{ revision?: number } | null>(null)
+  useEffect(() => {
+    if (!baseline.current) setDraft(value)
+  }, [value, revision])
+  return (
+    <input
+      aria-label={label}
+      readOnly={!editable}
+      value={draft}
+      maxLength={maxLength}
+      placeholder={placeholder}
+      className={className}
+      onChange={(event) => {
+        baseline.current ??= { revision }
+        setDraft(event.target.value)
+      }}
+      onBlur={() => {
+        if (!baseline.current) return
+        const next = required ? draft.trim() : draft
+        if ((required && !next) || next === value) {
+          baseline.current = null
+          setDraft(value)
+        } else if (onSave(next, baseline.current.revision)) {
+          baseline.current = null
+          setDraft(next)
+        }
+      }}
+      onKeyDown={(event) => {
+        if (event.nativeEvent.isComposing) return
+        if (event.key === "Escape") {
+          event.preventDefault()
+          baseline.current = null
+          setDraft(value)
+          event.currentTarget.blur()
+        } else if (event.key === "Enter") {
+          event.preventDefault()
+          event.currentTarget.blur()
+        }
+      }}
+    />
+  )
+}
 type Props = {
   workspaceId: string
   user: InitiativePerson
@@ -224,6 +289,7 @@ function ProjectDetail({
   const [issueToolbarHost, setIssueToolbarHost] =
     useState<HTMLDivElement | null>(null)
   const [error, setError] = useState("")
+  const descriptionBaseline = useRef<{ revision?: number } | null>(null)
   const agent = useAgent()
   const people = [
     ...directoryPeople.filter((person) => person.id !== user.id),
@@ -324,7 +390,11 @@ function ProjectDetail({
   const details = preferences.preferences.detailSidebar
   const favorite = preferences.preferences.favoriteIds.includes(project.id)
   const subscribed = preferences.preferences.subscribedIds.includes(project.id)
-  function patch(changes: Partial<InitiativeProject>, initiativeIds = ids) {
+  function patch(
+    changes: Partial<InitiativeProject>,
+    initiativeIds = ids,
+    expectedRevision = project.revision
+  ) {
     let validation = ""
     const saved = store.update((state) => {
       const current = initiativeProjectCatalog(state).find(
@@ -334,6 +404,7 @@ function ProjectDetail({
       const parsed = initiativeProjectSchema.safeParse({
         ...current,
         ...changes,
+        revision: expectedRevision,
       })
       if (!parsed.success) {
         validation =
@@ -697,26 +768,30 @@ function ProjectDetail({
                     className="size-10 rounded-lg border-0 bg-[#5e6ad2]/10"
                   />
                   <h1>
-                    <DetailTitle
+                    <ProjectTextField
                       value={project.name}
-                      onSave={(name) => patch({ name })}
+                      revision={project.revision}
+                      onSave={(name, revision) =>
+                        patch({ name }, ids, revision)
+                      }
                       label="Project name"
                       editable={store.writable}
-                      className="mt-4 mb-1"
+                      className="mt-4 mb-1 w-full bg-transparent text-2xl font-semibold outline-none"
+                      maxLength={200}
+                      required
                     />
                   </h1>
-                  <input
-                    aria-label="Project summary"
-                    key={project.summary}
-                    defaultValue={project.summary ?? ""}
-                    readOnly={!store.writable}
+                  <ProjectTextField
+                    label="Project summary"
+                    value={project.summary ?? ""}
+                    revision={project.revision}
+                    editable={store.writable}
                     maxLength={2000}
                     placeholder="Add a short summary…"
                     className="mb-6 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
-                    onBlur={(event) => {
-                      if (event.target.value !== project.summary)
-                        patch({ summary: event.target.value })
-                    }}
+                    onSave={(summary, revision) =>
+                      patch({ summary }, ids, revision)
+                    }
                   />
                   <div className="space-y-3 text-[13px]">
                     <div className="grid grid-cols-[64px_minmax(0,1fr)] items-start gap-x-4">
@@ -772,7 +847,21 @@ function ProjectDetail({
                       document={project.description}
                       label="Project description"
                       editable={store.writable}
-                      onSave={(_text, description) => patch({ description })}
+                      onEditingStart={() => {
+                        descriptionBaseline.current = {
+                          revision: project.revision,
+                        }
+                      }}
+                      onSave={(_text, description) => {
+                        const saved = patch(
+                          { description },
+                          ids,
+                          descriptionBaseline.current?.revision ??
+                            project.revision
+                        )
+                        if (saved) descriptionBaseline.current = null
+                        return saved
+                      }}
                     />
                   </section>
                   <ProjectMilestones

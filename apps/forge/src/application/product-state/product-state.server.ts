@@ -1,6 +1,7 @@
 import "@tanstack/react-start/server-only"
 import { and, eq, inArray, or } from "drizzle-orm"
 import { z } from "zod"
+import { filterProjectCopy, projectCopyIds } from "./project-copies"
 import {
   filterIssueCopy,
   hasRetainedCommandCopy,
@@ -21,6 +22,7 @@ import {
   issues,
   organizations,
   productState,
+  projects,
   teamMembers,
   teams,
 } from "@/db"
@@ -30,6 +32,7 @@ import {
 } from "@/application/authorization"
 import {
   readableIssueCondition,
+  readableProjectCondition,
   readableTeamCondition,
 } from "@/application/resource-policy.server"
 import { currentCommandActor } from "@/application/commands/command-actor.server"
@@ -201,13 +204,30 @@ export async function readProductState(
     for (const row of rows) {
       try {
         if ((await scope(tx, current, row.key)) === row.ownerId) {
+          const original =
+            row.encodedValue === null
+              ? null
+              : (JSON.parse(row.encodedValue) as string)
+          const projectIds = projectCopyIds(row.key, original)
+          const readable = projectIds.length
+            ? await tx
+                .select({ id: projects.id })
+                .from(projects)
+                .where(
+                  and(
+                    inArray(projects.id, projectIds),
+                    readableProjectCondition(current, projects.id)
+                  )
+                )
+            : []
+          const projectValue = filterProjectCopy(row.key, original, (id) =>
+            readable.some((project) => project.id === id)
+          )
           const value = await visibleIssueCopyValue(
             tx,
             current,
             row.key,
-            row.encodedValue === null
-              ? null
-              : (JSON.parse(row.encodedValue) as string)
+            projectValue
           )
           entries.push({
             key: row.key,
