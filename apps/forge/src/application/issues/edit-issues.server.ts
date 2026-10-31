@@ -10,13 +10,7 @@ import {
 } from "./issues.server"
 import type { Actor } from "@/application/actor"
 import type { EditIssueBatch } from "@/lib/canonical-issue-edit-contract"
-import {
-  db,
-  issueLabels,
-  issues,
-  organizations,
-  teamIssueNumbers,
-} from "@/db"
+import { db, issueLabels, issues, organizations, teamIssueNumbers } from "@/db"
 import { ApplicationAccessError } from "@/application/authorization"
 import { executeCommand } from "@/application/commands/execute-command.server"
 import { currentCommandActor } from "@/application/commands/command-actor.server"
