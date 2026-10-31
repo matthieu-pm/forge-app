@@ -195,6 +195,9 @@ export async function editCanonicalIssues(actor: Actor, raw: EditIssueBatch) {
               properties: {
                 ...row.properties,
                 ...draft,
+                // Read projections redact deleted bodies. Keep the authoritative
+                // discussion when unrelated issue properties are edited.
+                comments: row.properties.comments ?? [],
                 activity: [
                   ...before.activity,
                   ...activity,

@@ -12,6 +12,8 @@ import {
 import { InlineIssueProperties, IssueSubProgress } from "./issue-list"
 import { Attachments, attachmentId } from "./issue-attachments"
 import { ActivityReference, ActivityRow } from "./issue-activity-row"
+import { SharedCommentInput } from "./shared-comment-input"
+import { SafeCommentContent } from "./safe-comment-content"
 import { CommentInput, readFiles } from "./issue-comment-input"
 import { DetailDescription, DetailTitle } from "./detail-content"
 import { ReactionPicker, Reactions } from "./issue-reactions"
@@ -32,9 +34,13 @@ import type { TemplateDirectory } from "@/lib/template-contract"
 import type { ActivityReferenceKind } from "@/lib/issue-activity"
 import {
   canonicalIssueEpoch,
+  canonicalIssueState,
   canonicalIssuesActive,
   projectDisplayName,
 } from "@/lib/canonical-issue-cache"
+import { productStorage } from "@/lib/product-storage"
+import { loadCommentMentions } from "@/lib/issue-comment-state"
+import { commentDraftKey, sendIssueComment } from "@/lib/issue-comment-client"
 import { createSharedTeamIssue } from "@/lib/canonical-issue-client"
 import { usePreferenceGroup } from "@/components/account-preference-provider"
 import { issuePullRequest, issuePullRequests } from "@/lib/issue-pull-requests"
@@ -157,6 +163,71 @@ export function IssueDetail({
   const file = useRef<HTMLInputElement>(null)
   const shared = canonicalIssuesActive()
   const lifecycle = useIssueLifecycle()
+  const [canModerate, setCanModerate] = useState(false)
+  const [commentActionPending, setCommentActionPending] = useState(false)
+  const commentActionBusy = useRef(false)
+  const commentEpoch = canonicalIssueEpoch()
+  useEffect(() => {
+    setCanModerate(false)
+    const identity = canonicalIssueState()
+    if (!shared || !identity) return
+    let cancelled = false
+    void loadCommentMentions({
+      data: {
+        workspaceId: identity.workspaceId,
+        sessionId: identity.sessionId,
+        issueId: issue.id,
+        query: "",
+      },
+    })
+      .then((result) => {
+        if (!cancelled && commentEpoch === canonicalIssueEpoch())
+          setCanModerate(result.canModerate)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [shared, issue.id, commentEpoch])
+  async function sharedCommentAction(
+    comment: Comment,
+    action: "delete" | "restore"
+  ) {
+    if (commentActionBusy.current) return
+    const key = commentDraftKey(issue.id, `action-${comment.id}`)
+    let saved
+    try {
+      saved = JSON.parse(productStorage.getItem(key) ?? "null")
+    } catch {
+      /* No saved command. */
+    }
+    const input = saved?.command ?? {
+      commandKey: crypto.randomUUID(),
+      teamId: team.id,
+      issueId: issue.id,
+      commentId: comment.id,
+      parentId: "",
+      expectedVersion: comment.version ?? 0,
+      action,
+    }
+    commentActionBusy.current = true
+    setCommentActionPending(true)
+    try {
+      const result = await sendIssueComment(input, key, {})
+      if (commentEpoch !== canonicalIssueEpoch()) return
+      if (result.status === "conflict")
+        toast.error("This comment changed. Review it before trying again.")
+      if (result.status === "rejected") toast.error(result.message)
+    } catch {
+      if (commentEpoch === canonicalIssueEpoch())
+        toast.error(
+          "The change could not be confirmed. Retry to check its outcome."
+        )
+    } finally {
+      commentActionBusy.current = false
+      if (commentEpoch === canonicalIssueEpoch()) setCommentActionPending(false)
+    }
+  }
   const [deleteOpen, setDeleteOpen] = useState(false)
   async function changeLifecycle(action: "delete" | "archive") {
     if (
@@ -411,16 +482,34 @@ export function IssueDetail({
   }
   function renderComment(comment: Comment, reply = false, imageThread = false) {
     const editId = `${imageThread ? "image-thread-" : ""}${comment.id}`
-    const ownComment = comment.author === userId || comment.author === "You"
+    let retryingAction = false
+    if (shared) {
+      try {
+        retryingAction = Boolean(
+          JSON.parse(
+            productStorage.getItem(
+              commentDraftKey(issue.id, `action-${comment.id}`)
+            ) ?? "null"
+          )?.command
+        )
+      } catch {
+        /* Ignore unsupported draft data. */
+      }
+    }
+    const ownComment =
+      comment.author === userId ||
+      comment.author === "You" ||
+      (shared && canModerate)
     const contextAttachment = issue.attachments?.find(
       (item) => attachmentId(item) === comment.attachmentId
     )
-    const author = ownComment
-      ? user
-      : members.find(
-          (member) =>
-            member.id === comment.author || member.name === comment.author
-        )
+    const author =
+      comment.author === userId || comment.author === "You"
+        ? user
+        : members.find(
+            (member) =>
+              member.id === comment.author || member.name === comment.author
+          )
     return (
       <div
         key={comment.id}
@@ -470,16 +559,34 @@ export function IssueDetail({
             )}
           <div className="mb-2 flex items-center gap-2 text-xs">
             <AssigneeMark
-              name={author?.name ?? comment.author}
+              name={
+                author?.name ??
+                comment.authorName ??
+                (shared ? "Former member" : comment.author)
+              }
               image={author?.image}
             />
             <span className="min-w-0 truncate">
-              {author?.name ?? comment.author}
+              {author?.name ??
+                comment.authorName ??
+                (shared ? "Former member" : comment.author)}
             </span>
             {activityLink(
               `comment-${comment.id}`,
               comment.createdAt,
-              comment.edited
+              comment.edited && !comment.editedAt
+            )}
+            {comment.editedAt && (
+              <span
+                className="text-xs text-muted-foreground"
+                title={`Edited ${new Date(comment.editedAt).toLocaleString()}`}
+              >
+                edited by{" "}
+                {members.find((member) => member.id === comment.editedBy)
+                  ?.name ??
+                  comment.editedByName ??
+                  "a former member"}
+              </span>
             )}
             <div className="ml-auto flex items-center transition-opacity duration-150 group-focus-within/comment:opacity-100 group-hover/comment:opacity-100 has-[[aria-expanded=true]]:opacity-100 motion-reduce:transition-none [@media(hover:hover)]:opacity-0">
               {comment.attachmentId && !reply && (
@@ -494,30 +601,32 @@ export function IssueDetail({
                   <IssueIcon name="check" />
                 </ActionIconButton>
               )}
-              <ReactionPicker
-                label="React to comment"
-                onChoose={(emoji) => {
-                  const existing = comment.reactions.find(
-                    (r) => r.emoji === emoji
-                  )
-                  changeComment(comment, {
-                    reactions: existing
-                      ? comment.reactions
-                          .map((r) =>
-                            r === existing
-                              ? {
-                                  ...r,
-                                  users: r.users.includes(userId)
-                                    ? r.users.filter((v) => v !== userId)
-                                    : [...r.users, userId],
-                                }
-                              : r
-                          )
-                          .filter((r) => r.users.length)
-                      : [...comment.reactions, { emoji, users: [userId] }],
-                  })
-                }}
-              />
+              {!shared && (
+                <ReactionPicker
+                  label="React to comment"
+                  onChoose={(emoji) => {
+                    const existing = comment.reactions.find(
+                      (r) => r.emoji === emoji
+                    )
+                    changeComment(comment, {
+                      reactions: existing
+                        ? comment.reactions
+                            .map((r) =>
+                              r === existing
+                                ? {
+                                    ...r,
+                                    users: r.users.includes(userId)
+                                      ? r.users.filter((v) => v !== userId)
+                                      : [...r.users, userId],
+                                  }
+                                : r
+                            )
+                            .filter((r) => r.users.length)
+                        : [...comment.reactions, { emoji, users: [userId] }],
+                    })
+                  }}
+                />
+              )}
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={
@@ -538,20 +647,34 @@ export function IssueDetail({
                   </DropdownMenuItem>
                   {ownComment && (
                     <>
+                      {(!shared || !comment.deleted) && (
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setEditing(editId)
+                            setEditText(comment.body)
+                          }}
+                        >
+                          Edit comment
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem
-                        onClick={() => {
-                          setEditing(editId)
-                          setEditText(comment.body)
-                        }}
-                      >
-                        Edit comment
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
+                        disabled={commentActionPending}
                         onClick={() =>
-                          changeComment(comment, { deleted: !comment.deleted })
+                          shared
+                            ? void sharedCommentAction(
+                                comment,
+                                comment.deleted ? "restore" : "delete"
+                              )
+                            : changeComment(comment, {
+                                deleted: !comment.deleted,
+                              })
                         }
                       >
-                        {comment.deleted ? "Restore comment" : "Delete comment"}
+                        {retryingAction
+                          ? "Retry comment change"
+                          : comment.deleted
+                            ? "Restore comment"
+                            : "Delete comment"}
                       </DropdownMenuItem>
                     </>
                   )}
@@ -559,7 +682,16 @@ export function IssueDetail({
               </DropdownMenu>
             </div>
           </div>
-          {editing === editId ? (
+          {editing === editId && shared ? (
+            <SharedCommentInput
+              key={`edit-${comment.id}`}
+              teamId={team.id}
+              issueId={issue.id}
+              comment={comment}
+              onSaved={() => setEditing(undefined)}
+              onCancel={() => setEditing(undefined)}
+            />
+          ) : editing === editId ? (
             <div>
               <textarea
                 aria-label="Edit comment"
@@ -610,10 +742,13 @@ export function IssueDetail({
                 </Button>
               </div>
             </div>
+          ) : comment.deleted ? (
+            <p className="text-sm text-muted-foreground">Comment deleted</p>
           ) : (
-            <p className="text-sm whitespace-pre-wrap">
-              {comment.deleted ? "Comment deleted" : comment.body}
-            </p>
+            <SafeCommentContent
+              document={comment.document}
+              fallback={comment.body}
+            />
           )}
           {!comment.deleted && (
             <>
@@ -641,12 +776,23 @@ export function IssueDetail({
               .filter((item) => item.parentId === comment.id)
               .map((item) => renderComment(item, true, imageThread))}
             <div className="border-t border-border/40">
-              <CommentInput
-                key={`${imageThread ? "image-" : ""}reply-${comment.id}`}
-                placeholder="Leave a reply…"
-                avatar={user ?? undefined}
-                onSubmit={(body, files) => addComment(body, files, comment.id)}
-              />
+              {shared && comment.deleted ? null : shared ? (
+                <SharedCommentInput
+                  key={`reply-${comment.id}`}
+                  teamId={team.id}
+                  issueId={issue.id}
+                  parentId={comment.id}
+                />
+              ) : (
+                <CommentInput
+                  key={`${imageThread ? "image-" : ""}reply-${comment.id}`}
+                  placeholder="Leave a reply…"
+                  avatar={user ?? undefined}
+                  onSubmit={(body, files) =>
+                    addComment(body, files, comment.id)
+                  }
+                />
+              )}
             </div>
           </>
         )}
@@ -1495,7 +1641,15 @@ export function IssueDetail({
                       </ActivityRow>
                     )
                   })}
-                  <CommentInput onSubmit={addComment} />
+                  {shared ? (
+                    <SharedCommentInput
+                      key={issue.id}
+                      teamId={team.id}
+                      issueId={issue.id}
+                    />
+                  ) : (
+                    <CommentInput onSubmit={addComment} />
+                  )}
                 </div>
               </section>
             </article>
