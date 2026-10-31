@@ -1,0 +1,111 @@
+{
+  "issue": "FOR-50",
+  "pullRequest": "https://github.com/matthieu-pm/forge-app/pull/30",
+  "date": "2026-10-31",
+  "reviewedHead": "e80a967c546bf3eb68b288dcaae31b4b9fde86a0",
+  "base": "884445aab3a2e800f2fd4298bc581e182f0fa336",
+  "fixedImplementation": "920e97766fed648fa97a486264b0172b5478220e",
+  "reviewAxes": {
+    "standards": {
+      "initialFindings": 0,
+      "remainingFindings": 0
+    },
+    "specification": {
+      "initialFindings": 2,
+      "remainingFindings": 0
+    }
+  },
+  "resolvedFindings": [
+    {
+      "priority": "P2",
+      "problem": "Transient query invalidation unmounted the selected decision controls, losing chosen fields and adopting a newer reviewed revision.",
+      "fix": "Keep the selected editor mounted during same-identity loading; discard the retained projection when the replacement result or identity becomes authoritative.",
+      "regression": "Real useIssueQuery invalidation, metadata-only row reset, delayed replacement, chosen fields retained, expectedRevision remains the original reviewed version."
+    },
+    {
+      "priority": "P2",
+      "problem": "A superseded triage decision prevented recovering unrelated queued edits; the available global discard removed every draft.",
+      "fix": "Discard superseded decisions independently, retaining unrelated mixed-batch/tail drafts for explicit version review. Missing bounded-cache rows are checked through the authorized detail endpoint and identity-epoch checks before classification.",
+      "regressions": [
+        "Mixed-batch and separate-tail edits survive discard, reload, explicit rebase and submission.",
+        "A metadata-only cache reset with a fetched still-pending issue does not discard the decision.",
+        "Conflict feedback exposes selective discard."
+      ]
+    }
+  ],
+  "validation": {
+    "app": {
+      "passed": 2293,
+      "failed": 0,
+      "skipped": 394
+    },
+    "focused": {
+      "passed": 29,
+      "failed": 0
+    },
+    "postgresTriage": {
+      "passed": 6,
+      "failed": 0,
+      "database": "forge_triage_acceptance",
+      "neonBranch": "br-autumn-union-za0opf1e"
+    },
+    "workflow": {
+      "passed": 4,
+      "failed": 0
+    },
+    "browser": {
+      "passed": true,
+      "environment": "production Node build at localhost:3150 with two real Better Auth sessions",
+      "cleanup": {
+        "workspaces": 0,
+        "users": 0,
+        "receipts": 0
+      }
+    },
+    "build": "passed",
+    "typecheck": "Passed on final integrated implementation after using typed HTMLSelectElement queries in the refresh regression.",
+    "changedFileLint": {
+      "errors": 0,
+      "warnings": 4
+    },
+    "gitDiffCheck": "passed"
+  },
+  "testStabilization": "The existing Reviews emoji-picker test now allows a bounded wait for its lazy-loaded emoji dataset and a matching per-test timeout; no production behavior changed.",
+  "release": {
+    "merged": false,
+    "productionChanged": false
+  },
+  "integratedBase": "00fe108091b00d9ce730597bedc4fe45e595613a",
+  "integratedImplementation": "f2bd0cc64687bcbc761661b85b44b96905e5da0a",
+  "integrationValidation": {
+    "app": {
+      "passed": 2306,
+      "failed": 0,
+      "skipped": 404
+    },
+    "postgresTriageAndEngagement": {
+      "passed": 16,
+      "failed": 0,
+      "database": "forge_triage_acceptance"
+    },
+    "workflow": {
+      "passed": 4,
+      "failed": 0
+    },
+    "typecheck": "passed",
+    "productionBuild": "passed",
+    "changedFileLint": {
+      "errors": 0,
+      "warnings": 2
+    },
+    "browser": {
+      "passed": true,
+      "environment": "Combined FOR-47 and FOR-50 production Node build with two real Better Auth sessions",
+      "cleanup": {
+        "workspaces": 0,
+        "users": 0,
+        "receipts": 0
+      }
+    }
+  }
+}

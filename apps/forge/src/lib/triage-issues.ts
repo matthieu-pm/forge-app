@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useSyncExternalStore } from "react"
 import { z } from "zod"
 import {
+  canonicalIssueEpoch,
   canonicalIssueRows,
   canonicalIssuesActive,
 } from "./canonical-issue-cache"
@@ -14,7 +15,6 @@ import {
 import { triageDraftSchema, triagePriorities } from "./triage-record-contract"
 import type { TeamIssue } from "./issue-record-contract"
 import type { TriageDraft } from "./triage-record-contract"
-import { productStorage } from "@/lib/product-storage"
 
 export { triagePriorities, triageDraftSchema } from "./triage-record-contract"
 export type { TriageDraft } from "./triage-record-contract"
@@ -40,7 +40,6 @@ const changed = "forge:triage-issues-changed"
 const pendingTriage = new Map<string, { signature: string; key: string }>()
 
 export function useTriageIssues(teamId: string) {
-  const key = triageIssuesKey(teamId)
   const raw = useSyncExternalStore(
     useCallback((notify) => {
       window.addEventListener("storage", notify)
@@ -60,7 +59,7 @@ export function useTriageIssues(teamId: string) {
               .filter((r) => r.issue.triage)
               .map((r) => ({ ...r.issue, snoozed: r.issue.snoozed }))
           )
-        return productStorage.getItem(key) ?? "[]"
+        return "unavailable"
       } catch {
         return "unavailable"
       }
@@ -74,7 +73,7 @@ export function useTriageIssues(teamId: string) {
       return {
         issues: [],
         error:
-          "Saved triage issues could not be loaded. Your saved data has been preserved.",
+          "Shared triage could not be loaded. Reload to try again. Your saved data has been preserved.",
       }
     }
   }, [raw])
@@ -95,7 +94,7 @@ export function useTriageIssues(teamId: string) {
         )
         return schema.parse(updated)
       }
-      const signature = JSON.stringify(draft)
+      const signature = JSON.stringify({ draft, epoch: canonicalIssueEpoch() })
       if (pendingTriage.get(teamId)?.signature !== signature)
         pendingTriage.set(teamId, { signature, key: crypto.randomUUID() })
       const issue = await createSharedTeamIssue(
@@ -111,29 +110,7 @@ export function useTriageIssues(teamId: string) {
       pendingTriage.delete(teamId)
       return schema.parse({ ...issue, snoozed: false })
     }
-    if (state.error) throw new Error(state.error)
-    const current = parseTriageIssues(productStorage.getItem(key) ?? "[]")
-    const previous = current.find((issue) => issue.id === id)
-    if (id && !previous) throw new Error("This issue is no longer available.")
-    const issue = schema.parse({
-      ...draft,
-      id: previous?.id ?? crypto.randomUUID(),
-      number:
-        previous?.number ??
-        Math.max(0, ...current.map((item) => item.number)) + 1,
-      createdAt: previous?.createdAt ?? new Date().toISOString(),
-      snoozed: snoozed ?? previous?.snoozed ?? false,
-    })
-    productStorage.setItem(
-      key,
-      JSON.stringify(
-        previous
-          ? current.map((item) => (item.id === id ? issue : item))
-          : [...current, issue]
-      )
-    )
-    window.dispatchEvent(new Event(changed))
-    return issue
+    throw new Error("Shared triage is unavailable. Reload to try again.")
   }
   return { ...state, save }
 }

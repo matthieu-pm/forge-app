@@ -120,3 +120,17 @@ describe("FOR-48 file retry lifecycle", () => {
     expect(filterIssueCopy(fileKey, raw, () => false)).toBeNull()
   })
 })
+
+describe("FOR-47 pending engagement copies", () => {
+  it("hides inaccessible retry state and scrubs expired issue copies", () => {
+    const key = `forge:issue-engagement-draft:v1:${a}`
+    const value = JSON.stringify({
+      issueId: a,
+      command: { issueId: a, present: true },
+    })
+    expect(issueCopyIds(key, value)).toEqual([a])
+    expect(filterIssueCopy(key, value, () => false)).toBeNull()
+    expect(filterIssueCopy(key, value, () => true)).toBe(value)
+    expect(retainHiddenIssueCopies(key, null, value, new Set([a]))).toBe(value)
+  })
+})

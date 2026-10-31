@@ -7,6 +7,7 @@ import {
 import { blankIssueDraft, issueSchema } from "./issue-record-contract"
 import {
   applyEditsToLatest,
+  discardUnavailableTriageDecisions,
   enqueueIssueEdits,
   flushIssueEdits,
   hydrateIssueEdits,
@@ -14,7 +15,10 @@ import {
   resetIssueEdits,
   useLatestIssueVersions,
 } from "./canonical-issue-edit-client"
-import { persistCanonicalIssueEdits } from "./canonical-issue-state"
+import {
+  loadIssueDetail,
+  persistCanonicalIssueEdits,
+} from "./canonical-issue-state"
 import { productStorage, saveProductValue } from "./product-storage"
 import type * as ProductStorage from "./product-storage"
 
@@ -22,6 +26,7 @@ vi.mock("./canonical-issue-state", () => ({
   persistCanonicalIssueEdits: vi.fn(),
   persistCanonicalIssue: vi.fn(),
   loadCanonicalIssues: vi.fn(),
+  loadIssueDetail: vi.fn(),
   importCanonicalProjectState: vi.fn(),
 }))
 vi.mock("./product-storage", async (original) => {
@@ -438,5 +443,203 @@ describe("canonical issue edit queue", () => {
     )
     await new Promise((r) => setTimeout(r, 0))
     expect(canonicalIssueState()!.records).toEqual([])
+  })
+  it("FOR-50 replays an uncertain triage decision with its original command and reviewed revision", async () => {
+    const before = { ...original, triage: true, snoozed: true }
+    replaceCanonicalIssues({
+      ...snapshot(),
+      records: [{ teamId, issue: before }],
+    })
+    vi.mocked(persistCanonicalIssueEdits).mockRejectedValueOnce(
+      new Error("Response lost")
+    )
+    enqueueIssueEdits(teamId, [
+      {
+        before,
+        triageDecision: "accept",
+        changes: { status: "todo", assignee: "" },
+      },
+    ])
+    await vi.waitFor(() =>
+      expect(JSON.parse(issueEditSnapshot()).error).toBe("Response lost")
+    )
+    const input = vi.mocked(persistCanonicalIssueEdits).mock.calls[0][0].data
+    expect(input.edits[0]).toMatchObject({
+      expectedRevision: 0,
+      triageDecision: "accept",
+      changes: { assignee: "" },
+    })
+    expect(canonicalIssueRows(teamId)[0].issue).toMatchObject({
+      id,
+      triage: false,
+      snoozed: false,
+    })
+    vi.mocked(persistCanonicalIssueEdits).mockResolvedValueOnce(
+      JSON.stringify({
+        status: "saved",
+        records: [
+          {
+            teamId,
+            issue: { ...before, triage: false, snoozed: false, revision: 1 },
+          },
+        ],
+      })
+    )
+    await flushIssueEdits()
+    expect(vi.mocked(persistCanonicalIssueEdits).mock.calls[1][0].data).toEqual(
+      input
+    )
+    expect(JSON.parse(issueEditSnapshot()).pending).toBe(0)
+  })
+  it("FOR-50 cannot rebase a losing decision after another triager decided", async () => {
+    const before = { ...original, triage: true }
+    replaceCanonicalIssues({
+      ...snapshot(),
+      records: [{ teamId, issue: before }],
+    })
+    vi.mocked(persistCanonicalIssueEdits).mockResolvedValue(
+      JSON.stringify({
+        status: "conflict",
+        records: [
+          {
+            teamId,
+            issue: {
+              ...before,
+              triage: false,
+              status: "canceled",
+              revision: 1,
+            },
+          },
+        ],
+      })
+    )
+    enqueueIssueEdits(teamId, [
+      {
+        before,
+        triageDecision: "accept",
+        changes: { status: "todo", assignee: "" },
+      },
+    ])
+    await vi.waitFor(() =>
+      expect(JSON.parse(issueEditSnapshot()).conflict).toBe(true)
+    )
+    await applyEditsToLatest()
+    expect(persistCanonicalIssueEdits).toHaveBeenCalledTimes(1)
+    expect(JSON.parse(issueEditSnapshot()).error).toContain(
+      "already left triage"
+    )
+  })
+  it.each(["mixed batch", "separate batches"])(
+    "FOR-50 preserves unrelated drafts through discard/reload/recovery in %s",
+    async (mode) => {
+      const before = { ...original, triage: true }
+      const other = {
+        ...original,
+        id: "20edcd10-f58c-4ca7-865f-28bbd0593224",
+        title: "Other issue",
+      }
+      replaceCanonicalIssues({
+        ...snapshot(),
+        records: [
+          { teamId, issue: before },
+          { teamId, issue: other },
+        ],
+      })
+      vi.mocked(persistCanonicalIssueEdits).mockResolvedValue(
+        JSON.stringify({
+          status: "conflict",
+          records: [
+            { teamId, issue: { ...before, triage: false, revision: 1 } },
+            { teamId, issue: other },
+          ],
+        })
+      )
+      const triage = {
+        before,
+        triageDecision: "accept" as const,
+        changes: { status: "todo", assignee: "" },
+      }
+      const unrelated = {
+        before: other,
+        changes: { title: "Keep unrelated draft" },
+      }
+      enqueueIssueEdits(
+        teamId,
+        mode === "mixed batch" ? [triage, unrelated] : [triage]
+      )
+      if (mode === "separate batches") enqueueIssueEdits(teamId, [unrelated])
+      await vi.waitFor(() =>
+        expect(JSON.parse(issueEditSnapshot()).conflict).toBe(true)
+      )
+      await discardUnavailableTriageDecisions()
+      expect(JSON.parse(issueEditSnapshot()).drafts).toMatchObject([
+        { issueId: other.id, changes: { title: "Keep unrelated draft" } },
+      ])
+      resetIssueEdits()
+      hydrateIssueEdits()
+      expect(JSON.parse(issueEditSnapshot()).drafts).toMatchObject([
+        { issueId: other.id, changes: { title: "Keep unrelated draft" } },
+      ])
+      // A shortened batch must stay blocked after reload until explicit review.
+      if (mode === "mixed batch")
+        expect(JSON.parse(issueEditSnapshot()).conflict).toBe(true)
+      else await flushIssueEdits()
+      vi.mocked(persistCanonicalIssueEdits).mockResolvedValue(
+        JSON.stringify({
+          status: "saved",
+          records: [
+            {
+              teamId,
+              issue: { ...other, title: "Keep unrelated draft", revision: 1 },
+            },
+          ],
+        })
+      )
+      await applyEditsToLatest()
+      await vi.waitFor(() =>
+        expect(JSON.parse(issueEditSnapshot()).pending).toBe(0)
+      )
+      const last = vi.mocked(persistCanonicalIssueEdits).mock.calls.at(-1)![0]
+        .data
+      expect(last.edits).toHaveLength(1)
+      expect(last.edits[0]).toMatchObject({
+        issueId: other.id,
+        changes: { title: "Keep unrelated draft" },
+      })
+    }
+  )
+  it("FOR-50 never discards a valid decision just because a metadata refresh emptied the cache", async () => {
+    const before = { ...original, triage: true }
+    replaceCanonicalIssues({
+      ...snapshot(),
+      records: [{ teamId, issue: before }],
+    })
+    vi.mocked(persistCanonicalIssueEdits).mockResolvedValue(
+      JSON.stringify({
+        status: "conflict",
+        records: [{ teamId, issue: { ...before, revision: 1 } }],
+      })
+    )
+    enqueueIssueEdits(teamId, [
+      {
+        before,
+        triageDecision: "accept",
+        changes: { status: "todo", assignee: "" },
+      },
+    ])
+    await vi.waitFor(() =>
+      expect(JSON.parse(issueEditSnapshot()).conflict).toBe(true)
+    )
+    replaceCanonicalIssues({ ...snapshot(), records: [] })
+    vi.mocked(loadIssueDetail).mockResolvedValue(
+      JSON.stringify([{ teamId, issue: { ...before, revision: 1 } }])
+    )
+    await discardUnavailableTriageDecisions()
+    expect(loadIssueDetail).toHaveBeenCalledWith({
+      data: { workspaceId: "workspace", sessionId: "session", id },
+    })
+    expect(JSON.parse(issueEditSnapshot()).drafts).toMatchObject([
+      { issueId: id, triageDecision: "accept" },
+    ])
   })
 })

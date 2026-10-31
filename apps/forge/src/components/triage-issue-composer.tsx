@@ -527,7 +527,7 @@ export function TriageIssueComposer({
               label="Add to cycle"
               content={
                 <p className="text-xs text-muted-foreground">
-                  Cycle assignment is not available for local triage issues yet.
+                  Cycle assignment is not available in this composer.
                 </p>
               }
             >

@@ -6,6 +6,7 @@ export const issueCopyPrefixes = [
   "forge:team-relationship-draft:v1:",
   "forge:comment-draft:v1:",
   "forge:file-draft:v1:",
+  "forge:issue-engagement-draft:v1:",
   "forge:pending-recovery:v1:",
   "forge:legacy-conflict:v1:",
 ]
@@ -35,7 +36,8 @@ export function filterIssueCopy(
   const data = object(JSON.parse(value))
   if (
     key.startsWith("forge:comment-draft:v1:") ||
-    key.startsWith("forge:file-draft:v1:")
+    key.startsWith("forge:file-draft:v1:") ||
+    key.startsWith("forge:issue-engagement-draft:v1:")
   ) {
     const target = id(data.issueId)
     if (!target) throw new Error("Invalid comment draft.")
@@ -132,7 +134,8 @@ export function retainHiddenIssueCopies(
   if (
     key.startsWith("forge:team-relationship-draft:v1:") ||
     key.startsWith("forge:comment-draft:v1:") ||
-    key.startsWith("forge:file-draft:v1:")
+    key.startsWith("forge:file-draft:v1:") ||
+    key.startsWith("forge:issue-engagement-draft:v1:")
   )
     return issueCopyIds(key, previous).some((issueId) => retained.has(issueId))
       ? previous
@@ -167,7 +170,8 @@ export function hasRetainedCommandCopy(
   if (
     key.startsWith("forge:team-issue-edit-drafts:v1:") ||
     key.startsWith("forge:comment-draft:v1:") ||
-    key.startsWith("forge:file-draft:v1:")
+    key.startsWith("forge:file-draft:v1:") ||
+    key.startsWith("forge:issue-engagement-draft:v1:")
   )
     return issueCopyIds(key, value).some((id) => retained.has(id))
   if (

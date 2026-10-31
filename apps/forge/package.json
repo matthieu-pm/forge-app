@@ -59,10 +59,14 @@
     "test:issue-relationships:browser": "node scripts/verify-issue-relationships-browser.mjs",
     "test:issue-lifecycle:postgres": "vitest run src/application/issues/issues.postgres.test.ts -t FOR-45",
     "test:issue-lifecycle:browser": "node scripts/verify-issue-lifecycle-browser.mjs",
+    "test:triage:postgres": "vitest run src/application/issues/issues.postgres.test.ts -t FOR-50",
+    "test:triage:browser": "node scripts/verify-triage-browser.mjs",
     "test:issue-comments:postgres": "vitest run src/application/issues/issues.postgres.test.ts -t FOR-46",
     "test:issue-comments:browser": "node scripts/verify-issue-comments-browser.mjs",
     "test:issue-files:postgres": "vitest run src/application/issues/issues.postgres.test.ts -t FOR-48",
-    "test:issue-files:browser": "node scripts/verify-issue-files-browser.mjs"
+    "test:issue-files:browser": "node scripts/verify-issue-files-browser.mjs",
+    "test:issue-engagement:postgres": "vitest run src/application/issues/issues.postgres.test.ts -t FOR-47",
+    "test:issue-engagement:browser": "node scripts/verify-issue-engagement-browser.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1104.0",

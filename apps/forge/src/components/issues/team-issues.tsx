@@ -134,6 +134,7 @@ export function TeamIssues({
   const members = directory?.members ?? []
   const query = useIssueQuery({
     teamIds: [team.id],
+    triage: false,
     scope,
     filters,
     display,
@@ -142,7 +143,13 @@ export function TeamIssues({
   const detail = useQueriedIssue(search.issue)
   const visible = query.enabled
     ? query.records.map((r) => r.issue)
-    : visibleIssues(store.issues, scope, statuses, filters, display)
+    : visibleIssues(
+        store.issues.filter((issue) => !issue.triage),
+        scope,
+        statuses,
+        filters,
+        display
+      )
   const selectedVisible = selected.filter((id) =>
     visible.some((issue) => issue.id === id)
   )
