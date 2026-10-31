@@ -18,6 +18,7 @@ import {
   requireResourceScope,
 } from "@/application/resource-policy.server"
 import {
+  cycleTimezoneSchema,
   initialTeamCycles,
   parseTeamCycles,
   teamCyclesStorageKey,
@@ -39,6 +40,7 @@ export async function ensureTeamCycles(
   now = new Date()
 ) {
   if (!settings.enabled) return
+  timezone = cycleTimezoneSchema.parse(timezone)
   const today = cycleToday(timezone, now)
   const latest = (
     await tx
@@ -109,7 +111,10 @@ export async function readTeamCycles(
     const stored = row?.encodedValue
       ? parseTeamCycles(JSON.parse(row.encodedValue))
       : initialTeamCycles()
-    const settings = { ...stored, timezone: stored.timezone ?? team.timezone }
+    const settings = {
+      ...stored,
+      timezone: cycleTimezoneSchema.parse(stored.timezone ?? team.timezone),
+    }
     await ensureTeamCycles(
       tx,
       current.workspaceId,

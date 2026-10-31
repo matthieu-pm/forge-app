@@ -1,19 +1,26 @@
 import { z } from "zod"
 
+export const cycleTimezoneSchema = z
+  .string()
+  .max(100)
+  .refine((value) => {
+    if (/^[+-]/.test(value)) return false
+    try {
+      new Intl.DateTimeFormat("en", { timeZone: value })
+      return true
+    } catch {
+      return false
+    }
+  }, "Choose a valid IANA timezone.")
+  .transform(
+    (value) =>
+      new Intl.DateTimeFormat("en", { timeZone: value }).resolvedOptions()
+        .timeZone
+  )
+
 export const cyclesSchema = z.object({
   enabled: z.boolean(),
-  timezone: z
-    .string()
-    .max(100)
-    .refine((value) => {
-      try {
-        new Intl.DateTimeFormat("en", { timeZone: value })
-        return true
-      } catch {
-        return false
-      }
-    }, "Choose a valid IANA timezone.")
-    .optional(),
+  timezone: cycleTimezoneSchema.optional(),
   duration: z.number().int().min(1).max(8),
   cooldown: z.number().int().min(0).max(4),
   startDay: z.number().int().min(0).max(6),

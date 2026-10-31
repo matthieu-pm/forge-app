@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest"
+import { cycleTimezoneSchema } from "./team-cycles-contract"
 import { addCycleDays, cycleToday, nextCycleDate } from "./cycle-calendar"
 
 describe("cycle calendar dates", () => {
+  it("canonicalizes IANA names and rejects offset-only schedules", () => {
+    expect(cycleTimezoneSchema.parse("europe/paris")).toBe("Europe/Paris")
+    expect(cycleTimezoneSchema.safeParse("+02:00").success).toBe(false)
+  })
   it("uses the shared timezone across viewers and DST", () => {
     const instant = new Date("2026-03-29T22:30:00Z")
     expect(cycleToday("Europe/Paris", instant)).toBe("2026-03-30")
