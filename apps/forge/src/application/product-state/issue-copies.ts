@@ -4,6 +4,7 @@ export const issueCopyPrefixes = [
   "forge:inbox:v1:",
   "forge:team-issue-edit-drafts:v1:",
   "forge:team-relationship-draft:v1:",
+  "forge:comment-draft:v1:",
   "forge:pending-recovery:v1:",
   "forge:legacy-conflict:v1:",
 ]
@@ -31,6 +32,11 @@ export function filterIssueCopy(
   if (value === null || !isIssueCopyKey(key)) return value
   if (depth > 8) throw new Error("Saved recovery nesting exceeds its limit.")
   const data = object(JSON.parse(value))
+  if (key.startsWith("forge:comment-draft:v1:")) {
+    const target = id(data.issueId)
+    if (!target) throw new Error("Invalid comment draft.")
+    return keep(target) ? value : null
+  }
   if (
     key.startsWith("forge:pending-recovery:v1:") ||
     key.startsWith("forge:legacy-conflict:v1:")
@@ -119,7 +125,10 @@ export function retainHiddenIssueCopies(
       ? incoming
       : JSON.stringify({ ...old, ...next, value: nested })
   }
-  if (key.startsWith("forge:team-relationship-draft:v1:"))
+  if (
+    key.startsWith("forge:team-relationship-draft:v1:") ||
+    key.startsWith("forge:comment-draft:v1:")
+  )
     return issueCopyIds(key, previous).some((issueId) => retained.has(issueId))
       ? previous
       : incoming
@@ -150,7 +159,10 @@ export function hasRetainedCommandCopy(
 ): boolean {
   if (!value || !isIssueCopyKey(key)) return false
   if (depth > 8) throw new Error("Saved recovery nesting exceeds its limit.")
-  if (key.startsWith("forge:team-issue-edit-drafts:v1:"))
+  if (
+    key.startsWith("forge:team-issue-edit-drafts:v1:") ||
+    key.startsWith("forge:comment-draft:v1:")
+  )
     return issueCopyIds(key, value).some((id) => retained.has(id))
   if (
     key.startsWith("forge:pending-recovery:v1:") ||
@@ -160,12 +172,7 @@ export function hasRetainedCommandCopy(
     return (
       typeof data.key === "string" &&
       (data.value === null || typeof data.value === "string") &&
-      hasRetainedCommandCopy(
-        data.key,
-        data.value,
-        retained,
-        depth + 1
-      )
+      hasRetainedCommandCopy(data.key, data.value, retained, depth + 1)
     )
   }
   return false

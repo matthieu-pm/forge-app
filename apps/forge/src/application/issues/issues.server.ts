@@ -215,6 +215,17 @@ export async function readIssueRows(
     issue: issueSchema.parse({
       ...blankIssueDraft(row.statusId),
       ...row.properties,
+      comments: (row.properties.comments ?? []).map((comment) =>
+        comment.deleted
+          ? {
+              ...comment,
+              body: "",
+              document: undefined,
+              attachments: [],
+              reactions: [],
+            }
+          : comment
+      ),
       id: row.id,
       revision: row.revision,
       number: row.number,

@@ -1,0 +1,148 @@
+{
+  "issue": "FOR-46",
+  "date": "2026-10-31",
+  "implementationCommit": "5a35565506f7857301dcd1299fa0ae9a73232b01",
+  "baseCommit": "f7a69b7",
+  "environment": {
+    "production": false,
+    "database": "forge_auto_assignment_acceptance",
+    "neonBranch": "br-autumn-union-za0opf1e",
+    "browserOrigin": "http://localhost:3146",
+    "browserServer": "production Node build with generated local-only secrets"
+  },
+  "acceptedDecision": {
+    "source": "Product owner in this chat",
+    "moderation": "Authors and workspace owners/admins may edit, delete and restore comments. Original authors remain immutable; editor/deleter IDs and timestamps are server-generated. Deleted comments remain thread placeholders; stale edits retain drafts for explicit review."
+  },
+  "acceptance": [
+    {
+      "criterion": "AC-01",
+      "test": "AT-01",
+      "result": "passed",
+      "evidence": [
+        "Two real Better Auth sessions see the same authored rich comment and eligible mention after reload.",
+        "Replies, rich formatting, admin edits, deleted placeholders and restoration survive reload.",
+        "One activity outbox event and one event per distinct newly mentioned eligible user commit with the comment."
+      ]
+    },
+    {
+      "criterion": "AC-02",
+      "test": "AT-02",
+      "result": "passed",
+      "evidence": [
+        "Concurrent exact retries create one comment, audit record and activity/mention event set.",
+        "Lost response after commit, reload and exact retry produce one comment.",
+        "Private-team ineligible and nonexistent targets yield the same generic rejection and no partial comment, receipt or events.",
+        "Author and recipient fields cannot be supplied by clients.",
+        "Live access is rechecked on replay; uncertain authorization failures retain the original command identity.",
+        "Account/session changes remount private editor state and ignore stale responses."
+      ]
+    },
+    {
+      "criterion": "AC-03",
+      "test": "AT-03",
+      "result": "passed",
+      "evidence": [
+        "Closed JSON node/mark vocabulary rejects script nodes, event-handler attributes, embeds, unsafe URLs, invalid nesting and oversized content.",
+        "Stored hostile script, handler and unsafe-link fixtures render inert fallback text after reload, without executable DOM or unsafe navigation.",
+        "Rich editor initialization and shared read renderer both validate untrusted stored documents."
+      ]
+    }
+  ],
+  "checks": {
+    "postgresRegression": {
+      "passed": 103,
+      "failed": 0,
+      "sourceRevision": "3344dc269178b691a617e7b84aa30a031771a2e4",
+      "command": "FORGE_AUTO_ASSIGNMENT_TEST_DATABASE_FILE=<isolated-config> bun run --cwd apps/forge test:issues:postgres"
+    },
+    "postgresComments": {
+      "passed": 8,
+      "failed": 0,
+      "sourceRevision": "5a35565506f7857301dcd1299fa0ae9a73232b01",
+      "command": "FORGE_AUTO_ASSIGNMENT_TEST_DATABASE_FILE=<isolated-config> bun run --cwd apps/forge test:issue-comments:postgres",
+      "note": "Includes the final distinct/self-mention event behavior; delivery policy stays with FOR-33/FOR-65."
+    },
+    "appTests": {
+      "passed": 2285,
+      "failed": 0,
+      "sourceRevision": "9aed66044e1d1392809aed9dec839f38e68d1bf7",
+      "command": "bunx vitest run --maxWorkers=4",
+      "note": "One unrelated emoji-picker async loading test timed out under parallel build/default-worker load; the bounded-worker full run passed. The final additional PostgreSQL-only mention test is covered separately above."
+    },
+    "workflowTests": {
+      "passed": 4,
+      "failed": 0,
+      "command": "bun run test:workflow"
+    },
+    "focusedClientRendererEditorTests": {
+      "passed": 22,
+      "failed": 0,
+      "sourceRevision": "9aed66044e1d1392809aed9dec839f38e68d1bf7"
+    },
+    "browser": {
+      "passed": true,
+      "sourceRevision": "9aed66044e1d1392809aed9dec839f38e68d1bf7",
+      "command": "FORGE_ISSUE_COMMENT_TEST_DATABASE_FILE=<isolated-config> bun run --cwd apps/forge test:issue-comments:browser",
+      "checks": [
+        "two independent real auth sessions",
+        "authored comment/mention reload",
+        "rich formatting and replies",
+        "admin edit attribution",
+        "delete/restore thread preservation",
+        "post-commit response loss and reload replay",
+        "hostile stored document fixtures",
+        "private-team picker filtering"
+      ],
+      "cleanup": {
+        "workspaces": 0,
+        "users": 0,
+        "receipts": 0
+      }
+    },
+    "typecheck": {
+      "result": "passed",
+      "sourceRevision": "5a35565506f7857301dcd1299fa0ae9a73232b01"
+    },
+    "build": {
+      "result": "passed",
+      "sourceRevision": "5a35565506f7857301dcd1299fa0ae9a73232b01"
+    },
+    "lint": {
+      "errors": 0,
+      "warnings": 285,
+      "sourceRevision": "5a35565506f7857301dcd1299fa0ae9a73232b01"
+    },
+    "gitDiffCheck": "passed"
+  },
+  "storageAndEvents": {
+    "storage": "Existing canonical issues.properties.comments JSON aggregate, protected by row locking and per-comment versions; issue revision triggers remain authoritative.",
+    "outboxTopics": [
+      "issue.comment.created",
+      "issue.comment.edited",
+      "issue.comment.deleted",
+      "issue.comment.restored",
+      "issue.comment.mentioned"
+    ],
+    "recipientPolicy": "Recipients derive only from distinct structured mention nodes and live recipient-specific issue access. Unchanged mentions do not emit another mention event. Self-mentions remain durable events; downstream delivery decides notification policy.",
+    "draftLifecycle": "Private authenticated product-state copies are visibility-filtered and included in issue recovery/purge filtering. Deleted bodies are redacted from read projections; unrelated property edits preserve the authoritative stored discussion.",
+    "queryClockFix": "Issue pagination snapshots use the database clock that assigns created_at; observed local/database skew otherwise hid newly committed fixtures."
+  },
+  "boundaries": {
+    "notificationDelivery": [
+      "FOR-33",
+      "FOR-65"
+    ],
+    "fileBinding": "FOR-48",
+    "reactionsAndSubscriptions": "FOR-47",
+    "publicApiPublication": "FOR-87"
+  },
+  "rollout": {
+    "schemaMigrationRequired": false,
+    "configurationChangeRequired": false,
+    "merged": false,
+    "deployed": false,
+    "status": "Ready for pull request review"
+  },
+  "reviewFollowup": "for46-review-evidence.json"
+}

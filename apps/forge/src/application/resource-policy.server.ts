@@ -7,6 +7,8 @@ import type { Actor, ApiScope } from "./actor"
 import type { DatabaseExecutor, Transaction } from "@/db"
 import { db } from "@/db"
 
+type ResourceSubject = { workspaceId: string; userId: string | SQLWrapper }
+
 /** Authenticated adapters supply Actors; reload and lock live authority in one transaction. */
 export async function requireCurrentActor(
   actor: Actor,
@@ -28,19 +30,17 @@ export function requireResourceScope(actor: Actor, scope: ApiScope) {
     )
 }
 
-export function currentMemberCondition(
-  actor: Pick<Actor, "workspaceId" | "userId">
-): SQL {
+export function currentMemberCondition(actor: ResourceSubject): SQL {
   return sql`EXISTS (SELECT 1 FROM member authz_member WHERE authz_member.organization_id = ${actor.workspaceId} AND authz_member.user_id = ${actor.userId})`
 }
 
-function privilegedCondition(actor: Actor): SQL {
+function privilegedCondition(actor: ResourceSubject): SQL {
   return sql`EXISTS (SELECT 1 FROM member authz_role WHERE authz_role.organization_id = ${actor.workspaceId} AND authz_role.user_id = ${actor.userId} AND string_to_array(replace(authz_role.role, ' ', ''), ',') && ARRAY['owner','admin']::text[])`
 }
 
 /** Resource predicates deliberately do not require teams:read for issues:read. */
 export function readableTeamCondition(
-  actor: Actor,
+  actor: ResourceSubject,
   teamId: SQLWrapper,
   includeArchived = false
 ): SQL {
@@ -55,7 +55,7 @@ export function readableProjectCondition(
 }
 
 export function readableIssueCondition(
-  actor: Actor,
+  actor: ResourceSubject,
   issueId: SQLWrapper,
   includeInactive = false
 ): SQL {

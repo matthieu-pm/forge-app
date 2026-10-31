@@ -3348,4 +3348,418 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
       expect((await purgeDeletedIssues({ delete: remove })).purged).toBe(0)
     }, 30000)
   })
+  describe("FOR-46 durable comments and mentions", () => {
+    const document = (text: string, mention?: string) => ({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            { type: "text", text },
+            ...(mention
+              ? [
+                  {
+                    type: "mention",
+                    attrs: { id: mention, label: "Forged label" },
+                  },
+                ]
+              : []),
+          ],
+        },
+      ],
+    })
+    async function setup() {
+      const f = await fixture()
+      const issue = (
+        await service.createCanonicalIssue(f.actors[0], command(f.teamId))
+      ).records[0].issue
+      const comments = await import("./issue-comments.server")
+      const input = {
+        commandKey: randomUUID(),
+        teamId: f.teamId,
+        issueId: issue.id,
+        commentId: randomUUID(),
+        action: "create" as const,
+        expectedVersion: 0,
+        parentId: "",
+        document: document("Durable discussion ", users[1]),
+      }
+      return { ...f, issue, comments, input }
+    }
+    it("AT-01/02: concurrent retries persist one authored rich comment, activity and mention event across two readers", async () => {
+      const f = await setup()
+      const results = await Promise.all([
+        f.comments.commandIssueComment(f.actors[0], f.input),
+        f.comments.commandIssueComment(f.actors[0], f.input),
+      ])
+      expect(results.map((r) => r.status)).toEqual(["saved", "saved"])
+      expect(results.filter((r) => "replayed" in r && r.replayed)).toHaveLength(
+        1
+      )
+      for (const actor of f.actors) {
+        const records = await database.db.transaction((tx) =>
+          service.readIssueRows(tx, actor, [f.issue.id])
+        )
+        expect(records[0].issue.comments).toHaveLength(1)
+        expect(records[0].issue.comments[0]).toMatchObject({
+          id: f.input.commentId,
+          author: users[0],
+          body: `Durable discussion @${users[1]}`,
+          version: 0,
+        })
+      }
+      const events = (
+        await pool.query(
+          "SELECT topic,payload FROM command_outbox_events WHERE workspace_id=$1 AND topic LIKE 'issue.comment.%' ORDER BY ordinal",
+          [f.workspaceId]
+        )
+      ).rows
+      expect(events.map((e) => e.topic)).toEqual([
+        "issue.comment.created",
+        "issue.comment.mentioned",
+      ])
+      expect(events[1].payload.recipientId).toBe(users[1])
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int n FROM command_audit_events WHERE workspace_id=$1 AND operation='issues.comment@1'",
+            [f.workspaceId]
+          )
+        ).rows[0].n
+      ).toBe(1)
+      await expect(
+        f.comments.commandIssueComment(f.actors[0], {
+          ...f.input,
+          document: document("Changed input"),
+        })
+      ).rejects.toMatchObject({ reason: "reused" })
+    }, 30000)
+    it("AT-02: eligible picker and forged mentions enforce recipient access and roll back every effect", async () => {
+      const f = await setup()
+      await pool.query("UPDATE teams SET visibility='private' WHERE id=$1", [
+        f.teamId,
+      ])
+      const targets = await f.comments.queryCommentMentions(
+        f.actors[0],
+        f.issue.id,
+        ""
+      )
+      expect(targets.targets.map((t) => t.id)).toEqual([users[0]])
+      const denied = await f.comments.commandIssueComment(f.actors[0], f.input)
+      expect(denied).toMatchObject({
+        status: "rejected",
+        message:
+          "One or more mentions are unavailable. Choose people with current issue access.",
+      })
+      expect(JSON.stringify(denied)).not.toContain(users[1])
+      const missing = await f.comments.commandIssueComment(f.actors[0], {
+        ...f.input,
+        document: document("Hi", "nonexistent-secret-user"),
+      })
+      expect(missing).toEqual(denied)
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int n FROM command_receipts WHERE workspace_id=$1 AND operation='issues.comment@1'",
+            [f.workspaceId]
+          )
+        ).rows[0].n
+      ).toBe(0)
+      expect(
+        (
+          await pool.query(
+            "SELECT properties->'comments' comments FROM issues WHERE id=$1",
+            [f.issue.id]
+          )
+        ).rows[0].comments
+      ).toEqual([])
+      await expect(
+        f.comments.commandIssueComment(f.actors[0], {
+          ...f.input,
+          author: users[1],
+        } as never)
+      ).rejects.toThrow()
+      await expect(
+        f.comments.commandIssueComment(f.actors[0], {
+          ...f.input,
+          recipientIds: [users[0]],
+        } as never)
+      ).rejects.toThrow()
+    }, 30000)
+    it("allows authors/admins to edit and moderate, retains attribution, detects stale edits, preserves reply tombstones", async () => {
+      const f = await setup()
+      const created = await f.comments.commandIssueComment(f.actors[0], f.input)
+      expect(created.status).toBe("saved")
+      const edit = {
+        ...f.input,
+        action: "edit" as const,
+        commandKey: randomUUID(),
+        document: document("An edit"),
+      }
+      expect(
+        await f.comments.commandIssueComment(f.actors[1], edit)
+      ).toMatchObject({ status: "rejected" })
+      const own = await f.comments.commandIssueComment(f.actors[0], edit)
+      expect(own.status).toBe("saved")
+      expect(
+        await f.comments.commandIssueComment(f.actors[0], {
+          ...edit,
+          commandKey: randomUUID(),
+        })
+      ).toMatchObject({ status: "conflict" })
+      const reply = {
+        ...f.input,
+        commandKey: randomUUID(),
+        commentId: randomUUID(),
+        parentId: f.input.commentId,
+        document: document("Reply from Bob"),
+      }
+      expect(
+        await f.comments.commandIssueComment(f.actors[1], reply)
+      ).toMatchObject({ status: "saved" })
+      const moderated = await f.comments.commandIssueComment(f.actors[0], {
+        ...reply,
+        action: "edit",
+        parentId: "",
+        commandKey: randomUUID(),
+        document: document("Moderated reply"),
+      })
+      expect(moderated.records[0].issue.comments[1]).toMatchObject({
+        author: users[1],
+        editedBy: users[0],
+        edited: true,
+        version: 1,
+      })
+      const deletion = {
+        ...edit,
+        commandKey: randomUUID(),
+        action: "delete" as const,
+        document: undefined,
+        expectedVersion: 1,
+      }
+      const removed = await f.comments.commandIssueComment(
+        f.actors[0],
+        deletion
+      )
+      expect(removed.records[0].issue.comments[0]).toMatchObject({
+        deleted: true,
+        body: "",
+        deletedBy: users[0],
+        version: 2,
+      })
+      expect(removed.records[0].issue.comments[0].document).toBeUndefined()
+      expect(removed.records[0].issue.comments[1].parentId).toBe(
+        f.input.commentId
+      )
+      expect(
+        await f.comments.commandIssueComment(f.actors[1], {
+          ...reply,
+          commandKey: randomUUID(),
+          commentId: randomUUID(),
+        })
+      ).toMatchObject({ status: "rejected" })
+      const latest = removed.records[0].issue
+      expect(
+        await editing.editCanonicalIssues(f.actors[0], {
+          commandKey: randomUUID(),
+          teamId: f.teamId,
+          edits: [
+            {
+              issueId: f.issue.id,
+              expectedRevision: latest.revision!,
+              changes: { title: "Title changed during tombstone" },
+            },
+          ],
+        })
+      ).toMatchObject({ status: "saved" })
+      const restored = await f.comments.commandIssueComment(f.actors[0], {
+        ...deletion,
+        commandKey: randomUUID(),
+        action: "restore",
+        expectedVersion: 2,
+      })
+      expect(restored.records[0].issue.comments[0]).toMatchObject({
+        body: "An edit",
+        deleted: false,
+        version: 3,
+      })
+    }, 30000)
+    it("rechecks live authorization on replay and prevents commenting on deleted/archived issues", async () => {
+      const f = await setup()
+      await f.comments.commandIssueComment(f.actors[0], f.input)
+      await pool.query("UPDATE issues SET archived_at=now() WHERE id=$1", [
+        f.issue.id,
+      ])
+      await expect(
+        f.comments.commandIssueComment(f.actors[0], f.input)
+      ).rejects.toMatchObject({ code: "FORBIDDEN" })
+      await pool.query(
+        "UPDATE issues SET archived_at=null, deleted_at=now() WHERE id=$1",
+        [f.issue.id]
+      )
+      await expect(
+        f.comments.commandIssueComment(f.actors[0], f.input)
+      ).rejects.toMatchObject({ code: "FORBIDDEN" })
+      await pool.query("UPDATE issues SET deleted_at=null WHERE id=$1", [
+        f.issue.id,
+      ])
+      await pool.query(
+        "DELETE FROM member WHERE organization_id=$1 AND user_id=$2",
+        [f.workspaceId, users[0]]
+      )
+      await expect(
+        f.comments.commandIssueComment(f.actors[0], f.input)
+      ).rejects.toMatchObject({ code: "FORBIDDEN" })
+      await pool.query(
+        "INSERT INTO member(id,organization_id,user_id,role) VALUES($1,$2,$3,'admin')",
+        [randomUUID(), f.workspaceId, users[0]]
+      )
+      expect(
+        await f.comments.commandIssueComment(f.actors[0], f.input)
+      ).toMatchObject({ status: "saved", replayed: true })
+    }, 30000)
+    it("AT-03: rejects hostile rich text atomically; imported stored fixtures remain inert data", async () => {
+      const f = await setup()
+      for (const doc of [
+        { type: "doc", content: [{ type: "script", text: "alert(1)" }] },
+        {
+          type: "doc",
+          content: [
+            {
+              type: "paragraph",
+              attrs: { onclick: "alert(1)" },
+              content: [{ type: "text", text: "click" }],
+            },
+          ],
+        },
+        {
+          type: "doc",
+          content: [
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "bad",
+                  marks: [
+                    { type: "link", attrs: { href: "javascript:alert(1)" } },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ])
+        await expect(
+          f.comments.commandIssueComment(f.actors[0], {
+            ...f.input,
+            document: doc,
+          })
+        ).rejects.toThrow()
+      const result = await f.comments.commandIssueComment(f.actors[0], {
+        ...f.input,
+        document: document('<img src=x onerror="alert(1)">'),
+      })
+      expect(result.records[0].issue.comments[0].body).toContain("<img")
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int n FROM command_receipts WHERE workspace_id=$1 AND operation='issues.comment@1'",
+            [f.workspaceId]
+          )
+        ).rows[0].n
+      ).toBe(1)
+    })
+    it("serializes distinct comments without losing concurrent discussion", async () => {
+      const f = await setup()
+      const second = {
+        ...f.input,
+        commandKey: randomUUID(),
+        commentId: randomUUID(),
+        document: document("Concurrent Bob comment"),
+      }
+      const saved = await Promise.all([
+        f.comments.commandIssueComment(f.actors[0], f.input),
+        f.comments.commandIssueComment(f.actors[1], second),
+      ])
+      expect(saved.map((r) => r.status)).toEqual(["saved", "saved"])
+      const records = await database.db.transaction((tx) =>
+        service.readIssueRows(tx, f.actors[1], [f.issue.id])
+      )
+      expect(records[0].issue.comments).toHaveLength(2)
+      expect(new Set(records[0].issue.comments.map((c) => c.author))).toEqual(
+        new Set(users)
+      )
+    }, 30000)
+    it("gates private issue drafts without exposing their content", async () => {
+      const f = await setup()
+      const { commentFromText } = await import("@/lib/comment-rich-text")
+      const key = `forge:comment-draft:v1:${f.issue.id}:root`
+      const value = JSON.stringify({
+        issueId: f.issue.id,
+        document: commentFromText("Private unsent comment"),
+      })
+      const sessionId =
+        f.actors[1].authentication.kind === "session"
+          ? f.actors[1].authentication.sessionId
+          : ""
+      await product.saveProductState(f.actors[1], {
+        workspaceId: f.workspaceId,
+        sessionId,
+        commandKey: randomUUID(),
+        key,
+        value,
+        expectedRevision: 0,
+      })
+      expect(
+        (await product.readProductState(f.actors[1])).entries.find(
+          (e) => e.key === key
+        )?.value
+      ).toBe(value)
+      await pool.query("UPDATE teams SET visibility='private' WHERE id=$1", [
+        f.teamId,
+      ])
+      expect(
+        (await product.readProductState(f.actors[1])).entries.find(
+          (e) => e.key === key
+        )
+      ).toMatchObject({ value: null })
+    }, 30000)
+    it("records distinct mention events including self while leaving delivery policy to the consumer", async () => {
+      const f = await setup()
+      const document = {
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
+            content: [
+              { type: "text", text: "Mention events " },
+              ...[users[1], users[1], users[0]].map((id) => ({
+                type: "mention",
+                attrs: { id, label: "untrusted label" },
+              })),
+            ],
+          },
+        ],
+      }
+      const created = { ...f.input, document }
+      expect(
+        await f.comments.commandIssueComment(f.actors[0], created)
+      ).toMatchObject({ status: "saved" })
+      expect(
+        await f.comments.commandIssueComment(f.actors[0], {
+          ...created,
+          action: "edit",
+          commandKey: randomUUID(),
+        })
+      ).toMatchObject({ status: "saved" })
+      const events = (
+        await pool.query(
+          "SELECT payload->>'recipientId' recipient FROM command_outbox_events WHERE workspace_id=$1 AND topic='issue.comment.mentioned' ORDER BY payload->>'recipientId'",
+          [f.workspaceId]
+        )
+      ).rows
+      expect(events.map((e) => e.recipient)).toEqual([...users].sort())
+    }, 30000)
+  })
 })

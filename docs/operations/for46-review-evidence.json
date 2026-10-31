@@ -1,0 +1,111 @@
+{
+  "issue": "FOR-46",
+  "pullRequest": "https://github.com/matthieu-pm/forge-app/pull/28",
+  "date": "2026-10-31",
+  "reviewedHead": "0c7b6d1f196aaa05ffa082fc980b078145691570",
+  "base": "f7a69b75980074b52ea5f96ff617d117a4191ff4",
+  "fixedImplementation": "852e92b5ab9cd1d362766b8be1c087c597480522",
+  "reviewAxes": {
+    "standards": {
+      "initialFindings": 3,
+      "remainingFindings": 0
+    },
+    "specification": {
+      "initialFindings": 2,
+      "remainingFindings": 0
+    },
+    "uniqueFindings": 4,
+    "note": "The edit-baseline finding was independently identified on both axes."
+  },
+  "resolvedFindings": [
+    {
+      "priority": "P1",
+      "problem": "A live refreshed version or a reopened saved draft could silently adopt newer shared edits while retaining older local content.",
+      "fix": "Capture and persist the edit baseline with its draft; advance only after explicit conflict review. Older drafts without a baseline require review.",
+      "regressions": [
+        "open editor receives a newer comment prop",
+        "reload of a draft with an older baseline",
+        "review of baseline-free legacy draft"
+      ]
+    },
+    {
+      "priority": "P2",
+      "problem": "Publication validation discarded oversized failed drafts on hydration and the next autosave could overwrite them.",
+      "fix": "Recover drafts through the same safe node/link vocabulary with separate draft-size limits; keep unsupported data inert and retained until explicit replacement.",
+      "regressions": [
+        "10,001-character draft reload and failed publication retains saved text",
+        "unsupported saved content is read-only and not overwritten"
+      ]
+    },
+    {
+      "priority": "P2",
+      "problem": "An open mention picker could mutate editor content after its command had been frozen for submission/retry.",
+      "fix": "Close the picker at submission and disable/guard insertion while pending or retrying.",
+      "regressions": [
+        "submit with open mention targets cannot append an unsent mention"
+      ]
+    },
+    {
+      "priority": "P2",
+      "problem": "An identity switch during moderation left controls pending or allowed an old completion to reset a newer operation.",
+      "fix": "Reset moderation state per identity/issue and fence completions with request tokens and identity epoch.",
+      "regressions": [
+        "new identity is unblocked while old moderation is pending",
+        "old completion cannot clear the new identity request or permit a duplicate"
+      ]
+    }
+  ],
+  "validation": {
+    "app": {
+      "passed": 2291,
+      "failed": 0,
+      "command": "bunx vitest run --maxWorkers=4"
+    },
+    "focused": {
+      "passed": 28,
+      "failed": 0
+    },
+    "postgresComments": {
+      "passed": 8,
+      "failed": 0,
+      "database": "forge_auto_assignment_acceptance",
+      "neonBranch": "br-autumn-union-za0opf1e"
+    },
+    "workflow": {
+      "passed": 4,
+      "failed": 0
+    },
+    "browser": {
+      "passed": true,
+      "environment": "local production build, two real Better Auth sessions and isolated acceptance database",
+      "checks": [
+        "comment/mention reload",
+        "rich formatting/replies",
+        "admin edit attribution",
+        "delete/restore",
+        "lost response plus reload exact replay",
+        "hostile stored rich text",
+        "private-team mention filtering"
+      ],
+      "cleanup": {
+        "workspaces": 0,
+        "users": 0,
+        "receipts": 0
+      }
+    },
+    "build": "passed",
+    "typecheck": "passed",
+    "changedFileLint": {
+      "errors": 0,
+      "warnings": 1
+    },
+    "gitDiffCheck": "passed"
+  },
+  "previewGate": {
+    "requirement": "Both forge-app and forge-preview-runtime must be READY with successful checks for the final pushed PR head. Check app and runtime live/ready endpoints. Exact final deployment IDs, commit and responses are recorded in the Linear review completion comment after deployment."
+  },
+  "release": {
+    "merged": false,
+    "productionChanged": false
+  }
+}
