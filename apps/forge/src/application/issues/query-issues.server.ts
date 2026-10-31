@@ -163,7 +163,15 @@ export async function queryCanonicalIssues(
         throw new Error(
           "This issue cursor expired or belongs to another query. Refresh the list."
         )
-      const snapshot = cursor?.snapshot ?? new Date().toISOString()
+      // created_at is assigned by PostgreSQL. Using an application clock here
+      // can hide a just-committed issue when the database is slightly ahead.
+      const snapshot =
+        cursor?.snapshot ??
+        (
+          await tx.execute<{ snapshot: string }>(
+            sql`SELECT to_char(statement_timestamp() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS snapshot`
+          )
+        ).rows[0].snapshot
       const expires = cursor?.expires ?? Date.now() + 15 * 60_000
       const domain: Array<SQL> = [
         sql`${issues.workspaceId} = ${current.workspaceId}`,
