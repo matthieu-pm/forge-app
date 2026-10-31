@@ -19,7 +19,6 @@ export const issueChangesSchema = z
     parentId: z.union([z.uuid(), z.literal("")]).optional(),
     links: issueDraftSchema.shape.links.removeDefault().max(100).optional(),
     recurrence: issueDraftSchema.shape.recurrence.removeDefault().optional(),
-    subscribers: issueDraftSchema.shape.subscribers.removeDefault().optional(),
     milestone: issueDraftSchema.shape.milestone.removeDefault().optional(),
     triage: z.boolean().optional(),
     snoozed: z.boolean().optional(),

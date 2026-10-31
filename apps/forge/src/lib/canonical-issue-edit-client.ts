@@ -313,8 +313,11 @@ export function changesBetween(
   }
   if (
     JSON.stringify(before.comments) !== JSON.stringify(after.comments) ||
-    JSON.stringify(before.reactions) !== JSON.stringify(after.reactions)
+    JSON.stringify(before.reactions) !== JSON.stringify(after.reactions) ||
+    before.subscribers !== after.subscribers
   )
-    throw new Error("Shared comments and reactions are not available yet.")
+    throw new Error(
+      "Use the discussion and subscription controls to make this change."
+    )
   return issueChangesSchema.parse(changes)
 }

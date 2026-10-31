@@ -7,6 +7,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { normalizeReactionEmoji } from "@/lib/issue-engagement-contract"
 import { cn } from "@/lib/utils"
 
 type Reaction = IssueDraft["reactions"][number]
@@ -14,9 +15,11 @@ type Reaction = IssueDraft["reactions"][number]
 export function ReactionPicker({
   onChoose,
   label = "Add reaction",
+  disabled = false,
 }: {
   onChoose: (emoji: string) => void
   label?: string
+  disabled?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
@@ -24,7 +27,8 @@ export function ReactionPicker({
     Array<{ emoji: string; label: string }>
   >([])
   useEffect(() => {
-    if (open && !choices.length)
+    if (disabled) setOpen(false)
+    if (open && !disabled && !choices.length)
       void import("emojibase-data/en/compact.json").then(({ default: data }) =>
         setChoices(
           [...data]
@@ -32,11 +36,17 @@ export function ReactionPicker({
             .map((item) => ({ emoji: item.unicode, label: item.label }))
         )
       )
-  }, [open, choices.length])
+  }, [open, choices.length, disabled])
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
-        render={<ActionIconButton label={label} hintDisabled={open} />}
+        render={
+          <ActionIconButton
+            label={label}
+            hintDisabled={open}
+            disabled={disabled}
+          />
+        }
       >
         <IssueIcon name="reaction" />
       </PopoverTrigger>
@@ -60,6 +70,7 @@ export function ReactionPicker({
                 title={item.label}
                 aria-label={item.label}
                 className="flex size-8 items-center justify-center rounded text-lg hover:bg-muted"
+                disabled={disabled}
                 onClick={() => {
                   onChoose(item.emoji)
                   setOpen(false)
@@ -77,13 +88,25 @@ export function Reactions({
   items,
   user,
   onChange,
+  onToggle,
+  disabled = false,
 }: {
   items: Array<Reaction>
   user: string
-  onChange: (next: Array<Reaction>) => void
+  onChange?: (next: Array<Reaction>) => void
+  onToggle?: (emoji: string, present: boolean) => void
+  disabled?: boolean
 }) {
   function toggle(emoji: string) {
-    const existing = items.find((item) => item.emoji === emoji)
+    const existing = items.find(
+      (item) =>
+        normalizeReactionEmoji(item.emoji) === normalizeReactionEmoji(emoji)
+    )
+    if (disabled) return
+    if (onToggle) {
+      onToggle(emoji, !existing?.users.includes(user))
+      return
+    }
     const next = existing
       ? items
           .map((item) =>
@@ -98,7 +121,7 @@ export function Reactions({
           )
           .filter((item) => item.users.length)
       : [...items, { emoji, users: [user] }]
-    onChange(next)
+    onChange?.(next)
   }
   return (
     <div className="flex items-center gap-1">
@@ -106,6 +129,8 @@ export function Reactions({
         <button
           key={item.emoji}
           aria-pressed={item.users.includes(user)}
+          aria-label={`${item.emoji}: ${item.users.length} reactions`}
+          disabled={disabled}
           title={`${item.users.length} reaction${item.users.length === 1 ? "" : "s"}`}
           className={cn(
             "flex h-7 items-center gap-1.5 rounded-full border border-border px-2 text-xs",
@@ -117,7 +142,7 @@ export function Reactions({
           <span>{item.users.length}</span>
         </button>
       ))}
-      <ReactionPicker onChoose={toggle} />
+      <ReactionPicker onChoose={toggle} disabled={disabled} />
     </div>
   )
 }

@@ -14,7 +14,6 @@ import {
   db,
   issueLabels,
   issues,
-  members,
   organizations,
   teamIssueNumbers,
 } from "@/db"
@@ -125,32 +124,6 @@ export async function editCanonicalIssues(actor: Actor, raw: EditIssueBatch) {
           // The automation is part of this edit, never a second command. Persist
           // its resulting assignment in both canonical columns and properties.
           draft.assignee = resolved.assignee ?? ""
-          if (edit.changes.subscribers !== undefined) {
-            const subscribers = [
-              ...new Set(
-                edit.changes.subscribers
-                  .split(",")
-                  .map((s) => s.trim())
-                  .filter(Boolean)
-              ),
-            ]
-            const found = subscribers.length
-              ? await tx
-                  .select({ id: members.userId })
-                  .from(members)
-                  .where(
-                    and(
-                      eq(members.organizationId, current.workspaceId),
-                      inArray(members.userId, subscribers)
-                    )
-                  )
-                  .for("share")
-              : []
-            if (found.length !== subscribers.length)
-              throw new Error(
-                "Choose subscribers who are current workspace members."
-              )
-          }
           const now = new Date().toISOString()
           const activity = Object.entries(edit.changes)
             .filter(([field]) => field !== "subIssues")
@@ -198,6 +171,8 @@ export async function editCanonicalIssues(actor: Actor, raw: EditIssueBatch) {
                 // Read projections redact deleted bodies. Keep the authoritative
                 // discussion when unrelated issue properties are edited.
                 comments: row.properties.comments ?? [],
+                reactions: row.properties.reactions ?? [],
+                subscribers: row.properties.subscribers ?? "",
                 activity: [
                   ...before.activity,
                   ...activity,
