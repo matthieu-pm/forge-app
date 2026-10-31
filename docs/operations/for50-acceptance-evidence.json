@@ -118,10 +118,11 @@
   "release": {
     "migrationRequired": false,
     "deployed": false,
-    "status": "Ready for pull-request review; production release is separate"
+    "status": "Review fixes passed full validation; release authorization received in this chat."
   },
   "screenshots": [
     "docs/qa/triage/for50-decision.png",
     "docs/qa/triage/for50-conflict.png"
-  ]
+  ],
+  "reviewEvidence": "for50-review-evidence.json"
 }
