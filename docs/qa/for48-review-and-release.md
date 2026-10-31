@@ -45,3 +45,9 @@ The two isolated staging-branch databases used by this PR had previously applied
 Final integrated source, checks, production deployment, and hosted acceptance are recorded in Linear before completion.
 
 FOR-52 merged during cutover. Its protected-session fences and persistent creation intent journal are preserved alongside confirmed-create success and durable attachment recovery. Failed post-commit acknowledgement cleanup cannot report a failed creation. Uploads also stop immediately on protected-session retirement, before canonical caches reset. Focused regressions cover both integration boundaries.
+
+## Hosted acceptance follow-up
+
+Production acceptance on merged source `da97242` exposed a timing-dependent editor reset. Every periodic metadata refresh invalidated the detail query generation; its existing response stopped rendering until the replacement response arrived. This unmounted the editor and correctly aborted its selected upload. Fast local acceptance did not cross this boundary.
+
+The follow-up keeps the previously authorized detail rendered during same-identity, same-issue revalidation. Empty/failed responses remove it, and account/session/workspace or issue changes still hide it immediately. A new upload immediately checkpoints its comment draft before cancelling the autosave debounce. Hook regressions verify editor DOM continuity, denied/empty responses, identity changes, and late responses. Browser acceptance now delays the comment upload token for 32 seconds to cross a real periodic metadata refresh. Exact final checks and hosted redeploy results are recorded in Linear.

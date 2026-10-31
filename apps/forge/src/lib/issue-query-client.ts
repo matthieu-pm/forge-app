@@ -6,6 +6,7 @@ import {
   canonicalIssueRows,
   canonicalIssueState,
   canonicalIssuesActive,
+  isCanonicalIssueSuppressed,
   mergeCanonicalIssueRecords,
   removeCanonicalIssueRecords,
 } from "./canonical-issue-cache"
@@ -186,7 +187,10 @@ export function useQueriedIssue(id?: string) {
     ? `${canonicalIssueEpoch()}:${state.workspaceId}:${state.userId}:${state.sessionId}`
     : ""
   const invalidation = generation
-  const key = `${scope}:${id}:${invalidation}`
+  // Refreshing the same authorized detail must not unmount its private editor
+  // or cancel selected uploads. Identity/ID changes still hide it immediately;
+  // an empty or failed revalidation clears it when that response arrives.
+  const key = `${scope}:${id}`
   const [result, setResult] = useState<{
     key: string
     record?: IssueQueryPage["records"][number]
@@ -215,14 +219,23 @@ export function useQueriedIssue(id?: string) {
         setResult({ key, record: records[0] })
       })
       .catch(() => {
-        if (active) setResult({ key })
+        const current = canonicalIssueState()
+        if (
+          active &&
+          epoch === canonicalIssueEpoch() &&
+          generation === invalidation &&
+          current?.sessionId === state.sessionId &&
+          current.userId === state.userId &&
+          current.workspaceId === state.workspaceId
+        )
+          setResult({ key })
       })
     return () => {
       active = false
     }
   }, [id, scope, invalidation])
   const record = result?.key === key ? result.record : undefined
-  return record
+  return record && !isCanonicalIssueSuppressed(record.issue.id)
     ? (canonicalIssueRows(record.teamId).find(
         (r) => r.issue.id === record.issue.id
       ) ?? record)

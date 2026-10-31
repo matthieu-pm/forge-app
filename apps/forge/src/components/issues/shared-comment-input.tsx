@@ -456,7 +456,20 @@ function CommentComposer({
           issueId={issueId}
           disabled={pending || uploading || Boolean(retry)}
           count={uploads.length + (comment?.attachments?.length ?? 0)}
-          onBusy={setUploading}
+          onBusy={(value) => {
+            if (value && epoch === canonicalIssueEpoch())
+              productStorage.setItem(
+                key,
+                JSON.stringify({
+                  issueId,
+                  document,
+                  uploads,
+                  expectedVersion: baselineVersion,
+                  requiresReview: review,
+                })
+              )
+            setUploading(value)
+          }}
           onReady={async (file) => {
             const next = [...uploads, file]
             await saveProductValue(
