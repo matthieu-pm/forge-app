@@ -59,8 +59,11 @@ const blob = production
     )
   : null
 if (
-  blob &&
-  (blob.storeId !== "store_z6l5eIW5xSJCsoUL" ||
+  production &&
+  (!blob ||
+    typeof blob !== "object" ||
+    typeof blob.token !== "string" ||
+    blob.storeId !== "store_z6l5eIW5xSJCsoUL" ||
     blob.token.split("_")[3] !== blob.storeId.slice(6))
 )
   throw new Error("Wrong production byte store")

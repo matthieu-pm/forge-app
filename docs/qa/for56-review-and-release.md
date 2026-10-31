@@ -9,7 +9,7 @@ The independent standards review identified two P2 correctness defects:
 1. Preliminary authorization/hydration acquired issue/project `FOR SHARE` locks before receipt reservation and workspace/graph fences. Concurrent same-file retries could deadlock against a reserved receipt, and different-file finalizations could invert target/graph locks. Preliminary target reads now remain nonlocking; reconciliation locks targets only after its command fences. Deterministic SQL regressions hold the graph fence until both requests are waiting, then verify exact replay or a visible revision conflict without a deadlock.
 2. A visible issue's conflict details included raw parent/project IDs after authorizing only the issue. A public child could therefore disclose its private cross-team parent's UUID. Both related IDs are now independently authorized before appearing in details; raw mappings remain internal. A public-child/private-parent regression verifies the complete response excludes the hidden UUID.
 
-Re-review at `bf8146b`: **zero remaining standards findings**. No separate actionable heuristic-smell findings.
+Re-review at `bf8146b`: **zero remaining standards findings**. A separate review of the new release harness found a falsy private Blob configuration could bypass its initial guard; production mode now requires a non-null object, string token and exact store binding before creating a database pool or any fixtures. No separate actionable heuristic-smell findings.
 
 ## Specification
 
