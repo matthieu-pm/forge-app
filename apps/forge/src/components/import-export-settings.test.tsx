@@ -5,6 +5,9 @@ import { ImportExportSettings } from "./import-export-settings"
 
 // The preview has its own interaction suite. Keep this controls-only test from
 // starting a real lazy server-function import during environment teardown.
+vi.mock("./legacy-import-execution", () => ({
+  LegacyImportExecution: () => null,
+}))
 vi.mock("./legacy-import-preview", () => ({ LegacyImportPreview: () => null }))
 
 describe("ImportExportSettings", () => {

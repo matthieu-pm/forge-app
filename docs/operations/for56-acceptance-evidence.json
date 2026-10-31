@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "issue": "FOR-56",
+  "implementationCommit": "58dbf7608dbd338c3d94ffb7326d35b47fb3f212",
+  "baseCommit": "0a38e70e8691b1b3fe289aa24101d29ddcf76e02",
+  "recordedAt": "2026-10-31T22:41:36.274974+00:00",
+  "environment": {
+    "app": "local development server, real Better Auth sessions and ordinary pooled application role",
+    "database": "forge_issue_history_acceptance",
+    "branchId": "br-autumn-union-za0opf1e",
+    "storage": "disposable local private file adapter; upload/content validation and authorized delivery routes exercised",
+    "productionChanged": false,
+    "packagedMacOSVerified": false
+  },
+  "productDecision": "Legacy cycle start dates reconstruct windows from saved team duration/timezone; existing windows remain immutable; relative labels remain unresolved. Confirmed by Matthieu in this chat and recorded on FOR-56.",
+  "checks": [
+    {
+      "name": "App regression suite",
+      "command": "bunx vitest run --maxWorkers 4",
+      "passed": 2415,
+      "skipped": 453,
+      "note": "One default-parallel run hit an unchanged Reviews UI 5000ms timeout under concurrent build load. The complete four-worker rerun passed. The final filename-contract tightening was subsequently covered by focused parser/file tests and the source-bound import suite."
+    },
+    {
+      "name": "Workflow suite",
+      "command": "bun run test:workflow",
+      "passed": 4
+    },
+    {
+      "name": "Broad PostgreSQL regressions",
+      "command": "FORGE_ISSUE_HISTORY_TEST_DATABASE_FILE=/private/connections.json bunx vitest run src/application/issues/issues.postgres.test.ts",
+      "passed": 147,
+      "note": "Ran before the final import-only refinements; final source-bound import acceptance covers those refinements."
+    },
+    {
+      "name": "Source-bound import acceptance",
+      "commit": "58dbf7608dbd338c3d94ffb7326d35b47fb3f212",
+      "command": "FORGE_ISSUE_HISTORY_TEST_DATABASE_FILE=/private/connections.json bunx vitest run src/application/imports/imports.postgres.test.ts",
+      "passed": 13,
+      "cases": [
+        "interrupted ordered batches and deep parent remapping",
+        "changed snapshots and stale conflict decisions",
+        "cross-account exact-source deduplication",
+        "revoked membership and owner privacy",
+        "deleted alias suppression and body-free manifest metadata",
+        "ready-upload checksum validation and idempotent binding",
+        "concurrent tabs/profiles",
+        "project links and reconstructed dated cycles",
+        "atomic audit-failure rollback",
+        "bounded review payloads",
+        "invalid-file quarantine cannot be bypassed by retry",
+        "reviewed conversion preserves the same issue, anchor, width and newer edits",
+        "concurrent inline-file removal returns to review without resurrection"
+      ]
+    },
+    {
+      "name": "Focused final filename/attachment checks",
+      "passed": 7,
+      "note": "Owning upload filename/MIME contract, file checksums, malformed-source quarantine and durable file UI regressions."
+    },
+    {
+      "name": "Two-session Chromium acceptance",
+      "passed": 9,
+      "command": "FORGE_ISSUE_HISTORY_TEST_DATABASE_FILE=/private/connections.json FORGE_IMPORT_BROWSER_URL=http://localhost:3156 node scripts/verify-import-execution-browser.mjs",
+      "cases": [
+        "real authenticated automatic import",
+        "parent remapping",
+        "verified file upload and another-member byte-equal download",
+        "reload replay",
+        "cross-profile conflict review",
+        "Keep both preserves the original shared body",
+        "second reload without duplicates",
+        "390px mobile layout without horizontal overflow",
+        "no page errors"
+      ],
+      "note": "Final browser run preceded only the final owning-contract filename normalization; ordinary valid filenames retain identical behavior. Source-bound SQL acceptance reran afterwards."
+    },
+    {
+      "name": "TypeScript",
+      "result": "passed"
+    },
+    {
+      "name": "Changed-file ESLint",
+      "result": "zero errors; warnings reported"
+    },
+    {
+      "name": "Source-bound production build/prerender/protected Workflow verification",
+      "commit": "58dbf7608dbd338c3d94ffb7326d35b47fb3f212",
+      "result": "passed; explicit localhost-only build placeholder DATABASE_URL"
+    },
+    {
+      "name": "git diff --check",
+      "result": "passed"
+    }
+  ],
+  "migration": {
+    "file": "0062_resumable_legacy_imports.sql",
+    "firstApply": {
+      "applied": 1,
+      "total": 63
+    },
+    "releaseRequirement": "Apply migration and ordinary application-role grants before deploying; production not migrated.",
+    "exactReplay": {
+      "applied": 0,
+      "total": 63
+    }
+  },
+  "traceability": {
+    "AC-01/AT-01": "Ordered restart, canonical relationship remapping, concurrency/rollback, byte-verified upload and same-issue inline-file conversion.",
+    "AC-02/AT-02": "Live target fingerprints bind decisions; newer shared edits survive; unavailable/deleted targets do not automatically recreate; source/candidate changes require fresh review."
+  },
+  "cleanup": "UUID-prefixed SQL/auth fixtures and fixture-owned local bytes removed by the guarded harnesses. Screenshot artifacts remain in /tmp/for56-browser-conflict.png and /tmp/for56-browser-mobile.png.",
+  "limits": [
+    "100,000-record / 200-MB ceilings are admission guards, not throughput qualification.",
+    "Hosted Blob, deployed authenticated browser behavior and packaged macOS are not claimed.",
+    "FOR-57 owns terminal reconciliation/cleanup; FOR-126 and FOR-144 retain their advanced-content and preference scopes."
+  ]
+}

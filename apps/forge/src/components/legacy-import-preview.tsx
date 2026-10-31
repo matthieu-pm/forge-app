@@ -606,8 +606,9 @@ export function LegacyImportPreview() {
               {review ? (
                 <div role="status" className="space-y-2 text-sm">
                   <p>
-                    Choices confirmed for this snapshot. Import is not available
-                    yet. Your originals are unchanged.
+                    Choices confirmed for this snapshot. Supported server
+                    sources resume under Browser import progress above. This
+                    preview preserves the original source.
                   </p>
                   <Button
                     variant="secondary"

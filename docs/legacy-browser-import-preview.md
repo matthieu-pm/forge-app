@@ -1,5 +1,7 @@
 # Browser migration preview and backup · FOR-53
 
+> **FOR-56 implementation:** [Resumable server imports](operations/resumable-browser-imports.md) now own enabled core execution, conflicts, aliases and verified files.
+
 > **30 October 2026 update — FOR-41/FOR-42:** The product owner expanded scope to server-only persistence for all Forge product data, automatic issue/project/cycle migration, and canonical issue editing. [Current behavior and release guidance](operations/canonical-issues-and-server-storage.md) supersede the device-backup and manual-cutover statements below for the implemented adapters. Backups now use private server records; existing actor-owned device copies are verified on the server before exact-source cleanup. The remaining sections document the earlier FOR-22/FOR-53 contract and separately owned import adapters.
 
 Implemented against `c7ca71d` and the accepted [FOR-22 policy](legacy-browser-import-policy.md). Entry point: **Settings → Import & export → Browser data**. The flow is available on the browser origin and in a desktop renderer using that origin; each profile has its own sources and backups.

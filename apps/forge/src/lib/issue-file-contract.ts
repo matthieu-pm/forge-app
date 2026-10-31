@@ -47,3 +47,17 @@ export const creationFileJobSchema = z
 export type CreationFileJob = z.infer<typeof creationFileJobSchema>
 export const creationFileJobKey = (issueId: string) =>
   `forge:file-draft:v1:${issueId}:creation`
+
+/** Stable legacy anchors also keep existing attachment discussion links intact during conversion. */
+export function issueAttachmentAnchor(item: {
+  id?: string
+  name: string
+  data: string
+}) {
+  if (item.id) return item.id
+  let hash = 2166136261
+  const text = item.name + item.data
+  for (let i = 0; i < text.length; i++)
+    hash = Math.imul(hash ^ text.charCodeAt(i), 16777619)
+  return `file-${(hash >>> 0).toString(16)}`
+}

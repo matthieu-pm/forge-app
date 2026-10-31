@@ -30,19 +30,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { issueAttachmentAnchor } from "@/lib/issue-file-contract"
 import { cn } from "@/lib/utils"
 import { OptionSelect } from "@/components/ui/option-select"
 
 export type Attachment = NonNullable<IssueDraft["attachments"]>[number]
 // Legacy files get deterministic anchors until a change persists their ID.
-export function attachmentId(item: Attachment) {
-  if (item.id) return item.id
-  let hash = 2166136261
-  const text = item.name + item.data
-  for (let i = 0; i < text.length; i++)
-    hash = Math.imul(hash ^ text.charCodeAt(i), 16777619)
-  return `file-${(hash >>> 0).toString(16)}`
-}
+export const attachmentId = issueAttachmentAnchor
+
 async function imageCanvas(item: Attachment) {
   const image = new Image()
   image.src = item.data

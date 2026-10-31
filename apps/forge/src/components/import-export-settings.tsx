@@ -18,6 +18,12 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 
+const LegacyImportExecution = React.lazy(() =>
+  import("./legacy-import-execution").then((module) => ({
+    default: module.LegacyImportExecution,
+  }))
+)
+
 const LegacyImportPreview = React.lazy(() =>
   import("./legacy-import-preview").then((module) => ({
     default: module.LegacyImportPreview,
@@ -162,6 +168,7 @@ export function ImportExportSettings() {
               </p>
             }
           >
+            <LegacyImportExecution />
             <LegacyImportPreview />
           </React.Suspense>
 
