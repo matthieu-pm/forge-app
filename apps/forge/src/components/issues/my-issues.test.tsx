@@ -9,6 +9,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { MyIssues } from "./my-issues"
 import type { ComponentProps } from "react"
 import type { TeamSummary } from "@/lib/team-contract"
+import { replaceCanonicalIssues } from "@/lib/canonical-issue-cache"
+import { loadIssueDetail, loadIssueQuery } from "@/lib/canonical-issue-state"
+import { invalidateIssueQueries } from "@/lib/issue-query-client"
 import { productStorage } from "@/lib/product-storage"
 import {
   readTestView,
@@ -22,6 +25,10 @@ import {
   teamIssuesKey,
 } from "@/lib/team-issues"
 
+vi.mock("@/lib/canonical-issue-state", () => ({
+  loadIssueQuery: vi.fn(),
+  loadIssueDetail: vi.fn(),
+}))
 vi.mock("@tanstack/react-router", () => ({
   Link: ({
     children,
@@ -73,6 +80,7 @@ vi.mock("./issue-detail", () => ({
   }) => (
     <div>
       {issue.title}
+      <input aria-label="Detail draft" />
       <button onClick={onBack}>Back to My issues</button>
     </div>
   ),
@@ -117,6 +125,8 @@ function start(
   return { ...result, onNavigate }
 }
 beforeEach(async () => {
+  vi.mocked(loadIssueQuery).mockReset()
+  vi.mocked(loadIssueDetail).mockReset()
   await setupPreferenceFixture("user")
   productStorage.clear()
   vi.stubGlobal(
@@ -156,6 +166,8 @@ beforeEach(async () => {
 })
 afterEach(() => {
   cleanup()
+  replaceCanonicalIssues(null, false)
+  invalidateIssueQueries()
   productStorage.clear()
   vi.unstubAllGlobals()
 })
@@ -255,4 +267,80 @@ describe("My issues page", () => {
       ).toBeTruthy()
     )
   })
+})
+
+it("FOR-51 keeps a direct personal detail mounted through metadata refresh and removes it after revocation", async () => {
+  const issue = readIssueStore(first.id).issues[0]
+  const record = { teamId: first.id, issue }
+  const identity = {
+    workspaceId: "workspace",
+    userId: "user",
+    sessionId: "session",
+    projects: [],
+    cycles: [],
+    records: [],
+  }
+  vi.mocked(loadIssueDetail).mockResolvedValue(JSON.stringify([record]))
+  vi.mocked(loadIssueQuery).mockResolvedValue(
+    JSON.stringify({
+      ...identity,
+      records: [],
+      total: 0,
+      resultRevision: "empty",
+      nextCursor: null,
+      groups: [],
+      rollups: [],
+      projectTotals: [],
+      facets: {
+        assignee: [],
+        labels: [],
+        priority: [],
+        project: [],
+        team: [],
+        status: [],
+      },
+      facetsTruncated: false,
+    })
+  )
+  act(() => replaceCanonicalIssues(identity))
+  start({ view: "assigned", issue: issue.id })
+  const editor = await screen.findByLabelText("Detail draft")
+  fireEvent.change(editor, { target: { value: "Keep my unsent comment" } })
+  let finish!: (raw: string) => void
+  vi.mocked(loadIssueDetail).mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve
+      })
+  )
+  act(() => replaceCanonicalIssues({ ...identity, records: [] }))
+  await waitFor(() => expect(loadIssueDetail).toHaveBeenCalledTimes(2))
+  expect(screen.getByLabelText("Detail draft")).toBe(editor)
+  expect((editor as HTMLInputElement).value).toBe("Keep my unsent comment")
+  await act(async () => finish(JSON.stringify([record])))
+  expect(screen.getByLabelText("Detail draft")).toBe(editor)
+  vi.mocked(loadIssueDetail).mockRejectedValueOnce(new Error("revoked"))
+  act(() => invalidateIssueQueries())
+  await waitFor(() =>
+    expect(screen.queryByLabelText("Detail draft")).toBeNull()
+  )
+  expect(screen.getByText(/This issue is no longer available/)).toBeTruthy()
+})
+
+it("FOR-51 shows a retry state after a personal query fails", async () => {
+  vi.mocked(loadIssueQuery).mockRejectedValue(new Error("Offline"))
+  act(() =>
+    replaceCanonicalIssues({
+      workspaceId: "workspace",
+      userId: "user",
+      sessionId: "session",
+      projects: [],
+      cycles: [],
+      records: [],
+    })
+  )
+  start()
+  expect(await screen.findByRole("button", { name: "Retry" })).toBeTruthy()
+  expect(screen.queryByText("No assigned issues")).toBeNull()
+  expect(screen.getByText(/My issues could not be loaded/)).toBeTruthy()
 })

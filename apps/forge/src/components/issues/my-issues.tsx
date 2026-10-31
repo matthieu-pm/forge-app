@@ -107,9 +107,22 @@ export function MyIssues({
     ...(directory?.members ?? []).filter((member) => member.id !== user.id),
     { ...user, image: user.image ?? null },
   ]
-  const allIssues = data.contexts.flatMap((context) => context.issues)
+  // A direct link can be outside the loaded personal page. Keep its owning
+  // context through metadata refresh while the shared detail is revalidated.
+  const issueContexts = data.contexts.map((context) =>
+    query.enabled && detail?.teamId === context.team.id
+      ? {
+          ...context,
+          issues: [
+            ...context.issues.filter((issue) => issue.id !== detail.issue.id),
+            detail.issue,
+          ],
+        }
+      : context
+  )
+  const allIssues = issueContexts.flatMap((context) => context.issues)
   const contexts = new Map<string, IssueRowContext>(
-    data.contexts.flatMap((context) =>
+    issueContexts.flatMap((context) =>
       context.issues.map(
         (issue) => [issue.id, { ...context, members }] as const
       )
@@ -249,7 +262,7 @@ export function MyIssues({
     Boolean
   )
   if (current && currentContext) {
-    const context = data.contexts.find(
+    const context = issueContexts.find(
       (item) => item.team.slug === currentContext.team.slug
     )!
     return (
@@ -407,6 +420,10 @@ export function MyIssues({
           <div role="status" className="p-8 text-sm text-muted-foreground">
             Loading My issues…
           </div>
+        ) : query.enabled && query.error ? (
+          <p className="p-8 text-sm text-muted-foreground">
+            My issues could not be loaded. Use Retry to try again.
+          </p>
         ) : !visible.length ||
           (search.view === "activity" && !activity.length) ? (
           <IllustratedEmptyState

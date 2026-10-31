@@ -3,7 +3,12 @@ import {
   pendingIssueEngagement,
   sendIssueEngagement,
 } from "./issue-engagement-client"
-import { replaceCanonicalIssues } from "./canonical-issue-cache"
+import {
+  canonicalIssueState,
+  removeCanonicalIssueRecords,
+  replaceCanonicalIssues,
+} from "./canonical-issue-cache"
+import { blankIssueDraft } from "./issue-record-contract"
 import { issueEngagementCommandSchema } from "./issue-engagement-contract"
 import { issueChangesSchema } from "./canonical-issue-edit-contract"
 
@@ -107,4 +112,38 @@ describe("FOR-47 durable desired-state commands", () => {
       false
     )
   })
+})
+
+it("FOR-51 review: a delayed confirmed mutation cannot restore an evicted private record and still clears its receipt draft", async () => {
+  const record = {
+    teamId: input.teamId,
+    issue: {
+      ...blankIssueDraft(),
+      id: input.issueId,
+      number: 1,
+      creator: "alice",
+      revision: 2,
+      createdAt: "2026-01-01T00:00:00Z",
+      updatedAt: "2026-01-01T00:00:00Z",
+      statusChangedAt: "2026-01-01T00:00:00Z",
+      suggestedLabel: "",
+      completedAt: null,
+      recurrenceSpawned: false,
+    },
+  }
+  replaceCanonicalIssues({ ...state, records: [record] })
+  let finish!: (raw: string) => void
+  mock.persist.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve
+      })
+  )
+  const sending = sendIssueEngagement(input)
+  await vi.waitFor(() => expect(mock.persist).toHaveBeenCalledTimes(1))
+  removeCanonicalIssueRecords([input.issueId], { requireAuthorizedRead: true })
+  finish(JSON.stringify({ status: "saved", records: [record] }))
+  await expect(sending).resolves.toMatchObject({ status: "saved" })
+  expect(mock.save.mock.calls.at(-1)?.[1]).toBeNull()
+  expect(canonicalIssueState()?.records).toEqual([])
 })

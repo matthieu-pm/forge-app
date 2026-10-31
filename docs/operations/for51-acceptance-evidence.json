@@ -1,0 +1,117 @@
+{
+  "issue": "FOR-51",
+  "date": "2026-10-31",
+  "implementationCommit": "5c15a7d5eba938325037123c1ec5cf6873b8c2fd",
+  "baseCommit": "7eae3fe185e3ab8e6bab54963976ce179376a6fb",
+  "environment": {
+    "production": false,
+    "database": "forge_issue_history_acceptance",
+    "neonBranch": "br-autumn-union-za0opf1e",
+    "browserOrigin": "http://localhost:3151",
+    "server": "Vite production Node artifact with generated local runtime secrets and development service configuration; no external providers used"
+  },
+  "acceptance": [
+    {
+      "criterion": "AC-01",
+      "test": "AT-01",
+      "result": "passed",
+      "evidence": [
+        "Alice assigns through the team issue detail; two independently authenticated Bob browser contexts open the same issue UUID and team number in Assigned.",
+        "Bob edits the title in My issues; Alice sees the committed title in team details and the other Bob context reloads the same title.",
+        "Created and Subscribed use actor-owned durable state across sessions. Subscribe/unsubscribe propagates on focus refresh."
+      ]
+    },
+    {
+      "criterion": "AC-02",
+      "test": "AT-02",
+      "result": "passed",
+      "evidence": [
+        "Private team membership revoked while Bob has a list preview and another device has a full personal detail open.",
+        "Explicit queue refresh clears the row and preview; focus refresh clears the direct detail. SPA navigation through Created, Subscribed, Assigned and Activity returns zero rows without restoring private titles.",
+        "Client regression tests assert canonical cached-record eviction after empty and failed revalidation, stale in-flight response rejection, concurrent retained detail hiding and same-revision access recovery.",
+        "PostgreSQL checks assert live authorization for all personal scopes, no private IDs/counts/facets, redacted details, rejected writes and rejected revoked sessions."
+      ]
+    }
+  ],
+  "checks": {
+    "appSuite": {
+      "passed": 2361,
+      "failed": 0,
+      "skipped": 423,
+      "filesPassed": 294,
+      "filesSkipped": 22,
+      "command": "cd apps/forge && bun x vitest run --maxWorkers=4",
+      "note": "Environment-dependent suites are skipped without dedicated test credentials. This run preceded addition of the final retry-state UI test; that file was rerun below."
+    },
+    "focusedClientAndUI": {
+      "passed": 48,
+      "failed": 0,
+      "command": "cd apps/forge && bun x vitest run src/lib/issue-query-client.test.tsx src/lib/my-issues.test.ts src/components/issues/my-issues.test.tsx src/lib/canonical-issue-client.test.ts src/lib/canonical-issue-edit-client.test.ts src/lib/issue-engagement-client.test.ts"
+    },
+    "finalMyIssuesUI": {
+      "passed": 6,
+      "failed": 0,
+      "command": "cd apps/forge && bun x vitest run src/components/issues/my-issues.test.tsx"
+    },
+    "postgresRegression": {
+      "passed": 19,
+      "failed": 0,
+      "skippedUnselected": 120,
+      "includes": ["FOR-51", "FOR-43", "FOR-47"],
+      "command": "cd apps/forge && FORGE_MY_ISSUES_TEST_DATABASE_FILE=/secure/path/connection.json bun x vitest run src/application/issues/issues.postgres.test.ts -t 'FOR-51|FOR-43|FOR-47'",
+      "cleanup": "Suite asserted zero fixture users, workspaces, issues, preferences, receipts, audit and outbox records"
+    },
+    "workflow": {
+      "passed": 4,
+      "failed": 0,
+      "command": "cd apps/forge && bun run test:workflow"
+    },
+    "typecheck": {
+      "workspace": "passed",
+      "finalApp": "passed",
+      "commands": ["bun run typecheck", "cd apps/forge && bun run typecheck"]
+    },
+    "changedFileLint": {
+      "errors": 0,
+      "warnings": 14,
+      "result": "passed"
+    },
+    "productionBuild": {
+      "result": "passed",
+      "command": "bun run build (apps/forge, generated local build environment)",
+      "workflowHandlerVerification": "passed"
+    },
+    "formatAndDiff": "passed",
+    "browser": {
+      "result": "passed",
+      "command": "cd apps/forge && FORGE_MY_ISSUES_TEST_DATABASE_FILE=/secure/path/connection.json FORGE_MY_ISSUES_BROWSER_URL=http://localhost:3151 node scripts/verify-my-issues-browser.mjs",
+      "checks": [
+        "Alice assigns and two independent Bob browsers open the same canonical ID",
+        "My issues edits shared with team detail and another device",
+        "Created and Subscribed tabs use durable actor-owned state",
+        "Subscribe/unsubscribe changes propagate through focus refresh",
+        "Assigned details preview uses the canonical row",
+        "Private membership revocation removes list, preview and full detail",
+        "SPA tab switches cannot resurrect revoked personal issues",
+        "No browser page errors"
+      ],
+      "cleanup": {
+        "workspaces": 0,
+        "users": 0,
+        "receipts": 0
+      }
+    }
+  },
+  "policy": {
+    "subscriptions": "Reuses accepted FOR-47 policy; creator subscription remains and users control only their own subscription.",
+    "refresh": "Existing focus/30-second polling and committed mutation invalidation. FOR-95 owns resumable event transport.",
+    "notifications": "Inbox and external notification delivery remain FOR-65/FOR-33."
+  },
+  "release": {
+    "migrationRequired": false,
+    "newConfigurationRequired": false,
+    "deployed": false,
+    "status": "Implemented and locally accepted; GitHub PR prepared for review."
+  },
+  "screenshots": ["docs/qa/my-issues/for51-personal-queue.png"]
+}

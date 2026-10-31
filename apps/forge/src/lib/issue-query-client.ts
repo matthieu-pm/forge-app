@@ -3,9 +3,11 @@ import { z } from "zod"
 import {
   CANONICAL_ISSUES_CHANGED,
   canonicalIssueEpoch,
+  canonicalIssueRemovalEpoch,
   canonicalIssueRows,
   canonicalIssueState,
   canonicalIssuesActive,
+  clearCanonicalIssueQueryRecords,
   isCanonicalIssueSuppressed,
   mergeCanonicalIssueRecords,
   removeCanonicalIssueRecords,
@@ -42,7 +44,19 @@ function snapshot() {
   const state = canonicalIssueState()
   return `${version}:${canonicalIssueEpoch()}:${canonicalIssuesActive()}:${state?.workspaceId}:${state?.userId}:${state?.sessionId}`
 }
-export function invalidateIssueQueries(teamIds?: Array<string>) {
+function evictRecords(ids: Array<string>) {
+  if (!ids.length) return
+  const removed = new Set(ids)
+  for (const [key, entry] of entries)
+    if (entry.page?.records.some((r) => removed.has(r.issue.id)))
+      entries.delete(key)
+  removeCanonicalIssueRecords(ids, { requireAuthorizedRead: true })
+  notify()
+}
+export function invalidateIssueQueries(
+  teamIds?: Array<string>,
+  retainedIssueIds: Array<string> = []
+) {
   generation++
   for (const [key, entry] of entries) {
     if (
@@ -52,20 +66,24 @@ export function invalidateIssueQueries(teamIds?: Array<string>) {
     )
       entries.delete(key)
   }
+  clearCanonicalIssueQueryRecords(teamIds, retainedIssueIds)
   notify()
 }
 if (typeof window !== "undefined") {
   window.addEventListener(DEFINITIONS_CHANGED, () => invalidateIssueQueries())
   window.addEventListener(ISSUE_QUERIES_INVALIDATED, (event) => {
-    invalidateIssueQueries(
-      (event as Event & { detail?: { teamIds?: Array<string> } }).detail
-        ?.teamIds
-    )
+    const detail = (
+      event as Event & {
+        detail?: { teamIds?: Array<string>; retainedIssueIds?: Array<string> }
+      }
+    ).detail
+    invalidateIssueQueries(detail?.teamIds, detail?.retainedIssueIds)
   })
 }
 async function requestPage(key: string, entry: Entry, more: boolean) {
   const identity = canonicalIssueState()
   if (!identity || entry.loading) return
+  const removalEpoch = canonicalIssueRemovalEpoch()
   entry.loading = true
   entry.error = ""
   notify()
@@ -92,13 +110,20 @@ async function requestPage(key: string, entry: Entry, more: boolean) {
       current.sessionId !== page.sessionId
     )
       return
+    // A response begun before an explicit access/cache eviction cannot restore
+    // its old rows or counts. Start a new authorized read instead.
+    if (removalEpoch !== canonicalIssueRemovalEpoch()) {
+      entries.delete(key)
+      notify()
+      return
+    }
     if (
       more &&
       entry.page &&
       entry.page.resultRevision !== page.resultRevision
     ) {
       const previous = entry.page.records
-      removeCanonicalIssueRecords(previous.map((r) => r.issue.id))
+      evictRecords(previous.map((r) => r.issue.id))
       // Re-read the first page if edits or access changes altered this traversal.
       // A normal concurrent create is outside the cursor's creation cutoff.
       invalidateIssueQueries([...new Set(previous.map((r) => r.teamId))])
@@ -116,15 +141,14 @@ async function requestPage(key: string, entry: Entry, more: boolean) {
           ]
         : page.records
     entry.page = { ...page, records }
-    mergeCanonicalIssueRecords(page.records, false)
+    mergeCanonicalIssueRecords(page.records, false, removalEpoch)
   } catch {
     if (entries.get(key) === entry) {
       // Never keep protected rows after an authorization/refresh failure.
-      removeCanonicalIssueRecords(
-        entry.page?.records.map((r) => r.issue.id) ?? []
-      )
+      const ids = entry.page?.records.map((r) => r.issue.id) ?? []
       entry.page = undefined
       entry.error = "Issues could not be loaded. Refresh to try again."
+      evictRecords(ids)
     }
   } finally {
     entry.loading = false
@@ -173,7 +197,11 @@ export function useIssueQuery(input: IssueQuery) {
       if (entry?.page?.nextCursor) void requestPage(key, entry, true)
     },
     refresh: () => {
+      // Explicit list refresh also discards the protected rows retained by other
+      // personal tabs and details, including when the refreshed result is empty.
+      evictRecords(entry?.page?.records.map((r) => r.issue.id) ?? [])
       entries.delete(key)
+      generation++
       notify()
     },
   }
@@ -193,12 +221,14 @@ export function useQueriedIssue(id?: string) {
   const key = `${scope}:${id}`
   const [result, setResult] = useState<{
     key: string
+    removalEpoch: number
     record?: IssueQueryPage["records"][number]
   }>()
   useEffect(() => {
     if (!state || !id || !z.uuid().safeParse(id).success) return
     let active = true
     const epoch = canonicalIssueEpoch()
+    const removalEpoch = canonicalIssueRemovalEpoch(id)
     void loadIssueDetail({
       data: { workspaceId: state.workspaceId, sessionId: state.sessionId, id },
     })
@@ -207,6 +237,7 @@ export function useQueriedIssue(id?: string) {
         if (
           !active ||
           epoch !== canonicalIssueEpoch() ||
+          removalEpoch !== canonicalIssueRemovalEpoch(id) ||
           generation !== invalidation ||
           current?.sessionId !== state.sessionId ||
           current.userId !== state.userId ||
@@ -214,28 +245,33 @@ export function useQueriedIssue(id?: string) {
         )
           return
         const records = JSON.parse(raw) as IssueQueryPage["records"]
-        if (!records.length) removeCanonicalIssueRecords([id])
-        mergeCanonicalIssueRecords(records, false)
-        setResult({ key, record: records[0] })
+        if (!records.length) evictRecords([id])
+        mergeCanonicalIssueRecords(records, false, removalEpoch)
+        setResult({ key, removalEpoch, record: records[0] })
       })
       .catch(() => {
         const current = canonicalIssueState()
         if (
           active &&
           epoch === canonicalIssueEpoch() &&
+          removalEpoch === canonicalIssueRemovalEpoch(id) &&
           generation === invalidation &&
           current?.sessionId === state.sessionId &&
           current.userId === state.userId &&
           current.workspaceId === state.workspaceId
-        )
-          setResult({ key })
+        ) {
+          evictRecords([id])
+          setResult({ key, removalEpoch })
+        }
       })
     return () => {
       active = false
     }
   }, [id, scope, invalidation])
   const record = result?.key === key ? result.record : undefined
-  return record && !isCanonicalIssueSuppressed(record.issue.id)
+  return record &&
+    result?.removalEpoch === canonicalIssueRemovalEpoch(record.issue.id) &&
+    !isCanonicalIssueSuppressed(record.issue.id)
     ? (canonicalIssueRows(record.teamId).find(
         (r) => r.issue.id === record.issue.id
       ) ?? record)
