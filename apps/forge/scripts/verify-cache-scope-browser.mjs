@@ -114,6 +114,23 @@ try {
     page.getByText(`Alice private ${marker}`, { exact: true })
   ).toBeVisible({ timeout: 60000 })
   console.log("Verified initial A scope")
+  await page.evaluate(async () => {
+    await import("/src/lib/auth-client.ts")
+  })
+  await context.setOffline(true)
+  await page.evaluate(async (workspace) => {
+    const { authClient } = await import("/src/lib/auth-client.ts")
+    try {
+      await authClient.organization.setActive({ organizationId: workspace })
+    } catch {
+      /* Expected transport rejection. */
+    }
+  }, workspaces[2])
+  await context.setOffline(false)
+  await expect(
+    page.getByText(`Alice private ${marker}`, { exact: true })
+  ).toBeVisible({ timeout: 60000 })
+  console.log("Verified recovery after an offline auth transition")
   const sibling = await context.newPage()
   await sibling.goto(`${base}/teams/engineering/issues?view=all`)
   await expect(
@@ -208,10 +225,11 @@ try {
   })
   expect(
     await page.evaluate((title) => {
-      const key = Object.keys(localStorage).find((key) =>
-        key.startsWith('["forge.unsaved-drafts"')
+      return Object.keys(localStorage).some(
+        (key) =>
+          key.startsWith('["forge.unsaved-draft",') &&
+          localStorage.getItem(key).includes(title)
       )
-      return key && localStorage.getItem(key).includes(title)
     }, draftTitle)
   ).toBe(true)
   console.log("Verified offline reload recovery")

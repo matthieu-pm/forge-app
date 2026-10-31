@@ -51,3 +51,30 @@ describe("navigation cache invalidation", () => {
     expect(request.body).toBe("{}")
   })
 })
+
+it("settles a protected transition when fetch rejects before HTTP hooks, so tabs can verify again", async () => {
+  const { onPreferenceSessionInvalidated } =
+    await import("./preference-session-events")
+  const phases: Array<string> = []
+  const stop = onPreferenceSessionInvalidated((phase) => phases.push(phase))
+  vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Offline")))
+  try {
+    hooks.onRequest({
+      method: "POST",
+      url: "https://forge.test/api/auth/sign-out",
+      headers: new Headers(),
+    })
+    await expect(
+      hooks.customFetchImpl("https://forge.test/api/auth/sign-out", {
+        method: "POST",
+      })
+    ).rejects.toThrow("Offline")
+    expect(phases).toEqual(["start", "settled"])
+    expect(
+      JSON.parse(localStorage.getItem("forge:session-transition:v1")!).phase
+    ).toBe("settled")
+  } finally {
+    stop()
+    vi.unstubAllGlobals()
+  }
+})

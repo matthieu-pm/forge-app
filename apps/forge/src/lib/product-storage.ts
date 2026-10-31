@@ -22,8 +22,10 @@ type Pending = {
   revision?: number
   recoveryCommandKey?: string
   recoveryValue?: string
+  createdAt?: number
 }
 let pending: Array<Pending> = []
+let lastDraftTime = 0
 let running = false
 let error = ""
 let definitiveFailure = false
@@ -157,14 +159,18 @@ export async function flushProductStorage() {
 }
 function queueChange(key: string, value: string | null) {
   const tail = pending.at(-1)
-  // Never rewrite a command whose outcome is uncertain. Unsent typing can be
-  // coalesced so offline editing does not grow a journal per keystroke.
-  if (tail?.key === key && tail.revision === undefined) tail.value = value
-  else {
-    const commandKey = crypto.randomUUID()
-    ownedDrafts.add(commandKey)
-    pending.push({ key, value, commandKey })
-  }
+  // Replace unsent typing with a fresh immutable record. Another tab may have
+  // restored the old command, so never change the bytes behind its identity.
+  if (
+    tail?.key === key &&
+    tail.revision === undefined &&
+    !tail.recoveryCommandKey
+  )
+    pending.pop()
+  const commandKey = crypto.randomUUID()
+  lastDraftTime = Math.max(Date.now(), lastDraftTime + 1)
+  ownedDrafts.add(commandKey)
+  pending.push({ key, value, commandKey, createdAt: lastDraftTime })
 }
 // Synchronous projection for existing controls. Server confirmation and device
 // recovery are separate; pending writes are always labeled unsaved.
@@ -228,23 +234,28 @@ export async function preservePendingAndReload() {
   running = true
   const token = generation,
     binding = identity
+  // Freeze this batch before the first await. Typing during recovery receives
+  // fresh commands and must remain pending after the snapshot is installed.
+  const recovering = [...pending]
+  for (const p of recovering) {
+    p.recoveryCommandKey ??= crypto.randomUUID()
+    p.recoveryValue ??= JSON.stringify({
+      key: p.key,
+      value: p.value,
+      expectedRevision: p.revision ?? 0,
+      createdAt: new Date().toISOString(),
+    })
+  }
+  persistDeviceDrafts()
   try {
-    for (const p of pending) {
-      p.recoveryCommandKey ??= crypto.randomUUID()
-      p.recoveryValue ??= JSON.stringify({
-        key: p.key,
-        value: p.value,
-        expectedRevision: p.revision ?? 0,
-        createdAt: new Date().toISOString(),
-      })
-      persistDeviceDrafts()
+    for (const p of recovering) {
       await persistProductState({
         data: {
           workspaceId: binding.workspaceId,
           sessionId: binding.sessionId,
-          commandKey: p.recoveryCommandKey,
+          commandKey: p.recoveryCommandKey!,
           key: `forge:pending-recovery:v1:${p.commandKey}`,
-          value: p.recoveryValue,
+          value: p.recoveryValue!,
           expectedRevision: 0,
         },
       })
@@ -258,16 +269,27 @@ export async function preservePendingAndReload() {
       snapshot.workspaceId !== binding.workspaceId
     )
       throw new Error("The active session changed.")
-    for (const p of pending)
+    for (const p of recovering)
       if (
         snapshot.entries.find(
           (entry) => entry.key === `forge:pending-recovery:v1:${p.commandKey}`
         )?.value !== p.recoveryValue
       )
         throw new Error("The saved recovery copy could not be verified.")
-    pending = []
+    const newer = pending.filter((p) => !recovering.includes(p))
+    pending = newer
     persistDeviceDrafts()
     initializeProductStorage(snapshot, false)
+    pending = newer
+    for (const p of pending) {
+      ownedDrafts.add(p.commandKey)
+      if (p.value === null) values.delete(p.key)
+      else values.set(p.key, p.value)
+    }
+    if (pending.length)
+      error = "Newer unsaved changes are retained. Review and retry saving."
+    persistDeviceDrafts()
+    notify()
     return true
   } catch (failure) {
     if (token === generation)
@@ -315,43 +337,91 @@ const deviceDraftSchema = z.object({
       revision: z.number().int().nonnegative().optional(),
       recoveryCommandKey: z.uuid().optional(),
       recoveryValue: z.string().optional(),
+      createdAt: z.number().finite().optional(),
     })
   ),
 })
-function readDeviceDrafts() {
-  if (!identity) return []
-  const raw = localStorage.getItem(draftJournalKey(identity))
-  if (!raw) return []
+const draftRecordPrefix = (scope: { userId: string; workspaceId: string }) =>
+  JSON.stringify([
+    "forge.unsaved-draft",
+    1,
+    scope.userId,
+    scope.workspaceId,
+  ]).slice(0, -1) + ","
+const draftRecordKey = (
+  scope: { userId: string; workspaceId: string },
+  commandKey: string
+) => draftRecordPrefix(scope) + JSON.stringify(commandKey) + "]"
+function parseDeviceDrafts(raw: string) {
   const journal = deviceDraftSchema.parse(JSON.parse(raw))
   if (
-    journal.userId !== identity.userId ||
+    journal.userId !== identity?.userId ||
     journal.workspaceId !== identity.workspaceId
   )
     throw new Error()
   return journal.pending
 }
+function legacyDeviceDrafts() {
+  if (!identity) return []
+  const raw = localStorage.getItem(draftJournalKey(identity))
+  return raw
+    ? parseDeviceDrafts(raw).map((p, index) => ({
+        ...p,
+        createdAt: p.createdAt ?? index + 1,
+      }))
+    : []
+}
+function readDeviceDrafts() {
+  if (!identity) return []
+  const records = new Map(legacyDeviceDrafts().map((p) => [p.commandKey, p]))
+  const keys = Array.from({ length: localStorage.length }, (_, index) =>
+    localStorage.key(index)
+  )
+  for (const key of keys) {
+    if (!key?.startsWith(draftRecordPrefix(identity))) continue
+    const parts = JSON.parse(key)
+    const commandKey = z.uuid().parse(parts[4])
+    const raw = localStorage.getItem(key)
+    if (!raw) continue
+    if (raw === "null") {
+      records.delete(commandKey)
+      continue
+    }
+    const entries = parseDeviceDrafts(raw)
+    if (entries.length !== 1 || entries[0].commandKey !== commandKey)
+      throw new Error()
+    records.set(commandKey, {
+      ...entries[0],
+      createdAt: entries[0].createdAt ?? 0,
+    })
+  }
+  return [...records.values()].sort((a, b) => a.createdAt - b.createdAt)
+}
 function persistDeviceDrafts() {
   if (!identity || typeof window === "undefined") return
   try {
     if (!journalWritable) throw new Error()
-    const key = draftJournalKey(identity)
-    // Preserve inaccessible drafts and other tabs' writes. Remove only receipts
-    // this tab owns, after their server acknowledgement.
-    const others = readDeviceDrafts().filter(
-      (item) => !ownedDrafts.has(item.commandKey)
-    )
-    const retained = [...others, ...pending]
-    if (retained.length)
+    const legacy = new Set(legacyDeviceDrafts().map((p) => p.commandKey))
+    const retained = new Set(pending.map((p) => p.commandKey))
+    // Separate command keys avoid a cross-tab read/modify/write race. Write new
+    // records before retiring superseded typing; quota failures preserve old data.
+    for (const p of pending)
       localStorage.setItem(
-        key,
+        draftRecordKey(identity, p.commandKey),
         JSON.stringify({
           version: 1,
           userId: identity.userId,
           workspaceId: identity.workspaceId,
-          pending: retained,
+          pending: [p],
         })
       )
-    else localStorage.removeItem(key)
+    for (const id of ownedDrafts)
+      if (!retained.has(id)) {
+        if (legacy.has(id))
+          localStorage.setItem(draftRecordKey(identity, id), "null")
+        else localStorage.removeItem(draftRecordKey(identity, id))
+        ownedDrafts.delete(id)
+      }
     deviceError = ""
   } catch {
     deviceError =
@@ -374,6 +444,7 @@ function restoreDeviceDrafts() {
       )
     })
     for (const item of pending) {
+      lastDraftTime = Math.max(lastDraftTime, item.createdAt ?? 0)
       ownedDrafts.add(item.commandKey)
       // Preserve the original baseline and retry identity through reloads.
       if (item.value === null) values.delete(item.key)

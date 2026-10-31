@@ -100,8 +100,20 @@ function RootLayout() {
     "/onboarding/workspace",
   ])
 
-  if (shelllessPaths.has(pathname)) {
-    return <Outlet key={pathname} />
+  if (shelllessPaths.has(pathname) || pathname.startsWith("/join/")) {
+    if (
+      (["/onboarding/workspace", "/accept-invitation"].includes(pathname) ||
+        pathname.startsWith("/join/")) &&
+      !identity
+    )
+      return (
+        <main role="status" className="p-6 text-sm">
+          Verifying your session…
+        </main>
+      )
+    return (
+      <Outlet key={`${pathname}:${identity?.userId}:${identity?.sessionId}`} />
+    )
   }
 
   if (!identity)

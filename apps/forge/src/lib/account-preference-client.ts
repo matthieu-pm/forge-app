@@ -250,6 +250,7 @@ export class AccountPreferenceClient {
       this.pending[key] = structuredClone(value)
     }
     this.publish("saving", "Saving preferences…")
+    this.retainDraft()
     void this.flush()
   }
   private async flush() {

@@ -30,6 +30,22 @@ function changesPreferenceIdentity(url: unknown) {
 
 export const authClient = createAuthClient({
   fetchOptions: {
+    // Better Fetch's HTTP hooks do not run when the transport rejects.
+    customFetchImpl: async (input, init) => {
+      try {
+        return await globalThis.fetch(input, init)
+      } catch (error) {
+        const url = input instanceof Request ? input.url : String(input)
+        const method =
+          init?.method ?? (input instanceof Request ? input.method : "GET")
+        if (method !== "GET" && changesPreferenceIdentity(url)) {
+          invalidateNavigationAuthState()
+          invalidatePreferenceSession("settled")
+          broadcastSessionInvalidation("settled")
+        }
+        throw error
+      }
+    },
     // Clear before and after mutations so an overlapping read cannot retain
     // the previous account or workspace after sign-in, sign-out or switching.
     onRequest: (request) => {

@@ -314,3 +314,30 @@ it("FOR-52 restores unsaved preference edits after reload without publishing or 
   await reloaded.retry()
   expect(f.save.mock.calls[1][0]).toEqual(original)
 })
+
+it("retains newer typing behind an unresolved preference command and retries the original identity first", async () => {
+  productStorage.clear()
+  const f = fixture()
+  let fail!: (error: Error) => void
+  f.save.mockImplementationOnce(
+    () =>
+      new Promise((_, reject) => {
+        fail = reject
+      })
+  )
+  const old = f.create(productStorage)
+  await old.refresh()
+  old.edit({ "agent.guidance": "first command" })
+  const original = f.save.mock.calls[0][0]
+  old.edit({ "agent.guidance": "newer unsaved typing" })
+  old.dispose()
+  fail(new Error("Connection lost"))
+  const recovered = f.create(productStorage)
+  expect(recovered.getSnapshot().values["agent.guidance"]).toBe(
+    "newer unsaved typing"
+  )
+  await recovered.retry()
+  await vi.waitFor(() => expect(recovered.getSnapshot().status).toBe("ready"))
+  expect(f.save.mock.calls[1][0]).toEqual(original)
+  expect(f.saved().values["agent.guidance"]).toBe("newer unsaved typing")
+})
