@@ -1,0 +1,87 @@
+{
+  "issue": "FOR-47",
+  "pullRequest": "https://github.com/matthieu-pm/forge-app/pull/29",
+  "date": "2026-10-31",
+  "initialReviewedHead": "2c0bbffc09868c3913e61c096cd0aba6eff8d825",
+  "base": "884445aab3a2e800f2fd4298bc581e182f0fa336",
+  "reviewedImplementation": "5d07ebc690c52d9606e376bdaaf0a2acdc6049c3",
+  "reviewAxes": {
+    "standards": {
+      "hardViolations": 0,
+      "initialOptionalSmells": 1,
+      "remainingFindings": 0
+    },
+    "specification": {
+      "initialFindings": 0,
+      "remainingFindings": 0
+    }
+  },
+  "resolvedFindings": [
+    {
+      "kind": "Optional duplicated-code smell",
+      "file": "apps/forge/src/components/issues/issue-detail.tsx",
+      "problem": "Shared subscriber display and legacy picker repeated the same member lookup and avatar rendering.",
+      "fix": "Render subscriberAvatars once and reuse it under both existing wrappers; behavior unchanged.",
+      "reviewerConfirmed": true
+    }
+  ],
+  "nonBlockingIntegrationNote": "When canonical issue team movement is implemented, reconcile pending engagement commands bound to the original team. Canonical movement currently throws and has no supported producer, so this is not a present FOR-47 defect. Never rewrite an uncertain command identity.",
+  "validation": {
+    "app": {
+      "passed": 2304,
+      "failed": 0,
+      "skipped": 398,
+      "command": "bunx vitest run --maxWorkers=4"
+    },
+    "postgresRegression": {
+      "passed": 113,
+      "failed": 1,
+      "total": 114,
+      "note": "The old FOR-139 sync-off assignment scenario encountered SQLSTATE 40P01: AccessShare/AccessExclusive table-lock deadlock on teams and team_members. This is outside the changed engagement code. Its exact targeted rerun passed. All 10 FOR-47 cases passed in the broad run."
+    },
+    "postgresRerun": {
+      "passed": 1,
+      "failed": 0,
+      "command": "FORGE_ISSUE_ENGAGEMENT_TEST_DATABASE_FILE=<isolated-config> bun run test:issues:postgres --testNamePattern 'preserves assignment for sync-off'"
+    },
+    "browser": {
+      "passed": true,
+      "environment": "Local production Node build, isolated acceptance database, three real Better Auth sessions",
+      "checks": [
+        "Bob in two independent browser contexts",
+        "Owned reactions and subscription reload",
+        "Unsubscribe preserves discussion and later mention producer event",
+        "Post-commit response loss and exact replay after reload",
+        "Mobile viewport",
+        "No page errors"
+      ],
+      "cleanup": {
+        "workspaces": 0,
+        "users": 0,
+        "receipts": 0
+      }
+    },
+    "workflow": {
+      "passed": 4,
+      "failed": 0
+    },
+    "build": "passed, including HTTP 200 root prerender and protected Workflow handler verification",
+    "typecheck": "passed",
+    "changedFileLint": {
+      "errors": 0,
+      "warnings": 0,
+      "scope": "Review cleanup in issue-detail.tsx"
+    },
+    "gitDiffCheck": "passed"
+  },
+  "previewGate": {
+    "requirement": "Both forge-app and forge-preview-runtime must be READY with successful checks for the final pushed head; verify live/ready endpoints before merge."
+  },
+  "release": {
+    "authorization": "Matthieu explicitly requested review fixes, merge, production deployment, release verification and FOR-47 update in this conversation.",
+    "migrationRequired": false,
+    "configurationChangeRequired": false,
+    "rollbackDeployment": "dpl_56FQAFZuAJgnHEaMMMa5Ug5dmMwt",
+    "status": "Awaiting final preview checks and merge; production evidence recorded in the Linear release comment."
+  }
+}
