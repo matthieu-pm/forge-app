@@ -40,6 +40,7 @@ import {
   canonicalIssueEpoch,
   canonicalIssueState,
   canonicalIssuesActive,
+  cycleDisplayName,
   projectDisplayName,
 } from "@/lib/canonical-issue-cache"
 import { normalizeReactionEmoji } from "@/lib/issue-engagement-contract"
@@ -1653,6 +1654,8 @@ export function IssueDetail({
                           "Former member"
                         )
                       if (field === "project") return projectDisplayName(value)
+                      if (field === "cycle")
+                        return cycleDisplayName(value, team.id)
                       if (field === "subscribers")
                         return value
                           .split(",")

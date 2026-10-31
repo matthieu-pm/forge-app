@@ -9,6 +9,8 @@ import type { ReactNode } from "react"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamCyclesSettings as CyclePreferences } from "@/lib/team-cycles"
 import { cycleWeekdays, nextCycleStart, useTeamCycles } from "@/lib/team-cycles"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import {
   Select,
@@ -161,14 +163,24 @@ function CycleChoice({
 }
 
 export function TeamCyclesSettings({ team }: { team: TeamSummary }) {
-  const { settings, ready, error, update } = useTeamCycles(team.id)
-  const disabled = !ready || !!error
-  const nextStart = nextCycleStart(settings.startDay).toLocaleDateString(
-    "en-US",
-    { month: "short", day: "numeric" }
-  )
-  function save(patch: Partial<CyclePreferences>) {
-    if (!update(patch))
+  const {
+    settings,
+    ready,
+    error,
+    update,
+    pending,
+    canManage,
+    cycles,
+    retry,
+    discard,
+  } = useTeamCycles(team.id)
+  const disabled = !ready || !!error || pending || !canManage
+  const nextStart = (
+    cycles.find((c) => c.state === "Upcoming")?.start ??
+    nextCycleStart(settings.startDay)
+  ).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+  async function save(patch: Partial<CyclePreferences>) {
+    if (!(await update(patch)))
       toast.error("Your cycle settings could not be saved. Please try again.")
   }
   return (
@@ -178,9 +190,9 @@ export function TeamCyclesSettings({ team }: { team: TeamSummary }) {
           <header className="forge-page-header forge-settings-header">
             <h1>Cycles</h1>
             <p className="mt-1.5 text-sm leading-[22px] text-muted-foreground">
-              Cycles create rhythm and focus with short, time-boxed planning
-              windows. Automations can create future cycles, carry over
-              unfinished work, and move issues in or out based on status.{" "}
+              Plan shared work in fixed cycle windows. Existing dates stay fixed
+              when you change the schedule. New settings apply to newly created
+              cycles.{" "}
               <a
                 href="https://linear.app/docs/use-cycles"
                 target="_blank"
@@ -195,6 +207,33 @@ export function TeamCyclesSettings({ team }: { team: TeamSummary }) {
           {error && (
             <p role="alert" className="mb-4 px-4 text-sm text-destructive">
               {error}
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={pending}
+                onClick={() => void retry()}
+              >
+                Retry saved change
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={pending}
+                onClick={discard}
+              >
+                Discard saved change
+              </Button>
+            </p>
+          )}
+          {pending && (
+            <p role="status" className="mb-4 text-sm text-muted-foreground">
+              Saving cycle settings…
+            </p>
+          )}
+          {ready && !canManage && (
+            <p className="mb-4 text-sm text-muted-foreground">
+              Workspace admins manage cycle settings. Members can plan issues in
+              existing cycles.
             </p>
           )}
           <section aria-label="Cycle settings" className="space-y-3">
@@ -223,6 +262,23 @@ export function TeamCyclesSettings({ team }: { team: TeamSummary }) {
             </div>
             {settings.enabled && (
               <div className={`${cardClass} divide-y divide-border/40`}>
+                <div className="flex min-h-16 items-center justify-between gap-4 py-4">
+                  <label htmlFor="cycle-timezone" className="text-sm">
+                    Timezone for new cycles
+                  </label>
+                  <Input
+                    id="cycle-timezone"
+                    aria-label="Cycle timezone"
+                    className="w-56"
+                    disabled={disabled}
+                    defaultValue={settings.timezone ?? "UTC"}
+                    key={settings.timezone}
+                    onBlur={(event) => {
+                      if (event.target.value !== settings.timezone)
+                        void save({ timezone: event.target.value })
+                    }}
+                  />
+                </div>
                 <CycleChoice
                   label="Cycle duration"
                   value={settings.duration}
@@ -247,7 +303,7 @@ export function TeamCyclesSettings({ team }: { team: TeamSummary }) {
                   onChange={(startDay) => save({ startDay })}
                 />
                 <CycleChoice
-                  label="Auto-create cycles"
+                  label="Upcoming cycles"
                   value={settings.futureCycles}
                   options={futureCounts}
                   disabled={disabled}
@@ -265,8 +321,7 @@ export function TeamCyclesSettings({ team }: { team: TeamSummary }) {
                 Cycle automation
               </h2>
               <p className="mt-1 text-sm leading-[22px] text-muted-foreground">
-                Capture all work in cycles by auto-adding issues to cycles based
-                on their status type
+                Automatic assignment and carryover are not available yet.
               </p>
             </div>
             <div className={`${cardClass} divide-y divide-border/40`}>
@@ -274,21 +329,21 @@ export function TeamCyclesSettings({ team }: { team: TeamSummary }) {
                 label="Active issues & due date"
                 description="Auto-add started, unstarted, and issues with due dates that match the current cycle, or the next if in cooldown"
                 checked={settings.activeIssues}
-                disabled={disabled || !settings.enabled}
+                disabled={true}
                 onChange={(activeIssues) => save({ activeIssues })}
               />
               <CycleToggle
                 label="Started issues"
                 description="Auto-add started issues to the current cycle, or the next if in cooldown"
                 checked={settings.startedIssues}
-                disabled={disabled || !settings.enabled}
+                disabled={true}
                 onChange={(startedIssues) => save({ startedIssues })}
               />
               <CycleToggle
                 label="Completed issues"
                 description="Auto-add completed issues to the current cycle, or the next if in cooldown"
                 checked={settings.completedIssues}
-                disabled={disabled || !settings.enabled}
+                disabled={true}
                 onChange={(completedIssues) => save({ completedIssues })}
               />
             </div>

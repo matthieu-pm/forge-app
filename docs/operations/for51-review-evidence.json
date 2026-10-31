@@ -105,5 +105,51 @@
     "configurationChangeRequired": false,
     "rollbackDeployment": "dpl_5SPWU9JL1TJLffe2C7b11bc4qC4L",
     "status": "Final reviewed implementation passed local acceptance; production deployment and hosted evidence recorded in Linear after release."
+  },
+  "integration": {
+    "base": "d732759fdc33863d00ae8c765368a84883bc3c85",
+    "reason": "FOR-55 / PR37 merged while final FOR-51 preview builds were running. GitHub rejected the first merge attempt due to a package script conflict.",
+    "resolution": "Kept both My issues and cycle acceptance scripts. Cycle number/timezone metadata, team-scoped history labels and canonical cycle imports combine with the authorization/read-generation fences. Independent integration re-review found no actionable issues.",
+    "app": {
+      "passed": 2382,
+      "failed": 0,
+      "skipped": 431,
+      "filesPassed": 296,
+      "filesSkipped": 22
+    },
+    "postgres": {
+      "passed": 27,
+      "failed": 0,
+      "skippedUnselected": 120,
+      "includes": ["FOR-51", "FOR-43", "FOR-47", "FOR-55"],
+      "database": "forge_cycles_acceptance",
+      "neonBranch": "br-autumn-union-za0opf1e",
+      "migrationReceipts": 61,
+      "migrationReplayApplied": 0
+    },
+    "acceptanceDatabaseNote": "The old history test database failed the exact-prefix migration guard; no receipt was changed or guard bypassed. Combined regression/browser acceptance used the already canonical 61-receipt cycle acceptance database instead.",
+    "browser": {
+      "passed": true,
+      "sameChecksAs": "validation.browser",
+      "database": "forge_cycles_acceptance",
+      "cleanup": {
+        "workspaces": 0,
+        "users": 0,
+        "receipts": 0
+      }
+    },
+    "workflow": {
+      "passed": 4,
+      "failed": 0
+    },
+    "typecheck": "passed",
+    "productionBuild": "passed",
+    "formatAndDiff": "passed",
+    "releaseBaseline": {
+      "productionSource": "d732759fdc33863d00ae8c765368a84883bc3c85",
+      "rollbackDeployment": "dpl_CbtdHbuBUr5LcSsNZ38tS4ktxfMR",
+      "migrationReceipts": 61,
+      "note": "FOR-55 owning release applied migration0060. FOR-51 has no additional schema or configuration change."
+    }
   }
 }

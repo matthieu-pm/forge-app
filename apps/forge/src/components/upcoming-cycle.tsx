@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { Link } from "@tanstack/react-router"
-import { addWeeks, format } from "date-fns"
+import { format } from "date-fns"
 import { toast } from "sonner"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { CycleIssue, CycleIssueDraft } from "@/lib/cycle-issues"
@@ -34,7 +34,7 @@ import { loadTemplates } from "@/lib/template-state"
 import { OptionSelect } from "@/components/ui/option-select"
 import { useCycleIssues } from "@/lib/cycle-issues"
 import { useCycleIssueView } from "@/lib/cycle-issue-view"
-import { nextCycleStart, useTeamCycles } from "@/lib/team-cycles"
+import { useTeamCycles } from "@/lib/team-cycles"
 import { initialTeamStatuses } from "@/lib/team-statuses"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { Button } from "@/components/ui/button"
@@ -69,19 +69,24 @@ const blankDraft = (status = "todo"): CycleIssueDraft => ({
 })
 export function UpcomingCycle({
   team,
-  cycleNumber = 1,
+  cycleNumber,
 }: {
   team: TeamSummary
   cycleNumber?: number
 }) {
-  const { settings, ready, error: settingsError } = useTeamCycles(team.id)
-  const start = addWeeks(
-    nextCycleStart(settings.startDay),
-    (cycleNumber - 1) * (settings.duration + settings.cooldown)
-  )
-  const end = addWeeks(start, settings.duration)
-  end.setDate(end.getDate() - 1)
-  const cycle = format(start, "yyyy-MM-dd")
+  const {
+    settings,
+    ready,
+    error: settingsError,
+    cycles,
+  } = useTeamCycles(team.id, cycleNumber)
+  const selectedCycle = cycleNumber
+    ? cycles.find((c) => c.number === cycleNumber)
+    : cycles.find((c) => c.state === "Upcoming")
+  const number = selectedCycle?.number ?? cycleNumber
+  const start = selectedCycle?.start ?? new Date()
+  const end = selectedCycle?.end ?? new Date()
+  const cycle = selectedCycle?.value ?? ""
   const cycleData = useCycleIssues(team.id, cycle)
   const { issues, records, error, save } = cycleData
   const view = useCycleIssueView(team.id, cycle)
@@ -195,15 +200,21 @@ export function UpcomingCycle({
   const chosen = selected.filter((id) =>
     visible.some((issue) => issue.id === id)
   )
-  const failure = settingsError ?? error ?? workflowError
-  const writable = ready && settings.enabled && !failure
+  const failure =
+    settingsError ??
+    error ??
+    workflowError ??
+    (ready && settings.enabled && !selectedCycle
+      ? "This cycle is unavailable. Choose a cycle from the team schedule."
+      : null)
+  const writable = ready && settings.enabled && !!selectedCycle && !failure
   const issueNumber = (issue: CycleIssue) =>
     `${team.identifier}-${issue.number}`
   const hasFilters = filters.rules.length > 0
   return (
     <main
       className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
-      aria-label={`Cycle ${cycleNumber}`}
+      aria-label={`Cycle ${number}`}
       onKeyDown={(event) => {
         if (
           event.defaultPrevented ||
@@ -242,7 +253,7 @@ export function UpcomingCycle({
           Cycles
         </Link>
         <span className="text-muted-foreground">›</span>
-        <h1 aria-label={`Cycle ${cycleNumber}`} className="min-w-0 font-medium">
+        <h1 aria-label={`Cycle ${number}`} className="min-w-0 font-medium">
           <Popover>
             <PopoverTrigger
               render={
@@ -255,35 +266,28 @@ export function UpcomingCycle({
               }
             >
               <IssueIcon name="clock" />
-              Cycle {cycleNumber}
+              Cycle {number}
               <IssueIcon name="down" />
             </PopoverTrigger>
             <PopoverContent className="w-60 gap-1 rounded-xl p-2">
-              {Array.from(
-                { length: Math.max(settings.futureCycles, cycleNumber) },
-                (_, index) => (
-                  <Link
-                    key={index}
-                    to="/teams/$teamSlug/cycle/$cycleNumber"
-                    params={{
-                      teamSlug: team.slug,
-                      cycleNumber: String(index + 1),
-                    }}
-                    aria-current={
-                      index + 1 === cycleNumber ? "page" : undefined
-                    }
-                    className="flex h-8 items-center gap-2 rounded-md px-2 text-xs hover:bg-muted"
-                  >
-                    <IssueIcon name="clock" />
-                    Cycle {index + 1}
-                    {index === 0 && (
-                      <span className="ml-auto text-muted-foreground">
-                        Upcoming
-                      </span>
-                    )}
-                  </Link>
-                )
-              )}
+              {cycles.slice(-100).map((item) => (
+                <Link
+                  key={item.id}
+                  to="/teams/$teamSlug/cycle/$cycleNumber"
+                  params={{
+                    teamSlug: team.slug,
+                    cycleNumber: String(item.number),
+                  }}
+                  aria-current={item.number === number ? "page" : undefined}
+                  className="flex h-8 items-center gap-2 rounded-md px-2 text-xs hover:bg-muted"
+                >
+                  <IssueIcon name="clock" />
+                  Cycle {item.number}
+                  <span className="ml-auto text-muted-foreground">
+                    {item.state}
+                  </span>
+                </Link>
+              ))}
             </PopoverContent>
           </Popover>
         </h1>
@@ -513,7 +517,7 @@ export function UpcomingCycle({
               className="absolute inset-0 z-10 flex min-h-0 flex-col overflow-y-auto border-l border-border/50 bg-background p-4 md:static md:w-72 md:shrink-0"
             >
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>{cycleNumber === 1 ? "Upcoming" : "Planned"}</span>
+                <span>{selectedCycle?.state}</span>
                 <Button
                   variant="ghost"
                   size="icon-xs"
@@ -523,28 +527,19 @@ export function UpcomingCycle({
                   <IssueIcon name="close" />
                 </Button>
               </div>
-              <h2 className="mt-3 text-sm font-medium">Cycle {cycleNumber}</h2>
+              <h2 className="mt-3 text-sm font-medium">Cycle {number}</h2>
               <p className="mt-2 text-xs text-muted-foreground">
-                {format(start, "MMM d")} → {format(end, "MMM d")}
+                {format(start, "MMM d, yyyy")} → {format(end, "MMM d, yyyy")} ·{" "}
+                {selectedCycle?.timezone}
               </p>
               <dl className="mt-6 grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <dt className="text-muted-foreground">Scope</dt>
-                  <dd className="mt-1">
-                    {query.enabled ? (query.page?.total ?? 0) : issues.length}
-                  </dd>
+                  <dd className="mt-1">{selectedCycle?.issueCount ?? 0}</dd>
                 </div>
                 <div>
                   <dt className="text-muted-foreground">Completed</dt>
-                  <dd className="mt-1">
-                    {
-                      issues.filter(
-                        (issue) =>
-                          statuses.find((status) => status.id === issue.status)
-                            ?.group === "completed"
-                      ).length
-                    }
-                  </dd>
+                  <dd className="mt-1">{selectedCycle?.completedCount ?? 0}</dd>
                 </div>
               </dl>
             </aside>
@@ -626,7 +621,7 @@ export function UpcomingCycle({
         <DialogContent className="sm:max-w-xl">
           <DialogTitle>Edit issue</DialogTitle>
           <DialogDescription>
-            {team.name} · Cycle {cycleNumber}
+            {team.name} · Cycle {number}
           </DialogDescription>
           <form
             className="space-y-4"
@@ -644,7 +639,7 @@ export function UpcomingCycle({
                 })
               } catch {
                 setSaveError(
-                  "The issue could not be saved on this device. Your draft is still here; try again."
+                  "The issue could not be saved. Your draft is still here; try again."
                 )
               }
             }}

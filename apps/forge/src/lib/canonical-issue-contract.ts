@@ -10,6 +10,7 @@ export const createCanonicalIssueSchema = z
     teamId: z.uuid(),
     commandKey: z.string().min(1).max(255),
     draft: issueDraftSchema.extend({
+      cycle: z.union([z.uuid(), z.iso.date(), z.literal("")]).default(""),
       title: z.string().trim().min(1).max(240),
       subIssues: issueDraftSchema.shape.subIssues
         .removeDefault()

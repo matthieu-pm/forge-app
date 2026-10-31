@@ -22,6 +22,16 @@ export const DATABASE_TARGETS = {
     ...STAGING.database,
     database: "forge_issue_creation_acceptance_v3",
   },
+  // Temporary production clone for the FOR-55 release; expires 1 November 2026 00:00 UTC.
+  "cycle-rehearsal": {
+    branchId: "br-red-darkness-za9grku0",
+    host: "ep-shiny-mouse-za64uyvj.c-2.eu-west-2.aws.neon.tech",
+    database: "neondb",
+  },
+  "cycle-acceptance": {
+    ...STAGING.database,
+    database: "forge_cycles_acceptance",
+  },
   "triage-acceptance": {
     ...STAGING.database,
     database: "forge_triage_acceptance",

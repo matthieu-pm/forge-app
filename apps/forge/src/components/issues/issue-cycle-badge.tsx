@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router"
 import { format, isValid, parseISO } from "date-fns"
-import { scheduledTeamCycles, useTeamCycles } from "@/lib/team-cycles"
+import { useTeamCycles } from "@/lib/team-cycles"
 
 export function IssueCycleBadge({
   team,
@@ -9,12 +9,10 @@ export function IssueCycleBadge({
   team: { id: string; slug: string }
   value: string
 }) {
-  const { settings, ready, error } = useTeamCycles(team.id)
+  const { settings, ready, error, cycles } = useTeamCycles(team.id)
   if (!ready || error || !settings.enabled || !value) return null
 
-  const cycle = scheduledTeamCycles(settings).find(
-    (item) => item.value === value
-  )
+  const cycle = cycles.find((item) => item.value === value)
   const date = parseISO(value)
   const label = cycle
     ? `Cycle ${cycle.number} · ${format(cycle.start, "MMM d")}–${format(cycle.end, "MMM d, yyyy")}`
