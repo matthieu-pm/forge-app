@@ -1,4 +1,6 @@
 import { createRouter as createTanStackRouter } from "@tanstack/react-router"
+import { registerProtectedRouteReset } from "./lib/protected-session"
+import { onPreferenceSessionInvalidated } from "./lib/preference-session-events"
 import { routeTree } from "./routeTree.gen"
 
 export function getRouter() {
@@ -11,6 +13,16 @@ export function getRouter() {
     defaultStaleTime: 30_000,
   })
 
+  if (typeof window !== "undefined") {
+    onPreferenceSessionInvalidated(() => {
+      for (const match of router.state.matches) match.abortController.abort()
+      router.clearCache()
+    })
+    registerProtectedRouteReset(async () => {
+      router.clearCache()
+      await router.invalidate({ sync: true })
+    })
+  }
   return router
 }
 

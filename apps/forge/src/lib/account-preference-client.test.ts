@@ -291,3 +291,53 @@ describe("FOR-127 shared preference client", () => {
     expect(client.getSnapshot().status).toBe("ready")
   })
 })
+
+it("FOR-52 restores unsaved preference edits after reload without publishing or crossing accounts", async () => {
+  productStorage.clear()
+  const f = fixture()
+  const old = f.create(productStorage)
+  await old.refresh()
+  f.save.mockRejectedValueOnce(new Error("Offline"))
+  old.edit({ "agent.guidance": "offline preference draft" })
+  await vi.waitFor(() => expect(old.getSnapshot().status).toBe("error"))
+  const original = f.save.mock.calls[0][0]
+  old.dispose()
+  const reloaded = f.create(productStorage)
+  expect(reloaded.getSnapshot()).toMatchObject({
+    status: "error",
+    pending: true,
+    values: { "agent.guidance": "offline preference draft" },
+  })
+  expect(f.save).toHaveBeenCalledTimes(1)
+  const other = fixture("bob").create(productStorage)
+  expect(other.getSnapshot().values["agent.guidance"]).toBeUndefined()
+  await reloaded.retry()
+  expect(f.save.mock.calls[1][0]).toEqual(original)
+})
+
+it("retains newer typing behind an unresolved preference command and retries the original identity first", async () => {
+  productStorage.clear()
+  const f = fixture()
+  let fail!: (error: Error) => void
+  f.save.mockImplementationOnce(
+    () =>
+      new Promise((_, reject) => {
+        fail = reject
+      })
+  )
+  const old = f.create(productStorage)
+  await old.refresh()
+  old.edit({ "agent.guidance": "first command" })
+  const original = f.save.mock.calls[0][0]
+  old.edit({ "agent.guidance": "newer unsaved typing" })
+  old.dispose()
+  fail(new Error("Connection lost"))
+  const recovered = f.create(productStorage)
+  expect(recovered.getSnapshot().values["agent.guidance"]).toBe(
+    "newer unsaved typing"
+  )
+  await recovered.retry()
+  await vi.waitFor(() => expect(recovered.getSnapshot().status).toBe("ready"))
+  expect(f.save.mock.calls[1][0]).toEqual(original)
+  expect(f.saved().values["agent.guidance"]).toBe("newer unsaved typing")
+})

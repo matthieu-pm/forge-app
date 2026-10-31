@@ -39,6 +39,7 @@ export function ProductStateProvider({
         const snapshot = await loadProductState()
         if (!active) return
         if (
+          snapshot.userId !== identity.userId ||
           snapshot.workspaceId !== identity.workspaceId ||
           snapshot.sessionId !== identity.sessionId
         )
@@ -77,7 +78,7 @@ export function ProductStateProvider({
       window.removeEventListener("focus", focus)
       window.removeEventListener("beforeunload", beforeUnload)
     }
-  }, [identity.workspaceId, identity.sessionId])
+  }, [identity.userId, identity.workspaceId, identity.sessionId])
   if (!ready)
     return (
       <main className="p-6 text-sm" role={error ? "alert" : "status"}>
@@ -89,11 +90,20 @@ export function ProductStateProvider({
     )
   return (
     <>
-      {(status.pending > 0 || migration.length > 0) && (
+      {(status.pending > 0 || status.deviceError || migration.length > 0) && (
         <aside
           role={status.error ? "alert" : "status"}
           className="relative z-[70] border-b border-border bg-muted p-2 text-xs"
         >
+          {status.deviceError && <p role="alert">{status.deviceError}</p>}
+          {status.pending > 0 && (
+            <p>
+              Unsaved changes — not confirmed by the server.{" "}
+              {status.deviceError
+                ? ""
+                : "A recovery draft is kept on this device."}
+            </p>
+          )}
           {status.error ||
             (status.pending
               ? "Saving changes…"

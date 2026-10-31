@@ -15,6 +15,8 @@ import type { ReactNode, RefObject } from "react"
 import type { IssueDraft, TeamIssue } from "@/lib/team-issues"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
+import { stableJson } from "@/lib/stable-json"
+import { productStorage } from "@/lib/product-storage"
 import {
   canonicalIssueRows,
   canonicalIssuesActive,
@@ -30,7 +32,9 @@ import {
   blankIssueDraft,
   getDefaultIssueStatus,
   getIssueStatuses,
+  issueDraftSchema,
   issuePriorities,
+  issueSchema,
   saveIssueDraft,
   saveTeamIssue,
   writeIssueStore,
@@ -85,14 +89,37 @@ export function IssueComposer({
   presentation?: "dialog" | "inline"
   onDraftChange?: (draft: IssueDraft, team: TeamSummary) => void
 }) {
+  const editRecoveryKey = issueId
+    ? `forge:team-issue-composer-edit:v1:${team.id}:${issueId}`
+    : null
+  const [recoveredEdit] = useState(() => {
+    try {
+      const raw = JSON.parse(
+        editRecoveryKey
+          ? (productStorage.getItem(editRecoveryKey) ?? "null")
+          : "null"
+      )
+      return raw
+        ? {
+            draft: issueDraftSchema.parse(raw.draft),
+            baseline: raw.baseline
+              ? issueSchema.parse(raw.baseline)
+              : undefined,
+          }
+        : undefined
+    } catch {
+      return undefined
+    }
+  })
   const editBaseline = useRef(
-    issueId
-      ? canonicalIssueRows(team.id).find((r) => r.issue.id === issueId)?.issue
-      : undefined
+    recoveredEdit?.baseline ??
+      (issueId
+        ? canonicalIssueRows(team.id).find((r) => r.issue.id === issueId)?.issue
+        : undefined)
   )
   const [targetTeam, setTargetTeam] = useState(team)
   const { data: session } = authClient.useSession()
-  const [draft, setDraft] = useState(initial)
+  const [draft, setDraft] = useState(recoveredEdit?.draft ?? initial)
   const draftChange = useRef(onDraftChange)
   useEffect(() => {
     draftChange.current = onDraftChange
@@ -103,7 +130,20 @@ export function IssueComposer({
   const [statuses, setStatuses] = useState(initialTeamStatuses().statuses)
   const [saving, setSaving] = useState(false)
   const saveLock = useRef(false)
+  const localDraftId = useRef(draftId ?? crypto.randomUUID())
+  const localDraftTeam = useRef(team.id)
+  const intentKey = `forge:issue-composer-intent:v1:${localDraftId.current}`
   const pendingCreate = useRef<{ signature: string; key: string } | null>(null)
+  const [intentLoaded] = useState(() => {
+    try {
+      pendingCreate.current = JSON.parse(
+        productStorage.getItem(intentKey) ?? "null"
+      )
+    } catch {
+      /* Keep the original recovery copy. */
+    }
+    return true
+  })
   const [error, setError] = useState("")
   const [sharedLabels, setSharedLabels] = useState<Array<string> | null>(null)
   const [expanded, setExpanded] = useState(false)
@@ -164,7 +204,42 @@ export function IssueComposer({
   }
   const dirty =
     JSON.stringify(draft) !== JSON.stringify(initial) ||
-    Boolean(draft.title || draft.description)
+    (!issueId && Boolean(draft.title || draft.description))
+  useEffect(() => {
+    if (!dirty || !intentLoaded) return
+    try {
+      if (editRecoveryKey) {
+        productStorage.setItem(
+          editRecoveryKey,
+          JSON.stringify({ draft, baseline: editBaseline.current })
+        )
+        return
+      }
+      if (localDraftTeam.current !== targetTeam.id) {
+        writeIssueStore(localDraftTeam.current, (store) => ({
+          ...store,
+          drafts: store.drafts.filter((d) => d.id !== localDraftId.current),
+        }))
+        localDraftTeam.current = targetTeam.id
+      }
+      saveIssueDraft(targetTeam.id, draft, localDraftId.current)
+    } catch {
+      setError(
+        "This draft is only in this tab. Keep it open until device storage is available."
+      )
+    }
+  }, [draft, targetTeam.id, dirty, editRecoveryKey, intentLoaded])
+  function removeRecoveryDraft() {
+    if (editRecoveryKey) {
+      productStorage.removeItem(editRecoveryKey)
+      return
+    }
+    writeIssueStore(localDraftTeam.current, (store) => ({
+      ...store,
+      drafts: store.drafts.filter((d) => d.id !== localDraftId.current),
+    }))
+    productStorage.removeItem(intentKey)
+  }
   function requestClose() {
     if (attaching || saveLock.current) return
     if (dirty) setConfirmClose(true)
@@ -172,7 +247,8 @@ export function IssueComposer({
   }
   function saveDraft() {
     try {
-      saveIssueDraft(targetTeam.id, draft, draftId)
+      saveIssueDraft(targetTeam.id, draft, localDraftId.current)
+      if (editRecoveryKey) productStorage.removeItem(editRecoveryKey)
       onDraftSaved()
       onClose()
     } catch {
@@ -180,6 +256,31 @@ export function IssueComposer({
         "Your draft could not be saved. Your text is still here. Please try again."
       )
       setConfirmClose(false)
+    }
+  }
+  function restoreUnconfirmedDraft() {
+    try {
+      if (!pendingCreate.current) return
+      const [teamId, original] = JSON.parse(pendingCreate.current.signature)
+      const originalTeam = [team, ...(directory?.teams ?? [])].find(
+        (item) => item.id === teamId
+      )
+      if (!originalTeam) throw new Error()
+      // Preserve subsequent typing separately before restoring the exact retry.
+      if (
+        stableJson([targetTeam.id, draft]) !==
+        pendingCreate.current.signature
+      )
+        saveIssueDraft(targetTeam.id, draft)
+      setTargetTeam(originalTeam)
+      setDraft(issueDraftSchema.parse(original))
+      setError(
+        "Original unconfirmed draft restored. Retry to check its outcome; newer edits are kept as a separate draft."
+      )
+    } catch {
+      setError(
+        "The original draft could not be restored. Its recovery copy is preserved."
+      )
     }
   }
   async function submit() {
@@ -192,9 +293,16 @@ export function IssueComposer({
     saveLock.current = true
     setSaving(true)
     try {
-      const signature = JSON.stringify([targetTeam.id, draft])
-      if (pendingCreate.current?.signature !== signature)
-        pendingCreate.current = { signature, key: crypto.randomUUID() }
+      const signature = stableJson([targetTeam.id, draft])
+      if (
+        pendingCreate.current &&
+        pendingCreate.current.signature !== signature
+      )
+        throw new Error(
+          "Retry the original draft before changing a creation whose outcome is unconfirmed."
+        )
+      pendingCreate.current ??= { signature, key: crypto.randomUUID() }
+      productStorage.setItem(intentKey, JSON.stringify(pendingCreate.current))
       const issue =
         canonicalIssuesActive() && !issueId
           ? await createSharedTeamIssue(targetTeam.id, draft, {
@@ -206,7 +314,9 @@ export function IssueComposer({
               draftId,
               creator: session?.user.id,
             })
+      if (!mounted.current) return
       pendingCreate.current = null
+      removeRecoveryDraft()
       if (!issueId && draftId)
         writeIssueStore(targetTeam.id, (store) => ({
           ...store,
@@ -214,6 +324,7 @@ export function IssueComposer({
         }))
       onSaved(issue, targetTeam)
       if (createMore && !issueId) {
+        localDraftId.current = crypto.randomUUID()
         setDraft({
           ...blankIssueDraft(draft.status),
           priority: draft.priority,
@@ -374,6 +485,12 @@ export function IssueComposer({
           }
         }}
       >
+        {dirty && (
+          <p role="status" className="text-xs text-muted-foreground">
+            Unpublished {issueId ? "edit draft" : "draft"} — kept for recovery
+            on this device.
+          </p>
+        )}
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-1">
             <IssuePicker
@@ -917,10 +1034,24 @@ export function IssueComposer({
             ))}
           </div>
         )}
-        {error && (
-          <p role="alert" className="mt-3 px-1 text-xs text-destructive">
-            {error}
-          </p>
+        {(error ||
+          (pendingCreate.current &&
+            pendingCreate.current.signature !==
+              stableJson([targetTeam.id, draft]))) && (
+          <div className="mt-3 px-1 text-xs text-destructive">
+            {error && <p role="alert">{error}</p>}
+            {pendingCreate.current &&
+              pendingCreate.current.signature !==
+                stableJson([targetTeam.id, draft]) && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={restoreUnconfirmedDraft}
+                >
+                  Restore original draft to retry
+                </Button>
+              )}
+          </div>
         )}
         <div className="mt-6 flex items-center justify-between gap-3">
           <Button
@@ -981,7 +1112,13 @@ export function IssueComposer({
             <Button variant="ghost" onClick={() => setConfirmClose(false)}>
               Keep editing
             </Button>
-            <Button variant="secondary" onClick={onClose}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                removeRecoveryDraft()
+                onClose()
+              }}
+            >
               Discard
             </Button>
             <Button

@@ -22,6 +22,7 @@ import { WorkspaceEmojiProvider } from "@/components/custom-emoji-provider"
 import {
   AccountPreferenceProvider,
   PreferenceSyncStatus,
+  useProtectedIdentity,
 } from "@/components/account-preference-provider"
 import { IssueDefinitionProvider } from "@/components/issue-definition-provider"
 import { PersonalPreferenceEffects } from "@/components/personal-preference-effects"
@@ -86,6 +87,7 @@ export const Route = createRootRoute({
 })
 
 function RootLayout() {
+  const identity = useProtectedIdentity()
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
@@ -98,9 +100,28 @@ function RootLayout() {
     "/onboarding/workspace",
   ])
 
-  if (shelllessPaths.has(pathname)) {
-    return <Outlet key={pathname} />
+  if (shelllessPaths.has(pathname) || pathname.startsWith("/join/")) {
+    if (
+      (["/onboarding/workspace", "/accept-invitation"].includes(pathname) ||
+        pathname.startsWith("/join/")) &&
+      !identity
+    )
+      return (
+        <main role="status" className="p-6 text-sm">
+          Verifying your session…
+        </main>
+      )
+    return (
+      <Outlet key={`${pathname}:${identity?.userId}:${identity?.sessionId}`} />
+    )
   }
+
+  if (!identity)
+    return (
+      <main role="status" className="p-6 text-sm">
+        Verifying your session…
+      </main>
+    )
 
   const hasStandaloneTeamSettingsLayout =
     pathname.startsWith("/settings/teams/")

@@ -1,5 +1,6 @@
 import { notFound, redirect } from "@tanstack/react-router"
 import { createServerFn } from "@tanstack/react-start"
+import { protectedSessionEpoch } from "@/lib/protected-session"
 import { createTimedRequestCache } from "@/lib/timed-request-cache"
 import { getTeamRouteState } from "@/lib/team-state"
 
@@ -17,15 +18,18 @@ export const getAuthState = createServerFn({ method: "GET" }).handler(
 // This cache only drives navigation; every protected server request still
 // checks the current session and membership independently.
 const getCachedClientAuthState = createTimedRequestCache(getAuthState, 30_000)
+let cachedAuthEpoch = protectedSessionEpoch()
 
 export function invalidateNavigationAuthState() {
   getCachedClientAuthState.clear()
+  cachedAuthEpoch = protectedSessionEpoch()
 }
 
 export function getNavigationAuthState() {
-  return typeof window === "undefined"
-    ? getAuthState()
-    : getCachedClientAuthState()
+  if (typeof window === "undefined") return getAuthState()
+  if (cachedAuthEpoch !== protectedSessionEpoch())
+    invalidateNavigationAuthState()
+  return getCachedClientAuthState()
 }
 
 function redirectTarget(pathname: string, search = "", hash = "") {
