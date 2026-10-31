@@ -13,6 +13,7 @@ import {
   commentFromText,
   commentPlainText,
   validateCommentDocument,
+  validateCommentDraft,
 } from "@/lib/comment-rich-text"
 import {
   canonicalIssueEpoch,
@@ -90,10 +91,31 @@ function CommentComposer({
   const [retry, setRetry] = useState<IssueCommentCommand | undefined>(
     initial.command
   )
-  const [review, setReview] = useState(Boolean(initial.requiresReview))
+  const savedVersion =
+    initial.expectedVersion ?? initial.command?.expectedVersion
+  const [baselineVersion, setBaselineVersion] = useState<number>(
+    Number.isInteger(savedVersion) && savedVersion >= 0
+      ? savedVersion
+      : (comment?.version ?? 0)
+  )
+  const [review, setReview] = useState(
+    Boolean(initial.requiresReview) ||
+      Boolean(
+        comment && initial.document !== undefined && savedVersion === undefined
+      )
+  )
+  const [recovery, setRecovery] = useState(() => {
+    if (initial.document === undefined) return false
+    try {
+      validateCommentDraft(initial.document)
+      return false
+    } catch {
+      return true
+    }
+  })
   const [document, setDocument] = useState<CommentNode>(() => {
     try {
-      return validateCommentDocument(initial.document ?? comment?.document)
+      return validateCommentDraft(initial.document ?? comment?.document)
     } catch {
       return commentFromText(comment?.body ?? "")
     }
@@ -149,16 +171,21 @@ function CommentComposer({
     editor?.setEditable(!pending && !retry)
   }, [editor, pending, retry])
   useEffect(() => {
-    if (busy.current || retry) return
+    if (busy.current || retry || recovery) return
     const timer = setTimeout(() => {
       if (!busy.current && epoch === canonicalIssueEpoch())
         productStorage.setItem(
           key,
-          JSON.stringify({ issueId, document, requiresReview: review })
+          JSON.stringify({
+            issueId,
+            document,
+            expectedVersion: baselineVersion,
+            requiresReview: review,
+          })
         )
     }, 350)
     return () => clearTimeout(timer)
-  }, [document, key, issueId, epoch, review, retry])
+  }, [document, key, issueId, epoch, review, retry, recovery, baselineVersion])
   useEffect(() => {
     if (!mentionOpen) return
     setTargets([])
@@ -193,7 +220,8 @@ function CommentComposer({
     if (
       busy.current ||
       review ||
-      comment?.deleted ||
+      recovery ||
+      (comment?.deleted && !retry) ||
       epoch !== canonicalIssueEpoch()
     )
       return
@@ -206,7 +234,7 @@ function CommentComposer({
         action: comment ? "edit" : "create",
         commentId: comment?.id ?? crypto.randomUUID(),
         parentId,
-        expectedVersion: comment?.version ?? 0,
+        expectedVersion: baselineVersion,
         document: validateCommentDocument(document),
       }
     } catch (failure) {
@@ -217,8 +245,12 @@ function CommentComposer({
     setPending(true)
     setError("")
     setRetry(input)
+    setMentionOpen(false)
     try {
-      const result = await sendIssueComment(input, key, { document })
+      const result = await sendIssueComment(input, key, {
+        document,
+        expectedVersion: baselineVersion,
+      })
       if (epoch !== canonicalIssueEpoch()) return
       setRetry(undefined)
       if (result.status === "rejected") {
@@ -256,6 +288,40 @@ function CommentComposer({
   shortcut.current = () => {
     void submit()
   }
+  if (recovery)
+    return (
+      <div className="space-y-2 rounded-lg border border-border p-3">
+        <p role="alert" className="text-sm">
+          This saved draft contains unsupported content. Its original data is
+          retained below.
+        </p>
+        <textarea
+          aria-label="Saved draft recovery"
+          readOnly
+          value={JSON.stringify(initial.document, null, 2)}
+          className="min-h-32 w-full rounded border border-border bg-transparent p-2 text-xs"
+        />
+        <Button
+          size="sm"
+          disabled={Boolean(retry)}
+          onClick={() => {
+            let replacement: CommentNode
+            try {
+              replacement = validateCommentDraft(comment?.document)
+            } catch {
+              replacement = commentFromText(comment?.body ?? "")
+            }
+            editor?.commands.setContent(replacement)
+            setDocument(replacement)
+            setBaselineVersion(comment?.version ?? 0)
+            setReview(false)
+            setRecovery(false)
+          }}
+        >
+          Start a new draft
+        </Button>
+      </div>
+    )
   return (
     <div className="group/composer rounded-lg border border-border/50 bg-muted/40 p-2">
       <div
@@ -303,6 +369,8 @@ function CommentComposer({
           <input
             aria-label="Find people to mention"
             value={query}
+            maxLength={100}
+            disabled={pending || Boolean(retry)}
             onChange={(e) => setQuery(e.target.value)}
             className="w-full bg-transparent p-1 text-sm outline-none"
             placeholder="Find people…"
@@ -315,8 +383,10 @@ function CommentComposer({
               <button
                 key={p.id}
                 type="button"
+                disabled={pending || Boolean(retry)}
                 className="block w-full rounded p-1 text-left text-sm hover:bg-muted"
                 onClick={() => {
+                  if (busy.current || retry) return
                   editor
                     ?.chain()
                     .focus()
@@ -361,6 +431,7 @@ function CommentComposer({
             variant="outline"
             disabled={comment?.deleted}
             onClick={() => {
+              setBaselineVersion(comment?.version ?? 0)
               setReview(false)
               setError("")
             }}
@@ -385,7 +456,7 @@ function CommentComposer({
           disabled={
             pending ||
             review ||
-            comment?.deleted ||
+            (comment?.deleted && !retry) ||
             (!retry && !commentPlainText(document).trim())
           }
           aria-label={

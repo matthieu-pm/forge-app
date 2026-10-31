@@ -41,13 +41,14 @@ const blocks = new Set([
 ])
 
 /** Closed JSON vocabulary: no HTML, arbitrary attributes, embeds or remote assets. */
-export function validateCommentDocument(value: unknown): CommentNode {
+function parseCommentDocument(value: unknown, draft: boolean): CommentNode {
   let count = 0,
     length = 0
+  const maximumText = draft ? 20_000_000 : 10000
   function visit(raw: unknown, depth: number, parent: string): CommentNode {
     if (
-      ++count > 2000 ||
-      depth > 12 ||
+      ++count > (draft ? 100000 : 2000) ||
+      depth > (draft ? 64 : 12) ||
       !raw ||
       typeof raw !== "object" ||
       Array.isArray(raw)
@@ -152,17 +153,24 @@ export function validateCommentDocument(value: unknown): CommentNode {
         )
       }
     }
-    if (length > 10000)
+    if (length > maximumText)
       throw new Error("Comments can contain up to 10,000 characters.")
     return result
   }
   const doc = visit(value, 0, "root")
   const plain = commentPlainText(doc)
-  if (plain.length > 10000)
+  if (plain.length > maximumText)
     throw new Error("Comments can contain up to 10,000 characters.")
-  if (!plain.trim()) throw new Error("Write a comment before submitting.")
+  if (!draft && !plain.trim())
+    throw new Error("Write a comment before submitting.")
   return doc
 }
+export const validateCommentDocument = (value: unknown): CommentNode =>
+  parseCommentDocument(value, false)
+// Drafts use the same safe node/link vocabulary, with room to recover content
+// that cannot yet be published (including empty or oversized editor documents).
+export const validateCommentDraft = (value: unknown): CommentNode =>
+  parseCommentDocument(value, true)
 export const commentDocumentSchema = z.unknown().transform((value, ctx) => {
   try {
     return validateCommentDocument(value)

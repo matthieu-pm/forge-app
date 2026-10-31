@@ -27,6 +27,7 @@ import { IssueLabelPicker } from "./issue-label-picker"
 import { IssueCyclePicker } from "./issue-cycle-picker"
 import { IssueRelationships } from "./issue-relationships"
 import { useIssueLifecycle } from "./issue-lifecycle"
+import { useCommentModeration } from "./use-comment-moderation"
 import type { IssueDraft, TeamIssue } from "@/lib/team-issues"
 import type { TeamStatus } from "@/lib/team-statuses"
 import type { TeamSummary } from "@/lib/team-contract"
@@ -40,7 +41,7 @@ import {
 } from "@/lib/canonical-issue-cache"
 import { productStorage } from "@/lib/product-storage"
 import { loadCommentMentions } from "@/lib/issue-comment-state"
-import { commentDraftKey, sendIssueComment } from "@/lib/issue-comment-client"
+import { commentDraftKey } from "@/lib/issue-comment-client"
 import { createSharedTeamIssue } from "@/lib/canonical-issue-client"
 import { usePreferenceGroup } from "@/components/account-preference-provider"
 import { issuePullRequest, issuePullRequests } from "@/lib/issue-pull-requests"
@@ -164,8 +165,7 @@ export function IssueDetail({
   const shared = canonicalIssuesActive()
   const lifecycle = useIssueLifecycle()
   const [canModerate, setCanModerate] = useState(false)
-  const [commentActionPending, setCommentActionPending] = useState(false)
-  const commentActionBusy = useRef(false)
+  const commentModeration = useCommentModeration(team.id, issue.id)
   const commentEpoch = canonicalIssueEpoch()
   useEffect(() => {
     setCanModerate(false)
@@ -189,45 +189,6 @@ export function IssueDetail({
       cancelled = true
     }
   }, [shared, issue.id, commentEpoch])
-  async function sharedCommentAction(
-    comment: Comment,
-    action: "delete" | "restore"
-  ) {
-    if (commentActionBusy.current) return
-    const key = commentDraftKey(issue.id, `action-${comment.id}`)
-    let saved
-    try {
-      saved = JSON.parse(productStorage.getItem(key) ?? "null")
-    } catch {
-      /* No saved command. */
-    }
-    const input = saved?.command ?? {
-      commandKey: crypto.randomUUID(),
-      teamId: team.id,
-      issueId: issue.id,
-      commentId: comment.id,
-      parentId: "",
-      expectedVersion: comment.version ?? 0,
-      action,
-    }
-    commentActionBusy.current = true
-    setCommentActionPending(true)
-    try {
-      const result = await sendIssueComment(input, key, {})
-      if (commentEpoch !== canonicalIssueEpoch()) return
-      if (result.status === "conflict")
-        toast.error("This comment changed. Review it before trying again.")
-      if (result.status === "rejected") toast.error(result.message)
-    } catch {
-      if (commentEpoch === canonicalIssueEpoch())
-        toast.error(
-          "The change could not be confirmed. Retry to check its outcome."
-        )
-    } finally {
-      commentActionBusy.current = false
-      if (commentEpoch === canonicalIssueEpoch()) setCommentActionPending(false)
-    }
-  }
   const [deleteOpen, setDeleteOpen] = useState(false)
   async function changeLifecycle(action: "delete" | "archive") {
     if (
@@ -658,10 +619,10 @@ export function IssueDetail({
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuItem
-                        disabled={commentActionPending}
+                        disabled={commentModeration.pending}
                         onClick={() =>
                           shared
-                            ? void sharedCommentAction(
+                            ? void commentModeration.change(
                                 comment,
                                 comment.deleted ? "restore" : "delete"
                               )
