@@ -57,11 +57,7 @@
       "passed": 19,
       "failed": 0,
       "skippedUnselected": 120,
-      "includes": [
-        "FOR-51",
-        "FOR-43",
-        "FOR-47"
-      ],
+      "includes": ["FOR-51", "FOR-43", "FOR-47"],
       "command": "cd apps/forge && FORGE_MY_ISSUES_TEST_DATABASE_FILE=/secure/path/connection.json bun x vitest run src/application/issues/issues.postgres.test.ts -t 'FOR-51|FOR-43|FOR-47'",
       "cleanup": "Suite asserted zero fixture users, workspaces, issues, preferences, receipts, audit and outbox records"
     },
@@ -73,10 +69,7 @@
     "typecheck": {
       "workspace": "passed",
       "finalApp": "passed",
-      "commands": [
-        "bun run typecheck",
-        "cd apps/forge && bun run typecheck"
-      ]
+      "commands": ["bun run typecheck", "cd apps/forge && bun run typecheck"]
     },
     "changedFileLint": {
       "errors": 0,
@@ -120,7 +113,5 @@
     "deployed": false,
     "status": "Implemented and locally accepted; GitHub PR prepared for review."
   },
-  "screenshots": [
-    "docs/qa/my-issues/for51-personal-queue.png"
-  ]
+  "screenshots": ["docs/qa/my-issues/for51-personal-queue.png"]
 }
