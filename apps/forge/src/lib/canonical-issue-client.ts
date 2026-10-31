@@ -14,6 +14,7 @@ import {
   scheduledTeamCycles,
   teamCyclesStorageKey,
 } from "./team-cycles"
+import { finishCreatedIssueFiles } from "./issue-file-client"
 import type { CreateCanonicalIssue } from "./canonical-issue-contract"
 import type { CanonicalSnapshot } from "./canonical-issue-cache"
 import type { IssueDraft, TeamIssue } from "./issue-record-contract"
@@ -119,7 +120,7 @@ export async function createSharedTeamIssue(
     retained?.data ??
     structuredClone({
       teamId,
-      draft,
+      draft: options.legacyId ? draft : { ...draft, attachments: [] },
       ...options,
       ...prepareIssueRelations(teamId, draft),
       workspaceId: before.workspaceId,
@@ -138,9 +139,20 @@ export async function createSharedTeamIssue(
     throw new Error(
       "The active session changed. Reload to view the saved issue."
     )
-  // A fresh authoritative snapshot includes imported projects/cycles as well.
+  // Refresh related metadata before file commands merge their final issue rows.
   await refreshCanonicalIssues(before)
   mergeCanonicalIssueRecords(result.records)
+  if (!options.legacyId && draft.attachments?.length) {
+    await finishCreatedIssueFiles(
+      teamId,
+      result.issue.id,
+      draft.attachments,
+      options.commandKey
+    )
+  }
   preparedCreates.delete(options.commandKey)
-  return result.issue
+  return (
+    canonicalIssueState()?.records.find((r) => r.issue.id === result.issue.id)
+      ?.issue ?? result.issue
+  )
 }

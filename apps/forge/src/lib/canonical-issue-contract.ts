@@ -29,6 +29,11 @@ export const createCanonicalIssueSchema = z
   .strict()
   .refine(
     (input) =>
+      !(input.draft.attachments ?? []).some((f) => f.fileId || !f.data),
+    "Upload durable files after creating the issue."
+  )
+  .refine(
+    (input) =>
       (input.draft.attachments ?? []).reduce(
         (sum, file) => sum + (file.data.split(",")[1]?.length ?? 0) * 0.75,
         0

@@ -717,6 +717,7 @@ export async function createCanonicalIssue(
       const properties = {
         ...input.draft,
         legacyFingerprint,
+        attachments: input.legacyId ? input.draft.attachments : [],
         assignee: assignee ?? "",
         subIssues: [],
         activity: initialAssignmentActivity(current, assignee, now),

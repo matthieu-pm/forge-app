@@ -428,6 +428,10 @@ export const resourceFiles = pgTable(
       .references(() => users.id),
     issueId: uuid("issue_id"),
     documentId: uuid("document_id"),
+    attachmentState: text("attachment_state").$type<
+      "unbound" | "attached" | "detached"
+    >(),
+    commentId: uuid("comment_id"),
     name: text("name").notNull(),
     contentType: text("content_type").notNull(),
     sizeBytes: integer("size_bytes").notNull(),
@@ -439,6 +443,14 @@ export const resourceFiles = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
+    check(
+      "resource_files_attachment_state",
+      sql`${t.attachmentState} IS NULL OR (${t.issueId} IS NOT NULL AND ${t.attachmentState} IN ('unbound','attached','detached'))`
+    ),
+    check(
+      "resource_files_comment_owner",
+      sql`${t.commentId} IS NULL OR (${t.attachmentState} IN ('attached','detached') AND ${t.issueId} IS NOT NULL)`
+    ),
     unique("resource_files_storage_reference_unique").on(t.storageReference),
     check(
       "resource_files_one_resource",

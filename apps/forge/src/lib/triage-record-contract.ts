@@ -20,12 +20,19 @@ export const triageDraftSchema = z.object({
     .array(
       z.object({
         id: z.string().optional(),
+        fileId: z.uuid().optional(),
+        contentType: z.string().max(120).optional(),
+        sizeBytes: z.number().int().positive().optional(),
+        checksum: z
+          .string()
+          .regex(/^[a-f0-9]{64}$/)
+          .optional(),
         width: z.number().min(20).max(100).optional(),
         name: z.string().max(255),
         data: z
           .string()
           .max(2800000)
-          .regex(/^data:[a-zA-Z0-9.+/-]*;base64,[a-zA-Z0-9+/=]*$/),
+          .regex(/^(?:data:[a-zA-Z0-9.+/-]*;base64,[a-zA-Z0-9+/=]*|)$/),
       })
     )
     .max(5)

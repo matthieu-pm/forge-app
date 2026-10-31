@@ -105,3 +105,18 @@ describe("FOR-45 durable issue copy policy", () => {
     )
   })
 })
+
+describe("FOR-48 file retry lifecycle", () => {
+  it("hides revoked file retries, retains recovery copies, and removes them on purge", () => {
+    const fileKey = `forge:file-draft:v1:${a}:issue`
+    const raw = JSON.stringify({
+      issueId: a,
+      fileIds: [b],
+      commandKey: "retry",
+    })
+    expect(issueCopyIds(fileKey, raw)).toEqual([a])
+    expect(filterIssueCopy(fileKey, raw, () => false, 0, "read")).toBeNull()
+    expect(retainHiddenIssueCopies(fileKey, null, raw, new Set([a]))).toBe(raw)
+    expect(filterIssueCopy(fileKey, raw, () => false)).toBeNull()
+  })
+})

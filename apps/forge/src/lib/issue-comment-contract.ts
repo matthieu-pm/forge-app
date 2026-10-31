@@ -11,6 +11,11 @@ export const issueCommentCommandSchema = z
     parentId: z.union([z.uuid(), z.literal("")]).default(""),
     expectedVersion: z.number().int().nonnegative().default(0),
     document: commentDocumentSchema.optional(),
+    uploadIds: z
+      .array(z.uuid())
+      .max(5)
+      .refine((ids) => new Set(ids).size === ids.length)
+      .optional(),
   })
   .strict()
   .superRefine((v, ctx) => {
@@ -18,6 +23,11 @@ export const issueCommentCommandSchema = z
       ctx.addIssue({
         code: "custom",
         message: "Supply content only when creating or editing a comment.",
+      })
+    if (!["create", "edit"].includes(v.action) && v.uploadIds?.length)
+      ctx.addIssue({
+        code: "custom",
+        message: "Supply files only when creating or editing a comment.",
       })
     if (v.action !== "create" && v.parentId)
       ctx.addIssue({

@@ -1,16 +1,21 @@
 import { afterEach, expect, it, vi } from "vitest"
 import { createSharedTeamIssue } from "./canonical-issue-client"
-import { replaceCanonicalIssues } from "./canonical-issue-cache"
+import { finishCreatedIssueFiles } from "./issue-file-client"
+import { blankIssueDraft, issueSchema } from "./issue-record-contract"
+import {
+  mergeCanonicalIssueRecords,
+  replaceCanonicalIssues,
+} from "./canonical-issue-cache"
 import {
   loadCanonicalIssues,
   persistCanonicalIssue,
 } from "./canonical-issue-state"
-import { blankIssueDraft } from "./issue-record-contract"
 
 vi.mock("./canonical-issue-state", () => ({
   loadCanonicalIssues: vi.fn(),
   persistCanonicalIssue: vi.fn(),
 }))
+vi.mock("./issue-file-client", () => ({ finishCreatedIssueFiles: vi.fn() }))
 afterEach(() => {
   replaceCanonicalIssues(null, false)
   vi.resetAllMocks()
@@ -58,5 +63,62 @@ it("replays an identical prepared create after its response is lost and a relati
   await createSharedTeamIssue(teamId, draft, options)
   expect(vi.mocked(persistCanonicalIssue).mock.calls[1][0]).toEqual(
     vi.mocked(persistCanonicalIssue).mock.calls[0][0]
+  )
+})
+
+it("uploads creation files after metadata refresh and returns the final durable projection", async () => {
+  const teamId = crypto.randomUUID(),
+    id = crypto.randomUUID(),
+    fileId = crypto.randomUUID()
+  const state = {
+    workspaceId: "workspace",
+    sessionId: "session",
+    userId: "user",
+    records: [],
+    projects: [],
+    cycles: [],
+  }
+  replaceCanonicalIssues(state)
+  const draft = {
+    ...blankIssueDraft("todo"),
+    title: "Created with evidence",
+    attachments: [
+      { name: "evidence.txt", data: "data:text/plain;base64,ZXZpZGVuY2U=" },
+    ],
+  }
+  const issue = issueSchema.parse({
+    ...draft,
+    attachments: [],
+    id,
+    number: 1,
+    creator: "user",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    statusChangedAt: new Date().toISOString(),
+    suggestedLabel: "",
+    completedAt: null,
+  })
+  const final = {
+    ...issue,
+    revision: 1,
+    attachments: [{ name: "evidence.txt", data: "", fileId }],
+  }
+  vi.mocked(loadCanonicalIssues).mockResolvedValue(JSON.stringify(state))
+  vi.mocked(persistCanonicalIssue).mockResolvedValue(
+    JSON.stringify({ issue, records: [{ teamId, issue }] })
+  )
+  vi.mocked(finishCreatedIssueFiles).mockImplementation(async () => {
+    mergeCanonicalIssueRecords([{ teamId, issue: final }])
+  })
+  const options = { commandKey: crypto.randomUUID() }
+  expect(await createSharedTeamIssue(teamId, draft, options)).toEqual(final)
+  expect(
+    vi.mocked(persistCanonicalIssue).mock.calls[0][0].data.draft.attachments
+  ).toEqual([])
+  expect(finishCreatedIssueFiles).toHaveBeenCalledWith(
+    teamId,
+    id,
+    draft.attachments,
+    options.commandKey
   )
 })

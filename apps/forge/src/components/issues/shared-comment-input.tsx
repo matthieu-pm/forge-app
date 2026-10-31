@@ -3,12 +3,15 @@ import { Node } from "@tiptap/core"
 import { EditorContent, useEditor } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 import Placeholder from "@tiptap/extension-placeholder"
+import { FileUploadPicker } from "./durable-issue-files"
 import { SafeCommentContent } from "./safe-comment-content"
+import type { ReadyUpload } from "@/application/files/upload-contract"
 import type { CommentNode } from "@/lib/comment-rich-text"
 import type {
   IssueCommentCommand,
   MentionTarget,
 } from "@/lib/issue-comment-contract"
+import { productStorage, saveProductValue } from "@/lib/product-storage"
 import {
   commentFromText,
   commentPlainText,
@@ -21,7 +24,6 @@ import {
 } from "@/lib/canonical-issue-cache"
 import { commentDraftKey, sendIssueComment } from "@/lib/issue-comment-client"
 import { loadCommentMentions } from "@/lib/issue-comment-state"
-import { productStorage } from "@/lib/product-storage"
 import { Button } from "@/components/ui/button"
 import "./comment-editor.css"
 
@@ -50,6 +52,7 @@ type SharedCommentInputProps = {
     document?: unknown
     version?: number
     deleted?: boolean
+    attachments?: Array<unknown>
   }
   onSaved?: () => void
   onCancel?: () => void
@@ -86,6 +89,10 @@ function CommentComposer({
       return {}
     }
   })
+  const [uploads, setUploads] = useState<Array<ReadyUpload>>(
+    initial.uploads ?? []
+  )
+  const [uploading, setUploading] = useState(false)
   const [pending, setPending] = useState(false),
     [error, setError] = useState("")
   const [retry, setRetry] = useState<IssueCommentCommand | undefined>(
@@ -168,10 +175,10 @@ function CommentComposer({
     onUpdate: ({ editor: e }) => setDocument(e.getJSON() as CommentNode),
   })
   useEffect(() => {
-    editor?.setEditable(!pending && !retry)
-  }, [editor, pending, retry])
+    editor?.setEditable(!pending && !uploading && !retry)
+  }, [editor, pending, uploading, retry])
   useEffect(() => {
-    if (busy.current || retry || recovery) return
+    if (busy.current || retry || recovery || uploading) return
     const timer = setTimeout(() => {
       if (!busy.current && epoch === canonicalIssueEpoch())
         productStorage.setItem(
@@ -179,13 +186,25 @@ function CommentComposer({
           JSON.stringify({
             issueId,
             document,
+            uploads,
             expectedVersion: baselineVersion,
             requiresReview: review,
           })
         )
     }, 350)
     return () => clearTimeout(timer)
-  }, [document, key, issueId, epoch, review, retry, recovery, baselineVersion])
+  }, [
+    document,
+    uploads,
+    uploading,
+    key,
+    issueId,
+    epoch,
+    review,
+    retry,
+    recovery,
+    baselineVersion,
+  ])
   useEffect(() => {
     if (!mentionOpen) return
     setTargets([])
@@ -219,6 +238,7 @@ function CommentComposer({
   async function submit() {
     if (
       busy.current ||
+      uploading ||
       review ||
       recovery ||
       (comment?.deleted && !retry) ||
@@ -236,6 +256,7 @@ function CommentComposer({
         parentId,
         expectedVersion: baselineVersion,
         document: validateCommentDocument(document),
+        uploadIds: uploads.length ? uploads.map((f) => f.id) : undefined,
       }
     } catch (failure) {
       setError((failure as Error).message)
@@ -249,6 +270,7 @@ function CommentComposer({
     try {
       const result = await sendIssueComment(input, key, {
         document,
+        uploads,
         expectedVersion: baselineVersion,
       })
       if (epoch !== canonicalIssueEpoch()) return
@@ -269,6 +291,7 @@ function CommentComposer({
       }
       editor?.commands.clearContent()
       setDocument(commentFromText(""))
+      setUploads([])
       onSaved?.()
     } catch (failure) {
       if (epoch === canonicalIssueEpoch())
@@ -331,7 +354,7 @@ function CommentComposer({
           size="sm"
           variant="ghost"
           aria-label="Bold"
-          disabled={pending || Boolean(retry)}
+          disabled={pending || uploading || Boolean(retry)}
           onClick={() => editor?.chain().focus().toggleBold().run()}
         >
           <strong>B</strong>
@@ -340,7 +363,7 @@ function CommentComposer({
           size="sm"
           variant="ghost"
           aria-label="Italic"
-          disabled={pending || Boolean(retry)}
+          disabled={pending || uploading || Boolean(retry)}
           onClick={() => editor?.chain().focus().toggleItalic().run()}
         >
           <em>I</em>
@@ -349,7 +372,7 @@ function CommentComposer({
           size="sm"
           variant="ghost"
           aria-label="Bullet list"
-          disabled={pending || Boolean(retry)}
+          disabled={pending || uploading || Boolean(retry)}
           onClick={() => editor?.chain().focus().toggleBulletList().run()}
         >
           List
@@ -358,7 +381,7 @@ function CommentComposer({
           size="sm"
           variant="ghost"
           aria-label="Mention a person"
-          disabled={pending || Boolean(retry)}
+          disabled={pending || uploading || Boolean(retry)}
           onClick={() => setMentionOpen((v) => !v)}
         >
           @
@@ -370,7 +393,7 @@ function CommentComposer({
             aria-label="Find people to mention"
             value={query}
             maxLength={100}
-            disabled={pending || Boolean(retry)}
+            disabled={pending || uploading || Boolean(retry)}
             onChange={(e) => setQuery(e.target.value)}
             className="w-full bg-transparent p-1 text-sm outline-none"
             placeholder="Find people…"
@@ -383,7 +406,7 @@ function CommentComposer({
               <button
                 key={p.id}
                 type="button"
-                disabled={pending || Boolean(retry)}
+                disabled={pending || uploading || Boolean(retry)}
                 className="block w-full rounded p-1 text-left text-sm hover:bg-muted"
                 onClick={() => {
                   if (busy.current || retry) return
@@ -410,6 +433,51 @@ function CommentComposer({
         </div>
       )}
       <EditorContent editor={editor} className="comment-editor" />
+      <div className="space-y-2 p-2">
+        {uploads.map((file) => (
+          <div
+            key={file.id}
+            className="flex items-center justify-between gap-2 text-sm"
+          >
+            <span className="truncate">{file.name}</span>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={pending || uploading || Boolean(retry)}
+              onClick={() =>
+                setUploads((files) => files.filter((f) => f.id !== file.id))
+              }
+            >
+              Remove
+            </Button>
+          </div>
+        ))}
+        <FileUploadPicker
+          issueId={issueId}
+          disabled={pending || uploading || Boolean(retry)}
+          count={uploads.length + (comment?.attachments?.length ?? 0)}
+          onBusy={setUploading}
+          onReady={async (file) => {
+            const next = [...uploads, file]
+            await saveProductValue(
+              key,
+              JSON.stringify({
+                issueId,
+                document,
+                uploads: next,
+                expectedVersion: baselineVersion,
+                requiresReview: review,
+              })
+            )
+            if (epoch === canonicalIssueEpoch()) setUploads(next)
+          }}
+        />
+        {uploading && (
+          <p role="status" className="text-xs">
+            Uploading file…
+          </p>
+        )}
+      </div>
       {error && (
         <p role="alert" className="p-2 text-sm text-destructive">
           {error}
@@ -445,7 +513,7 @@ function CommentComposer({
           <Button
             size="sm"
             variant="ghost"
-            disabled={pending || Boolean(retry)}
+            disabled={pending || uploading || Boolean(retry)}
             onClick={onCancel}
           >
             Cancel
@@ -455,6 +523,7 @@ function CommentComposer({
           size="sm"
           disabled={
             pending ||
+            uploading ||
             review ||
             (comment?.deleted && !retry) ||
             (!retry && !commentPlainText(document).trim())

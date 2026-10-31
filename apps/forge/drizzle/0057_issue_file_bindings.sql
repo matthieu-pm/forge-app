@@ -1,0 +1,4 @@
+ALTER TABLE "resource_files" ADD COLUMN "attachment_state" text;--> statement-breakpoint
+ALTER TABLE "resource_files" ADD COLUMN "comment_id" uuid;--> statement-breakpoint
+ALTER TABLE "resource_files" ADD CONSTRAINT "resource_files_attachment_state" CHECK ("resource_files"."attachment_state" IS NULL OR ("resource_files"."issue_id" IS NOT NULL AND "resource_files"."attachment_state" IN ('unbound','attached','detached')));--> statement-breakpoint
+ALTER TABLE "resource_files" ADD CONSTRAINT "resource_files_comment_owner" CHECK ("resource_files"."comment_id" IS NULL OR ("resource_files"."attachment_state" IN ('attached','detached') AND "resource_files"."issue_id" IS NOT NULL));
