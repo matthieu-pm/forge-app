@@ -27,6 +27,7 @@ import { IssueLabelPicker } from "./issue-label-picker"
 import { IssueCyclePicker } from "./issue-cycle-picker"
 import { IssueRelationships } from "./issue-relationships"
 import { useIssueLifecycle } from "./issue-lifecycle"
+import { useIssueEngagement } from "./use-issue-engagement"
 import { useCommentModeration } from "./use-comment-moderation"
 import type { IssueDraft, TeamIssue } from "@/lib/team-issues"
 import type { TeamStatus } from "@/lib/team-statuses"
@@ -39,6 +40,7 @@ import {
   canonicalIssuesActive,
   projectDisplayName,
 } from "@/lib/canonical-issue-cache"
+import { normalizeReactionEmoji } from "@/lib/issue-engagement-contract"
 import { productStorage } from "@/lib/product-storage"
 import { loadCommentMentions } from "@/lib/issue-comment-state"
 import { commentDraftKey } from "@/lib/issue-comment-client"
@@ -215,10 +217,24 @@ export function IssueDetail({
           (member) =>
             member.id === issue.creator || member.name === issue.creator
         )
+  const engagement = useIssueEngagement(team.id, issue.id)
   const subscribers = issue.subscribers
     .split(",")
     .map((id) => id.trim())
     .filter(Boolean)
+  function toggleSubscription() {
+    if (shared)
+      void engagement.change({
+        action: "subscription",
+        subscribed: !subscribers.includes(userId),
+      })
+    else
+      patch({
+        subscribers: subscribers.includes(userId)
+          ? subscribers.filter((v) => v !== userId).join(", ")
+          : [...subscribers, userId].join(", "),
+      })
+  }
   const id = `${team.identifier}-${issue.number}`
   const branch = `${id.toLowerCase()}-${issue.title
     .toLowerCase()
@@ -270,7 +286,11 @@ export function IssueDetail({
       const label =
         (event.metaKey || event.ctrlKey) && event.shiftKey
           ? key === "s"
-            ? "Change subscribers"
+            ? shared
+              ? subscribers.includes(userId)
+                ? "Unsubscribe from issue"
+                : "Subscribe to issue"
+              : "Change subscribers"
             : key === "m"
               ? "Move to a different team"
               : undefined
@@ -562,10 +582,25 @@ export function IssueDetail({
                   <IssueIcon name="check" />
                 </ActionIconButton>
               )}
-              {!shared && (
+              {!comment.deleted && (
                 <ReactionPicker
                   label="React to comment"
+                  disabled={shared && engagement.blocked}
                   onChoose={(emoji) => {
+                    if (shared) {
+                      void engagement.change({
+                        action: "reaction",
+                        commentId: comment.id,
+                        emoji,
+                        present: !comment.reactions.some(
+                          (r) =>
+                            normalizeReactionEmoji(r.emoji) ===
+                              normalizeReactionEmoji(emoji) &&
+                            r.users.includes(userId)
+                        ),
+                      })
+                      return
+                    }
                     const existing = comment.reactions.find(
                       (r) => r.emoji === emoji
                     )
@@ -723,6 +758,18 @@ export function IssueDetail({
                 <Reactions
                   items={comment.reactions}
                   user={userId}
+                  disabled={shared && engagement.blocked}
+                  onToggle={
+                    shared
+                      ? (emoji, present) =>
+                          void engagement.change({
+                            action: "reaction",
+                            commentId: comment.id,
+                            emoji,
+                            present,
+                          })
+                      : undefined
+                  }
                   onChange={(reactions) =>
                     changeComment(comment, { reactions })
                   }
@@ -858,13 +905,8 @@ export function IssueDetail({
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={() =>
-                patch({
-                  subscribers: subscribers.includes(userId)
-                    ? subscribers.filter((v) => v !== userId).join(", ")
-                    : [...subscribers, userId].join(", "),
-                })
-              }
+              disabled={shared && engagement.blocked}
+              onClick={toggleSubscription}
             >
               <IssueIcon name="bell" />
               {subscribers.includes(userId) ? "Unsubscribe" : "Subscribe"}
@@ -1102,10 +1144,37 @@ export function IssueDetail({
                     {link.title}
                   </a>
                 ))}
+              {shared && engagement.retry && (
+                <div
+                  role="status"
+                  className="my-3 flex items-center gap-2 text-sm text-muted-foreground"
+                >
+                  This change needs confirmation.
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={engagement.pending}
+                    onClick={() => void engagement.change()}
+                  >
+                    Retry discussion change
+                  </Button>
+                </div>
+              )}
               <div className="mt-5 mb-4 flex items-center gap-1">
                 <Reactions
                   items={issue.reactions}
                   user={userId}
+                  disabled={shared && engagement.blocked}
+                  onToggle={
+                    shared
+                      ? (emoji, present) =>
+                          void engagement.change({
+                            action: "reaction",
+                            emoji,
+                            present,
+                          })
+                      : undefined
+                  }
                   onChange={(reactions) => patch({ reactions })}
                 />
                 <ActionIconButton
@@ -1501,43 +1570,64 @@ export function IssueDetail({
                         ? "Unsubscribe from issue"
                         : "Subscribe to issue"
                     }
-                    onClick={() =>
-                      patch({
-                        subscribers: subscribers.includes(userId)
-                          ? subscribers.filter((v) => v !== userId).join(", ")
-                          : [...subscribers, userId].join(", "),
-                      })
-                    }
+                    disabled={shared && engagement.blocked}
+                    onClick={toggleSubscription}
                   >
                     {subscribers.includes(userId) ? "Unsubscribe" : "Subscribe"}
                   </Button>
-                  <IssuePicker
-                    label="Change subscribers"
-                    multiple
-                    value={issue.subscribers}
-                    options={members.map((m) => ({
-                      value: m.id,
-                      label: m.name,
-                      icon: <AssigneeMark name={m.name} image={m.image} />,
-                    }))}
-                    onChange={(value) => patch({ subscribers: value })}
-                    className="bg-transparent p-0"
-                  >
-                    {subscribers.length ? (
-                      subscribers.slice(0, 3).map((subscriber) => {
-                        const member = members.find((m) => m.id === subscriber)
-                        return (
-                          <AssigneeMark
-                            key={subscriber}
-                            name={member?.name ?? subscriber}
-                            image={member?.image}
-                          />
-                        )
-                      })
-                    ) : (
-                      <IssueIcon name="person" />
-                    )}
-                  </IssuePicker>
+                  {shared ? (
+                    <div
+                      aria-label="Issue subscribers"
+                      className="flex items-center gap-1"
+                    >
+                      {subscribers.length ? (
+                        subscribers.slice(0, 3).map((subscriber) => {
+                          const member = members.find(
+                            (m) => m.id === subscriber
+                          )
+                          return (
+                            <AssigneeMark
+                              key={subscriber}
+                              name={member?.name ?? subscriber}
+                              image={member?.image}
+                            />
+                          )
+                        })
+                      ) : (
+                        <IssueIcon name="person" />
+                      )}
+                    </div>
+                  ) : (
+                    <IssuePicker
+                      label="Change subscribers"
+                      multiple
+                      value={issue.subscribers}
+                      options={members.map((m) => ({
+                        value: m.id,
+                        label: m.name,
+                        icon: <AssigneeMark name={m.name} image={m.image} />,
+                      }))}
+                      onChange={(value) => patch({ subscribers: value })}
+                      className="bg-transparent p-0"
+                    >
+                      {subscribers.length ? (
+                        subscribers.slice(0, 3).map((subscriber) => {
+                          const member = members.find(
+                            (m) => m.id === subscriber
+                          )
+                          return (
+                            <AssigneeMark
+                              key={subscriber}
+                              name={member?.name ?? subscriber}
+                              image={member?.image}
+                            />
+                          )
+                        })
+                      ) : (
+                        <IssueIcon name="person" />
+                      )}
+                    </IssuePicker>
+                  )}
                 </div>
                 <div className="mb-5">
                   <ActivityRow id="issue-created">

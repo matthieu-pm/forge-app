@@ -31,6 +31,10 @@ import type {
   InboxScope,
   InboxView,
 } from "@/lib/inbox-state"
+import { issueSubscriberIds } from "@/lib/issue-engagement-contract"
+import { useQueriedIssue } from "@/lib/issue-query-client"
+import { canonicalIssuesActive } from "@/lib/canonical-issue-cache"
+import { useIssueEngagement } from "@/components/issues/use-issue-engagement"
 import { useWorkspaceView } from "@/components/account-preference-provider"
 import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import { ContentHeader } from "@/components/ui/content-header"
@@ -167,8 +171,19 @@ export function Inbox({ scope }: { scope: InboxScope }) {
     preferences
   )
   const selected = state.entries.find((entry) => entry.id === selectedId)
-  const subscribed =
-    !selected?.issue || !state.unsubscribedIssueIds.includes(selected.issue.id)
+  const shared = canonicalIssuesActive()
+  const sharedIssue = useQueriedIssue(shared ? selected?.issue?.id : undefined)
+  const engagement = useIssueEngagement(
+    sharedIssue?.teamId ?? "",
+    selected?.issue?.id ?? ""
+  )
+  const subscribed = shared
+    ? Boolean(
+        sharedIssue &&
+        issueSubscriberIds(sharedIssue.issue.subscribers).includes(scope.userId)
+      )
+    : !selected?.issue ||
+      !state.unsubscribedIssueIds.includes(selected.issue.id)
   const unreadEntries = visibleInboxEntries(state, {
     view: "inbox",
     filter: "all",
@@ -265,6 +280,14 @@ export function Inbox({ scope }: { scope: InboxScope }) {
       )
   }
   function toggleSubscription() {
+    if (shared) {
+      if (sharedIssue && !engagement.blocked)
+        void engagement.change({
+          action: "subscription",
+          subscribed: !subscribed,
+        })
+      return
+    }
     if (selected?.issue)
       apply(
         { type: "subscribe", id: selected.id, subscribed: !subscribed },
@@ -687,6 +710,7 @@ export function Inbox({ scope }: { scope: InboxScope }) {
                     }
                     icon={NotificationOff01Icon}
                     aria-pressed={!subscribed}
+                    disabled={shared && (!sharedIssue || engagement.blocked)}
                     onClick={toggleSubscription}
                   />
                 )}
@@ -804,6 +828,21 @@ export function Inbox({ scope }: { scope: InboxScope }) {
           </IllustratedEmptyState>
         )}
       </section>
+      {shared && engagement.retry && (
+        <div
+          role="status"
+          className="absolute right-4 bottom-4 flex items-center gap-3 rounded-lg border bg-background p-3 text-xs"
+        >
+          This change needs confirmation.
+          <Button
+            size="sm"
+            disabled={engagement.pending}
+            onClick={() => void engagement.change()}
+          >
+            Retry discussion change
+          </Button>
+        </div>
+      )}
       {actionError && (
         <div
           role="alert"
