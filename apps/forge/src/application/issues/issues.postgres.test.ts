@@ -30,7 +30,9 @@ const autoAssignmentFile =
   process.env.FORGE_ISSUE_RELATIONSHIP_TEST_DATABASE_FILE ??
   process.env.FORGE_ISSUE_QUERY_TEST_DATABASE_FILE ??
   process.env.FORGE_AUTO_ASSIGNMENT_TEST_DATABASE_FILE
-const file = autoAssignmentFile ?? process.env.FORGE_ISSUE_TEST_DATABASE_FILE
+const triageFile = process.env.FORGE_TRIAGE_TEST_DATABASE_FILE
+const file =
+  triageFile ?? autoAssignmentFile ?? process.env.FORGE_ISSUE_TEST_DATABASE_FILE
 
 describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
   const marker = `for41-${randomUUID()}`
@@ -107,9 +109,11 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
     const { connection, applicationConnection } = JSON.parse(
       readFileSync(file!, "utf8")
     )
-    const environment = autoAssignmentFile
-      ? "auto-assignment-acceptance"
-      : "issue-creation-acceptance"
+    const environment = triageFile
+      ? "triage-acceptance"
+      : autoAssignmentFile
+        ? "auto-assignment-acceptance"
+        : "issue-creation-acceptance"
     const target = { environment, ...DATABASE_TARGETS[environment] } as const
     assertMigrationTarget(connection, target)
     assertMigrationTarget(
@@ -3347,6 +3351,279 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
         code: "FORBIDDEN",
       })
       expect((await purgeDeletedIssues({ delete: remove })).purged).toBe(0)
+    }, 30000)
+  })
+  describe("FOR-50 canonical triage", () => {
+    async function incoming() {
+      const f = await fixture()
+      const input = command(f.teamId, "Incoming canonical request")
+      input.draft.triage = true
+      input.draft.snoozed = true
+      input.draft.links = [
+        { title: "Original source", url: "https://example.test/source/123" },
+      ]
+      const issue = (await service.createCanonicalIssue(f.actors[0], input))
+        .issue
+      return { ...f, issue }
+    }
+    function decision(
+      f: Awaited<ReturnType<typeof incoming>>,
+      kind: "accept" | "decline" = "accept"
+    ) {
+      return {
+        commandKey: randomUUID(),
+        teamId: f.teamId,
+        edits: [
+          {
+            issueId: f.issue.id,
+            expectedRevision: f.issue.revision!,
+            triageDecision: kind,
+            changes: (kind === "accept"
+              ? { status: "todo", assignee: users[1] }
+              : { status: "canceled" }) as IssueChanges,
+          },
+        ],
+      }
+    }
+    it("AT-01: accept/assign preserves ID, source, history and one replay-safe event set", async () => {
+      const f = await incoming(),
+        input = decision(f)
+      expect(
+        (
+          await queryIssues(f.actors[1], {
+            teamIds: [f.teamId],
+            triage: true,
+            showSnoozed: true,
+          })
+        ).total
+      ).toBe(1)
+      expect(
+        (await queryIssues(f.actors[1], { teamIds: [f.teamId], triage: false }))
+          .total
+      ).toBe(0)
+      expect(
+        (
+          await queryIssues(f.actors[1], {
+            teamIds: [f.teamId],
+            triage: true,
+            showSnoozed: true,
+            filters: {
+              match: "all",
+              rules: [
+                { id: "source", field: "links", operator: "set", value: "" },
+              ],
+            },
+          })
+        ).total
+      ).toBe(1)
+      const results = await Promise.all([
+        editing.editCanonicalIssues(f.actors[0], input),
+        editing.editCanonicalIssues(f.actors[0], input),
+      ])
+      expect(results.map((r) => r.status)).toEqual(["saved", "saved"])
+      expect(results.filter((r) => "replayed" in r && r.replayed)).toHaveLength(
+        1
+      )
+      for (const actor of f.actors) {
+        const team = await queryIssues(actor, {
+          teamIds: [f.teamId],
+          triage: false,
+        })
+        expect(team.total).toBe(1)
+        expect(team.records[0].issue).toMatchObject({
+          id: f.issue.id,
+          number: f.issue.number,
+          triage: false,
+          snoozed: false,
+          status: "todo",
+          assignee: users[1],
+          links: f.issue.links,
+        })
+        expect(team.records[0].issue.activity).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              author: users[0],
+              text: "accepted from triage",
+            }),
+            expect.objectContaining({ field: "assignee", to: users[1] }),
+          ])
+        )
+        expect(
+          (
+            await queryIssues(actor, {
+              teamIds: [f.teamId],
+              triage: true,
+              showSnoozed: true,
+            })
+          ).total
+        ).toBe(0)
+      }
+      const events = (
+        await pool.query(
+          "SELECT topic FROM command_outbox_events WHERE workspace_id=$1 AND topic IN ('issue.updated','issue.triage.accepted')",
+          [f.workspaceId]
+        )
+      ).rows
+      expect(events.map((e) => e.topic).sort()).toEqual([
+        "issue.triage.accepted",
+        "issue.updated",
+      ])
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int n FROM command_audit_events WHERE workspace_id=$1 AND operation='issues.edit@1'",
+            [f.workspaceId]
+          )
+        ).rows[0].n
+      ).toBe(1)
+    }, 30000)
+    it("AT-02: competing decisions commit once and return latest state as a conflict", async () => {
+      const f = await incoming()
+      const results = await Promise.all([
+        editing.editCanonicalIssues(f.actors[0], decision(f)),
+        editing.editCanonicalIssues(f.actors[1], decision(f, "decline")),
+      ])
+      expect(results.map((r) => r.status).sort()).toEqual(["conflict", "saved"])
+      const saved = results.find((r) => r.status === "saved")!,
+        conflict = results.find((r) => r.status === "conflict")!
+      expect(conflict.records[0].issue).toEqual(saved.records[0].issue)
+      expect(saved.records[0].issue.triage).toBe(false)
+      expect(
+        saved.records[0].issue.activity.filter((a) =>
+          a.text.endsWith("from triage")
+        )
+      ).toHaveLength(1)
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int n FROM command_outbox_events WHERE workspace_id=$1 AND topic LIKE 'issue.triage.%'",
+            [f.workspaceId]
+          )
+        ).rows[0].n
+      ).toBe(1)
+      const repeated = decision(f, "decline")
+      repeated.edits[0].expectedRevision = saved.records[0].issue.revision!
+      expect(
+        (await editing.editCanonicalIssues(f.actors[0], repeated)).status
+      ).toBe("conflict")
+    }, 30000)
+    it("declines into Canceled with the same ID and source references", async () => {
+      const f = await incoming()
+      const result = await editing.editCanonicalIssues(
+        f.actors[1],
+        decision(f, "decline")
+      )
+      expect(result.status).toBe("saved")
+      expect(result.records[0].issue).toMatchObject({
+        id: f.issue.id,
+        status: "canceled",
+        triage: false,
+        snoozed: false,
+        links: f.issue.links,
+      })
+      expect(result.records[0].issue.activity).toContainEqual(
+        expect.objectContaining({
+          text: "declined from triage",
+          author: users[1],
+        })
+      )
+    }, 30000)
+    it("rejects invalid decisions and ineligible assignees atomically", async () => {
+      const f = await incoming()
+      for (const [kind, changes] of [
+        ["accept", { status: "done", assignee: "" }],
+        ["decline", { status: "todo" }],
+        ["accept", { status: "todo", assignee: "nonmember" }],
+        ["accept", { status: "todo", assignee: "", title: "Forged" }],
+      ] as const) {
+        const input = decision(f, kind)
+        input.edits[0].changes = changes
+        await expect(
+          editing.editCanonicalIssues(f.actors[0], input)
+        ).rejects.toThrow()
+      }
+      expect(
+        (await service.readCanonicalIssues(f.actors[1])).records[0].issue
+      ).toMatchObject({
+        id: f.issue.id,
+        triage: true,
+        revision: f.issue.revision,
+      })
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int n FROM command_audit_events WHERE workspace_id=$1 AND operation='issues.edit@1'",
+            [f.workspaceId]
+          )
+        ).rows[0].n
+      ).toBe(0)
+    }, 30000)
+    it("rolls back decision, history, receipt and outbox if audit fails, then safely retries", async () => {
+      const f = await incoming(),
+        input = decision(f)
+      await pool.query(
+        "CREATE FUNCTION for50_reject_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'FOR50 injected audit failure'; END $$"
+      )
+      await pool.query(
+        "CREATE TRIGGER for50_reject_audit BEFORE INSERT ON command_audit_events FOR EACH ROW EXECUTE FUNCTION for50_reject_audit()"
+      )
+      try {
+        await expect(
+          editing.editCanonicalIssues(f.actors[0], input)
+        ).rejects.toThrow()
+        const stored = (await service.readCanonicalIssues(f.actors[0]))
+          .records[0].issue
+        expect(stored).toMatchObject({
+          triage: true,
+          revision: f.issue.revision,
+          activity: f.issue.activity,
+        })
+        expect(
+          (
+            await pool.query(
+              "SELECT count(*)::int n FROM command_receipts WHERE workspace_id=$1 AND operation='issues.edit@1'",
+              [f.workspaceId]
+            )
+          ).rows[0].n
+        ).toBe(0)
+        expect(
+          (
+            await pool.query(
+              "SELECT count(*)::int n FROM command_outbox_events WHERE workspace_id=$1 AND topic LIKE 'issue.triage.%'",
+              [f.workspaceId]
+            )
+          ).rows[0].n
+        ).toBe(0)
+      } finally {
+        await pool.query(
+          "DROP TRIGGER for50_reject_audit ON command_audit_events"
+        )
+        await pool.query("DROP FUNCTION for50_reject_audit()")
+      }
+      expect(
+        (await editing.editCanonicalIssues(f.actors[0], input)).status
+      ).toBe("saved")
+    }, 30000)
+    it("rechecks private-team access and revoked replay authorization", async () => {
+      const f = await incoming(),
+        input = decision(f)
+      await pool.query("UPDATE teams SET visibility='private' WHERE id=$1", [
+        f.teamId,
+      ])
+      await expect(
+        editing.editCanonicalIssues(f.actors[1], input)
+      ).rejects.toThrow()
+      await pool.query("UPDATE teams SET visibility='workspace' WHERE id=$1", [
+        f.teamId,
+      ])
+      await editing.editCanonicalIssues(f.actors[1], input)
+      await pool.query(
+        "DELETE FROM member WHERE organization_id=$1 AND user_id=$2",
+        [f.workspaceId, users[1]]
+      )
+      await expect(
+        editing.editCanonicalIssues(f.actors[1], input)
+      ).rejects.toThrow()
     }, 30000)
   })
   describe("FOR-46 durable comments and mentions", () => {

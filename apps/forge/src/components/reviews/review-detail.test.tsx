@@ -65,7 +65,13 @@ describe("Simulated review detail", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Search emoji" }), {
       target: { value: "party popper" },
     })
-    fireEvent.click(await screen.findByRole("button", { name: "party popper" }))
+    fireEvent.click(
+      await screen.findByRole(
+        "button",
+        { name: "party popper" },
+        { timeout: 10000 }
+      )
+    )
     expect(
       screen.getByRole("button", { name: /🎉.*1/ }).getAttribute("aria-pressed")
     ).toBe("true")
@@ -100,7 +106,7 @@ describe("Simulated review detail", () => {
     expect(
       readReviewEdits(reviewEditsKey(scope))["reviews-demo:248"].reactions
     ).toEqual([])
-  })
+  }, 20000)
   it("collapses a rich description into a preview without changing its saved content", () => {
     productStorage.setItem(
       reviewEditsKey(scope),

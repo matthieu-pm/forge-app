@@ -68,8 +68,8 @@ protected rows. Normal creates after the cursor cutoff do not change the digest.
 Future adapters that retain pages must honor this result-revision contract.
 
 This is polling and mutation invalidation. Resumable change events remain FOR-95.
-It does not enable external MCP, public planning APIs, or the canonical triage
-lifecycle/subscriber commands owned by their separate stories.
+It does not enable external MCP or public planning APIs. FOR-50 adds canonical
+triage lifecycle decisions. Subscriber commands remain separately owned.
 
 ## Accepted milestone boundary
 

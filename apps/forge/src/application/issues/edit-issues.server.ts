@@ -108,7 +108,26 @@ export async function editCanonicalIssues(actor: Actor, raw: EditIssueBatch) {
             throw new Error(
               "Use relationship controls to change an issue's parent."
             )
-          const draft = { ...before, ...edit.changes, subIssues: [] }
+          if (edit.triageDecision && !before.triage)
+            throw new IssueEditConflict("This issue has already left triage.")
+          if (
+            edit.triageDecision &&
+            (!edit.changes.status ||
+              (edit.triageDecision === "accept" &&
+                edit.changes.assignee === undefined) ||
+              Object.keys(edit.changes).some(
+                (key) => !["status", "assignee"].includes(key)
+              ))
+          )
+            throw new Error(
+              "Choose a triage status and assignment before deciding."
+            )
+          const draft = {
+            ...before,
+            ...edit.changes,
+            subIssues: [],
+            ...(edit.triageDecision ? { triage: false, snoozed: false } : {}),
+          }
           const resolved = await resolveIssueFields(
             tx,
             current,
@@ -121,6 +140,15 @@ export async function editCanonicalIssues(actor: Actor, raw: EditIssueBatch) {
             },
             { before, assignmentExplicit: edit.changes.assignee !== undefined }
           )
+          if (
+            edit.triageDecision &&
+            (edit.triageDecision === "decline"
+              ? resolved.status.group !== "canceled"
+              : !["backlog", "unstarted", "started"].includes(
+                  resolved.status.group
+                ))
+          )
+            throw new Error("Choose a valid status for this triage decision.")
           // The automation is part of this edit, never a second command. Persist
           // its resulting assignment in both canonical columns and properties.
           draft.assignee = resolved.assignee ?? ""
@@ -153,6 +181,16 @@ export async function editCanonicalIssues(actor: Actor, raw: EditIssueBatch) {
                   }
                 : {}),
             }))
+          if (edit.triageDecision)
+            activity.push({
+              id: crypto.randomUUID(),
+              author: current.userId,
+              text:
+                edit.triageDecision === "accept"
+                  ? "accepted from triage"
+                  : "declined from triage",
+              createdAt: now,
+            })
           await tx
             .update(issues)
             .set({
@@ -201,6 +239,11 @@ export async function editCanonicalIssues(actor: Actor, raw: EditIssueBatch) {
             topic: "issue.updated",
             payload: { issueId: row.id, teamId: input.teamId },
           })
+          if (edit.triageDecision)
+            events.push({
+              topic: `issue.triage.${edit.triageDecision === "accept" ? "accepted" : "declined"}`,
+              payload: { issueId: row.id, teamId: input.teamId },
+            })
           const children = edit.changes.subIssues ?? []
           if (children.length) {
             await tx

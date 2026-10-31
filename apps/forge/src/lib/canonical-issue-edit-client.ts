@@ -11,7 +11,10 @@ import {
   mergeCanonicalIssueRecords,
   setOptimisticIssue,
 } from "./canonical-issue-cache"
-import { persistCanonicalIssueEdits } from "./canonical-issue-state"
+import {
+  loadIssueDetail,
+  persistCanonicalIssueEdits,
+} from "./canonical-issue-state"
 import { productStorage, saveProductValue } from "./product-storage"
 import type { CanonicalSnapshot } from "./canonical-issue-cache"
 import type {
@@ -84,7 +87,7 @@ export function hydrateIssueEdits() {
       if (requiresReview === true) {
         conflict = true
         error =
-          "Some saved issue edits require review after deletion. Review the latest versions before applying the remaining edits."
+          "Some saved issue edits require review. Review the latest versions before applying the remaining edits."
         continue
       }
       error =
@@ -95,11 +98,16 @@ export function hydrateIssueEdits() {
   }
   notify()
 }
-function optimisticFor(before: TeamIssue, changes: IssueChanges): TeamIssue {
+function optimisticFor(
+  before: TeamIssue,
+  changes: IssueChanges,
+  triageDecision?: "accept" | "decline"
+): TeamIssue {
   const now = new Date().toISOString()
   return {
     ...before,
     ...changes,
+    ...(triageDecision ? { triage: false, snoozed: false } : {}),
     subIssues: [],
     revision: (before.revision ?? 0) + 1,
     updatedAt: now,
@@ -111,16 +119,21 @@ function optimisticFor(before: TeamIssue, changes: IssueChanges): TeamIssue {
 }
 export function enqueueIssueEdits(
   teamId: string,
-  edits: Array<{ before: TeamIssue; changes: IssueChanges }>
+  edits: Array<{
+    before: TeamIssue
+    changes: IssueChanges
+    triageDecision?: "accept" | "decline"
+  }>
 ) {
   if (!edits.length) return
   const input = editIssueBatchSchema.parse({
     commandKey: crypto.randomUUID(),
     teamId,
-    edits: edits.map(({ before, changes }) => ({
+    edits: edits.map(({ before, changes, triageDecision }) => ({
       issueId: before.id,
       expectedRevision: before.revision ?? 0,
       changes,
+      ...(triageDecision ? { triageDecision } : {}),
       ...prepareIssueRelations(teamId, { ...before, ...changes }),
     })),
   })
@@ -133,7 +146,8 @@ export function enqueueIssueEdits(
       optimisticFor(
         canonicalIssueRows(teamId).find((r) => r.issue.id === edit.before.id)
           ?.issue ?? edit.before,
-        edit.changes
+        edit.changes,
+        edit.triageDecision
       )
     )
   notify()
@@ -240,6 +254,93 @@ export async function useLatestIssueVersions() {
   }
   if (ready && token === epoch) void flushIssueEdits()
 }
+/** Drop only decisions that can no longer apply, retaining unrelated drafts for
+ * explicit revision review. A known conflict is required before changing inputs. */
+export async function discardUnavailableTriageDecisions() {
+  if (running || !conflict) return
+  const state = canonicalIssueState()
+  if (!state) return
+  const token = epoch
+  const latest = new Map(state.records.map((r) => [r.issue.id, r.issue]))
+  const identityToken = canonicalIssueEpoch()
+  running = true
+  notify()
+  try {
+    // A bounded cache miss is unknown. Recheck missing decisions under current
+    // authorization before treating them as decided or unavailable after reload.
+    const unknown = [
+      ...new Set(
+        queue.flatMap((pending) =>
+          pending.input.edits
+            .filter((edit) => edit.triageDecision && !latest.has(edit.issueId))
+            .map((edit) => edit.issueId)
+        )
+      ),
+    ]
+    const details = await Promise.all(
+      unknown.map(async (id) => ({
+        id,
+        records: JSON.parse(
+          await loadIssueDetail({
+            data: {
+              workspaceId: state.workspaceId,
+              sessionId: state.sessionId,
+              id,
+            },
+          })
+        ) as CanonicalSnapshot["records"],
+      }))
+    )
+    if (token !== epoch || identityToken !== canonicalIssueEpoch()) return
+    const unavailable = new Set<string>()
+    for (const detail of details) {
+      const record = detail.records.find((r) => r.issue.id === detail.id)
+      if (record) latest.set(detail.id, record.issue)
+      else unavailable.add(detail.id)
+    }
+    mergeCanonicalIssueRecords(details.flatMap((detail) => detail.records))
+    let discarded = 0
+    for (const pending of [...queue]) {
+      const edits = pending.input.edits.filter(
+        (edit) =>
+          !edit.triageDecision ||
+          (!unavailable.has(edit.issueId) &&
+            latest.get(edit.issueId)?.triage !== false)
+      )
+      if (edits.length === pending.input.edits.length) continue
+      discarded += pending.input.edits.length - edits.length
+      // requiresReview survives reload; never automatically submit a shortened batch.
+      const retained = { ...pending.input, edits }
+      await saveProductValue(
+        pending.sourceKey,
+        edits.length
+          ? JSON.stringify({ ...retained, requiresReview: true })
+          : null
+      )
+      if (token !== epoch || identityToken !== canonicalIssueEpoch()) return
+      if (edits.length) {
+        pending.input = retained
+        pending.preparedRebase = false
+      } else queue = queue.filter((item) => item !== pending)
+    }
+    error = queue.length
+      ? discarded
+        ? "Unavailable triage decisions were discarded. Review your remaining edits before applying them."
+        : "These triage issues are still pending. Review the latest versions before applying your edits."
+      : ""
+    conflict = queue.length > 0
+  } catch {
+    if (token === epoch)
+      error =
+        "Triage decisions could not be cleared. Your saved drafts are preserved."
+  } finally {
+    if (token === epoch) {
+      running = false
+      notify()
+    }
+  }
+}
+
 export async function applyEditsToLatest() {
   // An uncertain response must replay its original command before any rebase.
   if (running || !conflict) return
@@ -259,6 +360,10 @@ export async function applyEditsToLatest() {
           edits: pending.input.edits.map((edit) => {
             const before = versions.get(edit.issueId)
             if (!before) throw new Error("An issue is no longer available.")
+            if (edit.triageDecision && !before.triage)
+              throw new Error(
+                "This issue has already left triage. Use the latest shared version."
+              )
             return { ...edit, expectedRevision: before.revision ?? 0 }
           }),
         }
@@ -267,7 +372,10 @@ export async function applyEditsToLatest() {
       for (const edit of pending.input.edits) {
         const before = versions.get(edit.issueId)
         if (before)
-          versions.set(edit.issueId, optimisticFor(before, edit.changes))
+          versions.set(
+            edit.issueId,
+            optimisticFor(before, edit.changes, edit.triageDecision)
+          )
       }
       // Replace the same durable draft slot. Never expose two generations after
       // a partial save or a reload, and retain the prepared identity on retry.
@@ -281,7 +389,10 @@ export async function applyEditsToLatest() {
         const before = state.records.find(
           (record) => record.issue.id === edit.issueId
         )?.issue
-        if (before) setOptimisticIssue(optimisticFor(before, edit.changes))
+        if (before)
+          setOptimisticIssue(
+            optimisticFor(before, edit.changes, edit.triageDecision)
+          )
       }
     ready = true
   } catch (failure) {

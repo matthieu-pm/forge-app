@@ -22,6 +22,7 @@ export type MigrationTarget = {
     | "issue-definition-acceptance"
     | "issue-creation-acceptance"
     | "auto-assignment-acceptance"
+    | "triage-acceptance"
     | "production-storage-rehearsal"
     | "production"
   branchId: string
