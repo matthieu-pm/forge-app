@@ -222,6 +222,20 @@ export function IssueDetail({
     .split(",")
     .map((id) => id.trim())
     .filter(Boolean)
+  const subscriberAvatars = subscribers.length ? (
+    subscribers.slice(0, 3).map((subscriber) => {
+      const member = members.find((item) => item.id === subscriber)
+      return (
+        <AssigneeMark
+          key={subscriber}
+          name={member?.name ?? subscriber}
+          image={member?.image}
+        />
+      )
+    })
+  ) : (
+    <IssueIcon name="person" />
+  )
   function toggleSubscription() {
     if (shared)
       void engagement.change({
@@ -1580,22 +1594,7 @@ export function IssueDetail({
                       aria-label="Issue subscribers"
                       className="flex items-center gap-1"
                     >
-                      {subscribers.length ? (
-                        subscribers.slice(0, 3).map((subscriber) => {
-                          const member = members.find(
-                            (m) => m.id === subscriber
-                          )
-                          return (
-                            <AssigneeMark
-                              key={subscriber}
-                              name={member?.name ?? subscriber}
-                              image={member?.image}
-                            />
-                          )
-                        })
-                      ) : (
-                        <IssueIcon name="person" />
-                      )}
+                      {subscriberAvatars}
                     </div>
                   ) : (
                     <IssuePicker
@@ -1610,22 +1609,7 @@ export function IssueDetail({
                       onChange={(value) => patch({ subscribers: value })}
                       className="bg-transparent p-0"
                     >
-                      {subscribers.length ? (
-                        subscribers.slice(0, 3).map((subscriber) => {
-                          const member = members.find(
-                            (m) => m.id === subscriber
-                          )
-                          return (
-                            <AssigneeMark
-                              key={subscriber}
-                              name={member?.name ?? subscriber}
-                              image={member?.image}
-                            />
-                          )
-                        })
-                      ) : (
-                        <IssueIcon name="person" />
-                      )}
+                      {subscriberAvatars}
                     </IssuePicker>
                   )}
                 </div>
