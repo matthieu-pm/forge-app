@@ -1,5 +1,7 @@
 import * as React from "react"
 import { addDays, addWeeks, format } from "date-fns"
+import { sharedCyclesEnabled, useSharedTeamCycles } from "./shared-cycle-client"
+import { canonicalIssuesActive } from "./canonical-issue-cache"
 import {
   cyclesSchema,
   initialTeamCycles,
@@ -25,15 +27,19 @@ export function useEnabledTeamCycles(teamIds: ReadonlyArray<string>) {
     React.useCallback((notify) => {
       window.addEventListener("storage", notify)
       window.addEventListener(changeEvent, notify)
+      window.addEventListener("forge:shared-cycles-changed", notify)
       return () => {
         window.removeEventListener("storage", notify)
         window.removeEventListener(changeEvent, notify)
+        window.removeEventListener("forge:shared-cycles-changed", notify)
       }
     }, []),
     () =>
       JSON.stringify(
         teamIds.filter((id) => {
           try {
+            const confirmed = sharedCyclesEnabled(id)
+            if (confirmed !== undefined) return confirmed
             const raw = productStorage.getItem(teamCyclesStorageKey(id))
             return raw !== null && parseTeamCycles(raw).enabled
           } catch {
@@ -46,7 +52,9 @@ export function useEnabledTeamCycles(teamIds: ReadonlyArray<string>) {
   return React.useMemo(() => new Set<string>(JSON.parse(snapshot)), [snapshot])
 }
 
-export function useTeamCycles(teamId: string) {
+export function useTeamCycles(teamId: string, number?: number) {
+  const shared = canonicalIssuesActive()
+  const remote = useSharedTeamCycles(teamId, shared, number)
   const [settings, setSettings] = React.useState(initialTeamCycles)
   const [ready, setReady] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
@@ -90,7 +98,45 @@ export function useTeamCycles(teamId: string) {
       return false
     }
   }
-  return { settings, ready, error, update }
+  if (shared)
+    return {
+      settings: remote.snapshot?.settings ?? initialTeamCycles(),
+      ready: !!remote.snapshot || !!remote.error,
+      error: remote.error,
+      update: remote.update,
+      pending: remote.pending,
+      canManage: remote.snapshot?.canManage ?? false,
+      cycles:
+        remote.snapshot?.cycles.map((c) => ({
+          ...c,
+          start: new Date(`${c.startDate}T12:00:00`),
+          end: new Date(`${c.endDate}T12:00:00`),
+          value: c.id,
+        })) ?? [],
+      retry: remote.retry,
+      discard: remote.discard,
+    }
+  return {
+    settings,
+    ready,
+    error,
+    update,
+    pending: false,
+    canManage: true,
+    cycles: scheduledTeamCycles(settings).map((c) => ({
+      ...c,
+      id: c.value,
+      startDate: c.value,
+      endDate: format(c.end, "yyyy-MM-dd"),
+      teamId,
+      issueCount: 0,
+      completedCount: 0,
+      timezone: settings.timezone ?? "UTC",
+      state: c.number === 1 ? "Upcoming" : "Planned",
+    })),
+    retry: () => Promise.resolve(false),
+    discard: () => {},
+  }
 }
 
 export const cycleWeekdays = [

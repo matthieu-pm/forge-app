@@ -114,7 +114,7 @@ describe("team cycles settings", () => {
     expect(
       screen.getByRole("list", { name: "Upcoming cycle schedule" }).children
     ).toHaveLength(3)
-    expect(screen.getAllByText("1 week cooldown")).toHaveLength(2)
+    expect(screen.getAllByText(/UTC/)).toHaveLength(3)
     act(() => {
       productStorage.removeItem(key)
       window.dispatchEvent(new StorageEvent("storage", { key }))
@@ -123,19 +123,18 @@ describe("team cycles settings", () => {
     expect(screen.queryByRole("list")).toBeNull()
   })
 
-  it("gates automation behind cycles and preserves its choice across disable and reload", () => {
-    const view = render(<TeamCyclesSettings team={team} />)
+  it("keeps deferred automation disabled while preserving saved choices", () => {
+    render(<TeamCyclesSettings team={team} />)
     expect(priority().getAttribute("aria-disabled")).toBe("true")
     fireEvent.click(enable())
-    expect(priority().getAttribute("aria-disabled")).not.toBe("true")
+    expect(priority().getAttribute("aria-disabled")).toBe("true")
     fireEvent.click(priority())
-    expect(saved()).toMatchObject({ enabled: true, startedIssues: false })
-    fireEvent.click(enable())
-    expect(saved()).toMatchObject({ enabled: false, startedIssues: false })
-    view.unmount()
-    render(<TeamCyclesSettings team={team} />)
-    fireEvent.click(enable())
-    expect(priority().getAttribute("aria-checked")).toBe("false")
+    expect(saved().startedIssues).toBe(true)
+    expect(
+      screen.getByText(
+        "Automatic assignment and carryover are not available yet."
+      )
+    ).toBeTruthy()
   })
   it("isolates settings per team and preserves corrupt saved data", () => {
     const view = render(<TeamCyclesSettings team={team} />)

@@ -113,11 +113,15 @@ export const issueCycles = pgTable(
     id: id(),
     workspaceId: workspace(),
     teamId: uuid("team_id").notNull(),
+    number: integer("number").default(0).notNull(),
+    timezone: text("timezone").default("UTC").notNull(),
     startDate: text("start_date").notNull(),
     endDate: text("end_date").notNull(),
   },
   (t) => [
     unique("issue_cycles_team_start").on(t.teamId, t.startDate),
+    unique("issue_cycles_team_number").on(t.teamId, t.number),
+    check("issue_cycles_number_positive", sql`${t.number} > 0`),
     unique("issue_cycles_workspace_identity").on(t.workspaceId, t.teamId, t.id),
     foreignKey({
       name: "issue_cycles_team_fk",

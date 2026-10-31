@@ -32,7 +32,9 @@ const autoAssignmentFile =
   process.env.FORGE_AUTO_ASSIGNMENT_TEST_DATABASE_FILE
 const historyFile = process.env.FORGE_ISSUE_HISTORY_TEST_DATABASE_FILE
 const triageFile = process.env.FORGE_TRIAGE_TEST_DATABASE_FILE
+const cycleFile = process.env.FORGE_CYCLE_TEST_DATABASE_FILE
 const file =
+  cycleFile ??
   historyFile ??
   triageFile ??
   autoAssignmentFile ??
@@ -113,13 +115,15 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
     const { connection, applicationConnection } = JSON.parse(
       readFileSync(file!, "utf8")
     )
-    const environment = historyFile
-      ? "issue-history-acceptance"
-      : triageFile
-        ? "triage-acceptance"
-        : autoAssignmentFile
-          ? "auto-assignment-acceptance"
-          : "issue-creation-acceptance"
+    const environment = cycleFile
+      ? "cycle-acceptance"
+      : historyFile
+        ? "issue-history-acceptance"
+        : triageFile
+          ? "triage-acceptance"
+          : autoAssignmentFile
+            ? "auto-assignment-acceptance"
+            : "issue-creation-acceptance"
     const target = { environment, ...DATABASE_TARGETS[environment] } as const
     assertMigrationTarget(connection, target)
     assertMigrationTarget(
@@ -715,7 +719,11 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
       }),
     ])
     expect(a.issue.id).toBe(b.issue.id)
-    expect(a.issue.cycle).toBe("2026-10-26")
+    expect(a.issue.cycle).toBe(
+      (await service.readCanonicalIssues(f.actors[0])).cycles.find(
+        (c) => c.startDate === "2026-10-26"
+      )!.id
+    )
     expect(
       (await service.readCanonicalIssues(f.actors[1])).projects
     ).toHaveLength(1)
@@ -5549,6 +5557,332 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
           )
         ).rowCount
       ).toBe(1)
+    }, 30000)
+  })
+  describe("FOR-55 shared cycles", () => {
+    async function setup() {
+      const f = await fixture()
+      const c = await import("../cycles/cycles.server")
+      const settings = {
+        enabled: true,
+        timezone: "Europe/Paris",
+        duration: 2,
+        cooldown: 1,
+        startDay: 1,
+        futureCycles: 2,
+        activeIssues: false,
+        startedIssues: false,
+        completedIssues: false,
+      }
+      const save = (patch = {}, revision = 0, key = randomUUID()) =>
+        product.saveProductState(f.actors[0], {
+          workspaceId: f.workspaceId,
+          sessionId:
+            f.actors[0].authentication.kind === "session"
+              ? f.actors[0].authentication.sessionId
+              : "",
+          commandKey: key,
+          key: `forge:team-cycles:v1:${f.teamId}`,
+          value: JSON.stringify({ ...settings, ...patch }),
+          expectedRevision: revision,
+        })
+      await save()
+      return { ...f, c, save, settings }
+    }
+    it("rehearses migration 0060 on populated legacy cycles without replacing IDs or dates", async () => {
+      const client = await pool.connect()
+      const schema = `for55_${randomUUID().replaceAll("-", "")}`
+      try {
+        await client.query("BEGIN")
+        await client.query(`CREATE SCHEMA "${schema}"`)
+        await client.query(`SET LOCAL search_path TO "${schema}", public`)
+        await client.query(
+          "CREATE TABLE teams(id uuid PRIMARY KEY, timezone text NOT NULL); CREATE TABLE issue_cycles(id uuid PRIMARY KEY, workspace_id text NOT NULL, team_id uuid NOT NULL, start_date text NOT NULL, end_date text NOT NULL)"
+        )
+        const team = randomUUID(),
+          one = randomUUID(),
+          two = randomUUID()
+        await client.query("INSERT INTO teams VALUES($1,'Europe/Paris')", [
+          team,
+        ])
+        await client.query(
+          "INSERT INTO issue_cycles VALUES($1,'migration',$3,'2026-10-26','2026-11-08'),($2,'migration',$3,'2026-11-23','2026-12-06')",
+          [two, one, team]
+        )
+        const before = (
+          await client.query("SELECT * FROM issue_cycles ORDER BY start_date")
+        ).rows
+        await client.query(
+          readFileSync(
+            new URL("../../../drizzle/0060_shared_cycles.sql", import.meta.url),
+            "utf8"
+          )
+        )
+        const after = (
+          await client.query("SELECT * FROM issue_cycles ORDER BY start_date")
+        ).rows
+        expect(
+          after.map(({ number: _number, timezone: _zone, ...row }) => row)
+        ).toEqual(before)
+        expect(after.map((row) => [row.number, row.timezone])).toEqual([
+          [1, "Europe/Paris"],
+          [2, "Europe/Paris"],
+        ])
+        const third = (
+          await client.query(
+            "INSERT INTO issue_cycles(id,workspace_id,team_id,start_date,end_date) VALUES($1,'migration',$2,'2026-12-21','2027-01-03') RETURNING number",
+            [randomUUID(), team]
+          )
+        ).rows[0]
+        expect(third.number).toBe(3)
+      } finally {
+        await client.query("ROLLBACK")
+        client.release()
+      }
+    }, 30000)
+    it("shows the same canonical issue, dates and timezone to another member (AT-01)", async () => {
+      const f = await setup()
+      const first = await f.c.readTeamCycles(f.actors[0], f.teamId)
+      expect(first.cycles).toHaveLength(2)
+      expect(first.cycles[0]).toMatchObject({
+        number: 1,
+        timezone: "Europe/Paris",
+        state: "Upcoming",
+      })
+      const created = await service.createCanonicalIssue(f.actors[0], {
+        ...command(f.teamId),
+        draft: { ...draft("Shared cycle issue"), cycle: first.cycles[0].id },
+      })
+      const second = await f.c.readTeamCycles(f.actors[1], f.teamId)
+      expect(
+        second.cycles.map(
+          ({ issueCount: _count, completedCount: _completed, ...c }) => c
+        )
+      ).toEqual(
+        first.cycles.map(
+          ({ issueCount: _count, completedCount: _completed, ...c }) => c
+        )
+      )
+      expect(second.cycles[0].issueCount).toBe(1)
+      expect(second.canManage).toBe(false)
+      const page = await queryIssues(f.actors[1], {
+        teamIds: [f.teamId],
+        cycle: first.cycles[0].id,
+      })
+      expect(page.total).toBe(1)
+      expect(page.records[0].issue).toMatchObject({
+        id: created.issue.id,
+        cycle: first.cycles[0].id,
+      })
+      await editing.editCanonicalIssues(f.actors[0], {
+        teamId: f.teamId,
+        commandKey: randomUUID(),
+        edits: [
+          {
+            issueId: created.issue.id,
+            expectedRevision: created.issue.revision!,
+            changes: { status: "done" },
+          },
+        ],
+      })
+      expect(
+        (await f.c.readTeamCycles(f.actors[1], f.teamId)).cycles[0]
+      ).toMatchObject({ issueCount: 1, completedCount: 1 })
+    }, 30000)
+    it("conflicts concurrent assignments without losing the winner or duplicating issues (AT-02)", async () => {
+      const f = await setup(),
+        cycles = (await f.c.readTeamCycles(f.actors[0], f.teamId)).cycles
+      const created = await service.createCanonicalIssue(
+        f.actors[0],
+        command(f.teamId)
+      )
+      const input = (cycle: string) => ({
+        teamId: f.teamId,
+        commandKey: randomUUID(),
+        edits: [
+          {
+            issueId: created.issue.id,
+            expectedRevision: created.issue.revision!,
+            changes: { cycle },
+          },
+        ],
+      })
+      const commands = [input(cycles[0].id), input(cycles[1].id)]
+      const results = await Promise.all(
+        commands.map((cmd, i) => editing.editCanonicalIssues(f.actors[i], cmd))
+      )
+      expect(results.map((r) => r.status).sort()).toEqual(["conflict", "saved"])
+      const winner = results.findIndex((r) => r.status === "saved")
+      const current = (await service.readCanonicalIssues(f.actors[1])).records
+      expect(current).toHaveLength(1)
+      expect(current[0].issue.cycle).toBe(
+        commands[winner].edits[0].changes.cycle
+      )
+      expect(
+        (await editing.editCanonicalIssues(f.actors[winner], commands[winner]))
+          .status
+      ).toBe("saved")
+      expect(
+        (await service.readCanonicalIssues(f.actors[0])).records
+      ).toHaveLength(1)
+    }, 30000)
+    it("rejects foreign-team, foreign-workspace and missing cycle assignments atomically (AT-02)", async () => {
+      const f = await setup(),
+        other = await setup()
+      const cycle = (await f.c.readTeamCycles(f.actors[0], f.teamId)).cycles[0]
+      const issue = (
+        await service.createCanonicalIssue(f.actors[0], command(f.secondTeam))
+      ).issue
+      await expect(
+        editing.editCanonicalIssues(f.actors[1], {
+          teamId: f.secondTeam,
+          commandKey: randomUUID(),
+          edits: [
+            {
+              issueId: issue.id,
+              expectedRevision: issue.revision!,
+              changes: { cycle: cycle.id },
+            },
+          ],
+        })
+      ).rejects.toThrow("cycle could not be found")
+
+      const foreign = (
+        await other.c.readTeamCycles(other.actors[0], other.teamId)
+      ).cycles[0]
+      for (const value of [foreign.id, randomUUID()]) {
+        await expect(
+          service.createCanonicalIssue(f.actors[0], {
+            ...command(f.teamId),
+            draft: { ...draft(), cycle: value },
+          })
+        ).rejects.toThrow()
+      }
+      expect(
+        (await service.readCanonicalIssues(f.actors[0])).records[0].issue.cycle
+      ).toBe("")
+    }, 30000)
+    it("preserves existing windows and memberships when schedule settings change", async () => {
+      const f = await setup(),
+        before = (await f.c.readTeamCycles(f.actors[0], f.teamId)).cycles
+      const issue = (
+        await service.createCanonicalIssue(f.actors[0], {
+          ...command(f.teamId),
+          draft: { ...draft(), cycle: before[0].id },
+        })
+      ).issue
+      await f.save(
+        {
+          timezone: "America/New_York",
+          duration: 1,
+          cooldown: 0,
+          futureCycles: 3,
+          startDay: 3,
+        },
+        1
+      )
+      const after = await f.c.readTeamCycles(
+        f.actors[1],
+        f.teamId,
+        before[0].number
+      )
+      expect(
+        after.cycles
+          .slice(0, 2)
+          .map(({ issueCount: _count, completedCount: _completed, ...c }) => c)
+      ).toEqual(
+        before.map(
+          ({ issueCount: _count, completedCount: _completed, ...c }) => c
+        )
+      )
+      expect(after.cycles[2]).toMatchObject({
+        number: 3,
+        timezone: "America/New_York",
+      })
+      expect(after.cycles[2].startDate > before[1].endDate).toBe(true)
+      expect(
+        (await service.readCanonicalIssues(f.actors[0])).records.find(
+          (r) => r.issue.id === issue.id
+        )!.issue.cycle
+      ).toBe(before[0].id)
+      await expect(
+        pool.query(
+          "UPDATE issue_cycles SET start_date='2027-01-01' WHERE id=$1",
+          [before[0].id]
+        )
+      ).rejects.toThrow("immutable")
+    }, 30000)
+    it("serializes schedule creation, rejects stale settings and blocks non-admin settings writes", async () => {
+      const f = await setup()
+      await Promise.all(
+        Array.from({ length: 5 }, () =>
+          f.c.readTeamCycles(f.actors[1], f.teamId)
+        )
+      )
+      expect(
+        (await f.c.readTeamCycles(f.actors[0], f.teamId)).cycles
+      ).toHaveLength(2)
+      await f.save({ duration: 1 }, 1)
+      await expect(f.save({ duration: 3 }, 1)).rejects.toThrow(
+        "changed in another session"
+      )
+      expect(
+        (await f.c.readTeamCycles(f.actors[1], f.teamId)).settings.duration
+      ).toBe(1)
+      await expect(
+        product.saveProductState(f.actors[1], {
+          workspaceId: f.workspaceId,
+          sessionId:
+            f.actors[1].authentication.kind === "session"
+              ? f.actors[1].authentication.sessionId
+              : "",
+          commandKey: randomUUID(),
+          key: `forge:team-cycles:v1:${f.teamId}`,
+          value: JSON.stringify(f.settings),
+          expectedRevision: 2,
+        })
+      ).rejects.toThrow()
+    }, 30000)
+    it("rejects invalid dates/timezones and refreshes current/upcoming state in each stored zone", async () => {
+      const f = await setup()
+      await expect(f.save({ timezone: "Invalid/Nowhere" }, 1)).rejects.toThrow()
+      for (const [start, end, zone] of [
+        ["2026-02-30", "2026-03-01", "UTC"],
+        ["2026-11-10", "2026-11-01", "UTC"],
+        ["2026-11-01", "2026-11-02", "Invalid/Zone"],
+      ]) {
+        await expect(
+          pool.query(
+            "INSERT INTO issue_cycles(workspace_id,team_id,start_date,end_date,timezone) VALUES($1,$2,$3,$4,$5)",
+            [f.workspaceId, f.teamId, start, end, zone]
+          )
+        ).rejects.toThrow()
+      }
+      const { cycleToday, addCycleDays } = await import("@/lib/cycle-calendar")
+      const today = cycleToday("Europe/Paris")
+      const row = (
+        await pool.query(
+          "INSERT INTO issue_cycles(workspace_id,team_id,start_date,end_date,timezone) VALUES($1,$2,$3,$4,'Europe/Paris') RETURNING number",
+          [f.workspaceId, f.teamId, addCycleDays(today, -1), today]
+        )
+      ).rows[0]
+      expect(
+        (
+          await f.c.readTeamCycles(f.actors[1], f.teamId, row.number)
+        ).cycles.find((c) => c.number === row.number)?.state
+      ).toBe("Current")
+    }, 30000)
+    it("rechecks private-team and revoked membership access", async () => {
+      const f = await setup()
+      await pool.query("UPDATE teams SET visibility='private' WHERE id=$1", [
+        f.teamId,
+      ])
+      await expect(f.c.readTeamCycles(f.actors[1], f.teamId)).rejects.toThrow()
+      await pool.query(
+        "DELETE FROM member WHERE organization_id=$1 AND user_id=$2",
+        [f.workspaceId, users[1]]
+      )
+      await expect(f.c.readTeamCycles(f.actors[1], f.teamId)).rejects.toThrow()
     }, 30000)
   })
 })

@@ -70,6 +70,8 @@
     "test:issue-history:postgres": "vitest run src/application/issues/issues.postgres.test.ts -t FOR-49",
     "test:issue-history:browser": "node scripts/verify-issue-history-browser.mjs",
     "test:cache-scope:browser": "node scripts/verify-cache-scope-browser.mjs",
+    "test:cycles:postgres": "vitest run src/application/issues/issues.postgres.test.ts -t FOR-55",
+    "test:cycles:browser": "node scripts/verify-cycles-browser.mjs",
     "test:projects:postgres": "vitest run src/application/planning/projects.postgres.test.ts",
     "test:projects:browser": "node scripts/verify-shared-projects-browser.mjs"
   },

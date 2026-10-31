@@ -1,5 +1,5 @@
 {
-  "id": "85705c21-bbed-4d50-b9d1-a8c3d0d6a99d",
+  "id": "ddd6c5b8-fecd-4731-a169-944855a7d1c8",
   "prevId": "fb937984-ef58-49e3-8d6a-f616cf856431",
   "version": "7",
   "dialect": "postgresql",
@@ -8358,6 +8358,20 @@
           "primaryKey": false,
           "notNull": true
         },
+        "number": {
+          "name": "number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "timezone": {
+          "name": "timezone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'UTC'"
+        },
         "start_date": {
           "name": "start_date",
           "type": "text",
@@ -8412,6 +8426,14 @@
             "start_date"
           ]
         },
+        "issue_cycles_team_number": {
+          "name": "issue_cycles_team_number",
+          "nullsNotDistinct": false,
+          "columns": [
+            "team_id",
+            "number"
+          ]
+        },
         "issue_cycles_workspace_identity": {
           "name": "issue_cycles_workspace_identity",
           "nullsNotDistinct": false,
@@ -8424,6 +8446,10 @@
       },
       "policies": {},
       "checkConstraints": {
+        "issue_cycles_number_positive": {
+          "name": "issue_cycles_number_positive",
+          "value": "\"issue_cycles\".\"number\" > 0"
+        },
         "issue_cycles_dates": {
           "name": "issue_cycles_dates",
           "value": "\"issue_cycles\".\"start_date\" ~ '^\\d{4}-\\d{2}-\\d{2}$' AND \"issue_cycles\".\"end_date\" >= \"issue_cycles\".\"start_date\""
@@ -9610,13 +9636,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
-        },
-        "revision": {
-          "name": "revision",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
         },
         "properties": {
           "name": "properties",

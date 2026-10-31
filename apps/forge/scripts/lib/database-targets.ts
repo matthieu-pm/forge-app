@@ -22,6 +22,16 @@ export const DATABASE_TARGETS = {
     ...STAGING.database,
     database: "forge_issue_creation_acceptance_v3",
   },
+  // Temporary production clone for the FOR-55 release; expires 1 November 2026 00:00 UTC.
+  "cycle-rehearsal": {
+    branchId: "br-red-darkness-za9grku0",
+    host: "ep-shiny-mouse-za64uyvj.c-2.eu-west-2.aws.neon.tech",
+    database: "neondb",
+  },
+  "cycle-acceptance": {
+    ...STAGING.database,
+    database: "forge_cycles_acceptance",
+  },
   "triage-acceptance": {
     ...STAGING.database,
     database: "forge_triage_acceptance",
@@ -36,10 +46,10 @@ export const DATABASE_TARGETS = {
     host: "ep-shy-fog-zayf42ev.c-2.eu-west-2.aws.neon.tech",
     database: "neondb",
   },
-  // Verified production clone for FOR-54; expires 2026-11-01 00:23:57 UTC.
+  // Verified integrated production clone for FOR-54; expires 2026-11-01 00:34:05 UTC.
   "project-rehearsal": {
-    branchId: "br-solitary-moon-zab3thpd",
-    host: "ep-autumn-leaf-za11vueo.c-2.eu-west-2.aws.neon.tech",
+    branchId: "br-empty-sun-zagd0klv",
+    host: "ep-solitary-sky-za85gbt8.c-2.eu-west-2.aws.neon.tech",
     database: "neondb",
   },
   "auto-assignment-acceptance": {

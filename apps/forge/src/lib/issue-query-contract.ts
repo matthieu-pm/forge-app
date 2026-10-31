@@ -13,7 +13,7 @@ export const issueQuerySchema = z
     teamIds: z.array(z.uuid()).max(100).optional(),
     project: z.string().max(240).optional(),
     milestone: z.array(z.string().max(240)).max(30).optional(),
-    cycle: z.string().max(10).optional(),
+    cycle: z.string().max(36).optional(),
     triage: z.boolean().optional(),
     showSnoozed: z.boolean().default(false),
     personal: z

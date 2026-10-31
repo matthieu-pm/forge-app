@@ -22,7 +22,7 @@ Milestones, project updates/comments, resources/documents, labels, dependencies,
 
 ## Migration and verification
 
-`0060_shared_projects.sql` is additive: it adds `projects.revision` and revision triggers. Apply it with the serialized migration runner and a verified direct database connection before deploying this application revision. Application traffic continues through its pooled connection. Application rollback can retain the added column/triggers. Do not restore personal copies as project authority or remove the revision fence.
+`0061_shared_projects.sql` is additive: it adds `projects.revision` and revision triggers. It follows FOR-55's released `0060_shared_cycles.sql`; the shared-project SQL is unchanged from its provisional 0060 version. Apply it with the serialized migration runner and a verified direct database connection before deploying this application revision. Application traffic continues through its pooled connection. Application rollback can retain the added column/triggers. Do not restore personal copies as project authority or remove the revision fence.
 
 Acceptance uses the isolated `forge_issue_history_acceptance` database on staging branch `br-autumn-union-za0opf1e`, with owner and application-role connections held in a private JSON file. The migration runner verifies the allowlisted branch/database. Fixture cleanup deletes its workspace first because durable command receipts deliberately reject direct deletion while the workspace exists.
 
