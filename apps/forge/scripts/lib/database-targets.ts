@@ -26,6 +26,16 @@ export const DATABASE_TARGETS = {
     ...STAGING.database,
     database: "forge_triage_acceptance",
   },
+  "issue-history-acceptance": {
+    ...STAGING.database,
+    database: "forge_issue_history_acceptance",
+  },
+  // Verified production clone for the FOR-49 release; expires 2026-10-31 17:00 UTC.
+  "issue-history-rehearsal": {
+    branchId: "br-bitter-feather-za3lxg4n",
+    host: "ep-shy-fog-zayf42ev.c-2.eu-west-2.aws.neon.tech",
+    database: "neondb",
+  },
   "auto-assignment-acceptance": {
     ...STAGING.database,
     database: "forge_auto_assignment_acceptance",

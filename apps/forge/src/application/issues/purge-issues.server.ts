@@ -15,6 +15,7 @@ import {
   productState,
   resourceFiles,
 } from "@/db/planning-schema"
+import { commandOutboxEvents } from "@/db/schema"
 import { organizations } from "@/db/auth-schema"
 
 /** Bounded, leased SQL checkpoints surround idempotent byte deletes. Restore
@@ -212,6 +213,32 @@ export async function purgeDeletedIssues(
               purgeLeaseUntil: null,
               purgeToken: null,
             })
+            .where(eq(issues.id, target.id))
+          return
+        }
+        // History snapshots follow the owning content's recovery deadline. Keep
+        // only the separate minimal audit/receipt evidence after permanent purge.
+        const history = await tx
+          .select({ id: commandOutboxEvents.id })
+          .from(commandOutboxEvents)
+          .where(
+            and(
+              eq(commandOutboxEvents.workspaceId, target.workspaceId),
+              sql`${commandOutboxEvents.payload}->>'issueId'=${target.id}`
+            )
+          )
+          .limit(100)
+        if (history.length)
+          await tx.delete(commandOutboxEvents).where(
+            inArray(
+              commandOutboxEvents.id,
+              history.map((e) => e.id)
+            )
+          )
+        if (history.length === 100) {
+          await tx
+            .update(issues)
+            .set({ purgeLeaseUntil: null, purgeToken: null })
             .where(eq(issues.id, target.id))
           return
         }

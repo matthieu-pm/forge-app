@@ -23,6 +23,7 @@ import { currentCommandActor } from "@/application/commands/command-actor.server
 import { readableIssueCondition } from "@/application/resource-policy.server"
 import { blankIssueDraft } from "@/lib/issue-record-contract"
 import { editIssueBatchSchema } from "@/lib/canonical-issue-edit-contract"
+import { boundedHistoryText } from "@/lib/issue-history-contract"
 import { withoutUndefined } from "@/lib/canonical-json"
 
 class IssueEditConflict extends Error {}
@@ -237,7 +238,59 @@ export async function editCanonicalIssues(actor: Actor, raw: EditIssueBatch) {
             )
           events.push({
             topic: "issue.updated",
-            payload: { issueId: row.id, teamId: input.teamId },
+            payload: {
+              issueId: row.id,
+              teamId: input.teamId,
+              history: {
+                version: 1,
+                changes: Object.entries(edit.changes)
+                  .filter(
+                    ([field, value]) =>
+                      field !== "subIssues" &&
+                      !(
+                        field === "descriptionDoc" &&
+                        edit.changes.description !== undefined
+                      ) &&
+                      JSON.stringify(
+                        before[field as keyof typeof before] ?? null
+                      ) !== JSON.stringify(value ?? null)
+                  )
+                  .map(([field, value]) => {
+                    const retainValue = [
+                      "status",
+                      "priority",
+                      "assignee",
+                      "project",
+                      "labels",
+                      "dueDate",
+                      "cycle",
+                      "parentId",
+                      "recurrence",
+                      "subscribers",
+                      "milestone",
+                      "triage",
+                      "snoozed",
+                    ].includes(field)
+                    return {
+                      field: field === "descriptionDoc" ? "description" : field,
+                      from: retainValue
+                        ? boundedHistoryText(
+                            String(before[field as keyof typeof before] ?? ""),
+                            1000
+                          )
+                        : "",
+                      to: retainValue
+                        ? boundedHistoryText(String(value ?? ""), 1000)
+                        : "",
+                    }
+                  })
+                  .concat(
+                    resolved.assignedOnStart
+                      ? [{ field: "assignee", from: "", to: current.userId }]
+                      : []
+                  ),
+              },
+            },
           })
           if (edit.triageDecision)
             events.push({
@@ -297,7 +350,22 @@ export async function editCanonicalIssues(actor: Actor, raw: EditIssueBatch) {
               createdIds.push(child.id)
               events.push({
                 topic: "issue.created",
-                payload: { issueId: child.id, teamId: input.teamId },
+                payload: {
+                  issueId: child.id,
+                  teamId: input.teamId,
+                  history: {
+                    version: 1,
+                    changes: childResolved.assignee
+                      ? [
+                          {
+                            field: "assignee",
+                            from: "",
+                            to: childResolved.assignee,
+                          },
+                        ]
+                      : [],
+                  },
+                },
               })
             }
           }

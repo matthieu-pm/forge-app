@@ -400,6 +400,13 @@
       "when": 1793402909367,
       "tag": "0056_issue_copy_purge_cursor",
       "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1793450405951,
+      "tag": "0057_issue_history",
+      "breakpoints": true
     }
   ]
 }
