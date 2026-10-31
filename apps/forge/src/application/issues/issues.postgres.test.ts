@@ -3725,5 +3725,41 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
         )
       ).toMatchObject({ value: null })
     }, 30000)
+    it("records distinct mention events including self while leaving delivery policy to the consumer", async () => {
+      const f = await setup()
+      const document = {
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
+            content: [
+              { type: "text", text: "Mention events " },
+              ...[users[1], users[1], users[0]].map((id) => ({
+                type: "mention",
+                attrs: { id, label: "untrusted label" },
+              })),
+            ],
+          },
+        ],
+      }
+      const created = { ...f.input, document }
+      expect(
+        await f.comments.commandIssueComment(f.actors[0], created)
+      ).toMatchObject({ status: "saved" })
+      expect(
+        await f.comments.commandIssueComment(f.actors[0], {
+          ...created,
+          action: "edit",
+          commandKey: randomUUID(),
+        })
+      ).toMatchObject({ status: "saved" })
+      const events = (
+        await pool.query(
+          "SELECT payload->>'recipientId' recipient FROM command_outbox_events WHERE workspace_id=$1 AND topic='issue.comment.mentioned' ORDER BY payload->>'recipientId'",
+          [f.workspaceId]
+        )
+      ).rows
+      expect(events.map((e) => e.recipient)).toEqual([...users].sort())
+    }, 30000)
   })
 })

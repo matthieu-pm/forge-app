@@ -282,9 +282,7 @@ export async function commandIssueComment(
               payload: event,
             },
             ...ids
-              .filter(
-                (id) => !previousIds.includes(id) && id !== current.userId
-              )
+              .filter((id) => !previousIds.includes(id))
               .map((recipientId) => ({
                 topic: "issue.comment.mentioned",
                 payload: { ...event, recipientId },
