@@ -5,6 +5,7 @@ export const issueCopyPrefixes = [
   "forge:team-issue-edit-drafts:v1:",
   "forge:team-relationship-draft:v1:",
   "forge:comment-draft:v1:",
+  "forge:issue-engagement-draft:v1:",
   "forge:pending-recovery:v1:",
   "forge:legacy-conflict:v1:",
 ]
@@ -32,7 +33,10 @@ export function filterIssueCopy(
   if (value === null || !isIssueCopyKey(key)) return value
   if (depth > 8) throw new Error("Saved recovery nesting exceeds its limit.")
   const data = object(JSON.parse(value))
-  if (key.startsWith("forge:comment-draft:v1:")) {
+  if (
+    key.startsWith("forge:comment-draft:v1:") ||
+    key.startsWith("forge:issue-engagement-draft:v1:")
+  ) {
     const target = id(data.issueId)
     if (!target) throw new Error("Invalid comment draft.")
     return keep(target) ? value : null
@@ -127,7 +131,8 @@ export function retainHiddenIssueCopies(
   }
   if (
     key.startsWith("forge:team-relationship-draft:v1:") ||
-    key.startsWith("forge:comment-draft:v1:")
+    key.startsWith("forge:comment-draft:v1:") ||
+    key.startsWith("forge:issue-engagement-draft:v1:")
   )
     return issueCopyIds(key, previous).some((issueId) => retained.has(issueId))
       ? previous
@@ -161,7 +166,8 @@ export function hasRetainedCommandCopy(
   if (depth > 8) throw new Error("Saved recovery nesting exceeds its limit.")
   if (
     key.startsWith("forge:team-issue-edit-drafts:v1:") ||
-    key.startsWith("forge:comment-draft:v1:")
+    key.startsWith("forge:comment-draft:v1:") ||
+    key.startsWith("forge:issue-engagement-draft:v1:")
   )
     return issueCopyIds(key, value).some((id) => retained.has(id))
   if (

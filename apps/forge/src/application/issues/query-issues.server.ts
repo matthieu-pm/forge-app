@@ -201,6 +201,10 @@ export async function queryCanonicalIssues(
         domain.push(
           sql`coalesce(${issues.properties}->>'milestone','') IN (${sql.join(query.milestone.length ? query.milestone.map((v) => sql`${v}`) : [sql`''`], sql`,`)})`
         )
+      if (query.triage === false)
+        domain.push(
+          sql`coalesce(${issues.properties}->>'triage','false') <> 'true'`
+        )
       if (query.triage) {
         domain.push(sql`${issues.properties}->>'triage' = 'true'`)
         if (!query.showSnoozed)
@@ -262,7 +266,7 @@ export async function queryCanonicalIssues(
       '' suggested_label, coalesce(issues.properties->>'dueDate','') due_date,
       coalesce(issues.properties->>'milestone','') milestone, coalesce(issues.properties->>'subscribers','') subscribers,
       CASE WHEN issues.properties->>'autoClosed'='true' THEN 'Yes' ELSE 'No' END auto_closed,
-      CASE WHEN ${Boolean(query.triage)} THEN CASE WHEN (issues.title || E'\n' || coalesce(issues.properties->>'description','')) ~* 'https?://[^[:space:]]+' THEN 'link' ELSE '' END ELSE coalesce((SELECT string_agg((e->>'title') || ' ' || (e->>'url'),',') FROM jsonb_array_elements(coalesce(issues.properties->'links','[]')) e),'') END links,
+      CASE WHEN ${Boolean(query.triage)} THEN CASE WHEN jsonb_array_length(coalesce(issues.properties->'links','[]')) > 0 OR (issues.title || E'\n' || coalesce(issues.properties->>'description','')) ~* 'https?://[^[:space:]]+' THEN 'link' ELSE '' END ELSE coalesce((SELECT string_agg((e->>'title') || ' ' || (e->>'url'),',') FROM jsonb_array_elements(coalesce(issues.properties->'links','[]')) e),'') END links,
       coalesce(issues.properties->>'templateName','') template_name,
       to_char(issues.created_at AT TIME ZONE 'UTC','YYYY-MM-DD') created_day,
       to_char(issues.updated_at AT TIME ZONE 'UTC','YYYY-MM-DD') updated_day,

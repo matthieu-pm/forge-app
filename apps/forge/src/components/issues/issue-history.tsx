@@ -35,6 +35,10 @@ export function historyAction(entry: IssueHistoryEntry) {
     "issue.archive": "archived the issue",
     "issue.unarchive": "unarchived the issue",
     "issue.relationship-changed": "changed issue relationships",
+    "issue.triage.accepted": "accepted the issue from triage",
+    "issue.triage.declined": "declined the issue from triage",
+    "issue.subscription.changed": "changed their subscription",
+    "issue.reaction.changed": "changed a reaction",
   }
   return actions[entry.topic] ?? "changed the issue"
 }

@@ -59,8 +59,12 @@
     "test:issue-relationships:browser": "node scripts/verify-issue-relationships-browser.mjs",
     "test:issue-lifecycle:postgres": "vitest run src/application/issues/issues.postgres.test.ts -t FOR-45",
     "test:issue-lifecycle:browser": "node scripts/verify-issue-lifecycle-browser.mjs",
+    "test:triage:postgres": "vitest run src/application/issues/issues.postgres.test.ts -t FOR-50",
+    "test:triage:browser": "node scripts/verify-triage-browser.mjs",
     "test:issue-comments:postgres": "vitest run src/application/issues/issues.postgres.test.ts -t FOR-46",
     "test:issue-comments:browser": "node scripts/verify-issue-comments-browser.mjs",
+    "test:issue-engagement:postgres": "vitest run src/application/issues/issues.postgres.test.ts -t FOR-47",
+    "test:issue-engagement:browser": "node scripts/verify-issue-engagement-browser.mjs",
     "test:issue-history:postgres": "vitest run src/application/issues/issues.postgres.test.ts -t FOR-49",
     "test:issue-history:browser": "node scripts/verify-issue-history-browser.mjs"
   },

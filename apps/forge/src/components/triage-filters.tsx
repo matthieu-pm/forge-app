@@ -82,7 +82,7 @@ const categories: Array<Category> = [
   {
     label: "Creator",
     icon: UserGroup03Icon,
-    unavailable: "Creator information is not recorded for local triage issues.",
+    unavailable: "Creator filtering is not available in this triage view.",
   },
   { label: "Priority", icon: Flag01Icon, field: "priority" },
   { label: "Labels", icon: Tag01Icon, field: "labels" },
@@ -106,12 +106,13 @@ const categories: Array<Category> = [
   {
     label: "Project properties",
     icon: CubeIcon,
-    unavailable: "Project properties are not linked to local triage issues.",
+    unavailable:
+      "Project property filtering is not available in this triage view.",
   },
   {
     label: "Initiative",
     icon: Flag01Icon,
-    unavailable: "Initiatives are not linked to local triage issues.",
+    unavailable: "Initiative filtering is not available in this triage view.",
   },
   {
     label: "Cycle",
@@ -121,13 +122,12 @@ const categories: Array<Category> = [
   {
     label: "Added to cycle",
     icon: Clock05Icon,
-    unavailable:
-      "Cycle assignment dates are not recorded for local triage issues.",
+    unavailable: "Cycle date filtering is not available in this triage view.",
   },
   {
     label: "Customers",
     icon: UserGroup03Icon,
-    unavailable: "Customers are not linked to local triage issues.",
+    unavailable: "Customer filtering is not available in this triage view.",
   },
   {
     label: "Subscribers",
@@ -138,7 +138,8 @@ const categories: Array<Category> = [
   {
     label: "External source",
     icon: Link01Icon,
-    unavailable: "External sources are not recorded for local triage issues.",
+    unavailable:
+      "External source filtering is not available in this triage view.",
   },
   {
     label: "Auto-closed",

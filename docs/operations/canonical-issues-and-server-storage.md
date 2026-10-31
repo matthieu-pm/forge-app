@@ -22,6 +22,21 @@ Imported issue/project identity is deduplicated against its original fingerprint
 
 Comments/reactions, issue movement/deletion, automatic recurrence execution, started-state personal assignment, general project/cycle planning mutations and public planning REST/MCP transports retain their own issue ownership. These paths do not silently fall back to browser authority.
 
+## Canonical triage · FOR-50
+
+Triage is a pending state on the canonical issue. Its queue uses the same team number, UUID, authorized bounded queries and live source links. Team issue lists/boards request `triage: false`; pending work is shown in triage. Accept selects a Backlog, Unstarted or Started status and an explicit eligible assignee or Unassigned. The product owner confirmed on 31 October 2026 that decline keeps the same issue and moves it to a status in the team's Canceled group. Both decisions clear triage and snooze, append server-attributed history, and atomically emit `issue.updated` plus `issue.triage.accepted` or `issue.triage.declined` through the existing command outbox. Notification delivery remains separately owned.
+
+Decisions use the revision the triager reviewed. Only one competing decision commits. The losing private draft is visible in the existing conflict feedback; it cannot be rebased after the issue leaves triage. Uncertain responses retain the exact command identity for replay. A generic property edit cannot directly toggle triage. Existing legacy triage payloads remain available to the migration adapter; the triage screen creates no separate local issue copy.
+
+Verification uses `forge_triage_acceptance` on staging branch `br-autumn-union-za0opf1e`, with owner and pooled application connections held in a private JSON file. Do not run database-wide audit fault injection concurrently with browser verification on the same database.
+
+```sh
+FORGE_TRIAGE_TEST_DATABASE_FILE=/private/connections.json bun run test:triage:postgres
+FORGE_TRIAGE_TEST_DATABASE_FILE=/private/connections.json FORGE_TRIAGE_BROWSER_URL=http://localhost:3150 bun run test:triage:browser
+```
+
+The browser server must use that dedicated database and generated local test secrets. No production migration or deployment is needed for this application-only change. Recorded results belong to the implementation revision in `for50-acceptance-evidence.json`.
+
 ## Product state and recovery
 
 `productStorage` is a memory-only compatibility adapter. Its writes go through authenticated, revision-checked, idempotent commands into `product_state`. Personal state belongs to the current user and workspace. Shared team configuration requires current team access and administrator authorization. Raw legacy initiative stores remain private; only validated canonical project projections are shared.
