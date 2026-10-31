@@ -39,14 +39,7 @@ const Mention = Node.create({
   ],
   renderText: ({ node }) => `@${String(node.attrs.label)}`,
 })
-export function SharedCommentInput({
-  teamId,
-  issueId,
-  parentId = "",
-  comment,
-  onSaved,
-  onCancel,
-}: {
+type SharedCommentInputProps = {
   teamId: string
   issueId: string
   parentId?: string
@@ -59,7 +52,25 @@ export function SharedCommentInput({
   }
   onSaved?: () => void
   onCancel?: () => void
-}) {
+}
+export function SharedCommentInput(props: SharedCommentInputProps) {
+  // Even when the same shared issue stays open across an account/session switch,
+  // discard the old editor's private draft and in-flight state.
+  return (
+    <CommentComposer
+      key={`${canonicalIssueEpoch()}:${props.issueId}:${props.parentId ?? ""}:${props.comment?.id ?? ""}`}
+      {...props}
+    />
+  )
+}
+function CommentComposer({
+  teamId,
+  issueId,
+  parentId = "",
+  comment,
+  onSaved,
+  onCancel,
+}: SharedCommentInputProps) {
   const slot = comment
     ? `edit-${comment.id}`
     : parentId
