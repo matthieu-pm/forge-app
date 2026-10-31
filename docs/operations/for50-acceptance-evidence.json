@@ -1,0 +1,127 @@
+{
+  "issue": "FOR-50",
+  "date": "2026-10-31",
+  "implementationCommit": "fa30b31a1896f8a14aaa2e15be73ba3cfd7008ad",
+  "baseCommit": "884445a",
+  "environment": {
+    "production": false,
+    "database": "forge_triage_acceptance",
+    "neonBranch": "br-autumn-union-za0opf1e",
+    "applicationRole": "forge_staging_web",
+    "browserOrigin": "http://localhost:3150",
+    "server": "Production Node build with generated local test credentials; external providers unused"
+  },
+  "acceptedDecision": {
+    "source": "Product owner in this chat, recorded in FOR-50 comments",
+    "decline": "Retain the canonical issue and move it into the team Canceled status group; record the decision in shared history.",
+    "accept": "Choose a nonterminal team status and explicit eligible assignee or Unassigned."
+  },
+  "acceptance": [
+    {
+      "criterion": "AC-01",
+      "test": "AT-01",
+      "result": "passed",
+      "evidence": [
+        "Two real Better Auth sessions see the same canonical UUID and team issue number after accept and assignment.",
+        "The issue leaves pending triage and appears in team work with matching server-attributed history.",
+        "Valid source references survive accept and decline.",
+        "Incoming creation is canonical and visible after another account reloads."
+      ]
+    },
+    {
+      "criterion": "AC-02",
+      "test": "AT-02",
+      "result": "passed",
+      "evidence": [
+        "Competing accept and decline requests on the same revision commit one decision, one decision event and one audit record.",
+        "The losing client shows the conflict and retained decision draft.",
+        "A losing decision cannot rebase after the issue leaves triage.",
+        "Uncertain response retries retain the original command identity and reviewed revision.",
+        "Injected audit failure rolls back issue state, history, receipt and outbox together.",
+        "Live private-team access, assignee eligibility and revocation apply to commands and replays."
+      ]
+    }
+  ],
+  "checks": {
+    "targetedPostgres": {
+      "passed": 6,
+      "failed": 0
+    },
+    "focusedUIAndQueue": {
+      "passed": 18,
+      "failed": 0
+    },
+    "appSuite": {
+      "passed": 2288,
+      "failed": 1,
+      "skipped": 394,
+      "files": 307,
+      "note": "The Reviews emoji-picker test fails intermittently in the full suite. It passed in isolated reruns on the unchanged base (884445a) and this implementation; the three files that failed in the first contended run also passed individually on both revisions. No Reviews code is changed.",
+      "sourceRevision": "97abb798b918d2c779779365d7c2205b3fbbfd51"
+    },
+    "isolatedRerunOfAffectedFiles": {
+      "passed": 18,
+      "failed": 0,
+      "baseAlsoPassed": true
+    },
+    "finalReviewsRerun": {
+      "passed": 7,
+      "failed": 0
+    },
+    "workflow": {
+      "passed": 4,
+      "failed": 0,
+      "sourceRevision": "97abb798b918d2c779779365d7c2205b3fbbfd51"
+    },
+    "typecheck": "passed at final implementation revision",
+    "changedFileLint": {
+      "errors": 0,
+      "warnings": 10
+    },
+    "productionBuild": "passed at final implementation revision",
+    "postgresRegression": {
+      "passed": 110,
+      "failed": 0,
+      "sourceRevision": "97abb798b918d2c779779365d7c2205b3fbbfd51",
+      "cleanup": "All acceptance fixtures removed by suite cleanup"
+    },
+    "finalTriageAndQueryRegression": {
+      "passed": 12,
+      "failed": 0,
+      "sourceRevision": "fa30b31a1896f8a14aaa2e15be73ba3cfd7008ad",
+      "includes": "Canonical source links count in the triage Has links filter"
+    },
+    "finalChangedFileLint": {
+      "errors": 0,
+      "warnings": 3
+    },
+    "browser": {
+      "result": "passed",
+      "sourceRevision": "fa30b31a1896f8a14aaa2e15be73ba3cfd7008ad",
+      "checks": [
+        "Two independent real Better Auth sessions",
+        "Accept and assign the same issue UUID and team number",
+        "Preserve valid canonical source references",
+        "Shared history in the team issue detail",
+        "Competing decisions yield one committed decision and one visible conflict",
+        "No rebase after a committed decision",
+        "Decline moves to Canceled",
+        "New triage creation visible to the second account after reload"
+      ],
+      "cleanup": {
+        "workspaces": 0,
+        "users": 0,
+        "receipts": 0
+      }
+    }
+  },
+  "release": {
+    "migrationRequired": false,
+    "deployed": false,
+    "status": "Ready for pull-request review; production release is separate"
+  },
+  "screenshots": [
+    "docs/qa/triage/for50-decision.png",
+    "docs/qa/triage/for50-conflict.png"
+  ]
+}
