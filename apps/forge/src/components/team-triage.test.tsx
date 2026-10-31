@@ -232,7 +232,7 @@ describe("FOR-50 canonical triage screen", () => {
         .getByRole("button", { name: "Apply my edits to latest" })
         .hasAttribute("disabled")
     ).toBe(true)
-    fireEvent.click(screen.getByText("Review saved issue edits"))
+    fireEvent.click(screen.getByText("Review unsaved issue edits"))
     expect(screen.getByText(/already left triage/)).toBeTruthy()
     fireEvent.click(
       screen.getByRole("button", {
