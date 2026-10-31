@@ -28,13 +28,36 @@ let epoch = 0
 const optimistic = new Map<string, TeamIssue>()
 const suppressed = new Map<string, number>()
 const revisionFloors = new Map<string, number>()
+let removalEpoch = 0
+let readGeneration = 0
+const removedAt = new Map<string, number>()
+const requiresAuthorizedRead = new Set<string>()
+// Explicit eviction is different from a metadata-only bootstrap refresh. Detail
+// hooks may retain an editor across the latter, but never across the former.
+export function canonicalIssueRemovalEpoch(id?: string) {
+  return id ? (removedAt.get(id) ?? 0) : removalEpoch
+}
+export function canonicalIssueReadGeneration() {
+  return readGeneration
+}
 export function canonicalSuppressionSnapshot() {
   return [...suppressed.keys()].sort().join(",")
 }
 export function isCanonicalIssueSuppressed(id: string) {
   return suppressed.has(id)
 }
-function acceptCanonicalIssueRecord(issue: TeamIssue) {
+function acceptCanonicalIssueRecord(
+  issue: TeamIssue,
+  authorizedReadEpoch?: number
+) {
+  // A delayed mutation acknowledgement may predate access loss. Its receipt is
+  // still valid, but only a fresh authorized read may restore the cached row.
+  if (
+    requiresAuthorizedRead.has(issue.id) &&
+    (authorizedReadEpoch === undefined ||
+      authorizedReadEpoch < (removedAt.get(issue.id) ?? 0))
+  )
+    return false
   const revision = issue.revision ?? 0
   if (
     revision < (revisionFloors.get(issue.id) ?? 0) ||
@@ -42,6 +65,7 @@ function acceptCanonicalIssueRecord(issue: TeamIssue) {
   )
     return false
   suppressed.delete(issue.id)
+  requiresAuthorizedRead.delete(issue.id)
   revisionFloors.set(issue.id, revision)
   return true
 }
@@ -58,6 +82,7 @@ export function replaceCanonicalIssues(
   next: CanonicalSnapshot | null,
   enabled = true
 ) {
+  readGeneration++
   const changed =
     !next ||
     !state ||
@@ -69,6 +94,9 @@ export function replaceCanonicalIssues(
     optimistic.clear()
     suppressed.clear()
     revisionFloors.clear()
+    removedAt.clear()
+    requiresAuthorizedRead.clear()
+    removalEpoch++
   } else if (next.records.length) {
     const previous = new Map(state!.records.map((r) => [r.issue.id, r]))
     next.records = next.records.map((r) => {
@@ -79,6 +107,12 @@ export function replaceCanonicalIssues(
     })
     for (const id of optimistic.keys())
       if (!next.records.some((r) => r.issue.id === id)) optimistic.delete(id)
+  }
+  if (!changed) {
+    const retained = new Set(next.records.map((r) => r.issue.id))
+    for (const record of state!.records)
+      if (!retained.has(record.issue.id))
+        requiresAuthorizedRead.add(record.issue.id)
   }
   state = next
     ? {
@@ -162,12 +196,13 @@ export function clearOptimisticIssue(issueId: string) {
 }
 export function mergeCanonicalIssueRecords(
   records: CanonicalSnapshot["records"],
-  invalidate = true
+  invalidate = true,
+  authorizedReadEpoch?: number
 ) {
   if (!state) return
   const byId = new Map(state.records.map((r) => [r.issue.id, r]))
   for (const record of records) {
-    if (!acceptCanonicalIssueRecord(record.issue)) continue
+    if (!acceptCanonicalIssueRecord(record.issue, authorizedReadEpoch)) continue
     const old = byId.get(record.issue.id)
     if (!old || (record.issue.revision ?? 0) >= (old.issue.revision ?? 0))
       byId.set(record.issue.id, record)
@@ -176,7 +211,10 @@ export function mergeCanonicalIssueRecords(
   if (invalidate && typeof window !== "undefined")
     window.dispatchEvent(
       new CustomEvent("forge:issue-queries-invalidated", {
-        detail: { teamIds: [...new Set(records.map((r) => r.teamId))] },
+        detail: {
+          teamIds: [...new Set(records.map((r) => r.teamId))],
+          retainedIssueIds: records.map((r) => r.issue.id),
+        },
       })
     )
   notifyIssues()
@@ -204,7 +242,7 @@ export function restoreCanonicalIssueVisibility(
   notifyIssues()
 }
 
-export function removeCanonicalIssueRecords(ids: Array<string>) {
+function discardCanonicalIssueRecords(ids: Array<string>) {
   if (!state || !ids.length) return
   const removed = new Set(ids)
   state = {
@@ -213,4 +251,38 @@ export function removeCanonicalIssueRecords(ids: Array<string>) {
   }
   for (const id of ids) optimistic.delete(id)
   notifyIssues()
+}
+
+/** Collection invalidation discards cached rows, including unmounted details.
+ * Mounted editors keep their own projection until their authorized read settles.
+ * A committed mutation's fresh records are retained through its invalidation. */
+export function clearCanonicalIssueQueryRecords(
+  teamIds?: Array<string>,
+  retainedIssueIds: Array<string> = []
+) {
+  readGeneration++
+  const retained = new Set(retainedIssueIds)
+  const ids =
+    state?.records
+      .filter(
+        (r) =>
+          (!teamIds || teamIds.includes(r.teamId)) && !retained.has(r.issue.id)
+      )
+      .map((r) => r.issue.id) ?? []
+  for (const id of ids) requiresAuthorizedRead.add(id)
+  discardCanonicalIssueRecords(ids)
+}
+
+export function removeCanonicalIssueRecords(
+  ids: Array<string>,
+  options: { requireAuthorizedRead?: boolean } = {}
+) {
+  if (!state || !ids.length) return
+  readGeneration++
+  removalEpoch++
+  for (const id of ids) {
+    removedAt.set(id, removalEpoch)
+    if (options.requireAuthorizedRead) requiresAuthorizedRead.add(id)
+  }
+  discardCanonicalIssueRecords(ids)
 }

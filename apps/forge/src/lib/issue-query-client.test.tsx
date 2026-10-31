@@ -9,6 +9,8 @@ import {
 } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
+  canonicalIssueState,
+  mergeCanonicalIssueRecords,
   replaceCanonicalIssues,
   suppressCanonicalIssueRecord,
 } from "./canonical-issue-cache"
@@ -303,4 +305,188 @@ it("ignores a failed obsolete revalidation when a newer refresh is pending", asy
   expect(hook.result.current?.issue.id).toBe(id)
   await act(async () => finish(JSON.stringify(page(id).records)))
   expect(hook.result.current?.issue.id).toBe(id)
+})
+
+describe("FOR-51 personal queue cache revocation", () => {
+  it.each(["assigned", "created", "subscribed"] as const)(
+    "an explicit %s refresh purges the cached row and retained detail even if the new page is empty",
+    async (personal) => {
+      const id = crypto.randomUUID()
+      vi.mocked(loadIssueQuery).mockResolvedValueOnce(JSON.stringify(page(id)))
+      vi.mocked(loadIssueDetail).mockResolvedValueOnce(
+        JSON.stringify(page(id).records)
+      )
+      const queue = renderHook(() => useIssueQuery({ personal }))
+      const detail = renderHook(() => useQueriedIssue(id))
+      await waitFor(() => expect(queue.result.current.records).toHaveLength(1))
+      await waitFor(() => expect(detail.result.current?.issue.id).toBe(id))
+      vi.mocked(loadIssueQuery).mockResolvedValue(
+        JSON.stringify({ ...page(id), records: [], total: 0 })
+      )
+      vi.mocked(loadIssueDetail).mockResolvedValue("[]")
+      act(() => queue.result.current.refresh())
+      expect(detail.result.current).toBeUndefined()
+      expect(canonicalIssueState()?.records).toEqual([])
+      await waitFor(() => expect(queue.result.current.page?.total).toBe(0))
+      expect(queue.result.current.records).toEqual([])
+      expect(canonicalIssueState()?.records).toEqual([])
+    }
+  )
+
+  it.each(["empty", "failure"])(
+    "a %s detail revalidation evicts all cached personal tabs, fences delayed reads and recovers after access returns",
+    async (outcome) => {
+      const id = crypto.randomUUID()
+      vi.mocked(loadIssueQuery).mockResolvedValue(JSON.stringify(page(id)))
+      vi.mocked(loadIssueDetail).mockResolvedValue(
+        JSON.stringify(page(id).records)
+      )
+      const assigned = renderHook(() => useIssueQuery({ personal: "assigned" }))
+      const subscribed = renderHook(() =>
+        useIssueQuery({ personal: "subscribed" })
+      )
+      const detail = renderHook(() => useQueriedIssue(id))
+      const secondDetail = renderHook(() => useQueriedIssue(id))
+      await waitFor(() =>
+        expect(assigned.result.current.records).toHaveLength(1)
+      )
+      await waitFor(() =>
+        expect(subscribed.result.current.records).toHaveLength(1)
+      )
+      await waitFor(() =>
+        expect(secondDetail.result.current?.issue.id).toBe(id)
+      )
+      let finishOld!: (value: string) => void
+      let deny!: () => void
+      // Queue reads began before the denial; returning them later must not
+      // restore rows or counts. Keep the second detail request pending too.
+      vi.mocked(loadIssueQuery)
+        .mockImplementationOnce(
+          () =>
+            new Promise((resolve) => {
+              finishOld = resolve
+            })
+        )
+        .mockResolvedValue(
+          JSON.stringify({ ...page(id), records: [], total: 0 })
+        )
+      vi.mocked(loadIssueDetail)
+        .mockImplementationOnce(
+          () =>
+            new Promise((resolve, reject) => {
+              deny = () =>
+                outcome === "empty"
+                  ? resolve("[]")
+                  : reject(new Error("revoked"))
+            })
+        )
+        .mockReturnValueOnce(new Promise(() => {}))
+      act(() => invalidateIssueQueries())
+      await waitFor(() => expect(loadIssueDetail).toHaveBeenCalledTimes(4))
+      await act(async () => deny())
+      expect(detail.result.current).toBeUndefined()
+      expect(secondDetail.result.current).toBeUndefined()
+      expect(canonicalIssueState()?.records).toEqual([])
+      await act(async () => finishOld(JSON.stringify(page(id))))
+      await waitFor(() => expect(assigned.result.current.loading).toBe(false))
+      expect(assigned.result.current.page?.total).toBe(0)
+      expect(subscribed.result.current.records).toEqual([])
+      expect(canonicalIssueState()?.records).toEqual([])
+
+      // Access may be restored without changing the issue revision.
+      vi.mocked(loadIssueQuery).mockResolvedValue(JSON.stringify(page(id)))
+      vi.mocked(loadIssueDetail).mockResolvedValue(
+        JSON.stringify(page(id).records)
+      )
+      act(() => invalidateIssueQueries())
+      await waitFor(() =>
+        expect(assigned.result.current.records).toHaveLength(1)
+      )
+      await waitFor(() => expect(detail.result.current?.issue.id).toBe(id))
+      await waitFor(() =>
+        expect(secondDetail.result.current?.issue.id).toBe(id)
+      )
+    }
+  )
+})
+
+it.each(["empty", "failure"])(
+  "FOR-51 review: invalidation clears cached private rows after a replacement %s without an open detail",
+  async (outcome) => {
+    const id = crypto.randomUUID()
+    vi.mocked(loadIssueQuery).mockResolvedValueOnce(JSON.stringify(page(id)))
+    const queue = renderHook(() => useIssueQuery({ personal: "assigned" }))
+    await waitFor(() => expect(queue.result.current.records).toHaveLength(1))
+    expect(canonicalIssueState()?.records).toHaveLength(1)
+    if (outcome === "empty")
+      vi.mocked(loadIssueQuery).mockResolvedValueOnce(
+        JSON.stringify({ ...page(id), records: [], total: 0 })
+      )
+    else vi.mocked(loadIssueQuery).mockRejectedValueOnce(new Error("revoked"))
+    act(() => invalidateIssueQueries([team]))
+    await waitFor(() => expect(queue.result.current.loading).toBe(false))
+    expect(queue.result.current.records).toEqual([])
+    expect(canonicalIssueState()?.records).toEqual([])
+    // An acknowledgement from before invalidation cannot refill the cache.
+    act(() => mergeCanonicalIssueRecords(page(id).records))
+    expect(canonicalIssueState()?.records).toEqual([])
+    expect(loadIssueDetail).not.toHaveBeenCalled()
+  }
+)
+
+it("FOR-51 review: mutation invalidation retains its committed record and mounted editor while discarding other cached details", async () => {
+  const id = crypto.randomUUID()
+  const original = page(id).records[0]
+  vi.mocked(loadIssueDetail)
+    .mockResolvedValueOnce(JSON.stringify([original]))
+    .mockReturnValueOnce(new Promise(() => {}))
+  function Detail() {
+    const record = useQueriedIssue(id)
+    return record ? (
+      <>
+        <input aria-label="Retained mutation draft" />
+        <span>{record.issue.title}</span>
+      </>
+    ) : null
+  }
+  render(<Detail />)
+  const editor = await screen.findByLabelText("Retained mutation draft")
+  fireEvent.change(editor, {
+    target: { value: "Unsent text and uploads stay here" },
+  })
+  const other = page(crypto.randomUUID()).records[0]
+  const unrelated = {
+    ...page(crypto.randomUUID()).records[0],
+    teamId: crypto.randomUUID(),
+  }
+  act(() => mergeCanonicalIssueRecords([other, unrelated], false))
+  const updated = {
+    ...original,
+    issue: { ...original.issue, title: "Committed title", revision: 2 },
+  }
+  act(() => mergeCanonicalIssueRecords([updated]))
+  await waitFor(() => expect(loadIssueDetail).toHaveBeenCalledTimes(2))
+  expect(screen.getByLabelText("Retained mutation draft")).toBe(editor)
+  expect((editor as HTMLInputElement).value).toBe(
+    "Unsent text and uploads stay here"
+  )
+  expect(screen.getByText("Committed title")).toBeTruthy()
+  expect(
+    canonicalIssueState()
+      ?.records.map((r) => r.issue.id)
+      .sort()
+  ).toEqual([id, unrelated.issue.id].sort())
+})
+
+it("FOR-51 review: metadata-only replacement fences delayed mutation records until a fresh authorized read", async () => {
+  const id = crypto.randomUUID()
+  const record = page(id).records[0]
+  act(() => mergeCanonicalIssueRecords([record], false))
+  act(() => replaceCanonicalIssues(structuredClone(identity)))
+  act(() => mergeCanonicalIssueRecords([record]))
+  expect(canonicalIssueState()?.records).toEqual([])
+  vi.mocked(loadIssueDetail).mockResolvedValueOnce(JSON.stringify([record]))
+  const detail = renderHook(() => useQueriedIssue(id))
+  await waitFor(() => expect(detail.result.current?.issue.id).toBe(id))
+  expect(canonicalIssueState()?.records).toEqual([record])
 })
