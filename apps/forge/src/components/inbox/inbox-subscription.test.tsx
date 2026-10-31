@@ -76,7 +76,7 @@ describe("FOR-47 canonical inbox subscriptions", () => {
     render(<Inbox scope={scope} />)
     fireEvent.keyDown(screen.getByRole("main", { name: "Inbox" }), { key: "j" })
     const control = screen.getByRole("button", { name: "Subscribe to issue" })
-    expect(control.disabled).toBe(true)
+    expect(control.hasAttribute("disabled")).toBe(true)
     fireEvent.click(control)
     expect(mock.change).not.toHaveBeenCalled()
   })
