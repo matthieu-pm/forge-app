@@ -27,6 +27,7 @@ import { IssueLabelPicker } from "./issue-label-picker"
 import { IssueCyclePicker } from "./issue-cycle-picker"
 import { IssueRelationships } from "./issue-relationships"
 import { useIssueLifecycle } from "./issue-lifecycle"
+import { IssueHistory } from "./issue-history"
 import { useCommentModeration } from "./use-comment-moderation"
 import type { IssueDraft, TeamIssue } from "@/lib/team-issues"
 import type { TeamStatus } from "@/lib/team-statuses"
@@ -1539,29 +1540,47 @@ export function IssueDetail({
                     )}
                   </IssuePicker>
                 </div>
-                <div className="mb-5">
-                  <ActivityRow id="issue-created">
-                    <span className="flex h-5 shrink-0 items-center">
-                      <AssigneeMark
-                        name={creator?.name ?? issue.creator}
-                        image={creator?.image}
-                      />
-                    </span>
-                    <p className="min-w-0">
-                      {activityReference(
-                        "member",
-                        creator?.id ??
-                          (issue.creator === "You" ? userId : issue.creator)
-                      )}{" "}
-                      created the issue ·{" "}
-                      {activityLink("issue-created", issue.createdAt)}
-                    </p>
-                  </ActivityRow>
-                </div>
+                {shared && (
+                  <IssueHistory
+                    issueId={issue.id}
+                    revision={issue.revision ?? 0}
+                    valueLabel={(field, value) =>
+                      field === "status"
+                        ? (statuses.find((status) => status.id === value)
+                            ?.name ?? value)
+                        : field === "assignee"
+                          ? (members.find((member) => member.id === value)
+                              ?.name ?? value)
+                          : value
+                    }
+                  />
+                )}
+                {!shared && (
+                  <div className="mb-5">
+                    <ActivityRow id="issue-created">
+                      <span className="flex h-5 shrink-0 items-center">
+                        <AssigneeMark
+                          name={creator?.name ?? issue.creator}
+                          image={creator?.image}
+                        />
+                      </span>
+                      <p className="min-w-0">
+                        {activityReference(
+                          "member",
+                          creator?.id ??
+                            (issue.creator === "You" ? userId : issue.creator)
+                        )}{" "}
+                        created the issue ·{" "}
+                        {activityLink("issue-created", issue.createdAt)}
+                      </p>
+                    </ActivityRow>
+                  </div>
+                )}
                 <div className="space-y-4">
                   {timeline.map((entry) => {
                     if (entry.kind === "comment")
                       return renderComment(entry.comment)
+                    if (shared) return null
                     const event = entry.events[0]
                     const actor =
                       event.author === "You" || event.author === userId

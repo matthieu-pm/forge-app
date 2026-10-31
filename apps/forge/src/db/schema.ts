@@ -2249,6 +2249,12 @@ export const commandOutboxEvents = pgTable(
       foreignColumns: [commandReceipts.workspaceId, commandReceipts.id],
     }).onDelete("cascade"),
     index("command_outbox_created_idx").on(t.createdAt, t.id),
+    index("command_outbox_issue_history_idx").on(
+      t.workspaceId,
+      sql`(${t.payload}->>'issueId')`,
+      t.createdAt,
+      t.id
+    ),
     check("command_outbox_ordinal_check", sql`${t.ordinal} >= 0`),
   ]
 )

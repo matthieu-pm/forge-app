@@ -784,11 +784,31 @@ export async function createCanonicalIssue(
         events: [
           {
             topic: "issue.created",
-            payload: { issueId: id, teamId: input.teamId },
+            payload: {
+              issueId: id,
+              teamId: input.teamId,
+              history: {
+                version: 1,
+                origin: input.legacyId ? "import" : "command",
+                changes: assignee
+                  ? [{ field: "assignee", from: "", to: assignee }]
+                  : [],
+              },
+            },
           },
           ...children.map((c) => ({
             topic: "issue.created",
-            payload: { issueId: c.id, teamId: input.teamId },
+            payload: {
+              issueId: c.id,
+              teamId: input.teamId,
+              history: {
+                version: 1,
+                origin: input.legacyId ? "import" : "command",
+                changes: personalAssignee
+                  ? [{ field: "assignee", from: "", to: personalAssignee }]
+                  : [],
+              },
+            },
           })),
         ],
       }

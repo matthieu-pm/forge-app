@@ -1,5 +1,5 @@
 import "@tanstack/react-start/server-only"
-import { and, eq } from "drizzle-orm"
+import { and, eq, sql } from "drizzle-orm"
 import { canonicalCommandInput, commandInputHash } from "./command-input"
 import { commandPrincipal, currentCommandActor } from "./command-actor.server"
 import type { Actor } from "@/application/actor"
@@ -9,7 +9,9 @@ import {
   commandOutboxEvents,
   commandReceipts,
   db,
+  users,
 } from "@/db"
+import { issueHistoryDetailsSchema } from "@/lib/issue-history-contract"
 
 export class CommandConflictError extends Error {
   constructor(
@@ -20,6 +22,7 @@ export class CommandConflictError extends Error {
     this.name = "CommandConflictError"
   }
 }
+
 export type CommandResult<T> = {
   value: T
   resource: { type: string; id: string }
@@ -132,16 +135,43 @@ export async function executeCommand<T>(
       resourceType: result.resource.type,
       resourceId: result.resource.id,
     })
-    if (result.events.length)
+    if (result.events.length) {
+      const actorName =
+        (
+          await tx
+            .select({ name: users.name })
+            .from(users)
+            .where(eq(users.id, currentActor.userId))
+        )[0]?.name.slice(0, 200) ?? "Member"
       await tx.insert(commandOutboxEvents).values(
         result.events.map((event, ordinal) => ({
           workspaceId: actor.workspaceId,
           commandId: reserved.id,
           ordinal,
           topic: event.topic,
-          payload: event.payload,
+          // Only the authenticated command boundary writes attributable metadata.
+          // Do not retain credential/session secrets or duplicate comment bodies.
+          payload: {
+            ...event.payload,
+            ...(event.topic.startsWith("issue.")
+              ? {
+                  history: {
+                    ...issueHistoryDetailsSchema.parse(
+                      event.payload.history ?? { version: 1 }
+                    ),
+                    actor: {
+                      userId: currentActor.userId,
+                      name: actorName,
+                      kind: currentActor.authentication.kind,
+                    },
+                  },
+                }
+              : {}),
+          },
+          createdAt: sql`clock_timestamp()`,
         }))
       )
+    }
     await tx
       .update(commandReceipts)
       .set({
