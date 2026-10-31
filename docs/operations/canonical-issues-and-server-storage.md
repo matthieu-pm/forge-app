@@ -1,4 +1,6 @@
 # Canonical issues and server product storage · FOR-41 / FOR-42
+
+> **FOR-56 implementation:** [Resumable server imports](resumable-browser-imports.md) replace the original browser-driven migration loop with trusted manifests, atomic checkpoints and verified files.
 > FOR-43 replaces the full browser issue projection with [bounded authorized issue queries](bounded-issue-queries.md). That guide also records the accepted temporary guard on milestone relocation, conversion and deletion. The FOR-41/FOR-42 evidence below describes their original rollout.
 
 Implementation scope was expanded by the product owner on 30 October 2026:

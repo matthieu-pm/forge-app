@@ -435,6 +435,13 @@
       "when": 1793478791476,
       "tag": "0061_shared_projects",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1793484285632,
+      "tag": "0062_resumable_legacy_imports",
+      "breakpoints": true
     }
   ]
 }

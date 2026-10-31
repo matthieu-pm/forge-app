@@ -82,7 +82,7 @@ export function initialAssignmentActivity(
     : []
 }
 
-async function importedProjectSnapshot(
+export async function importedProjectSnapshot(
   tx: Transaction,
   actor: Actor,
   project: InitiativeProject

@@ -1,5 +1,7 @@
 # Legacy browser import ownership and conflicts
 
+> **FOR-56 implementation:** [Resumable server imports](operations/resumable-browser-imports.md) now own enabled core execution, conflicts, aliases and verified files.
+
 > **30 October 2026 update — FOR-41/FOR-42:** The product owner expanded scope to server-only persistence for all Forge product data, automatic issue/project/cycle migration, and canonical issue editing. [Current behavior and release guidance](operations/canonical-issues-and-server-storage.md) supersede the device-backup and manual-cutover statements below for the implemented adapters. Backups now use private server records; existing actor-owned device copies are verified on the server before exact-source cleanup. The remaining sections document the earlier FOR-22/FOR-53 contract and separately owned import adapters.
 
 FOR-22 decision record, 29 October 2026. Policy version **1**. The conservative rules below are the implementation contract for this issue. This record does not claim a separate stakeholder review or certify a production migration. The same policy applies to each browser profile and desktop renderer origin independently.

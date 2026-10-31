@@ -599,3 +599,52 @@ export const teamIssueNumbers = pgTable("team_issue_numbers", {
     .references(() => teams.id, { onDelete: "cascade" }),
   lastNumber: integer("last_number").default(0).notNull(),
 })
+
+// Source bytes and historical claims are private to the importing account.
+export const legacyImports = pgTable(
+  "legacy_imports",
+  {
+    id: id(),
+    workspaceId: workspace(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    fingerprint: text("fingerprint").notNull(),
+    revision: integer("revision").notNull().default(0),
+    encodedManifest: text("encoded_manifest").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    unique("legacy_imports_source_unique").on(
+      t.workspaceId,
+      t.userId,
+      t.fingerprint
+    ),
+  ]
+)
+
+// Deliberately no resource FK: deletion leaves a tombstone, never permission to recreate.
+export const legacyImportAliases = pgTable(
+  "legacy_import_aliases",
+  {
+    id: id(),
+    workspaceId: workspace(),
+    teamId: uuid("team_id").notNull(),
+    kind: text("kind").notNull(),
+    legacyId: text("legacy_id").notNull(),
+    fingerprint: text("fingerprint").notNull(),
+    canonicalId: uuid("canonical_id").notNull(),
+    targetFingerprint: text("target_fingerprint").notNull(),
+  },
+  (t) => [
+    unique("legacy_import_aliases_source_unique").on(
+      t.workspaceId,
+      t.teamId,
+      t.kind,
+      t.legacyId,
+      t.fingerprint
+    ),
+  ]
+)
