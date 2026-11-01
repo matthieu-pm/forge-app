@@ -171,6 +171,7 @@ local development, signing, updates, and release operations.
 
 - [Capacity, service and recovery objectives](docs/operations/service-objectives.md)
 - [Legacy browser import ownership and conflict policy](docs/legacy-browser-import-policy.md)
+- [Reconciled import cutover and recovery](docs/operations/reconciled-import-cutover.md)
 - [Data retention and account/workspace deletion policy](docs/data-retention-and-deletion-policy.md)
 - [Turborepo and cache policy](docs/operations/turborepo.md)
 - [Desktop releases](docs/operations/desktop-releases.md)

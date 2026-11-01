@@ -312,7 +312,7 @@ try {
     .toBe(1)
   const rows = (
       await pool.query(
-        "SELECT id,parent_id,project_id,cycle_id,legacy_id,properties FROM issues WHERE workspace_id=$1",
+        "SELECT id,number,parent_id,project_id,cycle_id,legacy_id,properties FROM issues WHERE workspace_id=$1",
         [marker]
       )
     ).rows,
@@ -385,6 +385,81 @@ try {
       )
     ).rows[0].n
   ).toBe(3)
+  // FOR-57: reconcile and settle the full manifest, retaining private recovery copies.
+  await alice
+    .locator("summary")
+    .filter({ hasText: /Import from/ })
+    .first()
+    .click()
+  await alice
+    .getByRole("button", { name: "Reconcile import", exact: true })
+    .click()
+  await expect(alice.getByText(/Reconciliation passed/)).toBeVisible({
+    timeout: 30000,
+  })
+  await expect(
+    alice.getByRole("button", {
+      name: "Complete reconciled import",
+      exact: true,
+    })
+  ).toBeDisabled()
+  const reportDownload = alice.waitForEvent("download")
+  await alice
+    .getByRole("button", {
+      name: "Download full reconciliation report",
+      exact: true,
+    })
+    .click()
+  const reportFile = await reportDownload
+  await reportFile.saveAs("/tmp/for57-browser-report.json")
+  const exported = JSON.parse(
+    readFileSync("/tmp/for57-browser-report.json", "utf8")
+  )
+  expect(exported.report.ready).toBe(true)
+  expect(exported.records).toHaveLength(4)
+  await alice.screenshot({
+    path: "/tmp/for57-reconciliation.png",
+    fullPage: true,
+  })
+  expect(JSON.stringify(exported)).not.toContain("Original local body")
+  await alice
+    .getByRole("checkbox", { name: /I reviewed the excluded and skipped data/ })
+    .check()
+  await alice
+    .getByRole("button", { name: "Complete reconciled import", exact: true })
+    .click()
+  await expect(
+    alice.getByText("Import completed · canonical server records", {
+      exact: true,
+    })
+  ).toBeVisible({ timeout: 30000 })
+  await alice
+    .getByRole("button", {
+      name: "Clean up reconciled source records",
+      exact: true,
+    })
+    .click()
+  await expect(
+    alice.getByText(/Cleanup completed for 1 unchanged source stores/)
+  ).toBeVisible({ timeout: 30000 })
+  const preserved = (
+    await pool.query(
+      "SELECT encoded_value FROM product_state WHERE workspace_id=$1 AND key LIKE 'forge:legacy-conflict:v1:import-%'",
+      [marker]
+    )
+  ).rows
+  expect(
+    preserved.some((r) =>
+      JSON.parse(JSON.parse(r.encoded_value)).value.includes("legacy-child")
+    )
+  ).toBe(true)
+  const sourceRow = (
+    await pool.query(
+      "SELECT encoded_value FROM product_state WHERE workspace_id=$1 AND owner_user_id=$2 AND key=$3",
+      [marker, users[0], `forge:team-issues:v1:${teamId}`]
+    )
+  ).rows[0]
+  expect(JSON.parse(JSON.parse(sourceRow.encoded_value)).issues).toEqual([])
   await saveSource(users[1], [
     {
       ...record,
@@ -442,6 +517,117 @@ try {
       )
     ).rows[0].n
   ).toBe(4)
+  // FOR-57: every issue entry point continues with canonical UUIDs after cleanup.
+  await alice.goto(
+    `${base}/teams/engineering/issues?view=all&issue=${parent.id}`
+  )
+  await expect(
+    alice.getByRole("textbox", { name: "Issue title", exact: true })
+  ).toHaveValue("Browser import parent", { timeout: 60000 })
+  expect(new URL(alice.url()).searchParams.get("issue")).toBe(parent.id)
+  await alice
+    .getByRole("button", {
+      name: "Assign to for Browser import parent",
+      exact: true,
+    })
+    .click()
+  await alice.getByRole("option", { name: "Bob Member", exact: true }).click()
+  await expect
+    .poll(
+      async () =>
+        (
+          await pool.query("SELECT assignee_id FROM issues WHERE id=$1", [
+            parent.id,
+          ])
+        ).rows[0].assignee_id
+    )
+    .toBe(users[1])
+  await bob.goto(`${base}/my-issues?view=assigned`)
+  const assignedRow = bob.getByRole("button", {
+    name: `Open ENG-${parent.number} Browser import parent`,
+    exact: true,
+  })
+  await expect(assignedRow).toBeVisible({ timeout: 60000 })
+  await assignedRow.click()
+  await expect(
+    bob.getByRole("textbox", { name: "Issue title", exact: true })
+  ).toHaveValue("Browser import parent")
+  expect(new URL(bob.url()).searchParams.get("issue")).toBe(parent.id)
+  await alice.goto(`${base}/my-issues?view=created&issue=${parent.id}`)
+  await expect(
+    alice.getByRole("textbox", { name: "Issue title", exact: true })
+  ).toHaveValue("Browser import parent", { timeout: 60000 })
+  await alice.goto(`${base}/teams/engineering/issues?view=all`)
+  await alice.getByRole("button", { name: "New issue", exact: true }).click()
+  await alice
+    .getByRole("textbox", { name: "Issue title", exact: true })
+    .fill("After cutover composer")
+  await alice.getByRole("button", { name: "Create issue", exact: true }).click()
+  await expect
+    .poll(
+      async () =>
+        (
+          await pool.query(
+            "SELECT id FROM issues WHERE workspace_id=$1 AND title='After cutover composer'",
+            [marker]
+          )
+        ).rows.length,
+      { timeout: 30000 }
+    )
+    .toBe(1)
+  const composed = (
+    await pool.query(
+      "SELECT id FROM issues WHERE workspace_id=$1 AND title='After cutover composer'",
+      [marker]
+    )
+  ).rows[0]
+  expect(composed.id).toMatch(/^[0-9a-f-]{36}$/)
+  await alice.goto(`${base}/settings/teams/engineering/triage`)
+  const triageSwitch = alice.getByRole("switch", {
+    name: "Enable triage for this team",
+  })
+  await expect(triageSwitch).toBeVisible({ timeout: 60000 })
+  await triageSwitch.click()
+  await expect
+    .poll(
+      async () =>
+        (
+          await pool.query(
+            "SELECT (encoded_value::jsonb#>>'{}')::jsonb->>'enabled' enabled FROM product_state WHERE workspace_id=$1 AND key=$2",
+            [marker, `forge:team-triage:v1:${teamId}`]
+          )
+        ).rows[0]?.enabled,
+      { timeout: 30000 }
+    )
+    .toBe("true")
+  await alice.goto(`${base}/teams/engineering/triage`)
+  await alice
+    .getByRole("button", { name: "Create triage issue", exact: true })
+    .click()
+  await alice
+    .getByRole("textbox", { name: "Issue title", exact: true })
+    .fill("After cutover triage")
+  await alice.getByRole("button", { name: "Create issue", exact: true }).click()
+  await expect(
+    alice.getByRole("heading", { name: "After cutover triage", exact: true })
+  ).toBeVisible({ timeout: 30000 })
+  const incoming = (
+    await pool.query(
+      "SELECT id FROM issues WHERE workspace_id=$1 AND title='After cutover triage'",
+      [marker]
+    )
+  ).rows[0]
+  await bob.goto(
+    `${base}/teams/engineering/issues?view=all&issue=${incoming.id}`
+  )
+  await expect(
+    bob.getByRole("textbox", { name: "Issue title", exact: true })
+  ).toHaveValue("After cutover triage", { timeout: 60000 })
+  expect(new URL(bob.url()).searchParams.get("issue")).toBe(incoming.id)
+  await bob.goto(`${base}/settings/import-export`)
+  await expect(
+    bob.getByRole("heading", { name: "Browser import progress" })
+  ).toBeVisible({ timeout: 60000 })
   await bob.setViewportSize({ width: 390, height: 844 })
   await bob.screenshot({
     path: "/tmp/for56-browser-mobile.png",
@@ -459,6 +645,10 @@ try {
       revision,
       production,
       checks: [
+        "FOR-57 acknowledged reconciliation, completion and exact-source cleanup",
+        "FOR-57 private backup retained after cleanup",
+        "FOR-57 canonical team detail and My issues use the imported UUID",
+        "FOR-57 composer and triage create shared UUIDs after cutover",
         "real authenticated automatic import",
         "parent remapping",
         "canonical project membership",

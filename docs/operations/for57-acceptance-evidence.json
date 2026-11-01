@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "issue": "FOR-57",
+  "implementationCommit": "7c3382347c0df6c52653c952096fa39808942f39",
+  "verifiedHead": "c49b399969e83242f0d9bc76b30d81042978c0b0",
+  "baseCommit": "b850d7ef3138321872e89c4ad88cfe2efbe56b9b",
+  "recordedAt": "2026-11-01T00:27:57.780844+00:00",
+  "environment": {
+    "database": "forge_issue_history_acceptance",
+    "branchId": "br-autumn-union-za0opf1e",
+    "web": "local development server with real Better Auth sessions and the ordinary pooled application role",
+    "files": "disposable local private-file adapter, verified upload and authorized delivery",
+    "productionChanged": false,
+    "packagedMacOSVerified": false
+  },
+  "productDecision": "Matthieu confirmed on 1 November 2026: allow explicitly acknowledged exclusions while retaining private backups; failed supported core records and files block completion. Advanced-content/preference adapters remain FOR-126/FOR-144.",
+  "checks": [
+    {
+      "name": "Full application regression",
+      "command": "bunx vitest run --maxWorkers 4",
+      "passed": 2417,
+      "skipped": 466,
+      "note": "Ran before final server reconciliation refinements and three additional PostgreSQL acceptance cases; final runtime covered by all 29 real PostgreSQL cases and the committed production build."
+    },
+    {
+      "name": "Final focused UI, client, parser and canonical-source regressions",
+      "command": "bunx vitest run src/components/legacy-import-execution.test.tsx src/lib/import-execution-client.test.ts src/application/imports/manifest.test.ts src/lib/team-issues.test.ts",
+      "passed": 28
+    },
+    {
+      "name": "Workflow regression",
+      "command": "bun run test:workflow",
+      "passed": 4
+    },
+    {
+      "name": "Real PostgreSQL import and reconciliation acceptance",
+      "command": "FORGE_ISSUE_HISTORY_TEST_DATABASE_FILE=/private/connections.json bunx vitest run src/application/imports/imports.postgres.test.ts",
+      "passed": 29,
+      "cases": [
+        "ordered resumable batches, exact replay and canonical aliases",
+        "source count and backup checksum reconciliation",
+        "failed records and pending/detached files block settlement",
+        "explicit exclusions acknowledgement",
+        "shared edits and remapped parent relationships require new review",
+        "cross-account file reuse retains live checksum verification",
+        "full reject export beyond the UI limit",
+        "stale revisions, missing backups and malformed envelopes fail closed",
+        "actor privacy and revoked membership",
+        "audit failure rolls back completion/cleanup",
+        "exact-source cleanup preserves later source strings and backups",
+        "favorite UUID projection is preserved before legacy-source cleanup"
+      ]
+    },
+    {
+      "name": "TypeScript",
+      "command": "bun run typecheck",
+      "result": "passed"
+    },
+    {
+      "name": "Production build, prerender and protected Workflow handler verification",
+      "command": "DATABASE_URL=postgresql://build:build@127.0.0.1:5432/forge_build bun run build",
+      "commit": "7c3382347c0df6c52653c952096fa39808942f39",
+      "result": "passed; c49b399 changes only the SQL acceptance harness revision handling"
+    },
+    {
+      "name": "Changed-file ESLint",
+      "result": "0 errors, 39 warnings"
+    },
+    {
+      "name": "Formatting and git diff --check",
+      "result": "passed"
+    },
+    {
+      "name": "Committed-source two-session Chromium acceptance",
+      "command": "FORGE_ISSUE_HISTORY_TEST_DATABASE_FILE=/private/connections.json FORGE_IMPORT_BROWSER_URL=http://localhost:3156 node scripts/verify-import-execution-browser.mjs",
+      "commit": "c49b399969e83242f0d9bc76b30d81042978c0b0",
+      "result": "passed",
+      "checks": [
+        "FOR-57 acknowledged reconciliation, completion and exact-source cleanup",
+        "FOR-57 private backup retained after cleanup",
+        "FOR-57 canonical team detail and My issues use the imported UUID",
+        "FOR-57 composer and triage create shared UUIDs after cutover",
+        "real authenticated automatic import",
+        "parent remapping",
+        "canonical project membership",
+        "saved-settings cycle reconstruction",
+        "same-issue conversion preserves shared fields, anchors and width",
+        "verified durable file",
+        "reload replay",
+        "cross-profile conflict review",
+        "keep-both preserves shared version",
+        "second reload has no duplicate",
+        "mobile layout",
+        "no page errors",
+        "full authenticated reconciliation report download, all four record mappings and no source bodies",
+        "Assigned list and Created detail retain the imported UUID"
+      ],
+      "screenshot": "docs/qa/for57/reconciliation.png",
+      "pageErrors": 0
+    }
+  ],
+  "traceability": {
+    "AC-01/AT-01": "Canonical authority is already installed atomically by the authenticated IssueDefinitionProvider; final acceptance verifies imported and newly created UUIDs after reconciliation and cleanup across team views, composer, My issues and triage.",
+    "AC-02/AT-02": "Complete manifest counts/checksums, target/relationship checkpoints and live file bindings are recomputed under commit locks. Unresolved discrepancies or stale report fingerprints block settlement and cleanup. Exact original sources remain private and downloadable."
+  },
+  "release": {
+    "migrationRequired": false,
+    "newConfigurationRequired": false,
+    "productionDeploymentPerformed": false,
+    "rollback": "Retain additive import schema, canonical rows, private recovery envelopes, aliases and command receipts. Roll back application code; recover originals through reviewed import, never restore browser authority or overwrite newer shared state."
+  },
+  "limits": [
+    "100,000-record/200-MB import admission limits are not throughput qualification for reconciliation.",
+    "No hosted Blob or packaged macOS acceptance is claimed.",
+    "Source backups and unsupported advanced data remain retained; cleanup only removes exact unchanged core issue collections."
+  ],
+  "cleanup": {
+    "workspaces": 0,
+    "users": 0,
+    "manifests": 0,
+    "receipts": 0,
+    "files": "fixture-owned disposable bytes removed"
+  }
+}

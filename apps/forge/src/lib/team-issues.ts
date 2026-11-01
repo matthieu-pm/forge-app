@@ -95,22 +95,47 @@ export function readLocalIssueStore(teamId: string): IssueStore {
   const raw = productStorage.getItem(teamIssuesKey(teamId))
   return raw ? parseIssueStore(raw) : initialIssueStore()
 }
+const issueUiKey = (teamId: string) => `forge:team-issue-ui:v1:${teamId}`
+function canonicalIssueMetadata(teamId: string): IssueStore {
+  const raw =
+    productStorage.getItem(issueUiKey(teamId)) ??
+    productStorage.getItem(teamIssuesKey(teamId))
+  if (!raw) return initialIssueStore()
+  try {
+    const body = JSON.parse(raw)
+    // Invalid legacy issue payloads remain migration evidence, never an active list.
+    return storeSchema.parse({ ...initialIssueStore(), ...body, issues: [] })
+  } catch {
+    return initialIssueStore()
+  }
+}
 export function readIssueStore(teamId: string): IssueStore {
-  const local = readLocalIssueStore(teamId)
-  if (!canonicalIssuesActive()) return local
+  if (!canonicalIssuesActive()) return readLocalIssueStore(teamId)
+  const local = canonicalIssueMetadata(teamId)
   const records = canonicalIssueRows(teamId)
   const rawFavorites = productStorage.getItem(
     `forge:team-issue-favorites:v1:${teamId}`
   )
+  let legacyFavorites = new Set<string>()
+  if (!rawFavorites) {
+    try {
+      legacyFavorites = new Set(
+        readLocalIssueStore(teamId)
+          .issues.filter((i) => i.favorite)
+          .map((i) => i.id)
+      )
+    } catch {
+      /* Invalid legacy source is retained for import review. */
+    }
+  }
   const favorites = new Set<string>(
     rawFavorites
       ? JSON.parse(rawFavorites)
       : records
-          .filter((r) =>
-            local.issues.some((i) => i.id === r.legacyId && i.favorite)
-          )
+          .filter((r) => r.legacyId && legacyFavorites.has(r.legacyId))
           .map((r) => r.issue.id)
   )
+
   return {
     ...local,
     issues: records.map((r) => ({
@@ -186,15 +211,12 @@ export function writeIssueStore(
       JSON.stringify(next.issues.filter((i) => i.favorite).map((i) => i.id))
     )
   if (canonicalEdits.length) enqueueIssueEdits(teamId, canonicalEdits)
-  const local = canonicalIssuesActive()
-    ? {
-        ...next,
-        issues: readLocalIssueStore(teamId).issues.map(
-          (old) => next.issues.find((i) => i.id === old.id) ?? old
-        ),
-      }
-    : next
-  productStorage.setItem(teamIssuesKey(teamId), JSON.stringify(local))
+  if (canonicalIssuesActive())
+    productStorage.setItem(
+      issueUiKey(teamId),
+      JSON.stringify({ ...next, issues: [] })
+    )
+  else productStorage.setItem(teamIssuesKey(teamId), JSON.stringify(next))
   window.dispatchEvent(new Event(ISSUES_CHANGED))
   return next
 }

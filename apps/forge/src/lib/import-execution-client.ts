@@ -35,6 +35,7 @@ export async function resumeLegacyImport(manifest: ImportSnapshot) {
     })
   ) as ImportSnapshot
   assertCurrent()
+  if (manifest.completedAt) return manifest
   while (
     (manifest.pendingCount ??
       manifest.entries.filter((e) => e.state === "pending").length) > 0

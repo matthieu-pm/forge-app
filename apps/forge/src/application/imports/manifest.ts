@@ -62,6 +62,7 @@ export function buildImportManifest(input: {
 }): ImportManifest {
   const entries: Array<ImportEntry> = [],
     exclusions: Array<string> = []
+  const sourceErrors: Array<string> = []
   const sources = [
     ...new Map(
       input.sources.map((s) => [JSON.stringify([s.key, s.raw]), s])
@@ -114,8 +115,6 @@ export function buildImportManifest(input: {
             value && typeof value === "object"
               ? (value as Record<string, unknown>)
               : {}
-          // Canonical projections are not legacy sources.
-          if (object.revision !== undefined) continue
           const entry: ImportEntry = {
             id: commandInputHash([source.key, source.checksum, path]),
             sourceKey: source.key,
@@ -134,8 +133,16 @@ export function buildImportManifest(input: {
             files: [],
             state: "pending",
             sourceValid: true,
+            ...(object.revision !== undefined
+              ? { canonicalProjection: true }
+              : {}),
           }
           try {
+            if (entry.canonicalProjection) {
+              entry.canonicalId = z.uuid().parse(object.id)
+              z.number().int().nonnegative().parse(object.revision)
+              entry.reviewRequired = true
+            }
             if (projectSource) {
               const project = initiativeProjectSchema.parse(value)
               if (!project.teamIds.length)
@@ -177,7 +184,9 @@ export function buildImportManifest(input: {
                 exclusions.push(
                   `${source.key}/${path}: the legacy milestone remains in the private source until its planning adapter is enabled.`
                 )
-              entry.files = validatedImportFiles(record.attachments)
+              entry.files = entry.canonicalProjection
+                ? []
+                : validatedImportFiles(record.attachments)
               // Same entity in two stores compares normalized values, never a last-writer Map.
               entry.fingerprint = commandInputHash(
                 JSON.parse(
@@ -200,6 +209,7 @@ export function buildImportManifest(input: {
     } catch (error) {
       if (error instanceof Error && error.message.includes("100,000"))
         throw error
+      sourceErrors.push(`${source.key}: source could not be parsed completely.`)
       exclusions.push(
         `${source.key}: ${error instanceof Error ? error.message : "Invalid source."} Exact bytes preserved.`
       )
@@ -219,6 +229,7 @@ export function buildImportManifest(input: {
     sources,
     entries,
     exclusions,
+    sourceErrors,
     createdAt: new Date().toISOString(),
   }
   // Count across collections and sources, including quarantined records.

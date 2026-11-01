@@ -4,6 +4,7 @@ import { LegacyImportExecution } from "./legacy-import-execution"
 import type { ImportSnapshot } from "@/lib/import-execution-contract"
 import {
   loadLegacyImports,
+  reconcileLegacyImport,
   resolveLegacyImport,
 } from "@/lib/import-execution-state"
 import { resumeLegacyImport } from "@/lib/import-execution-client"
@@ -13,6 +14,8 @@ vi.mock("@/lib/import-execution-state", () => ({
   loadLegacyImports: vi.fn(),
   resolveLegacyImport: vi.fn(),
   retryLegacyImport: vi.fn(),
+  reconcileLegacyImport: vi.fn(),
+  downloadLegacyImportReport: vi.fn(),
 }))
 vi.mock("@/lib/import-execution-client", () => ({
   IMPORT_PROGRESS_CHANGED: "forge:test-import",
@@ -92,5 +95,57 @@ describe("FOR-56 conflict review", () => {
     act(() => invalidatePreferenceSession("start"))
     await act(async () => resolve(JSON.stringify([manifest])))
     expect(screen.queryByText("Private source issue · review")).toBeNull()
+  })
+  it("FOR-57 requires exclusion acknowledgement and sends the exact reconciliation fingerprint", async () => {
+    const reconciled: ImportSnapshot = {
+      ...manifest,
+      entries: [],
+      reconciliation: {
+        fingerprint: "r".repeat(64),
+        checkedAt: "2026-11-01T00:00:00Z",
+        ready: true,
+        counts: {
+          sources: 1,
+          records: 1,
+          saved: 1,
+          skipped: 0,
+          unresolved: 0,
+          files: 0,
+          verifiedFiles: 0,
+        },
+        discrepancyCount: 0,
+        discrepancies: [],
+        retainedExclusions: 1,
+      },
+    }
+    vi.mocked(loadLegacyImports).mockResolvedValue(JSON.stringify([reconciled]))
+    vi.mocked(reconcileLegacyImport).mockResolvedValue(
+      JSON.stringify({
+        ...reconciled,
+        completedAt: "2026-11-01T00:01:00Z",
+        revision: 4,
+      })
+    )
+    render(<LegacyImportExecution />)
+    const button = await screen.findByRole("button", {
+      name: "Complete reconciled import",
+    })
+    expect((button as HTMLButtonElement).disabled).toBe(true)
+    fireEvent.click(screen.getByRole("checkbox"))
+    fireEvent.click(button)
+    await vi.waitFor(() =>
+      expect(reconcileLegacyImport).toHaveBeenCalledWith({
+        data: {
+          workspaceId: "w",
+          sessionId: "s",
+          id: manifest.id,
+          revision: 3,
+          action: "complete",
+          reportFingerprint: "r".repeat(64),
+          acknowledgeExclusions: true,
+        },
+      })
+    )
+    await screen.findByText("Import completed · canonical server records")
   })
 })
