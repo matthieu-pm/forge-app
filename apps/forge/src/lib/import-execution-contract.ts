@@ -43,6 +43,7 @@ export type ImportEntry = {
   files: Array<ImportFile>
   canonicalId?: string
   replaceLegacyFiles?: boolean
+  canonicalProjection?: boolean
   reviewRequired?: boolean
   targetFingerprint?: string
   sourceValid?: boolean
@@ -63,6 +64,16 @@ export type ImportEntry = {
     fingerprint: string
   }
 }
+export type ImportReference = Pick<
+  ImportEntry,
+  | "id"
+  | "sourceKey"
+  | "sourceChecksum"
+  | "legacyId"
+  | "kind"
+  | "teamId"
+  | "canonicalId"
+> & { manifestId: string; state: "saved" }
 export type ImportManifest = {
   version: 1
   policyVersion: 1
@@ -79,11 +90,15 @@ export type ImportManifest = {
   cleanedSources?: Array<{ key: string; checksum: string }>
 
   sources: Array<{ key: string; checksum: string; raw: string }>
+  referenceContext?: Array<ImportReference>
   entries: Array<ImportEntry>
   exclusions: Array<string>
   createdAt: string
 }
-export type ImportSnapshot = Omit<ImportManifest, "sources"> & {
+export type ImportSnapshot = Omit<
+  ImportManifest,
+  "sources" | "referenceContext"
+> & {
   sources: Array<{ key: string; checksum: string }>
   totalCount?: number
   savedCount?: number

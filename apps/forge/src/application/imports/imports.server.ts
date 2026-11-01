@@ -148,6 +148,12 @@ async function hydrate(
     defaultStatus: defaultDefinitionValue().statuses.defaultId,
   })
   const payloadById = new Map(payload.entries.map((entry) => [entry.id, entry]))
+  // Older executors omitted revision-bearing source records. Inventory them now;
+  // a revision marker alone never proves that a core record reached the server.
+  const recorded = new Set(manifest.entries.map((entry) => entry.id))
+  for (const entry of payload.entries)
+    if (entry.canonicalProjection && !recorded.has(entry.id))
+      manifest.entries.push(entry)
   for (const entry of manifest.entries) {
     const original = payloadById.get(entry.id)
     entry.title = original?.title ?? "Unavailable source record"
@@ -204,6 +210,7 @@ async function load(tx: Transaction, actor: Actor, id: string, lock = true) {
   const manifest = JSON.parse(row.encodedManifest) as ImportManifest
   await authorize(tx, actor, manifest)
   await hydrate(tx, actor, manifest)
+  await authorize(tx, actor, manifest)
   return manifest
 }
 async function save(tx: Transaction, manifest: ImportManifest) {
@@ -235,8 +242,9 @@ function snapshot(
     ).values(),
   ].slice(0, 100)
   const fileEntry = files[0]?.id
+  const { referenceContext: _references, ...clientManifest } = manifest
   return {
-    ...manifest,
+    ...clientManifest,
     totalCount: manifest.entries.length,
     savedCount: manifest.entries.filter((e) => e.state === "saved").length,
     pendingCount: pending.length,
@@ -329,15 +337,34 @@ export async function prepareImport(actor: Actor) {
       .select({ encoded: legacyImports.encodedManifest })
       .from(legacyImports)
       .where(owner(current))
+    const completedManifests = completed
+      .map((row) => JSON.parse(row.encoded) as ImportManifest)
+      .filter((m) => m.completedAt)
     const settledSources = new Set(
-      completed.flatMap((row) => {
-        const m = JSON.parse(row.encoded) as ImportManifest
-        return m.completedAt
-          ? [...m.sources, ...(m.cleanedSources ?? [])].map((s) =>
-              JSON.stringify([s.key, s.checksum])
-            )
+      completedManifests.flatMap((m) =>
+        [...m.sources, ...(m.cleanedSources ?? [])].map((s) =>
+          JSON.stringify([s.key, s.checksum])
+        )
+      )
+    )
+    const referenceContext = completedManifests.flatMap((m) =>
+      m.entries.flatMap((entry) =>
+        entry.state === "saved" && entry.canonicalId
+          ? [
+              {
+                id: entry.id,
+                sourceKey: entry.sourceKey,
+                sourceChecksum: entry.sourceChecksum,
+                legacyId: entry.legacyId,
+                kind: entry.kind,
+                teamId: entry.teamId,
+                canonicalId: entry.canonicalId,
+                manifestId: m.id,
+                state: "saved" as const,
+              },
+            ]
           : []
-      })
+      )
     )
     const unsettled = sources.filter(
       (s) =>
@@ -351,6 +378,7 @@ export async function prepareImport(actor: Actor) {
       sources: unsettled,
       defaultStatus: defaultDefinitionValue().statuses.defaultId,
     })
+    manifest.referenceContext = referenceContext
     if (!manifest.entries.length && !manifest.exclusions.length) return null
     await authorize(tx, current, manifest)
     const [existing] = await tx
@@ -359,7 +387,18 @@ export async function prepareImport(actor: Actor) {
       .where(
         and(owner(current), eq(legacyImports.fingerprint, manifest.fingerprint))
       )
-    if (existing) return snapshot(await load(tx, current, existing.id))
+    if (existing) {
+      const prior = await load(tx, current, existing.id)
+      if (
+        !prior.completedAt &&
+        commandInputHash(prior.referenceContext ?? []) !==
+          commandInputHash(referenceContext)
+      ) {
+        prior.referenceContext = referenceContext
+        await save(tx, prior)
+      }
+      return snapshot(prior)
+    }
     for (const [index, source] of manifest.sources.entries()) {
       await tx
         .insert(productState)
@@ -587,7 +626,7 @@ async function reconcile(
   entry: ImportEntry
 ) {
   const mapping =
-    entry.kind === "issue" && entry.draft
+    entry.kind === "issue" && entry.draft && !entry.canonicalProjection
       ? {
           parentId:
             (await reference(
@@ -646,8 +685,9 @@ async function reconcile(
       } else return { reuse: row.id }
     }
   }
-  const possible =
-    entry.kind === "issue"
+  const possible = entry.canonicalProjection
+    ? []
+    : entry.kind === "issue"
       ? await tx
           .select({ id: issues.id })
           .from(issues)
@@ -686,13 +726,16 @@ async function reconcile(
           .limit(21)
   const candidates = []
   for (const id of new Set([
-    ...aliases.map((a) => a.canonicalId),
+    ...(entry.canonicalProjection ? [] : aliases.map((a) => a.canonicalId)),
     ...possible.map((p) => p.id),
+    ...(entry.canonicalProjection && entry.canonicalId
+      ? [entry.canonicalId]
+      : []),
   ])) {
     const row = await target(tx, actor, entry, id, true)
     if (row) candidates.push(row)
   }
-  if (!aliases.length && !possible.length) {
+  if (!aliases.length && !possible.length && !entry.canonicalProjection) {
     delete entry.conflict
     return {}
   }
@@ -722,6 +765,16 @@ async function reconcile(
     entry.state = "review"
     entry.message =
       "A matching or changed shared record needs your review. No shared content was changed."
+    return { blocked: true }
+  }
+  if (
+    entry.canonicalProjection &&
+    entry.decision.choice !== "keep-server" &&
+    entry.decision.choice !== "skip"
+  ) {
+    entry.state = "review"
+    entry.message =
+      "Keep or skip the existing canonical record. A saved projection cannot authorize a new copy."
     return { blocked: true }
   }
   if (entry.decision.choice === "migrate-files") {
@@ -761,17 +814,25 @@ function referenceEntries(
       (kind === "project" || e.teamId === entry.teamId) &&
       e.legacyId === legacyId
   )
-  const sameSnapshot = local.filter(
+  const candidates = local.length
+    ? local
+    : (manifest.referenceContext ?? []).filter(
+        (e) =>
+          e.kind === kind &&
+          (kind === "project" || e.teamId === entry.teamId) &&
+          e.legacyId === legacyId
+      )
+  const sameSnapshot = candidates.filter(
     (e) =>
       e.sourceKey === entry.sourceKey &&
       e.sourceChecksum === entry.sourceChecksum
   )
-  const sameSource = local.filter((e) => e.sourceKey === entry.sourceKey)
+  const sameSource = candidates.filter((e) => e.sourceKey === entry.sourceKey)
   return sameSnapshot.length
     ? sameSnapshot
     : sameSource.length
       ? sameSource
-      : local
+      : candidates
 }
 async function reference(
   tx: Transaction,
@@ -795,6 +856,62 @@ async function reference(
     (ids.length !== 1 || selected.some((e) => !e.canonicalId))
   )
     throw new Error("A referenced source record must be resolved first.")
+  for (const selectedEntry of selected) {
+    if (!("manifestId" in selectedEntry)) continue
+    const [origin] = await tx
+      .select()
+      .from(legacyImports)
+      .where(and(owner(actor), eq(legacyImports.id, selectedEntry.manifestId)))
+      .for("share")
+    const settled = origin
+      ? (JSON.parse(origin.encodedManifest) as ImportManifest)
+      : null
+    const original = settled?.entries.find((e) => e.id === selectedEntry.id)
+    if (
+      !settled?.completedAt ||
+      settled.actorId !== actor.userId ||
+      settled.workspaceId !== actor.workspaceId ||
+      original?.state !== "saved" ||
+      original.canonicalId !== selectedEntry.canonicalId ||
+      original.kind !== selectedEntry.kind ||
+      original.teamId !== selectedEntry.teamId ||
+      original.legacyId !== selectedEntry.legacyId ||
+      original.sourceKey !== selectedEntry.sourceKey ||
+      original.sourceChecksum !== selectedEntry.sourceChecksum ||
+      !(await target(tx, actor, original, original.canonicalId!))
+    )
+      throw new Error(
+        "A settled reference changed or is unavailable. Refresh import progress before retrying."
+      )
+    const index = settled.sources.findIndex(
+      (source) =>
+        source.key === original.sourceKey &&
+        source.checksum === original.sourceChecksum
+    )
+    const [backup] = await tx
+      .select()
+      .from(productState)
+      .where(
+        and(
+          eq(productState.workspaceId, actor.workspaceId),
+          eq(productState.ownerId, `user:${actor.userId}`),
+          eq(productState.key, sourceBackupKey(settled.id, index))
+        )
+      )
+      .for("share")
+    try {
+      const preserved = JSON.parse(JSON.parse(backup?.encodedValue ?? "null"))
+      if (
+        preserved.key !== original.sourceKey ||
+        commandInputHash(preserved.value) !== original.sourceChecksum
+      )
+        throw new Error("checksum")
+    } catch {
+      throw new Error(
+        "A settled reference backup is unavailable. Its mapping cannot be reconciled."
+      )
+    }
+  }
   if (ids.length === 1) return ids[0]
   const table = kind === "issue" ? issues : projects
   const possible = await tx

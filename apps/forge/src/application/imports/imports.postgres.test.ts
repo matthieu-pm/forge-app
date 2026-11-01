@@ -1356,4 +1356,180 @@ describe.skipIf(!file)("FOR-56 real PostgreSQL imports", () => {
       (await settle(f.actors[0], m, "reconcile")).reconciliation?.ready
     ).toBe(true)
   }, 30000)
+  it("PR39 review: revision markers cannot hide unmigrated core records from reconciliation", async () => {
+    const f = await fixture()
+    const m = await source(f, [issue("legacy-with-revision", { revision: 0 })])
+    const report = await settle(
+      f.actors[0],
+      await finish(f.actors[0], m),
+      "reconcile"
+    )
+    expect(report.totalCount).toBe(1)
+    expect(report.reconciliation).toMatchObject({
+      ready: false,
+      counts: { records: 1, unresolved: 1 },
+    })
+    await expect(settle(f.actors[0], report, "cleanup", true)).rejects.toThrow(
+      /discrepancies/
+    )
+    expect(
+      (
+        await pool.query(
+          "SELECT count(*)::int n FROM issues WHERE workspace_id=$1",
+          [f.workspaceId]
+        )
+      ).rows[0].n
+    ).toBe(0)
+  }, 30000)
+  it("PR39 review: actual canonical projections require live-target review instead of disappearing", async () => {
+    const f = await fixture()
+    const { createCanonicalIssue } = await import("../issues/issues.server")
+    const canonical = await createCanonicalIssue(f.actors[0], {
+      commandKey: randomUUID(),
+      teamId: f.teamId,
+      draft: {
+        ...blankIssueDraft("todo"),
+        title: "Existing canonical projection",
+      },
+    })
+    let m = await finish(
+      f.actors[0],
+      await source(f, [
+        issue(canonical.issue.id, {
+          revision: canonical.issue.revision,
+          title: "Existing canonical projection",
+        }),
+      ])
+    )
+    expect(m.totalCount).toBe(1)
+    expect(m.entries[0].state).toBe("review")
+    m = await finish(
+      f.actors[0],
+      await decide(f.actors[0], m, m.entries[0].id, "keep-both")
+    )
+    expect(m.entries[0].state).toBe("review")
+    m = await finish(
+      f.actors[0],
+      await decide(f.actors[0], m, m.entries[0].id, "keep-server")
+    )
+    expect(m.entries[0].canonicalId).toBe(canonical.issue.id)
+    expect(
+      (await settle(f.actors[0], m, "reconcile")).reconciliation?.ready
+    ).toBe(true)
+    expect(
+      (
+        await pool.query(
+          "SELECT count(*)::int n FROM issues WHERE workspace_id=$1",
+          [f.workspaceId]
+        )
+      ).rows[0].n
+    ).toBe(1)
+  }, 30000)
+  it("PR39 review: settled Keep-both project mappings remain authoritative for later issue imports", async () => {
+    const f = await fixture(),
+      key = `forge:workspace:${f.workspaceId}:initiatives:v1`
+    const project = {
+      id: "settled-project",
+      name: "Original project",
+      teamIds: [f.teamId],
+      status: "Planned",
+      health: "On track",
+    }
+    const put = async (value: unknown) =>
+      pool.query(
+        "INSERT INTO product_state(workspace_id,owner_id,owner_user_id,key,encoded_value) VALUES($1,$2,$3,$4,$5) ON CONFLICT(workspace_id,owner_id,key) DO UPDATE SET encoded_value=excluded.encoded_value",
+        [
+          f.workspaceId,
+          `user:${f.actors[0].userId}`,
+          f.actors[0].userId,
+          key,
+          JSON.stringify(
+            JSON.stringify({
+              version: 1,
+              initiatives: [],
+              workspaceProjects: [value],
+            })
+          ),
+        ]
+      )
+    await put(project)
+    const original = await finish(f.actors[0], await source(f, []))
+    const originalId = original.entries[0].canonicalId
+    await put({ ...project, name: "Reviewed project copy" })
+    let m = await finish(
+      f.actors[0],
+      (await service.prepareImport(f.actors[0]))!
+    )
+    const entry = m.entries.find((e) => e.kind === "project")!
+    m = await finish(
+      f.actors[0],
+      await decide(f.actors[0], m, entry.id, "keep-both")
+    )
+    const selectedId = m.entries.find((e) => e.kind === "project")!.canonicalId!
+    expect(selectedId).not.toBe(originalId)
+    m = await settle(f.actors[0], m, "reconcile")
+    await settle(f.actors[0], m, "complete", true)
+    const later = await finish(
+      f.actors[0],
+      await source(f, [issue("later-child", { project: "settled-project" })])
+    )
+    expect(later.entries[0].state).toBe("saved")
+    expect(later).not.toHaveProperty("referenceContext")
+    expect(
+      (
+        await pool.query("SELECT project_id FROM issues WHERE id=$1", [
+          later.entries[0].canonicalId,
+        ])
+      ).rows[0].project_id
+    ).toBe(selectedId)
+    expect(
+      (await settle(f.actors[0], later, "reconcile")).reconciliation?.ready
+    ).toBe(true)
+    expect(
+      (
+        await pool.query(
+          "SELECT count(*)::int n FROM projects WHERE workspace_id=$1",
+          [f.workspaceId]
+        )
+      ).rows[0].n
+    ).toBe(2)
+  }, 30000)
+  it("PR39 review: pre-cutover manifests inventory omitted projections and reauthorize their teams", async () => {
+    const f = await fixture()
+    const m = await source(f, [issue("omitted", { revision: 0 })], f.actors[1])
+    const stored = JSON.parse(
+      (
+        await pool.query(
+          "SELECT encoded_manifest FROM legacy_imports WHERE id=$1",
+          [m.id]
+        )
+      ).rows[0].encoded_manifest
+    )
+    stored.entries = []
+    await pool.query(
+      "UPDATE legacy_imports SET encoded_manifest=$1 WHERE id=$2",
+      [JSON.stringify(stored), m.id]
+    )
+    expect((await service.readImport(f.actors[1], m.id)).totalCount).toBe(1)
+    expect(
+      (await settle(f.actors[1], m, "reconcile")).reconciliation?.ready
+    ).toBe(false)
+    const old = JSON.parse(
+      (
+        await pool.query(
+          "SELECT encoded_manifest FROM legacy_imports WHERE id=$1",
+          [m.id]
+        )
+      ).rows[0].encoded_manifest
+    )
+    old.entries = []
+    await pool.query(
+      "UPDATE legacy_imports SET encoded_manifest=$1 WHERE id=$2",
+      [JSON.stringify(old), m.id]
+    )
+    await pool.query("UPDATE teams SET visibility='private' WHERE id=$1", [
+      f.teamId,
+    ])
+    await expect(service.readImport(f.actors[1], m.id)).rejects.toThrow()
+  }, 30000)
 })

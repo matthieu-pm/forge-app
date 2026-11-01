@@ -290,7 +290,7 @@ export function LegacyImportExecution() {
                       <Button
                         size="sm"
                         variant="secondary"
-                        disabled={busy}
+                        disabled={busy || entry.canonicalProjection}
                         onClick={() =>
                           void run(manifest, entry.id, "keep-both")
                         }
