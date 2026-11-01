@@ -7,6 +7,7 @@ import type { Transaction } from "@/db"
 import type {
   ImportEntry,
   ImportManifest,
+  ImportReconciliation,
   ImportSnapshot,
 } from "@/lib/import-execution-contract"
 import {
@@ -51,6 +52,7 @@ import { issueAttachmentAnchor } from "@/lib/issue-file-contract"
 import { defaultDefinitionValue } from "@/lib/issue-definition-contract"
 import {
   importChoiceSchema,
+  importCutoverSchema,
   importFileRequestSchema,
   importRequestSchema,
 } from "@/lib/import-execution-contract"
@@ -177,6 +179,19 @@ async function hydrate(
         "The original source is no longer available. No new effect can run."
     }
   }
+  manifest.sourceErrors = [...(payload.sourceErrors ?? [])]
+  if (sources.length !== manifest.sources.length)
+    manifest.sourceErrors.push(
+      "A private source backup is missing or its checksum differs."
+    )
+  const expected = new Set(payload.entries.map((entry) => entry.id))
+  if (
+    manifest.entries.length !== expected.size ||
+    manifest.entries.some((entry) => !expected.has(entry.id))
+  )
+    manifest.sourceErrors.push(
+      "Source and manifest record counts or identities differ."
+    )
   manifest.sources = manifest.sources.map((source) => ({ ...source, raw: "" }))
 }
 async function load(tx: Transaction, actor: Actor, id: string, lock = true) {
@@ -310,12 +325,30 @@ export async function prepareImport(actor: Actor) {
         }
       }
     }
-    if (!sources.length) return null
+    const completed = await tx
+      .select({ encoded: legacyImports.encodedManifest })
+      .from(legacyImports)
+      .where(owner(current))
+    const settledSources = new Set(
+      completed.flatMap((row) => {
+        const m = JSON.parse(row.encoded) as ImportManifest
+        return m.completedAt
+          ? [...m.sources, ...(m.cleanedSources ?? [])].map((s) =>
+              JSON.stringify([s.key, s.checksum])
+            )
+          : []
+      })
+    )
+    const unsettled = sources.filter(
+      (s) =>
+        !settledSources.has(JSON.stringify([s.key, commandInputHash(s.raw)]))
+    )
+    if (!unsettled.length) return null
     const manifest = buildImportManifest({
       id: crypto.randomUUID(),
       actorId: current.userId,
       workspaceId: current.workspaceId,
-      sources,
+      sources: unsettled,
       defaultStatus: defaultDefinitionValue().statuses.defaultId,
     })
     if (!manifest.entries.length && !manifest.exclusions.length) return null
@@ -581,7 +614,7 @@ async function reconcile(
     .from(legacyImportAliases)
     .where(aliasScope(actor, entry))
   const exact = aliases.find((a) => a.fingerprint === entry.fingerprint)
-  if (exact) {
+  if (exact && !entry.reviewRequired) {
     const row = await target(tx, actor, entry, exact.canonicalId, true)
     if (
       row?.fingerprint === exact.targetFingerprint &&
@@ -598,6 +631,9 @@ async function reconcile(
           !entry.files.every((source) =>
             issue?.properties.attachments?.some(
               (f) =>
+                f.fileId &&
+                !f.data &&
+                f.name === source.name &&
                 f.checksum === source.checksum &&
                 f.sizeBytes === source.sizeBytes
             )
@@ -1003,6 +1039,7 @@ export async function runImportBatch(
         sql`SELECT public.forge_lock_issue_graph(${current.workspaceId})`
       )
       const manifest = await load(tx, current, input.id)
+      if (manifest.completedAt) throw new Error("This import is completed.")
       if (manifest.revision !== input.revision)
         return {
           value: { id: manifest.id },
@@ -1065,14 +1102,22 @@ export async function runImportBatch(
               entry.canonicalId = result.convert
               entry.replaceLegacyFiles = true
               entry.state = "saved"
+              delete entry.reviewRequired
               entry.message =
                 "Existing inline files will be converted to verified durable files; shared issue fields are preserved."
               await recordAlias(nested, current, entry, result.convert)
+              entry.targetFingerprint = (await target(
+                nested,
+                current,
+                entry,
+                result.convert
+              ))!.fingerprint
               return
             }
             if (result.reuse) {
               entry.canonicalId = result.reuse
               entry.state = "saved"
+              delete entry.reviewRequired
               // Reuse never appends source files to an existing shared object.
               if (result.reviewed) {
                 entry.message =
@@ -1081,7 +1126,30 @@ export async function runImportBatch(
                   `${entry.sourceKey}/${entry.path}: kept the reviewed shared version; source fields/files were not added.`
                 )
               }
-              entry.files = []
+              if (result.reviewed) entry.files = []
+              else if (entry.files.length) {
+                const [existing] = await nested
+                  .select({ properties: issues.properties })
+                  .from(issues)
+                  .where(eq(issues.id, result.reuse))
+                entry.files = entry.files.map((source) => ({
+                  ...source,
+                  data: "",
+                  fileId: existing?.properties.attachments?.find(
+                    (file) =>
+                      file.fileId &&
+                      file.name === source.name &&
+                      file.checksum === source.checksum &&
+                      file.sizeBytes === source.sizeBytes
+                  )?.fileId,
+                }))
+              }
+              entry.targetFingerprint = (await target(
+                nested,
+                current,
+                entry,
+                result.reuse
+              ))!.fingerprint
               return
             }
             if (entry.canonicalId) {
@@ -1102,6 +1170,13 @@ export async function runImportBatch(
               Boolean(result.both)
             )
             entry.state = "saved"
+            delete entry.reviewRequired
+            entry.targetFingerprint = (await target(
+              nested,
+              current,
+              entry,
+              entry.canonicalId
+            ))!.fingerprint
             delete entry.message
             created = true
           })
@@ -1306,6 +1381,11 @@ export async function finalizeImportFile(
       source.fileId = input.fileId
       source.data = ""
       const updated = await target(tx, current, entry, row.id)
+      if (
+        entry.targetFingerprint ===
+        commandInputHash(JSON.parse(JSON.stringify(row)))
+      )
+        entry.targetFingerprint = updated!.fingerprint
       await tx
         .update(legacyImportAliases)
         .set({ targetFingerprint: updated!.fingerprint })
@@ -1347,11 +1427,33 @@ export async function retryImportRecords(
 ) {
   const input = importRequestSchema.parse(raw)
   return db.transaction(async (tx) => {
-    const current = await currentCommandActor(tx, actor),
-      manifest = await load(tx, current, input.id)
+    const current = await currentCommandActor(tx, actor)
+    await tx
+      .select({ id: organizations.id })
+      .from(organizations)
+      .where(eq(organizations.id, current.workspaceId))
+      .for("no key update")
+    await tx.execute(
+      sql`SELECT public.forge_lock_issue_graph(${current.workspaceId})`
+    )
+    const manifest = await load(tx, current, input.id)
     if (manifest.revision !== input.revision)
       throw new Error("Import progress changed. Refresh before retrying.")
+    if (manifest.cleanedAt)
+      throw new Error(
+        "This import is completed and cleaned. New source data requires a new import."
+      )
+    // An explicit review can reopen an uncleaned settlement after normal shared edits.
+    delete manifest.completedAt
+    delete manifest.reconciliation
+    const report = await importReconciliation(tx, current, manifest, true)
+    const failed = new Set(report.discrepancies.map((d) => d.entryId))
     for (const entry of manifest.entries) {
+      if (entry.state === "saved" && failed.has(entry.id)) {
+        entry.state = "pending"
+        entry.reviewRequired = true
+        delete entry.decision
+      }
       if (
         entry.state === "quarantined" &&
         entry.sourceValid &&
@@ -1382,5 +1484,366 @@ export async function pauseAutomaticImport(
       await save(tx, manifest)
     }
     return snapshot(manifest)
+  })
+}
+
+/** Source backup and canonical rows are checked under the same locks as import effects.
+ * The report is evidence at a point in time, never a promise to freeze shared work. */
+async function importReconciliation(
+  tx: Transaction,
+  actor: Actor,
+  manifest: ImportManifest,
+  full = false
+): Promise<ImportReconciliation> {
+  const discrepancies: ImportReconciliation["discrepancies"] = (
+    manifest.sourceErrors ?? []
+  ).map((message) => ({ message }))
+  const counts = {
+    sources: manifest.sources.length,
+    records: manifest.entries.length,
+    saved: 0,
+    skipped: 0,
+    unresolved: 0,
+    files: 0,
+    verifiedFiles: 0,
+  }
+  // Lock and recheck the recovery bytes after the workspace/graph fences; reads
+  // during hydration alone cannot prevent concurrent backup replacement.
+  for (const [index, source] of manifest.sources.entries()) {
+    const [backup] = await tx
+      .select()
+      .from(productState)
+      .where(
+        and(
+          eq(productState.workspaceId, actor.workspaceId),
+          eq(productState.ownerId, `user:${actor.userId}`),
+          eq(productState.key, sourceBackupKey(manifest.id, index))
+        )
+      )
+      .for("share")
+    try {
+      const value = JSON.parse(JSON.parse(backup?.encodedValue ?? "null"))
+      if (
+        value.key !== source.key ||
+        commandInputHash(value.value) !== source.checksum
+      )
+        throw new Error("checksum")
+    } catch {
+      discrepancies.push({
+        message: "A private source backup is missing or its checksum differs.",
+      })
+    }
+  }
+  const observed: Array<unknown> = []
+  for (const entry of [...manifest.entries].sort((a, b) =>
+    (a.canonicalId ?? a.id).localeCompare(b.canonicalId ?? b.id)
+  )) {
+    const fail = (message: string) =>
+      discrepancies.push({ entryId: entry.id, message })
+    if (entry.state === "skipped") {
+      counts.skipped++
+      continue
+    }
+    if (entry.state !== "saved" || !entry.canonicalId) {
+      counts.unresolved++
+      fail(entry.message ?? "A source record still needs import or review.")
+      continue
+    }
+    counts.saved++
+    const live = await target(tx, actor, entry, entry.canonicalId, true)
+    observed.push([entry.id, live?.fingerprint ?? null])
+    // Pre-FOR-57 imports can use their original alias checkpoint, never today's row as an implicit acceptance.
+    const [alias] = entry.targetFingerprint
+      ? []
+      : await tx
+          .select()
+          .from(legacyImportAliases)
+          .where(
+            and(
+              aliasScope(actor, entry),
+              eq(legacyImportAliases.fingerprint, entry.fingerprint),
+              eq(legacyImportAliases.canonicalId, entry.canonicalId)
+            )
+          )
+    const expected = entry.targetFingerprint ?? alias?.targetFingerprint
+    if (!live || !expected || live.fingerprint !== expected)
+      fail(
+        "The shared record changed or is unavailable. Retry unresolved records to review the current version."
+      )
+    if (
+      entry.kind === "issue" &&
+      live &&
+      entry.decision?.choice !== "keep-server" &&
+      !entry.replaceLegacyFiles
+    ) {
+      try {
+        const parentId =
+          (await reference(
+            tx,
+            actor,
+            manifest,
+            entry,
+            "issue",
+            entry.draft?.parentId ?? ""
+          )) || null
+        const projectId =
+          (await reference(
+            tx,
+            actor,
+            manifest,
+            entry,
+            "project",
+            entry.draft?.project ?? ""
+          )) || null
+        if (
+          live.relationships?.parentId !== parentId ||
+          live.relationships.projectId !== projectId
+        )
+          fail(
+            "Canonical parent or project relationships differ from the source mapping."
+          )
+      } catch {
+        fail("A source relationship is missing, ambiguous or unavailable.")
+      }
+    }
+    for (const file of entry.files) {
+      counts.files++
+      if (!file.fileId) {
+        fail("A source file has not been verified and attached.")
+        continue
+      }
+      const [bound] = await tx
+        .select()
+        .from(resourceFiles)
+        .where(
+          and(
+            eq(resourceFiles.id, file.fileId),
+            eq(resourceFiles.workspaceId, actor.workspaceId)
+          )
+        )
+        .for("share")
+      observed.push([
+        file.fileId,
+        bound?.checksum,
+        bound?.attachmentState,
+        bound?.deletedAt,
+      ])
+      const [issue] = await tx
+        .select({ properties: issues.properties })
+        .from(issues)
+        .where(eq(issues.id, entry.canonicalId))
+      if (
+        !bound ||
+        bound.issueId !== entry.canonicalId ||
+        bound.deletedAt ||
+        bound.attachmentState !== "attached" ||
+        bound.commentId ||
+        bound.checksum !== file.checksum ||
+        bound.sizeBytes !== file.sizeBytes ||
+        bound.name !== file.name ||
+        !issue?.properties.attachments?.some(
+          (f) =>
+            f.fileId === file.fileId &&
+            f.checksum === file.checksum &&
+            f.sizeBytes === file.sizeBytes &&
+            !f.data
+        )
+      )
+        fail(
+          "An attached file is missing or differs from its verified source checksum."
+        )
+      else counts.verifiedFiles++
+    }
+  }
+  const body = {
+    manifest: manifest.fingerprint,
+    counts,
+    discrepancies,
+    observed,
+    exclusions: manifest.exclusions,
+  }
+  return {
+    fingerprint: commandInputHash(JSON.parse(JSON.stringify(body))),
+    checkedAt: new Date().toISOString(),
+    ready: !discrepancies.length,
+    counts,
+    discrepancyCount: discrepancies.length,
+    discrepancies: full ? discrepancies : discrepancies.slice(0, 100),
+    retainedExclusions: manifest.exclusions.length + counts.skipped,
+  }
+}
+
+/** Explicit settlement never enables browser writes. Canonical authority is already
+ * atomically installed by IssueDefinitionProvider for this authenticated scope. */
+export async function cutoverImport(
+  actor: Actor,
+  raw: z.infer<typeof importCutoverSchema>
+) {
+  const input = importCutoverSchema.parse(raw)
+  await executeCommand({
+    actor,
+    commandKey: `import-cutover:${input.id}:${input.revision}:${input.action}`,
+    operation: "imports.cutover@1",
+    input: {
+      id: input.id,
+      revision: input.revision,
+      action: input.action,
+      reportFingerprint: input.reportFingerprint ?? null,
+      acknowledgeExclusions: input.acknowledgeExclusions,
+    },
+    status: 200,
+    parse: (value) => z.object({ id: z.uuid() }).parse(value),
+    authorize: async (tx, current) => {
+      await load(tx, current, input.id, false)
+    },
+    run: async (tx, current) => {
+      await tx
+        .select({ id: organizations.id })
+        .from(organizations)
+        .where(eq(organizations.id, current.workspaceId))
+        .for("no key update")
+      await tx.execute(
+        sql`SELECT public.forge_lock_issue_graph(${current.workspaceId})`
+      )
+      const manifest = await load(tx, current, input.id)
+      if (manifest.revision !== input.revision)
+        throw new Error("Import progress changed. Refresh and reconcile again.")
+      const report = await importReconciliation(tx, current, manifest)
+      if (input.action !== "reconcile") {
+        if (!report.ready)
+          throw new Error(
+            "Unresolved discrepancies block completion and cleanup. Reconcile and review the report."
+          )
+        if (input.reportFingerprint !== report.fingerprint)
+          throw new Error(
+            "Reconciliation changed. Check the latest report before continuing."
+          )
+        if (report.retainedExclusions && !input.acknowledgeExclusions)
+          throw new Error(
+            "Acknowledge the excluded and skipped data retained in your private backups."
+          )
+        manifest.completedAt ??= new Date().toISOString()
+      }
+      if (input.action === "cleanup") {
+        if (!manifest.cleanedAt) {
+          // Remove only redundant issue records; team preferences/history and advanced
+          // workspace planning stay intact. Exact CAS never erases a later source.
+          manifest.cleanedSources = []
+          for (const source of manifest.sources) {
+            if (!/^forge:(team|triage|cycle)-issues:v1:/.test(source.key))
+              continue
+            const predicate = and(
+              eq(productState.workspaceId, current.workspaceId),
+              eq(productState.ownerId, `user:${current.userId}`),
+              eq(productState.key, source.key)
+            )
+            const [row] = await tx
+              .select()
+              .from(productState)
+              .where(predicate)
+              .for("update")
+            if (!row?.encodedValue) continue
+            const raw = JSON.parse(row.encodedValue)
+            if (commandInputHash(raw) !== source.checksum) continue
+            const body = JSON.parse(raw)
+            if (source.key.startsWith("forge:team-issues:v1:")) {
+              const teamId = source.key.slice("forge:team-issues:v1:".length)
+              const favorites = manifest.entries
+                .filter(
+                  (e) =>
+                    e.sourceKey === source.key &&
+                    e.sourceChecksum === source.checksum &&
+                    e.draft?.favorite &&
+                    e.canonicalId
+                )
+                .map((e) => e.canonicalId!)
+              // Preserve the existing star projection before removing its legacy fallback.
+              // A newer explicit favorite selection always wins, including an empty list.
+              await tx
+                .insert(productState)
+                .values({
+                  workspaceId: current.workspaceId,
+                  ownerId: `user:${current.userId}`,
+                  ownerUserId: current.userId,
+                  teamId,
+                  key: `forge:team-issue-favorites:v1:${teamId}`,
+                  encodedValue: JSON.stringify(JSON.stringify(favorites)),
+                })
+                .onConflictDoNothing()
+            }
+            const cleaned = JSON.stringify(
+              Array.isArray(body) ? [] : { ...body, issues: [] }
+            )
+            await tx
+              .update(productState)
+              .set({
+                encodedValue: JSON.stringify(cleaned),
+                revision: row.revision + 1,
+              })
+              .where(predicate)
+            manifest.cleanedSources.push({
+              key: source.key,
+              checksum: commandInputHash(cleaned),
+            })
+          }
+          manifest.cleanedAt = new Date().toISOString()
+        }
+      }
+      manifest.reconciliation = report
+      await save(tx, manifest)
+      return {
+        value: { id: manifest.id },
+        resource: { type: "legacyImport", id: manifest.id },
+        events: [
+          {
+            topic: "imports.reconciled",
+            payload: {
+              importId: manifest.id,
+              action: input.action,
+              ready: report.ready,
+            },
+          },
+        ],
+      }
+    },
+  })
+  return readImport(actor, input.id)
+}
+
+/** Complete, authenticated reject report; source bodies remain in private backups. */
+export async function downloadImportReport(actor: Actor, id: string) {
+  return db.transaction(async (tx) => {
+    const current = await currentCommandActor(tx, actor)
+    await tx
+      .select({ id: organizations.id })
+      .from(organizations)
+      .where(eq(organizations.id, current.workspaceId))
+      .for("no key update")
+    await tx.execute(
+      sql`SELECT public.forge_lock_issue_graph(${current.workspaceId})`
+    )
+    const manifest = await load(tx, current, id)
+    return {
+      version: 1,
+      id,
+      workspaceId: current.workspaceId,
+      actorId: current.userId,
+      authority: "canonical-server",
+      completedAt: manifest.completedAt,
+      cleanedAt: manifest.cleanedAt,
+      report: await importReconciliation(tx, current, manifest, true),
+      sources: manifest.sources.map(({ key, checksum }) => ({ key, checksum })),
+      records: manifest.entries.map(
+        ({ id, sourceKey, path, legacyId, canonicalId, state }) => ({
+          id,
+          sourceKey,
+          path,
+          legacyId,
+          canonicalId,
+          state,
+        })
+      ),
+      exclusions: manifest.exclusions,
+    }
   })
 }

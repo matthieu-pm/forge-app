@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react"
+import { LegacyImportReconciliation } from "./legacy-import-reconciliation"
 import type { ImportSnapshot } from "@/lib/import-execution-contract"
+import { downloadLegacyFile } from "@/lib/legacy-import-backup"
 import {
+  downloadLegacyImportReport,
   loadLegacyImports,
+  reconcileLegacyImport,
   resolveLegacyImport,
   retryLegacyImport,
 } from "@/lib/import-execution-state"
@@ -103,6 +107,63 @@ export function LegacyImportExecution() {
       if (epoch === canonicalIssueEpoch()) setBusy(false)
     }
   }
+  async function settle(
+    manifest: ImportSnapshot,
+    action: "reconcile" | "complete" | "cleanup" | "download",
+    acknowledgeExclusions: boolean
+  ) {
+    const token = ++generation.current,
+      epoch = canonicalIssueEpoch()
+    setBusy(true)
+    setError("")
+    try {
+      if (action === "download") {
+        const report = JSON.parse(
+          await downloadLegacyImportReport({
+            data: {
+              ...importIdentity(),
+              id: manifest.id,
+              revision: manifest.revision,
+            },
+          })
+        )
+        if (token !== generation.current || epoch !== canonicalIssueEpoch())
+          return
+        downloadLegacyFile(
+          report,
+          `forge-import-${manifest.id}-reconciliation.json`
+        )
+        return
+      }
+      const next = JSON.parse(
+        await reconcileLegacyImport({
+          data: {
+            ...importIdentity(),
+            id: manifest.id,
+            revision: manifest.revision,
+            action,
+            reportFingerprint: manifest.reconciliation?.fingerprint,
+            acknowledgeExclusions,
+          },
+        })
+      ) as ImportSnapshot
+      if (token !== generation.current || epoch !== canonicalIssueEpoch())
+        return
+      setImports((values) =>
+        values.map((value) => (value.id === next.id ? next : value))
+      )
+    } catch (failure) {
+      if (token === generation.current && epoch === canonicalIssueEpoch())
+        setError(
+          failure instanceof Error
+            ? failure.message
+            : "Reconciliation could not be confirmed. Refresh and try again."
+        )
+    } finally {
+      if (token === generation.current && epoch === canonicalIssueEpoch())
+        setBusy(false)
+    }
+  }
   return (
     <section className="space-y-3" aria-label="Browser import progress">
       <h2 className="text-sm font-semibold">Browser import progress</h2>
@@ -151,7 +212,7 @@ export function LegacyImportExecution() {
             <div className="flex flex-wrap gap-2">
               <Button
                 size="sm"
-                disabled={busy}
+                disabled={busy || Boolean(manifest.completedAt)}
                 onClick={() => void run(manifest)}
               >
                 Resume import
@@ -159,7 +220,7 @@ export function LegacyImportExecution() {
               <Button
                 size="sm"
                 variant="secondary"
-                disabled={busy}
+                disabled={busy || Boolean(manifest.cleanedAt)}
                 onClick={() => void run(manifest, undefined, undefined, true)}
               >
                 Retry unresolved records and files
@@ -267,6 +328,14 @@ export function LegacyImportExecution() {
                 )}
               </div>
             ))}
+            <LegacyImportReconciliation
+              key={`${manifest.id}:${manifest.revision}`}
+              manifest={manifest}
+              busy={busy}
+              run={(action, acknowledge) =>
+                void settle(manifest, action, acknowledge)
+              }
+            />
             <details>
               <summary className="text-xs">Preserved and excluded data</summary>
               {manifest.exclusions.map((reason, index) => (

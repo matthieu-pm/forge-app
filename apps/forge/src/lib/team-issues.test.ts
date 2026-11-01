@@ -363,3 +363,47 @@ it("records PR linking and unlinking once and preserves metadata after reload", 
   expect(unlinked.activity[1]).toMatchObject({ link, linkAction: "unlinked" })
   expect(readIssueStore(team).issues[0].links).toEqual([])
 })
+
+it("FOR-57 canonical lists ignore malformed legacy sources and writes preserve their exact bytes", async () => {
+  const { replaceCanonicalIssues } = await import("./canonical-issue-cache")
+  const id = crypto.randomUUID()
+  const original = '{"version":1,"issues":[{"id":"bad","title":42}]}'
+  productStorage.setItem(teamIssuesKey(team), original)
+  replaceCanonicalIssues({
+    userId: "actor",
+    workspaceId: "workspace",
+    sessionId: "session",
+    projects: [],
+    cycles: [],
+    records: [
+      {
+        teamId: team,
+        issue: {
+          ...blankIssueDraft("todo"),
+          id,
+          number: 1,
+          title: "Canonical",
+          createdAt: "2026-01-01T00:00:00Z",
+          updatedAt: "2026-01-01T00:00:00Z",
+          statusChangedAt: "2026-01-01T00:00:00Z",
+          creator: "actor",
+          suggestedLabel: "",
+          completedAt: null,
+          recurrenceSpawned: false,
+        },
+      },
+    ],
+  })
+  try {
+    expect(readIssueStore(team).issues.map((i) => i.id)).toEqual([id])
+    writeIssueStore(team, (s) => ({ ...s, favorite: true }))
+    expect(productStorage.getItem(teamIssuesKey(team))).toBe(original)
+    expect(readIssueStore(team).favorite).toBe(true)
+    expect(
+      JSON.parse(productStorage.getItem(`forge:team-issue-ui:v1:${team}`)!)
+        .issues
+    ).toEqual([])
+  } finally {
+    replaceCanonicalIssues(null, false)
+  }
+})

@@ -43,6 +43,8 @@ export type ImportEntry = {
   files: Array<ImportFile>
   canonicalId?: string
   replaceLegacyFiles?: boolean
+  reviewRequired?: boolean
+  targetFingerprint?: string
   sourceValid?: boolean
   state: "pending" | "review" | "quarantined" | "saved" | "skipped"
   message?: string
@@ -70,6 +72,12 @@ export type ImportManifest = {
   actorId: string
   revision: number
   automaticPaused?: boolean
+  sourceErrors?: Array<string>
+  reconciliation?: ImportReconciliation
+  completedAt?: string
+  cleanedAt?: string
+  cleanedSources?: Array<{ key: string; checksum: string }>
+
   sources: Array<{ key: string; checksum: string; raw: string }>
   entries: Array<ImportEntry>
   exclusions: Array<string>
@@ -86,4 +94,27 @@ export const importFileRequestSchema = importRequestSchema.extend({
   entryId: z.string().min(1),
   index: z.number().int().min(0).max(4),
   fileId: z.uuid(),
+})
+
+export type ImportReconciliation = {
+  fingerprint: string
+  checkedAt: string
+  ready: boolean
+  counts: {
+    sources: number
+    records: number
+    saved: number
+    skipped: number
+    unresolved: number
+    files: number
+    verifiedFiles: number
+  }
+  discrepancyCount: number
+  discrepancies: Array<{ entryId?: string; message: string }>
+  retainedExclusions: number
+}
+export const importCutoverSchema = importRequestSchema.extend({
+  action: z.enum(["reconcile", "complete", "cleanup"]),
+  reportFingerprint: z.string().length(64).optional(),
+  acknowledgeExclusions: z.boolean().default(false),
 })

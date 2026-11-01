@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start"
 import {
   importChoiceSchema,
+  importCutoverSchema,
   importFileRequestSchema,
   importIdentitySchema,
   importRequestSchema,
@@ -73,4 +74,18 @@ export const pauseLegacyImport = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { actor, service } = await context(data)
     return JSON.stringify(await service.pauseAutomaticImport(actor, data))
+  })
+
+export const reconcileLegacyImport = createServerFn({ method: "POST" })
+  .validator(importCutoverSchema)
+  .handler(async ({ data }) => {
+    const { actor, service } = await context(data)
+    return JSON.stringify(await service.cutoverImport(actor, data))
+  })
+
+export const downloadLegacyImportReport = createServerFn({ method: "GET" })
+  .validator(importRequestSchema)
+  .handler(async ({ data }) => {
+    const { actor, service } = await context(data)
+    return JSON.stringify(await service.downloadImportReport(actor, data.id))
   })

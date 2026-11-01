@@ -62,6 +62,7 @@ export function buildImportManifest(input: {
 }): ImportManifest {
   const entries: Array<ImportEntry> = [],
     exclusions: Array<string> = []
+  const sourceErrors: Array<string> = []
   const sources = [
     ...new Map(
       input.sources.map((s) => [JSON.stringify([s.key, s.raw]), s])
@@ -200,6 +201,7 @@ export function buildImportManifest(input: {
     } catch (error) {
       if (error instanceof Error && error.message.includes("100,000"))
         throw error
+      sourceErrors.push(`${source.key}: source could not be parsed completely.`)
       exclusions.push(
         `${source.key}: ${error instanceof Error ? error.message : "Invalid source."} Exact bytes preserved.`
       )
@@ -219,6 +221,7 @@ export function buildImportManifest(input: {
     sources,
     entries,
     exclusions,
+    sourceErrors,
     createdAt: new Date().toISOString(),
   }
   // Count across collections and sources, including quarantined records.
