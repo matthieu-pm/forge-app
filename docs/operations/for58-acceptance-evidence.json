@@ -1,0 +1,109 @@
+{
+  "issue": "FOR-58",
+  "testedSourceRevision": "8b1809e37d51cf58e1e177e495d89b55eeec9349",
+  "baseRevision": "ce41821cb4fe0eab317e274589ce6284e4377600",
+  "environment": {
+    "database": "forge_issue_history_acceptance",
+    "branch": "br-autumn-union-za0opf1e"
+  },
+  "productDecisions": [
+    "Readable-project collaborators manage milestones and publish posts",
+    "Authors and workspace owners/admins may edit/delete posts",
+    "Owners/admins manage shared status and label catalogs",
+    "Milestone relocation requires access to every affected issue",
+    "Private project attachments included in FOR-58"
+  ],
+  "migration": {
+    "file": "0063_project_progress_files.sql",
+    "result": "Applied once to the isolated acceptance database; 64 migration receipts total",
+    "productionApplied": false
+  },
+  "acceptance": {
+    "AT-01": {
+      "result": "passed",
+      "evidence": [
+        "Canonical project PostgreSQL suite",
+        "Two authenticated browser sessions",
+        "Two readable milestone issues, one completed: matching 50% project/milestone progress",
+        "Server-attributed collaborator update and persisted private attachment"
+      ]
+    },
+    "AT-02": {
+      "result": "passed",
+      "evidence": [
+        "Stale project/milestone edits rejected with private draft recovery",
+        "Hidden issue excluded from progress totals",
+        "Hidden affected issue blocks whole milestone relocation",
+        "Read/write scopes, destination revision/team constraints, revoked access and exact command replay checked"
+      ]
+    }
+  },
+  "validation": {
+    "typecheck": "passed",
+    "productionBuild": "passed; protected Workflow handlers verified",
+    "applicationSuite": {
+      "testFilesPassed": 306,
+      "testFilesSkipped": 24,
+      "testsPassed": 2421,
+      "testsSkipped": 479,
+      "result": "passed"
+    },
+    "postgres": {
+      "canonicalIssueCases": 147,
+      "projectCases": 15,
+      "completeRun": {
+        "passed": 160,
+        "initialExpectationFailures": 2
+      },
+      "focusedRerun": {
+        "passed": 9,
+        "notSelected": 153
+      },
+      "result": "All current cases verified across complete run and focused rerun. Two pre-FOR-58 expectations were updated: workspace snapshots now include shared catalogs; the Unicode history test now uses valid labels instead of an arbitrary milestone assignment. Both pass on rerun."
+    },
+    "browser": {
+      "issue": "FOR-58",
+      "passed": true,
+      "environment": {
+        "database": "forge_issue_history_acceptance",
+        "branch": "br-autumn-union-za0opf1e"
+      },
+      "checks": [
+        "two sessions",
+        "shared custom status creation and assignment through UI",
+        "private uploaded composer draft survives reload",
+        "UI milestone creation",
+        "authorized 2-issue 50% progress",
+        "member authored update",
+        "private direct upload, post binding and collaborator byte equality",
+        "reload persistence",
+        "stale milestone draft preserved",
+        "revoked attachment grant denied"
+      ]
+    },
+    "cleanup": {
+      "workspaces": 0,
+      "users": 0,
+      "receipts": 0,
+      "localBytes": "fixture file references removed"
+    },
+    "eslint": {
+      "errors": 0,
+      "warnings": 70,
+      "result": "passed with warnings"
+    },
+    "gitDiffCheck": "passed"
+  },
+  "screenshot": "../qa/project-progress/update-and-private-attachment.png",
+  "releaseNotes": [
+    "Apply migration through the serialized migration runner before deploying",
+    "No production migration or deployment performed",
+    "Legacy private project catalogs retained; advanced legacy planning import remains FOR-126",
+    "Resources/documents, dependencies, Slack integration and initiative membership remain separately scoped"
+  ],
+  "notClaimed": [
+    "production browser acceptance",
+    "production deployment",
+    "packaged macOS acceptance"
+  ]
+}
