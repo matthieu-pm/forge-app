@@ -1,0 +1,165 @@
+{
+  "schemaVersion": 1,
+  "issue": "FOR-57",
+  "pullRequest": "https://github.com/matthieu-pm/forge-app/pull/39",
+  "baseCommit": "b850d7ef3138321872e89c4ad88cfe2efbe56b9b",
+  "originalHead": "02577457bc454057dbb457e53895f12ff6322d0e",
+  "reviewedFixCommit": "de7807748bdecaf8e5e5efb84ea25efb43c8fffb",
+  "recordedAt": "2026-11-01T00:44:42.949301+00:00",
+  "review": {
+    "standards": {
+      "hardViolations": 0,
+      "remainingFunctionalFindings": 0,
+      "optionalHeuristic": "Repeated workspace/graph fencing is consistent and not a release blocker."
+    },
+    "specification": {
+      "distinctFunctionalFindings": 2,
+      "remainingFindings": 0,
+      "fixed": [
+        "P1 revision markers could hide unmigrated core records from reconciliation counts",
+        "P1 removing completed sources could replace a reviewed Keep-both relationship with an original legacy-ID match"
+      ]
+    },
+    "redReproductions": {
+      "originalHeadFailed": 3
+    },
+    "independentReReviews": "Both axes report zero remaining functional findings."
+  },
+  "environment": {
+    "database": "forge_issue_history_acceptance",
+    "branchId": "br-autumn-union-za0opf1e",
+    "applicationRole": "ordinary pooled application role",
+    "browser": "two independent Chromium/Better Auth sessions",
+    "byteStore": "disposable local private-file adapter",
+    "productionChanged": false
+  },
+  "checks": [
+    {
+      "name": "Real PostgreSQL imports, reconciliation and review regressions",
+      "passed": 33,
+      "command": "FORGE_ISSUE_HISTORY_TEST_DATABASE_FILE=/private/connections.json bunx vitest run src/application/imports/imports.postgres.test.ts"
+    },
+    {
+      "name": "Exact final old-manifest hydration/team authorization case",
+      "passed": 1,
+      "command": "FORGE_ISSUE_HISTORY_TEST_DATABASE_FILE=/private/connections.json bunx vitest run src/application/imports/imports.postgres.test.ts -t 'pre-cutover manifests'"
+    },
+    {
+      "name": "Full application regression",
+      "passed": 2417,
+      "skipped": 473,
+      "command": "bunx vitest run --maxWorkers 4"
+    },
+    {
+      "name": "Workflow regression",
+      "passed": 4,
+      "command": "bun run test:workflow"
+    },
+    {
+      "name": "TypeScript",
+      "result": "passed"
+    },
+    {
+      "name": "Production build/prerender/protected Workflow verification",
+      "result": "passed",
+      "commit": "de7807748bdecaf8e5e5efb84ea25efb43c8fffb",
+      "database": "localhost-only build placeholder"
+    },
+    {
+      "name": "Changed-file ESLint",
+      "errors": 0,
+      "warnings": 40
+    },
+    {
+      "name": "Formatting and diff checks",
+      "result": "passed"
+    },
+    {
+      "name": "Source-bound two-session browser acceptance",
+      "commit": "de7807748bdecaf8e5e5efb84ea25efb43c8fffb",
+      "result": "passed",
+      "checks": [
+        "FOR-57 acknowledged reconciliation, completion and exact-source cleanup",
+        "FOR-57 private backup retained after cleanup",
+        "FOR-57 canonical team detail and My issues use the imported UUID",
+        "FOR-57 composer and triage create shared UUIDs after cutover",
+        "real authenticated automatic import",
+        "parent remapping",
+        "canonical project membership",
+        "saved-settings cycle reconstruction",
+        "same-issue conversion preserves shared fields, anchors and width",
+        "verified durable file",
+        "reload replay",
+        "cross-profile conflict review",
+        "keep-both preserves shared version",
+        "second reload has no duplicate",
+        "mobile layout",
+        "no page errors"
+      ],
+      "additionalAssertions": [
+        "full report download excludes source bodies",
+        "Assigned and Created use the same canonical UUID"
+      ],
+      "pageErrors": 0,
+      "cleanup": {
+        "workspaces": 0,
+        "users": 0,
+        "manifests": 0,
+        "receipts": 0
+      }
+    }
+  ],
+  "productionPreflight": {
+    "database": "neondb",
+    "branch": "br-muddy-queen-zaeeysjt",
+    "host": "ep-lingering-bread-zazpwrxp.c-2.eu-west-2.aws.neon.tech",
+    "ledgerCount": 63,
+    "ledgerHead": {
+      "id": 63,
+      "hash": "a8a70c5bade9cba71ea82a1f66d0d5c20cb45b981e39c514d8b990064a9827aa",
+      "created_at": "1793484285632"
+    },
+    "recordedAt": "2026-11-01T00:40:39.684Z"
+  },
+  "productionHealthBefore": [
+    {
+      "url": "https://app.forgenow.tech/api/health/live",
+      "status": 200,
+      "body": {
+        "status": "ok",
+        "code": "ALIVE"
+      }
+    },
+    {
+      "url": "https://app.forgenow.tech/api/health/ready",
+      "status": 200,
+      "body": {
+        "status": "ok",
+        "code": "READY"
+      }
+    },
+    {
+      "url": "https://forge-agent-runtime.vercel.app/health/live",
+      "status": 200,
+      "body": {
+        "status": "ok",
+        "code": "ALIVE"
+      }
+    },
+    {
+      "url": "https://forge-agent-runtime.vercel.app/health/ready",
+      "status": 200,
+      "body": {
+        "status": "ok",
+        "code": "READY"
+      }
+    }
+  ],
+  "rollbackDeployment": "dpl_2SDugPTYtivpSwYpem21jtBuegm1",
+  "migrationRequired": false,
+  "configurationChangesRequired": false,
+  "limits": [
+    "Packaged macOS and 100,000-record throughput qualification are not claimed.",
+    "Production release acceptance is recorded after merge in FOR-57."
+  ]
+}
