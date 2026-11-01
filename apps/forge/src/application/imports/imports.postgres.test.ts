@@ -1343,9 +1343,8 @@ describe.skipIf(!file)("FOR-56 real PostgreSQL imports", () => {
       f.actors[0],
       await decide(f.actors[0], m, parent.id, "keep-both")
     )
-    expect(
-      (await settle(f.actors[0], m, "reconcile")).reconciliation?.ready
-    ).toBe(false)
+    m = await settle(f.actors[0], m, "reconcile")
+    expect(m.reconciliation?.ready).toBe(false)
     m = await finish(f.actors[0], await retry(f.actors[0], m))
     const child = m.entries.find((e) => e.legacyId === "child")!
     expect(child.state).toBe("review")
