@@ -437,6 +437,8 @@ export const resourceFiles = pgTable(
       "unbound" | "attached" | "detached"
     >(),
     commentId: uuid("comment_id"),
+    projectId: uuid("project_id"),
+    projectPostId: uuid("project_post_id"),
     name: text("name").notNull(),
     contentType: text("content_type").notNull(),
     sizeBytes: integer("size_bytes").notNull(),
@@ -450,7 +452,7 @@ export const resourceFiles = pgTable(
   (t) => [
     check(
       "resource_files_attachment_state",
-      sql`${t.attachmentState} IS NULL OR (${t.issueId} IS NOT NULL AND ${t.attachmentState} IN ('unbound','attached','detached'))`
+      sql`${t.attachmentState} IS NULL OR (( ${t.issueId} IS NOT NULL OR ${t.projectId} IS NOT NULL) AND ${t.attachmentState} IN ('unbound','attached','detached'))`
     ),
     check(
       "resource_files_comment_owner",
@@ -459,13 +461,22 @@ export const resourceFiles = pgTable(
     unique("resource_files_storage_reference_unique").on(t.storageReference),
     check(
       "resource_files_one_resource",
-      sql`num_nonnulls(${t.issueId}, ${t.documentId}) = 1`
+      sql`num_nonnulls(${t.issueId}, ${t.documentId}, ${t.projectId}) = 1`
     ),
     check("resource_files_size_positive", sql`${t.sizeBytes} > 0`),
     check("resource_files_checksum", sql`${t.checksum} ~ '^[a-f0-9]{64}$'`),
     check(
       "resource_files_reference",
       sql`${t.storageReference} ~ '^files/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'`
+    ),
+    foreignKey({
+      name: "resource_files_project_fk",
+      columns: [t.workspaceId, t.projectId],
+      foreignColumns: [projects.workspaceId, projects.id],
+    }),
+    check(
+      "resource_files_project_post",
+      sql`${t.projectPostId} IS NULL OR (${t.projectId} IS NOT NULL AND ${t.attachmentState} IN ('attached','detached'))`
     ),
     foreignKey({
       name: "resource_files_issue_fk",

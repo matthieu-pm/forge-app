@@ -44,7 +44,8 @@ export function DetailTitle({
           return
         }
         const next = title.trim()
-        if (!next || (next !== value && onSave(next) === false)) setTitle(value)
+        if (next && next !== value && onSave(next) === false) return
+        if (!next) setTitle(value)
         else setTitle(next)
         dirty.current = false
       }}

@@ -17,6 +17,7 @@ import type {
   ProjectStatus,
   ProjectStatusDirectory,
 } from "@/lib/project-statuses"
+import { productStorageIdentity } from "@/lib/product-storage"
 import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import {
   deleteProjectStatus,
@@ -267,6 +268,9 @@ export function ProjectStatusesSettings({
     change: (current: ProjectStatusDirectory) => ProjectStatusDirectory,
     version = directory.version
   ) {
+    const role = productStorageIdentity()?.workspaceRole
+    if (role && !["owner", "admin"].includes(role))
+      throw new Error("Only workspace admins can change project catalogs.")
     if (!ready || loadError)
       throw new Error(
         "Saved statuses could not be loaded. Reload to try again."

@@ -304,6 +304,9 @@ export function useInitiatives(
     }
   }
   return {
+    canModerate: ["owner", "admin"].includes(
+      productStorageIdentity()?.workspaceRole ?? ""
+    ),
     ...data,
     mutationError,
     update,

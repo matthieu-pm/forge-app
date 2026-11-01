@@ -201,6 +201,7 @@ export async function editCanonicalIssues(actor: Actor, raw: EditIssueBatch) {
               properties: {
                 ...row.properties,
                 ...draft,
+                milestone: resolved.milestone,
                 // Read projections redact deleted bodies. Keep the authoritative
                 // discussion when unrelated issue properties are edited.
                 comments: row.properties.comments ?? [],
@@ -237,7 +238,12 @@ export async function editCanonicalIssues(actor: Actor, raw: EditIssueBatch) {
               teamId: input.teamId,
               history: {
                 version: 1,
-                changes: Object.entries(edit.changes)
+                changes: Object.entries({
+                  ...edit.changes,
+                  ...(before.milestone !== resolved.milestone
+                    ? { milestone: resolved.milestone }
+                    : {}),
+                })
                   .filter(
                     ([field, value]) =>
                       field !== "subIssues" &&

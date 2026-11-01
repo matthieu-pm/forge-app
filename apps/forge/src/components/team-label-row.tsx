@@ -70,6 +70,7 @@ export function TeamLabelRow({
   lastInGroup = false,
   workspaceStyle = false,
   onSave,
+  catalogRevision,
   onClose,
   onDelete,
 }: {
@@ -85,10 +86,12 @@ export function TeamLabelRow({
   nested?: boolean
   lastInGroup?: boolean
   workspaceStyle?: boolean
-  onSave: (label: TeamLabel) => string | undefined
+  catalogRevision?: number
+  onSave: (label: TeamLabel, expectedRevision?: number) => string | undefined
   onClose: () => void
   onDelete: () => void
 }) {
+  const revisionBaseline = React.useRef(catalogRevision)
   const [name, setName] = React.useState(label.name)
   const [description, setDescription] = React.useState(label.description)
   const [color, setColor] = React.useState(label.color)
@@ -105,6 +108,9 @@ export function TeamLabelRow({
   const cancelled = React.useRef(false)
   const committed = React.useRef(label)
   const errorId = React.useId()
+
+  if (!editingName && !editingDescription && !colorOpen)
+    revisionBaseline.current = catalogRevision
 
   React.useEffect(() => {
     if (!saved) return
@@ -130,12 +136,15 @@ export function TeamLabelRow({
       if (saved) setError("A label name is required.")
       return false
     }
-    const failure = onSave({
-      ...label,
-      ...next,
-      name: next.name.trim(),
-      description: next.description.trim(),
-    })
+    const failure = onSave(
+      {
+        ...label,
+        ...next,
+        name: next.name.trim(),
+        description: next.description.trim(),
+      },
+      revisionBaseline.current
+    )
     setError(failure ?? "")
     if (failure) return false
     committed.current = {

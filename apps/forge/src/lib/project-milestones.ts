@@ -1,11 +1,18 @@
 import { format, isValid, parseISO } from "date-fns"
-import { canonicalIssuesActive } from "./canonical-issue-cache"
+import {
+  canonicalIssuesActive,
+  canonicalProjects,
+} from "./canonical-issue-cache"
 import { initiativeProjectCatalog } from "./initiative-projects"
 import {
   initiativeStoreSchema,
   initiativesStorageKey,
   targetLabel,
 } from "./initiatives"
+import {
+  projectChangesSchema,
+  projectCommandPrefix,
+} from "./shared-project-contract"
 import { saveWorkspaceProject } from "./projects"
 import {
   ISSUES_CHANGED,
@@ -96,10 +103,44 @@ export function relocateProjectMilestone({
   targetId?: string
   convert?: boolean
 }) {
-  if (canonicalIssuesActive())
-    throw new Error(
-      "Moving, converting or deleting shared milestones is unavailable until all issue assignments can be updated together."
+  if (canonicalIssuesActive()) {
+    const catalog = canonicalProjects(workspaceId)
+    const source = catalog.find((p) => p.id === sourceId)
+    const target = catalog.find((p) => p.id === targetId)
+    if (!source || source.revision === undefined || (targetId && !target))
+      throw new Error("Reload the projects before changing this milestone.")
+    for (let i = 0; i < productStorage.length; i++) {
+      const key = productStorage.key(i)
+      if (
+        key?.startsWith(projectCommandPrefix) &&
+        projectChangesSchema
+          .parse(JSON.parse(productStorage.getItem(key)!))
+          .some((c) => c.id === sourceId || c.id === targetId)
+      )
+        throw new Error(
+          "Wait for the pending project save before moving a milestone."
+        )
+    }
+    const changes = projectChangesSchema.parse([
+      {
+        id: sourceId,
+        expectedRevision: source.revision,
+        changes: {},
+        relocation: {
+          milestoneId,
+          ...(target
+            ? { targetId: target.id, targetRevision: target.revision }
+            : {}),
+          ...(convert ? { convertId: crypto.randomUUID() } : {}),
+        },
+      },
+    ])
+    productStorage.setItem(
+      `${projectCommandPrefix}${crypto.randomUUID()}`,
+      JSON.stringify(changes)
     )
+    return target
+  }
   const key = initiativesStorageKey(workspaceId)
   const stored = productStorage.getItem(key)
   if (!stored) throw new Error("Project data is unavailable.")

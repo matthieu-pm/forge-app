@@ -310,9 +310,9 @@ describe("FOR-54 shared project client", () => {
     replaceCanonicalIssues(snapshot())
     expect(canonicalProjects(identity.workspaceId)[0].name).toBe("Newest")
   })
-  it("keeps advanced metadata out of canonical commands and permits an empty default project form", () => {
+  it("persists milestone metadata in canonical commands and permits an empty default project form", () => {
     const before = { ...emptyInitiatives(), workspaceProjects: [shared] }
-    expect(() =>
+    expect(
       sharedProjectChanges(before, {
         ...before,
         workspaceProjects: [
@@ -321,8 +321,8 @@ describe("FOR-54 shared project client", () => {
             milestones: [{ id: "m", name: "Milestone", completed: false }],
           },
         ],
-      })
-    ).toThrow("not available yet")
+      })[0].changes.milestones
+    ).toEqual([{ id: "m", name: "Milestone", completed: false }])
     expect(
       sharedProjectChanges(emptyInitiatives(), {
         ...emptyInitiatives(),

@@ -17,6 +17,7 @@ import { ApplicationAccessError } from "@/application/authorization"
 import {
   readableDocumentCondition,
   readableIssueCondition,
+  readableProjectCondition,
   requireResourceScope,
 } from "@/application/resource-policy.server"
 import { readSubscriptionAccessState } from "@/application/billing/subscription-access-state.server"
@@ -57,7 +58,37 @@ export async function authorizeUploadTarget(
       )
     )
     .for("share")
-  if (target.kind === "document") {
+  if (target.kind === "project") {
+    requireResourceScope(actor, "projects:read")
+    requireResourceScope(actor, "projects:write")
+    if (
+      !(
+        await tx
+          .select({ id: projects.id })
+          .from(projects)
+          .where(
+            and(
+              eq(projects.id, target.id),
+              readableProjectCondition(actor, projects.id)
+            )
+          )
+          .for("share")
+      )[0]
+    )
+      throw new ApplicationAccessError()
+    await tx
+      .select()
+      .from(projectTeams)
+      .where(eq(projectTeams.projectId, target.id))
+      .for("share")
+    await tx
+      .select()
+      .from(teams)
+      .where(
+        sql`${teams.id} IN (SELECT team_id FROM project_teams WHERE project_id=${target.id})`
+      )
+      .for("share")
+  } else if (target.kind === "document") {
     await tx
       .select()
       .from(documents)

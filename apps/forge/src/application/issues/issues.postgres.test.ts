@@ -754,12 +754,16 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
       expectedRevision: 0,
     }
     await product.saveProductState(actor, input)
-    expect((await product.readProductState(actor)).entries[0].value).toBe(
-      "saved tabs"
-    )
-    expect((await product.readProductState(f.actors[1])).entries).toHaveLength(
-      0
-    )
+    expect(
+      (await product.readProductState(actor)).entries.find(
+        (entry) => entry.key === input.key
+      )?.value
+    ).toBe("saved tabs")
+    expect(
+      (await product.readProductState(f.actors[1])).entries.find(
+        (entry) => entry.key === input.key
+      )
+    ).toBeUndefined()
     await expect(
       product.saveProductState(actor, {
         ...input,
@@ -3967,7 +3971,20 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
               kind: "session",
             })
           } else {
-            const milestone = "a".repeat(999) + "😀"
+            // Milestone assignments now require a real project milestone. Use a
+            // valid multi-label value to cross the same history metadata bound.
+            const names = Array.from(
+              { length: 13 },
+              (_, index) => `${index}`.padStart(2, "0") + "a".repeat(73)
+            )
+            const prefix = names.join(",") + ","
+            names.push("b".repeat(999 - prefix.length) + "😀")
+            const labels = names.join(",")
+            for (const name of [...names, "Next"])
+              await pool.query(
+                "INSERT INTO resource_labels(workspace_id,team_id,name) VALUES($1,$2,$3)",
+                [f.workspaceId, f.teamId, name]
+              )
             const changed = await editing.editCanonicalIssues(f.actors[0], {
               teamId: f.teamId,
               commandKey: randomUUID(),
@@ -3975,12 +3992,14 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
                 {
                   issueId: created.issue.id,
                   expectedRevision: created.issue.revision!,
-                  changes: { milestone },
+                  changes: { labels },
                 },
               ],
             })
             expect(changed.status).toBe("saved")
-            expect(changed.records[0].issue.milestone).toBe(milestone)
+            expect(changed.records[0].issue.labels!.split(",").sort()).toEqual(
+              names.sort()
+            )
             const next = await editing.editCanonicalIssues(f.actors[0], {
               teamId: f.teamId,
               commandKey: randomUUID(),
@@ -3988,7 +4007,7 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
                 {
                   issueId: created.issue.id,
                   expectedRevision: changed.records[0].issue.revision!,
-                  changes: { milestone: "Next" },
+                  changes: { labels: "Next" },
                 },
               ],
             })
@@ -3997,10 +4016,16 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
               issueId: created.issue.id,
             })
             expect(page.entries[0].changes).toEqual([
-              { field: "milestone", from: "a".repeat(999), to: "Next" },
+              {
+                field: "labels",
+                from: changed.records[0].issue
+                  .labels!.slice(0, 1000)
+                  .replace(/[\uD800-\uDBFF]$/, ""),
+                to: "Next",
+              },
             ])
             expect(page.entries[1].changes).toEqual([
-              { field: "milestone", from: "", to: "a".repeat(999) },
+              { field: "labels", from: "", to: labels.slice(0, 999) },
             ])
           }
         } finally {

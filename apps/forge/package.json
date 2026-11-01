@@ -75,7 +75,9 @@
     "test:cycles:postgres": "vitest run src/application/issues/issues.postgres.test.ts -t FOR-55",
     "test:cycles:browser": "node scripts/verify-cycles-browser.mjs",
     "test:projects:postgres": "vitest run src/application/planning/projects.postgres.test.ts",
-    "test:projects:browser": "node scripts/verify-shared-projects-browser.mjs"
+    "test:projects:browser": "node scripts/verify-shared-projects-browser.mjs",
+    "test:project-progress:postgres": "vitest run src/application/planning/projects.postgres.test.ts -t FOR-58",
+    "test:project-progress:browser": "node scripts/verify-project-progress-browser.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1104.0",

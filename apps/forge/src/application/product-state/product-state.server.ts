@@ -16,6 +16,10 @@ import type {
   ProductStateSnapshot,
 } from "@/lib/product-state-contract"
 import {
+  isProjectCatalog,
+  validateProjectCatalogChange,
+} from "@/application/planning/project-catalog.server"
+import {
   ensureTeamCycles,
   lockTeamCycles,
 } from "@/application/cycles/cycles.server"
@@ -66,7 +70,9 @@ async function scope(
   write = false
 ) {
   if (!isProductStorageKey(key)) throw new ApplicationAccessError()
-  const workspace = key.match(/^forge:workspace:([^:]+):/)?.[1]
+  const workspace =
+    key.match(/^forge:workspace:([^:]+):/)?.[1] ??
+    key.match(/^forge:project-statuses:v1:([^:]+)$/)?.[1]
   if (workspace && workspace !== actor.workspaceId)
     throw new ApplicationAccessError()
   const team =
@@ -104,7 +110,31 @@ async function scope(
         throw new ApplicationAccessError()
     }
   }
+  const postProject = key.match(
+    /^forge:project-post-draft:v1:([0-9a-f-]{36})$/
+  )?.[1]
+  if (
+    postProject &&
+    !(
+      await tx
+        .select({ id: projects.id })
+        .from(projects)
+        .where(
+          and(
+            eq(projects.id, postProject),
+            readableProjectCondition(actor, projects.id)
+          )
+        )
+    )[0]
+  )
+    throw new ApplicationAccessError()
+  const catalog = isProjectCatalog(key, actor.workspaceId)
+  if (catalog && write && !hasWorkspaceRole(actor, ["owner", "admin"]))
+    throw new ApplicationAccessError(
+      "Only workspace admins can change project catalogs."
+    )
   const shared =
+    catalog ||
     /^forge:team-(?:cycles|triage|project-updates|thread-summaries):v1:/.test(
       key
     )
@@ -204,6 +234,15 @@ export async function readProductState(
           )
         )
       )
+    const readableProjects = await tx
+      .select({ properties: projects.properties })
+      .from(projects)
+      .where(
+        and(
+          eq(projects.workspaceId, current.workspaceId),
+          readableProjectCondition(current, projects.id)
+        )
+      )
     const entries: ProductStateSnapshot["entries"] = []
     for (const row of rows) {
       try {
@@ -233,9 +272,34 @@ export async function readProductState(
             row.key,
             projectValue
           )
+          let projectedValue = value
+          if (row.key === "forge:workspace-project-labels:v1" && value) {
+            const directory = JSON.parse(value)
+            const usage = (id: string) =>
+              readableProjects.filter(
+                (p) =>
+                  Array.isArray(p.properties.labelIds) &&
+                  p.properties.labelIds.includes(id)
+              ).length
+            projectedValue = JSON.stringify({
+              ...directory,
+              catalogRevision: row.revision,
+              inheritedCount: 0,
+              labels: directory.labels.map((label: { id: string }) => ({
+                ...label,
+                issues: usage(label.id),
+                lastApplied: null,
+              })),
+              groups: directory.groups.map((group: { id: string }) => ({
+                ...group,
+                issues: usage(group.id),
+                lastApplied: null,
+              })),
+            })
+          }
           entries.push({
             key: row.key,
-            value,
+            value: projectedValue,
             revision: row.revision,
           })
         }
@@ -243,9 +307,30 @@ export async function readProductState(
         /* Revoked/private resources are omitted. */
       }
     }
+    for (const [key, value] of [
+      [
+        `forge:project-statuses:v1:${current.workspaceId}`,
+        JSON.stringify(
+          (await import("@/lib/project-statuses")).initialProjectStatuses()
+        ),
+      ],
+      [
+        "forge:workspace-project-labels:v1",
+        JSON.stringify({
+          version: 1,
+          labels: [],
+          groups: [],
+          inheritedCount: 0,
+          catalogRevision: 0,
+        }),
+      ],
+    ])
+      if (!entries.some((entry) => entry.key === key))
+        entries.push({ key, value, revision: 0 })
     return {
       workspaceId: current.workspaceId,
       userId: current.userId,
+      workspaceRole: current.workspaceRole,
       sessionId:
         actor.authentication.kind === "session"
           ? actor.authentication.sessionId
@@ -300,6 +385,14 @@ export async function saveProductState(actor: Actor, raw: ProductStateCommand) {
     },
     run: async (tx, current) => {
       const ownerId = await scope(tx, current, input.key, true)
+      if (isProjectCatalog(input.key, current.workspaceId)) {
+        await tx
+          .select({ id: organizations.id })
+          .from(organizations)
+          .where(eq(organizations.id, current.workspaceId))
+          .for("no key update")
+        await validateProjectCatalogChange(tx, current, input.key, input.value)
+      }
       const cycleTeamId = input.key.match(
         /^forge:team-cycles:v1:([0-9a-f-]{36})$/
       )?.[1]
@@ -360,6 +453,21 @@ export async function saveProductState(actor: Actor, raw: ProductStateCommand) {
           "This data changed in another session. Your pending changes are preserved in this session; reload the latest version before retrying."
         )
       }
+      if (isProjectCatalog(input.key, current.workspaceId) && input.value) {
+        const next = JSON.parse(input.value)
+        if (
+          input.key === "forge:workspace-project-labels:v1"
+            ? next.catalogRevision !== row.revision
+            : next.version !==
+              (row.encodedValue
+                ? JSON.parse(JSON.parse(row.encodedValue)).version
+                : 0) +
+                1
+        )
+          throw new Error(
+            "This data changed in another session. Your catalog draft is preserved; load the latest version and review it."
+          )
+      }
       const value = await visibleIssueCopyValue(
         tx,
         current,
@@ -392,7 +500,9 @@ export async function saveProductState(actor: Actor, raw: ProductStateCommand) {
       return {
         value: { revision: row.revision + 1 },
         resource: { type: "productState", id: row.id },
-        events: [],
+        events: isProjectCatalog(input.key, current.workspaceId)
+          ? [{ topic: "project.catalog.updated", payload: { key: input.key } }]
+          : [],
       }
     },
   })

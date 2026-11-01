@@ -18,7 +18,11 @@ import type {
   TeamLabelGroup,
 } from "@/lib/team-labels"
 import type { TeamLabelRowHandle } from "@/components/team-label-row"
-import { productStorage } from "@/lib/product-storage"
+import {
+  hasPendingProductSave,
+  productStorage,
+  productStorageIdentity,
+} from "@/lib/product-storage"
 import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import { OptionSelect } from "@/components/ui/option-select"
 import {
@@ -131,7 +135,12 @@ function LocalEntityLabelsSettings({
     created: true,
     rules: standalone,
   })
-  const [editor, setEditor] = React.useState<Editor | null>(null)
+  const [editor, setEditorState] = React.useState<Editor | null>(null)
+  const editorRevision = React.useRef<number | undefined>(undefined)
+  function setEditor(next: Editor | null) {
+    editorRevision.current = directory.catalogRevision
+    setEditorState(next)
+  }
   const [newLabel, setNewLabel] = React.useState<TeamLabel | null>(null)
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(
     () => new Set()
@@ -193,6 +202,15 @@ function LocalEntityLabelsSettings({
   ])
 
   function save(next: TeamLabelDirectory, key = storageKey) {
+    if (projectLabels && hasPendingProductSave(key)) {
+      toast.error("Wait for the pending catalog save before editing again.")
+      return false
+    }
+    const role = productStorageIdentity()?.workspaceRole
+    if (projectLabels && role && !["owner", "admin"].includes(role)) {
+      toast.error("Only workspace admins can change project catalogs.")
+      return false
+    }
     if (loadError) return false
     try {
       productStorage.setItem(key, JSON.stringify(next))
@@ -275,7 +293,12 @@ function LocalEntityLabelsSettings({
     })
   }
 
-  function saveLabel(label: TeamLabel) {
+  function saveLabel(
+    label: TeamLabel,
+    expectedRevision = directory.catalogRevision
+  ) {
+    if (projectLabels && expectedRevision !== directory.catalogRevision)
+      return "Labels changed while you were editing. Your draft is kept. Review the latest label before saving."
     if (
       directory.labels.some(
         (item) =>
@@ -314,6 +337,8 @@ function LocalEntityLabelsSettings({
     groupId: string | null
   }) {
     if (!editor) return
+    if (projectLabels && editorRevision.current !== directory.catalogRevision)
+      return "Labels changed in another session. Close this editor and review the latest labels before saving."
     const collection =
       editor.kind === "label" ? directory.labels : directory.groups
     if (
@@ -882,6 +907,7 @@ function LocalEntityLabelsSettings({
                       saved={directory.labels.some(
                         (label) => label.id === newLabel.id
                       )}
+                      catalogRevision={directory.catalogRevision}
                       onSave={saveLabel}
                       onClose={closeNewLabel}
                       onDelete={() => remove("label", newLabel.id)}
@@ -972,6 +998,7 @@ function LocalEntityLabelsSettings({
                             onSelectedChange={(selected) =>
                               selectLabel(label.id, selected)
                             }
+                            catalogRevision={directory.catalogRevision}
                             onSave={saveLabel}
                             onClose={() => {}}
                             onDelete={() => remove("label", label.id)}

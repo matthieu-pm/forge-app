@@ -42,6 +42,9 @@ function notify(key: string | null = null) {
     window.dispatchEvent(new StorageEvent("storage", { key }))
   }
 }
+export function hasPendingProductSave(key: string) {
+  return pending.some((p) => p.key === key)
+}
 export function storageStatus() {
   return { pending: pending.length, error, deviceError, restored }
 }
@@ -62,7 +65,11 @@ function visibleProjectDraft(value: unknown) {
       typeof change === "object" &&
       typeof change.id === "string" &&
       (change.expectedRevision === null ||
-        current.projects.some((project) => project.id === change.id))
+        current.projects.some((project) => project.id === change.id)) &&
+      (!change.relocation?.targetId ||
+        current.projects.some(
+          (project) => project.id === change.relocation.targetId
+        ))
   )
 }
 export function pendingProjectDrafts() {
@@ -147,7 +154,11 @@ export function refreshProductStorage(
       if (!revoked) revisions.delete(key)
     }
   }
-  identity = { ...identity, teamIds: snapshot.teamIds }
+  identity = {
+    ...identity,
+    teamIds: snapshot.teamIds,
+    workspaceRole: snapshot.workspaceRole,
+  }
   for (const e of snapshot.entries)
     if (
       !pending.some((p) => p.key === e.key) &&
@@ -186,9 +197,23 @@ export async function flushProductStorage() {
         const { refreshCanonicalIssues } =
           await import("./canonical-issue-client")
         await refreshCanonicalIssues(binding)
+        const { invalidateIssueQueries } = await import("./issue-query-client")
+        invalidateIssueQueries()
         if (token !== generation) return
         values.delete(p.key)
       }
+      if (
+        p.key === "forge:workspace-project-labels:v1" &&
+        p.value &&
+        !pending.slice(1).some((next) => next.key === p.key)
+      )
+        values.set(
+          p.key,
+          JSON.stringify({
+            ...JSON.parse(p.value),
+            catalogRevision: result.value.revision,
+          })
+        )
       mutationEpoch++
       revisions.set(p.key, result.value.revision)
       pending.shift()
@@ -376,6 +401,7 @@ export function productStorageIdentity() {
         userId: identity.userId,
         sessionId: identity.sessionId,
         teamIds: identity.teamIds,
+        workspaceRole: identity.workspaceRole,
       }
     : null
 }

@@ -47,6 +47,11 @@ function ProjectDraftPreview({
     teamIds: "Teams",
     startDate: "Start date",
     targetDate: "Target date",
+    statusId: "Workflow status",
+    labelIds: "Labels",
+    milestones: "Milestones",
+    updates: "Updates",
+    comments: "Comments",
   }
   return (
     <>
@@ -60,19 +65,45 @@ function ProjectDraftPreview({
               "Project draft"}
           </p>
           <dl>
+            {change.relocation && (
+              <p>
+                Milestone move, conversion or deletion: review both projects
+                before retrying.
+              </p>
+            )}
             {Object.entries(change.changes).map(([field, value]) => (
               <div key={field} className="flex gap-2">
                 <dt>{labels[field] ?? field}:</dt>
                 <dd className="max-w-xl break-words">
-                  {field === "description" || field === "icon"
-                    ? "Edited"
-                    : Array.isArray(value)
-                      ? `${value.length} selected`
-                      : value === ""
-                        ? "Cleared"
-                        : field === "leadId"
-                          ? "Changed"
-                          : String(value)}
+                  {Array.isArray(value) &&
+                  ["milestones", "updates", "comments"].includes(field) ? (
+                    <ul>
+                      {value.map((entry, index) => (
+                        <li key={index}>
+                          {typeof entry === "object" && "name" in entry
+                            ? entry.name
+                            : typeof entry === "object" && "text" in entry
+                              ? entry.text
+                              : String(entry)}
+                          {typeof entry === "object" &&
+                          "attachments" in entry &&
+                          entry.attachments.length
+                            ? ` (${entry.attachments.map((file: { name: string }) => file.name).join(", ")})`
+                            : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : field === "description" || field === "icon" ? (
+                    "Edited"
+                  ) : Array.isArray(value) ? (
+                    `${value.length} selected`
+                  ) : value === "" ? (
+                    "Cleared"
+                  ) : field === "leadId" ? (
+                    "Changed"
+                  ) : (
+                    String(value)
+                  )}
                 </dd>
               </div>
             ))}
@@ -243,6 +274,16 @@ export function ProductStateProvider({
                       expectedRevision:
                         latest.find((project) => project.id === change.id)
                           ?.revision ?? null,
+                      ...(change.relocation?.targetId
+                        ? {
+                            relocation: {
+                              ...change.relocation,
+                              targetRevision: latest.find(
+                                (p) => p.id === change.relocation?.targetId
+                              )?.revision,
+                            },
+                          }
+                        : {}),
                     }))
                     productStorage.setItem(
                       `${projectCommandPrefix}${crypto.randomUUID()}`,

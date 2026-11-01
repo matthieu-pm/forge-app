@@ -1,6 +1,9 @@
 import type { ReactNode } from "react"
 import type { InitiativePerson, InitiativeProject } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
+import { useProjectStatusDirectory } from "@/lib/project-status-client"
+import { projectStatusValue } from "@/lib/project-statuses"
+import { canonicalIssuesActive } from "@/lib/canonical-issue-cache"
 import {
   projectStatusName,
   projectStatuses,
@@ -63,6 +66,11 @@ export function ProjectProperties({
   expanded?: boolean
   onChange: (patch: Partial<InitiativeProject>) => void
 }) {
+  const statuses = useProjectStatusDirectory()
+  const custom = canonicalIssuesActive()
+  const selectedStatus =
+    statuses.find((s) => s.id === project.statusId) ??
+    statuses.find((s) => projectStatusValue[s.group] === project.status)
   const lead = people.find((p) => p.id === project.leadId)
   const projectTeams = teams.filter((team) => project.teamIds.includes(team.id))
   const split = (value: string) =>
@@ -95,19 +103,43 @@ export function ProjectProperties({
           label="Change project status"
           side={expanded ? "left" : "bottom"}
           shortcut="P then S"
-          value={project.status}
-          options={projectStatuses.map((status) => ({
-            value: status,
-            label: projectStatusName(status),
-            icon: <ProjectStatusMark status={status} />,
-          }))}
+          value={
+            custom ? (selectedStatus?.id ?? project.status) : project.status
+          }
+          options={
+            custom
+              ? statuses.map((s) => ({
+                  value: s.id,
+                  label: s.name,
+                  icon: (
+                    <ProjectStatusMark status={projectStatusValue[s.group]} />
+                  ),
+                }))
+              : projectStatuses.map((status) => ({
+                  value: status,
+                  label: projectStatusName(status),
+                  icon: <ProjectStatusMark status={status} />,
+                }))
+          }
           onChange={(status) =>
-            onChange({ status: status as InitiativeProject["status"] })
+            onChange(
+              custom
+                ? {
+                    statusId: status,
+                    status:
+                      projectStatusValue[
+                        statuses.find((s) => s.id === status)!.group
+                      ],
+                  }
+                : { status: status as InitiativeProject["status"] }
+            )
           }
           className={style}
         >
           <ProjectStatusMark status={project.status} />
-          {projectStatusName(project.status)}
+          {custom
+            ? (selectedStatus?.name ?? projectStatusName(project.status))
+            : projectStatusName(project.status)}
         </IssuePicker>
       )}
       {row(

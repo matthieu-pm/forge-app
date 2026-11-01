@@ -113,7 +113,7 @@ export type MilestoneControls = {
   rows: Array<MilestoneIssue>
   writable: boolean
   selected?: string
-  onChange: (milestone: ProjectMilestone) => boolean
+  onChange: (milestone: ProjectMilestone, expectedRevision?: number) => boolean
   onEdit: (id: string) => void
   onIssues: (id?: string) => void
   onReorder?: (milestones: Array<ProjectMilestone>) => void
@@ -443,6 +443,21 @@ export function ProjectMilestones(props: OverviewProps) {
   const [name, setName] = useState("")
   const [dragged, setDragged] = useState<string>()
   const root = useRef<HTMLElement>(null)
+  const baselines = useRef(new Map<string, number | undefined>())
+  function start(id: string) {
+    if (!baselines.current.has(id))
+      baselines.current.set(id, props.project.revision)
+  }
+  function save(next: ProjectMilestone) {
+    const result = props.onChange(
+      next,
+      baselines.current.has(next.id)
+        ? baselines.current.get(next.id)
+        : props.project.revision
+    )
+    if (result) baselines.current.delete(next.id)
+    return result
+  }
   const milestones = props.project.milestones ?? []
   const current = currentProjectMilestone(
     props.project,
@@ -514,8 +529,9 @@ export function ProjectMilestones(props: OverviewProps) {
                 value={milestone.name}
                 label={`Milestone name for ${milestone.name}`}
                 editable={props.writable}
+                onEditingStart={() => start(milestone.id)}
                 onSave={(next) =>
-                  props.onChange({
+                  save({
                     ...milestone,
                     name: next,
                     aliases: [
@@ -581,8 +597,9 @@ export function ProjectMilestones(props: OverviewProps) {
                   document={milestone.description}
                   label={`Description for ${milestone.name}`}
                   editable={props.writable}
+                  onEditingStart={() => start(milestone.id)}
                   onSave={(_text, description) =>
-                    props.onChange({
+                    save({
                       ...milestone,
                       description,
                       descriptionHistory: [

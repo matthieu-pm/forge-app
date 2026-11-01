@@ -209,7 +209,7 @@ it("blocks relocation, conversion and deletion before any shared assignment or p
   })
   try {
     for (const options of [{ targetId: "target" }, { convert: true }, {}]) {
-      expect(() => relocate(options)).toThrow("all issue assignments")
+      expect(() => relocate(options)).toThrow("Reload the projects")
       expect(productStorage.getItem(key)).toBe(before)
     }
   } finally {
