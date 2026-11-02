@@ -9,11 +9,11 @@ import {
   instantiateTemplate,
   loadTemplateApplications,
 } from "@/lib/template-application-state"
+import { productStorageIdentity, saveProductValue } from "@/lib/product-storage"
 import {
-  productStorage,
-  productStorageIdentity,
-  saveProductValue,
-} from "@/lib/product-storage"
+  pendingTemplateCreation,
+  templateCreationKey,
+} from "@/lib/template-creation-journal"
 import { protectedSessionEpoch } from "@/lib/protected-session"
 import { onPreferenceSessionInvalidated } from "@/lib/preference-session-events"
 import { refreshCanonicalIssues } from "@/lib/canonical-issue-client"
@@ -53,10 +53,31 @@ export function TemplateApplicationButton({
   const [error, setError] = useState("")
   const [busy, setBusy] = useState(false)
   const pending = useRef<ApplyTemplate | null>(null)
+  const pendingJournal = useRef<string | null>(null)
+  const context = JSON.stringify([kind, slug ?? null, triage])
+  const activeContext = useRef({ key: context, generation: 0, mounted: true })
+  if (activeContext.current.key !== context) {
+    activeContext.current.key = context
+    activeContext.current.generation++
+  }
+  useEffect(() => {
+    activeContext.current.mounted = true
+    return () => {
+      activeContext.current.mounted = false
+      activeContext.current.generation++
+    }
+  }, [])
   const busyRef = useRef(false)
   const journal = `forge:template-application-intent:v1:${kind}:${slug ?? "workspace"}${triage ? ":triage" : ""}`
   useEffect(() => {
     let active = true
+    setDirectory(undefined)
+    setOpen(false)
+    setError("")
+    pending.current = null
+    pendingJournal.current = null
+    busyRef.current = false
+    setBusy(false)
     const refresh = () => {
       const epoch = protectedSessionEpoch()
       void loadTemplateApplications({ data: { kind, slug } })
@@ -66,10 +87,14 @@ export function TemplateApplicationButton({
         .catch(() => {})
     }
     const unsubscribe = onPreferenceSessionInvalidated((phase) => {
+      activeContext.current.generation++
       setDirectory(undefined)
       setOpen(false)
       setError("")
       pending.current = null
+      pendingJournal.current = null
+      busyRef.current = false
+      setBusy(false)
       if (phase === "settled") refresh()
     })
     refresh()
@@ -77,7 +102,7 @@ export function TemplateApplicationButton({
       active = false
       unsubscribe()
     }
-  }, [kind, slug])
+  }, [kind, slug, triage])
   const template = directory?.templates.find((t) => t.id === selected)
   function select(id: string, value = directory) {
     const chosen = value?.templates.find((t) => t.id === id)
@@ -92,14 +117,18 @@ export function TemplateApplicationButton({
     )
   }
   async function show() {
-    const epoch = protectedSessionEpoch()
+    const epoch = protectedSessionEpoch(),
+      generation = activeContext.current.generation
+    const active = () =>
+      activeContext.current.mounted &&
+      generation === activeContext.current.generation &&
+      epoch === protectedSessionEpoch()
     try {
-      const saved = productStorage.getItem(journal)
-      pending.current = saved
-        ? applyTemplateSchema.parse(JSON.parse(saved))
-        : null
+      const saved = pendingTemplateCreation(journal)
+      pending.current = saved?.input ?? null
+      pendingJournal.current = saved?.key ?? null
       const value = await loadTemplateApplications({ data: { kind, slug } })
-      if (epoch !== protectedSessionEpoch()) return
+      if (!active()) return
       setDirectory(value)
       if (pending.current) {
         const p = pending.current
@@ -117,7 +146,7 @@ export function TemplateApplicationButton({
         )
       setOpen(true)
     } catch {
-      if (epoch !== protectedSessionEpoch()) return
+      if (!active()) return
       setError("Templates could not be loaded. Try again.")
       setOpen(true)
     }
@@ -128,12 +157,17 @@ export function TemplateApplicationButton({
     setBusy(true)
     setError("")
     const identity = productStorageIdentity(),
-      epoch = protectedSessionEpoch()
+      epoch = protectedSessionEpoch(),
+      generation = activeContext.current.generation
+    const active = () =>
+      activeContext.current.mounted &&
+      generation === activeContext.current.generation &&
+      epoch === protectedSessionEpoch()
     const current = () => {
       const now = productStorageIdentity()
       if (
         !identity ||
-        epoch !== protectedSessionEpoch() ||
+        !active() ||
         now?.workspaceId !== identity.workspaceId ||
         now.userId !== identity.userId ||
         now.sessionId !== identity.sessionId
@@ -156,7 +190,10 @@ export function TemplateApplicationButton({
           ...(triage ? { triage: true } : {}),
         })
       pending.current = input
-      await saveProductValue(journal, JSON.stringify(input))
+      const recordKey =
+        pendingJournal.current ?? templateCreationKey(journal, input)
+      pendingJournal.current = recordKey
+      await saveProductValue(recordKey, JSON.stringify(input))
       current()
       const result = await instantiateTemplate({
         data: {
@@ -167,16 +204,18 @@ export function TemplateApplicationButton({
       })
       current()
       if (!result.ok) {
-        await saveProductValue(journal, null)
+        await saveProductValue(recordKey, null)
         current()
         pending.current = null
+        pendingJournal.current = null
         setError(result.message)
         return
       }
       // Creation is confirmed even when a refresh or journal cleanup goes offline.
       pending.current = null
+      pendingJournal.current = null
       try {
-        await saveProductValue(journal, null)
+        await saveProductValue(recordKey, null)
       } catch {
         /* Exact replay remains safe. */
       }
@@ -196,15 +235,17 @@ export function TemplateApplicationButton({
       onCreated?.(result)
       window.dispatchEvent(new Event("focus"))
     } catch (failure) {
-      if (epoch === protectedSessionEpoch())
+      if (active())
         setError(
           failure instanceof Error && !failure.message.startsWith("[")
             ? `${failure.message} Retry to confirm the original creation.`
             : "Creation could not be confirmed. Retry to check its outcome."
         )
     } finally {
-      busyRef.current = false
-      setBusy(false)
+      if (active()) {
+        busyRef.current = false
+        setBusy(false)
+      }
     }
   }
   if (!directory?.enabled) return null
@@ -370,12 +411,17 @@ export function TemplateApplicationButton({
                 if (busyRef.current) return
                 busyRef.current = true
                 setBusy(true)
-                const epoch = protectedSessionEpoch()
+                const epoch = protectedSessionEpoch(),
+                  generation = activeContext.current.generation
+                const active = () =>
+                  activeContext.current.mounted &&
+                  epoch === protectedSessionEpoch() &&
+                  generation === activeContext.current.generation
                 try {
                   const value = await loadTemplateApplications({
                     data: { kind, slug },
                   })
-                  if (epoch !== protectedSessionEpoch()) return
+                  if (!active()) return
                   setDirectory(value)
                   const latest = value.templates.find((t) => t.id === selected)
                   if (!latest) {
@@ -396,13 +442,15 @@ export function TemplateApplicationButton({
                     )
                   }
                 } catch {
-                  if (epoch === protectedSessionEpoch())
+                  if (active())
                     setError(
                       "Templates could not be loaded. Your details are kept. Try again."
                     )
                 } finally {
-                  busyRef.current = false
-                  setBusy(false)
+                  if (active()) {
+                    busyRef.current = false
+                    setBusy(false)
+                  }
                 }
               }}
             >

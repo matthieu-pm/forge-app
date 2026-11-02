@@ -1,9 +1,11 @@
 import {
+  act,
   cleanup,
   fireEvent,
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react"
 import { afterEach, beforeEach, expect, it, vi } from "vitest"
 import { TemplateApplicationButton } from "./template-application-button"
@@ -23,7 +25,13 @@ vi.mock("@tanstack/react-router", () => ({
   useRouter: () => ({ invalidate: mocks.invalidate }),
 }))
 vi.mock("@/lib/product-storage", () => ({
-  productStorage: { getItem: (key: string) => mocks.values.get(key) ?? null },
+  productStorage: {
+    get length() {
+      return mocks.values.size
+    },
+    key: (index: number) => [...mocks.values.keys()][index] ?? null,
+    getItem: (key: string) => mocks.values.get(key) ?? null,
+  },
   productStorageIdentity: () => ({
     workspaceId: "workspace",
     userId: "alice",
@@ -141,3 +149,112 @@ it("hides the action when server-side enablement is off", async () => {
   await waitFor(() => expect(mocks.load).toHaveBeenCalled())
   expect(container.textContent).toBe("")
 })
+
+it("confirms only its own record when two already-open dialogs create concurrently", async () => {
+  let finishFirst!: (value: unknown) => void
+  mocks.apply
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishFirst = resolve
+        })
+    )
+    .mockRejectedValueOnce(new Error("Second response lost"))
+  const first = render(
+    <TemplateApplicationButton kind="issue" slug="engineering" />
+  )
+  const second = render(
+    <TemplateApplicationButton kind="issue" slug="engineering" />
+  )
+  await waitFor(() =>
+    expect(
+      screen.getAllByRole("button", { name: "Create from template" })
+    ).toHaveLength(2)
+  )
+  const triggers = screen.getAllByRole("button", {
+    name: "Create from template",
+  })
+  fireEvent.click(triggers[0])
+  await screen.findByRole("dialog")
+  fireEvent.change(screen.getByLabelText("Impact"), {
+    target: { value: "First" },
+  })
+  // Open the second dialog before either attempt is journaled, as in two tabs.
+  fireEvent.click(triggers[1])
+  await waitFor(() =>
+    expect(screen.getAllByRole("dialog", { hidden: true })).toHaveLength(2)
+  )
+  const dialogs = screen.getAllByRole("dialog", { hidden: true })
+  fireEvent.change(within(dialogs[1]).getByLabelText("Impact"), {
+    target: { value: "Second" },
+  })
+  fireEvent.click(
+    within(dialogs[0]).getByRole("button", {
+      name: "Create issue",
+      hidden: true,
+    })
+  )
+  await waitFor(() => expect(mocks.apply).toHaveBeenCalledTimes(1))
+  fireEvent.click(
+    within(dialogs[1]).getByRole("button", { name: "Create issue" })
+  )
+  await waitFor(() => expect(mocks.apply).toHaveBeenCalledTimes(2))
+  expect(mocks.values.size).toBe(2)
+  const originalSecond = mocks.apply.mock.calls[1][0]
+  await act(async () =>
+    finishFirst({
+      ok: true,
+      replayed: false,
+      value: { kind: "issue", id, issueIds: [id], projectIds: [] },
+    })
+  )
+  await waitFor(() => expect(mocks.values.size).toBe(1))
+  expect(
+    [...mocks.values.values()].map((raw) => JSON.parse(raw).commandKey)
+  ).toEqual([originalSecond.data.commandKey])
+  first.unmount()
+  second.unmount()
+  mocks.apply.mockResolvedValue({
+    ok: true,
+    replayed: true,
+    value: { kind: "issue", id, issueIds: [id], projectIds: [] },
+  })
+  render(<TemplateApplicationButton kind="issue" slug="engineering" />)
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Create from template" })
+  )
+  fireEvent.click(await screen.findByRole("button", { name: "Retry creation" }))
+  await waitFor(() => expect(mocks.apply).toHaveBeenCalledTimes(3))
+  expect(mocks.apply.mock.calls[2][0]).toEqual(originalSecond)
+})
+
+it.each([
+  ["engineering", "another-team"],
+  [undefined, "workspace"],
+])(
+  "ignores delayed open responses when scope changes from %s to %s",
+  async (originalSlug, nextSlug) => {
+    let finishOpen!: (value: unknown) => void
+    mocks.load
+      .mockResolvedValueOnce(directory())
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finishOpen = resolve
+          })
+      )
+      .mockResolvedValue(directory())
+    const view = render(
+      <TemplateApplicationButton kind="issue" slug={originalSlug} />
+    )
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Create from template" })
+    )
+    await waitFor(() => expect(mocks.load).toHaveBeenCalledTimes(2))
+    view.rerender(<TemplateApplicationButton kind="issue" slug={nextSlug} />)
+    await waitFor(() => expect(mocks.load).toHaveBeenCalledTimes(3))
+    await act(async () => finishOpen(directory()))
+    expect(screen.queryByRole("dialog")).toBeNull()
+    expect(mocks.apply).not.toHaveBeenCalled()
+  }
+)

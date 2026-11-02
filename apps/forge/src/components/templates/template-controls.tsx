@@ -446,21 +446,25 @@ export function Properties({
     React.useState<Awaited<ReturnType<typeof loadTemplateReferences>>>()
   React.useEffect(() => {
     let active = true
-    const epoch = protectedSessionEpoch()
-    const unsubscribe = onPreferenceSessionInvalidated(() =>
-      setReferences(undefined)
-    )
-    if (typeof loadTemplateReferences === "function")
+    const refresh = () => {
+      const epoch = protectedSessionEpoch()
       void loadTemplateReferences()
         .then((value) => {
           if (active && epoch === protectedSessionEpoch()) setReferences(value)
         })
         .catch(() => {})
+    }
+    const unsubscribe = onPreferenceSessionInvalidated((phase) => {
+      setReferences(undefined)
+      if (phase === "settled") refresh()
+    })
+    refresh()
     return () => {
       active = false
       unsubscribe()
     }
   }, [])
+
   const rootRef = React.useRef<HTMLDivElement>(null)
   const sequence = React.useRef(0)
   React.useEffect(() => {

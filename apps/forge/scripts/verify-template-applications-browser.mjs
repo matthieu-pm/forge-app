@@ -4,20 +4,54 @@ import { chromium, expect } from "@playwright/test"
 import { Pool, neonConfig } from "@neondatabase/serverless"
 import { hashPassword } from "better-auth/crypto"
 
-const config = JSON.parse(
-  readFileSync(process.env.FORGE_TEMPLATE_TEST_DATABASE_FILE, "utf8")
+const revision = execFileSync("git", ["rev-parse", "HEAD"], {
+  encoding: "utf8",
+}).trim()
+const authorizedRevision =
+  process.env.FORGE_TEMPLATES_PRODUCTION_AUTHORIZED_REVISION
+const production = Boolean(authorizedRevision)
+if (
+  production &&
+  (authorizedRevision !== revision ||
+    execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim())
 )
-const base = process.env.FORGE_TEMPLATE_BROWSER_URL ?? "http://localhost:3163"
+  throw Error(
+    "Production verification requires a clean checkout and its exact authorized source revision"
+  )
+const config = JSON.parse(
+  readFileSync(
+    production
+      ? process.env.FORGE_TEMPLATE_PRODUCTION_DATABASE_FILE
+      : process.env.FORGE_TEMPLATE_TEST_DATABASE_FILE,
+    "utf8"
+  )
+)
+const base = production
+  ? "https://app.forgenow.tech"
+  : (process.env.FORGE_TEMPLATE_BROWSER_URL ?? "http://localhost:3163")
 const database = new URL(config.connection),
   host = new URL(base)
+const expectedHost = production
+  ? "ep-lingering-bread-zazpwrxp.c-2.eu-west-2.aws.neon.tech"
+  : "ep-blue-shadow-zauhwkjz.c-2.eu-west-2.aws.neon.tech"
+const expectedDatabase = production ? "neondb" : "forge_templates_acceptance"
+const expectedBranch = production
+  ? "br-muddy-queen-zaeeysjt"
+  : "br-autumn-union-za0opf1e"
+const artifactPrefix = production
+  ? "/tmp/for63-production"
+  : "/tmp/for63-browser"
 if (
-  database.hostname.replace("-pooler.", ".") !==
-    "ep-blue-shadow-zauhwkjz.c-2.eu-west-2.aws.neon.tech" ||
-  database.pathname !== "/forge_templates_acceptance" ||
-  host.protocol !== "http:" ||
-  !["localhost", "127.0.0.1"].includes(host.hostname)
+  database.hostname.replace("-pooler.", ".") !== expectedHost ||
+  database.pathname !== `/${expectedDatabase}` ||
+  database.searchParams.get("sslmode") !== "require" ||
+  (!production &&
+    (host.protocol !== "http:" ||
+      !["localhost", "127.0.0.1"].includes(host.hostname)))
 )
-  throw Error("Use the isolated template acceptance database and local server")
+  throw Error(
+    "Use the explicitly selected acceptance or authorized production target"
+  )
 neonConfig.webSocketConstructor = WebSocket
 const pool = new Pool({ connectionString: config.connection }),
   marker = `for63-browser-${crypto.randomUUID()}`,
@@ -63,8 +97,8 @@ try {
     )
   ).rows[0]
   expect(identity).toEqual({
-    db: "forge_templates_acceptance",
-    branch: "br-autumn-union-za0opf1e",
+    db: expectedDatabase,
+    branch: expectedBranch,
   })
   verified = true
   await pool.query(
@@ -314,7 +348,7 @@ try {
     page.getByText("Launch project", { exact: true }).first()
   ).toBeVisible({ timeout: 30000 })
   await page.screenshot({
-    path: "/tmp/for63-browser-project.png",
+    path: `${artifactPrefix}-project.png`,
     fullPage: true,
   })
   expect(errors).toEqual([])
@@ -323,7 +357,9 @@ try {
       revision: execFileSync("git", ["rev-parse", "HEAD"], {
         encoding: "utf8",
       }).trim(),
-      environment: "isolated template acceptance",
+      environment: production
+        ? "authorized production fixture"
+        : "isolated template acceptance",
       result: "passed",
       assertions: [
         "required form validation",
@@ -338,10 +374,10 @@ try {
 } catch (error) {
   if (page) {
     await page
-      .screenshot({ path: "/tmp/for63-browser-failure.png", fullPage: true })
+      .screenshot({ path: `${artifactPrefix}-failure.png`, fullPage: true })
       .catch(() => {})
     writeFileSync(
-      "/tmp/for63-browser-failure.txt",
+      `${artifactPrefix}-failure.txt`,
       await page
         .locator("body")
         .innerText()
