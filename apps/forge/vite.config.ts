@@ -40,13 +40,12 @@ const config = defineConfig(({ mode }) => {
       devtools(),
       nitro({
         vercel: {
-          functionRules:
+          // Nitro's per-route clone makes traced package links absolute to the
+          // catch-all function. Vercel isolates functions, so those links break.
+          // Keep the scheduler in the shared, self-contained server bundle.
+          functions:
             process.env.FORGE_LOOPS_ENABLED === "true"
-              ? {
-                  "/api/internal/loops": {
-                    maxDuration: LOOP_FUNCTION_DURATION_SECONDS,
-                  },
-                }
+              ? { maxDuration: LOOP_FUNCTION_DURATION_SECONDS }
               : {},
           config: {
             version: 3,
