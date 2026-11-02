@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react"
 import type { ReactNode } from "react"
-import type { JSONContent } from "@tiptap/core"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import type { TriageDraft } from "@/lib/triage-issues"
+import { TemplateApplicationButton } from "@/components/templates/template-application-button"
 import { productStorage } from "@/lib/product-storage"
 import { OptionSelect } from "@/components/ui/option-select"
 import { loadTemplates } from "@/lib/template-state"
@@ -63,15 +63,6 @@ function Property({
     </Popover>
   )
 }
-function documentText(node: JSONContent): string {
-  if (node.text) return node.text
-  if (node.type === "hardBreak") return "\n"
-  return (node.content ?? [])
-    .map(documentText)
-    .join(
-      ["doc", "bulletList", "orderedList"].includes(node.type ?? "") ? "\n" : ""
-    )
-}
 function ExpandIcon({ expanded }: { expanded: boolean }) {
   return (
     <svg
@@ -116,7 +107,6 @@ export function TriageIssueComposer({
   const [createMore, setCreateMore] = useState(false)
   const [directory, setDirectory] = useState<TemplateDirectory>()
   const [directoryError, setDirectoryError] = useState(false)
-  const [templateOpen, setTemplateOpen] = useState(false)
   const [attaching, setAttaching] = useState(false)
   const titleRef = useRef<HTMLInputElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -230,11 +220,6 @@ export function TriageIssueComposer({
       setAttaching(false)
     }
   }
-  const templates =
-    directory?.templates.filter(
-      (item) =>
-        item.payload.kind === "issue" && item.payload.issueType === "standard"
-    ) ?? []
   const directoryMessage = directoryError
     ? "Could not load team templates and members. Close and reopen to retry."
     : "Loading…"
@@ -291,66 +276,14 @@ export function TriageIssueComposer({
               <span aria-hidden="true" className="px-0.5 text-muted-foreground">
                 ›
               </span>
-              <Popover open={templateOpen} onOpenChange={setTemplateOpen}>
-                <PopoverTrigger
-                  render={
-                    <Button
-                      size="sm"
-                      type="button"
-                      variant="secondary"
-                      className={chip}
-                      aria-label="Apply template"
-                    />
-                  }
-                >
-                  <Glyph name="document" />
-                  <span className="truncate">
-                    {draft.templateName || "Template"}
-                  </span>
-                </PopoverTrigger>
-                <PopoverContent
-                  align="start"
-                  className="max-h-72 w-64 gap-1 overflow-y-auto rounded-xl p-2"
-                >
-                  {!directory ? (
-                    <p className="p-2 text-xs text-muted-foreground">
-                      {directoryMessage}
-                    </p>
-                  ) : templates.length ? (
-                    templates.map((template) => (
-                      <Button
-                        key={template.id}
-                        type="button"
-                        variant="ghost"
-                        className="justify-start text-xs"
-                        onClick={() => {
-                          const value = template.payload
-                          update({
-                            title: value.title || draft.title,
-                            description: value.content
-                              ? documentText(value.content).slice(0, 10000)
-                              : value.description,
-                            priority: value.properties.priority,
-                            assignee: value.properties.assignee ?? "",
-                            project: value.properties.project ?? "",
-                            labels: value.properties.labels
-                              .join(", ")
-                              .slice(0, 1000),
-                            templateName: value.name,
-                          })
-                          setTemplateOpen(false)
-                        }}
-                      >
-                        {template.payload.name}
-                      </Button>
-                    ))
-                  ) : (
-                    <p className="p-2 text-xs text-muted-foreground">
-                      No issue templates for this team yet.
-                    </p>
-                  )}
-                </PopoverContent>
-              </Popover>
+              {!editing && (
+                <TemplateApplicationButton
+                  kind="issue"
+                  slug={team.slug}
+                  triage
+                  onCreated={() => onOpenChange(false)}
+                />
+              )}
             </div>
             <div className="ml-auto flex shrink-0 items-center gap-1">
               {!editing && (

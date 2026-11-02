@@ -10,6 +10,7 @@ export const projectFields = initiativeProjectSchema
     name: true,
     status: true,
     teamIds: true,
+    dependencyIds: true,
     summary: true,
     description: true,
     icon: true,
@@ -26,6 +27,7 @@ export const projectFields = initiativeProjectSchema
   })
   .extend({
     teamIds: z.array(z.uuid()).max(100),
+    dependencyIds: z.array(z.uuid()).max(100).optional(),
     labelIds: z.array(z.string().min(1).max(200)).max(100).optional(),
     milestones: initiativeProjectSchema.shape.milestones
       .unwrap()

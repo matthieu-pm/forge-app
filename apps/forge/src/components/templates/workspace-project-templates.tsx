@@ -1,6 +1,7 @@
 import * as React from "react"
 import { Link, useRouter } from "@tanstack/react-router"
 import { toast } from "sonner"
+import { TemplateApplicationButton } from "./template-application-button"
 import { Glyph } from "./template-controls"
 import type { SavedTemplate, TemplateDirectory } from "@/lib/template-contract"
 import { deleteTemplate } from "@/lib/template-state"
@@ -42,6 +43,9 @@ export function WorkspaceProjectTemplates({
               Docs ↗
             </a>
           </p>
+          <div className="mt-4">
+            <TemplateApplicationButton kind="project" />
+          </div>
         </header>
         <section
           aria-label="Project templates"

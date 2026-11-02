@@ -249,7 +249,7 @@ describe("shared issue definitions UI", () => {
     )
     fireEvent.click(await screen.findByRole("option", { name: /Ready/ }))
     expect(change).toHaveBeenCalledWith(
-      expect.objectContaining({ status: "Ready" })
+      expect.objectContaining({ status: "ready" })
     )
   })
   it("blocks deleting statuses used by preserved local issues", async () => {

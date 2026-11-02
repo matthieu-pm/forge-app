@@ -13,6 +13,7 @@ import type {
 } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamLabel } from "@/lib/team-labels"
+import { TemplateApplicationButton } from "@/components/templates/template-application-button"
 import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import {
   blankInitiative,
@@ -261,6 +262,13 @@ export function ProjectDialog({
             </IssuePicker>
             <span className="text-muted-foreground">›</span>
             <span>{project ? "Edit project" : "New project"}</span>
+            {!project && !item && (
+              <TemplateApplicationButton
+                kind="project"
+                slug={teams.find((t) => t.id === draft.teamIds[0])?.slug}
+                onCreated={onClose}
+              />
+            )}
             <Button
               variant="secondary"
               size="xs"
@@ -463,31 +471,29 @@ export function ProjectDialog({
                   onChange={(patch) => set({ labelIds: patch.labelIds })}
                 />
               )}
-              {!sharedMode && (
-                <IssuePicker
-                  label="Add project dependencies"
-                  multiple
-                  value={(draft.dependencyIds ?? []).join(",")}
-                  options={catalog
-                    .filter((value) => value.id !== draft.id)
-                    .map((value) => ({ value: value.id, label: value.name }))}
-                  onChange={(value) =>
-                    set({
-                      dependencyIds: value
-                        .split(",")
-                        .map((id) => id.trim())
-                        .filter(Boolean),
-                    })
-                  }
-                  className="h-6 rounded-full border border-border/40 bg-muted/50 px-2 text-xs"
-                >
-                  <IssueIcon name="branch" />
-                  Dependencies
-                  {draft.dependencyIds?.length
-                    ? ` (${draft.dependencyIds.length})`
-                    : ""}
-                </IssuePicker>
-              )}
+              <IssuePicker
+                label="Add project dependencies"
+                multiple
+                value={(draft.dependencyIds ?? []).join(",")}
+                options={catalog
+                  .filter((value) => value.id !== draft.id)
+                  .map((value) => ({ value: value.id, label: value.name }))}
+                onChange={(value) =>
+                  set({
+                    dependencyIds: value
+                      .split(",")
+                      .map((id) => id.trim())
+                      .filter(Boolean),
+                  })
+                }
+                className="h-6 rounded-full border border-border/40 bg-muted/50 px-2 text-xs"
+              >
+                <IssueIcon name="branch" />
+                Dependencies
+                {draft.dependencyIds?.length
+                  ? ` (${draft.dependencyIds.length})`
+                  : ""}
+              </IssuePicker>
             </div>
             <RichEditor
               label="Project description"

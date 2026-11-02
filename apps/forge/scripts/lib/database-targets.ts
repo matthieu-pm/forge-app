@@ -48,6 +48,10 @@ export const DATABASE_TARGETS = {
     host: "ep-noisy-brook-za2e2r2p.c-2.eu-west-2.aws.neon.tech",
     database: "neondb",
   },
+  "template-acceptance": {
+    ...STAGING.database,
+    database: "forge_templates_acceptance",
+  },
   "saved-views-acceptance": {
     ...STAGING.database,
     database: "forge_saved_views_acceptance",

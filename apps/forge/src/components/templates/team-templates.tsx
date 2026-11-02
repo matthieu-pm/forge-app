@@ -2,6 +2,7 @@ import * as React from "react"
 import { Link, useNavigate, useRouter } from "@tanstack/react-router"
 import { formatDistanceToNow } from "date-fns"
 import { toast } from "sonner"
+import { TemplateApplicationButton } from "./template-application-button"
 import { IssueTemplateTypeDialog } from "./issue-template-type-dialog"
 import { Glyph, Picker, TemplateShell } from "./template-controls"
 import type {
@@ -136,6 +137,9 @@ export function TeamTemplates({
                         ? `${items.length} ${kind} template${items.length === 1 ? "" : "s"}`
                         : `No ${kind} templates`}
                     </span>
+                    {kind !== "document" && (
+                      <TemplateApplicationButton kind={kind} slug={team.slug} />
+                    )}
                     {directory.canManage && (
                       <Button
                         type="button"
