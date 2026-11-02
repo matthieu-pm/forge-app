@@ -72,7 +72,7 @@ function Detail({
             className="text-sm text-muted-foreground"
           >
             {store.error ||
-              "This initiative is no longer available on this device."}
+              "This initiative is unavailable or shared initiatives are disabled."}
           </p>
           <Button variant="ghost" className="mt-4" onClick={back}>
             Back to initiatives

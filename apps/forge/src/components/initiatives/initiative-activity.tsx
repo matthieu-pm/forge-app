@@ -91,8 +91,10 @@ export function ActivityComposer({
   onAsk,
   subject = "Initiative",
   uploadAttachment,
+  allowAttachments = true,
   children,
 }: {
+  allowAttachments?: boolean
   uploadAttachment?: (
     file: File
   ) => Promise<InitiativeComment["attachments"][number]>
@@ -316,7 +318,12 @@ export function ActivityComposer({
           size="icon-xs"
           className="ml-auto text-muted-foreground"
           aria-label="Attach images, files, or videos"
-          disabled={!writable || loading}
+          disabled={!allowAttachments || !writable || loading}
+          title={
+            allowAttachments
+              ? undefined
+              : "Initiative attachments are not available yet."
+          }
           onClick={() => file.current?.click()}
         >
           <IssueIcon name="attach" />

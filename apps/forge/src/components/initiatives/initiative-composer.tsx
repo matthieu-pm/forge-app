@@ -10,6 +10,7 @@ import type {
 } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamLabel } from "@/lib/team-labels"
+import { canonicalIssuesActive } from "@/lib/canonical-issue-cache"
 import { TeamIconPicker } from "@/components/team-icon-picker"
 import { Button } from "@/components/ui/button"
 import { blankInitiative } from "@/lib/initiatives"
@@ -104,6 +105,7 @@ export function InitiativeComposer({
                   key={property}
                   item={draft}
                   property={property}
+                  disabled={canonicalIssuesActive() && property === "labels"}
                   people={people}
                   teams={teams}
                   labels={labels}

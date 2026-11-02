@@ -7,6 +7,7 @@ import {
 import type { Initiative, InitiativePerson } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamLabel } from "@/lib/team-labels"
+import { canonicalIssuesActive } from "@/lib/canonical-issue-cache"
 import { documentTime } from "@/lib/team-documents"
 import { IssueIcon } from "@/components/issues/issue-controls"
 import { ActionIconButton } from "@/components/ui/action-icon-button"
@@ -101,7 +102,10 @@ export function InitiativeDetailsPanel({
                     teams={teams}
                     labels={labels}
                     onChange={onPatch}
-                    disabled={!writable}
+                    disabled={
+                      !writable ||
+                      (canonicalIssuesActive() && row.property === "labels")
+                    }
                   />
                 </div>
               </div>
