@@ -1,7 +1,8 @@
 import { createServerFn } from "@tanstack/react-start"
 import { productStateCommandSchema } from "./product-state-contract"
+import type { ProductStateSnapshot } from "./product-state-contract"
 
-export const loadProductState = createServerFn({ method: "GET" }).handler(
+const loadProductStateRequest = createServerFn({ method: "GET" }).handler(
   async () => {
     const [
       { getRequest, setResponseHeader },
@@ -34,3 +35,9 @@ export const persistProductState = createServerFn({ method: "POST" })
       data
     )
   })
+
+let readSequence = 0
+export async function loadProductState(): Promise<ProductStateSnapshot> {
+  const requestSequence = ++readSequence
+  return { ...(await loadProductStateRequest()), requestSequence }
+}

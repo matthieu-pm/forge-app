@@ -106,6 +106,7 @@ export function InitiativeDetail({
     node?.scrollIntoView({ behavior: "smooth", block: "center" })
     setActivityTarget("")
   }, [tab, activityTarget])
+  const editRevision = useRef(item.revision)
   const previous = useRef({
     name: item.name,
     summary: item.summary,
@@ -130,20 +131,32 @@ export function InitiativeDetail({
     name.trim() !== item.name ||
     summary !== item.summary ||
     JSON.stringify(body) !== JSON.stringify(item.description)
+  if (!dirty) editRevision.current = item.revision
   const hasDraft = Boolean(draft.text.trim() || draft.attachments.length)
   const blocker = useBlocker({
     shouldBlockFn: () => dirty || hasDraft,
     enableBeforeUnload: () => dirty || hasDraft,
     withResolver: true,
   })
-  function mutate(reducer: (current: Initiative) => Initiative) {
+  function mutate(
+    reducer: (current: Initiative) => Initiative,
+    revision = item.revision
+  ) {
     const success = store.update((current) => {
       if (!current.initiatives.some((value) => value.id === item.id))
         throw new Error("Initiative removed")
       return {
         ...current,
         initiatives: current.initiatives.map((value) =>
-          value.id === item.id ? reducer(value) : value
+          value.id === item.id
+            ? (() => {
+                if (store.canonical && value.revision !== revision)
+                  throw new Error(
+                    "This initiative changed while editing. Your draft is kept. Review the latest shared version."
+                  )
+                return reducer(value)
+              })()
+            : value
         ),
       }
     })
@@ -160,7 +173,15 @@ export function InitiativeDetail({
   const autosave = useRef(() => {})
   autosave.current = () => {
     if (dirty && name.trim())
-      patch({ name: name.trim(), summary, description: body })
+      mutate(
+        (current) =>
+          patchInitiative(current, {
+            name: name.trim(),
+            summary,
+            description: body,
+          }),
+        editRevision.current
+      )
   }
   useEffect(() => {
     if (!dirty || !name.trim() || !store.writable) return
@@ -334,7 +355,10 @@ export function InitiativeDetail({
           teams={teams}
           labels={store.labels}
           onChange={patch}
-          disabled={!store.writable}
+          disabled={
+            !store.writable ||
+            (store.canonical && (property === "labels" || property === "teams"))
+          }
           className={cn(buttonSurface, "h-7")}
         />
       ))}
@@ -357,7 +381,7 @@ export function InitiativeDetail({
                 teams={teams}
                 labels={store.labels}
                 onChange={patch}
-                disabled={!store.writable}
+                disabled={!store.writable || store.canonical}
               />
             ))}
           </PopoverContent>
@@ -551,7 +575,7 @@ export function InitiativeDetail({
             </DropdownMenuItem>
             <DropdownMenuItem
               variant="destructive"
-              disabled={!store.writable || dirty || hasDraft}
+              disabled={store.canonical || !store.writable || dirty || hasDraft}
               onClick={remove}
             >
               Delete initiative
@@ -629,7 +653,7 @@ export function InitiativeDetail({
           ))}
           <ActionIconButton
             label="Add new view"
-            disabled={!store.writable}
+            disabled={store.canonical || !store.writable}
             onClick={() => {
               setViewName("")
               setViewStatus("")
@@ -685,6 +709,7 @@ export function InitiativeDetail({
       {[
         error,
         store.error,
+        store.mutationError,
         store.settingsError,
         store.labelsError,
         store.projectLabelsError,
@@ -695,6 +720,7 @@ export function InitiativeDetail({
               [
                 error,
                 store.error,
+                store.mutationError,
                 store.settingsError,
                 store.labelsError,
                 store.projectLabelsError,
@@ -742,9 +768,25 @@ export function InitiativeDetail({
                   </h2>
                   {properties()}
                 </div>
+                {store.canonical && (
+                  <p className="mt-4 text-xs text-muted-foreground">
+                    Attachments, resources and saved project views are not
+                    available for shared initiatives yet.
+                  </p>
+                )}
+                {item.rollup && (
+                  <p
+                    className="mt-4 text-xs text-muted-foreground"
+                    aria-label="Initiative progress"
+                  >
+                    {item.rollup.completedIssues} of {item.rollup.issueCount}{" "}
+                    issues completed · {item.rollup.percent}% ·{" "}
+                    {item.rollup.projectCount} projects you can access
+                  </p>
+                )}
                 <InitiativeResources
                   item={item}
-                  writable={store.writable}
+                  writable={!store.canonical && store.writable}
                   onSave={(resource) =>
                     mutate((current) =>
                       patchInitiative(current, {
@@ -796,7 +838,7 @@ export function InitiativeDetail({
                   <RichEditor
                     label="Initiative description"
                     placeholder="Add description…"
-                    value={item.description}
+                    value={body}
                     onChange={(value) =>
                       setBody(value as Initiative["description"])
                     }
@@ -804,6 +846,49 @@ export function InitiativeDetail({
                     className="min-h-24 [&_.tiptap]:min-h-24"
                   />
                 </section>
+                {dirty &&
+                  store.canonical &&
+                  editRevision.current !== item.revision && (
+                    <div role="alert" className="mt-3 space-y-3 text-xs">
+                      <p>
+                        This initiative changed while you were editing. Review
+                        the shared text before applying your draft.
+                      </p>
+                      <details>
+                        <summary>Review latest shared text</summary>
+                        <p className="mt-2">Name: {item.name}</p>
+                        <p>Summary: {item.summary}</p>
+                        <RichEditor
+                          label="Latest shared initiative description"
+                          value={item.description}
+                          onChange={() => {}}
+                          editable={false}
+                        />
+                      </details>
+                      <Button
+                        size="xs"
+                        variant="secondary"
+                        onClick={() => {
+                          setName(item.name)
+                          setSummary(item.summary)
+                          setBody(item.description)
+                          editRevision.current = item.revision
+                        }}
+                      >
+                        Use latest shared text
+                      </Button>
+                      <Button
+                        size="xs"
+                        disabled={!name.trim() || !store.writable}
+                        onClick={() => {
+                          editRevision.current = item.revision
+                          autosave.current()
+                        }}
+                      >
+                        Apply text draft to latest initiative
+                      </Button>
+                    </div>
+                  )}
                 {dirty && (
                   <div className="mt-3 flex items-center justify-end gap-3 text-xs text-muted-foreground">
                     <span>
@@ -867,6 +952,7 @@ export function InitiativeDetail({
                 onDraft={setDraft}
                 onPublish={publish}
                 writable={store.writable}
+                allowAttachments={!store.canonical}
                 onAsk={ask}
               />
               <div className="mt-6 space-y-5">

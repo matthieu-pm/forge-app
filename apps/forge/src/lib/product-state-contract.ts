@@ -29,6 +29,8 @@ export type ProductStateSnapshot = {
   userId: string
   sessionId: string
   entries: Array<{ key: string; value: string | null; revision: number }>
+  initiativeFeatureAvailable?: boolean
+  requestSequence?: number
   workspaceRole?: string
   teamIds?: Array<string>
 }
