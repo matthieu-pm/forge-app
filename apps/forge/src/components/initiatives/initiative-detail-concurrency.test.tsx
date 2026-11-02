@@ -133,7 +133,7 @@ it.each(["updates", "comments"] as const)(
     expect(edit.getAttribute("aria-disabled")).not.toBe("true")
     fireEvent.click(edit)
     fireEvent.change(
-      screen.getByRole("textbox", { name: "Edit activity text" }),
+      screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Edit activity text" }),
       { target: { value: "Admin moderation" } }
     )
     fireEvent.click(screen.getByRole("button", { name: "Save post" }))
@@ -157,18 +157,16 @@ it.each(["updates", "comments"] as const)(
       })
     )
     fireEvent.change(
-      screen.getByRole("textbox", { name: "Edit activity text" }),
+      screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Edit activity text" }),
       { target: { value: "Private stale draft" } }
     )
     act(() => install(item(kind, "Newer shared post", 2)))
     fireEvent.click(screen.getByRole("button", { name: "Save post" }))
     expect(persistProductState).not.toHaveBeenCalled()
     expect(
-      (
-        screen.getByRole("textbox", {
-          name: "Edit activity text",
-        })
-      ).value
+      screen.getByRole<HTMLTextAreaElement>("textbox", {
+        name: "Edit activity text",
+      }).value
     ).toBe("Private stale draft")
     expect(
       screen
@@ -186,7 +184,7 @@ it("retains the post edit baseline when a reaction is saved during editing", asy
   fireEvent.click(screen.getByRole("button", { name: "Update options" }))
   fireEvent.click(screen.getByRole("menuitem", { name: "Edit update" }))
   fireEvent.change(
-    screen.getByRole("textbox", { name: "Edit activity text" }),
+    screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Edit activity text" }),
     { target: { value: "Kept text draft" } }
   )
   fireEvent.click(screen.getByRole("button", { name: "👍: 0 reactions" }))
@@ -195,10 +193,8 @@ it("retains the post edit baseline when a reaction is saved during editing", asy
   fireEvent.click(screen.getByRole("button", { name: "Save post" }))
   expect(persistProductState).toHaveBeenCalledTimes(1)
   expect(
-    (
-      screen.getByRole("textbox", {
-        name: "Edit activity text",
-      })
-    ).value
+    screen.getByRole<HTMLTextAreaElement>("textbox", {
+      name: "Edit activity text",
+    }).value
   ).toBe("Kept text draft")
 })
