@@ -5,6 +5,7 @@ import {
   projectFilterSchema,
   projectPreferencesSchema,
 } from "./project-view-contract"
+import type { InitiativeProject } from "./initiatives"
 import type { CustomView } from "./custom-views"
 
 const metadata = z.object({
@@ -63,6 +64,11 @@ export const savedViewDefinitionSchema = z
     (v) => v.visibility !== "team" || Boolean(v.teamId),
     "A team view needs a team."
   )
+export type SavedProjectQuery = {
+  projects: Array<InitiativeProject>
+  /** Unfiltered readable identities distinguish access loss from filter exclusion. */
+  authorizedProjectIds: Array<string>
+}
 export type SavedViewDefinition = z.infer<typeof savedViewDefinitionSchema>
 export type SavedView = CustomView & { revision: number; canEdit: boolean }
 export type SavedViewDirectory = {

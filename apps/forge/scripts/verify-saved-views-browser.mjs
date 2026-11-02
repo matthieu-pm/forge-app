@@ -69,6 +69,12 @@ try {
   )
     throw new Error("Wrong database")
   verified = true
+  if (production)
+    writeFileSync(
+      "/tmp/for60-production-fixture.json",
+      JSON.stringify({ marker, users, teamId, revision }),
+      { mode: 0o600 }
+    )
   await pool.query(
     "INSERT INTO organization(id,name,slug) VALUES($1,'FOR60 Acceptance',$1)",
     [marker]
@@ -306,6 +312,19 @@ try {
     "INSERT INTO projects(id,workspace_id,name,properties) VALUES($1,$2,'FOR60 shared project',$3)",
     [project, marker, { status: "Planned", health: "On track" }]
   )
+  const privateProject = crypto.randomUUID()
+  await pool.query(
+    "INSERT INTO projects(id,workspace_id,name,properties) VALUES($1,$2,'FOR60 private project',$3)",
+    [privateProject, marker, { status: "Planned", health: "On track" }]
+  )
+  await pool.query(
+    "INSERT INTO project_teams(workspace_id,project_id,team_id) VALUES($1,$2,$3)",
+    [marker, privateProject, privateTeam]
+  )
+  await pool.query(
+    "INSERT INTO team_members(workspace_id,team_id,user_id,role) VALUES($1,$2,$3,'member')",
+    [marker, privateTeam, users[1]]
+  )
   await admin.goto(`${base}/workspace/views?kind=projects&view=new`)
   await admin
     .getByRole("textbox", { name: "View name", exact: true })
@@ -335,8 +354,50 @@ try {
   await expect(
     member.getByText("FOR60 shared project", { exact: true })
   ).toBeVisible({ timeout: 60000 })
+  await expect(
+    member.getByText("FOR60 private project", { exact: true })
+  ).toBeVisible({ timeout: 60000 })
+  activePage = member
+  await member.getByRole("button", { name: "New project", exact: true }).click()
+  await member
+    .getByRole("textbox", { name: "Project name", exact: true })
+    .fill("FOR60 unsaved nested draft")
+  const refreshed = member.waitForResponse(async (response) => {
+    if (!response.url().includes("_serverFn")) return false
+    const body = await response.text().catch(() => "")
+    return (
+      body.includes("records") &&
+      body.includes("cycles") &&
+      body.includes(marker)
+    )
+  })
+  await member.evaluate(() => window.dispatchEvent(new Event("focus")))
+  await refreshed
+  await expect(
+    member.getByRole("textbox", { name: "Project name", exact: true })
+  ).toBeVisible({ timeout: 30000 })
+  await expect(
+    member.getByRole("textbox", { name: "Project name", exact: true })
+  ).toHaveValue("FOR60 unsaved nested draft")
+  await member.reload()
+  await expect(
+    member.getByText("FOR60 private project", { exact: true })
+  ).toBeVisible({ timeout: 60000 })
+  await pool.query(
+    "DELETE FROM team_members WHERE workspace_id=$1 AND team_id=$2 AND user_id=$3",
+    [marker, privateTeam, users[1]]
+  )
+  await member.evaluate(() => window.dispatchEvent(new Event("focus")))
+  await expect(
+    member.getByText("FOR60 private project", { exact: true })
+  ).toHaveCount(0, { timeout: 60000 })
+  await expect(
+    member.getByText("FOR60 shared project", { exact: true })
+  ).toBeVisible({ timeout: 60000 })
   await member.screenshot({
-    path: "/tmp/for60-saved-views.png",
+    path: production
+      ? "/tmp/for60-production-saved-views.png"
+      : "/tmp/for60-saved-views.png",
     fullPage: true,
   })
   expect(errors).toEqual([])
@@ -346,6 +407,7 @@ try {
       revision,
       production,
       passed: true,
+      target: production ? "production" : "local acceptance",
       environment: identity,
       checks: [
         "private/shared visibility",
@@ -355,6 +417,8 @@ try {
         "creator/admin-only controls",
         "revision conflict draft retained",
         "invalid filters fail closed",
+        "live project access revocation evicts retained results",
+        "unsaved nested project draft survives ordinary access refresh",
       ],
     })
   )

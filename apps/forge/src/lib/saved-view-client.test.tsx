@@ -1,7 +1,11 @@
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { useCustomViews } from "./custom-views-state"
-import { replaceCanonicalIssues } from "./canonical-issue-cache"
+import {
+  CANONICAL_ISSUES_CHANGED,
+  clearCanonicalIssueQueryRecords,
+  replaceCanonicalIssues,
+} from "./canonical-issue-cache"
 import { invalidatePreferenceSession } from "./preference-session-events"
 import { newCustomView } from "./custom-views"
 
@@ -116,6 +120,114 @@ describe("FOR-60 authenticated view client", () => {
       await pending
     })
     expect(hook.result.current.views).toEqual([])
+  })
+  it.each(["canonical refresh", "query invalidation"])(
+    "hides saved definitions and favorites until %s is reauthorized",
+    async (change) => {
+      const hook = renderHook(() =>
+        useCustomViews(identity.workspaceId, identity.userId)
+      )
+      await waitFor(() => expect(hook.result.current.views).toHaveLength(1))
+      let resolve!: (value: string) => void
+      transport.load.mockImplementationOnce(
+        () =>
+          new Promise((r) => {
+            resolve = r
+          })
+      )
+      act(() => {
+        if (change === "canonical refresh")
+          replaceCanonicalIssues({
+            ...identity,
+            records: [],
+            projects: [],
+            cycles: [],
+          })
+        else {
+          clearCanonicalIssueQueryRecords()
+          window.dispatchEvent(new Event("forge:issue-queries-invalidated"))
+        }
+      })
+      expect(hook.result.current.views).toEqual([])
+      await waitFor(() => expect(transport.load).toHaveBeenCalledTimes(2))
+      await act(async () => {
+        resolve(JSON.stringify({ ...directory(), views: [] }))
+        await Promise.resolve()
+      })
+      expect(hook.result.current.views).toEqual([])
+      await act(async () => {
+        window.dispatchEvent(new Event(CANONICAL_ISSUES_CHANGED))
+        await Promise.resolve()
+      })
+      expect(transport.load).toHaveBeenCalledTimes(2)
+    }
+  )
+  it("does not restore definitions from a pre-revocation read after the new read completes", async () => {
+    const hook = renderHook(() =>
+      useCustomViews(identity.workspaceId, identity.userId)
+    )
+    await waitFor(() => expect(hook.result.current.enabled).toBe(true))
+    let resolve!: (value: string) => void
+    transport.load
+      .mockImplementationOnce(
+        () =>
+          new Promise((r) => {
+            resolve = r
+          })
+      )
+      .mockResolvedValueOnce(JSON.stringify({ ...directory(), views: [] }))
+    let old: unknown
+    act(() => {
+      old = hook.result.current.refresh()
+    })
+    act(() =>
+      replaceCanonicalIssues({
+        ...identity,
+        records: [],
+        projects: [],
+        cycles: [],
+      })
+    )
+    await waitFor(() => expect(transport.load).toHaveBeenCalledTimes(3))
+    await waitFor(() => expect(hook.result.current.loading).toBe(false))
+    await act(async () => {
+      resolve(JSON.stringify(directory()))
+      await old
+    })
+    expect(hook.result.current.views).toEqual([])
+  })
+  it("keeps an in-flight acknowledged write successful across an access refresh", async () => {
+    const hook = renderHook(() =>
+      useCustomViews(identity.workspaceId, identity.userId)
+    )
+    await waitFor(() => expect(hook.result.current.enabled).toBe(true))
+    let resolve!: (value: unknown) => void
+    transport.save.mockImplementationOnce(
+      () =>
+        new Promise((done) => {
+          resolve = done
+        })
+    )
+    let pending!: Promise<boolean>
+    act(() => {
+      pending = hook.result.current.save(view)
+    })
+    act(() =>
+      replaceCanonicalIssues({
+        ...identity,
+        records: [],
+        projects: [],
+        cycles: [],
+      })
+    )
+    expect(hook.result.current.views).toEqual([])
+    expect(transport.load).toHaveBeenCalledTimes(1)
+    await act(async () => {
+      resolve({})
+      expect(await pending).toBe(true)
+    })
+    expect(hook.result.current.views).toHaveLength(1)
+    expect(transport.load).toHaveBeenCalledTimes(2)
   })
   it("an acknowledged write remains successful when its follow-up read fails", async () => {
     const hook = renderHook(() =>

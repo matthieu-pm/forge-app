@@ -13,6 +13,7 @@ import {
   issues,
   members,
   organizations,
+  projectTeams,
   projects,
   savedViewFavorites,
   savedViews,
@@ -22,6 +23,7 @@ import {
   ApplicationAccessError,
   hasWorkspaceRole,
 } from "@/application/authorization"
+import { requireIssueTeam } from "@/application/issues/issues.server"
 import { currentCommandActor } from "@/application/commands/command-actor.server"
 import { executeCommand } from "@/application/commands/execute-command.server"
 import {
@@ -73,23 +75,34 @@ const unavailable =
 async function validateReferences(
   tx: Transaction,
   actor: Actor,
-  definition: SavedViewDefinition
+  definition: SavedViewDefinition,
+  lock = false
 ) {
   const check = async (
     kind: "team" | "project" | "issue" | "member",
     id: string
   ) => {
     if (!id) return
-    const rows =
+    if (lock && kind === "team") {
+      try {
+        await requireIssueTeam(tx, actor, id)
+      } catch (error) {
+        if (error instanceof ApplicationAccessError)
+          throw new Error(unavailable)
+        throw error
+      }
+      return
+    }
+    const query =
       kind === "team"
-        ? await tx
+        ? tx
             .select({ id: teams.id })
             .from(teams)
             .where(
               and(eq(teams.id, id), readableTeamCondition(actor, teams.id))
             )
         : kind === "project"
-          ? await tx
+          ? tx
               .select({ id: projects.id })
               .from(projects)
               .where(
@@ -99,7 +112,7 @@ async function validateReferences(
                 )
               )
           : kind === "issue"
-            ? await tx
+            ? tx
                 .select({ id: issues.id })
                 .from(issues)
                 .where(
@@ -108,7 +121,7 @@ async function validateReferences(
                     readableIssueCondition(actor, issues.id)
                   )
                 )
-            : await tx
+            : tx
                 .select({ id: members.id })
                 .from(members)
                 .where(
@@ -117,7 +130,35 @@ async function validateReferences(
                     eq(members.userId, id)
                   )
                 )
+    const rows = await (lock ? query.for("share") : query)
     if (!rows.length) throw new Error(unavailable)
+    if (lock && kind === "project") {
+      const allLinks = await tx
+        .select({ teamId: projectTeams.teamId })
+        .from(projectTeams)
+        .where(eq(projectTeams.projectId, id))
+      const links = await tx
+        .select({ teamId: projectTeams.teamId })
+        .from(projectTeams)
+        .where(
+          and(
+            eq(projectTeams.projectId, id),
+            readableTeamCondition(actor, projectTeams.teamId)
+          )
+        )
+        .orderBy(asc(projectTeams.teamId))
+      // A project row lock may have waited while private membership was revoked.
+      // Recheck its current team authority after that wait, including zero links.
+      if (allLinks.length && !links.length) throw new Error(unavailable)
+      for (const link of links) await requireIssueTeam(tx, actor, link.teamId)
+    }
+    if (lock && kind === "issue") {
+      const [issue] = await tx
+        .select({ teamId: issues.teamId })
+        .from(issues)
+        .where(eq(issues.id, id))
+      await requireIssueTeam(tx, actor, issue.teamId)
+    }
   }
   if (definition.teamId) await check("team", definition.teamId)
   if (definition.kind === "issues") {
@@ -274,6 +315,7 @@ export async function mutateSavedView(
           return
         throw new ApplicationAccessError()
       }
+      if (row.teamId) await requireIssueTeam(tx, current, row.teamId)
       if (input.action !== "favorite" && !editable(current, row))
         throw new ApplicationAccessError()
       // Receipts reveal only identity/revision; live visibility is always rechecked.
@@ -331,7 +373,7 @@ export async function mutateSavedView(
             .delete(savedViewFavorites)
             .where(eq(savedViewFavorites.viewId, input.id))
         } else {
-          await validateReferences(tx, current, input.definition)
+          await validateReferences(tx, current, input.definition, true)
           privatizedByAdmin = Boolean(
             row &&
             row.ownerId !== current.userId &&
@@ -416,7 +458,6 @@ export async function queryViewProjects(actor: Actor, raw: unknown) {
         throw new Error(
           "This project view exceeds the supported limit of 500 projects."
         )
-      const { projectTeams } = await import("@/db")
       const links = await tx
         .select()
         .from(projectTeams)
@@ -441,13 +482,16 @@ export async function queryViewProjects(actor: Actor, raw: unknown) {
         status: p.properties.status ?? "Backlog",
         health: p.properties.health ?? "On track",
       })) as Array<InitiativeProject>
-      return visibleProjects(
-        catalog,
-        emptyInitiatives(),
-        definition.filters,
-        definition.display,
-        definition.teamId
-      )
+      return {
+        projects: visibleProjects(
+          catalog,
+          emptyInitiatives(),
+          definition.filters,
+          definition.display,
+          definition.teamId
+        ),
+        authorizedProjectIds: catalog.map((project) => project.id),
+      }
     },
     { isolationLevel: "repeatable read" }
   )

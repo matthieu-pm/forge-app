@@ -3,6 +3,7 @@ import { savedViewMutationSchema, viewDefinition } from "./saved-view-contract"
 import { loadSavedViews, persistSavedView } from "./saved-view-functions"
 import {
   CANONICAL_ISSUES_CHANGED,
+  canonicalIssueReadGeneration,
   canonicalIssueState,
 } from "./canonical-issue-cache"
 import { protectedSessionEpoch } from "./protected-session"
@@ -18,6 +19,7 @@ type Entry = {
   loading: boolean
   busy: boolean
   generation: number
+  accessGeneration: number
   retry?: { input: string; key: string }
 }
 const entries = new Map<string, Entry>()
@@ -35,9 +37,11 @@ if (typeof window !== "undefined") onPreferenceSessionInvalidated(clear)
 function subscribe(fn: () => void) {
   listeners.add(fn)
   window.addEventListener(CANONICAL_ISSUES_CHANGED, fn)
+  window.addEventListener("forge:issue-queries-invalidated", fn)
   return () => {
     listeners.delete(fn)
     window.removeEventListener(CANONICAL_ISSUES_CHANGED, fn)
+    window.removeEventListener("forge:issue-queries-invalidated", fn)
   }
 }
 function identityKey() {
@@ -49,6 +53,11 @@ function identityKey() {
 async function refresh(key: string, entry: Entry) {
   const identity = canonicalIssueState()
   if (!identity || identityKey() !== key) return
+  const accessGeneration = canonicalIssueReadGeneration()
+  // Canonical access changes retire both the protected projection and reads
+  // started before it. Ordinary issue notifications do not advance this fence.
+  if (entry.accessGeneration !== accessGeneration) entry.data = undefined
+  entry.accessGeneration = accessGeneration
   const token = ++entry.generation
   entry.loading = true
   notify()
@@ -64,7 +73,8 @@ async function refresh(key: string, entry: Entry) {
     if (
       entries.get(key) !== entry ||
       identityKey() !== key ||
-      token !== entry.generation
+      token !== entry.generation ||
+      accessGeneration !== canonicalIssueReadGeneration()
     )
       return
     if (
@@ -88,7 +98,7 @@ async function refresh(key: string, entry: Entry) {
 export function useCustomViews(workspaceId: string, userId: string) {
   useSyncExternalStore(
     subscribe,
-    () => `${version}:${identityKey()}`,
+    () => `${version}:${identityKey()}:${canonicalIssueReadGeneration()}`,
     () => ""
   )
   const identity = canonicalIssueState()
@@ -97,12 +107,23 @@ export function useCustomViews(workspaceId: string, userId: string) {
       ? identityKey()
       : ""
   const entry = entries.get(key)
+  const accessGeneration = canonicalIssueReadGeneration()
+  const data =
+    entry?.accessGeneration === accessGeneration ? entry.data : undefined
   useEffect(() => {
     if (!key) return
     let current = entries.get(key)
     if (!current) {
-      current = { error: "", loading: false, busy: false, generation: 0 }
+      current = {
+        error: "",
+        loading: false,
+        busy: false,
+        generation: 0,
+        accessGeneration,
+      }
       entries.set(key, current)
+      void refresh(key, current)
+    } else if (current.accessGeneration !== accessGeneration && !current.busy) {
       void refresh(key, current)
     }
     const active = current
@@ -115,10 +136,11 @@ export function useCustomViews(workspaceId: string, userId: string) {
       window.clearInterval(timer)
       window.removeEventListener("focus", reload)
     }
-  }, [key, Boolean(entry)])
+  }, [key, Boolean(entry), accessGeneration, entry?.busy])
   async function mutate(raw: unknown) {
     if (
       !entry?.data?.enabled ||
+      entry.accessGeneration !== canonicalIssueReadGeneration() ||
       entry.busy ||
       !identity ||
       identityKey() !== key
@@ -161,11 +183,14 @@ export function useCustomViews(workspaceId: string, userId: string) {
     }
   }
   return {
-    views: entry?.data?.views ?? [],
-    enabled: entry?.data?.enabled ?? false,
-    loading: Boolean(key && (!entry || entry.loading)),
+    views: data?.views ?? [],
+    enabled: data?.enabled ?? false,
+    loading: Boolean(
+      key &&
+      (!entry || entry.loading || entry.accessGeneration !== accessGeneration)
+    ),
     busy: entry?.busy ?? false,
-    error: entry?.error || entry?.data?.error || "",
+    error: entry?.error || data?.error || "",
     refresh: () => entry && refresh(key, entry),
     save: (view: CustomView) => {
       try {
