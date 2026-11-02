@@ -65,3 +65,5 @@ bun run build
 ```
 
 Acceptance records name the source/environment and distinguish real PostgreSQL/browser checks, real coordinator with a fake runtime, and live provider testing. This PR does not deploy production or qualify packaged macOS.
+
+The [implementation acceptance record](for62-implementation-evidence.json) identifies commit `84dd7e5` and the isolated environment. It records 2,555 application tests, four Workflow tests, 37 runtime tests, 48 native database checks and 23 browser checks, plus build/typecheck, migration replay and worker entry-point verification. Changed-source lint has zero errors and 83 warnings, primarily defensive SQL-result checks and async test doubles. All owned fixtures were removed. Screenshots show [shared resources](../qa/for62/for62-resources-shared.png), [stale resource editing](../qa/for62/for62-resources-conflict.png), [shared Loops](../qa/for62/for62-loops-shared.png), [stale Loop editing](../qa/for62/for62-loops-conflict.png) and mobile [resources](../qa/for62/for62-resources-mobile.png)/[Loops](../qa/for62/for62-loops-mobile.png).
