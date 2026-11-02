@@ -26,3 +26,9 @@ FORGE_SAVED_VIEWS_TEST_DATABASE_FILE=/private/path/connections.json node scripts
 ```
 
 The browser harness requires a local server on port 3160, connected to the same isolated database with the gate enabled. `FORGE_VIEWS_BROWSER_URL` overrides the local origin. It creates real Better Auth accounts and fresh cookie-only browser profiles, verifies sharing/favorites, permissions, authorized issue/project results, failed-filter handling and conflict drafts, then deletes its own fixtures and checks cleanup.
+
+## Review and hosted acceptance
+
+Review regressions cover empty and nonempty unsupported initiative filters on save/read/execution, and a transient failed background read while an unsaved editor is open. Read recovery preserves both the draft and its original revision.
+
+Production browser acceptance requires `FORGE_VIEWS_PRODUCTION_AUTHORIZED_REVISION` to equal the clean checkout's exact revision and `FORGE_VIEWS_PRODUCTION_DATABASE_FILE` to identify the verified production operator connection. It permits only `https://app.forgenow.tech` and the verified production database/branch. It creates uniquely named test accounts/workspace, exercises the same two-device acceptance, and deletes only its own fixtures. This mode is a release verification action; local runs retain the isolated acceptance guards.

@@ -139,6 +139,12 @@ async function validateReferences(
     }
   } else
     for (const rule of definition.filters) {
+      // Even an empty "No initiatives" rule needs a canonical initiative
+      // query. Skipping it would silently widen the view to every project.
+      if (rule.field === "Initiatives")
+        throw new Error(
+          "Initiative filters are unavailable until shared initiatives are enabled."
+        )
       if (!rule.value) continue
       const kind =
         rule.field === "Teams"
@@ -148,10 +154,7 @@ async function validateReferences(
             : ["Lead", "Members"].includes(rule.field)
               ? "member"
               : undefined
-      if (rule.field === "Initiatives")
-        throw new Error(
-          "Initiative filters are unavailable until shared initiatives are enabled."
-        )
+
       if (kind) {
         if (kind !== "member" && !z.uuid().safeParse(rule.value).success)
           throw new Error(unavailable)

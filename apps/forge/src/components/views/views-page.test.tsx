@@ -1,5 +1,11 @@
 import { useState } from "react"
-import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react"
+import {
+  act,
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+} from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { ViewsPage } from "./views-page"
 import type { ViewsSearch } from "./views-page"
@@ -242,5 +248,37 @@ describe("FOR-60 saved view interactions", () => {
       screen.getByRole("button", { name: "New view" }).hasAttribute("disabled")
     ).toBe(true)
     expect(screen.queryByRole("link", { name: "Shared view" })).toBeNull()
+  })
+})
+
+it("FOR-60 review: keeps an unsaved edit draft after a failed background refresh recovers", async () => {
+  render(<Harness initial={{ kind: "issues", view: saved.id, edit: true }} />)
+  const name = await screen.findByRole("textbox", { name: "View name" })
+  fireEvent.change(name, { target: { value: "Unsaved review draft" } })
+  fireEvent.click(
+    screen.getByRole("button", { name: "Filter high priority issues" })
+  )
+  transport.load.mockRejectedValueOnce(new Error("Temporary read failure"))
+  act(() => window.dispatchEvent(new Event("focus")))
+  await screen.findByText(
+    "Saved views could not be loaded. Refresh to try again."
+  )
+  transport.load.mockResolvedValueOnce(
+    JSON.stringify({
+      ...identity,
+      enabled: true,
+      views: [{ ...saved, name: "Newer shared name", revision: 2 }],
+      error: "",
+    })
+  )
+  act(() => window.dispatchEvent(new Event("focus")))
+  const recovered = await screen.findByRole("textbox", { name: "View name" })
+  expect((recovered as HTMLInputElement).value).toBe("Unsaved review draft")
+  expect(screen.getByTestId("issue-config").textContent).toContain("High")
+  fireEvent.click(screen.getByRole("button", { name: "Save view" }))
+  await waitFor(() => expect(transport.save).toHaveBeenCalledOnce())
+  expect(transport.save.mock.calls[0][0].data.mutation).toMatchObject({
+    expectedRevision: 1,
+    definition: { name: "Unsaved review draft" },
   })
 })

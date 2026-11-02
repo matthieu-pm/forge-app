@@ -418,4 +418,31 @@ describe.skipIf(!file)("FOR-60 saved views on PostgreSQL", () => {
       vi.stubEnv("FORGE_FEATURE_SAVED_VIEWS", "true")
     }
   }, 30000)
+  it("FOR-60 review: empty and nonempty initiative project filters fail closed on save, read and execution", async () => {
+    const {
+      actors: [alice, bob],
+    } = await fixture()
+    for (const value of ["", randomUUID()]) {
+      const id = randomUUID(),
+        unsupportedDefinition = viewDefinition({
+          ...newCustomView("projects", alice.userId),
+          visibility: "workspace",
+          filters: [{ field: "Initiatives", value }],
+        })
+      await expect(save(alice, id, unsupportedDefinition)).rejects.toThrow(
+        /Initiative filters/
+      )
+      await expect(
+        views.queryViewProjects(bob, unsupportedDefinition)
+      ).rejects.toThrow(/Initiative filters/)
+      await pool.query(
+        "INSERT INTO saved_views(id,workspace_id,owner_id,visibility,definition,revision) VALUES($1,$2,$3,'workspace',$4,1)",
+        [id, alice.workspaceId, alice.userId, unsupportedDefinition]
+      )
+    }
+    expect(await views.readSavedViews(bob)).toMatchObject({
+      views: [],
+      error: expect.stringContaining("unsupported filters"),
+    })
+  }, 30000)
 })

@@ -1,29 +1,56 @@
+import { execFileSync } from "node:child_process"
 import { readFileSync, writeFileSync } from "node:fs"
 import { chromium, expect } from "@playwright/test"
 import { Pool, neonConfig } from "@neondatabase/serverless"
 import { hashPassword } from "better-auth/crypto"
-const file = process.env.FORGE_SAVED_VIEWS_TEST_DATABASE_FILE
-if (!file) throw new Error("FORGE_SAVED_VIEWS_TEST_DATABASE_FILE is required")
+const revision = execFileSync("git", ["rev-parse", "HEAD"], {
+  encoding: "utf8",
+}).trim()
+const authorizedRevision =
+  process.env.FORGE_VIEWS_PRODUCTION_AUTHORIZED_REVISION
+const production = Boolean(authorizedRevision)
+if (
+  production &&
+  (authorizedRevision !== revision ||
+    execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim())
+)
+  throw new Error(
+    "Production verification requires a clean, exact authorized source revision."
+  )
+const file = production
+  ? process.env.FORGE_VIEWS_PRODUCTION_DATABASE_FILE
+  : process.env.FORGE_SAVED_VIEWS_TEST_DATABASE_FILE
+if (!file) throw new Error("An explicit acceptance database file is required")
 const config = JSON.parse(readFileSync(file, "utf8")),
   url = new URL(config.connection)
+const expectedHost = production
+  ? "ep-lingering-bread-zazpwrxp.c-2.eu-west-2.aws.neon.tech"
+  : "ep-blue-shadow-zauhwkjz.c-2.eu-west-2.aws.neon.tech"
+const expectedDatabase = production ? "neondb" : "forge_saved_views_acceptance"
+const expectedBranch = production
+  ? "br-muddy-queen-zaeeysjt"
+  : "br-autumn-union-za0opf1e"
 if (
-  url.hostname !== "ep-blue-shadow-zauhwkjz.c-2.eu-west-2.aws.neon.tech" ||
-  decodeURIComponent(url.pathname) !== "/forge_saved_views_acceptance" ||
+  url.hostname.replace("-pooler.", ".") !== expectedHost ||
+  decodeURIComponent(url.pathname) !== `/${expectedDatabase}` ||
   url.searchParams.get("sslmode") !== "require"
 )
-  throw new Error("Only the dedicated acceptance database is allowed")
-const base = process.env.FORGE_VIEWS_BROWSER_URL ?? "http://localhost:3160",
+  throw new Error("Wrong acceptance database")
+const base = production
+    ? "https://app.forgenow.tech"
+    : (process.env.FORGE_VIEWS_BROWSER_URL ?? "http://localhost:3160"),
   baseUrl = new URL(base)
 if (
-  baseUrl.protocol !== "http:" ||
-  !["localhost", "127.0.0.1"].includes(baseUrl.hostname) ||
-  baseUrl.username ||
-  baseUrl.password
+  !production &&
+  (baseUrl.protocol !== "http:" ||
+    !["localhost", "127.0.0.1"].includes(baseUrl.hostname) ||
+    baseUrl.username ||
+    baseUrl.password)
 )
   throw new Error("A local acceptance server is required")
 neonConfig.webSocketConstructor = WebSocket
 const pool = new Pool({ connectionString: config.connection }),
-  marker = `for60-browser-${crypto.randomUUID()}`,
+  marker = `for60-${production ? "production-" : ""}browser-${crypto.randomUUID()}`,
   teamId = crypto.randomUUID(),
   password = `for60-${crypto.randomUUID()}`,
   users = [`${marker}-admin`, `${marker}-member`]
@@ -37,8 +64,8 @@ try {
     )
   ).rows[0]
   if (
-    identity.database !== "forge_saved_views_acceptance" ||
-    identity.branch !== "br-autumn-union-za0opf1e"
+    identity.database !== expectedDatabase ||
+    identity.branch !== expectedBranch
   )
     throw new Error("Wrong database")
   verified = true
@@ -316,6 +343,8 @@ try {
   console.log(
     JSON.stringify({
       issue: "FOR-60",
+      revision,
+      production,
       passed: true,
       environment: identity,
       checks: [

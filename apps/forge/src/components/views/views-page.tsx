@@ -198,12 +198,31 @@ export function ViewsPage({
     saveDirectory({ ordering, descending, properties: value })
   }
   const [teamIds, setTeamIds] = useState<Array<string> | undefined>()
+  const draftNavigation = JSON.stringify([
+    workspaceId,
+    user.id,
+    team?.id,
+    search.view,
+    search.edit,
+    search.kind,
+  ])
+  const initializedDraft = useRef({
+    navigation: draftNavigation,
+    loaded: false,
+  })
   useEffect(() => {
-    if (search.view !== "new" && saved) setDraft(saved)
+    if (initializedDraft.current.navigation !== draftNavigation)
+      initializedDraft.current = { navigation: draftNavigation, loaded: false }
+    // An unavailable read can temporarily evict saved. Recovery is not a new
+    // editor navigation and must retain the draft and its original revision.
+    if (search.view !== "new" && saved && !initializedDraft.current.loaded) {
+      setDraft(saved)
+      initializedDraft.current.loaded = true
+    }
     setTemporary(undefined)
     setSummaryTab("")
     setTeamIds(undefined)
-  }, [search.view, search.edit, workspaceId, user.id, team?.id, saved?.id]) // A draft is reset only when navigating, never by a storage update.
+  }, [draftNavigation, saved?.id])
   useEffect(() => setTemporary(undefined), [saved?.revision])
   const onIssueMetrics = useCallback(
     (groups: ViewIssueMetricGroups) => setIssueMetrics(groups),
