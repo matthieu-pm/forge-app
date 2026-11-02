@@ -15,7 +15,7 @@ The browser adapter requires a current Better Auth session bound to its workspac
 
 ## Reproduction
 
-Use a private connection JSON containing `connection` (migration owner/direct) and `applicationConnection` (ordinary application login) for the dedicated database `forge_documents_acceptance_v3`, branch `br-autumn-union-za0opf1e`. The test harness verifies the target before mutation and removes its owned users, workspaces, and receipts afterwards. Never point this harness at production.
+Use a private connection JSON containing `connection` (migration owner/direct) and `applicationConnection` (ordinary application login) for the dedicated database `forge_documents_acceptance_v3`, branch `br-autumn-union-za0opf1e`. The test harness verifies the target before mutation and removes its owned users, workspaces, and receipts afterwards. The native SQL harness never targets production. Production browser verification uses the separately guarded release mode described below.
 
 ```sh
 cd apps/forge
@@ -43,3 +43,11 @@ Initial acceptance screenshots: [conflict](../qa/for61/conflict.png), [editor](.
 All 13 dedicated PostgreSQL acceptance cases and the two-browser flow passed. Workspace TypeScript, the production build and protected Workflow handlers, four Workflow tests, schema-drift verification, and changed-source lint (zero errors, 32 warnings) passed. Fixtures were removed; the ordinary application role is not a superuser.
 
 An earlier full app run passed 2,438 tests. The final full run passed 2,435 cases and hit three timing failures: two preference-fixture setup timeouts and an agent-shell asynchronous wait. All three affected files passed isolated reruns (41 tests). A separate rerun had a worker-startup timeout in unchanged Electron navigation tests; all four of those cases passed alone. This is reported as broader-suite timing flakiness, not a clean final full-suite result. No unrelated timeout thresholds were changed. See [the sanitized acceptance record](for61-acceptance-evidence.json).
+
+## Reviewed production release · 2 November 2026
+
+The reviewed source `0e867c3` passed 2,498 app tests with no unhandled errors, 20 real PostgreSQL cases under the ordinary application role, four Workflow tests, workspace TypeScript, the production build/protected handlers, two-session browser acceptance, and changed-source lint (zero errors, 37 warnings). Both Vercel GitHub checks passed.
+
+Migration `0066_shared_documents` advanced production from 66 to 67 canonical receipts and replayed with zero changes. The feature gate is enabled. Deployment `dpl_B6M9rc97JDFsbC8DogamJ3FqjxWc` passed staged health checks, was promoted to app.forgenow.tech, and passed the full authenticated two-session flow. Its owned fixtures were removed and existing record counts were unchanged. No error/fatal runtime log groups appeared in the queried release window. See [the release evidence](for61-review-release-evidence.json) and [review report](../qa/for61/review-and-release.md).
+
+Production browser verification is separately guarded by a clean exact authorized revision, the explicit production connection file, and the fixed production branch/host/database. It creates and removes only its own temporary workspace/accounts; the native SQL suite remains restricted to the acceptance database.

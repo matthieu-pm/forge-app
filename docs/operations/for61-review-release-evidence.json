@@ -1,0 +1,229 @@
+{
+  "issue": "FOR-61",
+  "pullRequest": "https://github.com/matthieu-pm/forge-app/pull/43",
+  "originalReviewHead": "16f43f8185b9b481e3bf29128827f1a02a6df5ef",
+  "reviewedCodeRevision": "0e867c3028e7a47ac7368917d9e23ecc7dcf5183",
+  "integratedMain": "112e9a170cd6e8dd03405e9cf713a883d0c2c0d4",
+  "review": {
+    "standards": "All findings corrected; final restore per-field rebase covered by distinct-body cases.",
+    "specification": "All findings corrected; final import/source recovery re-review found no blockers.",
+    "report": "docs/qa/for61/review-and-release.md"
+  },
+  "validation": {
+    "appSuite": {
+      "passed": 2498,
+      "skipped": 522,
+      "filesPassed": 316,
+      "filesSkipped": 27,
+      "unhandledErrors": 0
+    },
+    "nativePostgres": {
+      "passed": 20,
+      "ordinaryApplicationRole": "forge_staging_web"
+    },
+    "workflowTests": {
+      "passed": 4
+    },
+    "workspaceTypecheck": "passed",
+    "productionBuildAndProtectedWorkflowHandlers": "passed",
+    "changedSourceLint": {
+      "errors": 0,
+      "warnings": 37
+    },
+    "githubChecks": [
+      "Vercel \u2013 forge-app: success",
+      "Vercel \u2013 forge-preview-runtime: success"
+    ],
+    "localBrowser": {
+      "issue": "FOR-61",
+      "revision": "0e867c3028e7a47ac7368917d9e23ecc7dcf5183",
+      "target": "local acceptance",
+      "passed": true,
+      "environment": {
+        "database": "forge_documents_acceptance_v3",
+        "branch": "br-autumn-union-za0opf1e"
+      },
+      "checks": [
+        "two signed-in sessions",
+        "shared content and metadata",
+        "stale save conflict with draft and latest view",
+        "reload recovers conflict draft",
+        "explicit reviewed save",
+        "history restore appends revision",
+        "failed network recovery and retry",
+        "global authorized document link",
+        "mobile no horizontal overflow"
+      ]
+    }
+  },
+  "migration": {
+    "name": "0066_shared_documents",
+    "rehearsal": {
+      "target": {
+        "environment": "document-rehearsal",
+        "branchId": "br-lingering-hat-zay4d9dp",
+        "host": "ep-crimson-math-zap8ynn1.c-2.eu-west-2.aws.neon.tech",
+        "database": "neondb"
+      },
+      "beforeCount": 66,
+      "beforeHash": "8743b2aaaea3af4d6d3512991af10fa10b335a065370d752e290fe2fa80bbda5",
+      "applied": {
+        "applied": 1,
+        "total": 67
+      },
+      "replay": {
+        "applied": 0,
+        "total": 67
+      },
+      "countsBefore": {
+        "documents": 0,
+        "workspaces": 2
+      },
+      "countsAfter": {
+        "documents": 0,
+        "workspaces": 2
+      },
+      "recordedAt": "2026-11-02T09:05:26.872Z"
+    },
+    "production": {
+      "source": "0e867c3028e7a47ac7368917d9e23ecc7dcf5183",
+      "applied": {
+        "environment": "production",
+        "branchId": "br-muddy-queen-zaeeysjt",
+        "host": "ep-lingering-bread-zazpwrxp.c-2.eu-west-2.aws.neon.tech",
+        "database": "neondb",
+        "applied": 1,
+        "total": 67
+      },
+      "replay": {
+        "environment": "production",
+        "branchId": "br-muddy-queen-zaeeysjt",
+        "host": "ep-lingering-bread-zazpwrxp.c-2.eu-west-2.aws.neon.tech",
+        "database": "neondb",
+        "applied": 0,
+        "total": 67
+      },
+      "recordedAt": "2026-11-02T09:50:01.200Z"
+    },
+    "before": {
+      "target": {
+        "database": "neondb",
+        "branch": "br-muddy-queen-zaeeysjt",
+        "role": "neondb_owner"
+      },
+      "ledgerCount": 66,
+      "ledgerHead": {
+        "hash": "8743b2aaaea3af4d6d3512991af10fa10b335a065370d752e290fe2fa80bbda5",
+        "created_at": "1793608747032"
+      },
+      "counts": {
+        "documents": 0,
+        "projects": 0,
+        "issues": 0,
+        "workspaces": 1
+      },
+      "recordedAt": "2026-11-02T09:49:40.501Z"
+    },
+    "after": {
+      "target": {
+        "database": "neondb",
+        "branch": "br-muddy-queen-zaeeysjt",
+        "role": "neondb_owner"
+      },
+      "ledgerCount": 67,
+      "ledgerHead": {
+        "hash": "a3bcf92955442f52dafc2dd61877aefde3579d977f9ffda43788d43ca6928dc3",
+        "created_at": "1793610204062"
+      },
+      "counts": {
+        "documents": 0,
+        "projects": 0,
+        "issues": 0,
+        "workspaces": 1
+      },
+      "recordedAt": "2026-11-02T09:50:15.107Z"
+    },
+    "afterAcceptance": {
+      "target": {
+        "database": "neondb",
+        "branch": "br-muddy-queen-zaeeysjt",
+        "role": "neondb_owner"
+      },
+      "ledgerCount": 67,
+      "ledgerHead": {
+        "hash": "a3bcf92955442f52dafc2dd61877aefde3579d977f9ffda43788d43ca6928dc3",
+        "created_at": "1793610204062"
+      },
+      "counts": {
+        "documents": 0,
+        "projects": 0,
+        "issues": 0,
+        "workspaces": 1
+      },
+      "recordedAt": "2026-11-02T09:56:03.269Z"
+    }
+  },
+  "production": {
+    "url": "https://app.forgenow.tech",
+    "deploymentId": "dpl_B6M9rc97JDFsbC8DogamJ3FqjxWc",
+    "deploymentUrl": "https://forge-x5rhejq56-matthieu-pm.vercel.app",
+    "state": "READY",
+    "source": "Clean reviewed CLI upload; source revision metadata verified before promotion.",
+    "featureFlag": {
+      "FORGE_SHARED_DOCUMENTS_ENABLED": "true"
+    },
+    "candidateReady": {
+      "status": "ok",
+      "code": "READY"
+    },
+    "candidateLive": {
+      "status": "ok",
+      "code": "ALIVE"
+    },
+    "publicReady": {
+      "status": "ok",
+      "code": "READY"
+    },
+    "browser": {
+      "issue": "FOR-61",
+      "revision": "0e867c3028e7a47ac7368917d9e23ecc7dcf5183",
+      "target": "production",
+      "passed": true,
+      "environment": {
+        "database": "neondb",
+        "branch": "br-muddy-queen-zaeeysjt"
+      },
+      "checks": [
+        "two signed-in sessions",
+        "shared content and metadata",
+        "stale save conflict with draft and latest view",
+        "reload recovers conflict draft",
+        "explicit reviewed save",
+        "history restore appends revision",
+        "failed network recovery and retry",
+        "global authorized document link",
+        "mobile no horizontal overflow"
+      ]
+    },
+    "cleanup": {
+      "workspaces": 0,
+      "users": 0,
+      "receipts": 0
+    },
+    "recordCountsUnchanged": true,
+    "errorAndFatalRuntimeLogGroups": [],
+    "errorLogWindow": "Last 10 minutes, queried after production browser acceptance",
+    "rollbackDeploymentId": "dpl_J7dYU2SPu13WFhryzqT3f7ZYCsHE",
+    "rollbackRetainsExpandedSchema": true
+  },
+  "artifacts": [
+    "docs/qa/for61/production-conflict.png",
+    "docs/qa/for61/production-editor.png",
+    "docs/qa/for61/production-mobile.png"
+  ],
+  "limitations": [
+    "Packaged macOS and large-volume performance qualification were not performed.",
+    "Final main merge and deployment identifiers are recorded in the FOR-61 completion comment."
+  ],
+  "recordedAt": "2026-11-02T09:56:57.013925+00:00"
+}
