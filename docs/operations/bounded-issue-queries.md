@@ -74,12 +74,7 @@ and cache eviction in [Shared personal issue views](shared-personal-issue-views.
 
 ## Accepted milestone boundary
 
-The product owner chose to keep FOR-43 focused and defer transactional milestone
-relocation to FOR-58. Moving milestones between projects, converting them to
-projects, and deleting them are disabled for canonical data. The shared helper
-rejects these operations before writing anything; a partial browser page cannot
-be used as the complete issue assignment set. Ordinary milestone metadata edits,
-completion and ordering retain their existing behavior.
+FOR-43 originally deferred transactional milestone relocation to FOR-58 and blocked browser-only reassignment. [FOR-58](project-progress.md) now provides move, conversion and deletion through a canonical transactional command. Source/destination revisions and access to every affected issue are checked before committing the full assignment set; a partial browser page is never used as that set. Milestone metadata edits, completion and ordering use canonical project revisions.
 
 ## Release and validation
 
@@ -119,3 +114,5 @@ It deletes its fixtures and verifies zero remaining workspaces/users/receipts.
 
 Final commands, results, tested implementation revision and environment are recorded
 in [the FOR-43 acceptance evidence](for43-acceptance-evidence.json).
+
+FOR-58 implements this deferred transactional milestone command; see [project progress](project-progress.md) for its source/destination revision checks, full affected-issue authorization and atomic assignment/history updates.

@@ -47,7 +47,10 @@ const attachmentSchema = z.object({
   data: z
     .string()
     .regex(/^data:/)
-    .max(3_000_000),
+    .max(3_000_000)
+    .optional(),
+  fileId: z.uuid().optional(),
+  sizeBytes: z.number().int().positive().optional(),
 })
 const reactionSchema = z.object({
   emoji: z.string().max(20),
@@ -104,6 +107,7 @@ export const initiativeProjectSchema = z.object({
     "Completed",
     "Canceled",
   ]),
+  statusId: z.string().max(200).optional(),
   teamIds: z.array(z.string()),
   health: z.enum(initiativeHealthValues),
   summary: z.string().max(2000).optional(),
@@ -136,7 +140,13 @@ export const initiativeProjectSchema = z.object({
     }, "Enter an HTTPS Slack channel URL.")
     .optional(),
   updates: initiativeUpdatesSchema.optional(),
-  comments: z.array(initiativeCommentSchema).optional(),
+  comments: z
+    .array(
+      initiativeCommentSchema.extend({
+        comments: z.array(initiativeCommentSchema).default([]),
+      })
+    )
+    .optional(),
   resources: initiativeResourcesSchema.removeDefault().optional(),
   milestones: z
     .array(

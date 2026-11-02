@@ -11,10 +11,16 @@ export function filterProjectCopy(
 ): string | null {
   if (value === null) return null
   if (depth > 8) throw new Error("Saved recovery nesting exceeds its limit.")
+  const postProject = key.match(
+    /^forge:project-post-draft:v1:([0-9a-f-]{36})$/
+  )?.[1]
+  if (postProject) return keep(postProject) ? value : null
   if (key.startsWith(projectCommandPrefix)) {
     const changes = projectChangesSchema.parse(JSON.parse(value))
     return changes.every(
-      (change) => change.expectedRevision === null || keep(change.id)
+      (change) =>
+        (change.expectedRevision === null || keep(change.id)) &&
+        (!change.relocation?.targetId || keep(change.relocation.targetId))
     )
       ? value
       : null

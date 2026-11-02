@@ -16,7 +16,7 @@ export const projectStatusSchema = z.object({
   color: z.string().regex(/^#[\da-f]{6}$/i, "Enter a six-digit hex color."),
 })
 export type ProjectStatus = z.infer<typeof projectStatusSchema>
-const directorySchema = z
+export const projectStatusDirectorySchema = z
   .object({
     version: z.number().int().nonnegative(),
     statuses: z.array(projectStatusSchema),
@@ -40,7 +40,9 @@ const directorySchema = z
           "Every workflow group needs a status, with unique names and IDs.",
       })
   })
-export type ProjectStatusDirectory = z.infer<typeof directorySchema>
+export type ProjectStatusDirectory = z.infer<
+  typeof projectStatusDirectorySchema
+>
 export function initialProjectStatuses(): ProjectStatusDirectory {
   return {
     version: 0,
@@ -58,7 +60,9 @@ export const projectStatusesStorageKey = (workspaceId: string) =>
   `forge:project-statuses:v1:${workspaceId}`
 export function readProjectStatuses(workspaceId: string) {
   const raw = productStorage.getItem(projectStatusesStorageKey(workspaceId))
-  return raw ? directorySchema.parse(JSON.parse(raw)) : initialProjectStatuses()
+  return raw
+    ? projectStatusDirectorySchema.parse(JSON.parse(raw))
+    : initialProjectStatuses()
 }
 export function writeProjectStatuses(
   workspaceId: string,
@@ -68,7 +72,7 @@ export function writeProjectStatuses(
   const current = readProjectStatuses(workspaceId)
   if (current.version !== expectedVersion)
     throw new Error("Statuses changed elsewhere. Reload before trying again.")
-  const next = directorySchema.parse({
+  const next = projectStatusDirectorySchema.parse({
     ...change(current),
     version: current.version + 1,
   })
@@ -162,3 +166,12 @@ export function moveProjectStatus(
   ;[statuses[from], statuses[to]] = [statuses[to], statuses[from]]
   return { ...current, statuses }
 }
+
+/** Stable workflow groups keep existing project views compatible with custom statuses. */
+export const projectStatusValue = {
+  backlog: "Backlog",
+  planned: "Planned",
+  "in-progress": "Active",
+  completed: "Completed",
+  canceled: "Canceled",
+} as const

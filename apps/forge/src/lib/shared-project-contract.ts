@@ -18,9 +18,24 @@ export const projectFields = initiativeProjectSchema
     memberIds: true,
     startDate: true,
     targetDate: true,
+    statusId: true,
+    labelIds: true,
+    milestones: true,
+    updates: true,
+    comments: true,
   })
   .extend({
     teamIds: z.array(z.uuid()).max(100),
+    labelIds: z.array(z.string().min(1).max(200)).max(100).optional(),
+    milestones: initiativeProjectSchema.shape.milestones
+      .unwrap()
+      .max(500)
+      .optional(),
+    updates: initiativeProjectSchema.shape.updates.unwrap().max(500).optional(),
+    comments: initiativeProjectSchema.shape.comments
+      .unwrap()
+      .max(500)
+      .optional(),
     memberIds: z.array(z.string().min(1).max(200)).max(100).optional(),
     leadId: z.string().max(200).optional(),
   })
@@ -32,6 +47,15 @@ export const projectChangesSchema = z
         id: z.uuid(),
         expectedRevision: z.number().int().nonnegative().nullable(),
         changes: projectFields.partial(),
+        relocation: z
+          .object({
+            milestoneId: z.string().min(1).max(200),
+            targetId: z.uuid().optional(),
+            targetRevision: z.number().int().nonnegative().optional(),
+            convertId: z.uuid().optional(),
+          })
+          .strict()
+          .optional(),
       })
       .strict()
   )
@@ -62,7 +86,15 @@ export function sharedProjectChanges(
     const changes: Record<string, unknown> = {}
     for (const [key, value] of Object.entries(project)) {
       if (
-        ["id", "revision", "creatorId", "createdAt", "updatedAt"].includes(key)
+        [
+          "id",
+          "revision",
+          "creatorId",
+          "createdAt",
+          "updatedAt",
+          "health",
+          "milestoneEvents",
+        ].includes(key)
       )
         continue
       if (stableJson(value) === stableJson(old?.[key as keyof typeof old]))
@@ -77,7 +109,7 @@ export function sharedProjectChanges(
         )
           continue
         throw new Error(
-          "Project milestones, updates, labels and dependencies are not available yet. Your draft has been kept."
+          "Project resources, dependencies and integration settings are not available yet. Your draft has been kept."
         )
       }
       changes[key] = value

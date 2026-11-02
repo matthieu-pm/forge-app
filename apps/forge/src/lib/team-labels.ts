@@ -30,6 +30,7 @@ const labelSchema = z.object({
 })
 export const teamLabelDirectorySchema = z.object({
   version: z.literal(1),
+  catalogRevision: z.number().int().nonnegative().optional(),
   labels: z.array(labelSchema),
   groups: z.array(
     z.object({

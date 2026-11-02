@@ -20,7 +20,7 @@ Editors keep the revision from their first edit; a background refresh cannot sil
 
 Canonical projects replace personal project projections even when the authorized directory becomes empty. Private initiative state retains its own lifecycle, but cannot republish canonical references as legacy source data. Existing legacy project imports retain their fingerprint/deduplication behavior and initialize project revisions through the same schema.
 
-Milestones, project updates/comments, resources/documents, labels, dependencies, Slack settings and shared initiative membership remain owned by FOR-58 and the relevant planning stories. They cannot mutate canonical project properties through the generic product-state adapter. Project deletion has no enabled canonical command. Optional public project API/agent transports remain FOR-88/FOR-81.
+[FOR-58](project-progress.md) extends the same command boundary to milestones, authored updates/comments, project labels/status catalogs and private post attachments. Resources/documents, dependencies, Slack settings and shared initiative membership remain separately scoped. The generic product-state adapter cannot mutate canonical project properties. Project deletion has no enabled canonical command. Optional public project API/agent transports remain FOR-88/FOR-81.
 
 ## Migration and verification
 

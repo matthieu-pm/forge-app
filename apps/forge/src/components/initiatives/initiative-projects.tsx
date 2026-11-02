@@ -54,6 +54,10 @@ import { ProjectInitiativePicker } from "@/components/projects/project-initiativ
 import { ProjectRowIcon } from "@/components/projects/project-row-icon"
 import { canonicalIssuesActive } from "@/lib/canonical-issue-cache"
 
+import { useProjectStatusDirectory } from "@/lib/project-status-client"
+import { productStorageIdentity } from "@/lib/product-storage"
+import { projectStatusValue, readProjectStatuses } from "@/lib/project-statuses"
+
 export const projectStatuses = [
   "Backlog",
   "Planned",
@@ -62,8 +66,19 @@ export const projectStatuses = [
   "Completed",
   "Canceled",
 ] as const
-export const projectStatusName = (status: InitiativeProject["status"]) =>
-  status === "Active" ? "In Progress" : status
+export const projectStatusName = (
+  status: InitiativeProject["status"],
+  statusId?: string
+) => {
+  const workspaceId = productStorageIdentity()?.workspaceId
+  if (workspaceId && statusId) {
+    const custom = readProjectStatuses(workspaceId).statuses.find(
+      (s) => s.id === statusId
+    )
+    if (custom) return custom.name
+  }
+  return status === "Active" ? "In Progress" : status
+}
 export const projectIcon = {
   kind: "icon" as const,
   value: "CubeIcon",
@@ -97,6 +112,7 @@ export function ProjectDialog({
   onAsk: (text: string) => void
 }) {
   const sharedMode = canonicalIssuesActive()
+  const sharedStatuses = useProjectStatusDirectory()
   const [draft, setDraft] = useState<InitiativeProject>(
     () =>
       project ?? {
@@ -303,18 +319,46 @@ export function ProjectDialog({
             <div className="mt-3 flex shrink-0 flex-wrap gap-1.5 border-b border-border/50 pb-5">
               <IssuePicker
                 label="Change project status"
-                value={draft.status}
-                options={projectStatuses.map((value) => ({
-                  value,
-                  label: projectStatusName(value),
-                }))}
+                value={
+                  sharedMode
+                    ? draft.statusId ||
+                      sharedStatuses.find(
+                        (s) => projectStatusValue[s.group] === draft.status
+                      )?.id ||
+                      draft.status
+                    : draft.status
+                }
+                options={
+                  sharedMode
+                    ? sharedStatuses.map((s) => ({
+                        value: s.id,
+                        label: s.name,
+                      }))
+                    : projectStatuses.map((value) => ({
+                        value,
+                        label: projectStatusName(value),
+                      }))
+                }
                 onChange={(value) =>
-                  set({ status: value as InitiativeProject["status"] })
+                  set(
+                    sharedMode
+                      ? {
+                          statusId: value,
+                          status:
+                            projectStatusValue[
+                              sharedStatuses.find((s) => s.id === value)!.group
+                            ],
+                        }
+                      : { status: value as InitiativeProject["status"] }
+                  )
                 }
                 className="h-6 rounded-full border border-border/40 bg-muted/50 px-2 text-xs"
               >
                 <IssueIcon name="clock" />
-                {projectStatusName(draft.status)}
+                {sharedMode
+                  ? (sharedStatuses.find((s) => s.id === draft.statusId)
+                      ?.name ?? projectStatusName(draft.status))
+                  : projectStatusName(draft.status)}
               </IssuePicker>
               <InitiativePropertyPicker
                 item={propertyItem}
@@ -1050,7 +1094,7 @@ export function InitiativeProjects({
                 />
                 {project.name}
                 <span className="ml-auto text-xs text-muted-foreground">
-                  {projectStatusName(project.status)}
+                  {projectStatusName(project.status, project.statusId)}
                 </span>
               </label>
             ))}

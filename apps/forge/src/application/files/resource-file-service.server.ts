@@ -11,7 +11,7 @@ import type {
 import type { Actor } from "@/application/actor"
 
 const resourceSchema = z
-  .object({ kind: z.enum(["issue", "document"]), id: z.uuid() })
+  .object({ kind: z.enum(["issue", "document", "project"]), id: z.uuid() })
   .strict()
 const inputSchema = z.object({
   name: z

@@ -446,6 +446,13 @@ export async function resolveIssueFields(
         "Choose an assignee who is a current member of this team."
       )
   }
+  let milestone = input.draft.milestone
+  if (
+    edit &&
+    input.draft.project !== edit.before.project &&
+    milestone === edit.before.milestone
+  )
+    milestone = ""
   let projectId: string | null = null
   if (input.draft.project) {
     let project = (
@@ -514,8 +521,32 @@ export async function resolveIssueFields(
       .for("share")
     if (links.length && !links.some((l) => l.teamId === input.teamId))
       throw new Error("Choose a project available to this team.")
+    if (milestone) {
+      const milestones = (project.properties.milestones ?? []) as Array<{
+        id: string
+        name: string
+        aliases?: Array<string>
+      }>
+      const matchedMilestone = milestones.find(
+        (m) =>
+          m.id === milestone ||
+          m.name === milestone ||
+          m.aliases?.includes(milestone)
+      )
+      if (!matchedMilestone) {
+        // Preserve an existing legacy assignment on unrelated edits, but never create a new dangling reference.
+        if (
+          !edit ||
+          edit.before.project !== project.id ||
+          edit.before.milestone !== milestone
+        )
+          throw new Error("Choose a milestone from the linked project.")
+      } else milestone = matchedMilestone.id
+    }
     projectId = project.id
   }
+  if (!projectId && milestone)
+    throw new Error("Choose a project before assigning a milestone.")
   let cycleId: string | null = null
   if (input.draft.cycle) {
     await lockTeamCycles(tx, input.teamId)
@@ -623,6 +654,7 @@ export async function resolveIssueFields(
     assignee,
     personalAssignee,
     assignedOnStart,
+    milestone,
     projectId,
     cycleId,
     parentId,
@@ -710,6 +742,7 @@ export async function createCanonicalIssue(
         status,
         assignee,
         personalAssignee,
+        milestone,
         projectId,
         cycleId,
         parentId,
@@ -734,6 +767,7 @@ export async function createCanonicalIssue(
       // Local history is imported as a snapshot, never forged as attributable activity.
       const properties = {
         ...input.draft,
+        milestone,
         legacyFingerprint,
         attachments: input.legacyId ? input.draft.attachments : [],
         assignee: assignee ?? "",

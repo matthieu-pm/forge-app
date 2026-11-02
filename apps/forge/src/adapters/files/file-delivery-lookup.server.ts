@@ -4,7 +4,7 @@ import { DrizzleAgentArtifactStore } from "../agents/drizzle-artifact-store.serv
 import { DrizzleAgentAttachmentStore } from "../agents/drizzle-attachment-store.server"
 import { DrizzleResourceFileStore } from "./drizzle-resource-file-store.server"
 import type { AuthorizedFileLookup } from "@/application/files/file-delivery-service.server"
-import { db, fileUploadIntents, issues } from "@/db"
+import { db, fileUploadIntents, issues, projects } from "@/db"
 import { requireCurrentActor } from "@/application/resource-policy.server"
 import { getPlanningResource } from "@/application/planning/queries.server"
 import { requireAgentRead } from "@/application/agents/agent-authorization"
@@ -28,6 +28,31 @@ export const lookupAuthorizedFile: AuthorizedFileLookup = async (
       !(await getPlanningResource(actor, file.resource.kind, file.resource.id))
     )
       return null
+    if (file.resource.kind === "project") {
+      if (file.attachmentState !== "attached" || !file.projectPostId)
+        return null
+      const row = (
+        await db
+          .select()
+          .from(projects)
+          .where(
+            and(
+              eq(projects.workspaceId, actor.workspaceId),
+              eq(projects.id, file.resource.id)
+            )
+          )
+      )[0]
+      const { projectPostFiles } =
+        await import("@/application/planning/project-files")
+      if (
+        !row ||
+        !projectPostFiles(row.properties).some(
+          (ref) => ref.postId === file.projectPostId && ref.fileId === file.id
+        )
+      )
+        return null
+      return file
+    }
     // Old processes can finalize uploads during an additive migration rollout.
     // A NULL state on a direct issue upload is still unbound, never a legacy grant.
     const directUpload =

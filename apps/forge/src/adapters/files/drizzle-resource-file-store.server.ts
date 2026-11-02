@@ -7,12 +7,14 @@ import type {
 import { db, documents, issues, resourceFiles } from "@/db"
 
 function toRecord(row: typeof resourceFiles.$inferSelect): StoredResourceFile {
-  const { issueId, documentId, ...record } = row
+  const { issueId, documentId, projectId, ...record } = row
   return {
     ...record,
     resource: issueId
       ? { kind: "issue", id: issueId }
-      : { kind: "document", id: documentId! },
+      : projectId
+        ? { kind: "project", id: projectId }
+        : { kind: "document", id: documentId! },
   }
 }
 export class DrizzleResourceFileStore implements ResourceFileMetadataStore {
@@ -64,6 +66,7 @@ export class DrizzleResourceFileStore implements ResourceFileMetadataStore {
         .values({
           ...record,
           issueId: resource.kind === "issue" ? resource.id : null,
+          projectId: resource.kind === "project" ? resource.id : null,
           documentId: resource.kind === "document" ? resource.id : null,
         })
         .returning()

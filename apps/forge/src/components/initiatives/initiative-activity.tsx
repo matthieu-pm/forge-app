@@ -90,8 +90,12 @@ export function ActivityComposer({
   writable,
   onAsk,
   subject = "Initiative",
+  uploadAttachment,
   children,
 }: {
+  uploadAttachment?: (
+    file: File
+  ) => Promise<InitiativeComment["attachments"][number]>
   subject?: "Initiative" | "Project"
   children?: ReactNode
   draft: ActivityDraft
@@ -111,8 +115,21 @@ export function ActivityComposer({
     try {
       if (draft.attachments.length + files.length > 3)
         throw new Error("Attach up to three files per post.")
-      const attachments = []
+      const appendAttachment = (
+        attachment: InitiativeComment["attachments"][number]
+      ) => {
+        const next = {
+          ...latestDraft.current,
+          attachments: [...latestDraft.current.attachments, attachment],
+        }
+        latestDraft.current = next
+        onDraft(next)
+      }
       for (const value of Array.from(files)) {
+        if (uploadAttachment) {
+          appendAttachment(await uploadAttachment(value))
+          continue
+        }
         if (value.size > 2_000_000)
           throw new Error(
             "Choose files smaller than 2 MB for this local workspace."
@@ -124,17 +141,13 @@ export function ActivityComposer({
             reject(new Error("The attachment could not be read."))
           reader.readAsDataURL(value)
         })
-        attachments.push({
+        appendAttachment({
           id: crypto.randomUUID(),
           name: value.name,
           mime: value.type,
           data,
         })
       }
-      onDraft({
-        ...latestDraft.current,
-        attachments: [...latestDraft.current.attachments, ...attachments],
-      })
       setError("")
     } catch (attachmentError) {
       setError(
@@ -330,6 +343,8 @@ export function ActivityCard({
   writable,
   onChange,
   onRemove,
+  canModerate = false,
+  onEditingStart,
   onReply,
   latest = false,
   onUpdate,
@@ -340,6 +355,8 @@ export function ActivityCard({
   userId: string
   writable: boolean
   onChange: (patch: Partial<ActivityEntry>) => boolean
+  onEditingStart?: () => void
+  canModerate?: boolean
   onRemove: () => void
   onReply?: (text: string) => boolean
   latest?: boolean
@@ -416,9 +433,12 @@ export function ActivityCard({
           />
           <DropdownMenuContent align="end">
             <DropdownMenuItem
-              disabled={!writable || entry.authorId !== userId}
+              disabled={
+                !writable || (!canModerate && entry.authorId !== userId)
+              }
               onClick={() => {
                 setText(entry.text)
+                onEditingStart?.()
                 setEditing(true)
               }}
             >
@@ -426,7 +446,9 @@ export function ActivityCard({
             </DropdownMenuItem>
             <DropdownMenuItem
               variant="destructive"
-              disabled={!writable || entry.authorId !== userId}
+              disabled={
+                !writable || (!canModerate && entry.authorId !== userId)
+              }
               onClick={onRemove}
             >
               Delete {entry.health ? "update" : "comment"}
@@ -473,7 +495,29 @@ export function ActivityCard({
           {entry.attachments.map((value) => (
             <a
               key={value.id}
-              href={value.data}
+              href={value.data ?? "#"}
+              onClick={
+                value.fileId
+                  ? async (event) => {
+                      event.preventDefault()
+                      try {
+                        const { issueFileUrl } =
+                          await import("@/lib/issue-file-client")
+                        const url = await issueFileUrl(
+                          value.fileId!,
+                          "download"
+                        )
+                        window.location.assign(url)
+                      } catch (reason) {
+                        setError(
+                          reason instanceof Error
+                            ? reason.message
+                            : "The file is unavailable."
+                        )
+                      }
+                    }
+                  : undefined
+              }
               download={value.name}
               className="inline-flex items-center gap-1 rounded-md border border-border/50 px-2 py-1 text-xs"
             >

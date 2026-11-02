@@ -12,7 +12,9 @@ export const UPLOAD_LIMITS = Object.freeze({
 })
 export const uploadTargetSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("agent") }).strict(),
-  z.object({ kind: z.enum(["issue", "document"]), id: z.uuid() }).strict(),
+  z
+    .object({ kind: z.enum(["issue", "document", "project"]), id: z.uuid() })
+    .strict(),
 ])
 export const uploadInputSchema = z
   .object({

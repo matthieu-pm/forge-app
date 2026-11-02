@@ -1,4 +1,7 @@
-export type FileResource = { kind: "issue" | "document"; id: string }
+export type FileResource = {
+  kind: "issue" | "document" | "project"
+  id: string
+}
 export type StoredResourceFile = {
   id: string
   workspaceId: string
@@ -12,6 +15,7 @@ export type StoredResourceFile = {
   createdAt: Date
   deletedAt: Date | null
   attachmentState?: "unbound" | "attached" | "detached" | null
+  projectPostId?: string | null
   commentId?: string | null
 }
 export interface ResourceFileMetadataStore {

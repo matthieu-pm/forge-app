@@ -12,6 +12,13 @@ import type { ProjectResource } from "@/lib/project-resources"
 import type { InitiativePerson, InitiativeProject } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { ActivityEntry } from "@/components/initiatives/initiative-activity"
+import { productStorage, productStorageIdentity } from "@/lib/product-storage"
+import {
+  projectPostDraftKey,
+  projectPostDraftSchema,
+} from "@/lib/project-post-draft"
+import { uploadFileDirect } from "@/lib/files/direct-upload-client"
+import { issueUploadContext } from "@/lib/issue-file-client"
 import { useIssueQuery } from "@/lib/issue-query-client"
 import { updateProjectResources } from "@/lib/project-resources"
 import { useMyIssueData } from "@/lib/my-issues-state"
@@ -274,7 +281,39 @@ function ProjectDetail({
 }) {
   const preferences = useProjectPreferences(workspaceId, user.id)
   const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(blankActivityDraft)
+  const draftKey = projectPostDraftKey(project.id)
+  const renderSession = productStorageIdentity()?.sessionId
+  const [savedDraft] = useState(() => {
+    const raw = productStorage.getItem(draftKey)
+    try {
+      if (raw === null) return { draft: blankActivityDraft(), error: "" }
+      const parsed = projectPostDraftSchema.safeParse(JSON.parse(raw))
+      if (parsed.success) return { draft: parsed.data, error: "" }
+    } catch {
+      /* Keep damaged source bytes until the author explicitly discards them. */
+    }
+    return {
+      draft: blankActivityDraft(),
+      error:
+        "Your saved project post draft could not be loaded. Its original data has been preserved.",
+    }
+  })
+  const [draftLoadError, setDraftLoadError] = useState(savedDraft.error)
+  const [draft, setDraft] = useState(savedDraft.draft)
+  function draftIdentityCurrent() {
+    const binding = productStorageIdentity()
+    return !(
+      binding &&
+      (binding.sessionId !== renderSession ||
+        binding.workspaceId !== workspaceId ||
+        binding.userId !== user.id)
+    )
+  }
+  function updateActivityDraft(next: typeof draft) {
+    if (draftLoadError || !draftIdentityCurrent()) return
+    setDraft(next)
+    productStorage.setItem(draftKey, JSON.stringify(next))
+  }
   const [milestoneOpen, setMilestoneOpen] = useState(false)
   const [editingMilestone, setEditingMilestone] = useState<{
     id: string
@@ -300,6 +339,8 @@ function ProjectDetail({
     item.projects.some((value) => value.id === project.id)
   )
   const ids = linked.map((item) => item.id)
+  const uploadSessions = useRef(new Map())
+  const postBaselines = useRef(new Map<string, number | undefined>())
   const updates = project.updates ?? []
   const comments = project.comments ?? []
   const milestones = project.milestones ?? []
@@ -327,27 +368,31 @@ function ProjectDetail({
     project,
     catalog,
     rows: milestoneRows,
-    canRelocate: !milestoneQuery.enabled,
+    canRelocate: true,
     counts: milestoneQuery.enabled
       ? (milestoneQuery.page?.rollups ?? [])
       : undefined,
     writable: store.writable && !milestoneData.errors.length,
     selected: selectedMilestone,
-    onChange: (next: ProjectMilestone) =>
-      patch({
-        milestones: milestones.map((item) =>
-          item.id === next.id ? next : item
-        ),
-        milestoneEvents: [
-          ...(project.milestoneEvents ?? []),
-          {
-            id: crypto.randomUUID(),
-            text: `updated milestone ${next.name}`,
-            authorId: user.id,
-            createdAt: new Date().toISOString(),
-          },
-        ],
-      }),
+    onChange: (next: ProjectMilestone, expectedRevision = project.revision) =>
+      patch(
+        {
+          milestones: milestones.map((item) =>
+            item.id === next.id ? next : item
+          ),
+          milestoneEvents: [
+            ...(project.milestoneEvents ?? []),
+            {
+              id: crypto.randomUUID(),
+              text: `updated milestone ${next.name}`,
+              authorId: user.id,
+              createdAt: new Date().toISOString(),
+            },
+          ],
+        },
+        ids,
+        expectedRevision
+      ),
     onEdit: (id: string) => {
       setEditingMilestone({ id, request: Date.now() })
       onTab("overview")
@@ -367,10 +412,10 @@ function ProjectDetail({
         })
         toast.success(
           convert
-            ? "Milestone converted to project"
+            ? "Milestone conversion pending"
             : targetId
-              ? "Milestone moved"
-              : "Milestone deleted"
+              ? "Milestone move pending"
+              : "Milestone deletion pending"
         )
         if (selectedMilestone === id) showMilestoneIssues()
         return true
@@ -383,7 +428,11 @@ function ProjectDetail({
     },
   }
   const stats = useProjectIssueStats(teams, [project])
-  const stat = stats.stats.get(project.id) ?? { count: 0, completed: 0 }
+  const stat = (milestoneQuery.enabled
+    ? milestoneQuery.page?.projectTotals.find(
+        (total) => total.project === project.id
+      )
+    : stats.stats.get(project.id)) ?? { count: 0, completed: 0 }
   const progress = stat.count
     ? Math.round((stat.completed / stat.count) * 100)
     : 0
@@ -468,22 +517,34 @@ function ProjectDetail({
               ...updates,
             ],
           })
-        : patch({ comments: [entry, ...comments] })
-    if (saved) setDraft(blankActivityDraft())
+        : patch({ comments: [{ ...entry, comments: [] }, ...comments] })
+    if (saved) updateActivityDraft(blankActivityDraft())
     return saved
   }
-  function changeEntry(entry: ActivityEntry, changes: Partial<ActivityEntry>) {
+  function changeEntry(
+    entry: ActivityEntry,
+    changes: Partial<ActivityEntry>,
+    revision = project.revision
+  ) {
     return updates.some((item) => item.id === entry.id)
-      ? patch({
-          updates: updates.map((item) =>
-            item.id === entry.id ? { ...item, ...changes } : item
-          ),
-        })
-      : patch({
-          comments: comments.map((item) =>
-            item.id === entry.id ? { ...item, ...changes } : item
-          ),
-        })
+      ? patch(
+          {
+            updates: updates.map((item) =>
+              item.id === entry.id ? { ...item, ...changes } : item
+            ),
+          },
+          ids,
+          revision
+        )
+      : patch(
+          {
+            comments: comments.map((item) =>
+              item.id === entry.id ? { ...item, ...changes } : item
+            ),
+          },
+          ids,
+          revision
+        )
   }
   function removeEntry(entry: ActivityEntry) {
     patch(
@@ -499,9 +560,23 @@ function ProjectDetail({
         entry={entry}
         people={people}
         userId={user.id}
+        canModerate={store.canModerate}
         writable={store.writable}
         latest={updates[0]?.id === entry.id}
-        onChange={(changes) => changeEntry(entry, changes)}
+        onEditingStart={() =>
+          postBaselines.current.set(entry.id, project.revision)
+        }
+        onChange={(changes) => {
+          const saved = changeEntry(
+            entry,
+            changes,
+            changes.text !== undefined && postBaselines.current.has(entry.id)
+              ? postBaselines.current.get(entry.id)
+              : project.revision
+          )
+          if (saved) postBaselines.current.delete(entry.id)
+          return saved
+        }}
         onRemove={() => removeEntry(entry)}
         onUpdate={() => onTab("activity")}
         onReply={(text) =>
@@ -575,10 +650,30 @@ function ProjectDetail({
   const composer = (
     <ActivityComposer
       subject="Project"
+      uploadAttachment={async (file) => {
+        const ready = await uploadFileDirect(
+          {
+            name: file.name,
+            contentType: file.type || "application/octet-stream",
+            file,
+            target: { kind: "project", id: project.id },
+          },
+          fetch,
+          uploadSessions.current,
+          issueUploadContext()
+        )
+        return {
+          id: ready.id,
+          fileId: ready.id,
+          name: ready.name,
+          mime: ready.contentType,
+          sizeBytes: ready.sizeBytes,
+        }
+      }}
       draft={draft}
-      onDraft={setDraft}
+      onDraft={updateActivityDraft}
       onPublish={publish}
-      writable={store.writable}
+      writable={store.writable && !draftLoadError}
       onAsk={() =>
         ask(
           `Write an update for ${project.name}.\n${project.summary ?? ""}\n${progress}% complete.`
@@ -605,7 +700,9 @@ function ProjectDetail({
           </dd>
           <dt className="text-muted-foreground">Progress</dt>
           <dd>
-            {progress}% · {stat.completed} of {stat.count} issues completed
+            {milestoneQuery.enabled && !milestoneQuery.page
+              ? "Loading progress…"
+              : `${progress}% · ${stat.completed} of ${stat.count} issues completed`}
           </dd>
         </dl>
       )}
@@ -682,6 +779,20 @@ function ProjectDetail({
           </ActionIconButton>
         </div>
       </ContentHeader>
+      {draftLoadError && (
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => {
+            if (!draftIdentityCurrent()) return
+            productStorage.removeItem(draftKey)
+            setDraft(blankActivityDraft())
+            setDraftLoadError("")
+          }}
+        >
+          Discard damaged post draft
+        </Button>
+      )}
       <div
         role="toolbar"
         aria-label="Project toolbar"
@@ -717,14 +828,16 @@ function ProjectDetail({
           </ActionIconButton>
         </div>
       </div>
-      {(error ||
+      {(draftLoadError ||
+        error ||
         store.mutationError ||
         store.error ||
         directoryError ||
         stats.error ||
         preferences.error) && (
         <p role="alert" className="px-6 py-2 text-xs text-destructive">
-          {store.mutationError ||
+          {draftLoadError ||
+            store.mutationError ||
             error ||
             store.error ||
             directoryError ||
