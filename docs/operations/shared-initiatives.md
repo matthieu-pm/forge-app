@@ -14,7 +14,7 @@ Failed/conflicting commands remain labeled unsaved. Exact retry retains the comm
 
 ## Enablement and boundaries
 
-Apply migration `0064_shared_initiatives.sql` through the serialized migration runner before setting `FORGE_FEATURE_INITIATIVES=true`. The flag defaults off. Workspace owners/admins may additionally disable initiatives or change their update expectation in shared initiative settings. Ordinary members cannot change these settings. Deploying the code alone does not enable the feature, and the settings UI cannot bypass the deployment gate. Disabling the feature hides canonical snapshots and rejects saves/replays.
+Apply migration `0065_shared_initiatives.sql` through the serialized migration runner before setting `FORGE_FEATURE_INITIATIVES=true`. The flag defaults off. Workspace owners/admins may additionally disable initiatives or change their update expectation in shared initiative settings. Ordinary members cannot change these settings. Deploying the code alone does not enable the feature, and the settings UI cannot bypass the deployment gate. Disabling the feature hides canonical snapshots and rejects saves/replays.
 
 Initiative attachments, resources/documents, labels, saved project views and initiative deletion have no enabled canonical command here. Their controls are disabled and their fields cannot be silently persisted through initiative saves. Personal display preferences retain their existing account-preference boundary. Legacy advanced-content import remains FOR-126, and optional public API exposure remains FOR-150; no external initiative credential scope is enabled.
 

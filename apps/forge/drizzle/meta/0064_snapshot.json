@@ -1,5 +1,5 @@
 {
-  "id": "49c8d8bb-ab9f-4063-a094-feee125c9905",
+  "id": "9afe6c02-8eae-4dc3-9b48-85faee1ea9cd",
   "prevId": "04ad72ea-5580-4e14-8c9f-45642d86e614",
   "version": "7",
   "dialect": "postgresql",
@@ -8302,27 +8302,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
-        },
-        "number": {
-          "name": "number",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 1
-        },
-        "revision": {
-          "name": "revision",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "properties": {
-          "name": "properties",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::jsonb"
         }
       },
       "indexes": {},
@@ -8349,14 +8328,6 @@
           "columns": [
             "workspace_id",
             "id"
-          ]
-        },
-        "initiatives_workspace_number_unique": {
-          "name": "initiatives_workspace_number_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "workspace_id",
-            "number"
           ]
         }
       },
@@ -10248,6 +10219,267 @@
       },
       "policies": {},
       "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.saved_view_favorites": {
+      "name": "saved_view_favorites",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "view_id": {
+          "name": "view_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "saved_view_favorites_workspace_id_organization_id_fk": {
+          "name": "saved_view_favorites_workspace_id_organization_id_fk",
+          "tableFrom": "saved_view_favorites",
+          "tableTo": "organization",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "saved_view_favorites_user_id_user_id_fk": {
+          "name": "saved_view_favorites_user_id_user_id_fk",
+          "tableFrom": "saved_view_favorites",
+          "tableTo": "user",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "saved_view_favorites_view_fk": {
+          "name": "saved_view_favorites_view_fk",
+          "tableFrom": "saved_view_favorites",
+          "tableTo": "saved_views",
+          "columnsFrom": [
+            "workspace_id",
+            "view_id"
+          ],
+          "columnsTo": [
+            "workspace_id",
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "saved_view_favorites_actor": {
+          "name": "saved_view_favorites_actor",
+          "nullsNotDistinct": false,
+          "columns": [
+            "workspace_id",
+            "user_id",
+            "view_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.saved_views": {
+      "name": "saved_views",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "visibility": {
+          "name": "visibility",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "team_id": {
+          "name": "team_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revision": {
+          "name": "revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "definition": {
+          "name": "definition",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "saved_views_directory": {
+          "name": "saved_views_directory",
+          "columns": [
+            {
+              "expression": "workspace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "visibility",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "owner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "saved_views_workspace_id_organization_id_fk": {
+          "name": "saved_views_workspace_id_organization_id_fk",
+          "tableFrom": "saved_views",
+          "tableTo": "organization",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "saved_views_owner_id_user_id_fk": {
+          "name": "saved_views_owner_id_user_id_fk",
+          "tableFrom": "saved_views",
+          "tableTo": "user",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "saved_views_team_fk": {
+          "name": "saved_views_team_fk",
+          "tableFrom": "saved_views",
+          "tableTo": "teams",
+          "columnsFrom": [
+            "workspace_id",
+            "team_id"
+          ],
+          "columnsTo": [
+            "workspace_id",
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "saved_views_workspace_identity": {
+          "name": "saved_views_workspace_identity",
+          "nullsNotDistinct": false,
+          "columns": [
+            "workspace_id",
+            "id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "saved_views_visibility": {
+          "name": "saved_views_visibility",
+          "value": "\"saved_views\".\"visibility\" IN ('personal','workspace','team') AND (\"saved_views\".\"visibility\" <> 'team' OR \"saved_views\".\"team_id\" IS NOT NULL)"
+        },
+        "saved_views_revision": {
+          "name": "saved_views_revision",
+          "value": "\"saved_views\".\"revision\" >= 0"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.team_issue_numbers": {
