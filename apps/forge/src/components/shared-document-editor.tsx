@@ -69,6 +69,7 @@ export function SharedDocumentEditor({
     ]).slice(0, -1) + ","
   const key = React.useRef("")
   const recovered = React.useRef<{ key: string; raw: string } | null>(null)
+  const recoveryScope = React.useRef<string | null>(null)
   const current = React.useRef<Draft>({
     fields: fieldsOf(resource),
     baseline: resource.revision,
@@ -104,10 +105,12 @@ export function SharedDocumentEditor({
     try {
       localStorage.setItem(key.current, JSON.stringify(next))
       setDeviceError("")
+      return true
     } catch {
       setDeviceError(
         "Device storage is unavailable. Keep this tab open to preserve your draft."
       )
+      return false
     }
   }
   function retire() {
@@ -125,15 +128,21 @@ export function SharedDocumentEditor({
   }
   React.useEffect(() => {
     live.current = true
+    // StrictMode and Fast Refresh can rerun setup without creating a new editor.
+    // Recovery belongs to the editor instance, not each effect setup.
+    if (recoveryScope.current === prefix)
+      return () => {
+        live.current = false
+      }
+    recoveryScope.current = prefix
+    recovered.current = null
     try {
       key.current = prefix + JSON.stringify(tab.current) + "]"
       const previousKey = Array.from({ length: localStorage.length }, (_, i) =>
         localStorage.key(i)
-      ).find((k) => k?.startsWith(prefix))
+      ).find((k) => k !== key.current && k?.startsWith(prefix))
       const previous = previousKey ? localStorage.getItem(previousKey) : null
-      if (previous && previousKey)
-        recovered.current = { key: previousKey, raw: previous }
-      if (previous) {
+      if (previous && previousKey) {
         const saved = JSON.parse(previous) as Draft
         if (
           !saved ||
@@ -155,7 +164,20 @@ export function SharedDocumentEditor({
             throw new Error()
           saved.attempt = { key: saved.attempt.key, command: input }
         }
-        remember(saved)
+        recovered.current = { key: previousKey, raw: previous }
+        if (remember(saved)) {
+          // Transfer the durable device copy before retiring its unchanged source.
+          // Repeated reloads must not accumulate stale ancestors that reappear
+          // after a later confirmed save or restoration.
+          try {
+            if (localStorage.getItem(previousKey) === previous) {
+              localStorage.removeItem(previousKey)
+              recovered.current = null
+            }
+          } catch {
+            // Both copies remain recoverable. Confirmation retries source cleanup.
+          }
+        }
         paused.current = true
         setError("Unsaved draft recovered. Review it, then retry saving.")
         setEditorEpoch((n) => n + 1)
@@ -424,8 +446,7 @@ export function SharedDocumentEditor({
           className="flex flex-wrap items-center gap-3 border-b px-6 py-3 text-sm"
         >
           <span>
-            {error ||
-              deviceError ||
+            {[error, deviceError].filter(Boolean).join(" ") ||
               "Unsupported document content is preserved. Download the draft or restore a safe revision."}
           </span>
           {dirty && !conflict && (

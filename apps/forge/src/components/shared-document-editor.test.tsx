@@ -7,6 +7,7 @@ import {
   waitFor,
 } from "@testing-library/react"
 import { afterEach, beforeEach, expect, it, vi } from "vitest"
+import { StrictMode } from "react"
 import { SharedDocumentEditor } from "./shared-document-editor"
 import type {
   DocumentCommandResult,
@@ -406,4 +407,207 @@ it("does not treat a post-restore server refresh as newer local typing", async (
   })
   expect(command).toHaveBeenCalledTimes(1)
   expect(localStorage.length).toBe(0)
+})
+
+it("recovery is idempotent in StrictMode when the own copy sorts before its source", async () => {
+  const sourceKey = JSON.stringify([
+    "forge.document-draft",
+    1,
+    "workspace",
+    "user",
+    resource.id,
+    "source-tab",
+  ])
+  const record = {
+    fields: {
+      title: "Recovered writing",
+      body: resource.body,
+      icon: resource.icon,
+      sectionId: null,
+    },
+    baseline: 1,
+  }
+  localStorage.setItem(sourceKey, JSON.stringify(record))
+  const realKey = Storage.prototype.key,
+    realRemove = Storage.prototype.removeItem
+  vi.spyOn(Storage.prototype, "key").mockImplementation(function (
+    this: Storage,
+    index
+  ) {
+    const keys = Array.from({ length: this.length }, (_, at) =>
+      realKey.call(this, at)
+    )
+    keys.sort((left, right) =>
+      left === sourceKey ? 1 : right === sourceKey ? -1 : 0
+    )
+    return keys[index] ?? null
+  })
+  const writes = vi.spyOn(Storage.prototype, "setItem")
+  vi.spyOn(Storage.prototype, "removeItem")
+    .mockImplementationOnce(() => {
+      throw new Error("Source cleanup temporarily unavailable")
+    })
+    .mockImplementation(function (this: Storage, key) {
+      realRemove.call(this, key)
+    })
+  const command = vi.fn().mockResolvedValue(saved(2))
+  render(
+    <StrictMode>
+      <SharedDocumentEditor
+        resource={resource}
+        command={command}
+        onBack={() => {}}
+      />
+    </StrictMode>
+  )
+  await screen.findByText(
+    "Unsaved draft recovered. Review it, then retry saving."
+  )
+  expect(writes).toHaveBeenCalledTimes(1)
+  expect(localStorage.length).toBe(2)
+  fireEvent.click(screen.getByRole("button", { name: "Try again" }))
+  await waitFor(() =>
+    expect(screen.getByRole("status").textContent).toBe("Saved · Revision 2")
+  )
+  expect(localStorage.length).toBe(0)
+})
+it("transfers recovery across multiple reloads without resurrecting stale ancestors", async () => {
+  const command = vi
+    .fn()
+    .mockRejectedValueOnce(new Error("Offline"))
+    .mockResolvedValue(saved(2))
+  const first = render(
+    <SharedDocumentEditor
+      resource={resource}
+      command={command}
+      onBack={() => {}}
+    />
+  )
+  fireEvent.change(await screen.findByLabelText("Document title"), {
+    target: { value: "Recovery through two reloads" },
+  })
+  await screen.findByText("Offline", {}, { timeout: 3000 })
+  const firstKey = localStorage.key(0)
+  first.unmount()
+  const second = render(
+    <SharedDocumentEditor
+      resource={resource}
+      command={command}
+      onBack={() => {}}
+    />
+  )
+  await screen.findByText(
+    "Unsaved draft recovered. Review it, then retry saving."
+  )
+  expect(localStorage.length).toBe(1)
+  expect(localStorage.key(0)).not.toBe(firstKey)
+  const secondKey = localStorage.key(0)
+  second.unmount()
+  render(
+    <SharedDocumentEditor
+      resource={resource}
+      command={command}
+      onBack={() => {}}
+    />
+  )
+  await screen.findByText(
+    "Unsaved draft recovered. Review it, then retry saving."
+  )
+  expect(localStorage.length).toBe(1)
+  expect(localStorage.key(0)).not.toBe(secondKey)
+  fireEvent.click(screen.getByRole("button", { name: "Try again" }))
+  await waitFor(() =>
+    expect(screen.getByRole("status").textContent).toBe("Saved · Revision 2")
+  )
+  expect(command.mock.calls[1]).toEqual(command.mock.calls[0])
+  expect(localStorage.length).toBe(0)
+})
+it("preserves an ancestor changed by another editor during recovery transfer", async () => {
+  const sourceKey = JSON.stringify([
+    "forge.document-draft",
+    1,
+    "workspace",
+    "user",
+    resource.id,
+    "source-tab",
+  ])
+  const fields = {
+    title: "Recovered writing",
+    body: resource.body,
+    icon: resource.icon,
+    sectionId: null,
+  }
+  localStorage.setItem(sourceKey, JSON.stringify({ fields, baseline: 1 }))
+  const changed = JSON.stringify({
+    fields: { ...fields, title: "Newer writing in the other tab" },
+    baseline: 1,
+  })
+  const realSet = Storage.prototype.setItem
+  let modified = false
+  vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (
+    this: Storage,
+    key,
+    value
+  ) {
+    realSet.call(this, key, value)
+    if (key !== sourceKey && !modified) {
+      modified = true
+      realSet.call(this, sourceKey, changed)
+    }
+  })
+  const command = vi.fn().mockResolvedValue(saved(2))
+  render(
+    <SharedDocumentEditor
+      resource={resource}
+      command={command}
+      onBack={() => {}}
+    />
+  )
+  await screen.findByText(
+    "Unsaved draft recovered. Review it, then retry saving."
+  )
+  expect(localStorage.getItem(sourceKey)).toBe(changed)
+  fireEvent.click(screen.getByRole("button", { name: "Try again" }))
+  await waitFor(() =>
+    expect(screen.getByRole("status").textContent).toBe("Saved · Revision 2")
+  )
+  expect(localStorage.length).toBe(1)
+  expect(localStorage.getItem(sourceKey)).toBe(changed)
+})
+
+it("keeps the source recovery record if its durable transfer cannot be written", async () => {
+  const sourceKey = JSON.stringify([
+    "forge.document-draft",
+    1,
+    "workspace",
+    "user",
+    resource.id,
+    "source-tab",
+  ])
+  const raw = JSON.stringify({
+    fields: {
+      title: "Recovery survives storage failure",
+      body: resource.body,
+      icon: resource.icon,
+      sectionId: null,
+    },
+    baseline: 1,
+  })
+  localStorage.setItem(sourceKey, raw)
+  vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    throw new Error("Quota exceeded")
+  })
+  render(
+    <SharedDocumentEditor
+      resource={resource}
+      command={vi.fn()}
+      onBack={() => {}}
+    />
+  )
+  await screen.findByText(/Device storage is unavailable. Keep this tab open/)
+  expect(screen.getByLabelText<HTMLInputElement>("Document title").value).toBe(
+    "Recovery survives storage failure"
+  )
+  expect(localStorage.getItem(sourceKey)).toBe(raw)
+  expect(localStorage.length).toBe(1)
 })

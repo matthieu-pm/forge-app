@@ -26,7 +26,7 @@ const config = JSON.parse(readFileSync(file, "utf8")),
 const expectedHost = production
   ? "ep-lingering-bread-zazpwrxp.c-2.eu-west-2.aws.neon.tech"
   : "ep-blue-shadow-zauhwkjz.c-2.eu-west-2.aws.neon.tech"
-const expectedDatabase = production ? "neondb" : "forge_documents_acceptance_v2"
+const expectedDatabase = production ? "neondb" : "forge_documents_acceptance_v3"
 const expectedBranch = production
   ? "br-muddy-queen-zaeeysjt"
   : "br-autumn-union-za0opf1e"

@@ -15,7 +15,7 @@ The browser adapter requires a current Better Auth session bound to its workspac
 
 ## Reproduction
 
-Use a private connection JSON containing `connection` (migration owner/direct) and `applicationConnection` (ordinary application login) for the dedicated database `forge_documents_acceptance_v2`, branch `br-autumn-union-za0opf1e`. The test harness verifies the target before mutation and removes its owned users, workspaces, and receipts afterwards. Never point this harness at production.
+Use a private connection JSON containing `connection` (migration owner/direct) and `applicationConnection` (ordinary application login) for the dedicated database `forge_documents_acceptance_v3`, branch `br-autumn-union-za0opf1e`. The test harness verifies the target before mutation and removes its owned users, workspaces, and receipts afterwards. Never point this harness at production.
 
 ```sh
 cd apps/forge

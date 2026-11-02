@@ -54,13 +54,13 @@ export const DATABASE_TARGETS = {
   },
   // FOR-61 production clone; expires 3 November 2026 12:00 UTC.
   "document-rehearsal": {
-    branchId: "br-bold-glade-zavbn4nc",
-    host: "ep-odd-butterfly-zasoz87f.c-2.eu-west-2.aws.neon.tech",
+    branchId: "br-lingering-hat-zay4d9dp",
+    host: "ep-crimson-math-zap8ynn1.c-2.eu-west-2.aws.neon.tech",
     database: "neondb",
   },
   "document-acceptance": {
     ...STAGING.database,
-    database: "forge_documents_acceptance_v2",
+    database: "forge_documents_acceptance_v3",
   },
   "issue-history-acceptance": {
     ...STAGING.database,
