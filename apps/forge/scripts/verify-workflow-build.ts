@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process"
-import { access, readFile, readdir } from "node:fs/promises"
-import { resolve } from "node:path"
+import { access, readFile, readdir, realpath } from "node:fs/promises"
+import { isAbsolute, relative, resolve } from "node:path"
 import { pathToFileURL } from "node:url"
 
 const vercelBuild =
@@ -11,6 +11,36 @@ if (vercelBuild) {
   const config = JSON.parse(
     await readFile(resolve(output, "config.json"), "utf8")
   )
+  if (process.env.FORGE_LOOPS_ENABLED === "true") {
+    const server = resolve(output, "functions/__server.func")
+    const serverConfig = JSON.parse(
+      await readFile(resolve(server, ".vc-config.json"), "utf8")
+    )
+    if (serverConfig.maxDuration !== 300) {
+      throw new Error(
+        "The shared Loop scheduler requires a 300-second function."
+      )
+    }
+    try {
+      await access(resolve(output, "functions/api/internal/loops.func"))
+      throw new Error(
+        "The Loop scheduler must use the self-contained server bundle."
+      )
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error
+    }
+    // Resolution on the build machine alone can conceal cross-function links.
+    for (const name of ["oidc", "cli-config", "cli-exec"]) {
+      const target = await realpath(
+        resolve(server, "node_modules/@vercel", name)
+      )
+      const path = relative(server, target)
+      if (path.startsWith("..") || isAbsolute(path)) {
+        throw new Error(`Packaged @vercel/${name} escapes its function bundle.`)
+      }
+    }
+    console.log("Verified the self-contained 300-second Loop scheduler bundle.")
+  }
   // Exercise the shipped CommonJS dependencies under Vercel's stricter loader.
   // A global jose 6 override breaks @vercel/oidc's require("jose") at runtime.
   const tracedVercelPackages = resolve(
