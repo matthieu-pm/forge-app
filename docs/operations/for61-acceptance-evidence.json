@@ -1,0 +1,68 @@
+{
+  "issue": "FOR-61",
+  "date": "2026-11-02",
+  "implementationBranch": "dev/for-61-canonical-documents",
+  "baseCommit": "94db2f8",
+  "environment": {
+    "database": "forge_documents_acceptance",
+    "branch": "br-autumn-union-za0opf1e"
+  },
+  "applicationRole": {
+    "name": "forge_staging_web",
+    "superuser": false
+  },
+  "acceptance": {
+    "AC-01": "passed: shared content/projection/revision metadata across two sessions",
+    "AC-02": "passed: stale write retains latest content and author draft; reload, explicit save and restore",
+    "AC-03": "passed: unsafe create/import/save rejection and renderer exclusion; original draft recovery"
+  },
+  "checks": {
+    "postgres": {
+      "passed": 13,
+      "failed": 0
+    },
+    "browser": {
+      "passed": true,
+      "sessions": 2,
+      "mobileWidth": 390,
+      "cleanupVerified": true
+    },
+    "workspaceTypecheck": "passed",
+    "productionBuildAndProtectedWorkflowHandlers": "passed",
+    "workflowTests": {
+      "passed": 4,
+      "failed": 0
+    },
+    "schemaDrift": "none",
+    "changedSourceLint": {
+      "errors": 0,
+      "warnings": 32
+    },
+    "appSuite": {
+      "earlierFullRun": {
+        "passed": 2438,
+        "failed": 0
+      },
+      "finalFullRun": {
+        "passed": 2435,
+        "failed": 3,
+        "skipped": 494
+      },
+      "finalFailures": "Two preference-fixture setup timeouts and an agent-shell async wait; all affected files passed isolated reruns (41 tests). Another rerun had an Electron worker startup timeout; its four cases passed alone. No unrelated timeout thresholds were changed."
+    }
+  },
+  "cleanup": {
+    "workspaces": 0,
+    "users": 0,
+    "receipts": 0,
+    "documents": 0,
+    "revisions": 0
+  },
+  "productionChanged": false,
+  "productionEnablement": "Apply 0064_shared_documents and set FORGE_SHARED_DOCUMENTS_ENABLED=true; default remains off in production.",
+  "artifacts": [
+    "docs/qa/for61/conflict.png",
+    "docs/qa/for61/editor.png",
+    "docs/qa/for61/mobile.png"
+  ]
+}

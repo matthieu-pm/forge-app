@@ -15,6 +15,7 @@ import type {
   ProductStateCommand,
   ProductStateSnapshot,
 } from "@/lib/product-state-contract"
+import { pruneTeamDocumentCopies } from "@/application/documents/document-copies.server"
 import {
   isProjectCatalog,
   validateProjectCatalogChange,
@@ -285,7 +286,12 @@ export async function readProductState(
               row.key,
               projectValue
             )
-            let projectedValue = value
+            let projectedValue = await pruneTeamDocumentCopies(
+              tx,
+              current,
+              row.key,
+              value
+            )
             if (row.key === "forge:workspace-project-labels:v1" && value) {
               const directory = JSON.parse(value)
               const usage = (id: string) =>
@@ -519,11 +525,20 @@ export async function saveProductState(actor: Actor, raw: ProductStateCommand) {
             "This data changed in another session. Your catalog draft is preserved; load the latest version and review it."
           )
       }
-      const value = await visibleIssueCopyValue(
+      const projected = await visibleIssueCopyValue(
         tx,
         current,
         input.key,
         input.value,
+        row.encodedValue === null
+          ? null
+          : (JSON.parse(row.encodedValue) as string)
+      )
+      const value = await pruneTeamDocumentCopies(
+        tx,
+        current,
+        input.key,
+        projected,
         row.encodedValue === null
           ? null
           : (JSON.parse(row.encodedValue) as string)

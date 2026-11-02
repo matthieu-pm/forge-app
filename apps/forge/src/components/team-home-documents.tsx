@@ -7,16 +7,20 @@ import {
   MoreHorizontalIcon,
   Settings03Icon,
 } from "@hugeicons/core-free-icons"
-import { TeamDocumentEditor } from "./team-document-editor"
+import { toast } from "sonner"
+import { SharedDocumentEditor } from "./shared-document-editor"
 import { TeamSidebarIcon } from "./team-sidebar-icon"
 import type { TeamSummary } from "@/lib/team-contract"
-import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
-import { authClient } from "@/lib/auth-client"
+import { retainedDocumentTitle } from "@/lib/document-copy-recovery"
+import { downloadDocumentDraft } from "@/lib/document-download"
+import { useSharedDocuments } from "@/lib/shared-document-client"
 import {
   defaultDocumentIcon,
   documentTime,
-  newTeamDocument,
+  teamDocumentBody,
 } from "@/lib/team-documents"
+import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { OptionSelect } from "@/components/ui/option-select"
 import { useTeamHome } from "@/lib/team-home-state"
@@ -25,7 +29,6 @@ import {
   HomeIconButton,
   TeamHomeLayout,
   homePill,
-  homeSave,
 } from "@/components/team-home"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -51,7 +54,8 @@ export function TeamDocuments({
   onOpenDocument?: (id?: string) => void
 }) {
   const store = useTeamHome(team.id)
-  const session = authClient.useSession()
+  const shared = useSharedDocuments({ kind: "team", id: team.id })
+  const [saving, setSaving] = React.useState(false)
   const [localDocumentId, setLocalDocumentId] = React.useState<string>()
   const [query, setQuery] = React.useState("")
   const [sort, setSort] = React.useState("name")
@@ -60,7 +64,15 @@ export function TeamDocuments({
   const [showOwner, setShowOwner] = React.useState(true)
   const [collapsed, setCollapsed] = React.useState(false)
   const activeId = onOpenDocument ? documentId : localDocumentId
-  const documents = store.state.resources.filter((r) => r.kind === "document")
+  const documents = shared.documents
+  const legacy = store.state.resources.filter(
+    (r) => r.kind === "document" && !documents.some((d) => d.id === r.id)
+  )
+  const retainedDrafts = store.state.retainedDocumentDrafts ?? []
+  const overlappingLegacy = store.state.resources.filter(
+    (r) => r.kind === "document" && documents.some((d) => d.id === r.id)
+  )
+  const recoveryCopies = [...retainedDrafts, ...overlappingLegacy]
   const active = documents.find((resource) => resource.id === activeId)
   const visible = documents
     .filter((r) => r.title.toLowerCase().includes(query.trim().toLowerCase()))
@@ -87,34 +99,68 @@ export function TeamDocuments({
     if (onOpenDocument) onOpenDocument(id)
     else setLocalDocumentId(id)
   }
-  function create() {
-    const user = session.data?.user
-    const resource = newTeamDocument(
-      user
-        ? { id: user.id, name: user.name || "You", image: user.image }
-        : undefined
-    )
-    if (
-      homeSave(store, (state) => ({
-        ...state,
-        resources: [...state.resources, resource],
-      }))
-    )
-      openDocument(resource.id)
+  async function create() {
+    if (saving) return
+    setSaving(true)
+    try {
+      openDocument(await shared.create())
+    } catch (e) {
+      toast.error(
+        e instanceof Error ? e.message : "Document could not be created"
+      )
+    } finally {
+      setSaving(false)
+    }
   }
-  function remove(id: string) {
-    if (
-      homeSave(
-        store,
-        (state) => ({
-          ...state,
-          resources: state.resources.filter((resource) => resource.id !== id),
-        }),
-        "Document deleted"
-      ) &&
-      activeId === id
-    )
-      openDocument()
+  async function remove(id: string) {
+    const document = documents.find((d) => d.id === id)
+    if (!document || saving) return
+    setSaving(true)
+    try {
+      const result = await shared.command({
+        action: "delete",
+        id,
+        expectedRevision: document.revision,
+      })
+      if (result.status === "saved") {
+        if (activeId === id) openDocument()
+      } else
+        toast.error(
+          "The document changed. Open the latest version before deleting."
+        )
+    } catch {
+      toast.error("Document could not be deleted.")
+    } finally {
+      setSaving(false)
+    }
+  }
+  async function importLegacy(resource: (typeof legacy)[number]) {
+    setSaving(true)
+    try {
+      const result = await shared.command({
+        action: "create",
+        legacyImport: true,
+        id: resource.id,
+        source: { kind: "team", id: team.id },
+        fields: {
+          title: resource.title,
+          body: teamDocumentBody(resource),
+          icon: resource.icon ?? defaultDocumentIcon,
+          sectionId: resource.sectionId,
+        },
+      })
+      if (result.status === "saved") openDocument(resource.id)
+      else
+        toast.error(
+          "The document or its legacy source changed. Refresh and review the latest content before importing."
+        )
+    } catch {
+      toast.error(
+        "This legacy document could not be imported. Its original copy is preserved; unsupported content must be reviewed."
+      )
+    } finally {
+      setSaving(false)
+    }
   }
   function orderBy(value: string) {
     if (value === sort) setAscending(!ascending)
@@ -123,15 +169,14 @@ export function TeamDocuments({
       setAscending(value === "name" || value === "owner")
     }
   }
-  if (active && store.ready)
+  if (active && shared.ready)
     return (
-      <TeamDocumentEditor
+      <SharedDocumentEditor
         key={active.id}
-        team={team}
         resource={active}
-        store={store}
+        command={shared.command}
+        sections={store.state.sections}
         onBack={() => openDocument()}
-        onDelete={() => remove(active.id)}
       />
     )
   return (
@@ -144,7 +189,7 @@ export function TeamDocuments({
           <Button
             variant="outline"
             className={homePill}
-            disabled={!store.ready || !!store.error}
+            disabled={!shared.ready || !!shared.error || saving}
             onClick={create}
           >
             <HomeIcon icon={Add01Icon} className="size-3" />
@@ -228,8 +273,56 @@ export function TeamDocuments({
         </>
       }
     >
+      {shared.error && (
+        <div role="alert" className="p-4 text-sm">
+          {shared.error}
+          <Button onClick={() => void shared.refresh()}>Try again</Button>
+        </div>
+      )}
+      {shared.ready && !shared.error && recoveryCopies.length > 0 && (
+        <div
+          className="border-b p-4 text-sm"
+          aria-label="Recovered legacy document drafts"
+        >
+          <p>
+            Earlier document drafts are preserved for review. Download an
+            original copy before reconciling it with the shared document.
+          </p>
+          {recoveryCopies.map((copy, index) => (
+            <Button
+              key={index}
+              variant="ghost"
+              onClick={() => downloadDocumentDraft(copy)}
+            >
+              Download original: {retainedDocumentTitle(copy)}
+            </Button>
+          ))}
+        </div>
+      )}
+      {shared.ready && !shared.error && legacy.length > 0 && (
+        <div className="border-b p-4 text-sm">
+          <p>
+            Earlier documents are preserved. Import a document to start shared
+            revision history.
+          </p>
+          {legacy.map((r) => (
+            <div key={r.id} className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="ghost"
+                disabled={saving}
+                onClick={() => void importLegacy(r)}
+              >
+                Import {r.title}
+              </Button>
+              <Button variant="ghost" onClick={() => downloadDocumentDraft(r)}>
+                Download original
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {!store.ready ? (
+        {!shared.ready ? (
           <p role="status" className="p-6 text-sm text-muted-foreground">
             Loading documents…
           </p>
@@ -252,7 +345,7 @@ export function TeamDocuments({
               <>
                 <Button
                   onClick={create}
-                  disabled={!!store.error}
+                  disabled={!!shared.error || saving}
                   size="sm"
                   className="rounded-full bg-[#5E6AD2] px-3 text-xs font-normal text-white hover:bg-[#5360C8]"
                 >
@@ -345,7 +438,7 @@ export function TeamDocuments({
               <HomeIconButton
                 label="Create document in Team documents"
                 icon={Add01Icon}
-                disabled={Boolean(store.error)}
+                disabled={Boolean(shared.error) || saving}
                 onClick={create}
               />
             </div>
@@ -395,10 +488,7 @@ export function TeamDocuments({
                       {resource.owner ? (
                         <>
                           <Avatar className="size-5">
-                            <AvatarImage
-                              src={resource.owner.image ?? undefined}
-                              alt=""
-                            />
+                            <AvatarImage src={undefined} alt="" />
                             <AvatarFallback className="text-[9px]">
                               {resource.owner.name
                                 .split(/\s+/)
@@ -434,7 +524,11 @@ export function TeamDocuments({
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         variant="destructive"
-                        onClick={() => remove(resource.id)}
+                        disabled={!resource.canDelete || saving}
+                        onClick={() => {
+                          if (window.confirm(`Delete “${resource.title}”?`))
+                            void remove(resource.id)
+                        }}
                       >
                         Delete document
                       </DropdownMenuItem>

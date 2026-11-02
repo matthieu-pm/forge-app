@@ -3,7 +3,6 @@ import { Link } from "@tanstack/react-router"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { ProjectSidebar } from "./project-sidebar"
-import { ProjectDocumentEditor } from "./project-document-editor"
 import { ProjectMilestones } from "./project-milestones"
 import { ProjectProperties } from "./project-properties"
 import { ProjectInitiativePicker } from "./project-initiative-picker"
@@ -12,6 +11,11 @@ import type { ProjectResource } from "@/lib/project-resources"
 import type { InitiativePerson, InitiativeProject } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { ActivityEntry } from "@/components/initiatives/initiative-activity"
+import { downloadDocumentDraft } from "@/lib/document-download"
+import { emptyDocumentBody } from "@/lib/document-contract"
+import { defaultDocumentIcon } from "@/lib/team-documents"
+import { useSharedDocuments } from "@/lib/shared-document-client"
+import { SharedDocumentEditor } from "@/components/shared-document-editor"
 import { productStorage, productStorageIdentity } from "@/lib/product-storage"
 import {
   projectPostDraftKey,
@@ -162,10 +166,31 @@ type Props = {
 
 export function ProjectDetailPage(props: Props) {
   const [localDocumentId, setLocalDocumentId] = useState<string>()
+  const documents = useSharedDocuments({ kind: "project", id: props.projectId })
+  const [documentError, setDocumentError] = useState("")
   const store = useInitiatives(props.workspaceId, props.user.id, "projects")
-  const project = initiativeProjectCatalog(store.state).find(
+  const storedProject = initiativeProjectCatalog(store.state).find(
     (item) => item.id === props.projectId
   )
+  const project = storedProject
+    ? {
+        ...storedProject,
+        resources: [
+          ...(storedProject.resources ?? []).filter(
+            (r) => r.url || !documents.documents.some((d) => d.id === r.id)
+          ),
+          ...documents.documents.map((d) => ({
+            id: d.id,
+            url: undefined,
+            title: d.title,
+            body: d.body,
+            icon: d.icon,
+            createdAt: d.createdAt,
+            updatedAt: d.updatedAt,
+          })),
+        ],
+      }
+    : undefined
   if (!store.ready)
     return (
       <p role="status" className="p-8 text-sm text-muted-foreground">
@@ -204,7 +229,31 @@ export function ProjectDetailPage(props: Props) {
       )
     )
   }
-  function removeResource(id: string) {
+  async function removeResource(id: string) {
+    const document = documents.documents.find((d) => d.id === id)
+    if (document) {
+      if (!document.canDelete) {
+        setDocumentError(
+          "Only the creator or a workspace administrator can delete this document."
+        )
+        return false
+      }
+      if (!window.confirm(`Delete “${document.title}”?`)) return true
+      try {
+        const result = await documents.command({
+          action: "delete",
+          id,
+          expectedRevision: document.revision,
+        })
+        if (result.status !== "saved") throw new Error()
+        return true
+      } catch {
+        setDocumentError(
+          "The document could not be deleted. Refresh and try again."
+        )
+        return false
+      }
+    }
     return store.update((state) =>
       updateProjectResources(
         state,
@@ -218,21 +267,64 @@ export function ProjectDetailPage(props: Props) {
     const resource = project.resources?.find(
       (item) => item.id === documentId && !item.url
     )
-    return resource ? (
-      <ProjectDocumentEditor
-        key={resource.id}
-        project={project}
-        resource={resource}
-        writable={store.writable}
-        onSave={saveResource}
-        onBack={() => openDocument(undefined)}
-        onRemove={() => removeResource(resource.id)}
-      />
-    ) : (
+    const canonical = documents.documents.find((d) => d.id === documentId)
+    if (canonical)
+      return (
+        <SharedDocumentEditor
+          key={canonical.id}
+          resource={canonical}
+          command={documents.command}
+          onBack={() => openDocument(undefined)}
+        />
+      )
+    return (
       <div className="p-8">
         <p role="status">
-          This document is no longer available on this device.
+          {!documents.ready
+            ? "Loading document…"
+            : !documents.error && resource
+              ? "This earlier document is preserved. Import it to start shared revision history."
+              : "This document is unavailable."}
         </p>
+        {(documentError || documents.error) && (
+          <p role="alert">{documentError || documents.error}</p>
+        )}
+        {resource && documents.ready && !documents.error && (
+          <Button
+            disabled={!store.writable}
+            onClick={async () => {
+              try {
+                const result = await documents.command({
+                  action: "create",
+                  legacyImport: true,
+                  id: resource.id,
+                  source: { kind: "project", id: project.id },
+                  fields: {
+                    title: resource.title,
+                    body: resource.body ?? emptyDocumentBody(),
+                    icon: resource.icon ?? defaultDocumentIcon,
+                    sectionId: null,
+                  },
+                })
+                if (result.status !== "saved") throw new Error()
+              } catch {
+                setDocumentError(
+                  "The document could not be imported. Its original copy is preserved; review unsupported content before retrying."
+                )
+              }
+            }}
+          >
+            Import document
+          </Button>
+        )}
+        {resource && documents.ready && !documents.error && (
+          <Button
+            variant="ghost"
+            onClick={() => downloadDocumentDraft(resource)}
+          >
+            Download original
+          </Button>
+        )}
         <Button
           variant="secondary"
           className="mt-4"
@@ -243,6 +335,7 @@ export function ProjectDetailPage(props: Props) {
       </div>
     )
   }
+
   return (
     <ProjectDetail
       key={project.id}
@@ -250,6 +343,10 @@ export function ProjectDetailPage(props: Props) {
       project={project}
       store={store}
       onOpenDocument={openDocument}
+      onCreateDocument={async () => {
+        openDocument(await documents.create())
+      }}
+      documentError={documentError || documents.error}
       onSaveResource={saveResource}
       onRemoveResource={removeResource}
     />
@@ -270,14 +367,18 @@ function ProjectDetail({
   milestone: milestoneFilter,
   onMilestoneFilter,
   onOpenDocument,
+  onCreateDocument,
+  documentError,
   onSaveResource,
   onRemoveResource,
 }: Props & {
   project: InitiativeProject
   store: ReturnType<typeof useInitiatives>
   onOpenDocument: (id: string) => void
+  onCreateDocument: () => Promise<void>
+  documentError: string
   onSaveResource: (resource: ProjectResource) => boolean
-  onRemoveResource: (id: string) => boolean
+  onRemoveResource: (id: string) => Promise<boolean>
 }) {
   const preferences = useProjectPreferences(workspaceId, user.id)
   const [editing, setEditing] = useState(false)
@@ -928,11 +1029,13 @@ function ProjectDetail({
                       </div>
                     </div>
                   </div>
+                  {documentError && <p role="alert">{documentError}</p>}
                   <InitiativeResources
                     context="project"
                     item={{ resources: project.resources ?? [] }}
                     writable={store.writable}
                     onOpenDocument={onOpenDocument}
+                    onCreateDocument={onCreateDocument}
                     onSave={onSaveResource}
                     onRemove={onRemoveResource}
                   />

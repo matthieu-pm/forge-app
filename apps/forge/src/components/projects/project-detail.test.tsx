@@ -14,6 +14,11 @@ import type { ProjectTab } from "./project-detail"
 import type { TeamSummary } from "@/lib/team-contract"
 import { productStorage } from "@/lib/product-storage"
 import {
+  documentFixture,
+  useSharedDocuments as useFixtureDocuments,
+} from "@/test/document-fixture"
+import { useSharedDocuments } from "@/lib/shared-document-client"
+import {
   renderPreferences as render,
   setupPreferenceFixture,
 } from "@/test/preference-fixture"
@@ -24,6 +29,11 @@ import {
   initiativesStorageKey,
 } from "@/lib/initiatives"
 import { blankIssueDraft, saveTeamIssue } from "@/lib/team-issues"
+
+vi.mock("@/lib/shared-document-client", async () => {
+  const fixture = await import("@/test/document-fixture")
+  return { ...fixture, useSharedDocuments: vi.fn(fixture.useSharedDocuments) }
+})
 
 vi.mock("@tanstack/react-router", () => ({
   useBlocker: () => ({ status: "idle" }),
@@ -93,6 +103,9 @@ function Page({ initialTab = "overview" }: { initialTab?: ProjectTab }) {
 beforeEach(async () => {
   await setupPreferenceFixture("user")
   productStorage.clear()
+  localStorage.clear()
+  documentFixture.reset()
+  vi.mocked(useSharedDocuments).mockImplementation(useFixtureDocuments)
   vi.stubGlobal(
     "ResizeObserver",
     class {
@@ -230,114 +243,108 @@ it("adds links through the resource menu with an optional title", async () => {
     read().workspaceProjects[0].resources
   )
 })
-it("creates a document, autosaves its title and favorite, and reopens it after remount", async () => {
+it("creates a canonical project document, saves its title and personal favorite, and reopens after remount", async () => {
   const page = render(<Page />)
   fireEvent.click(screen.getByRole("button", { name: "Add document or link…" }))
   fireEvent.click(
     await screen.findByRole("menuitem", { name: /Create new document/ })
   )
-  expect(
-    await screen.findByRole("region", { name: "Project document editor" })
-  ).toBeTruthy()
-  expect(screen.queryByRole("dialog")).toBeNull()
-  expect(read().workspaceProjects[0].resources[0].title).toBe("New document")
-  fireEvent.change(screen.getByRole("textbox", { name: "Document title" }), {
-    target: { value: "Release plan" },
-  })
+  await screen.findByRole("region", { name: "Document editor" })
+  fireEvent.change(
+    await screen.findByRole("textbox", { name: "Document title" }),
+    { target: { value: "Release plan" } }
+  )
   fireEvent.click(
     screen.getByRole("button", { name: "Add document to favorites" })
   )
-  expect(read().workspaceProjects[0].resources[0]).toMatchObject({
-    title: "Release plan",
-    favorite: true,
+  await waitFor(
+    () => expect(documentFixture.rows()[0].title).toBe("Release plan"),
+    { timeout: 3000 }
+  )
+  expect(documentFixture.rows()[0].source).toEqual({
+    kind: "project",
+    id: "project",
   })
-  fireEvent.click(screen.getByRole("button", { name: "Back to Launch" }))
+  fireEvent.click(screen.getByRole("button", { name: "Documents" }))
   page.unmount()
   render(<Page />)
   fireEvent.click(screen.getByRole("button", { name: "Release plan" }))
   expect(
-    screen.getByRole<HTMLInputElement>("textbox", { name: "Document title" })
-      .value
+    (
+      await screen.findByRole<HTMLInputElement>("textbox", {
+        name: "Document title",
+      })
+    ).value
   ).toBe("Release plan")
   expect(
     screen
       .getByRole("button", { name: "Remove document from favorites" })
       .getAttribute("aria-pressed")
   ).toBe("true")
+  expect(read().workspaceProjects[0]?.resources ?? []).toEqual([])
 })
-it("keeps a document draft open when storage fails and saves it on retry", async () => {
+it("keeps a project document draft when the server save fails and retries with its original baseline", async () => {
   render(<Page />)
   fireEvent.click(screen.getByRole("button", { name: "Add document or link…" }))
   fireEvent.click(
     await screen.findByRole("menuitem", { name: /Create new document/ })
   )
   await screen.findByRole("textbox", { name: "Document title" })
-  const storage = vi.spyOn(productStorage, "setItem").mockImplementation(() => {
-    throw new Error("Quota exceeded")
-  })
+  documentFixture.failNext()
   fireEvent.change(screen.getByRole("textbox", { name: "Document title" }), {
     target: { value: "Keep this draft" },
   })
-  expect(screen.getByRole("alert").textContent).toContain("could not be saved")
-  fireEvent.click(screen.getByRole("button", { name: "Back to Launch" }))
+  await screen.findByRole("alert", {}, { timeout: 3000 })
+  expect(documentFixture.rows()[0].title).toBe("New document")
+  fireEvent.click(screen.getByRole("button", { name: "Documents" }))
   expect(
     screen.getByRole<HTMLInputElement>("textbox", { name: "Document title" })
       .value
   ).toBe("Keep this draft")
-  storage.mockRestore()
   fireEvent.click(screen.getByRole("button", { name: "Try again" }))
-  expect(read().workspaceProjects[0].resources[0].title).toBe("Keep this draft")
+  await waitFor(() =>
+    expect(documentFixture.rows()[0].title).toBe("Keep this draft")
+  )
   expect(screen.queryByRole("alert")).toBeNull()
 })
-it("does not open a new document when its initial save fails", async () => {
+it("does not open a new project document when server creation fails", async () => {
   render(<Page />)
   fireEvent.click(screen.getByRole("button", { name: "Add document or link…" }))
-  vi.spyOn(productStorage, "setItem").mockImplementation(() => {
-    throw new Error("Quota exceeded")
-  })
+  documentFixture.failNext("The document could not be created.")
   fireEvent.click(
     await screen.findByRole("menuitem", { name: /Create new document/ })
   )
-  expect(screen.getByRole("alert").textContent).toContain(
+  expect((await screen.findByRole("alert")).textContent).toContain(
     "could not be created"
   )
-  expect(
-    screen.queryByRole("region", { name: "Project document editor" })
-  ).toBeNull()
+  expect(screen.queryByRole("region", { name: "Document editor" })).toBeNull()
+  expect(documentFixture.rows()).toEqual([])
 })
-it("confirms document removal and removes it from every project copy", async () => {
+it("confirms canonical document removal without recreating a project resource copy", async () => {
   render(<Page />)
   fireEvent.click(screen.getByRole("button", { name: "Add document or link…" }))
   fireEvent.click(
     await screen.findByRole("menuitem", { name: /Create new document/ })
   )
   await screen.findByRole("textbox", { name: "Document title" })
-  fireEvent.click(screen.getByRole("button", { name: "Document options" }))
-  fireEvent.click(
-    await screen.findByRole("menuitem", { name: "Delete document" })
-  )
+  fireEvent.click(screen.getByRole("button", { name: "Delete" }))
   fireEvent.click(
     within(screen.getByRole("dialog", { name: "Delete document?" })).getByRole(
       "button",
       { name: "Cancel" }
     )
   )
-  expect(read().workspaceProjects[0].resources).toHaveLength(1)
-  fireEvent.click(screen.getByRole("button", { name: "Document options" }))
-  fireEvent.click(
-    await screen.findByRole("menuitem", { name: "Delete document" })
-  )
+  expect(documentFixture.rows()).toHaveLength(1)
+  fireEvent.click(screen.getByRole("button", { name: "Delete" }))
   fireEvent.click(
     within(screen.getByRole("dialog", { name: "Delete document?" })).getByRole(
       "button",
       { name: "Delete document" }
     )
   )
-  expect(read().workspaceProjects[0].resources).toEqual([])
-  expect(read().initiatives[0].projects[0].resources).toEqual([])
-  expect(
-    screen.queryByRole("region", { name: "Project document editor" })
-  ).toBeNull()
+  await waitFor(() => expect(documentFixture.rows()).toHaveLength(0))
+  expect(read().workspaceProjects[0]?.resources ?? []).toEqual([])
+  expect(read().initiatives[0].projects[0].resources ?? []).toEqual([])
 })
 it("shows live progress breakdowns and opens the matching project issues", async () => {
   saveTeamIssue(
@@ -460,3 +467,54 @@ it("edits milestone metadata, reorders milestones, and filters project issues fr
     await screen.findByRole("button", { name: /Open FOR-2 Other work/ })
   ).toBeTruthy()
 })
+
+it.each([
+  { ready: false, error: "" },
+  { ready: true, error: "Source access denied" },
+])(
+  "hides cached legacy project imports and downloads until document-source authorization succeeds ($ready, $error)",
+  async ({ ready, error }) => {
+    vi.mocked(useSharedDocuments).mockImplementation((source) => ({
+      ...useFixtureDocuments(source),
+      ready,
+      error,
+    }))
+    const state = read()
+    state.initiatives[0].projects[0].resources = [
+      {
+        id: "legacy-protected",
+        title: "Protected project original",
+        body: {
+          type: "doc",
+          content: [
+            {
+              type: "paragraph",
+              content: [{ type: "text", text: "Hidden original" }],
+            },
+          ],
+        },
+      },
+    ]
+    productStorage.setItem(
+      initiativesStorageKey("workspace"),
+      JSON.stringify(state)
+    )
+    render(
+      <ProjectDetailPage
+        {...props}
+        tab="overview"
+        onTab={vi.fn()}
+        documentId="legacy-protected"
+        onDocumentChange={vi.fn()}
+      />
+    )
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "Download original" })
+      ).toBeNull()
+    )
+    expect(screen.queryByRole("button", { name: "Import document" })).toBeNull()
+    expect(screen.queryByText(/This earlier document is preserved/)).toBeNull()
+    expect(documentFixture.command).not.toHaveBeenCalled()
+  }
+)

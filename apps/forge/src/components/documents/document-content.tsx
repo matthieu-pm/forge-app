@@ -1,6 +1,7 @@
 import type { JSONContent } from "@tiptap/core"
 import type { ReactNode } from "react"
 import type { PickerIcon } from "@/components/team-icon-picker"
+import { documentBodySchema } from "@/lib/document-contract"
 import { TeamIconPicker } from "@/components/team-icon-picker"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { RichEditor } from "@/components/templates/rich-editor"
@@ -32,6 +33,7 @@ export function DocumentContent({
   metadata?: ReactNode
   children?: ReactNode
 }) {
+  const safeBody = documentBodySchema.safeParse(body)
   return (
     <article
       className={cn(
@@ -68,14 +70,21 @@ export function DocumentContent({
         className="mb-7 h-10 w-full min-w-0 border-0 bg-transparent p-0 text-2xl font-semibold tracking-tight outline-none placeholder:text-muted-foreground/55"
       />
       {metadata}
-      <RichEditor
-        value={body}
-        label="Document content"
-        placeholder="Start writing..."
-        className="min-h-[360px]"
-        onChange={onBodyChange}
-        editable={editable}
-      />
+      {safeBody.success ? (
+        <RichEditor
+          value={safeBody.data}
+          label="Document content"
+          placeholder="Start writing..."
+          className="min-h-[360px]"
+          onChange={onBodyChange}
+          editable={editable}
+        />
+      ) : (
+        <p role="alert">
+          This document contains unsupported content. The original draft has
+          been preserved.
+        </p>
+      )}
       {children}
     </article>
   )

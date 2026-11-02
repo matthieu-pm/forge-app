@@ -28,13 +28,15 @@ export function InitiativeResources({
   onSave,
   onRemove,
   onOpenDocument,
+  onCreateDocument,
   context = "initiative",
 }: {
   item: { resources: Array<ProjectResource> }
   writable: boolean
   onSave: (resource: ProjectResource) => boolean
-  onRemove: (id: string) => boolean | void
+  onRemove: (id: string) => boolean | void | Promise<boolean | void>
   onOpenDocument?: (id: string) => void
+  onCreateDocument?: () => Promise<void>
   context?: "initiative" | "project"
 }) {
   const [draft, setDraft] = useState<ProjectResource | null>(null)
@@ -50,6 +52,12 @@ export function InitiativeResources({
     setDraft(resource ?? { id: crypto.randomUUID(), title: "", url: "" })
   }
   function openDocument(resource?: ProjectResource) {
+    if (!resource && onCreateDocument) {
+      void onCreateDocument().catch(() =>
+        setError("The document could not be created. Try again.")
+      )
+      return
+    }
     if (!resource && !writable) return
     setError("")
     if (onOpenDocument) {
@@ -145,8 +153,8 @@ export function InitiativeResources({
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     variant="destructive"
-                    onClick={() => {
-                      if (onRemove(resource.id) === false)
+                    onClick={async () => {
+                      if ((await onRemove(resource.id)) === false)
                         setError(
                           "The resource could not be removed. Please try again."
                         )

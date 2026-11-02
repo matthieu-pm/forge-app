@@ -49,7 +49,12 @@ beforeEach(() => {
     canModerate: false,
   })
 })
-afterEach(cleanup)
+afterEach(async () => {
+  cleanup()
+  // Tiptap defers destruction until after unmount. Release its DOM listeners
+  // before Vitest disposes this test file's window.
+  await new Promise((resolve) => setTimeout(resolve, 5))
+})
 describe("FOR-46 private comment draft isolation", () => {
   it("remounts the editor when the account changes while the same shared issue stays open", async () => {
     storage.getItem.mockReturnValue(

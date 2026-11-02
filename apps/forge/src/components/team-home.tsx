@@ -28,6 +28,7 @@ import { toast } from "sonner"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamMemberDirectory } from "@/lib/team-member-contract"
 import type { HomeStore, TeamResource } from "@/lib/team-home-state"
+import { useSharedDocuments } from "@/lib/shared-document-client"
 import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
 import { ContentHeader } from "@/components/ui/content-header"
 import { OptionSelect } from "@/components/ui/option-select"
@@ -62,8 +63,6 @@ import { notifyTeamDirectoryChanged } from "@/lib/team-events"
 import { useTeamTriage } from "@/lib/team-triage"
 import { useTeamCycles } from "@/lib/team-cycles"
 import { cn } from "@/lib/utils"
-import { authClient } from "@/lib/auth-client"
-import { newTeamDocument } from "@/lib/team-documents"
 
 export { ActionIconButton as HomeIconButton } from "@/components/ui/action-icon-button"
 
@@ -392,7 +391,19 @@ export function TeamOverview({
   store: HomeStore
 }) {
   const router = useRouter()
-  const session = authClient.useSession()
+  const sharedDocuments = useSharedDocuments({ kind: "team", id: team.id })
+  const displayedResources = [
+    ...store.state.resources.filter(
+      (r) =>
+        r.kind !== "document" ||
+        !sharedDocuments.documents.some((d) => d.id === r.id)
+    ),
+    ...sharedDocuments.documents.map((d) => ({
+      ...d,
+      kind: "document" as const,
+      owner: d.owner ?? undefined,
+    })),
+  ]
   const [name, setName] = React.useState(team.name)
   const [description, setDescription] = React.useState(team.description)
   const [saving, setSaving] = React.useState(false)
@@ -412,21 +423,17 @@ export function TeamOverview({
         search: { document: resource.id },
       })
   }
-  function createDocument(sectionId: string | null) {
-    const user = session.data?.user
-    const resource = newTeamDocument(
-      user
-        ? { id: user.id, name: user.name || "You", image: user.image }
-        : undefined,
-      sectionId
-    )
-    if (
-      homeSave(store, (state) => ({
-        ...state,
-        resources: [...state.resources, resource],
-      }))
-    )
-      openResource(resource)
+  async function createDocument(sectionId: string | null) {
+    try {
+      const id = await sharedDocuments.create(sectionId)
+      void router.navigate({
+        to: "/teams/$teamSlug/documents",
+        params: { teamSlug: team.slug },
+        search: { document: id },
+      })
+    } catch {
+      toast.error("The document could not be created. Try again.")
+    }
   }
   async function save(
     settings: Parameters<typeof updateTeam>[0]["data"]["settings"]
@@ -489,8 +496,13 @@ export function TeamOverview({
     )
   }
   function resources(sectionId: string | null) {
-    return store.state.resources
-      .filter((r) => r.sectionId === sectionId)
+    return displayedResources
+      .filter(
+        (r) =>
+          r.sectionId === sectionId ||
+          (sectionId === null &&
+            !store.state.sections.some((section) => section.id === r.sectionId))
+      )
       .map((r) => (
         <div
           key={r.id}
@@ -539,15 +551,44 @@ export function TeamOverview({
               </DropdownMenuItem>
               <DropdownMenuItem
                 variant="destructive"
+                disabled={
+                  r.kind === "document" &&
+                  !sharedDocuments.documents.find((d) => d.id === r.id)
+                    ?.canDelete
+                }
                 onClick={() =>
-                  homeSave(
-                    store,
-                    (s) => ({
-                      ...s,
-                      resources: s.resources.filter((x) => x.id !== r.id),
-                    }),
-                    "Resource removed"
-                  )
+                  r.kind === "document"
+                    ? void (async () => {
+                        const document = sharedDocuments.documents.find(
+                          (d) => d.id === r.id
+                        )
+                        if (
+                          !document ||
+                          !window.confirm(`Delete “${r.title}”?`)
+                        )
+                          return
+                        try {
+                          const result = await sharedDocuments.command({
+                            action: "delete",
+                            id: document.id,
+                            expectedRevision: document.revision,
+                          })
+                          if (result.status !== "saved")
+                            toast.error(
+                              "The document changed. Review the latest version."
+                            )
+                        } catch {
+                          toast.error("The document could not be deleted.")
+                        }
+                      })()
+                    : homeSave(
+                        store,
+                        (s) => ({
+                          ...s,
+                          resources: s.resources.filter((x) => x.id !== r.id),
+                        }),
+                        "Resource removed"
+                      )
                 }
               >
                 Remove resource
@@ -692,7 +733,7 @@ export function TeamOverview({
               }}
             />
           </div>
-          {store.state.resources.length === 0 &&
+          {displayedResources.length === 0 &&
             store.state.sections.length === 0 && (
               <p className="mt-3 text-sm text-muted-foreground/60">
                 Add documents and links. Organize by creating sections.
