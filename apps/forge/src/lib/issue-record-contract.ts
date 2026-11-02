@@ -37,6 +37,7 @@ const commentSchema = z.object({
   reactions: z.array(reactionSchema).default([]),
 })
 export const issueDraftSchema = triageDraftSchema.extend({
+  estimate: z.string().max(30).nullable().optional(),
   triage: z.boolean().default(false),
   snoozed: z.boolean().default(false),
   status: z.string().min(1),

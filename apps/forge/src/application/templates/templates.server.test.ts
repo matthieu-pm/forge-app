@@ -27,42 +27,57 @@ vi.mock("drizzle-orm", () => ({
   and: (...conditions: Array<unknown>) => conditions,
   isNull: (column: unknown) => ({ column, isNull: true }),
   desc: (column: unknown) => column,
+  sql: vi.fn(),
 }))
-vi.mock("@/db", () => ({
-  teamTemplates: {
-    id: "id",
-    workspaceId: "workspace",
-    teamId: "team",
-    updatedAt: "revision",
-  },
-  teamTemplateDefaults: { teamId: "team", audience: "audience" },
-  users: {},
-  members: { organizationId: "organization" },
-  db: {
-    query: {
-      members: { findMany: mocks.people },
-      teamTemplates: { findFirst: mocks.existing },
+vi.mock("@/db", () => {
+  const module = {
+    teamTemplates: {
+      id: "id",
+      workspaceId: "workspace",
+      teamId: "team",
+      updatedAt: "revision",
     },
-    select: () => ({ from: () => ({ where: mocks.duplicates }) }),
-    insert: () => ({
-      values: (value: unknown) => {
-        mocks.values(value)
-        return {
-          returning: mocks.returning,
-          onConflictDoUpdate: mocks.conflict,
-        }
+    teamTemplateDefaults: { teamId: "team", audience: "audience" },
+    users: {},
+    members: { organizationId: "organization" },
+    db: {
+      execute: vi.fn().mockResolvedValue({}),
+      query: {
+        members: { findMany: mocks.people },
+        teamTemplates: { findFirst: mocks.existing },
       },
-    }),
-    update: () => ({
-      set: () => ({
-        where: (value: unknown) => {
-          mocks.updateWhere(value)
-          return { returning: mocks.returning }
+      select: () => ({ from: () => ({ where: mocks.duplicates }) }),
+      insert: () => ({
+        values: (value: unknown) => {
+          mocks.values(value)
+          return {
+            returning: mocks.returning,
+            onConflictDoUpdate: mocks.conflict,
+          }
         },
       }),
-    }),
-    delete: () => ({ where: mocks.deleteWhere }),
-  },
+      update: () => ({
+        set: () => ({
+          where: (value: unknown) => {
+            mocks.updateWhere(value)
+            return { returning: mocks.returning }
+          },
+        }),
+      }),
+      delete: () => ({ where: mocks.deleteWhere }),
+    },
+  }
+  return {
+    ...module,
+    db: {
+      ...module.db,
+      transaction: async (fn: (tx: typeof module.db) => Promise<unknown>) =>
+        fn(module.db),
+    },
+  }
+})
+vi.mock("@/application/commands/command-actor.server", () => ({
+  currentCommandActor: async (_tx: unknown, actor: Actor) => actor,
 }))
 const teamId = "00000000-0000-4000-8000-000000000001"
 const owner: Actor = {

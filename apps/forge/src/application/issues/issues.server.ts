@@ -12,6 +12,7 @@ import {
 import { z } from "zod"
 import { startedAssignmentEnabled } from "./started-assignment.server"
 import type { InitiativeProject } from "@/lib/initiatives"
+import type { CommandOptions } from "@/application/commands/execute-command.server"
 import type { Actor } from "@/application/actor"
 import type { Transaction } from "@/db"
 import type { CreateCanonicalIssue } from "@/lib/canonical-issue-contract"
@@ -662,7 +663,7 @@ export async function resolveIssueFields(
   }
 }
 
-export async function createCanonicalIssue(
+export function canonicalIssueCreationCommand(
   actor: Actor,
   raw: CreateCanonicalIssue
 ) {
@@ -672,7 +673,7 @@ export async function createCanonicalIssue(
   const legacyFingerprint = input.legacyId
     ? commandInputHash(legacyIssueSource(input.draft, input.assigneeId))
     : undefined
-  const result = await executeCommand({
+  return {
     actor,
     commandKey,
     operation: "issues.create@1",
@@ -886,7 +887,18 @@ export async function createCanonicalIssue(
         ],
       }
     },
-  })
+  } satisfies CommandOptions<{
+    issueId: string
+    childIds: Array<string>
+  }>
+}
+
+export async function createCanonicalIssue(
+  actor: Actor,
+  raw: CreateCanonicalIssue
+) {
+  const result = await executeCommand(canonicalIssueCreationCommand(actor, raw))
+
   // Read current state under live authorization; receipts contain identities only.
   const records = await db.transaction(async (tx) => {
     const current = await currentCommandActor(tx, actor)

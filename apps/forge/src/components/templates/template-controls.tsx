@@ -22,6 +22,9 @@ import type {
 } from "@/lib/template-contract"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamLabelDirectory } from "@/lib/team-labels"
+import { loadTemplateReferences } from "@/lib/template-application-state"
+import { onPreferenceSessionInvalidated } from "@/lib/preference-session-events"
+import { protectedSessionEpoch } from "@/lib/protected-session"
 import { productStorage } from "@/lib/product-storage"
 import { IssueStatusIcon } from "@/components/issue-status-icon"
 import {
@@ -439,6 +442,29 @@ export function Properties({
   workspace?: boolean
   children?: ReactNode
 }) {
+  const [references, setReferences] =
+    React.useState<Awaited<ReturnType<typeof loadTemplateReferences>>>()
+  React.useEffect(() => {
+    let active = true
+    const refresh = () => {
+      const epoch = protectedSessionEpoch()
+      void loadTemplateReferences()
+        .then((value) => {
+          if (active && epoch === protectedSessionEpoch()) setReferences(value)
+        })
+        .catch(() => {})
+    }
+    const unsubscribe = onPreferenceSessionInvalidated((phase) => {
+      setReferences(undefined)
+      if (phase === "settled") refresh()
+    })
+    refresh()
+    return () => {
+      active = false
+      unsubscribe()
+    }
+  }, [])
+
   const rootRef = React.useRef<HTMLDivElement>(null)
   const sequence = React.useRef(0)
   React.useEffect(() => {
@@ -522,20 +548,26 @@ export function Properties({
       : null
   const statusChoices = sharedStatuses
     ? sharedStatuses.map((status, i) => ({
-        value: status.name,
+        value: status.id,
         label: status.name,
         icon: <IssueStatusIcon group={status.group} color={status.color} />,
         detail: String(i + 1),
       }))
-    : (project
-        ? ["Backlog", "To do", "In Progress", "Completed", "Canceled"]
-        : ["Backlog", "Todo", "In Progress", "In Review", "Done", "Canceled"]
-      ).map((status, i) => ({
-        value: status,
-        label: status,
-        icon: <StatusIcon status={status} />,
-        detail: String(i + 1),
-      }))
+    : project && references
+      ? references.catalog.statuses.statuses.map((status) => ({
+          value: status.id,
+          label: status.name,
+          icon: <StatusIcon status={status.name} />,
+        }))
+      : (project
+          ? ["Backlog", "To do", "In Progress", "Completed", "Canceled"]
+          : ["Backlog", "Todo", "In Progress", "In Review", "Done", "Canceled"]
+        ).map((status, i) => ({
+          value: status,
+          label: status,
+          icon: <StatusIcon status={status} />,
+          detail: String(i + 1),
+        }))
   const priorities = ["No priority", "Urgent", "High", "Medium", "Low"].map(
     (p, i) => ({
       value: p,
@@ -603,7 +635,7 @@ export function Properties({
           value={
             sharedStatuses?.find(
               (s) => s.id === value.status || s.name === value.status
-            )?.name ?? value.status
+            )?.id ?? value.status
           }
           options={statusChoices}
           onChange={(selected) => patch("status", selected ?? "Backlog")}
@@ -613,7 +645,9 @@ export function Properties({
             ? (sharedStatuses.find(
                 (s) => s.id === value.status || s.name === value.status
               )?.name ?? "Status unavailable")
-            : value.status}
+            : (references?.catalog.statuses.statuses.find(
+                (s) => s.id === value.status
+              )?.name ?? value.status)}
         </Picker>
       )}
       <Picker
@@ -669,7 +703,10 @@ export function Properties({
             placeholder="Add initiatives..."
             multiple
             value={value.initiatives}
-            options={[]}
+            options={(references?.initiatives ?? []).map((i) => ({
+              value: i.id,
+              label: i.name,
+            }))}
             empty="No active initiatives in this workspace."
             onChange={(selected) => patch("initiatives", selected)}
           >
@@ -684,11 +721,17 @@ export function Properties({
           value={value.project}
           options={[
             { value: "", label: "No project", icon: <Glyph name="project" /> },
+            ...(references?.projects ?? []).map((p) => ({
+              value: p.id,
+              label: p.name,
+            })),
           ]}
           onChange={(selected) => patch("project", selected)}
         >
           <Glyph name="project" />
-          {value.project ?? "Project"}
+          {references?.projects.find((p) => p.id === value.project)?.name ??
+            value.project ??
+            "Project"}
         </Picker>
       )}
       {workspace && (
@@ -714,7 +757,13 @@ export function Properties({
         shortcut={project ? "P then L" : "L"}
         multiple
         value={value.labels}
-        options={labels}
+        options={
+          project && references
+            ? references.catalog.labels.labels
+                .filter((l) => !l.archived)
+                .map((l) => ({ value: l.id, label: l.name }))
+            : labels
+        }
         empty="No labels yet. Add labels in team settings."
         onChange={(selected) => patch("labels", selected)}
       >
@@ -723,7 +772,13 @@ export function Properties({
           ? `${value.labels.length} label${value.labels.length === 1 ? "" : "s"}`
           : "Labels"}
       </Picker>
-      {project && <DependencyPicker value={value} onChange={onChange} />}
+      {project && (
+        <DependencyPicker
+          value={value}
+          onChange={onChange}
+          projects={references?.projects ?? []}
+        />
+      )}
       {children}
     </div>
   )
@@ -731,9 +786,11 @@ export function Properties({
 function DependencyPicker({
   value,
   onChange,
+  projects,
 }: {
   value: TemplateProperties
   onChange: (value: TemplateProperties) => void
+  projects: Array<{ id: string; name: string }>
 }) {
   const [direction, setDirection] = React.useState<
     "blockedBy" | "blocking" | null
@@ -766,9 +823,33 @@ function DependencyPicker({
             >
               ‹ Back
             </button>
-            <p className="p-2 text-xs text-muted-foreground">
-              No projects in this workspace.
-            </p>
+            {projects.length ? (
+              projects.map((project) => (
+                <button
+                  type="button"
+                  key={project.id}
+                  className="p-2 text-left text-xs hover:bg-muted"
+                  onClick={() => {
+                    onChange({
+                      ...value,
+                      dependencies: [
+                        ...value.dependencies.filter(
+                          (d) => d.name !== project.id
+                        ),
+                        { direction, name: project.id },
+                      ],
+                    })
+                    setDirection(null)
+                  }}
+                >
+                  {project.name}
+                </button>
+              ))
+            ) : (
+              <p className="p-2 text-xs text-muted-foreground">
+                No accessible projects in this workspace.
+              </p>
+            )}
           </>
         ) : (
           <>
@@ -802,7 +883,8 @@ function DependencyPicker({
                 }
                 className="p-2 text-left text-xs hover:bg-muted"
               >
-                {d.name} ×
+                {d.direction === "blockedBy" ? "Blocked by" : "Blocking"}{" "}
+                {projects.find((p) => p.id === d.name)?.name ?? d.name} ×
               </button>
             ))}
           </>

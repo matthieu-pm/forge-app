@@ -15,6 +15,7 @@ import type { ReactNode, RefObject } from "react"
 import type { IssueDraft, TeamIssue } from "@/lib/team-issues"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
+import { TemplateApplicationButton } from "@/components/templates/template-application-button"
 import { stableJson } from "@/lib/stable-json"
 import { productStorage } from "@/lib/product-storage"
 import {
@@ -268,8 +269,7 @@ export function IssueComposer({
       if (!originalTeam) throw new Error()
       // Preserve subsequent typing separately before restoring the exact retry.
       if (
-        stableJson([targetTeam.id, draft]) !==
-        pendingCreate.current.signature
+        stableJson([targetTeam.id, draft]) !== pendingCreate.current.signature
       )
         saveIssueDraft(targetTeam.id, draft)
       setTargetTeam(originalTeam)
@@ -530,6 +530,13 @@ export function IssueComposer({
             <span className="px-1 text-muted-foreground">›</span>
             <span className="text-[13px]">
               {issueId ? "Edit issue" : "New issue"}
+              {!issueId && (
+                <TemplateApplicationButton
+                  kind="issue"
+                  slug={targetTeam.slug}
+                  onCreated={onClose}
+                />
+              )}
             </span>
           </div>
           <div className="flex items-center gap-1">

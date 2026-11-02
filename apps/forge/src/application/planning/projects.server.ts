@@ -1,6 +1,7 @@
 import "@tanstack/react-start/server-only"
 import { and, eq, inArray, notInArray } from "drizzle-orm"
 import { z } from "zod"
+import { resolveProjectDependencies } from "./project-dependencies.server"
 import { bindProjectPostFiles } from "./project-files.server"
 import {
   projectMilestoneEvents,
@@ -12,6 +13,7 @@ import {
   readProjectCatalog,
 } from "./project-catalog.server"
 import type { InitiativeProject } from "@/lib/initiatives"
+import type { CommandOptions } from "@/application/commands/execute-command.server"
 import type { Actor } from "@/application/actor"
 import type { Transaction } from "@/db"
 import type { ProjectChanges } from "@/lib/shared-project-contract"
@@ -110,13 +112,13 @@ async function authorize(
 }
 
 /** Used by the authenticated save queue. Receipts contain identities, never drafts. */
-export async function saveCanonicalProjects(
+export function canonicalProjectSaveCommand(
   actor: Actor,
   commandKey: string,
   raw: unknown
 ) {
   const changes = projectChangesSchema.parse(raw)
-  return executeCommand({
+  return {
     actor,
     commandKey,
     operation: "projects.save@1",
@@ -175,6 +177,15 @@ export async function saveCanonicalProjects(
           name: change.changes.name ?? old?.name,
         })
         const previous = (old?.properties ?? {}) as Partial<InitiativeProject>
+        if (change.changes.dependencyIds !== undefined)
+          core.dependencyIds = await resolveProjectDependencies(
+            tx,
+            current,
+            change.id,
+            change.changes.dependencyIds,
+            previous.dependencyIds ?? []
+          )
+
         if (
           !relocated &&
           change.changes.milestones &&
@@ -422,5 +433,15 @@ export async function saveCanonicalProjects(
         ],
       }
     },
-  })
+  } satisfies CommandOptions<{
+    revision: 1
+  }>
+}
+
+export async function saveCanonicalProjects(
+  actor: Actor,
+  commandKey: string,
+  raw: unknown
+) {
+  return executeCommand(canonicalProjectSaveCommand(actor, commandKey, raw))
 }

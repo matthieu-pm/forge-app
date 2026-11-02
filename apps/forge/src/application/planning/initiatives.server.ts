@@ -3,6 +3,7 @@ import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm"
 import { z } from "zod"
 import { initiativeSettings } from "./initiative-gate.server"
 import { reconcileProjectEntries } from "./project-content"
+import type { CommandOptions } from "@/application/commands/execute-command.server"
 import type { Actor } from "@/application/actor"
 import type { Transaction } from "@/db"
 import type { Initiative, InitiativeStore } from "@/lib/initiatives"
@@ -90,7 +91,7 @@ async function authorize(
   }
 }
 /** A relation write must retain live visibility until commit, including private-team revocation. */
-async function lockProject(tx: Transaction, actor: Actor, id: string) {
+export async function lockProject(tx: Transaction, actor: Actor, id: string) {
   await tx
     .select({ id: projects.id })
     .from(projects)
@@ -131,13 +132,13 @@ async function lockProject(tx: Transaction, actor: Actor, id: string) {
   )
     throw new ApplicationAccessError()
 }
-export async function saveCanonicalInitiatives(
+export function canonicalInitiativeSaveCommand(
   actor: Actor,
   commandKey: string,
   raw: unknown
 ) {
   const changes = initiativeChangesSchema.parse(raw)
-  return executeCommand({
+  return {
     actor,
     commandKey,
     operation: "initiatives.save@1",
@@ -295,7 +296,17 @@ export async function saveCanonicalInitiatives(
         })),
       }
     },
-  })
+  } satisfies CommandOptions<{
+    revision: 1
+  }>
+}
+
+export async function saveCanonicalInitiatives(
+  actor: Actor,
+  commandKey: string,
+  raw: unknown
+) {
+  return executeCommand(canonicalInitiativeSaveCommand(actor, commandKey, raw))
 }
 
 /** SQL visibility precedes every child/aggregate query. This transaction supplies directory and detail together. */
@@ -349,6 +360,19 @@ export async function initiativeSnapshot(
       )
     )
     .groupBy(issues.projectId)
+  const visibleDependencyProjects = new Set(
+    (
+      await tx
+        .select({ id: projects.id })
+        .from(projects)
+        .where(
+          and(
+            eq(projects.workspaceId, actor.workspaceId),
+            readableProjectCondition(actor, projects.id)
+          )
+        )
+    ).map((p) => p.id)
+  )
   const items = rows.map((row) => {
     const children = childRows
       .filter((c) => c.initiativeId === row.id)
@@ -360,7 +384,12 @@ export async function initiativeSnapshot(
           revision: p.revision,
           status: p.properties.status ?? "Backlog",
           health: p.properties.health ?? "Update missing",
-          dependencyIds: [],
+          dependencyIds: Array.isArray(p.properties.dependencyIds)
+            ? p.properties.dependencyIds.filter(
+                (id: unknown) =>
+                  typeof id === "string" && visibleDependencyProjects.has(id)
+              )
+            : [],
           teamIds: teamLinks
             .filter((t) => t.projectId === p.id)
             .map((t) => t.teamId),

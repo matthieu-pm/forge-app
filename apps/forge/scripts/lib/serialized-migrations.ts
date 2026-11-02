@@ -28,6 +28,7 @@ export type MigrationTarget = {
     | "initiative-rehearsal"
     | "saved-views-rehearsal"
     | "saved-views-acceptance"
+    | "template-acceptance"
     | "issue-history-acceptance"
     | "document-acceptance"
     | "resource-loop-acceptance"

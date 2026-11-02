@@ -1,0 +1,106 @@
+{
+  "issue": "FOR-63",
+  "validatedSourceRevision": "02f2a6dd7ce4333a44c14ed9837db3b6d4d91b75",
+  "baseRevision": "b5a9e6ee29b3652fa3cd1064d75c6a7589d34f24",
+  "date": "2026-11-02",
+  "environment": {
+    "kind": "isolated staging acceptance",
+    "database": "forge_templates_acceptance",
+    "branchId": "br-autumn-union-za0opf1e",
+    "browser": "local web server, ordinary Better Auth member session",
+    "schemaMigrations": 70,
+    "featureFlag": "FORGE_FEATURE_TEMPLATES=true only in local acceptance"
+  },
+  "scopeDecision": {
+    "confirmedBy": "Matthieu",
+    "decision": "Include forms, project dependencies, and initiative links as well as standard issue/project templates, milestones and nested issues."
+  },
+  "acceptance": [
+    {
+      "criteria": "AC-01 / AT-01",
+      "result": "passed",
+      "evidence": [
+        "Concurrent exact retries create one issue tree and one receipt/audit per command.",
+        "A second distinct key creates a second tree with expected content, assignment, priority, estimates and child properties.",
+        "Browser drops the committed creation response, reloads, and retries its private journal without duplicating the tree.",
+        "Project application creates fresh milestone identities, canonical issue membership, both dependency directions, and initiative membership atomically."
+      ]
+    },
+    {
+      "criteria": "AC-02 / AT-02",
+      "result": "passed",
+      "evidence": [
+        "Unavailable/deleted issue status, inaccessible/deleted team, departed assignee, hidden dependency, invalid form answers and stale template revision return repairable validation without objects or receipts.",
+        "Invalid nested issue, a dependency cycle, or invalid initiative rolls back the entire project setup.",
+        "Browser repairs an invalid reference and a stale chosen revision before creating a real project."
+      ]
+    }
+  ],
+  "additionalChecks": [
+    "Six form field types and required answers validated on the server; answers persisted in canonical rich/plain descriptions.",
+    "Source/workspace/visibility and feature-gate checks; live replay authorization after revocation.",
+    "Template deletion after a committed effect denies replay without replacing its identity.",
+    "Deferred COMMIT fault is not reported as a validation rollback; an exact retry safely resolves its outcome.",
+    "Existing member/non-member defaults, cross-kind preselection and triage behavior.",
+    "Unreadable existing dependency links survive an authorized edit without disclosure.",
+    "Template management and application share the workspace/definition lock order."
+  ],
+  "validation": [
+    {
+      "command": "bun run typecheck",
+      "result": "passed",
+      "scope": "workspace, three configured typecheck tasks"
+    },
+    {
+      "command": "cd apps/forge && bunx vitest run --maxWorkers=2",
+      "result": "passed",
+      "filesPassed": 328,
+      "testsPassed": 2584,
+      "testsSkipped": 587
+    },
+    {
+      "command": "cd apps/forge && FORGE_TEMPLATE_TEST_DATABASE_FILE=/private/connections.json bunx vitest run src/application/templates/template-application.postgres.test.ts --no-file-parallelism",
+      "result": "passed",
+      "testsPassed": 11
+    },
+    {
+      "command": "cd apps/forge && FORGE_TEMPLATE_TEST_DATABASE_FILE=/private/connections.json node scripts/verify-template-applications-browser.mjs",
+      "result": "passed",
+      "pageErrors": 0
+    },
+    {
+      "command": "cd apps/forge && bun run test:workflow",
+      "result": "passed",
+      "testsPassed": 4
+    },
+    {
+      "command": "cd apps/forge && bun run build",
+      "result": "passed",
+      "protectedWorkflowHandlersVerified": true
+    },
+    {
+      "command": "cd apps/forge && bun run lint",
+      "result": "passed",
+      "errors": 0,
+      "warnings": 551
+    },
+    {
+      "command": "git diff --check",
+      "result": "passed"
+    }
+  ],
+  "fixtureCleanup": {
+    "workspaces": 0,
+    "receipts": 0,
+    "users": 0
+  },
+  "rollout": {
+    "newSchemaMigrationRequired": false,
+    "defaultEnabled": false,
+    "initiativeLinksRequireExistingInitiativeGate": true,
+    "productionMigrationPerformed": false,
+    "productionDeploymentPerformed": false,
+    "packagedMacOSQualified": false
+  },
+  "operationsGuide": "docs/operations/canonical-template-applications.md"
+}
