@@ -283,21 +283,34 @@ function ProjectDetail({
   const [editing, setEditing] = useState(false)
   const draftKey = projectPostDraftKey(project.id)
   const renderSession = productStorageIdentity()?.sessionId
-  const [draft, setDraft] = useState(() => {
-    const parsed = projectPostDraftSchema.safeParse(
-      JSON.parse(productStorage.getItem(draftKey) ?? "null")
-    )
-    return parsed.success ? parsed.data : blankActivityDraft()
+  const [savedDraft] = useState(() => {
+    const raw = productStorage.getItem(draftKey)
+    try {
+      if (raw === null) return { draft: blankActivityDraft(), error: "" }
+      const parsed = projectPostDraftSchema.safeParse(JSON.parse(raw))
+      if (parsed.success) return { draft: parsed.data, error: "" }
+    } catch {
+      /* Keep damaged source bytes until the author explicitly discards them. */
+    }
+    return {
+      draft: blankActivityDraft(),
+      error:
+        "Your saved project post draft could not be loaded. Its original data has been preserved.",
+    }
   })
-  function updateActivityDraft(next: typeof draft) {
+  const [draftLoadError, setDraftLoadError] = useState(savedDraft.error)
+  const [draft, setDraft] = useState(savedDraft.draft)
+  function draftIdentityCurrent() {
     const binding = productStorageIdentity()
-    if (
+    return !(
       binding &&
       (binding.sessionId !== renderSession ||
         binding.workspaceId !== workspaceId ||
         binding.userId !== user.id)
     )
-      return
+  }
+  function updateActivityDraft(next: typeof draft) {
+    if (draftLoadError || !draftIdentityCurrent()) return
     setDraft(next)
     productStorage.setItem(draftKey, JSON.stringify(next))
   }
@@ -660,7 +673,7 @@ function ProjectDetail({
       draft={draft}
       onDraft={updateActivityDraft}
       onPublish={publish}
-      writable={store.writable}
+      writable={store.writable && !draftLoadError}
       onAsk={() =>
         ask(
           `Write an update for ${project.name}.\n${project.summary ?? ""}\n${progress}% complete.`
@@ -766,6 +779,20 @@ function ProjectDetail({
           </ActionIconButton>
         </div>
       </ContentHeader>
+      {draftLoadError && (
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => {
+            if (!draftIdentityCurrent()) return
+            productStorage.removeItem(draftKey)
+            setDraft(blankActivityDraft())
+            setDraftLoadError("")
+          }}
+        >
+          Discard damaged post draft
+        </Button>
+      )}
       <div
         role="toolbar"
         aria-label="Project toolbar"
@@ -801,14 +828,16 @@ function ProjectDetail({
           </ActionIconButton>
         </div>
       </div>
-      {(error ||
+      {(draftLoadError ||
+        error ||
         store.mutationError ||
         store.error ||
         directoryError ||
         stats.error ||
         preferences.error) && (
         <p role="alert" className="px-6 py-2 text-xs text-destructive">
-          {store.mutationError ||
+          {draftLoadError ||
+            store.mutationError ||
             error ||
             store.error ||
             directoryError ||

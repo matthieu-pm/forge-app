@@ -444,18 +444,18 @@ export function ProjectMilestones(props: OverviewProps) {
   const [dragged, setDragged] = useState<string>()
   const root = useRef<HTMLElement>(null)
   const baselines = useRef(new Map<string, number | undefined>())
-  function start(id: string) {
-    if (!baselines.current.has(id))
-      baselines.current.set(id, props.project.revision)
+  function start(id: string, field: "name" | "description") {
+    baselines.current.set(`${id}:${field}`, props.project.revision)
   }
-  function save(next: ProjectMilestone) {
+  function save(next: ProjectMilestone, field: "name" | "description") {
+    const key = `${next.id}:${field}`
     const result = props.onChange(
       next,
-      baselines.current.has(next.id)
-        ? baselines.current.get(next.id)
+      baselines.current.has(key)
+        ? baselines.current.get(key)
         : props.project.revision
     )
-    if (result) baselines.current.delete(next.id)
+    if (result) baselines.current.delete(key)
     return result
   }
   const milestones = props.project.milestones ?? []
@@ -529,18 +529,24 @@ export function ProjectMilestones(props: OverviewProps) {
                 value={milestone.name}
                 label={`Milestone name for ${milestone.name}`}
                 editable={props.writable}
-                onEditingStart={() => start(milestone.id)}
+                onEditingStart={() => start(milestone.id, "name")}
+                onEditingCancel={() =>
+                  baselines.current.delete(`${milestone.id}:name`)
+                }
                 onSave={(next) =>
-                  save({
-                    ...milestone,
-                    name: next,
-                    aliases: [
-                      ...new Set([
-                        ...(milestone.aliases ?? []),
-                        milestone.name,
-                      ]),
-                    ],
-                  })
+                  save(
+                    {
+                      ...milestone,
+                      name: next,
+                      aliases: [
+                        ...new Set([
+                          ...(milestone.aliases ?? []),
+                          milestone.name,
+                        ]),
+                      ],
+                    },
+                    "name"
+                  )
                 }
                 className="mb-0 [field-sizing:content] w-auto max-w-[45%] min-w-12 text-[13px] font-medium"
               />
@@ -597,19 +603,22 @@ export function ProjectMilestones(props: OverviewProps) {
                   document={milestone.description}
                   label={`Description for ${milestone.name}`}
                   editable={props.writable}
-                  onEditingStart={() => start(milestone.id)}
+                  onEditingStart={() => start(milestone.id, "description")}
                   onSave={(_text, description) =>
-                    save({
-                      ...milestone,
-                      description,
-                      descriptionHistory: [
-                        ...(milestone.descriptionHistory ?? []),
-                        {
-                          description: milestone.description ?? null,
-                          createdAt: new Date().toISOString(),
-                        },
-                      ],
-                    })
+                    save(
+                      {
+                        ...milestone,
+                        description,
+                        descriptionHistory: [
+                          ...(milestone.descriptionHistory ?? []),
+                          {
+                            description: milestone.description ?? null,
+                            createdAt: new Date().toISOString(),
+                          },
+                        ],
+                      },
+                      "description"
+                    )
                   }
                 />
               </div>

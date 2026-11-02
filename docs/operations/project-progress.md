@@ -37,3 +37,6 @@ FORGE_ISSUE_HISTORY_TEST_DATABASE_FILE=/private/connections.json FORGE_PROJECT_B
 ```
 
 The browser server must use that same acceptance database, development-only authentication/grant secrets and an isolated local file directory `/tmp/for58-private-files`. Do not run browser acceptance concurrently with PostgreSQL tests that deliberately fault audit tables. The browser script creates two independent Better Auth sessions, exercises real project/milestone/post/upload controls, verifies progress and byte equality, reloads drafts/posts, checks stale revisions and revocation, then removes its fixture rows and local bytes. See [acceptance evidence](for58-acceptance-evidence.json) for executed checks and limits. PR preparation does not migrate or deploy production.
+
+
+Production release verification uses the same browser harness with `FORGE_PROJECT_PRODUCTION_AUTHORIZED_REVISION`, `FORGE_PROJECT_PRODUCTION_DATABASE_FILE` and `FORGE_PROJECT_PRODUCTION_BLOB_FILE`. It rejects a dirty checkout, mismatched source, database or private store, uses only UUID-scoped synthetic fixtures, and deletes/checks its provider bytes before removing fixture rows. See [PR #40 review and release notes](../qa/for58/review-and-release.md).

@@ -6,12 +6,12 @@ import type { Transaction } from "@/db"
 import type { Actor } from "@/application/actor"
 import type { ProjectChanges } from "@/lib/shared-project-contract"
 import type { InitiativeProject } from "@/lib/initiatives"
-import { issues, projectTeams, projects, teams } from "@/db"
+import { requireIssueTeam } from "@/application/issues/issues.server"
+import { issues, projectTeams, projects } from "@/db"
 import { ApplicationAccessError } from "@/application/authorization"
 import {
   readableIssueCondition,
   readableProjectCondition,
-  readableTeamCondition,
   requireResourceScope,
 } from "@/application/resource-policy.server"
 
@@ -41,6 +41,7 @@ export async function relocateMilestone(
     .select()
     .from(projectTeams)
     .where(eq(projectTeams.projectId, source.id))
+    .orderBy(projectTeams.teamId)
   let target = relocation.targetId
     ? (
         await tx
@@ -64,22 +65,8 @@ export async function relocateMilestone(
     )
   if (relocation.convertId) {
     // Creating a project cannot copy invisible team identities into a new relation.
-    for (const link of sourceLinks) {
-      if (
-        !(
-          await tx
-            .select({ id: teams.id })
-            .from(teams)
-            .where(
-              and(
-                eq(teams.id, link.teamId),
-                readableTeamCondition(actor, teams.id)
-              )
-            )
-        )[0]
-      )
-        throw new ApplicationAccessError()
-    }
+    for (const link of sourceLinks)
+      await requireIssueTeam(tx, actor, link.teamId)
     target = (
       await tx
         .insert(projects)
@@ -117,6 +104,23 @@ export async function relocateMilestone(
   const values = [
     ...new Set([milestone.id, milestone.name, ...(milestone.aliases ?? [])]),
   ]
+  const assignment = and(
+    eq(issues.workspaceId, actor.workspaceId),
+    eq(issues.projectId, source.id),
+    sql`${issues.properties}->>'milestone' IN (${sql.join(
+      values.map((v) => sql`${v}`),
+      sql`, `
+    )})`
+  )
+  // Team leave/removal does not take the organization fence. Hold the same
+  // team/member authority locks as ordinary issue writes until commit.
+  const affectedTeams = await tx
+    .selectDistinct({ teamId: issues.teamId })
+    .from(issues)
+    .where(assignment)
+    .orderBy(issues.teamId)
+  for (const { teamId } of affectedTeams)
+    await requireIssueTeam(tx, actor, teamId)
   // Include archived/recoverable issues: restoring one must not revive a dangling assignment.
   const affected = await tx
     .select({
@@ -124,16 +128,7 @@ export async function relocateMilestone(
       readable: sql<boolean>`${readableIssueCondition(actor, issues.id, true)}`,
     })
     .from(issues)
-    .where(
-      and(
-        eq(issues.workspaceId, actor.workspaceId),
-        eq(issues.projectId, source.id),
-        sql`${issues.properties}->>'milestone' IN (${sql.join(
-          values.map((v) => sql`${v}`),
-          sql`, `
-        )})`
-      )
-    )
+    .where(assignment)
     .orderBy(issues.id)
     .for("update")
   if (

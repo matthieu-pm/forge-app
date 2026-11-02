@@ -1,29 +1,71 @@
-import { readFileSync } from "node:fs"
+import { execFileSync } from "node:child_process"
+import { del, get } from "@vercel/blob"
+import { readFileSync, writeFileSync } from "node:fs"
 import { chromium, expect } from "@playwright/test"
 import { Pool, neonConfig } from "@neondatabase/serverless"
 import { hashPassword } from "better-auth/crypto"
-const file = process.env.FORGE_ISSUE_HISTORY_TEST_DATABASE_FILE
-if (!file) throw new Error("FORGE_ISSUE_HISTORY_TEST_DATABASE_FILE is required")
+const authorizedRevision =
+  process.env.FORGE_PROJECT_PRODUCTION_AUTHORIZED_REVISION
+const production = Boolean(authorizedRevision)
+const revision = execFileSync("git", ["rev-parse", "HEAD"], {
+  encoding: "utf8",
+}).trim()
+if (
+  production &&
+  (authorizedRevision !== revision ||
+    execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim())
+)
+  throw new Error(
+    "Production verification requires a clean, exact authorized source revision."
+  )
+const file = production
+  ? process.env.FORGE_PROJECT_PRODUCTION_DATABASE_FILE
+  : process.env.FORGE_ISSUE_HISTORY_TEST_DATABASE_FILE
+if (!file) throw new Error("An explicit acceptance database file is required")
 const config = JSON.parse(readFileSync(file, "utf8")),
   url = new URL(config.connection)
+const expectedHost = production
+  ? "ep-lingering-bread-zazpwrxp.c-2.eu-west-2.aws.neon.tech"
+  : "ep-blue-shadow-zauhwkjz.c-2.eu-west-2.aws.neon.tech"
+const expectedDatabase = production
+  ? "neondb"
+  : "forge_issue_history_acceptance"
+const expectedBranch = production
+  ? "br-muddy-queen-zaeeysjt"
+  : "br-autumn-union-za0opf1e"
 if (
-  url.hostname !== "ep-blue-shadow-zauhwkjz.c-2.eu-west-2.aws.neon.tech" ||
-  decodeURIComponent(url.pathname) !== "/forge_issue_history_acceptance" ||
+  url.hostname !== expectedHost ||
+  decodeURIComponent(url.pathname) !== `/${expectedDatabase}` ||
   url.searchParams.get("sslmode") !== "require"
 )
-  throw new Error("Only the dedicated acceptance database is allowed")
-const base = process.env.FORGE_PROJECT_BROWSER_URL ?? "http://localhost:3158",
+  throw new Error("Wrong acceptance database")
+const base = production
+    ? "https://app.forgenow.tech"
+    : (process.env.FORGE_PROJECT_BROWSER_URL ?? "http://localhost:3158"),
   baseUrl = new URL(base)
 if (
-  baseUrl.protocol !== "http:" ||
-  !["localhost", "127.0.0.1"].includes(baseUrl.hostname) ||
-  baseUrl.username ||
-  baseUrl.password
+  !production &&
+  (baseUrl.protocol !== "http:" ||
+    !["localhost", "127.0.0.1"].includes(baseUrl.hostname) ||
+    baseUrl.username ||
+    baseUrl.password)
 )
   throw new Error("A local acceptance server is required")
+const blob = production
+  ? JSON.parse(
+      readFileSync(process.env.FORGE_PROJECT_PRODUCTION_BLOB_FILE, "utf8")
+    )
+  : null
+if (
+  production &&
+  (blob?.storeId !== "store_z6l5eIW5xSJCsoUL" ||
+    typeof blob.token !== "string" ||
+    blob.token.split("_")[3] !== blob.storeId.slice(6))
+)
+  throw new Error("Wrong production byte store")
 neonConfig.webSocketConstructor = WebSocket
 const pool = new Pool({ connectionString: config.connection }),
-  marker = `for58-browser-${crypto.randomUUID()}`,
+  marker = `for58-${production ? "production-" : ""}browser-${crypto.randomUUID()}`,
   teamId = crypto.randomUUID(),
   password = `for58-${crypto.randomUUID()}`,
   users = [`${marker}-admin`, `${marker}-member`]
@@ -36,13 +78,19 @@ try {
     )
   ).rows[0]
   if (
-    identity.database !== "forge_issue_history_acceptance" ||
-    identity.branch !== "br-autumn-union-za0opf1e"
+    identity.database !== expectedDatabase ||
+    identity.branch !== expectedBranch
   )
     throw new Error("Wrong database")
   verified = true
+  if (production)
+    writeFileSync(
+      "/tmp/for58-production-fixture.json",
+      JSON.stringify({ marker, users, teamId, revision }),
+      { mode: 0o600 }
+    )
   await pool.query(
-    "INSERT INTO organization(id,name,slug) VALUES($1,'FOR49 Acceptance',$1)",
+    "INSERT INTO organization(id,name,slug) VALUES($1,'FOR58 Acceptance',$1)",
     [marker]
   )
   await pool.query(
@@ -135,7 +183,10 @@ try {
     )
     .toBe(true)
 
-  await expect(admin.getByText(/Unsaved changes — not confirmed/)).toHaveCount(0, { timeout: 60000 })
+  await expect(admin.getByText(/Unsaved changes — not confirmed/)).toHaveCount(
+    0,
+    { timeout: 60000 }
+  )
   await admin.goto(`${base}/projects/${project.id}?tab=overview`)
   await expect(
     admin.getByRole("button", { name: /^(Open|Close) project details$/ })
@@ -387,6 +438,8 @@ try {
   console.log(
     JSON.stringify({
       issue: "FOR-58",
+      revision,
+      production,
       passed: true,
       environment: identity,
       checks: [
@@ -427,11 +480,25 @@ try {
       )
     ).rows
     const { rm } = await import("node:fs/promises")
-    for (const ref of refs)
-      if (/^files\/[0-9a-f-]{36}$/.test(ref.storage_reference))
+    for (const ref of refs) {
+      if (!/^files\/[0-9a-f-]{36}$/.test(ref.storage_reference))
+        throw new Error("Unexpected fixture file reference")
+      if (production) {
+        const pathname = `forge/${ref.storage_reference}`
+        await del(pathname, { token: blob.token })
+        if (
+          await get(pathname, {
+            token: blob.token,
+            access: "private",
+            useCache: false,
+          })
+        )
+          throw new Error("Fixture bytes remain")
+      } else
         await rm(`/tmp/for58-private-files/${ref.storage_reference}`, {
           force: true,
         })
+    }
     await pool.query("DELETE FROM file_upload_intents WHERE workspace_id=$1", [
       marker,
     ])

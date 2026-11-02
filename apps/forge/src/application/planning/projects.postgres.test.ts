@@ -949,4 +949,121 @@ describe.skipIf(!file)("FOR-54 shared projects on PostgreSQL", () => {
       ).rows[0]
     ).toEqual({ project_id: destination, milestone: "" })
   })
+  it.each(["move", "convert"])(
+    "FOR-58 review: %s holds private-team membership until the complete command commits",
+    async (mode) => {
+      const f = await fixture(),
+        source = randomUUID(),
+        target = randomUUID(),
+        milestoneId = randomUUID()
+      await pool.query(
+        "INSERT INTO team_members(workspace_id,team_id,user_id,role) VALUES($1,$2,$3,'member')",
+        [f.workspaceId, f.privateTeam, userIds[1]]
+      )
+      await save(f.actors[1], [
+        ...create(source, [f.teamId, f.privateTeam]),
+        ...(mode === "move" ? create(target, [f.teamId, f.privateTeam]) : []),
+      ])
+      await save(f.actors[1], [
+        {
+          id: source,
+          expectedRevision: (await project(f.actors[1], source))!.revision,
+          changes: {
+            milestones: [
+              { id: milestoneId, name: "Private work", completed: false },
+            ],
+          },
+        },
+      ])
+      const issue = await issues.createCanonicalIssue(f.actors[1], {
+        commandKey: randomUUID(),
+        teamId: mode === "move" ? f.privateTeam : f.teamId,
+        draft: {
+          ...blankIssueDraft("todo"),
+          title: "Private assignment",
+          project: source,
+          milestone: milestoneId,
+        },
+      })
+      const sourceRow = (await project(f.actors[1], source))!,
+        targetRow = await project(f.actors[1], target)
+      const blocker = await pool.connect(),
+        revoker = await pool.connect()
+      let moving: Promise<unknown> | undefined
+      try {
+        await blocker.query("BEGIN")
+        const blockerPid = (await blocker.query("SELECT pg_backend_pid() pid"))
+          .rows[0].pid
+        await blocker.query("SELECT id FROM issues WHERE id=$1 FOR UPDATE", [
+          issue.issue.id,
+        ])
+        moving = save(f.actors[1], [
+          {
+            id: source,
+            expectedRevision: sourceRow.revision,
+            changes: {},
+            relocation: {
+              milestoneId,
+              ...(mode === "move"
+                ? { targetId: target, targetRevision: targetRow!.revision }
+                : { convertId: target }),
+            },
+          },
+        ])
+        let blocked = false
+        for (let attempt = 0; attempt < 80; attempt++) {
+          blocked = (
+            await pool.query(
+              "SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE $1=ANY(pg_blocking_pids(pid))) blocked",
+              [blockerPid]
+            )
+          ).rows[0].blocked
+          if (blocked) break
+          await new Promise((resolve) => setTimeout(resolve, 25))
+        }
+        expect(blocked).toBe(true)
+        await revoker.query("BEGIN")
+        await revoker.query("SET LOCAL lock_timeout='250ms'")
+        let code: string | undefined
+        try {
+          await revoker.query(
+            "DELETE FROM team_members WHERE workspace_id=$1 AND team_id=$2 AND user_id=$3",
+            [f.workspaceId, f.privateTeam, userIds[1]]
+          )
+        } catch (error) {
+          code = (error as { code?: string }).code
+        }
+        await revoker.query("ROLLBACK")
+        expect(code).toBe("55P03")
+      } finally {
+        await revoker.query("ROLLBACK")
+        await blocker.query("ROLLBACK")
+        await moving
+        revoker.release()
+        blocker.release()
+      }
+      expect(
+        (
+          await pool.query("SELECT project_id FROM issues WHERE id=$1", [
+            issue.issue.id,
+          ])
+        ).rows[0].project_id
+      ).toBe(target)
+      await pool.query(
+        "DELETE FROM team_members WHERE workspace_id=$1 AND team_id=$2 AND user_id=$3",
+        [f.workspaceId, f.privateTeam, userIds[1]]
+      )
+      await expect(
+        save(f.actors[1], [
+          {
+            id: target,
+            expectedRevision: (await project(f.actors[1], target))!.revision,
+            changes: {},
+            relocation: { milestoneId },
+          },
+        ])
+      ).rejects.toThrow()
+    },
+    30000
+  )
 })

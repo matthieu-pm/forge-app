@@ -115,10 +115,19 @@ export function ActivityComposer({
     try {
       if (draft.attachments.length + files.length > 3)
         throw new Error("Attach up to three files per post.")
-      const attachments = []
+      const appendAttachment = (
+        attachment: InitiativeComment["attachments"][number]
+      ) => {
+        const next = {
+          ...latestDraft.current,
+          attachments: [...latestDraft.current.attachments, attachment],
+        }
+        latestDraft.current = next
+        onDraft(next)
+      }
       for (const value of Array.from(files)) {
         if (uploadAttachment) {
-          attachments.push(await uploadAttachment(value))
+          appendAttachment(await uploadAttachment(value))
           continue
         }
         if (value.size > 2_000_000)
@@ -132,17 +141,13 @@ export function ActivityComposer({
             reject(new Error("The attachment could not be read."))
           reader.readAsDataURL(value)
         })
-        attachments.push({
+        appendAttachment({
           id: crypto.randomUUID(),
           name: value.name,
           mime: value.type,
           data,
         })
       }
-      onDraft({
-        ...latestDraft.current,
-        attachments: [...latestDraft.current.attachments, ...attachments],
-      })
       setError("")
     } catch (attachmentError) {
       setError(

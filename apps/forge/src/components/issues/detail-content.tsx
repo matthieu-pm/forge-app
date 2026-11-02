@@ -10,6 +10,7 @@ export function DetailTitle({
   label,
   editable = true,
   onEditingStart,
+  onEditingCancel,
   className,
 }: {
   value: string
@@ -17,6 +18,7 @@ export function DetailTitle({
   label: string
   editable?: boolean
   onEditingStart?: () => void
+  onEditingCancel?: () => void
   className?: string
 }) {
   const [title, setTitle] = useState(value)
@@ -39,12 +41,14 @@ export function DetailTitle({
       onBlur={() => {
         if (canceled.current) {
           canceled.current = false
+          onEditingCancel?.()
           dirty.current = false
           setTitle(value)
           return
         }
         const next = title.trim()
         if (next && next !== value && onSave(next) === false) return
+        if (!next || next === value) onEditingCancel?.()
         if (!next) setTitle(value)
         else setTitle(next)
         dirty.current = false
