@@ -1,6 +1,7 @@
 import "@tanstack/react-start/server-only"
 import { z } from "zod"
 import { authorizeForgeCapability } from "./capability-authorization.server"
+import { loopArtifactPublication } from "./loop-artifact-publication.server"
 
 import {
   consumeCapabilityCommandApproval,
@@ -188,6 +189,7 @@ const agentStore = new DrizzleAgentStore()
 const eventStore = new DrizzleAgentEventStore()
 const artifactBlobs = createFileBlobStore()
 export const forgeArtifactService = new AgentArtifactService({
+  publication: loopArtifactPublication,
   authorizeActor: requireCurrentActor,
   metadata: new DrizzleAgentArtifactStore(),
   blobs: artifactBlobs,

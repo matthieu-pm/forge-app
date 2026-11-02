@@ -58,6 +58,10 @@ export const DATABASE_TARGETS = {
     host: "ep-crimson-math-zap8ynn1.c-2.eu-west-2.aws.neon.tech",
     database: "neondb",
   },
+  "resource-loop-acceptance": {
+    ...STAGING.database,
+    database: "forge_resources_loops_acceptance",
+  },
   "document-acceptance": {
     ...STAGING.database,
     database: "forge_documents_acceptance_v3",

@@ -149,6 +149,20 @@
         "FORGE_CALLS_SUMMARY_MODEL"
       ],
       "passThroughEnv": ["FORGE_*"]
+    },
+    "loops:dispatch": {
+      "cache": false,
+      "passThroughEnv": [
+        "DATABASE_URL",
+        "DATABASE_URL_UNPOOLED",
+        "BETTER_AUTH_*",
+        "EVE_AGENT_RUNTIME_URL",
+        "OPENAI_API_KEY",
+        "AI_GATEWAY_API_KEY",
+        "BLOB_*",
+        "FORGE_*",
+        "POLAR_*"
+      ]
     }
   },
   "globalPassThroughEnv": ["CI", "NODE_ENV", "VERCEL*", "FORGE_*"]

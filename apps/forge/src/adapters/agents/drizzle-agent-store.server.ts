@@ -99,7 +99,8 @@ export class DrizzleAgentStore implements AgentStore {
       .where(
         and(
           eq(agentThreads.workspaceId, workspaceId),
-          eq(agentThreads.createdByUserId, userId)
+          eq(agentThreads.createdByUserId, userId),
+          sql`NOT EXISTS(SELECT 1 FROM loop_runs lr WHERE lr.thread_id=${agentThreads.id} AND lr.workspace_id=${agentThreads.workspaceId})`
         )
       )
       .orderBy(desc(agentThreads.lastActivityAt))

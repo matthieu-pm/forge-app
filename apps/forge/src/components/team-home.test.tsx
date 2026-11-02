@@ -22,7 +22,33 @@ import { useSharedDocuments } from "@/lib/shared-document-client"
 import { downloadDocumentDraft } from "@/lib/document-download"
 import { emptyDocumentBody } from "@/lib/document-contract"
 
+vi.mock("@/lib/team-resources-client", () => ({
+  useTeamResources: () => ({
+    snapshot: { revision: 0, sections: [], links: [], order: [] },
+    ready: true,
+    error: "",
+    saving: false,
+    pending: null,
+    conflict: false,
+    save: vi.fn(async () => true),
+    retry: vi.fn(async () => true),
+    refresh: vi.fn(),
+    reviewConflict: vi.fn(),
+  }),
+}))
+
 vi.mock("@/lib/document-download", () => ({ downloadDocumentDraft: vi.fn() }))
+vi.mock("@/lib/loop-client", () => ({
+  useTeamLoops: () => ({
+    snapshot: { loops: [], runs: [], enabled: true },
+    ready: true,
+    error: "",
+    pending: [],
+    command: vi.fn(),
+    retry: vi.fn(),
+    refresh: vi.fn(),
+  }),
+}))
 
 vi.mock("@/lib/shared-document-client", async () => {
   const fixture = await import("@/test/document-fixture")
@@ -411,26 +437,12 @@ describe("team home workflows", () => {
       screen.getByLabelText<HTMLTextAreaElement>("Document content").value
     ).toBe("Draft")
   })
-  it("turns a loop template into an editable persisted draft", async () => {
+  it("opens real Loop configuration without a fictional template save", async () => {
     render(<TeamLoops team={team} />)
-    const template = screen.getByRole("button", {
-      name: /Weekly wrap Summarizes/,
-    })
-    await waitFor(() => expect(template.hasAttribute("disabled")).toBe(false))
-    fireEvent.click(template)
-    expect(
-      screen.getByRole("combobox", { name: "Loop trigger" }).textContent
-    ).toBe("Weekly schedule")
-    fireEvent.change(screen.getByLabelText("Loop name"), {
-      target: { value: "Friday wrap" },
-    })
-    fireEvent.click(screen.getByRole("button", { name: "Save draft" }))
-    await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Friday wrap" })).toBeTruthy()
-    )
-    expect(
-      JSON.parse(productStorage.getItem(teamHomeKey(team.id))!).loops[0].trigger
-    ).toBe("Weekly schedule")
-    expect(screen.getByText("Draft · On this device")).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: "New loop" }))
+    expect(screen.getByLabelText("Loop instructions")).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Publish loop" })).toBeTruthy()
+    expect(screen.queryByRole("button", { name: "Save draft" })).toBeNull()
+    expect(screen.queryByText("Weekly wrap")).toBeNull()
   })
 })

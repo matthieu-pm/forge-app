@@ -15,7 +15,15 @@ import type {
   DocumentSource,
   SharedDocument,
 } from "@/lib/document-contract"
-import { db, documentRevisions, documents, organizations, users } from "@/db"
+import {
+  db,
+  documentRevisions,
+  documents,
+  organizations,
+  teamResourceBoards,
+  users,
+} from "@/db"
+import { teamResourcesEnabled } from "@/application/resources/team-resources.server"
 import {
   ApplicationAccessError,
   hasWorkspaceRole,
@@ -352,6 +360,48 @@ export async function commandDocument(
             icon: old.icon,
             sectionId: old.sectionId,
           }
+        // Team section IDs are shared-resource identities. Preserve existing legacy
+        // membership on unchanged content edits; new placements must use a current
+        // section. Removing a section presents its old documents at the root,
+        // without inventing document content revisions.
+        const teamId =
+          input.action === "create"
+            ? input.source.kind === "team"
+              ? input.source.id
+              : null
+            : old.teamId
+        if (
+          teamId &&
+          teamResourcesEnabled() &&
+          input.action !== "create" &&
+          fields.sectionId !== old.sectionId
+        )
+          await sourceAccess(tx, current, { kind: "team", id: teamId })
+        if (
+          teamId &&
+          teamResourcesEnabled() &&
+          fields.sectionId !== null &&
+          (input.action === "create" || fields.sectionId !== old?.sectionId)
+        ) {
+          const board = (
+            await tx
+              .select({ fields: teamResourceBoards.fields })
+              .from(teamResourceBoards)
+              .where(eq(teamResourceBoards.teamId, teamId))
+          )[0]
+          if (
+            !board?.fields.sections.some(
+              (section) => section.id === fields.sectionId
+            )
+          ) {
+            if (input.action === "restore")
+              fields = { ...fields, sectionId: null }
+            else
+              throw new Error(
+                "This resource section is no longer available. Choose a current section or Team resources."
+              )
+          }
+        }
         const values = {
           ...fields,
           body: fields.body as Record<string, unknown>,

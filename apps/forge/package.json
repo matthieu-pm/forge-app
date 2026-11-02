@@ -83,7 +83,12 @@
     "test:initiatives:postgres": "vitest run src/application/planning/initiatives.postgres.test.ts",
     "test:initiatives:browser": "node scripts/verify-shared-initiatives-browser.mjs",
     "test:documents:postgres": "vitest run src/application/documents/documents.postgres.test.ts",
-    "test:documents:browser": "node scripts/verify-shared-documents-browser.mjs"
+    "test:documents:browser": "node scripts/verify-shared-documents-browser.mjs",
+    "loops:dispatch": "bun scripts/dispatch-loops.ts",
+    "test:resources:postgres": "vitest run src/application/resources/team-resources.postgres.test.ts",
+    "test:resources:browser": "node scripts/verify-team-resources-browser.mjs",
+    "test:loops:postgres": "vitest run src/application/loops/loops.postgres.test.ts src/application/resources/team-resources.postgres.test.ts",
+    "test:loops:browser": "node scripts/verify-team-loops-browser.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1104.0",

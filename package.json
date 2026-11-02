@@ -51,7 +51,8 @@
     "observability:check": "bun scripts/check-observability.ts",
     "recovery:run": "bun apps/forge/scripts/recovery.ts",
     "recovery:rehearse": "bun apps/forge/scripts/rehearse-recovery.ts",
-    "recovery:maintenance": "bun apps/forge/scripts/recovery-maintenance.ts"
+    "recovery:maintenance": "bun apps/forge/scripts/recovery-maintenance.ts",
+    "loops:dispatch": "turbo run loops:dispatch --filter=@forge/app"
   },
   "devDependencies": {
     "prettier": "^3.9.6",

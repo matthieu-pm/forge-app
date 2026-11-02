@@ -6,6 +6,10 @@ import {
   isAgentProviderEnabled,
   resolveAgentFeatureFlags,
 } from "@/application/agents/agent-feature-flags"
+import {
+  authorizeLoopAgentApproval,
+  authorizeLoopAgentThread,
+} from "@/application/loops/loop-agent-access.server"
 import { AgentCoordinator } from "@/application/agents/agent-coordinator.server"
 import { handleCapabilityRequest } from "@/application/agents/capability-http-handler.server"
 import { createAgentHttpHandler } from "@/application/agents/agent-http-handler.server"
@@ -80,33 +84,48 @@ const runtimes =
     : process.env.AGENT_FAKE_RUNTIME_ENABLED === "true"
       ? [new FakeAgentRuntime()]
       : []
-const coordinator = new AgentCoordinator({
-  store,
-  eventStore,
-  runtimes,
-  listModels: async (actor) =>
-    (await listModelsForRouting(actor)).filter((model) =>
-      providerAllowed(model.provider)
-    ),
-  refreshModels: (actor, connectionId) =>
-    getModelConnectionService().refreshForRouting(actor, connectionId),
-  routeModel: (input) => {
-    if (input.mode === "auto" && !agentFeatures.agent_auto_openai) {
-      return Promise.reject(
-        new ModelRoutingError(
-          "AUTO_UNAVAILABLE",
-          "OpenAI Auto is not enabled for this deployment."
+export function createProductionAgentCoordinator(
+  id?: () => string,
+  loop = false
+) {
+  return new AgentCoordinator({
+    id,
+    store,
+    eventStore,
+    runtimes,
+    listModels: async (actor) =>
+      (await listModelsForRouting(actor)).filter((model) =>
+        providerAllowed(model.provider)
+      ),
+    refreshModels: (actor, connectionId) =>
+      getModelConnectionService().refreshForRouting(actor, connectionId),
+    routeModel: (input) => {
+      if (input.mode === "auto" && !agentFeatures.agent_auto_openai) {
+        return Promise.reject(
+          new ModelRoutingError(
+            "AUTO_UNAVAILABLE",
+            "OpenAI Auto is not enabled for this deployment."
+          )
         )
-      )
-    }
-    return resolveModel(input)
-  },
-  approvals: forgeApprovalService,
-  preferences: new DrizzleThreadModelPreferenceStore(),
-  controlPolicy: agentControls,
-  attachments: forgeAttachmentService,
-  authorizeRun: (actor) => assertWorkspaceActionAllowed(actor, "agents.invoke"),
-})
+      }
+      return resolveModel(input)
+    },
+    approvals: forgeApprovalService,
+    preferences: new DrizzleThreadModelPreferenceStore(),
+    controlPolicy: loop
+      ? { ...agentControls, userMonthlyBudgetMicros: null }
+      : agentControls,
+    attachments: forgeAttachmentService,
+    authorizeThread: authorizeLoopAgentThread,
+    authorizeApproval: authorizeLoopAgentApproval,
+    authorizeRun: async (actor) =>
+      assertWorkspaceActionAllowed(
+        await requireCurrentActor(actor),
+        "agents.invoke"
+      ),
+  })
+}
+const coordinator = createProductionAgentCoordinator()
 
 const handler = createAgentHttpHandler({
   getActor: async (request) =>

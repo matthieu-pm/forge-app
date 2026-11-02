@@ -3,6 +3,8 @@ import { mkdtemp, readFile, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { drizzle } from "drizzle-orm/neon-serverless"
+import * as loopsSchema from "../../src/db/loops-schema"
+import * as resourcesSchema from "../../src/db/resources-schema"
 import * as appSchema from "../../src/db/schema"
 import * as authSchema from "../../src/db/auth-schema"
 import * as planningSchema from "../../src/db/planning-schema"
@@ -640,7 +642,13 @@ export async function enforceRestoredDeadlines(
       "UPDATE public.issues SET purge_lease_until=NULL,purge_token=NULL WHERE deleted_at+interval '720 hours'<=clock_timestamp() AND purged_at IS NULL"
     )
     const database = drizzle(client as PoolClient, {
-      schema: { ...appSchema, ...planningSchema, ...authSchema },
+      schema: {
+        ...appSchema,
+        ...planningSchema,
+        ...authSchema,
+        ...loopsSchema,
+        ...resourcesSchema,
+      },
     })
     for (let batch = 0; ; batch++) {
       const due = Number(

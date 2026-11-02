@@ -3,7 +3,11 @@
  * Implementations must reject overwrite and never fall back to another store.
  */
 export interface FileBlobStore {
-  put: (reference: string, content: Uint8Array) => Promise<void>
+  put: (
+    reference: string,
+    content: Uint8Array,
+    options?: { signal?: AbortSignal }
+  ) => Promise<void>
   get: (
     reference: string,
     options?: { maxBytes: number; signal?: AbortSignal }

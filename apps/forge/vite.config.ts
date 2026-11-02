@@ -38,15 +38,19 @@ const config = defineConfig(({ mode }) => {
         vercel: {
           config: {
             version: 3,
-            crons:
-              process.env.FORGE_OPERATIONS_MONITOR_ENABLED === "true"
+            crons: [
+              ...(process.env.FORGE_OPERATIONS_MONITOR_ENABLED === "true"
                 ? [
                     {
                       path: "/api/internal/operations-monitor",
                       schedule: "* * * * *",
                     },
                   ]
-                : [],
+                : []),
+              ...(process.env.FORGE_LOOPS_ENABLED === "true"
+                ? [{ path: "/api/internal/loops", schedule: "* * * * *" }]
+                : []),
+            ],
           },
         },
         plugins: [

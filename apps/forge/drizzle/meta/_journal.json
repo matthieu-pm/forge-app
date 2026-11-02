@@ -470,6 +470,27 @@
       "when": 1793610204062,
       "tag": "0066_shared_documents",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1793631500935,
+      "tag": "0067_team_resources_and_loops",
+      "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1793632763850,
+      "tag": "0068_loop_lifecycle_fencing",
+      "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1793633654643,
+      "tag": "0069_loop_artifact_intents",
+      "breakpoints": true
     }
   ]
 }

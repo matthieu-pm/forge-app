@@ -5,7 +5,9 @@ import { configuredDeletionJournal } from "../adapters/recovery/r2-deletion-jour
 import { journalDatabasePool } from "../adapters/recovery/journaled-pool.server"
 import * as appSchema from "./schema"
 import * as planningSchema from "./planning-schema"
+import * as loopsSchema from "./loops-schema"
 import * as authSchema from "./auth-schema"
+import * as resourceSchema from "./resources-schema"
 
 assertStagingEnvironment(process.env, "web")
 
@@ -33,8 +35,10 @@ export const databaseClient = client
 
 export const schema = {
   ...appSchema,
+  ...loopsSchema,
   ...planningSchema,
   ...authSchema,
+  ...resourceSchema,
 }
 
 export const db = drizzle(client, { schema })
@@ -46,3 +50,7 @@ export * from "./schema"
 export * from "./auth-schema"
 
 export * from "./planning-schema"
+
+export * from "./resources-schema"
+
+export * from "./loops-schema"

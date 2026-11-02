@@ -23,13 +23,18 @@ export class VercelPrivateFileBlobStore implements FileBlobStore {
     assertFileReference(reference)
     return `forge/${reference}`
   }
-  async put(reference: string, content: Uint8Array) {
+  async put(
+    reference: string,
+    content: Uint8Array,
+    options?: { signal?: AbortSignal }
+  ) {
     await put(this.#path(reference), Buffer.from(content), {
       token: this.#token,
       access: "private",
       addRandomSuffix: false,
       allowOverwrite: false,
       contentType: "application/octet-stream",
+      abortSignal: options?.signal,
     })
   }
   async get(

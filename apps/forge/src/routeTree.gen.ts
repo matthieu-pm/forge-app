@@ -70,6 +70,7 @@ import { Route as ApiHealthReadyRouteImport } from './routes/api/health/ready'
 import { Route as ApiInternalDatabaseReleaseRehearsalRouteImport } from './routes/api/internal/database-release-rehearsal'
 import { Route as ApiInternalEnvironmentRouteImport } from './routes/api/internal/environment'
 import { Route as ApiInternalIssueRetentionRouteImport } from './routes/api/internal/issue-retention'
+import { Route as ApiInternalLoopsRouteImport } from './routes/api/internal/loops'
 import { Route as ApiInternalObservabilityCheckRouteImport } from './routes/api/internal/observability-check'
 import { Route as ApiInternalOperationsCheckRouteImport } from './routes/api/internal/operations-check'
 import { Route as ApiInternalOperationsMonitorRouteImport } from './routes/api/internal/operations-monitor'
@@ -102,6 +103,7 @@ import { Route as ApiCallsOauthCallbackRouteImport } from './routes/api/calls/oa
 import { Route as ApiFilesUploadsIndexRouteImport } from './routes/api/files/uploads/index'
 import { Route as ApiFilesUploadsSplatRouteImport } from './routes/api/files/uploads/$'
 import { Route as ApiInternalDesktopReleasesRouteImport } from './routes/api/internal/desktop/releases'
+import { Route as ApiLoopsWebhooksLoopIdRouteImport } from './routes/api/loops/webhooks/$loopId'
 import { Route as SettingsTemplatesIssueTemplateIdRouteImport } from './routes/settings.templates.issue.$templateId'
 import { Route as SettingsTemplatesProjectTemplateIdRouteImport } from './routes/settings.templates.project.$templateId'
 import { Route as SettingsTeamsTeamSlugIndexRouteImport } from './routes/settings_.teams.$teamSlug.index'
@@ -441,6 +443,11 @@ const ApiInternalIssueRetentionRoute =
     path: '/api/internal/issue-retention',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiInternalLoopsRoute = ApiInternalLoopsRouteImport.update({
+  id: '/api/internal/loops',
+  path: '/api/internal/loops',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiInternalObservabilityCheckRoute =
   ApiInternalObservabilityCheckRouteImport.update({
     id: '/api/internal/observability-check',
@@ -611,6 +618,11 @@ const ApiInternalDesktopReleasesRoute =
     path: '/api/internal/desktop/releases',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiLoopsWebhooksLoopIdRoute = ApiLoopsWebhooksLoopIdRouteImport.update({
+  id: '/api/loops/webhooks/$loopId',
+  path: '/api/loops/webhooks/$loopId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsTemplatesIssueTemplateIdRoute =
   SettingsTemplatesIssueTemplateIdRouteImport.update({
     id: '/templates/issue/$templateId',
@@ -842,6 +854,7 @@ export interface FileRoutesByFullPath {
   '/api/internal/database-release-rehearsal': typeof ApiInternalDatabaseReleaseRehearsalRoute
   '/api/internal/environment': typeof ApiInternalEnvironmentRoute
   '/api/internal/issue-retention': typeof ApiInternalIssueRetentionRoute
+  '/api/internal/loops': typeof ApiInternalLoopsRoute
   '/api/internal/observability-check': typeof ApiInternalObservabilityCheckRoute
   '/api/internal/operations-check': typeof ApiInternalOperationsCheckRoute
   '/api/internal/operations-monitor': typeof ApiInternalOperationsMonitorRoute
@@ -873,6 +886,7 @@ export interface FileRoutesByFullPath {
   '/api/calls/oauth/callback': typeof ApiCallsOauthCallbackRoute
   '/api/files/uploads/$': typeof ApiFilesUploadsSplatRoute
   '/api/internal/desktop/releases': typeof ApiInternalDesktopReleasesRouteWithChildren
+  '/api/loops/webhooks/$loopId': typeof ApiLoopsWebhooksLoopIdRoute
   '/settings/templates/issue/$templateId': typeof SettingsTemplatesIssueTemplateIdRoute
   '/settings/templates/project/$templateId': typeof SettingsTemplatesProjectTemplateIdRoute
   '/settings/teams/$teamSlug/agent-skills': typeof SettingsTeamsTeamSlugAgentSkillsRouteWithChildren
@@ -963,6 +977,7 @@ export interface FileRoutesByTo {
   '/api/internal/database-release-rehearsal': typeof ApiInternalDatabaseReleaseRehearsalRoute
   '/api/internal/environment': typeof ApiInternalEnvironmentRoute
   '/api/internal/issue-retention': typeof ApiInternalIssueRetentionRoute
+  '/api/internal/loops': typeof ApiInternalLoopsRoute
   '/api/internal/observability-check': typeof ApiInternalObservabilityCheckRoute
   '/api/internal/operations-check': typeof ApiInternalOperationsCheckRoute
   '/api/internal/operations-monitor': typeof ApiInternalOperationsMonitorRoute
@@ -993,6 +1008,7 @@ export interface FileRoutesByTo {
   '/api/calls/oauth/callback': typeof ApiCallsOauthCallbackRoute
   '/api/files/uploads/$': typeof ApiFilesUploadsSplatRoute
   '/api/internal/desktop/releases': typeof ApiInternalDesktopReleasesRouteWithChildren
+  '/api/loops/webhooks/$loopId': typeof ApiLoopsWebhooksLoopIdRoute
   '/settings/templates/issue/$templateId': typeof SettingsTemplatesIssueTemplateIdRoute
   '/settings/templates/project/$templateId': typeof SettingsTemplatesProjectTemplateIdRoute
   '/settings/teams/$teamSlug/agents': typeof SettingsTeamsTeamSlugAgentsRoute
@@ -1083,6 +1099,7 @@ export interface FileRoutesById {
   '/api/internal/database-release-rehearsal': typeof ApiInternalDatabaseReleaseRehearsalRoute
   '/api/internal/environment': typeof ApiInternalEnvironmentRoute
   '/api/internal/issue-retention': typeof ApiInternalIssueRetentionRoute
+  '/api/internal/loops': typeof ApiInternalLoopsRoute
   '/api/internal/observability-check': typeof ApiInternalObservabilityCheckRoute
   '/api/internal/operations-check': typeof ApiInternalOperationsCheckRoute
   '/api/internal/operations-monitor': typeof ApiInternalOperationsMonitorRoute
@@ -1114,6 +1131,7 @@ export interface FileRoutesById {
   '/api/calls/oauth/callback': typeof ApiCallsOauthCallbackRoute
   '/api/files/uploads/$': typeof ApiFilesUploadsSplatRoute
   '/api/internal/desktop/releases': typeof ApiInternalDesktopReleasesRouteWithChildren
+  '/api/loops/webhooks/$loopId': typeof ApiLoopsWebhooksLoopIdRoute
   '/settings/templates/issue/$templateId': typeof SettingsTemplatesIssueTemplateIdRoute
   '/settings/templates/project/$templateId': typeof SettingsTemplatesProjectTemplateIdRoute
   '/settings_/teams/$teamSlug/agent-skills': typeof SettingsTeamsTeamSlugAgentSkillsRouteWithChildren
@@ -1208,6 +1226,7 @@ export interface FileRouteTypes {
     | '/api/internal/database-release-rehearsal'
     | '/api/internal/environment'
     | '/api/internal/issue-retention'
+    | '/api/internal/loops'
     | '/api/internal/observability-check'
     | '/api/internal/operations-check'
     | '/api/internal/operations-monitor'
@@ -1239,6 +1258,7 @@ export interface FileRouteTypes {
     | '/api/calls/oauth/callback'
     | '/api/files/uploads/$'
     | '/api/internal/desktop/releases'
+    | '/api/loops/webhooks/$loopId'
     | '/settings/templates/issue/$templateId'
     | '/settings/templates/project/$templateId'
     | '/settings/teams/$teamSlug/agent-skills'
@@ -1329,6 +1349,7 @@ export interface FileRouteTypes {
     | '/api/internal/database-release-rehearsal'
     | '/api/internal/environment'
     | '/api/internal/issue-retention'
+    | '/api/internal/loops'
     | '/api/internal/observability-check'
     | '/api/internal/operations-check'
     | '/api/internal/operations-monitor'
@@ -1359,6 +1380,7 @@ export interface FileRouteTypes {
     | '/api/calls/oauth/callback'
     | '/api/files/uploads/$'
     | '/api/internal/desktop/releases'
+    | '/api/loops/webhooks/$loopId'
     | '/settings/templates/issue/$templateId'
     | '/settings/templates/project/$templateId'
     | '/settings/teams/$teamSlug/agents'
@@ -1448,6 +1470,7 @@ export interface FileRouteTypes {
     | '/api/internal/database-release-rehearsal'
     | '/api/internal/environment'
     | '/api/internal/issue-retention'
+    | '/api/internal/loops'
     | '/api/internal/observability-check'
     | '/api/internal/operations-check'
     | '/api/internal/operations-monitor'
@@ -1479,6 +1502,7 @@ export interface FileRouteTypes {
     | '/api/calls/oauth/callback'
     | '/api/files/uploads/$'
     | '/api/internal/desktop/releases'
+    | '/api/loops/webhooks/$loopId'
     | '/settings/templates/issue/$templateId'
     | '/settings/templates/project/$templateId'
     | '/settings_/teams/$teamSlug/agent-skills'
@@ -1547,6 +1571,7 @@ export interface RootRouteChildren {
   ApiInternalDatabaseReleaseRehearsalRoute: typeof ApiInternalDatabaseReleaseRehearsalRoute
   ApiInternalEnvironmentRoute: typeof ApiInternalEnvironmentRoute
   ApiInternalIssueRetentionRoute: typeof ApiInternalIssueRetentionRoute
+  ApiInternalLoopsRoute: typeof ApiInternalLoopsRoute
   ApiInternalObservabilityCheckRoute: typeof ApiInternalObservabilityCheckRoute
   ApiInternalOperationsCheckRoute: typeof ApiInternalOperationsCheckRoute
   ApiInternalOperationsMonitorRoute: typeof ApiInternalOperationsMonitorRoute
@@ -1559,6 +1584,7 @@ export interface RootRouteChildren {
   ApiCallsOauthCallbackRoute: typeof ApiCallsOauthCallbackRoute
   ApiFilesUploadsSplatRoute: typeof ApiFilesUploadsSplatRoute
   ApiInternalDesktopReleasesRoute: typeof ApiInternalDesktopReleasesRouteWithChildren
+  ApiLoopsWebhooksLoopIdRoute: typeof ApiLoopsWebhooksLoopIdRoute
   ApiFilesUploadsIndexRoute: typeof ApiFilesUploadsIndexRoute
   ApiDesktopUpdatesDarwinArchRoute: typeof ApiDesktopUpdatesDarwinArchRoute
 }
@@ -1992,6 +2018,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiInternalIssueRetentionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/internal/loops': {
+      id: '/api/internal/loops'
+      path: '/api/internal/loops'
+      fullPath: '/api/internal/loops'
+      preLoaderRoute: typeof ApiInternalLoopsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/internal/observability-check': {
       id: '/api/internal/observability-check'
       path: '/api/internal/observability-check'
@@ -2214,6 +2247,13 @@ declare module '@tanstack/react-router' {
       path: '/api/internal/desktop/releases'
       fullPath: '/api/internal/desktop/releases'
       preLoaderRoute: typeof ApiInternalDesktopReleasesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/loops/webhooks/$loopId': {
+      id: '/api/loops/webhooks/$loopId'
+      path: '/api/loops/webhooks/$loopId'
+      fullPath: '/api/loops/webhooks/$loopId'
+      preLoaderRoute: typeof ApiLoopsWebhooksLoopIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings/templates/issue/$templateId': {
@@ -2708,6 +2748,7 @@ const rootRouteChildren: RootRouteChildren = {
     ApiInternalDatabaseReleaseRehearsalRoute,
   ApiInternalEnvironmentRoute: ApiInternalEnvironmentRoute,
   ApiInternalIssueRetentionRoute: ApiInternalIssueRetentionRoute,
+  ApiInternalLoopsRoute: ApiInternalLoopsRoute,
   ApiInternalObservabilityCheckRoute: ApiInternalObservabilityCheckRoute,
   ApiInternalOperationsCheckRoute: ApiInternalOperationsCheckRoute,
   ApiInternalOperationsMonitorRoute: ApiInternalOperationsMonitorRoute,
@@ -2720,6 +2761,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCallsOauthCallbackRoute: ApiCallsOauthCallbackRoute,
   ApiFilesUploadsSplatRoute: ApiFilesUploadsSplatRoute,
   ApiInternalDesktopReleasesRoute: ApiInternalDesktopReleasesRouteWithChildren,
+  ApiLoopsWebhooksLoopIdRoute: ApiLoopsWebhooksLoopIdRoute,
   ApiFilesUploadsIndexRoute: ApiFilesUploadsIndexRoute,
   ApiDesktopUpdatesDarwinArchRoute: ApiDesktopUpdatesDarwinArchRoute,
 }

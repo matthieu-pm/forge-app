@@ -16,6 +16,12 @@ export async function currentCommandActor(
 ): Promise<Actor> {
   const authentication = actor.authentication
   let scopes = actor.scopes
+  let loopRunId: string | undefined
+  if (authentication.kind === "loop") {
+    const { currentLoopActor } =
+      await import("@/application/loops/loop-actor.server")
+    return currentLoopActor(tx, actor, authentication.runId)
+  }
   if (authentication.kind === "apiKey") {
     const key = (
       await tx
@@ -85,6 +91,13 @@ export async function currentCommandActor(
         .for("share")
     ).at(0)
     if (!thread) throw new ApplicationAccessError()
+    if (typeof run.requestedSelection.loopRunId === "string")
+      loopRunId = run.requestedSelection.loopRunId
+  }
+  if (loopRunId) {
+    const { currentLoopActor } =
+      await import("@/application/loops/loop-actor.server")
+    return currentLoopActor(tx, actor, loopRunId)
   }
   const membership = (
     await tx
@@ -103,6 +116,8 @@ export async function currentCommandActor(
 }
 
 export function commandPrincipal(actor: Actor) {
+  if (actor.authentication.kind === "loop")
+    return `loop:${actor.authentication.loopId}:${actor.authentication.runId}`
   return actor.authentication.kind === "apiKey"
     ? `apiKey:${actor.authentication.credentialId}`
     : actor.authentication.kind === "agent"
