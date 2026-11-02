@@ -31,3 +31,5 @@ The follow-up changes no database schema or feature flag. Production's migration
 ## Final review
 
 Both review axes have zero remaining concrete findings after the combined corrections. Regression evidence and final checks are recorded in `docs/operations/for60-review-evidence.json`; production outcomes are also recorded in the Linear completion update.
+
+Final source `c040f8004b8d549f1c8e50b92b390b353fc5f387` passed 2,460 app tests (502 integration cases skipped without explicit targets), all 14 separately targeted PostgreSQL cases, four workflow cases, typecheck, the production build and lint with zero errors. The local browser acceptance passed including live private-project revocation and nested draft preservation, and fixture cleanup returned zero. An unrelated Signals editor timeout in the first broad run passed isolated and in the complete single-worker rerun; no unrelated test was changed. Production was rechecked on current main/FOR-59 with journal 66 and the saved-views flag enabled.
