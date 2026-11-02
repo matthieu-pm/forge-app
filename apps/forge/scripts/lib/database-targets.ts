@@ -36,6 +36,12 @@ export const DATABASE_TARGETS = {
     ...STAGING.database,
     database: "forge_triage_acceptance",
   },
+  // FOR-59 production clone; expires 3 November 2026 08:40 UTC.
+  "initiative-rehearsal": {
+    branchId: "br-sparkling-boat-zay5z06u",
+    host: "ep-broad-dawn-zaijxea7.c-2.eu-west-2.aws.neon.tech",
+    database: "neondb",
+  },
   // FOR-60 production clone; expires 3 November 2026 00:00 UTC.
   "saved-views-rehearsal": {
     branchId: "br-snowy-thunder-zabg6anv",

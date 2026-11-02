@@ -3,34 +3,57 @@ import { readFileSync, writeFileSync } from "node:fs"
 import { chromium, expect } from "@playwright/test"
 import { Pool, neonConfig } from "@neondatabase/serverless"
 import { hashPassword } from "better-auth/crypto"
-const file = process.env.FORGE_ISSUE_HISTORY_TEST_DATABASE_FILE
-if (!file)
-  throw new Error("An explicit isolated acceptance database is required")
+const revision = execFileSync("git", ["rev-parse", "HEAD"], {
+  encoding: "utf8",
+}).trim()
+const authorizedRevision =
+  process.env.FORGE_INITIATIVE_PRODUCTION_AUTHORIZED_REVISION
+const production = Boolean(authorizedRevision)
+if (
+  production &&
+  (authorizedRevision !== revision ||
+    execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim())
+)
+  throw new Error(
+    "Production verification requires a clean, exact authorized source revision."
+  )
+const file = production
+  ? process.env.FORGE_INITIATIVE_PRODUCTION_DATABASE_FILE
+  : process.env.FORGE_ISSUE_HISTORY_TEST_DATABASE_FILE
+if (!file) throw new Error("An explicit acceptance database file is required")
 const config = JSON.parse(readFileSync(file, "utf8")),
   url = new URL(config.connection)
-const expectedHost = "ep-blue-shadow-zauhwkjz.c-2.eu-west-2.aws.neon.tech",
-  expectedDatabase = "forge_issue_history_acceptance",
-  expectedBranch = "br-autumn-union-za0opf1e"
+const rehearsal = config.target === "initiative-rehearsal"
+const expectedHost = production
+  ? "ep-lingering-bread-zazpwrxp.c-2.eu-west-2.aws.neon.tech"
+  : rehearsal
+    ? "ep-broad-dawn-zaijxea7.c-2.eu-west-2.aws.neon.tech"
+    : "ep-blue-shadow-zauhwkjz.c-2.eu-west-2.aws.neon.tech"
+const expectedDatabase =
+  production || rehearsal ? "neondb" : "forge_issue_history_acceptance"
+const expectedBranch = production
+  ? "br-muddy-queen-zaeeysjt"
+  : rehearsal
+    ? "br-sparkling-boat-zay5z06u"
+    : "br-autumn-union-za0opf1e"
 if (
-  url.hostname !== expectedHost ||
+  url.hostname.replace("-pooler.", ".") !== expectedHost ||
   decodeURIComponent(url.pathname) !== `/${expectedDatabase}` ||
   url.searchParams.get("sslmode") !== "require"
 )
   throw new Error("Wrong acceptance database")
-const base =
-    process.env.FORGE_INITIATIVE_BROWSER_URL ?? "http://localhost:3159",
-  baseUrl = new URL(base),
-  production = false
+const base = production
+    ? "https://app.forgenow.tech"
+    : (process.env.FORGE_INITIATIVE_BROWSER_URL ?? "http://localhost:3159"),
+  baseUrl = new URL(base)
 if (
-  baseUrl.protocol !== "http:" ||
-  !["localhost", "127.0.0.1"].includes(baseUrl.hostname) ||
-  baseUrl.username ||
-  baseUrl.password
+  !production &&
+  (baseUrl.protocol !== "http:" ||
+    !["localhost", "127.0.0.1"].includes(baseUrl.hostname) ||
+    baseUrl.username ||
+    baseUrl.password)
 )
-  throw new Error("Local acceptance server required")
-const revision = execFileSync("git", ["rev-parse", "HEAD"], {
-  encoding: "utf8",
-}).trim()
+  throw new Error("A local acceptance server is required")
 neonConfig.webSocketConstructor = WebSocket
 const pool = new Pool({ connectionString: config.connection }),
   marker = `for59-${production ? "production-" : ""}browser-${crypto.randomUUID()}`,
@@ -301,6 +324,94 @@ try {
   await expect(
     admin.getByText("Shared member comment", { exact: true })
   ).toBeVisible({ timeout: 60000 })
+  // A workspace admin can moderate the member's post; an open member editor
+  // must retain its original revision after that shared edit arrives.
+  await member
+    .locator(`[data-activity-id="${stored.updates[0].id}"]`)
+    .getByRole("button", { name: "Update options", exact: true })
+    .click()
+  await member
+    .getByRole("menuitem", { name: "Edit update", exact: true })
+    .click()
+  await member
+    .getByRole("textbox", { name: "Edit activity text", exact: true })
+    .fill("Stale member activity draft")
+  await admin
+    .locator(`[data-activity-id="${stored.updates[0].id}"]`)
+    .getByRole("button", { name: "Update options", exact: true })
+    .click()
+  await admin
+    .getByRole("menuitem", { name: "Edit update", exact: true })
+    .click()
+  await admin
+    .getByRole("textbox", { name: "Edit activity text", exact: true })
+    .fill("Admin moderated shared update")
+  await admin.getByRole("button", { name: "Save post", exact: true }).click()
+  await quiet(admin)
+  const moderatedRefresh = member.waitForResponse(
+    async (response) =>
+      response.url().includes("/_serverFn/") &&
+      (await response.text()).includes("Admin moderated shared update")
+  )
+  await member.evaluate(() => window.dispatchEvent(new Event("focus")))
+  await moderatedRefresh
+  await member.getByRole("button", { name: "Save post", exact: true }).click()
+  await expect(
+    member.getByRole("textbox", { name: "Edit activity text", exact: true })
+  ).toHaveValue("Stale member activity draft")
+  await expect(
+    member.getByText(/Changes could not be saved. Your text has been kept/)
+  ).toBeVisible()
+  expect(
+    (
+      await pool.query(
+        "SELECT properties->'updates'->0->>'text' text FROM initiatives WHERE id=$1",
+        [initiative.id]
+      )
+    ).rows[0].text
+  ).toBe("Admin moderated shared update")
+  await member.getByRole("button", { name: "Cancel", exact: true }).click()
+  // A departed initiative owner does not make the remaining workspace read-only.
+  await admin.goto(
+    `${base}/workspace/initiatives/${initiative.id}?tab=overview`
+  )
+  await pool.query(
+    "UPDATE initiatives SET properties=jsonb_set(properties,'{ownerId}',to_jsonb($2::text)) WHERE id=$1",
+    [initiative.id, users[1]]
+  )
+  await pool.query(
+    "DELETE FROM member WHERE organization_id=$1 AND user_id=$2",
+    [marker, users[1]]
+  )
+  await admin.evaluate(() => window.dispatchEvent(new Event("focus")))
+  await expect(
+    admin.getByRole("textbox", { name: "Initiative summary", exact: true })
+  ).toBeEnabled()
+  // Wait for the fresh owner/revision snapshot before making the unrelated edit.
+  await admin.reload()
+  await expect(
+    admin.getByRole("textbox", { name: "Initiative summary", exact: true })
+  ).toBeEnabled({ timeout: 60000 })
+  await admin
+    .getByRole("textbox", { name: "Initiative summary", exact: true })
+    .fill("Remaining admin can still collaborate")
+  await expect
+    .poll(
+      async () =>
+        (
+          await pool.query(
+            "SELECT properties->>'summary' summary FROM initiatives WHERE id=$1",
+            [initiative.id]
+          )
+        ).rows[0].summary,
+      { timeout: 60000 }
+    )
+    .toBe("Remaining admin can still collaborate")
+  await quiet(admin)
+  await pool.query(
+    "INSERT INTO member(id,user_id,organization_id,role) VALUES($1,$2,$3,'member')",
+    [crypto.randomUUID(), users[1], marker]
+  )
   // Force a real server revision conflict while the retained form still holds its old revision.
   await member.goto(
     `${base}/workspace/initiatives/${initiative.id}?tab=overview`
@@ -390,7 +501,9 @@ try {
   ).toBe("Reviewed background draft")
   await member.clock.resume()
   await member.screenshot({
-    path: "/tmp/for59-initiative-browser.png",
+    path: production
+      ? "/tmp/for59-production-browser.png"
+      : "/tmp/for59-initiative-browser.png",
     fullPage: true,
   })
   expect(errors).toEqual([])
@@ -398,12 +511,17 @@ try {
     JSON.stringify({
       acceptance: "FOR-59",
       revision,
+      production,
+      environment: identity,
       passed: true,
       checks: [
         "member-visible authorized rollups",
         "project progress updates across sessions",
         "private child/team omission",
         "shared attributed updates/comments",
+        "administrator post moderation",
+        "stale post text retained after background refresh",
+        "departed initiative owner does not block collaboration",
         "real revision conflict and reviewed draft recovery",
         "background refresh preserves dirty text until explicitly reviewed",
       ],

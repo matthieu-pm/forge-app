@@ -186,6 +186,7 @@ export async function saveCanonicalInitiatives(
         })
         if (
           properties.ownerId &&
+          (!old || change.changes.ownerId !== undefined) &&
           !(
             await tx
               .select({ id: members.id })

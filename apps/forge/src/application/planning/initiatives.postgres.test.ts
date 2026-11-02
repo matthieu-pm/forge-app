@@ -23,13 +23,16 @@ describe.skipIf(!file)("FOR-59 shared initiatives on PostgreSQL", () => {
     projects: typeof Projects,
     issues: typeof Issues
   beforeAll(async () => {
-    const { connection, applicationConnection } = JSON.parse(
-      readFileSync(file!, "utf8")
-    )
-    const target = {
-      environment: "issue-history-acceptance",
-      ...DATABASE_TARGETS["issue-history-acceptance"],
-    } as const
+    const {
+      connection,
+      applicationConnection,
+      target: configuredTarget,
+    } = JSON.parse(readFileSync(file!, "utf8"))
+    const environment =
+      configuredTarget === "initiative-rehearsal"
+        ? "initiative-rehearsal"
+        : "issue-history-acceptance"
+    const target = { environment, ...DATABASE_TARGETS[environment] } as const
     assertMigrationTarget(connection, target)
     assertMigrationTarget(
       applicationConnection.replace("-pooler.", "."),
@@ -454,5 +457,37 @@ describe.skipIf(!file)("FOR-59 shared initiatives on PostgreSQL", () => {
         ],
       })
     ).rejects.toThrow(/attachments/)
+  }, 30000)
+  it("review: a departed initiative owner does not block unrelated metadata or activity changes", async () => {
+    const f = await fixture(),
+      i = await createInitiative(f.actors[0])
+    await change(f.actors[0], i.id, i.revision!, { ownerId: userIds[1] })
+    await pool.query(
+      "DELETE FROM member WHERE organization_id=$1 AND user_id=$2",
+      [f.workspaceId, userIds[1]]
+    )
+    let current = await get(f.actors[0], i.id)
+    await change(f.actors[0], i.id, current.revision!, {
+      summary: "Owner has left",
+    })
+    current = await get(f.actors[0], i.id)
+    await change(f.actors[0], i.id, current.revision!, {
+      comments: [
+        {
+          id: randomUUID(),
+          text: "Still collaborates",
+          authorId: userIds[0],
+          createdAt: new Date().toISOString(),
+          attachments: [],
+          reactions: [],
+        },
+      ],
+    })
+    current = await get(f.actors[0], i.id)
+    expect(current.summary).toBe("Owner has left")
+    expect(current.comments[0].text).toBe("Still collaborates")
+    await expect(
+      change(f.actors[0], i.id, current.revision!, { ownerId: userIds[1] })
+    ).rejects.toThrow()
   }, 30000)
 })

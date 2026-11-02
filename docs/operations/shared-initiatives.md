@@ -22,7 +22,7 @@ This change supplies web/shared application behavior. Packaged macOS acceptance 
 
 ## Verification
 
-Use an explicit JSON credential file containing `connection` (direct) and `applicationConnection` (pooled) for the verified `issue-history-acceptance` database. Tests check its host, database and Neon branch before fixture writes. Never use production credentials with these scripts.
+Use an explicit JSON credential file containing `connection` (direct) and `applicationConnection` (pooled) for the verified `issue-history-acceptance` database, or the expiring production clone with `target: "initiative-rehearsal"`. Tests check its host, database and Neon branch before fixture writes. Never use production credentials with these scripts.
 
 - `FORGE_ISSUE_HISTORY_TEST_DATABASE_FILE=/absolute/path/credentials.json bun run --cwd apps/forge test:initiatives:postgres`
 - Start a local app against that database with `FORGE_FEATURE_INITIATIVES=true` and `BETTER_AUTH_URL` matching the local origin.
@@ -30,3 +30,5 @@ Use an explicit JSON credential file containing `connection` (direct) and `appli
 - Client regression checks: `bun x vitest run src/lib/shared-initiative-client.test.tsx` from `apps/forge`.
 
 PostgreSQL tests cover AT-01/AT-02, mixed/private project visibility, hidden membership preservation, live canonical progress, foreign/private links, stale and competing revisions, atomic rollback, exact retries, revoked membership/session access, author moderation, reactions, owner validation and gate enforcement. The browser script exercises two authenticated sessions, real project linking, filtered progress changes, shared authored updates/comments and a real conflict with reviewed private draft recovery. Each integration runner deletes its own fixture workspaces/users.
+
+Production acceptance additionally requires a clean checkout, `FORGE_INITIATIVE_PRODUCTION_AUTHORIZED_REVISION` equal to its exact HEAD, and `FORGE_INITIATIVE_PRODUCTION_DATABASE_FILE` pointing privately to the verified production connection. The harness then fixes the origin to `https://app.forgenow.tech`, checks actual SQL branch/database identity, creates only its own random fixture workspace/users, and verifies cleanup. No credentials belong in evidence artifacts.

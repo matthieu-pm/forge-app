@@ -106,6 +106,7 @@ export function InitiativeDetail({
     node?.scrollIntoView({ behavior: "smooth", block: "center" })
     setActivityTarget("")
   }, [tab, activityTarget])
+  const postBaselines = useRef(new Map<string, number | undefined>())
   const editRevision = useRef(item.revision)
   const previous = useRef({
     name: item.name,
@@ -247,22 +248,28 @@ export function InitiativeDetail({
     if (saved) setDraft(blankActivityDraft())
     return saved
   }
-  function changeEntry(entry: ActivityEntry, changes: Partial<ActivityEntry>) {
-    return mutate((current) =>
-      patchInitiative(
-        current,
-        entry.health
-          ? {
-              updates: current.updates.map((value) =>
-                value.id === entry.id ? { ...value, ...changes } : value
-              ),
-            }
-          : {
-              comments: current.comments.map((value) =>
-                value.id === entry.id ? { ...value, ...changes } : value
-              ),
-            }
-      )
+  function changeEntry(
+    entry: ActivityEntry,
+    changes: Partial<ActivityEntry>,
+    revision = item.revision
+  ) {
+    return mutate(
+      (current) =>
+        patchInitiative(
+          current,
+          entry.health
+            ? {
+                updates: current.updates.map((value) =>
+                  value.id === entry.id ? { ...value, ...changes } : value
+                ),
+              }
+            : {
+                comments: current.comments.map((value) =>
+                  value.id === entry.id ? { ...value, ...changes } : value
+                ),
+              }
+        ),
+      revision
     )
   }
   function card(entry: ActivityEntry, latest = false) {
@@ -274,12 +281,27 @@ export function InitiativeDetail({
         projects={initiativeProjectCatalog(store.state)}
         userId={userId}
         writable={store.writable}
+        canModerate={store.canModerate}
+        onEditingStart={() =>
+          postBaselines.current.set(entry.id, item.revision)
+        }
         latest={latest}
         onUpdate={() => {
           setDraft({ ...draft, kind: "update" })
           onTab("updates")
         }}
-        onChange={(changes) => changeEntry(entry, changes)}
+        onChange={(changes) => {
+          const saved = changeEntry(
+            entry,
+            changes,
+            changes.text !== undefined && postBaselines.current.has(entry.id)
+              ? postBaselines.current.get(entry.id)
+              : item.revision
+          )
+          if (saved && changes.text !== undefined)
+            postBaselines.current.delete(entry.id)
+          return saved
+        }}
         onRemove={() =>
           mutate((current) =>
             patchInitiative(
