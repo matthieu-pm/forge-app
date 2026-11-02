@@ -659,3 +659,66 @@ export const legacyImportAliases = pgTable(
     ),
   ]
 )
+
+/** Versioned definitions are shared separately from each actor's favorites. */
+export const savedViews = pgTable(
+  "saved_views",
+  {
+    id: id(),
+    workspaceId: workspace(),
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    visibility: text("visibility")
+      .$type<"personal" | "workspace" | "team">()
+      .notNull(),
+    teamId: uuid("team_id"),
+    revision: integer("revision").notNull().default(0),
+    definition: jsonb("definition").$type<Record<string, unknown>>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (t) => [
+    unique("saved_views_workspace_identity").on(t.workspaceId, t.id),
+    index("saved_views_directory").on(
+      t.workspaceId,
+      t.visibility,
+      t.ownerId,
+      t.id
+    ),
+    check(
+      "saved_views_visibility",
+      sql`${t.visibility} IN ('personal','workspace','team') AND (${t.visibility} <> 'team' OR ${t.teamId} IS NOT NULL)`
+    ),
+    check("saved_views_revision", sql`${t.revision} >= 0`),
+    foreignKey({
+      name: "saved_views_team_fk",
+      columns: [t.workspaceId, t.teamId],
+      foreignColumns: [teams.workspaceId, teams.id],
+    }).onDelete("cascade"),
+  ]
+)
+export const savedViewFavorites = pgTable(
+  "saved_view_favorites",
+  {
+    id: id(),
+    workspaceId: workspace(),
+    viewId: uuid("view_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (t) => [
+    unique("saved_view_favorites_actor").on(t.workspaceId, t.userId, t.viewId),
+    foreignKey({
+      name: "saved_view_favorites_view_fk",
+      columns: [t.workspaceId, t.viewId],
+      foreignColumns: [savedViews.workspaceId, savedViews.id],
+    }).onDelete("cascade"),
+  ]
+)

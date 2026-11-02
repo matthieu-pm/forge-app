@@ -1,5 +1,11 @@
 import { useState } from "react"
-import { cleanup, fireEvent, screen } from "@testing-library/react"
+import {
+  act,
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+} from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { ViewsPage } from "./views-page"
 import type { ViewsSearch } from "./views-page"
@@ -7,16 +13,19 @@ import type { ViewIssuesProps } from "./view-issues"
 import type { ComponentProps } from "react"
 import type { ViewProjects } from "./view-projects"
 import { productStorage } from "@/lib/product-storage"
+import { replaceCanonicalIssues } from "@/lib/canonical-issue-cache"
+import { invalidatePreferenceSession } from "@/lib/preference-session-events"
 import {
-  readTestView,
   renderPreferences as render,
   setupPreferenceFixture,
 } from "@/test/preference-fixture"
-import {
-  customViewsKey,
-  newCustomView,
-  parseCustomViews,
-} from "@/lib/custom-views"
+import { newCustomView } from "@/lib/custom-views"
+
+const transport = vi.hoisted(() => ({ load: vi.fn(), save: vi.fn() }))
+vi.mock("@/lib/saved-view-functions", () => ({
+  loadSavedViews: transport.load,
+  persistSavedView: transport.save,
+}))
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 vi.mock("@/components/team-icon-picker", () => ({
@@ -90,231 +99,186 @@ vi.mock("./view-projects", () => ({
 }))
 
 const user = { id: "user", name: "Matthieu", image: null }
+const identity = {
+  workspaceId: "workspace",
+  userId: "user",
+  sessionId: "session",
+}
 const props = { workspaceId: "workspace", user, people: [user], teams: [] }
-const navigate = vi.fn()
+const saved = {
+  ...newCustomView("issues", user.id),
+  name: "Shared view",
+  visibility: "workspace" as const,
+  revision: 1,
+  canEdit: true,
+}
 function Harness({ initial = { kind: "issues" } }: { initial?: ViewsSearch }) {
   const [search, setSearch] = useState(initial)
-  return (
-    <ViewsPage
-      {...props}
-      search={search}
-      onNavigate={(next) => {
-        navigate(next)
-        setSearch(next)
-      }}
-    />
-  )
-}
-const read = () =>
-  parseCustomViews(
-    productStorage.getItem(customViewsKey(props.workspaceId, user.id))
-  ).views
-const issueConfig = () =>
-  JSON.parse(screen.getByTestId("issue-config").textContent)
-const projectConfig = () =>
-  JSON.parse(screen.getByTestId("project-config").textContent)
-const changeName = (name: string) =>
-  fireEvent.change(screen.getByRole("textbox", { name: "View name" }), {
-    target: { value: name },
-  })
-async function openOptions(action: string) {
-  fireEvent.click(screen.getAllByRole("button", { name: "View options" })[0])
-  fireEvent.click(await screen.findByRole("button", { name: action }))
+  return <ViewsPage {...props} search={search} onNavigate={setSearch} />
 }
 beforeEach(async () => {
-  await setupPreferenceFixture("user")
   productStorage.clear()
-  vi.clearAllMocks()
-  Element.prototype.scrollIntoView = vi.fn()
-  vi.stubGlobal(
-    "ResizeObserver",
-    class {
-      observe() {}
-      unobserve() {}
-      disconnect() {}
-    }
-  )
+  await setupPreferenceFixture("user")
+  invalidatePreferenceSession("start")
+  replaceCanonicalIssues({ ...identity, records: [], projects: [], cycles: [] })
+  transport.load
+    .mockReset()
+    .mockResolvedValue(
+      JSON.stringify({ ...identity, enabled: true, views: [saved], error: "" })
+    )
+  transport.save.mockReset().mockResolvedValue({})
 })
 afterEach(() => {
   cleanup()
-  vi.unstubAllGlobals()
+  invalidatePreferenceSession("start")
+  replaceCanonicalIssues(null)
 })
-
-describe("Views pages", () => {
-  it("creates from the directory with the preview configuration and reopens the saved view after remount", async () => {
-    const mounted = render(<Harness />)
-    fireEvent.click(screen.getByRole("button", { name: "Create new view" }))
-    changeName("High priority work")
-    fireEvent.change(
-      screen.getByRole("textbox", { name: "View description" }),
-      { target: { value: "Watch urgent work" } }
-    )
-    fireEvent.click(
-      screen.getByRole("button", { name: "Filter high priority issues" })
-    )
-    fireEvent.click(screen.getByRole("button", { name: "Use issue board" }))
-    expect(read()).toEqual([])
-    fireEvent.click(screen.getByRole("button", { name: "Create view" }))
-    const saved = read()[0]
-    expect(saved).toMatchObject({
-      name: "High priority work",
-      description: "Watch urgent work",
-      kind: "issues",
-      filters: { rules: [{ value: "High" }] },
-      display: { layout: "board" },
-    })
-    expect(navigate).toHaveBeenLastCalledWith({
-      kind: "issues",
-      view: saved.id,
-    })
-    mounted.unmount()
-    render(<Harness initial={{ kind: "issues", view: saved.id }} />)
-    expect(issueConfig().filters.rules[0].value).toBe("High")
-    expect(issueConfig().display.layout).toBe("board")
-    expect(
-      screen.getByRole("heading", { level: 1, name: "High priority work" })
-    ).toBeTruthy()
-    fireEvent.click(screen.getByRole("button", { name: "Views" }))
-    expect(
-      await screen.findByRole("link", { name: "High priority work" })
-    ).toBeTruthy()
-  })
-
-  it("edits a saved view as a draft, cancels without saving, then commits subsequent edits", async () => {
-    const saved = newCustomView("issues", user.id)
-    productStorage.setItem(
-      customViewsKey(props.workspaceId, user.id),
-      JSON.stringify({ version: 1, views: [saved] })
-    )
-    render(<Harness initial={{ kind: "issues", view: saved.id }} />)
-    await openOptions("Edit view…")
-    changeName("Discard this edit")
-    fireEvent.click(
-      screen.getByRole("button", { name: "Filter high priority issues" })
-    )
-    fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
-    expect(read()[0].name).toBe("All issues")
-    expect(issueConfig().filters.rules).toEqual([])
-    await openOptions("Edit view…")
-    expect(
-      screen.getByRole<HTMLInputElement>("textbox", { name: "View name" }).value
-    ).toBe("All issues")
-    changeName("Saved edit")
-    fireEvent.click(screen.getByRole("button", { name: "Save view" }))
-    expect(read()).toHaveLength(1)
-    expect(read()[0]).toMatchObject({ id: saved.id, name: "Saved edit" })
-  })
-
-  it("duplicates all filter and display settings into an independent unsaved draft", async () => {
-    const source = newCustomView("projects", user.id)
-    source.name = "Current roadmap"
-    source.favorite = true
-    source.description = "Planning view"
-    source.filters = [{ field: "Priority", value: "High" }]
-    source.display.layout = "Timeline"
-    productStorage.setItem(
-      customViewsKey(props.workspaceId, user.id),
-      JSON.stringify({ version: 1, views: [source] })
-    )
-    render(<Harness initial={{ kind: "projects", view: source.id }} />)
-    await openOptions("Duplicate view…")
-    expect(read()).toHaveLength(1)
-    expect(projectConfig()).toEqual({
-      filters: source.filters,
-      display: source.display,
-    })
-    expect(
-      screen.getByRole<HTMLInputElement>("textbox", { name: "View name" }).value
-    ).toBe("Current roadmap (copy)")
-    fireEvent.click(screen.getByRole("button", { name: "Create view" }))
-    expect(read()).toHaveLength(2)
-    expect(read()[1]).toMatchObject({
-      name: "Current roadmap (copy)",
-      description: "Planning view",
-      favorite: false,
-      filters: source.filters,
-      display: source.display,
-    })
-    expect(read()[1].id).not.toBe(source.id)
-    expect(read()[0]).toEqual(source)
-  })
-
-  it("switches the draft type, retaining entered metadata but replacing incompatible configuration", () => {
-    render(<Harness initial={{ kind: "issues", view: "new" }} />)
-    changeName("My delivery view")
-    fireEvent.click(
-      screen.getByRole("button", { name: "Filter high priority issues" })
-    )
-    fireEvent.click(screen.getByRole("button", { name: "Projects" }))
-    expect(projectConfig().filters).toEqual([])
-    expect(
-      screen.getByRole<HTMLInputElement>("textbox", { name: "View name" }).value
-    ).toBe("My delivery view")
-    fireEvent.click(
-      screen.getByRole("button", { name: "Filter active projects" })
-    )
-    fireEvent.click(
-      screen.getByRole("button", { name: "Use project timeline" })
-    )
-    fireEvent.click(screen.getByRole("button", { name: "Create view" }))
-    expect(read()[0]).toMatchObject({
-      kind: "projects",
-      name: "My delivery view",
-      filters: [{ field: "Status", value: "In Progress" }],
-      display: { layout: "Timeline" },
-    })
-  })
-
-  it("keeps issue and project directory tabs separate", async () => {
-    const issues = { ...newCustomView("issues", user.id), name: "Bugs" }
-    const projects = { ...newCustomView("projects", user.id), name: "Roadmap" }
-    productStorage.setItem(
-      customViewsKey(props.workspaceId, user.id),
-      JSON.stringify({ version: 1, views: [issues, projects] })
-    )
+describe("FOR-60 saved view interactions", () => {
+  it("creates with an explicit acknowledged save and keeps filters in the draft", async () => {
     render(<Harness />)
-    expect(screen.getByRole("link", { name: "Bugs" })).toBeTruthy()
-    expect(screen.queryByRole("link", { name: "Roadmap" })).toBeNull()
-    fireEvent.click(screen.getByRole("button", { name: "Projects" }))
-    expect(await screen.findByRole("link", { name: "Roadmap" })).toBeTruthy()
-    expect(screen.queryByRole("link", { name: "Bugs" })).toBeNull()
-  })
-
-  it("persists favorites and only removes the selected view after confirming deletion", async () => {
-    const first = { ...newCustomView("issues", user.id), name: "Watch list" }
-    const second = { ...newCustomView("issues", user.id), name: "Other list" }
-    productStorage.setItem(
-      customViewsKey(props.workspaceId, user.id),
-      JSON.stringify({ version: 1, views: [first, second] })
+    await screen.findByRole("link", { name: "Shared view" })
+    fireEvent.click(screen.getByRole("button", { name: "New view" }))
+    fireEvent.change(screen.getByRole("textbox", { name: "View name" }), {
+      target: { value: "High priority" },
+    })
+    fireEvent.click(
+      screen.getByRole("button", { name: "Filter high priority issues" })
     )
-    render(<Harness initial={{ kind: "issues", view: first.id }} />)
+    expect(transport.save).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole("button", { name: "Create view" }))
+    await waitFor(() => expect(transport.save).toHaveBeenCalledOnce())
+    expect(transport.save.mock.calls[0][0].data.mutation).toMatchObject({
+      action: "save",
+      expectedRevision: null,
+      definition: {
+        name: "High priority",
+        filters: { rules: [{ field: "priority", value: "High" }] },
+      },
+    })
+  })
+  it("browsing filters stay temporary while favorites use the actor-owned command", async () => {
+    render(<Harness initial={{ kind: "issues", view: saved.id }} />)
+    await screen.findByTestId("issue-config")
+    fireEvent.click(
+      screen.getByRole("button", { name: "Filter high priority issues" })
+    )
+    expect(transport.save).not.toHaveBeenCalled()
     fireEvent.click(
       screen.getAllByRole("button", { name: "Add to favorites" })[0]
     )
-    expect(readTestView("directory").favoriteIds).toContain(first.id)
-    await openOptions("Delete view…")
-    expect(screen.getByRole("dialog")).toBeTruthy()
-    expect(read()).toHaveLength(2)
-    fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
-    expect(read()).toHaveLength(2)
-    await openOptions("Delete view…")
-    fireEvent.click(screen.getByRole("button", { name: "Delete view" }))
-    expect(read()).toEqual([second])
-    expect(navigate).toHaveBeenLastCalledWith({ kind: "issues" })
-    expect(await screen.findByRole("link", { name: "Other list" })).toBeTruthy()
+    await waitFor(() => expect(transport.save).toHaveBeenCalledOnce())
+    expect(transport.save.mock.calls[0][0].data.mutation).toEqual({
+      action: "favorite",
+      id: saved.id,
+      favorite: true,
+    })
   })
-
-  it("disables saving when existing storage is corrupt and preserves the unreadable value", () => {
-    const key = customViewsKey(props.workspaceId, user.id)
-    productStorage.setItem(key, "{damaged")
-    render(<Harness initial={{ kind: "issues", view: "new" }} />)
-    expect(screen.getByRole("alert").textContent).toContain("preserved")
+  it("readers cannot enter the shared editor or change ownership", async () => {
+    transport.load.mockResolvedValue(
+      JSON.stringify({
+        ...identity,
+        enabled: true,
+        views: [{ ...saved, ownerId: "alice", canEdit: false }],
+        error: "",
+      })
+    )
+    render(<Harness initial={{ kind: "issues", view: saved.id, edit: true }} />)
+    await screen.findByTestId("issue-config")
+    expect(screen.queryByRole("textbox", { name: "View name" })).toBeNull()
     expect(
-      screen.getByRole<HTMLButtonElement>("button", { name: "Create view" })
-        .disabled
-    ).toBe(true)
+      screen.queryByRole("button", { name: "Change view visibility" })
+    ).toBeNull()
+    expect(
+      screen.queryByRole("button", { name: "Change view owner" })
+    ).toBeNull()
+  })
+  it("preserves failed edit drafts and allows a retry", async () => {
+    transport.save.mockRejectedValueOnce(
+      new Error("Conflict: review the latest view")
+    )
+    render(<Harness initial={{ kind: "issues", view: saved.id, edit: true }} />)
+    await screen.findByRole("textbox", { name: "View name" })
+    fireEvent.change(screen.getByRole("textbox", { name: "View name" }), {
+      target: { value: "My edit" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Save view" }))
+    await screen.findByRole("alert")
+    expect(screen.getByRole("textbox", { name: "View name" })).toHaveProperty(
+      "value",
+      "My edit"
+    )
+    expect(
+      screen.getByRole("button", { name: "Save view" }).hasAttribute("disabled")
+    ).toBe(false)
+  })
+  it("keeps the original revision when changing an existing view type", async () => {
+    render(<Harness initial={{ kind: "issues", view: saved.id, edit: true }} />)
+    await screen.findByRole("textbox", { name: "View name" })
+    fireEvent.click(screen.getByRole("button", { name: "Projects" }))
+    fireEvent.click(screen.getByRole("button", { name: "Save view" }))
+    await waitFor(() => expect(transport.save).toHaveBeenCalledOnce())
+    expect(transport.save.mock.calls[0][0].data.mutation).toMatchObject({
+      id: saved.id,
+      expectedRevision: 1,
+      definition: { kind: "projects" },
+    })
+  })
+  it("duplicates a readable shared view as a new private definition", async () => {
+    render(<Harness initial={{ kind: "issues", view: saved.id }} />)
+    await screen.findByTestId("issue-config")
+    fireEvent.click(screen.getAllByRole("button", { name: "View options" })[0])
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Duplicate view…" })
+    )
     fireEvent.click(screen.getByRole("button", { name: "Create view" }))
-    expect(productStorage.getItem(key)).toBe("{damaged")
-    expect(navigate).not.toHaveBeenCalled()
+    await waitFor(() => expect(transport.save).toHaveBeenCalledOnce())
+    expect(transport.save.mock.calls[0][0].data.mutation).toMatchObject({
+      expectedRevision: null,
+      definition: { name: "Shared view (copy)", visibility: "personal" },
+    })
+    expect(transport.save.mock.calls[0][0].data.mutation.id).not.toBe(saved.id)
+  })
+  it("the disabled gate exposes no create or saved-view content", async () => {
+    transport.load.mockResolvedValue(
+      JSON.stringify({ ...identity, enabled: false, views: [], error: "" })
+    )
+    render(<Harness />)
+    await screen.findByText("Saved views are not enabled for this environment.")
+    expect(
+      screen.getByRole("button", { name: "New view" }).hasAttribute("disabled")
+    ).toBe(true)
+    expect(screen.queryByRole("link", { name: "Shared view" })).toBeNull()
+  })
+})
+
+it("FOR-60 review: keeps an unsaved edit draft after a failed background refresh recovers", async () => {
+  render(<Harness initial={{ kind: "issues", view: saved.id, edit: true }} />)
+  const name = await screen.findByRole("textbox", { name: "View name" })
+  fireEvent.change(name, { target: { value: "Unsaved review draft" } })
+  fireEvent.click(
+    screen.getByRole("button", { name: "Filter high priority issues" })
+  )
+  transport.load.mockRejectedValueOnce(new Error("Temporary read failure"))
+  act(() => window.dispatchEvent(new Event("focus")))
+  await screen.findByText(
+    "Saved views could not be loaded. Refresh to try again."
+  )
+  transport.load.mockResolvedValueOnce(
+    JSON.stringify({
+      ...identity,
+      enabled: true,
+      views: [{ ...saved, name: "Newer shared name", revision: 2 }],
+      error: "",
+    })
+  )
+  act(() => window.dispatchEvent(new Event("focus")))
+  const recovered = await screen.findByRole("textbox", { name: "View name" })
+  expect((recovered as HTMLInputElement).value).toBe("Unsaved review draft")
+  expect(screen.getByTestId("issue-config").textContent).toContain("High")
+  fireEvent.click(screen.getByRole("button", { name: "Save view" }))
+  await waitFor(() => expect(transport.save).toHaveBeenCalledOnce())
+  expect(transport.save.mock.calls[0][0].data.mutation).toMatchObject({
+    expectedRevision: 1,
+    definition: { name: "Unsaved review draft" },
   })
 })

@@ -1,5 +1,5 @@
 import { act } from "@testing-library/react"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it } from "vitest"
 import {
   customViewSchema,
   customViewsKey,
@@ -7,10 +7,7 @@ import {
   parseCustomViews,
   visibleCustomViews,
 } from "./custom-views"
-import {
-  useCustomViewDirectoryPreferences,
-  useCustomViews,
-} from "./custom-views-state"
+import { useCustomViewDirectoryPreferences } from "./custom-views-state"
 import { productStorage } from "@/lib/product-storage"
 import {
   renderPreferenceHook as renderHook,
@@ -76,101 +73,6 @@ describe("Custom view definitions", () => {
     ]) {
       expect(() => parseCustomViews(raw)).toThrow()
     }
-  })
-})
-
-describe("Custom view persistence", () => {
-  it("creates, edits and removes views while retaining the original creation time", () => {
-    const { result } = renderHook(() => useCustomViews("workspace", "user"))
-    const view = newCustomView("issues", "user")
-    act(() => {
-      expect(result.current.save(view)).toBe(true)
-    })
-    expect(result.current.views).toHaveLength(1)
-    const createdAt = result.current.views[0].createdAt
-    act(() => {
-      expect(
-        result.current.save({
-          ...view,
-          name: "High priority",
-          favorite: true,
-          createdAt: "2020-01-01T00:00:00.000Z",
-        })
-      ).toBe(true)
-    })
-    expect(result.current.views[0]).toMatchObject({
-      name: "High priority",
-      favorite: true,
-      createdAt,
-    })
-    const { result: reloaded } = renderHook(() =>
-      useCustomViews("workspace", "user")
-    )
-    expect(reloaded.current.views).toEqual(result.current.views)
-    act(() => {
-      expect(result.current.remove(view.id)).toBe(true)
-    })
-    expect(result.current.views).toEqual([])
-    expect(reloaded.current.views).toEqual([])
-  })
-
-  it("reads the latest stored definitions before writing so stale renders do not remove other views", () => {
-    const { result } = renderHook(() => useCustomViews("workspace", "user"))
-    const first = newCustomView("issues", "user")
-    const second = newCustomView("projects", "user")
-    productStorage.setItem(
-      customViewsKey("workspace", "user"),
-      JSON.stringify({ version: 1, views: [first] })
-    )
-    act(() => {
-      expect(result.current.save(second)).toBe(true)
-    })
-    expect(result.current.views.map((view) => view.id)).toEqual([
-      first.id,
-      second.id,
-    ])
-    const third = newCustomView("issues", "user")
-    productStorage.setItem(
-      customViewsKey("workspace", "user"),
-      JSON.stringify({ version: 1, views: [...result.current.views, third] })
-    )
-    act(() => {
-      expect(result.current.remove(first.id)).toBe(true)
-    })
-    expect(result.current.views.map((view) => view.id)).toEqual([
-      second.id,
-      third.id,
-    ])
-  })
-
-  it("preserves corrupt data on save and delete and reports the loading failure", () => {
-    const key = customViewsKey("workspace", "user")
-    productStorage.setItem(key, "{broken")
-    const { result } = renderHook(() => useCustomViews("workspace", "user"))
-    expect(result.current.error).toContain("preserved")
-    expect(result.current.save(newCustomView("issues", "user"))).toBe(false)
-    expect(result.current.remove("anything")).toBe(false)
-    expect(productStorage.getItem(key)).toBe("{broken")
-  })
-
-  it("rejects invalid edits without altering the valid store and handles failed storage writes", () => {
-    const { result } = renderHook(() => useCustomViews("workspace", "user"))
-    const view = newCustomView("issues", "user")
-    act(() => {
-      result.current.save(view)
-    })
-    const before = productStorage.getItem(customViewsKey("workspace", "user"))
-    expect(result.current.save({ ...view, name: "" })).toBe(false)
-    expect(productStorage.getItem(customViewsKey("workspace", "user"))).toBe(
-      before
-    )
-    vi.spyOn(productStorage, "setItem").mockImplementationOnce(() => {
-      throw new Error("Quota exceeded")
-    })
-    expect(result.current.remove(view.id)).toBe(false)
-    expect(productStorage.getItem(customViewsKey("workspace", "user"))).toBe(
-      before
-    )
   })
 })
 
