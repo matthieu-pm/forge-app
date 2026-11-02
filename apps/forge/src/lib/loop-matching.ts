@@ -2,24 +2,23 @@ import type {
   LoopCondition,
   LoopEntity,
   LoopFields,
-  LoopLeafCondition,
   LoopTrigger,
 } from "./loop-contract"
 
 type Value = string | number | boolean | null | Array<string | number | boolean>
-export type LoopEntitySnapshot = Partial<
-  Record<LoopLeafCondition["field"], Value>
->
+export type LoopEntitySnapshot = Partial<Record<string, Value>>
 export type LoopEvent = {
   entity: LoopEntity
   event: "created" | "updated" | "comment" | "update" | "started" | "completed"
   before: LoopEntitySnapshot | null
   after: LoopEntitySnapshot
   comment?: {
+    id?: string
     text: string
     parentId?: string | null
     mentionIds?: Array<string>
   }
+  update?: { id: string; text: string }
 }
 const values = (value: Value | undefined) =>
   value === undefined || value === null || value === ""

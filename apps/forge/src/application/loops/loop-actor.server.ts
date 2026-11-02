@@ -114,14 +114,16 @@ export async function currentLoopActor(
     ) &&
     typeof event.entityId === "string"
   ) {
-    const { authorizedLoopEntity } = await import("./loop-context.server")
-    await authorizedLoopEntity(
+    const { authorizedLoopEntity, loopActivityContext } =
+      await import("./loop-context.server")
+    const raw = await authorizedLoopEntity(
       tx,
       scoped,
       event.entity as Parameters<typeof authorizedLoopEntity>[2],
       event.entityId,
       row.loop.teamId
     )
+    loopActivityContext(raw, event)
   }
   return scoped
 }

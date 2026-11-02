@@ -44,12 +44,10 @@ import {
   documentSourceSchema,
 } from "@/lib/document-contract"
 import { defaultDocumentIcon, documentPlainText } from "@/lib/team-documents"
+import { teamContentFeatureEnabled } from "@/application/team-content-feature-policy"
 
 function session(actor: Actor) {
-  const enabled =
-    process.env.FORGE_SHARED_DOCUMENTS_ENABLED ??
-    (process.env.FORGE_SERVICE_ENVIRONMENT === "production" ? "false" : "true")
-  if (enabled !== "true")
+  if (!teamContentFeatureEnabled("FORGE_SHARED_DOCUMENTS_ENABLED"))
     throw new ApplicationAccessError(
       "Shared documents are not enabled in this environment."
     )

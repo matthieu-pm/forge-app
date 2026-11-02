@@ -59,7 +59,7 @@ export async function readLoops(
   if (!loopsEnabled()) return { enabled: false, loops: [], runs: [] }
   return db.transaction(async (tx) => {
     actor = await currentCommandActor(tx, actor)
-    await loopTeamAccess(tx, actor, teamId)
+    const owningTeam = await loopTeamAccess(tx, actor, teamId)
     const rows = await tx
       .select()
       .from(teamLoops)
@@ -122,7 +122,8 @@ export async function readLoops(
           )
       : []
     const { loopChoices } = await import("./loop-choices.server")
-    const { manualLoopContext } = await import("./loop-context.server")
+    const { manualLoopContext, authorizedLoopEntity, loopActivityContext } =
+      await import("./loop-context.server")
     const visibility = new Map<string, boolean>()
     const visibleRuns = new Set<string>()
     for (const { run } of runs) {
@@ -140,11 +141,18 @@ export async function readLoops(
         continue
       }
       const access =
+        owningTeam.visibility === "workspace" &&
         loop.fields.teamAccess === "all-public-teams" &&
         run.fields.teamAccess === "all-public-teams"
           ? "all-public-teams"
           : "this-team"
-      const key = JSON.stringify([event.entity, event.entityId, access])
+      const key = JSON.stringify([
+        event.entity,
+        event.entityId,
+        access,
+        event.comment,
+        event.update,
+      ])
       if (!visibility.has(key)) {
         try {
           await manualLoopContext(
@@ -165,6 +173,16 @@ export async function readLoops(
             },
             event.entityId
           )
+          const rawSource = await authorizedLoopEntity(
+            tx,
+            actor,
+            event.entity as
+              "issue" | "project" | "initiative" | "cycle" | "team",
+            event.entityId,
+            loop.teamId,
+            access === "all-public-teams"
+          )
+          loopActivityContext(rawSource, event)
           visibility.set(key, true)
         } catch (error) {
           if (

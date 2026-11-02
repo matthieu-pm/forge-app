@@ -3,6 +3,7 @@ import { and, eq, sql } from "drizzle-orm"
 import { runtimeOrigin } from "../../../../../packages/environment/preview-environment"
 import { LoopPolicyError, loopsEnabled } from "./loop-access.server"
 import { currentLoopActor, loopPrincipalId } from "./loop-actor.server"
+import { resolveLoopModel } from "./loop-model-routing"
 import {
   LOOP_CANCEL_SETTLEMENT_MS,
   LOOP_RUN_LEASE_MS,
@@ -11,7 +12,8 @@ import {
   withinLoopExecutionWindow,
 } from "./loop-execution-policy"
 import {
-  authorizedLoopEntity,
+  currentLoopEntitySnapshot,
+  loopActivityContext,
   normalizeLoopSnapshot,
 } from "./loop-context.server"
 import type { Actor } from "@/application/actor"
@@ -27,6 +29,9 @@ import {
   teamLoops,
 } from "@/db"
 import { resolveAgentFeatureFlags } from "@/application/agents/agent-feature-flags"
+import { resolveAgentControlPolicy } from "@/application/agents/agent-control-policy"
+import { ModelRoutingError } from "@/application/agents/model-router"
+import { isTeamContentDevelopment } from "@/application/team-content-feature-policy"
 
 export async function assertLoopCanEnable(actor: Actor) {
   const flags = resolveAgentFeatureFlags()
@@ -34,8 +39,17 @@ export async function assertLoopCanEnable(actor: Actor) {
     throw new LoopPolicyError(
       "Cloud agent execution is disabled in this environment."
     )
+  const allowedProviders = resolveAgentControlPolicy().allowedProviders
   if (
-    process.env.FORGE_SERVICE_ENVIRONMENT !== "production" &&
+    !flags.agent_auto_openai ||
+    !flags.agent_provider_openai ||
+    (allowedProviders && !allowedProviders.has("openai"))
+  )
+    throw new LoopPolicyError(
+      "Enable OpenAI Auto for this environment before enabling Loops."
+    )
+  if (
+    isTeamContentDevelopment() &&
     process.env.AGENT_FAKE_RUNTIME_ENABLED === "true"
   )
     return
@@ -56,17 +70,20 @@ export async function assertLoopCanEnable(actor: Actor) {
         eq(modelConnections.status, "ready")
       )
     )
-  if (
-    !models.some(
-      (m) =>
-        m.locality === "server-capable" &&
-        m.executionKind === "forge-native" &&
-        workspace.some((c) => c.id === m.connectionId)
-    )
-  )
+  try {
+    await resolveLoopModel({
+      mode: "auto",
+      message: "Check Loop execution readiness.",
+      availableModels: models.filter((model) =>
+        workspace.some((connection) => connection.id === model.connectionId)
+      ),
+    })
+  } catch (error) {
+    if (!(error instanceof ModelRoutingError)) throw error
     throw new LoopPolicyError(
-      "Configure a workspace cloud model before enabling Loops."
+      "Configure a compatible workspace OpenAI cloud model with tools and reasoning support before enabling Loops."
     )
+  }
 }
 export type ClaimedLoopRun = typeof loopRuns.$inferSelect & { teamId: string }
 export type LoopExecutionResult = {
@@ -91,21 +108,22 @@ function principal(run: ClaimedLoopRun): Actor {
 async function contextFor(tx: Transaction, actor: Actor, run: ClaimedLoopRun) {
   const event = run.event
   if (typeof event.entity === "string" && typeof event.entityId === "string") {
-    const raw = await authorizedLoopEntity(
+    const raw = await currentLoopEntitySnapshot(
       tx,
       actor,
-      event.entity as Parameters<typeof authorizedLoopEntity>[2],
+      event.entity as Parameters<typeof currentLoopEntitySnapshot>[2],
       event.entityId,
       run.teamId
     )
     return {
       event: event.kind ?? "event",
       entity: event.entity,
+      trigger: event.trigger ?? event.kind ?? "event",
       context: normalizeLoopSnapshot(
         event.entity as Parameters<typeof normalizeLoopSnapshot>[0],
         raw
       ),
-      ...(event.comment ? { comment: event.comment } : {}),
+      ...loopActivityContext(raw, event),
     }
   }
   return event

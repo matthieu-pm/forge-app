@@ -4,27 +4,50 @@ import { chromium, expect } from "@playwright/test"
 import { Pool, neonConfig } from "@neondatabase/serverless"
 import { hashPassword } from "better-auth/crypto"
 
-const file = process.env.FORGE_RESOURCE_TEST_DATABASE_FILE
+const authorizedRevision =
+  process.env.FORGE_RESOURCE_PRODUCTION_AUTHORIZED_REVISION
+const production = Boolean(authorizedRevision)
+const revision = execFileSync("git", ["rev-parse", "HEAD"], {
+  encoding: "utf8",
+}).trim()
+if (
+  production &&
+  (authorizedRevision !== revision ||
+    execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim())
+)
+  throw new Error(
+    "Production acceptance requires a clean exact authorized source revision."
+  )
+const file = production
+  ? process.env.FORGE_RESOURCE_PRODUCTION_DATABASE_FILE
+  : process.env.FORGE_RESOURCE_TEST_DATABASE_FILE
 if (!file)
   throw new Error("An explicit resource acceptance database file is required")
 const config = JSON.parse(readFileSync(file, "utf8")),
   url = new URL(config.connection)
-const expectedHost = "ep-blue-shadow-zauhwkjz.c-2.eu-west-2.aws.neon.tech",
-  expectedDatabase = "forge_resources_loops_acceptance",
-  expectedBranch = "br-autumn-union-za0opf1e"
+const expectedHost = production
+    ? "ep-lingering-bread-zazpwrxp.c-2.eu-west-2.aws.neon.tech"
+    : "ep-blue-shadow-zauhwkjz.c-2.eu-west-2.aws.neon.tech",
+  expectedDatabase = production ? "neondb" : "forge_resources_loops_acceptance",
+  expectedBranch = production
+    ? "br-muddy-queen-zaeeysjt"
+    : "br-autumn-union-za0opf1e"
 if (
   url.hostname !== expectedHost ||
   decodeURIComponent(url.pathname) !== `/${expectedDatabase}` ||
   url.searchParams.get("sslmode") !== "require"
 )
   throw new Error("Wrong resource acceptance database")
-const base = process.env.FORGE_RESOURCE_BROWSER_URL ?? "http://localhost:3162",
+const base = production
+    ? "https://app.forgenow.tech"
+    : (process.env.FORGE_RESOURCE_BROWSER_URL ?? "http://localhost:3162"),
   baseUrl = new URL(base)
 if (
-  baseUrl.protocol !== "http:" ||
-  !["localhost", "127.0.0.1"].includes(baseUrl.hostname) ||
-  baseUrl.username ||
-  baseUrl.password
+  !production &&
+  (baseUrl.protocol !== "http:" ||
+    !["localhost", "127.0.0.1"].includes(baseUrl.hostname) ||
+    baseUrl.username ||
+    baseUrl.password)
 )
   throw new Error("A local resource acceptance server is required")
 neonConfig.webSocketConstructor = WebSocket
@@ -35,9 +58,6 @@ const pool = new Pool({ connectionString: config.connection }),
   users = [marker + "-alice", marker + "-bob"]
 let browser,
   verified = false
-const revision = execFileSync("git", ["rev-parse", "HEAD"], {
-  encoding: "utf8",
-}).trim()
 try {
   const identity = (
     await pool.query(
@@ -316,7 +336,9 @@ try {
     )
   ).toBe(false)
   await bob.screenshot({
-    path: "/private/tmp/for62-resources-conflict.png",
+    path: production
+      ? "/private/tmp/for62-production-resources-conflict.png"
+      : "/private/tmp/for62-resources-conflict.png",
     fullPage: true,
   })
   await bob.unrouteAll({ behavior: "wait" })
@@ -357,7 +379,9 @@ try {
     bob.getByRole("button", { name: "FOR62 Shared document", exact: true })
   ).toBeVisible()
   await bob.screenshot({
-    path: "/private/tmp/for62-resources-shared.png",
+    path: production
+      ? "/private/tmp/for62-production-resources-shared.png"
+      : "/private/tmp/for62-resources-shared.png",
     fullPage: true,
   })
   await bob.setViewportSize({ width: 390, height: 844 })
@@ -367,7 +391,9 @@ try {
     )
   ).toBe(true)
   await bob.screenshot({
-    path: "/private/tmp/for62-resources-mobile.png",
+    path: production
+      ? "/private/tmp/for62-production-resources-mobile.png"
+      : "/private/tmp/for62-resources-mobile.png",
     fullPage: true,
   })
   // An old open editor must stop showing protected source data after team revocation.
@@ -396,7 +422,7 @@ try {
       issue: "FOR-62",
       slice: "resources",
       revision,
-      target: "local acceptance",
+      target: production ? "production" : "local acceptance",
       passed: true,
       environment: identity,
       checks: [

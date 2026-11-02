@@ -34,7 +34,8 @@ const pool = new Pool({ connectionString: config.connection }),
   password = `for62-${crypto.randomUUID()}`,
   users = [marker + "-alice", marker + "-bob"]
 let browser,
-  verified = false
+  verified = false,
+  fixtureLock
 const revision = execFileSync("git", ["rev-parse", "HEAD"], {
   encoding: "utf8",
 }).trim()
@@ -50,6 +51,17 @@ try {
   )
     throw new Error("Wrong Loop database")
   verified = true
+  fixtureLock = await pool.connect()
+  if (
+    !(
+      await fixtureLock.query(
+        "SELECT pg_try_advisory_lock(62006200,1) acquired"
+      )
+    ).rows[0].acquired
+  )
+    throw new Error(
+      "Run Loop browser and database harnesses sequentially; their scheduler queue is shared."
+    )
   await pool.query(
     "INSERT INTO organization(id,name,slug) VALUES($1,'FOR62 Loops Acceptance',$1)",
     [marker]
@@ -547,6 +559,10 @@ try {
     ).rows[0]
     expect(leftovers).toEqual({ workspaces: 0, users: 0, receipts: 0 })
     console.log(JSON.stringify({ cleanup: leftovers }))
+  }
+  if (fixtureLock) {
+    await fixtureLock.query("SELECT pg_advisory_unlock(62006200,1)")
+    fixtureLock.release()
   }
   await pool.end()
 }

@@ -12,6 +12,7 @@ import { ApplicationAccessError } from "@/application/authorization"
 import { currentCommandActor } from "@/application/commands/command-actor.server"
 import { executeCommand } from "@/application/commands/execute-command.server"
 import { readableTeamCondition } from "@/application/resource-policy.server"
+import { teamContentFeatureEnabled } from "@/application/team-content-feature-policy"
 import {
   emptyTeamResources,
   teamResourceCommandSchema,
@@ -19,12 +20,7 @@ import {
 } from "@/lib/team-resources-contract"
 
 export function teamResourcesEnabled() {
-  return (
-    (process.env.FORGE_TEAM_RESOURCES_ENABLED ??
-      (process.env.FORGE_SERVICE_ENVIRONMENT === "production"
-        ? "false"
-        : "true")) === "true"
-  )
+  return teamContentFeatureEnabled("FORGE_TEAM_RESOURCES_ENABLED")
 }
 async function authorize(tx: Transaction, actor: Actor, teamId: string) {
   if (!teamResourcesEnabled())

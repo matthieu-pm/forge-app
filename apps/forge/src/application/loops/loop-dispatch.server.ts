@@ -71,6 +71,7 @@ export async function enqueueNativeLoopEvents(
                 )
               )
             )
+            .for("share")
         : []
       const matches = loopMatchEvents(
         event.entity as LoopEntity,
@@ -89,6 +90,7 @@ export async function enqueueNativeLoopEvents(
           trigger: match.event,
           context: match.after,
           ...(match.comment ? { comment: match.comment } : {}),
+          ...(match.update ? { update: match.update } : {}),
         })
       }
       await tx

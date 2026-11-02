@@ -5,6 +5,7 @@ import { Pool, neonConfig } from "@neondatabase/serverless"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 import { DATABASE_TARGETS } from "../../../scripts/lib/database-targets"
 import { assertMigrationTarget } from "../../../scripts/lib/serialized-migrations"
+import type { PoolClient } from "@neondatabase/serverless"
 import type { Actor } from "@/application/actor"
 import type { LoopFields } from "@/lib/loop-contract"
 import type * as Service from "./loops.server"
@@ -28,6 +29,7 @@ describe.skipIf(!file)("FOR-62 shared Loops on PostgreSQL", () => {
     users = [marker + "-alice", marker + "-bob"],
     workspaces: Array<string> = []
   let pool: Pool, service: typeof Service
+  let fixtureLock: PoolClient | undefined
   let loopPrincipalId: typeof LoopActor.loopPrincipalId
   beforeAll(async () => {
     const config = JSON.parse(readFileSync(file!, "utf8")),
@@ -45,6 +47,17 @@ describe.skipIf(!file)("FOR-62 shared Loops on PostgreSQL", () => {
         )
       ).rows[0]
     ).toEqual({ db: target.database, branch: target.branchId })
+    fixtureLock = await pool.connect()
+    if (
+      !(
+        await fixtureLock.query(
+          "SELECT pg_try_advisory_lock(62006200,1) acquired"
+        )
+      ).rows[0].acquired
+    )
+      throw new Error(
+        "Run Loop browser and database harnesses sequentially; their scheduler queue is shared."
+      )
     vi.stubEnv("DATABASE_URL", config.applicationConnection)
     vi.stubEnv("FORGE_SERVICE_ENVIRONMENT", "development")
     vi.stubEnv("FORGE_LOOPS_ENABLED", "true")
@@ -90,6 +103,10 @@ describe.skipIf(!file)("FOR-62 shared Loops on PostgreSQL", () => {
     if (botIds.length)
       await pool.query('DELETE FROM "user" WHERE id=ANY($1::text[])', [botIds])
     await pool.query('DELETE FROM "user" WHERE id=ANY($1)', [users])
+    if (fixtureLock) {
+      await fixtureLock.query("SELECT pg_advisory_unlock(62006200,1)")
+      fixtureLock.release()
+    }
     await pool.end()
     await (await import("@/db")).databaseClient.end()
     vi.unstubAllEnvs()
@@ -676,6 +693,115 @@ describe.skipIf(!file)("FOR-62 shared Loops on PostgreSQL", () => {
       vi.stubEnv("FORGE_LOOPS_ENABLED", "true")
     }
   })
+  it("disabling waits for native enqueue and cancels its committed run before re-enable", async () => {
+    const f = await fixture(),
+      loop = await create(f),
+      issueId = randomUUID()
+    await enableFixture(f, loop.id)
+    await pool.query(
+      "INSERT INTO issue_statuses(id,workspace_id,team_id,name,status_group,color,position) VALUES('backlog',$1,$2,'Backlog','backlog','#94a3b8',0) ON CONFLICT(workspace_id,team_id,id) DO NOTHING",
+      [f.workspaceId, f.teamId]
+    )
+    await pool.query(
+      "INSERT INTO issues(id,workspace_id,team_id,number,title,status_id,creator_id) VALUES($1,$2,$3,1,'Native enqueue race','backlog',$4)",
+      [issueId, f.workspaceId, f.teamId, users[0]]
+    )
+    const barrierName = `for62_queue_barrier_${randomUUID().replaceAll("-", "")}`,
+      lockKey = Math.floor(Math.random() * 1_000_000_000) + 1,
+      locker = await pool.connect()
+    let enqueued: Promise<number> | undefined,
+      disabled: Promise<unknown> | undefined,
+      disableSettled = false
+    try {
+      await pool.query(
+        `CREATE FUNCTION ${barrierName}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.loop_id='${loop.id}'::uuid THEN PERFORM pg_advisory_xact_lock(${lockKey}); END IF; RETURN NEW; END; $$`
+      )
+      await pool.query(
+        `CREATE TRIGGER ${barrierName} BEFORE INSERT ON loop_runs FOR EACH ROW EXECUTE FUNCTION ${barrierName}()`
+      )
+      await locker.query("BEGIN")
+      await locker.query("SELECT pg_advisory_xact_lock($1)", [lockKey])
+      const { enqueueNativeLoopEvents } = await import("./loop-dispatch.server")
+      enqueued = enqueueNativeLoopEvents(1, f.workspaceId)
+      let nativePid: number | undefined
+      await expect
+        .poll(
+          async () => {
+            nativePid = (
+              await pool.query(
+                "SELECT pid FROM pg_locks WHERE locktype='advisory' AND classid=0 AND objid=$1 AND NOT granted",
+                [lockKey]
+              )
+            ).rows[0]?.pid
+            return Boolean(nativePid)
+          },
+          { timeout: 5000 }
+        )
+        .toBe(true)
+      disabled = service.commandLoop(f.actors[0], f.teamId, randomUUID(), {
+        action: "disable",
+        id: loop.id,
+        expectedRevision: 1,
+      })
+      void disabled.then(
+        () => {
+          disableSettled = true
+        },
+        () => {
+          disableSettled = true
+        }
+      )
+      await expect
+        .poll(
+          async () => {
+            const blocked =
+              (
+                await pool.query(
+                  "SELECT pid FROM pg_stat_activity WHERE $1=ANY(pg_blocking_pids(pid))",
+                  [nativePid]
+                )
+              ).rows.length > 0
+            return blocked
+              ? "waiting-for-enqueue"
+              : disableSettled
+                ? "committed-before-enqueue"
+                : "starting"
+          },
+          { timeout: 5000 }
+        )
+        .toBe("waiting-for-enqueue")
+      await locker.query("COMMIT")
+      expect(await enqueued).toBe(1)
+      expect(await disabled).toMatchObject({ status: "saved", revision: 2 })
+      const runs = (
+        await pool.query("SELECT state FROM loop_runs WHERE loop_id=$1", [
+          loop.id,
+        ])
+      ).rows
+      expect(runs).toEqual([{ state: "cancelled" }])
+      expect(
+        await service.commandLoop(f.actors[0], f.teamId, randomUUID(), {
+          action: "enable",
+          id: loop.id,
+          expectedRevision: 2,
+        })
+      ).toMatchObject({ status: "saved" })
+      const { executeNextLoopRun } = await import("./loop-execution.server"),
+        executor = vi.fn(async () => ({
+          state: "completed" as const,
+          result: "Must not replay",
+        }))
+      expect(await executeNextLoopRun(executor, f.workspaceId)).toBeNull()
+      expect(executor).not.toHaveBeenCalled()
+    } finally {
+      await locker.query("ROLLBACK")
+      await Promise.allSettled([enqueued, disabled].filter(Boolean))
+      await pool.query(`DROP TRIGGER IF EXISTS ${barrierName} ON loop_runs`)
+      await pool.query(`DROP FUNCTION IF EXISTS ${barrierName}()`)
+      locker.release()
+    }
+  }, 20000)
+
   it("due schedules coalesce missed ticks and concurrent scanners do not duplicate the occurrence", async () => {
     const f = await fixture(),
       startAt = new Date(Date.now() + 60000).toISOString(),
@@ -1006,10 +1132,71 @@ describe.skipIf(!file)("FOR-62 shared Loops on PostgreSQL", () => {
       )
     ).rejects.toThrow()
   })
+  it("enablement requires the executable OpenAI Auto route, including before any local fixture shortcut", async () => {
+    const f = await fixture(),
+      { assertLoopCanEnable } = await import("./loop-execution.server")
+    const environmentKeys = [
+      "FORGE_FEATURE_AGENT_AUTO_OPENAI",
+      "FORGE_FEATURE_AGENT_PROVIDER_OPENAI",
+      "FORGE_AGENT_ALLOWED_PROVIDERS",
+      "AGENT_FAKE_RUNTIME_ENABLED",
+      "EVE_AGENT_RUNTIME_URL",
+      "FORGE_AGENT_CHANNEL_SECRET",
+    ]
+    const original = Object.fromEntries(
+      environmentKeys.map((key) => [key, process.env[key]])
+    )
+    try {
+      vi.stubEnv("FORGE_FEATURE_AGENT_AUTO_OPENAI", "false")
+      await expect(assertLoopCanEnable(f.actors[0])).rejects.toThrow(
+        "OpenAI Auto"
+      )
+      vi.stubEnv("FORGE_FEATURE_AGENT_AUTO_OPENAI", "true")
+      vi.stubEnv("FORGE_FEATURE_AGENT_PROVIDER_OPENAI", "false")
+      await expect(assertLoopCanEnable(f.actors[0])).rejects.toThrow(
+        "OpenAI Auto"
+      )
+      vi.stubEnv("FORGE_FEATURE_AGENT_PROVIDER_OPENAI", "true")
+      vi.stubEnv("FORGE_AGENT_ALLOWED_PROVIDERS", "anthropic")
+      await expect(assertLoopCanEnable(f.actors[0])).rejects.toThrow(
+        "OpenAI Auto"
+      )
+      vi.stubEnv("FORGE_AGENT_ALLOWED_PROVIDERS", "")
+      vi.stubEnv("AGENT_FAKE_RUNTIME_ENABLED", "false")
+      vi.stubEnv("EVE_AGENT_RUNTIME_URL", "https://runtime.acceptance.invalid")
+      vi.stubEnv(
+        "FORGE_AGENT_CHANNEL_SECRET",
+        "for62-readiness-test-channel-secret-only"
+      )
+      const anthropic = await seedModel(f, "workspace")
+      await pool.query(
+        "UPDATE model_connections SET provider='anthropic' WHERE id=$1",
+        [anthropic]
+      )
+      await seedModel(f, "personal")
+      await seedModel(f, "workspace", "local-only")
+      await expect(assertLoopCanEnable(f.actors[0])).rejects.toThrow(
+        "compatible workspace OpenAI"
+      )
+      const cloud = await seedModel(f, "workspace")
+      await expect(assertLoopCanEnable(f.actors[0])).resolves.toBeUndefined()
+      await pool.query(
+        "UPDATE model_catalog_entries SET supports_tools=false WHERE connection_id=$1",
+        [cloud]
+      )
+      await expect(assertLoopCanEnable(f.actors[0])).rejects.toThrow(
+        "compatible workspace OpenAI"
+      )
+    } finally {
+      for (const key of environmentKeys) vi.stubEnv(key, original[key])
+    }
+  }, 15000)
+
   it("the default cloud execution path persists coordinator thread, run, model and events using FakeAgentRuntime", async () => {
     const f = await fixture(),
       loop = await create(f, f.teamId, {
         ...fields(),
+        reasoning: "high",
         trigger: { kind: "webhook" },
       }),
       cloud = await seedModel(f, "workspace")
@@ -1042,7 +1229,7 @@ describe.skipIf(!file)("FOR-62 shared Loops on PostgreSQL", () => {
     expect(
       (
         await pool.query(
-          "SELECT state,resolved_connection_id,thread_id,initiated_by_user_id FROM agent_runs WHERE id=$1",
+          "SELECT state,resolved_connection_id,thread_id,initiated_by_user_id,reasoning_effort FROM agent_runs WHERE id=$1",
           [run.agentRunId]
         )
       ).rows[0]
@@ -1051,6 +1238,7 @@ describe.skipIf(!file)("FOR-62 shared Loops on PostgreSQL", () => {
       resolved_connection_id: cloud,
       thread_id: run.threadId,
       initiated_by_user_id: loopPrincipalId(loop.id),
+      reasoning_effort: "high",
     })
     expect(
       (
@@ -1232,6 +1420,21 @@ describe.skipIf(!file)("FOR-62 shared Loops on PostgreSQL", () => {
     expect(linked).toHaveLength(1)
     expect(linked[0].event).toBe("comment")
     expect(linked[0].comment?.mentionIds).toEqual([mentionId])
+    const { loopActivityContext } = await import("./loop-context.server")
+    const originalActivity = {
+      properties: { comments: [{ id: linked[0].comment?.id, document: body }] },
+    }
+    expect(
+      loopActivityContext(originalActivity, { comment: linked[0].comment })
+    ).toMatchObject({ comment: { mentionIds: [mentionId] } })
+    const changedMention = structuredClone(originalActivity)
+    changedMention.properties.comments[0].document.content[0].content = [
+      { type: "mention", attrs: { id: users[0], label: "Bob" } },
+      { type: "text", text: " Please review" },
+    ]
+    expect(() =>
+      loopActivityContext(changedMention, { comment: linked[0].comment })
+    ).toThrow()
     expect(
       matchesLoopEvent(
         {
@@ -1539,6 +1742,128 @@ describe.skipIf(!file)("FOR-62 shared Loops on PostgreSQL", () => {
       ).rows[0]
     ).toEqual({ state: "cancelled", pending_decision: null })
   })
+
+  it("known artifact identities cannot bypass narrowed Loop scope or private owner-team scope", async () => {
+    const f = await fixture(),
+      input = { ...fields(), teamAccess: "all-public-teams" as const },
+      loop = await create(f, f.teamId, input),
+      issueId = randomUUID()
+    await pool.query("UPDATE teams SET visibility='workspace' WHERE id=$1", [
+      f.privateTeamId,
+    ])
+    await pool.query(
+      "INSERT INTO issue_statuses(id,workspace_id,team_id,name,status_group,color,position) VALUES('backlog',$1,$2,'Backlog','backlog','#94a3b8',0) ON CONFLICT(workspace_id,team_id,id) DO NOTHING",
+      [f.workspaceId, f.privateTeamId]
+    )
+    await pool.query(
+      "INSERT INTO issues(id,workspace_id,team_id,number,title,status_id,creator_id) VALUES($1,$2,$3,1,'Another public team source','backlog',$4)",
+      [issueId, f.workspaceId, f.privateTeamId, users[0]]
+    )
+    await seedModel(f, "workspace")
+    await enableFixture(f, loop.id)
+    const { db, teamLoops } = await import("@/db"),
+      { eq } = await import("drizzle-orm"),
+      row = (
+        await db.select().from(teamLoops).where(eq(teamLoops.id, loop.id))
+      )[0],
+      run = await db.transaction((tx) =>
+        service.enqueueLoopRun(tx, row, "artifact-scope", {
+          kind: "native",
+          entity: "issue",
+          entityId: issueId,
+        })
+      )
+    const { executeNextLoopRun } = await import("./loop-execution.server")
+    await executeNextLoopRun(undefined, f.workspaceId)
+    const artifactId = randomUUID()
+    await pool.query(
+      "INSERT INTO agent_artifacts(id,run_id,kind,name,content_type,size_bytes,storage_reference,checksum) VALUES($1,$2,'report','Scoped.txt','text/plain',4,'scope-metadata-only',$3)",
+      [artifactId, run.agentRunId, "c".repeat(64)]
+    )
+    const { DrizzleAgentArtifactStore } =
+        await import("@/adapters/agents/drizzle-artifact-store.server"),
+      artifacts = new DrizzleAgentArtifactStore()
+    expect(
+      (await artifacts.getAuthorized(f.workspaceId, users[1], artifactId))?.id
+    ).toBe(artifactId)
+    await service.commandLoop(f.actors[0], f.teamId, randomUUID(), {
+      action: "save",
+      id: loop.id,
+      expectedRevision: 1,
+      fields: { ...input, teamAccess: "this-team" },
+    })
+    expect(
+      (await service.readLoops(f.actors[1], f.teamId)).runs.find(
+        (r) => r.id === run.id
+      )?.errorCode
+    ).toBe("SOURCE_UNAVAILABLE")
+    expect(
+      await artifacts.getAuthorized(f.workspaceId, users[1], artifactId)
+    ).toBeNull()
+    await service.commandLoop(f.actors[0], f.teamId, randomUUID(), {
+      action: "save",
+      id: loop.id,
+      expectedRevision: 2,
+      fields: input,
+    })
+    expect(
+      (await artifacts.getAuthorized(f.workspaceId, users[1], artifactId))?.id
+    ).toBe(artifactId)
+    const commentId = randomUUID(),
+      comment = { id: commentId, body: "Original triggering comment" }
+    await pool.query(
+      "UPDATE issues SET properties=jsonb_set(properties,'{comments}',$2::jsonb) WHERE id=$1",
+      [issueId, JSON.stringify([comment])]
+    )
+    await pool.query(
+      "UPDATE loop_runs SET event=event||$2::jsonb WHERE id=$1",
+      [
+        run.id,
+        JSON.stringify({
+          comment: {
+            id: commentId,
+            text: comment.body,
+            parentId: null,
+            mentionIds: [],
+          },
+        }),
+      ]
+    )
+    expect(
+      (await artifacts.getAuthorized(f.workspaceId, users[1], artifactId))?.id
+    ).toBe(artifactId)
+    await pool.query(
+      "UPDATE issues SET properties=jsonb_set(properties,'{comments}',$2::jsonb) WHERE id=$1",
+      [issueId, JSON.stringify([{ ...comment, body: "Edited source" }])]
+    )
+    expect(
+      await artifacts.getAuthorized(f.workspaceId, users[1], artifactId)
+    ).toBeNull()
+    await pool.query(
+      "UPDATE issues SET properties=jsonb_set(properties,'{comments}',$2::jsonb) WHERE id=$1",
+      [issueId, JSON.stringify([{ ...comment, deleted: true }])]
+    )
+    expect(
+      await artifacts.getAuthorized(f.workspaceId, users[1], artifactId)
+    ).toBeNull()
+    await pool.query(
+      "UPDATE issues SET properties=jsonb_set(properties,'{comments}',$2::jsonb) WHERE id=$1",
+      [issueId, JSON.stringify([comment])]
+    )
+    expect(
+      (await artifacts.getAuthorized(f.workspaceId, users[1], artifactId))?.id
+    ).toBe(artifactId)
+    await pool.query(
+      "INSERT INTO team_members(workspace_id,team_id,user_id) VALUES($1,$2,$3)",
+      [f.workspaceId, f.teamId, users[0]]
+    )
+    await pool.query("UPDATE teams SET visibility='private' WHERE id=$1", [
+      f.teamId,
+    ])
+    expect(
+      await artifacts.getAuthorized(f.workspaceId, users[0], artifactId)
+    ).toBeNull()
+  }, 15000)
 
   it("shared Loop threads never become personal conversations; artifact metadata follows live team access", async () => {
     const f = await fixture(),
@@ -2747,5 +3072,218 @@ describe.skipIf(!file)("FOR-62 shared Loops on PostgreSQL", () => {
         )
       ).rows[0]
     ).toEqual({ enabled: true, revision: 2 })
+  })
+
+  it("property updates include domain health and posted updates reach executors while changed activities are hidden", async () => {
+    const f = await fixture(),
+      projectId = randomUUID(),
+      updateId = randomUUID()
+    const generic = await create(f, f.teamId, {
+      ...fields(),
+      trigger: { kind: "event", entity: "project", event: "updated" },
+    })
+    const posted = await create(f, f.teamId, {
+      ...fields(),
+      trigger: { kind: "event", entity: "project", event: "update" },
+    })
+    await enableFixture(f, generic.id)
+    await enableFixture(f, posted.id)
+    const client = await pool.connect()
+    try {
+      await client.query("BEGIN")
+      await client.query(
+        "INSERT INTO projects(id,workspace_id,name,properties) VALUES($1,$2,'Context source',$3::jsonb)",
+        [
+          projectId,
+          f.workspaceId,
+          JSON.stringify({
+            health: "On track",
+            summary: "Original summary",
+            updates: [],
+          }),
+        ]
+      )
+      await client.query(
+        "INSERT INTO project_teams(workspace_id,project_id,team_id) VALUES($1,$2,$3)",
+        [f.workspaceId, projectId, f.teamId]
+      )
+      await client.query("COMMIT")
+    } finally {
+      await client.query("ROLLBACK").catch(() => {})
+      client.release()
+    }
+    const { enqueueNativeLoopEvents } = await import("./loop-dispatch.server")
+    const { executeNextLoopRun } = await import("./loop-execution.server")
+    await enqueueNativeLoopEvents(100, f.workspaceId)
+    await pool.query(
+      "UPDATE projects SET properties=properties||$2::jsonb WHERE id=$1",
+      [
+        projectId,
+        JSON.stringify({
+          health: "At risk",
+          summary: "Current summary",
+          startDate: "2030-05-01",
+        }),
+      ]
+    )
+    await enqueueNativeLoopEvents(100, f.workspaceId)
+    expect(
+      await executeNextLoopRun(async (_actor, run, context) => {
+        expect(run.loopId).toBe(generic.id)
+        expect(context).toMatchObject({
+          trigger: "updated",
+          context: {
+            health: "At risk",
+            summary: "Current summary",
+            startDate: "2030-05-01",
+            team: [f.teamId],
+          },
+        })
+        return { state: "completed", result: "Domain property result" }
+      }, f.workspaceId)
+    ).toBeTruthy()
+    const update = {
+      id: updateId,
+      text: "Delivery blocked by vendor",
+      comments: [],
+    }
+    await pool.query(
+      "UPDATE projects SET properties=jsonb_set(properties,'{updates}',$2::jsonb) WHERE id=$1",
+      [projectId, JSON.stringify([update])]
+    )
+    await enqueueNativeLoopEvents(100, f.workspaceId)
+    expect(
+      await executeNextLoopRun(async (_actor, run, context) => {
+        expect(run.loopId).toBe(posted.id)
+        expect(context).toMatchObject({
+          trigger: "update",
+          update: { id: updateId, text: update.text },
+        })
+        return { state: "waiting-for-approval", result: "Posted update result" }
+      }, f.workspaceId)
+    ).toBeTruthy()
+    let history = await service.readLoops(f.actors[1], f.teamId)
+    expect(history.runs.find((run) => run.loopId === posted.id)?.result).toBe(
+      "Posted update result"
+    )
+    const postedRun = (
+      await pool.query("SELECT id FROM loop_runs WHERE loop_id=$1", [posted.id])
+    ).rows[0]
+    const { db } = await import("@/db"),
+      { currentLoopActor } = await import("./loop-actor.server")
+    const currentActor: Actor = {
+      ...f.actors[0],
+      userId: loopPrincipalId(posted.id),
+      authentication: { kind: "loop", loopId: posted.id, runId: postedRun.id },
+      scopes: null,
+    }
+    expect(
+      (
+        await db.transaction((tx) =>
+          currentLoopActor(tx, currentActor, postedRun.id)
+        )
+      ).loopScope?.runId
+    ).toBe(postedRun.id)
+    await pool.query(
+      "UPDATE projects SET properties=jsonb_set(properties,'{updates}',$2::jsonb) WHERE id=$1",
+      [projectId, JSON.stringify([{ ...update, text: "Edited before review" }])]
+    )
+    await expect(
+      db.transaction((tx) => currentLoopActor(tx, currentActor, postedRun.id))
+    ).rejects.toThrow()
+    history = await service.readLoops(f.actors[1], f.teamId)
+    expect(history.runs.find((run) => run.loopId === posted.id)).toMatchObject({
+      result: null,
+      threadId: null,
+      errorCode: "SOURCE_UNAVAILABLE",
+    })
+    expect(history.runs.find((run) => run.loopId === generic.id)?.result).toBe(
+      "Domain property result"
+    )
+    const { loopActivityContext } = await import("./loop-context.server")
+    expect(() =>
+      loopActivityContext(
+        { properties: { updates: [] } },
+        { update: { id: updateId, text: update.text } }
+      )
+    ).toThrow()
+  })
+
+  it("native executors receive current relational memberships and only project identities within the Loop scope", async () => {
+    const f = await fixture(),
+      teamLoop = await create(f, f.teamId, {
+        ...fields(),
+        trigger: {
+          kind: "event",
+          entity: "team",
+          event: "changed",
+          property: "members",
+        },
+      })
+    await enableFixture(f, teamLoop.id)
+    await pool.query(
+      "INSERT INTO team_members(workspace_id,team_id,user_id,role) VALUES($1,$2,$3,'member')",
+      [f.workspaceId, f.teamId, users[1]]
+    )
+    const { enqueueNativeLoopEvents } = await import("./loop-dispatch.server")
+    const { executeNextLoopRun } = await import("./loop-execution.server")
+    await enqueueNativeLoopEvents(100, f.workspaceId)
+    expect(
+      await executeNextLoopRun(async (_actor, run, context) => {
+        expect(run.loopId).toBe(teamLoop.id)
+        expect(context).toMatchObject({ context: { members: [users[1]] } })
+        return { state: "completed", result: "Membership context result" }
+      }, f.workspaceId)
+    ).toBeTruthy()
+    const publicProject = randomUUID(),
+      privateProject = randomUUID(),
+      initiativeId = randomUUID()
+    for (const [project, team] of [
+      [publicProject, f.teamId],
+      [privateProject, f.privateTeamId],
+    ]) {
+      await pool.query(
+        "INSERT INTO projects(id,workspace_id,name) VALUES($1,$2,'Scoped project')",
+        [project, f.workspaceId]
+      )
+      await pool.query(
+        "INSERT INTO project_teams(workspace_id,project_id,team_id) VALUES($1,$2,$3)",
+        [f.workspaceId, project, team]
+      )
+    }
+    const initiativeLoop = await create(f, f.teamId, {
+      ...fields(),
+      trigger: { kind: "event", entity: "initiative", event: "created" },
+    })
+    await enableFixture(f, initiativeLoop.id)
+    const client = await pool.connect()
+    try {
+      await client.query("BEGIN")
+      await client.query(
+        "INSERT INTO initiatives(id,workspace_id,name) VALUES($1,$2,'Public initiative source')",
+        [initiativeId, f.workspaceId]
+      )
+      for (const project of [publicProject, privateProject])
+        await client.query(
+          "INSERT INTO initiative_projects(workspace_id,initiative_id,project_id) VALUES($1,$2,$3)",
+          [f.workspaceId, initiativeId, project]
+        )
+      await client.query("COMMIT")
+    } finally {
+      await client.query("ROLLBACK").catch(() => {})
+      client.release()
+    }
+    await enqueueNativeLoopEvents(100, f.workspaceId)
+    expect(
+      await executeNextLoopRun(async (_actor, run, context) => {
+        expect(run.loopId).toBe(initiativeLoop.id)
+        expect(context).toMatchObject({
+          context: { projects: [publicProject], team: [f.teamId] },
+        })
+        expect(JSON.stringify(context)).not.toContain(privateProject)
+        expect(JSON.stringify(context)).not.toContain(f.privateTeamId)
+        return { state: "completed", result: "Scoped relationship context" }
+      }, f.workspaceId)
+    ).toBeTruthy()
   })
 })

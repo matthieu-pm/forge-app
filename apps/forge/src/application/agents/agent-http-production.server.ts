@@ -1,6 +1,7 @@
 import { runtimeOrigin } from "../../../../../packages/environment/preview-environment"
 import "@tanstack/react-start/server-only"
 import { LOOP_RUN_WALL_CLOCK_MS } from "@/application/loops/loop-execution-policy"
+import { resolveLoopModel } from "@/application/loops/loop-model-routing"
 import { requireCurrentActor } from "@/application/resource-policy.server"
 
 import {
@@ -110,7 +111,7 @@ export function createProductionAgentCoordinator(
           )
         )
       }
-      return resolveModel(input)
+      return loop ? resolveLoopModel(input) : resolveModel(input)
     },
     approvals: forgeApprovalService,
     preferences: new DrizzleThreadModelPreferenceStore(),

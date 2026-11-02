@@ -5,14 +5,10 @@ import type { Transaction } from "@/db"
 import { organizations, teamMembers, teams } from "@/db"
 import { ApplicationAccessError } from "@/application/authorization"
 import { readableTeamCondition } from "@/application/resource-policy.server"
+import { teamContentFeatureEnabled } from "@/application/team-content-feature-policy"
 
 export function loopsEnabled() {
-  return (
-    (process.env.FORGE_LOOPS_ENABLED ??
-      (process.env.FORGE_SERVICE_ENVIRONMENT === "production"
-        ? "false"
-        : "true")) === "true"
-  )
+  return teamContentFeatureEnabled("FORGE_LOOPS_ENABLED")
 }
 export async function loopTeamAccess(
   tx: Transaction,
