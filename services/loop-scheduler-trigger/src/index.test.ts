@@ -86,6 +86,10 @@ describe("Cloudflare minute trigger", () => {
         "invocation failed"
       )
       expect(JSON.stringify(log.mock.calls)).not.toContain("private response")
+      expect(JSON.parse(log.mock.calls[0][0])).toMatchObject({
+        failureStage: "http",
+        status,
+      })
     }
   )
   it.each([
