@@ -1,5 +1,5 @@
 {
-  "id": "c3ba88ac-d262-4564-ab60-7bf830120ec1",
+  "id": "8d37c689-8f0f-439c-ad31-fbc7fb3b1acd",
   "prevId": "9afe6c02-8eae-4dc3-9b48-85faee1ea9cd",
   "version": "7",
   "dialect": "postgresql",
@@ -7795,119 +7795,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.document_revisions": {
-      "name": "document_revisions",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "workspace_id": {
-          "name": "workspace_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "document_id": {
-          "name": "document_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "revision": {
-          "name": "revision",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "snapshot": {
-          "name": "snapshot",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "author_id": {
-          "name": "author_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "document_revisions_workspace_id_organization_id_fk": {
-          "name": "document_revisions_workspace_id_organization_id_fk",
-          "tableFrom": "document_revisions",
-          "tableTo": "organization",
-          "columnsFrom": [
-            "workspace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "document_revisions_author_id_user_id_fk": {
-          "name": "document_revisions_author_id_user_id_fk",
-          "tableFrom": "document_revisions",
-          "tableTo": "user",
-          "columnsFrom": [
-            "author_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "document_revisions_document_fk": {
-          "name": "document_revisions_document_fk",
-          "tableFrom": "document_revisions",
-          "tableTo": "documents",
-          "columnsFrom": [
-            "workspace_id",
-            "document_id"
-          ],
-          "columnsTo": [
-            "workspace_id",
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "document_revisions_identity": {
-          "name": "document_revisions_identity",
-          "nullsNotDistinct": false,
-          "columns": [
-            "document_id",
-            "revision"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "document_revisions_positive": {
-          "name": "document_revisions_positive",
-          "value": "\"document_revisions\".\"revision\" > 0"
-        }
-      },
-      "isRLSEnabled": false
-    },
     "public.documents": {
       "name": "documents",
       "schema": "",
@@ -7945,65 +7832,6 @@
           "notNull": true,
           "default": "'{}'::jsonb"
         },
-        "content": {
-          "name": "content",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "''"
-        },
-        "icon": {
-          "name": "icon",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{\"kind\":\"icon\",\"value\":\"File01Icon\",\"color\":\"#94949e\"}'::jsonb"
-        },
-        "section_id": {
-          "name": "section_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "owner_id": {
-          "name": "owner_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "updated_by_id": {
-          "name": "updated_by_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "revision": {
-          "name": "revision",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "deleted_at": {
-          "name": "deleted_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
         "team_id": {
           "name": "team_id",
           "type": "uuid",
@@ -8036,32 +7864,6 @@
             "id"
           ],
           "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "documents_owner_id_user_id_fk": {
-          "name": "documents_owner_id_user_id_fk",
-          "tableFrom": "documents",
-          "tableTo": "user",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "documents_updated_by_id_user_id_fk": {
-          "name": "documents_updated_by_id_user_id_fk",
-          "tableFrom": "documents",
-          "tableTo": "user",
-          "columnsFrom": [
-            "updated_by_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
           "onUpdate": "no action"
         },
         "documents_team_fk": {
@@ -8500,6 +8302,27 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "number": {
+          "name": "number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "revision": {
+          "name": "revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "properties": {
+          "name": "properties",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
         }
       },
       "indexes": {},
@@ -8526,6 +8349,14 @@
           "columns": [
             "workspace_id",
             "id"
+          ]
+        },
+        "initiatives_workspace_number_unique": {
+          "name": "initiatives_workspace_number_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "workspace_id",
+            "number"
           ]
         }
       },

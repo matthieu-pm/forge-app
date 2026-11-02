@@ -8,6 +8,7 @@ import {
   PRODUCT_STORAGE_CHANGED,
   flushProductStorage,
   initializeProductStorage,
+  initiativeDrafts,
   pendingProjectDrafts,
   preservePendingAndReload,
   productStorage,
@@ -18,6 +19,7 @@ import {
   storageStatus,
 } from "@/lib/product-storage"
 import { migrateBrowserData } from "@/lib/browser-data-migration"
+import { InitiativeDraftRecovery } from "@/components/initiatives/initiative-draft-recovery"
 import { Button } from "@/components/ui/button"
 import {
   CANONICAL_ISSUES_CHANGED,
@@ -129,6 +131,10 @@ export function ProductStateProvider({
     let active = true,
       initializing = false
     const update = () => setStatus(storageStatus())
+    const canonicalChanged = () => {
+      update()
+      void load(false)
+    }
     async function load(initial = false) {
       if (initializing) return
       initializing = true
@@ -164,7 +170,7 @@ export function ProductStateProvider({
       }
     }
     window.addEventListener(PRODUCT_STORAGE_CHANGED, update)
-    window.addEventListener(CANONICAL_ISSUES_CHANGED, update)
+    window.addEventListener(CANONICAL_ISSUES_CHANGED, canonicalChanged)
     window.addEventListener("focus", focus)
     window.addEventListener("beforeunload", beforeUnload)
     void load(true)
@@ -174,7 +180,7 @@ export function ProductStateProvider({
       resetProductStorage()
       window.clearInterval(timer)
       window.removeEventListener(PRODUCT_STORAGE_CHANGED, update)
-      window.removeEventListener(CANONICAL_ISSUES_CHANGED, update)
+      window.removeEventListener(CANONICAL_ISSUES_CHANGED, canonicalChanged)
       window.removeEventListener("focus", focus)
       window.removeEventListener("beforeunload", beforeUnload)
     }
@@ -188,6 +194,7 @@ export function ProductStateProvider({
         )}
       </main>
     )
+  const initiativeRecovery = initiativeDrafts()
   const projectDrafts = pendingProjectDrafts().flatMap((raw) => {
     const result = projectChangesSchema.safeParse(raw)
     return result.success ? [result.data] : []
@@ -201,7 +208,8 @@ export function ProductStateProvider({
       {(status.pending > 0 ||
         status.deviceError ||
         migration.length > 0 ||
-        recovered.length > 0) && (
+        recovered.length > 0 ||
+        initiativeRecovery.length > 0) && (
         <aside
           role={status.error ? "alert" : "status"}
           className="relative z-[70] border-b border-border bg-muted p-2 text-xs"
@@ -305,6 +313,11 @@ export function ProductStateProvider({
               </details>
             )
           })}
+          <InitiativeDraftRecovery
+            drafts={initiativeRecovery}
+            workspaceId={identity.workspaceId}
+            pending={status.pending > 0}
+          />
           {migration.length > 0 && (
             <details>
               <summary>Migration details</summary>

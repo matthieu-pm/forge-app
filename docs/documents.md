@@ -14,7 +14,7 @@ Earlier team/project resource documents are offered for explicit import. Success
 
 Favorites remain personal preferences. Full-width writing, document icons, team section assignments, title filtering, ordering, owner/timestamp columns, and deep links remain available. Team resource sections and Loops continue to use their existing contracts.
 
-Production enablement requires migration `0065_shared_documents` and `FORGE_SHARED_DOCUMENTS_ENABLED=true`. The gate defaults off in production and on in development; undeclared external-credential adapters remain denied. See the [operator and acceptance guide](operations/shared-documents.md).
+Production enablement requires migration `0066_shared_documents` and `FORGE_SHARED_DOCUMENTS_ENABLED=true`. The gate defaults off in production and on in development; undeclared external-credential adapters remain denied. See the [operator and acceptance guide](operations/shared-documents.md).
 
 The investigation and screenshots below document the earlier prototype and its reference research; their browser-local persistence description has been superseded by FOR-61.
 

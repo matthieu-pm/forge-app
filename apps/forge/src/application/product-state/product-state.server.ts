@@ -46,6 +46,13 @@ import {
 } from "@/application/resource-policy.server"
 import { currentCommandActor } from "@/application/commands/command-actor.server"
 import { executeCommand } from "@/application/commands/execute-command.server"
+import {
+  initiativeCommandPrefix,
+  sharedInitiativesKey,
+} from "@/lib/shared-initiative-key"
+import { initiativeSnapshot } from "@/application/planning/initiatives.server"
+import { initiativeSettings } from "@/application/planning/initiative-gate.server"
+import { initiativesSettingsStorageKey } from "@/lib/initiatives"
 import { projectCommandPrefix } from "@/lib/shared-project-contract"
 import {
   isProductStorageKey,
@@ -129,12 +136,17 @@ async function scope(
     )[0]
   )
     throw new ApplicationAccessError()
+  if (write && key === sharedInitiativesKey(actor.workspaceId))
+    throw new ApplicationAccessError()
+  const initiativeSettingsKey =
+    key === initiativesSettingsStorageKey(actor.workspaceId)
   const catalog = isProjectCatalog(key, actor.workspaceId)
   if (catalog && write && !hasWorkspaceRole(actor, ["owner", "admin"]))
     throw new ApplicationAccessError(
       "Only workspace admins can change project catalogs."
     )
   const shared =
+    initiativeSettingsKey ||
     catalog ||
     /^forge:team-(?:cycles|triage|project-updates|thread-summaries):v1:/.test(
       key
@@ -221,139 +233,168 @@ export async function readProductState(
   actor: Actor
 ): Promise<ProductStateSnapshot> {
   session(actor)
-  return db.transaction(async (tx) => {
-    const current = await currentCommandActor(tx, actor)
-    const rows = await tx
-      .select()
-      .from(productState)
-      .where(
-        and(
-          eq(productState.workspaceId, current.workspaceId),
-          or(
-            eq(productState.ownerId, `user:${current.userId}`),
-            eq(productState.ownerId, "workspace")
+  return db.transaction(
+    async (tx) => {
+      const current = await currentCommandActor(tx, actor)
+      const rows = await tx
+        .select()
+        .from(productState)
+        .where(
+          and(
+            eq(productState.workspaceId, current.workspaceId),
+            or(
+              eq(productState.ownerId, `user:${current.userId}`),
+              eq(productState.ownerId, "workspace")
+            )
           )
         )
-      )
-    const readableProjects = await tx
-      .select({ properties: projects.properties })
-      .from(projects)
-      .where(
-        and(
-          eq(projects.workspaceId, current.workspaceId),
-          readableProjectCondition(current, projects.id)
+      const readableProjects = await tx
+        .select({ properties: projects.properties })
+        .from(projects)
+        .where(
+          and(
+            eq(projects.workspaceId, current.workspaceId),
+            readableProjectCondition(current, projects.id)
+          )
         )
-      )
-    const entries: ProductStateSnapshot["entries"] = []
-    for (const row of rows) {
-      try {
-        if ((await scope(tx, current, row.key)) === row.ownerId) {
-          const original =
-            row.encodedValue === null
-              ? null
-              : (JSON.parse(row.encodedValue) as string)
-          const projectIds = projectCopyIds(row.key, original)
-          const readable = projectIds.length
-            ? await tx
-                .select({ id: projects.id })
-                .from(projects)
-                .where(
-                  and(
-                    inArray(projects.id, projectIds),
-                    readableProjectCondition(current, projects.id)
+      const entries: ProductStateSnapshot["entries"] = []
+      for (const row of rows) {
+        try {
+          if ((await scope(tx, current, row.key)) === row.ownerId) {
+            const original =
+              row.encodedValue === null
+                ? null
+                : (JSON.parse(row.encodedValue) as string)
+            const projectIds = projectCopyIds(row.key, original)
+            const readable = projectIds.length
+              ? await tx
+                  .select({ id: projects.id })
+                  .from(projects)
+                  .where(
+                    and(
+                      inArray(projects.id, projectIds),
+                      readableProjectCondition(current, projects.id)
+                    )
                   )
-                )
-            : []
-          const projectValue = filterProjectCopy(row.key, original, (id) =>
-            readable.some((project) => project.id === id)
-          )
-          const value = await visibleIssueCopyValue(
-            tx,
-            current,
-            row.key,
-            projectValue
-          )
-          let projectedValue = await pruneTeamDocumentCopies(
-            tx,
-            current,
-            row.key,
-            value
-          )
-          if (row.key === "forge:workspace-project-labels:v1" && value) {
-            const directory = JSON.parse(value)
-            const usage = (id: string) =>
-              readableProjects.filter(
-                (p) =>
-                  Array.isArray(p.properties.labelIds) &&
-                  p.properties.labelIds.includes(id)
-              ).length
-            projectedValue = JSON.stringify({
-              ...directory,
-              catalogRevision: row.revision,
-              inheritedCount: 0,
-              labels: directory.labels.map((label: { id: string }) => ({
-                ...label,
-                issues: usage(label.id),
-                lastApplied: null,
-              })),
-              groups: directory.groups.map((group: { id: string }) => ({
-                ...group,
-                issues: usage(group.id),
-                lastApplied: null,
-              })),
+              : []
+            const projectValue = filterProjectCopy(row.key, original, (id) =>
+              readable.some((project) => project.id === id)
+            )
+            const value = await visibleIssueCopyValue(
+              tx,
+              current,
+              row.key,
+              projectValue
+            )
+            let projectedValue = await pruneTeamDocumentCopies(
+              tx,
+              current,
+              row.key,
+              value
+            )
+            if (row.key === "forge:workspace-project-labels:v1" && value) {
+              const directory = JSON.parse(value)
+              const usage = (id: string) =>
+                readableProjects.filter(
+                  (p) =>
+                    Array.isArray(p.properties.labelIds) &&
+                    p.properties.labelIds.includes(id)
+                ).length
+              projectedValue = JSON.stringify({
+                ...directory,
+                catalogRevision: row.revision,
+                inheritedCount: 0,
+                labels: directory.labels.map((label: { id: string }) => ({
+                  ...label,
+                  issues: usage(label.id),
+                  lastApplied: null,
+                })),
+                groups: directory.groups.map((group: { id: string }) => ({
+                  ...group,
+                  issues: usage(group.id),
+                  lastApplied: null,
+                })),
+              })
+            }
+            entries.push({
+              key: row.key,
+              value: projectedValue,
+              revision: row.revision,
             })
           }
-          entries.push({
-            key: row.key,
-            value: projectedValue,
-            revision: row.revision,
-          })
+        } catch {
+          /* Revoked/private resources are omitted. */
         }
-      } catch {
-        /* Revoked/private resources are omitted. */
       }
-    }
-    for (const [key, value] of [
-      [
-        `forge:project-statuses:v1:${current.workspaceId}`,
-        JSON.stringify(
-          (await import("@/lib/project-statuses")).initialProjectStatuses()
-        ),
-      ],
-      [
-        "forge:workspace-project-labels:v1",
-        JSON.stringify({
-          version: 1,
-          labels: [],
-          groups: [],
-          inheritedCount: 0,
-          catalogRevision: 0,
-        }),
-      ],
-    ])
-      if (!entries.some((entry) => entry.key === key))
-        entries.push({ key, value, revision: 0 })
-    return {
-      workspaceId: current.workspaceId,
-      userId: current.userId,
-      workspaceRole: current.workspaceRole,
-      sessionId:
-        actor.authentication.kind === "session"
-          ? actor.authentication.sessionId
-          : "",
-      entries,
-      teamIds: (
-        await tx
-          .select({ id: teams.id })
-          .from(teams)
-          .where(readableTeamCondition(current, teams.id))
-      ).map((t) => t.id),
-    }
-  })
+      for (const [key, value] of [
+        [
+          `forge:project-statuses:v1:${current.workspaceId}`,
+          JSON.stringify(
+            (await import("@/lib/project-statuses")).initialProjectStatuses()
+          ),
+        ],
+        [
+          "forge:workspace-project-labels:v1",
+          JSON.stringify({
+            version: 1,
+            labels: [],
+            groups: [],
+            inheritedCount: 0,
+            catalogRevision: 0,
+          }),
+        ],
+      ])
+        if (!entries.some((entry) => entry.key === key))
+          entries.push({ key, value, revision: 0 })
+      entries.push({
+        key: sharedInitiativesKey(current.workspaceId),
+        value: JSON.stringify(await initiativeSnapshot(tx, current)),
+        revision: 0,
+      })
+      const settingsKey = initiativesSettingsStorageKey(current.workspaceId)
+      const existingSettings = entries.find((e) => e.key === settingsKey)
+      const settingsValue = JSON.stringify(
+        await initiativeSettings(tx, current)
+      )
+      if (existingSettings) existingSettings.value = settingsValue
+      else entries.push({ key: settingsKey, value: settingsValue, revision: 0 })
+      return {
+        workspaceId: current.workspaceId,
+        userId: current.userId,
+        workspaceRole: current.workspaceRole,
+        initiativeFeatureAvailable:
+          process.env.FORGE_FEATURE_INITIATIVES === "true",
+        sessionId:
+          actor.authentication.kind === "session"
+            ? actor.authentication.sessionId
+            : "",
+        entries,
+        teamIds: (
+          await tx
+            .select({ id: teams.id })
+            .from(teams)
+            .where(readableTeamCondition(current, teams.id))
+        ).map((t) => t.id),
+      }
+    },
+    { isolationLevel: "repeatable read" }
+  )
 }
 export async function saveProductState(actor: Actor, raw: ProductStateCommand) {
   const input = productStateCommandSchema.parse(raw)
+  if (input.key === sharedInitiativesKey(actor.workspaceId))
+    throw new ApplicationAccessError()
   session(actor, input.workspaceId, input.sessionId)
+  if (input.key.startsWith(initiativeCommandPrefix)) {
+    if (input.value === null) throw new ApplicationAccessError()
+    const { saveCanonicalInitiatives } =
+      await import("@/application/planning/initiatives.server")
+    return saveCanonicalInitiatives(
+      actor,
+      input.commandKey,
+      JSON.parse(input.value)
+    )
+  }
   if (input.key.startsWith(projectCommandPrefix)) {
     if (input.value === null) throw new ApplicationAccessError()
     const { saveCanonicalProjects } =
@@ -365,6 +406,10 @@ export async function saveProductState(actor: Actor, raw: ProductStateCommand) {
     )
   }
   if (input.value !== null) {
+    if (input.key === initiativesSettingsStorageKey(actor.workspaceId))
+      (await import("@/lib/initiatives")).initiativesSettingsSchema.parse(
+        JSON.parse(input.value)
+      )
     if (input.key.startsWith("forge:team-cycles:v1:"))
       parseTeamCycles(input.value)
     if (input.key.startsWith("forge:team-triage:v1:"))
@@ -391,6 +436,12 @@ export async function saveProductState(actor: Actor, raw: ProductStateCommand) {
     },
     run: async (tx, current) => {
       const ownerId = await scope(tx, current, input.key, true)
+      if (input.key === initiativesSettingsStorageKey(current.workspaceId))
+        await tx
+          .select({ id: organizations.id })
+          .from(organizations)
+          .where(eq(organizations.id, current.workspaceId))
+          .for("no key update")
       if (isProjectCatalog(input.key, current.workspaceId)) {
         await tx
           .select({ id: organizations.id })

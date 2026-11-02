@@ -1,3 +1,5 @@
+import { initiativeCommandPrefix } from "@/lib/shared-initiative-key"
+import { initiativeChangesSchema } from "@/lib/shared-initiative-contract"
 import { projectChangesSchema } from "@/lib/shared-project-contract"
 import { projectCommandPrefix } from "@/lib/shared-project-key"
 
@@ -15,6 +17,14 @@ export function filterProjectCopy(
     /^forge:project-post-draft:v1:([0-9a-f-]{36})$/
   )?.[1]
   if (postProject) return keep(postProject) ? value : null
+  if (key.startsWith(initiativeCommandPrefix)) {
+    const changes = initiativeChangesSchema.parse(JSON.parse(value))
+    return changes.every((c) =>
+      [...c.addProjectIds, ...c.removeProjectIds].every(keep)
+    )
+      ? value
+      : null
+  }
   if (key.startsWith(projectCommandPrefix)) {
     const changes = projectChangesSchema.parse(JSON.parse(value))
     return changes.every(

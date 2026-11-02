@@ -80,8 +80,17 @@ export const initiatives = pgTable(
     id: id(),
     workspaceId: workspace(),
     name: text("name").notNull(),
+    number: integer("number").default(1).notNull(),
+    revision: integer("revision").default(0).notNull(),
+    properties: jsonb("properties")
+      .$type<Record<string, unknown>>()
+      .default({})
+      .notNull(),
   },
-  (t) => [unique("initiatives_workspace_id_unique").on(t.workspaceId, t.id)]
+  (t) => [
+    unique("initiatives_workspace_id_unique").on(t.workspaceId, t.id),
+    unique("initiatives_workspace_number_unique").on(t.workspaceId, t.number),
+  ]
 )
 
 export const initiativeProjects = pgTable(

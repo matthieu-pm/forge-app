@@ -151,6 +151,7 @@ export function InitiativesPage({
     return saved
   }
   const errors = [
+    store.mutationError,
     store.error,
     store.preferencesError,
     store.settingsError,
@@ -530,8 +531,8 @@ export function InitiativesPage({
                 variant="ghost"
                 size="sm"
                 className="justify-start text-xs text-destructive"
+                disabled={store.canonical || !store.writable}
                 aria-label="Delete selected initiatives"
-                disabled={!store.writable}
                 onClick={() => bulk()}
               >
                 <IssueIcon name="delete" /> Delete initiatives

@@ -1,0 +1,100 @@
+{
+  "issue": "FOR-59",
+  "implementationCommit": "cda2eb1205618941622119e90db3577598d97f6b",
+  "baselineCommit": "94db2f8635ef5cb071a87b3e0dbeb92efbb35f1e",
+  "date": "2026-11-02",
+  "environment": {
+    "database": "forge_issue_history_acceptance",
+    "neonBranch": "br-autumn-union-za0opf1e",
+    "browserOrigin": "http://localhost:3159",
+    "productionDeployed": false
+  },
+  "confirmedDecisions": [
+    "All current workspace members may create/edit initiatives; project link changes require current project access.",
+    "Shared authored updates/comments, replies and actor-owned reactions are included.",
+    "Initiative metadata is workspace-visible; only authorized projects, teams and active issues contribute to child records and rollups."
+  ],
+  "checks": [
+    {
+      "name": "Full app suite",
+      "result": "passed",
+      "command": "bun x vitest run --maxWorkers=2 --testTimeout=15000",
+      "filesPassed": 308,
+      "testsPassed": 2431,
+      "filesSkipped": 25,
+      "testsSkipped": 487,
+      "note": "Separate opt-in PostgreSQL acceptance was executed below. Bounded concurrency avoids unrelated five-second timeout failures seen during parallel builds."
+    },
+    {
+      "name": "Workflow tests",
+      "result": "passed",
+      "testsPassed": 4
+    },
+    {
+      "name": "Agent runtime tests",
+      "result": "passed",
+      "testsPassed": 37
+    },
+    {
+      "name": "Initiative and existing project PostgreSQL acceptance",
+      "result": "passed",
+      "testsPassed": 23,
+      "command": "FORGE_ISSUE_HISTORY_TEST_DATABASE_FILE=<isolated-credential-file> bun x vitest run src/application/planning/initiatives.postgres.test.ts src/application/planning/projects.postgres.test.ts --testTimeout=30000 --maxWorkers=1"
+    },
+    {
+      "name": "Focused client/schema/privacy regressions",
+      "result": "passed",
+      "testsPassed": 40
+    },
+    {
+      "name": "Two-session browser acceptance",
+      "result": "passed",
+      "sourceRevision": "cda2eb1205618941622119e90db3577598d97f6b",
+      "checks": [
+        "member-visible authorized rollups",
+        "project progress updates across sessions",
+        "private child/team omission",
+        "shared attributed updates/comments",
+        "real revision conflict and reviewed draft recovery",
+        "background refresh preserves dirty text until explicitly reviewed"
+      ],
+      "fixtureCleanup": {
+        "workspaces": 0,
+        "users": 0
+      },
+      "screenshot": "../qa/initiatives/for59-browser-acceptance.png"
+    },
+    {
+      "name": "TypeScript",
+      "result": "passed"
+    },
+    {
+      "name": "ESLint",
+      "result": "passed",
+      "errors": 0,
+      "warnings": 421
+    },
+    {
+      "name": "Workspace production build and Workflow handlers",
+      "result": "passed"
+    },
+    {
+      "name": "Serialized migration 0064_shared_initiatives",
+      "result": "passed",
+      "applied": 1,
+      "replayApplied": 0,
+      "totalReceipts": 65
+    },
+    {
+      "name": "Git diff whitespace validation",
+      "result": "passed"
+    }
+  ],
+  "scopeBoundaries": [
+    "FORGE_FEATURE_INITIATIVES defaults false. Migration and explicit deployment enablement are required.",
+    "Workspace owners/admins manage the shared enable/disable setting and update expectation.",
+    "Initiative attachments, resources/documents, labels, saved project views and initiative deletion have no enabled canonical command.",
+    "Legacy advanced-content migration remains FOR-126; public API transport remains FOR-150.",
+    "Production rollout and packaged macOS acceptance were not performed."
+  ]
+}

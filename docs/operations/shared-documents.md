@@ -4,7 +4,7 @@ The accepted product rules are recorded in [FOR-61](https://linear.app/atriumcrm
 
 ## Enablement and rollback
 
-1. Reconcile the migration journal with any earlier merged schema work, regenerate its snapshot if ordering changes, and apply `0065_shared_documents` with the repository's serialized migration runner against the approved direct connection.
+1. Reconcile the migration journal with any earlier merged schema work, regenerate its snapshot if ordering changes, and apply `0066_shared_documents` with the repository's serialized migration runner against the approved direct connection.
 2. Confirm application-role privileges for `document_revisions`, the expanded document table, and readiness migration receipts.
 3. Set `FORGE_SHARED_DOCUMENTS_ENABLED=true` in the intended environment and deploy the reviewed source. The default is false when `FORGE_SERVICE_ENVIRONMENT=production`.
 4. Verify two authenticated sessions, a stale-save conflict, history restore, and revocation before enabling broadly.

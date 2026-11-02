@@ -182,6 +182,16 @@ export const initiativeProjectSchema = z.object({
 export type InitiativeProject = z.infer<typeof initiativeProjectSchema>
 export type InitiativeComment = z.infer<typeof initiativeCommentSchema>
 export const initiativeSchema = z.object({
+  revision: z.number().int().nonnegative().optional(),
+  rollup: z
+    .object({
+      projectCount: z.number().int().nonnegative(),
+      completedProjects: z.number().int().nonnegative(),
+      issueCount: z.number().int().nonnegative(),
+      completedIssues: z.number().int().nonnegative(),
+      percent: z.number().int().min(0).max(100),
+    })
+    .optional(),
   id: z.string().min(1),
   number: z.number().int().positive(),
   name: z.string().trim().min(1).max(200),

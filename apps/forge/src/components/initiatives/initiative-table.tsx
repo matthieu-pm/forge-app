@@ -12,6 +12,7 @@ import type {
 } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamLabel } from "@/lib/team-labels"
+import { canonicalIssuesActive } from "@/lib/canonical-issue-cache"
 import { IssueIcon } from "@/components/issues/issue-controls"
 import { DirectoryRowIcon } from "@/components/ui/directory-row-icon"
 import {
@@ -165,9 +166,21 @@ export function InitiativeTable({
     if (property === "Target date")
       return <InitiativePropertyPicker {...common} property="target" />
     if (property === "Labels")
-      return <InitiativePropertyPicker {...common} property="labels" />
+      return (
+        <InitiativePropertyPicker
+          {...common}
+          disabled={disabled || canonicalIssuesActive()}
+          property="labels"
+        />
+      )
     if (property === "Contributing teams")
-      return <InitiativePropertyPicker {...common} property="teams" />
+      return (
+        <InitiativePropertyPicker
+          {...common}
+          disabled={disabled || canonicalIssuesActive()}
+          property="teams"
+        />
+      )
     if (property === "Health") {
       const health = initiativeHealth(item, schedule)
       return (
