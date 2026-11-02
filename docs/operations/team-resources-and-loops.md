@@ -20,6 +20,8 @@ Public-team Loops may access their own team or all public teams. Private-team Lo
 
 Execution uses the capabilities registered in the existing Forge agent runtime. This release supplies authorized native event context and shared orchestration; it does not add undeclared issue/project/document agent tool adapters or external integrations. Registered writes keep their existing exact-input approvals. Shared history presents confirmed results and pending approvals; queuing a run or cancellation is not a completed effect.
 
+The current Auto route requires an enabled, compatible workspace OpenAI cloud model with tool support. Personal/local models and other providers do not satisfy Loop enablement. Published explicit reasoning is validated against the selected model and retained in run history. Native context includes current scoped relationships and the precise trigger; posted comments/updates include the triggering activity ID and body. Editing or removing that activity revokes execution/callbacks and its saved history/artifact access.
+
 ## Schedules, delivery and recovery
 
 Schedules use an IANA timezone, an initial instant and hour/day/week/month/year interval. Calendar recurrence preserves local wall time across DST, clamps unavailable month days and emits one coalesced occurrence after missed ticks. Weekly schedules select weekdays. Re-enabling preserves the recurrence anchor. Cycle start/end use each saved cycle's timezone and inclusive calendar window; completion occurs at the following midnight. Enabling a cycle Loop does not replay a boundary that already passed that day.
@@ -52,7 +54,9 @@ The authenticated `/api/internal/loops` Cron and dedicated function configuratio
 
 ## Reproduction and evidence
 
-Native and browser harnesses require an explicit private connection JSON containing `connection` (migration owner) and `applicationConnection` (ordinary application login). They verify the dedicated `forge_resources_loops_acceptance` database on `br-autumn-union-za0opf1e`; they have no production mode. Browser scripts additionally require loopback HTTP and clean up their owned users/workspaces/receipts.
+Native and default browser harnesses require an explicit private connection JSON containing `connection` (migration owner) and `applicationConnection` (ordinary application login). They verify the dedicated `forge_resources_loops_acceptance` database on `br-autumn-union-za0opf1e`. Default browser scripts additionally require loopback HTTP and clean up owned users/workspaces/receipts. Run Loop browser and native suites sequentially: an advisory lock protects their shared global scheduler queue.
+
+Production release verification is separate and requires a clean checkout matching an explicitly authorized revision and the exact known production database/branch. `verify-team-resources-browser.mjs` accepts the `FORGE_RESOURCE_PRODUCTION_AUTHORIZED_REVISION`/`FORGE_RESOURCE_PRODUCTION_DATABASE_FILE` pair. `verify-team-loops-production.mjs` requires the corresponding `FORGE_LOOP_PRODUCTION_*` pair plus `FORGE_LOOP_PRODUCTION_CRON_SECRET_FILE`. It creates only an owned temporary workspace, validates a real hosted provider result through web scheduling, and removes its fixture accounts/data. No fake provider/catalog is installed in production.
 
 ```sh
 cd apps/forge
