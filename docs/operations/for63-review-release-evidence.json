@@ -1,0 +1,164 @@
+{
+  "issue": "FOR-63",
+  "pullRequest": "https://github.com/matthieu-pm/forge-app/pull/48",
+  "originalReviewHead": "27bc5763aeae610ed15fe0901182f17100d94691",
+  "reviewBase": "b5a9e6ee29b3652fa3cd1064d75c6a7589d34f24",
+  "reviewedCodeRevision": "c2da2073c6432e9226b37d3f29fbb373faab4081",
+  "reviewedPRHead": "a4bbf3a49ddc239a14f7c92a4f0a81e58da3e194",
+  "mergedRevision": "690d01e668261f7af80d98689b6af99e45090a87",
+  "review": {
+    "report": "docs/qa/for63/review-and-release.md",
+    "standards": "Two lifecycle findings corrected; independent re-review found no remaining blockers.",
+    "specification": "Two findings corrected, one shared with Standards; independent re-review found no remaining blockers.",
+    "fixes": [
+      "Independent per-command private journals with discovery and owned-record cleanup, including legacy singleton recovery.",
+      "Context generation and mounted-state fences for delayed open, submit, reload and finally callbacks.",
+      "Retained reference selectors refresh on session settlement and reject retired responses."
+    ]
+  },
+  "validation": {
+    "appSuite": {
+      "passed": 2588,
+      "skipped": 587,
+      "filesPassed": 328,
+      "filesSkipped": 30
+    },
+    "nativePostgres": {
+      "passed": 11,
+      "database": "forge_templates_acceptance",
+      "branch": "br-autumn-union-za0opf1e",
+      "ordinaryApplicationRole": "forge_staging_web"
+    },
+    "workflowTests": {
+      "passed": 4
+    },
+    "workspaceTypecheck": "passed",
+    "productionBuildAndProtectedWorkflowHandlers": "passed",
+    "changedSourceLint": {
+      "errors": 0,
+      "warnings": 6
+    },
+    "focusedLifecycleRegressions": {
+      "passed": 10
+    },
+    "committedSourceBrowser": {
+      "revision": "c2da2073c6432e9226b37d3f29fbb373faab4081",
+      "result": "passed"
+    },
+    "githubChecks": [
+      "Vercel – forge-app: success",
+      "Vercel – forge-preview-runtime: success"
+    ]
+  },
+  "migration": {
+    "newMigrationRequired": false,
+    "source": "690d01e668261f7af80d98689b6af99e45090a87",
+    "target": {
+      "database": "neondb",
+      "branch": "br-muddy-queen-zaeeysjt",
+      "role": "neondb_owner"
+    },
+    "beforeCount": 70,
+    "beforeHead": {
+      "hash": "420b8c70c6fcd3a32d9d3fd4bcbf24f1530e3aea0d2afaba01c591e089d3f74e",
+      "created_at": "1793633654643"
+    },
+    "apply": {
+      "applied": 0,
+      "total": 70
+    },
+    "replay": {
+      "applied": 0,
+      "total": 70
+    },
+    "afterCount": 70,
+    "afterHead": {
+      "hash": "420b8c70c6fcd3a32d9d3fd4bcbf24f1530e3aea0d2afaba01c591e089d3f74e",
+      "created_at": "1793633654643"
+    },
+    "countsBefore": {
+      "templates": 0,
+      "projects": 0,
+      "issues": 0,
+      "workspaces": 1
+    },
+    "countsAfter": {
+      "templates": 0,
+      "projects": 0,
+      "issues": 0,
+      "workspaces": 1
+    },
+    "preserved": true
+  },
+  "production": {
+    "url": "https://app.forgenow.tech",
+    "deploymentId": "dpl_24tWSzqCzhUvtRe1Px5hQ3UaccPR",
+    "deploymentUrl": "https://forge-i5lic8ays-matthieu-pm.vercel.app",
+    "state": "READY",
+    "target": "production",
+    "sourceRevision": "690d01e668261f7af80d98689b6af99e45090a87",
+    "previousDeploymentId": "dpl_HPGuLQmAm2MSZpYMQeoyKvQAbPg5",
+    "deploymentMethod": "Clean reviewed CLI upload staged with --prod --skip-domain, candidate source identity/readiness checked, then promoted.",
+    "featureFlag": {
+      "FORGE_FEATURE_TEMPLATES": "true",
+      "target": "production",
+      "otherGates": "Existing initiative and workspace policies retained."
+    },
+    "stagedReadiness": {
+      "status": "ok",
+      "code": "READY"
+    },
+    "postPromotionHealth": [
+      {
+        "path": "/api/health/live",
+        "status": 200,
+        "body": "{\"status\":\"ok\",\"code\":\"ALIVE\"}"
+      },
+      {
+        "path": "/api/health/ready",
+        "status": 200,
+        "body": "{\"status\":\"ok\",\"code\":\"READY\"}"
+      }
+    ],
+    "browser": {
+      "result": "passed",
+      "revision": "690d01e668261f7af80d98689b6af99e45090a87",
+      "environment": "authorized production fixture",
+      "checks": [
+        "Ordinary-member Better Auth sign-in",
+        "Required form validation with no invalid issue",
+        "Committed response loss, reload and exact retry without duplicate issue tree",
+        "A distinct command creates a distinct issue tree",
+        "Invalid nested status and stale template revision repair without partial project",
+        "Canonical milestones and project issue membership",
+        "Independent canonical project detail rendering"
+      ],
+      "pageErrors": 0
+    },
+    "errorLogScan": {
+      "type": "summary",
+      "recordsReturned": 0,
+      "timeRange": {
+        "start": "2026-11-02T21:06:02.957Z",
+        "end": "2026-11-02T21:16:02.957Z"
+      },
+      "pagination": {
+        "hasMore": false,
+        "next": null
+      },
+      "excludedIntervals": []
+    },
+    "fixtureCleanup": {
+      "workspaces": 0,
+      "users": 0,
+      "receipts": 0
+    },
+    "actualDatabaseIdentityVerified": true
+  },
+  "releaseBoundaries": [
+    "Packaged macOS qualification is not claimed.",
+    "Feature remains off by default in checked-in configuration; the reviewed production environment is explicitly enabled.",
+    "No production customer records were modified by verification; generated fixture workspace/users and command evidence were removed."
+  ],
+  "recordedAt": "2026-11-02T21:16:24.335853+00:00"
+}
