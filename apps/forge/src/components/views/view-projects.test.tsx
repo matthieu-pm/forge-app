@@ -21,6 +21,10 @@ import {
   initiativesStorageKey,
 } from "@/lib/initiatives"
 
+const projection = vi.hoisted(() => ({ read: vi.fn() }))
+vi.mock("@/lib/saved-view-project-client", () => ({
+  useViewProjectQuery: (...args: Array<unknown>) => projection.read(...args),
+}))
 vi.mock("@/components/templates/rich-editor", () => ({
   RichEditor: ({ label }: { label: string }) => (
     <div role="textbox" aria-label={label} />
@@ -87,6 +91,13 @@ function start(overrides: Partial<ComponentProps<typeof ViewProjects>> = {}) {
 const read = () =>
   JSON.parse(productStorage.getItem(initiativesStorageKey(base.workspaceId))!)
 beforeEach(() => {
+  projection.read.mockReturnValue({
+    projects: [],
+    authorizedProjectIds: [],
+    loading: false,
+    ready: true,
+    error: "",
+  })
   productStorage.clear()
   Element.prototype.scrollIntoView = vi.fn()
   vi.stubGlobal(
@@ -199,5 +210,82 @@ describe("Custom view project collection", () => {
       ])
     )
     expect(updates).toBeLessThan(4)
+  })
+})
+
+describe("Canonical project view editor authority", () => {
+  const ready = () => ({
+    projects: [project],
+    authorizedProjectIds: [project.id],
+    loading: false,
+    ready: true,
+    error: "",
+  })
+  it.each(["loading", "error"])(
+    "hides a new project draft during %s and restores its text after verification",
+    async (state) => {
+      seed()
+      projection.read.mockReturnValue(ready())
+      const page = start({ canonical: true })
+      fireEvent.click(screen.getByRole("button", { name: "New project" }))
+      fireEvent.change(screen.getByRole("textbox", { name: "Project name" }), {
+        target: { value: "Unsaved nested project" },
+      })
+      projection.read.mockReturnValue({
+        projects: [],
+        authorizedProjectIds: [],
+        ready: false,
+        loading: state === "loading",
+        error: state === "error" ? "Access could not be verified" : "",
+      })
+      page.rerender(<ViewProjects {...page.props} />)
+      expect(screen.queryByRole("dialog")).toBeNull()
+      expect(screen.queryByRole("textbox", { name: "Project name" })).toBeNull()
+      projection.read.mockReturnValue(ready())
+      page.rerender(<ViewProjects {...page.props} />)
+      expect(
+        await screen.findByRole("textbox", { name: "Project name" })
+      ).toHaveProperty("value", "Unsaved nested project")
+    }
+  )
+  it("closes an existing editor after confirmed access loss instead of restoring it on regrant", async () => {
+    seed()
+    projection.read.mockReturnValue(ready())
+    const page = start({ canonical: true })
+    fireEvent.click(screen.getByRole("button", { name: "Release" }))
+    fireEvent.change(screen.getByRole("textbox", { name: "Project name" }), {
+      target: { value: "Retained private title" },
+    })
+    projection.read.mockReturnValue({
+      projects: [],
+      authorizedProjectIds: [],
+      loading: false,
+      ready: true,
+      error: "",
+    })
+    page.rerender(<ViewProjects {...page.props} />)
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+    projection.read.mockReturnValue(ready())
+    page.rerender(<ViewProjects {...page.props} />)
+    expect(screen.queryByRole("dialog")).toBeNull()
+  })
+  it("keeps an authorized editor when a filter excludes its row", () => {
+    seed()
+    projection.read.mockReturnValue(ready())
+    const page = start({ canonical: true })
+    fireEvent.click(screen.getByRole("button", { name: "Release" }))
+    fireEvent.change(screen.getByRole("textbox", { name: "Project name" }), {
+      target: { value: "Filtered draft" },
+    })
+    projection.read.mockReturnValue({ ...ready(), projects: [] })
+    page.rerender(
+      <ViewProjects
+        {...page.props}
+        filters={[{ field: "Priority", value: "High" }]}
+      />
+    )
+    expect(
+      screen.getByRole("textbox", { name: "Project name" })
+    ).toHaveProperty("value", "Filtered draft")
   })
 })

@@ -1,14 +1,15 @@
 "use client"
 
-import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import * as React from "react"
 import { Select as SelectPrimitive } from "@base-ui/react/select"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { ArrowDown01Icon, ArrowUp01Icon } from "@hugeicons/core-free-icons"
+import { usePortalContainer } from "@/components/ui/portal-scope"
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
 
 import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 
 import { cn } from "@/lib/utils"
-import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowUp01Icon, ArrowDown01Icon } from "@hugeicons/core-free-icons"
 
 const Select = SelectPrimitive.Root
 
@@ -70,8 +71,9 @@ function SelectContent({
     SelectPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset" | "alignItemWithTrigger"
   >) {
+  const portalContainer = usePortalContainer()
   return (
-    <SelectPrimitive.Portal>
+    <SelectPrimitive.Portal container={portalContainer}>
       <SelectPrimitive.Positioner
         side={side}
         sideOffset={sideOffset}

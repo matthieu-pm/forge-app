@@ -1,22 +1,25 @@
 import { useEffect, useState, useSyncExternalStore } from "react"
-import { loadViewProjects } from "./saved-view-functions"
+import { loadViewProjectQuery } from "./saved-view-functions"
 import { viewDefinition } from "./saved-view-contract"
 import { newCustomView } from "./custom-views"
 import {
   CANONICAL_ISSUES_CHANGED,
+  canonicalIssueReadGeneration,
   canonicalIssueState,
 } from "./canonical-issue-cache"
 import { protectedSessionEpoch } from "./protected-session"
 import { onPreferenceSessionInvalidated } from "./preference-session-events"
-import type { InitiativeProject } from "./initiatives"
+import type { SavedProjectQuery } from "./saved-view-contract"
 import type { ProjectFilter, ProjectPreferences } from "./project-view-contract"
 
 function subscribe(fn: () => void) {
   window.addEventListener(CANONICAL_ISSUES_CHANGED, fn)
+  window.addEventListener("forge:issue-queries-invalidated", fn)
   const off = onPreferenceSessionInvalidated(fn)
   return () => {
     off()
     window.removeEventListener(CANONICAL_ISSUES_CHANGED, fn)
+    window.removeEventListener("forge:issue-queries-invalidated", fn)
   }
 }
 export function useViewProjectQuery(
@@ -26,14 +29,16 @@ export function useViewProjectQuery(
   filters: Array<ProjectFilter>,
   display: ProjectPreferences,
   teamId?: string
-) {
+): SavedProjectQuery & { error: string; ready: boolean; loading: boolean } {
   useSyncExternalStore(
     subscribe,
-    () => `${protectedSessionEpoch()}:${canonicalIssueState()?.sessionId}`,
+    () =>
+      `${protectedSessionEpoch()}:${canonicalIssueReadGeneration()}:${canonicalIssueState()?.sessionId}`,
     () => ""
   )
   const identity = canonicalIssueState(),
-    epoch = protectedSessionEpoch()
+    epoch = protectedSessionEpoch(),
+    accessGeneration = canonicalIssueReadGeneration()
   const session =
     identity?.workspaceId === workspaceId && identity.userId === userId
       ? identity.sessionId
@@ -47,35 +52,51 @@ export function useViewProjectQuery(
         })
       )
     : ""
-  const key = `${workspaceId}:${userId}:${session}:${epoch}:${definition}`
-  const [state, setState] = useState<{
-    key: string
-    projects: Array<InitiativeProject>
-    error: string
-  }>()
+  const key = `${workspaceId}:${userId}:${session}:${epoch}:${accessGeneration}:${definition}`
+  const [state, setState] = useState<
+    SavedProjectQuery & {
+      key: string
+      error: string
+      loading: boolean
+    }
+  >()
   useEffect(() => {
     if (!enabled || !session) return
     let active = true,
       generation = 0
     async function refresh() {
       const token = ++generation
+      setState({
+        key,
+        projects: [],
+        authorizedProjectIds: [],
+        error: "",
+        loading: true,
+      })
       try {
-        const projects = JSON.parse(
-          await loadViewProjects({
+        const result = JSON.parse(
+          await loadViewProjectQuery({
             data: {
               workspaceId,
               sessionId: session,
               definition: JSON.parse(definition),
             },
           })
-        ) as Array<InitiativeProject>
-        if (active && token === generation && epoch === protectedSessionEpoch())
-          setState({ key, projects, error: "" })
+        ) as SavedProjectQuery
+        if (
+          active &&
+          token === generation &&
+          epoch === protectedSessionEpoch() &&
+          accessGeneration === canonicalIssueReadGeneration()
+        )
+          setState({ ...result, key, error: "", loading: false })
       } catch {
         if (active && token === generation)
           setState({
             key,
             projects: [],
+            authorizedProjectIds: [],
+            loading: false,
             error:
               "Projects could not be loaded. Review the view filters or refresh to try again.",
           })
@@ -92,6 +113,12 @@ export function useViewProjectQuery(
     }
   }, [enabled, key])
   return state?.key === key
-    ? { ...state, loading: false }
-    : { projects: [], error: "", loading: enabled && Boolean(session) }
+    ? { ...state, ready: !state.loading && !state.error }
+    : {
+        projects: [],
+        authorizedProjectIds: [],
+        error: "",
+        ready: false,
+        loading: enabled && Boolean(session),
+      }
 }
