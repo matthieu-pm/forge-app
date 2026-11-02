@@ -48,6 +48,8 @@ async function readReceipt(response: Response) {
 export async function triggerScheduler(env: Env, scheduledTime: number) {
   if (!env.CRON_SECRET || env.CRON_SECRET.length < 32)
     throw new Error("Scheduler secret binding is missing")
+  let status: number | undefined
+  let failureStage = "transport"
   try {
     const response = await fetch(SCHEDULER_URL, {
       method: "POST",
@@ -55,13 +57,18 @@ export async function triggerScheduler(env: Env, scheduledTime: number) {
         Authorization: `Bearer ${env.CRON_SECRET}`,
         "Cache-Control": "no-store",
       },
-      redirect: "error",
+      // Workers rejects `error` before sending a request. `manual` returns
+      // redirects to our non-200 guard without forwarding the credential.
+      redirect: "manual",
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     })
+    status = response.status
+    failureStage = "http"
     if (response.status !== 200) {
       await response.body?.cancel()
       throw new Error("Scheduler returned a non-success status")
     }
+    failureStage = "receipt"
     const receipt = await readReceipt(response)
     console.log(
       JSON.stringify({
@@ -78,6 +85,8 @@ export async function triggerScheduler(env: Env, scheduledTime: number) {
         job: "forge.loops.scheduler",
         scheduledTime,
         errorCode: "SCHEDULER_REQUEST_FAILED",
+        failureStage,
+        ...(status === undefined ? {} : { status }),
       })
     )
     throw new Error("Forge scheduler invocation failed")
