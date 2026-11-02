@@ -335,8 +335,11 @@ describe.skipIf(!file)("FOR-60 saved views on PostgreSQL", () => {
       filters: [{ field: "Status", value: "Planned" }],
     })
     const result = await views.queryViewProjects(bob, value)
-    expect(result.map((p) => p.name)).toEqual(["Visible"])
-    expect(result[0].teamIds).toEqual([teamId])
+    expect(result.projects.map((p) => p.name)).toEqual(["Visible"])
+    expect(result.projects[0].teamIds).toEqual([teamId])
+    expect(result.authorizedProjectIds).toEqual(
+      result.projects.map((p) => p.id)
+    )
   }, 30000)
   it("revocation hides team views and favorites, including writes with a retained Actor", async () => {
     const {
@@ -400,6 +403,161 @@ describe.skipIf(!file)("FOR-60 saved views on PostgreSQL", () => {
       ).rows
     ).toEqual([])
     await expect(save(alice, id, value)).rejects.toThrow()
+  }, 30000)
+  it.each(["save", "favorite", "delete"] as const)(
+    "%s holds private-team authority until the complete view command commits",
+    async (action) => {
+      const f = await fixture(),
+        bob = f.actors[1],
+        id = randomUUID()
+      await pool.query(
+        "INSERT INTO team_members(workspace_id,team_id,user_id,role) VALUES($1,$2,$3,'member')",
+        [f.workspaceId, f.privateTeam, bob.userId]
+      )
+      const value = definition(bob.userId, "team", f.privateTeam)
+      await save(bob, id, value)
+      const blocker = await pool.connect(),
+        revoker = await pool.connect()
+      let writing: Promise<unknown> | undefined
+      try {
+        await blocker.query("BEGIN")
+        const pid = (await blocker.query("SELECT pg_backend_pid() pid")).rows[0]
+          .pid
+        await blocker.query(
+          "SELECT id FROM saved_views WHERE id=$1 FOR UPDATE",
+          [id]
+        )
+        writing = views.mutateSavedView(
+          bob,
+          randomUUID(),
+          action === "save"
+            ? {
+                action,
+                id,
+                expectedRevision: 1,
+                definition: { ...value, name: "Updated" },
+              }
+            : action === "delete"
+              ? { action, id, expectedRevision: 1 }
+              : { action, id, favorite: true }
+        )
+        let blocked = false
+        for (let attempt = 0; attempt < 80; attempt++) {
+          blocked = (
+            await pool.query(
+              "SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE $1=ANY(pg_blocking_pids(pid))) blocked",
+              [pid]
+            )
+          ).rows[0].blocked
+          if (blocked) break
+          await new Promise((resolve) => setTimeout(resolve, 25))
+        }
+        expect(blocked).toBe(true)
+        await revoker.query("BEGIN")
+        await revoker.query("SET LOCAL lock_timeout='250ms'")
+        let code: string | undefined
+        try {
+          await revoker.query(
+            "DELETE FROM team_members WHERE team_id=$1 AND user_id=$2",
+            [f.privateTeam, bob.userId]
+          )
+        } catch (error) {
+          code = (error as { code?: string }).code
+        }
+        await revoker.query("ROLLBACK")
+        expect(code).toBe("55P03")
+      } finally {
+        await revoker.query("ROLLBACK")
+        await blocker.query("ROLLBACK")
+        await writing
+        revoker.release()
+        blocker.release()
+      }
+      await pool.query(
+        "DELETE FROM team_members WHERE team_id=$1 AND user_id=$2",
+        [f.privateTeam, bob.userId]
+      )
+      expect((await views.readSavedViews(bob)).views).toEqual([])
+    },
+    30000
+  )
+  it("rechecks project reference access after waiting for its resource row lock", async () => {
+    const f = await fixture(),
+      bob = f.actors[1],
+      projectId = randomUUID(),
+      id = randomUUID()
+    await pool.query(
+      "INSERT INTO team_members(workspace_id,team_id,user_id,role) VALUES($1,$2,$3,'member')",
+      [f.workspaceId, f.privateTeam, bob.userId]
+    )
+    await pool.query(
+      "INSERT INTO projects(id,workspace_id,name) VALUES($1,$2,'Private reference')",
+      [projectId, f.workspaceId]
+    )
+    await pool.query(
+      "INSERT INTO project_teams(workspace_id,project_id,team_id) VALUES($1,$2,$3)",
+      [f.workspaceId, projectId, f.privateTeam]
+    )
+    const blocker = await pool.connect()
+    let writing: Promise<{ error?: unknown }> | undefined,
+      settled = false
+    try {
+      await blocker.query("BEGIN")
+      const pid = (await blocker.query("SELECT pg_backend_pid() pid")).rows[0]
+        .pid
+      await blocker.query("SELECT id FROM projects WHERE id=$1 FOR UPDATE", [
+        projectId,
+      ])
+      const value = {
+        ...definition(bob.userId, "workspace"),
+        filters: {
+          match: "all",
+          rules: [
+            {
+              id: "project",
+              field: "project",
+              operator: "is",
+              value: projectId,
+            },
+          ],
+        },
+      }
+      writing = save(bob, id, value).then(
+        () => {
+          settled = true
+          return {}
+        },
+        (error) => {
+          settled = true
+          return { error }
+        }
+      )
+      let blocked = false
+      for (let attempt = 0; attempt < 80 && !settled; attempt++) {
+        blocked = (
+          await pool.query(
+            "SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE $1=ANY(pg_blocking_pids(pid))) blocked",
+            [pid]
+          )
+        ).rows[0].blocked
+        if (blocked) break
+        await new Promise((resolve) => setTimeout(resolve, 25))
+      }
+      await pool.query(
+        "DELETE FROM team_members WHERE team_id=$1 AND user_id=$2",
+        [f.privateTeam, bob.userId]
+      )
+      await blocker.query("ROLLBACK")
+      expect(blocked).toBe(true)
+      expect((await writing).error).toBeInstanceOf(Error)
+      expect(
+        (await pool.query("SELECT id FROM saved_views WHERE id=$1", [id])).rows
+      ).toEqual([])
+    } finally {
+      await blocker.query("ROLLBACK")
+      await writing
+      blocker.release()
+    }
   }, 30000)
   it("feature gate returns no definitions and rejects all mutations", async () => {
     const {

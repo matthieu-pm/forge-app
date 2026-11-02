@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { Activity, useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { toast } from "sonner"
 import type { MutableRefObject, ReactNode } from "react"
@@ -27,6 +27,7 @@ import { ProjectDialog } from "@/components/initiatives/initiative-projects"
 import { ProjectSelectionToolbar } from "@/components/projects/project-selection-toolbar"
 import { IssueIcon } from "@/components/issues/issue-controls"
 import { Button } from "@/components/ui/button"
+import { PortalScope } from "@/components/ui/portal-scope"
 import { useAgent } from "@/components/agent/agent-provider"
 
 export type ViewMetric = {
@@ -84,6 +85,7 @@ export function ViewProjects({
   const agent = useAgent()
   const [filterOpen, setFilterOpen] = useState(false)
   const [editing, setEditing] = useState<InitiativeProject | "new" | null>(null)
+  const editorPortalHost = useRef<HTMLDivElement>(null)
   const [selected, setSelected] = useState<Array<string>>([])
   const catalog = useMemo(
     () => initiativeProjectCatalog(store.state),
@@ -107,6 +109,24 @@ export function ViewProjects({
     display,
     scopeTeamId ?? team?.id
   )
+  const editorReadable =
+    !canonical ||
+    (query.ready &&
+      Boolean(editing) &&
+      (editing === "new" ||
+        (editing && query.authorizedProjectIds.includes(editing.id))))
+  useEffect(() => {
+    // Filter exclusion is not revocation. Only a successful unfiltered authority
+    // projection may discard an existing editor's protected retained draft.
+    if (
+      canonical &&
+      query.ready &&
+      editing &&
+      editing !== "new" &&
+      !query.authorizedProjectIds.includes(editing.id)
+    )
+      setEditing(null)
+  }, [canonical, query.ready, query.authorizedProjectIds, editing])
   const localVisible = useMemo(
     () =>
       visibleProjects(
@@ -340,29 +360,34 @@ export function ViewProjects({
           writable={store.writable}
         />
       )}
-      {editing && (
-        <ProjectDialog
-          project={editing === "new" ? undefined : editing}
-          initialTeamId={team?.id}
-          people={people}
-          teams={teams}
-          labels={store.projectLabels}
-          catalog={catalog}
-          initiatives={store.state.initiatives}
-          initialInitiativeIds={editing === "new" ? [] : links(editing)}
-          onClose={() => setEditing(null)}
-          onAsk={(text) => {
-            agent.openComposer("floating")
-            agent.setDraft(text)
-          }}
-          onSave={(project, ids) => {
-            if (!save(project, ids)) return false
-            setEditing(null)
-            toast.success("Project saved")
-            return true
-          }}
-        />
-      )}
+      <PortalScope container={editorPortalHost}>
+        <Activity mode={editorReadable ? "visible" : "hidden"}>
+          <div ref={editorPortalHost} />
+          {editing && (
+            <ProjectDialog
+              project={editing === "new" ? undefined : editing}
+              initialTeamId={team?.id}
+              people={people}
+              teams={teams}
+              labels={store.projectLabels}
+              catalog={catalog}
+              initiatives={store.state.initiatives}
+              initialInitiativeIds={editing === "new" ? [] : links(editing)}
+              onClose={() => setEditing(null)}
+              onAsk={(text) => {
+                agent.openComposer("floating")
+                agent.setDraft(text)
+              }}
+              onSave={(project, ids) => {
+                if (!save(project, ids)) return false
+                setEditing(null)
+                toast.success("Project saved")
+                return true
+              }}
+            />
+          )}
+        </Activity>
+      </PortalScope>
     </div>
   )
 }

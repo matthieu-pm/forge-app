@@ -3,6 +3,7 @@ import {
   act,
   cleanup,
   fireEvent,
+  isInaccessible,
   screen,
   waitFor,
 } from "@testing-library/react"
@@ -20,6 +21,12 @@ import {
   setupPreferenceFixture,
 } from "@/test/preference-fixture"
 import { newCustomView } from "@/lib/custom-views"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 
 const transport = vi.hoisted(() => ({ load: vi.fn(), save: vi.fn() }))
 vi.mock("@/lib/saved-view-functions", () => ({
@@ -70,32 +77,55 @@ vi.mock("./view-issues", () => ({
   ),
 }))
 vi.mock("./view-projects", () => ({
-  ViewProjects: ({
+  ViewProjects: function ProjectPreview({
     filters,
     display,
     onFiltersChange,
     onDisplayChange,
     toolbarActions,
-  }: ComponentProps<typeof ViewProjects>) => (
-    <div>
-      <output data-testid="project-config">
-        {JSON.stringify({ filters, display })}
-      </output>
-      <button
-        onClick={() =>
-          onFiltersChange([{ field: "Status", value: "In Progress" }])
-        }
-      >
-        Filter active projects
-      </button>
-      <button
-        onClick={() => onDisplayChange({ ...display, layout: "Timeline" })}
-      >
-        Use project timeline
-      </button>
-      {toolbarActions}
-    </div>
-  ),
+  }: ComponentProps<typeof ViewProjects>) {
+    const [editing, setEditing] = useState(false)
+    const [draft, setDraft] = useState("")
+    return (
+      <div>
+        <output data-testid="project-config">
+          {JSON.stringify({ filters, display })}
+        </output>
+        <button
+          onClick={() =>
+            onFiltersChange([{ field: "Status", value: "In Progress" }])
+          }
+        >
+          Filter active projects
+        </button>
+        <button
+          onClick={() => onDisplayChange({ ...display, layout: "Timeline" })}
+        >
+          Use project timeline
+        </button>
+        <button onClick={() => setEditing(true)}>
+          Open nested project editor
+        </button>
+        <Popover>
+          <PopoverTrigger render={<button>Open project filter</button>} />
+          <PopoverContent>
+            <p>Private project filter option</p>
+          </PopoverContent>
+        </Popover>
+        <Dialog open={editing} onOpenChange={setEditing}>
+          <DialogContent>
+            <DialogTitle>Nested project editor</DialogTitle>
+            <input
+              aria-label="Nested project draft"
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+            />
+          </DialogContent>
+        </Dialog>
+        {toolbarActions}
+      </div>
+    )
+  },
 }))
 
 const user = { id: "user", name: "Matthieu", image: null }
@@ -210,6 +240,188 @@ describe("FOR-60 saved view interactions", () => {
     expect(
       screen.getByRole("button", { name: "Save view" }).hasAttribute("disabled")
     ).toBe(false)
+  })
+  it("retains an unsaved edit and its revision through a failed refresh and recovery", async () => {
+    render(<Harness initial={{ kind: "issues", view: saved.id, edit: true }} />)
+    await screen.findByRole("textbox", { name: "View name" })
+    fireEvent.change(screen.getByRole("textbox", { name: "View name" }), {
+      target: { value: "My retained draft" },
+    })
+    fireEvent.click(
+      screen.getByRole("button", { name: "Filter high priority issues" })
+    )
+    transport.load.mockRejectedValueOnce(new Error("Network unavailable"))
+    fireEvent.focus(window)
+    await screen.findByText(
+      "Saved views are unavailable. Refresh to try again."
+    )
+    expect(screen.queryByRole("textbox", { name: "View name" })).toBeNull()
+    expect(isInaccessible(screen.getByTestId("issue-config"))).toBe(true)
+    transport.load.mockResolvedValue(
+      JSON.stringify({
+        ...identity,
+        enabled: true,
+        views: [{ ...saved, name: "Changed remotely", revision: 2 }],
+        error: "",
+      })
+    )
+    fireEvent.focus(window)
+    const input = await screen.findByRole("textbox", { name: "View name" })
+    expect(input).toHaveProperty("value", "My retained draft")
+    fireEvent.click(screen.getByRole("button", { name: "Save view" }))
+    await waitFor(() => expect(transport.save).toHaveBeenCalledOnce())
+    expect(transport.save.mock.calls[0][0].data.mutation).toMatchObject({
+      expectedRevision: 1,
+      definition: {
+        name: "My retained draft",
+        filters: { rules: [{ field: "priority", value: "High" }] },
+      },
+    })
+  })
+  it("preserves a nested project editor while hiding all protected content during reauthorization", async () => {
+    const projectView = {
+      ...newCustomView("projects", user.id),
+      name: "Saved projects",
+      revision: 1,
+      canEdit: true,
+    }
+    const directory = JSON.stringify({
+      ...identity,
+      enabled: true,
+      views: [projectView],
+      error: "",
+    })
+    transport.load.mockResolvedValue(directory)
+    render(<Harness initial={{ kind: "projects", view: projectView.id }} />)
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Open nested project editor" })
+    )
+    fireEvent.change(
+      await screen.findByRole("textbox", { name: "Nested project draft" }),
+      { target: { value: "Unsubmitted project changes" } }
+    )
+    let resolve!: (value: string) => void
+    transport.load.mockReturnValueOnce(
+      new Promise<string>((done) => {
+        resolve = done
+      })
+    )
+    act(() =>
+      replaceCanonicalIssues({
+        ...identity,
+        records: [],
+        projects: [],
+        cycles: [],
+      })
+    )
+    await screen.findByText("Loading saved views…")
+    expect(screen.queryByRole("heading", { name: "Saved projects" })).toBeNull()
+    expect(
+      screen.queryByRole("textbox", { name: "Nested project draft" })
+    ).toBeNull()
+    expect(
+      screen.queryByRole("dialog", { name: "Nested project editor" })
+    ).toBeNull()
+    await act(async () => {
+      resolve(directory)
+      await Promise.resolve()
+    })
+    expect(
+      await screen.findByRole("textbox", { name: "Nested project draft" })
+    ).toHaveProperty("value", "Unsubmitted project changes")
+    transport.load.mockRejectedValueOnce(new Error("Temporary refresh failure"))
+    fireEvent.focus(window)
+    await screen.findByText(
+      "Saved views are unavailable. Refresh to try again."
+    )
+    expect(
+      screen.queryByRole("textbox", { name: "Nested project draft" })
+    ).toBeNull()
+    expect(
+      screen.queryByRole("dialog", { name: "Nested project editor" })
+    ).toBeNull()
+    transport.load.mockResolvedValueOnce(directory)
+    fireEvent.focus(window)
+    expect(
+      await screen.findByRole("textbox", { name: "Nested project draft" })
+    ).toHaveProperty("value", "Unsubmitted project changes")
+    // A definitive missing view retires the nested state, unlike a pending read.
+    transport.load.mockResolvedValueOnce(
+      JSON.stringify({ ...identity, enabled: true, views: [], error: "" })
+    )
+    act(() =>
+      replaceCanonicalIssues({
+        ...identity,
+        records: [],
+        projects: [],
+        cycles: [],
+      })
+    )
+    await screen.findByText("This view could not be found.")
+    expect(
+      screen.queryByRole("textbox", {
+        name: "Nested project draft",
+        hidden: true,
+      })
+    ).toBeNull()
+    transport.load.mockResolvedValueOnce(directory)
+    fireEvent.focus(window)
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Open nested project editor" })
+    )
+    expect(
+      await screen.findByRole("textbox", { name: "Nested project draft" })
+    ).toHaveProperty("value", "")
+  })
+  it("hides portalled filter content on read failure and drops it when the feature is disabled", async () => {
+    const projectView = {
+      ...newCustomView("projects", user.id),
+      name: "Scoped project view",
+      revision: 1,
+      canEdit: true,
+    }
+    const directory = JSON.stringify({
+      ...identity,
+      enabled: true,
+      views: [projectView],
+      error: "",
+    })
+    transport.load.mockResolvedValue(directory)
+    render(<Harness initial={{ kind: "projects", view: projectView.id }} />)
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Open project filter" })
+    )
+    await waitFor(() =>
+      expect(
+        isInaccessible(screen.getByText("Private project filter option"))
+      ).toBe(false)
+    )
+    transport.load.mockRejectedValueOnce(new Error("Temporary read failure"))
+    fireEvent.focus(window)
+    await screen.findByText(
+      "Saved views are unavailable. Refresh to try again."
+    )
+    expect(
+      isInaccessible(screen.getByText("Private project filter option"))
+    ).toBe(true)
+    expect(screen.queryByRole("heading", { name: projectView.name })).toBeNull()
+    transport.load.mockResolvedValueOnce(directory)
+    fireEvent.focus(window)
+    await waitFor(() =>
+      expect(
+        isInaccessible(screen.getByText("Private project filter option"))
+      ).toBe(false)
+    )
+    transport.load.mockResolvedValueOnce(
+      JSON.stringify({ ...identity, enabled: false, views: [], error: "" })
+    )
+    fireEvent.focus(window)
+    await screen.findByText("Saved views are not enabled for this environment.")
+    expect(screen.queryByText("Private project filter option")).toBeNull()
+    transport.load.mockResolvedValueOnce(directory)
+    fireEvent.focus(window)
+    await screen.findByRole("button", { name: "Open project filter" })
+    expect(screen.queryByText("Private project filter option")).toBeNull()
   })
   it("keeps the original revision when changing an existing view type", async () => {
     render(<Harness initial={{ kind: "issues", view: saved.id, edit: true }} />)

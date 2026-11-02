@@ -1,4 +1,5 @@
 import {
+  Activity,
   Fragment,
   useCallback,
   useEffect,
@@ -15,6 +16,8 @@ import type { InitiativePerson } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { ViewIssueMetricGroups } from "./view-issues"
 import type { ViewMetric, ViewProjectMetricGroups } from "./view-projects"
+import { PortalScope } from "@/components/ui/portal-scope"
+import { protectedSessionEpoch } from "@/lib/protected-session"
 import { newCustomView, visibleCustomViews } from "@/lib/custom-views"
 import {
   useCustomViewDirectoryPreferences,
@@ -146,6 +149,7 @@ export function ViewsPage({
   onNavigate: (search: ViewsSearch) => void
   directoryError?: string
 }) {
+  const portalHost = useRef<HTMLDivElement>(null)
   const [toolbarHost, setToolbarHost] = useState<HTMLDivElement | null>(null)
   const createActionRef = useRef<(() => void) | null>(null)
   const store = useCustomViews(workspaceId, user.id)
@@ -153,14 +157,48 @@ export function ViewsPage({
     () => [...directoryPeople.filter((p) => p.id !== user.id), user],
     [directoryPeople, user.id, user.name, user.image]
   )
-  const saved = store.views.find(
+  const readSaved = store.views.find(
     (v) => v.id === search.view && (!team || v.teamId === team.id)
   )
+  const draftContext = JSON.stringify([
+    workspaceId,
+    user.id,
+    team?.id,
+    search.view,
+    search.kind,
+    Boolean(search.edit),
+    protectedSessionEpoch(),
+  ])
+  const lastAuthorized = useRef<{
+    context: string
+    view: typeof readSaved
+  } | null>(null)
+  const interrupted = !store.enabled && (store.loading || Boolean(store.error))
+  const retained =
+    interrupted && lastAuthorized.current?.context === draftContext
+      ? lastAuthorized.current
+      : undefined
+  const saved = readSaved ?? retained?.view
+  const canRenderContent = store.enabled || Boolean(retained)
   const isEditor =
     search.view === "new" || Boolean(search.edit && saved?.canEdit)
   const [draft, setDraft] = useState<CustomView & { revision?: number }>(
     () => saved ?? newCustomView(search.kind, user.id, team?.id)
   )
+  useEffect(() => {
+    if (store.enabled && (!search.view || search.view === "new" || readSaved))
+      lastAuthorized.current = { context: draftContext, view: readSaved }
+    else if (!store.loading && (store.enabled || !store.error))
+      lastAuthorized.current = null
+  }, [
+    draftContext,
+    readSaved,
+    search.view,
+    store.enabled,
+    store.loading,
+    store.error,
+  ])
+  const draftSource = useRef({ context: draftContext, id: saved?.id })
   const [temporary, setTemporary] = useState<CustomView>()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [sidebar, setSidebar] = useState(true)
@@ -198,31 +236,19 @@ export function ViewsPage({
     saveDirectory({ ordering, descending, properties: value })
   }
   const [teamIds, setTeamIds] = useState<Array<string> | undefined>()
-  const draftNavigation = JSON.stringify([
-    workspaceId,
-    user.id,
-    team?.id,
-    search.view,
-    search.edit,
-    search.kind,
-  ])
-  const initializedDraft = useRef({
-    navigation: draftNavigation,
-    loaded: false,
-  })
   useEffect(() => {
-    if (initializedDraft.current.navigation !== draftNavigation)
-      initializedDraft.current = { navigation: draftNavigation, loaded: false }
-    // An unavailable read can temporarily evict saved. Recovery is not a new
-    // editor navigation and must retain the draft and its original revision.
-    if (search.view !== "new" && saved && !initializedDraft.current.loaded) {
+    if (draftSource.current.context !== draftContext)
+      draftSource.current = { context: draftContext, id: undefined }
+    // A protected read failure hides the editor, but does not replace its draft
+    // when the same session/view becomes readable again.
+    if (search.view !== "new" && saved && draftSource.current.id !== saved.id) {
       setDraft(saved)
-      initializedDraft.current.loaded = true
+      draftSource.current.id = saved.id
     }
     setTemporary(undefined)
     setSummaryTab("")
     setTeamIds(undefined)
-  }, [draftNavigation, saved?.id])
+  }, [draftContext, search.view, saved?.id])
   useEffect(() => setTemporary(undefined), [saved?.revision])
   const onIssueMetrics = useCallback(
     (groups: ViewIssueMetricGroups) => setIssueMetrics(groups),
@@ -232,11 +258,13 @@ export function ViewsPage({
     (groups: ViewProjectMetricGroups) => setProjectMetrics(groups),
     []
   )
-  const current = isEditor
-    ? draft
-    : temporary?.id === saved?.id
-      ? temporary
-      : saved
+  const current = canRenderContent
+    ? isEditor
+      ? draft
+      : temporary?.id === saved?.id
+        ? temporary
+        : saved
+    : undefined
   const kind = current?.kind ?? search.kind
   function navigate(next: ViewsSearch) {
     onNavigate(next)
@@ -429,650 +457,691 @@ export function ViewsPage({
       className="flex h-full min-h-0 flex-1 flex-col bg-background"
       aria-label="Views"
     >
-      <ContentHeader className="justify-between">
-        <div className="flex min-w-0 items-center gap-2">
-          {search.view ? (
-            <>
-              <button
-                onClick={() => navigate({ kind })}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                Views
-              </button>
-              <span className="text-muted-foreground">›</span>
-              {current && (
-                <>
-                  <ViewMark view={current} />
-                  <h1 className="truncate text-[13px] font-medium">
-                    {current.name || "New view"}
-                  </h1>
-                </>
-              )}
-            </>
-          ) : (
-            <h1 className="text-[13px] font-medium">Views</h1>
-          )}
-          {!isEditor && favorite}
-          {!isEditor && viewMenu}
-        </div>
-        {search.view && !isEditor && current ? (
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon-sm"
-              aria-label="Copy view URL"
-              onClick={copy}
-            >
-              <IssueIcon name="link" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={!teams.length}
-              onClick={() => createActionRef.current?.()}
-            >
-              <IssueIcon name="add" />
-              {kind === "issues" ? "New issue" : "New project"}
-            </Button>
-          </div>
-        ) : search.view ? (
-          <Button
-            variant="outline"
-            size="icon-sm"
-            aria-label="Copy view URL"
-            onClick={copy}
-          >
-            <IssueIcon name="link" />
-          </Button>
-        ) : (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => create()}
-            disabled={!store.enabled || store.busy || store.loading}
-          >
-            <IssueIcon name="add" />
-            New view
-          </Button>
-        )}
-      </ContentHeader>
       {(store.error || directoryError || directoryDisplay.error) && (
         <p role="alert" className="px-4 py-2 text-xs text-destructive">
           {store.error || directoryError || directoryDisplay.error}
         </p>
       )}
-      {store.loading && !current ? (
+      {!store.enabled && (
         <p role="status" className="p-8 text-sm text-muted-foreground">
-          Loading saved views…
+          {store.loading
+            ? "Loading saved views…"
+            : store.error
+              ? "Saved views are unavailable. Refresh to try again."
+              : "Saved views are not enabled for this environment."}
         </p>
-      ) : !store.enabled ? (
-        <p role="status" className="p-8 text-sm text-muted-foreground">
-          {store.error
-            ? "Saved views are unavailable. Refresh to try again."
-            : "Saved views are not enabled for this environment."}
-        </p>
-      ) : search.view && !current && !isEditor ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-4">
-          <p className="text-sm text-muted-foreground">
-            This view could not be found.
-          </p>
-          <Button
-            variant="outline"
-            onClick={() => navigate({ kind: search.kind })}
-          >
-            Back to views
-          </Button>
-        </div>
-      ) : current ? (
-        <>
-          {isEditor && (
-            <div className="mx-2 mt-2 shrink-0 rounded-xl border border-border/50 bg-muted/40">
-              <div className="flex flex-wrap items-start gap-3 p-3">
-                <TeamIconPicker
-                  name={draft.name || "View"}
-                  label="Choose view icon"
-                  value={draft.icon ?? defaultIcon}
-                  onChange={(icon) => setDraft({ ...draft, icon })}
-                />
-                <div className="min-w-40 flex-1">
-                  <input
-                    aria-label="View name"
-                    placeholder="View name"
-                    maxLength={80}
-                    value={draft.name}
-                    onChange={(e) =>
-                      setDraft({ ...draft, name: e.target.value })
-                    }
-                    className="h-8 w-full bg-transparent text-sm font-medium outline-none"
-                  />
-                  <input
-                    aria-label="View description"
-                    placeholder="Description (optional)"
-                    maxLength={500}
-                    value={draft.description}
-                    onChange={(e) =>
-                      setDraft({ ...draft, description: e.target.value })
-                    }
-                    className="mt-1 h-8 w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground/60"
+      )}
+      <PortalScope container={portalHost}>
+        <Activity key={draftContext} mode={interrupted ? "hidden" : "visible"}>
+          <div ref={portalHost} />
+
+          <ContentHeader className="justify-between">
+            <div className="flex min-w-0 items-center gap-2">
+              {search.view ? (
+                <>
+                  <button
+                    onClick={() => navigate({ kind })}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    Views
+                  </button>
+                  <span className="text-muted-foreground">›</span>
+                  {current && (
+                    <>
+                      <ViewMark view={current} />
+                      <h1 className="truncate text-[13px] font-medium">
+                        {current.name || "New view"}
+                      </h1>
+                    </>
+                  )}
+                </>
+              ) : (
+                <h1 className="text-[13px] font-medium">Views</h1>
+              )}
+              {!isEditor && favorite}
+              {!isEditor && viewMenu}
+            </div>
+            {search.view && !isEditor && current ? (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  aria-label="Copy view URL"
+                  onClick={copy}
+                >
+                  <IssueIcon name="link" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!teams.length}
+                  onClick={() => createActionRef.current?.()}
+                >
+                  <IssueIcon name="add" />
+                  {kind === "issues" ? "New issue" : "New project"}
+                </Button>
+              </div>
+            ) : search.view ? (
+              <Button
+                variant="outline"
+                size="icon-sm"
+                aria-label="Copy view URL"
+                onClick={copy}
+              >
+                <IssueIcon name="link" />
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => create()}
+                disabled={!store.enabled || store.busy || store.loading}
+              >
+                <IssueIcon name="add" />
+                New view
+              </Button>
+            )}
+          </ContentHeader>
+          {canRenderContent &&
+            (search.view && !current && !isEditor ? (
+              <div className="flex flex-1 flex-col items-center justify-center gap-4">
+                <p className="text-sm text-muted-foreground">
+                  This view could not be found.
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate({ kind: search.kind })}
+                >
+                  Back to views
+                </Button>
+              </div>
+            ) : current ? (
+              <>
+                {isEditor && (
+                  <div className="mx-2 mt-2 shrink-0 rounded-xl border border-border/50 bg-muted/40">
+                    <div className="flex flex-wrap items-start gap-3 p-3">
+                      <TeamIconPicker
+                        name={draft.name || "View"}
+                        label="Choose view icon"
+                        value={draft.icon ?? defaultIcon}
+                        onChange={(icon) => setDraft({ ...draft, icon })}
+                      />
+                      <div className="min-w-40 flex-1">
+                        <input
+                          aria-label="View name"
+                          placeholder="View name"
+                          maxLength={80}
+                          value={draft.name}
+                          onChange={(e) =>
+                            setDraft({ ...draft, name: e.target.value })
+                          }
+                          className="h-8 w-full bg-transparent text-sm font-medium outline-none"
+                        />
+                        <input
+                          aria-label="View description"
+                          placeholder="Description (optional)"
+                          maxLength={500}
+                          value={draft.description}
+                          onChange={(e) =>
+                            setDraft({ ...draft, description: e.target.value })
+                          }
+                          className="mt-1 h-8 w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground/60"
+                        />
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 text-xs">
+                        <span className="text-muted-foreground">Save to</span>
+                        <IssuePicker
+                          label="Save view to"
+                          value={
+                            draft.visibility === "team"
+                              ? `team:${draft.teamId}`
+                              : draft.visibility
+                          }
+                          options={[
+                            { value: "personal", label: "Personal" },
+                            { value: "workspace", label: "Workspace" },
+                            ...teams.map((t) => ({
+                              value: `team:${t.id}`,
+                              label: t.name,
+                            })),
+                          ]}
+                          onChange={(value) =>
+                            setDraft({
+                              ...draft,
+                              visibility: value.startsWith("team:")
+                                ? "team"
+                                : (value as "personal" | "workspace"),
+                              teamId: value.startsWith("team:")
+                                ? value.slice(5)
+                                : team?.id,
+                            })
+                          }
+                          className="h-7 gap-2 rounded-full bg-muted px-2.5 text-xs"
+                        >
+                          <IssueIcon name="person" />
+                          {draft.visibility === "team"
+                            ? teams.find((t) => t.id === draft.teamId)?.name
+                            : draft.visibility === "personal"
+                              ? "Personal"
+                              : "Workspace"}
+                        </IssuePicker>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={store.busy}
+                          onClick={() =>
+                            navigate({
+                              kind,
+                              view: search.edit ? saved?.id : undefined,
+                            })
+                          }
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          size="sm"
+                          disabled={!draft.name.trim() || store.busy}
+                          onClick={() => void commit()}
+                        >
+                          {search.edit ? "Save view" : "Create view"}
+                        </Button>
+                      </div>
+                    </div>
+                    <PageTabs
+                      aria-label="View type"
+                      className="border-t border-border/50 px-3 py-2"
+                    >
+                      {(["issues", "projects"] as const).map((value) => (
+                        <button
+                          key={value}
+                          className={pageTabClass}
+                          aria-current={kind === value ? "page" : undefined}
+                          onClick={() => changeKind(value)}
+                        >
+                          {value === "issues" ? "Issues" : "Projects"}
+                        </button>
+                      ))}
+                    </PageTabs>
+                  </div>
+                )}
+                <div ref={setToolbarHost} className="shrink-0" />
+                <div className="relative flex min-h-0 flex-1">
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    {current.kind === "issues" ? (
+                      <ViewIssues
+                        key={`${current.id}:${isEditor}`}
+                        workspaceId={workspaceId}
+                        user={user}
+                        teams={teams}
+                        team={
+                          teams.find((t) => t.id === current.teamId) ?? team
+                        }
+                        teamIds={current.teamId ? [current.teamId] : teamIds}
+                        filters={current.filters}
+                        display={current.display}
+                        onFiltersChange={(filters) =>
+                          patch({ ...current, filters })
+                        }
+                        onDisplayChange={(display) =>
+                          patch({ ...current, display })
+                        }
+                        onMetricsChange={onIssueMetrics}
+                        hideCreate
+                        toolbarHost={toolbarHost}
+                        createActionRef={createActionRef}
+                        toolbarActions={
+                          !isEditor && (
+                            <Button
+                              variant="outline"
+                              size="icon-sm"
+                              aria-label={
+                                sidebar
+                                  ? "Close view details"
+                                  : "Open view details"
+                              }
+                              onClick={() => setSidebar(!sidebar)}
+                            >
+                              <IssueIcon name="details" />
+                            </Button>
+                          )
+                        }
+                      />
+                    ) : (
+                      <ViewProjects
+                        canonical
+                        key={`${current.id}:${isEditor}`}
+                        workspaceId={workspaceId}
+                        user={user}
+                        people={people}
+                        teams={teams}
+                        team={
+                          teams.find((t) => t.id === current.teamId) ?? team
+                        }
+                        filters={current.filters}
+                        display={current.display}
+                        scopeTeamId={current.teamId}
+                        onFiltersChange={(filters) =>
+                          patch({ ...current, filters })
+                        }
+                        onDisplayChange={(display) =>
+                          patch({ ...current, display })
+                        }
+                        onMetricsChange={onProjectMetrics}
+                        hideCreate
+                        toolbarHost={toolbarHost}
+                        createActionRef={createActionRef}
+                        toolbarActions={
+                          !isEditor && (
+                            <Button
+                              variant="outline"
+                              size="icon-sm"
+                              aria-label={
+                                sidebar
+                                  ? "Close view details"
+                                  : "Open view details"
+                              }
+                              onClick={() => setSidebar(!sidebar)}
+                            >
+                              <IssueIcon name="details" />
+                            </Button>
+                          )
+                        }
+                      />
+                    )}
+                  </div>
+                  {!isEditor && sidebar && (
+                    <aside
+                      aria-label="View details"
+                      className="absolute inset-y-0 right-2 z-20 flex w-[min(390px,calc(100%-16px))] flex-col gap-2 overflow-y-auto pb-2 lg:static lg:mr-2 lg:max-w-[32%]"
+                    >
+                      <div className="flex items-center gap-3 rounded-xl border border-border/30 bg-muted/50 p-4">
+                        <ViewMark view={current} />
+                        <h2 className="min-w-0 flex-1 truncate text-[13px] font-medium">
+                          {current.name}
+                        </h2>
+                        {favorite}
+                        {viewMenu}
+                      </div>
+                      <div className="space-y-3 rounded-xl border border-border/30 bg-muted/50 p-3 text-xs">
+                        <div className="flex items-center gap-3">
+                          <span className="w-20 shrink-0 text-muted-foreground">
+                            Visibility
+                          </span>
+                          {saved?.canEdit ? (
+                            <IssuePicker
+                              label="Change view visibility"
+                              value={
+                                current.visibility === "team"
+                                  ? `team:${current.teamId}`
+                                  : current.visibility
+                              }
+                              options={[
+                                { value: "personal", label: "Personal" },
+                                { value: "workspace", label: "Workspace" },
+                                ...teams.map((t) => ({
+                                  value: `team:${t.id}`,
+                                  label: t.name,
+                                })),
+                              ]}
+                              onChange={(value) =>
+                                void store.save({
+                                  ...saved,
+                                  visibility: value.startsWith("team:")
+                                    ? "team"
+                                    : (value as "personal" | "workspace"),
+                                  teamId: value.startsWith("team:")
+                                    ? value.slice(5)
+                                    : current.teamId,
+                                })
+                              }
+                              className="flex h-7 items-center gap-2 text-xs"
+                            >
+                              {current.visibility === "personal"
+                                ? "Personal"
+                                : current.visibility === "workspace"
+                                  ? "Workspace"
+                                  : (teams.find((t) => t.id === current.teamId)
+                                      ?.name ?? "Team")}
+                            </IssuePicker>
+                          ) : (
+                            <span>
+                              {current.visibility === "personal"
+                                ? "Personal"
+                                : current.visibility === "workspace"
+                                  ? "Workspace"
+                                  : "Team"}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="w-20 shrink-0 text-muted-foreground">
+                            Owner
+                          </span>
+                          <span className="flex items-center gap-2 text-xs">
+                            <AssigneeMark
+                              name={
+                                people.find((p) => p.id === current.ownerId)
+                                  ?.name
+                              }
+                              image={
+                                people.find((p) => p.id === current.ownerId)
+                                  ?.image
+                              }
+                            />
+                            {people.find((p) => p.id === current.ownerId)
+                              ?.name ?? "Unknown member"}
+                          </span>
+                        </div>
+                        {current.description && (
+                          <p className="border-t border-border/40 pt-3 text-muted-foreground">
+                            {current.description}
+                          </p>
+                        )}
+                      </div>
+                      <div className="min-h-40 flex-1 rounded-xl border border-border/30 bg-muted/50 p-3">
+                        <PageTabs aria-label="View summary" className="gap-1">
+                          {summaryTabs.map((tab) => (
+                            <button
+                              key={tab}
+                              className={cn(
+                                pageTabClass,
+                                "flex-1 px-2 text-[11px]"
+                              )}
+                              aria-current={
+                                activeSummary === tab ? "page" : undefined
+                              }
+                              onClick={() => setSummaryTab(tab)}
+                            >
+                              {tab}
+                            </button>
+                          ))}
+                        </PageTabs>
+                        <div className="mt-3 space-y-1">
+                          {metrics[activeSummary].map((metric) => (
+                            <button
+                              key={metric.value}
+                              onClick={() => metricFilter(metric)}
+                              className="flex w-full items-center gap-2 rounded-lg p-2 text-left text-xs hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              {activeSummary === "Assignees" ||
+                              activeSummary === "Leads" ? (
+                                <AssigneeMark
+                                  name={metric.value ? metric.label : undefined}
+                                  image={metric.image}
+                                />
+                              ) : (
+                                <IssueIcon
+                                  name={
+                                    activeSummary === "Labels"
+                                      ? "label"
+                                      : activeSummary === "Health"
+                                        ? "clock"
+                                        : "layers"
+                                  }
+                                />
+                              )}
+                              <span className="min-w-0 flex-1 truncate">
+                                {metric.label}
+                              </span>
+                              <span className="text-muted-foreground">
+                                {metric.count}
+                              </span>
+                            </button>
+                          ))}
+                          {!metrics[activeSummary].length && (
+                            <p className="py-3 text-center text-xs text-muted-foreground">
+                              No {activeSummary.toLowerCase()}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </aside>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex min-h-11 shrink-0 items-center justify-between px-2 py-1.5">
+                  <PageTabs aria-label="Views type">
+                    {(["issues", "projects"] as const).map((value) => (
+                      <button
+                        className={pageTabClass}
+                        key={value}
+                        aria-current={kind === value ? "page" : undefined}
+                        onClick={() => changeKind(value)}
+                      >
+                        {value === "issues" ? "Issues" : "Projects"}
+                      </button>
+                    ))}
+                  </PageTabs>
+                  <DirectoryDisplay
+                    label="Display options"
+                    ordering={ordering}
+                    descending={descending}
+                    properties={properties}
+                    propertyOptions={["Created", "Updated", "Owner"] as const}
+                    orderingOptions={[
+                      { value: "Name", label: "Name" },
+                      { value: "Created", label: "Created" },
+                      { value: "Updated", label: "Updated" },
+                    ]}
+                    onOrdering={setOrdering}
+                    onDirection={() => setDescending(!descending)}
+                    onProperties={setProperties}
                   />
                 </div>
-                <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <span className="text-muted-foreground">Save to</span>
-                  <IssuePicker
-                    label="Save view to"
-                    value={
-                      draft.visibility === "team"
-                        ? `team:${draft.teamId}`
-                        : draft.visibility
-                    }
-                    options={[
-                      { value: "personal", label: "Personal" },
-                      { value: "workspace", label: "Workspace" },
-                      ...teams.map((t) => ({
-                        value: `team:${t.id}`,
-                        label: t.name,
-                      })),
-                    ]}
-                    onChange={(value) =>
-                      setDraft({
-                        ...draft,
-                        visibility: value.startsWith("team:")
-                          ? "team"
-                          : (value as "personal" | "workspace"),
-                        teamId: value.startsWith("team:")
-                          ? value.slice(5)
-                          : team?.id,
-                      })
-                    }
-                    className="h-7 gap-2 rounded-full bg-muted px-2.5 text-xs"
-                  >
-                    <IssueIcon name="person" />
-                    {draft.visibility === "team"
-                      ? teams.find((t) => t.id === draft.teamId)?.name
-                      : draft.visibility === "personal"
-                        ? "Personal"
-                        : "Workspace"}
-                  </IssuePicker>
+                {!items.length ? (
+                  <EmptyViews kind={kind} onCreate={() => create()} />
+                ) : (
+                  <div className="min-h-0 flex-1 overflow-auto">
+                    <WorkspaceDirectoryTable aria-label="Saved views">
+                      <colgroup>
+                        <col />
+                        {properties.map((property) => (
+                          <col
+                            key={property}
+                            className={property === "Owner" ? "w-56" : "w-32"}
+                          />
+                        ))}
+                      </colgroup>
+                      <WorkspaceDirectoryTableHeader>
+                        <TableHead className="pl-4 text-xs font-normal text-muted-foreground">
+                          <button
+                            onClick={() => {
+                              saveDirectory({
+                                ordering: "Name",
+                                descending:
+                                  ordering === "Name" ? !descending : false,
+                                properties,
+                              })
+                            }}
+                          >
+                            Name{" "}
+                            {ordering === "Name" && (descending ? "↑" : "↓")}
+                          </button>
+                        </TableHead>
+                        {properties.map((property) => (
+                          <TableHead
+                            key={property}
+                            className="text-xs font-normal text-muted-foreground"
+                          >
+                            {property}
+                          </TableHead>
+                        ))}
+                      </WorkspaceDirectoryTableHeader>
+                      <TableBody>
+                        {groups
+                          .filter((group) =>
+                            items.some((v) => v.visibility === group.value)
+                          )
+                          .map((group) => (
+                            <Fragment key={group.value}>
+                              <TableRow className="border-0 hover:bg-transparent">
+                                <TableCell
+                                  colSpan={properties.length + 1}
+                                  className="px-0.5 py-1"
+                                >
+                                  <div className="flex h-9 items-center gap-2.5 rounded-lg bg-muted/50 px-3.5 text-xs">
+                                    <span className="flex size-5 shrink-0 items-center justify-center">
+                                      <AssigneeMark
+                                        name={user.name}
+                                        image={user.image}
+                                      />
+                                    </span>
+                                    <span>
+                                      {group.label}
+                                      <span className="text-muted-foreground">
+                                        {group.description &&
+                                          ` · ${group.description}`}
+                                      </span>
+                                    </span>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon-xs"
+                                      className="ml-auto"
+                                      aria-label={`Create ${group.label.toLowerCase()}`}
+                                      onClick={() => {
+                                        create()
+                                        setDraft({
+                                          ...newCustomView(
+                                            kind,
+                                            user.id,
+                                            team?.id
+                                          ),
+                                          visibility:
+                                            group.value as CustomView["visibility"],
+                                          teamId:
+                                            team?.id ??
+                                            (group.value === "team"
+                                              ? items.find(
+                                                  (v) => v.visibility === "team"
+                                                )?.teamId
+                                              : undefined),
+                                        })
+                                      }}
+                                    >
+                                      <IssueIcon name="add" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                              {items
+                                .filter((v) => v.visibility === group.value)
+                                .map((view) => (
+                                  <WorkspaceDirectoryRow key={view.id}>
+                                    <WorkspaceDirectoryCell className="first:pl-3.5">
+                                      <a
+                                        href={`${team ? `/teams/${team.slug}/views` : "/workspace/views"}?kind=${view.kind}&view=${view.id}`}
+                                        onClick={(event) => {
+                                          if (
+                                            !event.metaKey &&
+                                            !event.ctrlKey &&
+                                            !event.shiftKey &&
+                                            !event.altKey
+                                          ) {
+                                            event.preventDefault()
+                                            navigate({
+                                              kind: view.kind,
+                                              view: view.id,
+                                            })
+                                          }
+                                        }}
+                                        className="flex h-12 w-full min-w-0 items-center gap-2.5 text-left text-[13px]"
+                                      >
+                                        <span className="flex size-5 shrink-0 items-center justify-center">
+                                          <ViewMark view={view} />
+                                        </span>
+                                        <span className="truncate">
+                                          {view.name}
+                                        </span>
+                                        {view.favorite && (
+                                          <IssueIcon
+                                            name="star"
+                                            className="text-yellow-500"
+                                          />
+                                        )}
+                                      </a>
+                                    </WorkspaceDirectoryCell>
+                                    {properties.map((property) => (
+                                      <WorkspaceDirectoryCell
+                                        key={property}
+                                        className="text-xs text-muted-foreground"
+                                      >
+                                        {property === "Owner" ? (
+                                          <span className="flex min-w-0 items-center gap-2">
+                                            <AssigneeMark
+                                              name={
+                                                people.find(
+                                                  (p) => p.id === view.ownerId
+                                                )?.name
+                                              }
+                                              image={
+                                                people.find(
+                                                  (p) => p.id === view.ownerId
+                                                )?.image
+                                              }
+                                            />
+                                            <span className="truncate">
+                                              {people.find(
+                                                (p) => p.id === view.ownerId
+                                              )?.name ?? "Unknown member"}
+                                            </span>
+                                          </span>
+                                        ) : (
+                                          date(
+                                            property === "Created"
+                                              ? view.createdAt
+                                              : view.updatedAt
+                                          )
+                                        )}
+                                      </WorkspaceDirectoryCell>
+                                    ))}
+                                  </WorkspaceDirectoryRow>
+                                ))}
+                            </Fragment>
+                          ))}
+                      </TableBody>
+                    </WorkspaceDirectoryTable>
+                  </div>
+                )}
+              </>
+            ))}
+          {canRenderContent && (
+            <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Delete this view?</DialogTitle>
+                  <DialogDescription>
+                    This removes the saved view. Its issues and projects will
+                    remain.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
                   <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={store.busy}
-                    onClick={() =>
-                      navigate({
-                        kind,
-                        view: search.edit ? saved?.id : undefined,
-                      })
-                    }
+                    variant="outline"
+                    onClick={() => setConfirmDelete(false)}
                   >
                     Cancel
                   </Button>
                   <Button
-                    size="sm"
-                    disabled={!draft.name.trim() || store.busy}
-                    onClick={() => void commit()}
+                    variant="destructive"
+                    disabled={store.busy}
+                    onClick={async () => {
+                      if (saved && (await store.remove(saved.id))) {
+                        setConfirmDelete(false)
+                        navigate({ kind: saved.kind })
+                        toast.success("View deleted")
+                      } else toast.error("View could not be deleted")
+                    }}
                   >
-                    {search.edit ? "Save view" : "Create view"}
+                    Delete view
                   </Button>
-                </div>
-              </div>
-              <PageTabs
-                aria-label="View type"
-                className="border-t border-border/50 px-3 py-2"
-              >
-                {(["issues", "projects"] as const).map((value) => (
-                  <button
-                    key={value}
-                    className={pageTabClass}
-                    aria-current={kind === value ? "page" : undefined}
-                    onClick={() => changeKind(value)}
-                  >
-                    {value === "issues" ? "Issues" : "Projects"}
-                  </button>
-                ))}
-              </PageTabs>
-            </div>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           )}
-          <div ref={setToolbarHost} className="shrink-0" />
-          <div className="relative flex min-h-0 flex-1">
-            <div className="flex min-w-0 flex-1 flex-col">
-              {current.kind === "issues" ? (
-                <ViewIssues
-                  key={`${current.id}:${isEditor}`}
-                  workspaceId={workspaceId}
-                  user={user}
-                  teams={teams}
-                  team={teams.find((t) => t.id === current.teamId) ?? team}
-                  teamIds={current.teamId ? [current.teamId] : teamIds}
-                  filters={current.filters}
-                  display={current.display}
-                  onFiltersChange={(filters) => patch({ ...current, filters })}
-                  onDisplayChange={(display) => patch({ ...current, display })}
-                  onMetricsChange={onIssueMetrics}
-                  hideCreate
-                  toolbarHost={toolbarHost}
-                  createActionRef={createActionRef}
-                  toolbarActions={
-                    !isEditor && (
-                      <Button
-                        variant="outline"
-                        size="icon-sm"
-                        aria-label={
-                          sidebar ? "Close view details" : "Open view details"
-                        }
-                        onClick={() => setSidebar(!sidebar)}
-                      >
-                        <IssueIcon name="details" />
-                      </Button>
-                    )
-                  }
-                />
-              ) : (
-                <ViewProjects
-                  canonical
-                  key={`${current.id}:${isEditor}`}
-                  workspaceId={workspaceId}
-                  user={user}
-                  people={people}
-                  teams={teams}
-                  team={teams.find((t) => t.id === current.teamId) ?? team}
-                  filters={current.filters}
-                  display={current.display}
-                  scopeTeamId={current.teamId}
-                  onFiltersChange={(filters) => patch({ ...current, filters })}
-                  onDisplayChange={(display) => patch({ ...current, display })}
-                  onMetricsChange={onProjectMetrics}
-                  hideCreate
-                  toolbarHost={toolbarHost}
-                  createActionRef={createActionRef}
-                  toolbarActions={
-                    !isEditor && (
-                      <Button
-                        variant="outline"
-                        size="icon-sm"
-                        aria-label={
-                          sidebar ? "Close view details" : "Open view details"
-                        }
-                        onClick={() => setSidebar(!sidebar)}
-                      >
-                        <IssueIcon name="details" />
-                      </Button>
-                    )
-                  }
-                />
-              )}
-            </div>
-            {!isEditor && sidebar && (
-              <aside
-                aria-label="View details"
-                className="absolute inset-y-0 right-2 z-20 flex w-[min(390px,calc(100%-16px))] flex-col gap-2 overflow-y-auto pb-2 lg:static lg:mr-2 lg:max-w-[32%]"
-              >
-                <div className="flex items-center gap-3 rounded-xl border border-border/30 bg-muted/50 p-4">
-                  <ViewMark view={current} />
-                  <h2 className="min-w-0 flex-1 truncate text-[13px] font-medium">
-                    {current.name}
-                  </h2>
-                  {favorite}
-                  {viewMenu}
-                </div>
-                <div className="space-y-3 rounded-xl border border-border/30 bg-muted/50 p-3 text-xs">
-                  <div className="flex items-center gap-3">
-                    <span className="w-20 shrink-0 text-muted-foreground">
-                      Visibility
-                    </span>
-                    {saved?.canEdit ? (
-                      <IssuePicker
-                        label="Change view visibility"
-                        value={
-                          current.visibility === "team"
-                            ? `team:${current.teamId}`
-                            : current.visibility
-                        }
-                        options={[
-                          { value: "personal", label: "Personal" },
-                          { value: "workspace", label: "Workspace" },
-                          ...teams.map((t) => ({
-                            value: `team:${t.id}`,
-                            label: t.name,
-                          })),
-                        ]}
-                        onChange={(value) =>
-                          void store.save({
-                            ...saved,
-                            visibility: value.startsWith("team:")
-                              ? "team"
-                              : (value as "personal" | "workspace"),
-                            teamId: value.startsWith("team:")
-                              ? value.slice(5)
-                              : current.teamId,
-                          })
-                        }
-                        className="flex h-7 items-center gap-2 text-xs"
-                      >
-                        {current.visibility === "personal"
-                          ? "Personal"
-                          : current.visibility === "workspace"
-                            ? "Workspace"
-                            : (teams.find((t) => t.id === current.teamId)
-                                ?.name ?? "Team")}
-                      </IssuePicker>
-                    ) : (
-                      <span>
-                        {current.visibility === "personal"
-                          ? "Personal"
-                          : current.visibility === "workspace"
-                            ? "Workspace"
-                            : "Team"}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="w-20 shrink-0 text-muted-foreground">
-                      Owner
-                    </span>
-                    <span className="flex items-center gap-2 text-xs">
-                      <AssigneeMark
-                        name={
-                          people.find((p) => p.id === current.ownerId)?.name
-                        }
-                        image={
-                          people.find((p) => p.id === current.ownerId)?.image
-                        }
-                      />
-                      {people.find((p) => p.id === current.ownerId)?.name ??
-                        "Unknown member"}
-                    </span>
-                  </div>
-                  {current.description && (
-                    <p className="border-t border-border/40 pt-3 text-muted-foreground">
-                      {current.description}
-                    </p>
-                  )}
-                </div>
-                <div className="min-h-40 flex-1 rounded-xl border border-border/30 bg-muted/50 p-3">
-                  <PageTabs aria-label="View summary" className="gap-1">
-                    {summaryTabs.map((tab) => (
-                      <button
-                        key={tab}
-                        className={cn(pageTabClass, "flex-1 px-2 text-[11px]")}
-                        aria-current={
-                          activeSummary === tab ? "page" : undefined
-                        }
-                        onClick={() => setSummaryTab(tab)}
-                      >
-                        {tab}
-                      </button>
-                    ))}
-                  </PageTabs>
-                  <div className="mt-3 space-y-1">
-                    {metrics[activeSummary].map((metric) => (
-                      <button
-                        key={metric.value}
-                        onClick={() => metricFilter(metric)}
-                        className="flex w-full items-center gap-2 rounded-lg p-2 text-left text-xs hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        {activeSummary === "Assignees" ||
-                        activeSummary === "Leads" ? (
-                          <AssigneeMark
-                            name={metric.value ? metric.label : undefined}
-                            image={metric.image}
-                          />
-                        ) : (
-                          <IssueIcon
-                            name={
-                              activeSummary === "Labels"
-                                ? "label"
-                                : activeSummary === "Health"
-                                  ? "clock"
-                                  : "layers"
-                            }
-                          />
-                        )}
-                        <span className="min-w-0 flex-1 truncate">
-                          {metric.label}
-                        </span>
-                        <span className="text-muted-foreground">
-                          {metric.count}
-                        </span>
-                      </button>
-                    ))}
-                    {!metrics[activeSummary].length && (
-                      <p className="py-3 text-center text-xs text-muted-foreground">
-                        No {activeSummary.toLowerCase()}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </aside>
-            )}
-          </div>
-        </>
-      ) : (
-        <>
-          <div className="flex min-h-11 shrink-0 items-center justify-between px-2 py-1.5">
-            <PageTabs aria-label="Views type">
-              {(["issues", "projects"] as const).map((value) => (
-                <button
-                  className={pageTabClass}
-                  key={value}
-                  aria-current={kind === value ? "page" : undefined}
-                  onClick={() => changeKind(value)}
-                >
-                  {value === "issues" ? "Issues" : "Projects"}
-                </button>
-              ))}
-            </PageTabs>
-            <DirectoryDisplay
-              label="Display options"
-              ordering={ordering}
-              descending={descending}
-              properties={properties}
-              propertyOptions={["Created", "Updated", "Owner"] as const}
-              orderingOptions={[
-                { value: "Name", label: "Name" },
-                { value: "Created", label: "Created" },
-                { value: "Updated", label: "Updated" },
-              ]}
-              onOrdering={setOrdering}
-              onDirection={() => setDescending(!descending)}
-              onProperties={setProperties}
-            />
-          </div>
-          {!items.length ? (
-            <EmptyViews kind={kind} onCreate={() => create()} />
-          ) : (
-            <div className="min-h-0 flex-1 overflow-auto">
-              <WorkspaceDirectoryTable aria-label="Saved views">
-                <colgroup>
-                  <col />
-                  {properties.map((property) => (
-                    <col
-                      key={property}
-                      className={property === "Owner" ? "w-56" : "w-32"}
-                    />
-                  ))}
-                </colgroup>
-                <WorkspaceDirectoryTableHeader>
-                  <TableHead className="pl-4 text-xs font-normal text-muted-foreground">
-                    <button
-                      onClick={() => {
-                        saveDirectory({
-                          ordering: "Name",
-                          descending: ordering === "Name" ? !descending : false,
-                          properties,
-                        })
-                      }}
-                    >
-                      Name {ordering === "Name" && (descending ? "↑" : "↓")}
-                    </button>
-                  </TableHead>
-                  {properties.map((property) => (
-                    <TableHead
-                      key={property}
-                      className="text-xs font-normal text-muted-foreground"
-                    >
-                      {property}
-                    </TableHead>
-                  ))}
-                </WorkspaceDirectoryTableHeader>
-                <TableBody>
-                  {groups
-                    .filter((group) =>
-                      items.some((v) => v.visibility === group.value)
-                    )
-                    .map((group) => (
-                      <Fragment key={group.value}>
-                        <TableRow className="border-0 hover:bg-transparent">
-                          <TableCell
-                            colSpan={properties.length + 1}
-                            className="px-0.5 py-1"
-                          >
-                            <div className="flex h-9 items-center gap-2.5 rounded-lg bg-muted/50 px-3.5 text-xs">
-                              <span className="flex size-5 shrink-0 items-center justify-center">
-                                <AssigneeMark
-                                  name={user.name}
-                                  image={user.image}
-                                />
-                              </span>
-                              <span>
-                                {group.label}
-                                <span className="text-muted-foreground">
-                                  {group.description &&
-                                    ` · ${group.description}`}
-                                </span>
-                              </span>
-                              <Button
-                                variant="ghost"
-                                size="icon-xs"
-                                className="ml-auto"
-                                aria-label={`Create ${group.label.toLowerCase()}`}
-                                onClick={() => {
-                                  create()
-                                  setDraft({
-                                    ...newCustomView(kind, user.id, team?.id),
-                                    visibility:
-                                      group.value as CustomView["visibility"],
-                                    teamId:
-                                      team?.id ??
-                                      (group.value === "team"
-                                        ? items.find(
-                                            (v) => v.visibility === "team"
-                                          )?.teamId
-                                        : undefined),
-                                  })
-                                }}
-                              >
-                                <IssueIcon name="add" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                        {items
-                          .filter((v) => v.visibility === group.value)
-                          .map((view) => (
-                            <WorkspaceDirectoryRow key={view.id}>
-                              <WorkspaceDirectoryCell className="first:pl-3.5">
-                                <a
-                                  href={`${team ? `/teams/${team.slug}/views` : "/workspace/views"}?kind=${view.kind}&view=${view.id}`}
-                                  onClick={(event) => {
-                                    if (
-                                      !event.metaKey &&
-                                      !event.ctrlKey &&
-                                      !event.shiftKey &&
-                                      !event.altKey
-                                    ) {
-                                      event.preventDefault()
-                                      navigate({
-                                        kind: view.kind,
-                                        view: view.id,
-                                      })
-                                    }
-                                  }}
-                                  className="flex h-12 w-full min-w-0 items-center gap-2.5 text-left text-[13px]"
-                                >
-                                  <span className="flex size-5 shrink-0 items-center justify-center">
-                                    <ViewMark view={view} />
-                                  </span>
-                                  <span className="truncate">{view.name}</span>
-                                  {view.favorite && (
-                                    <IssueIcon
-                                      name="star"
-                                      className="text-yellow-500"
-                                    />
-                                  )}
-                                </a>
-                              </WorkspaceDirectoryCell>
-                              {properties.map((property) => (
-                                <WorkspaceDirectoryCell
-                                  key={property}
-                                  className="text-xs text-muted-foreground"
-                                >
-                                  {property === "Owner" ? (
-                                    <span className="flex min-w-0 items-center gap-2">
-                                      <AssigneeMark
-                                        name={
-                                          people.find(
-                                            (p) => p.id === view.ownerId
-                                          )?.name
-                                        }
-                                        image={
-                                          people.find(
-                                            (p) => p.id === view.ownerId
-                                          )?.image
-                                        }
-                                      />
-                                      <span className="truncate">
-                                        {people.find(
-                                          (p) => p.id === view.ownerId
-                                        )?.name ?? "Unknown member"}
-                                      </span>
-                                    </span>
-                                  ) : (
-                                    date(
-                                      property === "Created"
-                                        ? view.createdAt
-                                        : view.updatedAt
-                                    )
-                                  )}
-                                </WorkspaceDirectoryCell>
-                              ))}
-                            </WorkspaceDirectoryRow>
-                          ))}
-                      </Fragment>
-                    ))}
-                </TableBody>
-              </WorkspaceDirectoryTable>
-            </div>
-          )}
-        </>
-      )}
-      <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete this view?</DialogTitle>
-            <DialogDescription>
-              This removes the saved view. Its issues and projects will remain.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDelete(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={store.busy}
-              onClick={async () => {
-                if (saved && (await store.remove(saved.id))) {
-                  setConfirmDelete(false)
-                  navigate({ kind: saved.kind })
-                  toast.success("View deleted")
-                } else toast.error("View could not be deleted")
-              }}
-            >
-              Delete view
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </Activity>
+      </PortalScope>
     </section>
   )
 }

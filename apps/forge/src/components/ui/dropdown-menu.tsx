@@ -1,17 +1,27 @@
-import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import * as React from "react"
 import { Menu as MenuPrimitive } from "@base-ui/react/menu"
 
-import { cn } from "@/lib/utils"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons"
+import { cn } from "@/lib/utils"
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
+import { usePortalContainer } from "@/components/ui/portal-scope"
 
 function DropdownMenu({ ...props }: MenuPrimitive.Root.Props) {
   return <MenuPrimitive.Root data-slot="dropdown-menu" {...props} />
 }
 
 function DropdownMenuPortal({ ...props }: MenuPrimitive.Portal.Props) {
-  return <MenuPrimitive.Portal data-slot="dropdown-menu-portal" {...props} />
+  const portalContainer = usePortalContainer()
+  return (
+    <MenuPrimitive.Portal
+      data-slot="dropdown-menu-portal"
+      {...props}
+      container={
+        portalContainer !== undefined ? portalContainer : props.container
+      }
+    />
+  )
 }
 
 function DropdownMenuTrigger({ ...props }: MenuPrimitive.Trigger.Props) {
@@ -30,8 +40,9 @@ function DropdownMenuContent({
     MenuPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset"
   >) {
+  const portalContainer = usePortalContainer()
   return (
-    <MenuPrimitive.Portal>
+    <MenuPrimitive.Portal container={portalContainer}>
       <MenuPrimitive.Positioner
         className="isolate z-50 outline-none"
         align={align}

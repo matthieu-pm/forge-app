@@ -4,6 +4,7 @@ import {
   savedViewDefinitionSchema,
   savedViewIdentitySchema,
 } from "./saved-view-contract"
+import type { SavedViewDefinition } from "./saved-view-contract"
 
 export const loadSavedViews = createServerFn({ method: "GET" })
   .validator(savedViewIdentitySchema)
@@ -50,29 +51,45 @@ export const persistSavedView = createServerFn({ method: "POST" })
     return mutateSavedView(actor, data.commandKey, data.mutation)
   })
 
-export const loadViewProjects = createServerFn({ method: "GET" })
-  .validator(
-    savedViewIdentitySchema
-      .extend({ definition: savedViewDefinitionSchema })
-      .strict()
+const projectQueryInputSchema = savedViewIdentitySchema
+  .extend({ definition: savedViewDefinitionSchema })
+  .strict()
+
+async function queryProjectsForSession(data: {
+  workspaceId: string
+  sessionId: string
+  definition: SavedViewDefinition
+}) {
+  const [
+    { getRequest, setResponseHeader },
+    { requireSessionActor },
+    { queryViewProjects },
+  ] = await Promise.all([
+    import("@tanstack/react-start/server"),
+    import("@/adapters/auth/session-actor.server"),
+    import("@/application/views/saved-views.server"),
+  ])
+  setResponseHeader("Cache-Control", "private, no-store")
+  const actor = await requireSessionActor(getRequest())
+  if (
+    actor.workspaceId !== data.workspaceId ||
+    actor.authentication.kind !== "session" ||
+    actor.authentication.sessionId !== data.sessionId
   )
-  .handler(async ({ data }) => {
-    const [
-      { getRequest, setResponseHeader },
-      { requireSessionActor },
-      { queryViewProjects },
-    ] = await Promise.all([
-      import("@tanstack/react-start/server"),
-      import("@/adapters/auth/session-actor.server"),
-      import("@/application/views/saved-views.server"),
-    ])
-    setResponseHeader("Cache-Control", "private, no-store")
-    const actor = await requireSessionActor(getRequest())
-    if (
-      actor.workspaceId !== data.workspaceId ||
-      actor.authentication.kind !== "session" ||
-      actor.authentication.sessionId !== data.sessionId
-    )
-      throw new Error("The active session changed.")
-    return JSON.stringify(await queryViewProjects(actor, data.definition))
-  })
+    throw new Error("The active session changed.")
+  return queryViewProjects(actor, data.definition)
+}
+
+// Keep this name/file and array response for already deployed browser bundles.
+export const loadViewProjects = createServerFn({ method: "GET" })
+  .validator(projectQueryInputSchema)
+  .handler(async ({ data }) =>
+    JSON.stringify((await queryProjectsForSession(data)).projects)
+  )
+
+// New callers opt into the authority metadata without changing the legacy RPC.
+export const loadViewProjectQuery = createServerFn({ method: "GET" })
+  .validator(projectQueryInputSchema)
+  .handler(async ({ data }) =>
+    JSON.stringify(await queryProjectsForSession(data))
+  )

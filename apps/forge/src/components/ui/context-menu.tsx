@@ -1,18 +1,26 @@
-import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import * as React from "react"
 import { ContextMenu as ContextMenuPrimitive } from "@base-ui/react/context-menu"
 
-import { cn } from "@/lib/utils"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons"
+import { cn } from "@/lib/utils"
+import { CheckboxMark } from "@/components/ui/checkbox-mark"
+import { usePortalContainer } from "@/components/ui/portal-scope"
 
 function ContextMenu({ ...props }: ContextMenuPrimitive.Root.Props) {
   return <ContextMenuPrimitive.Root data-slot="context-menu" {...props} />
 }
 
 function ContextMenuPortal({ ...props }: ContextMenuPrimitive.Portal.Props) {
+  const portalContainer = usePortalContainer()
   return (
-    <ContextMenuPrimitive.Portal data-slot="context-menu-portal" {...props} />
+    <ContextMenuPrimitive.Portal
+      data-slot="context-menu-portal"
+      {...props}
+      container={
+        portalContainer !== undefined ? portalContainer : props.container
+      }
+    />
   )
 }
 
@@ -41,8 +49,9 @@ function ContextMenuContent({
     ContextMenuPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset"
   >) {
+  const portalContainer = usePortalContainer()
   return (
-    <ContextMenuPrimitive.Portal>
+    <ContextMenuPrimitive.Portal container={portalContainer}>
       <ContextMenuPrimitive.Positioner
         className="isolate z-50 outline-none"
         align={align}

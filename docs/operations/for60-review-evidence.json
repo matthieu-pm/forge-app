@@ -1,0 +1,131 @@
+{
+  "issue": "FOR-60",
+  "reviewedPullRequest": 41,
+  "testedSourceRevision": "c040f8004b8d549f1c8e50b92b390b353fc5f387",
+  "recordedAt": "2026-11-02T09:10:45.047411+00:00",
+  "review": {
+    "standards": {
+      "remainingFindings": 0,
+      "fixed": [
+        "definition draft recovery",
+        "transactional team authority locks",
+        "access-generation cache invalidation"
+      ]
+    },
+    "spec": {
+      "remainingFindings": 0,
+      "fixed": [
+        "revoked access and late-response fencing",
+        "retained nested editors with physically scoped portals"
+      ]
+    },
+    "regressionsDemonstratedBeforeFix": true
+  },
+  "validation": {
+    "postgres": {
+      "command": "FORGE_SAVED_VIEWS_TEST_DATABASE_FILE=<private> bunx vitest run src/application/views/saved-views.postgres.test.ts",
+      "passed": 14,
+      "database": "forge_saved_views_acceptance",
+      "branch": "br-autumn-union-za0opf1e"
+    },
+    "workflow": {
+      "command": "bun run test:workflow",
+      "passed": 4
+    },
+    "typecheck": {
+      "command": "bun run typecheck",
+      "passed": true
+    },
+    "productionBuild": {
+      "command": "FORGE_ENVIRONMENT=production bun run build",
+      "passed": true,
+      "protectedWorkflowHandlersVerified": true
+    },
+    "lint": {
+      "command": "bun run lint",
+      "errors": 0,
+      "warnings": 434
+    },
+    "formatAndDiff": "passed",
+    "rpcCompatibility": {
+      "legacyArrayResponseId": "08b84a74970f8ad70bf1f9a5ec85da00a9a6a309a9d7ecf3adffe68417c6d8a9",
+      "newAuthorityDtoId": "97c610e754ee72d5ae66c49127f45833ba02466e999d2275286c49be252d5e01",
+      "bothProductionBuildEntriesPresent": true,
+      "adapterRegressions": 6
+    },
+    "appSuite": {
+      "command": "bunx vitest run --maxWorkers=1",
+      "passed": 2460,
+      "skipped": 502,
+      "filesPassed": 312,
+      "filesSkipped": 26,
+      "durationSeconds": 194.3,
+      "context": "Exact tested source. Earlier two-worker run timed out on a Signals editor chart; the same test passed isolated and this complete single-worker rerun passed. No unrelated test or timeout was changed."
+    }
+  },
+  "browser": [
+    {
+      "issue": "FOR-60",
+      "revision": "c040f8004b8d549f1c8e50b92b390b353fc5f387",
+      "production": false,
+      "passed": true,
+      "target": "local acceptance",
+      "environment": {
+        "database": "forge_saved_views_acceptance",
+        "branch": "br-autumn-union-za0opf1e"
+      },
+      "checks": [
+        "private/shared visibility",
+        "two new device profiles without local product data",
+        "actor-owned favorites",
+        "authorized issue and project results",
+        "creator/admin-only controls",
+        "revision conflict draft retained",
+        "invalid filters fail closed",
+        "live project access revocation evicts retained results",
+        "unsaved nested project draft survives ordinary access refresh"
+      ]
+    },
+    {
+      "cleanup": {
+        "workspaces": 0,
+        "users": 0,
+        "receipts": 0
+      }
+    }
+  ],
+  "acceptanceMigration": {
+    "target": {
+      "environment": "saved-views-acceptance",
+      "branchId": "br-autumn-union-za0opf1e",
+      "host": "ep-blue-shadow-zauhwkjz.c-2.eu-west-2.aws.neon.tech",
+      "database": "forge_saved_views_acceptance"
+    },
+    "applied": {
+      "applied": 1,
+      "total": 66
+    },
+    "replay": {
+      "applied": 0,
+      "total": 66
+    }
+  },
+  "productionBeforeFollowup": {
+    "sourceRevision": "d2dac69335335967550dba3d106f06a41760d244",
+    "deploymentId": "dpl_3yftYuDxwrr4EjrbNVFk71tXjC96",
+    "projectId": "prj_S0XLtdngbexhl2ao7WviBrlMScar",
+    "origin": "https://app.forgenow.tech",
+    "ready": true,
+    "branchId": "br-muddy-queen-zaeeysjt",
+    "migrationJournalCount": 66,
+    "migrationJournalHead": "8743b2aaaea3af4d6d3512991af10fa10b335a065370d752e290fe2fa80bbda5",
+    "savedViewsFlag": true,
+    "recordedAt": "2026-11-02T09:08:22.061Z"
+  },
+  "releaseBoundary": {
+    "schemaChangedByFollowup": false,
+    "flagChangeRequired": false,
+    "productionVerification": "Required after follow-up merge; final deployment, exact-source live browser and cleanup evidence will be recorded in Linear.",
+    "legacyLocalImport": "FOR-126"
+  }
+}
