@@ -6,6 +6,7 @@ import viteReact from "@vitejs/plugin-react"
 import tailwindcss from "@tailwindcss/vite"
 import { nitro } from "nitro/vite"
 import { workflow } from "workflow/vite"
+import { LOOP_FUNCTION_DURATION_SECONDS } from "./src/application/loops/loop-execution-policy"
 
 const repositoryRoot = resolve(import.meta.dirname, "../..")
 
@@ -36,6 +37,14 @@ const config = defineConfig(({ mode }) => {
       devtools(),
       nitro({
         vercel: {
+          functionRules:
+            process.env.FORGE_LOOPS_ENABLED === "true"
+              ? {
+                  "/api/internal/loops": {
+                    maxDuration: LOOP_FUNCTION_DURATION_SECONDS,
+                  },
+                }
+              : {},
           config: {
             version: 3,
             crons: [

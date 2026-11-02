@@ -1,6 +1,7 @@
 import "@tanstack/react-start/server-only"
 import { and, eq, isNull } from "drizzle-orm"
 import { loopsEnabled } from "./loop-access.server"
+import { LOOP_RUN_WALL_CLOCK_MS } from "./loop-execution-policy"
 import type { Actor, ApiScope } from "@/application/actor"
 import type { Transaction } from "@/db"
 import { loopRuns, teamLoops, teams, workspaceSecuritySettings } from "@/db"
@@ -61,6 +62,10 @@ export async function currentLoopActor(
     !row ||
     (row.run.pendingDecision?.action === "cancel-run" && !cancelling) ||
     ((!row.loop.enabled || row.loop.deletedAt) && !cancelling) ||
+    (!cancelling &&
+      (row.run.startedAt ?? row.run.leaseAt ?? row.run.createdAt).getTime() +
+        LOOP_RUN_WALL_CLOCK_MS <=
+        Date.now()) ||
     loopPrincipalId(row.loop.id) !== actor.userId ||
     (actor.authentication.kind === "agent" &&
       actor.authentication.runId !== row.run.agentRunId) ||

@@ -1,5 +1,6 @@
 import { runtimeOrigin } from "../../../../../packages/environment/preview-environment"
 import "@tanstack/react-start/server-only"
+import { LOOP_RUN_WALL_CLOCK_MS } from "@/application/loops/loop-execution-policy"
 import { requireCurrentActor } from "@/application/resource-policy.server"
 
 import {
@@ -86,7 +87,8 @@ const runtimes =
       : []
 export function createProductionAgentCoordinator(
   id?: () => string,
-  loop = false
+  loop = false,
+  remainingMs = LOOP_RUN_WALL_CLOCK_MS
 ) {
   return new AgentCoordinator({
     id,
@@ -113,7 +115,15 @@ export function createProductionAgentCoordinator(
     approvals: forgeApprovalService,
     preferences: new DrizzleThreadModelPreferenceStore(),
     controlPolicy: loop
-      ? { ...agentControls, userMonthlyBudgetMicros: null }
+      ? {
+          ...agentControls,
+          runWallClockMs: Math.min(
+            agentControls.runWallClockMs,
+            LOOP_RUN_WALL_CLOCK_MS,
+            Math.max(1, remainingMs)
+          ),
+          userMonthlyBudgetMicros: null,
+        }
       : agentControls,
     attachments: forgeAttachmentService,
     authorizeThread: authorizeLoopAgentThread,

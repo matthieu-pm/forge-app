@@ -4,6 +4,13 @@ import { runtimeOrigin } from "../../../../../packages/environment/preview-envir
 import { LoopPolicyError, loopsEnabled } from "./loop-access.server"
 import { currentLoopActor, loopPrincipalId } from "./loop-actor.server"
 import {
+  LOOP_CANCEL_SETTLEMENT_MS,
+  LOOP_RUN_LEASE_MS,
+  LOOP_RUN_WALL_CLOCK_MS,
+  LOOP_SETTLEMENT_GRACE_MS,
+  withinLoopExecutionWindow,
+} from "./loop-execution-policy"
+import {
   authorizedLoopEntity,
   normalizeLoopSnapshot,
 } from "./loop-context.server"
@@ -26,13 +33,6 @@ export async function assertLoopCanEnable(actor: Actor) {
   if (!flags.agent_ui || !flags.agent_eve_runtime)
     throw new LoopPolicyError(
       "Cloud agent execution is disabled in this environment."
-    )
-  if (
-    process.env.FORGE_SERVICE_ENVIRONMENT === "production" &&
-    process.env.FORGE_LOOP_WORKER_ENABLED !== "true"
-  )
-    throw new LoopPolicyError(
-      "The background Loop worker has not been enabled for this environment."
     )
   if (
     process.env.FORGE_SERVICE_ENVIRONMENT !== "production" &&
@@ -119,7 +119,10 @@ export async function executeCloudLoop(
     await import("@/application/agents/agent-http-production.server")
   const coordinator = createProductionAgentCoordinator(
     () => run.agentRunId,
-    true
+    true,
+    (run.startedAt?.getTime() ?? run.leaseAt?.getTime() ?? Date.now()) +
+      LOOP_RUN_WALL_CLOCK_MS -
+      Date.now()
   )
   await db
     .insert(agentThreads)
@@ -195,7 +198,7 @@ export async function executeCloudLoop(
     }
     await db
       .update(loopRuns)
-      .set({ leaseAt: new Date(), result: result.slice(0, 100000) })
+      .set({ result: result.slice(0, 100000) })
       .where(and(eq(loopRuns.id, run.id), eq(loopRuns.state, "running")))
   }
   const saved = (
@@ -239,7 +242,7 @@ export async function executeNextLoopRun(
           and(
             sql`(${loopRuns.state}='queued' OR (${loopRuns.state}='waiting-for-approval' AND ${loopRuns.pendingDecision} IS NOT NULL) OR (${loopRuns.state}='running' AND ${loopRuns.pendingDecision}->>'action'='cancel-run'))`,
             workspaceId ? eq(loopRuns.workspaceId, workspaceId) : undefined,
-            sql`(${loopRuns.pendingDecision}->>'action'='cancel-run' OR NOT EXISTS (SELECT 1 FROM loop_runs busy WHERE busy.workspace_id=${loopRuns.workspaceId} AND (busy.state='running' OR (busy.state='uncertain' AND coalesce(busy.started_at,busy.created_at)+interval '15 minutes'>clock_timestamp())) AND busy.id<>${loopRuns.id}))`
+            sql`(${loopRuns.pendingDecision}->>'action'='cancel-run' OR NOT EXISTS (SELECT 1 FROM loop_runs busy WHERE busy.workspace_id=${loopRuns.workspaceId} AND (busy.state='running' OR (busy.state='uncertain' AND coalesce(busy.lease_at,busy.started_at,busy.created_at)+(${LOOP_RUN_LEASE_MS} * interval '1 millisecond')>clock_timestamp())) AND busy.id<>${loopRuns.id}))`
           )
         )
         .orderBy(loopRuns.createdAt)
@@ -259,7 +262,7 @@ export async function executeNextLoopRun(
           .where(
             and(
               eq(loopRuns.workspaceId, row.run.workspaceId),
-              sql`(${loopRuns.state}='running' OR (${loopRuns.state}='uncertain' AND coalesce(${loopRuns.startedAt},${loopRuns.createdAt})+interval '15 minutes'>clock_timestamp()))`,
+              sql`(${loopRuns.state}='running' OR (${loopRuns.state}='uncertain' AND coalesce(${loopRuns.leaseAt},${loopRuns.startedAt},${loopRuns.createdAt})+(${LOOP_RUN_LEASE_MS} * interval '1 millisecond')>clock_timestamp()))`,
               sql`${loopRuns.id}<>${row.run.id}::uuid`
             )
           )
@@ -267,13 +270,18 @@ export async function executeNextLoopRun(
       )[0]
     )
       return null
-    const run = { ...row.run, teamId: row.teamId }
+    const run = {
+      ...row.run,
+      teamId: row.teamId,
+      leaseAt: new Date(),
+      startedAt: row.run.startedAt ?? new Date(),
+    }
     await tx
       .update(loopRuns)
       .set({
         state: "running",
-        startedAt: run.startedAt ?? new Date(),
-        leaseAt: new Date(),
+        startedAt: run.startedAt,
+        leaseAt: run.leaseAt,
       })
       .where(eq(loopRuns.id, run.id))
     return run
@@ -291,6 +299,11 @@ export async function executeNextLoopRun(
       if (latest?.pending?.action === "cancel-run")
         claimed.pendingDecision = latest.pending
       const candidate = principal(claimed)
+      if (
+        claimed.pendingDecision?.action !== "cancel-run" &&
+        Date.now() >= claimed.startedAt.getTime() + LOOP_RUN_WALL_CLOCK_MS
+      )
+        throw new Error("UNCERTAIN_EXECUTION_TIMEOUT")
       if (claimed.pendingDecision?.action === "cancel-run")
         candidate.loopScope = {
           loopId: claimed.loopId,
@@ -362,7 +375,14 @@ export async function executeNextLoopRun(
             : await contextFor(tx, actor, claimed),
       }
     })
-    const result = await executor(actor, claimed, context)
+    const result = await withinLoopExecutionWindow(
+      executor(actor, claimed, context),
+      claimed.pendingDecision?.action === "cancel-run"
+        ? claimed.leaseAt.getTime() + LOOP_CANCEL_SETTLEMENT_MS
+        : claimed.startedAt.getTime() +
+            LOOP_RUN_WALL_CLOCK_MS +
+            LOOP_SETTLEMENT_GRACE_MS
+    )
     await db
       .update(loopRuns)
       .set({

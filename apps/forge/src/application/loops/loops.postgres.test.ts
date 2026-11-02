@@ -940,9 +940,10 @@ describe.skipIf(!file)("FOR-62 shared Loops on PostgreSQL", () => {
     const run = await db.transaction((tx) =>
       service.enqueueLoopRun(tx, row, "security-scope", { kind: "manual" })
     )
-    await pool.query("UPDATE loop_runs SET state='running' WHERE id=$1", [
-      run.id,
-    ])
+    await pool.query(
+      "UPDATE loop_runs SET state='running',lease_at=clock_timestamp() WHERE id=$1",
+      [run.id]
+    )
     // A wider current configuration must not expand the immutable run snapshot.
     await pool.query(
       `UPDATE team_loops SET fields=jsonb_set(fields,'{teamAccess}','"all-public-teams"') WHERE id=$1`,
@@ -1391,9 +1392,10 @@ describe.skipIf(!file)("FOR-62 shared Loops on PostgreSQL", () => {
     const run = await db.transaction((tx) =>
       service.enqueueLoopRun(tx, loopRow, "callback", { kind: "manual" })
     )
-    await pool.query("UPDATE loop_runs SET state='running' WHERE id=$1", [
-      run.id,
-    ])
+    await pool.query(
+      "UPDATE loop_runs SET state='running',lease_at=clock_timestamp() WHERE id=$1",
+      [run.id]
+    )
     const normalThread = randomUUID(),
       normalRun = randomUUID()
     for (const [threadId, agentRunId, selection] of [
@@ -1772,7 +1774,7 @@ describe.skipIf(!file)("FOR-62 shared Loops on PostgreSQL", () => {
       [waiting.id]
     )
     await pool.query(
-      `UPDATE loop_runs SET state='running',pending_decision='{"action":"cancel-run"}',created_at='1901-01-01T00:00:00Z' WHERE id=$1`,
+      `UPDATE loop_runs SET state='running',lease_at=clock_timestamp(),pending_decision='{"action":"cancel-run"}',created_at='1901-01-01T00:00:00Z' WHERE id=$1`,
       [running.id]
     )
     const { executeNextLoopRun } = await import("./loop-execution.server"),
@@ -1828,7 +1830,7 @@ describe.skipIf(!file)("FOR-62 shared Loops on PostgreSQL", () => {
       [blocked.id]
     )
     await pool.query(
-      "UPDATE loop_runs SET state='running',created_at='1801-01-01T00:00:00Z' WHERE id=$1",
+      "UPDATE loop_runs SET state='running',lease_at=clock_timestamp(),created_at='1801-01-01T00:00:00Z' WHERE id=$1",
       [busy.id]
     )
     await pool.query(
@@ -1956,9 +1958,10 @@ describe.skipIf(!file)("FOR-62 shared Loops on PostgreSQL", () => {
         entityId: issueId,
       })
     )
-    await pool.query("UPDATE loop_runs SET state='running' WHERE id=$1", [
-      run.id,
-    ])
+    await pool.query(
+      "UPDATE loop_runs SET state='running',lease_at=clock_timestamp() WHERE id=$1",
+      [run.id]
+    )
     await pool.query(
       "INSERT INTO agent_threads(id,workspace_id,created_by_user_id,title,status,runtime_kind) VALUES($1,$2,$3,'Source callback','active','eve')",
       [run.threadId, f.workspaceId, loopPrincipalId(loop.id)]
@@ -2235,7 +2238,7 @@ describe.skipIf(!file)("FOR-62 shared Loops on PostgreSQL", () => {
     ).toEqual({ state: "approved", resolved_by_user_id: users[1] })
   }, 15000)
 
-  it("pending cancellation immediately revokes agent callbacks while disabled Loops can still confirm cancellation", async () => {
+  it("the four-minute deadline and pending cancellation revoke callbacks while disabled Loops can still confirm cancellation", async () => {
     const f = await fixture(),
       loop = await create(f, f.teamId, {
         ...fields(),
@@ -2265,7 +2268,7 @@ describe.skipIf(!file)("FOR-62 shared Loops on PostgreSQL", () => {
       [run.agentRunId]
     )
     await pool.query(
-      "UPDATE loop_runs SET state='running',finished_at=null WHERE id=$1",
+      "UPDATE loop_runs SET state='running',lease_at=clock_timestamp(),finished_at=null WHERE id=$1",
       [run.id]
     )
     const callback: Actor = {
@@ -2307,6 +2310,33 @@ describe.skipIf(!file)("FOR-62 shared Loops on PostgreSQL", () => {
         await import("@/application/agents/openai-model-proxy.server"),
       fetcher = vi.fn<typeof fetch>(),
       proxy = createOpenAIModelProxy({ fetcher })
+    await pool.query(
+      "UPDATE loop_runs SET started_at=clock_timestamp()-interval '4 minutes 1 second' WHERE id=$1",
+      [run.id]
+    )
+    await expect(
+      db.transaction((tx) => currentCommandActor(tx, callback))
+    ).rejects.toThrow()
+    const deadlineResponse = await proxy(
+      new Request("http://localhost/api/agent/runtime/model/responses", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "gpt-6-astra",
+          input: "Continue after deadline",
+        }),
+      }),
+      "responses"
+    )
+    expect(deadlineResponse.status).toBe(403)
+    expect(fetcher).not.toHaveBeenCalled()
+    await pool.query(
+      "UPDATE loop_runs SET started_at=clock_timestamp() WHERE id=$1",
+      [run.id]
+    )
     // External-source revocation must stop an in-flight webhook callback,
     // while the narrow internal principal can still confirm cancellation.
     await pool.query(
@@ -2383,6 +2413,10 @@ describe.skipIf(!file)("FOR-62 shared Loops on PostgreSQL", () => {
     )
     expect(cancelling.scopes).toEqual(["agents:read", "agents:write"])
     expect(cancelling.loopScope?.cancelling).toBe(true)
+    await pool.query(
+      "UPDATE loop_runs SET started_at=clock_timestamp()-interval '4 minutes 1 second' WHERE id=$1",
+      [run.id]
+    )
     await service.commandLoop(f.actors[0], f.teamId, randomUUID(), {
       action: "disable",
       id: loop.id,
@@ -2451,7 +2485,7 @@ describe.skipIf(!file)("FOR-62 shared Loops on PostgreSQL", () => {
         .rows[0].state
     ).toBe("queued")
     await pool.query(
-      "UPDATE loop_runs SET started_at=clock_timestamp()-interval '16 minutes' WHERE id=$1",
+      "UPDATE loop_runs SET started_at=clock_timestamp()-interval '5 minutes 1 second' WHERE id=$1",
       [uncertain.id]
     )
     expect(await executeNextLoopRun(executor, f.workspaceId)).toBe(queued.id)
@@ -2467,6 +2501,71 @@ describe.skipIf(!file)("FOR-62 shared Loops on PostgreSQL", () => {
       (await pool.query("SELECT state FROM loop_runs WHERE id=$1", [queued.id]))
         .rows[0].state
     ).toBe("completed")
+  })
+
+  it("web scheduling defers late starts, expires original approval deadlines and reconciles dead invocation leases without replay", async () => {
+    const f = await fixture(),
+      loop = await create(f)
+    await enableFixture(f, loop.id)
+    const { db, teamLoops } = await import("@/db"),
+      { eq } = await import("drizzle-orm")
+    const row = (
+      await db.select().from(teamLoops).where(eq(teamLoops.id, loop.id))
+    )[0]
+    const run = await db.transaction((tx) =>
+      service.enqueueLoopRun(tx, row, "scheduler-budget", { kind: "manual" })
+    )
+    const { dispatchLoops } = await import("./loop-dispatch.server")
+    const executor = vi.fn(async (_actor: Actor, claimed: ClaimedLoopRun) => {
+      expect(claimed.startedAt).toBeInstanceOf(Date)
+      expect(claimed.leaseAt).toBeInstanceOf(Date)
+      return {
+        state: "waiting-for-approval" as const,
+        result: "Needs a human decision",
+      }
+    })
+    expect(
+      await dispatchLoops({
+        workspaceId: f.workspaceId,
+        limit: 1,
+        executor,
+        executionStartBefore: Date.now() - 1,
+      })
+    ).toMatchObject({ executed: 0 })
+    expect(executor).not.toHaveBeenCalled()
+    expect(
+      await dispatchLoops({ workspaceId: f.workspaceId, limit: 1, executor })
+    ).toMatchObject({ executed: 1 })
+    await pool.query(
+      "UPDATE loop_runs SET started_at=clock_timestamp()-interval '4 minutes 1 second' WHERE id=$1",
+      [run.id]
+    )
+    await dispatchLoops({ workspaceId: f.workspaceId, enqueueOnly: true })
+    expect(
+      (
+        await pool.query("SELECT state,error_code FROM loop_runs WHERE id=$1", [
+          run.id,
+        ])
+      ).rows[0]
+    ).toEqual({ state: "failed", error_code: "RUN_WALL_CLOCK_LIMIT" })
+    const abandoned = await db.transaction((tx) =>
+      service.enqueueLoopRun(tx, row, "abandoned-web-invocation", {
+        kind: "manual",
+      })
+    )
+    await pool.query(
+      "UPDATE loop_runs SET state='running',lease_at=clock_timestamp()-interval '5 minutes 1 second',started_at=clock_timestamp()-interval '5 minutes 1 second' WHERE id=$1",
+      [abandoned.id]
+    )
+    await dispatchLoops({ workspaceId: f.workspaceId, limit: 1, executor })
+    expect(
+      (
+        await pool.query("SELECT state,error_code FROM loop_runs WHERE id=$1", [
+          abandoned.id,
+        ])
+      ).rows[0]
+    ).toEqual({ state: "uncertain", error_code: "WORKER_LEASE_EXPIRED" })
+    expect(executor).toHaveBeenCalledTimes(1)
   })
 
   it("revoking external sources rejects webhook ingress, enabling and publishing an active webhook", async () => {

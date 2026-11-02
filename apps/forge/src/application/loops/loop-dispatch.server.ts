@@ -4,6 +4,10 @@ import { loopsEnabled } from "./loop-access.server"
 import { enqueueLoopRun } from "./loops.server"
 import { loopMatchEvents, normalizeLoopSnapshot } from "./loop-context.server"
 import { executeNextLoopRun } from "./loop-execution.server"
+import {
+  LOOP_RUN_LEASE_MS,
+  LOOP_RUN_WALL_CLOCK_MS,
+} from "./loop-execution-policy"
 import type { LoopEntity } from "@/lib/loop-contract"
 import type { LoopExecutor } from "./loop-execution.server"
 import {
@@ -208,12 +212,34 @@ export async function dispatchLoops(
     now?: Date
     executor?: LoopExecutor
     enqueueOnly?: boolean
+    executionStartBefore?: number
   } = {}
 ) {
   if (!loopsEnabled())
     return { enabled: false, events: 0, scheduled: 0, executed: 0 }
   const limit = Math.max(1, Math.min(options.limit ?? 10, 100)),
     now = options.now ?? new Date()
+  await db
+    .update(loopRuns)
+    .set({
+      state: "failed",
+      errorCode: "RUN_WALL_CLOCK_LIMIT",
+      finishedAt: now,
+      pendingDecision: null,
+    })
+    .where(
+      and(
+        eq(loopRuns.state, "waiting-for-approval"),
+        lte(
+          loopRuns.startedAt,
+          new Date(now.getTime() - LOOP_RUN_WALL_CLOCK_MS)
+        ),
+        sql`(${loopRuns.pendingDecision}->>'action' IS DISTINCT FROM 'cancel-run')`,
+        options.workspaceId
+          ? eq(loopRuns.workspaceId, options.workspaceId)
+          : undefined
+      )
+    )
   // A dead process cannot be assumed to have sent no provider request.
   await db
     .update(loopRuns)
@@ -225,7 +251,7 @@ export async function dispatchLoops(
     .where(
       and(
         eq(loopRuns.state, "running"),
-        lte(loopRuns.leaseAt, new Date(now.getTime() - 20 * 60_000)),
+        lte(loopRuns.leaseAt, new Date(now.getTime() - LOOP_RUN_LEASE_MS)),
         options.workspaceId
           ? eq(loopRuns.workspaceId, options.workspaceId)
           : undefined
@@ -235,6 +261,11 @@ export async function dispatchLoops(
     scheduled = await enqueueScheduledLoops(now, options.workspaceId)
   let executed = 0
   for (let i = 0; i < (options.enqueueOnly ? 0 : limit); i++) {
+    if (
+      options.executionStartBefore !== undefined &&
+      Date.now() >= options.executionStartBefore
+    )
+      break
     if (!(await executeNextLoopRun(options.executor, options.workspaceId)))
       break
     executed++

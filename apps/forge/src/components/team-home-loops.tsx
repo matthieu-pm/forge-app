@@ -75,10 +75,11 @@ function runError(code: string) {
     DISPATCH_REQUIRES_RECONCILIATION:
       "The outcome could not be confirmed. Review the run before starting the work again.",
     WORKER_LEASE_EXPIRED:
-      "The worker stopped before confirming the outcome. Review the run before starting again.",
+      "The scheduler stopped before confirming the outcome. Review the run before starting again.",
     EXECUTION_FAILED:
       "The run could not finish. Check its configuration and try again.",
     RUN_DEADLINE_EXCEEDED: "The run reached its time limit.",
+    RUN_WALL_CLOCK_LIMIT: "The run reached its four-minute time limit.",
   }
   return (
     messages[code] ??

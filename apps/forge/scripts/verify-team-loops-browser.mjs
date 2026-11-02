@@ -336,6 +336,56 @@ try {
       { timeout: 30000 }
     )
     .toBe("cancelled")
+  const modelConnection = crypto.randomUUID()
+  await pool.query(
+    "INSERT INTO model_connections(id,workspace_id,scope,provider,kind,execution_kind,locality,billing_mode,credential_owner,display_name,status,created_by_user_id) VALUES($1,$2,'workspace','openai','api-key','forge-native','server-capable','pay-as-you-go','forge-server-vault','Scheduler acceptance model','ready',$3)",
+    [modelConnection, marker, users[0]]
+  )
+  await pool.query(
+    `INSERT INTO model_catalog_entries(connection_id,selection_id,provider_model_id,display_name,provider_label,source_label,execution_kind,input_modalities,supports_tools,supports_code,supported_reasoning_efforts,status) VALUES($1,$2,'gpt-6-astra','Acceptance GPT','OpenAI','Acceptance','forge-native','["text"]',true,true,'["low","medium","high","xhigh"]','available')`,
+    [modelConnection, `${modelConnection}:gpt-6-astra`]
+  )
+  const cronSecret = process.env.FORGE_LOOP_TEST_CRON_SECRET
+  if (!cronSecret || cronSecret.length < 32)
+    throw new Error("The local scheduler acceptance secret is required")
+  expect(
+    (await contexts[0].request.get(`${base}/api/internal/loops`)).status()
+  ).toBe(401)
+  const queuedForScheduler = await contexts[0].request.post(
+    `${base}/api/loops/webhooks/${webhook.id}`,
+    {
+      headers: {
+        Authorization: `Bearer ${secret}`,
+        "Webhook-Id": `scheduler-${crypto.randomUUID()}`,
+      },
+      data: { event: "scheduler.acceptance" },
+    }
+  )
+  expect(queuedForScheduler.status()).toBe(202)
+  const scheduledRun = (await queuedForScheduler.json()).runId
+  const scheduled = await contexts[0].request.get(
+    `${base}/api/internal/loops`,
+    {
+      headers: { Authorization: `Bearer ${cronSecret}` },
+    }
+  )
+  expect(scheduled.status()).toBe(200)
+  expect(await scheduled.json()).toMatchObject({ enabled: true, executed: 1 })
+  expect(
+    (
+      await pool.query(
+        "SELECT state,result FROM loop_runs WHERE id=$1 AND workspace_id=$2",
+        [scheduledRun, marker]
+      )
+    ).rows[0]
+  ).toEqual({ state: "completed", result: "Done" })
+  await bob.evaluate(() => window.dispatchEvent(new Event("focus")))
+  await expect(bob.getByText("Done", { exact: true })).toBeVisible({
+    timeout: 30000,
+  })
+  checked(
+    "authenticated web scheduler executes a queued Loop through the real coordinator and shares its confirmed result"
+  )
   await card(bob, "Webhook review")
     .getByRole("button", { name: "Disable", exact: true })
     .click()
