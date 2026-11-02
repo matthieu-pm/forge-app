@@ -53,8 +53,11 @@ beforeEach(() => {
     }
   )
 })
-afterEach(() => {
+afterEach(async () => {
   cleanup()
+  // Tiptap schedules editor destruction one millisecond after unmount. Let it
+  // release its DOM listeners before Vitest tears down this window.
+  await new Promise((resolve) => setTimeout(resolve, 5))
   vi.unstubAllGlobals()
 })
 const start = () =>

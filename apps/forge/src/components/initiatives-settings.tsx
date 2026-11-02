@@ -10,7 +10,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 import { toast } from "sonner"
 import { z } from "zod"
-import { productStorage } from "@/lib/product-storage"
+import { productStorage, productStorageIdentity } from "@/lib/product-storage"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import {
@@ -108,7 +108,12 @@ export function InitiativesSettings({ workspaceId }: { workspaceId: string }) {
       return false
     }
   }
-  const disabled = !settings.enabled || !ready || !!error
+  const binding = productStorageIdentity()
+  const unavailable = binding?.initiativeFeatureAvailable === false
+  const canManage =
+    !binding || ["owner", "admin"].includes(binding.workspaceRole ?? "")
+  const disabled =
+    !settings.enabled || !ready || !!error || unavailable || !canManage
   return (
     <main className="forge-settings-scroll">
       <div className="forge-settings-content">
@@ -128,6 +133,11 @@ export function InitiativesSettings({ workspaceId }: { workspaceId: string }) {
             </a>
           </p>
         </header>
+        {unavailable && (
+          <p role="status" className="mb-4 text-sm text-muted-foreground">
+            Shared initiatives are awaiting deployment enablement.
+          </p>
+        )}
         {error && (
           <p role="alert" className="mb-4 px-4 text-sm text-destructive">
             {error}
@@ -148,7 +158,7 @@ export function InitiativesSettings({ workspaceId }: { workspaceId: string }) {
           <Switch
             id="enable-initiatives"
             checked={settings.enabled}
-            disabled={!ready || !!error}
+            disabled={!ready || !!error || unavailable || !canManage}
             onCheckedChange={(enabled) => {
               if (save({ ...settings, enabled })) {
                 setEditing(false)

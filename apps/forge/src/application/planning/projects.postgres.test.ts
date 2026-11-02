@@ -21,13 +21,16 @@ describe.skipIf(!file)("FOR-54 shared projects on PostgreSQL", () => {
     issues: typeof Issues,
     queries: typeof Queries
   beforeAll(async () => {
-    const { connection, applicationConnection } = JSON.parse(
-      readFileSync(file!, "utf8")
-    )
-    const target = {
-      environment: "issue-history-acceptance",
-      ...DATABASE_TARGETS["issue-history-acceptance"],
-    } as const
+    const {
+      connection,
+      applicationConnection,
+      target: configuredTarget,
+    } = JSON.parse(readFileSync(file!, "utf8"))
+    const environment =
+      configuredTarget === "initiative-rehearsal"
+        ? "initiative-rehearsal"
+        : "issue-history-acceptance"
+    const target = { environment, ...DATABASE_TARGETS[environment] } as const
     assertMigrationTarget(connection, target)
     assertMigrationTarget(
       applicationConnection.replace("-pooler.", "."),

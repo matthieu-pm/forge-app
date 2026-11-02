@@ -37,3 +37,5 @@ FORGE_ISSUE_HISTORY_TEST_DATABASE_FILE=/private/connections.json FORGE_PROJECT_B
 ```
 
 Run the PostgreSQL suite separately from browser acceptance: issue tests temporarily fault the audit table on this dedicated database. The browser server must target the same acceptance database with local-only authentication secrets. The browser script verifies database identity, signs in two independent Better Auth contexts, creates project/issue membership through the real controls, checks private issue/team filtering, edits as an ordinary member, exercises stale-draft preservation/rebase and reloads. It removes its fixtures afterward. No production migration or deployment is part of FOR-54's PR preparation.
+
+[FOR-59](shared-initiatives.md) adds feature-gated canonical initiatives and authorized project membership/rollups. Private legacy initiative content is preserved for separately scoped migration.

@@ -11,6 +11,7 @@ import {
   sharedProjectChanges,
 } from "./shared-project-contract"
 import {
+  blankInitiative,
   defaultInitiativePreferences,
   defaultInitiativesSettings,
   emptyInitiatives,
@@ -27,6 +28,14 @@ import {
   parseTeamLabels,
   projectLabelsStorageKey,
 } from "./team-labels"
+import {
+  initiativeCommandPrefix,
+  sharedInitiativesKey,
+} from "./shared-initiative-key"
+import {
+  initiativeChangesSchema,
+  sharedInitiativeChanges,
+} from "./shared-initiative-contract"
 import { protectedSessionEpoch } from "./protected-session"
 import type { InitiativeStore } from "./initiatives"
 import { productStorage, productStorageIdentity } from "@/lib/product-storage"
@@ -50,7 +59,9 @@ export function useInitiatives(
   const renderEpoch = protectedSessionEpoch()
   const [mutationError, setMutationError] = useState("")
   const sync = useWorkspaceView("initiatives", "main", { workspaceId, userId })
-  const dataKey = initiativesStorageKey(workspaceId)
+  const dataKey = canonicalIssuesActive()
+    ? sharedInitiativesKey(workspaceId)
+    : initiativesStorageKey(workspaceId)
   const preferencesKey = initiativePreferencesKey(workspaceId, userId)
   const settingsKey = initiativesSettingsStorageKey(workspaceId)
   const raw = useSyncExternalStore(
@@ -73,7 +84,11 @@ export function useInitiatives(
                 Array.from({ length: productStorage.length }, (_, i) =>
                   productStorage.key(i)
                 )
-                  .filter((key) => key?.startsWith(projectCommandPrefix))
+                  .filter(
+                    (key) =>
+                      key?.startsWith(projectCommandPrefix) ||
+                      key?.startsWith(initiativeCommandPrefix)
+                  )
                   .map((key) => productStorage.getItem(key))
               )
             )
@@ -139,6 +154,56 @@ export function useInitiatives(
       result.projectLabelsError =
         "Project labels could not be loaded. Saved labels have been preserved."
     }
+    if (canonicalIssuesActive()) {
+      for (let i = 0; i < productStorage.length; i++) {
+        const key = productStorage.key(i)
+        if (!key?.startsWith(initiativeCommandPrefix)) continue
+        try {
+          for (const c of initiativeChangesSchema.parse(
+            JSON.parse(productStorage.getItem(key)!)
+          )) {
+            const old = result.state.initiatives.find(
+              (item) => item.id === c.id
+            )
+            if (!old) {
+              if (c.expectedRevision === null)
+                result.state.initiatives.push(
+                  initiativeStoreSchema.shape.initiatives.element.parse({
+                    ...blankInitiative(userId),
+                    ...c.changes,
+                    id: c.id,
+                    number: result.state.nextNumber++,
+                    projects: canonicalProjects(workspaceId).filter((p) =>
+                      c.addProjectIds.includes(p.id)
+                    ),
+                  })
+                )
+              continue
+            }
+            result.state.initiatives = result.state.initiatives.map((item) =>
+              item.id === c.id
+                ? {
+                    ...item,
+                    ...c.changes,
+                    projects: [
+                      ...item.projects.filter(
+                        (p) => !c.removeProjectIds.includes(p.id)
+                      ),
+                      ...canonicalProjects(workspaceId).filter(
+                        (p) =>
+                          c.addProjectIds.includes(p.id) &&
+                          !item.projects.some((o) => o.id === p.id)
+                      ),
+                    ],
+                  }
+                : item
+            )
+          }
+        } catch {
+          /* Invalid or revoked drafts remain in recovery. */
+        }
+      }
+    }
     const shared = canonicalProjects(workspaceId)
     if (canonicalIssuesActive()) {
       if (scope === "projects") result.error = ""
@@ -170,16 +235,12 @@ export function useInitiatives(
         }
       }
       shared.splice(0, shared.length, ...projected.values())
-      const byId = new Map(shared.map((p) => [p.id, p]))
       result.state = {
         ...result.state,
         workspaceProjects: shared,
-        initiatives: result.state.initiatives.map((i) => ({
-          ...i,
-          projects: i.projects.flatMap((p) =>
-            byId.has(p.id) ? [byId.get(p.id)!] : []
-          ),
-        })),
+        // The initiative read is an independent authorized snapshot. Replacing
+        // children from the project cache could restore a revoked team's data
+        // or older project status at the same revision.
       }
     } else if (shared.length) {
       const byId = new Map(shared.map((p) => [p.id, p]))
@@ -196,7 +257,7 @@ export function useInitiatives(
       }
     }
     return result
-  }, [raw, workspaceId, scope])
+  }, [raw, workspaceId, userId, scope])
   function update(reducer: (current: InitiativeStore) => InitiativeStore) {
     if (
       !data.ready ||
@@ -234,21 +295,28 @@ export function useInitiatives(
             "The active session changed. Reopen this project before saving."
           )
         const next = initiativeStoreSchema.parse(reducer(data.state))
+        const initiativeChanges = sharedInitiativeChanges(data.state, next)
         if (
-          scope === "projects" &&
-          JSON.stringify(
-            next.initiatives.map((i) => [i.id, i.projects.map((p) => p.id)])
-          ) !==
-            JSON.stringify(
-              data.state.initiatives.map((i) => [
-                i.id,
-                i.projects.map((p) => p.id),
-              ])
-            )
+          initiativeChanges.length &&
+          (!data.settings.enabled || data.settingsError)
         )
           throw new Error(
-            "Shared initiative links are unavailable until initiative support is enabled."
+            "Shared initiatives are not enabled for this workspace."
           )
+        if (initiativeChanges.length) {
+          for (let i = 0; i < productStorage.length; i++) {
+            const key = productStorage.key(i)
+            if (
+              key?.startsWith(initiativeCommandPrefix) &&
+              initiativeChangesSchema
+                .parse(JSON.parse(productStorage.getItem(key)!))
+                .some((p) => initiativeChanges.some((c) => c.id === p.id))
+            )
+              throw new Error(
+                "Wait for this initiative's pending save before editing it again. Your draft is preserved in the save banner."
+              )
+          }
+        }
         const changes = sharedProjectChanges(data.state, next)
         if (changes.length) {
           for (let i = 0; i < productStorage.length; i++) {
@@ -272,12 +340,10 @@ export function useInitiatives(
             JSON.stringify(changes)
           )
         }
-        // Initiative membership and text remain privately saved by their own
-        // adapter; canonical project fields are never written there.
-        if (scope === "initiatives")
+        if (initiativeChanges.length)
           productStorage.setItem(
-            dataKey,
-            JSON.stringify({ ...next, workspaceProjects: [] })
+            `${initiativeCommandPrefix}${crypto.randomUUID()}`,
+            JSON.stringify(initiativeChanges)
           )
         window.dispatchEvent(new Event(changed))
         return true
@@ -304,6 +370,7 @@ export function useInitiatives(
     }
   }
   return {
+    canonical: canonicalIssuesActive(),
     canModerate: ["owner", "admin"].includes(
       productStorageIdentity()?.workspaceRole ?? ""
     ),

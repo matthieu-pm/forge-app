@@ -1,5 +1,9 @@
 import { z } from "zod"
 import { onPreferenceSessionInvalidated } from "./preference-session-events"
+import {
+  initiativeCommandPrefix,
+  sharedInitiativesKey,
+} from "./shared-initiative-key"
 import { projectCommandPrefix } from "./shared-project-key"
 import { canonicalIssueState } from "./canonical-issue-cache"
 import { loadProductState, persistProductState } from "./product-state-server"
@@ -12,6 +16,7 @@ import type { ProductStateSnapshot } from "./product-state-contract"
 let identity: Omit<ProductStateSnapshot, "entries"> | null = null
 let generation = 0
 let mutationEpoch = 0
+let lastReadSequence = 0
 export function productStorageRefreshToken() {
   return mutationEpoch
 }
@@ -103,6 +108,7 @@ export function savedProjectDrafts() {
 export function resetProductStorage() {
   generation++
   identity = null
+  lastReadSequence = 0
   values.clear()
   revisions.clear()
   pending = []
@@ -121,6 +127,7 @@ export function initializeProductStorage(
 ) {
   resetProductStorage()
   identity = snapshot
+  lastReadSequence = snapshot.requestSequence ?? 0
   for (const e of snapshot.entries) {
     if (e.value !== null) values.set(e.key, e.value)
     revisions.set(e.key, e.revision)
@@ -139,6 +146,12 @@ export function refreshProductStorage(
     snapshot.sessionId !== identity.sessionId
   )
     return
+  if (
+    snapshot.requestSequence !== undefined &&
+    snapshot.requestSequence < lastReadSequence
+  )
+    return
+  lastReadSequence = snapshot.requestSequence ?? lastReadSequence
   const present = new Set(snapshot.entries.map((entry) => entry.key))
   for (const key of values.keys()) {
     const teamId = legacyStorageScope(key).teamId
@@ -158,9 +171,12 @@ export function refreshProductStorage(
     ...identity,
     teamIds: snapshot.teamIds,
     workspaceRole: snapshot.workspaceRole,
+    initiativeFeatureAvailable: snapshot.initiativeFeatureAvailable,
   }
   for (const e of snapshot.entries)
     if (
+      (e.key !== sharedInitiativesKey(snapshot.workspaceId) ||
+        requestToken === mutationEpoch) &&
       !pending.some((p) => p.key === e.key) &&
       e.revision >= (revisions.get(e.key) ?? 0)
     ) {
@@ -193,6 +209,13 @@ export async function flushProductStorage() {
         },
       })
       if (token !== generation) return
+      if (p.key.startsWith(initiativeCommandPrefix)) {
+        mutationEpoch++
+        const snapshot = await loadProductState()
+        if (token !== generation) return
+        refreshProductStorage(snapshot)
+        values.delete(p.key)
+      }
       if (p.key.startsWith(projectCommandPrefix)) {
         const { refreshCanonicalIssues } =
           await import("./canonical-issue-client")
@@ -402,6 +425,7 @@ export function productStorageIdentity() {
         sessionId: identity.sessionId,
         teamIds: identity.teamIds,
         workspaceRole: identity.workspaceRole,
+        initiativeFeatureAvailable: identity.initiativeFeatureAvailable,
       }
     : null
 }
@@ -551,3 +575,61 @@ function restoreDeviceDrafts() {
 }
 if (typeof window !== "undefined")
   onPreferenceSessionInvalidated(() => resetProductStorage())
+
+/** Recovery copies remain private and are hidden as a whole after linked-project revocation. */
+export function initiativeDrafts() {
+  const current = canonicalIssueState()
+  if (
+    !identity ||
+    !current ||
+    current.workspaceId !== identity.workspaceId ||
+    current.userId !== identity.userId ||
+    current.sessionId !== identity.sessionId
+  )
+    return []
+  const visible = (raw: string | null) => {
+    const changes: unknown = JSON.parse(raw ?? "null")
+    return (
+      Array.isArray(changes) &&
+      changes.every(
+        (c) =>
+          c &&
+          typeof c === "object" &&
+          [c.addProjectIds ?? [], c.removeProjectIds ?? []].every(
+            (ids) =>
+              Array.isArray(ids) &&
+              ids.every((id) => current.projects.some((p) => p.id === id))
+          )
+      )
+    )
+  }
+  const result: Array<{ key: string; recovery: boolean; value: string }> = []
+  for (const p of pending) {
+    try {
+      if (
+        p.key.startsWith(initiativeCommandPrefix) &&
+        p.value &&
+        visible(p.value)
+      )
+        result.push({ key: p.key, recovery: false, value: p.value })
+    } catch {
+      /* Invalid drafts are retained. */
+    }
+  }
+  for (const [key, value] of values) {
+    if (!key.startsWith("forge:pending-recovery:v1:")) continue
+    try {
+      const draft = JSON.parse(value)
+      if (
+        typeof draft.key === "string" &&
+        draft.key.startsWith(initiativeCommandPrefix) &&
+        typeof draft.value === "string" &&
+        visible(draft.value)
+      )
+        result.push({ key, recovery: true, value: draft.value })
+    } catch {
+      /* Invalid drafts are retained. */
+    }
+  }
+  return result
+}
