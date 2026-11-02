@@ -431,6 +431,20 @@ describe("operational monitor enablement", () => {
 })
 
 describe("Loop web scheduler enablement", () => {
+  it("accepts Cloudflare scheduling and rejects an unknown driver", () => {
+    const env = {
+      ...core,
+      FORGE_LOOPS_ENABLED: "true",
+      CRON_SECRET: secret,
+      FORGE_LOOP_WEBHOOK_SECRET: secret,
+    }
+    expect(
+      variables({ ...env, FORGE_LOOP_SCHEDULER_DRIVER: "cloudflare" })
+    ).toEqual([])
+    expect(
+      variables({ ...env, FORGE_LOOP_SCHEDULER_DRIVER: "unknown" })
+    ).toEqual(["FORGE_LOOP_SCHEDULER_DRIVER"])
+  })
   it("requires scheduler and webhook signing material only when the gate is enabled", () => {
     expect(variables(core)).toEqual([])
     expect(variables({ ...core, FORGE_LOOPS_ENABLED: "true" })).toEqual([

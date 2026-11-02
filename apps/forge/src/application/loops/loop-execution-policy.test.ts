@@ -4,11 +4,21 @@ import {
   LOOP_RUN_WALL_CLOCK_MS,
   LOOP_SCHEDULER_SETUP_MS,
   LOOP_SETTLEMENT_GRACE_MS,
+  loopSchedulerDriver,
   withinLoopExecutionWindow,
 } from "./loop-execution-policy"
 
 afterEach(() => vi.useRealTimers())
 describe("Loop web execution budget", () => {
+  it("selects an explicit scheduler driver without silently dropping unknown configurations", () => {
+    expect(loopSchedulerDriver({})).toBe("vercel")
+    expect(
+      loopSchedulerDriver({ FORGE_LOOP_SCHEDULER_DRIVER: "cloudflare" })
+    ).toBe("cloudflare")
+    expect(() =>
+      loopSchedulerDriver({ FORGE_LOOP_SCHEDULER_DRIVER: "unknown" })
+    ).toThrow("must be vercel or cloudflare")
+  })
   it("leaves room for settlement and request overhead within the deployed function", () => {
     expect(LOOP_RUN_WALL_CLOCK_MS).toBe(240_000)
     expect(

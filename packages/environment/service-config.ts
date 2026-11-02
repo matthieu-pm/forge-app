@@ -235,6 +235,8 @@ export function inspectServiceConfiguration(
   }
   if (service === "app") {
     if (flag("FORGE_LOOPS_ENABLED")) {
+      if (env.FORGE_LOOP_SCHEDULER_DRIVER !== undefined && !["vercel", "cloudflare"].includes(env.FORGE_LOOP_SCHEDULER_DRIVER))
+        add("FORGE_LOOP_SCHEDULER_DRIVER", "must select vercel or cloudflare")
       secret("CRON_SECRET")
       secret("FORGE_LOOP_WEBHOOK_SECRET")
     }
