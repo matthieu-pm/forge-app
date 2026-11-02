@@ -91,6 +91,9 @@ export function SharedDocumentEditor({
     live = React.useRef(true),
     unsaved = React.useRef(false)
   const editGeneration = React.useRef(0)
+  const fieldEditGeneration = React.useRef<
+    Partial<Record<keyof DocumentFields, number>>
+  >({})
   const paused = React.useRef(false)
   const blocker = useBlocker({
     shouldBlockFn: () => unsaved.current,
@@ -278,6 +281,8 @@ export function SharedDocumentEditor({
   }, [ready, draft, dirty, busy])
   function edit(patch: Partial<DocumentFields>) {
     editGeneration.current++
+    for (const field of Object.keys(patch) as Array<keyof DocumentFields>)
+      fieldEditGeneration.current[field] = editGeneration.current
     remember({
       ...current.current,
       fields: { ...current.current.fields, ...patch },
@@ -623,12 +628,27 @@ export function SharedDocumentEditor({
                       )
                     } else {
                       if (editGeneration.current !== restoreGeneration) {
-                        // Closing history does not stop typing. Keep those later edits
-                        // and save them against the confirmed restored revision.
-                        remember({
-                          fields: current.current.fields,
-                          baseline: result.revision,
-                        })
+                        // Rebase only fields explicitly edited during the restore.
+                        // Reusing the whole older draft would undo untouched restored
+                        // content when, for example, only its title was edited.
+                        const fields = {
+                          title: viewing.title,
+                          body: viewing.body,
+                          icon: viewing.icon,
+                          sectionId: viewing.sectionId,
+                        }
+                        for (const field of Object.keys(fields) as Array<
+                          keyof DocumentFields
+                        >) {
+                          if (
+                            (fieldEditGeneration.current[field] ?? 0) >
+                            restoreGeneration
+                          )
+                            Object.assign(fields, {
+                              [field]: current.current.fields[field],
+                            })
+                        }
+                        remember({ fields, baseline: result.revision })
                         paused.current = false
                         setError("")
                       } else {

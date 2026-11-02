@@ -293,11 +293,29 @@ it("restores a failed draft after remount and retires its recovery copy only aft
 })
 
 it("retains and rebases typing made after dismissing a pending restore", async () => {
+  const currentBody = {
+    type: "doc",
+    content: [
+      {
+        type: "paragraph",
+        content: [{ type: "text", text: "Bob current body" }],
+      },
+    ],
+  }
+  const historicalBody = {
+    type: "doc",
+    content: [
+      {
+        type: "paragraph",
+        content: [{ type: "text", text: "Alice historical body" }],
+      },
+    ],
+  }
   vi.mocked(loadDocumentHistory).mockResolvedValueOnce(
     JSON.stringify([
       {
         title: "Historical title",
-        body: resource.body,
+        body: historicalBody,
         icon: resource.icon,
         sectionId: null,
         revision: 1,
@@ -318,7 +336,7 @@ it("retains and rebases typing made after dismissing a pending restore", async (
     .mockResolvedValue(saved(3))
   render(
     <SharedDocumentEditor
-      resource={resource}
+      resource={{ ...resource, body: currentBody }}
       command={command}
       onBack={() => {}}
     />
@@ -350,7 +368,7 @@ it("retains and rebases typing made after dismissing a pending restore", async (
   expect(command.mock.calls[1][0]).toMatchObject({
     action: "save",
     expectedRevision: 2,
-    fields: { title: "Typing after dismissing restore" },
+    fields: { title: "Typing after dismissing restore", body: historicalBody },
   })
   await waitFor(() =>
     expect(screen.getByRole("status").textContent).toBe("Saved · Revision 3")
@@ -610,4 +628,132 @@ it("keeps the source recovery record if its durable transfer cannot be written",
   )
   expect(localStorage.getItem(sourceKey)).toBe(raw)
   expect(localStorage.length).toBe(1)
+})
+
+it("restores untouched metadata while preserving body edits made during restoration", async () => {
+  const currentBody = {
+    type: "doc",
+    content: [
+      {
+        type: "paragraph",
+        content: [{ type: "text", text: "Bob current body" }],
+      },
+    ],
+  }
+  const historicalBody = {
+    type: "doc",
+    content: [
+      {
+        type: "paragraph",
+        content: [{ type: "text", text: "Alice historical body" }],
+      },
+    ],
+  }
+  vi.mocked(loadDocumentHistory).mockResolvedValueOnce(
+    JSON.stringify([
+      {
+        title: "Historical title",
+        body: historicalBody,
+        icon: resource.icon,
+        sectionId: null,
+        revision: 1,
+        createdAt: resource.createdAt,
+        author: resource.owner,
+      },
+    ])
+  )
+  let resolveRestore!: (value: DocumentCommandResult) => void
+  const command = vi
+    .fn()
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveRestore = resolve
+        })
+    )
+    .mockResolvedValue(saved(3))
+  render(
+    <SharedDocumentEditor
+      resource={{ ...resource, body: currentBody }}
+      command={command}
+      onBack={() => {}}
+    />
+  )
+  fireEvent.click(await screen.findByRole("button", { name: "History" }))
+  fireEvent.click(await screen.findByRole("button", { name: /^Revision 1 ·/ }))
+  fireEvent.click(screen.getByRole("button", { name: "Restore revision 1" }))
+  fireEvent.click(screen.getByRole("button", { name: "Close" }))
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+  fireEvent.click(screen.getByRole("button", { name: "Insert safe link" }))
+  await act(async () => {
+    resolveRestore(saved(2))
+  })
+  await waitFor(() => expect(command).toHaveBeenCalledTimes(2), {
+    timeout: 3000,
+  })
+  expect(command.mock.calls[1][0]).toMatchObject({
+    action: "save",
+    expectedRevision: 2,
+    fields: {
+      title: "Historical title",
+      body: { content: [{ content: [{ text: "Link" }] }] },
+    },
+  })
+  await waitFor(() =>
+    expect(screen.getByRole("status").textContent).toBe("Saved · Revision 3")
+  )
+})
+it("preserves an intentionally returned-to-original field value during restore", async () => {
+  vi.mocked(loadDocumentHistory).mockResolvedValueOnce(
+    JSON.stringify([
+      {
+        title: "Historical title",
+        body: resource.body,
+        icon: resource.icon,
+        sectionId: null,
+        revision: 1,
+        createdAt: resource.createdAt,
+        author: resource.owner,
+      },
+    ])
+  )
+  let resolveRestore!: (value: DocumentCommandResult) => void
+  const command = vi
+    .fn()
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveRestore = resolve
+        })
+    )
+    .mockResolvedValue(saved(3))
+  render(
+    <SharedDocumentEditor
+      resource={resource}
+      command={command}
+      onBack={() => {}}
+    />
+  )
+  fireEvent.click(await screen.findByRole("button", { name: "History" }))
+  fireEvent.click(await screen.findByRole("button", { name: /^Revision 1 ·/ }))
+  fireEvent.click(screen.getByRole("button", { name: "Restore revision 1" }))
+  fireEvent.click(screen.getByRole("button", { name: "Close" }))
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+  fireEvent.change(screen.getByLabelText("Document title"), {
+    target: { value: "Temporary title" },
+  })
+  fireEvent.change(screen.getByLabelText("Document title"), {
+    target: { value: resource.title },
+  })
+  await act(async () => {
+    resolveRestore(saved(2))
+  })
+  await waitFor(() => expect(command).toHaveBeenCalledTimes(2), {
+    timeout: 3000,
+  })
+  expect(command.mock.calls[1][0]).toMatchObject({
+    action: "save",
+    expectedRevision: 2,
+    fields: { title: resource.title },
+  })
 })

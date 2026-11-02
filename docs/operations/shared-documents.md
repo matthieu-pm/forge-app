@@ -1,6 +1,6 @@
 # Shared documents · FOR-61
 
-The accepted product rules are recorded in [FOR-61](https://linear.app/atriumcrm/issue/FOR-61/create-and-edit-shared-documents-with-revision-conflicts). Implementation branches from `94db2f8`. This PR implements the slice and does not deploy it to production.
+The accepted product rules are recorded in [FOR-61](https://linear.app/atriumcrm/issue/FOR-61/create-and-edit-shared-documents-with-revision-conflicts). Implementation branches from `94db2f8`. The review and production release are tracked in [the release report](../qa/for61/review-and-release.md).
 
 ## Enablement and rollback
 
@@ -36,9 +36,9 @@ The app must use its development environment and enable shared documents. Browse
 - Additional checks cover exact lost-response replay, changed-input rejection, current private-source access, sharing grants and revocation, creator/admin deletion, history pagination, cross-workspace denial, feature-gate denial, and transactional rollback of document/receipt/audit/outbox after a real database history fault.
 - Editor tests cover typing during an in-flight request, exact uncertain-command retry before later typing, safe-link normalization without save loops, and device-draft recovery/retirement.
 
-Browser screenshots: [conflict](../qa/for61/conflict.png), [editor](../qa/for61/editor.png), [mobile](../qa/for61/mobile.png). Evidence is from the dedicated acceptance environment, not a production or packaged-macOS certification.
+Initial acceptance screenshots: [conflict](../qa/for61/conflict.png), [editor](../qa/for61/editor.png), [mobile](../qa/for61/mobile.png). Release verification and production artifacts are recorded separately in the release report. Packaged macOS is not certified by these browser checks.
 
-## Validation result · 2 November 2026
+## Initial implementation validation · 2 November 2026
 
 All 13 dedicated PostgreSQL acceptance cases and the two-browser flow passed. Workspace TypeScript, the production build and protected Workflow handlers, four Workflow tests, schema-drift verification, and changed-source lint (zero errors, 32 warnings) passed. Fixtures were removed; the ordinary application role is not a superuser.
 
