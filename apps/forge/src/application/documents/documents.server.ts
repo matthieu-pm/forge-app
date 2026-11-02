@@ -1,7 +1,10 @@
 import "@tanstack/react-start/server-only"
 import { and, desc, eq, isNull } from "drizzle-orm"
 import { z } from "zod"
-import { consumeLegacyDocumentCopy } from "./document-copies.server"
+import {
+  LegacyDocumentConflict,
+  consumeLegacyDocumentCopy,
+} from "./document-copies.server"
 import type { JSONContent } from "@tiptap/core"
 import type { Actor } from "@/application/actor"
 import type { Transaction } from "@/db"
@@ -154,9 +157,7 @@ function safeFields(row: {
   const body = documentBodySchema.safeParse(row.body)
   return {
     title: row.title,
-    body: body.success
-      ? body.data
-      : (row.body as JSONContent),
+    body: body.success ? body.data : (row.body as JSONContent),
     icon: documentIconSchema.safeParse(row.icon).data ?? defaultDocumentIcon,
     sectionId: row.sectionId,
     ...(!body.success ? { unsafeBody: true } : {}),
@@ -279,7 +280,10 @@ export async function commandDocument(
         await lockWorkspace(tx, current)
         if (input.action === "create") {
           await sourceAccess(tx, current, input.source)
-          if (saved) await accessible(tx, current, saved.id)
+          // Creation receipts return caller-known identity/revision only. A deleted
+          // tombstone can confirm an uncertain create after current source authority
+          // is rechecked above, without exposing deleted content or recreating it.
+          if (saved) await accessible(tx, current, saved.id, true)
         } else {
           const row = await accessible(
             tx,
@@ -381,7 +385,15 @@ export async function commandDocument(
                 : {}),
             })
             .where(eq(documents.id, input.id))
-        if (input.action === "create") await consumeLegacyDocumentCopy(tx, current, input.source, input.id)
+        if (input.action === "create")
+          await consumeLegacyDocumentCopy(
+            tx,
+            current,
+            input.source,
+            input.id,
+            input.fields,
+            input.legacyImport === true
+          )
         await tx.insert(documentRevisions).values({
           workspaceId: current.workspaceId,
           documentId: input.id,
@@ -404,7 +416,11 @@ export async function commandDocument(
     })
     return { status: "saved", ...result.value }
   } catch (error) {
-    if (!(error instanceof RevisionConflict)) throw error
+    if (
+      !(error instanceof RevisionConflict) &&
+      !(error instanceof LegacyDocumentConflict)
+    )
+      throw error
     // Conflict itself has no durable effect or receipt. Reauthorize the fresh view.
     const current = await readDocuments(actor, { id: input.id }).catch(() => [])
     return { status: "conflict", current: current[0] ?? null }

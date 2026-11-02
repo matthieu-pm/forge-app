@@ -1,10 +1,12 @@
 import * as React from "react"
+import {
+  confirmDocumentCreation,
+  pendingDocumentCreation,
+} from "./document-creation-journal"
 import { protectedSessionEpoch } from "./protected-session"
 import { loadSharedDocuments, persistSharedDocument } from "./document-state"
 import { productStorageIdentity } from "./product-storage"
 import { onPreferenceSessionInvalidated } from "./preference-session-events"
-import { emptyDocumentBody } from "./document-contract"
-import { defaultDocumentIcon } from "./team-documents"
 import type {
   DocumentCommand,
   DocumentCommandResult,
@@ -84,40 +86,40 @@ export function useSharedDocuments(source: DocumentSource, id?: string) {
     const binding = productStorageIdentity(),
       epoch = protectedSessionEpoch()
     if (!binding) throw new Error("Reload to verify your session.")
+    const assertCurrentBinding = () => {
+      if (
+        protectedSessionEpoch() !== epoch ||
+        activeKey.current !== queryKey ||
+        productStorageIdentity()?.sessionId !== binding.sessionId ||
+        productStorageIdentity()?.workspaceId !== binding.workspaceId ||
+        productStorageIdentity()?.userId !== binding.userId
+      )
+        throw new Error("The active session changed.")
+    }
     const result = JSON.parse(
       await persistSharedDocument({ data: { ...binding, commandKey, command } })
     ) as DocumentCommandResult
-    if (
-      protectedSessionEpoch() !== epoch ||
-      activeKey.current !== queryKey ||
-      productStorageIdentity()?.sessionId !== binding.sessionId ||
-      productStorageIdentity()?.workspaceId !== binding.workspaceId ||
-      productStorageIdentity()?.userId !== binding.userId
-    )
-      throw new Error("The active session changed.")
+    assertCurrentBinding()
     if (result.status === "saved") {
       window.dispatchEvent(new Event(DOCUMENTS_CHANGED))
       await refresh()
+      assertCurrentBinding()
     }
     return result
   }
   async function create(sectionId: string | null = null) {
-    const documentId = crypto.randomUUID()
-    const result = await command({
-      action: "create",
-      id: documentId,
-      source,
-      fields: {
-        title: "New document",
-        icon: defaultDocumentIcon,
-        body: emptyDocumentBody(),
-        sectionId,
-      },
-    })
-    if (result.status !== "saved")
-      throw new Error("Document could not be created.")
-    return documentId
+    const binding = productStorageIdentity()
+    if (!binding) throw new Error("Reload to verify your session.")
+    const pending = pendingDocumentCreation(binding, source, sectionId)
+    const result = await command(pending.command, pending.key)
+    if (result.status !== "saved" || result.id !== pending.command.id)
+      throw new Error(
+        "Document creation could not be confirmed. The pending request is preserved for retry."
+      )
+    confirmDocumentCreation(binding, pending)
+    return pending.command.id
   }
+
   return {
     documents: resolvedKey === queryKey ? documents : [],
     ready: resolvedKey === queryKey && ready,

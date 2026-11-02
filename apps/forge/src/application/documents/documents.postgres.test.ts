@@ -8,6 +8,7 @@ import { assertMigrationTarget } from "../../../scripts/lib/serialized-migration
 import type { Actor } from "@/application/actor"
 import type * as Service from "./documents.server"
 import { defaultDocumentIcon } from "@/lib/team-documents"
+import { documentFieldsSchema } from "@/lib/document-contract"
 
 const file = process.env.FORGE_DOCUMENT_TEST_DATABASE_FILE
 const fields = (text = "Shared writing") => ({
@@ -407,9 +408,23 @@ describe.skipIf(!file)("FOR-61 canonical documents on PostgreSQL", () => {
     )
     const input = {
       action: "create",
+      legacyImport: true,
       id,
       source: { kind: "team", id: f.teamId },
-      fields: fields("Legacy text"),
+      fields: documentFieldsSchema.parse({
+        title: "Legacy writing",
+        icon: defaultDocumentIcon,
+        sectionId: null,
+        body: {
+          type: "doc",
+          content: [
+            {
+              type: "paragraph",
+              content: [{ type: "text", text: "Legacy text" }],
+            },
+          ],
+        },
+      }),
     }
     await expect(
       service.commandDocument(f.actors[0], randomUUID(), {
@@ -455,6 +470,316 @@ describe.skipIf(!file)("FOR-61 canonical documents on PostgreSQL", () => {
     expect(
       JSON.parse(JSON.parse((await source()).encoded_value)).resources
     ).toEqual([])
+  })
+  const legacyResource = (
+    id: string,
+    text: string,
+    title = "Legacy writing"
+  ) => ({
+    id,
+    kind: "document",
+    title,
+    content: text,
+    sectionId: null,
+    updatedAt: new Date().toISOString(),
+  })
+  const legacyFields = (resource: ReturnType<typeof legacyResource>) =>
+    documentFieldsSchema.parse({
+      title: resource.title,
+      icon: defaultDocumentIcon,
+      sectionId: null,
+      body: {
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
+            content: [{ type: "text", text: resource.content }],
+          },
+        ],
+      },
+    })
+  const teamSnapshot = (
+    resources: Array<unknown>,
+    retainedDocumentDrafts?: Array<unknown>
+  ) => ({
+    favorite: false,
+    sections: [],
+    loops: [],
+    resources,
+    ...(retainedDocumentDrafts ? { retainedDocumentDrafts } : {}),
+  })
+  async function putTeamSource(actor: Actor, teamId: string, value: unknown) {
+    const key = `forge:team-home:v1:${teamId}`
+    await pool.query(
+      "INSERT INTO product_state(workspace_id,owner_id,owner_user_id,team_id,key,encoded_value) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(workspace_id,owner_id,key) DO UPDATE SET encoded_value=excluded.encoded_value,revision=product_state.revision+1",
+      [
+        actor.workspaceId,
+        `user:${actor.userId}`,
+        actor.userId,
+        teamId,
+        key,
+        JSON.stringify(JSON.stringify(value)),
+      ]
+    )
+    return key
+  }
+  async function teamSource(actor: Actor, key: string) {
+    const row = (
+      await pool.query(
+        "SELECT encoded_value,revision FROM product_state WHERE workspace_id=$1 AND owner_id=$2 AND key=$3",
+        [actor.workspaceId, `user:${actor.userId}`, key]
+      )
+    ).rows[0]
+    return {
+      value: JSON.parse(JSON.parse(row.encoded_value)),
+      revision: row.revision,
+    }
+  }
+  it("a stale team import preserves a newer source and consumes only the selected reviewed copy", async () => {
+    const f = await fixture(),
+      id = randomUUID(),
+      old = legacyResource(id, "Earlier text"),
+      newer = legacyResource(id, "Newer text"),
+      unrelated = legacyResource(randomUUID(), "Unrelated original")
+    const key = await putTeamSource(
+      f.actors[0],
+      f.teamId,
+      teamSnapshot([newer, unrelated])
+    )
+    const commandKey = randomUUID(),
+      input = {
+        action: "create",
+        legacyImport: true,
+        id,
+        source: { kind: "team", id: f.teamId },
+        fields: legacyFields(old),
+      }
+    expect(
+      await service.commandDocument(f.actors[0], commandKey, input)
+    ).toMatchObject({ status: "conflict", current: null })
+    expect((await teamSource(f.actors[0], key)).value.resources).toEqual([
+      newer,
+      unrelated,
+    ])
+    expect(
+      (
+        await pool.query(
+          "SELECT count(*)::int n FROM command_receipts WHERE command_key=$1",
+          [commandKey]
+        )
+      ).rows[0].n
+    ).toBe(0)
+    expect(
+      (
+        await pool.query("SELECT count(*)::int n FROM documents WHERE id=$1", [
+          id,
+        ])
+      ).rows[0].n
+    ).toBe(0)
+    expect(
+      await service.commandDocument(f.actors[0], randomUUID(), {
+        ...input,
+        fields: legacyFields(newer),
+      })
+    ).toMatchObject({ status: "saved" })
+    expect((await teamSource(f.actors[0], key)).value.resources).toEqual([
+      unrelated,
+    ])
+  })
+  it("a removed team import source conflicts while fresh document creation remains available", async () => {
+    const f = await fixture(),
+      id = randomUUID(),
+      old = legacyResource(id, "Removed original")
+    await putTeamSource(f.actors[0], f.teamId, teamSnapshot([]))
+    expect(
+      await service.commandDocument(f.actors[0], randomUUID(), {
+        action: "create",
+        legacyImport: true,
+        id,
+        source: { kind: "team", id: f.teamId },
+        fields: legacyFields(old),
+      })
+    ).toMatchObject({ status: "conflict", current: null })
+    expect(
+      await service.commandDocument(f.actors[0], randomUUID(), {
+        action: "create",
+        id,
+        source: { kind: "team", id: f.teamId },
+        fields: fields("Fresh writing"),
+      })
+    ).toMatchObject({ status: "saved" })
+  })
+  it("two actors' divergent same-ID sources remain scoped and recoverable through unrelated older-client saves", async () => {
+    const f = await fixture(),
+      id = randomUUID(),
+      alice = legacyResource(id, "Alice's reviewed source"),
+      bob = legacyResource(id, "Bob's divergent draft")
+    const aKey = await putTeamSource(
+      f.actors[0],
+      f.teamId,
+      teamSnapshot([alice])
+    )
+    const bKey = await putTeamSource(f.actors[1], f.teamId, teamSnapshot([bob]))
+    await service.commandDocument(f.actors[0], randomUUID(), {
+      action: "create",
+      legacyImport: true,
+      id,
+      source: { kind: "team", id: f.teamId },
+      fields: legacyFields(alice),
+    })
+    const { readProductState, saveProductState } =
+      await import("@/application/product-state/product-state.server")
+    const visible = (await readProductState(f.actors[1])).entries.find(
+      (e) => e.key === bKey
+    )!
+    expect(JSON.parse(visible.value!).resources).toEqual([])
+    expect(JSON.parse(visible.value!).retainedDocumentDrafts).toEqual([bob])
+    expect(
+      (await readProductState(f.actors[0])).entries.find((e) => e.key === aKey)
+        ?.value
+    ).not.toContain("Bob's divergent draft")
+    for (let attempt = 0; attempt < 2; attempt++)
+      await saveProductState(f.actors[1], {
+        workspaceId: f.workspaceId,
+        sessionId:
+          f.actors[1].authentication.kind === "session"
+            ? f.actors[1].authentication.sessionId
+            : "",
+        commandKey: randomUUID(),
+        key: bKey,
+        value: JSON.stringify(teamSnapshot([])),
+        expectedRevision: (await teamSource(f.actors[1], bKey)).revision,
+      })
+    expect((await teamSource(f.actors[1], bKey)).value).toMatchObject({
+      resources: [],
+      retainedDocumentDrafts: [bob],
+    })
+    // Even a generic key deletion cannot silently discard retained authored writing.
+    await saveProductState(f.actors[1], {
+      workspaceId: f.workspaceId,
+      sessionId:
+        f.actors[1].authentication.kind === "session"
+          ? f.actors[1].authentication.sessionId
+          : "",
+      commandKey: randomUUID(),
+      key: bKey,
+      value: null,
+      expectedRevision: (await teamSource(f.actors[1], bKey)).revision,
+    })
+    expect(
+      (await teamSource(f.actors[1], bKey)).value.retainedDocumentDrafts
+    ).toEqual([bob])
+  })
+  it("an explicit import does not consume unrelated same-ID canonical recovery sources", async () => {
+    const f = await fixture(),
+      canonical = await create(f.actors[0], f.teamId),
+      selected = legacyResource(randomUUID(), "Selected source"),
+      divergent = legacyResource(canonical.id, "Unreviewed divergent writing")
+    const key = await putTeamSource(
+      f.actors[0],
+      f.teamId,
+      teamSnapshot([divergent, selected])
+    )
+    await service.commandDocument(f.actors[0], randomUUID(), {
+      action: "create",
+      legacyImport: true,
+      id: selected.id,
+      source: { kind: "team", id: f.teamId },
+      fields: legacyFields(selected),
+    })
+    expect((await teamSource(f.actors[0], key)).value.resources).toEqual([
+      divergent,
+    ])
+  })
+  it("stale or removed project import sources conflict without replacing their latest text", async () => {
+    const f = await fixture(),
+      projectId = randomUUID(),
+      id = randomUUID(),
+      old = legacyResource(id, "Old project source"),
+      newer = legacyResource(id, "New project source")
+    const projectCopy = {
+      id,
+      title: newer.title,
+      body: legacyFields(newer).body,
+      icon: defaultDocumentIcon,
+    }
+    await pool.query(
+      "INSERT INTO projects(id,workspace_id,name,properties) VALUES($1,$2,'Import project',$3)",
+      [projectId, f.workspaceId, JSON.stringify({ resources: [projectCopy] })]
+    )
+    const input = {
+      action: "create",
+      legacyImport: true,
+      id,
+      source: { kind: "project", id: projectId },
+      fields: legacyFields(old),
+    }
+    expect(
+      await service.commandDocument(f.actors[1], randomUUID(), input)
+    ).toMatchObject({ status: "conflict", current: null })
+    expect(
+      (
+        await pool.query("SELECT properties FROM projects WHERE id=$1", [
+          projectId,
+        ])
+      ).rows[0].properties.resources
+    ).toEqual([projectCopy])
+    await pool.query(
+      "UPDATE projects SET properties='{\"resources\":[]}' WHERE id=$1",
+      [projectId]
+    )
+    expect(
+      await service.commandDocument(f.actors[1], randomUUID(), {
+        ...input,
+        fields: legacyFields(newer),
+      })
+    ).toMatchObject({ status: "conflict", current: null })
+    await pool.query("UPDATE projects SET properties=$2 WHERE id=$1", [
+      projectId,
+      JSON.stringify({ resources: [projectCopy] }),
+    ])
+    expect(
+      await service.commandDocument(f.actors[1], randomUUID(), {
+        ...input,
+        fields: legacyFields(newer),
+      })
+    ).toMatchObject({ status: "saved" })
+    expect(
+      (
+        await pool.query("SELECT properties FROM projects WHERE id=$1", [
+          projectId,
+        ])
+      ).rows[0].properties.resources
+    ).toEqual([])
+  })
+  it("retained originals are hidden after private-team revocation", async () => {
+    const f = await fixture(),
+      key = await putTeamSource(
+        f.actors[0],
+        f.privateTeamId,
+        teamSnapshot(
+          [],
+          [
+            {
+              title: "Private recovered writing",
+              rawBody: { event: "never render" },
+            },
+          ]
+        )
+      )
+    const { readProductState } =
+      await import("@/application/product-state/product-state.server")
+    expect(
+      (await readProductState(f.actors[0])).entries.find((e) => e.key === key)
+        ?.value
+    ).toContain("Private recovered writing")
+    await pool.query(
+      "DELETE FROM team_members WHERE workspace_id=$1 AND team_id=$2 AND user_id=$3",
+      [f.workspaceId, f.privateTeamId, f.actors[0].userId]
+    )
+    expect(
+      (await readProductState(f.actors[0])).entries.some((e) => e.key === key)
+    ).toBe(false)
   })
   it("a database history failure rolls document, receipt, audit and outbox back together", async () => {
     const f = await fixture(),
@@ -586,5 +911,42 @@ describe.skipIf(!file)("FOR-61 canonical documents on PostgreSQL", () => {
     })
     expect((await read(f.actors[1], d.id)).revision).toBe(2)
     expect(await service.readDocumentHistory(f.actors[1], d.id)).toHaveLength(2)
+  })
+  it("creation receipt replay confirms a later deleted identity without reopening content or recreating it", async () => {
+    const f = await fixture(),
+      d = await create(f.actors[0], f.teamId)
+    await service.commandDocument(f.actors[0], randomUUID(), {
+      action: "delete",
+      id: d.id,
+      expectedRevision: 1,
+    })
+    expect(await service.commandDocument(f.actors[0], d.key, d.input)).toEqual({
+      status: "saved",
+      id: d.id,
+      revision: 1,
+    })
+    await expect(read(f.actors[0], d.id)).rejects.toThrow()
+    await expect(
+      service.readDocumentHistory(f.actors[0], d.id)
+    ).rejects.toThrow()
+    expect(
+      (
+        await pool.query(
+          "SELECT revision,deleted_at FROM documents WHERE id=$1",
+          [d.id]
+        )
+      ).rows[0]
+    ).toMatchObject({ revision: 2, deleted_at: expect.any(Date) })
+    expect(
+      (
+        await pool.query(
+          "SELECT count(*)::int n FROM command_receipts WHERE resource_id=$1",
+          [d.id]
+        )
+      ).rows[0].n
+    ).toBe(2)
+    expect(
+      await service.commandDocument(f.actors[0], randomUUID(), d.input)
+    ).toMatchObject({ status: "conflict", current: null })
   })
 })

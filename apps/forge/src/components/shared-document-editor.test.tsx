@@ -12,6 +12,7 @@ import type {
   DocumentCommandResult,
   SharedDocument,
 } from "@/lib/document-contract"
+import { loadDocumentHistory } from "@/lib/document-state"
 import { defaultDocumentIcon } from "@/lib/team-documents"
 
 vi.mock("@tanstack/react-router", () => ({
@@ -287,5 +288,122 @@ it("restores a failed draft after remount and retires its recovery copy only aft
     expect(screen.getByRole("status").textContent).toBe("Saved · Revision 2")
   )
   expect(command.mock.calls[1]).toEqual(command.mock.calls[0])
+  expect(localStorage.length).toBe(0)
+})
+
+it("retains and rebases typing made after dismissing a pending restore", async () => {
+  vi.mocked(loadDocumentHistory).mockResolvedValueOnce(
+    JSON.stringify([
+      {
+        title: "Historical title",
+        body: resource.body,
+        icon: resource.icon,
+        sectionId: null,
+        revision: 1,
+        createdAt: resource.createdAt,
+        author: resource.owner,
+      },
+    ])
+  )
+  let resolveRestore!: (value: DocumentCommandResult) => void
+  const command = vi
+    .fn()
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveRestore = resolve
+        })
+    )
+    .mockResolvedValue(saved(3))
+  render(
+    <SharedDocumentEditor
+      resource={resource}
+      command={command}
+      onBack={() => {}}
+    />
+  )
+  fireEvent.click(await screen.findByRole("button", { name: "History" }))
+  fireEvent.click(await screen.findByRole("button", { name: /^Revision 1 ·/ }))
+  fireEvent.click(screen.getByRole("button", { name: "Restore revision 1" }))
+  expect(command.mock.calls[0][0]).toMatchObject({
+    action: "restore",
+    expectedRevision: 1,
+  })
+  fireEvent.click(screen.getByRole("button", { name: "Close" }))
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+  fireEvent.change(screen.getByLabelText("Document title"), {
+    target: { value: "Typing after dismissing restore" },
+  })
+  await act(async () => {
+    resolveRestore(saved(2))
+  })
+  expect(screen.getByLabelText<HTMLInputElement>("Document title").value).toBe(
+    "Typing after dismissing restore"
+  )
+  expect(
+    JSON.parse(localStorage.getItem(localStorage.key(0)!)!).fields.title
+  ).toBe("Typing after dismissing restore")
+  await waitFor(() => expect(command).toHaveBeenCalledTimes(2), {
+    timeout: 3000,
+  })
+  expect(command.mock.calls[1][0]).toMatchObject({
+    action: "save",
+    expectedRevision: 2,
+    fields: { title: "Typing after dismissing restore" },
+  })
+  await waitFor(() =>
+    expect(screen.getByRole("status").textContent).toBe("Saved · Revision 3")
+  )
+  expect(localStorage.length).toBe(0)
+})
+it("does not treat a post-restore server refresh as newer local typing", async () => {
+  const historical = {
+    title: "Historical title",
+    body: resource.body,
+    icon: resource.icon,
+    sectionId: null,
+    revision: 1,
+    createdAt: resource.createdAt,
+    author: resource.owner,
+  }
+  vi.mocked(loadDocumentHistory).mockResolvedValueOnce(
+    JSON.stringify([historical])
+  )
+  let resolveRestore!: (value: DocumentCommandResult) => void
+  const command = vi.fn().mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        resolveRestore = resolve
+      })
+  )
+  const page = render(
+    <SharedDocumentEditor
+      resource={resource}
+      command={command}
+      onBack={() => {}}
+    />
+  )
+  fireEvent.click(await screen.findByRole("button", { name: "History" }))
+  fireEvent.click(await screen.findByRole("button", { name: /^Revision 1 ·/ }))
+  fireEvent.click(screen.getByRole("button", { name: "Restore revision 1" }))
+  fireEvent.click(screen.getByRole("button", { name: "Close" }))
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+  page.rerender(
+    <SharedDocumentEditor
+      resource={{ ...resource, title: historical.title, revision: 2 }}
+      command={command}
+      onBack={() => {}}
+    />
+  )
+  await act(async () => {
+    resolveRestore(saved(2))
+  })
+  await waitFor(() =>
+    expect(screen.getByRole("status").textContent).toBe("Saved · Revision 2")
+  )
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 850))
+  })
+  expect(command).toHaveBeenCalledTimes(1)
   expect(localStorage.length).toBe(0)
 })

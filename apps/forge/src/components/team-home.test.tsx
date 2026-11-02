@@ -14,13 +14,20 @@ import type { TeamSummary } from "@/lib/team-contract"
 import { productStorage } from "@/lib/product-storage"
 import { updateTeam } from "@/lib/team-state"
 import { emptyTeamHome, teamHomeKey } from "@/lib/team-home-state"
-import { documentFixture } from "@/test/document-fixture"
+import {
+  documentFixture,
+  useSharedDocuments as useFixtureDocuments,
+} from "@/test/document-fixture"
+import { useSharedDocuments } from "@/lib/shared-document-client"
+import { downloadDocumentDraft } from "@/lib/document-download"
 import { emptyDocumentBody } from "@/lib/document-contract"
 
-vi.mock(
-  "@/lib/shared-document-client",
-  async () => await import("@/test/document-fixture")
-)
+vi.mock("@/lib/document-download", () => ({ downloadDocumentDraft: vi.fn() }))
+
+vi.mock("@/lib/shared-document-client", async () => {
+  const fixture = await import("@/test/document-fixture")
+  return { ...fixture, useSharedDocuments: vi.fn(fixture.useSharedDocuments) }
+})
 
 vi.mock("@tanstack/react-router", () => ({
   useRouter: () => ({ navigate: vi.fn(), invalidate: vi.fn() }),
@@ -102,6 +109,7 @@ beforeEach(() => {
   productStorage.clear()
   localStorage.clear()
   documentFixture.reset()
+  vi.mocked(useSharedDocuments).mockImplementation(useFixtureDocuments)
   vi.stubGlobal(
     "ResizeObserver",
     class {
@@ -285,6 +293,77 @@ describe("team home workflows", () => {
     expect(onOpenDocument).toHaveBeenCalledWith(undefined)
     expect(documentFixture.rows()).toEqual([])
   })
+  it("offers preserved raw legacy writing as a download without rendering its untrusted body", async () => {
+    const original = {
+      id: "legacy",
+      title: "Recovered original",
+      body: { type: "script", attrs: { onclick: "never execute" } },
+      content: "Raw writing",
+    }
+    productStorage.setItem(
+      teamHomeKey(team.id),
+      JSON.stringify({ ...emptyTeamHome(), retainedDocumentDrafts: [original] })
+    )
+    render(<TeamDocuments team={team} />)
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Download original: Recovered original",
+      })
+    )
+    expect(downloadDocumentDraft).toHaveBeenCalledWith(original)
+    expect(screen.queryByLabelText("Document content")).toBeNull()
+    expect(documentFixture.command).not.toHaveBeenCalled()
+  })
+  it.each([
+    { ready: false, error: "" },
+    { ready: true, error: "Source access denied" },
+  ])(
+    "hides cached original import/download controls until source authorization succeeds ($ready, $error)",
+    async ({ ready, error }) => {
+      vi.mocked(useSharedDocuments).mockImplementation((source) => ({
+        ...useFixtureDocuments(source),
+        ready,
+        error,
+      }))
+      const original = {
+        id: "retained",
+        title: "Protected retained writing",
+        body: { type: "script", text: "Never render" },
+      }
+      const legacy = {
+        id: "legacy",
+        kind: "document",
+        title: "Protected legacy writing",
+        content: "Hidden original",
+        sectionId: null,
+        updatedAt: new Date().toISOString(),
+      }
+      productStorage.setItem(
+        teamHomeKey(team.id),
+        JSON.stringify({
+          ...emptyTeamHome(),
+          resources: [legacy],
+          retainedDocumentDrafts: [original],
+        })
+      )
+      render(<TeamDocuments team={team} />)
+      await waitFor(() =>
+        expect(
+          screen.queryByRole("button", { name: /Download original/ })
+        ).toBeNull()
+      )
+      expect(
+        screen.queryByRole("button", {
+          name: "Import Protected legacy writing",
+        })
+      ).toBeNull()
+      expect(
+        screen.queryByLabelText("Recovered legacy document drafts")
+      ).toBeNull()
+      expect(screen.queryByText("Protected retained writing")).toBeNull()
+      expect(documentFixture.command).not.toHaveBeenCalled()
+    }
+  )
   it("rejects unsafe link schemes before saving", () => {
     const update = vi.fn(() => true)
     render(

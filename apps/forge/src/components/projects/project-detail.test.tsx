@@ -13,7 +13,11 @@ import type { InitiativeProject } from "@/lib/initiatives"
 import type { ProjectTab } from "./project-detail"
 import type { TeamSummary } from "@/lib/team-contract"
 import { productStorage } from "@/lib/product-storage"
-import { documentFixture } from "@/test/document-fixture"
+import {
+  documentFixture,
+  useSharedDocuments as useFixtureDocuments,
+} from "@/test/document-fixture"
+import { useSharedDocuments } from "@/lib/shared-document-client"
 import {
   renderPreferences as render,
   setupPreferenceFixture,
@@ -26,10 +30,10 @@ import {
 } from "@/lib/initiatives"
 import { blankIssueDraft, saveTeamIssue } from "@/lib/team-issues"
 
-vi.mock(
-  "@/lib/shared-document-client",
-  async () => await import("@/test/document-fixture")
-)
+vi.mock("@/lib/shared-document-client", async () => {
+  const fixture = await import("@/test/document-fixture")
+  return { ...fixture, useSharedDocuments: vi.fn(fixture.useSharedDocuments) }
+})
 
 vi.mock("@tanstack/react-router", () => ({
   useBlocker: () => ({ status: "idle" }),
@@ -101,6 +105,7 @@ beforeEach(async () => {
   productStorage.clear()
   localStorage.clear()
   documentFixture.reset()
+  vi.mocked(useSharedDocuments).mockImplementation(useFixtureDocuments)
   vi.stubGlobal(
     "ResizeObserver",
     class {
@@ -462,3 +467,54 @@ it("edits milestone metadata, reorders milestones, and filters project issues fr
     await screen.findByRole("button", { name: /Open FOR-2 Other work/ })
   ).toBeTruthy()
 })
+
+it.each([
+  { ready: false, error: "" },
+  { ready: true, error: "Source access denied" },
+])(
+  "hides cached legacy project imports and downloads until document-source authorization succeeds ($ready, $error)",
+  async ({ ready, error }) => {
+    vi.mocked(useSharedDocuments).mockImplementation((source) => ({
+      ...useFixtureDocuments(source),
+      ready,
+      error,
+    }))
+    const state = read()
+    state.initiatives[0].projects[0].resources = [
+      {
+        id: "legacy-protected",
+        title: "Protected project original",
+        body: {
+          type: "doc",
+          content: [
+            {
+              type: "paragraph",
+              content: [{ type: "text", text: "Hidden original" }],
+            },
+          ],
+        },
+      },
+    ]
+    productStorage.setItem(
+      initiativesStorageKey("workspace"),
+      JSON.stringify(state)
+    )
+    render(
+      <ProjectDetailPage
+        {...props}
+        tab="overview"
+        onTab={vi.fn()}
+        documentId="legacy-protected"
+        onDocumentChange={vi.fn()}
+      />
+    )
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "Download original" })
+      ).toBeNull()
+    )
+    expect(screen.queryByRole("button", { name: "Import document" })).toBeNull()
+    expect(screen.queryByText(/This earlier document is preserved/)).toBeNull()
+    expect(documentFixture.command).not.toHaveBeenCalled()
+  }
+)

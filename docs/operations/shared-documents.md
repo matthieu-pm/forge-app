@@ -4,7 +4,7 @@ The accepted product rules are recorded in [FOR-61](https://linear.app/atriumcrm
 
 ## Enablement and rollback
 
-1. Reconcile the migration journal with any earlier merged schema work, regenerate its snapshot if ordering changes, and apply `0064_shared_documents` with the repository's serialized migration runner against the approved direct connection.
+1. Reconcile the migration journal with any earlier merged schema work, regenerate its snapshot if ordering changes, and apply `0065_shared_documents` with the repository's serialized migration runner against the approved direct connection.
 2. Confirm application-role privileges for `document_revisions`, the expanded document table, and readiness migration receipts.
 3. Set `FORGE_SHARED_DOCUMENTS_ENABLED=true` in the intended environment and deploy the reviewed source. The default is false when `FORGE_SERVICE_ENVIRONMENT=production`.
 4. Verify two authenticated sessions, a stale-save conflict, history restore, and revocation before enabling broadly.
@@ -15,7 +15,7 @@ The browser adapter requires a current Better Auth session bound to its workspac
 
 ## Reproduction
 
-Use a private connection JSON containing `connection` (migration owner/direct) and `applicationConnection` (ordinary application login) for the dedicated database `forge_documents_acceptance`, branch `br-autumn-union-za0opf1e`. The test harness verifies the target before mutation and removes its owned users, workspaces, and receipts afterwards. Never point this harness at production.
+Use a private connection JSON containing `connection` (migration owner/direct) and `applicationConnection` (ordinary application login) for the dedicated database `forge_documents_acceptance_v2`, branch `br-autumn-union-za0opf1e`. The test harness verifies the target before mutation and removes its owned users, workspaces, and receipts afterwards. Never point this harness at production.
 
 ```sh
 cd apps/forge

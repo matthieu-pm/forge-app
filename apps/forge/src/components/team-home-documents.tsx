@@ -11,6 +11,7 @@ import { toast } from "sonner"
 import { SharedDocumentEditor } from "./shared-document-editor"
 import { TeamSidebarIcon } from "./team-sidebar-icon"
 import type { TeamSummary } from "@/lib/team-contract"
+import { retainedDocumentTitle } from "@/lib/document-copy-recovery"
 import { downloadDocumentDraft } from "@/lib/document-download"
 import { useSharedDocuments } from "@/lib/shared-document-client"
 import {
@@ -67,6 +68,11 @@ export function TeamDocuments({
   const legacy = store.state.resources.filter(
     (r) => r.kind === "document" && !documents.some((d) => d.id === r.id)
   )
+  const retainedDrafts = store.state.retainedDocumentDrafts ?? []
+  const overlappingLegacy = store.state.resources.filter(
+    (r) => r.kind === "document" && documents.some((d) => d.id === r.id)
+  )
+  const recoveryCopies = [...retainedDrafts, ...overlappingLegacy]
   const active = documents.find((resource) => resource.id === activeId)
   const visible = documents
     .filter((r) => r.title.toLowerCase().includes(query.trim().toLowerCase()))
@@ -133,6 +139,7 @@ export function TeamDocuments({
     try {
       const result = await shared.command({
         action: "create",
+        legacyImport: true,
         id: resource.id,
         source: { kind: "team", id: team.id },
         fields: {
@@ -145,7 +152,7 @@ export function TeamDocuments({
       if (result.status === "saved") openDocument(resource.id)
       else
         toast.error(
-          "A document with this identity already exists. Refresh to open it."
+          "The document or its legacy source changed. Refresh and review the latest content before importing."
         )
     } catch {
       toast.error(
@@ -272,7 +279,27 @@ export function TeamDocuments({
           <Button onClick={() => void shared.refresh()}>Try again</Button>
         </div>
       )}
-      {legacy.length > 0 && (
+      {shared.ready && !shared.error && recoveryCopies.length > 0 && (
+        <div
+          className="border-b p-4 text-sm"
+          aria-label="Recovered legacy document drafts"
+        >
+          <p>
+            Earlier document drafts are preserved for review. Download an
+            original copy before reconciling it with the shared document.
+          </p>
+          {recoveryCopies.map((copy, index) => (
+            <Button
+              key={index}
+              variant="ghost"
+              onClick={() => downloadDocumentDraft(copy)}
+            >
+              Download original: {retainedDocumentTitle(copy)}
+            </Button>
+          ))}
+        </div>
+      )}
+      {shared.ready && !shared.error && legacy.length > 0 && (
         <div className="border-b p-4 text-sm">
           <p>
             Earlier documents are preserved. Import a document to start shared

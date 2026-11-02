@@ -39,6 +39,7 @@ export const teamHomeSchema = z.object({
     })
   ),
   resources: z.array(teamResourceSchema),
+  retainedDocumentDrafts: z.array(z.unknown()).optional(),
   loops: z.array(
     z.object({
       id: z.string(),

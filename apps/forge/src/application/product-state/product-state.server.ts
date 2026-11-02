@@ -487,7 +487,10 @@ export async function saveProductState(actor: Actor, raw: ProductStateCommand) {
         tx,
         current,
         input.key,
-        projected
+        projected,
+        row.encodedValue === null
+          ? null
+          : (JSON.parse(row.encodedValue) as string)
       )
       await tx
         .update(productState)

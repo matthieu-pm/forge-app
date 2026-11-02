@@ -206,6 +206,7 @@ export const documentCommandSchema = z.discriminatedUnion("action", [
   z
     .object({
       action: z.literal("create"),
+      legacyImport: z.literal(true).optional(),
       id: z.uuid(),
       source: documentSourceSchema,
       fields: documentFieldsSchema,

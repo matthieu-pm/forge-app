@@ -282,20 +282,21 @@ export function ProjectDetailPage(props: Props) {
         <p role="status">
           {!documents.ready
             ? "Loading document…"
-            : resource
+            : !documents.error && resource
               ? "This earlier document is preserved. Import it to start shared revision history."
               : "This document is unavailable."}
         </p>
         {(documentError || documents.error) && (
           <p role="alert">{documentError || documents.error}</p>
         )}
-        {resource && documents.ready && (
+        {resource && documents.ready && !documents.error && (
           <Button
             disabled={!store.writable}
             onClick={async () => {
               try {
                 const result = await documents.command({
                   action: "create",
+                  legacyImport: true,
                   id: resource.id,
                   source: { kind: "project", id: project.id },
                   fields: {
@@ -316,7 +317,7 @@ export function ProjectDetailPage(props: Props) {
             Import document
           </Button>
         )}
-        {resource && (
+        {resource && documents.ready && !documents.error && (
           <Button
             variant="ghost"
             onClick={() => downloadDocumentDraft(resource)}

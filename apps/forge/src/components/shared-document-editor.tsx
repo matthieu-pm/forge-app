@@ -89,6 +89,7 @@ export function SharedDocumentEditor({
   const sending = React.useRef(false),
     live = React.useRef(true),
     unsaved = React.useRef(false)
+  const editGeneration = React.useRef(0)
   const paused = React.useRef(false)
   const blocker = useBlocker({
     shouldBlockFn: () => unsaved.current,
@@ -254,6 +255,7 @@ export function SharedDocumentEditor({
     return () => clearTimeout(timer)
   }, [ready, draft, dirty, busy])
   function edit(patch: Partial<DocumentFields>) {
+    editGeneration.current++
     remember({
       ...current.current,
       fields: { ...current.current.fields, ...patch },
@@ -584,6 +586,7 @@ export function SharedDocumentEditor({
                 disabled={dirty || busy || viewing.unsafeBody}
                 onClick={async () => {
                   setBusy(true)
+                  const restoreGeneration = editGeneration.current
                   try {
                     const result = await command({
                       action: "restore",
@@ -598,18 +601,29 @@ export function SharedDocumentEditor({
                         "A newer revision was saved. Review it before restoring."
                       )
                     } else {
-                      const next = {
-                        fields: {
-                          title: viewing.title,
-                          body: viewing.body,
-                          icon: viewing.icon,
-                          sectionId: viewing.sectionId,
-                        },
-                        baseline: result.revision,
+                      if (editGeneration.current !== restoreGeneration) {
+                        // Closing history does not stop typing. Keep those later edits
+                        // and save them against the confirmed restored revision.
+                        remember({
+                          fields: current.current.fields,
+                          baseline: result.revision,
+                        })
+                        paused.current = false
+                        setError("")
+                      } else {
+                        const next = {
+                          fields: {
+                            title: viewing.title,
+                            body: viewing.body,
+                            icon: viewing.icon,
+                            sectionId: viewing.sectionId,
+                          },
+                          baseline: result.revision,
+                        }
+                        current.current = next
+                        setDraft(next)
+                        setEditorEpoch((n) => n + 1)
                       }
-                      current.current = next
-                      setDraft(next)
-                      setEditorEpoch((n) => n + 1)
                       setHistory(null)
                       setViewing(null)
                     }
