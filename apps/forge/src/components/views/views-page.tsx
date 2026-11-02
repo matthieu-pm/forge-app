@@ -156,10 +156,12 @@ export function ViewsPage({
   const saved = store.views.find(
     (v) => v.id === search.view && (!team || v.teamId === team.id)
   )
-  const isEditor = search.view === "new" || Boolean(search.edit && saved)
-  const [draft, setDraft] = useState<CustomView>(
+  const isEditor =
+    search.view === "new" || Boolean(search.edit && saved?.canEdit)
+  const [draft, setDraft] = useState<CustomView & { revision?: number }>(
     () => saved ?? newCustomView(search.kind, user.id, team?.id)
   )
+  const [temporary, setTemporary] = useState<CustomView>()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [sidebar, setSidebar] = useState(true)
   const [summaryTab, setSummaryTab] = useState("")
@@ -197,11 +199,12 @@ export function ViewsPage({
   }
   const [teamIds, setTeamIds] = useState<Array<string> | undefined>()
   useEffect(() => {
-    if (search.view !== "new")
-      setDraft(saved ?? newCustomView(search.kind, user.id, team?.id))
+    if (search.view !== "new" && saved) setDraft(saved)
+    setTemporary(undefined)
     setSummaryTab("")
     setTeamIds(undefined)
   }, [search.view, search.edit, workspaceId, user.id, team?.id, saved?.id]) // A draft is reset only when navigating, never by a storage update.
+  useEffect(() => setTemporary(undefined), [saved?.revision])
   const onIssueMetrics = useCallback(
     (groups: ViewIssueMetricGroups) => setIssueMetrics(groups),
     []
@@ -210,17 +213,18 @@ export function ViewsPage({
     (groups: ViewProjectMetricGroups) => setProjectMetrics(groups),
     []
   )
-  const current = isEditor ? draft : saved
+  const current = isEditor
+    ? draft
+    : temporary?.id === saved?.id
+      ? temporary
+      : saved
   const kind = current?.kind ?? search.kind
   function navigate(next: ViewsSearch) {
     onNavigate(next)
   }
   function patch(next: CustomView) {
     if (isEditor) setDraft(next)
-    else if (!store.save(next))
-      toast.error(
-        "View could not be saved. Existing views have been preserved."
-      )
+    else setTemporary(next)
   }
   function create(viewKind = search.kind) {
     navigate({ kind: viewKind, view: "new" })
@@ -232,9 +236,9 @@ export function ViewsPage({
       () => toast.error("The URL could not be copied")
     )
   }
-  function commit() {
+  async function commit() {
     if (!draft.name.trim()) return
-    if (store.save({ ...draft, name: draft.name.trim() })) {
+    if (await store.save({ ...draft, name: draft.name.trim() })) {
       navigate({ kind: draft.kind, view: draft.id })
       toast.success(search.edit ? "View saved" : "View created", {
         description: draft.name,
@@ -245,6 +249,9 @@ export function ViewsPage({
     if (!saved) return
     const next = {
       ...saved,
+      ownerId: user.id,
+      visibility: "personal" as const,
+      revision: undefined,
       id: crypto.randomUUID(),
       name: `${saved.name} (copy)`.slice(0, 80),
       favorite: false,
@@ -259,6 +266,7 @@ export function ViewsPage({
       const next = newCustomView(value, user.id, draft.teamId)
       setDraft({
         ...next,
+        revision: draft.revision,
         id: draft.id,
         name: /^All (issues|projects)$/.test(draft.name)
           ? next.name
@@ -283,6 +291,7 @@ export function ViewsPage({
         <Button
           variant="ghost"
           className="justify-start text-xs"
+          disabled={!saved.canEdit || store.busy}
           onClick={() =>
             navigate({ kind: saved.kind, view: saved.id, edit: true })
           }
@@ -306,6 +315,7 @@ export function ViewsPage({
         <Button
           variant="ghost"
           className="justify-start text-xs text-destructive"
+          disabled={!saved.canEdit || store.busy}
           onClick={() => setConfirmDelete(true)}
         >
           Delete view…
@@ -319,7 +329,8 @@ export function ViewsPage({
       size="icon-sm"
       aria-label={saved.favorite ? "Remove from favorites" : "Add to favorites"}
       aria-pressed={saved.favorite}
-      onClick={() => patch({ ...saved, favorite: !saved.favorite })}
+      disabled={store.busy}
+      onClick={() => void store.favorite(saved.id, !saved.favorite)}
     >
       <IssueIcon
         name="star"
@@ -459,7 +470,7 @@ export function ViewsPage({
             variant="outline"
             size="sm"
             onClick={() => create()}
-            disabled={Boolean(store.error)}
+            disabled={!store.enabled || store.busy || store.loading}
           >
             <IssueIcon name="add" />
             New view
@@ -471,7 +482,17 @@ export function ViewsPage({
           {store.error || directoryError || directoryDisplay.error}
         </p>
       )}
-      {search.view && !current && !isEditor ? (
+      {store.loading && !current ? (
+        <p role="status" className="p-8 text-sm text-muted-foreground">
+          Loading saved views…
+        </p>
+      ) : !store.enabled ? (
+        <p role="status" className="p-8 text-sm text-muted-foreground">
+          {store.error
+            ? "Saved views are unavailable. Refresh to try again."
+            : "Saved views are not enabled for this environment."}
+        </p>
+      ) : search.view && !current && !isEditor ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-4">
           <p className="text-sm text-muted-foreground">
             This view could not be found.
@@ -556,6 +577,7 @@ export function ViewsPage({
                   <Button
                     variant="ghost"
                     size="sm"
+                    disabled={store.busy}
                     onClick={() =>
                       navigate({
                         kind,
@@ -567,8 +589,8 @@ export function ViewsPage({
                   </Button>
                   <Button
                     size="sm"
-                    disabled={!draft.name.trim() || Boolean(store.error)}
-                    onClick={commit}
+                    disabled={!draft.name.trim() || store.busy}
+                    onClick={() => void commit()}
                   >
                     {search.edit ? "Save view" : "Create view"}
                   </Button>
@@ -627,6 +649,7 @@ export function ViewsPage({
                 />
               ) : (
                 <ViewProjects
+                  canonical
                   key={`${current.id}:${isEditor}`}
                   workspaceId={workspaceId}
                   user={user}
@@ -677,56 +700,57 @@ export function ViewsPage({
                     <span className="w-20 shrink-0 text-muted-foreground">
                       Visibility
                     </span>
-                    <IssuePicker
-                      label="Change view visibility"
-                      value={
-                        current.visibility === "team"
-                          ? `team:${current.teamId}`
-                          : current.visibility
-                      }
-                      options={[
-                        { value: "personal", label: "Personal" },
-                        { value: "workspace", label: "Workspace" },
-                        ...teams.map((t) => ({
-                          value: `team:${t.id}`,
-                          label: t.name,
-                        })),
-                      ]}
-                      onChange={(value) =>
-                        patch({
-                          ...current,
-                          visibility: value.startsWith("team:")
-                            ? "team"
-                            : (value as "personal" | "workspace"),
-                          teamId: value.startsWith("team:")
-                            ? value.slice(5)
-                            : current.teamId,
-                        })
-                      }
-                      className="flex h-7 items-center gap-2 text-xs"
-                    >
-                      {current.visibility === "personal"
-                        ? "Personal"
-                        : current.visibility === "workspace"
-                          ? "Workspace"
-                          : (teams.find((t) => t.id === current.teamId)?.name ??
-                            "Team")}
-                    </IssuePicker>
+                    {saved?.canEdit ? (
+                      <IssuePicker
+                        label="Change view visibility"
+                        value={
+                          current.visibility === "team"
+                            ? `team:${current.teamId}`
+                            : current.visibility
+                        }
+                        options={[
+                          { value: "personal", label: "Personal" },
+                          { value: "workspace", label: "Workspace" },
+                          ...teams.map((t) => ({
+                            value: `team:${t.id}`,
+                            label: t.name,
+                          })),
+                        ]}
+                        onChange={(value) =>
+                          void store.save({
+                            ...saved,
+                            visibility: value.startsWith("team:")
+                              ? "team"
+                              : (value as "personal" | "workspace"),
+                            teamId: value.startsWith("team:")
+                              ? value.slice(5)
+                              : current.teamId,
+                          })
+                        }
+                        className="flex h-7 items-center gap-2 text-xs"
+                      >
+                        {current.visibility === "personal"
+                          ? "Personal"
+                          : current.visibility === "workspace"
+                            ? "Workspace"
+                            : (teams.find((t) => t.id === current.teamId)
+                                ?.name ?? "Team")}
+                      </IssuePicker>
+                    ) : (
+                      <span>
+                        {current.visibility === "personal"
+                          ? "Personal"
+                          : current.visibility === "workspace"
+                            ? "Workspace"
+                            : "Team"}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="w-20 shrink-0 text-muted-foreground">
                       Owner
                     </span>
-                    <IssuePicker
-                      label="Change view owner"
-                      value={current.ownerId}
-                      options={people.map((p) => ({
-                        value: p.id,
-                        label: p.name,
-                      }))}
-                      onChange={(ownerId) => patch({ ...current, ownerId })}
-                      className="flex items-center gap-2 text-xs"
-                    >
+                    <span className="flex items-center gap-2 text-xs">
                       <AssigneeMark
                         name={
                           people.find((p) => p.id === current.ownerId)?.name
@@ -737,7 +761,7 @@ export function ViewsPage({
                       />
                       {people.find((p) => p.id === current.ownerId)?.name ??
                         "Unknown member"}
-                    </IssuePicker>
+                    </span>
                   </div>
                   {current.description && (
                     <p className="border-t border-border/40 pt-3 text-muted-foreground">
@@ -1016,8 +1040,9 @@ export function ViewsPage({
             </Button>
             <Button
               variant="destructive"
-              onClick={() => {
-                if (saved && store.remove(saved.id)) {
+              disabled={store.busy}
+              onClick={async () => {
+                if (saved && (await store.remove(saved.id))) {
                   setConfirmDelete(false)
                   navigate({ kind: saved.kind })
                   toast.success("View deleted")
