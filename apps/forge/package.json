@@ -78,6 +78,8 @@
     "test:projects:browser": "node scripts/verify-shared-projects-browser.mjs",
     "test:project-progress:postgres": "vitest run src/application/planning/projects.postgres.test.ts -t FOR-58",
     "test:project-progress:browser": "node scripts/verify-project-progress-browser.mjs",
+    "test:saved-views:postgres": "vitest run src/application/views/saved-views.postgres.test.ts",
+    "test:saved-views:browser": "node scripts/verify-saved-views-browser.mjs",
     "test:documents:postgres": "vitest run src/application/documents/documents.postgres.test.ts",
     "test:documents:browser": "node scripts/verify-shared-documents-browser.mjs"
   },

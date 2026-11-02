@@ -1,0 +1,104 @@
+{
+  "issue": "FOR-60",
+  "testedSourceRevision": "8bd16af87d824e43d4102e2ac10f8689fd8caf70",
+  "recordedAt": "2026-11-02T00:51:20.740537+00:00",
+  "environment": {
+    "kind": "isolated staging database and local web server",
+    "database": "forge_saved_views_acceptance",
+    "branchId": "br-autumn-union-za0opf1e",
+    "origin": "http://localhost:3160",
+    "gate": "FORGE_FEATURE_SAVED_VIEWS=true",
+    "authentication": "real Better Auth sessions; ordinary pooled application role"
+  },
+  "policy": {
+    "private": "owner only",
+    "sharedEditing": "creator and workspace owners/admins",
+    "favorites": "authenticated actor only",
+    "ownership": "server assigned creator; no client transfer"
+  },
+  "acceptance": {
+    "AC-01/AT-01": "pass: private/shared visibility and actor-owned favorites persist across fresh browser profiles with cookies only",
+    "AC-02/AT-02": "pass: strict unknown-field/version validation, inaccessible references, authorized issue/project results and no broad fallback"
+  },
+  "migration": {
+    "target": {
+      "environment": "saved-views-acceptance",
+      "branchId": "br-autumn-union-za0opf1e",
+      "host": "ep-blue-shadow-zauhwkjz.c-2.eu-west-2.aws.neon.tech",
+      "database": "forge_saved_views_acceptance"
+    },
+    "applied": {
+      "applied": 65,
+      "total": 65
+    },
+    "replay": {
+      "applied": 0,
+      "total": 65
+    }
+  },
+  "validation": {
+    "appSuite": {
+      "command": "bunx vitest run --maxWorkers=2",
+      "passed": 2422,
+      "skipped": 489,
+      "filesPassed": 308,
+      "filesSkipped": 25,
+      "context": "Broad suite before the final admin self-revocation fix; the final focused suite covers that fix and additional regressions. Initial unrestricted run encountered unrelated timing failures; bounded rerun passed."
+    },
+    "finalFocused": {
+      "command": "FORGE_SAVED_VIEWS_TEST_DATABASE_FILE=<private> bunx vitest run --maxWorkers=2 src/application/views/saved-views.postgres.test.ts src/lib/saved-view-client.test.tsx src/lib/custom-views.test.tsx src/components/views/views-page.test.tsx src/components/views/view-projects.test.tsx src/components/views/view-issues.test.tsx",
+      "passed": 39,
+      "filesPassed": 6,
+      "postgresCases": 9
+    },
+    "workflow": {
+      "command": "bun run test:workflow",
+      "passed": 4
+    },
+    "typecheck": "pass: bun run typecheck",
+    "build": "pass: FORGE_ENVIRONMENT=production bun run build; protected Workflow handler verification passed",
+    "lint": "pass: full lint has 0 errors (419 warnings at broad check); final touched-file lint 0 errors (10 warnings)",
+    "formatAndDiff": "pass"
+  },
+  "browser": [
+    {
+      "issue": "FOR-60",
+      "passed": true,
+      "environment": {
+        "database": "forge_saved_views_acceptance",
+        "branch": "br-autumn-union-za0opf1e"
+      },
+      "checks": [
+        "private/shared visibility",
+        "two new device profiles without local product data",
+        "actor-owned favorites",
+        "authorized issue and project results",
+        "creator/admin-only controls",
+        "revision conflict draft retained",
+        "invalid filters fail closed"
+      ]
+    },
+    {
+      "cleanup": {
+        "workspaces": 0,
+        "users": 0,
+        "receipts": 0
+      }
+    }
+  ],
+  "cleanup": {
+    "workspaces": 0,
+    "users": 0,
+    "views": 0,
+    "favorites": 0,
+    "receipts": 0
+  },
+  "release": {
+    "productionChanged": false,
+    "defaultGate": false,
+    "requiredMigration": "0064_saved_views.sql",
+    "legacyLocalImport": "FOR-126",
+    "unsupported": "Initiative project filters fail explicitly until canonical shared initiative querying is available",
+    "bounds": "20 filters; 500 saved views per workspace; project execution rejects more than 500 authorized projects"
+  }
+}

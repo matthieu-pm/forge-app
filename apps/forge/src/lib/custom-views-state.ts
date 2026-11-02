@@ -1,110 +1,193 @@
-import { useCallback, useMemo, useSyncExternalStore } from "react"
+import { useEffect, useSyncExternalStore } from "react"
+import { savedViewMutationSchema, viewDefinition } from "./saved-view-contract"
+import { loadSavedViews, persistSavedView } from "./saved-view-functions"
 import {
-  customViewSchema,
-  customViewsKey,
-  parseCustomViews,
-} from "./custom-views"
-import type { WorkspaceViewValues } from "./workspace-preference-contract"
+  CANONICAL_ISSUES_CHANGED,
+  canonicalIssueState,
+} from "./canonical-issue-cache"
+import { protectedSessionEpoch } from "./protected-session"
+import { onPreferenceSessionInvalidated } from "./preference-session-events"
+import type { SavedViewDirectory } from "./saved-view-contract"
 import type { CustomView } from "./custom-views"
-import { productStorage } from "@/lib/product-storage"
+import type { WorkspaceViewValues } from "./workspace-preference-contract"
 import { useWorkspaceView } from "@/components/account-preference-provider"
 
-const changed = "forge:custom-views-changed"
-const errorMessage =
-  "Saved views could not be loaded. Your existing data has been preserved."
-function subscribe(notify: () => void) {
-  for (const event of ["storage", "focus", changed])
-    window.addEventListener(event, notify)
+type Entry = {
+  data?: SavedViewDirectory
+  error: string
+  loading: boolean
+  busy: boolean
+  generation: number
+  retry?: { input: string; key: string }
+}
+const entries = new Map<string, Entry>()
+const listeners = new Set<() => void>()
+let version = 0
+function notify() {
+  version++
+  for (const fn of listeners) fn()
+}
+function clear() {
+  entries.clear()
+  notify()
+}
+if (typeof window !== "undefined") onPreferenceSessionInvalidated(clear)
+function subscribe(fn: () => void) {
+  listeners.add(fn)
+  window.addEventListener(CANONICAL_ISSUES_CHANGED, fn)
   return () => {
-    for (const event of ["storage", "focus", changed])
-      window.removeEventListener(event, notify)
+    listeners.delete(fn)
+    window.removeEventListener(CANONICAL_ISSUES_CHANGED, fn)
   }
 }
-
-export function useCustomViews(workspaceId: string, userId: string) {
-  const favorites = useWorkspaceView("directory", "main", {
-    workspaceId,
-    userId,
-  })
-  const key = customViewsKey(workspaceId, userId)
-  const raw = useSyncExternalStore(
-    subscribe,
-    useCallback(() => {
-      try {
-        return productStorage.getItem(key)
-      } catch {
-        return "unavailable"
-      }
-    }, [key]),
-    () => null
-  )
-  const result = useMemo(() => {
-    try {
-      return { views: parseCustomViews(raw).views, error: "" }
-    } catch {
-      return { views: [] as Array<CustomView>, error: errorMessage }
-    }
-  }, [raw])
-  function update(transform: (views: Array<CustomView>) => Array<CustomView>) {
-    try {
-      // Read again at write time so another open view's changes are preserved.
-      const current = parseCustomViews(productStorage.getItem(key))
-      const visible = current.views.map((view) => ({
-        ...view,
-        favorite: favorites.value.favoriteIds.includes(view.id),
-      }))
-      const views = transform(visible)
-      const favoriteIds = views
-        .filter((view) => view.favorite)
-        .map((view) => view.id)
-      if (
-        JSON.stringify(favoriteIds) !==
-          JSON.stringify(favorites.value.favoriteIds) &&
-        !favorites.save({ ...favorites.value, favoriteIds })
-      )
-        return false
-      productStorage.setItem(
-        key,
-        JSON.stringify({
-          ...current,
-          views: views.map((view) => ({
-            ...view,
-            favorite:
-              current.views.find((previous) => previous.id === view.id)
-                ?.favorite ?? false,
-          })),
-        })
-      )
-      window.dispatchEvent(new Event(changed))
-      return true
-    } catch {
-      return false
-    }
-  }
-  function save(view: CustomView) {
-    return update((views) => {
-      const existing = views.find((entry) => entry.id === view.id)
-      const next = customViewSchema.parse({
-        ...view,
-        createdAt: existing?.createdAt ?? view.createdAt,
-        updatedAt: new Date().toISOString(),
+function identityKey() {
+  const i = canonicalIssueState()
+  return i
+    ? `${i.workspaceId}:${i.userId}:${i.sessionId}:${protectedSessionEpoch()}`
+    : ""
+}
+async function refresh(key: string, entry: Entry) {
+  const identity = canonicalIssueState()
+  if (!identity || identityKey() !== key) return
+  const token = ++entry.generation
+  entry.loading = true
+  notify()
+  try {
+    const data = JSON.parse(
+      await loadSavedViews({
+        data: {
+          workspaceId: identity.workspaceId,
+          sessionId: identity.sessionId,
+        },
       })
-      return existing
-        ? views.map((entry) => (entry.id === next.id ? next : entry))
-        : [...views, next]
-    })
+    ) as SavedViewDirectory
+    if (
+      entries.get(key) !== entry ||
+      identityKey() !== key ||
+      token !== entry.generation
+    )
+      return
+    if (
+      `${data.workspaceId}:${data.userId}:${data.sessionId}:${protectedSessionEpoch()}` !==
+      key
+    )
+      throw new Error("Session changed")
+    entry.data = data
+    entry.error = ""
+  } catch {
+    if (entries.get(key) !== entry || token !== entry.generation) return
+    entry.data = undefined
+    entry.error = "Saved views could not be loaded. Refresh to try again."
+  } finally {
+    if (entries.get(key) === entry && token === entry.generation) {
+      entry.loading = false
+      notify()
+    }
   }
-  function remove(id: string) {
-    return update((views) => views.filter((view) => view.id !== id))
+}
+export function useCustomViews(workspaceId: string, userId: string) {
+  useSyncExternalStore(
+    subscribe,
+    () => `${version}:${identityKey()}`,
+    () => ""
+  )
+  const identity = canonicalIssueState()
+  const key =
+    identity?.workspaceId === workspaceId && identity.userId === userId
+      ? identityKey()
+      : ""
+  const entry = entries.get(key)
+  useEffect(() => {
+    if (!key) return
+    let current = entries.get(key)
+    if (!current) {
+      current = { error: "", loading: false, busy: false, generation: 0 }
+      entries.set(key, current)
+      void refresh(key, current)
+    }
+    const active = current
+    const reload = () => {
+      if (!active.busy && !active.loading) void refresh(key, active)
+    }
+    const timer = window.setInterval(reload, 30_000)
+    window.addEventListener("focus", reload)
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener("focus", reload)
+    }
+  }, [key, Boolean(entry)])
+  async function mutate(raw: unknown) {
+    if (
+      !entry?.data?.enabled ||
+      entry.busy ||
+      !identity ||
+      identityKey() !== key
+    )
+      return false
+    try {
+      const mutation = savedViewMutationSchema.parse(raw)
+      const input = JSON.stringify(mutation)
+      const commandKey =
+        entry.retry?.input === input ? entry.retry.key : crypto.randomUUID()
+      entry.retry = { input, key: commandKey }
+      entry.busy = true
+      entry.loading = false
+      ++entry.generation
+      notify()
+      await persistSavedView({
+        data: {
+          workspaceId,
+          sessionId: identity.sessionId,
+          commandKey,
+          mutation,
+        },
+      })
+      if (entries.get(key) !== entry || identityKey() !== key) return false
+      entry.retry = undefined
+      await refresh(key, entry)
+      return entries.get(key) === entry && identityKey() === key
+    } catch (error) {
+      if (entries.get(key) === entry)
+        entry.error =
+          error instanceof Error
+            ? error.message
+            : "The view could not be saved. Your draft is kept."
+      return false
+    } finally {
+      if (entries.get(key) === entry) {
+        entry.busy = false
+        notify()
+      }
+    }
   }
   return {
-    ...result,
-    views: result.views.map((view) => ({
-      ...view,
-      favorite: favorites.value.favoriteIds.includes(view.id),
-    })),
-    save,
-    remove,
+    views: entry?.data?.views ?? [],
+    enabled: entry?.data?.enabled ?? false,
+    loading: Boolean(key && (!entry || entry.loading)),
+    busy: entry?.busy ?? false,
+    error: entry?.error || entry?.data?.error || "",
+    refresh: () => entry && refresh(key, entry),
+    save: (view: CustomView) => {
+      try {
+        return mutate({
+          action: "save",
+          id: view.id,
+          expectedRevision:
+            (view as CustomView & { revision?: number }).revision ?? null,
+          definition: viewDefinition(view),
+        })
+      } catch {
+        return Promise.resolve(false)
+      }
+    },
+    remove: (id: string) =>
+      mutate({
+        action: "delete",
+        id,
+        expectedRevision: entry?.data?.views.find((v) => v.id === id)?.revision,
+      }),
+    favorite: (id: string, favorite: boolean) =>
+      mutate({ action: "favorite", id, favorite }),
   }
 }
 

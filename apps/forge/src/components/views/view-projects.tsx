@@ -5,6 +5,7 @@ import type { MutableRefObject, ReactNode } from "react"
 import type { InitiativePerson, InitiativeProject } from "@/lib/initiatives"
 import type { ProjectFilter, ProjectPreferences } from "@/lib/projects"
 import type { TeamSummary } from "@/lib/team-contract"
+import { useViewProjectQuery } from "@/lib/saved-view-project-client"
 import { targetTimestamp } from "@/lib/initiatives"
 import { useInitiatives } from "@/lib/initiatives-state"
 import { initiativeProjectCatalog } from "@/lib/initiative-projects"
@@ -54,6 +55,7 @@ export function ViewProjects({
   toolbarHost,
   createActionRef,
   scopeTeamId,
+  canonical = false,
 }: {
   workspaceId: string
   user: InitiativePerson
@@ -70,6 +72,7 @@ export function ViewProjects({
   toolbarHost?: HTMLElement | null
   createActionRef?: MutableRefObject<(() => void) | null>
   scopeTeamId?: string
+  canonical?: boolean
 }) {
   useEffect(() => {
     if (createActionRef) createActionRef.current = () => setEditing("new")
@@ -96,7 +99,15 @@ export function ViewProjects({
     }),
     [people, teams, store.projectLabels, store.state.initiatives, catalog]
   )
-  const visible = useMemo(
+  const query = useViewProjectQuery(
+    canonical,
+    workspaceId,
+    user.id,
+    filters,
+    display,
+    scopeTeamId ?? team?.id
+  )
+  const localVisible = useMemo(
     () =>
       visibleProjects(
         catalog,
@@ -107,6 +118,7 @@ export function ViewProjects({
       ),
     [catalog, store.state, filters, display, scopeTeamId, team?.id]
   )
+  const visible = canonical ? query.projects : localVisible
   const stats = useProjectIssueStats(teams, catalog)
   const chosen = visible.filter((project) => selected.includes(project.id))
   const metrics = useMemo(
@@ -284,6 +296,16 @@ export function ViewProjects({
           </div>
         )}
       </div>
+      {canonical && query.loading && (
+        <p role="status" className="px-4 py-2 text-xs text-muted-foreground">
+          Loading projects…
+        </p>
+      )}
+      {query.error && (
+        <p role="alert" className="px-4 py-2 text-xs text-destructive">
+          {query.error}
+        </p>
+      )}
       {chosen.length > 0 && (
         <ProjectSelectionToolbar
           selected={chosen}
