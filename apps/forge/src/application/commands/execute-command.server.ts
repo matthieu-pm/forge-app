@@ -63,6 +63,10 @@ export async function executeCommand<T>(
   const inputHash = commandInputHash(input)
   return db.transaction(async (tx) => {
     const currentActor = await currentCommandActor(tx, actor)
+    if (currentActor.loopScope)
+      await tx.execute(
+        sql`select set_config('forge.loop_run_id', ${currentActor.loopScope.runId}, true)`
+      )
     await authorize(tx, currentActor)
     const scope = and(
       eq(commandReceipts.workspaceId, actor.workspaceId),
@@ -167,7 +171,10 @@ export async function executeCommand<T>(
                     actor: {
                       userId: currentActor.userId,
                       name: actorName,
-                      kind: currentActor.authentication.kind,
+                      kind:
+                        currentActor.authentication.kind === "loop"
+                          ? "agent"
+                          : currentActor.authentication.kind,
                     },
                   },
                 }

@@ -33,6 +33,9 @@ async function queryAccessibleCatalog(actor: Actor) {
             eq(modelConnections.userId, actor.userId)
           )
         ),
+        actor.authentication.kind === "loop" || actor.loopScope
+          ? eq(modelConnections.scope, "workspace")
+          : undefined,
         eq(modelConnections.status, "ready"),
         eq(modelCatalogEntries.status, "available"),
         or(
@@ -71,7 +74,12 @@ export async function listModelCatalog(
   return [
     ...(await ensureManagedOpenAIModels(actor)),
     ...(await queryAccessibleCatalog(actor)),
-  ]
+  ].filter(
+    (model) =>
+      !(actor.authentication.kind === "loop" || actor.loopScope) ||
+      (model.locality === "server-capable" &&
+        model.executionKind === "forge-native")
+  )
 }
 
 export async function listModelsForRouting(
@@ -81,5 +89,10 @@ export async function listModelsForRouting(
   return [
     ...(await ensureManagedOpenAIModels(actor)),
     ...(await queryAccessibleCatalog(actor)),
-  ]
+  ].filter(
+    (model) =>
+      !(actor.authentication.kind === "loop" || actor.loopScope) ||
+      (model.locality === "server-capable" &&
+        model.executionKind === "forge-native")
+  )
 }

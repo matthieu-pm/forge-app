@@ -229,6 +229,8 @@ type CoordinatorDependencies = {
   controlPolicy?: AgentControlPolicy
   attachments?: Pick<AgentAttachmentService, "resolve">
   authorizeRun?: (actor: Actor) => Promise<void>
+  authorizeThread?: (actor: Actor, threadId: string) => Promise<void>
+  authorizeApproval?: (actor: Actor, approvalId: string) => Promise<void>
 }
 
 export class AgentCoordinator {
@@ -322,6 +324,7 @@ export class AgentCoordinator {
   }
 
   private async requireOwnedThread(actor: Actor, threadId: string) {
+    await this.dependencies.authorizeThread?.(actor, threadId)
     const thread = await this.dependencies.store.getThread(
       actor.workspaceId,
       threadId
@@ -406,6 +409,7 @@ export class AgentCoordinator {
         "The agent run was not found."
       )
     }
+    await this.requireOwnedThread(actor, run.threadId)
     return this.dependencies.eventStore.listRunEvents(runId, afterSequence)
   }
 
@@ -524,6 +528,7 @@ export class AgentCoordinator {
       executionKind: resolved.model.executionKind,
       requestedSelection: {
         mode: input.selectionMode,
+        ...(actor.loopScope ? { loopRunId: actor.loopScope.runId } : {}),
         selectionId: resolved.requestedSelection,
         provider: resolved.model.provider,
         billingMode: resolved.route.billingMode,
@@ -861,6 +866,7 @@ export class AgentCoordinator {
     decision: ApprovalDecision
   ): Promise<AgentRunSession> {
     requireAgentRun(actor)
+    await this.dependencies.authorizeApproval?.(actor, approvalId)
     if (!this.dependencies.approvals) {
       throw new AgentCoordinatorError(
         "RUNTIME_UNAVAILABLE",

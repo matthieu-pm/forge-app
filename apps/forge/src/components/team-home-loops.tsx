@@ -1,28 +1,24 @@
+"use client"
+
 import * as React from "react"
-import {
-  ArrowUp02Icon,
-  BubbleChatIcon,
-  Bug01Icon,
-  Calendar03Icon,
-  File01Icon,
-  InboxUnreadIcon,
-  MoreHorizontalIcon,
-  Shield01Icon,
-} from "@hugeicons/core-free-icons"
+import { toast } from "sonner"
+import { LoopConditionEditor, LoopTriggerEditor } from "./loop-configuration"
 import type { TeamSummary } from "@/lib/team-contract"
-import type { LoopDraft } from "@/lib/team-home-state"
-import { OptionSelect } from "@/components/ui/option-select"
+import type {
+  LoopCommand,
+  LoopFields,
+  LoopVersion,
+  SharedLoop,
+} from "@/lib/loop-contract"
+import { loopFieldsSchema, loopTriggerLabel } from "@/lib/loop-contract"
+import { useTeamLoops } from "@/lib/loop-client"
 import { useTeamHome } from "@/lib/team-home-state"
-import {
-  HomeIcon,
-  HomeIconButton,
-  TeamHomeLayout,
-  homePill,
-  homeSave,
-} from "@/components/team-home"
+import { onPreferenceSessionInvalidated } from "@/lib/preference-session-events"
+import { TeamHomeLayout } from "@/components/team-home"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { OptionSelect } from "@/components/ui/option-select"
 import {
   Dialog,
   DialogContent,
@@ -31,294 +27,923 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 
-"use client"
-
-export const loopTemplates = [
-  {
-    name: "Autofix bugs",
-    description:
-      "Investigates new bug reports and starts a coding session when it finds a clear fix.",
-    icon: Bug01Icon,
-    color: "text-cyan-500",
-    trigger: "Issue created",
-  },
-  {
-    name: "Triage agent",
-    description:
-      "Reviews incoming issues, adds context, and routes each one to the right owner.",
-    icon: InboxUnreadIcon,
-    color: "text-orange-500",
-    trigger: "Issue added to triage",
-  },
-  {
-    name: "Slack Q&A assistant",
-    description:
-      "Answers product questions from the team in a selected Slack channel.",
-    icon: BubbleChatIcon,
-    color: "text-indigo-400",
-    trigger: "Slack message",
-  },
-  {
-    name: "Weekly wrap",
-    description:
-      "Summarizes the week's accomplishments for a person or team and shares the highlights.",
-    icon: Calendar03Icon,
-    color: "text-muted-foreground",
-    trigger: "Weekly schedule",
-  },
-  {
-    name: "Feature request report",
-    description:
-      "Groups recent feature requests into a weekly report with themes and customer impact.",
-    icon: File01Icon,
-    color: "text-sky-400",
-    trigger: "Weekly schedule",
-  },
-  {
-    name: "Security alerts",
-    description:
-      "Alerts a Slack channel and sets an SLA whenever a security issue is reported.",
-    icon: Shield01Icon,
-    color: "text-red-400",
-    trigger: "Issue created",
-  },
-]
-export function TeamLoops({ team }: { team: TeamSummary }) {
-  const store = useTeamHome(team.id)
-  const [prompt, setPrompt] = React.useState("")
-  const [draft, setDraft] = React.useState<LoopDraft | null>(null)
-  const create = (name = "", description = "", trigger = "Manual") =>
-    setDraft({
-      id: crypto.randomUUID(),
-      name,
-      prompt: description,
-      trigger,
-      updatedAt: new Date().toISOString(),
-    })
+type Draft = { id: string; revision?: number; fields: LoopFields }
+function blankLoop(team?: TeamSummary): LoopFields {
+  return {
+    name: "",
+    description: "",
+    instructions: "",
+    trigger: { kind: "event", entity: "issue", event: "created" },
+    conditions: [],
+    reasoning: "auto",
+    teamAccess:
+      team?.visibility === "workspace" ? "all-public-teams" : "this-team",
+  }
+}
+function download(value: unknown, name: string) {
+  const url = URL.createObjectURL(
+      new Blob([JSON.stringify(value, null, 2)], { type: "application/json" })
+    ),
+    anchor = document.createElement("a")
+  anchor.href = url
+  anchor.download = name
+  anchor.click()
+  URL.revokeObjectURL(url)
+}
+const label = "block space-y-2 text-sm"
+const selectClass =
+  "h-9 w-full rounded-lg border border-input bg-background px-2 text-sm"
+const runStates: Record<string, string> = {
+  queued: "Queued",
+  running: "Running",
+  "waiting-for-approval": "Waiting for approval",
+  completed: "Completed",
+  failed: "Failed",
+  cancelled: "Cancelled",
+  blocked: "Access unavailable",
+  uncertain: "Needs review",
+}
+function runError(code: string) {
+  const messages: Record<string, string> = {
+    SOURCE_UNAVAILABLE:
+      "The source is no longer available with this Loop’s access.",
+    SOURCE_PURGED: "The source and its saved run content were removed.",
+    ACCESS_REVOKED: "This Loop no longer has access to its source.",
+    REVIEWER_ACCESS_REVOKED:
+      "The reviewer no longer has access. An authorized teammate can review this action.",
+    DISPATCH_REQUIRES_RECONCILIATION:
+      "The outcome could not be confirmed. Review the run before starting the work again.",
+    WORKER_LEASE_EXPIRED:
+      "The scheduler stopped before confirming the outcome. Review the run before starting again.",
+    EXECUTION_FAILED:
+      "The run could not finish. Check its configuration and try again.",
+    RUN_DEADLINE_EXCEEDED: "The run reached its time limit.",
+    RUN_WALL_CLOCK_LIMIT: "The run reached its four-minute time limit.",
+  }
   return (
-    <TeamHomeLayout team={team} tab="loops" store={store}>
+    messages[code] ??
+    "The run needs attention. Review its configuration and saved history."
+  )
+}
+
+export function TeamLoops({ team }: { team: TeamSummary }) {
+  const store = useTeamHome(team.id),
+    shared = useTeamLoops(team.id)
+  const [draft, setDraft] = React.useState<Draft | null>(null),
+    [saving, setSaving] = React.useState(false),
+    [validation, setValidation] = React.useState("")
+  const [conflict, setConflict] = React.useState<SharedLoop | null>(null),
+    [secret, setSecret] = React.useState<{ id: string; value: string } | null>(
+      null
+    )
+  const [manualRun, setManualRun] = React.useState<{
+    loop: SharedLoop
+    entityId: string
+  } | null>(null)
+  const [historyLoop, setHistoryLoop] = React.useState<SharedLoop | null>(null)
+  const [selectedVersion, setSelectedVersion] =
+    React.useState<LoopVersion | null>(null)
+  const available =
+    shared.ready && !shared.error && Boolean(shared.snapshot?.enabled)
+  const busy = saving || shared.pending.length > 0
+  React.useEffect(() => {
+    if (!shared.snapshot) setSecret(null)
+  }, [shared.snapshot])
+  React.useEffect(
+    () =>
+      onPreferenceSessionInvalidated(() => {
+        setDraft(null)
+        setHistoryLoop(null)
+        setManualRun(null)
+        setConflict(null)
+        setSecret(null)
+        setValidation("")
+      }),
+    []
+  )
+  function edit(loop?: SharedLoop) {
+    setValidation("")
+    setConflict(null)
+    setDraft(
+      loop
+        ? {
+            id: loop.id,
+            revision: loop.revision,
+            fields: {
+              name: loop.name,
+              description: loop.description,
+              instructions: loop.instructions,
+              trigger: loop.trigger,
+              conditions: loop.conditions,
+              reasoning: loop.reasoning,
+              teamAccess: loop.teamAccess,
+            },
+          }
+        : { id: crypto.randomUUID(), fields: blankLoop(team) }
+    )
+  }
+  async function perform(command: LoopCommand, close = false) {
+    if (saving) return
+    setSaving(true)
+    setValidation("")
+    try {
+      const result = await shared.command(command)
+      if (result.status === "rejected") {
+        setValidation(result.message)
+        return
+      }
+      if (result.status === "conflict") {
+        setConflict(result.current)
+        setValidation(
+          draft
+            ? "This Loop changed. Your draft is preserved. Review the latest version before saving."
+            : "This Loop changed. Review its latest configuration before continuing."
+        )
+        return
+      }
+      if (result.webhookSecret)
+        setSecret({ id: result.id, value: result.webhookSecret })
+      toast.success(
+        command.action === "create" || command.action === "save"
+          ? "Loop published"
+          : command.action === "run-now"
+            ? "Run queued"
+            : "Loop updated"
+      )
+      if (close) setDraft(null)
+    } catch (error) {
+      setValidation(
+        error instanceof Error
+          ? error.message
+          : "The outcome could not be confirmed. Retry the pending request."
+      )
+    } finally {
+      setSaving(false)
+    }
+  }
+  return (
+    <TeamHomeLayout
+      team={team}
+      tab="loops"
+      store={store}
+      actions={
+        <Button
+          variant="outline"
+          disabled={!available || busy}
+          onClick={() => edit()}
+        >
+          New loop
+        </Button>
+      }
+    >
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-[800px] px-6 pt-12 pb-16">
-          <h2 className="text-lg font-medium">Create a new loop</h2>
-          <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-muted-foreground">
-              Automate manual work for your team and keep your process moving
+        <div className="mx-auto max-w-[860px] space-y-6 px-6 py-10">
+          <div>
+            <h2 className="text-lg font-medium">Team Loops</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Run agent instructions on workspace events, a schedule, or an
+              authenticated webhook. Tool writes use Forge’s existing approval
+              flow.
             </p>
-            <Button
-              variant="secondary"
-              className={homePill}
-              disabled={!store.ready || !!store.error}
-              onClick={() => create()}
-            >
-              Start from scratch
-            </Button>
           </div>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              if (prompt.trim()) create("New loop", prompt)
-            }}
-            className="mt-8 rounded-xl bg-muted/40 p-3 shadow-[0_0_0_1px_var(--border)]"
-          >
-            <Textarea
-              aria-label="Loop prompt"
-              placeholder="Describe the loop you want to build…"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              maxLength={20000}
-              className="min-h-14 resize-none border-0 bg-transparent p-1 shadow-none focus-visible:ring-0 md:text-sm"
-            />
-            <div className="flex justify-end">
-              <HomeIconButton
-                type="submit"
-                label="Create loop from prompt"
-                icon={ArrowUp02Icon}
-                disabled={!prompt.trim() || !store.ready || !!store.error}
-                className="rounded-full bg-muted"
-              />
+          {shared.error && (
+            <div role="alert" className="space-y-2 text-sm text-destructive">
+              <p>{shared.error}</p>
+              <Button variant="outline" onClick={() => void shared.refresh()}>
+                Try again
+              </Button>
             </div>
-          </form>
-          <div className="my-8 flex items-center gap-3 text-xs text-muted-foreground">
-            <div className="h-px flex-1 bg-border/35" />
-            or pick a template
-            <div className="h-px flex-1 bg-border/35" />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {loopTemplates.map((template) => (
-              <button
-                key={template.name}
-                disabled={!store.ready || !!store.error}
-                onClick={() =>
-                  create(template.name, template.description, template.trigger)
-                }
-                className="rounded-xl bg-muted/30 p-3 text-left shadow-[0_0_0_1px_var(--border)] transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50"
+          )}
+          {shared.ready && shared.snapshot && !shared.snapshot.enabled && (
+            <p role="status" className="text-sm text-muted-foreground">
+              Loops are not enabled in this environment.
+            </p>
+          )}
+          {!shared.ready && (
+            <p role="status" className="text-sm text-muted-foreground">
+              Loading Loops…
+            </p>
+          )}
+          {validation && !draft && (
+            <p role="alert" className="text-sm text-destructive">
+              {validation}
+            </p>
+          )}
+          {available &&
+            shared.pending.map((pending) => (
+              <div
+                key={pending.key}
+                className="space-y-2 rounded-lg border border-border p-4"
               >
-                <HomeIcon icon={template.icon} className={template.color} />
-                <h3 className="mt-3 text-sm font-medium">{template.name}</h3>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  {template.description}
+                <p className="text-sm">
+                  A {pending.command.action} request needs confirmation. Retry
+                  the original request before making other changes.
                 </p>
-              </button>
-            ))}
-          </div>
-          {store.state.loops.length > 0 && (
-            <section className="mt-9">
-              <h2 className="mb-2 text-sm text-muted-foreground">
-                Loop drafts
-              </h2>
-              {store.state.loops.map((loop) => (
-                <div
-                  key={loop.id}
-                  className="flex items-center gap-3 border-b border-border/40 py-3"
-                >
-                  <button
-                    className="flex-1 text-left text-sm"
-                    onClick={() => setDraft(loop)}
-                  >
-                    {loop.name}
-                  </button>
-                  <span className="text-xs text-muted-foreground">
-                    Draft · On this device
-                  </span>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger
-                      render={
-                        <HomeIconButton
-                          label={`Actions for ${loop.name}`}
-                          icon={MoreHorizontalIcon}
-                        />
-                      }
-                    />
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setDraft(loop)}>
-                        Edit draft
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        variant="destructive"
-                        onClick={() =>
-                          homeSave(
-                            store,
-                            (s) => ({
-                              ...s,
-                              loops: s.loops.filter((l) => l.id !== loop.id),
-                            }),
-                            "Loop draft deleted"
+                <div className="flex gap-2">
+                  <Button
+                    disabled={saving}
+                    onClick={async () => {
+                      setSaving(true)
+                      try {
+                        const result = await shared.retry(pending)
+                        if (result.status === "rejected") {
+                          setValidation(result.message)
+                          return
+                        }
+                        if (result.status === "conflict") {
+                          setConflict(result.current)
+                          setValidation(
+                            "The pending request conflicts with the latest version. Review before trying another save."
                           )
+                        } else {
+                          if (result.webhookSecret)
+                            setSecret({
+                              id: result.id,
+                              value: result.webhookSecret,
+                            })
+                          toast.success("Request confirmed")
+                          if (draft?.id === result.id) setDraft(null)
+                        }
+                      } catch (error) {
+                        setValidation(
+                          error instanceof Error
+                            ? error.message
+                            : "Request is still unresolved."
+                        )
+                      } finally {
+                        setSaving(false)
+                      }
+                    }}
+                  >
+                    Retry pending request
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() =>
+                      download(pending, "forge-loop-pending-request.json")
+                    }
+                  >
+                    Download pending request
+                  </Button>
+                </div>
+              </div>
+            ))}
+          {available && secret && (
+            <div className="space-y-3 rounded-lg border border-border p-4">
+              <h3 className="font-medium">Webhook secret</h3>
+              <p className="text-sm text-muted-foreground">
+                Copy this secret now. It is shown only for this rotation.
+                Rotating again invalidates the previous secret.
+              </p>
+              <label className={label}>
+                Endpoint
+                <Input
+                  readOnly
+                  value={
+                    typeof window !== "undefined"
+                      ? `${window.location.origin}/api/loops/webhooks/${secret.id}`
+                      : ""
+                  }
+                />
+              </label>
+              <label className={label}>
+                Secret
+                <Input
+                  aria-label="Webhook secret"
+                  readOnly
+                  value={secret.value}
+                />
+              </label>
+              <Button variant="ghost" onClick={() => setSecret(null)}>
+                Dismiss secret
+              </Button>
+            </div>
+          )}
+          {available && (
+            <section aria-label="Saved team Loops" className="space-y-3">
+              {!shared.snapshot?.loops.length && (
+                <p className="text-sm text-muted-foreground">
+                  No shared Loops yet. Create one, review its configuration,
+                  then enable it.
+                </p>
+              )}
+              {shared.snapshot?.loops.map((loop) => (
+                <article
+                  key={loop.id}
+                  className="space-y-3 rounded-xl border border-border p-4"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="font-medium">{loop.name}</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {loop.description}
+                      </p>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        {loopTriggerLabel(loop.trigger)} ·{" "}
+                        {loop.enabled ? "Enabled" : "Paused"} · Revision{" "}
+                        {loop.revision}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      disabled={busy}
+                      onClick={() => edit(loop)}
+                    >
+                      Edit
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="ghost"
+                      disabled={busy}
+                      onClick={() => {
+                        setHistoryLoop(loop)
+                        setSelectedVersion(null)
+                      }}
+                    >
+                      Published versions
+                    </Button>
+                    <Button
+                      variant="outline"
+                      disabled={busy}
+                      onClick={() =>
+                        void perform({
+                          action: loop.enabled ? "disable" : "enable",
+                          id: loop.id,
+                          expectedRevision: loop.revision,
+                        })
+                      }
+                    >
+                      {loop.enabled ? "Disable" : "Enable"}
+                    </Button>
+                    {loop.enabled && loop.trigger.kind === "schedule" && (
+                      <Button
+                        variant="outline"
+                        disabled={busy}
+                        onClick={() =>
+                          void perform({
+                            action: "run-now",
+                            id: loop.id,
+                            expectedRevision: loop.revision,
+                          })
                         }
                       >
-                        Delete draft
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                        Run now
+                      </Button>
+                    )}
+                    {loop.enabled &&
+                      loop.trigger.kind === "event" &&
+                      !["comment", "update"].includes(loop.trigger.event) &&
+                      ["issue", "project", "initiative"].includes(
+                        loop.trigger.entity
+                      ) && (
+                        <Button
+                          variant="outline"
+                          disabled={busy}
+                          onClick={() => setManualRun({ loop, entityId: "" })}
+                        >
+                          Run now…
+                        </Button>
+                      )}
+                    {loop.trigger.kind === "webhook" && (
+                      <Button
+                        variant="outline"
+                        disabled={busy}
+                        onClick={() =>
+                          void perform({
+                            action: "rotate-webhook",
+                            id: loop.id,
+                            expectedRevision: loop.revision,
+                          })
+                        }
+                      >
+                        Rotate webhook secret
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      disabled={busy}
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            `Delete “${loop.name}”? Its saved configuration will no longer run.`
+                          )
+                        )
+                          void perform({
+                            action: "delete",
+                            id: loop.id,
+                            expectedRevision: loop.revision,
+                          })
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                </article>
+              ))}
+            </section>
+          )}
+          {available && (
+            <section aria-label="Loop run history">
+              <h3 className="mb-3 text-sm font-medium">Run history</h3>
+              {!shared.snapshot?.runs.length && (
+                <p className="text-sm text-muted-foreground">No runs yet.</p>
+              )}
+              <div className="space-y-3">
+                {shared.snapshot?.runs.map((run) => (
+                  <article
+                    key={run.id}
+                    className="rounded-lg border border-border p-3"
+                  >
+                    <div className="flex justify-between gap-3 text-sm">
+                      <span>
+                        {shared.snapshot?.loops.find(
+                          (loop) => loop.id === run.loopId
+                        )?.name ?? "Loop"}
+                      </span>
+                      <span>{runStates[run.state] ?? "Needs review"}</span>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {new Date(run.createdAt).toLocaleString()}
+                    </p>
+                    {run.errorCode && (
+                      <p className="mt-2 text-sm text-destructive">
+                        {runError(run.errorCode)}
+                      </p>
+                    )}
+                    {run.result && (
+                      <p className="mt-2 text-sm whitespace-pre-wrap">
+                        {run.result}
+                      </p>
+                    )}
+                    {(run.approvals ?? []).map((approval) => (
+                      <div
+                        key={approval.id}
+                        className="mt-3 space-y-2 rounded-lg bg-muted p-3"
+                      >
+                        <p className="text-sm">{approval.summary}</p>
+                        <div className="flex gap-2">
+                          {(["approve", "deny"] as const).map((action) => (
+                            <Button
+                              key={action}
+                              variant={
+                                action === "approve" ? "default" : "outline"
+                              }
+                              disabled={
+                                busy ||
+                                !shared.snapshot?.loops.some(
+                                  (loop) => loop.id === run.loopId
+                                )
+                              }
+                              onClick={() => {
+                                const loop = shared.snapshot?.loops.find(
+                                  (candidate) => candidate.id === run.loopId
+                                )
+                                if (loop)
+                                  void perform({
+                                    action,
+                                    id: loop.id,
+                                    expectedRevision: loop.revision,
+                                    runId: run.id,
+                                    approvalId: approval.id,
+                                    inputHash: approval.inputHash,
+                                  })
+                              }}
+                            >
+                              {action === "approve"
+                                ? "Approve action"
+                                : "Deny action"}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                    {["queued", "running", "waiting-for-approval"].includes(
+                      run.state
+                    ) && (
+                      <Button
+                        variant="ghost"
+                        className="mt-2"
+                        disabled={
+                          busy ||
+                          !shared.snapshot?.loops.some(
+                            (loop) => loop.id === run.loopId
+                          )
+                        }
+                        onClick={() => {
+                          const loop = shared.snapshot?.loops.find(
+                            (candidate) => candidate.id === run.loopId
+                          )
+                          if (loop)
+                            void perform({
+                              action: "cancel-run",
+                              id: loop.id,
+                              expectedRevision: loop.revision,
+                              runId: run.id,
+                            })
+                        }}
+                      >
+                        Cancel run
+                      </Button>
+                    )}
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
+          {available && store.state.loops.length > 0 && (
+            <section aria-label="Legacy Loop drafts">
+              <h3 className="text-sm font-medium">Preserved device drafts</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                These drafts never ran. Review a copy to create a shared Loop;
+                the original stays preserved.
+              </p>
+              {store.state.loops.map((legacy) => (
+                <div
+                  key={legacy.id}
+                  className="mt-3 flex items-center justify-between gap-3"
+                >
+                  <span className="text-sm">{legacy.name}</span>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      disabled={busy}
+                      onClick={() => {
+                        edit()
+                        setDraft({
+                          id: crypto.randomUUID(),
+                          fields: {
+                            ...blankLoop(team),
+                            name: legacy.name,
+                            instructions: legacy.prompt,
+                          },
+                        })
+                      }}
+                    >
+                      Review draft: {legacy.name}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={() =>
+                        download(legacy, "forge-loop-device-draft.json")
+                      }
+                    >
+                      Download draft
+                    </Button>
+                  </div>
                 </div>
               ))}
             </section>
           )}
+          <p className="text-xs text-muted-foreground">
+            Slack and GitHub triggers are unavailable until their Forge
+            integrations are implemented.
+          </p>
         </div>
       </div>
-      {draft && (
+      {historyLoop && available && (
         <Dialog
           open
           onOpenChange={(open) => {
-            if (!open) setDraft(null)
+            if (!open) {
+              setHistoryLoop(null)
+              setSelectedVersion(null)
+            }
           }}
         >
-          <DialogContent className="sm:max-w-[600px]">
+          <DialogContent className="max-h-[85svh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{draft.name || "New loop"}</DialogTitle>
+              <DialogTitle>Published versions · {historyLoop.name}</DialogTitle>
               <DialogDescription>
-                Configure a draft on this device. Running loops and connecting
-                triggers are not available yet.
+                Restoring publishes a new version and preserves the saved
+                history.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              {(shared.snapshot?.versions ?? [])
+                .filter((version) => version.loopId === historyLoop.id)
+                .map((version) => (
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between"
+                    key={version.revision}
+                    onClick={() => setSelectedVersion(version)}
+                  >
+                    <span>Version {version.revision}</span>
+                    <span>
+                      {new Date(version.publishedAt).toLocaleString()}
+                    </span>
+                  </Button>
+                ))}
+              {!(shared.snapshot?.versions ?? []).some(
+                (version) => version.loopId === historyLoop.id
+              ) && (
+                <p className="text-sm text-muted-foreground">
+                  No earlier published versions available.
+                </p>
+              )}
+            </div>
+            {selectedVersion && (
+              <div className="space-y-2 rounded-lg border border-border p-3">
+                <p className="font-medium">{selectedVersion.fields.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {loopTriggerLabel(selectedVersion.fields.trigger)}
+                </p>
+                <p className="text-sm whitespace-pre-wrap">
+                  {selectedVersion.fields.instructions}
+                </p>
+                <Button
+                  disabled={busy}
+                  onClick={() => {
+                    setDraft({
+                      id: historyLoop.id,
+                      revision: historyLoop.revision,
+                      fields: selectedVersion.fields,
+                    })
+                    setHistoryLoop(null)
+                    setSelectedVersion(null)
+                    setValidation("")
+                    setConflict(null)
+                  }}
+                >
+                  Review this version for restoration
+                </Button>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
+      {manualRun && available && (
+        <Dialog
+          open
+          onOpenChange={(open) => {
+            if (!open && !saving) setManualRun(null)
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Run {manualRun.loop.name}</DialogTitle>
+              <DialogDescription>
+                Select the work item to use as context for this run.
+              </DialogDescription>
+            </DialogHeader>
+            <OptionSelect
+              aria-label="Run context"
+              className={selectClass}
+              value={manualRun.entityId}
+              onValueChange={(entityId) =>
+                setManualRun({ ...manualRun, entityId })
+              }
+            >
+              <option value="">Choose an item…</option>
+              {(
+                shared.snapshot?.choices?.[
+                  manualRun.loop.trigger.kind === "event"
+                    ? manualRun.loop.trigger.entity
+                    : "issue"
+                ] ?? []
+              ).map((choice) => (
+                <option key={choice.id} value={choice.id}>
+                  {choice.name}
+                </option>
+              ))}
+            </OptionSelect>
+            <DialogFooter>
+              <Button
+                variant="ghost"
+                disabled={saving}
+                onClick={() => setManualRun(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                disabled={busy || !manualRun.entityId}
+                onClick={async () => {
+                  await perform({
+                    action: "run-now",
+                    id: manualRun.loop.id,
+                    expectedRevision: manualRun.loop.revision,
+                    entityId: manualRun.entityId,
+                  })
+                  setManualRun(null)
+                }}
+              >
+                Queue run
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+      {draft && available && (
+        <Dialog
+          open
+          onOpenChange={(open) => {
+            if (!open && !saving) setDraft(null)
+          }}
+        >
+          <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-[700px]">
+            <DialogHeader>
+              <DialogTitle>
+                {draft.revision === undefined ? "New loop" : "Edit loop"}
+              </DialogTitle>
+              <DialogDescription>
+                Publish a new version after reviewing its instructions and
+                access. Enabled Loops continue using the latest published
+                version.
               </DialogDescription>
             </DialogHeader>
             <form
               className="space-y-4"
-              onSubmit={(e) => {
-                e.preventDefault()
-                if (
-                  homeSave(
-                    store,
-                    (s) => ({
-                      ...s,
-                      loops: [
-                        ...s.loops.filter((l) => l.id !== draft.id),
-                        { ...draft, updatedAt: new Date().toISOString() },
-                      ],
-                    }),
-                    "Loop draft saved"
+              onSubmit={(event) => {
+                event.preventDefault()
+                const parsed = loopFieldsSchema.safeParse(draft.fields)
+                if (!parsed.success) {
+                  setValidation(
+                    parsed.error.issues.map((issue) => issue.message).join(" ")
                   )
-                ) {
-                  setDraft(null)
-                  setPrompt("")
+                  return
                 }
+                void perform(
+                  draft.revision === undefined
+                    ? { action: "create", id: draft.id, fields: parsed.data }
+                    : {
+                        action: "save",
+                        id: draft.id,
+                        expectedRevision: draft.revision,
+                        fields: parsed.data,
+                      },
+                  true
+                )
               }}
             >
-              <label className="block text-sm">
+              <label className={label}>
                 Name
                 <Input
-                  autoFocus
-                  required
                   aria-label="Loop name"
-                  maxLength={200}
-                  value={draft.name}
-                  onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-                  className="mt-2"
+                  required
+                  maxLength={64}
+                  value={draft.fields.name}
+                  onChange={(event) =>
+                    setDraft({
+                      ...draft,
+                      fields: { ...draft.fields, name: event.target.value },
+                    })
+                  }
                 />
               </label>
-              <label className="block text-sm">
-                Trigger
-                <OptionSelect
-                  aria-label="Loop trigger"
-                  value={draft.trigger}
-                  onValueChange={(nextValue) =>
-                    setDraft({ ...draft, trigger: nextValue })
+              <label className={label}>
+                Description
+                <Input
+                  aria-label="Loop description"
+                  maxLength={255}
+                  value={draft.fields.description}
+                  onChange={(event) =>
+                    setDraft({
+                      ...draft,
+                      fields: {
+                        ...draft.fields,
+                        description: event.target.value,
+                      },
+                    })
                   }
-                  className="mt-2 block h-9 w-full rounded-lg bg-muted px-2"
+                />
+              </label>
+              <label className={label}>
+                Team access
+                <OptionSelect
+                  aria-label="Loop team access"
+                  className={selectClass}
+                  value={draft.fields.teamAccess}
+                  onValueChange={(teamAccess) =>
+                    setDraft({
+                      ...draft,
+                      fields: {
+                        ...draft.fields,
+                        teamAccess: teamAccess as LoopFields["teamAccess"],
+                      },
+                    })
+                  }
                 >
-                  {[
-                    "Manual",
-                    "Issue created",
-                    "Issue added to triage",
-                    "Slack message",
-                    "Weekly schedule",
-                  ].map((value) => (
+                  <option value="this-team">This team</option>
+                  {team.visibility !== "private" && (
+                    <option value="all-public-teams">All public teams</option>
+                  )}
+                </OptionSelect>
+              </label>
+              <LoopTriggerEditor
+                value={draft.fields.trigger}
+                timeZone={team.timezone}
+                choices={shared.snapshot?.choices}
+                onChange={(trigger) =>
+                  setDraft({
+                    ...draft,
+                    fields: {
+                      ...draft.fields,
+                      trigger,
+                      conditions:
+                        trigger.kind === "event" ? draft.fields.conditions : [],
+                    },
+                  })
+                }
+              />
+              {draft.fields.trigger.kind === "event" && (
+                <fieldset className="space-y-2">
+                  <legend className="mb-2 text-sm font-medium">
+                    Conditions
+                  </legend>
+                  <LoopConditionEditor
+                    conditions={draft.fields.conditions}
+                    entity={draft.fields.trigger.entity}
+                    choices={shared.snapshot?.choices}
+                    onChange={(conditions) =>
+                      setDraft({
+                        ...draft,
+                        fields: { ...draft.fields, conditions },
+                      })
+                    }
+                  />
+                </fieldset>
+              )}
+              <label className={label}>
+                Instructions
+                <Textarea
+                  aria-label="Loop instructions"
+                  required
+                  maxLength={20000}
+                  className="min-h-40"
+                  value={draft.fields.instructions}
+                  onChange={(event) =>
+                    setDraft({
+                      ...draft,
+                      fields: {
+                        ...draft.fields,
+                        instructions: event.target.value,
+                      },
+                    })
+                  }
+                />
+              </label>
+              <label className={label}>
+                Reasoning
+                <OptionSelect
+                  aria-label="Loop reasoning"
+                  className={selectClass}
+                  value={draft.fields.reasoning}
+                  onValueChange={(reasoning) =>
+                    setDraft({
+                      ...draft,
+                      fields: {
+                        ...draft.fields,
+                        reasoning: reasoning as LoopFields["reasoning"],
+                      },
+                    })
+                  }
+                >
+                  {["auto", "low", "medium", "high"].map((value) => (
                     <option key={value}>{value}</option>
                   ))}
                 </OptionSelect>
               </label>
-              <label className="block text-sm">
-                Instructions
-                <Textarea
-                  aria-label="Loop instructions"
-                  value={draft.prompt}
-                  onChange={(e) =>
-                    setDraft({ ...draft, prompt: e.target.value })
-                  }
-                  maxLength={20000}
-                  className="mt-2 min-h-40"
-                />
-              </label>
+              {validation && (
+                <p role="alert" className="text-sm text-destructive">
+                  {validation}
+                </p>
+              )}
+              {conflict && (
+                <div className="space-y-2 rounded-lg border border-border p-3">
+                  <p className="text-sm">
+                    Latest saved revision {conflict.revision}: {conflict.name}
+                  </p>
+                  <p className="text-sm whitespace-pre-wrap text-muted-foreground">
+                    {conflict.instructions}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setDraft({ ...draft, revision: conflict.revision })
+                      setConflict(null)
+                      setValidation(
+                        "Latest revision reviewed. Your draft is retained; save when ready."
+                      )
+                    }}
+                  >
+                    Use latest revision with my draft
+                  </Button>
+                </div>
+              )}
               <DialogFooter>
                 <Button
                   type="button"
                   variant="ghost"
+                  disabled={saving}
                   onClick={() => setDraft(null)}
                 >
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={!draft.name.trim()}
-                  className="rounded-full bg-[#5E6AD2] text-white hover:bg-[#5360C8]"
-                >
-                  Save draft
+                <Button type="submit" disabled={busy}>
+                  Publish loop
                 </Button>
               </DialogFooter>
             </form>

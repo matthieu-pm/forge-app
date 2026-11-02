@@ -21,7 +21,15 @@ export type Actor = {
   authentication:
     | { kind: "session"; sessionId: string }
     | { kind: "apiKey"; credentialId: string }
+    | { kind: "loop"; loopId: string; runId: string }
     | { kind: "agent"; runId: string; tokenId: string }
+  loopScope?: {
+    loopId: string
+    runId: string
+    teamId: string
+    allPublic: boolean
+    cancelling?: boolean
+  }
   /** null means the first-party session is not credential-scope limited. */
   scopes: ReadonlyArray<ApiScope> | null
 }

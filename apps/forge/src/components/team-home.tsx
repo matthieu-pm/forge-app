@@ -4,19 +4,14 @@ import * as React from "react"
 import {
   Add01Icon,
   AirplayLineIcon,
-  ArrowDown01Icon,
   ArrowRight01Icon,
   ClipboardIcon,
   Clock05Icon,
   CubeIcon,
-  Delete02Icon,
-  File01Icon,
-  FolderAddIcon,
   InboxUnreadIcon,
   LayerIcon,
   Link01Icon,
   MoreHorizontalIcon,
-  PencilEdit01Icon,
   Settings02Icon,
   SlackIcon,
   StarIcon,
@@ -25,14 +20,14 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Link, useRouter } from "@tanstack/react-router"
 import { toast } from "sonner"
+import { TeamSharedResources } from "./team-shared-resources"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamMemberDirectory } from "@/lib/team-member-contract"
 import type { HomeStore, TeamResource } from "@/lib/team-home-state"
-import { useSharedDocuments } from "@/lib/shared-document-client"
 import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
 import { ContentHeader } from "@/components/ui/content-header"
 import { OptionSelect } from "@/components/ui/option-select"
-import { removeHomeSection, safeResourceUrl } from "@/lib/team-home-state"
+import { safeResourceUrl } from "@/lib/team-home-state"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { TeamIconPicker } from "@/components/team-icon-picker"
 import { Button, buttonSurface } from "@/components/ui/button"
@@ -87,8 +82,6 @@ export function HomeIcon({
 }
 const homeFocus =
   "outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-const revealAction =
-  "opacity-100 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 data-popup-open:opacity-100"
 const homeShortcut =
   "group -ml-2 inline-flex h-7 w-fit max-w-full items-center gap-2 rounded-full px-2 text-sm transition-colors duration-150 hover:bg-muted active:bg-muted/80 focus-visible:bg-muted motion-reduce:transition-none " +
   homeFocus
@@ -391,50 +384,12 @@ export function TeamOverview({
   store: HomeStore
 }) {
   const router = useRouter()
-  const sharedDocuments = useSharedDocuments({ kind: "team", id: team.id })
-  const displayedResources = [
-    ...store.state.resources.filter(
-      (r) =>
-        r.kind !== "document" ||
-        !sharedDocuments.documents.some((d) => d.id === r.id)
-    ),
-    ...sharedDocuments.documents.map((d) => ({
-      ...d,
-      kind: "document" as const,
-      owner: d.owner ?? undefined,
-    })),
-  ]
   const [name, setName] = React.useState(team.name)
   const [description, setDescription] = React.useState(team.description)
   const [saving, setSaving] = React.useState(false)
-  const [sectionName, setSectionName] = React.useState<string | null>(null)
-  const draggedSection = React.useRef<string | null>(null)
   const cancelledEdit = React.useRef(false)
-  const [renameId, setRenameId] = React.useState<string | null>(null)
-  const [editor, setEditor] = React.useState<TeamResource | null>(null)
   const triage = useTeamTriage(team.id)
   const cycles = useTeamCycles(team.id)
-  function openResource(resource: TeamResource) {
-    if (resource.kind === "link") setEditor(resource)
-    else
-      void router.navigate({
-        to: "/teams/$teamSlug/documents",
-        params: { teamSlug: team.slug },
-        search: { document: resource.id },
-      })
-  }
-  async function createDocument(sectionId: string | null) {
-    try {
-      const id = await sharedDocuments.create(sectionId)
-      void router.navigate({
-        to: "/teams/$teamSlug/documents",
-        params: { teamSlug: team.slug },
-        search: { document: id },
-      })
-    } catch {
-      toast.error("The document could not be created. Try again.")
-    }
-  }
   async function save(
     settings: Parameters<typeof updateTeam>[0]["data"]["settings"]
   ) {
@@ -452,151 +407,6 @@ export function TeamOverview({
     } finally {
       setSaving(false)
     }
-  }
-  function addMenu(sectionId: string | null = null, compact = false) {
-    return (
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            compact ? (
-              <HomeIconButton
-                label="Add resources"
-                icon={Add01Icon}
-                className={cn(homePill, "size-7 p-0")}
-                disabled={!store.ready || !!store.error}
-              />
-            ) : (
-              <Button
-                variant="ghost"
-                className={cn(
-                  homePill,
-                  "-ml-2 bg-transparent shadow-none transition-colors duration-150 data-popup-open:bg-muted motion-reduce:transition-none"
-                )}
-                disabled={!store.ready || !!store.error}
-              >
-                <HomeIcon icon={Add01Icon} className="size-3" />
-                Add resources
-              </Button>
-            )
-          }
-        />
-        <DropdownMenuContent className="w-44">
-          <DropdownMenuItem onClick={() => createDocument(sectionId)}>
-            <HomeIcon icon={File01Icon} />
-            New document
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => setEditor(newResource("link", sectionId))}
-          >
-            <HomeIcon icon={Link01Icon} />
-            New link…
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    )
-  }
-  function resources(sectionId: string | null) {
-    return displayedResources
-      .filter(
-        (r) =>
-          r.sectionId === sectionId ||
-          (sectionId === null &&
-            !store.state.sections.some((section) => section.id === r.sectionId))
-      )
-      .map((r) => (
-        <div
-          key={r.id}
-          className="group flex items-center gap-2 rounded-lg px-2 py-2 transition-colors duration-150 focus-within:bg-muted/40 hover:bg-muted/40 motion-reduce:transition-none"
-        >
-          <HomeIcon
-            icon={r.kind === "document" ? File01Icon : Link01Icon}
-            className="text-muted-foreground"
-          />
-          {r.kind === "link" && safeResourceUrl(r.content) ? (
-            <a
-              href={safeResourceUrl(r.content)!}
-              target="_blank"
-              rel="noreferrer"
-              className={cn(
-                "min-w-0 flex-1 truncate rounded-sm text-sm",
-                homeFocus
-              )}
-            >
-              {r.title}
-            </a>
-          ) : (
-            <button
-              className={cn(
-                "min-w-0 flex-1 truncate rounded-sm text-left text-sm",
-                homeFocus
-              )}
-              onClick={() => openResource(r)}
-            >
-              {r.title}
-            </button>
-          )}
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <HomeIconButton
-                  label={`Actions for ${r.title}`}
-                  icon={MoreHorizontalIcon}
-                  className={revealAction}
-                />
-              }
-            />
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => openResource(r)}>
-                Edit resource
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                variant="destructive"
-                disabled={
-                  r.kind === "document" &&
-                  !sharedDocuments.documents.find((d) => d.id === r.id)
-                    ?.canDelete
-                }
-                onClick={() =>
-                  r.kind === "document"
-                    ? void (async () => {
-                        const document = sharedDocuments.documents.find(
-                          (d) => d.id === r.id
-                        )
-                        if (
-                          !document ||
-                          !window.confirm(`Delete “${r.title}”?`)
-                        )
-                          return
-                        try {
-                          const result = await sharedDocuments.command({
-                            action: "delete",
-                            id: document.id,
-                            expectedRevision: document.revision,
-                          })
-                          if (result.status !== "saved")
-                            toast.error(
-                              "The document changed. Review the latest version."
-                            )
-                        } catch {
-                          toast.error("The document could not be deleted.")
-                        }
-                      })()
-                    : homeSave(
-                        store,
-                        (s) => ({
-                          ...s,
-                          resources: s.resources.filter((x) => x.id !== r.id),
-                        }),
-                        "Resource removed"
-                      )
-                }
-              >
-                Remove resource
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      ))
   }
   const goto = [
     {
@@ -719,233 +529,7 @@ export function TeamOverview({
             }}
             className="mt-4 -ml-1 w-full rounded-md bg-transparent px-1 py-1 text-sm text-muted-foreground transition-colors duration-150 outline-none placeholder:text-muted-foreground/50 hover:bg-muted/40 read-only:hover:bg-transparent focus-visible:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
           />
-          <div className="mt-9 flex items-center gap-2">
-            <h2 className="mr-auto text-lg font-medium">Team resources</h2>
-            {addMenu(null, true)}
-            <HomeIconButton
-              label="Add section"
-              icon={FolderAddIcon}
-              className={cn(homePill, "size-7 p-0")}
-              disabled={!store.ready || !!store.error}
-              onClick={() => {
-                setRenameId(null)
-                setSectionName("")
-              }}
-            />
-          </div>
-          {displayedResources.length === 0 &&
-            store.state.sections.length === 0 && (
-              <p className="mt-3 text-sm text-muted-foreground/60">
-                Add documents and links. Organize by creating sections.
-              </p>
-            )}
-          <div className="mt-4">{resources(null)}</div>
-          {store.state.sections.map((section) => (
-            <section
-              key={section.id}
-              className="group/section mt-5"
-              onDragOver={(e) => {
-                if (draggedSection.current) e.preventDefault()
-              }}
-              onDrop={(e) => {
-                e.preventDefault()
-                const from = draggedSection.current
-                draggedSection.current = null
-                if (!from || from === section.id) return
-                homeSave(store, (s) => {
-                  const moving = s.sections.find((x) => x.id === from)
-                  if (!moving) return s
-                  const sections = s.sections.filter((x) => x.id !== from)
-                  sections.splice(
-                    sections.findIndex((x) => x.id === section.id),
-                    0,
-                    moving
-                  )
-                  return { ...s, sections }
-                })
-              }}
-            >
-              <div
-                className="flex items-center gap-2"
-                draggable
-                onDragStart={(e) => {
-                  draggedSection.current = section.id
-                  e.dataTransfer.effectAllowed = "move"
-                  e.dataTransfer.setData("text/plain", section.id)
-                }}
-                onDragEnd={() => {
-                  draggedSection.current = null
-                }}
-              >
-                <button
-                  aria-expanded={!section.collapsed}
-                  onClick={() =>
-                    homeSave(store, (s) => ({
-                      ...s,
-                      sections: s.sections.map((x) =>
-                        x.id === section.id
-                          ? { ...x, collapsed: !x.collapsed }
-                          : x
-                      ),
-                    }))
-                  }
-                  className={cn(
-                    "-ml-2 flex h-7 items-center gap-1 rounded-full px-2 text-sm font-medium transition-colors duration-150 hover:bg-muted focus-visible:bg-muted motion-reduce:transition-none",
-                    homeFocus
-                  )}
-                >
-                  {section.name}
-                  <HomeIcon
-                    icon={ArrowDown01Icon}
-                    className={cn(
-                      "size-3 text-muted-foreground transition-transform duration-150 motion-reduce:transition-none",
-                      section.collapsed && "-rotate-90"
-                    )}
-                  />
-                </button>
-                <div className="h-px flex-1 bg-border/40" />
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={
-                      <HomeIconButton
-                        label={`Actions for ${section.name} section`}
-                        icon={MoreHorizontalIcon}
-                        className="text-muted-foreground opacity-100 group-focus-within/section:opacity-100 group-hover/section:opacity-100 data-popup-open:opacity-100 [@media(hover:hover)]:opacity-0"
-                      />
-                    }
-                  />
-                  <DropdownMenuContent>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        setRenameId(section.id)
-                        setSectionName(section.name)
-                      }}
-                    >
-                      <HomeIcon icon={PencilEdit01Icon} />
-                      Rename section
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() =>
-                        homeSave(store, (s) => {
-                          const i = s.sections.findIndex(
-                            (x) => x.id === section.id
-                          )
-                          if (i < 1) return s
-                          const sections = [...s.sections]
-                          ;[sections[i - 1], sections[i]] = [
-                            sections[i],
-                            sections[i - 1],
-                          ]
-                          return { ...s, sections }
-                        })
-                      }
-                    >
-                      Move up
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() =>
-                        homeSave(store, (s) => {
-                          const i = s.sections.findIndex(
-                            (x) => x.id === section.id
-                          )
-                          if (i < 0 || i >= s.sections.length - 1) return s
-                          const sections = [...s.sections]
-                          ;[sections[i], sections[i + 1]] = [
-                            sections[i + 1],
-                            sections[i],
-                          ]
-                          return { ...s, sections }
-                        })
-                      }
-                    >
-                      Move down
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      variant="destructive"
-                      onClick={() =>
-                        homeSave(
-                          store,
-                          (s) => removeHomeSection(s, section.id),
-                          "Section deleted. Resources kept."
-                        )
-                      }
-                    >
-                      <HomeIcon icon={Delete02Icon} />
-                      Delete section
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-              {!section.collapsed && (
-                <div className="mt-3 space-y-2">
-                  {resources(section.id)}
-                  {addMenu(section.id)}
-                </div>
-              )}
-            </section>
-          ))}
-          {sectionName !== null && (
-            <form
-              className="mt-5 flex items-center gap-2"
-              onSubmit={(e) => {
-                e.preventDefault()
-                if (!sectionName.trim()) return
-                if (
-                  homeSave(
-                    store,
-                    (s) => ({
-                      ...s,
-                      sections: renameId
-                        ? s.sections.map((x) =>
-                            x.id === renameId
-                              ? { ...x, name: sectionName.trim() }
-                              : x
-                          )
-                        : [
-                            ...s.sections,
-                            {
-                              id: crypto.randomUUID(),
-                              name: sectionName.trim(),
-                              collapsed: false,
-                            },
-                          ],
-                    }),
-                    renameId ? "Section renamed" : "Section created"
-                  )
-                )
-                  setSectionName(null)
-              }}
-            >
-              <Input
-                autoFocus
-                aria-label="Section name"
-                placeholder="Section name"
-                maxLength={80}
-                value={sectionName}
-                onChange={(e) => setSectionName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Escape") setSectionName(null)
-                }}
-                className="h-7 w-48"
-              />
-              <Button
-                type="submit"
-                variant="secondary"
-                size="sm"
-                disabled={!sectionName.trim()}
-              >
-                Save
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setSectionName(null)}
-              >
-                Cancel
-              </Button>
-            </form>
-          )}
+          <TeamSharedResources team={team} legacy={store} />
         </div>
         <aside className="-mx-3 px-3 pt-3 text-sm md:sticky md:top-7 md:max-h-[calc(100svh-160px)] md:self-start md:overflow-x-hidden md:overflow-y-auto md:overscroll-y-contain">
           <h2 className="text-muted-foreground">Members</h2>
@@ -1020,14 +604,6 @@ export function TeamOverview({
           </div>
         </aside>
       </div>
-      {editor && (
-        <ResourceEditor
-          key={editor.id}
-          resource={editor}
-          store={store}
-          onClose={() => setEditor(null)}
-        />
-      )}
     </div>
   )
 }

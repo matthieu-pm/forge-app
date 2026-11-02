@@ -14,6 +14,7 @@ import type { TeamSummary } from "@/lib/team-contract"
 import { retainedDocumentTitle } from "@/lib/document-copy-recovery"
 import { downloadDocumentDraft } from "@/lib/document-download"
 import { useSharedDocuments } from "@/lib/shared-document-client"
+import { useTeamResources } from "@/lib/team-resources-client"
 import {
   defaultDocumentIcon,
   documentTime,
@@ -54,6 +55,7 @@ export function TeamDocuments({
   onOpenDocument?: (id?: string) => void
 }) {
   const store = useTeamHome(team.id)
+  const resources = useTeamResources(team.id)
   const shared = useSharedDocuments({ kind: "team", id: team.id })
   const [saving, setSaving] = React.useState(false)
   const [localDocumentId, setLocalDocumentId] = React.useState<string>()
@@ -146,7 +148,11 @@ export function TeamDocuments({
           title: resource.title,
           body: teamDocumentBody(resource),
           icon: resource.icon ?? defaultDocumentIcon,
-          sectionId: resource.sectionId,
+          sectionId: resources.snapshot.sections.some(
+            (s) => s.id === resource.sectionId
+          )
+            ? resource.sectionId
+            : null,
         },
       })
       if (result.status === "saved") openDocument(resource.id)
@@ -175,7 +181,9 @@ export function TeamDocuments({
         key={active.id}
         resource={active}
         command={shared.command}
-        sections={store.state.sections}
+        sections={
+          resources.ready && !resources.error ? resources.snapshot.sections : []
+        }
         onBack={() => openDocument()}
       />
     )

@@ -1,3 +1,4 @@
+import type { Actor } from "@/application/actor"
 import type { AgentArtifactRecord } from "@/application/agents/artifact-contract"
 
 export type StoredAgentArtifactRecord = AgentArtifactRecord & {
@@ -16,7 +17,8 @@ export interface AgentArtifactMetadataStore {
   getAuthorized: (
     workspaceId: string,
     userId: string,
-    artifactId: string
+    artifactId: string,
+    actor?: Actor
   ) => Promise<StoredAgentArtifactRecord | null>
   listExpired: (
     before: Date,

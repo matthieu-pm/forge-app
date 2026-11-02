@@ -15,8 +15,215 @@ import {
   productState,
   resourceFiles,
 } from "@/db/planning-schema"
-import { commandOutboxEvents } from "@/db/schema"
+import {
+  agentApprovals,
+  agentArtifacts,
+  agentEvents,
+  agentRuns,
+  commandOutboxEvents,
+} from "@/db/schema"
+import { loopArtifactIntents, loopEvents, loopRuns } from "@/db/loops-schema"
+import { LOOP_ARTIFACT_INTENT_LEASE_MS } from "@/lib/loop-artifact-intent-policy"
 import { organizations } from "@/db/auth-schema"
+
+/** Source-bound copies are drained in bounded groups. The committed source
+ * purge marker plus SQL callback fences prevent a late worker from refilling
+ * a completed group. Every byte reference survives until its delete succeeds. */
+async function purgeLoopCopies(
+  database: Omit<typeof DefaultDatabase, "$client">,
+  target: { id: string; workspaceId: string },
+  blobs: Pick<FileBlobStore, "delete">
+) {
+  const source = and(
+    eq(loopRuns.workspaceId, target.workspaceId),
+    sql`${loopRuns.event}->>'entity'='issue' AND ${loopRuns.event}->>'entityId'=${target.id}`
+  )
+  const ownedRuns = database
+    .select({ id: loopRuns.agentRunId })
+    .from(loopRuns)
+    .where(source)
+  const ownedLoopRuns = database
+    .select({ id: loopRuns.id })
+    .from(loopRuns)
+    .where(source)
+  const rawEvents = await database
+    .select({ id: loopEvents.id })
+    .from(loopEvents)
+    .where(
+      and(
+        eq(loopEvents.workspaceId, target.workspaceId),
+        eq(loopEvents.entity, "issue"),
+        eq(loopEvents.entityId, target.id)
+      )
+    )
+    .orderBy(loopEvents.id)
+    .limit(100)
+  if (rawEvents.length)
+    await database.delete(loopEvents).where(
+      inArray(
+        loopEvents.id,
+        rawEvents.map((row) => row.id)
+      )
+    )
+  const dirtyRuns = await database
+    .select({ id: loopRuns.id })
+    .from(loopRuns)
+    .where(
+      and(
+        source,
+        sql`(${loopRuns.state}<>'cancelled' OR ${loopRuns.errorCode} IS DISTINCT FROM 'SOURCE_PURGED' OR ${loopRuns.result} IS NOT NULL OR ${loopRuns.pendingDecision} IS NOT NULL OR ${loopRuns.event}<>jsonb_build_object('entity','issue','entityId',${target.id}::text))`
+      )
+    )
+    .orderBy(loopRuns.id)
+    .limit(25)
+  if (dirtyRuns.length)
+    await database
+      .update(loopRuns)
+      .set({
+        state: "cancelled",
+        errorCode: "SOURCE_PURGED",
+        result: null,
+        pendingDecision: null,
+        event: { entity: "issue", entityId: target.id },
+        finishedAt: new Date(),
+        leaseAt: null,
+      })
+      .where(
+        inArray(
+          loopRuns.id,
+          dirtyRuns.map((row) => row.id)
+        )
+      )
+  const agents = await database
+    .select({ id: agentRuns.id })
+    .from(agentRuns)
+    .where(
+      and(
+        inArray(agentRuns.id, ownedRuns),
+        sql`(${agentRuns.state}<>'cancelled' OR ${agentRuns.errorCode} IS DISTINCT FROM 'SOURCE_PURGED')`
+      )
+    )
+    .orderBy(agentRuns.id)
+    .limit(100)
+  if (agents.length)
+    await database
+      .update(agentRuns)
+      .set({
+        state: "cancelled",
+        errorCode: "SOURCE_PURGED",
+        completedAt: new Date(),
+      })
+      .where(
+        inArray(
+          agentRuns.id,
+          agents.map((row) => row.id)
+        )
+      )
+  const payloads = await database
+    .select({ id: agentEvents.id })
+    .from(agentEvents)
+    .where(
+      and(
+        inArray(agentEvents.runId, ownedRuns),
+        sql`${agentEvents.payloadJson}<>'{}'::jsonb`
+      )
+    )
+    .orderBy(agentEvents.id)
+    .limit(100)
+  if (payloads.length)
+    await database
+      .update(agentEvents)
+      .set({ payloadJson: {} })
+      .where(
+        inArray(
+          agentEvents.id,
+          payloads.map((row) => row.id)
+        )
+      )
+  const approvals = await database
+    .select({ id: agentApprovals.id })
+    .from(agentApprovals)
+    .where(
+      and(
+        inArray(agentApprovals.runId, ownedRuns),
+        sql`(${agentApprovals.redactedInputSummary}<>'{}'::jsonb OR ${agentApprovals.state} IN ('pending','approved'))`
+      )
+    )
+    .orderBy(agentApprovals.id)
+    .limit(100)
+  if (approvals.length)
+    await database
+      .update(agentApprovals)
+      .set({
+        redactedInputSummary: {},
+        state: sql`CASE WHEN ${agentApprovals.state} IN ('pending','approved') THEN 'expired' ELSE ${agentApprovals.state} END`,
+        resolvedAt: sql`CASE WHEN ${agentApprovals.state} IN ('pending','approved') THEN coalesce(${agentApprovals.resolvedAt},clock_timestamp()) ELSE ${agentApprovals.resolvedAt} END`,
+      })
+      .where(
+        inArray(
+          agentApprovals.id,
+          approvals.map((row) => row.id)
+        )
+      )
+  const artifacts = await database
+    .select({
+      id: agentArtifacts.id,
+      reference: agentArtifacts.storageReference,
+    })
+    .from(agentArtifacts)
+    .where(inArray(agentArtifacts.runId, ownedRuns))
+    .orderBy(agentArtifacts.id)
+    .limit(100)
+  for (const row of artifacts) {
+    await blobs.delete(row.reference)
+    await database
+      .delete(agentArtifacts)
+      .where(
+        and(
+          eq(agentArtifacts.id, row.id),
+          inArray(agentArtifacts.runId, ownedRuns)
+        )
+      )
+  }
+  const reservations = await database
+    .select({
+      id: loopArtifactIntents.id,
+      reference: loopArtifactIntents.storageReference,
+      ready: sql<boolean>`${loopArtifactIntents.createdAt}+(${LOOP_ARTIFACT_INTENT_LEASE_MS} * interval '1 millisecond')<=clock_timestamp()`,
+    })
+    .from(loopArtifactIntents)
+    .where(
+      and(
+        eq(loopArtifactIntents.workspaceId, target.workspaceId),
+        inArray(loopArtifactIntents.loopRunId, ownedLoopRuns)
+      )
+    )
+    .orderBy(loopArtifactIntents.createdAt, loopArtifactIntents.id)
+    .limit(100)
+  for (const row of reservations) {
+    if (!row.ready) continue
+    await blobs.delete(row.reference)
+    await database
+      .delete(loopArtifactIntents)
+      .where(
+        and(
+          eq(loopArtifactIntents.id, row.id),
+          eq(loopArtifactIntents.storageReference, row.reference)
+        )
+      )
+  }
+  return {
+    pending:
+      rawEvents.length === 100 ||
+      artifacts.length === 100 ||
+      reservations.length === 100 ||
+      reservations.some((row) => !row.ready) ||
+      dirtyRuns.length === 25 ||
+      agents.length === 100 ||
+      payloads.length === 100 ||
+      approvals.length === 100,
+  }
+}
 
 /** Bounded, leased SQL checkpoints surround idempotent byte deletes. Restore
  * closes at the deadline, independently of worker availability. A failure keeps
@@ -129,6 +336,7 @@ export async function purgeDeletedIssues(
           .delete(fileUploadIntents)
           .where(eq(fileUploadIntents.id, intent.id))
       }
+      const loopCopies = await purgeLoopCopies(database, target, blobs)
       const completed = await database.transaction(async (tx) => {
         await tx
           .select({ id: organizations.id })
@@ -150,7 +358,11 @@ export async function purgeDeletedIssues(
         ).at(0)
         if (!row) return
         // A large resource is drained across batches without dropping its owner.
-        if (files.length === 100 || intents.length === 100) {
+        if (
+          files.length === 100 ||
+          intents.length === 100 ||
+          loopCopies.pending
+        ) {
           await tx
             .update(issues)
             .set({ purgeLeaseUntil: null, purgeToken: null })

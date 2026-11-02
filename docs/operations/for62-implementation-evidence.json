@@ -1,0 +1,93 @@
+{
+  "issue": "FOR-62",
+  "date": "2026-11-02",
+  "sourceCommit": "84dd7e52b7e743a0db63d52ddf0d818f695d3fb5",
+  "baseCommit": "b23a9d6a23c1fcb67c2bf6a3b0926ef9087b6438",
+  "scope": "Implementation acceptance for PR review; no production deployment",
+  "environment": {
+    "web": "http://localhost:3162",
+    "database": "forge_resources_loops_acceptance",
+    "neonBranch": "br-autumn-union-za0opf1e",
+    "applicationRole": "forge_staging_web",
+    "runtime": "Real production coordinator with FakeAgentRuntime for orchestration acceptance",
+    "liveProviderCalls": false
+  },
+  "checks": {
+    "workspaceTests": {
+      "command": "bun run test",
+      "passed": true,
+      "application": 2555,
+      "workflow": 4,
+      "agentRuntime": 37,
+      "applicationSkipped": 570,
+      "skipReason": "Opt-in external database suites and pre-existing gated acceptance suites; FOR-62 database tests executed separately below"
+    },
+    "postgres": {
+      "command": "FORGE_LOOP_TEST_DATABASE_FILE=<private-file> FORGE_RESOURCE_TEST_DATABASE_FILE=<private-file> bun run test:loops:postgres",
+      "passed": true,
+      "loops": 35,
+      "resourcesAndRetention": 13,
+      "authority": "Application operations use ordinary application login; verified owner login is used only for isolated fixture setup/inspection/cleanup",
+      "coverage": [
+        "canonical resources, ordering, URL validation, document membership and revision-safe exact retries",
+        "native committed producers, matching, rollback, deduplicated fanout and recursion suppression",
+        "timezone schedules, cycle boundaries and catch-up",
+        "webhook authentication, payload/event identity, rotation, size/media and external-source revocation",
+        "live workspace management restrictions, guest policy and reviewer revocation",
+        "workspace-only model access and dedicated service identity without personal chats, login or membership",
+        "real coordinator completion, exact shared approval attribution and source authorization",
+        "pending cancellation callback denial, disabled cancellation, head-of-line avoidance and uncertain-run fencing",
+        "bounded issue purge, late callback fences, durable upload reservations and publication/compensation races",
+        "automatic reserved service-principal cleanup"
+      ]
+    },
+    "browser": {
+      "passed": true,
+      "resourceChecks": 11,
+      "loopChecks": 12,
+      "sessions": "Two independent authenticated browser contexts; ordinary member and administrator",
+      "viewports": ["1280x900", "390x844"],
+      "sourceIdentity": "Executed the stable implementation working tree later committed as sourceCommit; harness stdout records the then-current baseCommit. No product source changed between these browser runs and sourceCommit.",
+      "artifacts": "../qa/for62/",
+      "liveProviderCalls": false
+    },
+    "workspaceTypecheck": { "command": "bun run typecheck", "passed": true },
+    "workspaceBuild": {
+      "command": "bun run build",
+      "passed": true,
+      "protectedWorkflowHandlersVerified": true,
+      "enabledLoopCronArtifact": { "path": "/api/internal/loops", "schedule": "* * * * *" }
+    },
+    "changedSourceLint": { "files": 66, "errors": 0, "warnings": 83 },
+    "schema": {
+      "migrations": ["0067_team_resources_and_loops", "0068_loop_lifecycle_fencing", "0069_loop_artifact_intents"],
+      "replayApplied": 0,
+      "totalReceipts": 70,
+      "drizzleSchemaDrift": false
+    },
+    "workerCli": {
+      "command": "bun run loops:dispatch",
+      "passed": true,
+      "enabled": { "events": 0, "scheduled": 0, "executed": 0 },
+      "disabled": { "events": 0, "scheduled": 0, "executed": 0 },
+      "note": "Root Turbo entry point verified enabled; app entry point also verified with product gate disabled. Real fixture execution is covered by the native suite."
+    },
+    "cleanup": {
+      "workspaces": 0,
+      "users": 0,
+      "loops": 0,
+      "runs": 0,
+      "events": 0,
+      "commandReceipts": 0,
+      "uploadIntents": 0,
+      "localAcceptanceServerStopped": true
+    }
+  },
+  "releaseBoundaries": [
+    "Production migrations, application deployment, dedicated worker hosting and gated live-provider acceptance remain release operations.",
+    "Both product gates remain off by default in production.",
+    "Slack, GitHub, external MCP connectors and native models absent from Forge remain unavailable.",
+    "Execution uses existing registered Forge capabilities; this change does not introduce undeclared issue/project/document tool adapters.",
+    "Packaged macOS and live provider behavior are not certified by these checks."
+  ]
+}

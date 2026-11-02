@@ -67,6 +67,31 @@ function publicRecord(record: StoredAgentArtifactRecord): AgentArtifactRecord {
   return artifact
 }
 
+export type AgentArtifactPublication = {
+  reserve: (actor: Actor, record: StoredAgentArtifactRecord) => Promise<void>
+  publish: (
+    actor: Actor,
+    record: StoredAgentArtifactRecord
+  ) => Promise<StoredAgentArtifactRecord>
+  recoverPublished: (
+    actor: Actor,
+    record: StoredAgentArtifactRecord
+  ) => Promise<StoredAgentArtifactRecord | null>
+  abandon: (
+    actor: Actor,
+    record: Pick<StoredAgentArtifactRecord, "id" | "runId" | "storageReference">
+  ) => Promise<void>
+  sweepExpired: (
+    before: Date,
+    limit: number,
+    blobs: Pick<AgentArtifactBlobStore, "delete">
+  ) => Promise<{
+    examined: number
+    deleted: number
+    failures: Array<{ artifactId: string; message: string }>
+  }>
+}
+
 export class AgentArtifactService {
   readonly #id: () => string
   readonly #now: () => Date
@@ -74,6 +99,7 @@ export class AgentArtifactService {
   constructor(
     private readonly dependencies: {
       authorizeActor?: (actor: Actor) => Promise<Actor>
+      publication?: AgentArtifactPublication
       metadata: AgentArtifactMetadataStore
       blobs: AgentArtifactBlobStore
       agents: AgentStore
@@ -145,13 +171,51 @@ export class AgentArtifactService {
       createdAt: now,
     }
 
-    await this.dependencies.blobs.put(storageReference, bytes)
     let created: StoredAgentArtifactRecord
-    try {
-      created = await this.dependencies.metadata.create(record)
-    } catch (error) {
-      await this.dependencies.blobs.delete(storageReference).catch(() => {})
-      throw error
+    if (actor.loopScope) {
+      const publication = this.dependencies.publication
+      if (!publication)
+        throw new AgentArtifactError(
+          "ARTIFACT_NOT_FOUND",
+          "Loop artifact publication is unavailable."
+        )
+      try {
+        // Commit byte ownership before network I/O. A crashed upload leaves a
+        // durable cleanup reference rather than an unowned private object.
+        await publication.reserve(actor, record)
+        await this.dependencies.blobs.put(storageReference, bytes, {
+          signal: AbortSignal.timeout(60_000),
+        })
+        created = await publication.publish(actor, record)
+      } catch (error) {
+        let recovered: StoredAgentArtifactRecord | null
+        try {
+          recovered = await publication.recoverPublished(actor, record)
+        } catch {
+          throw error
+        }
+        if (recovered) {
+          // A lost commit response is confirmed without deleting published bytes.
+          await this.dependencies.authorizeActor?.(actor)
+          created = recovered
+        } else {
+          try {
+            await this.dependencies.blobs.delete(storageReference)
+            await publication.abandon(actor, record)
+          } catch {
+            /* Keep the durable reference until byte deletion succeeds. */
+          }
+          throw error
+        }
+      }
+    } else {
+      await this.dependencies.blobs.put(storageReference, bytes)
+      try {
+        created = await this.dependencies.metadata.create(record)
+      } catch (error) {
+        await this.dependencies.blobs.delete(storageReference).catch(() => {})
+        throw error
+      }
     }
     await this.dependencies.events.append({
       threadId: run.threadId,
@@ -172,7 +236,8 @@ export class AgentArtifactService {
     const record = await this.dependencies.metadata.getAuthorized(
       actor.workspaceId,
       actor.userId,
-      artifactId
+      artifactId,
+      actor
     )
     if (
       !record ||
@@ -203,7 +268,8 @@ export class AgentArtifactService {
     const record = await this.dependencies.metadata.getAuthorized(
       actor.workspaceId,
       actor.userId,
-      artifactId
+      artifactId,
+      actor
     )
     if (
       !record ||
@@ -245,8 +311,15 @@ export class AgentArtifactService {
       before,
       boundedLimit
     )
-    const failures: Array<{ artifactId: string; message: string }> = []
-    let deleted = 0
+    const reservations = (await this.dependencies.publication?.sweepExpired(
+      before,
+      boundedLimit,
+      this.dependencies.blobs
+    )) ?? { examined: 0, deleted: 0, failures: [] }
+    const failures: Array<{ artifactId: string; message: string }> = [
+      ...reservations.failures,
+    ]
+    let deleted = reservations.deleted
     for (const artifact of expired) {
       try {
         await this.dependencies.blobs.delete(artifact.storageReference)
@@ -265,6 +338,10 @@ export class AgentArtifactService {
         })
       }
     }
-    return { examined: expired.length, deleted, failures }
+    return {
+      examined: expired.length + reservations.examined,
+      deleted,
+      failures,
+    }
   }
 }

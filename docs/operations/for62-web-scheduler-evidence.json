@@ -1,0 +1,56 @@
+{
+  "issue": "FOR-62",
+  "date": "2026-11-02",
+  "sourceCommit": "d1324bb6f1ae17a0e68a0cdcc91810fea1ca0577",
+  "supersedes": "The dedicated-worker execution/deployment contract in for62-implementation-evidence.json; other initial feature evidence remains historical and applicable where unchanged.",
+  "acceptedDecisions": {
+    "execution": "Authenticated web scheduler; four-minute original execution deadline including approval waits/reconnects",
+    "management": "Members with team access, subject to existing workspace restrictions"
+  },
+  "environment": {
+    "web": "http://localhost:3162",
+    "database": "forge_resources_loops_acceptance",
+    "neonBranch": "br-autumn-union-za0opf1e",
+    "applicationRole": "forge_staging_web",
+    "runtime": "Real production coordinator with FakeAgentRuntime for HTTP/database execution acceptance",
+    "liveProviderCalls": false
+  },
+  "checks": {
+    "workspaceTests": { "passed": true, "application": 2560, "workflow": 4, "runtime": 37, "applicationSkipped": 571 },
+    "deadlineAndSchedulerUnitChecks": {
+      "passed": true,
+      "newChecks": 5,
+      "plusExistingLoopUiChecks": 8,
+      "coverage": ["Unauthenticated scheduler calls cannot dispatch", "Authenticated calls await one execution", "Hung executors settle as uncertain within the request budget", "Confirmed outcomes and failures clear their deadline timers", "Configured runtime/setup/grace budgets fit the function duration"]
+    },
+    "postgres": {
+      "passed": true,
+      "loops": 36,
+      "resourcesAndRetention": 13,
+      "latestTargetedChecks": 2,
+      "newCoverage": ["Signed model callbacks stop after the original four-minute deadline", "Expired approval waits cannot reset the deadline", "Cancellation can still complete after expiry and disablement", "Late scheduler setup defers execution", "Dead five-minute invocation leases become uncertain without replay", "Uncertain execution fences use the bounded claim window"]
+    },
+    "loopBrowser": {
+      "passed": true,
+      "checks": 13,
+      "newCoverage": "HTTP webhook receipt -> authenticated GET /api/internal/loops -> real coordinator -> confirmed Done result in canonical database and second browser session",
+      "sourceIdentity": "Executed stable working-tree product code later committed as sourceCommit; runner stdout records previous head f16ca6d. Final edits after the run were import sorting and evidence artifacts only.",
+      "artifacts": "../qa/for62/",
+      "unchangedResourceBrowserEvidence": "11 prior checks retained in for62-implementation-evidence.json"
+    },
+    "workspaceTypecheck": { "passed": true },
+    "vercelPresetBuild": {
+      "passed": true,
+      "fakeRuntimeEnabledInBuild": false,
+      "protectedWorkflowHandlersVerified": true,
+      "functionConfig": "apps/forge/.vercel/output/functions/api/internal/loops.func/.vc-config.json",
+      "maxDurationSeconds": 300,
+      "route": "/api/internal/loops",
+      "cron": "* * * * *"
+    },
+    "changedSourceLint": { "errors": 0, "warnings": 22 },
+    "schema": { "changesRequiredByThisFollowup": false, "existingMigrationReceipts": 70 },
+    "cleanup": { "workspaces": 0, "users": 0, "loops": 0, "runs": 0, "events": 0, "commandReceipts": 0, "uploadIntents": 0, "localServerStopped": true }
+  },
+  "releaseBoundary": "No production migration or deployment performed. Apply migrations0067–0069 before enabling; deploy gated web/runtime configuration, verify Cron and its function duration, then qualify a live provider run. A separate worker host/readiness flag is no longer required."
+}

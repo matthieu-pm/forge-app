@@ -25,10 +25,18 @@ export class LocalFileBlobStore implements FileBlobStore {
     return target
   }
 
-  async put(reference: string, content: Uint8Array) {
+  async put(
+    reference: string,
+    content: Uint8Array,
+    options?: { signal?: AbortSignal }
+  ) {
     const target = this.#path(reference)
     await mkdir(resolve(target, ".."), { recursive: true, mode: 0o700 })
-    await writeFile(target, content, { mode: 0o600, flag: "wx" })
+    await writeFile(target, content, {
+      mode: 0o600,
+      flag: "wx",
+      signal: options?.signal,
+    })
   }
 
   async get(

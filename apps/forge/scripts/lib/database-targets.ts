@@ -58,6 +58,16 @@ export const DATABASE_TARGETS = {
     host: "ep-crimson-math-zap8ynn1.c-2.eu-west-2.aws.neon.tech",
     database: "neondb",
   },
+  "resource-loop-acceptance": {
+    ...STAGING.database,
+    database: "forge_resources_loops_acceptance",
+  },
+  // FOR-62 production clone; expires 3 November 2026 18:37 UTC.
+  "resource-loop-rehearsal": {
+    branchId: "br-red-block-zagcra0k",
+    host: "ep-super-moon-zacjdttg.c-2.eu-west-2.aws.neon.tech",
+    database: "neondb",
+  },
   "document-acceptance": {
     ...STAGING.database,
     database: "forge_documents_acceptance_v3",

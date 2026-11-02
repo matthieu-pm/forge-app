@@ -1402,7 +1402,7 @@ describe.skipIf(!file)("FOR-41 real PostgreSQL acceptance", () => {
             "UPDATE agent_runs SET state='cancelled' WHERE id=$1",
             [actor.authentication.runId]
           )
-        else
+        else if (actor.authentication.kind === "session")
           await pool.query("DELETE FROM session WHERE id=$1", [
             actor.authentication.sessionId,
           ])
