@@ -1,11 +1,7 @@
 import "@tanstack/react-start/server-only"
 import { and, asc, count, eq, gt, ilike, inArray, or, sql } from "drizzle-orm"
 import { z } from "zod"
-import {
-  ApplicationAccessError,
-  hasScope,
-  hasWorkspaceRole,
-} from "../authorization"
+import { ApplicationAccessError, hasScope } from "../authorization"
 import {
   currentMemberCondition,
   readableDocumentCondition,
@@ -305,23 +301,21 @@ export async function shareDocumentWithWorkspace(
   contract(actor, "document")
   z.string().uuid().parse(id)
   z.boolean().parse(shared)
-  return db.transaction(async (tx) => {
-    actor = await requireCurrentActor(actor, tx)
-    if (!hasWorkspaceRole(actor, ["owner", "admin"]))
-      throw new ApplicationAccessError()
-    const [row] = await tx
-      .update(documents)
-      .set({ sharedWithWorkspace: shared })
-      .where(
-        and(
-          eq(documents.id, id),
-          readableDocumentCondition(actor, documents.id),
-          // Recheck role in the actual UPDATE as well as before it.
-          sql`EXISTS (SELECT 1 FROM member m WHERE m.organization_id = ${actor.workspaceId} AND m.user_id = ${actor.userId} AND string_to_array(replace(m.role, ' ', ''), ',') && ARRAY['owner','admin']::text[])`
-        )
-      )
-      .returning({ id: documents.id })
-    if (!row) throw new ApplicationAccessError()
-    return row
+  const [{ randomUUID }, { readDocuments, commandDocument }] =
+    await Promise.all([
+      import("node:crypto"),
+      import("../documents/documents.server"),
+    ])
+  const [current] = await readDocuments(actor, { id })
+  const result = await commandDocument(actor, randomUUID(), {
+    action: "share",
+    id,
+    expectedRevision: current.revision,
+    shared,
   })
+  if (result.status !== "saved")
+    throw new Error(
+      "The document changed. Review the latest revision before changing sharing."
+    )
+  return { id: result.id }
 }

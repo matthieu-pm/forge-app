@@ -14,7 +14,13 @@ import type { TeamSummary } from "@/lib/team-contract"
 import { productStorage } from "@/lib/product-storage"
 import { updateTeam } from "@/lib/team-state"
 import { emptyTeamHome, teamHomeKey } from "@/lib/team-home-state"
-import { newTeamDocument } from "@/lib/team-documents"
+import { documentFixture } from "@/test/document-fixture"
+import { emptyDocumentBody } from "@/lib/document-contract"
+
+vi.mock(
+  "@/lib/shared-document-client",
+  async () => await import("@/test/document-fixture")
+)
 
 vi.mock("@tanstack/react-router", () => ({
   useRouter: () => ({ navigate: vi.fn(), invalidate: vi.fn() }),
@@ -94,6 +100,8 @@ const team: TeamSummary = {
 }
 beforeEach(() => {
   productStorage.clear()
+  localStorage.clear()
+  documentFixture.reset()
   vi.stubGlobal(
     "ResizeObserver",
     class {
@@ -153,97 +161,91 @@ describe("team home workflows", () => {
     fireEvent.click(screen.getByRole("menuitem", { name: "New link…" }))
     expect(screen.getByRole("dialog")).toBeTruthy()
   })
-  it("creates and reopens a document with its contents", async () => {
+  it("creates a confirmed shared document and reopens the saved content", async () => {
     render(<TeamDocuments team={team} />)
-    await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: "Create document" })
-      ).toBeTruthy()
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Create document" })
     )
-    fireEvent.click(screen.getByRole("button", { name: "Create document" }))
-    expect(screen.queryByRole("dialog")).toBeNull()
-    expect(screen.queryByRole("button", { name: "Save document" })).toBeNull()
-    fireEvent.change(screen.getByLabelText("Document title"), {
+    fireEvent.change(await screen.findByLabelText("Document title"), {
       target: { value: "Decision log" },
     })
     fireEvent.change(screen.getByLabelText("Document content"), {
       target: { value: "Keep the existing shell." },
     })
-    fireEvent.click(screen.getByRole("button", { name: "Documents" }))
-    await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Decision log" })).toBeTruthy()
+    await waitFor(
+      () => expect(documentFixture.rows()[0].title).toBe("Decision log"),
+      { timeout: 3000 }
     )
-    fireEvent.click(screen.getByRole("button", { name: "Decision log" }))
+    expect(documentFixture.rows()[0].content).toBe("Keep the existing shell.")
+    fireEvent.click(screen.getByRole("button", { name: "Documents" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Decision log" }))
     expect(
-      screen.getByLabelText<HTMLTextAreaElement>("Document content").value
+      (await screen.findByLabelText<HTMLTextAreaElement>("Document content"))
+        .value
     ).toBe("Keep the existing shell.")
-    expect(
-      JSON.parse(productStorage.getItem(teamHomeKey(team.id))!).resources[0]
-        .title
-    ).toBe("Decision log")
-    expect(
-      JSON.parse(productStorage.getItem(teamHomeKey(team.id))!).resources[0]
-        .owner.name
-    ).toBe("Matthieu")
+    expect(documentFixture.rows()[0].owner?.name).toBe("Matthieu")
+    expect(documentFixture.command).toHaveBeenLastCalledWith(
+      expect.objectContaining({ action: "save", expectedRevision: 1 }),
+      expect.any(String)
+    )
   })
-  it("retains failed autosaves, blocks returning to the list, and retries without losing content", () => {
-    const resource = {
-      ...newTeamDocument(),
-      title: "Saved plan",
-      content: "Original notes",
-    }
-    productStorage.setItem(
-      teamHomeKey(team.id),
-      JSON.stringify({ ...emptyTeamHome(), resources: [resource] })
+  it("retains failed server saves and retries the preserved draft", async () => {
+    documentFixture.seed(
+      { kind: "team", id: team.id },
+      {
+        title: "Saved plan",
+        body: {
+          type: "doc",
+          content: [
+            {
+              type: "paragraph",
+              content: [{ type: "text", text: "Original notes" }],
+            },
+          ],
+        },
+      }
     )
     render(<TeamDocuments team={team} />)
     fireEvent.click(screen.getByRole("button", { name: "Saved plan" }))
-    const write = vi.spyOn(productStorage, "setItem").mockImplementation(() => {
-      throw new Error("Storage full")
-    })
+    await screen.findByLabelText("Document title")
+    documentFixture.failNext()
     fireEvent.change(screen.getByLabelText("Document title"), {
       target: { value: "Unsaved plan" },
     })
-    expect(screen.getByRole("alert").textContent).toContain(
-      "could not be saved"
-    )
+    await screen.findByRole("alert", {}, { timeout: 3000 })
+    expect(documentFixture.rows()[0].title).toBe("Saved plan")
     fireEvent.click(screen.getByRole("button", { name: "Documents" }))
     expect(
       screen.getByLabelText<HTMLInputElement>("Document title").value
     ).toBe("Unsaved plan")
-    expect(
-      JSON.parse(productStorage.getItem(teamHomeKey(team.id))!).resources[0]
-        .title
-    ).toBe("Saved plan")
-    write.mockRestore()
     fireEvent.click(screen.getByRole("button", { name: "Try again" }))
-    expect(screen.queryByRole("alert")).toBeNull()
-    expect(
-      JSON.parse(productStorage.getItem(teamHomeKey(team.id))!).resources[0]
-        .title
-    ).toBe("Unsaved plan")
+    await waitFor(() =>
+      expect(documentFixture.rows()[0].title).toBe("Unsaved plan")
+    )
     expect(
       screen.getByLabelText<HTMLTextAreaElement>("Document content").value
     ).toBe("Original notes")
   })
-  it("orders documents by creation date and collapses the document group without altering saved content", () => {
-    const first = {
-      ...newTeamDocument(),
-      id: "first",
-      title: "A notes",
-      createdAt: "2026-10-01T12:00:00Z",
-    }
-    const second = {
-      ...newTeamDocument(),
-      id: "second",
-      title: "B notes",
-      createdAt: "2026-10-20T12:00:00Z",
-    }
-    const original = JSON.stringify({
-      ...emptyTeamHome(),
-      resources: [second, first],
-    })
-    productStorage.setItem(teamHomeKey(team.id), original)
+  it("orders shared documents and collapses the group without changing saved content", () => {
+    documentFixture.seed(
+      { kind: "team", id: team.id },
+      {
+        id: "first",
+        title: "A notes",
+        createdAt: "2026-10-01T12:00:00Z",
+        body: emptyDocumentBody(),
+      }
+    )
+    documentFixture.seed(
+      { kind: "team", id: team.id },
+      {
+        id: "second",
+        title: "B notes",
+        createdAt: "2026-10-20T12:00:00Z",
+        body: emptyDocumentBody(),
+      }
+    )
+    const original = JSON.stringify(documentFixture.rows())
     render(<TeamDocuments team={team} />)
     const before = (left: string, right: string) =>
       Boolean(
@@ -264,9 +266,10 @@ describe("team home workflows", () => {
       screen.getByRole("button", { name: "Expand Team documents" })
     )
     expect(screen.getByRole("button", { name: "A notes" })).toBeTruthy()
-    expect(productStorage.getItem(teamHomeKey(team.id))).toBe(original)
+    expect(JSON.stringify(documentFixture.rows())).toBe(original)
+    expect(documentFixture.command).not.toHaveBeenCalled()
   })
-  it("handles a missing document deep link without creating or changing records", () => {
+  it("handles a missing document deep link without creating records", () => {
     const onOpenDocument = vi.fn()
     render(
       <TeamDocuments
@@ -280,7 +283,7 @@ describe("team home workflows", () => {
     )
     fireEvent.click(screen.getByRole("button", { name: "Back to documents" }))
     expect(onOpenDocument).toHaveBeenCalledWith(undefined)
-    expect(productStorage.getItem(teamHomeKey(team.id))).toBeNull()
+    expect(documentFixture.rows()).toEqual([])
   })
   it("rejects unsafe link schemes before saving", () => {
     const update = vi.fn(() => true)

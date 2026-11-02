@@ -26,6 +26,7 @@ export type MigrationTarget = {
     | "cycle-acceptance"
     | "triage-acceptance"
     | "issue-history-acceptance"
+    | "document-acceptance"
     | "issue-history-rehearsal"
     | "project-rehearsal"
     | "project-progress-rehearsal"

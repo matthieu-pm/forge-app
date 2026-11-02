@@ -66,5 +66,5 @@ export function readableDocumentCondition(
   actor: Actor,
   documentId: SQLWrapper
 ): SQL {
-  return sql`EXISTS (SELECT 1 FROM documents authz_doc WHERE authz_doc.id = ${documentId} AND authz_doc.workspace_id = ${actor.workspaceId} AND ${currentMemberCondition(actor)} AND (authz_doc.shared_with_workspace OR (authz_doc.team_id IS NULL AND authz_doc.issue_id IS NULL AND authz_doc.project_id IS NULL) OR ${readableTeamCondition(actor, sql`authz_doc.team_id`)} OR ${readableIssueCondition(actor, sql`authz_doc.issue_id`)} OR ${readableProjectCondition(actor, sql`authz_doc.project_id`)}))`
+  return sql`EXISTS (SELECT 1 FROM documents authz_doc WHERE authz_doc.id = ${documentId} AND authz_doc.workspace_id = ${actor.workspaceId} AND authz_doc.deleted_at IS NULL AND ${currentMemberCondition(actor)} AND (authz_doc.shared_with_workspace OR (authz_doc.team_id IS NULL AND authz_doc.issue_id IS NULL AND authz_doc.project_id IS NULL) OR ${readableTeamCondition(actor, sql`authz_doc.team_id`)} OR ${readableIssueCondition(actor, sql`authz_doc.issue_id`)} OR ${readableProjectCondition(actor, sql`authz_doc.project_id`)}))`
 }

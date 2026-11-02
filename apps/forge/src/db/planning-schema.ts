@@ -387,6 +387,26 @@ export const documents = pgTable(
       .default(false)
       .notNull(),
     body: jsonb("body").$type<Record<string, unknown>>().default({}).notNull(),
+    content: text("content").default("").notNull(),
+    icon: jsonb("icon")
+      .$type<{ kind: "icon" | "emoji"; value: string; color: string }>()
+      .default({ kind: "icon", value: "File01Icon", color: "#94949e" })
+      .notNull(),
+    sectionId: text("section_id"),
+    ownerId: text("owner_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    updatedById: text("updated_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    revision: integer("revision").default(0).notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     teamId: uuid("team_id"),
     issueId: uuid("issue_id"),
     projectId: uuid("project_id"),
@@ -411,6 +431,32 @@ export const documents = pgTable(
       name: "documents_project_fk",
       columns: [t.workspaceId, t.projectId],
       foreignColumns: [projects.workspaceId, projects.id],
+    }).onDelete("cascade"),
+  ]
+)
+
+export const documentRevisions = pgTable(
+  "document_revisions",
+  {
+    id: id(),
+    workspaceId: workspace(),
+    documentId: uuid("document_id").notNull(),
+    revision: integer("revision").notNull(),
+    snapshot: jsonb("snapshot").$type<Record<string, unknown>>().notNull(),
+    authorId: text("author_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    unique("document_revisions_identity").on(t.documentId, t.revision),
+    check("document_revisions_positive", sql`${t.revision} > 0`),
+    foreignKey({
+      name: "document_revisions_document_fk",
+      columns: [t.workspaceId, t.documentId],
+      foreignColumns: [documents.workspaceId, documents.id],
     }).onDelete("cascade"),
   ]
 )

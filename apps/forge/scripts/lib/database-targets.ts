@@ -36,6 +36,10 @@ export const DATABASE_TARGETS = {
     ...STAGING.database,
     database: "forge_triage_acceptance",
   },
+  "document-acceptance": {
+    ...STAGING.database,
+    database: "forge_documents_acceptance",
+  },
   "issue-history-acceptance": {
     ...STAGING.database,
     database: "forge_issue_history_acceptance",

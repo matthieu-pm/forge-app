@@ -7,6 +7,7 @@ import {
   Clock05Icon,
   CodepenIcon,
   CubeIcon,
+  File01Icon,
   GitPullRequestArrowIcon,
   Home01Icon,
   InboxUnreadIcon,
@@ -68,6 +69,7 @@ export type AppPath =
   | "/workspace/initiatives"
   | "/workspace/initiatives/$initiativeId"
   | "/workspace/projects"
+  | "/workspace/documents"
   | "/workspace/calls"
   | "/workspace/signals"
   | "/workspace/insights"
@@ -130,6 +132,7 @@ export const workspaceNav: Array<AppNavChild> = [
     icon: AirplayLineIcon,
   },
   { title: "Projects", to: "/workspace/projects", icon: CubeIcon },
+  { title: "Documents", to: "/workspace/documents", icon: File01Icon },
   { title: "Calls", to: "/workspace/calls", icon: Call02Icon },
   { title: "Views", to: "/workspace/views", icon: LayerIcon },
   { title: "Teams", to: "/workspace/teams", icon: UserIdVerificationIcon },
