@@ -23,7 +23,7 @@ describe("Cloudflare minute trigger", () => {
     expect(url).toBe("https://app.forgenow.tech/api/internal/loops")
     expect(request).toMatchObject({
       method: "POST",
-      redirect: "error",
+      redirect: "manual",
       headers: { Authorization: `Bearer ${env.CRON_SECRET}` },
     })
     expect(request.signal).toBeInstanceOf(AbortSignal)
@@ -74,7 +74,7 @@ describe("Cloudflare minute trigger", () => {
     expect(fetcher).toHaveBeenCalledOnce()
     expect(JSON.stringify(log.mock.calls)).not.toContain(env.CRON_SECRET)
   })
-  it.each([401, 404, 503])(
+  it.each([301, 302, 307, 308, 401, 404, 503])(
     "marks HTTP %i as failed without consuming or logging its response",
     async (status) => {
       vi.stubGlobal(
@@ -86,6 +86,7 @@ describe("Cloudflare minute trigger", () => {
         "invocation failed"
       )
       expect(JSON.stringify(log.mock.calls)).not.toContain("private response")
+      expect(fetch).toHaveBeenCalledOnce()
       expect(JSON.parse(log.mock.calls[0][0])).toMatchObject({
         failureStage: "http",
         status,

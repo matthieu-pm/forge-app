@@ -57,7 +57,9 @@ export async function triggerScheduler(env: Env, scheduledTime: number) {
         Authorization: `Bearer ${env.CRON_SECRET}`,
         "Cache-Control": "no-store",
       },
-      redirect: "error",
+      // Workers rejects `error` before sending a request. `manual` returns
+      // redirects to our non-200 guard without forwarding the credential.
+      redirect: "manual",
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     })
     status = response.status
