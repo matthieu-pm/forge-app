@@ -181,7 +181,7 @@ export function registerHostBridge(
 
       const result = await desktopAuth.adopt(event.sender.session, window)
       windows.broadcastExcept(
-        { type: "auth-session-adopted", returnTo: "/inbox" },
+        { type: "auth-session-adopted", returnTo: "/" },
         event.sender.id
       )
       return result

@@ -15,6 +15,7 @@ import type { ReactNode, RefObject } from "react"
 import type { IssueDraft, TeamIssue } from "@/lib/team-issues"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
+import { DateInput } from "@/components/ui/date-input"
 import { TemplateApplicationButton } from "@/components/templates/template-application-button"
 import { stableJson } from "@/lib/stable-json"
 import { productStorage } from "@/lib/product-storage"
@@ -247,6 +248,7 @@ export function IssueComposer({
     else onClose()
   }
   function saveDraft() {
+    if (dueDateRef.current && !dueDateRef.current.reportValidity()) return
     try {
       saveIssueDraft(targetTeam.id, draft, localDraftId.current)
       if (editRecoveryKey) productStorage.removeItem(editRecoveryKey)
@@ -283,7 +285,9 @@ export function IssueComposer({
       )
     }
   }
+  const dueDateRef = useRef<HTMLInputElement>(null)
   async function submit() {
+    if (dueDateRef.current && !dueDateRef.current.reportValidity()) return
     if (attaching || saveLock.current) return
     if (!draft.title.trim()) {
       setError("Enter an issue title.")
@@ -843,12 +847,14 @@ export function IssueComposer({
                       <label className="block text-xs" htmlFor="issue-due">
                         Due date
                       </label>
-                      <input
+                      <DateInput
                         id="issue-due"
+                        ref={dueDateRef}
+                        aria-label="Due date"
                         type="date"
                         value={draft.dueDate}
-                        onChange={(event) =>
-                          update({ dueDate: event.target.value })
+                        onValueChange={(dateValue) =>
+                          update({ dueDate: dateValue })
                         }
                         className="h-8 w-full rounded-lg border border-border bg-transparent px-2 text-xs"
                       />

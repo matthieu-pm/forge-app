@@ -8,6 +8,7 @@ import { toast } from "sonner"
 import type { ReactNode } from "react"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamCyclesSettings as CyclePreferences } from "@/lib/team-cycles"
+import { useCalendarWeek } from "@/hooks/use-calendar-week"
 import { cycleWeekdays, nextCycleStart, useTeamCycles } from "@/lib/team-cycles"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -33,10 +34,6 @@ const weekOptions = (values: Array<number>) =>
   }))
 const durations = weekOptions([1, 2, 3, 4, 5, 6, 7, 8])
 const cooldowns = weekOptions([0, 1, 2, 3, 4])
-const weekdays = [1, 2, 3, 4, 5, 6, 0].map((value) => ({
-  value,
-  label: cycleWeekdays[value],
-}))
 const futureCounts = [1, 2, 3, 4, 5, 6].map((value) => ({
   value,
   label: `${value} ${value === 1 ? "cycle" : "cycles"}`,
@@ -163,6 +160,7 @@ function CycleChoice({
 }
 
 export function TeamCyclesSettings({ team }: { team: TeamSummary }) {
+  const { weekdays } = useCalendarWeek()
   const {
     settings,
     ready,
@@ -298,7 +296,10 @@ export function TeamCyclesSettings({ team }: { team: TeamSummary }) {
                   description={`Next cycle begins ${nextStart}`}
                   calendar
                   value={settings.startDay}
-                  options={weekdays}
+                  options={weekdays.map((value) => ({
+                    value,
+                    label: cycleWeekdays[value],
+                  }))}
                   disabled={disabled}
                   onChange={(startDay) => save({ startDay })}
                 />

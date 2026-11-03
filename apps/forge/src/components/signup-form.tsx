@@ -3,6 +3,7 @@
 import { startTransition, useEffect, useState } from "react"
 import { Link, useNavigate, useRouter } from "@tanstack/react-router"
 import { cn } from "@/lib/utils"
+import { DEFAULT_HOME_ENTRY, authReturnPath } from "@/lib/default-home"
 import { authClient } from "@/lib/auth-client"
 import {
   beginDesktopAuthorizationRedirect,
@@ -99,7 +100,9 @@ export function SignupForm({
 
     startTransition(() => {
       void navigate({
-        href: redirectTo || "/inbox",
+        href:
+          authReturnPath(redirectTo, window.location.hash) ??
+          DEFAULT_HOME_ENTRY,
       })
     })
   }

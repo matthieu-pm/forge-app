@@ -4,6 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import type { Initiative, InitiativePerson } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamLabel } from "@/lib/team-labels"
+import { DateInput } from "@/components/ui/date-input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { parseTargetDateInput } from "@/lib/target-dates"
 import {
@@ -255,12 +256,12 @@ export function TargetPicker({
           </Button>
         </div>
         {precision === "Day" ? (
-          <Input
+          <DateInput
             aria-label={`Choose ${dateLabel.toLowerCase()} day`}
             type="date"
             value={/^\d{4}-\d{2}-\d{2}$/.test(value) ? value : ""}
-            onChange={(event) => {
-              if (event.target.value) choose(event.target.value)
+            onValueChange={(dateValue) => {
+              if (dateValue) choose(dateValue)
             }}
           />
         ) : (

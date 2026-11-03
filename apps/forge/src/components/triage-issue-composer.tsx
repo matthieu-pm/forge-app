@@ -3,6 +3,7 @@ import type { ReactNode } from "react"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import type { TriageDraft } from "@/lib/triage-issues"
+import { DateInput } from "@/components/ui/date-input"
 import { TemplateApplicationButton } from "@/components/templates/template-application-button"
 import { productStorage } from "@/lib/product-storage"
 import { OptionSelect } from "@/components/ui/option-select"
@@ -133,7 +134,9 @@ export function TriageIssueComposer({
   }
   const [saving, setSaving] = useState(false)
   const saveLock = useRef(false)
+  const dueDateRef = useRef<HTMLInputElement>(null)
   async function submit() {
+    if (dueDateRef.current && !dueDateRef.current.reportValidity()) return
     if (!draft.title.trim() || attaching || saveLock.current) return
     saveLock.current = true
     setSaving(true)
@@ -166,6 +169,7 @@ export function TriageIssueComposer({
     }
   }
   function saveDraft() {
+    if (dueDateRef.current && !dueDateRef.current.reportValidity()) return
     try {
       const key = triageDraftKey(team.id)
       const previous = productStorage.getItem(key)
@@ -479,12 +483,13 @@ export function TriageIssueComposer({
               content={
                 <label className="space-y-2 text-xs">
                   Due date
-                  <Input
+                  <DateInput
                     type="date"
                     aria-label="Due date"
+                    ref={dueDateRef}
                     value={draft.dueDate}
-                    onChange={(event) =>
-                      update({ dueDate: event.target.value })
+                    onValueChange={(dateValue) =>
+                      update({ dueDate: dateValue })
                     }
                   />
                 </label>

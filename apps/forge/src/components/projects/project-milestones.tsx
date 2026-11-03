@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { format, isValid, parseISO } from "date-fns"
+import { format } from "date-fns"
 import { toast } from "sonner"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { PencilEdit02Icon } from "@hugeicons/core-free-icons"
@@ -19,7 +19,7 @@ import {
 import { IssueIcon } from "@/components/issues/issue-controls"
 import { MilestoneMark } from "@/components/ui/milestone-mark"
 import { Button, propertyButtonClassName } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
+import { DateInput } from "@/components/ui/date-input"
 import { Input } from "@/components/ui/input"
 import {
   Popover,
@@ -52,28 +52,18 @@ function MilestoneDatePicker({
   writable: boolean
 }) {
   const [open, setOpen] = useState(false)
-  const selected = milestone.targetDate
-    ? parseISO(milestone.targetDate)
-    : undefined
   const choose = (value: string) => {
     onChange(value)
     setOpen(false)
   }
   const content = (
     <>
-      <Input
-        type="date"
+      <DateInput
+        inlineCalendar
+        disabled={!writable}
         aria-label={`${milestone.name} target date`}
         value={milestone.targetDate?.length === 10 ? milestone.targetDate : ""}
-        onChange={(event) => choose(event.target.value)}
-      />
-      <Calendar
-        mode="single"
-        selected={selected && isValid(selected) ? selected : undefined}
-        defaultMonth={selected && isValid(selected) ? selected : undefined}
-        onSelect={(date) => {
-          if (date) choose(format(date, "yyyy-MM-dd"))
-        }}
+        onValueChange={choose}
       />
       {milestone.targetDate && (
         <Button variant="ghost" size="sm" onClick={() => choose("")}>

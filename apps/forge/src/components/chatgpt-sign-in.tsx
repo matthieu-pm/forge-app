@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { DEFAULT_HOME_ENTRY, authReturnPath } from "@/lib/default-home"
 import { authClient } from "@/lib/auth-client"
 import { desktopAuthorizationQuery } from "@/lib/auth-session"
 import { ChatGPTMark } from "@/components/chatgpt-mark"
@@ -36,9 +37,7 @@ export function ChatGPTSignIn({
     try {
       const desktop = desktopAuthorizationQuery(window.location.search)
       const returnPath =
-        redirectTo?.startsWith("/") && !redirectTo.startsWith("//")
-          ? redirectTo
-          : "/inbox"
+        authReturnPath(redirectTo, window.location.hash) ?? DEFAULT_HOME_ENTRY
       const callbackURL = desktop
         ? window.location.href
         : new URL(returnPath, window.location.origin).href

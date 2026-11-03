@@ -7,6 +7,7 @@ import type {
   RecurringIssueDraft,
   SavedRecurringIssue,
 } from "@/lib/recurring-issue-contract"
+import { DateInput } from "@/components/ui/date-input"
 import { OptionSelect } from "@/components/ui/option-select"
 import {
   emptyRecurringIssue,
@@ -51,6 +52,7 @@ export function RecurringIssueEditor({
   const safeToLeave = React.useRef(false)
   const savingRef = React.useRef(false)
   const titleRef = React.useRef<HTMLInputElement>(null)
+  const dueDateRef = React.useRef<HTMLInputElement>(null)
   const dirty = JSON.stringify(draft) !== initial.current || subIssueCreating
   const navigate = useNavigate()
   const router = useRouter()
@@ -73,6 +75,7 @@ export function RecurringIssueEditor({
     })
   }
   async function save() {
+    if (dueDateRef.current && !dueDateRef.current.reportValidity()) return
     if (savingRef.current || !directory.canManage) return
     if (subIssueCreating) {
       toast.error("Add or cancel the open sub-issue before saving.")
@@ -220,12 +223,14 @@ export function RecurringIssueEditor({
         <div className="mt-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-4 px-4">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-3 text-[13px]">
             <label htmlFor="recurring-first-due">First due</label>
-            <input
+            <DateInput
               id="recurring-first-due"
+              ref={dueDateRef}
+              aria-label="First due"
               type="date"
               disabled={saving || !directory.canManage}
               value={draft.firstDue}
-              onInput={(event) => patch("firstDue", event.currentTarget.value)}
+              onValueChange={(dateValue) => patch("firstDue", dateValue)}
               className="h-8 w-[132px] min-w-0 rounded-lg border border-border/60 bg-muted/40 px-2 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/30 disabled:opacity-50"
             />
             <span>repeats every</span>
