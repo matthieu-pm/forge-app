@@ -367,8 +367,9 @@ export function PreferencesSettings() {
                   label="Convert text emoticons into emojis"
                   description={
                     <>
-                      Strings like <span className="font-medium">:)</span> will
-                      be converted to 🙂
+                      In comments and replies, type :) or :-) for 🙂, :( or :-(
+                      for 🙁, ;) or ;-) for 😉, and :D or :-D for 😃. Conversion
+                      happens when you type a space.
                     </>
                   }
                 >

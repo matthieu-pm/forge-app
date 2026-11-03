@@ -8,6 +8,16 @@ import {
 } from "./personal-preference-contract"
 
 describe("personal preference contract", () => {
+  it("defaults emoticon conversion off while preserving explicit saved choices", () => {
+    expect(parsePersonalPreferences(null).preferences.convertEmoticons).toBe(
+      false
+    )
+    for (const enabled of [true, false])
+      expect(
+        parsePersonalPreferences(JSON.stringify({ convertEmoticons: enabled }))
+          .preferences.convertEmoticons
+      ).toBe(enabled)
+  })
   it("recovers valid fields independently and retains unknown source fields", () => {
     const raw = JSON.stringify({
       version: 1,
