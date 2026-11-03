@@ -26,6 +26,7 @@ import {
   flattenPreferences,
 } from "@/lib/account-preference-contract"
 import { onPreferenceSessionInvalidated } from "@/lib/preference-session-events"
+import { AppearanceStartup } from "@/components/appearance-startup"
 import { Button } from "@/components/ui/button"
 
 type ProtectedIdentity = {
@@ -115,32 +116,37 @@ export function AccountPreferenceProvider({
       window.removeEventListener("online", focus)
     }
   }, [])
-  if (!identity || !identity.workspaceId)
-    return (
-      <Context.Provider value={null}>
-        <WorkspaceContext.Provider value={null}>
-          <ProtectedIdentityContext.Provider value={identity}>
-            {children}
-          </ProtectedIdentityContext.Provider>
-        </WorkspaceContext.Provider>
-      </Context.Provider>
-    )
-  const workspaceIdentity = { ...identity, workspaceId: identity.workspaceId }
+  const workspaceIdentity = identity?.workspaceId
+    ? { ...identity, workspaceId: identity.workspaceId }
+    : null
   return (
-    <ProductStateProvider
-      key={JSON.stringify(identity)}
-      identity={workspaceIdentity}
-    >
-      <PreferenceSessionScope
-        key={JSON.stringify(identity)}
-        identity={workspaceIdentity}
-        active={active}
-      >
-        <ProtectedIdentityContext.Provider value={identity}>
-          {children}
-        </ProtectedIdentityContext.Provider>
-      </PreferenceSessionScope>
-    </ProductStateProvider>
+    <>
+      <AppearanceStartup userId={identity?.userId ?? null} />
+      {workspaceIdentity ? (
+        <ProductStateProvider
+          key={JSON.stringify(workspaceIdentity)}
+          identity={workspaceIdentity}
+        >
+          <PreferenceSessionScope
+            key={JSON.stringify(workspaceIdentity)}
+            identity={workspaceIdentity}
+            active={active}
+          >
+            <ProtectedIdentityContext.Provider value={identity}>
+              {children}
+            </ProtectedIdentityContext.Provider>
+          </PreferenceSessionScope>
+        </ProductStateProvider>
+      ) : (
+        <Context.Provider value={null}>
+          <WorkspaceContext.Provider value={null}>
+            <ProtectedIdentityContext.Provider value={identity}>
+              {children}
+            </ProtectedIdentityContext.Provider>
+          </WorkspaceContext.Provider>
+        </Context.Provider>
+      )}
+    </>
   )
 }
 

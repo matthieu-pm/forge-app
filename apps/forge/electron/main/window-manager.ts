@@ -1,6 +1,6 @@
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { BrowserWindow, dialog, screen, shell } from "electron"
+import { BrowserWindow, dialog, nativeTheme, screen, shell } from "electron"
 import Conf from "conf"
 
 import { routePathSchema } from "../shared/bridge-contract"
@@ -38,7 +38,9 @@ export class WindowManager {
       createWindowOptions(
         join(moduleDirectory, "preload.cjs"),
         bounds,
-        this.development
+        this.development,
+        process.platform,
+        nativeTheme.shouldUseDarkColors
       )
     )
 

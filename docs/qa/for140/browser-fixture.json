@@ -1,0 +1,14 @@
+{
+  "issue": "FOR-140",
+  "environment": "Local Chromium fixture, real appearance startup, preference provider, dialog and editor styles; synthetic auth and transport; no database or packaged desktop certification",
+  "sourceRevision": "ed98d972dbb8f2dce397f339b1827e2e427dfcd9",
+  "checkedAt": "2026-11-03T21:20:37.372Z",
+  "checks": [
+    "Fresh signed-out session follows the OS and ignores another account's cache",
+    "Saved dark choice paints before workspace data and ignores an OS change",
+    "Only System follows the operating system, including its palette",
+    "Dialog and editor tokens follow the palette and the focused action keeps a visible ring",
+    "An account switch drops the previous appearance"
+  ],
+  "pageErrors": []
+}

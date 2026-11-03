@@ -23,7 +23,7 @@ import {
   themeSourceSchema,
   unreadCountSchema,
 } from "../shared/bridge-contract"
-import { configureAppAppearance } from "./appearance"
+import { configureAppAppearance, hostWindowBackground } from "./appearance"
 import type { IpcMainInvokeEvent } from "electron"
 
 import type {
@@ -70,6 +70,23 @@ export function registerHostBridge(
   desktopAuth: DesktopAuth,
   modelBroker: ModelBroker
 ) {
+  const paintHostWindowBackground = () => {
+    const source = themeSourceSchema.safeParse(nativeTheme.themeSource)
+    if (!source.success) return
+    const background = hostWindowBackground(
+      source.data,
+      nativeTheme.shouldUseDarkColors,
+      process.platform
+    )
+    if (!background) return
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (!window.isDestroyed()) window.setBackgroundColor(background)
+    }
+  }
+  nativeTheme.on("updated", () => {
+    if (nativeTheme.themeSource === "system") paintHostWindowBackground()
+  })
+
   const trusted = <T>(
     handler: (event: IpcMainInvokeEvent, input: unknown) => T | Promise<T>
   ) => {
@@ -115,6 +132,7 @@ export function registerHostBridge(
     desktopChannels.setThemeSource,
     trusted((_event, input) => {
       configureAppAppearance(nativeTheme, themeSourceSchema.parse(input))
+      paintHostWindowBackground()
     })
   )
 

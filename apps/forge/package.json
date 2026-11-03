@@ -49,6 +49,7 @@
     "files:migrate": "bun scripts/migrate-local-files.ts",
     "test:preferences:postgres": "vitest run src/application/preferences/preferences.postgres.test.ts",
     "test:preferences:browser": "node scripts/verify-personal-preferences-browser.mjs",
+    "test:appearance:browser": "node scripts/verify-appearance-browser.mjs",
     "test:emoticons:browser": "node scripts/verify-emoticons-browser.mjs",
     "test:profiles:postgres": "vitest run src/application/profiles/profiles.postgres.test.ts",
     "test:profiles:browser": "node scripts/verify-profile-browser.mjs",

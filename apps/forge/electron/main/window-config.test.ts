@@ -60,6 +60,18 @@ describe("createWindowOptions", () => {
     expect(options.transparent).toBeUndefined()
     expect(options.vibrancy).toBeUndefined()
   })
+
+  it("uses the system dark background before an account choice loads", () => {
+    const options = createWindowOptions(
+      "/app/preload.js",
+      undefined,
+      false,
+      "linux",
+      true
+    )
+
+    expect(options.backgroundColor).toBe("#111111")
+  })
 })
 
 describe("restoreVisibleBounds", () => {

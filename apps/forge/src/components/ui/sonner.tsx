@@ -1,12 +1,29 @@
 "use client"
 
-import { useTheme } from "next-themes"
+import * as React from "react"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { CheckmarkCircle02Icon, InformationCircleIcon, Alert02Icon, MultiplicationSignCircleIcon, Loading03Icon } from "@hugeicons/core-free-icons"
 
+function useDocumentColorScheme(): "light" | "dark" {
+  const [scheme, setScheme] = React.useState<"light" | "dark">("light")
+  React.useEffect(() => {
+    const root = document.documentElement
+    const read = () =>
+      setScheme(root.classList.contains("dark") ? "dark" : "light")
+    read()
+    const observer = new MutationObserver(read)
+    observer.observe(root, {
+      attributes: true,
+      attributeFilter: ["class"],
+    })
+    return () => observer.disconnect()
+  }, [])
+  return scheme
+}
+
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme()
+  const theme = useDocumentColorScheme()
 
   return (
     <Sonner
