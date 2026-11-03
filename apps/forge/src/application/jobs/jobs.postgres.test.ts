@@ -4,6 +4,7 @@ import { spawn } from "node:child_process"
 import { readFileSync, readdirSync } from "node:fs"
 import { Pool } from "pg"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
+import { journalDatabasePool } from "../../adapters/recovery/journaled-pool.server"
 import { JobError, jobStore } from "./job-store"
 import { jobCommand } from "./job-cli"
 import { runNextJob } from "./job-runner"
@@ -13,6 +14,9 @@ import {
   runWorkflowRetention,
   workflowRetention,
 } from "./workflow-retention"
+import type { Pool as NeonPool } from "@neondatabase/serverless"
+
+vi.mock("@tanstack/react-start/server-only", () => ({}))
 
 const connection = process.env.FORGE_JOB_TEST_DATABASE_URL
 
@@ -80,7 +84,7 @@ describe.skipIf(!connection)("FOR-64 local PostgreSQL acceptance", () => {
         await pool.query(readFileSync(`drizzle/${file}`, "utf8"))
     }
     await pool.query(
-      "CREATE TABLE IF NOT EXISTS for64_job_effects(job_id uuid NOT NULL)"
+      "CREATE TABLE IF NOT EXISTS for64_job_effects(job_id uuid NOT NULL, id uuid PRIMARY KEY DEFAULT gen_random_uuid())"
     )
     store = jobStore(pool)
   }, 30000)
@@ -154,7 +158,7 @@ describe.skipIf(!connection)("FOR-64 local PostgreSQL acceptance", () => {
     })
     await expect(
       store.sqlStep(old, "x", async (tx) => {
-        await tx.query("INSERT INTO for64_job_effects VALUES($1)", [id])
+        await tx.query("INSERT INTO for64_job_effects(job_id) VALUES($1)", [id])
         return null
       })
     ).rejects.toMatchObject({ code: "LEASE_LOST" })
@@ -205,7 +209,7 @@ describe.skipIf(!connection)("FOR-64 local PostgreSQL acceptance", () => {
       await expire(id)
       const lease = (await store.claim("fixture-v1", id))!
       const value = await store.sqlStep(lease, "effect-v1", async (tx) => {
-        await tx.query("INSERT INTO for64_job_effects VALUES($1)", [id])
+        await tx.query("INSERT INTO for64_job_effects(job_id) VALUES($1)", [id])
         return { count: 1 }
       })
       expect(value).toEqual({ count: 1 })
@@ -224,7 +228,7 @@ describe.skipIf(!connection)("FOR-64 local PostgreSQL acceptance", () => {
       lease = (await store.claim("fixture-v1", id))!
     await expect(
       store.sqlStep(lease, "x", async (tx) => {
-        await tx.query("INSERT INTO for64_job_effects VALUES($1)", [id])
+        await tx.query("INSERT INTO for64_job_effects(job_id) VALUES($1)", [id])
         throw new Error("private payload")
       })
     ).rejects.toThrow()
@@ -245,7 +249,7 @@ describe.skipIf(!connection)("FOR-64 local PostgreSQL acceptance", () => {
       lease: Parameters<typeof store.complete>[0]
     ) => {
       await s.sqlStep(lease, "saved", async (tx) => {
-        await tx.query("INSERT INTO for64_job_effects VALUES($1)", [id])
+        await tx.query("INSERT INTO for64_job_effects(job_id) VALUES($1)", [id])
         return { private: "secret-result" }
       })
       throw new Error("secret-exception")
@@ -416,7 +420,7 @@ describe.skipIf(!connection)("FOR-64 local PostgreSQL acceptance", () => {
       lease = (await store.claim("fixture-v1", id))!
     await expect(
       store.sqlStep(lease, "expiry", async (tx) => {
-        await tx.query("INSERT INTO for64_job_effects VALUES($1)", [id])
+        await tx.query("INSERT INTO for64_job_effects(job_id) VALUES($1)", [id])
         await tx.query(
           "UPDATE background_jobs SET lease_until=clock_timestamp()-interval '1 second' WHERE id=$1",
           [id]
@@ -535,7 +539,7 @@ describe.skipIf(!connection)("FOR-64 local PostgreSQL acceptance", () => {
       lease = (await store.claim("fixture-v1", id))!
     await expect(
       store.sqlStep(lease, "invalid-result", async (tx) => {
-        await tx.query("INSERT INTO for64_job_effects VALUES($1)", [id])
+        await tx.query("INSERT INTO for64_job_effects(job_id) VALUES($1)", [id])
         return { unsupported: undefined }
       })
     ).rejects.toThrow()
@@ -571,6 +575,166 @@ describe.skipIf(!connection)("FOR-64 local PostgreSQL acceptance", () => {
         )
       ).rows[0].n
     ).toBe(1)
+  })
+  it("preserves primary-key coverage required by enabled deletion recovery", async () => {
+    const result = await pool.query(
+      `SELECT EXISTS(SELECT 1 FROM pg_index WHERE indrelid='background_job_steps'::regclass AND indisprimary) AS present`
+    )
+    expect(result.rows[0].present).toBe(true)
+  })
+  it("deletes retained workflows through enabled recovery preparation", async () => {
+    const workspace = randomUUID(),
+      run = randomUUID(),
+      now = new Date("2020-05-01T12:00:00Z")
+    const hasPk = (
+      await pool.query(
+        "SELECT EXISTS(SELECT 1 FROM pg_index WHERE indrelid='background_job_steps'::regclass AND indisprimary) present"
+      )
+    ).rows[0].present
+    if (!hasPk)
+      await pool.query(
+        "ALTER TABLE background_job_steps ADD PRIMARY KEY(job_id,key)"
+      )
+    await pool.query("SELECT forge_install_recovery_triggers()")
+    await pool.query(
+      "INSERT INTO organization(id,name,slug,created_at) VALUES($1,$1,$1,now())",
+      [workspace]
+    )
+    await pool.query(
+      `INSERT INTO business_workflow_runs(id,workspace_id,kind,subject_type,subject_id,idempotency_key,state,completed_at) VALUES($1::uuid,$2,'fixture','fixture',$1::text,$1::text,'completed','2019-01-01')`,
+      [run, workspace]
+    )
+    const recoveredEvents: Array<string> = []
+    const operations: Array<string> = []
+    const backend = {
+      prepare: vi.fn(async (id: string) => {
+        operations.push(id)
+      }),
+      abort: vi.fn(async () => {}),
+      complete: vi.fn(
+        async (
+          _id: unknown,
+          _source: unknown,
+          batches: AsyncIterable<Array<{ table: string }>>
+        ) => {
+          for await (const batch of batches)
+            recoveredEvents.push(...batch.map((event) => event.table))
+        }
+      ),
+    }
+    const journalPool = new Pool({
+      connectionString: connection,
+      options: "-c neon.branch_id=br-local-fixture",
+    })
+    journalDatabasePool(
+      journalPool as unknown as NeonPool,
+      backend,
+      connection!,
+      "store_fixture"
+    )
+    try {
+      await pool.query(
+        "UPDATE recovery_journal_state SET enabled=true WHERE id='singleton'"
+      )
+      const journalStore = jobStore(journalPool)
+      const id = await enqueueWorkflowRetention(journalStore, now)
+      ids.push(id)
+      expect(
+        (
+          await runNextJob(
+            journalStore,
+            WORKFLOW_RETENTION_KIND,
+            workflowRetention,
+            id
+          )
+        ).state
+      ).toBe("completed")
+      expect(recoveredEvents).toContain("business_workflow_runs")
+      expect(backend.prepare).toHaveBeenCalled()
+      expect(backend.complete).toHaveBeenCalled()
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int n FROM business_workflow_runs WHERE id=$1",
+            [run]
+          )
+        ).rows[0].n
+      ).toBe(0)
+    } finally {
+      await pool.query(
+        "UPDATE recovery_journal_state SET enabled=false WHERE id='singleton'"
+      )
+      await journalPool.end()
+      await pool.query("DELETE FROM organization WHERE id=$1", [workspace])
+      if (!hasPk)
+        await pool.query(
+          "ALTER TABLE background_job_steps DROP CONSTRAINT background_job_steps_pkey"
+        )
+      await pool.query(
+        "DELETE FROM recovery_events WHERE operation_id=ANY($1::uuid[])",
+        [operations]
+      )
+      await pool.query(
+        "DELETE FROM recovery_operations WHERE id=ANY($1::uuid[])",
+        [operations]
+      )
+    }
+  })
+  for (const phase of ["completion", "external-intent"])
+    it(`rejects expired ownership delayed during ${phase}`, async () => {
+      const id = await enqueue(),
+        lease = (await store.claim("fixture-v1", id))!
+      const blocker = await pool.connect()
+      const invoked = vi.fn(async () => {})
+      try {
+        await blocker.query("BEGIN")
+        await blocker.query(
+          "LOCK TABLE background_job_steps IN ACCESS EXCLUSIVE MODE"
+        )
+        await pool.query(
+          "UPDATE background_jobs SET lease_until=clock_timestamp()+interval '1 second' WHERE id=$1",
+          [id]
+        )
+        const pending =
+          phase === "completion"
+            ? store.complete(lease)
+            : store.externalStep(lease, "late", { mode: "reconcile" }, invoked)
+        const observed = pending.then(
+          () => ({ ok: true }),
+          (error) => ({ ok: false, error })
+        )
+        for (let n = 0; n < 40; n++) {
+          const waiting = await pool.query(
+            "SELECT count(*)::int n FROM pg_stat_activity WHERE wait_event_type='Lock' AND query LIKE '%background_job_steps%' AND pid<>pg_backend_pid()"
+          )
+          if (waiting.rows[0].n) break
+          await new Promise((resolve) => setTimeout(resolve, 10))
+        }
+        await new Promise((resolve) => setTimeout(resolve, 1100))
+        await blocker.query("COMMIT")
+        const result = await observed
+        expect(result).toMatchObject({
+          ok: false,
+          error: { code: "LEASE_LOST" },
+        })
+        expect(invoked).not.toHaveBeenCalled()
+      } finally {
+        await blocker.query("ROLLBACK")
+        blocker.release()
+      }
+    })
+  it("keeps an ID-specific claim from reaping another expired job", async () => {
+    const first = await enqueue(),
+      second = await enqueue()
+    await store.claim("fixture-v1", first)
+    await store.claim("fixture-v1", second)
+    await pool.query(
+      "UPDATE background_jobs SET lease_until=clock_timestamp()-interval '1 second' WHERE id=ANY($1::uuid[])",
+      [[first, second]]
+    )
+    expect(await store.claim("fixture-v1", first)).toBeNull()
+    expect((await store.inspect(first)).jobs[0].state).toBe("retry")
+    expect((await store.inspect(second)).jobs[0].state).toBe("running")
   })
   it("rejects unsafe CLI arguments and live-owner replay", async () => {
     const id = await enqueue()

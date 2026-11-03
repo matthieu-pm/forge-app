@@ -97,16 +97,22 @@ export function jobStore(pool: JobPool) {
     )
     if (!result.rows.length) throw new JobError("LEASE_LOST")
   }
-  async function reap() {
-    const recovered = await pool.query(`WITH expired AS (
+  async function reap(kind?: string, id?: string) {
+    if ((kind && !key(kind)) || (id && !uuid(id)))
+      throw new JobError("INVALID_INPUT")
+    const recovered = await pool.query(
+      `WITH expired AS (
       SELECT id FROM background_jobs WHERE state='running' AND lease_until<=clock_timestamp()
+      AND ($1::text IS NULL OR kind=$1) AND ($2::uuid IS NULL OR id=$2)
       ORDER BY lease_until LIMIT 100 FOR UPDATE SKIP LOCKED
     ) UPDATE background_jobs j SET
       state=CASE WHEN EXISTS (SELECT 1 FROM background_job_steps s WHERE s.job_id=j.id AND s.state='started' AND (s.mode='reconcile' OR s.idempotency_until<=clock_timestamp())) THEN 'reconcile'
         WHEN attempts>=max_attempts THEN 'dead' ELSE 'retry' END,
       failure_code='LEASE_EXPIRED', lease_token=NULL, lease_until=NULL,
       available_at=clock_timestamp()+make_interval(secs=>least(3600,30*power(2,least(attempts-1,7)))::int), updated_at=clock_timestamp()
-      FROM expired WHERE j.id=expired.id RETURNING j.id,j.state`)
+      FROM expired WHERE j.id=expired.id RETURNING j.id,j.state`,
+      [kind ?? null, id ?? null]
+    )
     for (const row of recovered.rows)
       emitTelemetry("operation.failed", "jobs.run", {
         jobId: row.id,
@@ -169,7 +175,7 @@ export function jobStore(pool: JobPool) {
     reap,
     async claim(kind: string, id?: string): Promise<JobLease | null> {
       if (!key(kind) || (id && !uuid(id))) throw new JobError("INVALID_INPUT")
-      await reap()
+      await reap(kind, id)
       const token = randomUUID()
       const row = (
         await pool.query(
@@ -281,6 +287,7 @@ export function jobStore(pool: JobPool) {
           ON CONFLICT(job_id,key) DO UPDATE SET state='started',idempotency_until=EXCLUDED.idempotency_until,updated_at=clock_timestamp()`,
           [lease.id, step, mode, deadline]
         )
+        await stillOwned(tx, lease)
         return {
           completed: false,
           deadline: deadline === null ? null : new Date(deadline),
@@ -305,10 +312,11 @@ export function jobStore(pool: JobPool) {
           [lease.id]
         )
         if (pending.rows.length) throw new JobError("RECONCILIATION_REQUIRED")
-        await tx.query(
-          `UPDATE background_jobs SET state='completed',completed_at=clock_timestamp(),updated_at=clock_timestamp(),failure_code=NULL,lease_token=NULL,lease_until=NULL WHERE id=$1`,
+        const completed = await tx.query(
+          `UPDATE background_jobs SET state='completed',completed_at=clock_timestamp(),updated_at=clock_timestamp(),failure_code=NULL,lease_token=NULL,lease_until=NULL WHERE id=$1 AND lease_until>clock_timestamp() RETURNING id`,
           [lease.id]
         )
+        if (!completed.rows.length) throw new JobError("LEASE_LOST")
       })
     },
     async fail(lease: JobLease, error: unknown) {
@@ -322,10 +330,11 @@ export function jobStore(pool: JobPool) {
           state=CASE WHEN $2 OR EXISTS(SELECT 1 FROM background_job_steps s WHERE s.job_id=j.id AND s.state='started' AND (s.mode='reconcile' OR s.idempotency_until<=clock_timestamp())) THEN 'reconcile'
           WHEN $3 OR attempts>=max_attempts THEN 'dead' ELSE 'retry' END,
           failure_code=$4,available_at=clock_timestamp()+make_interval(secs=>least(3600,30*power(2,least(attempts-1,7)))::int),
-          lease_token=NULL,lease_until=NULL,updated_at=clock_timestamp() WHERE id=$1 RETURNING state`,
+          lease_token=NULL,lease_until=NULL,updated_at=clock_timestamp() WHERE id=$1 AND lease_until>clock_timestamp() RETURNING state`,
             [lease.id, code === "RECONCILIATION_REQUIRED", permanent, code]
           )
         ).rows[0]
+        if (!row) throw new JobError("LEASE_LOST")
         return row.state as JobState
       })
     },

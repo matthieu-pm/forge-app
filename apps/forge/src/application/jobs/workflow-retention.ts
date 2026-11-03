@@ -15,14 +15,19 @@ export const workflowRetention: JobHandler = async (store, lease) => {
   for (let batch = 0; ; batch++) {
     await store.heartbeat(lease)
     const result = await store.sqlStep(lease, `batch:${batch}`, async (tx) => {
-      const deleted = await tx.query(
-        `WITH expired AS (
-        SELECT id FROM business_workflow_runs WHERE
+      const expired = await tx.query(
+        `SELECT id FROM business_workflow_runs WHERE
           (state IN ('completed','failed','cancelled') AND completed_at<$1::timestamptz)
           OR (state='failed-to-start' AND updated_at<$1::timestamptz)
-        ORDER BY id LIMIT 500 FOR UPDATE
-      ) DELETE FROM business_workflow_runs r USING expired WHERE r.id=expired.id RETURNING r.id`,
+        ORDER BY id LIMIT 500 FOR UPDATE`,
         [input.cutoff]
+      )
+      if (!expired.rows.length) return { deleted: 0 }
+      const deleted = await tx.query(
+        `DELETE FROM business_workflow_runs WHERE id=ANY($1::uuid[]) AND (
+          (state IN ('completed','failed','cancelled') AND completed_at<$2::timestamptz)
+          OR (state='failed-to-start' AND updated_at<$2::timestamptz)) RETURNING id`,
+        [expired.rows.map((row) => row.id), input.cutoff]
       )
       return { deleted: deleted.rows.length }
     })

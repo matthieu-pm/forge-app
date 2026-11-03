@@ -6,6 +6,7 @@ import {
   integer,
   jsonb,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -77,7 +78,7 @@ export const backgroundJobSteps = pgTable(
       .default(sql`clock_timestamp()`),
   },
   (t) => [
-    uniqueIndex("background_job_steps_identity").on(t.jobId, t.key),
+    primaryKey({ name: "background_job_steps_pk", columns: [t.jobId, t.key] }),
     check(
       "background_job_steps_mode",
       sql`${t.mode} IN ('transactional','provider-idempotent','reconcile')`

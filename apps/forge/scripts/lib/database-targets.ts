@@ -13,6 +13,12 @@ export const DATABASE_TARGETS = {
     host: "ep-solitary-mode-za4ecto6.c-2.eu-west-2.aws.neon.tech",
     database: "neondb",
   },
+  // FOR-64 production clone; expires 3 November 2026 08:00 UTC.
+  "background-job-rehearsal": {
+    branchId: "br-wispy-breeze-za41co4w",
+    host: "ep-curly-wave-zafcb7ha.c-2.eu-west-2.aws.neon.tech",
+    database: "neondb",
+  },
   staging: STAGING.database,
   "recovery-source": {
     ...STAGING.database,

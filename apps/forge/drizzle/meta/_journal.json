@@ -498,6 +498,13 @@
       "when": 1793665576687,
       "tag": "0070_durable_background_jobs",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1793666532080,
+      "tag": "0071_background_job_recovery_primary_key",
+      "breakpoints": true
     }
   ]
 }
