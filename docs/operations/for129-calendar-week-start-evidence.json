@@ -1,0 +1,151 @@
+{
+  "issue": "FOR-129",
+  "sourceCommit": "827d20ae56a27f71c5f9d69f442861d0c1762668",
+  "date": "2026-11-03",
+  "environment": {
+    "kind": "local worktree and renderer fixture",
+    "origin": "http://localhost:3129",
+    "persistence": "real account preference client with in-memory fixture adapter",
+    "authenticatedHostedAcceptance": false,
+    "packagedDesktopAcceptance": false
+  },
+  "decisions": {
+    "weekStarts": [
+      "sunday",
+      "monday",
+      "saturday"
+    ],
+    "nativeDatePopups": "replaced throughout application",
+    "weekNumbers": "hidden",
+    "isoWeekSemantics": "unchanged",
+    "existingFeatureGates": "unchanged"
+  },
+  "acceptance": {
+    "AT-01": {
+      "result": "passed locally",
+      "specification": "apps/forge/src/components/ui/calendar.test.tsx",
+      "cases": "All three starts at January 1 2026, March 1 2026, and February 29 2028; first header/date column; Home, End, ArrowDown, ArrowUp; no date selection"
+    },
+    "AT-02": {
+      "result": "passed locally",
+      "specifications": [
+        "apps/forge/src/components/ui/calendar.test.tsx",
+        "apps/forge/src/components/ui/date-input.test.tsx",
+        "apps/forge/src/components/preferences-settings.test.tsx"
+      ],
+      "cases": "Mounted picker reacts to preference subscription and real settings selector, preserving calendar root, selected date/instant, locale, timezone, and seconds; other-account edits have no effect"
+    }
+  },
+  "verification": {
+    "regressionTests": {
+      "result": "passed",
+      "tests": 59,
+      "files": 10,
+      "commandDirectory": "apps/forge",
+      "command": "bunx vitest run src/components/ui/calendar.test.tsx src/components/ui/date-input.test.tsx src/components/calendar-scheduling.test.tsx src/components/preferences-settings.test.tsx src/components/account-preference-provider.test.tsx src/components/team-cycles-settings.test.tsx src/components/recurring-issues/recurring-issue-editor.test.tsx src/components/issues/issue-composer-assignment.test.tsx src/lib/cycle-calendar.test.ts src/lib/loop-matching.test.ts"
+    },
+    "timezoneRuns": [
+      {
+        "timezone": "America/Los_Angeles",
+        "result": "passed",
+        "tests": 16,
+        "files": 3
+      },
+      {
+        "timezone": "Pacific/Auckland",
+        "result": "passed",
+        "tests": 16,
+        "files": 3
+      }
+    ],
+    "typecheck": {
+      "result": "passed",
+      "command": "bun run --cwd apps/forge typecheck"
+    },
+    "eslint": {
+      "result": "passed",
+      "errors": 0,
+      "existingWarnings": 7,
+      "normallyIgnoredUiFilesIncluded": true
+    },
+    "formatAndDiff": {
+      "result": "passed"
+    },
+    "productionBuild": {
+      "result": "incomplete",
+      "compilation": "client and server bundles compiled",
+      "prerenderFailure": "DATABASE_URL is required to initialize the database client."
+    }
+  },
+  "browserFixture": {
+    "realComponents": [
+      "PreferencesSettings",
+      "DateInput",
+      "Calendar",
+      "LoopTriggerEditor",
+      "AccountPreferenceClient",
+      "AccountPreferenceScope"
+    ],
+    "observations": [
+      {
+        "change": "Sunday to Monday",
+        "sameCalendarRoot": true,
+        "firstColumn": "lundi",
+        "datetime": "2026-01-01T10:30:45",
+        "businessEdits": 0,
+        "timezone": "Pacific/Auckland"
+      },
+      {
+        "change": "Sunday to Saturday",
+        "sameCalendarRoot": true,
+        "firstColumn": "samedi",
+        "selectedCivilDate": "2026-01-01",
+        "datetime": "2026-01-01T10:30:45",
+        "businessEdits": 0,
+        "timezone": "Pacific/Auckland",
+        "weekdayOrder": [
+          "Sat",
+          "Sun",
+          "Mon",
+          "Tue",
+          "Wed",
+          "Thu",
+          "Fri"
+        ],
+        "checkedWeekdays": [
+          "Sun",
+          "Mon"
+        ]
+      },
+      {
+        "weekStart": "Monday",
+        "keys": {
+          "Home": "2025-12-29",
+          "End": "2026-01-04",
+          "ArrowDown": "2026-01-11"
+        },
+        "businessEdits": 0
+      },
+      {
+        "weekStart": "Saturday",
+        "keys": {
+          "Home": "2025-12-27",
+          "End": "2026-01-02"
+        },
+        "businessEdits": 0
+      },
+      {
+        "surface": "First scheduled run popup",
+        "columnOrder": "Saturday first",
+        "selectedDatetimeUnchanged": true
+      }
+    ],
+    "screenshot": "output/production-readiness/for129-saturday-fixture.png",
+    "limitation": "Fixture-only browser evidence; persistence adapter is in-memory. Development HMR emitted a fixture createRoot warning during iteration. No claim of production or end-to-end authenticated acceptance."
+  },
+  "deployment": {
+    "performed": false,
+    "productionGateChanged": false,
+    "migrationRequired": false
+  }
+}
