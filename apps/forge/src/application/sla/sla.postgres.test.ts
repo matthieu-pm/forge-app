@@ -1027,6 +1027,46 @@ describe.skipIf(!connection)("FOR-125 PostgreSQL acceptance", () => {
       ).rows[0].deadline.toISOString()
     ).toBe("2027-03-29T07:00:00.000Z")
   })
+  it("AT-01h: consistent completion windows enforce exact boundary breach and replay semantics", async () => {
+    const f = await fixture()
+    await pool.query(
+      "INSERT INTO sla_policy_periods(workspace_id,opened_at,closed_at) VALUES($1,clock_timestamp()-interval '3 hours',clock_timestamp()-interval '1 second')",
+      [f.workspaceId]
+    )
+    for (const exact of [false, true]) {
+      const g = await overdueFixture(f)
+      await pool.query("DELETE FROM issue_sla_windows WHERE commitment_id=$1", [
+        g.id,
+      ])
+      await pool.query(
+        "UPDATE issue_slas SET state='completed',completed_at=deadline_at-CASE WHEN $2 THEN interval '0' ELSE interval '1 microsecond' END WHERE id=$1",
+        [g.id, exact]
+      )
+      await pool.query(
+        "INSERT INTO issue_sla_windows(commitment_id,opened_at,closed_at) SELECT id,anchor_at,completed_at FROM issue_slas WHERE id=$1",
+        [g.id]
+      )
+      await run(g.id)
+      await run(g.id)
+      expect(await breaches(g.issueId)).toHaveLength(exact ? 1 : 0)
+      expect(
+        (
+          await pool.query("SELECT forge_sla_snapshot($1)->>'status' status", [
+            g.issueId,
+          ])
+        ).rows[0].status
+      ).toBe(exact ? "failed" : "achieved")
+      if (exact)
+        expect(
+          (
+            await pool.query(
+              "SELECT effective_at=deadline_at exact FROM issue_sla_events WHERE commitment_id=$1 AND kind='breached'",
+              [g.id]
+            )
+          ).rows[0].exact
+        ).toBe(true)
+    }
+  })
   it("AT-01h: PostgreSQL microsecond precision at the exact completion boundary", async () => {
     const f = await fixture(),
       g = await overdueFixture(f)

@@ -254,6 +254,7 @@ try {
   checks.push(
     "Revoked admin loses policy data and editor after live authorization refresh"
   )
+  await bob.clock.setSystemTime(new Date("2040-01-01T12:00:00Z"))
   await bob.goto(`${base}/teams/engineering/issues?view=all`)
   await bob.getByRole("button", { name: "New issue", exact: true }).click()
   await bob
@@ -276,6 +277,15 @@ try {
       [workspaceId]
     )
   ).rows[0]
+  expect(
+    (
+      await pool.query(
+        "SELECT abs(extract(epoch FROM (clock_timestamp()-anchor_at)))::float8 age FROM issue_slas WHERE workspace_id=$1",
+        [workspaceId]
+      )
+    ).rows[0].age
+  ).toBeLessThan(60)
+  await expect(section).toContainText("moderate risk")
   expect(stored.deadline_at.getTime() - stored.anchor_at.getTime()).toBe(
     48 * 3600000
   )
