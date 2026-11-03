@@ -38,10 +38,15 @@ neonConfig.webSocketConstructor = WebSocket
 const pool = new Pool({ connectionString: connection })
 const checks = [],
   pageErrors = []
+function record(check) {
+  checks.push(check)
+  console.log(check)
+}
 let browser,
   verified = false,
   identity,
-  cleanup
+  cleanup,
+  completed = false
 async function preference(value, index = 0) {
   await pool.query(
     `INSERT INTO account_preferences(user_id,values) VALUES($1,jsonb_build_object('general.defaultHomeView',$2::text))
@@ -65,15 +70,15 @@ async function login(context, index = 0) {
   expect(active.status()).toBe(200)
 }
 async function destination(page, path) {
+  const exact = path.includes("?") || path.includes("#")
   await expect
-    .poll(
-      () =>
-        new URL(page.url()).pathname +
-        new URL(page.url()).search +
-        new URL(page.url()).hash
-    )
+    .poll(() => {
+      const url = new URL(page.url())
+      return exact ? url.pathname + url.search + url.hash : url.pathname
+    })
     .toBe(path)
 }
+
 function observe(page) {
   page.on("pageerror", (error) => pageErrors.push(error.message))
 }
@@ -155,14 +160,14 @@ try {
       .toBe(choice)
     await page.goto(`${base}/`)
     await destination(page, path)
-    checks.push(
+    record(
       `AC-01: saved ${choice} through production UI; default startup opened ${path}`
     )
   }
   await preference("deleted-choice")
   await page.goto(`${base}/`)
   await destination(page, "/forge")
-  checks.push(
+  record(
     "AC-02: invalid stored home value selected the available historical fallback without a loop"
   )
   await preference("inbox")
@@ -171,17 +176,17 @@ try {
   await expect(
     page.getByRole("textbox", { name: "Issue title", exact: true })
   ).toHaveValue("FOR131 explicit destination")
-  checks.push(
+  record(
     "AC-03: authorized issue deep link retained issue query and fragment instead of home"
   )
   await page.goto(`${base}/login?redirect=${encodeURIComponent(deepLink)}`)
   await destination(page, deepLink)
-  checks.push("AC-03: signed-in auth return retained the exact issue URL")
+  record("AC-03: signed-in auth return retained the exact issue URL")
   for (const looping of ["/LOGIN", "/login//", "/%6cogin"]) {
     await page.goto(`${base}/login?redirect=${encodeURIComponent(looping)}`)
     await destination(page, "/inbox")
   }
-  checks.push(
+  record(
     "AC-02: router-equivalent login return URLs safely resolve home without loops"
   )
   const anonymous = await browser.newContext()
@@ -198,7 +203,7 @@ try {
   await expect(
     signIn.getByRole("textbox", { name: "Issue title", exact: true })
   ).toHaveValue("FOR131 explicit destination")
-  checks.push(
+  record(
     "AC-03: real unauthenticated HTTP redirect and email login retained the carried fragment and issue destination"
   )
   const desktop = await browser.newContext({
@@ -245,7 +250,7 @@ try {
     .toBe(deepLink)
   await nativePage.goto(`${base}/`)
   await destination(nativePage, deepLink)
-  checks.push(
+  record(
     "AC-03: desktop renderer restored the saved active issue URL before default-home resolution"
   )
   for (const [choice, path] of [
@@ -258,7 +263,7 @@ try {
       .getByRole("button", { name: "New tab", exact: true })
       .click()
     await destination(nativePage, path)
-    checks.push(
+    record(
       `AC-01: production desktop renderer default tab opened ${choice} via current server preference`
     )
   }
@@ -268,7 +273,7 @@ try {
     window.__for131HostCommand()
   })
   await expect(nativePage.getByRole("tab")).toHaveCount(before + 2)
-  checks.push(
+  record(
     "AC-01: two overlapping native commands create two independent tabs in the production renderer (fixture bridge)"
   )
   const other = await browser.newContext()
@@ -283,7 +288,7 @@ try {
     otherPage.getByRole("textbox", { name: "Issue title", exact: true })
   ).toHaveCount(0)
   expect(new URL(otherPage.url()).pathname).not.toBe("/my-issues")
-  checks.push(
+  record(
     "AC-01/03: a second account uses its own preference and cannot access the first workspace's issue"
   )
   await pool.query(
@@ -294,10 +299,11 @@ try {
   await expect
     .poll(() => new URL(otherPage.url()).pathname)
     .toBe("/onboarding/workspace")
-  checks.push(
+  record(
     "AC-02: revoked workspace membership prevents default destination access"
   )
   expect(pageErrors).toEqual([])
+  completed = true
 } finally {
   await browser?.close()
   if (verified) {
@@ -320,6 +326,7 @@ try {
     JSON.stringify(
       {
         revision,
+        completed,
         base,
         identity,
         scope,
@@ -333,5 +340,7 @@ try {
       2
     ) + "\n"
   )
-  console.log(JSON.stringify({ passed: checks.length, pageErrors, cleanup }))
+  console.log(
+    JSON.stringify({ completed, passed: checks.length, pageErrors, cleanup })
+  )
 }
