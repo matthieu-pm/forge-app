@@ -91,7 +91,10 @@ export const Route = createRootRoute({
 function RootLayout() {
   const identity = useProtectedIdentity()
   const pathname = useRouterState({
-    select: (state) => state.location.pathname,
+    select: (state) =>
+      state.matches.at(-1)?.pathname ??
+      state.resolvedLocation?.pathname ??
+      state.location.pathname,
   })
   const shelllessPaths = new Set([
     "/accept-invitation",

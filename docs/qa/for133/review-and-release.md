@@ -46,3 +46,37 @@ Authenticated production verification is scoped to one randomized disposable
 workspace/account, including sidebar navigation and comment preference behavior.
 The verification fixtures will be removed and the ledger checked again. Final
 deployment, checks and cleanup results will be recorded after release.
+
+## Initial production rollout and authentication finding
+
+PR #60 merged as `e6422e3c91941489257cee58eb36d2a8a9a047c8`, with a tree identical
+to the checked head `a125bd9`. The complete integrated suite passed: 2,835 tests,
+650 environment-dependent skips; four Workflow tests and 99 focused integration
+tests also passed. Both Vercel checks were green at merge.
+
+Deployment `dpl_CCU5A27ieo7WCQbyoXRCKraAJz6C` became READY on the merge revision,
+and `app.forgenow.tech` pointed to it. Public live/readiness checks returned
+200 ALIVE/READY. Its deployment-scoped error/fatal scan was empty during initial
+acceptance. No schema or production configuration changed.
+
+Authenticated acceptance in an isolated owned workspace confirmed sidebar
+visibility/order and dot badge writes, protected Inbox, gated destination
+exclusion, reload persistence, and SQL readback. Real Enter-mode comments,
+replies and edits each produced one canonical write despite repeated keys.
+Reply parent identity and comment edit version were confirmed in PostgreSQL.
+[Sidebar](production-sidebar-desktop.png), [settings](production-sidebar-settings.png)
+and [comments](production-comments.png) show these checks.
+
+Fresh sign-out/sign-in then exposed a pre-existing root shell transition error:
+`useAgent must be used within AgentProvider`. Shell selection followed the pending
+URL while Outlet could still render the previously published protected match.
+This was reproduced by three failing transition regressions on current main.
+
+Follow-up code commit `0c2f7c9` derives shell selection from the published leaf
+match, with resolved/pending URL fallback. Using resolvedLocation alone would
+also be unsafe: TanStack publishes target matches before updating that field.
+The six behavioral regressions cover both navigation directions, identity
+retirement and default-home handoff. All six pass after the correction, alongside
+84 focused auth/default-home/sidebar checks, typecheck, lint and the full
+production build/prerender/Workflow protection. Independent review checks the
+correction before the follow-up release and final production acceptance.
