@@ -52,6 +52,8 @@ export class JobError extends Error {
     super(code)
   }
 }
+/** Expected gating delay; preserves identity/checkpoints without burning retries. */
+export class JobDeferred extends Error {}
 const hash = (value: unknown) =>
   createHash("sha256").update(canonicalCommandInput(value)).digest("hex")
 const uuid = (v: string) =>
@@ -125,6 +127,19 @@ export function jobStore(pool: JobPool) {
     return recovered
   }
   return {
+    async defer(lease: JobLease) {
+      return transaction(async (tx) => {
+        await fence(tx, lease)
+        const result = await tx.query(
+          `UPDATE background_jobs SET state='queued',
+          available_at=clock_timestamp()+interval '1 minute',attempts=greatest(0,attempts-1),
+          lease_token=NULL,lease_until=NULL,updated_at=clock_timestamp()
+          WHERE id=$1 AND lease_until>clock_timestamp() RETURNING id`,
+          [lease.id]
+        )
+        if (!result.rows.length) throw new JobError("LEASE_LOST")
+      })
+    },
     async enqueue(input: {
       kind: string
       scope: string

@@ -25,6 +25,9 @@ export function historyAction(entry: IssueHistoryEntry) {
     return "imported the issue (historical attribution unverified)"
   const actions: Record<string, string> = {
     "issue.created": "created the issue",
+    "issue.sla.applied": "applied the shared SLA",
+    "issue.sla.removed": "removed the SLA",
+    "issue.sla.breached": "recorded an SLA breach",
     "issue.updated": "updated the issue",
     "issue.comment.created": "added a comment",
     "issue.comment.edited": "edited a comment",

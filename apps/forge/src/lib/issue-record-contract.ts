@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { issueSlaSnapshotSchema } from "./shared-sla-contract"
 import { pullRequestMetadataSchema } from "./issue-pull-requests"
 import { triageDraftSchema } from "./triage-record-contract"
 
@@ -93,6 +94,7 @@ export const blankIssueDraft = (status = "todo"): IssueDraft =>
     dueDate: "",
   })
 export const issueSchema = issueDraftSchema.extend({
+  sla: issueSlaSnapshotSchema.nullable().optional(),
   revision: z.number().int().nonnegative().optional(),
   legacyFingerprint: z.string().optional(),
   id: z.string(),

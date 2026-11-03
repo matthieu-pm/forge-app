@@ -9,6 +9,11 @@ import type { JobStore, Recovery } from "./job-store"
 
 export async function jobCommand(store: JobStore, args: Array<string>) {
   const [action, id, ...rest] = args
+  if (action === "run-sla" && args.length === 1) {
+    const { runSlaJobs } = await import("../sla/sla-jobs")
+    const { databaseClient } = await import("@/db")
+    return runSlaJobs(databaseClient, store)
+  }
   if (action === "list" && args.length === 1) return store.inspect()
   if (action === "inspect" && id && !rest.length) {
     const result = await store.inspect(id)

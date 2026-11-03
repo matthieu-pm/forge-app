@@ -91,7 +91,9 @@
     "test:resources:postgres": "vitest run src/application/resources/team-resources.postgres.test.ts",
     "test:resources:browser": "node scripts/verify-team-resources-browser.mjs",
     "test:loops:postgres": "vitest run src/application/loops/loops.postgres.test.ts src/application/resources/team-resources.postgres.test.ts",
-    "test:loops:browser": "node scripts/verify-team-loops-browser.mjs"
+    "test:loops:browser": "node scripts/verify-team-loops-browser.mjs",
+    "test:sla:postgres": "vitest run src/application/sla/sla.postgres.test.ts src/application/sla/sla-scheduler.test.ts",
+    "test:sla:browser": "node scripts/verify-sla-browser.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1104.0",

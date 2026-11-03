@@ -1,6 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { protectedRouteBeforeLoad } from "@/lib/auth-state"
-import { FeatureUnavailable } from "@/components/feature-availability"
+import {
+  FeatureUnavailable,
+  useFeatureMode,
+} from "@/components/feature-availability"
+import { SharedSlaSettings } from "@/components/shared-sla-settings"
 
 export const Route = createFileRoute("/settings/sla")({
   beforeLoad: protectedRouteBeforeLoad,
@@ -8,5 +12,9 @@ export const Route = createFileRoute("/settings/sla")({
 })
 
 function Page() {
-  return <FeatureUnavailable feature="sla" />
+  return useFeatureMode("sla") === "enabled" ? (
+    <SharedSlaSettings />
+  ) : (
+    <FeatureUnavailable feature="sla" />
+  )
 }

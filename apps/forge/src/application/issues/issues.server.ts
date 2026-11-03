@@ -11,6 +11,7 @@ import {
 } from "drizzle-orm"
 import { z } from "zod"
 import { startedAssignmentEnabled } from "./started-assignment.server"
+import { slaGate } from "../sla/sla-gate"
 import type { InitiativeProject } from "@/lib/initiatives"
 import type { CommandOptions } from "@/application/commands/execute-command.server"
 import type { Actor } from "@/application/actor"
@@ -175,6 +176,9 @@ export async function readIssueRows(
   const rows = await tx
     .select({
       ...getTableColumns(issues),
+      sla: slaGate(actor.workspaceId).enabled
+        ? sql`forge_sla_snapshot(${issues.id})`
+        : sql`NULL`,
       projectId: sql<
         string | null
       >`CASE WHEN ${readableProjectCondition(actor, projectColumn)} THEN ${projectColumn} ELSE NULL END`,
@@ -227,6 +231,7 @@ export async function readIssueRows(
     issue: issueSchema.parse({
       ...blankIssueDraft(row.statusId),
       ...row.properties,
+      sla: row.sla ?? undefined,
       comments: (row.properties.comments ?? []).map((comment) =>
         comment.deleted
           ? {

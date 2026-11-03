@@ -2,6 +2,7 @@ import "@tanstack/react-start/server-only"
 import { and, eq, sql } from "drizzle-orm"
 import { canonicalCommandInput, commandInputHash } from "./command-input"
 import { commandPrincipal, currentCommandActor } from "./command-actor.server"
+import { slaGate } from "../sla/sla-gate"
 import type { Actor } from "@/application/actor"
 import type { Transaction } from "@/db"
 import {
@@ -68,6 +69,10 @@ export async function executeCommand<T>(
         sql`select set_config('forge.loop_run_id', ${currentActor.loopScope.runId}, true)`
       )
     await authorize(tx, currentActor)
+    const sla = slaGate(currentActor.workspaceId)
+    await tx.execute(sql`SELECT set_config('forge.sla.workspace',${currentActor.workspaceId},true),
+      set_config('forge.sla.enabled',${sla.enabled ? "on" : "off"},true),
+      set_config('forge.sla.identity',${sla.identity},true)`)
     const scope = and(
       eq(commandReceipts.workspaceId, actor.workspaceId),
       eq(commandReceipts.principal, commandPrincipal(actor)),
