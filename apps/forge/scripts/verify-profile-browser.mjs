@@ -1,8 +1,11 @@
 import { readFileSync, mkdirSync, writeFileSync } from "node:fs"
 import { execFileSync } from "node:child_process"
-import { chromium, expect } from "@playwright/test"
+import { chromium, expect as browserExpect } from "@playwright/test"
 import { Pool, neonConfig } from "@neondatabase/serverless"
 import { hashPassword } from "better-auth/crypto"
+
+// Production reloads can include shared-definition hydration before the editor mounts.
+const expect = browserExpect.configure({ timeout: 30000 })
 
 const authorizedRevision =
   process.env.FORGE_PROFILE_PRODUCTION_AUTHORIZED_REVISION
@@ -216,6 +219,16 @@ try {
           .rows[0].image
     )
     .toMatch(/^data:image\/png;base64,/)
+  await expect(
+    owner.getByRole("button", { name: "Save profile", exact: true })
+  ).toBeDisabled()
+  await owner.reload()
+  await expect(owner.getByLabel("Title", { exact: true })).toHaveValue(
+    "Offline draft"
+  )
+  await expect(
+    owner.getByRole("button", { name: "Change profile picture" })
+  ).toBeEnabled()
   for (const body of [
     { userId: bob, title: "Hijacked" },
     { role: "owner" },
