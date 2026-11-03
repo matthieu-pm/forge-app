@@ -80,3 +80,38 @@ retirement and default-home handoff. All six pass after the correction, alongsid
 84 focused auth/default-home/sidebar checks, typecheck, lint and the full
 production build/prerender/Workflow protection. Independent review checks the
 correction before the follow-up release and final production acceptance.
+
+## Follow-up merged; final deployment blocked
+
+[PR #63](https://github.com/matthieu-pm/forge-app/pull/63) merged as
+`ed98d972dbb8f2dce397f339b1827e2e427dfcd9`. Runtime source matches the independently
+reviewed/tested fix; the intervening main change added only FOR-134 release
+evidence. The final app suite passed 2,864 tests (650 environment-dependent
+skips). The 84 focused auth/default-home/sidebar checks, typecheck, lint and
+production build/prerender/Workflow checks passed. The app preview passed.
+
+Vercel rejected the Git production deployment, MCP API request and authenticated
+CLI request with HTTP 402, `api-deployments-free-per-day`: more than 100 daily
+deployments, retry after 86,400 seconds. No deployment was created for this final
+merge. No billing, plan, protection or rollout settings were changed. The fix is
+merged and ready for deployment after quota reset or an authorized limit increase.
+
+The latest observed production alias points to
+`dpl_42ghSN1mQodTYP5xQHXnsBqX61b7` at `acd82c6`, which includes FOR-133 and the
+subsequent person-name/sidebar fixes but does not include the auth shell fix. Its
+liveness/readiness returned 200 ALIVE/READY. Initial FOR-133 deployment evidence
+above remains valid for its named revision and environment.
+
+Production Command mode was saved and SQL-confirmed, but the final Command submit
+and interrupted-response retry check were not completed before cleanup. Those
+paths retain local real-editor/client and renderer-fixture coverage; no production
+passing result is claimed. Fresh authentication must be rechecked after PR #63
+is deployed. FOR-133 remains open at this release boundary.
+
+All owned fixtures were removed. Independent checks report zero workspace, user,
+session, issue, account preference, command receipt, audit and outbox rows. The
+production migration ledger remains at 73 entries with the same last hash.
+The task-owned temporary password manifest was removed after cleanup.
+
+[Structured release evidence](../../operations/for133-production-release-evidence.json)
+records the exact source/deployment IDs, results and limitations.

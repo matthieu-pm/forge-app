@@ -1,0 +1,168 @@
+{
+  "issue": "FOR-133",
+  "pullRequest": "https://github.com/matthieu-pm/forge-app/pull/60",
+  "review": {
+    "originalHead": "24f5c0e25b77ba65399b2970023fb0f905783bf8",
+    "standardsFindings": 0,
+    "specP1Findings": 1,
+    "fixedFindings": 1,
+    "unresolvedFindings": 0,
+    "fix": "Coordinate Safari compositionend-before-Enter handling with ProseMirror and native textareas",
+    "correctedIntegratedHead": "a125bd968f251ccca5402ae1f5e649485514fb43",
+    "reReview": "No remaining blocker, including FOR-132 merge resolution"
+  },
+  "mergedRevision": "e6422e3c91941489257cee58eb36d2a8a9a047c8",
+  "reviewedAndMergedTree": "968fdb27d7de3b50ef7567cbf134f68547209101",
+  "validation": {
+    "appTestFilesPassed": 354,
+    "appTestsPassed": 2835,
+    "appTestsSkipped": 650,
+    "workflowTestsPassed": 4,
+    "focusedIntegrationTestsPassed": 99,
+    "typecheck": "passed",
+    "changedFileLint": "passed",
+    "formattingAndDiff": "passed",
+    "productionBuildPrerenderAndWorkflowProtection": "passed",
+    "checksAtMerge": [
+      "Vercel \u2013 forge-app success",
+      "Vercel \u2013 forge-preview-runtime success",
+      "Vercel Preview Comments success"
+    ]
+  },
+  "production": {
+    "deploymentId": "dpl_CCU5A27ieo7WCQbyoXRCKraAJz6C",
+    "url": "https://app.forgenow.tech",
+    "deploymentUrl": "https://forge-nv3pdnzk0-matthieu-pm.vercel.app",
+    "previousDeploymentId": "dpl_Fte5hSFrqevTCMWXvqJhwRkSskea",
+    "projectId": "prj_S0XLtdngbexhl2ao7WviBrlMScar",
+    "teamId": "team_KddvwwnftxOOhP8UymRnP0PX",
+    "initialReleaseVerified": true,
+    "latestObserved": {
+      "deploymentId": "dpl_42ghSN1mQodTYP5xQHXnsBqX61b7",
+      "sourceRevision": "acd82c6d82ede128ae699e41f79e7c88bac1a417",
+      "url": "https://app.forgenow.tech",
+      "readyState": "READY",
+      "includesFOR133": true,
+      "includesAuthShellFollowUp": false,
+      "health": {
+        "live": "200 ALIVE",
+        "ready": "200 READY"
+      }
+    }
+  },
+  "databaseBefore": {
+    "identity": {
+      "database": "neondb",
+      "branch": "br-muddy-queen-zaeeysjt"
+    },
+    "ledger": {
+      "count": 73,
+      "latest": 73
+    },
+    "last": {
+      "id": 73,
+      "hash": "2a4b45a4864cf75dcf4a8691bbdf779050b85dd76ecf944ce5089a1e6f4ef24d",
+      "created_at": "1793707859380"
+    },
+    "recordedAt": "2026-11-03T15:09:57.722Z"
+  },
+  "releaseScope": {
+    "migrationRequired": false,
+    "configurationChangeRequired": false,
+    "packagedElectronCertification": false
+  },
+  "completion": "blocked-final-auth-fix-deployment-quota",
+  "authFollowUp": {
+    "pullRequest": "https://github.com/matthieu-pm/forge-app/pull/63",
+    "codeCommit": "0c2f7c967b1eb5c71e4429b5bd986e2e94143c72",
+    "mergeCommit": "ed98d972dbb8f2dce397f339b1827e2e427dfcd9",
+    "mergedAt": "2026-11-03T15:48:43Z",
+    "productionDeployed": false,
+    "runtimeSourceMatchesTestedCode": true,
+    "threeRegressionsFailedBeforeFix": true,
+    "allSixRegressionsPass": true,
+    "focusedAuthSidebarTestsPassed": 84,
+    "fullAppTestsPassed": 2864,
+    "environmentDependentSkips": 650,
+    "typecheck": "passed",
+    "lint": "passed",
+    "productionBuild": "passed",
+    "independentReReview": "no blocker",
+    "appPreview": "passed",
+    "runtimePreview": "deployment rate limited; source unchanged"
+  },
+  "deploymentBlocker": {
+    "service": "Vercel",
+    "code": "api-deployments-free-per-day",
+    "status": 402,
+    "dailyLimit": 100,
+    "retryAfterSeconds": 86400,
+    "pathsRejected": [
+      "Git production deployment",
+      "Vercel MCP deployment API",
+      "authenticated Vercel CLI deployment API"
+    ],
+    "paymentOrPlanSettingsChanged": false,
+    "lastAttemptedSource": "ed98d972dbb8f2dce397f339b1827e2e427dfcd9"
+  },
+  "authenticatedProduction": {
+    "scope": "one owned disposable workspace/account; sequential fresh Better Auth sign-ins",
+    "sidebar": [
+      "settings reachable from workspace menu",
+      "Inbox visibility protected",
+      "gated Reviews and Signals excluded",
+      "Forge hidden and My issues moved above it",
+      "Count to Dot badge change saved",
+      "mounted navigation updated",
+      "preferences confirmed in PostgreSQL",
+      "persisted after reload and new sign-in"
+    ],
+    "comments": [
+      "Enter-mode unconfigured modifier did not submit",
+      "Shift+Enter inserted newline",
+      "repeated Enter created one root comment",
+      "repeated Enter created one reply with correct parent",
+      "repeated Enter edited original comment once to version1"
+    ],
+    "canonicalReadback": {
+      "issueRevision": 3,
+      "comments": 2,
+      "rootVersion": 1,
+      "replyParentVerified": true
+    },
+    "limits": [
+      "A fresh sign-out/sign-in exposed an AgentProvider shell transition error; fix merged but quota prevents its production verification",
+      "Production Command mode was saved and confirmed in SQL; final submission and interrupted-response retry were not completed before fixture cleanup",
+      "Request-failure and exact retry are covered by local real-editor/client tests and the earlier isolated renderer fixture",
+      "No native OS IME or packaged Electron certification"
+    ]
+  },
+  "databaseAfter": {
+    "identity": {
+      "database": "neondb",
+      "branch": "br-muddy-queen-zaeeysjt"
+    },
+    "ledger": {
+      "count": 73,
+      "latest": 73
+    },
+    "last": {
+      "id": 73,
+      "hash": "2a4b45a4864cf75dcf4a8691bbdf779050b85dd76ecf944ce5089a1e6f4ef24d",
+      "created_at": "1793707859380"
+    },
+    "recordedAt": "2026-11-03T15:57:55.578Z"
+  },
+  "migrationLedgerUnchanged": true,
+  "fixtureCleanup": {
+    "workspaces": 0,
+    "users": 0,
+    "receipts": 0,
+    "issues": 0,
+    "preferences": 0,
+    "sessions": 0,
+    "audit": 0,
+    "outbox": 0
+  },
+  "recordedAt": "2026-11-03T15:59:23.240636+00:00"
+}
