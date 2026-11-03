@@ -231,6 +231,8 @@ try {
     .getByRole("button", { name: "App notification badge", exact: true })
     .click()
   await a.getByRole("menuitemradio", { name: "Off", exact: true }).click()
+  await a.keyboard.press("Escape")
+  await expect(a.getByRole("menu")).toHaveCount(0)
   dialog = await editor(a)
   await dialog.getByRole("switch", { name: "Show Forge", exact: true }).click()
   await dialog.getByRole("switch", { name: "Show Calls", exact: true }).click()
@@ -406,6 +408,11 @@ try {
     fixtureScope: marker,
   }
 } catch (error) {
+  const firstPage = browser?.contexts()[0]?.pages()[0]
+  await firstPage?.screenshot({
+    path: "/tmp/for134-live-failure.png",
+    fullPage: true,
+  })
   writeFileSync(
     resolve(output, "production-failure.json"),
     JSON.stringify(
