@@ -241,4 +241,78 @@ describe("FOR-126 versioned content manifests", () => {
     expect(result.sourceErrors).toHaveLength(1)
     expect(result.sources[0].raw).toBe(source.raw)
   })
+  it("stores the canonical rich-text normalization for initiatives and milestones", () => {
+    const body = {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: "Source",
+              marks: [
+                {
+                  type: "link",
+                  attrs: {
+                    href: "https://example.com",
+                    target: "_self",
+                    rel: "opener",
+                    class: "legacy",
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+    const initiative = {
+      ...blankInitiative(actorId),
+      number: 1,
+      name: "Strategy",
+      description: body,
+      projects: [
+        {
+          id: "project",
+          name: "Roadmap",
+          status: "Active",
+          health: "On track",
+          teamIds: [teamId],
+          milestones: [
+            {
+              id: "milestone",
+              name: "Launch",
+              completed: false,
+              description: body,
+            },
+          ],
+        },
+      ],
+    }
+    const result = make([
+      {
+        key: `forge:workspace:${workspaceId}:initiatives:v1`,
+        raw: JSON.stringify({
+          version: 1,
+          initiatives: [initiative],
+          workspaceProjects: [],
+        }),
+      },
+    ])
+    const attrs = {
+      href: "https://example.com",
+      target: "_blank",
+      rel: "noopener noreferrer",
+    }
+    for (const entry of result.entries)
+      if (
+        entry.content?.kind === "initiative" ||
+        entry.content?.kind === "milestone"
+      )
+        expect(
+          entry.content.fields.description?.content?.[0].content?.[0].marks?.[0]
+            .attrs
+        ).toEqual(attrs)
+  })
 })

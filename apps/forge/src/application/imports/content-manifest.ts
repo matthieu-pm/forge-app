@@ -226,9 +226,8 @@ export function contentEntries(input: {
             comments: [],
             updates: [],
           })
-          documentBodySchema.parse(
-            fields.description ?? { type: "doc", content: [] }
-          )
+          if (fields.description)
+            fields.description = documentBodySchema.parse(fields.description)
           if (fields.labelIds.length)
             throw new Error(
               "Initiative labels have no enabled canonical adapter."
@@ -281,7 +280,8 @@ export function contentEntries(input: {
           const fields = initiativeProjectSchema.shape.milestones
             .unwrap()
             .element.parse(v)
-          if (fields.description) documentBodySchema.parse(fields.description)
+          if (fields.description)
+            fields.description = documentBodySchema.parse(fields.description)
           return {
             kind: "milestone",
             projectId,
