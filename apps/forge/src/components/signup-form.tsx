@@ -100,7 +100,9 @@ export function SignupForm({
 
     startTransition(() => {
       void navigate({
-        href: authReturnPath(redirectTo) ?? DEFAULT_HOME_ENTRY,
+        href:
+          authReturnPath(redirectTo, window.location.hash) ??
+          DEFAULT_HOME_ENTRY,
       })
     })
   }

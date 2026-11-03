@@ -22,7 +22,7 @@ export function resolveDefaultHome(
 }
 
 /** Keep internal auth return paths byte-for-byte, excluding auth-page loops. */
-export function authReturnPath(value: unknown): string | null {
+export function authReturnPath(value: unknown, fragment = ""): string | null {
   if (typeof value !== "string" || !value.startsWith("/")) return null
   if (
     value.startsWith("//") ||
@@ -39,11 +39,14 @@ export function authReturnPath(value: unknown): string | null {
     if (url.origin !== "https://forge.invalid") return null
     if (
       ["/login", "/signup", "/auth/desktop"].includes(
-        url.pathname.replace(/\/$/, "")
+        decodeURI(url.pathname).replace(/\/+$/, "").toLowerCase()
       )
     )
       return null
-    return value
+    // Browsers carry fragments across HTTP redirects, but never send them to SSR.
+    return fragment && !value.includes("#")
+      ? `${value}#${fragment.replace(/^#/, "")}`
+      : value
   } catch {
     return null
   }

@@ -14,7 +14,9 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@tanstack/react-router", () => ({
   useRouter: () => ({
     navigate: mocks.navigate,
-    latestLocation: mocks.location,
+    get latestLocation() {
+      return mocks.location
+    },
   }),
   useRouterState: ({ select }: { select: (state: unknown) => unknown }) =>
     select({
@@ -22,6 +24,9 @@ vi.mock("@tanstack/react-router", () => ({
       resolvedLocation: mocks.location,
       matches: [],
     }),
+}))
+vi.mock("@/components/account-preference-provider", () => ({
+  useProtectedIdentity: () => ({ workspaceId: "w" }),
 }))
 vi.mock("@/lib/team-state", () => ({ listTeams: () => Promise.resolve([]) }))
 vi.mock("@/lib/default-home-state", () => ({ loadDefaultHome: mocks.home }))
@@ -37,6 +42,10 @@ vi.mock("@/host/forge-host", () => ({
 beforeEach(() => {
   vi.clearAllMocks()
   mocks.storage.clear()
+  mocks.location = {
+    pathname: "/my-issues",
+    href: "/my-issues?view=assigned#issue",
+  }
   mocks.subscribe.mockReturnValue(() => {})
   mocks.home.mockResolvedValue("/inbox")
   Object.defineProperty(window, "forgeDesktop", {
@@ -69,6 +78,54 @@ describe("FOR-131 desktop renderer default opens (fixture bridge)", () => {
       expect(saved.tabs.at(-1).history).toEqual([path])
     }
   )
+  it("preserves every overlapping native new-tab request", async () => {
+    let resolve!: (path: string) => void
+    mocks.home.mockReturnValue(
+      new Promise<string>((done) => {
+        resolve = done
+      })
+    )
+    render(<DesktopTitleBar />)
+    await act(() => Promise.resolve())
+    const callback = mocks.subscribe.mock.calls.at(-1)![0]
+    act(() => {
+      callback({ type: "command", command: "new-tab" })
+      callback({ type: "command", command: "new-tab" })
+    })
+    await act(() => {
+      resolve("/inbox")
+      return Promise.resolve()
+    })
+    const saved = JSON.parse(mocks.storage.get("forge:desktop-tabs")!)
+    expect(saved.tabs).toHaveLength(3)
+    expect(
+      saved.tabs.slice(1).map((tab: { history: Array<string> }) => tab.history)
+    ).toEqual([["/inbox"], ["/inbox"]])
+    expect(mocks.home).toHaveBeenCalledOnce()
+    expect(mocks.navigate).toHaveBeenCalledOnce()
+  })
+  it("starts a fresh default batch after navigation while a previous request is pending", async () => {
+    const resolvers: Array<(path: string) => void> = []
+    mocks.home.mockImplementation(
+      () =>
+        new Promise<string>((resolve) => {
+          resolvers.push(resolve)
+        })
+    )
+    render(<DesktopTitleBar />)
+    await act(() => Promise.resolve())
+    fireEvent.click(screen.getByRole("button", { name: "New tab" }))
+    mocks.location = { pathname: "/inbox", href: "/inbox" }
+    fireEvent.click(screen.getByRole("button", { name: "New tab" }))
+    await act(() => {
+      resolvers[0]("/forge")
+      resolvers[1]("/inbox")
+      return Promise.resolve()
+    })
+    expect(mocks.home).toHaveBeenCalledTimes(2)
+    expect(mocks.navigate).toHaveBeenCalledTimes(1)
+    expect(mocks.navigate).toHaveBeenCalledWith({ href: "/inbox" })
+  })
   it("discards a late default result after explicit navigation", async () => {
     let resolve!: (path: string) => void
     mocks.home.mockReturnValue(

@@ -1,4 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+} from "@tanstack/react-router"
 import { retireProtectedSession } from "@/lib/protected-session"
 
 import {
@@ -115,7 +120,7 @@ describe("auth route guards", () => {
         location: {
           pathname: "/teams/product/issues",
           searchStr: "?issue=FOR-131",
-          hash: "#comment-1",
+          hash: "comment-1",
         },
       })
     ).rejects.toMatchObject({
@@ -126,6 +131,30 @@ describe("auth route guards", () => {
     })
   })
 
+  it("FOR-131 preserves an actual router-parsed issue fragment through authentication", async () => {
+    mocks.getAuthState.mockResolvedValue({ session: null, workspace: null })
+    const path = "/teams/product/issues?issue=FOR-131#comment-1"
+    const router = createRouter({
+      routeTree: createRootRoute(),
+      history: createMemoryHistory({ initialEntries: [path] }),
+    })
+    expect(router.latestLocation.hash).toBe("comment-1")
+    await expect(
+      protectedRouteBeforeLoad({ location: router.latestLocation })
+    ).rejects.toMatchObject({ options: { search: { redirect: path } } })
+  })
+  it("FOR-131 preserves a carried Login fragment for an already signed-in actor", async () => {
+    await expect(
+      publicRouteBeforeLoad({
+        location: {
+          searchStr: "?redirect=%2Fteams%2Fproduct%2Fissues%3Fissue%3DFOR-131",
+          hash: "comment-1",
+        },
+      })
+    ).rejects.toMatchObject({
+      options: { href: "/teams/product/issues?issue=FOR-131#comment-1" },
+    })
+  })
   it("shares navigation state beyond five seconds and reloads after invalidation", async () => {
     vi.useFakeTimers()
     try {

@@ -35,13 +35,13 @@ export function getNavigationAuthState() {
 }
 
 function redirectTarget(pathname: string, search = "", hash = "") {
-  return `${pathname}${search}${hash}`
+  return `${pathname}${search}${hash ? `#${hash.replace(/^#/, "")}` : ""}`
 }
 
 export async function publicRouteBeforeLoad({
   location,
 }: {
-  location?: { searchStr?: string }
+  location?: { searchStr?: string; hash?: string }
 } = {}) {
   const authState = await getNavigationAuthState()
 
@@ -52,7 +52,8 @@ export async function publicRouteBeforeLoad({
   // The browser must finish the desktop authorization handshake even when signed in.
   if (desktopAuthorizationQuery(location?.searchStr ?? "")) return
   const returnTo = authReturnPath(
-    new URLSearchParams(location?.searchStr).get("redirect")
+    new URLSearchParams(location?.searchStr).get("redirect"),
+    location?.hash
   )
 
   throw redirect({

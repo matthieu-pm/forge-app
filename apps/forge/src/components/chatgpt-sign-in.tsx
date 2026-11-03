@@ -36,7 +36,8 @@ export function ChatGPTSignIn({
     setError(null)
     try {
       const desktop = desktopAuthorizationQuery(window.location.search)
-      const returnPath = authReturnPath(redirectTo) ?? DEFAULT_HOME_ENTRY
+      const returnPath =
+        authReturnPath(redirectTo, window.location.hash) ?? DEFAULT_HOME_ENTRY
       const callbackURL = desktop
         ? window.location.href
         : new URL(returnPath, window.location.origin).href

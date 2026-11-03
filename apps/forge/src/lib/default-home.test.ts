@@ -15,6 +15,17 @@ describe("FOR-131 default home resolver", () => {
     }
   )
 
+  it("retains the fragment carried by the browser across an HTTP auth redirect", () => {
+    expect(
+      authReturnPath("/teams/product/issues?issue=FOR-131", "comment-1")
+    ).toBe("/teams/product/issues?issue=FOR-131#comment-1")
+    expect(
+      authReturnPath("/teams/product/issues?issue=FOR-131", "#comment-1")
+    ).toBe("/teams/product/issues?issue=FOR-131#comment-1")
+    expect(authReturnPath("/inbox#explicit", "#carried")).toBe(
+      "/inbox#explicit"
+    )
+  })
   it.each([
     undefined,
     null,
@@ -87,6 +98,13 @@ describe("FOR-131 default home resolver", () => {
     "/\n/outside.test",
     "/login?redirect=/inbox",
     "/signup/",
+    "/LOGIN",
+    "/%6cogin",
+    "/%73ignup",
+    "/%61uth/desktop",
+    "/login//",
+    "/SIGNUP///?redirect=/inbox",
+    "/AUTH/DESKTOP//",
     "/auth/desktop",
     "/foo/../login",
   ])("rejects unsafe or looping auth returns %j", (path) =>

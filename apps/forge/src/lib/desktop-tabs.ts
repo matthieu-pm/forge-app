@@ -118,10 +118,10 @@ export function moveDesktopTabHistory(
 
 export function restoreDesktopTabs(
   value: unknown,
-  currentPath: string
+  currentPath?: string
 ): DesktopTabsState {
   if (!value || typeof value !== "object") {
-    return createDesktopTabs(currentPath)
+    return createDesktopTabs(currentPath ?? "/")
   }
 
   const candidate = value as Partial<DesktopTabsState>
@@ -130,7 +130,7 @@ export function restoreDesktopTabs(
     candidate.tabs.length === 0 ||
     typeof candidate.activeTabId !== "string"
   ) {
-    return createDesktopTabs(currentPath)
+    return createDesktopTabs(currentPath ?? "/")
   }
 
   const tabs = candidate.tabs.filter(
@@ -148,7 +148,7 @@ export function restoreDesktopTabs(
   )
 
   if (tabs.length === 0) {
-    return createDesktopTabs(currentPath)
+    return createDesktopTabs(currentPath ?? "/")
   }
 
   const activeTabId = tabs.some((tab) => tab.id === candidate.activeTabId)
@@ -157,5 +157,5 @@ export function restoreDesktopTabs(
   const restored = { tabs, activeTabId }
 
   // The address loaded by Electron is authoritative on reload and deep-link opens.
-  return recordDesktopTabRoute(restored, currentPath)
+  return currentPath ? recordDesktopTabRoute(restored, currentPath) : restored
 }
