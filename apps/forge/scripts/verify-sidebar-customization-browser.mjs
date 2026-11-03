@@ -211,6 +211,12 @@ try {
   checks.push(
     "Fixture server snapshot reload retains layout/visibility/style; mounted navigation applies immediately"
   )
+  const reorder = page.getByRole("button", {
+    name: "Move My issues up",
+    exact: true,
+  })
+  await tabTo(reorder)
+  for (let i = 0; i < 4; i++) await page.keyboard.press("Alt+ArrowUp")
   const reviews = page.getByRole("button", {
     name: "Move Reviews up",
     exact: true,
@@ -228,6 +234,7 @@ try {
   await expect(reset).toBeFocused()
   await page.keyboard.press("Enter")
   await expect(reset).toBeFocused()
+  await expect(reset).toBeInViewport()
   await expect(show).toHaveAttribute("aria-checked", "true")
   await expect(badge).toHaveValue("count")
   await expect(dialog.getByText(/Default sidebar restored/)).toBeAttached()

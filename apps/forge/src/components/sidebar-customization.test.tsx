@@ -57,6 +57,10 @@ async function open() {
 }
 afterEach(cleanup)
 beforeEach(async () => {
+  Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+    configurable: true,
+    value: vi.fn(),
+  })
   gates.reviews = true
   await setupPreferenceFixture()
 })

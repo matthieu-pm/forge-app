@@ -92,9 +92,19 @@ export function SidebarCustomization() {
   React.useLayoutEffect(() => {
     const control = focusedControl.current
     if (!root.current || !control) return
-    if (!control.isConnected || control.matches(":disabled"))
-      (sync.editable ? reset.current : done.current)?.focus()
-    else if (document.activeElement === document.body) control.focus()
+    const target =
+      !control.isConnected || control.matches(":disabled")
+        ? sync.editable
+          ? reset.current
+          : done.current
+        : control
+    if (!target) return
+    if (target !== control || document.activeElement === document.body)
+      target.focus()
+    // Keyed row moves can change Chromium's scroll anchor even when the focused
+    // button survives. Keep that control visible after reorder/reset as well.
+    if (document.activeElement === target)
+      target.scrollIntoView({ block: "nearest", inline: "nearest" })
   }, [availableIds, sync.editable])
 
   return (
@@ -113,7 +123,7 @@ export function SidebarCustomization() {
         onFocusCapture={(event) => {
           focusedControl.current = event.target as HTMLElement
         }}
-        className="max-h-[calc(100dvh-2rem)] gap-4 overflow-y-auto p-4 motion-reduce:animate-none sm:max-w-lg sm:p-6"
+        className="max-h-[calc(100dvh-2rem)] scroll-p-4 gap-4 overflow-y-auto p-4 motion-reduce:animate-none sm:max-w-lg sm:scroll-p-6 sm:p-6"
       >
         <DialogHeader className="pr-8">
           <DialogTitle>Customize sidebar</DialogTitle>

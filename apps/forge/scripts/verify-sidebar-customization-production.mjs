@@ -64,6 +64,11 @@ async function saved(page) {
 async function editor(page) {
   const button = page.getByRole("button", { name: "Customize", exact: true })
   await expect(button).toBeEnabled({ timeout: 60000 })
+  // A previous settings selector may leave this control under the sticky
+  // Preferences heading. Scroll it clear using normal browser scrolling.
+  await button.evaluate((element) =>
+    element.scrollIntoView({ block: "center" })
+  )
   await button.click()
   const dialog = page.getByRole("dialog", { name: "Customize sidebar" })
   await expect(dialog).toBeVisible()
@@ -81,6 +86,9 @@ async function settings(page) {
 async function back(page) {
   await page.getByRole("link", { name: "Back to app", exact: true }).click()
   await expect(visible(page.locator('a[href="/inbox"]')).first()).toBeVisible()
+  await expect(
+    page.getByRole("main", { name: "Inbox", exact: true })
+  ).toBeVisible()
 }
 async function tabTo(page, locator) {
   for (let n = 0; n < 160; n++) {
@@ -226,6 +234,8 @@ try {
     .getByRole("button", { name: "App notification badge", exact: true })
     .click()
   await a.getByRole("menuitemradio", { name: "Off", exact: true }).click()
+  await a.keyboard.press("Escape")
+  await expect(a.getByRole("menu")).toHaveCount(0)
   dialog = await editor(a)
   await dialog.getByRole("switch", { name: "Show Forge", exact: true }).click()
   await dialog.getByRole("switch", { name: "Show Calls", exact: true }).click()
@@ -262,9 +272,12 @@ try {
   await expect(visible(a.locator('a[href="/forge"]'))).toHaveCount(0)
   expect((await paths(a)).slice(0, 2)).toEqual(["/my-issues", "/inbox"])
   await expect(visible(a.locator('[data-sidebar-badge="dot"]'))).toBeVisible()
+  await expect(a.getByText("Saving changes…", { exact: true })).toBeHidden({
+    timeout: 60000,
+  })
   await a.screenshot({
     path: resolve(output, "production-sidebar-desktop.png"),
-    fullPage: true,
+    fullPage: false,
   })
   checked(
     "AC-01/AT-01",
@@ -349,6 +362,9 @@ try {
   expect(defaults.values["general.notificationBadge"]).toBe("off")
   const dimensions = await dialog.evaluate((element) => ({
     width: element.getBoundingClientRect().width,
+    top: element.getBoundingClientRect().top,
+    bottom: element.getBoundingClientRect().bottom,
+    viewportHeight: window.innerHeight,
     client: element.clientWidth,
     scroll: element.scrollWidth,
     controls: [
@@ -360,11 +376,17 @@ try {
     }),
   }))
   expect(dimensions.width).toBeLessThanOrEqual(320)
+  expect(dimensions.top).toBeGreaterThanOrEqual(0)
+  expect(dimensions.bottom).toBeLessThanOrEqual(dimensions.viewportHeight)
   expect(dimensions.client).toBe(dimensions.scroll)
   expect(dimensions.controls).toBe(true)
+  await expect(reset).toBeInViewport()
+  await expect(a.getByText("Saving changes…", { exact: true })).toBeHidden({
+    timeout: 60000,
+  })
   await a.screenshot({
     path: resolve(output, "production-sidebar-320.png"),
-    fullPage: true,
+    fullPage: false,
   })
   checked(
     "AC-02/AT-02",
@@ -401,6 +423,11 @@ try {
     fixtureScope: marker,
   }
 } catch (error) {
+  const firstPage = browser?.contexts()[0]?.pages()[0]
+  await firstPage?.screenshot({
+    path: "/tmp/for134-live-failure.png",
+    fullPage: true,
+  })
   writeFileSync(
     resolve(output, "production-failure.json"),
     JSON.stringify(
