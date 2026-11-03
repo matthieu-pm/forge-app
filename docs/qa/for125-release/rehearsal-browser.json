@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-11-03T13:26:53.822Z",
+  "passed": true,
+  "revision": "965ae0f5541b0f61b5c3e73a672ba2fcc09a46a7",
+  "environment": "sla-rehearsal",
+  "database": "neondb",
+  "branch": "br-small-darkness-zahmr2fc",
+  "browser": "Chromium, real Better Auth sessions, Honolulu/Tokyo zones, clock set to2040",
+  "checks": [
+    "Admin saves shared policy from an initially disabled, empty configuration",
+    "Two admins resolve a visible revision conflict without losing the local draft",
+    "Definitive stale-reference rejection leaves an editable draft that can be corrected and saved",
+    "Lost response after a committed policy save retries the same receipt exactly once",
+    "Revoked admin loses policy data and editor after live authorization refresh",
+    "Member canonical creation produces and reloads a server deadline and honest system history, independent of browser timezone"
+  ],
+  "pageErrors": []
+}
