@@ -1,0 +1,18 @@
+{
+  "cleanup": {
+    "workspaces": "0",
+    "users": "0",
+    "sessions": "0",
+    "preferences": "0",
+    "workspace_preferences": "0",
+    "product_state": "0",
+    "receipts": "0"
+  },
+  "migrations": 73,
+  "lastMigration": {
+    "hash": "2a4b45a4864cf75dcf4a8691bbdf779050b85dd76ecf944ce5089a1e6f4ef24d",
+    "createdAt": 1793707859380
+  },
+  "matchesSource": true,
+  "checkedAt": "2026-11-03T15:45:05.181Z"
+}

@@ -1,0 +1,60 @@
+{
+  "issue": "FOR-134",
+  "revision": "acd82c6d82ede128ae699e41f79e7c88bac1a417",
+  "base": "https://app.forgenow.tech",
+  "startedAt": "2026-11-03T15:40:07.786Z",
+  "completedAt": "2026-11-03T15:43:10.711Z",
+  "identity": {
+    "database": "neondb",
+    "branch": "br-muddy-queen-zaeeysjt"
+  },
+  "migrationsVerified": 73,
+  "checks": [
+    {
+      "contract": "AC-03/AT-03",
+      "message": "Production reconciliation excludes retired/gated saved IDs and forces Inbox reachable"
+    },
+    {
+      "contract": "AC-01/AT-01",
+      "message": "Real account commands persist order/visibility/dot badge independently of native mode and mounted navigation updates without reload"
+    },
+    {
+      "contract": "AC-01/AT-01",
+      "message": "Second independent owner session reload reads saved layout; another authenticated account retains defaults"
+    },
+    {
+      "contract": "AC-01/AT-01",
+      "message": "Off style removes the real scoped unread badge"
+    },
+    {
+      "contract": "AC-01/AT-01",
+      "message": "Offline failure stays visibly unsaved; reconnect/explicit retry persists the real change"
+    },
+    {
+      "contract": "AC-02/AT-02",
+      "message": "Authenticated 320px keyboard reorder/reset preserve focus, announce changes and restore SQL-confirmed defaults without horizontal overflow"
+    },
+    {
+      "contract": "AC-02/AT-02",
+      "message": "Reset restores mounted default navigation/count badge; Escape returns focus and Settings stays reachable"
+    }
+  ],
+  "dimensions": {
+    "width": 288,
+    "top": 16,
+    "bottom": 624,
+    "viewportHeight": 640,
+    "client": 288,
+    "scroll": 288,
+    "controls": true
+  },
+  "pageErrors": [],
+  "fixtureScope": "for134-release-212c815b-8796-4847-9ad4-a6cf9ebbf149",
+  "cleanup": {
+    "workspaces": "0",
+    "users": "0",
+    "sessions": "0",
+    "preferences": "0",
+    "receipts": "0"
+  }
+}

@@ -1,3 +1,5 @@
+> Historical implementation-only evidence. Superseded by the [verified review and production release](review-and-release.md).
+
 # FOR-134 implementation and local acceptance
 
 Date: 3 November 2026. Final implementation: `e7fc53804618179a368d10e914374989ca4b77c6`,

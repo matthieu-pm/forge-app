@@ -1,0 +1,97 @@
+{
+  "issue": "FOR-134",
+  "date": "2026-11-03",
+  "pullRequests": [
+    {
+      "number": 59,
+      "merge": "6bcd5392a6e4473ad2fdcd4e9e4c62cc0ee24555"
+    },
+    {
+      "number": 62,
+      "reviewedHead": "5ed07c95f1e6a4afbb3037ad092cdf23c97cfbf3",
+      "merge": "acd82c6d82ede128ae699e41f79e7c88bac1a417"
+    }
+  ],
+  "review": {
+    "standardsP2Corrected": 2,
+    "remainingBlockers": 0,
+    "specRemainingBlockers": 0,
+    "report": "docs/qa/for134/review-and-release.md"
+  },
+  "validation": {
+    "applicationTestsPassed": 2699,
+    "applicationTestsSkipped": 650,
+    "workflowTestsPassed": 4,
+    "integratedAuthNavigationTestsPassed": 101,
+    "integratedComposerTestsPassed": 84,
+    "finalMergedSidebarProviderTestsPassed": 15,
+    "typecheck": "passed",
+    "productionBuildAndWorkflowProtection": "passed",
+    "fixAndHarnessLint": "passed",
+    "formatAndDiff": "passed"
+  },
+  "production": {
+    "url": "https://app.forgenow.tech",
+    "deploymentId": "dpl_42ghSN1mQodTYP5xQHXnsBqX61b7",
+    "deploymentUrl": "https://forge-5z8wgqva5-matthieu-pm.vercel.app",
+    "projectId": "prj_S0XLtdngbexhl2ao7WviBrlMScar",
+    "teamId": "team_KddvwwnftxOOhP8UymRnP0PX",
+    "sourceRevision": "acd82c6d82ede128ae699e41f79e7c88bac1a417",
+    "target": "production",
+    "state": "READY",
+    "framework": "tanstack-start",
+    "nodeVersion": "24.x",
+    "region": "iad1",
+    "buildDurationSeconds": 55.854,
+    "readyAt": "2026-11-03T15:38:38.454Z",
+    "method": "Vercel Git integration deployment of merged main; public alias independently matched",
+    "aliasVerified": true,
+    "schemaMigrationsApplied": 0,
+    "rolloutSettingsChanged": false,
+    "authenticatedChecks": 7,
+    "browserPageErrors": 0,
+    "acceptanceArtifact": "docs/qa/for134/production-browser.json",
+    "screenshotArtifacts": [
+      "docs/qa/for134/production-sidebar-320.png",
+      "docs/qa/for134/production-sidebar-desktop.png"
+    ],
+    "health": {
+      "live": "ALIVE",
+      "ready": "READY",
+      "httpStatus": 200
+    },
+    "errorFatalScan": {
+      "from": "2026-11-03T15:38:38.000Z",
+      "until": "2026-11-03T15:44:32.290Z",
+      "records": 0
+    },
+    "externalDrains": 0,
+    "monitoringChanged": false,
+    "temporaryShareLinksCreated": 0,
+    "temporaryCredentialsRemoved": true
+  },
+  "cleanupAndSchema": {
+    "cleanup": {
+      "workspaces": "0",
+      "users": "0",
+      "sessions": "0",
+      "preferences": "0",
+      "workspace_preferences": "0",
+      "product_state": "0",
+      "receipts": "0"
+    },
+    "migrations": 73,
+    "lastMigration": {
+      "hash": "2a4b45a4864cf75dcf4a8691bbdf779050b85dd76ecf944ce5089a1e6f4ef24d",
+      "createdAt": 1793707859380
+    },
+    "matchesSource": true,
+    "checkedAt": "2026-11-03T15:45:05.181Z"
+  },
+  "releaseBoundary": {
+    "authenticatedProductionWeb": "passed",
+    "packagedMacOS": "not claimed",
+    "nativeDockBadgeImplementation": "not changed"
+  },
+  "issueStatus": "Done"
+}
