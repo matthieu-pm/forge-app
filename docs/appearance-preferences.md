@@ -9,9 +9,10 @@ Before the session user is known, startup paint follows the operating system and
 the default palettes. It does not read stored appearance. After the user is
 known, a device cache keyed by that user id can paint the last account choice
 while workspace data is still loading. The cache is not an account patch, is
-never read for a different user, and is replaced when the signed-in snapshot
-arrives. Signing out returns to System. Another account does not keep the
-previous palette, mode, or host theme source.
+never read for a different user, and is replaced when a ready snapshot arrives.
+A failed, conflicted, or disabled load keeps that cache. Signing out returns
+to System. Another account does not keep the previous palette, mode, or host
+theme source.
 
 Dialogs, menus, popovers, toasts, and editors use the document theme tokens.
 `color-scheme` follows the resolved appearance so native controls and focus

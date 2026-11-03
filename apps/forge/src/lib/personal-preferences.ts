@@ -68,7 +68,8 @@ export function savePersonalPreferences(
 }
 
 export function applyPersonalInterfacePreferences(
-  preferences: PersonalPreferences
+  preferences: PersonalPreferences,
+  options?: { appearanceOnly?: boolean }
 ) {
   const root = document.documentElement
   const prefersDark = systemPrefersDark()
@@ -85,14 +86,16 @@ export function applyPersonalInterfacePreferences(
   root.classList.toggle("dark", useDarkTheme)
   root.dataset.forgeTheme = resolvedTheme
   root.dataset.forgeAppearance = preferences.interfaceTheme
-  root.dataset.forgePointerCursors = String(preferences.pointerCursors)
-  root.dataset.forgeUnderlineLinks = String(preferences.underlineLinks)
   root.style.colorScheme = useDarkTheme ? "dark" : "light"
-  root.style.fontSize = {
-    small: "15px",
-    default: "16px",
-    large: "17px",
-  }[preferences.fontSize]
+  if (!options?.appearanceOnly) {
+    root.dataset.forgePointerCursors = String(preferences.pointerCursors)
+    root.dataset.forgeUnderlineLinks = String(preferences.underlineLinks)
+    root.style.fontSize = {
+      small: "15px",
+      default: "16px",
+      large: "17px",
+    }[preferences.fontSize]
+  }
   void root.offsetWidth
   root.classList.remove("forge-theme-switching")
 }

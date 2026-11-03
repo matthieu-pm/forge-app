@@ -73,6 +73,17 @@ describe("appearance choice", () => {
         cached,
       }).interfaceTheme
     ).toBe("light")
+    for (const status of ["error", "conflict", "disabled"]) {
+      expect(
+        appearanceForAccount({
+          userId: "alice",
+          values: {},
+          preferences: defaultPersonalPreferences,
+          status,
+          cached,
+        }).darkTheme
+      ).toBe("forest")
+    }
   })
 
   it("ignores another account's cache and damaged records", () => {

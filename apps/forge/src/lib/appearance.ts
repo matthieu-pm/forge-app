@@ -81,6 +81,18 @@ export function hasPersistedAppearance(
   return !!values && appearanceFields.some((key) => Object.hasOwn(values, key))
 }
 
+const resolvedAppearanceStatuses = new Set(["ready", "saving"])
+
+/** A failed, conflicted, or disabled load is not an account snapshot. */
+export function appearanceChoiceResolved(
+  status: string,
+  values: Record<string, unknown> | null | undefined
+) {
+  return (
+    hasPersistedAppearance(values) || resolvedAppearanceStatuses.has(status)
+  )
+}
+
 export function appearanceForAccount(input: {
   userId: string | null
   values: Record<string, unknown> | null
@@ -89,7 +101,7 @@ export function appearanceForAccount(input: {
   cached: AppearanceChoice | null
 }): AppearanceChoice {
   if (!input.userId) return defaultAppearanceChoice
-  if (hasPersistedAppearance(input.values) || input.status !== "loading") {
+  if (appearanceChoiceResolved(input.status, input.values)) {
     return {
       interfaceTheme: input.preferences.interfaceTheme,
       lightTheme: input.preferences.lightTheme,

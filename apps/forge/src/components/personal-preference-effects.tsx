@@ -7,8 +7,8 @@ import {
   useProtectedIdentity,
 } from "./account-preference-provider"
 import {
+  appearanceChoiceResolved,
   appearanceForAccount,
-  hasPersistedAppearance,
   readAppearanceCache,
   writeAppearanceCache,
 } from "@/lib/appearance"
@@ -36,17 +36,22 @@ export function PersonalPreferenceEffects() {
     [preferences, status, sync.client, sync.values, userId]
   )
 
+  const resolved =
+    !userId ||
+    appearanceChoiceResolved(
+      sync.client ? sync.status : status,
+      sync.client ? sync.values : null
+    )
   React.useEffect(() => {
     const apply = () => {
-      applyPersonalInterfacePreferences({ ...preferences, ...choice })
+      applyPersonalInterfacePreferences(
+        { ...preferences, ...choice },
+        { appearanceOnly: !resolved }
+      )
       void getForgeHost().setThemeSource(choice.interfaceTheme)
     }
     apply()
-    if (
-      sync.client &&
-      userId &&
-      (hasPersistedAppearance(sync.values) || sync.status !== "loading")
-    ) {
+    if (sync.client && userId && resolved) {
       writeAppearanceCache(localStorage, userId, choice)
     }
     if (
@@ -57,7 +62,15 @@ export function PersonalPreferenceEffects() {
     const colorScheme = window.matchMedia("(prefers-color-scheme: dark)")
     colorScheme.addEventListener("change", apply)
     return () => colorScheme.removeEventListener("change", apply)
-  }, [choice, preferences, sync.client, sync.status, sync.values, userId])
+  }, [
+    choice,
+    preferences,
+    resolved,
+    sync.client,
+    sync.status,
+    sync.values,
+    userId,
+  ])
 
   return null
 }

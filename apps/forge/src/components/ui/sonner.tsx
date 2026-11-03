@@ -3,11 +3,17 @@
 import * as React from "react"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { CheckmarkCircle02Icon, InformationCircleIcon, Alert02Icon, MultiplicationSignCircleIcon, Loading03Icon } from "@hugeicons/core-free-icons"
+import {
+  CheckmarkCircle02Icon,
+  InformationCircleIcon,
+  Alert02Icon,
+  MultiplicationSignCircleIcon,
+  Loading03Icon,
+} from "@hugeicons/core-free-icons"
 
 function useDocumentColorScheme(): "light" | "dark" {
   const [scheme, setScheme] = React.useState<"light" | "dark">("light")
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     const root = document.documentElement
     const read = () =>
       setScheme(root.classList.contains("dark") ? "dark" : "light")
@@ -31,19 +37,39 @@ const Toaster = ({ ...props }: ToasterProps) => {
       className="toaster group"
       icons={{
         success: (
-          <HugeiconsIcon icon={CheckmarkCircle02Icon} strokeWidth={2} className="size-4" />
+          <HugeiconsIcon
+            icon={CheckmarkCircle02Icon}
+            strokeWidth={2}
+            className="size-4"
+          />
         ),
         info: (
-          <HugeiconsIcon icon={InformationCircleIcon} strokeWidth={2} className="size-4" />
+          <HugeiconsIcon
+            icon={InformationCircleIcon}
+            strokeWidth={2}
+            className="size-4"
+          />
         ),
         warning: (
-          <HugeiconsIcon icon={Alert02Icon} strokeWidth={2} className="size-4" />
+          <HugeiconsIcon
+            icon={Alert02Icon}
+            strokeWidth={2}
+            className="size-4"
+          />
         ),
         error: (
-          <HugeiconsIcon icon={MultiplicationSignCircleIcon} strokeWidth={2} className="size-4" />
+          <HugeiconsIcon
+            icon={MultiplicationSignCircleIcon}
+            strokeWidth={2}
+            className="size-4"
+          />
         ),
         loading: (
-          <HugeiconsIcon icon={Loading03Icon} strokeWidth={2} className="size-4 animate-spin" />
+          <HugeiconsIcon
+            icon={Loading03Icon}
+            strokeWidth={2}
+            className="size-4 animate-spin"
+          />
         ),
       }}
       style={
