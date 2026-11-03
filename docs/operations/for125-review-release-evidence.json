@@ -1,0 +1,112 @@
+{
+  "issue": "FOR-125",
+  "pullRequest": "https://github.com/matthieu-pm/forge-app/pull/52",
+  "review": {
+    "base": "9952f5039131ba84edcf913b14c54bd6e62f1371",
+    "originalHead": "8afc58199adf5fc413ff50dafc0e5d3ebb1bb596",
+    "correctedHead": "3ff97ab5cae6d0174fcdf2278632982cb1cc65f7",
+    "standardsFindings": 0,
+    "specificationP2FindingsCorrected": 1,
+    "unresolvedFindings": 0,
+    "correction": "Preserve and reconcile breaches owed before disablement even if removal/cancellation invalidates the active generation",
+    "report": "docs/qa/for125/review-and-release.md"
+  },
+  "mergedRevision": "29bd73ea86ed76d848a181de40487b83a78bd6d4",
+  "reviewedAndMergedTree": "37b76567eda6d68836a9038ddeeeead93bd2ba51",
+  "validation": {
+    "frozenInstallation": "passed",
+    "testFilesPassed": 4,
+    "testsPassed": 25,
+    "testsSkipped": 0,
+    "testCommand": "bunx vitest run src/application/features/feature-policy.test.ts src/application/features/feature-entrypoints.server.test.ts src/application/features/feature-functions.server.test.ts src/application/operations/health-acceptance.test.ts",
+    "fixtureDateArithmetic": "passed independent Python zoneinfo checks",
+    "repositoryLinksAndEvidenceJSON": "passed",
+    "selectedSourceDigestsAndLengthsVerified": 4,
+    "sourceCoordinates": "independently rechecked by specification reviewer",
+    "diffCheck": "passed",
+    "githubChecksAtMerge": [
+      "Vercel \u2013 forge-app: success",
+      "Vercel \u2013 forge-preview-runtime: success",
+      "Vercel Preview Comments: success"
+    ]
+  },
+  "scope": {
+    "documentationOnly": true,
+    "runtimeSourceAndDependenciesChanged": false,
+    "runtimeMatchesPreviouslyVerifiedSource": "5f12ea0dea026fab58ffb09eb2e96f7f93185d5d",
+    "schemaMigrationRequired": false,
+    "migrationsApplied": 0,
+    "slaImplemented": false,
+    "slaRuntimeAcceptanceExecuted": false,
+    "slaFeatureCeiling": "disabled",
+    "issueStatus": "In Progress"
+  },
+  "production": {
+    "url": "https://app.forgenow.tech",
+    "projectId": "prj_S0XLtdngbexhl2ao7WviBrlMScar",
+    "teamId": "team_KddvwwnftxOOhP8UymRnP0PX",
+    "deploymentId": "dpl_8yHP38h41yGGrJZ92g9mVgbojfZo",
+    "deploymentUrl": "https://forge-e6rvvx2ub-matthieu-pm.vercel.app",
+    "state": "READY",
+    "target": "production",
+    "framework": "tanstack-start",
+    "buildDurationSeconds": 59.724,
+    "method": "Clean merged Git archive, authenticated CLI production staging with domain assignment skipped; protected health/denial checks; exact tested deployment promoted without rebuilding",
+    "sourceMetadata": {
+      "forgeSourceRevision": "29bd73ea86ed76d848a181de40487b83a78bd6d4",
+      "sourceCommit": "29bd73ea86ed76d848a181de40487b83a78bd6d4",
+      "gitCommitSha": "29bd73ea86ed76d848a181de40487b83a78bd6d4"
+    },
+    "runtimeSourceAttestation": {
+      "sourceRevision": "29bd73ea86ed76d848a181de40487b83a78bd6d4",
+      "deploymentId": "dpl_8yHP38h41yGGrJZ92g9mVgbojfZo",
+      "source": "deployment-scoped forge.request.completed telemetry for all five staged requests",
+      "lastObservedAt": "2026-11-03T11:54:08.113Z"
+    },
+    "previousDeploymentId": "dpl_6auiJRv94iCWuR9Hcjd6g4jyjJdF",
+    "automaticMergeDeploymentCanceled": "dpl_PzgErLfJ8aQb4KoCyEUZRBtwdyCP",
+    "aliasVerified": {
+      "host": "app.forgenow.tech",
+      "deploymentId": "dpl_8yHP38h41yGGrJZ92g9mVgbojfZo"
+    },
+    "rollout": "FORGE_FEATURE_ROLLOUTS={} on this deployment preserves the previous default-off release; no persistent project setting changed",
+    "buildVerification": [
+      "Production build passed",
+      "Protected Workflow handlers verified",
+      "Packaged Vercel OIDC dependencies verified",
+      "Self-contained 300-second Loop scheduler bundle verified"
+    ],
+    "stagedHttpChecks": 5,
+    "stagedArtifact": "docs/qa/for125/staged-http.json",
+    "publicHttpChecks": 7,
+    "publicArtifact": "docs/qa/for125/production-http.json",
+    "health": {
+      "/api/health/live": {
+        "status": 200,
+        "code": "ALIVE"
+      },
+      "/api/health/ready": {
+        "status": 200,
+        "code": "READY"
+      }
+    },
+    "activeShareLinks": 0,
+    "deploymentProtection": "all_except_custom_domains retained",
+    "errorLogScan": {
+      "levels": [
+        "error",
+        "fatal"
+      ],
+      "recordsReturned": 0,
+      "deploymentScoped": true,
+      "start": "2026-11-03T11:51:24.861Z",
+      "end": "2026-11-03T11:55:41.657Z"
+    }
+  },
+  "verificationLimits": [
+    "Rollout verification covers this documentation-only release and unchanged runtime/gates; FOR-125 runtime AC/ATs remain open.",
+    "No authenticated SLA mutation, concurrency/DST engine acceptance, subscriber delivery or packaged macOS test was performed.",
+    "No customer records, persistent rollout settings or database schema were changed."
+  ],
+  "recordedAt": "2026-11-03T11:56:38.565983+00:00"
+}

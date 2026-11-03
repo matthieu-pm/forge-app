@@ -43,8 +43,36 @@ claimed.
 
 ## Production evidence
 
-The user authorized merging and deploying this PR on 3 November 2026. Final
-merge/deployment identity, health, feature-gate checks and deployment-scoped
-error scan are recorded in
-`docs/operations/for125-review-release-evidence.json` after rollout. FOR-125
-remains In Progress for runtime implementation and acceptance.
+The user authorized merging and deploying this PR on 3 November 2026. PR #52
+merged as `29bd73ea86ed76d848a181de40487b83a78bd6d4`; its tree equals reviewed
+head `3ff97ab5cae6d0174fcdf2278632982cb1cc65f7`. Both Vercel preview checks and
+the preview-comment check passed before merge.
+
+Production deployment `dpl_8yHP38h41yGGrJZ92g9mVgbojfZo` is READY at
+https://app.forgenow.tech. A clean archive of the merge commit was staged with
+production configuration and domain assignment skipped. Five protected HTTP
+checks passed, including live/ready health and anonymous SLA/API denial.
+Deployment-scoped request telemetry reported the expected source revision.
+The exact tested build was promoted without rebuilding; the canonical alias
+was independently matched to its deployment ID. Seven public HTTP checks then
+passed, including 200 ALIVE/READY, a no-store login redirect for SLA settings,
+and no-store 404 responses for unsupported SLA/internal endpoints.
+
+The production build verified protected Workflow handlers, OIDC dependencies
+and the packaged Loop scheduler. The runtime source/dependency tree matches
+the previously verified production application `5f12ea0`. No schema migration
+or persistent project setting changed. The existing default-off rollout was
+preserved on this deployment, and SLA's source ceiling remains disabled.
+
+The deployment-scoped error/fatal scan returned zero records from 11:51:24.861
+through 11:55:41.657 UTC. No deployment share links were created, and general
+deployment protection remains enabled. The previous deployment
+`dpl_6auiJRv94iCWuR9Hcjd6g4jyjJdF` is the rollback target. The automatic Git
+merge deployment was canceled so it could not replace the staged/tested build.
+
+Source IDs, exact checks and verification limits are recorded in
+[release evidence](../../operations/for125-review-release-evidence.json),
+[staged checks](staged-http.json) and [public checks](production-http.json).
+This verifies the documentation release and unchanged runtime boundary; it
+does not claim SLA engine, notification, multi-account or packaged-desktop
+acceptance. FOR-125 remains In Progress for runtime implementation.
