@@ -9,6 +9,7 @@ import {
   UserGroup03Icon,
 } from "@hugeicons/core-free-icons"
 import type { TeamDirectoryEntry } from "@/lib/team-contract"
+import { DateInput } from "@/components/ui/date-input"
 import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import { DirectoryDisplay } from "@/components/directory-controls"
 import { OptionSelect } from "@/components/ui/option-select"
@@ -576,17 +577,17 @@ export function TeamDirectoryFilters({
                     )}
                   </OptionSelect>
                 ) : (
-                  <input
+                  <DateInput
                     aria-label="Filter value"
                     type={rule.field === "created" ? "date" : "text"}
                     className={`${selectClass} flex-1`}
                     value={rule.value}
-                    onChange={(event) =>
+                    onValueChange={(inputValue) =>
                       setDraft({
                         ...draft,
                         rules: draft.rules.map((item) =>
                           item.id === rule.id
-                            ? { ...rule, value: event.target.value }
+                            ? { ...rule, value: inputValue }
                             : item
                         ),
                       })
@@ -624,7 +625,15 @@ export function TeamDirectoryFilters({
             </Button>
             <Button
               disabled={draft.rules.some((rule) => !rule.value.trim())}
-              onClick={() => {
+              onClick={(event) => {
+                const inputs =
+                  event.currentTarget
+                    .closest('[role="dialog"]')
+                    ?.querySelectorAll<HTMLInputElement>("input") ?? []
+                if (
+                  !Array.from(inputs).every((field) => field.reportValidity())
+                )
+                  return
                 onChange(draft)
                 setAdvanced(false)
               }}

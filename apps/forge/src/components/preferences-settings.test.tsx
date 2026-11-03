@@ -99,3 +99,36 @@ describe("PreferencesSettings themes", () => {
     })
   })
 })
+
+afterEach(cleanup)
+
+it("FOR-129 changes an already-mounted calendar through the real preference selector", async () => {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: vi.fn(() => ({
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })),
+  })
+  vi.mocked(loadStartedAssignmentAvailability).mockResolvedValue(false)
+  const { DateInput } = await import("@/components/ui/date-input")
+  await setupPreferenceFixture()
+  const changed = vi.fn()
+  const { container } = renderPreferences(
+    <DateInput inlineCalendar value="2026-01-01" onValueChange={changed} />
+  )
+  renderPreferences(<PreferencesSettings />)
+  const root = container.querySelector('[data-slot="calendar"]')
+  const heading = () =>
+    root?.querySelector('th[scope="col"]')?.getAttribute("aria-label")
+  expect(heading()).toBe("Sunday")
+  fireEvent.click(screen.getByRole("button", { name: "First day of the week" }))
+  fireEvent.click(await screen.findByRole("menuitemradio", { name: "Monday" }))
+  await waitFor(() => expect(heading()).toBe("Monday"))
+  expect(container.querySelector('[data-slot="calendar"]')).toBe(root)
+  expect((container.querySelector("input") as HTMLInputElement).value).toBe(
+    "2026-01-01"
+  )
+  expect(changed).not.toHaveBeenCalled()
+})

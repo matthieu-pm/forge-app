@@ -74,7 +74,10 @@ describe("Recurring issue editor", () => {
       target: { value: "2026-10-21" },
     })
     selectOption(screen.getByRole("combobox", { name: "Repeat interval" }), "2")
-    selectOption(screen.getByRole("combobox", { name: "Repeat unit" }), "months")
+    selectOption(
+      screen.getByRole("combobox", { name: "Repeat unit" }),
+      "months"
+    )
     fireEvent.click(screen.getByRole("button", { name: "Create" }))
     await waitFor(() =>
       expect(mocks.save).toHaveBeenCalledWith({
@@ -150,3 +153,22 @@ describe("Recurring issue editor", () => {
     ).toBe(false)
   })
 })
+
+it.each(["2026-0", "2026-02-31"])(
+  "does not save an earlier first due date while the visible draft is %s",
+  (invalid) => {
+    render(<RecurringIssueEditor team={team} directory={directory} />)
+    fireEvent.change(screen.getByRole("textbox", { name: "Issue title" }), {
+      target: { value: "Invalid date regression" },
+    })
+    fireEvent.input(screen.getByLabelText("First due"), {
+      target: { value: "2026-02-01" },
+    })
+    fireEvent.input(screen.getByLabelText("First due"), {
+      target: { value: invalid },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Create" }))
+    fireEvent.keyDown(document, { key: "Enter", ctrlKey: true })
+    expect(mocks.save).not.toHaveBeenCalled()
+  }
+)
