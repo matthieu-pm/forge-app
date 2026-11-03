@@ -310,9 +310,20 @@ describe("FOR-126 versioned content manifests", () => {
         entry.content?.kind === "initiative" ||
         entry.content?.kind === "milestone"
       )
-        expect(
-          entry.content.fields.description?.content?.[0].content?.[0].marks?.[0]
-            .attrs
-        ).toEqual(attrs)
+        expect(entry.content.fields.description).toEqual({
+          type: "doc",
+          content: [
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Source",
+                  marks: [{ type: "link", attrs }],
+                },
+              ],
+            },
+          ],
+        })
   })
 })
