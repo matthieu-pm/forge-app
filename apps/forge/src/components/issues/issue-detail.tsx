@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from "react"
+import { Fragment, useEffect, useId, useRef, useState } from "react"
 import { Link, useNavigate } from "@tanstack/react-router"
 import { toast } from "sonner"
 import {
@@ -14,6 +14,7 @@ import { Attachments, attachmentId } from "./issue-attachments"
 import { ActivityReference, ActivityRow } from "./issue-activity-row"
 import { DurableIssueFiles } from "./durable-issue-files"
 import { SharedCommentInput } from "./shared-comment-input"
+import { useCommentSubmission } from "./use-comment-submission"
 import { SafeCommentContent } from "./safe-comment-content"
 import { CommentInput, readFiles } from "./issue-comment-input"
 import { DetailDescription, DetailTitle } from "./detail-content"
@@ -156,6 +157,8 @@ export function IssueDetail({
   const [activeAttachment, setActiveAttachment] = useState("")
   const [editing, setEditing] = useState<string>()
   const [editText, setEditText] = useState("")
+  const commentSubmission = useCommentSubmission("save")
+  const editHintId = useId()
   const [tools, setTools] = useState(false)
   const [codingMenuOpen, setCodingMenuOpen] = useState(false)
   const [issueMenuOpen, setIssueMenuOpen] = useState(false)
@@ -708,39 +711,40 @@ export function IssueDetail({
             <div>
               <textarea
                 aria-label="Edit comment"
+                aria-describedby={editHintId}
                 autoFocus
                 maxLength={10000}
                 onKeyDown={(event) => {
                   if (event.key === "Escape") setEditing(undefined)
-                  if (
-                    (event.metaKey || event.ctrlKey) &&
-                    event.key === "Enter" &&
-                    !event.nativeEvent.isComposing &&
-                    editText.trim()
-                  ) {
-                    event.preventDefault()
+                  commentSubmission.handleKeyDown(event.nativeEvent, () => {
                     if (
-                      patch({
-                        comments: issue.comments.map((item) =>
-                          item.id === comment.id
-                            ? { ...item, body: editText.trim(), edited: true }
-                            : item
-                        ),
+                      editText.trim() &&
+                      changeComment(comment, {
+                        body: editText.trim(),
+                        edited: true,
                       })
                     )
                       setEditing(undefined)
-                  }
+                  })
                 }}
                 value={editText}
                 onChange={(e) => setEditText(e.target.value)}
                 className="min-h-16 w-full rounded border border-border bg-transparent p-2 text-sm"
               />
               <div className="flex justify-end gap-2">
+                <p
+                  id={editHintId}
+                  className="mr-auto self-center text-xs text-muted-foreground"
+                >
+                  {commentSubmission.hint}
+                </p>
                 <Button variant="ghost" onClick={() => setEditing(undefined)}>
                   Cancel
                 </Button>
                 <Button
                   disabled={!editText.trim()}
+                  aria-describedby={editHintId}
+                  aria-keyshortcuts={commentSubmission.ariaKeyShortcuts}
                   onClick={() => {
                     if (
                       changeComment(comment, {
