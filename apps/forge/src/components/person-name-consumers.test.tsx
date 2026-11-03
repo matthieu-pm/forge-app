@@ -8,7 +8,7 @@ import {
   within,
 } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { PersonNameScope } from "./person-name-provider"
+import { PersonNameScope, usePersonName } from "./person-name-provider"
 import { ActivityAuthor } from "./initiatives/activity-author"
 import { SafeCommentContent } from "./issues/safe-comment-content"
 import { InlineIssueProperties, IssueRows } from "./issues/issue-list"
@@ -16,12 +16,11 @@ import { SharedCommentInput } from "./issues/shared-comment-input"
 import { WorkspaceMembers } from "./workspace-members"
 import { IssueHistory } from "./issues/issue-history"
 import { PreferencesSettings } from "./preferences-settings"
-import * as PersonNames from "@/lib/person-name"
-import { usePersonName } from "./person-name-provider"
 import type { ReactNode } from "react"
 import type { TeamIssue } from "@/lib/team-issues"
 import type { WorkspaceAccessSummary } from "@/lib/member-contract"
 import type * as CommentClient from "@/lib/issue-comment-client"
+import * as PersonNames from "@/lib/person-name"
 import {
   PreferenceFixtureScope,
   externalPreferenceEdit,

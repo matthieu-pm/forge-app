@@ -13,7 +13,8 @@ issue, comment, mention document, command or permission.
 - Detect collisions across the authorized workspace directory, after Unicode
   normalization and locale-independent lowercasing. Append `· @username`, then a unique account
   prefix when the username cannot distinguish the accounts. Start the prefix at
-  six characters and extend it when needed. Generated labels are also checked
+  six characters and extend it when needed. IDs equal under normalization gain a
+  deterministic encoded-ID suffix. Generated labels are also checked
   against real full names that happen to contain the same suffix text.
 - Use the same complete disambiguated text visibly and in accessible labels.
   Existing secondary username fields can remain visible. Never invent a username
@@ -43,6 +44,10 @@ rechecks the current actor inside the transaction and verifies the originating
 session and workspace. API keys and agents cannot use this personal adapter.
 The response is private and not cacheable; no email, invitation, team membership
 or permission data is added to it.
+
+The provider computes the formatted directory once per directory/preference change
+and shares it across consumers. Document-wide mention snapshots provide peers for
+unavailable profiles without changing the stored content.
 
 The client keys its directory by the complete protected identity, clears it
 synchronously when the scope changes, rejects late reads from previous scopes

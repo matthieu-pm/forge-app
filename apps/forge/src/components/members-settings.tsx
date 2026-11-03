@@ -1,3 +1,5 @@
+"use client"
+
 import * as React from "react"
 import {
   ArrowDown01Icon,
@@ -69,8 +71,6 @@ import {
   retryInvitationDelivery,
 } from "@/lib/member-state"
 import { readLocalProfile, usernameFromEmail } from "@/lib/profile-state"
-
-;("use client")
 
 type MemberFilter = "all" | "active" | "invited"
 type SortDirection = "asc" | "desc"
