@@ -7,6 +7,7 @@ import * as appSchema from "./schema"
 import * as planningSchema from "./planning-schema"
 import * as loopsSchema from "./loops-schema"
 import * as authSchema from "./auth-schema"
+import * as jobsSchema from "./jobs-schema"
 import * as resourceSchema from "./resources-schema"
 
 assertStagingEnvironment(process.env, "web")
@@ -35,6 +36,7 @@ export const databaseClient = client
 
 export const schema = {
   ...appSchema,
+  ...jobsSchema,
   ...loopsSchema,
   ...planningSchema,
   ...authSchema,
@@ -54,3 +56,5 @@ export * from "./planning-schema"
 export * from "./resources-schema"
 
 export * from "./loops-schema"
+
+export * from "./jobs-schema"

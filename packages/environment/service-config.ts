@@ -6,7 +6,7 @@ import { appOrigin, runtimeOrigin } from "./preview-environment.ts"
 export type ServiceEnvironment = Record<string, string | undefined>
 export type Service = "app" | "runtime" | "jobs" | "release"
 export type Job =
-  "calls-sync" | "agent-retention" | "product-retention" | "workflow-health"
+  "calls-sync" | "agent-retention" | "product-retention" | "workflow-health" | "background-jobs"
 export type ReleaseOperation =
   "package" | "prepare" | "upload" | "promote" | "pause"
 export type ConfigurationOptions = {

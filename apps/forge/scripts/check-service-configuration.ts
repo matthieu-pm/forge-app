@@ -12,6 +12,7 @@ const jobs = [
   "agent-retention",
   "product-retention",
   "workflow-health",
+  "background-jobs",
 ]
 const operations = ["package", "prepare", "upload", "promote", "pause"]
 if (

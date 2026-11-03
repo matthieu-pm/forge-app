@@ -3,6 +3,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { drizzle } from "drizzle-orm/neon-serverless"
+import * as jobsSchema from "../../src/db/jobs-schema"
 import * as loopsSchema from "../../src/db/loops-schema"
 import * as resourcesSchema from "../../src/db/resources-schema"
 import * as appSchema from "../../src/db/schema"
@@ -644,6 +645,7 @@ export async function enforceRestoredDeadlines(
     const database = drizzle(client as PoolClient, {
       schema: {
         ...appSchema,
+        ...jobsSchema,
         ...planningSchema,
         ...authSchema,
         ...loopsSchema,
