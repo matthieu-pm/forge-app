@@ -36,7 +36,7 @@ export const defaultPersonalPreferences: Readonly<PersonalPreferences> =
     defaultHomeView: "agent",
     displayNames: "username",
     firstDayOfWeek: "sunday",
-    convertEmoticons: true,
+    convertEmoticons: false,
     submitCommentsWith: "command-enter",
     fontSize: "default",
     pointerCursors: false,
