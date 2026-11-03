@@ -164,6 +164,30 @@ try {
       assert.equal(await text(), ":) 😉 ")
     }
   )
+  await check(
+    "AT-02 Chromium IME protocol preserves composition and completion",
+    async () => {
+      await reset()
+      const cdp = await page.context().newCDPSession(page)
+      await cdp.send("Input.imeSetComposition", {
+        text: ":)",
+        selectionStart: 2,
+        selectionEnd: 2,
+      })
+      assert.equal(await text(), ":)")
+      await cdp.send("Input.imeSetComposition", {
+        text: ":) ",
+        selectionStart: 3,
+        selectionEnd: 3,
+      })
+      assert.equal(await text(), ":) ")
+      await cdp.send("Input.insertText", { text: ":) " })
+      assert.equal(await text(), ":) ")
+      await page.keyboard.type(";-) ")
+      assert.equal(await text(), ":) 😉 ")
+      await cdp.detach()
+    }
+  )
   assert.deepEqual(errors, [])
   const output = process.env.FORGE_EMOTICON_EVIDENCE_FILE
   const evidence = {
@@ -179,7 +203,7 @@ try {
       : "clean",
     environment: `local Chromium ${browser.version()}; shared editor fixture`,
     limitations:
-      "Composition events are synthetic; native OS IME and packaged macOS are not certified. Authenticated preference persistence remains covered by FOR-127; composer refresh is covered by component tests.",
+      "Composition is checked with synthetic events and Chromium's IME protocol; native OS IME and packaged macOS are not certified. Authenticated preference persistence remains covered by FOR-127; composer refresh is covered by component tests.",
     checks,
     errors,
   }

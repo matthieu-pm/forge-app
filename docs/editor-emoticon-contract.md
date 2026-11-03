@@ -37,8 +37,10 @@ callback. Preference refreshes do not recreate the editor, replace its document,
 move the selection or reset history. Newly mounted editors use the same account
 state. A preference identity that differs from the canonical comment account
 cannot enable conversion. Missing, loading and disabled preference clients leave
-conversion off. Pending edits follow the existing preference client's optimistic
-state and its visible save/error/conflict behavior.
+conversion off, as do failed or conflicted preference clients. Pending edits
+follow the existing preference client's optimistic state while saving. Failed
+or conflicted saves suspend new conversions until retry or review resolves them;
+existing editor content and history remain intact.
 
 The existing `FORGE_PERSONAL_PREFERENCE_SYNC_ENABLED` gate controls preference
 availability; when disabled, the persisted settings service returns disabled and

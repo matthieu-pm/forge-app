@@ -81,8 +81,7 @@ function CommentComposer({
   const conversion = useRef(false)
   conversion.current =
     preferences.client?.identity.userId === canonicalIssueState()?.userId &&
-    preferences.status !== "loading" &&
-    preferences.status !== "disabled" &&
+    preferences.editable &&
     preferences.groups.general.convertEmoticons
   const slot = comment
     ? `edit-${comment.id}`

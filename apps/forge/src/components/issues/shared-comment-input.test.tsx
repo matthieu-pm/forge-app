@@ -302,41 +302,51 @@ describe("FOR-132 live composer preferences", () => {
     })
   }
 
-  it("keeps conversion off while loading and when sync is disabled, even with an enabled cache", async () => {
-    const client = new AccountPreferenceClient(
-      { userId: "alice", sessionId: "session-alice", workspaceId: "workspace" },
-      {
-        load: () => Promise.resolve({ status: "disabled" }),
-        save: () => Promise.reject(new Error("disabled")),
-      },
-      {
-        getItem: () =>
-          JSON.stringify({
-            ...emptyPreferenceSnapshot("alice"),
-            values: { "general.convertEmoticons": true },
-          }),
-        setItem: vi.fn(),
-      }
-    )
-    render(
-      <AccountPreferenceScope client={client}>
-        <SharedCommentInput {...props} />
-      </AccountPreferenceScope>
-    )
-    const editor = (
-      await screen.findByRole<HTMLElement & { editor: Editor }>("textbox", {
-        name: "Comment",
-      })
-    ).editor
-    expect(client.getSnapshot().groups.general.convertEmoticons).toBe(true)
-    type(editor, ":) ")
-    expect(editor.getText()).toBe(":) ")
-    await act(() => client.refresh())
-    expect(client.getSnapshot().status).toBe("disabled")
-    type(editor, ":D ")
-    expect(editor.getText()).toBe(":) :D ")
-    client.dispose()
-  })
+  it.each(["disabled", "error"] as const)(
+    "keeps conversion off while loading and when sync is %s, even with an enabled cache",
+    async (status) => {
+      const client = new AccountPreferenceClient(
+        {
+          userId: "alice",
+          sessionId: "session-alice",
+          workspaceId: "workspace",
+        },
+        {
+          load: () =>
+            status === "disabled"
+              ? Promise.resolve({ status: "disabled" })
+              : Promise.reject(new Error("offline")),
+          save: () => Promise.reject(new Error("disabled")),
+        },
+        {
+          getItem: () =>
+            JSON.stringify({
+              ...emptyPreferenceSnapshot("alice"),
+              values: { "general.convertEmoticons": true },
+            }),
+          setItem: vi.fn(),
+        }
+      )
+      render(
+        <AccountPreferenceScope client={client}>
+          <SharedCommentInput {...props} />
+        </AccountPreferenceScope>
+      )
+      const editor = (
+        await screen.findByRole<HTMLElement & { editor: Editor }>("textbox", {
+          name: "Comment",
+        })
+      ).editor
+      expect(client.getSnapshot().groups.general.convertEmoticons).toBe(true)
+      type(editor, ":) ")
+      expect(editor.getText()).toBe(":) ")
+      await act(() => client.refresh())
+      expect(client.getSnapshot().status).toBe(status)
+      type(editor, ":D ")
+      expect(editor.getText()).toBe(":) :D ")
+      client.dispose()
+    }
+  )
 
   it.each([
     { label: "Comment", extra: {} },
