@@ -9,6 +9,7 @@ import {
 import { preferenceCacheKey } from "./personal-preference-contract"
 import type {
   AccountPreferenceCommand,
+  PreferenceSaveResult,
   PreferenceSnapshot,
 } from "./account-preference-contract"
 import { productStorage } from "@/lib/product-storage"
@@ -18,41 +19,43 @@ function fixture(userId = "alice") {
   let offline = false,
     loseResponse = false
   const receipts = new Map<string, string>()
-  const save = vi.fn(async (input: AccountPreferenceCommand) => {
-    if (offline) throw new Error("offline")
-    const hash = JSON.stringify(input)
-    if (receipts.has(input.commandKey)) {
-      if (receipts.get(input.commandKey) !== hash) throw new Error("reused")
+  const save = vi.fn(
+    async (input: AccountPreferenceCommand): Promise<PreferenceSaveResult> => {
+      if (offline) throw new Error("offline")
+      const hash = JSON.stringify(input)
+      if (receipts.has(input.commandKey)) {
+        if (receipts.get(input.commandKey) !== hash) throw new Error("reused")
+        return { status: "saved" as const, snapshot: structuredClone(saved) }
+      }
+      const fields = Object.keys(input.patch).filter(
+        (key) => (saved.fieldVersions[key] ?? 0) !== input.expectedVersions[key]
+      )
+      if (fields.length)
+        return {
+          status: "conflict" as const,
+          fields,
+          snapshot: structuredClone(saved),
+        }
+      const revision = saved.revision + 1
+      saved = preferenceSnapshotSchema.parse({
+        ...saved,
+        revision,
+        values: { ...saved.values, ...input.patch },
+        fieldVersions: {
+          ...saved.fieldVersions,
+          ...Object.fromEntries(
+            Object.keys(input.patch).map((key) => [key, revision])
+          ),
+        },
+      })
+      receipts.set(input.commandKey, hash)
+      if (loseResponse) {
+        loseResponse = false
+        throw new Error("response lost")
+      }
       return { status: "saved" as const, snapshot: structuredClone(saved) }
     }
-    const fields = Object.keys(input.patch).filter(
-      (key) => (saved.fieldVersions[key] ?? 0) !== input.expectedVersions[key]
-    )
-    if (fields.length)
-      return {
-        status: "conflict" as const,
-        fields,
-        snapshot: structuredClone(saved),
-      }
-    const revision = saved.revision + 1
-    saved = preferenceSnapshotSchema.parse({
-      ...saved,
-      revision,
-      values: { ...saved.values, ...input.patch },
-      fieldVersions: {
-        ...saved.fieldVersions,
-        ...Object.fromEntries(
-          Object.keys(input.patch).map((key) => [key, revision])
-        ),
-      },
-    })
-    receipts.set(input.commandKey, hash)
-    if (loseResponse) {
-      loseResponse = false
-      throw new Error("response lost")
-    }
-    return { status: "saved" as const, snapshot: structuredClone(saved) }
-  })
+  )
   const create = (storage?: Storage) =>
     new AccountPreferenceClient(
       { userId, sessionId: `session-${userId}`, workspaceId: "workspace" },
@@ -340,4 +343,73 @@ it("retains newer typing behind an unresolved preference command and retries the
   await vi.waitFor(() => expect(recovered.getSnapshot().status).toBe("ready"))
   expect(f.save.mock.calls[1][0]).toEqual(original)
   expect(f.saved().values["agent.guidance"]).toBe("newer unsaved typing")
+})
+
+it("FOR-103 preserves a recovered mixed unavailable draft separately and allows normal preferences", async () => {
+  productStorage.clear()
+  const f = fixture(),
+    original = f.create(productStorage)
+  await original.refresh()
+  f.save.mockRejectedValueOnce(new Error("Offline"))
+  original.edit({
+    "agent.guidance": "Private offline instructions",
+    "calls.language": "fr",
+  })
+  await settled(original)
+  const command = f.save.mock.calls[0][0]
+  original.dispose()
+  const recovered = f.create(productStorage)
+  f.save.mockResolvedValueOnce({
+    status: "unavailable",
+    fields: ["agent.guidance"],
+    snapshot: emptyPreferenceSnapshot("alice"),
+  })
+  await recovered.retry()
+  expect(recovered.getSnapshot()).toMatchObject({
+    status: "ready",
+    pending: false,
+  })
+  const backup = recovered.getSnapshot().unavailableDraft!
+  expect(JSON.parse(backup)).toMatchObject({
+    command,
+    pending: {
+      "agent.guidance": "Private offline instructions",
+      "calls.language": "fr",
+    },
+  })
+  expect(recovered.getSnapshot().message).toContain("not applied")
+  expect(f.saved().revision).toBe(0)
+  recovered.edit({ "general.interfaceTheme": "dark" })
+  await settled(recovered)
+  expect(f.saved().values).toEqual({ "general.interfaceTheme": "dark" })
+  expect(f.save.mock.calls[2][0].commandKey).not.toBe(command.commandKey)
+  const reloaded = f.create(productStorage)
+  expect(reloaded.getSnapshot().unavailableDraft).toBe(backup)
+  expect(
+    fixture("bob").create(productStorage).getSnapshot().unavailableDraft
+  ).toBeUndefined()
+})
+
+it("FOR-103 keeps the active draft when preserving a disabled-feature draft fails", async () => {
+  const f = fixture()
+  const store = {
+    getItem: () => null,
+    setItem: (key: string) => {
+      if (key.endsWith(":unavailable")) throw new Error("Quota")
+    },
+  } as unknown as Storage
+  const client = f.create(store)
+  await client.refresh()
+  f.save.mockResolvedValueOnce({
+    status: "unavailable",
+    fields: ["agent.guidance"],
+    snapshot: emptyPreferenceSnapshot("alice"),
+  })
+  client.edit({ "agent.guidance": "Keep this original" })
+  await settled(client)
+  expect(client.getSnapshot()).toMatchObject({
+    status: "error",
+    pending: true,
+    values: { "agent.guidance": "Keep this original" },
+  })
 })

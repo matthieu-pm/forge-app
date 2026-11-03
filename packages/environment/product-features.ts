@@ -63,7 +63,11 @@ export function parseFeatureRollouts(raw: string | undefined): FeatureRollouts {
     )
       return invalid()
     const ceiling = productFeatures[key as ProductFeature].ceiling
-    if (ceiling === "disabled" || (mode === "enabled" && ceiling !== "enabled"))
+    if (
+      ceiling === "disabled" ||
+      (mode === "enabled" && ceiling !== "enabled") ||
+      (key === "billing" && mode !== "enabled")
+    )
       return invalid()
   }
   return value as FeatureRollouts

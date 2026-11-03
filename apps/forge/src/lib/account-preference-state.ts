@@ -1,7 +1,11 @@
 import { z } from "zod"
 import { createServerFn } from "@tanstack/react-start"
 import { accountPreferenceCommandSchema } from "./account-preference-contract"
-import type { PreferenceLoadResult } from "./account-preference-contract"
+import type {
+  PreferenceLoadResult,
+  PreferenceSaveResult,
+} from "./account-preference-contract"
+import { ApplicationAccessError } from "@/application/authorization"
 
 export const loadStartedAssignmentAvailability = createServerFn({
   method: "GET",
@@ -51,7 +55,7 @@ export const loadAccountPreferences = createServerFn({ method: "GET" })
   })
 export const saveAccountPreferences = createServerFn({ method: "POST" })
   .validator(accountPreferenceCommandSchema)
-  .handler(async ({ data }) => {
+  .handler(async ({ data }): Promise<PreferenceSaveResult> => {
     const [
       { getRequest, setResponseHeader },
       { requireSessionActor },
@@ -63,10 +67,28 @@ export const saveAccountPreferences = createServerFn({ method: "POST" })
     ])
     setResponseHeader("Cache-Control", "private, no-store")
     const actor = await requireSessionActor(getRequest())
-    if (Object.keys(data.patch).some((key) => key.startsWith("agent."))) {
-      const { requireFeatureWrite } =
+    const gatedFields = Object.keys(data.patch).filter((key) =>
+      key.startsWith("agent.")
+    )
+    if (gatedFields.length) {
+      const { featureSnapshot } =
         await import("@/application/features/features.server")
-      requireFeatureWrite(actor, "agentGuidance")
+      if (featureSnapshot(actor).agentGuidance !== "enabled") {
+        service.assertPreferenceSession(actor, data.sessionId)
+        if (
+          data.expectedWorkspaceId &&
+          data.expectedWorkspaceId !== actor.workspaceId
+        )
+          throw new ApplicationAccessError()
+        return {
+          status: "unavailable",
+          fields: gatedFields,
+          snapshot: await service.readAccountPreferences(
+            actor,
+            data.scope ?? "account"
+          ),
+        }
+      }
     }
     return service.patchAccountPreferences(actor, data)
   })

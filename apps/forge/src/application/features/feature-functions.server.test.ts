@@ -14,6 +14,8 @@ const mocks = vi.hoisted(() => ({
   patch: vi.fn(),
   recurring: vi.fn(),
   summaries: vi.fn(),
+  readPreferences: vi.fn(),
+  assertPreferenceSession: vi.fn(),
 }))
 vi.mock("@tanstack/react-start", () => ({
   createServerFn: () => {
@@ -35,6 +37,8 @@ vi.mock("@/adapters/auth/session-actor.server", () => ({
 }))
 vi.mock("@/application/preferences/preferences.server", () => ({
   patchAccountPreferences: mocks.patch,
+  readAccountPreferences: mocks.readPreferences,
+  assertPreferenceSession: mocks.assertPreferenceSession,
 }))
 vi.mock("@/application/recurring-issues/recurring-issues.server", () => ({
   loadRecurringIssues: mocks.recurring,
@@ -82,11 +86,21 @@ describe("FOR-103 server function boundaries", () => {
       userId: "u",
       authentication: { kind: "session", sessionId: "s" },
     })
+    mocks.readPreferences.mockResolvedValue({
+      userId: "u",
+      revision: 0,
+      version: 1,
+      values: {},
+      fieldVersions: {},
+    })
     await expect(
       handler(saveAccountPreferences)({
         data: { patch: { "agent.guidance": "forged" } },
       })
-    ).rejects.toThrow(/unavailable/)
+    ).resolves.toMatchObject({
+      status: "unavailable",
+      fields: ["agent.guidance"],
+    })
     for (const fn of [
       loadRecurringIssues,
       saveRecurringIssue,

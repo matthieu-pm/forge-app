@@ -66,6 +66,7 @@ describe("FOR-103 workspace rollout authority", () => {
     '{"secret-unknown-feature":{}}',
     '{"signals":{"mode":"enabled","workspaceIds":["w1"]}}',
     '{"insights":{"mode":"preview","workspaceIds":["w1"]}}',
+    '{"billing":{"mode":"preview","workspaceIds":["w1"]}}',
     '{"billing":{"mode":"enabled","workspaceIds":["*"]}}',
     '{"billing":{"mode":"enabled","workspaceIds":[" w1"]}}',
     '{"billing":{"mode":"enabled","workspaceIds":["w1"],"clientFlag":true}}',

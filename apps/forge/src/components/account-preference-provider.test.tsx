@@ -69,6 +69,36 @@ beforeEach(() => {
 })
 afterEach(cleanup)
 describe("preference session lifecycle", () => {
+  it("keeps an unavailable draft downloadable without locking supported settings or crossing sessions", async () => {
+    mocks.save.mockResolvedValueOnce({
+      status: "unavailable",
+      fields: ["agent.guidance"],
+      snapshot: emptyPreferenceSnapshot("alice"),
+    })
+    render(
+      <AccountPreferenceProvider>
+        <Consumer />
+      </AccountPreferenceProvider>
+    )
+    await screen.findByText("Alice private")
+    fireEvent.click(screen.getByRole("button", { name: "Edit guidance" }))
+    await screen.findByRole("button", { name: "Download preserved draft" })
+    expect(
+      screen.getByText(/preserved separately and has not been applied/)
+    ).toBeTruthy()
+    expect(
+      screen
+        .getByRole("button", { name: "Edit guidance" })
+        .hasAttribute("disabled")
+    ).toBe(false)
+    expect(
+      screen.queryByRole("button", { name: "Retry preferences" })
+    ).toBeNull()
+    act(() => invalidatePreferenceSession("start"))
+    expect(
+      screen.queryByRole("button", { name: "Download preserved draft" })
+    ).toBeNull()
+  })
   it("works through StrictMode lifecycle and resets synchronously on sign-out without retaining drafts", async () => {
     mocks.save.mockRejectedValue(new Error("offline"))
     render(

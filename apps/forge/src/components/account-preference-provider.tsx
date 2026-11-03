@@ -286,9 +286,11 @@ export function PreferenceSyncStatus({
   scope = "account",
   compact = false,
 }: { scope?: "account" | "workspace"; compact?: boolean } = {}) {
-  const { status, message, client } = useAccountPreferences(scope)
+  const { status, message, client, unavailableDraft } =
+    useAccountPreferences(scope)
   if (
     compact &&
+    !unavailableDraft &&
     (status === "ready" ||
       status === "loading" ||
       (scope === "workspace" && status === "disabled"))
@@ -301,6 +303,30 @@ export function PreferenceSyncStatus({
       >
         {message}
       </p>
+      {unavailableDraft && (
+        <>
+          <p>
+            A draft for unavailable preferences was preserved separately and has
+            not been applied.
+          </p>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              const url = URL.createObjectURL(
+                new Blob([unavailableDraft], { type: "application/x-ndjson" })
+              )
+              const link = document.createElement("a")
+              link.href = url
+              link.download = "forge-unavailable-preference-drafts.jsonl"
+              link.click()
+              window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+            }}
+          >
+            Download preserved draft
+          </Button>
+        </>
+      )}
       {status === "error" && (
         <Button size="sm" variant="ghost" onClick={() => void client?.retry()}>
           Retry preferences
