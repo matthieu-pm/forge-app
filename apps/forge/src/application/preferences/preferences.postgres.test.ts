@@ -139,6 +139,11 @@ describe.skipIf(!file)("FOR-127 real PostgreSQL acceptance", () => {
       actor(),
       input({
         "general.interfaceTheme": "dark",
+        "general.sidebarLayout": [
+          { id: "my-issues", visible: true },
+          { id: "forge", visible: false },
+        ],
+        "general.sidebarBadgeStyle": "dot",
         "calls.language": "fr",
         "reviews.codeTheme": "github-light",
         "notifications.updates.marketing": true,
@@ -149,6 +154,11 @@ describe.skipIf(!file)("FOR-127 real PostgreSQL acceptance", () => {
     const second = await service.readAccountPreferences(actor(alice, sessionB))
     expect(second.values).toMatchObject({
       "general.interfaceTheme": "dark",
+      "general.sidebarLayout": [
+        { id: "my-issues", visible: true },
+        { id: "forge", visible: false },
+      ],
+      "general.sidebarBadgeStyle": "dot",
       "calls.language": "fr",
       "agent.guidance": "Private",
     })
