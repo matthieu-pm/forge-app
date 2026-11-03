@@ -1,0 +1,86 @@
+{
+  "issue": "FOR-64",
+  "implementationSource": "fd0c81ac258239df10a4d7a87b37d25881280b19",
+  "environment": {
+    "location": "local macOS",
+    "database": "dedicated local PostgreSQL 17.11 on 127.0.0.1:56464 / for64_jobs_test",
+    "data": "synthetic fixtures only; full SQL migration chain applied to a fresh local database",
+    "productionChanged": false
+  },
+  "acceptedScope": [
+    "Shared leased/resumable runner",
+    "Terminal Workflow retention maintenance consumer",
+    "Operator CLI and runbook",
+    "Automatic recovery only for transactional checkpoints or valid provider idempotency; external ambiguity requires reconciliation"
+  ],
+  "acceptance": [
+    {
+      "criterion": "AC-01 / AT-01",
+      "result": "passed",
+      "evidence": [
+        "Independent Bun worker killed with SIGKILL before SQL commit: mutation/checkpoint rolled back; retry commits one effect",
+        "Independent worker killed after checkpoint commit: resumed worker returns saved checkpoint without another mutation",
+        "Eight concurrent claim attempts yield one owner; stale generations cannot mutate, renew, complete or fail",
+        "SQL mutation rolls back if ownership expires or result encoding fails before checkpoint commit"
+      ]
+    },
+    {
+      "criterion": "AC-02 / AT-02",
+      "result": "passed",
+      "evidence": [
+        "Retry exhaustion retains dead-letter state, bounded failure code and inspectable same-job recovery command",
+        "Operator request UUID and observed generation fence exact retries and competing recovery requests",
+        "Replay retains checkpoints and lifetime attempt count",
+        "Unknown external effect requires quiescence attestation, incident evidence and separate resolution/replay; provider deadline expiry also stops",
+        "Inspection and structured telemetry omit synthetic private input, checkpoint result and exception strings"
+      ]
+    }
+  ],
+  "validation": {
+    "appTestsPassed": 2605,
+    "workflowTestsPassed": 4,
+    "backgroundJobPostgresCasesPassed": 17,
+    "otherDatabaseDependentTestsSkipped": 587,
+    "typecheck": "passed",
+    "productionBuildAndProtectedWorkflowHandlers": "passed with synthetic local configuration",
+    "changedFileLint": {
+      "errors": 0,
+      "warnings": 18
+    },
+    "frozenInstallation": "passed",
+    "diffCheck": "passed",
+    "migration0070TransactionalRollback": "passed; all three tables absent after rollback",
+    "standaloneCLIInvalidInput": "exit 1 with bounded INVALID_INPUT; no database mutation",
+    "fixtureCleanup": {
+      "jobs": 0,
+      "checkpoints": 0,
+      "recoveries": 0,
+      "effectRows": 0,
+      "organizations": 0,
+      "workflowRuns": 0
+    }
+  },
+  "review": {
+    "reviewer": "independent GPT-6.1 Sol subagent, read-only",
+    "resolvedFindings": [
+      "External steps return void so operator confirmation cannot invent provider output",
+      "Manual external resolution requires verified former-worker and outstanding-request quiescence with evidence",
+      "Persist provider deduplication deadline, prohibit automatic extension, pass deadline to adapter for per-request/internal-retry enforcement",
+      "Do not advance product-retention success when the current daily cleanup is incomplete"
+    ]
+  },
+  "operations": {
+    "runbook": "docs/operations/background-jobs.md",
+    "migration": "apps/forge/drizzle/0070_durable_background_jobs.sql",
+    "retention": "500-row SQL batches; immutable daily UTC schedule and 90-day cutoff",
+    "defaults": "5-minute lease; 5 claims; 30-second exponential retry delay capped at 1 hour"
+  },
+  "releaseBoundaries": [
+    "No production migration or deployment",
+    "No real provider execution or hosted scheduler acceptance",
+    "Provider adapters must enforce persisted deduplication deadline and verify provider semantics; this issue adds no provider adapter",
+    "Outbox delivery remains FOR-33; other maintenance/external effects retain existing implementations",
+    "Final scheduler thresholds and alert delivery remain FOR-30 release evidence",
+    "Production requires guarded source/target migration and deployment gates; retain durable identities/checkpoints on rollback"
+  ]
+}

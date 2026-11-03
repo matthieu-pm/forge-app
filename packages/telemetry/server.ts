@@ -39,6 +39,7 @@ export type Operation =
   | "product.retention"
   | "issues.retention"
   | "operations.monitor"
+  | "jobs.run"
   | "workflow.health"
   | "runtime.authenticate"
   | "runtime.callback"
@@ -99,6 +100,7 @@ const operations = new Set<Operation>([
   "product.retention",
   "issues.retention",
   "operations.monitor",
+  "jobs.run",
   "workflow.health",
   "runtime.authenticate",
   "runtime.callback",
@@ -159,6 +161,8 @@ const errorCodes = new Set([
   "WORKFLOW_EXECUTION_FAILED",
   "EMAIL_DELIVERY_FAILED",
   "JOB_FAILED",
+  "JOB_LEASE_LOST",
+  "JOB_RECONCILIATION_REQUIRED",
   "COMMAND_REJECTED",
 ])
 const ids = [
