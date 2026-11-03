@@ -205,4 +205,42 @@ describe("FOR-134 sidebar editor", () => {
       ).toBe("true")
     )
   })
+
+  it.each(["error", "conflict"])(
+    "recovers focus after gate removal while preference sync is %s",
+    async (status) => {
+      const page = renderPreferences(<Fixture />)
+      await open()
+      failPreferenceSaves("alice")
+      fireEvent.click(screen.getByRole("switch", { name: "Show Forge" }))
+      await screen.findByRole("button", { name: "Retry preferences" })
+      if (status === "conflict") {
+        await act(() =>
+          externalPreferenceEdit("alice", {
+            "general.sidebarLayout": [{ id: "my-issues", visible: true }],
+          })
+        )
+        failPreferenceSaves("alice", false)
+        fireEvent.click(
+          screen.getByRole("button", { name: "Retry preferences" })
+        )
+        await screen.findByRole("button", {
+          name: "Discard changes and load saved",
+        })
+      }
+      act(() => screen.getByRole("button", { name: "Move Reviews up" }).focus())
+      gates.reviews = false
+      page.rerender(
+        <PreferenceFixtureScope>
+          <Fixture />
+        </PreferenceFixtureScope>
+      )
+      expect(
+        screen.queryByRole("button", { name: "Move Reviews up" })
+      ).toBeNull()
+      expect(document.activeElement).toBe(
+        screen.getByRole("button", { name: "Done" })
+      )
+    }
+  )
 })

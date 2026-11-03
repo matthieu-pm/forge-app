@@ -36,6 +36,7 @@ export function SidebarCustomization() {
   const [error, setError] = React.useState("")
   const root = React.useRef<HTMLDivElement>(null)
   const reset = React.useRef<HTMLButtonElement>(null)
+  const done = React.useRef<HTMLButtonElement>(null)
   const focusedControl = React.useRef<HTMLElement | null>(null)
   const layout = reconcileSidebarLayout(
     sync.preferences.sidebarLayout,
@@ -91,9 +92,10 @@ export function SidebarCustomization() {
   React.useLayoutEffect(() => {
     const control = focusedControl.current
     if (!root.current || !control) return
-    if (!control.isConnected) reset.current?.focus()
+    if (!control.isConnected || control.matches(":disabled"))
+      (sync.editable ? reset.current : done.current)?.focus()
     else if (document.activeElement === document.body) control.focus()
-  }, [availableIds])
+  }, [availableIds, sync.editable])
 
   return (
     <Dialog>
@@ -259,7 +261,7 @@ export function SidebarCustomization() {
           >
             Reset to defaults
           </Button>
-          <DialogClose render={<Button variant="secondary" />}>
+          <DialogClose ref={done} render={<Button variant="secondary" />}>
             Done
           </DialogClose>
         </DialogFooter>
