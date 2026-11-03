@@ -1,0 +1,47 @@
+{
+  "issue": "FOR-131",
+  "date": "2026-11-03",
+  "implementationCommit": "8c529b0e41f00c99701b7db3d2a8cfa969f8ae65",
+  "environment": "Local macOS worktree; fixture sessions, actors, preferences and desktop bridge. Production build uses synthetic credentials and an unreachable fixture database.",
+  "contract": {
+    "defaultOpens": "Startup at /, empty workspace windows, login/signup/onboarding without a target, and default desktop tabs share loadDefaultHome and the pure resolveDefaultHome resolver.",
+    "authority": "Current session and active workspace membership are required server-side before preferences are read. No user/workspace IDs, flags, route preferences or browser-local legacy values are accepted from the request.",
+    "preferenceGate": "FORGE_PERSONAL_PREFERENCE_SYNC_ENABLED=true reads the canonical general.defaultHomeView account value. When disabled, no account preference read is attempted and the authorized historical fallback is used.",
+    "availability": "Forge Agent requires FORGE_FEATURE_AGENT_UI through the existing resolveAgentFeatureFlags policy. Inbox and My issues are enabled core routes for every verified workspace member; they do not require membership of any particular team.",
+    "fallbackOrder": ["/forge when enabled", "/inbox", "/my-issues"],
+    "explicitNavigation": "Only default opens invoke resolution. Explicit links, explicit new-tab links, loaded/restored URLs, tab history and safe auth return paths keep their original targets and normal route authorization. Auth returns preserve query and fragment. Desktop browser authorization is allowed to finish for already signed-in users.",
+    "races": "Default tabs resolve before tab creation, leaving no / placeholder in tab history. Late responses are discarded after intervening navigation, an explicit tab open, session retirement or unmount.",
+    "failure": "Missing membership fails closed. Preference read failure does not silently substitute another preference. Default-tab failures display a retry message without creating a tab. Invalid home values use the enabled fallback without modifying stored data. The pure resolver returns null when no route is available; the current runtime always has the two authorized core routes after membership validation."
+  },
+  "acceptance": [
+    {
+      "id": "AT-01 / AC-01",
+      "result": "passed with fixtures",
+      "evidence": "All three choices tested in the pure resolver, real server-function handler, default root route, desktop new-tab button and native command bridge. New tabs contain only the resolved destination in initial history."
+    },
+    {
+      "id": "AT-02 / AC-02",
+      "result": "passed with fixtures",
+      "evidence": "Invalid/deleted values, agent UI disabled, unauthorized choices, no available choices, disabled preference sync, revoked membership, request flags ignored, fresh reads after flag/preference changes and failed preference reads."
+    },
+    {
+      "id": "AT-03 / AC-03",
+      "result": "passed with fixtures",
+      "evidence": "Signed-in and unauthenticated auth returns retain issue query and fragment. Desktop authorization handshake completes. Restored tab history, authoritative loaded URLs, explicit links in new tabs and late default responses after navigation/session retirement are covered."
+    }
+  ],
+  "validation": {
+    "vitest": { "passedTests": 162, "passedFiles": 20 },
+    "typescript": "passed",
+    "changedFileEslint": "passed; zero errors and warnings",
+    "productionBuild": "passed, including protected Workflow handler verification",
+    "electronMainAndPreloadBuild": "passed",
+    "gitDiffCheck": "passed",
+    "testCommand": "cd apps/forge && bunx vitest run src/lib/default-home.test.ts src/lib/default-home-state.test.ts src/lib/default-home-routing.test.ts src/lib/auth-state.test.ts src/lib/desktop-tabs.test.ts src/components/desktop-title-bar.test.tsx src/components/desktop-title-bar-navigation.test.tsx src/lib/personal-preference-contract.test.ts src/lib/personal-preferences.test.ts src/lib/account-preference-client.test.ts src/components/account-preference-provider.test.tsx src/components/preferences-settings.test.tsx src/components/navigation-regression.test.tsx src/lib/auth-server.test.ts src/lib/auth-session-query.test.ts src/lib/auth-session.test.ts src/lib/auth-client.test.ts src/lib/chatgpt-auth.server.test.ts electron/main/navigation-policy.test.ts electron/shared/bridge-contract.test.ts"
+  },
+  "limits": [
+    "No schema changes, production deployment, rollout changes or customer-data mutations.",
+    "No authenticated live-browser or packaged macOS end-to-end acceptance claimed. Native command behavior is tested through a renderer fixture bridge, separately from packaged desktop integration.",
+    "FOR-141 owns broader web preference acceptance. Release and packaged desktop verification remain separate review evidence."
+  ]
+}
