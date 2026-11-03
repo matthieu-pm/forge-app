@@ -1,0 +1,165 @@
+{
+  "issue": "FOR-129",
+  "pullRequest": "https://github.com/matthieu-pm/forge-app/pull/56",
+  "originalReviewHead": "b45abbd0712f1faa52ac7ffe82ab4124d9f1564a",
+  "reviewBase": "b35968e596aa2b74aae2fbf765c1576041c1cc45",
+  "reconciledMain": "c6539225aac1ff04b241397652fe54073c940ba4",
+  "reviewedCodeRevision": "35a569040c6f94f0b899ec5f71bb3e8f4d9790bf",
+  "mergedRevision": "6e273c7593c3e553e3eef5c9844cc3b07f3c00da",
+  "mergedAt": "2026-11-03T14:47:16Z",
+  "mergedTreeEqualsReviewedTree": true,
+  "reviewedAndMergedTree": "cfa9aa9ca9afe8bb84ac864d6fa6b5a333cb2511",
+  "review": {
+    "report": "docs/qa/for129/review-and-release.md",
+    "standards": {
+      "findings": 2,
+      "priorities": [
+        "P1",
+        "P2"
+      ],
+      "fixes": [
+        "Validate actual visible date input before explicit saves and filter Apply actions",
+        "Synchronize inline month to actual selected-date changes while preserving manual browsing on preference refresh"
+      ],
+      "remainingBlockers": 0
+    },
+    "specification": {
+      "findings": 1,
+      "priority": "P1",
+      "sharedWithStandards": true,
+      "fix": "Do not submit the previous date while the visible draft is invalid",
+      "remainingBlockers": 0
+    },
+    "independentReReview": "Both axes found no remaining blocker and independently ran 22 focused tests",
+    "beforeFixRegressionFailures": 5
+  },
+  "validation": {
+    "appSuite": {
+      "passed": 2685,
+      "skipped": 650,
+      "filesPassed": 341,
+      "filesSkipped": 33
+    },
+    "workflowTestsPassed": 4,
+    "focusedActualCallerAndCalendarTests": 22,
+    "timezoneRuns": [
+      {
+        "zone": "America/Los_Angeles",
+        "passed": 17,
+        "files": 3
+      },
+      {
+        "zone": "Pacific/Auckland",
+        "passed": 17,
+        "files": 3
+      }
+    ],
+    "typecheck": "passed",
+    "productionBuildAndProtectedWorkflowHandlers": "passed",
+    "changedSourceLint": {
+      "files": 21,
+      "errors": 0,
+      "existingWarnings": 7,
+      "normallyIgnoredUiFilesIncluded": true
+    },
+    "formatting": "passed",
+    "diffCheck": "passed",
+    "correctedHeadGithubChecks": [
+      "Vercel forge-app success",
+      "Vercel forge-preview-runtime success"
+    ]
+  },
+  "database": {
+    "identity": {
+      "database": "neondb",
+      "branch": "br-muddy-queen-zaeeysjt",
+      "role": "neondb_owner"
+    },
+    "migrationRequired": false,
+    "migrationApplied": false,
+    "exactSourceJournalVerified": true,
+    "migrationCountBefore": 73,
+    "migrationCountAfter": 73,
+    "migrationHead": {
+      "hash": "2a4b45a4864cf75dcf4a8691bbdf779050b85dd76ecf944ce5089a1e6f4ef24d",
+      "created_at": "1793707859380"
+    },
+    "countsBefore": {
+      "workspaces": 1,
+      "users": 1,
+      "issues": 0,
+      "projects": 0,
+      "account_preferences": 0,
+      "receipts": 14
+    },
+    "countsAfter": {
+      "workspaces": 1,
+      "users": 1,
+      "issues": 0,
+      "projects": 0,
+      "account_preferences": 0,
+      "receipts": 14
+    },
+    "preservedExistingCounts": true,
+    "productionPreferenceSyncEnabled": true,
+    "featureGatesChanged": false,
+    "fixtureCleanup": {
+      "source": "6e273c7593c3e553e3eef5c9844cc3b07f3c00da",
+      "workspaces": 0,
+      "users": 0,
+      "projects": 0,
+      "preferences": 0,
+      "receipts": 0,
+      "at": "2026-11-03T14:54:47.567Z"
+    }
+  },
+  "production": {
+    "url": "https://app.forgenow.tech",
+    "projectId": "prj_S0XLtdngbexhl2ao7WviBrlMScar",
+    "teamId": "team_KddvwwnftxOOhP8UymRnP0PX",
+    "deploymentId": "dpl_2y2LFpPBR3XeNDxU6q1jNvHd2Se8",
+    "deploymentUrl": "https://forge-j7cd0cnsm-matthieu-pm.vercel.app",
+    "sourceRevision": "6e273c7593c3e553e3eef5c9844cc3b07f3c00da",
+    "target": "production",
+    "state": "READY",
+    "method": "Production Git deployment of the exact approved merge; public alias resolves to this deployment",
+    "rollbackDeployment": "dpl_8FaMtRQGUUwTrqNjSD5Yv6qaD3rK",
+    "publicAliasDeploymentMatched": true,
+    "protectedDeploymentReadiness": {
+      "status": "ok",
+      "code": "READY"
+    },
+    "publicHealthArtifact": "docs/qa/for129/production-health.json",
+    "sourceAttestation": {
+      "sourceRevision": "6e273c7593c3e553e3eef5c9844cc3b07f3c00da",
+      "verified": true,
+      "records": 8,
+      "deploymentId": "dpl_2y2LFpPBR3XeNDxU6q1jNvHd2Se8",
+      "includesPublicOrigin": true
+    },
+    "authenticatedAcceptanceArtifact": "docs/qa/for129/production-browser.json",
+    "authenticatedChecksPassed": 19,
+    "freshAuthenticatedPageLoadedSaturday": true,
+    "businessProjectUnchangedAcrossPreferences": true,
+    "targetDate": "2026-01-01",
+    "errorFatalScan": {
+      "deploymentId": "dpl_2y2LFpPBR3XeNDxU6q1jNvHd2Se8",
+      "levels": [
+        "error",
+        "fatal"
+      ],
+      "since": "15m",
+      "zeroRecords": true,
+      "details": "## Runtime Logs\n\n**Project:** prj_S0XLtdngbexhl2ao7WviBrlMScar\n**Deployment:** dpl_2y2LFpPBR3XeNDxU6q1jNvHd2Se8\n**Time range:** 2026-11-03T14:40:52.323Z \u2192 2026-11-03T14:55:52.323Z\n\nNo logs found for the specified criteria."
+    },
+    "temporaryAccessRemoved": true
+  },
+  "releaseBoundaries": [
+    "No schema, provider, Cloudflare scheduler or production feature-gate changes.",
+    "Real production browser acceptance used one disposable Better Auth account in separate page clients; independent-account isolation remains covered by local client tests and FOR-127 acceptance.",
+    "French locale/zoned-instant preservation and datetime seconds are covered by renderer tests; production acceptance used en-US, Europe/Paris viewer timezone and Pacific/Auckland team timezone.",
+    "Unavailable features remain unavailable; no packaged-macOS certification claimed.",
+    "All disposable production workspace/account/project/preference/receipt records were removed and original counts/migration chain retained."
+  ],
+  "recordedAt": "2026-11-03T14:57:11.355473+00:00"
+}

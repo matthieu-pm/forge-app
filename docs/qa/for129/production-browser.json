@@ -1,0 +1,173 @@
+{
+  "passed": true,
+  "at": "2026-11-03T14:54:35.312Z",
+  "sourceRevision": "6e273c7593c3e553e3eef5c9844cc3b07f3c00da",
+  "deploymentId": "dpl_2y2LFpPBR3XeNDxU6q1jNvHd2Se8",
+  "origin": "https://app.forgenow.tech",
+  "browser": "Dray session browser, real Better Auth account, separate mounted project and Preferences tabs",
+  "checks": [
+    {
+      "step": "Sunday baseline",
+      "first": "Sunday",
+      "sameCalendar": true,
+      "sameInput": true,
+      "value": "2026-01-01",
+      "selected": "1/1/2026",
+      "locale": "en-US",
+      "timezone": "Europe/Paris",
+      "weekColumns": 7
+    },
+    {
+      "key": "Home",
+      "weekStart": "Sunday",
+      "date": "2025-12-28"
+    },
+    {
+      "key": "End",
+      "weekStart": "Sunday",
+      "date": "2026-01-03"
+    },
+    {
+      "step": "Sunday navigation",
+      "first": "Sunday",
+      "sameCalendar": true,
+      "sameInput": true,
+      "value": "2026-01-01",
+      "selected": "1/1/2026",
+      "locale": "en-US",
+      "timezone": "Europe/Paris",
+      "weekColumns": 7
+    },
+    {
+      "step": "Monday cross-view update",
+      "first": "Monday",
+      "sameCalendar": true,
+      "sameInput": true,
+      "value": "2026-01-01",
+      "selected": "1/1/2026",
+      "locale": "en-US",
+      "timezone": "Europe/Paris",
+      "weekColumns": 7
+    },
+    {
+      "step": "Monday refreshed",
+      "first": "Monday",
+      "sameCalendar": true,
+      "sameInput": true,
+      "value": "2026-01-01",
+      "selected": "1/1/2026",
+      "locale": "en-US",
+      "timezone": "Europe/Paris",
+      "weekColumns": 7
+    },
+    {
+      "key": "Home",
+      "weekStart": "Monday",
+      "date": "2025-12-29"
+    },
+    {
+      "key": "End",
+      "weekStart": "Monday",
+      "date": "2026-01-04"
+    },
+    {
+      "key": "ArrowDown",
+      "weekStart": "Monday",
+      "date": "2026-01-11"
+    },
+    {
+      "step": "Monday navigation",
+      "first": "Monday",
+      "sameCalendar": true,
+      "sameInput": true,
+      "value": "2026-01-01",
+      "selected": "1/1/2026",
+      "locale": "en-US",
+      "timezone": "Europe/Paris",
+      "weekColumns": 7
+    },
+    {
+      "step": "Saturday cross-view update",
+      "first": "Saturday",
+      "sameCalendar": true,
+      "sameInput": true,
+      "value": "2026-01-01",
+      "selected": "1/1/2026",
+      "locale": "en-US",
+      "timezone": "Europe/Paris",
+      "weekColumns": 7
+    },
+    {
+      "key": "Home",
+      "weekStart": "Saturday",
+      "date": "2025-12-27"
+    },
+    {
+      "key": "End",
+      "weekStart": "Saturday",
+      "date": "2026-01-02"
+    },
+    {
+      "key": "ArrowDown",
+      "weekStart": "Saturday",
+      "date": "2026-01-09"
+    },
+    {
+      "step": "Saturday navigation",
+      "first": "Saturday",
+      "sameCalendar": true,
+      "sameInput": true,
+      "value": "2026-01-01",
+      "selected": "1/1/2026",
+      "locale": "en-US",
+      "timezone": "Europe/Paris",
+      "weekColumns": 7
+    },
+    {
+      "step": "Sunday round-trip update",
+      "first": "Sunday",
+      "sameCalendar": true,
+      "sameInput": true,
+      "value": "2026-01-01",
+      "selected": "1/1/2026",
+      "locale": "en-US",
+      "timezone": "Europe/Paris",
+      "weekColumns": 7
+    },
+    {
+      "key": "ArrowDown",
+      "weekStart": "Sunday",
+      "date": "2026-01-10"
+    },
+    {
+      "key": "ArrowUp",
+      "weekStart": "Sunday",
+      "date": "2026-01-03"
+    },
+    {
+      "step": "Sunday final navigation",
+      "first": "Sunday",
+      "sameCalendar": true,
+      "sameInput": true,
+      "value": "2026-01-01",
+      "selected": "1/1/2026",
+      "locale": "en-US",
+      "timezone": "Europe/Paris",
+      "weekColumns": 7
+    }
+  ],
+  "persistedPreferences": [
+    "monday",
+    "saturday",
+    "sunday"
+  ],
+  "projectUnchangedAcrossPreferenceEdits": true,
+  "projectRevision": 1,
+  "targetDate": "2026-01-01",
+  "storedTeamTimezone": "Pacific/Auckland",
+  "viewerTimezone": "Europe/Paris",
+  "locale": "en-US",
+  "freshAuthenticatedPageLoadedSaturday": true,
+  "browserErrors": [],
+  "finalSundayRoundTripProjectUnchanged": true
+}

@@ -1,0 +1,33 @@
+{
+  "at": "2026-11-03T14:54:51.012Z",
+  "base": "https://app.forgenow.tech",
+  "results": [
+    {
+      "path": "/api/health/live",
+      "status": 200,
+      "cacheControl": "private, no-store",
+      "location": null,
+      "body": {
+        "status": "ok",
+        "code": "ALIVE"
+      }
+    },
+    {
+      "path": "/api/health/ready",
+      "status": 200,
+      "cacheControl": "private, no-store",
+      "location": null,
+      "body": {
+        "status": "ok",
+        "code": "READY"
+      }
+    },
+    {
+      "path": "/settings",
+      "status": 307,
+      "cacheControl": "private, no-store",
+      "location": "/login?redirect=%2Fsettings",
+      "body": null
+    }
+  ]
+}
