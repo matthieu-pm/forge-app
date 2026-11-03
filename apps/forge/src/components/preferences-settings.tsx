@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { toast } from "sonner"
+import { SidebarCustomization } from "./sidebar-customization"
 
 import {
   PreferenceSyncStatus,
@@ -369,8 +370,9 @@ export function PreferencesSettings() {
                   label="Convert text emoticons into emojis"
                   description={
                     <>
-                      Strings like <span className="font-medium">:)</span> will
-                      be converted to 🙂
+                      In comments and replies, type :) or :-) for 🙂, :( or :-(
+                      for 🙁, ;) or ;-) for 😉, and :D or :-D for 😃. Conversion
+                      happens when you type a space.
                     </>
                   }
                 >
@@ -411,17 +413,7 @@ export function PreferencesSettings() {
                     label="App sidebar"
                     description="Customize sidebar item visibility, ordering, and badge style"
                   >
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="rounded-lg px-2.5 text-xs"
-                      onClick={() =>
-                        toast.info("Sidebar customization is coming soon.")
-                      }
-                    >
-                      Customize
-                    </Button>
+                    <SidebarCustomization />
                   </PreferenceRow>
                   <PreferenceRow
                     label="Font size"

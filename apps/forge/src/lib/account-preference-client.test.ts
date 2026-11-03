@@ -92,6 +92,11 @@ describe("FOR-127 shared preference client", () => {
     await Promise.all([a.refresh(), b.refresh(), other.refresh()])
     a.edit({
       "general.interfaceTheme": "dark",
+      "general.sidebarLayout": [
+        { id: "my-issues", visible: true },
+        { id: "forge", visible: false },
+      ],
+      "general.sidebarBadgeStyle": "dot",
       "calls.language": "fr",
       "reviews.startOnToolOpen": false,
       "notifications.updates.marketing": true,
@@ -100,13 +105,21 @@ describe("FOR-127 shared preference client", () => {
     await settled(a)
     await b.refresh()
     expect(b.getSnapshot().groups).toMatchObject({
-      general: { interfaceTheme: "dark" },
+      general: {
+        interfaceTheme: "dark",
+        sidebarLayout: [
+          { id: "my-issues", visible: true },
+          { id: "forge", visible: false },
+        ],
+        sidebarBadgeStyle: "dot",
+      },
       calls: { language: "fr" },
       reviews: { startOnToolOpen: false },
       notifications: { updates: { marketing: true } },
       agent: { guidance: "Private guidance" },
     })
     expect(other.getSnapshot().groups.agent.guidance).toBe("")
+    expect(other.getSnapshot().groups.general.sidebarBadgeStyle).toBe("count")
     const reloaded = owner.create()
     await reloaded.refresh()
     expect(reloaded.getSnapshot().groups).toEqual(b.getSnapshot().groups)
