@@ -1,0 +1,153 @@
+{
+  "issue": "FOR-125",
+  "pullRequests": {
+    "engine": 54,
+    "schedulerFollowup": 55
+  },
+  "engineMerge": "5d1674ca3d0fe4177401ab050f58a469050ca2cf",
+  "releaseSource": "b8fb50dbd1b5eafb415cb8f380fed591f5f947e8",
+  "review": {
+    "standards": {
+      "findings": 1,
+      "worstPriority": "P2",
+      "fixed": "Invalidate policy refreshes across saves/reconciliation",
+      "remaining": 0
+    },
+    "spec": {
+      "findings": 1,
+      "worstPriority": "P1",
+      "fixed": "Honor saved calendar/duration and fresh long-reopen anchor before different apply rules",
+      "remaining": 0
+    },
+    "schedulerFollowupReview": "both axes clear"
+  },
+  "validation": {
+    "targetedFiles": 3,
+    "targetedPassed": 28,
+    "targetedSkipped": 0,
+    "postgresTests": 21,
+    "schedulerAdmissionUnit": 5,
+    "editorConcurrencyUnit": 2,
+    "fullAppFilesPassed": 338,
+    "fullAppTestsPassed": 2663,
+    "fullAppTestsSkipped": 650,
+    "workflowTestsPassed": 4,
+    "workerTestsPassed": 28,
+    "followupAppAndConfigTestsPassed": 40,
+    "typechecks": "app and worker passed",
+    "builds": "web production build, protected Workflow check, worker build and Wrangler dry run passed",
+    "cloudflareWebBuildNativeCrons": [],
+    "prerequisites": {
+      "FOR-42": "Done",
+      "FOR-64": "Done"
+    }
+  },
+  "migration": {
+    "database": "neondb",
+    "branch": "br-muddy-queen-zaeeysjt",
+    "environment": "production",
+    "authorizedSource": "925cbc1109057ca54e7daf54f0d3dd545f54dd5b",
+    "previousCount": 72,
+    "previousHash": "c87680f803257a96a80961a0d9e521b314d831555a1e360b55a63c65a8d071f5",
+    "applied": 1,
+    "finalCount": 73,
+    "finalHash": "2a4b45a4864cf75dcf4a8691bbdf779050b85dd76ecf944ce5089a1e6f4ef24d",
+    "serializedSourceBoundRunner": true,
+    "rehearsal": {
+      "branch": "br-small-darkness-zahmr2fc",
+      "parent": "br-muddy-queen-zaeeysjt",
+      "expiresAt": "2026-11-04T13:30:00Z",
+      "applied": 1,
+      "total": 73,
+      "secondRunApplied": 0
+    },
+    "productionDstReadProbe": {
+      "spring": "2027-03-29T07:00:00.000Z",
+      "autumn": "2027-11-01T08:00:00.000Z"
+    }
+  },
+  "production": {
+    "url": "https://app.forgenow.tech",
+    "projectId": "prj_S0XLtdngbexhl2ao7WviBrlMScar",
+    "teamId": "team_KddvwwnftxOOhP8UymRnP0PX",
+    "deploymentId": "dpl_8FaMtRQGUUwTrqNjSD5Yv6qaD3rK",
+    "deploymentUrl": "https://forge-ei0gxjp6b-matthieu-pm.vercel.app",
+    "target": "production",
+    "state": "READY",
+    "sourceRevision": "b8fb50dbd1b5eafb415cb8f380fed591f5f947e8",
+    "rollbackDeployment": "dpl_EYN2892LuW3gMds9rcz1Rd3SFEfS",
+    "method": "Exact merged Git SHA deployed with automatic custom-domain assignment held; protected checks and source telemetry attested; same deployment promoted without rebuilding",
+    "stagedChecksPassed": 4,
+    "publicChecksPassed": 4,
+    "canonicalAliasDeploymentMatched": true,
+    "protectionBypassEntries": 0,
+    "deploymentProtection": "unchanged all_except_custom_domains",
+    "errorFatalScan": {
+      "deploymentScoped": true,
+      "since": "15m before 2026-11-03T13:57:18Z",
+      "groupsReturned": 0
+    },
+    "sourceAttestation": "deployment-scoped forge.request.completed events on app.forgenow.tech report b8fb50dbd1b5eafb415cb8f380fed591f5f947e8"
+  },
+  "scheduler": {
+    "driver": "cloudflare",
+    "reason": "Vercel Hobby rejected native minute Cron with cron_jobs_limits_reached; no plan upgrade was requested or performed",
+    "failedStagedDeployment": "dpl_DvkxUtW1e1tvpfqE1QbzdvzXqbvg",
+    "worker": "forge-loop-scheduler",
+    "accountId": "6ef2f63b419136eed4d57d84700cbc30",
+    "versionId": "1ef0f81e-532a-42c0-b413-fd4810e151eb",
+    "deploymentId": "2c63294f-9274-4154-ba95-ba9bc2024ef3",
+    "previousVersion": "0e9cd699-bfea-4ccf-9f2b-c321c0ffe4de",
+    "sourceTag": "b8fb50dbd1b5eafb415cb8f380fed591f5f947e8",
+    "cron": "* * * * *",
+    "existingSecretBindingPreserved": true,
+    "workersDev": false,
+    "previewUrls": false,
+    "scheduledSlaReceipt": {
+      "status": 200,
+      "dispatched": 2,
+      "processed": 1,
+      "failed": false
+    },
+    "subsequentTick": {
+      "status": 200,
+      "dispatched": 0,
+      "processed": 0,
+      "failed": false
+    },
+    "loopsStillTicking": true,
+    "bundleSha256": "9db0223b082b063ffb96a8daa37057a69956d0e11ce6b81a8102601a441d2775"
+  },
+  "productionBrowser": {
+    "passed": true,
+    "checks": 7,
+    "pageErrors": 0,
+    "harnessCommit": "dede7858bb378f03c299933a6e030ef743a0280e",
+    "runtimeSource": "b8fb50dbd1b5eafb415cb8f380fed591f5f947e8",
+    "coldStartRetry": "Initial 5s assertion timed out during definition loading; harness wait raised to30s. No runtime code changed. The full seven-scenario rerun passed.",
+    "actualCron": "Past-deadline fixture completed and emitted exactly one breach; next minute did not duplicate it; original deadline retained"
+  },
+  "rollout": {
+    "realWorkspace": "Forge",
+    "adminControlsEnabled": true,
+    "workspacePolicyRows": 0,
+    "activeCommitments": 0,
+    "presetTargetsCreated": false,
+    "internalAcceptanceCohort": "for125-browser-acceptance; its workspace and records were deleted after verification",
+    "FORGE_SLA_JOBS_ENABLED": "true",
+    "FORGE_SLA_SCHEDULER_DRIVER": "cloudflare"
+  },
+  "fixtureCleanup": {
+    "workspace": 0,
+    "users": 0,
+    "policies": 0,
+    "commitments": 0,
+    "slaJobs": 0
+  },
+  "boundaries": {
+    "notificationDelivery": "Conditional FOR-65/FOR-145 extension remains excluded",
+    "packagedMacOS": "not qualified",
+    "productionThroughput": "not certified",
+    "neonBranchExpiry": "automatic expiration configured; no destructive branch deletion performed"
+  }
+}
