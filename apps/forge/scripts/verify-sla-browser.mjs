@@ -1,31 +1,81 @@
-import { writeFileSync } from "node:fs"
+import { execFileSync } from "node:child_process"
+import { readFileSync, mkdirSync, writeFileSync } from "node:fs"
 import { Pool } from "pg"
 import { chromium, expect } from "@playwright/test"
 import { hashPassword } from "better-auth/crypto"
 
-const connection = process.env.FORGE_SLA_TEST_DATABASE_URL
-const target = new URL(connection ?? "http://invalid")
+const mode = process.env.FORGE_SLA_ACCEPTANCE_ENVIRONMENT ?? "local"
+const revision = execFileSync("git", ["rev-parse", "HEAD"], {
+  encoding: "utf8",
+}).trim()
+if (!["local", "sla-rehearsal", "production"].includes(mode))
+  throw new Error("Unknown SLA acceptance environment")
+const approved = process.env.FORGE_SLA_ACCEPTANCE_AUTHORIZED_REVISION
 if (
-  target.hostname !== "127.0.0.1" ||
-  target.port !== "56525" ||
-  target.pathname !== "/for125_sla_test"
+  mode !== "local" &&
+  (approved !== revision ||
+    execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim())
 )
-  throw new Error("Dedicated local FOR-125 database required")
+  throw new Error(
+    "SLA release acceptance requires the exact clean approved source"
+  )
+const config =
+  mode === "local"
+    ? {}
+    : JSON.parse(
+        readFileSync(process.env.FORGE_SLA_ACCEPTANCE_DATABASE_FILE, "utf8")
+      )
+const connection =
+  mode === "local" ? process.env.FORGE_SLA_TEST_DATABASE_URL : config.connection
+const target = new URL(connection ?? "http://invalid")
+const expected =
+  mode === "production"
+    ? {
+        host: "ep-lingering-bread-zazpwrxp.c-2.eu-west-2.aws.neon.tech",
+        database: "neondb",
+        branch: "br-muddy-queen-zaeeysjt",
+      }
+    : mode === "sla-rehearsal"
+      ? {
+          host: "ep-lingering-lab-za3xohqt.c-2.eu-west-2.aws.neon.tech",
+          database: "neondb",
+          branch: "br-small-darkness-zahmr2fc",
+        }
+      : { host: "127.0.0.1", database: "for125_sla_test", branch: null }
+if (
+  target.hostname !== expected.host ||
+  target.pathname !== `/${expected.database}` ||
+  (mode === "local"
+    ? target.port !== "56525"
+    : target.searchParams.get("sslmode") !== "require")
+)
+  throw new Error("Wrong dedicated SLA acceptance database")
 const pool = new Pool({ connectionString: connection })
-const base = "http://localhost:3125",
+const base =
+    mode === "production"
+      ? "https://app.forgenow.tech"
+      : "http://localhost:3125",
   workspaceId = "for125-browser-acceptance",
   teamId = crypto.randomUUID()
+const artifactDir =
+  process.env.FORGE_SLA_ACCEPTANCE_ARTIFACT_DIR ?? "/tmp/for125-release-browser"
+mkdirSync(artifactDir, { recursive: true })
 const users = ["for125-browser-alice", "for125-browser-bob"],
   password = crypto.randomUUID(),
   checks = []
 let browser,
   owned = false
 try {
+  const identity = (
+    await pool.query(
+      "SELECT current_database() database,current_setting('neon.branch_id',true) branch"
+    )
+  ).rows[0]
   if (
-    (await pool.query("SELECT current_database() name")).rows[0].name !==
-    "for125_sla_test"
+    identity.database !== expected.database ||
+    (expected.branch && identity.branch !== expected.branch)
   )
-    throw new Error("Wrong database")
+    throw new Error("Wrong database identity")
   await pool.query(
     "INSERT INTO organization(id,name,slug) VALUES($1,'SLA Acceptance',$1)",
     [workspaceId]
@@ -309,15 +359,90 @@ try {
   checks.push(
     "Member canonical creation produces and reloads a server deadline and honest system history, independent of browser timezone"
   )
-  await bob.screenshot({ path: "/tmp/for125-sla-browser.png", fullPage: true })
+  if (mode === "production") {
+    const scheduledIssue = crypto.randomUUID(),
+      commitment = crypto.randomUUID()
+    const c = await pool.connect()
+    try {
+      await c.query("BEGIN")
+      await c.query(
+        "INSERT INTO issues(id,workspace_id,team_id,number,title,status_id,properties) SELECT $1,workspace_id,team_id,2,'Scheduled SLA breach',status_id,properties FROM issues WHERE workspace_id=$2 AND title='Browser SLA commitment'",
+        [scheduledIssue, workspaceId]
+      )
+      await c.query(
+        `INSERT INTO issue_slas(id,workspace_id,issue_id,generation,rule_id,policy_revision,snapshot,anchor_at,deadline_at,high_risk_at,moderate_risk_at,gate_identity)
+        SELECT $1,workspace_id,$2,1,rule_id,policy_revision,snapshot,clock_timestamp()-interval '49 hours',clock_timestamp()-interval '1 hour',clock_timestamp()-interval '25 hours',clock_timestamp()-interval '169 hours',gate_identity FROM issue_slas WHERE workspace_id=$3 LIMIT 1`,
+        [commitment, scheduledIssue, workspaceId]
+      )
+      await c.query("INSERT INTO issue_sla_windows(commitment_id) VALUES($1)", [
+        commitment,
+      ])
+      await c.query("INSERT INTO issue_sla_intents(commitment_id) VALUES($1)", [
+        commitment,
+      ])
+      await c.query("COMMIT")
+    } catch (error) {
+      await c.query("ROLLBACK")
+      throw error
+    } finally {
+      c.release()
+    }
+    await expect
+      .poll(
+        async () =>
+          (
+            await pool.query(
+              "SELECT j.state FROM issue_sla_intents i JOIN background_jobs j ON j.id=i.job_id WHERE i.commitment_id=$1",
+              [commitment]
+            )
+          ).rows[0]?.state,
+        { timeout: 180000, intervals: [5000] }
+      )
+      .toBe("completed")
+    expect(
+      (
+        await pool.query(
+          "SELECT count(*)::int n FROM issue_sla_events WHERE commitment_id=$1 AND kind='breached'",
+          [commitment]
+        )
+      ).rows[0].n
+    ).toBe(1)
+    const events = (
+      await pool.query(
+        "SELECT deadline_at::text deadline,created_at::text processed FROM issue_sla_events WHERE commitment_id=$1 AND kind='breached'",
+        [commitment]
+      )
+    ).rows[0]
+    if (new Date(events.deadline) >= new Date(events.processed))
+      throw new Error("Late worker shifted deadline")
+    // The next platform tick must not repeat the same visible effect.
+    await new Promise((resolve) => setTimeout(resolve, 65000))
+    expect(
+      (
+        await pool.query(
+          "SELECT count(*)::int n FROM issue_sla_events WHERE commitment_id=$1 AND kind='breached'",
+          [commitment]
+        )
+      ).rows[0].n
+    ).toBe(1)
+    checks.push(
+      "Real Vercel Cron dispatches and completes a past-deadline fixture exactly once across two ticks; original deadline retained"
+    )
+  }
+  await bob.screenshot({ path: `${artifactDir}/issue-sla.png`, fullPage: true })
   expect(errors).toEqual([])
   writeFileSync(
-    "/tmp/for125-browser-evidence.json",
+    `${artifactDir}/browser.json`,
     JSON.stringify(
       {
         checkedAt: new Date().toISOString(),
-        environment:
-          "built app, local disposable PostgreSQL 17, real Better Auth sessions, Chromium",
+        passed: true,
+        revision,
+        environment: mode,
+        database: expected.database,
+        branch: expected.branch,
+        browser:
+          "Chromium, real Better Auth sessions, Honolulu/Tokyo zones, clock set to2040",
         checks,
         pageErrors: errors,
       },
@@ -331,7 +456,7 @@ try {
     for (const [n, c] of browser.contexts().entries()) {
       const p = c.pages()[0]
       if (p) {
-        await p.screenshot({ path: `/tmp/for125-browser-failure-${n}.png` })
+        await p.screenshot({ path: `${artifactDir}/failure-${n}.png` })
         console.log((await p.locator("body").innerText()).slice(-9000))
       }
     }
@@ -339,6 +464,23 @@ try {
 } finally {
   await browser?.close()
   if (owned) {
+    const jobs = (
+      await pool.query(
+        "SELECT id FROM background_jobs WHERE kind='sla-breach-v1' AND input->>'workspaceId'=$1",
+        [workspaceId]
+      )
+    ).rows.map((r) => r.id)
+    await pool.query(
+      "DELETE FROM background_job_steps WHERE job_id=ANY($1::uuid[])",
+      [jobs]
+    )
+    await pool.query(
+      "DELETE FROM background_job_recoveries WHERE job_id=ANY($1::uuid[])",
+      [jobs]
+    )
+    await pool.query("DELETE FROM background_jobs WHERE id=ANY($1::uuid[])", [
+      jobs,
+    ])
     await pool.query("DELETE FROM organization WHERE id=$1", [workspaceId])
     await pool.query('DELETE FROM "user" WHERE id=ANY($1)', [users])
   }
