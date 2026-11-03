@@ -1,0 +1,206 @@
+{
+  "issue": "FOR-64",
+  "pullRequest": "https://github.com/matthieu-pm/forge-app/pull/49",
+  "reviewBase": "2fcdc886f81342057be6e5dee21212a107d2bc95",
+  "originalReviewHead": "a5887d25d985024f67f00eab09ef762fef13663f",
+  "reviewedCodeRevision": "6fbf5f7c73ba4c97d32a7be19a36f83bd869158a",
+  "mergedRevision": "3a8d21a0819047ddbee873671c2d23faca279b9f",
+  "mergedAt": "2026-11-03T00:58:51Z",
+  "mergedTreeEqualsReviewedTree": true,
+  "review": {
+    "report": "docs/qa/for64/review-and-release.md",
+    "standards": "Two documented recovery-boundary violations fixed; independent re-review found no blocker.",
+    "specification": "Two shared P1 findings fixed; lock-delayed expiry and verification scope corrected. Independent re-review found no blocker.",
+    "reproducedRegressions": [
+      "Missing checkpoint primary key violates enabled recovery coverage",
+      "Original CTE deletion retries instead of completing with recovery enabled, independently of primary-key fix",
+      "Completion succeeds after a lock delay crosses lease expiry",
+      "External provider callback is invoked after a lock delay crosses lease expiry"
+    ],
+    "fixes": [
+      "Migration0071 composite primary key; migration0070 preserved",
+      "Locked selection then journal-supported direct DELETE in the checkpoint transaction",
+      "External intent final ownership check; completion/failure final expiry predicates",
+      "ID-specific claims reap only requested kind/job; production acceptance reaper uses its owned ID",
+      "Recovery-test cleanup scoped to created operation UUIDs"
+    ]
+  },
+  "validation": {
+    "appSuite": {
+      "passed": 2610,
+      "skipped": 587,
+      "filesPassed": 329,
+      "filesSkipped": 30
+    },
+    "workflowTests": 4,
+    "nativePostgresJobCases": 22,
+    "typecheck": "passed",
+    "productionBuildAndProtectedWorkflowHandlers": "passed",
+    "changedSourceLint": {
+      "errors": 0,
+      "warnings": 20
+    },
+    "frozenInstallation": "passed",
+    "diffCheck": "passed",
+    "githubChecks": [
+      "Vercel \u2013 forge-app: success",
+      "Vercel \u2013 forge-preview-runtime: success"
+    ]
+  },
+  "rehearsal": {
+    "branch": "br-wispy-breeze-za41co4w",
+    "expiresAt": "2026-11-03T08:00:00Z",
+    "beforeCount": 70,
+    "afterCount": 72,
+    "applied": 2,
+    "exactRetryApplied": 0,
+    "beforeHead": {
+      "hash": "420b8c70c6fcd3a32d9d3fd4bcbf24f1530e3aea0d2afaba01c591e089d3f74e",
+      "created_at": "1793633654643"
+    },
+    "afterHead": {
+      "hash": "c87680f803257a96a80961a0d9e521b314d831555a1e360b55a63c65a8d071f5",
+      "created_at": "1793666532080"
+    },
+    "coverage": {
+      "primary_keys": 3,
+      "capture_triggers": 3
+    },
+    "preservedCounts": true
+  },
+  "migration": {
+    "source": "6fbf5f7c73ba4c97d32a7be19a36f83bd869158a",
+    "target": {
+      "database": "neondb",
+      "branch": "br-muddy-queen-zaeeysjt",
+      "role": "neondb_owner"
+    },
+    "beforeCount": 70,
+    "apply": {
+      "applied": 2,
+      "total": 72
+    },
+    "replay": {
+      "applied": 0,
+      "total": 72
+    },
+    "afterCount": 72,
+    "beforeHead": {
+      "hash": "420b8c70c6fcd3a32d9d3fd4bcbf24f1530e3aea0d2afaba01c591e089d3f74e",
+      "created_at": "1793633654643"
+    },
+    "afterHead": {
+      "hash": "c87680f803257a96a80961a0d9e521b314d831555a1e360b55a63c65a8d071f5",
+      "created_at": "1793666532080"
+    },
+    "coverage": {
+      "primary_keys": 3,
+      "capture_triggers": 3
+    },
+    "countsBefore": {
+      "workspaces": 1,
+      "issues": 0,
+      "workflows": 0,
+      "workflow_effects": 0,
+      "receipts": 12,
+      "files": 0,
+      "recovery_enabled": false
+    },
+    "countsAfter": {
+      "workspaces": 1,
+      "issues": 0,
+      "workflows": 0,
+      "workflow_effects": 0,
+      "receipts": 12,
+      "files": 0,
+      "recovery_enabled": false
+    },
+    "preserved": true
+  },
+  "production": {
+    "url": "https://app.forgenow.tech",
+    "deploymentId": "dpl_E7BUtqcWj9dVAn5Eo67wN6G2j75j",
+    "deploymentUrl": "https://forge-piakogl4s-matthieu-pm.vercel.app",
+    "state": "READY",
+    "target": "production",
+    "sourceRevision": "6fbf5f7c73ba4c97d32a7be19a36f83bd869158a",
+    "method": "Clean reviewed CLI upload staged with --prod --skip-domain; protected health/source/log checks, then Vercel promotion API; custom domain resolves to the tested deployment. PR merged after all GitHub checks passed.",
+    "stagedHealth": {
+      "live": {
+        "status": "ok",
+        "code": "ALIVE"
+      },
+      "ready": {
+        "status": "ok",
+        "code": "READY"
+      }
+    },
+    "postPromotionHealth": [
+      {
+        "path": "/api/health/live",
+        "status": 200,
+        "body": "{\"status\":\"ok\",\"code\":\"ALIVE\"}",
+        "at": "2026-11-03T00:57:21.603303+00:00"
+      },
+      {
+        "path": "/api/health/ready",
+        "status": 200,
+        "body": "{\"status\":\"ok\",\"code\":\"READY\"}",
+        "at": "2026-11-03T00:57:22.577732+00:00"
+      }
+    ],
+    "runtimeSourceAttestation": {
+      "verified": true,
+      "source": "6fbf5f7c73ba4c97d32a7be19a36f83bd869158a",
+      "records": 14
+    },
+    "fixtureAcceptance": {
+      "sourceRevision": "6fbf5f7c73ba4c97d32a7be19a36f83bd869158a",
+      "identity": {
+        "database": "neondb",
+        "branch": "br-muddy-queen-zaeeysjt",
+        "role": "neondb_owner"
+      },
+      "migrationCount": 72,
+      "scope": "for64-acceptance-0e462823-fff2-49c9-9205-43d0da639c10",
+      "checks": {
+        "overlap": true,
+        "checkpointResume": true,
+        "staleOwnerFenced": true,
+        "oneEffect": true,
+        "terminalRetention": true,
+        "activeRecentPreserved": true,
+        "deadLetter": true,
+        "inspection": true,
+        "standaloneCLI": true,
+        "exactOperatorReplay": true
+      }
+    },
+    "fixtureCleanup": {
+      "jobs": 0,
+      "workspaces": 0,
+      "workflows": 0
+    },
+    "errorLogScan": {
+      "level": [
+        "error",
+        "fatal"
+      ],
+      "recordsReturned": 0,
+      "deploymentScoped": true,
+      "timeRange": {
+        "start": "2026-11-03T00:43:44.176Z",
+        "end": "2026-11-03T00:58:44.176Z"
+      }
+    },
+    "recoveryJournalServingSetting": "disabled; enabled-journal integration verified in isolated tests"
+  },
+  "releaseBoundaries": [
+    "No UI/auth behavior changed; production verification exercises the actual runner, CLI and SQL maintenance consumer, without claiming browser or packaged macOS acceptance.",
+    "No new provider adapter or live external effect is certified.",
+    "FOR-33 owns outbox delivery; final freshness thresholds and alert delivery remain FOR-30 release evidence.",
+    "Application rollback retains job identity/checkpoint/recovery tables and both additive migrations.",
+    "Ephemeral rehearsal clone expires automatically; temporary release credentials/helpers are removed after verification."
+  ],
+  "recordedAt": "2026-11-03T01:00:28.874396+00:00"
+}
