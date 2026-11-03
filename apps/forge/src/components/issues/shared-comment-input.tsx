@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useId, useRef, useState } from "react"
 import { Node } from "@tiptap/core"
 import { EditorContent, useEditor } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 import Placeholder from "@tiptap/extension-placeholder"
 import { FileUploadPicker } from "./durable-issue-files"
 import { SafeCommentContent } from "./safe-comment-content"
+import { useCommentSubmission } from "./use-comment-submission"
 import type { ReadyUpload } from "@/application/files/upload-contract"
 import type { CommentNode } from "@/lib/comment-rich-text"
 import type {
@@ -77,6 +78,8 @@ function CommentComposer({
   onSaved,
   onCancel,
 }: SharedCommentInputProps) {
+  const submission = useCommentSubmission(comment ? "save" : "send")
+  const hintId = useId()
   const preferences = useAccountPreferences()
   const conversion = useRef(false)
   conversion.current =
@@ -135,8 +138,7 @@ function CommentComposer({
       return commentFromText(comment?.body ?? "")
     }
   })
-  const busy = useRef(false),
-    shortcut = useRef<() => void>(() => {})
+  const busy = useRef(false)
   const [mentionOpen, setMentionOpen] = useState(false),
     [query, setQuery] = useState("")
   const [targets, setTargets] = useState<Array<MentionTarget>>([]),
@@ -165,20 +167,12 @@ function CommentComposer({
     editorProps: {
       attributes: {
         role: "textbox",
+        tabindex: "0",
+        "aria-readonly": String(pending || uploading || Boolean(retry)),
         "aria-label": comment ? "Edit comment" : parentId ? "Reply" : "Comment",
+        "aria-describedby": hintId,
+        "aria-multiline": "true",
         class: `${parentId ? "min-h-6" : "min-h-16"} p-2 text-sm outline-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5`,
-      },
-      handleKeyDown: (_view, event) => {
-        if (
-          !event.isComposing &&
-          (event.metaKey || event.ctrlKey) &&
-          event.key === "Enter"
-        ) {
-          event.preventDefault()
-          shortcut.current()
-          return true
-        }
-        return false
       },
     },
     onUpdate: ({ editor: e }) => setDocument(e.getJSON() as CommentNode),
@@ -247,9 +241,11 @@ function CommentComposer({
   async function submit() {
     if (
       busy.current ||
+      pending ||
       uploading ||
       review ||
       recovery ||
+      (!retry && !commentPlainText(document).trim()) ||
       (comment?.deleted && !retry) ||
       epoch !== canonicalIssueEpoch()
     )
@@ -317,9 +313,6 @@ function CommentComposer({
       }
     }
   }
-  shortcut.current = () => {
-    void submit()
-  }
   if (recovery)
     return (
       <div className="space-y-2 rounded-lg border border-border p-3">
@@ -355,7 +348,30 @@ function CommentComposer({
       </div>
     )
   return (
-    <div className="group/composer rounded-lg border border-border/50 bg-muted/40 p-2">
+    <div
+      className="group/composer rounded-lg border border-border/50 bg-muted/40 p-2"
+      onCompositionStartCapture={(event) => {
+        if (editor?.view.dom.contains(event.target as globalThis.Node))
+          submission.onCompositionStart()
+      }}
+      onCompositionEndCapture={(event) => {
+        if (editor?.view.dom.contains(event.target as globalThis.Node))
+          submission.onCompositionEnd()
+      }}
+      onKeyDownCapture={(event) => {
+        if (!editor?.view.dom.contains(event.target as globalThis.Node)) return
+        if (
+          submission.handleKeyDown(
+            event.nativeEvent,
+            () => {
+              void submit()
+            },
+            editor.view
+          )
+        )
+          event.stopPropagation()
+      }}
+    >
       <div
         className={`${parentId && !retry && !commentPlainText(document).trim() ? "hidden group-focus-within/composer:flex" : "flex"} gap-1 border-b border-border/40 pb-1`}
       >
@@ -531,6 +547,12 @@ function CommentComposer({
         </div>
       )}
       <div className="flex justify-end gap-2">
+        <p
+          id={hintId}
+          className="mr-auto self-center text-xs text-muted-foreground"
+        >
+          {submission.hint}
+        </p>
         {onCancel && (
           <Button
             size="sm"
@@ -557,6 +579,8 @@ function CommentComposer({
                 ? "Save comment"
                 : "Submit comment"
           }
+          aria-describedby={hintId}
+          aria-keyshortcuts={submission.ariaKeyShortcuts}
           onClick={() => {
             void submit()
           }}

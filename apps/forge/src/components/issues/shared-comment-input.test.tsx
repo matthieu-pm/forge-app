@@ -19,6 +19,7 @@ import { emptyPreferenceSnapshot } from "@/lib/account-preference-contract"
 import {
   PreferenceFixtureScope,
   externalPreferenceEdit,
+  renderPreferences,
   setupPreferenceFixture,
 } from "@/test/preference-fixture"
 
@@ -282,6 +283,202 @@ it("checkpoints the current comment before an upload cancels its debounce", asyn
     issueId: props.issueId,
     document: commentFromText("Fresh draft"),
     uploads: [],
+  })
+})
+
+describe("FOR-133 comment submission", () => {
+  beforeEach(async () => {
+    // JSDOM has no selection geometry; ProseMirror needs it for focused editors.
+    Object.defineProperties(Range.prototype, {
+      getClientRects: { configurable: true, value: () => [] },
+      getBoundingClientRect: { configurable: true, value: () => new DOMRect() },
+    })
+    await setupPreferenceFixture()
+    Object.defineProperty(navigator, "platform", {
+      configurable: true,
+      value: "Win32",
+    })
+    storage.getItem.mockReturnValue(
+      JSON.stringify({
+        issueId: props.issueId,
+        document: commentFromText("Intentional draft"),
+        expectedVersion: 0,
+      })
+    )
+  })
+
+  for (const platform of ["MacIntel", "Win32", "Linux x86_64"]) {
+    for (const mode of ["enter", "command-enter"] as const) {
+      for (const variant of ["root", "reply", "edit"]) {
+        it(`AT-01 ${platform} ${mode} ${variant}`, async () => {
+          Object.defineProperty(navigator, "platform", {
+            configurable: true,
+            value: platform,
+          })
+          await externalPreferenceEdit("alice", {
+            "general.submitCommentsWith": mode,
+          })
+          const comment =
+            variant === "edit"
+              ? { id: "comment", body: "Original", version: 0 }
+              : undefined
+          renderPreferences(
+            <SharedCommentInput
+              {...props}
+              parentId={variant === "reply" ? "parent" : undefined}
+              comment={comment}
+            />
+          )
+          const editor = await screen.findByRole("textbox", {
+            name:
+              variant === "edit"
+                ? "Edit comment"
+                : variant === "reply"
+                  ? "Reply"
+                  : "Comment",
+          })
+          const shortcut =
+            mode === "enter"
+              ? "Enter"
+              : platform === "MacIntel"
+                ? "Command+Enter"
+                : "Ctrl+Enter"
+          expect(
+            document.getElementById(editor.getAttribute("aria-describedby")!)
+              ?.textContent
+          ).toContain(`${shortcut} to ${variant === "edit" ? "save" : "send"}`)
+          const modifier =
+            platform === "MacIntel" ? { metaKey: true } : { ctrlKey: true }
+          fireEvent.keyDown(editor, { key: "Enter", shiftKey: true })
+          expect(editor.querySelector("br")).not.toBeNull()
+          fireEvent.keyDown(editor, {
+            key: "Enter",
+            shiftKey: true,
+            ...modifier,
+          })
+          fireEvent.keyDown(editor, {
+            key: "Enter",
+            ...(mode === "enter" ? modifier : {}),
+          })
+          expect(requests.send).not.toHaveBeenCalled()
+          fireEvent.keyDown(editor, {
+            key: "Enter",
+            ...(mode === "command-enter" ? modifier : {}),
+          })
+          await waitFor(() => expect(requests.send).toHaveBeenCalledOnce())
+          expect(requests.send.mock.calls[0][0]).toMatchObject({
+            action: variant === "edit" ? "edit" : "create",
+            parentId: variant === "reply" ? "parent" : "",
+          })
+        })
+      }
+    }
+  }
+
+  it("updates an open composer from account sync without clearing the draft", async () => {
+    renderPreferences(<SharedCommentInput {...props} />)
+    const editor = await screen.findByRole("textbox", { name: "Comment" })
+    editor.focus()
+    expect(editor.tabIndex).toBe(0)
+    await act(() =>
+      externalPreferenceEdit("alice", { "general.submitCommentsWith": "enter" })
+    )
+    expect(editor.textContent).toBe("Intentional draft")
+    expect(
+      screen.getByText("Enter to send. Shift+Enter for a new line.")
+    ).toBeTruthy()
+    fireEvent.keyDown(editor, { key: "Enter", ctrlKey: true })
+    expect(requests.send).not.toHaveBeenCalled()
+    fireEvent.keyDown(editor, { key: "Enter" })
+    await waitFor(() => expect(requests.send).toHaveBeenCalledOnce())
+  })
+
+  it("does not submit Safari's final IME Enter after compositionend", async () => {
+    vi.spyOn(navigator, "vendor", "get").mockReturnValue("Apple Computer, Inc.")
+    await externalPreferenceEdit("alice", {
+      "general.submitCommentsWith": "enter",
+    })
+    renderPreferences(<SharedCommentInput {...props} />)
+    const editor = await screen.findByRole("textbox", { name: "Comment" })
+    fireEvent.compositionStart(editor)
+    fireEvent.compositionEnd(editor)
+    fireEvent.keyDown(editor, { key: "Enter", keyCode: 13, isComposing: false })
+    expect(requests.send).not.toHaveBeenCalled()
+    expect(editor.textContent).toBe("Intentional draft")
+    fireEvent.keyDown(editor, { key: "Enter", keyCode: 13, shiftKey: true })
+    expect(editor.querySelector("br")).not.toBeNull()
+    expect(requests.send).not.toHaveBeenCalled()
+    fireEvent.keyDown(editor, { key: "Enter", keyCode: 13 })
+    await waitFor(() => expect(requests.send).toHaveBeenCalledOnce())
+  })
+
+  it.each(["enter", "command-enter"] as const)(
+    "AT-02 %s ignores IME and held keys, blocks pending dispatch, and retries the exact failed draft",
+    async (mode) => {
+      await externalPreferenceEdit("alice", {
+        "general.submitCommentsWith": mode,
+      })
+      let reject!: (error: Error) => void
+      requests.send.mockReturnValueOnce(
+        new Promise((_resolve, fail) => {
+          reject = fail
+        })
+      )
+      renderPreferences(<SharedCommentInput {...props} />)
+      const editor = await screen.findByRole("textbox", { name: "Comment" })
+      const key = { key: "Enter", ctrlKey: mode === "command-enter" }
+      editor.focus()
+      expect(editor.tabIndex).toBe(0)
+      fireEvent.keyDown(editor, { ...key, isComposing: true })
+      fireEvent.keyDown(editor, { ...key, keyCode: 229 })
+      fireEvent.compositionStart(editor)
+      fireEvent.keyDown(editor, key)
+      fireEvent.compositionEnd(editor)
+      fireEvent.keyDown(editor, { ...key, repeat: true })
+      expect(requests.send).not.toHaveBeenCalled()
+      await new Promise((resolve) => setTimeout(resolve, 25))
+      fireEvent.keyDown(editor, key)
+      fireEvent.keyDown(editor, key)
+      fireEvent.click(screen.getByRole("button", { name: "Submit comment" }))
+      expect(requests.send).toHaveBeenCalledOnce()
+      await act(() => reject(new Error("Offline; retry your comment")))
+      expect((await screen.findByRole("alert")).textContent).toContain(
+        "Offline"
+      )
+      expect(editor.textContent).toBe("Intentional draft")
+      expect(editor.getAttribute("contenteditable")).toBe("false")
+      expect(document.activeElement).toBe(editor)
+      const original = requests.send.mock.calls[0][0]
+      fireEvent.keyDown(editor, key)
+      await waitFor(() => expect(requests.send).toHaveBeenCalledTimes(2))
+      expect(requests.send.mock.calls[1][0]).toBe(original)
+      await waitFor(() => expect(editor.textContent).toBe(""))
+    }
+  )
+
+  it("does not dispatch an empty or uploading draft from the keyboard", async () => {
+    storage.getItem.mockReturnValue(null)
+    const view = renderPreferences(<SharedCommentInput {...props} />)
+    fireEvent.keyDown(await screen.findByRole("textbox", { name: "Comment" }), {
+      key: "Enter",
+      ctrlKey: true,
+    })
+    expect(requests.send).not.toHaveBeenCalled()
+    view.unmount()
+    storage.getItem.mockReturnValue(
+      JSON.stringify({
+        issueId: props.issueId,
+        document: commentFromText("Waiting for upload"),
+      })
+    )
+    vi.mocked(uploadFileDirect).mockReturnValueOnce(new Promise(() => {}))
+    renderPreferences(<SharedCommentInput {...props} />)
+    const editor = await screen.findByRole("textbox", { name: "Comment" })
+    fireEvent.change(screen.getByLabelText("Upload attachment"), {
+      target: { files: [new File(["evidence"], "evidence.txt")] },
+    })
+    fireEvent.keyDown(editor, { key: "Enter", ctrlKey: true })
+    expect(requests.send).not.toHaveBeenCalled()
   })
 })
 
