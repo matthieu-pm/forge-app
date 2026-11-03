@@ -416,7 +416,8 @@ try {
     if (new Date(events.deadline) >= new Date(events.processed))
       throw new Error("Late worker shifted deadline")
     // The next platform tick must not repeat the same visible effect.
-    await new Promise((resolve) => setTimeout(resolve, 65000))
+    for (let tick = 0; tick < 13; tick++)
+      await new Promise((resolve) => setTimeout(resolve, 5000))
     expect(
       (
         await pool.query(
@@ -426,7 +427,7 @@ try {
       ).rows[0].n
     ).toBe(1)
     checks.push(
-      "Real Vercel Cron dispatches and completes a past-deadline fixture exactly once across two ticks; original deadline retained"
+      "Real platform Cron dispatches and completes a past-deadline fixture exactly once across two ticks; original deadline retained"
     )
   }
   await bob.screenshot({ path: `${artifactDir}/issue-sla.png`, fullPage: true })

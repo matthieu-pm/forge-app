@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import { handleSlaScheduler } from "./sla-scheduler"
+import { handleSlaScheduler, slaSchedulerDriver } from "./sla-scheduler"
 import { slaGate } from "./sla-gate"
 import {
   initialSharedSlaPolicy,
@@ -7,6 +7,15 @@ import {
 } from "@/lib/shared-sla-contract"
 
 describe("SLA admission and validation", () => {
+  it("selects native or external scheduling explicitly and rejects an unknown driver", () => {
+    expect(slaSchedulerDriver({})).toBe("vercel")
+    expect(
+      slaSchedulerDriver({ FORGE_SLA_SCHEDULER_DRIVER: "cloudflare" })
+    ).toBe("cloudflare")
+    expect(() =>
+      slaSchedulerDriver({ FORGE_SLA_SCHEDULER_DRIVER: "unknown" })
+    ).toThrow("must be vercel or cloudflare")
+  })
   it("starts disabled without preset rules and cannot enable an unlisted workspace", () => {
     expect(initialSharedSlaPolicy()).toEqual({
       enabled: false,

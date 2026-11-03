@@ -1,5 +1,14 @@
 import { createHash, timingSafeEqual } from "node:crypto"
 
+export function slaSchedulerDriver(
+  env: Record<string, string | undefined> = process.env
+) {
+  const driver = env.FORGE_SLA_SCHEDULER_DRIVER ?? "vercel"
+  if (driver !== "vercel" && driver !== "cloudflare")
+    throw new Error("FORGE_SLA_SCHEDULER_DRIVER must be vercel or cloudflare.")
+  return driver
+}
+
 export async function handleSlaScheduler(
   request: Request,
   env: Record<string, string | undefined>,

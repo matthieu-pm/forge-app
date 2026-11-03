@@ -59,13 +59,18 @@ example `{"sla":{"mode":"enabled","workspaceIds":["<workspace-id>"]}}`.
 Preview mode has no operational SLA access. Policy enablement is an additional
 workspace-admin control. Preserve unrelated rollout entries when changing it.
 
-The Vercel scheduler is packaged only when `FORGE_SLA_JOBS_ENABLED=true` at build
+The native Vercel scheduler is packaged only when `FORGE_SLA_JOBS_ENABLED=true`
+and `FORGE_SLA_SCHEDULER_DRIVER=vercel` at build
 time. The GET `/api/internal/sla-jobs` handler also checks this flag at runtime and
 requires `Authorization: Bearer <CRON_SECRET>` with a secret of at least 32
 characters. Startup rejects enabled scheduling without a valid secret. The
 endpoint gives no-store 404 before importing the database on denied requests.
 It dispatches at most 100 intents and processes at most 20 due jobs per tick.
-Vercel scheduling runs every minute; delivery can be late, and history preserves
+For Vercel Hobby, select `FORGE_SLA_SCHEDULER_DRIVER=cloudflare`: the existing
+`forge-loop-scheduler` Worker sends an authenticated GET every minute to the
+same endpoint, independently of its Loop POST. No native SLA cron is emitted.
+Its existing secret binding is retained; its public handler stays inert.
+The web remains the queue/lease owner. Minute delivery can be late, and history preserves
 both the original deadline/effective breach time and actual processing time.
 
 The server records a feature identity from `VERCEL_DEPLOYMENT_ID` (or

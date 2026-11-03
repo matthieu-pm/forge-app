@@ -247,7 +247,14 @@ export function inspectServiceConfiguration(
     }
   }
   if (service === "app") {
-    if (flag("FORGE_SLA_JOBS_ENABLED")) secret("CRON_SECRET")
+    if (flag("FORGE_SLA_JOBS_ENABLED")) {
+      secret("CRON_SECRET")
+      if (
+        env.FORGE_SLA_SCHEDULER_DRIVER !== undefined &&
+        !["vercel", "cloudflare"].includes(env.FORGE_SLA_SCHEDULER_DRIVER)
+      )
+        add("FORGE_SLA_SCHEDULER_DRIVER", "must select vercel or cloudflare")
+    }
     if (flag("FORGE_LOOPS_ENABLED")) {
       if (
         env.FORGE_LOOP_SCHEDULER_DRIVER !== undefined &&
