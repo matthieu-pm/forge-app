@@ -5,6 +5,7 @@ import { downloadLegacyFile } from "@/lib/legacy-import-backup"
 import {
   downloadLegacyImportReport,
   loadLegacyImports,
+  prepareLegacyImport,
   reconcileLegacyImport,
   resolveLegacyImport,
   retryLegacyImport,
@@ -56,6 +57,23 @@ export function LegacyImportExecution() {
       window.removeEventListener(IMPORT_PROGRESS_CHANGED, refresh)
     }
   }, [refresh])
+  async function discoverContent() {
+    const token = ++generation.current,
+      epoch = canonicalIssueEpoch()
+    setBusy(true)
+    setError("")
+    try {
+      await prepareLegacyImport({ data: importIdentity() })
+      if (token !== generation.current || epoch !== canonicalIssueEpoch())
+        return
+      await refresh()
+    } catch {
+      if (token === generation.current && epoch === canonicalIssueEpoch())
+        setError("Preserved content could not be checked. Try again.")
+    } finally {
+      if (epoch === canonicalIssueEpoch()) setBusy(false)
+    }
+  }
   async function run(
     manifest: ImportSnapshot,
     entryId?: string,
@@ -168,9 +186,9 @@ export function LegacyImportExecution() {
     <section className="space-y-3" aria-label="Browser import progress">
       <h2 className="text-sm font-semibold">Browser import progress</h2>
       <p className="text-xs text-muted-foreground">
-        Issues, core projects and dated cycles resume from saved server
-        progress. Conflicts require your choice. Original sources and historical
-        details remain in your private backup.
+        Issues and enabled planning, document, resource and view modules resume
+        from saved server progress. Conflicts require your choice. Original
+        sources and historical details remain in your private backup.
       </p>
       {error && (
         <p role="alert" className="text-sm">
@@ -184,6 +202,14 @@ export function LegacyImportExecution() {
         onClick={() => void refresh()}
       >
         Refresh import progress
+      </Button>
+      <Button
+        variant="secondary"
+        size="sm"
+        disabled={busy}
+        onClick={() => void discoverContent()}
+      >
+        Check for preserved content
       </Button>
       {!imports.length && !error && (
         <p className="text-xs text-muted-foreground">

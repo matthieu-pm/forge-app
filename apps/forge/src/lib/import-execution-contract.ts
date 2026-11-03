@@ -1,6 +1,10 @@
 import { z } from "zod"
 import type { issueDraftSchema } from "./issue-record-contract"
 import type { initiativeProjectSchema } from "./initiatives"
+import type {
+  ImportContent,
+  ImportModules,
+} from "@/application/imports/content-manifest"
 
 export const IMPORT_VERSION = 1
 export const importIdentitySchema = z.object({
@@ -33,13 +37,22 @@ export type ImportEntry = {
   sourceChecksum?: string
   path: string
   legacyId: string
-  kind: "issue" | "project"
+  legacyAliases?: Array<string>
+  kind:
+    | "issue"
+    | "project"
+    | "initiative"
+    | "milestone"
+    | "document"
+    | "view"
+    | "resource"
   teamId: string
   teamIds?: Array<string>
   fingerprint: string
   title: string
   draft?: z.infer<typeof issueDraftSchema>
   project?: z.infer<typeof initiativeProjectSchema>
+  content?: ImportContent
   files: Array<ImportFile>
   canonicalId?: string
   replaceLegacyFiles?: boolean
@@ -70,12 +83,15 @@ export type ImportReference = Pick<
   | "sourceKey"
   | "sourceChecksum"
   | "legacyId"
+  | "legacyAliases"
   | "kind"
   | "teamId"
   | "canonicalId"
 > & { manifestId: string; state: "saved" }
 export type ImportManifest = {
   version: 1
+  contentVersion?: 2
+  modules?: ImportModules
   policyVersion: 1
   id: string
   fingerprint: string

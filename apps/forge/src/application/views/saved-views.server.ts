@@ -72,7 +72,7 @@ const unavailable =
   "This view has unsupported filters or unavailable references. Review its filters before using it."
 
 /** Recheck references on every read; never remove a filter and widen its result. */
-async function validateReferences(
+export async function validateSavedViewReferences(
   tx: Transaction,
   actor: Actor,
   definition: SavedViewDefinition,
@@ -251,7 +251,7 @@ export async function readSavedViews(
           continue
         }
         try {
-          await validateReferences(tx, current, parsed.data)
+          await validateSavedViewReferences(tx, current, parsed.data)
         } catch {
           result.error = unavailable
           continue
@@ -373,7 +373,7 @@ export async function mutateSavedView(
             .delete(savedViewFavorites)
             .where(eq(savedViewFavorites.viewId, input.id))
         } else {
-          await validateReferences(tx, current, input.definition, true)
+          await validateSavedViewReferences(tx, current, input.definition, true)
           privatizedByAdmin = Boolean(
             row &&
             row.ownerId !== current.userId &&
@@ -442,7 +442,7 @@ export async function queryViewProjects(actor: Actor, raw: unknown) {
   return db.transaction(
     async (tx) => {
       const current = await currentCommandActor(tx, actor)
-      await validateReferences(tx, current, definition)
+      await validateSavedViewReferences(tx, current, definition)
       const rows = await tx
         .select()
         .from(projects)

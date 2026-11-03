@@ -4,6 +4,7 @@ import { LegacyImportExecution } from "./legacy-import-execution"
 import type { ImportSnapshot } from "@/lib/import-execution-contract"
 import {
   loadLegacyImports,
+  prepareLegacyImport,
   reconcileLegacyImport,
   resolveLegacyImport,
 } from "@/lib/import-execution-state"
@@ -12,6 +13,7 @@ import { invalidatePreferenceSession } from "@/lib/preference-session-events"
 
 vi.mock("@/lib/import-execution-state", () => ({
   loadLegacyImports: vi.fn(),
+  prepareLegacyImport: vi.fn(),
   resolveLegacyImport: vi.fn(),
   retryLegacyImport: vi.fn(),
   reconcileLegacyImport: vi.fn(),
@@ -58,6 +60,22 @@ const manifest: ImportSnapshot = {
   ],
 }
 describe("FOR-56 conflict review", () => {
+  it("FOR-126 explicitly discovers enabled content from preserved server sources", async () => {
+    vi.mocked(loadLegacyImports).mockResolvedValue(JSON.stringify([]))
+    vi.mocked(prepareLegacyImport).mockResolvedValue(JSON.stringify(manifest))
+    render(<LegacyImportExecution />)
+    await screen.findByText("No saved imports for this account and workspace.")
+    vi.mocked(loadLegacyImports).mockResolvedValue(JSON.stringify([manifest]))
+    fireEvent.click(
+      screen.getByRole("button", { name: "Check for preserved content" })
+    )
+    await screen.findByText("Private source issue · review")
+    expect(prepareLegacyImport).toHaveBeenCalledWith({
+      data: { workspaceId: "w", sessionId: "s" },
+    })
+    expect(resumeLegacyImport).not.toHaveBeenCalled()
+  })
+
   it("submits the exact reviewed revision/fingerprint before resuming", async () => {
     vi.mocked(loadLegacyImports).mockResolvedValue(JSON.stringify([manifest]))
     vi.mocked(resolveLegacyImport).mockResolvedValue(JSON.stringify(manifest))

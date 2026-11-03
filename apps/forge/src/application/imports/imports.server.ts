@@ -1,6 +1,15 @@
 import "@tanstack/react-start/server-only"
 import { and, desc, eq, isNull, or, sql } from "drizzle-orm"
 import { z } from "zod"
+import {
+  contentCandidates,
+  contentDependencies,
+  contentRelationshipsMatch,
+  contentTarget,
+  createContent,
+  importModules,
+  requireContentModule,
+} from "./content.server"
 import { buildImportManifest, validatedImportFiles } from "./manifest"
 import type { Actor } from "@/application/actor"
 import type { Transaction } from "@/db"
@@ -79,6 +88,14 @@ async function authorize(
     manifest.workspaceId !== actor.workspaceId
   )
     throw new ApplicationAccessError()
+  const content = manifest.entries.filter(
+    (entry) => entry.kind !== "issue" && entry.kind !== "project"
+  )
+  if (content.length) {
+    const modules = await importModules(tx, actor)
+    for (const entry of content)
+      await requireContentModule(tx, actor, entry, modules)
+  }
   for (const id of new Set(
     manifest.entries.flatMap(
       (e) =>
@@ -96,7 +113,13 @@ function encodeManifest(manifest: ImportManifest) {
     ...manifest,
     sources: manifest.sources.map(({ key, checksum }) => ({ key, checksum })),
     entries: manifest.entries.map(
-      ({ draft: _draft, project: _project, title: _title, ...entry }) => ({
+      ({
+        draft: _draft,
+        project: _project,
+        content: _content,
+        title: _title,
+        ...entry
+      }) => ({
         ...entry,
         conflict: entry.conflict
           ? {
@@ -146,6 +169,7 @@ async function hydrate(
     workspaceId: actor.workspaceId,
     sources,
     defaultStatus: defaultDefinitionValue().statuses.defaultId,
+    modules: manifest.contentVersion === 2 ? manifest.modules : undefined,
   })
   const payloadById = new Map(payload.entries.map((entry) => [entry.id, entry]))
   // Older executors omitted revision-bearing source records. Inventory them now;
@@ -175,6 +199,7 @@ async function hydrate(
       entry.sourceValid = original.sourceValid
       entry.draft = original.draft
       entry.project = original.project
+      entry.content = original.content
       entry.files = entry.files.map((file, index) => ({
         ...file,
         data: file.fileId ? "" : (original.files[index]?.data ?? ""),
@@ -255,6 +280,7 @@ function snapshot(
     sources: manifest.sources.map(({ key, checksum }) => ({ key, checksum })),
     entries: visible.map((entry) => ({
       ...entry,
+      content: undefined,
       draft:
         entry.state === "review" && entry.draft
           ? {
@@ -304,7 +330,12 @@ export async function prepareImport(actor: Actor) {
     const keys = accessible.flatMap((t) =>
       ["team", "triage", "cycle"].map((k) => `forge:${k}-issues:v1:${t.id}`)
     )
-    keys.push(`forge:workspace:${current.workspaceId}:initiatives:v1`)
+    keys.push(
+      `forge:workspace:${current.workspaceId}:initiatives:v1`,
+      `forge:workspace:${current.workspaceId}:custom-views:v1:${current.userId}`,
+      ...accessible.map((t) => `forge:team-home:v1:${t.id}`)
+    )
+    const modules = await importModules(tx, current)
     const rows = await tx
       .select()
       .from(productState)
@@ -316,18 +347,32 @@ export async function prepareImport(actor: Actor) {
         )
       )
     const sources: Array<{ key: string; raw: string }> = []
+    const retainedSources: Array<{
+      key: string
+      raw: string
+      backupKey: string
+    }> = []
+    const currentKeys = new Set(
+      rows
+        .filter((row) => keys.includes(row.key) && row.encodedValue)
+        .map((row) => row.key)
+    )
     for (const row of rows) {
       if (!row.encodedValue) continue
       if (keys.includes(row.key))
         sources.push({ key: row.key, raw: JSON.parse(row.encodedValue) })
-      else if (
-        row.key.startsWith("forge:legacy-conflict:v1:") &&
-        !row.key.startsWith("forge:legacy-conflict:v1:import-")
-      ) {
+      else if (row.key.startsWith("forge:legacy-conflict:v1:")) {
         try {
           const source = JSON.parse(JSON.parse(row.encodedValue))
-          if (keys.includes(source.key) && typeof source.value === "string")
-            sources.push({ key: source.key, raw: source.value })
+          if (keys.includes(source.key) && typeof source.value === "string") {
+            if (row.key.startsWith("forge:legacy-conflict:v1:import-"))
+              retainedSources.push({
+                key: source.key,
+                raw: source.value,
+                backupKey: row.key,
+              })
+            else sources.push({ key: source.key, raw: source.value })
+          }
         } catch {
           /* The opaque backup remains available through product recovery. */
         }
@@ -340,12 +385,29 @@ export async function prepareImport(actor: Actor) {
     const completedManifests = completed
       .map((row) => JSON.parse(row.encoded) as ImportManifest)
       .filter((m) => m.completedAt)
-    const settledSources = new Set(
+    const completedBackupKeys = new Set(
       completedManifests.flatMap((m) =>
-        [...m.sources, ...(m.cleanedSources ?? [])].map((s) =>
-          JSON.stringify([s.key, s.checksum])
-        )
+        m.sources.map((_, index) => sourceBackupKey(m.id, index))
       )
+    )
+    for (const source of retainedSources)
+      if (
+        !currentKeys.has(source.key) &&
+        completedBackupKeys.has(source.backupKey)
+      )
+        sources.push({ key: source.key, raw: source.raw })
+    const settledSources = new Set(
+      completedManifests
+        .filter(
+          (m) =>
+            m.contentVersion === 2 &&
+            commandInputHash(m.modules) === commandInputHash(modules)
+        )
+        .flatMap((m) =>
+          [...m.sources, ...(m.cleanedSources ?? [])].map((s) =>
+            JSON.stringify([s.key, s.checksum])
+          )
+        )
     )
     const referenceContext = completedManifests.flatMap((m) =>
       m.entries.flatMap((entry) =>
@@ -356,6 +418,7 @@ export async function prepareImport(actor: Actor) {
                 sourceKey: entry.sourceKey,
                 sourceChecksum: entry.sourceChecksum,
                 legacyId: entry.legacyId,
+                legacyAliases: entry.legacyAliases,
                 kind: entry.kind,
                 teamId: entry.teamId,
                 canonicalId: entry.canonicalId,
@@ -376,6 +439,7 @@ export async function prepareImport(actor: Actor) {
       actorId: current.userId,
       workspaceId: current.workspaceId,
       sources: unsettled,
+      modules,
       defaultStatus: defaultDefinitionValue().statuses.defaultId,
     })
     manifest.referenceContext = referenceContext
@@ -458,12 +522,18 @@ export async function readImports(actor: Actor) {
     return values
   })
 }
+// Workspace-scoped content uses a reserved UUID because the v1 alias table requires a team UUID; it has no team FK.
+const workspaceAliasScope = "00000000-0000-4000-8000-000000000000"
+const aliasLegacyId = (actor: Actor, entry: ImportEntry) =>
+  entry.kind === "view"
+    ? JSON.stringify([actor.userId, entry.legacyId])
+    : entry.legacyId
 const aliasScope = (actor: Actor, entry: ImportEntry) =>
   and(
     eq(legacyImportAliases.workspaceId, actor.workspaceId),
-    eq(legacyImportAliases.teamId, entry.teamId),
+    eq(legacyImportAliases.teamId, entry.teamId || workspaceAliasScope),
     eq(legacyImportAliases.kind, entry.kind),
-    eq(legacyImportAliases.legacyId, entry.legacyId)
+    eq(legacyImportAliases.legacyId, aliasLegacyId(actor, entry))
   )
 async function target(
   tx: Transaction,
@@ -477,8 +547,14 @@ async function target(
   revision: number
   fingerprint: string
   details: Record<string, string>
-  relationships?: { parentId: string | null; projectId: string | null }
+  relationships?: {
+    parentId: string | null
+    projectId: string | null
+    milestoneId: string | null
+  }
 } | null> {
+  if (entry.kind !== "issue" && entry.kind !== "project")
+    return contentTarget(tx, actor, entry, id)
   if (entry.kind === "issue") {
     const query = tx
       .select()
@@ -531,7 +607,11 @@ async function target(
             cycle: row.cycleId ?? "",
             parent: parent?.id ?? "",
           },
-          relationships: { parentId: row.parentId, projectId: row.projectId },
+          relationships: {
+            parentId: row.parentId,
+            projectId: row.projectId,
+            milestoneId: row.properties.milestone || null,
+          },
           revision: row.revision,
           fingerprint: commandInputHash(JSON.parse(JSON.stringify(row))),
         }
@@ -601,9 +681,9 @@ async function recordAlias(
     .insert(legacyImportAliases)
     .values({
       workspaceId: actor.workspaceId,
-      teamId: entry.teamId,
+      teamId: entry.teamId || workspaceAliasScope,
       kind: entry.kind,
-      legacyId: entry.legacyId,
+      legacyId: aliasLegacyId(actor, entry),
       fingerprint: entry.fingerprint,
       canonicalId: id,
       targetFingerprint: row.fingerprint,
@@ -628,6 +708,17 @@ async function reconcile(
   const mapping =
     entry.kind === "issue" && entry.draft && !entry.canonicalProjection
       ? {
+          milestoneId:
+            manifest.modules?.milestones && entry.draft.milestone
+              ? await reference(
+                  tx,
+                  actor,
+                  manifest,
+                  entry,
+                  "milestone",
+                  `${entry.draft.project}::${entry.draft.milestone}`
+                )
+              : undefined,
           parentId:
             (await reference(
               tx,
@@ -657,9 +748,18 @@ async function reconcile(
     const row = await target(tx, actor, entry, exact.canonicalId, true)
     if (
       row?.fingerprint === exact.targetFingerprint &&
+      (await contentRelationshipsMatch(
+        tx,
+        actor,
+        entry,
+        exact.canonicalId,
+        (kind, id) => reference(tx, actor, manifest, entry, kind, id)
+      )) &&
       (!mapping ||
         (row.relationships?.parentId === mapping.parentId &&
-          row.relationships.projectId === mapping.projectId))
+          row.relationships.projectId === mapping.projectId &&
+          (mapping.milestoneId === undefined ||
+            row.relationships.milestoneId === mapping.milestoneId)))
     ) {
       if (entry.files.length) {
         const [issue] = await tx
@@ -687,43 +787,45 @@ async function reconcile(
   }
   const possible = entry.canonicalProjection
     ? []
-    : entry.kind === "issue"
-      ? await tx
-          .select({ id: issues.id })
-          .from(issues)
-          .where(
-            and(
-              eq(issues.workspaceId, actor.workspaceId),
-              eq(issues.teamId, entry.teamId),
-              or(
-                eq(issues.legacyId, entry.legacyId),
-                sql`lower(btrim(${issues.title}))=${entry.title.trim().toLowerCase()}`,
-                entry.draft?.description
-                  ? eq(
-                      sql`${issues.properties}->>'description'`,
-                      entry.draft.description
-                    )
-                  : undefined
-              ),
-              readableIssueCondition(actor, issues.id),
-              isNull(issues.deletedAt)
+    : entry.kind !== "issue" && entry.kind !== "project"
+      ? await contentCandidates(tx, actor, entry)
+      : entry.kind === "issue"
+        ? await tx
+            .select({ id: issues.id })
+            .from(issues)
+            .where(
+              and(
+                eq(issues.workspaceId, actor.workspaceId),
+                eq(issues.teamId, entry.teamId),
+                or(
+                  eq(issues.legacyId, entry.legacyId),
+                  sql`lower(btrim(${issues.title}))=${entry.title.trim().toLowerCase()}`,
+                  entry.draft?.description
+                    ? eq(
+                        sql`${issues.properties}->>'description'`,
+                        entry.draft.description
+                      )
+                    : undefined
+                ),
+                readableIssueCondition(actor, issues.id),
+                isNull(issues.deletedAt)
+              )
             )
-          )
-          .limit(21)
-      : await tx
-          .select({ id: projects.id })
-          .from(projects)
-          .where(
-            and(
-              eq(projects.workspaceId, actor.workspaceId),
-              or(
-                eq(projects.legacyId, entry.legacyId),
-                sql`lower(btrim(${projects.name}))=${entry.title.trim().toLowerCase()}`
-              ),
-              readableProjectCondition(actor, projects.id)
+            .limit(21)
+        : await tx
+            .select({ id: projects.id })
+            .from(projects)
+            .where(
+              and(
+                eq(projects.workspaceId, actor.workspaceId),
+                or(
+                  eq(projects.legacyId, entry.legacyId),
+                  sql`lower(btrim(${projects.name}))=${entry.title.trim().toLowerCase()}`
+                ),
+                readableProjectCondition(actor, projects.id)
+              )
             )
-          )
-          .limit(21)
+            .limit(21)
   const candidates = []
   for (const id of new Set([
     ...(entry.canonicalProjection ? [] : aliases.map((a) => a.canonicalId)),
@@ -743,7 +845,14 @@ async function reconcile(
     JSON.parse(
       JSON.stringify({
         source: entry.fingerprint,
-        mapping,
+        mapping: mapping ? JSON.parse(JSON.stringify(mapping)) : undefined,
+        contentMapping: await Promise.all(
+          contentDependencies(entry).map(async ([kind, id]) => [
+            kind,
+            id,
+            await reference(tx, actor, manifest, entry, kind, id),
+          ])
+        ),
         aliases,
         candidates,
       })
@@ -804,24 +913,21 @@ async function reconcile(
 function referenceEntries(
   manifest: ImportManifest,
   entry: ImportEntry,
-  kind: "issue" | "project",
+  kind: ImportEntry["kind"],
   legacyId: string
 ) {
   if (!legacyId) return []
-  const local = manifest.entries.filter(
-    (e) =>
-      e.kind === kind &&
-      (kind === "project" || e.teamId === entry.teamId) &&
-      e.legacyId === legacyId
-  )
+  const matches = (
+    e: Pick<ImportEntry, "kind" | "teamId" | "legacyId" | "legacyAliases">
+  ) =>
+    e.kind === kind &&
+    (["project", "initiative", "view"].includes(kind) ||
+      e.teamId === entry.teamId) &&
+    (e.legacyId === legacyId || Boolean(e.legacyAliases?.includes(legacyId)))
+  const local = manifest.entries.filter(matches)
   const candidates = local.length
     ? local
-    : (manifest.referenceContext ?? []).filter(
-        (e) =>
-          e.kind === kind &&
-          (kind === "project" || e.teamId === entry.teamId) &&
-          e.legacyId === legacyId
-      )
+    : (manifest.referenceContext ?? []).filter(matches)
   const sameSnapshot = candidates.filter(
     (e) =>
       e.sourceKey === entry.sourceKey &&
@@ -839,7 +945,7 @@ async function reference(
   actor: Actor,
   manifest: ImportManifest,
   entry: ImportEntry,
-  kind: "issue" | "project",
+  kind: ImportEntry["kind"],
   legacyId: string
 ) {
   if (!legacyId) return ""
@@ -913,6 +1019,14 @@ async function reference(
     }
   }
   if (ids.length === 1) return ids[0]
+  if (kind !== "issue" && kind !== "project") {
+    const live = z.uuid().safeParse(legacyId).success
+      ? await target(tx, actor, { ...entry, kind }, legacyId)
+      : null
+    if (!live)
+      throw new Error("A content relationship is missing or unavailable.")
+    return live.id
+  }
   const table = kind === "issue" ? issues : projects
   const possible = await tx
     .select({ id: table.id })
@@ -950,6 +1064,42 @@ async function createEntry(
   both: boolean
 ) {
   let id: string
+  if (entry.content) {
+    if (entry.content.kind === "milestone") {
+      const projectId = await reference(
+        tx,
+        actor,
+        manifest,
+        entry,
+        "project",
+        entry.content.projectId
+      )
+      for (const parent of manifest.entries.filter(
+        (e) =>
+          e.kind === "project" &&
+          e.state === "saved" &&
+          e.canonicalId === projectId
+      )) {
+        if (
+          (await target(tx, actor, parent, projectId))?.fingerprint !==
+          parent.targetFingerprint
+        )
+          throw new Error(
+            "The linked project changed. Retry unresolved records and review it before extending its milestones."
+          )
+      }
+    }
+    const result = await createContent(
+      tx,
+      actor,
+      manifest,
+      entry,
+      (kind, legacyId) => reference(tx, actor, manifest, entry, kind, legacyId),
+      both
+    )
+    await recordAlias(tx, actor, entry, result.id)
+    return result
+  }
   if (entry.kind === "project") {
     requireResourceScope(actor, "projects:write")
     const project = entry.project!
@@ -1028,6 +1178,16 @@ async function createEntry(
       "project",
       draft.project ?? ""
     )
+    if (manifest.modules?.milestones && entry.draft?.milestone) {
+      draft.milestone = await reference(
+        tx,
+        actor,
+        manifest,
+        entry,
+        "milestone",
+        `${entry.draft.project}::${entry.draft.milestone}`
+      )
+    }
     if (
       draft.cycle &&
       !z.uuid().safeParse(draft.cycle).success &&
@@ -1125,7 +1285,11 @@ async function createEntry(
     id = row.id
   }
   await recordAlias(tx, actor, entry, id)
-  return id
+  return {
+    id,
+    events: [] as Array<{ topic: string; payload: Record<string, unknown> }>,
+    changedProjectId: undefined as string | undefined,
+  }
 }
 export async function runImportBatch(
   actor: Actor,
@@ -1169,7 +1333,24 @@ export async function runImportBatch(
       // Projects, then roots, then children. Unresolved/circular graphs remain recoverable.
       pending.sort(
         (a, b) =>
-          Number(a.kind === "issue") - Number(b.kind === "issue") ||
+          [
+            "project",
+            "resource",
+            "milestone",
+            "initiative",
+            "document",
+            "issue",
+            "view",
+          ].indexOf(a.kind) -
+            [
+              "project",
+              "resource",
+              "milestone",
+              "initiative",
+              "document",
+              "issue",
+              "view",
+            ].indexOf(b.kind) ||
           Number(Boolean(a.draft?.parentId)) -
             Number(Boolean(b.draft?.parentId))
       )
@@ -1179,6 +1360,17 @@ export async function runImportBatch(
           (e) =>
             e.kind === "project" ||
             [
+              ...contentDependencies(e).flatMap(([kind, id]) =>
+                referenceEntries(manifest, e, kind, id)
+              ),
+              ...(manifest.modules?.milestones && e.draft?.milestone
+                ? referenceEntries(
+                    manifest,
+                    e,
+                    "milestone",
+                    `${e.draft.project}::${e.draft.milestone}`
+                  )
+                : []),
               ...referenceEntries(
                 manifest,
                 e,
@@ -1204,11 +1396,17 @@ export async function runImportBatch(
         const [entry] = pending.splice(index, 1)
         try {
           let created = false
+          let contentEvents: Array<{
+            topic: string
+            payload: Record<string, unknown>
+          }> = []
           await tx.transaction(async (nested) => {
             if (!entry.sourceValid)
               throw new Error(
                 "The source record is invalid. Correct its retained source before importing."
               )
+            if (entry.content)
+              await requireContentModule(nested, current, entry)
             const result = await reconcile(nested, current, manifest, entry)
             if (result.blocked) return
             if (result.skip) {
@@ -1279,13 +1477,31 @@ export async function runImportBatch(
               )
               entry.replaceLegacyFiles = false
             }
-            entry.canonicalId = await createEntry(
+            const effect = await createEntry(
               nested,
               current,
               manifest,
               entry,
               Boolean(result.both)
             )
+            entry.canonicalId = effect.id
+            contentEvents = effect.events
+            if (effect.changedProjectId) {
+              for (const parent of manifest.entries.filter(
+                (e) =>
+                  e.kind === "project" &&
+                  e.state === "saved" &&
+                  e.canonicalId === effect.changedProjectId
+              )) {
+                parent.targetFingerprint = (await target(
+                  nested,
+                  current,
+                  parent,
+                  parent.canonicalId!
+                ))!.fingerprint
+                await recordAlias(nested, current, parent, parent.canonicalId!)
+              }
+            }
             entry.state = "saved"
             delete entry.reviewRequired
             entry.targetFingerprint = (await target(
@@ -1297,6 +1513,7 @@ export async function runImportBatch(
             delete entry.message
             created = true
           })
+          events.push(...contentEvents)
           if (created && entry.kind === "issue")
             events.push({
               topic: "issue.created",
@@ -1574,7 +1791,7 @@ export async function retryImportRecords(
       if (
         entry.state === "quarantined" &&
         entry.sourceValid &&
-        (entry.draft || entry.project)
+        (entry.draft || entry.project || entry.content)
       ) {
         entry.state = "pending"
         delete entry.message
@@ -1712,7 +1929,20 @@ async function importReconciliation(
             "project",
             entry.draft?.project ?? ""
           )) || null
+        const milestoneId =
+          manifest.modules?.milestones && entry.draft?.milestone
+            ? await reference(
+                tx,
+                actor,
+                manifest,
+                entry,
+                "milestone",
+                `${entry.draft.project}::${entry.draft.milestone}`
+              )
+            : undefined
         if (
+          (milestoneId !== undefined &&
+            live.relationships?.milestoneId !== milestoneId) ||
           live.relationships?.parentId !== parentId ||
           live.relationships.projectId !== projectId
         )
@@ -1721,6 +1951,24 @@ async function importReconciliation(
           )
       } catch {
         fail("A source relationship is missing, ambiguous or unavailable.")
+      }
+    }
+    if (entry.content && entry.decision?.choice !== "keep-server") {
+      try {
+        if (
+          !(await contentRelationshipsMatch(
+            tx,
+            actor,
+            entry,
+            entry.canonicalId,
+            (kind, id) => reference(tx, actor, manifest, entry, kind, id)
+          ))
+        )
+          fail(
+            "Canonical content relationships differ from the source mapping."
+          )
+      } catch {
+        fail("A content relationship is missing, ambiguous or unavailable.")
       }
     }
     for (const file of entry.files) {
