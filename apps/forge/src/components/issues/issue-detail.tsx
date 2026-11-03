@@ -36,6 +36,7 @@ import type { TeamStatus } from "@/lib/team-statuses"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import type { ActivityReferenceKind } from "@/lib/issue-activity"
+import { DateInput } from "@/components/ui/date-input"
 import {
   canonicalIssueEpoch,
   canonicalIssueState,
@@ -400,7 +401,9 @@ export function IssueDetail({
   }
   const childSave = useRef<{ signature: string; key: string } | null>(null)
   const childSaving = useRef(false)
+  const dueDateRef = useRef<HTMLInputElement>(null)
   async function createChild() {
+    if (dueDateRef.current && !dueDateRef.current.reportValidity()) return
     if (childSaving.current) return
     childSaving.current = true
     try {
@@ -1537,14 +1540,15 @@ export function IssueDetail({
                         <PopoverContent>
                           <label className="text-xs">
                             Due date
-                            <input
+                            <DateInput
                               type="date"
                               aria-label="Sub-issue due date"
+                              ref={dueDateRef}
                               value={childDraft.dueDate}
-                              onChange={(e) =>
+                              onValueChange={(dateValue) =>
                                 setChildDraft({
                                   ...childDraft,
-                                  dueDate: e.target.value,
+                                  dueDate: dateValue,
                                 })
                               }
                               className="block p-2"

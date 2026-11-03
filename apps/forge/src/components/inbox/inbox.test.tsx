@@ -265,3 +265,26 @@ describe("Inbox", () => {
     expect(saved().entries.every((entry) => entry.deleted)).toBe(true)
   })
 })
+
+it.each(["2026-0", "2026-02-31"])(
+  "does not snooze to an earlier datetime while the visible draft is %s",
+  (invalid) => {
+    seed()
+    render(<Inbox scope={scope} />)
+    key("j")
+    key("s")
+    fireEvent.change(screen.getByLabelText("Snooze date"), {
+      target: { value: "2099-02-01" },
+    })
+    fireEvent.change(screen.getByLabelText("Snooze date time"), {
+      target: { value: "12:30" },
+    })
+    fireEvent.change(screen.getByLabelText("Snooze date"), {
+      target: { value: invalid },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Snooze" }))
+    expect(
+      saved().entries.find((entry) => entry.issue)?.snoozedUntil
+    ).toBeNull()
+  }
+)

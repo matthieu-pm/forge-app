@@ -31,6 +31,7 @@ import type {
   InboxScope,
   InboxView,
 } from "@/lib/inbox-state"
+import { DateInput } from "@/components/ui/date-input"
 import { issueSubscriberIds } from "@/lib/issue-engagement-contract"
 import { useQueriedIssue } from "@/lib/issue-query-client"
 import { canonicalIssuesActive } from "@/lib/canonical-issue-cache"
@@ -127,6 +128,7 @@ export function Inbox({ scope }: { scope: InboxScope }) {
   const [filterOpen, setFilterOpen] = useState(false)
   const [snoozeOpen, setSnoozeOpen] = useState(false)
   const [customDate, setCustomDate] = useState("")
+  const customDateRef = useRef<HTMLInputElement>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [announcement, setAnnouncement] = useState("")
   const [now, setNow] = useState(Date.now)
@@ -761,11 +763,13 @@ export function Inbox({ scope }: { scope: InboxScope }) {
                       )}
                       <label className="mt-2 grid gap-2 border-t border-border/50 px-2 pt-3 text-xs">
                         Pick a date and time
-                        <input
+                        <DateInput
                           type="datetime-local"
+                          aria-label="Snooze date"
+                          ref={customDateRef}
                           value={customDate}
-                          onChange={(event) =>
-                            setCustomDate(event.target.value)
+                          onValueChange={(dateValue) =>
+                            setCustomDate(dateValue)
                           }
                           className={selectClass}
                         />
@@ -775,7 +779,10 @@ export function Inbox({ scope }: { scope: InboxScope }) {
                         size="sm"
                         className="m-2"
                         disabled={!customDate}
-                        onClick={() => snooze(new Date(customDate).getTime())}
+                        onClick={() => {
+                          if (customDateRef.current?.reportValidity())
+                            snooze(new Date(customDate).getTime())
+                        }}
                       >
                         Snooze
                       </Button>

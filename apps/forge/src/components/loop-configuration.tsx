@@ -3,6 +3,8 @@ import type {
   LoopLeafCondition,
   LoopTrigger,
 } from "@/lib/loop-contract"
+import { useCalendarWeek } from "@/hooks/use-calendar-week"
+import { DateInput } from "@/components/ui/date-input"
 import {
   LOOP_ENTITIES,
   eventProperties,
@@ -337,6 +339,7 @@ export function LoopTriggerEditor({
     value.kind === "event" && ["added", "removed"].includes(value.event)
       ? propertyOptions?.filter((choice) => choice.id !== "__none__")
       : propertyOptions
+  const { weekdays } = useCalendarWeek()
   return (
     <div className="space-y-3">
       <label className={label}>
@@ -566,7 +569,7 @@ export function LoopTriggerEditor({
           </label>
           <label className={label}>
             First run (in the selected timezone)
-            <Input
+            <DateInput
               aria-label="First scheduled run"
               type="datetime-local"
               value={(() => {
@@ -579,14 +582,11 @@ export function LoopTriggerEditor({
                   return ""
                 }
               })()}
-              onChange={(event) => {
+              onValueChange={(dateValue) => {
                 try {
                   onChange({
                     ...value,
-                    startAt: loopScheduleStart(
-                      event.target.value,
-                      value.timeZone
-                    ),
+                    startAt: loopScheduleStart(dateValue, value.timeZone),
                   })
                 } catch {
                   /* Retain last valid date until input is complete. */
@@ -598,28 +598,32 @@ export function LoopTriggerEditor({
             <fieldset>
               <legend className="mb-2 text-sm">Weekdays</legend>
               <div className="flex flex-wrap gap-3">
-                {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(
-                  (day, index) => (
+                {weekdays.map((dayIndex) => {
+                  const weekday = dayIndex || 7
+                  const day = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][
+                    dayIndex
+                  ]
+                  return (
                     <label
                       className="flex items-center gap-1 text-sm"
                       key={day}
                     >
                       <input
                         type="checkbox"
-                        checked={value.weekdays?.includes(index + 1) ?? false}
+                        checked={value.weekdays?.includes(weekday) ?? false}
                         onChange={(event) =>
                           onChange({
                             ...value,
                             weekdays: event.target.checked
-                              ? [...(value.weekdays ?? []), index + 1]
-                              : value.weekdays?.filter((v) => v !== index + 1),
+                              ? [...(value.weekdays ?? []), weekday]
+                              : value.weekdays?.filter((v) => v !== weekday),
                           })
                         }
                       />
                       {day}
                     </label>
                   )
-                )}
+                })}
               </div>
             </fieldset>
           )}
