@@ -1,0 +1,95 @@
+{
+  "issue": "FOR-102",
+  "implementationCommit": "1768ffbebb8a838910529ff0473d18d34d67bc0c",
+  "baselineCommit": "2fcdc88",
+  "verifiedAt": "2026-11-03T00:53:35.339460+00:00",
+  "environment": {
+    "service": "local development server at http://localhost:3102",
+    "database": "forge_templates_acceptance",
+    "branchId": "br-autumn-union-za0opf1e",
+    "applicationRole": "forge_staging_web",
+    "schemaChanges": false
+  },
+  "acceptance": {
+    "AC-01 / AT-01": {
+      "status": "passed",
+      "evidence": [
+        "Real PostgreSQL owner sessions read normalized persisted name/title/username and bounded raster avatar; separate account unchanged.",
+        "Real Better Auth sign-in in three independent Chromium contexts; owner reloads persisted name/title/username; other account retains its profile."
+      ]
+    },
+    "AC-02 / AT-02": {
+      "status": "passed",
+      "evidence": [
+        "Strict schema rejects target IDs, roles, memberships, identity/security fields and private preferences, including mixed patches; user and role remain unchanged.",
+        "Session/workspace binding, API/agent denial, live-revoked session denial and legacy Better Auth endpoint HTTP 403 verified."
+      ]
+    }
+  },
+  "validation": {
+    "appSuite": {
+      "passed": 2596,
+      "skipped": 596,
+      "testFilesPassed": 330,
+      "testFilesSkipped": 31,
+      "command": "bunx vitest run --maxWorkers=4"
+    },
+    "postgres": {
+      "passed": 9,
+      "command": "FORGE_PROFILE_TEST_DATABASE_FILE=<private isolated connection file> bun run test:profiles:postgres"
+    },
+    "workflow": {
+      "passed": 4,
+      "command": "bun run test:workflow"
+    },
+    "browser": {
+      "status": "passed",
+      "environment": {
+        "database": "forge_templates_acceptance",
+        "branch": "br-autumn-union-za0opf1e"
+      },
+      "checks": [
+        "real Better Auth sign-in",
+        "two owner sessions reload canonical profile",
+        "other account isolation",
+        "stale edit conflict and explicit discard",
+        "offline retry",
+        "raster avatar persistence",
+        "unversioned auth endpoint denied"
+      ],
+      "pageErrors": []
+    },
+    "typecheck": "passed",
+    "productionBuildAndWorkflowProtection": "passed",
+    "changedFileLint": {
+      "errors": 0,
+      "warnings": 4
+    },
+    "prettier": "passed",
+    "gitDiffCheck": "passed"
+  },
+  "additionalChecks": [
+    "Concurrent same-version writes serialize: exactly one save and one visible conflict; stale mixed patch applies nothing.",
+    "Lost-response replay applies once; changed-input key reuse denied; content excluded from receipt/audit/outbox.",
+    "Injected audit failure rolls back profile and receipt, followed by one successful retry.",
+    "Control characters, unknown fields, SVG, remote image URLs, MIME mismatch and oversized data rejected.",
+    "UI preserves conflict draft and retry identity; ignores old account late completions.",
+    "Offline browser save retries successfully after reconnect; avatar upload persists."
+  ],
+  "cleanup": {
+    "fixtureUsersRemaining": 0,
+    "fixtureReceiptsRemaining": 0,
+    "injectedTriggerAndFunctionRemoved": true
+  },
+  "releaseBoundary": {
+    "gate": "FORGE_PROFILE_EDITING_ENABLED",
+    "default": "off",
+    "productionDeploymentPerformed": false,
+    "productionGateEnabled": false,
+    "packagedMacOSCertified": false,
+    "legacyProfileImportPerformed": false,
+    "durableOfflineQueueClaimed": false
+  },
+  "reproduction": "docs/profile-editing-contract.md",
+  "browserScript": "apps/forge/scripts/verify-profile-browser.mjs"
+}

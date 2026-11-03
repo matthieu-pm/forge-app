@@ -20,6 +20,7 @@ export const profileUserFields = {
   username: {
     type: "string" as const,
     required: false,
+    input: false,
     unique: true,
     validator: { input: usernameSchema },
     transform: {
@@ -30,6 +31,7 @@ export const profileUserFields = {
   title: {
     type: "string" as const,
     required: false,
+    input: false,
     validator: { input: profileTitleSchema },
     transform: {
       input: (value: DBPrimitive): DBPrimitive =>
