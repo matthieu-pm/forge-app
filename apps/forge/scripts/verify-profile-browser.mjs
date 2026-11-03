@@ -1,30 +1,57 @@
 import { readFileSync, mkdirSync, writeFileSync } from "node:fs"
+import { execFileSync } from "node:child_process"
 import { chromium, expect } from "@playwright/test"
 import { Pool, neonConfig } from "@neondatabase/serverless"
 import { hashPassword } from "better-auth/crypto"
 
-const file = process.env.FORGE_PROFILE_TEST_DATABASE_FILE
-if (!file) throw new Error("An explicit isolated database file is required")
+const authorizedRevision =
+  process.env.FORGE_PROFILE_PRODUCTION_AUTHORIZED_REVISION
+const production = Boolean(authorizedRevision)
+const revision = execFileSync("git", ["rev-parse", "HEAD"], {
+  encoding: "utf8",
+}).trim()
+if (
+  production &&
+  (authorizedRevision !== revision ||
+    execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim())
+)
+  throw new Error(
+    "Production verification requires a clean checkout at its exact authorized source revision"
+  )
+const file = production
+  ? process.env.FORGE_PROFILE_PRODUCTION_DATABASE_FILE
+  : process.env.FORGE_PROFILE_TEST_DATABASE_FILE
+if (!file) throw new Error("An explicit acceptance database file is required")
+const expectedHost = production
+  ? "ep-lingering-bread-zazpwrxp.c-2.eu-west-2.aws.neon.tech"
+  : "ep-blue-shadow-zauhwkjz.c-2.eu-west-2.aws.neon.tech"
+const expectedDatabase = production ? "neondb" : "forge_templates_acceptance"
+const expectedBranch = production
+  ? "br-muddy-queen-zaeeysjt"
+  : "br-autumn-union-za0opf1e"
 const config = JSON.parse(readFileSync(file, "utf8"))
 for (const connection of [config.connection, config.applicationConnection]) {
   const url = new URL(connection)
   if (
-    url.hostname.replace("-pooler.", ".") !==
-      "ep-blue-shadow-zauhwkjz.c-2.eu-west-2.aws.neon.tech" ||
-    url.pathname !== "/forge_templates_acceptance" ||
+    url.hostname.replace("-pooler.", ".") !== expectedHost ||
+    url.pathname !== `/${expectedDatabase}` ||
     url.searchParams.get("sslmode") !== "require"
   )
-    throw new Error("Wrong isolated profile database")
+    throw new Error("Wrong profile acceptance database")
 }
-const base = process.env.FORGE_PROFILE_BROWSER_URL ?? "http://localhost:3102"
+const base = production
+  ? "https://app.forgenow.tech"
+  : (process.env.FORGE_PROFILE_BROWSER_URL ?? "http://localhost:3102")
 const url = new URL(base)
 if (
-  url.protocol !== "http:" ||
-  !["localhost", "127.0.0.1"].includes(url.hostname) ||
-  url.username ||
-  url.password
+  !production &&
+  (url.protocol !== "http:" ||
+    !["localhost", "127.0.0.1"].includes(url.hostname) ||
+    url.username ||
+    url.password)
 )
   throw new Error("Local profile acceptance server required")
+const artifacts = production ? "/tmp/for102-production" : "../../.forge/for102"
 neonConfig.webSocketConstructor = WebSocket
 const pool = new Pool({ connectionString: config.connection })
 const marker = `for102-browser-${crypto.randomUUID()}`,
@@ -41,8 +68,8 @@ try {
     )
   ).rows[0]
   expect(identity).toEqual({
-    database: "forge_templates_acceptance",
-    branch: "br-autumn-union-za0opf1e",
+    database: expectedDatabase,
+    branch: expectedBranch,
   })
   verified = true
   await pool.query(
@@ -98,6 +125,19 @@ try {
   await owner.getByLabel("Full name", { exact: true }).fill("Alice Canonical")
   await owner.getByLabel("Title", { exact: true }).fill("Product engineer")
   const username = `for102_${crypto.randomUUID().slice(0, 8)}`
+  await owner.getByLabel("Username", { exact: true }).fill(username)
+  const takenUsername = `taken_${crypto.randomUUID().slice(0, 8)}`
+  await pool.query('UPDATE "user" SET username=$1 WHERE id=$2', [
+    takenUsername,
+    bob,
+  ])
+  await owner.getByLabel("Username", { exact: true }).fill(takenUsername)
+  await owner.getByRole("button", { name: "Save profile", exact: true }).click()
+  await expect(owner.getByRole("alert")).toContainText("already in use")
+  await expect(owner.getByLabel("Username", { exact: true })).toBeEnabled()
+  await expect(owner.getByLabel("Title", { exact: true })).toHaveValue(
+    "Product engineer"
+  )
   await owner.getByLabel("Username", { exact: true }).fill(username)
   await owner.getByRole("button", { name: "Save profile", exact: true }).click()
   await expect
@@ -196,16 +236,18 @@ try {
     ).rows[0].role
   ).toBe("member")
   expect(errors).toEqual([])
-  mkdirSync("../../.forge/for102", { recursive: true })
+  mkdirSync(artifacts, { recursive: true })
   await owner.screenshot({
-    path: "../../.forge/for102/profile-settings.png",
+    path: `${artifacts}/profile-settings.png`,
     fullPage: true,
   })
   writeFileSync(
-    "../../.forge/for102/browser-evidence.json",
+    `${artifacts}/browser-evidence.json`,
     JSON.stringify(
       {
         status: "passed",
+        sourceRevision: revision,
+        target: production ? "production" : "local",
         environment: identity,
         checks: [
           "real Better Auth sign-in",
@@ -214,6 +256,7 @@ try {
           "stale edit conflict and explicit discard",
           "offline retry",
           "raster avatar persistence",
+          "taken username rejected without locking or losing the draft",
           "unversioned auth endpoint denied",
         ],
         pageErrors: errors,

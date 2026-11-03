@@ -50,7 +50,6 @@ export type ProfileSnapshot = {
 }
 export type ProfileLoadResult =
   { status: "disabled" } | { status: "ready"; snapshot: ProfileSnapshot }
-export type ProfileSaveResult = {
-  status: "saved" | "conflict"
-  snapshot: ProfileSnapshot
-}
+export type ProfileSaveResult =
+  | { status: "saved" | "conflict"; snapshot: ProfileSnapshot }
+  | { status: "rejected"; message: string }

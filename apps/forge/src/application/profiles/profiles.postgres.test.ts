@@ -197,6 +197,7 @@ describe.skipIf(!file)("FOR-102 real PostgreSQL acceptance", () => {
       patch: { name: "Stale name", title: "Stale title" },
     })
     expect(stale.status).toBe("conflict")
+    if (stale.status !== "conflict") throw new Error("Expected conflict")
     expect(stale.snapshot.name).toBe("Alice Owner")
   })
   it("replays a lost response once, rejects key reuse and keeps content out of audit/receipts/outbox", async () => {
@@ -258,15 +259,56 @@ describe.skipIf(!file)("FOR-102 real PostgreSQL acceptance", () => {
     ).toBe(0)
     expect((await service.patchProfile(actor(), input)).status).toBe("saved")
   })
+  it("rejects taken usernames without committing any part of the draft and allows correction", async () => {
+    const username = `taken_${randomUUID().slice(0, 8)}`
+    await pool.query('UPDATE "user" SET username=$1 WHERE id=$2', [
+      username,
+      bob,
+    ])
+    const before = await service.readProfile(actor())
+    const input = await command({ username, title: "Retained draft" })
+    expect(await service.patchProfile(actor(), input)).toMatchObject({
+      status: "rejected",
+      message: expect.stringContaining("already in use"),
+    })
+    expect(await service.readProfile(actor())).toEqual(before)
+    expect(
+      (
+        await pool.query(
+          "SELECT count(*)::int count FROM command_receipts WHERE command_key=$1",
+          [input.commandKey]
+        )
+      ).rows[0].count
+    ).toBe(0)
+    expect(
+      (
+        await service.patchProfile(actor(), {
+          ...input,
+          commandKey: randomUUID(),
+          patch: { ...input.patch, username: `${username}_ok` },
+        })
+      ).status
+    ).toBe("saved")
+  })
   it("rejects invalid avatars, accepts a bounded raster avatar, and persists removal", async () => {
     for (const image of [
       "https://example.test/avatar.png",
       "data:image/svg+xml;base64,PHN2Zz4=",
-      "data:image/png;base64,SGVsbG8=",
     ])
       await expect(
         service.patchProfile(actor(), await command({ image }))
       ).rejects.toThrow()
+    const before = await service.readProfile(actor())
+    expect(
+      await service.patchProfile(
+        actor(),
+        await command({
+          image: "data:image/png;base64,SGVsbG8=",
+          title: "Invalid avatar draft",
+        })
+      )
+    ).toMatchObject({ status: "rejected" })
+    expect(await service.readProfile(actor())).toEqual(before)
     const image =
       "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l1cAAAAASUVORK5CYII="
     await service.patchProfile(actor(), await command({ image }))

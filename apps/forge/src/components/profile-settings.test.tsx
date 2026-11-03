@@ -83,9 +83,51 @@ describe("ProfileSettings", () => {
       "Product engineer"
     )
     expect(screen.getByLabelText<HTMLInputElement>("Title").disabled).toBe(true)
+    mocks.loadProfile.mockResolvedValue({
+      status: "ready",
+      snapshot: { ...profile, title: "Newest intervening edit" },
+    })
     fireEvent.click(discard)
+    await waitFor(() =>
+      expect(screen.getByLabelText<HTMLInputElement>("Title").value).toBe(
+        "Newest intervening edit"
+      )
+    )
+    expect(mocks.loadProfile).toHaveBeenCalledTimes(2)
+  })
+  it("preserves editable draft fields after a deterministic rejection and uses a new command when corrected", async () => {
+    mocks.saveProfile.mockResolvedValueOnce({
+      status: "rejected",
+      message: "This username is already in use.",
+    })
+    render(<ProfileSettings />)
+    await waitFor(() =>
+      expect(screen.getByLabelText<HTMLInputElement>("Title").disabled).toBe(
+        false
+      )
+    )
+    fireEvent.change(screen.getByLabelText("Username"), {
+      target: { value: "taken" },
+    })
+    await edit()
+    await screen.findByText("This username is already in use.")
     expect(screen.getByLabelText<HTMLInputElement>("Title").value).toBe(
-      "Changed elsewhere"
+      "Product engineer"
+    )
+    expect(screen.getByLabelText<HTMLInputElement>("Username").disabled).toBe(
+      false
+    )
+    fireEvent.change(screen.getByLabelText("Username"), {
+      target: { value: "available" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Save profile" }))
+    await waitFor(() => expect(mocks.saveProfile).toHaveBeenCalledTimes(2))
+    expect(mocks.saveProfile.mock.calls[1][0].data.patch).toEqual({
+      username: "available",
+      title: "Product engineer",
+    })
+    expect(mocks.saveProfile.mock.calls[1][0].data.commandKey).not.toBe(
+      mocks.saveProfile.mock.calls[0][0].data.commandKey
     )
   })
   it("retries a failed save with the identical durable command identity and input", async () => {

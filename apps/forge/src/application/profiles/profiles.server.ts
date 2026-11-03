@@ -41,20 +41,24 @@ function snapshot(row: typeof users.$inferSelect): ProfileSnapshot {
     image: row.image,
   }
 }
+class ProfileValidationError extends Error {}
 export async function validateProfileAvatar(image: string) {
   const [, mime, content] =
     /^data:(image\/(?:png|jpeg|webp));base64,(.+)$/.exec(image) ?? []
-  if (!content) throw new Error("Choose a PNG, JPEG or WebP image.")
+  if (!content)
+    throw new ProfileValidationError("Choose a PNG, JPEG or WebP image.")
   const bytes = Buffer.from(content, "base64")
   if (
     !bytes.length ||
     bytes.length > MAX_AVATAR_BYTES ||
     bytes.toString("base64") !== content
   )
-    throw new Error("Choose an image smaller than 2 MB.")
-  const type = await fileTypeFromBuffer(bytes)
+    throw new ProfileValidationError("Choose an image smaller than 2 MB.")
+  const type = await fileTypeFromBuffer(bytes).catch(() => undefined)
   if (type?.mime !== mime)
-    throw new Error("The image contents do not match its file type.")
+    throw new ProfileValidationError(
+      "The image contents do not match its file type."
+    )
 }
 export async function readProfile(actor: Actor): Promise<ProfileSnapshot> {
   assertEnabled()
@@ -76,9 +80,9 @@ export async function patchProfile(
   assertEnabled()
   const input = profileCommandSchema.parse(raw)
   assertSession(actor, input)
-  if (input.patch.image) await validateProfileAvatar(input.patch.image)
   const { commandKey, sessionId: _sessionId, ...commandInput } = input
   try {
+    if (input.patch.image) await validateProfileAvatar(input.patch.image)
     await executeCommand({
       actor,
       commandKey,
@@ -125,6 +129,23 @@ export async function patchProfile(
   } catch (error) {
     if (error instanceof ProfileConflict)
       return { status: "conflict", snapshot: await readProfile(actor) }
+    if (error instanceof ProfileValidationError)
+      return { status: "rejected", message: error.message }
+    // Drizzle wraps PostgreSQL errors. This constraint failure proves the
+    // transaction rolled back, so the user can correct the draft with a new key.
+    const cause = error instanceof Error && error.cause ? error.cause : error
+    if (
+      typeof cause === "object" &&
+      cause !== null &&
+      "code" in cause &&
+      cause.code === "23505" &&
+      "constraint" in cause &&
+      cause.constraint === "user_username_unique"
+    )
+      return {
+        status: "rejected",
+        message: "This username is already in use. Choose another username.",
+      }
     throw error
   }
 }

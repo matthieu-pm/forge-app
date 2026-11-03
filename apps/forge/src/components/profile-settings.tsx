@@ -204,7 +204,9 @@ function ProfileSettingsEditor() {
       const result = await saveProfile({ data: pending.current })
       if (!alive.current) return
       pending.current = null
-      if (result.status === "conflict") {
+      if (result.status === "rejected") {
+        setSaveError(result.message)
+      } else if (result.status === "conflict") {
         setConflict(result.snapshot)
         setSaveError(
           "Your profile changed in another session. Your draft is still shown. Load the latest profile before editing again."
@@ -450,13 +452,7 @@ function ProfileSettingsEditor() {
               </Button>
             )}
             {conflict ? (
-              <Button
-                onClick={() => {
-                  applySnapshot(conflict)
-                  setConflict(null)
-                  setSaveError("")
-                }}
-              >
+              <Button disabled={isSaving} onClick={() => void reloadProfile()}>
                 Discard draft and load latest profile
               </Button>
             ) : (

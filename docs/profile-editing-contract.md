@@ -41,8 +41,11 @@ retains the draft until the user explicitly discards it to load the latest value
 FOR-32 atomically commits the update, receipt and audit event. Receipts contain
 only user ID/version; audit and outbox never duplicate profile content. No
 external effect is emitted. A failed or lost response retries the exact command
-key and input. A deterministic failure can be resolved by explicitly discarding
-the draft and reloading. Pending edits live in the current mounted editor;
+key and input. A taken username or invalid avatar returns a deterministic
+rejection: the editor preserves the draft, allows correction, and uses a new
+command key for the corrected update. Unknown outcomes retain the original key.
+Discarding a conflict fetches current values, including any intervening edits.
+Pending edits live in the current mounted editor;
 close/reload warns for unsaved changes, while navigation, sign-out and account,
 session or workspace changes discard the editor. Late completions cannot
 populate a different account. No durable offline queue is claimed.
@@ -64,6 +67,13 @@ verification uses three independent Chromium contexts and real Better Auth
 password sign-in against a local server (default `http://localhost:3102`, optional
 `FORGE_PROFILE_BROWSER_URL`). It saves evidence under `.forge/for102/` and verifies
 fixture cleanup.
+
+For an explicitly authorized production release, the same browser script accepts
+`FORGE_PROFILE_PRODUCTION_AUTHORIZED_REVISION=<exact clean checkout HEAD>` and
+`FORGE_PROFILE_PRODUCTION_DATABASE_FILE=<private connection JSON>`. It fixes the
+origin to `https://app.forgenow.tech`, verifies the production database host/name
+and Neon branch before writing randomized fixtures, and verifies fixture cleanup.
+Production artifacts are written under `/tmp/for102-production/`.
 
 Enable only on a reviewed deployment after its required acceptance checks pass.
 Rollback disables the gate and redeploys; persisted profile values remain intact.
