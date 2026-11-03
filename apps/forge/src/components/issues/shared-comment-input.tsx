@@ -36,6 +36,8 @@ import {
 import { commentDraftKey, sendIssueComment } from "@/lib/issue-comment-client"
 import { loadCommentMentions } from "@/lib/issue-comment-state"
 import { Button } from "@/components/ui/button"
+import { useAccountPreferences } from "@/components/account-preference-provider"
+import { EditorEmoticons } from "@/lib/editor-emoticons"
 import "./comment-editor.css"
 
 function MentionView({ node }: NodeViewProps) {
@@ -104,6 +106,12 @@ function CommentComposer({
   onSaved,
   onCancel,
 }: SharedCommentInputProps) {
+  const preferences = useAccountPreferences()
+  const conversion = useRef(false)
+  conversion.current =
+    preferences.client?.identity.userId === canonicalIssueState()?.userId &&
+    preferences.editable &&
+    preferences.groups.general.convertEmoticons
   const slot = comment
     ? `edit-${comment.id}`
     : parentId
@@ -169,6 +177,7 @@ function CommentComposer({
   const personName = usePersonName(targets)
   const editor = useEditor({
     extensions: [
+      EditorEmoticons.configure({ enabled: () => conversion.current }),
       StarterKit.configure({
         heading: false,
         horizontalRule: false,

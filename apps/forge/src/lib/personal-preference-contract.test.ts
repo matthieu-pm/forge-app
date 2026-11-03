@@ -8,6 +8,16 @@ import {
 } from "./personal-preference-contract"
 
 describe("personal preference contract", () => {
+  it("defaults emoticon conversion off while preserving explicit saved choices", () => {
+    expect(parsePersonalPreferences(null).preferences.convertEmoticons).toBe(
+      false
+    )
+    for (const enabled of [true, false])
+      expect(
+        parsePersonalPreferences(JSON.stringify({ convertEmoticons: enabled }))
+          .preferences.convertEmoticons
+      ).toBe(enabled)
+  })
   it("recovers valid fields independently and retains unknown source fields", () => {
     const raw = JSON.stringify({
       version: 1,
@@ -52,7 +62,11 @@ describe("personal preference contract", () => {
   it("returns independent default objects", () => {
     const first = parsePersonalPreferences(null).preferences
     first.fontSize = "large"
+    first.sidebarLayout[0].visible = false
     expect(parsePersonalPreferences(null).preferences.fontSize).toBe("default")
+    expect(
+      parsePersonalPreferences(null).preferences.sidebarLayout[0].visible
+    ).toBe(true)
   })
 
   it("rejects protected/unknown fields in an outbound patch", () => {

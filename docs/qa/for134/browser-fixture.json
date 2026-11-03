@@ -1,0 +1,19 @@
+{
+  "issue": "FOR-134",
+  "environment": "Local Chromium fixture, real UI/provider/client; synthetic transport and gates; no database/authentication/deployment certification",
+  "sourceRevision": "e7fc53804618179a368d10e914374989ca4b77c6",
+  "checkedAt": "2026-11-03T14:58:38.709Z",
+  "checks": [
+    "320px keyboard reorder using Enter and Alt+ArrowDown; focus retained; live announcements",
+    "320px dialog and controls fit horizontally; vertical scrolling reaches badge and reset",
+    "Fixture server snapshot reload retains layout/visibility/style; mounted navigation applies immediately",
+    "Gate removal removes focused row and recovers focus; keyboard reset restores defaults without exposing disabled destination"
+  ],
+  "overflow": {
+    "width": 288,
+    "scroll": 288,
+    "client": 288,
+    "controls": true
+  },
+  "pageErrors": []
+}

@@ -125,6 +125,9 @@ function RootLayout() {
       </main>
     )
 
+  // Default startup waits for scoped product storage before choosing a route.
+  if (pathname === "/") return <Outlet />
+
   const hasStandaloneTeamSettingsLayout =
     pathname.startsWith("/settings/teams/")
   const hasSettingsLayout = pathname.startsWith("/settings")

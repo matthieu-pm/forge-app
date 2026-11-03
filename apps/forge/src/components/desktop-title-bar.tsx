@@ -14,7 +14,8 @@ import {
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useRouter, useRouterState } from "@tanstack/react-router"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { toast } from "sonner"
 
 import type { AppNavChild } from "@/lib/app-navigation"
 import type { DesktopTabsState } from "@/lib/desktop-tabs"
@@ -25,6 +26,9 @@ import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { ForgeLogo } from "@/components/forge-logo"
 import { Button } from "@/components/ui/button"
 import { getForgeHost } from "@/host/forge-host"
+import { loadDefaultHome } from "@/lib/default-home-state"
+import { protectedSessionEpoch } from "@/lib/protected-session"
+import { useProtectedIdentity } from "@/components/account-preference-provider"
 import { appNav, getBreadcrumbItems } from "@/lib/app-navigation"
 import {
   activateDesktopTab,
@@ -206,17 +210,19 @@ function PlusIcon() {
 }
 
 export function DesktopTitleBar() {
+  const identity = useProtectedIdentity()
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
 
-  if (isDesktopTitleBarHidden(pathname)) return null
+  if (!identity?.workspaceId || isDesktopTitleBarHidden(pathname)) return null
 
   return <DesktopTitleBarChrome />
 }
 
 export function isDesktopTitleBarHidden(pathname: string) {
   return (
+    pathname === "/" ||
     pathname === "/login" ||
     pathname === "/signup" ||
     pathname === "/onboarding/workspace"
@@ -236,6 +242,20 @@ function DesktopTitleBarChrome() {
   )
   const [sidebarState, setSidebarState] = useState<SidebarState>("expanded")
   const [workspaceTeams, setWorkspaceTeams] = useState<Array<TeamSummary>>([])
+  const defaultOpenSequence = useRef(0)
+  const pendingDefaultOpen = useRef<{
+    count: number
+    epoch: number
+    location: typeof router.latestLocation
+  } | null>(null)
+
+  useEffect(
+    () => () => {
+      ++defaultOpenSequence.current
+      pendingDefaultOpen.current = null
+    },
+    []
+  )
 
   useEffect(() => {
     let cancelled = false
@@ -281,11 +301,53 @@ function DesktopTitleBarChrome() {
   )
 
   const openTab = useCallback(
-    (path = "/forge") => {
-      setTabState((state) => openDesktopTab(state, path))
-      navigate(path)
+    (path?: string) => {
+      const open = (target: string) => {
+        setTabState((state) => openDesktopTab(state, target))
+        navigate(target)
+      }
+      if (path) {
+        ++defaultOpenSequence.current
+        pendingDefaultOpen.current = null
+        open(path)
+        return
+      }
+      const epoch = protectedSessionEpoch()
+      const location = router.latestLocation
+      const pending = pendingDefaultOpen.current
+      if (pending && pending.epoch === epoch && pending.location === location) {
+        pending.count++
+        return
+      }
+      const batch = { count: 1, epoch, location }
+      pendingDefaultOpen.current = batch
+      const sequence = ++defaultOpenSequence.current
+      const current = () =>
+        sequence === defaultOpenSequence.current &&
+        epoch === protectedSessionEpoch() &&
+        location === router.latestLocation
+      void loadDefaultHome()
+        .then((target) => {
+          if (current()) {
+            setTabState((state) => {
+              let next = state
+              for (let index = 0; index < batch.count; index++)
+                next = openDesktopTab(next, target)
+              return next
+            })
+            navigate(target)
+          }
+        })
+        .catch(() => {
+          if (current())
+            toast.error("Your home view could not be opened. Please retry.")
+        })
+        .finally(() => {
+          if (pendingDefaultOpen.current === batch)
+            pendingDefaultOpen.current = null
+        })
     },
-    [navigate]
+    [navigate, router]
   )
 
   const closeTab = useCallback(

@@ -1,4 +1,9 @@
 import { z } from "zod"
+import {
+  defaultSidebarLayout,
+  sidebarBadgeStyleSchema,
+  sidebarLayoutSchema,
+} from "./sidebar-preference-contract"
 
 export const PERSONAL_PREFERENCE_VERSION = 1
 
@@ -15,6 +20,8 @@ export const personalPreferenceFields = {
   lightTheme: z.enum(["light", "paper"]),
   darkTheme: z.enum(["dark", "midnight", "forest", "plum"]),
   notificationBadge: z.enum(["unread", "count", "off"]),
+  sidebarLayout: sidebarLayoutSchema,
+  sidebarBadgeStyle: sidebarBadgeStyleSchema,
   checkSpelling: z.boolean(),
   autoAssignToSelf: z.boolean(),
   assignStartedIssues: z.boolean(),
@@ -36,7 +43,7 @@ export const defaultPersonalPreferences: Readonly<PersonalPreferences> =
     defaultHomeView: "agent",
     displayNames: "username",
     firstDayOfWeek: "sunday",
-    convertEmoticons: true,
+    convertEmoticons: false,
     submitCommentsWith: "command-enter",
     fontSize: "default",
     pointerCursors: false,
@@ -45,6 +52,8 @@ export const defaultPersonalPreferences: Readonly<PersonalPreferences> =
     lightTheme: "light",
     darkTheme: "dark",
     notificationBadge: "unread",
+    sidebarLayout: defaultSidebarLayout,
+    sidebarBadgeStyle: "count",
     checkSpelling: true,
     autoAssignToSelf: false,
     assignStartedIssues: false,
@@ -99,7 +108,7 @@ export function parsePersonalPreferences(
   raw: string | null
 ): PreferenceReadResult {
   const result: PreferenceReadResult = {
-    preferences: { ...defaultPersonalPreferences },
+    preferences: structuredClone(defaultPersonalPreferences),
     raw,
     status: raw === null ? "empty" : "invalid",
     invalidFields: [],

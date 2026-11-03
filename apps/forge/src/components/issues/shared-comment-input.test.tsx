@@ -1,4 +1,5 @@
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -7,10 +8,19 @@ import {
 } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { SharedCommentInput } from "./shared-comment-input"
+import type { Editor } from "@tiptap/core"
 import type * as CommentClient from "@/lib/issue-comment-client"
 import { uploadFileDirect } from "@/lib/files/direct-upload-client"
 import { commentFromText } from "@/lib/comment-rich-text"
 import { replaceCanonicalIssues } from "@/lib/canonical-issue-cache"
+import { AccountPreferenceScope } from "@/components/account-preference-provider"
+import { AccountPreferenceClient } from "@/lib/account-preference-client"
+import { emptyPreferenceSnapshot } from "@/lib/account-preference-contract"
+import {
+  PreferenceFixtureScope,
+  externalPreferenceEdit,
+  setupPreferenceFixture,
+} from "@/test/preference-fixture"
 
 vi.mock("@/lib/files/direct-upload-client", () => ({
   uploadFileDirect: vi.fn(),
@@ -272,5 +282,146 @@ it("checkpoints the current comment before an upload cancels its debounce", asyn
     issueId: props.issueId,
     document: commentFromText("Fresh draft"),
     uploads: [],
+  })
+})
+
+describe("FOR-132 live composer preferences", () => {
+  function type(editor: Editor, value: string) {
+    act(() => {
+      for (const text of value) {
+        const { from, to } = editor.state.selection
+        if (
+          !editor.view.someProp("handleTextInput", (handler) =>
+            handler(editor.view, from, to, text, () =>
+              editor.state.tr.insertText(text)
+            )
+          )
+        )
+          editor.view.dispatch(editor.state.tr.insertText(text, from, to))
+      }
+    })
+  }
+
+  it.each(["disabled", "error"] as const)(
+    "keeps conversion off while loading and when sync is %s, even with an enabled cache",
+    async (status) => {
+      const client = new AccountPreferenceClient(
+        {
+          userId: "alice",
+          sessionId: "session-alice",
+          workspaceId: "workspace",
+        },
+        {
+          load: () =>
+            status === "disabled"
+              ? Promise.resolve({ status: "disabled" })
+              : Promise.reject(new Error("offline")),
+          save: () => Promise.reject(new Error("disabled")),
+        },
+        {
+          getItem: () =>
+            JSON.stringify({
+              ...emptyPreferenceSnapshot("alice"),
+              values: { "general.convertEmoticons": true },
+            }),
+          setItem: vi.fn(),
+        }
+      )
+      render(
+        <AccountPreferenceScope client={client}>
+          <SharedCommentInput {...props} />
+        </AccountPreferenceScope>
+      )
+      const editor = (
+        await screen.findByRole<HTMLElement & { editor: Editor }>("textbox", {
+          name: "Comment",
+        })
+      ).editor
+      expect(client.getSnapshot().groups.general.convertEmoticons).toBe(true)
+      type(editor, ":) ")
+      expect(editor.getText()).toBe(":) ")
+      await act(() => client.refresh())
+      expect(client.getSnapshot().status).toBe(status)
+      type(editor, ":D ")
+      expect(editor.getText()).toBe(":) :D ")
+      client.dispose()
+    }
+  )
+
+  it.each([
+    { label: "Comment", extra: {} },
+    { label: "Reply", extra: { parentId: "parent" } },
+    {
+      label: "Edit comment",
+      extra: { comment: { id: "comment", body: "", version: 0 } },
+    },
+  ])(
+    "applies saved changes to existing and new $label editors without losing selection",
+    async ({ label, extra }) => {
+      await setupPreferenceFixture()
+      const view = render(
+        <PreferenceFixtureScope>
+          <SharedCommentInput {...props} {...extra} />
+        </PreferenceFixtureScope>
+      )
+      const textbox = await screen.findByRole<HTMLElement & { editor: Editor }>(
+        "textbox",
+        { name: label }
+      )
+      const editor = textbox.editor
+      type(editor, ":) ")
+      expect(editor.getText()).toBe(":) ")
+      const selection = editor.state.selection.toJSON()
+      await act(() =>
+        externalPreferenceEdit("alice", { "general.convertEmoticons": true })
+      )
+      expect(editor.state.selection.toJSON()).toEqual(selection)
+      expect(screen.getByRole("textbox", { name: label })).toBe(textbox)
+      type(editor, ":D ")
+      expect(editor.getText()).toBe(":) 😃 ")
+      await act(() =>
+        externalPreferenceEdit("alice", { "general.convertEmoticons": false })
+      )
+      type(editor, ";) ")
+      expect(editor.getText()).toBe(":) 😃 ;) ")
+      await act(() =>
+        externalPreferenceEdit("alice", { "general.convertEmoticons": true })
+      )
+      view.unmount()
+      render(
+        <PreferenceFixtureScope>
+          <SharedCommentInput {...props} {...extra} />
+        </PreferenceFixtureScope>
+      )
+      const mounted = (
+        await screen.findByRole<HTMLElement & { editor: Editor }>("textbox", {
+          name: label,
+        })
+      ).editor
+      type(mounted, ":-) ")
+      expect(mounted.getText()).toBe("🙂 ")
+    }
+  )
+
+  it("does not apply another account's choice during a session transition", async () => {
+    await setupPreferenceFixture()
+    await externalPreferenceEdit("alice", { "general.convertEmoticons": true })
+    replaceCanonicalIssues({
+      ...identity,
+      userId: "bob",
+      sessionId: "bob-session",
+    })
+    render(
+      <PreferenceFixtureScope userId="alice">
+        <SharedCommentInput {...props} />
+      </PreferenceFixtureScope>
+    )
+    const editor = (
+      await screen.findByRole<HTMLElement & { editor: Editor }>("textbox", {
+        name: "Comment",
+      })
+    ).editor
+    type(editor, ":) ")
+    expect(editor.getText()).toBe(":) ")
   })
 })

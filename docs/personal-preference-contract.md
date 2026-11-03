@@ -23,6 +23,13 @@ separates account, workspace and device records, includes actor identity, and us
 JSON tuple encoding to avoid delimiter collisions. Identifiers come from trusted
 adapter context; a storage key itself is not authorization.
 
+FOR-132 changes the emoticon conversion default to off, preserving explicit
+account choices, and connects the setting to the canonical comment/reply/edit
+composers. The supported tokens, space trigger, protected content and undo behavior
+are documented in [the editor emoticon contract](editor-emoticon-contract.md).
+The FOR-127 inventory below is a historical implementation snapshot; the shared
+schema/default contract supplies current defaults.
+
 FOR-127 now integrates authenticated persistence and the scoped cache keys, as described below.
 The existing legacy browser key remains a local source without inferred account
 ownership. FOR-144 will implement consent/conflict-aware account import. Strict

@@ -1,0 +1,115 @@
+{
+  "issue": "FOR-132",
+  "implementationCommit": "0f1cb2e1fcfb07326655a67ebac47a87e23cb56b",
+  "baseCommit": "6e273c7",
+  "environment": "Local web renderer / Chromium; no production rollout",
+  "approvedPolicy": {
+    "defaultEnabled": false,
+    "trigger": "typed ASCII space after an uninterrupted, standalone typed token",
+    "tokens": {
+      ":)": "🙂",
+      ":-)": "🙂",
+      ":(": "🙁",
+      ":-(": "🙁",
+      ";)": "😉",
+      ";-)": "😉",
+      ":D": "😃",
+      ":-D": "😃"
+    },
+    "supportedComposers": [
+      "canonical issue comment",
+      "reply",
+      "comment edit"
+    ],
+    "undo": "Native Undo restores the original emoticon and space; Redo converts again"
+  },
+  "acceptance": {
+    "AT-01_AC-01": "passed: opt-in default, every documented token, live preferences, new mounts, caret, formatting, atoms and native keyboard undo/redo",
+    "AT-02_AC-02": "passed: code, links, URLs, restored/structured/plain content, selection replacement, account mismatch, disabled/loading cache and synthetic IME lifecycle"
+  },
+  "focusedTests": {
+    "command": "bunx vitest run --maxWorkers=2 src/lib/editor-emoticons.test.ts src/components/issues/shared-comment-input.test.tsx src/components/preferences-settings.test.tsx src/lib/personal-preference-contract.test.ts",
+    "sourceCommit": "0f1cb2e1fcfb07326655a67ebac47a87e23cb56b",
+    "passed": 52,
+    "failed": 0,
+    "files": [
+      "src/lib/editor-emoticons.test.ts",
+      "src/components/issues/shared-comment-input.test.tsx",
+      "src/components/preferences-settings.test.tsx",
+      "src/lib/personal-preference-contract.test.ts"
+    ]
+  },
+  "browser": {
+    "issue": "FOR-132",
+    "testedAt": "2026-11-03T14:54:36.521Z",
+    "sourceCommit": "0f1cb2e1fcfb07326655a67ebac47a87e23cb56b",
+    "workingTree": "clean",
+    "environment": "local Chromium 151.0.7922.34; shared editor fixture",
+    "limitations": "Composition events are synthetic; native OS IME and packaged macOS are not certified. Authenticated preference persistence remains covered by FOR-127; composer refresh is covered by component tests.",
+    "checks": [
+      {
+        "name": "AT-01 opt-in default and live setting",
+        "status": "passed"
+      },
+      {
+        "name": "AT-01 every documented token, caret, native keyboard undo and redo",
+        "status": "passed"
+      },
+      {
+        "name": "AT-02 code, links and URLs",
+        "status": "passed"
+      },
+      {
+        "name": "AT-02 structured HTML and plain paste remain literal after Space",
+        "status": "passed"
+      },
+      {
+        "name": "AT-02 selection replacement preserves literal input",
+        "status": "passed"
+      },
+      {
+        "name": "AT-02 synthetic composition lifecycle stays literal",
+        "status": "passed"
+      }
+    ],
+    "errors": []
+  },
+  "validation": {
+    "typecheck": "passed on final source",
+    "changedFileLint": "passed; zero errors and zero remaining warnings",
+    "formatAndDiffCheck": "passed",
+    "fullRegressionBeforeRebase": {
+      "base": "c6539225aac1ff04b241397652fe54073c940ba4 plus FOR-132 implementation",
+      "passed": 2691,
+      "skipped": 650,
+      "passedFiles": 339,
+      "skippedFiles": 33
+    },
+    "workflowBeforeRebase": {
+      "passed": 4,
+      "files": 2
+    },
+    "productionBuildBeforeRebase": "passed using local placeholder DATABASE_URL / Better Auth configuration; prerender and Workflow bundle checks passed. Initial attempt without local configuration stopped at required DATABASE_URL. No real database or production credentials used.",
+    "rebase": "clean onto FOR-129 calendar changes at 6e273c7; final focused tests, browser, TypeScript and lint passed"
+  },
+  "releaseBoundary": {
+    "prerequisites": [
+      "FOR-46 Done",
+      "FOR-127 Done"
+    ],
+    "gate": "Existing FORGE_PERSONAL_PREFERENCE_SYNC_ENABLED; loading or disabled preference clients cannot enable conversion",
+    "migrations": "none",
+    "deployment": "not performed",
+    "excluded": [
+      "agent prompt textarea",
+      "local legacy comments",
+      "excluded review composers",
+      "general document/template editors"
+    ],
+    "limitations": [
+      "Native OS IME and packaged macOS not certified",
+      "Browser uses exact shared extension fixture; account refresh uses actual preference client with fixture transport",
+      "Authenticated cross-session persistence remains covered by FOR-127"
+    ]
+  }
+}
