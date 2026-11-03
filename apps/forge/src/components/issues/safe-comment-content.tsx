@@ -2,7 +2,10 @@ import { Fragment } from "react"
 import type { ReactNode } from "react"
 import type { CommentNode } from "@/lib/comment-rich-text"
 import type { PersonIdentity } from "@/lib/person-name"
-import { validateCommentDocument } from "@/lib/comment-rich-text"
+import {
+  commentMentionPeople,
+  validateCommentDocument,
+} from "@/lib/comment-rich-text"
 import { usePersonName } from "@/components/person-name-provider"
 
 /** Stored/legacy JSON is untrusted too. React text and a fixed tag map only. */
@@ -15,13 +18,16 @@ export function SafeCommentContent({
   fallback: string
   people?: ReadonlyArray<PersonIdentity>
 }) {
-  const personName = usePersonName(people)
-  let doc: CommentNode
+  let doc: CommentNode | undefined
   try {
     doc = validateCommentDocument(document)
   } catch {
-    return <p className="whitespace-pre-wrap">{fallback}</p>
+    doc = undefined
   }
+  const personName = usePersonName(
+    doc ? [...commentMentionPeople(doc), ...people] : people
+  )
+  if (!doc) return <p className="whitespace-pre-wrap">{fallback}</p>
   function render(n: CommentNode, key: number): ReactNode {
     if (n.type === "text") {
       let text: ReactNode = n.text

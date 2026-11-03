@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Node } from "@tiptap/core"
 import {
   EditorContent,
@@ -17,10 +17,14 @@ import type {
   IssueCommentCommand,
   MentionTarget,
 } from "@/lib/issue-comment-contract"
-import { usePersonName } from "@/components/person-name-provider"
+import {
+  PersonNamePeers,
+  usePersonName,
+} from "@/components/person-name-provider"
 import { productStorage, saveProductValue } from "@/lib/product-storage"
 import {
   commentFromText,
+  commentMentionPeople,
   commentPlainText,
   validateCommentDocument,
   validateCommentDraft,
@@ -152,6 +156,10 @@ function CommentComposer({
       return commentFromText(comment?.body ?? "")
     }
   })
+  const mentionPeople = useMemo(
+    () => commentMentionPeople(document),
+    [document]
+  )
   const busy = useRef(false),
     shortcut = useRef<() => void>(() => {})
   const [mentionOpen, setMentionOpen] = useState(false),
@@ -458,7 +466,9 @@ function CommentComposer({
           )}
         </div>
       )}
-      <EditorContent editor={editor} className="comment-editor" />
+      <PersonNamePeers people={mentionPeople}>
+        <EditorContent editor={editor} className="comment-editor" />
+      </PersonNamePeers>
       <div className="space-y-2 p-2">
         {uploads.map((file) => (
           <div

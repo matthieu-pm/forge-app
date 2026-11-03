@@ -16,6 +16,8 @@ import { SharedCommentInput } from "./issues/shared-comment-input"
 import { WorkspaceMembers } from "./workspace-members"
 import { IssueHistory } from "./issues/issue-history"
 import { PreferencesSettings } from "./preferences-settings"
+import * as PersonNames from "@/lib/person-name"
+import { usePersonName } from "./person-name-provider"
 import type { ReactNode } from "react"
 import type { TeamIssue } from "@/lib/team-issues"
 import type { WorkspaceAccessSummary } from "@/lib/member-contract"
@@ -184,6 +186,93 @@ afterEach(async () => {
 })
 
 describe("FOR-130 AT-01", () => {
+  it("updates an already open member dialog with the same disambiguation as its row", async () => {
+    render(
+      <Scope>
+        <WorkspaceMembers access={access} teams={[]} />
+      </Scope>
+    )
+    fireEvent.click(screen.getByRole("button", { name: "View alex_two" }))
+    await screen.findByRole("dialog", { name: "alex_two" })
+    await act(() =>
+      externalPreferenceEdit("alice", { "general.displayNames": "full-name" })
+    )
+    expect(
+      screen.getByRole("dialog", { name: "Alex Smith · @alex_two" })
+    ).toBeTruthy()
+  })
+
+  it("shares workspace formatting across mounted consumers", async () => {
+    const format = vi.spyOn(PersonNames, "formatPersonNames")
+    function Name() {
+      const personName = usePersonName(people)
+      return <span>{personName(people[0])}</span>
+    }
+    render(
+      <Scope>
+        {Array.from({ length: 100 }, (_, index) => (
+          <Name key={index} />
+        ))}
+      </Scope>
+    )
+    expect(format).toHaveBeenCalledTimes(1)
+    await act(() =>
+      externalPreferenceEdit("alice", { "general.displayNames": "full-name" })
+    )
+    expect(format).toHaveBeenCalledTimes(2)
+    expect(screen.getAllByText("Alex Smith · @alex_one")).toHaveLength(100)
+  })
+
+  it("distinguishes unavailable mention snapshots in both read-only and mounted editor views", async () => {
+    const mentions = {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            { type: "mention", attrs: { id: "former-a", label: "Alex" } },
+            { type: "text", text: " and " },
+            { type: "mention", attrs: { id: "former-b", label: "Alex" } },
+          ],
+        },
+      ],
+    }
+    const original = structuredClone(mentions)
+    render(
+      <Scope>
+        <section aria-label="Former mentions">
+          <SafeCommentContent document={mentions} fallback="" />
+        </section>
+        <SharedCommentInput
+          teamId="6ac18b75-07f7-41dc-9890-a52cccd4c551"
+          issueId={issue.id}
+          comment={{
+            id: "cba89ef8-84b7-4f42-bcb1-a41d04b87c48",
+            body: "@Alex and @Alex",
+            document: mentions,
+            version: 1,
+          }}
+        />
+      </Scope>
+    )
+    const saved = within(
+      screen.getByRole("region", { name: "Former mentions" })
+    )
+    expect(saved.getByText("@Alex · former-a")).toBeTruthy()
+    expect(saved.getByText("@Alex · former-b")).toBeTruthy()
+    const editor = await screen.findByRole("textbox", { name: "Edit comment" })
+    expect(editor.textContent).toContain("@Alex · former-a")
+    expect(editor.textContent).toContain("@Alex · former-b")
+    await act(() =>
+      externalPreferenceEdit("alice", { "general.displayNames": "full-name" })
+    )
+    expect(editor.textContent).toContain("@Alex · former-b")
+    fireEvent.click(screen.getByRole("button", { name: "Save comment" }))
+    await waitFor(() => expect(requests.send).toHaveBeenCalled())
+    expect(requests.send.mock.calls[0][0].document).toEqual(original)
+    expect(mentions).toEqual(original)
+  })
+
   it("updates mounted assignee, activity, comment mention, history and member consumers with safe fallbacks", async () => {
     const frozen = structuredClone(document)
     render(

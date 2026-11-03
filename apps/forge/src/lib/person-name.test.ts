@@ -75,4 +75,30 @@ describe("FOR-130 person names", () => {
     expect(labels[0]).toBe("Alex · @one · first")
     expect(labels[2]).toBe("Alex · @one · third")
   })
+
+  it.each([
+    ["abcdef-1", "ABCDEF-2"],
+    ["abcdef", "ABCDEF"],
+    ["ＡＢＣＤＥＦ", "abcdef"],
+  ])(
+    "keeps normalized account suffixes unique for %s and %s",
+    (first, second) => {
+      const people = [
+        { id: first, name: "Alex" },
+        { id: second, name: "Alex" },
+      ]
+      const labels = people.map((person) =>
+        formatPersonName(person, "full-name", people)
+      )
+      expect(
+        new Set(labels.map((label) => label.normalize("NFKC").toLowerCase()))
+          .size
+      ).toBe(2)
+      expect(
+        people.map((person) =>
+          formatPersonName(person, "full-name", [...people].reverse())
+        )
+      ).toEqual(labels)
+    }
+  )
 })

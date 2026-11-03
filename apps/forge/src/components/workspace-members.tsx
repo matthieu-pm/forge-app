@@ -85,7 +85,7 @@ function MemberAvatar({ member }: { member: WorkspaceMemberSummary }) {
   const personName = usePersonName()
 
   return (
-    <Avatar className="size-6 shrink-0">
+    <Avatar aria-hidden="true" className="size-6 shrink-0">
       <AvatarImage src={member.image ?? undefined} alt="" />
       <AvatarFallback className="text-[10px]">
         {personName(member)
@@ -569,7 +569,7 @@ export function WorkspaceMembers({
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <MemberAvatar member={selected} />
-                  {selected.name}
+                  {personName(selected)}
                 </DialogTitle>
                 <DialogDescription>{selected.email}</DialogDescription>
               </DialogHeader>

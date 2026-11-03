@@ -11,7 +11,7 @@ import {
   useProtectedIdentity,
 } from "./account-preference-provider"
 import type { ReactNode } from "react"
-import type { PersonIdentity } from "@/lib/person-name"
+import type { NameFormat, PersonIdentity } from "@/lib/person-name"
 import {
   formatPersonName,
   formatPersonNames,
@@ -19,13 +19,77 @@ import {
 } from "@/lib/person-name"
 import { loadPersonDirectory } from "@/lib/person-directory-state"
 
-const Context = createContext<{
+type Directory = {
   enabled: boolean
   people: ReadonlyArray<PersonIdentity>
-}>({ enabled: false, people: [] })
+  format: NameFormat
+  byId: Map<string, PersonIdentity>
+  labels: Map<string, string>
+}
 const emptyPeople: ReadonlyArray<PersonIdentity> = []
+const Context = createContext<Directory>({
+  enabled: false,
+  people: emptyPeople,
+  format: "username",
+  byId: new Map(),
+  labels: new Map(),
+})
 
-export const PersonNameScope = Context.Provider
+function directoryFor(
+  people: ReadonlyArray<PersonIdentity>,
+  enabled: boolean,
+  format: NameFormat
+): Directory {
+  return {
+    enabled,
+    format,
+    people,
+    byId: new Map(people.map((person) => [personId(person), person])),
+    labels: enabled ? formatPersonNames(people, format) : new Map(),
+  }
+}
+
+function withPeers(
+  directory: Directory,
+  people: ReadonlyArray<PersonIdentity>
+) {
+  if (
+    !directory.enabled ||
+    people.every((person) => directory.byId.has(personId(person)))
+  )
+    return directory
+  const merged = new Map(people.map((person) => [personId(person), person]))
+  for (const [id, person] of directory.byId) merged.set(id, person)
+  return directoryFor([...merged.values()], true, directory.format)
+}
+
+export function PersonNameScope({
+  value,
+  children,
+}: {
+  value: { enabled: boolean; people: ReadonlyArray<PersonIdentity> }
+  children: ReactNode
+}) {
+  const { preferences } = usePreferenceGroup("general")
+  const directory = useMemo(
+    () => directoryFor(value.people, value.enabled, preferences.displayNames),
+    [value.people, value.enabled, preferences.displayNames]
+  )
+  return <Context value={directory}>{children}</Context>
+}
+
+export function PersonNamePeers({
+  people,
+  children,
+}: {
+  people: ReadonlyArray<PersonIdentity>
+  children: ReactNode
+}) {
+  const context = useContext(Context)
+  const directory = useMemo(() => withPeers(context, people), [context, people])
+  return <Context value={directory}>{children}</Context>
+}
+
 export const usePersonNamesEnabled = () => useContext(Context).enabled
 
 export function PersonNameProvider({ children }: { children: ReactNode }) {
@@ -81,28 +145,17 @@ export function usePersonName(
   people: ReadonlyArray<PersonIdentity> = emptyPeople
 ) {
   const context = useContext(Context)
-  const { preferences } = usePreferenceGroup("general")
-  const directory = useMemo(() => {
-    const result = new Map(people.map((entry) => [personId(entry), entry]))
-    for (const entry of context.people) result.set(personId(entry), entry)
-    return result
-  }, [context.people, people])
-  const labels = useMemo(
-    () => formatPersonNames([...directory.values()], preferences.displayNames),
-    [directory, preferences.displayNames]
-  )
+  const directory = useMemo(() => withPeers(context, people), [context, people])
   return useCallback(
     (person?: PersonIdentity | null, fallback = "") => {
       if (!person) return fallback
       if (!context.enabled) return person.name?.trim() || fallback
-      const current = directory.get(personId(person)) ?? person
+      const current = directory.byId.get(personId(person)) ?? person
       return (
-        labels.get(personId(current)) ??
-        formatPersonName(current, preferences.displayNames, [
-          ...directory.values(),
-        ])
+        directory.labels.get(personId(current)) ??
+        formatPersonName(current, directory.format, directory.people)
       )
     },
-    [context.enabled, preferences.displayNames, directory, labels]
+    [context.enabled, directory]
   )
 }
