@@ -1,0 +1,159 @@
+{
+  "issue": "FOR-130",
+  "pullRequest": "https://github.com/matthieu-pm/forge-app/pull/61",
+  "date": "2026-11-03",
+  "review": {
+    "originalHead": "182da07de88ff59e05b05ee1352e814b05932c1c",
+    "fixedBase": "6e273c7593c3e553e3eef5c9844cc3b07f3c00da",
+    "testedHead": "31a32348c0617b70ca735653bb003f2237fecb6a",
+    "correctedFindings": [
+      "Normalized ID collisions",
+      "Repeated directory formatting per mounted consumer",
+      "Non-reactive member detail title",
+      "Duplicate unavailable mention snapshots"
+    ],
+    "regressionsFailingOriginalHead": 6,
+    "independentStandards": "No remaining blockers at a986fed",
+    "independentSpec": "No remaining blockers, including final main resolution at 31a3234"
+  },
+  "integration": {
+    "resolvedMain": "e6422e3c91941489257cee58eb36d2a8a9a047c8",
+    "resolvedFiles": [
+      "issue-comment-input.tsx",
+      "shared-comment-input.tsx",
+      "preferences-settings.tsx"
+    ],
+    "preserved": [
+      "FOR-131 default home",
+      "FOR-132 emoticons",
+      "FOR-133 comment shortcuts",
+      "FOR-134 sidebar customization"
+    ],
+    "githubMergeableBeforeMerge": true,
+    "mergeCommit": "c0272c164433eeaed8b6a6291ad6822d6a43d887",
+    "mergedAt": "2026-11-03T15:36:14Z"
+  },
+  "validation": {
+    "appSuite": {
+      "passed": 2858,
+      "skipped": 650,
+      "filesPassed": 358,
+      "filesSkipped": 33
+    },
+    "workflow": {
+      "passed": 4,
+      "files": 2
+    },
+    "personNames": {
+      "passed": 23,
+      "files": 4
+    },
+    "typecheck": "passed",
+    "productionBuild": "passed with repository CI dummy loopback database and prerender auth values; protected Workflow verification passed",
+    "lint": {
+      "integratedErrors": 0,
+      "integratedWarnings": 34,
+      "finalMergeFilesErrors": 0,
+      "finalMergeFilesWarnings": 0
+    },
+    "format": "passed",
+    "diffCheck": "passed"
+  },
+  "acceptance": {
+    "AT-01": {
+      "result": "passed in fixture tests plus production member/sidebar acceptance",
+      "coverage": "Shared formatter fallbacks/collisions; mounted assignee, activity, mentions, member list/dialog; preference subscriptions; directory session/workspace fencing; full-name search aliases; reviewed consumer inventory."
+    },
+    "AT-02": {
+      "result": "passed in fixture regression tests",
+      "coverage": "Selected assignee/create target retains immutable account ID across formats. Submitted mention documents retain original account ID and label, including unavailable duplicate snapshots."
+    }
+  },
+  "release": {
+    "url": "https://app.forgenow.tech",
+    "deploymentId": "dpl_51nMEb9EmPU14reP2EegPQZ1imov",
+    "source": "c0272c164433eeaed8b6a6291ad6822d6a43d887",
+    "deploymentState": "READY",
+    "productionDomainAssignmentVerified": true,
+    "subsequentServingDeployment": {
+      "id": "dpl_42ghSN1mQodTYP5xQHXnsBqX61b7",
+      "source": "acd82c6d82ede128ae699e41f79e7c88bac1a417",
+      "includesMergedSource": true,
+      "change": "PR #62 sidebar focused-reset visibility; no person-name code changes"
+    },
+    "flags": {
+      "FORGE_PERSON_NAME_FORMATTING_ENABLED": true,
+      "FORGE_PERSONAL_PREFERENCE_SYNC_ENABLED": true
+    },
+    "migration": {
+      "required": false,
+      "database": "neondb",
+      "branch": "br-muddy-queen-zaeeysjt",
+      "journalEntries": 73,
+      "sourceHashesAndTimestampsMatch": true
+    },
+    "health": {
+      "live": {
+        "http": 200,
+        "code": "ALIVE"
+      },
+      "ready": {
+        "http": 200,
+        "code": "READY"
+      }
+    },
+    "scopedRuntimeLogs": {
+      "levels": ["error", "fatal"],
+      "window": "20 minutes ending 2026-11-03T15:48:33Z",
+      "deploymentsChecked": 2,
+      "matchingLogs": 0
+    }
+  },
+  "authenticatedBrowser": {
+    "driver": "Dray session browser",
+    "method": "Existing authenticated account, two temporary workspaces, six synthetic profiles; second mounted tab receives focus refresh without a page reload. Existing login retained.",
+    "observations": [
+      "Username rows and full-name search return distinct accounts.",
+      "Full name renders Alex Smith with distinct username suffixes in rows, selection controls and the open detail dialog.",
+      "Missing full name falls back to username; missing both fields renders Member plus deterministic account prefix.",
+      "A mounted list and open dialog update after the saved format changes in another tab and focus refresh.",
+      "Saved full-name and hidden-Forge choices survive fresh page load.",
+      "Sidebar visibility and My issues ordering save canonically; required Inbox remains enabled and reachable.",
+      "Settings/Back to app navigation succeeds before final reset.",
+      "Workspace switch shows Alpha only in acceptance workspace 1 and Beta only in workspace 2. Workspace 2 has no Alex members.",
+      "Original Username/default sidebar choices restored through the UI.",
+      "Original active workspace restored via the authenticated organization API (HTTP 200), with owned-scope DB restoration during browser recovery."
+    ],
+    "artifacts": {
+      "docs/qa/for130/production-fallbacks.png": "5cde27346db8cf57a6270ebf307dd85f78da3489ac876f9edb23f364378d9d32",
+      "docs/qa/for130/production-full-name.png": "42cd9f566b4901b2d528ff4fac470f4576fa62866aff5f0163f2505daf1c7c16",
+      "docs/qa/for130/production-live-dialog.png": "513911dc33096695e65461314ff3499b9bb00b3c4f449cc8485154310e1a22d3",
+      "docs/qa/for130/production-sidebar-and-person-names.mp4": "e38be139164febb78ea038de9badf9f90e24b26c14b38bb899142404efb42e24",
+      "docs/qa/for130/production-sidebar-customized.png": "d40c0333ac32e239d6d0c411fce3b8d3bebcbe7814036de424604ca61995e7f5",
+      "docs/qa/for130/production-username.png": "cc5faf7957b876007b0216937068117193274c14a40157d4114769697ad1b74b",
+      "docs/qa/for130/production-workspace-two.png": "ffe678c193dc76585a8823c2fb76bdcb1dbd78563b9243e2408919b45f90513c"
+    },
+    "videoSeconds": 241.745
+  },
+  "cleanup": {
+    "ownedUsers": 0,
+    "ownedWorkspaces": 0,
+    "ownedMemberships": 0,
+    "ownedSessions": 0,
+    "ownedCredentialAccounts": 0,
+    "ownedAccountPreferences": 0,
+    "ownedWorkspacePreferences": 0,
+    "ownedReceipts": 0,
+    "ownedTeams": 0,
+    "originalAccountAndWorkspacePreserved": true,
+    "fixtureSessionReferences": 0,
+    "temporaryCredentialFilesRemoved": true
+  },
+  "limitations": [
+    "PostgreSQL-dependent suites remain skipped without test database configuration; production directory/membership and persistence were exercised with disposable scopes.",
+    "No new independent-account login or packaged Electron qualification was performed.",
+    "Native badge-style picker caused Dray CDP timeouts; badge mutation is not claimed, and its original count setting was retained. Screenshots and the exported recording preserve the successful acceptance steps.",
+    "Concurrent production rollout caused stale lazy-import errors in already-open tabs; fresh-page acceptance, live/ready probes and deployment-scoped runtime checks were used.",
+    "The final recovery tab reported a 0 by 0 Dray viewport, so post-cleanup sidebar paint is not claimed. Authenticated set-active returned HTTP 200 and server records verified restored workspace/preferences."
+  ]
+}

@@ -60,3 +60,35 @@ remove their users, workspaces, sessions, preferences and receipts afterward.
 Final validation, deployment, authenticated browser acceptance and cleanup results
 are recorded in the companion `docs/operations/for130-review-release-evidence.json`
 only after execution.
+
+## Executed release
+
+Main advanced again to `e6422e3` (FOR-133). The three overlapping comment/input
+and preference files were resolved at `31a3234`, preserving both intents. The
+spec reviewer cleared the resolution. GitHub reported mergeable with passing
+deployment checks before PR #61 merged as `c0272c1` at 15:36 UTC.
+
+The final integrated suite passed 2,858 tests (650 PostgreSQL-dependent tests
+skipped), plus 4 Workflow and 23 focused person-name tests. Typecheck, production
+build, merge-file lint/format and diff checks passed.
+
+Production deployed `c0272c1` as `dpl_51nMEb9EmPU14reP2EegPQZ1imov`; its canonical
+domain assignment and ALIVE/READY HTTP 200 probes were verified. A concurrent
+sidebar fix subsequently deployed descendant `acd82c6` as
+`dpl_42ghSN1mQodTYP5xQHXnsBqX61b7`. Its four-file delta contains no person-name
+changes. Error/fatal log queries found no matching records on either deployment.
+
+Authenticated acceptance verified duplicate/missing names, full-name search,
+updates to a mounted list/open member dialog after focus refresh, canonical
+persistence, sidebar visibility/order, required Inbox and workspace/team
+separation. The selected Alex account remained identifiable in its detail view;
+immutable assignee and submitted mention identity are covered by the regression
+suite. The production recording and screenshots are beside this document.
+
+The native badge picker stalled Dray automation; no badge mutation is claimed.
+Existing open tabs also encountered stale lazy imports during the concurrent
+rollout. The evidence record distinguishes these automation/deployment events
+from the executed acceptance steps. The original name/sidebar choices and active
+workspace were restored. Owned fixture users, workspaces, memberships, sessions,
+credentials, preferences, teams and receipts were verified absent, and temporary
+fixture credentials/helpers were removed.
