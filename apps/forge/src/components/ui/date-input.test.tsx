@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest"
 import { fr } from "react-day-picker/locale"
 import { DateInput } from "./date-input"
 import {
+  PreferenceFixtureScope,
   externalPreferenceEdit,
   renderPreferences,
   setupPreferenceFixture,
@@ -189,4 +190,48 @@ it("clears manual validation errors after choosing a valid calendar day", () => 
   choose("2/28/2026")
   expect(input.value).toBe("2026-02-28")
   expect(input.checkValidity()).toBe(true)
+})
+
+it("follows selected-date changes across years while preserving manual month navigation on preference changes", async () => {
+  const changed = vi.fn()
+  const view = renderPreferences(
+    <DateInput
+      inlineCalendar
+      aria-label="Target"
+      value="2026-02-01"
+      onValueChange={changed}
+    />
+  )
+  expect(screen.getByRole("grid").getAttribute("aria-label")).toContain(
+    "February 2026"
+  )
+  view.rerender(
+    <PreferenceFixtureScope>
+      <DateInput
+        inlineCalendar
+        aria-label="Target"
+        value="2027-01-01"
+        onValueChange={changed}
+      />
+    </PreferenceFixtureScope>
+  )
+  expect(screen.getByRole("grid").getAttribute("aria-label")).toContain(
+    "January 2027"
+  )
+  expect(
+    document
+      .querySelector('button[data-selected-single="true"]')
+      ?.getAttribute("data-day")
+  ).toBe("1/1/2027")
+  fireEvent.click(screen.getByRole("button", { name: "Go to the Next Month" }))
+  expect(screen.getByRole("grid").getAttribute("aria-label")).toContain(
+    "February 2027"
+  )
+  await act(() =>
+    externalPreferenceEdit("alice", { "general.firstDayOfWeek": "saturday" })
+  )
+  expect(screen.getByRole("grid").getAttribute("aria-label")).toContain(
+    "February 2027"
+  )
+  expect(changed).not.toHaveBeenCalled()
 })

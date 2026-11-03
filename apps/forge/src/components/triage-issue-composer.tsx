@@ -134,7 +134,9 @@ export function TriageIssueComposer({
   }
   const [saving, setSaving] = useState(false)
   const saveLock = useRef(false)
+  const dueDateRef = useRef<HTMLInputElement>(null)
   async function submit() {
+    if (dueDateRef.current && !dueDateRef.current.reportValidity()) return
     if (!draft.title.trim() || attaching || saveLock.current) return
     saveLock.current = true
     setSaving(true)
@@ -167,6 +169,7 @@ export function TriageIssueComposer({
     }
   }
   function saveDraft() {
+    if (dueDateRef.current && !dueDateRef.current.reportValidity()) return
     try {
       const key = triageDraftKey(team.id)
       const previous = productStorage.getItem(key)
@@ -483,6 +486,7 @@ export function TriageIssueComposer({
                   <DateInput
                     type="date"
                     aria-label="Due date"
+                    ref={dueDateRef}
                     value={draft.dueDate}
                     onValueChange={(dateValue) =>
                       update({ dueDate: dateValue })

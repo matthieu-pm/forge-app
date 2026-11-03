@@ -401,7 +401,9 @@ export function IssueDetail({
   }
   const childSave = useRef<{ signature: string; key: string } | null>(null)
   const childSaving = useRef(false)
+  const dueDateRef = useRef<HTMLInputElement>(null)
   async function createChild() {
+    if (dueDateRef.current && !dueDateRef.current.reportValidity()) return
     if (childSaving.current) return
     childSaving.current = true
     try {
@@ -1541,6 +1543,7 @@ export function IssueDetail({
                             <DateInput
                               type="date"
                               aria-label="Sub-issue due date"
+                              ref={dueDateRef}
                               value={childDraft.dueDate}
                               onValueChange={(dateValue) =>
                                 setChildDraft({

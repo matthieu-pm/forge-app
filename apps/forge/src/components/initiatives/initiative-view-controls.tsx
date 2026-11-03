@@ -552,7 +552,17 @@ export function InitiativeFiltersMenu({
                       !["is set", "is not set"].includes(rule.operator) &&
                       !rule.value.trim()
                   )}
-                  onClick={() => {
+                  onClick={(event) => {
+                    const inputs =
+                      event.currentTarget
+                        .closest('[role="dialog"]')
+                        ?.querySelectorAll<HTMLInputElement>("input") ?? []
+                    if (
+                      !Array.from(inputs).every((input) =>
+                        input.reportValidity()
+                      )
+                    )
+                      return
                     onChange(draft)
                     setMode(null)
                   }}

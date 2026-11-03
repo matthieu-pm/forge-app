@@ -625,7 +625,15 @@ export function TeamDirectoryFilters({
             </Button>
             <Button
               disabled={draft.rules.some((rule) => !rule.value.trim())}
-              onClick={() => {
+              onClick={(event) => {
+                const inputs =
+                  event.currentTarget
+                    .closest('[role="dialog"]')
+                    ?.querySelectorAll<HTMLInputElement>("input") ?? []
+                if (
+                  !Array.from(inputs).every((field) => field.reportValidity())
+                )
+                  return
                 onChange(draft)
                 setAdvanced(false)
               }}

@@ -52,6 +52,7 @@ export function RecurringIssueEditor({
   const safeToLeave = React.useRef(false)
   const savingRef = React.useRef(false)
   const titleRef = React.useRef<HTMLInputElement>(null)
+  const dueDateRef = React.useRef<HTMLInputElement>(null)
   const dirty = JSON.stringify(draft) !== initial.current || subIssueCreating
   const navigate = useNavigate()
   const router = useRouter()
@@ -74,6 +75,7 @@ export function RecurringIssueEditor({
     })
   }
   async function save() {
+    if (dueDateRef.current && !dueDateRef.current.reportValidity()) return
     if (savingRef.current || !directory.canManage) return
     if (subIssueCreating) {
       toast.error("Add or cancel the open sub-issue before saving.")
@@ -223,6 +225,7 @@ export function RecurringIssueEditor({
             <label htmlFor="recurring-first-due">First due</label>
             <DateInput
               id="recurring-first-due"
+              ref={dueDateRef}
               aria-label="First due"
               type="date"
               disabled={saving || !directory.canManage}

@@ -248,6 +248,7 @@ export function IssueComposer({
     else onClose()
   }
   function saveDraft() {
+    if (dueDateRef.current && !dueDateRef.current.reportValidity()) return
     try {
       saveIssueDraft(targetTeam.id, draft, localDraftId.current)
       if (editRecoveryKey) productStorage.removeItem(editRecoveryKey)
@@ -284,7 +285,9 @@ export function IssueComposer({
       )
     }
   }
+  const dueDateRef = useRef<HTMLInputElement>(null)
   async function submit() {
+    if (dueDateRef.current && !dueDateRef.current.reportValidity()) return
     if (attaching || saveLock.current) return
     if (!draft.title.trim()) {
       setError("Enter an issue title.")
@@ -846,6 +849,7 @@ export function IssueComposer({
                       </label>
                       <DateInput
                         id="issue-due"
+                        ref={dueDateRef}
                         aria-label="Due date"
                         type="date"
                         value={draft.dueDate}

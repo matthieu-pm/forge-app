@@ -89,9 +89,17 @@ function CalendarInput({
     source: value,
     date: value.slice(0, 10),
     time: value.slice(11),
+    month: calendarDate(value.slice(0, 10)),
   }))
   if (draft.source !== value) {
-    setDraft({ source: value, date: value.slice(0, 10), time: value.slice(11) })
+    const date = value.slice(0, 10)
+    setDraft({
+      source: value,
+      date,
+      time: value.slice(11),
+      month:
+        date !== draft.date ? (calendarDate(date) ?? draft.month) : draft.month,
+    })
   }
   const inputRef = React.useRef<HTMLInputElement>(null)
   React.useImperativeHandle(ref, () => inputRef.current!, [])
@@ -116,14 +124,23 @@ function CalendarInput({
     const next =
       !date || (withTime && !time) ? "" : withTime ? `${date}T${time}` : date
     const valid = dateInRange(date, min, max)
-    setDraft({ source: valid ? next : value, date, time })
+    setDraft({
+      source: valid ? next : value,
+      date,
+      time,
+      month:
+        valid && date !== draft.date
+          ? (calendarDate(date) ?? draft.month)
+          : draft.month,
+    })
     if (valid) onValueChange(next)
   }
   const calendar = (
     <Calendar
       mode="single"
       selected={selected}
-      defaultMonth={selected}
+      month={draft.month}
+      onMonthChange={(month) => setDraft((current) => ({ ...current, month }))}
       locale={locale}
       timeZone="UTC"
       today={calendarDate(format(new Date(), "yyyy-MM-dd"))}

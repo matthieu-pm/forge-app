@@ -29,7 +29,10 @@ week-number display cannot override the personal column order in this wrapper.
 controlled by Forge. It offers manual `YYYY-MM-DD` entry and the shared calendar;
 datetime controls retain a native time field, including existing seconds.
 Only complete, valid dates inside any supplied bounds are emitted. Incomplete
-manual input remains a local draft and participates in form validation. Clearing
+manual input remains a local draft and participates in native validation. Explicit
+non-form save actions validate the actual date field before using the last
+confirmed value. Mounted inline pickers follow external selected-date changes
+while retaining manual month browsing on preference-only updates. Clearing
 is supported, as are required, disabled and read-only fields. The milestone
 picker keeps its existing inline calendar layout.
 

@@ -128,6 +128,7 @@ export function Inbox({ scope }: { scope: InboxScope }) {
   const [filterOpen, setFilterOpen] = useState(false)
   const [snoozeOpen, setSnoozeOpen] = useState(false)
   const [customDate, setCustomDate] = useState("")
+  const customDateRef = useRef<HTMLInputElement>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [announcement, setAnnouncement] = useState("")
   const [now, setNow] = useState(Date.now)
@@ -765,6 +766,7 @@ export function Inbox({ scope }: { scope: InboxScope }) {
                         <DateInput
                           type="datetime-local"
                           aria-label="Snooze date"
+                          ref={customDateRef}
                           value={customDate}
                           onValueChange={(dateValue) =>
                             setCustomDate(dateValue)
@@ -777,7 +779,10 @@ export function Inbox({ scope }: { scope: InboxScope }) {
                         size="sm"
                         className="m-2"
                         disabled={!customDate}
-                        onClick={() => snooze(new Date(customDate).getTime())}
+                        onClick={() => {
+                          if (customDateRef.current?.reportValidity())
+                            snooze(new Date(customDate).getTime())
+                        }}
                       >
                         Snooze
                       </Button>
