@@ -220,7 +220,7 @@ export function WorkspaceSetupForm({
       return
     }
 
-    window.location.assign("/inbox")
+    window.location.assign("/")
   }
 
   async function joinEligibleWorkspace() {
@@ -231,7 +231,7 @@ export function WorkspaceSetupForm({
       await acceptApprovedDomainWorkspace({
         data: { workspaceId: eligibleWorkspace.workspaceId },
       })
-      window.location.assign("/inbox")
+      window.location.assign("/")
     } catch (joinError) {
       setError(
         joinError instanceof Error
