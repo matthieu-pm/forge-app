@@ -16,6 +16,8 @@ import {
 } from "@/lib/shared-sla-api"
 import {
   sharedSlaPolicySchema,
+  slaStatusFromKey,
+  slaStatusKey,
   starterSlaRules,
 } from "@/lib/shared-sla-contract"
 
@@ -116,7 +118,11 @@ function Editor({
       const result = await persistSharedSlaPolicy({ data: command })
       if (!alive.current) return
       setPending(undefined)
-      if (result.status === "conflict") {
+      if (result.status === "invalid") {
+        setLatest(result.snapshot)
+        setBase(result.snapshot)
+        setError(result.message)
+      } else if (result.status === "conflict") {
         setLatest(result.snapshot)
         setError(
           "Another admin changed this policy. Your draft is preserved. Choose which version to use."
@@ -148,7 +154,11 @@ function Editor({
         rules: draft.rules.map((r, n) => (n === index ? rule : r)),
       })
   }
-  async function reconcile(id: string, decision: "breach-owed" | "not-owed") {
+  async function reconcile(
+    id: string,
+    version: string,
+    decision: "breach-owed" | "not-owed"
+  ) {
     if (evidence.trim().length < 10 || inFlight.current) return
     inFlight.current = true
     setBusy(true)
@@ -158,6 +168,7 @@ function Editor({
           ...identity,
           commandKey: crypto.randomUUID(),
           commitmentId: id,
+          expectedVersion: version,
           decision,
           evidence,
         },
@@ -367,7 +378,7 @@ function Editor({
                       />
                       <Choices
                         label="Qualifying statuses"
-                        values={rule.filters.statusIds}
+                        values={rule.filters.statuses?.map(slaStatusKey)}
                         options={base.statuses
                           .filter(
                             (s) =>
@@ -375,13 +386,19 @@ function Editor({
                               rule.filters.teamIds.includes(s.teamId)
                           )
                           .map((s) => ({
-                            id: s.id,
+                            id: slaStatusKey({
+                              teamId: s.teamId,
+                              statusId: s.id,
+                            }),
                             name: `${base.teams.find((t) => t.id === s.teamId)?.name}: ${s.name}`,
                           }))}
-                        onChange={(statusIds) =>
+                        onChange={(statusKeys) =>
                           ruleChange(index, {
                             ...rule,
-                            filters: { ...rule.filters, statusIds },
+                            filters: {
+                              ...rule.filters,
+                              statuses: statusKeys?.map(slaStatusFromKey),
+                            },
                           })
                         }
                       />
@@ -559,14 +576,18 @@ function Editor({
                     </span>
                     <Button
                       disabled={busy || evidence.trim().length < 10}
-                      onClick={() => void reconcile(item.id, "breach-owed")}
+                      onClick={() =>
+                        void reconcile(item.id, item.version, "breach-owed")
+                      }
                     >
                       Breach was owed
                     </Button>
                     <Button
                       variant="outline"
                       disabled={busy || evidence.trim().length < 10}
-                      onClick={() => void reconcile(item.id, "not-owed")}
+                      onClick={() =>
+                        void reconcile(item.id, item.version, "not-owed")
+                      }
                     >
                       No breach was owed
                     </Button>

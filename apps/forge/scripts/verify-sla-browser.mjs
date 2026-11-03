@@ -148,6 +148,84 @@ try {
   checks.push(
     "Two admins resolve a visible revision conflict without losing the local draft"
   )
+  await alice.reload()
+  const targetInput = alice.getByRole("spinbutton", {
+    name: "SLA target",
+    exact: true,
+  })
+  await expect(targetInput).toHaveValue("48")
+  await targetInput.fill("72")
+  await alice
+    .getByRole("listbox", { name: "Teams", exact: true })
+    .selectOption(teamId)
+  await pool.query(
+    "UPDATE teams SET deleted_at=clock_timestamp() WHERE id=$1",
+    [teamId]
+  )
+  await alice
+    .getByRole("button", { name: "Save SLA policy", exact: true })
+    .click()
+  await expect(alice.getByRole("alert")).toContainText(
+    "condition is unavailable"
+  )
+  await expect(targetInput).toBeEnabled()
+  await expect(targetInput).toHaveValue("72")
+  await alice
+    .getByRole("listbox", { name: "Teams", exact: true })
+    .selectOption([])
+  await pool.query("UPDATE teams SET deleted_at=NULL WHERE id=$1", [teamId])
+  await targetInput.fill("48")
+  await alice
+    .getByRole("button", { name: "Save SLA policy", exact: true })
+    .click()
+  await expect(alice.getByRole("status")).toHaveText("SLA policy saved.")
+  checks.push(
+    "Definitive stale-reference rejection leaves an editable draft that can be corrected and saved"
+  )
+  const beforeRetry = (
+    await pool.query(
+      "SELECT revision FROM sla_policies WHERE workspace_id=$1",
+      [workspaceId]
+    )
+  ).rows[0].revision
+  let interrupted = false
+  await alice.route("**/_serverFn/**", async (route) => {
+    if (
+      !interrupted &&
+      route.request().method() === "POST" &&
+      (route.request().postData() ?? "").includes("expectedRevision")
+    ) {
+      interrupted = true
+      await route.fetch()
+      await route.abort("failed")
+    } else await route.continue()
+  })
+  await targetInput.fill("48")
+  // Changing the work week supplies a distinct valid save while keeping the 48h target.
+  await alice
+    .getByRole("combobox", { name: "Work week", exact: true })
+    .selectOption("sun-thu")
+  await alice
+    .getByRole("button", { name: "Save SLA policy", exact: true })
+    .click()
+  await expect(
+    alice.getByRole("button", { name: "Retry save", exact: true })
+  ).toBeEnabled()
+  await expect(targetInput).toBeDisabled()
+  await alice.getByRole("button", { name: "Retry save", exact: true }).click()
+  await expect(alice.getByRole("status")).toHaveText("SLA policy saved.")
+  expect(interrupted).toBe(true)
+  expect(
+    (
+      await pool.query(
+        "SELECT revision FROM sla_policies WHERE workspace_id=$1",
+        [workspaceId]
+      )
+    ).rows[0].revision
+  ).toBe(beforeRetry + 1)
+  checks.push(
+    "Lost response after a committed policy save retries the same receipt exactly once"
+  )
   await pool.query(
     "UPDATE member SET role='member' WHERE organization_id=$1 AND user_id=$2",
     [workspaceId, users[1]]

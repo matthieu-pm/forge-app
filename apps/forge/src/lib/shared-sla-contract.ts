@@ -20,6 +20,16 @@ export const slaDurationSchema = z.discriminatedUnion("unit", [
     .object({ unit: z.literal("week"), value: z.number().int().min(1).max(52) })
     .strict(),
 ])
+/** Status IDs are team-local, including defaults such as todo. */
+export const slaStatusKey = (value: { teamId: string; statusId: string }) =>
+  `${value.teamId}:${value.statusId}`
+export function slaStatusFromKey(value: string) {
+  const separator = value.indexOf(":")
+  return {
+    teamId: value.slice(0, separator),
+    statusId: value.slice(separator + 1),
+  }
+}
 const filters = z
   .object({
     teamIds: z.array(z.uuid()).min(1).max(100).optional(),
@@ -28,7 +38,15 @@ const filters = z
       .min(1)
       .max(5)
       .optional(),
-    statusIds: z.array(z.string().min(1).max(255)).min(1).max(100).optional(),
+    statuses: z
+      .array(
+        z
+          .object({ teamId: z.uuid(), statusId: z.string().min(1).max(255) })
+          .strict()
+      )
+      .min(1)
+      .max(100)
+      .optional(),
   })
   .strict()
   .refine(
@@ -74,6 +92,7 @@ export const slaReconciliationSchema = slaReadSchema
   .extend({
     commandKey: z.uuid(),
     commitmentId: z.uuid(),
+    expectedVersion: z.string().regex(/^[a-f0-9]{64}$/),
     decision: z.enum(["breach-owed", "not-owed"]),
     evidence: z.string().trim().min(10).max(500),
   })
@@ -87,7 +106,12 @@ export type SlaPolicySnapshot = {
   canManage: boolean
   teams: Array<{ id: string; name: string; timezone: string }>
   statuses: Array<{ id: string; teamId: string; name: string }>
-  reconciliation: Array<{ id: string; issueId: string; deadline: string }>
+  reconciliation: Array<{
+    id: string
+    issueId: string
+    deadline: string
+    version: string
+  }>
 }
 export const initialSharedSlaPolicy = (): SharedSlaPolicy => ({
   enabled: false,

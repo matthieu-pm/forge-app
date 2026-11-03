@@ -6,6 +6,9 @@ The engine starts with no rules and a disabled policy. A workspace owner/admin
 can enable it, configure ordered apply/remove rules, and resolve policy revision
 conflicts at Settings → SLAs. No target is installed implicitly.
 
+Status conditions store both team and status IDs: default IDs such as `todo`
+are team-local and never treated as global state identities.
+
 Targets measure time to completion. Elapsed days/weeks mean 24/168 hours.
 Business days advance whole selected local dates in the captured team timezone,
 with no office-hour or holiday calendar. Gaps shift forward; repeated local times
@@ -64,12 +67,16 @@ Vercel scheduling runs every minute; delivery can be late, and history preserves
 both the original deadline/effective breach time and actual processing time.
 
 The server records a feature identity from `VERCEL_DEPLOYMENT_ID` (or
-`FORGE_SOURCE_REVISION` outside Vercel), workspace and effective mode. A new
+`FORGE_SOURCE_REVISION` plus a process identity outside Vercel), workspace and
+effective mode. A source revision alone cannot attest to continuity across
+separate operator processes. A new
 deployment cannot prove the predecessor's availability. Future unowed
 commitments can adopt its identity; overdue, unclassified intervals stay
 recoverable and appear in the admin interruption review. Use release/incident
 evidence to record “Breach was owed” or “No breach was owed”; this classification
-is receipt-backed and audited. It never changes the saved deadline. Already
+is receipt-backed and audited, and requires the exact observed interruption
+version under the commitment lock. A stale decision cannot classify a later
+interruption. It never changes the saved deadline. Already
 persisted known obligations remain owed across gate changes. Review pending
 interruptions after deployments and do not edit commitment rows to clear them.
 
@@ -101,7 +108,8 @@ then run `bun scripts/serve-sla-acceptance.mjs` and `bun run test:sla:browser`.
 The dedicated loopback WebSocket/TCP bridge exercises the unchanged built Neon
 driver; the server inherits no operator service credentials. The browser harness
 uses two real Better Auth sessions, distinct device timezones, policy conflicts,
-admin revocation and member issue creation/reload. Run it sequentially on this
+admin revocation, recovery from stale conditions, uncertain-save replay and
+member issue creation/reload. Run it sequentially on this
 database. It creates and cleans only the fixed acceptance workspace/users, and
 writes its result/screenshot under `/tmp/for125-*`.
 

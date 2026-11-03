@@ -1,5 +1,6 @@
 import "@tanstack/react-start/server-only"
-import { and, eq, inArray, isNull, sql } from "drizzle-orm"
+import { createHash } from "node:crypto"
+import { and, eq, inArray, isNull, or, sql } from "drizzle-orm"
 import { z } from "zod"
 import { slaGate } from "./sla-gate"
 import type { Actor } from "@/application/actor"
@@ -27,6 +28,7 @@ import {
   slaPolicyCommandSchema,
   slaReadSchema,
   slaReconciliationSchema,
+  slaStatusKey,
 } from "@/lib/shared-sla-contract"
 
 function authority(actor: Actor, input: z.infer<typeof slaReadSchema>) {
@@ -39,6 +41,29 @@ function authority(actor: Actor, input: z.infer<typeof slaReadSchema>) {
   )
     throw new ApplicationAccessError()
 }
+function reconciliationVersion(
+  row: {
+    id: string
+    gateIdentity: string
+    classifiedThrough: string | null
+    owedAt: string | null
+  },
+  workspaceId: string
+) {
+  return createHash("sha256")
+    .update(
+      JSON.stringify([
+        row.id,
+        row.gateIdentity,
+        row.classifiedThrough,
+        row.owedAt,
+        slaGate(workspaceId).identity,
+      ])
+    )
+    .digest("hex")
+}
+class SlaPolicyValidation extends Error {}
+class SlaReconciliationConflict extends Error {}
 async function snapshot(
   tx: Transaction,
   actor: Actor
@@ -54,6 +79,9 @@ async function snapshot(
       id: issueSlas.id,
       issueId: issueSlas.issueId,
       deadline: issueSlas.deadlineAt,
+      gateIdentity: issueSlas.gateIdentity,
+      classifiedThrough: issueSlas.classifiedThrough,
+      owedAt: issueSlas.owedAt,
     })
     .from(issueSlas)
     .where(
@@ -94,7 +122,12 @@ async function snapshot(
       ? sharedSlaPolicySchema.parse(row.values)
       : initialSharedSlaPolicy(),
     canManage: true,
-    reconciliation,
+    reconciliation: reconciliation.map((row) => ({
+      id: row.id,
+      issueId: row.issueId,
+      deadline: row.deadline,
+      version: reconciliationVersion(row, actor.workspaceId),
+    })),
     teams: teamDirectory,
     statuses,
   }
@@ -150,16 +183,26 @@ export async function saveSlaPolicy(
               new Set(found.map((t) => t.id)).size !==
               new Set(rule.filters.teamIds).size
             )
-              throw new ApplicationAccessError()
+              throw new SlaPolicyValidation()
           }
-          if (rule.filters.statusIds) {
+          if (rule.filters.statuses) {
             const found = await tx
-              .select({ id: issueStatuses.id })
+              .select({
+                statusId: issueStatuses.id,
+                teamId: issueStatuses.teamId,
+              })
               .from(issueStatuses)
               .where(
                 and(
                   eq(issueStatuses.workspaceId, current.workspaceId),
-                  inArray(issueStatuses.id, rule.filters.statusIds),
+                  or(
+                    ...rule.filters.statuses.map((s) =>
+                      and(
+                        eq(issueStatuses.teamId, s.teamId),
+                        eq(issueStatuses.id, s.statusId)
+                      )
+                    )
+                  ),
                   rule.filters.teamIds
                     ? inArray(issueStatuses.teamId, rule.filters.teamIds)
                     : undefined
@@ -167,10 +210,10 @@ export async function saveSlaPolicy(
               )
               .for("share")
             if (
-              new Set(found.map((s) => s.id)).size !==
-              new Set(rule.filters.statusIds).size
+              new Set(found.map(slaStatusKey)).size !==
+              new Set(rule.filters.statuses.map(slaStatusKey)).size
             )
-              throw new ApplicationAccessError()
+              throw new SlaPolicyValidation()
           }
         }
         let row
@@ -220,6 +263,16 @@ export async function saveSlaPolicy(
       }),
     }
   } catch (error) {
+    if (error instanceof SlaPolicyValidation)
+      return {
+        status: "invalid" as const,
+        message:
+          "A team or status condition is unavailable. Review the conditions and save again.",
+        snapshot: await readSlaPolicy(actor, {
+          workspaceId: input.workspaceId,
+          sessionId: input.sessionId,
+        }),
+      }
     if (error instanceof SlaPolicyConflict)
       return {
         status: "conflict" as const,
@@ -276,9 +329,13 @@ export async function reconcileSlaGate(
           .for("update")
       )[0]
       if (!row) throw new ApplicationAccessError()
-      if (!row.gateUncertain)
-        throw new Error(
-          "This SLA no longer needs reconciliation. Refresh the policy."
+      if (
+        !row.gateUncertain ||
+        input.expectedVersion !==
+          reconciliationVersion(row, current.workspaceId)
+      )
+        throw new SlaReconciliationConflict(
+          "This interruption changed. Refresh the policy before classifying it."
         )
       await tx
         .update(issueSlas)

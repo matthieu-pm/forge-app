@@ -88,7 +88,8 @@ CREATE FUNCTION forge_sla_local(p_wall timestamp, p_zone text) RETURNS timestamp
 LANGUAGE plpgsql STABLE AS $$
 DECLARE normal timestamptz; candidate timestamptz; resolved timestamptz; shift interval; best interval;
 BEGIN
-  IF NOT EXISTS(SELECT 1 FROM pg_timezone_names WHERE name=p_zone) THEN RAISE EXCEPTION 'Invalid SLA timezone'; END IF;
+  SELECT name INTO p_zone FROM pg_timezone_names WHERE lower(name)=lower(p_zone) ORDER BY name LIMIT 1;
+  IF p_zone IS NULL THEN RAISE EXCEPTION 'Invalid SLA timezone'; END IF;
   normal:=p_wall AT TIME ZONE p_zone;
   FOR shift IN SELECT DISTINCT ((t AT TIME ZONE p_zone)-(t AT TIME ZONE 'UTC')) FROM unnest(ARRAY[normal-interval '2 days',normal,normal+interval '2 days']) t LOOP
     candidate:=(p_wall-shift) AT TIME ZONE 'UTC';
@@ -162,7 +163,7 @@ BEGIN
   WHERE w.commitment_id=g.id AND greatest(g.deadline_at,w.opened_at,p.opened_at,coalesce(g.classified_through+interval '1 microsecond',g.deadline_at))<=least(coalesce(w.closed_at,p_at),coalesce(p.closed_at,p_at),p_at);
   UPDATE issue_slas SET owed_at=coalesce(owed_at,moment),
     gate_uncertain=CASE WHEN gate_on AND deadline_at>p_at AND owed_at IS NULL AND moment IS NULL THEN false
-      WHEN owed_at IS NULL AND moment IS NOT NULL AND (NOT gate_on OR identity<>gate_identity) THEN true ELSE gate_uncertain END,
+      WHEN owed_at IS NULL AND (NOT gate_on OR (moment IS NOT NULL AND identity<>gate_identity)) THEN true ELSE gate_uncertain END,
     gate_identity=CASE WHEN gate_on AND deadline_at>p_at AND owed_at IS NULL AND moment IS NULL THEN identity ELSE gate_identity END
   WHERE id=p_id;
 END $$;
@@ -185,7 +186,7 @@ CREATE FUNCTION forge_sla_rule(p_values jsonb, p_team uuid, p_priority text, p_s
  WHERE coalesce((value->>'enabled')::boolean,false)
  AND (NOT value->'filters' ? 'teamIds' OR value->'filters'->'teamIds' ? p_team::text)
  AND (NOT value->'filters' ? 'priorities' OR value->'filters'->'priorities' ? coalesce(p_priority,'No priority'))
- AND (NOT value->'filters' ? 'statusIds' OR value->'filters'->'statusIds' ? p_status)
+ AND (NOT value->'filters' ? 'statuses' OR value->'filters'->'statuses' @> jsonb_build_array(jsonb_build_object('teamId',p_team::text,'statusId',p_status)))
  ORDER BY position LIMIT 1;
 $$;
 --> statement-breakpoint
@@ -258,7 +259,7 @@ BEGIN
   END IF;
   IF carry THEN snap:=g.snapshot; anchor:=at_time;
   ELSE
-    SELECT timezone INTO zone FROM teams WHERE id=NEW.team_id AND workspace_id=NEW.workspace_id;
+    SELECT z.name INTO zone FROM teams t JOIN pg_timezone_names z ON lower(z.name)=lower(t.timezone) WHERE t.id=NEW.team_id AND t.workspace_id=NEW.workspace_id ORDER BY z.name LIMIT 1;
     week:=p.values->>'workWeek'; snap:=jsonb_build_object('rule',rule,'timezone',zone,'workWeek',week);
     anchor:=CASE rule->>'startMode' WHEN 'issueCreation' THEN NEW.created_at ELSE at_time END;
   END IF;

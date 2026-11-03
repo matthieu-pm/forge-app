@@ -32,6 +32,7 @@ describe.skipIf(!connection)("FOR-125 PostgreSQL acceptance", () => {
     users: Array<string> = []
   let number = 10000
   beforeAll(async () => {
+    vi.stubEnv("VERCEL_DEPLOYMENT_ID", "for125-acceptance-runtime")
     const url = new URL(connection!)
     if (
       url.hostname !== "127.0.0.1" ||
@@ -546,6 +547,8 @@ describe.skipIf(!connection)("FOR-125 PostgreSQL acceptance", () => {
       ...identity(f.actor),
       commandKey: randomUUID(),
       commitmentId: g.id,
+      expectedVersion: pending.reconciliation.find((x) => x.id === g.id)!
+        .version,
       decision: "breach-owed",
       evidence: "Verified fixture release interval",
     })
@@ -729,9 +732,9 @@ describe.skipIf(!connection)("FOR-125 PostgreSQL acceptance", () => {
         rules: [{ ...apply(), filters: { teamIds: [foreign.teamId] } }],
       },
     }
-    await expect(policy.saveSlaPolicy(f.actor, command)).rejects.toMatchObject({
-      code: "FORBIDDEN",
-    })
+    expect((await policy.saveSlaPolicy(f.actor, command)).status).toBe(
+      "invalid"
+    )
     for (const value of [0, -1, 1.5, 8761])
       await expect(
         policy.saveSlaPolicy(f.actor, {
@@ -894,6 +897,135 @@ describe.skipIf(!connection)("FOR-125 PostgreSQL acceptance", () => {
         )
       ).rows[0].n
     ).toBe(1)
+  })
+  it("AT-01e/02a: identical status IDs in two teams remain distinct policy conditions", async () => {
+    const f = await fixture(),
+      otherTeam = randomUUID()
+    await pool.query(
+      "INSERT INTO teams(id,workspace_id,name,slug,identifier,visibility,icon_kind,icon_value,color,timezone,created_by_user_id) VALUES($1,$2,'Other','other','OTH','workspace','emoji','🔥','#94a3b8','UTC',$3)",
+      [otherTeam, f.workspaceId, f.actor.userId]
+    )
+    const scoped = {
+      ...apply(),
+      filters: { statuses: [{ teamId: f.teamId, statusId: "todo" }] },
+    }
+    await save(f, { enabled: true, workWeek: "mon-fri", rules: [scoped] })
+    expect(await generations(await create(f))).toHaveLength(1)
+    expect(
+      await generations(await create({ ...f, teamId: otherTeam }))
+    ).toHaveLength(0)
+    const current = await policy.readSlaPolicy(f.actor, identity(f.actor))
+    expect(
+      (
+        await policy.saveSlaPolicy(f.actor, {
+          ...identity(f.actor),
+          expectedRevision: current.revision,
+          commandKey: randomUUID(),
+          values: {
+            ...current.values,
+            rules: [
+              {
+                ...scoped,
+                filters: {
+                  statuses: [{ teamId: randomUUID(), statusId: "todo" }],
+                },
+              },
+            ],
+          },
+        })
+      ).status
+    ).toBe("invalid")
+  })
+  it("AT-02e: an observed feature interruption before deadline cannot be forgotten on same-source reenablement", async () => {
+    const f = await fixture(),
+      g = await overdueFixture(f, true)
+    vi.stubEnv("FORGE_FEATURE_ROLLOUTS", "{}")
+    await edit(f, g.issueId, { title: "Observed unavailable before deadline" })
+    expect((await generations(g.issueId))[0].gate_uncertain).toBe(true)
+    await new Promise((resolve) => setTimeout(resolve, 250))
+    vi.stubEnv(
+      "FORGE_FEATURE_ROLLOUTS",
+      JSON.stringify({ sla: { mode: "enabled", workspaceIds: workspaces } })
+    )
+    expect((await run(g.id)).result.state).toBe("deferred")
+    expect(await breaches(g.issueId)).toHaveLength(0)
+    expect(
+      (
+        await policy.readSlaPolicy(f.actor, identity(f.actor))
+      ).reconciliation.map((r) => r.id)
+    ).toContain(g.id)
+  })
+  it("AT-02a/e: stale interruption decisions cannot classify a later deployment interval; exact decision replay is safe", async () => {
+    const f = await fixture(),
+      g = await overdueFixture(f)
+    vi.stubEnv("FORGE_FEATURE_ROLLOUTS", "{}")
+    await run(g.id)
+    vi.stubEnv(
+      "FORGE_FEATURE_ROLLOUTS",
+      JSON.stringify({ sla: { mode: "enabled", workspaceIds: workspaces } })
+    )
+    const first = (
+      await policy.readSlaPolicy(f.actor, identity(f.actor))
+    ).reconciliation.find((r) => r.id === g.id)!
+    await policy.reconcileSlaGate(f.actor, {
+      ...identity(f.actor),
+      commandKey: randomUUID(),
+      commitmentId: g.id,
+      expectedVersion: first.version,
+      decision: "not-owed",
+      evidence: "Verified first interruption only",
+    })
+    vi.stubEnv("VERCEL_DEPLOYMENT_ID", "for125-new-runtime")
+    try {
+      await run(g.id)
+      const second = (
+        await policy.readSlaPolicy(f.actor, identity(f.actor))
+      ).reconciliation.find((r) => r.id === g.id)!
+      expect(second.version).not.toBe(first.version)
+      await expect(
+        policy.reconcileSlaGate(f.actor, {
+          ...identity(f.actor),
+          commandKey: randomUUID(),
+          commitmentId: g.id,
+          expectedVersion: first.version,
+          decision: "breach-owed",
+          evidence: "Stale first interval evidence",
+        })
+      ).rejects.toThrow("interruption changed")
+      expect(await breaches(g.issueId)).toHaveLength(0)
+      const command = {
+        ...identity(f.actor),
+        commandKey: randomUUID(),
+        commitmentId: g.id,
+        expectedVersion: second.version,
+        decision: "breach-owed" as const,
+        evidence: "Verified second deployment interval",
+      }
+      await policy.reconcileSlaGate(f.actor, command)
+      expect((await policy.reconcileSlaGate(f.actor, command)).replayed).toBe(
+        true
+      )
+      expect(await breaches(g.issueId)).toHaveLength(1)
+    } finally {
+      vi.stubEnv("VERCEL_DEPLOYMENT_ID", "for125-acceptance-runtime")
+    }
+  })
+  it("AT-02b/d: existing case-insensitive IANA team timezone values remain valid canonical issue inputs", async () => {
+    const f = await fixture([
+      apply("Urgent", { unit: "business-day", value: 1 }),
+    ])
+    await pool.query("UPDATE teams SET timezone='europe/paris' WHERE id=$1", [
+      f.teamId,
+    ])
+    const id = await create(f)
+    expect((await generations(id))[0].snapshot.timezone).toBe("Europe/Paris")
+    expect(
+      (
+        await pool.query(
+          "SELECT forge_sla_shift('2027-03-26T08:00Z'::timestamptz,1,'business-day','mon-fri','europe/paris') deadline"
+        )
+      ).rows[0].deadline.toISOString()
+    ).toBe("2027-03-29T07:00:00.000Z")
   })
   it("AT-01h: PostgreSQL microsecond precision at the exact completion boundary", async () => {
     const f = await fixture(),
