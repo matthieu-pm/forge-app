@@ -31,6 +31,7 @@ import type {
   InboxScope,
   InboxView,
 } from "@/lib/inbox-state"
+import { DateInput } from "@/components/ui/date-input"
 import { issueSubscriberIds } from "@/lib/issue-engagement-contract"
 import { useQueriedIssue } from "@/lib/issue-query-client"
 import { canonicalIssuesActive } from "@/lib/canonical-issue-cache"
@@ -761,11 +762,12 @@ export function Inbox({ scope }: { scope: InboxScope }) {
                       )}
                       <label className="mt-2 grid gap-2 border-t border-border/50 px-2 pt-3 text-xs">
                         Pick a date and time
-                        <input
+                        <DateInput
                           type="datetime-local"
+                          aria-label="Snooze date"
                           value={customDate}
-                          onChange={(event) =>
-                            setCustomDate(event.target.value)
+                          onValueChange={(dateValue) =>
+                            setCustomDate(dateValue)
                           }
                           className={selectClass}
                         />

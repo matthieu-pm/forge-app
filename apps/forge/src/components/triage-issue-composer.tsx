@@ -3,6 +3,7 @@ import type { ReactNode } from "react"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import type { TriageDraft } from "@/lib/triage-issues"
+import { DateInput } from "@/components/ui/date-input"
 import { TemplateApplicationButton } from "@/components/templates/template-application-button"
 import { productStorage } from "@/lib/product-storage"
 import { OptionSelect } from "@/components/ui/option-select"
@@ -479,12 +480,12 @@ export function TriageIssueComposer({
               content={
                 <label className="space-y-2 text-xs">
                   Due date
-                  <Input
+                  <DateInput
                     type="date"
                     aria-label="Due date"
                     value={draft.dueDate}
-                    onChange={(event) =>
-                      update({ dueDate: event.target.value })
+                    onValueChange={(dateValue) =>
+                      update({ dueDate: dateValue })
                     }
                   />
                 </label>

@@ -11,6 +11,7 @@ import type {
 } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamLabel } from "@/lib/team-labels"
+import { DateInput } from "@/components/ui/date-input"
 import {
   AssigneeMark,
   IssueIcon,
@@ -502,12 +503,12 @@ export function InitiativeFiltersMenu({
                             ))}
                           </OptionSelect>
                         ) : (
-                          <Input
+                          <DateInput
                             aria-label={`Condition ${index + 1} value`}
                             type={dateField(rule.field) ? "date" : "text"}
                             value={rule.value}
-                            onChange={(event) =>
-                              set({ value: event.target.value })
+                            onValueChange={(dateValue) =>
+                              set({ value: dateValue })
                             }
                             className="h-8 min-w-32 flex-1 text-xs"
                           />

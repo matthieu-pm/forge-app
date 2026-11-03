@@ -2,6 +2,7 @@ import { useState } from "react"
 import { toast } from "sonner"
 import type { CallsDirectory, MeetingProvider } from "@/lib/calls"
 import type { TeamSummary } from "@/lib/team-contract"
+import { DateInput } from "@/components/ui/date-input"
 import { meetingProviders } from "@/lib/calls"
 import {
   connectMeetingProvider,
@@ -381,11 +382,12 @@ export function ImportCallDialog({
             </label>
             <label className="flex flex-col gap-2.5 text-[13px]">
               <span>Call date</span>
-              <Input
+              <DateInput
                 required
                 type="datetime-local"
+                aria-label="Call date"
                 value={date}
-                onChange={(e) => setDate(e.target.value)}
+                onValueChange={(dateValue) => setDate(dateValue)}
                 className={callField}
               />
             </label>

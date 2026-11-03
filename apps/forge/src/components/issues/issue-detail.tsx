@@ -36,6 +36,7 @@ import type { TeamStatus } from "@/lib/team-statuses"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import type { ActivityReferenceKind } from "@/lib/issue-activity"
+import { DateInput } from "@/components/ui/date-input"
 import {
   canonicalIssueEpoch,
   canonicalIssueState,
@@ -1537,14 +1538,14 @@ export function IssueDetail({
                         <PopoverContent>
                           <label className="text-xs">
                             Due date
-                            <input
+                            <DateInput
                               type="date"
                               aria-label="Sub-issue due date"
                               value={childDraft.dueDate}
-                              onChange={(e) =>
+                              onValueChange={(dateValue) =>
                                 setChildDraft({
                                   ...childDraft,
-                                  dueDate: e.target.value,
+                                  dueDate: dateValue,
                                 })
                               }
                               className="block p-2"
