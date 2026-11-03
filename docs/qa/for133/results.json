@@ -1,0 +1,53 @@
+{
+  "issue": "FOR-133",
+  "sourceCommit": "2e4bd49b97eeb6a58854db6f8a731ade6be42a6f",
+  "environment": {
+    "kind": "local-renderer-fixture",
+    "url": "http://127.0.0.1:3133",
+    "platform": "macOS",
+    "node": "v24.12.0",
+    "bun": "1.3.5"
+  },
+  "validation": {
+    "focusedTests": {
+      "files": 7,
+      "tests": 55,
+      "unhandledErrors": 0,
+      "result": "passed"
+    },
+    "affectedBroadRunFilesRechecked": {
+      "files": 3,
+      "tests": 40,
+      "result": "passed",
+      "workers": 1,
+      "timeoutMs": 30000
+    },
+    "typecheck": "passed",
+    "changedFileLint": "passed",
+    "formatting": "passed",
+    "productionBuild": "passed with synthetic localhost database/auth configuration",
+    "fullSuite": "interrupted after timing failures; not claimed"
+  },
+  "browser": {
+    "commandMode": "Enter newline; Command+Enter sent once despite rapid repeated press",
+    "enterMode": "Command+Enter did not submit; Shift+Enter newline; Enter sent once",
+    "failure": "draft retained, editor focused, keyboard retry sent the same intent once",
+    "requests": 4,
+    "savedCanonicalFixtureComments": 3,
+    "reviewMode": "Enter submitted and cleared textarea; Shift+Enter newline",
+    "errors": 0,
+    "recording": "for133-shortcuts-verified.mp4",
+    "sessionId": "49fa9593-ee17-4a4d-94e7-485e23cf274f"
+  },
+  "limits": [
+    "Simulated account preference and command transport in browser fixture",
+    "No authenticated live database acceptance",
+    "No packaged Electron certification",
+    "No production deployment or gate change"
+  ],
+  "artifacts": {
+    "browser-acceptance.png": "a3b075d21138e0cd983613c47c82663e0132fb4d1bc30028cef505e0d81edeb1",
+    "failed-draft.png": "decde8ba144b1a4971f458999e589892178f0c218485599337509036bf39e2c9",
+    "linear-reference.json": "bd3ed494201aed3883abdc67c4019ad4ede9355b06a04b67a541cc13a826303b"
+  }
+}
