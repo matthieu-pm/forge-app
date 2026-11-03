@@ -1,5 +1,5 @@
 import { DeleteObjectsCommand, S3Client } from "@aws-sdk/client-s3"
-import { and, eq, inArray, lt, or } from "drizzle-orm"
+import { and, eq, inArray, lt } from "drizzle-orm"
 import { emitTelemetry } from "../../../packages/telemetry/server"
 import { runMonitoredJob } from "./lib/monitored-job"
 import { validateJobEnvironment } from "./lib/script-environment"
@@ -9,8 +9,8 @@ validateJobEnvironment("product-retention")
 
 await runMonitoredJob("product.retention", async () => {
   const {
-    businessWorkflowRuns,
     db,
+    databaseClient,
     desktopReleaseArtifacts,
     desktopReleases,
     teams,
@@ -24,7 +24,6 @@ await runMonitoredJob("product.retention", async () => {
     import("../src/adapters/files/file-blob-store.server"),
   ])
   const issuePurge = await purgeDeletedIssues(createFileBlobStore())
-  const workflowCutoff = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1_000)
   const releaseCutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1_000)
   const teamCutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1_000)
   // Unpublished/ambiguous operations cannot age out. The recovery horizon is
@@ -48,25 +47,11 @@ await runMonitoredJob("product.retention", async () => {
       })
   }
 
-  const deletedWorkflowRuns = await db
-    .delete(businessWorkflowRuns)
-    .where(
-      or(
-        and(
-          inArray(businessWorkflowRuns.state, [
-            "completed",
-            "failed",
-            "cancelled",
-          ]),
-          lt(businessWorkflowRuns.completedAt, workflowCutoff)
-        ),
-        and(
-          eq(businessWorkflowRuns.state, "failed-to-start"),
-          lt(businessWorkflowRuns.updatedAt, workflowCutoff)
-        )
-      )
-    )
-    .returning({ id: businessWorkflowRuns.id })
+  const [{ jobStore }, { runWorkflowRetention }] = await Promise.all([
+    import("../src/application/jobs/job-store"),
+    import("../src/application/jobs/workflow-retention"),
+  ])
+  await runWorkflowRetention(jobStore(databaseClient), now)
 
   const permanentlyDeletedTeams = await db
     .delete(teams)
@@ -157,7 +142,6 @@ await runMonitoredJob("product.retention", async () => {
   emitTelemetry("job.health", "product.retention", {
     count:
       issuePurge.purged +
-      deletedWorkflowRuns.length +
       expiredDesktopReleases +
       permanentlyDeletedTeams.length,
   })

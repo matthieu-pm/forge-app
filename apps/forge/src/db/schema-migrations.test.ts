@@ -4,6 +4,11 @@ import { resolve } from "node:path"
 import { getTableColumns } from "drizzle-orm"
 import { describe, expect, it } from "vitest"
 
+import {
+  backgroundJobRecoveries,
+  backgroundJobSteps,
+  backgroundJobs,
+} from "./jobs-schema"
 import { apiKeys } from "./auth-schema"
 import {
   agentApprovals,
@@ -93,6 +98,9 @@ describe("database migrations", () => {
     ) as MigrationSnapshot
     for (const [tableName, table] of [
       ["documents", documents],
+      ["background_jobs", backgroundJobs],
+      ["background_job_steps", backgroundJobSteps],
+      ["background_job_recoveries", backgroundJobRecoveries],
       ["initiatives", initiatives],
       ["initiative_projects", initiativeProjects],
       ["issue_hierarchy_guards", issueHierarchyGuards],

@@ -19,8 +19,11 @@ function loadLocalScriptEnvironment() {
   }
 }
 
-export function validateJobEnvironment(job: Job) {
-  loadLocalScriptEnvironment()
+export function validateJobEnvironment(
+  job: Job,
+  options: { loadLocal?: boolean } = {}
+) {
+  if (options.loadLocal !== false) loadLocalScriptEnvironment()
   return assertServiceConfiguration(process.env, "jobs", { job })
 }
 

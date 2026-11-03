@@ -24,6 +24,7 @@ export default defineConfig({
   out: "./drizzle",
   schema: [
     "./src/db/schema.ts",
+    "./src/db/jobs-schema.ts",
     "./src/db/auth-schema.ts",
     "./src/db/planning-schema.ts",
     "./src/db/loops-schema.ts",
