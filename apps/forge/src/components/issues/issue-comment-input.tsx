@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useId, useRef, useState } from "react"
 import { toast } from "sonner"
 import { AssigneeMark, IssueIcon } from "./issue-controls"
+import { useCommentSubmission } from "./use-comment-submission"
 import type { PersonIdentity } from "@/lib/person-name"
 import type { IssueDraft } from "@/lib/team-issues"
 import { usePersonName } from "@/components/person-name-provider"
@@ -51,7 +52,9 @@ export function CommentInput({
   avatar?: PersonIdentity & { name: string; image?: string | null }
 }) {
   const personName = usePersonName()
-
+  const submission = useCommentSubmission()
+  const hintId = useId()
+  const busy = useRef(false)
   const [body, setBody] = useState(initialBody)
   const compact = placeholder === "Leave a reply…"
   const inlineControls = compact || presentation === "review"
@@ -67,9 +70,15 @@ export function CommentInput({
     input.style.height = `${Math.min(192, Math.max(inlineControls ? 24 : 48, input.scrollHeight))}px`
   }, [body, inlineControls])
   function submit() {
-    if ((body.trim() || files.length) && onSubmit(body.trim(), files)) {
-      setBody("")
-      setFiles([])
+    if (busy.current || (!body.trim() && !files.length)) return
+    busy.current = true
+    try {
+      if (onSubmit(body.trim(), files)) {
+        setBody("")
+        setFiles([])
+      }
+    } finally {
+      busy.current = false
     }
   }
   async function attachFiles(value: FileList) {
@@ -108,21 +117,17 @@ export function CommentInput({
         <textarea
           ref={textarea}
           aria-label={label ?? (compact ? "Reply" : "Comment")}
+          aria-describedby={hintId}
           placeholder={placeholder}
           autoFocus={autoFocus || Boolean(initialBody)}
           rows={inlineControls ? 1 : 2}
           maxLength={10000}
           value={body}
           onChange={(event) => setBody(event.target.value)}
+          onCompositionStart={submission.onCompositionStart}
+          onCompositionEnd={submission.onCompositionEnd}
           onKeyDown={(event) => {
-            if (
-              !event.nativeEvent.isComposing &&
-              (event.metaKey || event.ctrlKey) &&
-              event.key === "Enter"
-            ) {
-              event.preventDefault()
-              submit()
-            }
+            submission.handleKeyDown(event.nativeEvent, submit)
           }}
           className="min-w-0 flex-1 resize-none bg-transparent py-0.5 text-sm leading-5 outline-none placeholder:text-muted-foreground/70"
         />
@@ -167,6 +172,9 @@ export function CommentInput({
       {!inlineControls && (
         <div className="mt-1 flex justify-end">{controls()}</div>
       )}
+      <p id={hintId} className="mt-1 text-xs text-muted-foreground">
+        {submission.hint}
+      </p>
       <input
         ref={file}
         hidden
@@ -193,7 +201,9 @@ export function CommentInput({
           variant="secondary"
           size="icon-xs"
           label={compact ? "Submit reply" : "Submit comment"}
-          shortcut="⌘ ↵"
+          shortcut={submission.shortcut}
+          aria-describedby={hintId}
+          aria-keyshortcuts={submission.ariaKeyShortcuts}
           disabled={!body.trim() && !files.length}
           onClick={submit}
         >

@@ -1,0 +1,36 @@
+{
+  "source": "startup-root.CGodYAqU.js",
+  "sha256": "cb374be9ca499d8d2cf02ff24927a7952a9c458926290cc9397a749db5601d22",
+  "ranges": [
+    {
+      "name": "shortcut-hint",
+      "start": 3667307,
+      "end": 3667458,
+      "sha256": "8759a1647094f292efbebb2dbc79cdad86dbae23ae73f84a1bf2ea1fd0b94f1d"
+    },
+    {
+      "name": "form-shortcuts",
+      "start": 2273392,
+      "end": 2273940,
+      "sha256": "717763e295f2a51cd976a9916e5330a733ce4b9690edde5434a2f967512174b3"
+    },
+    {
+      "name": "enter-keymap",
+      "start": 923345,
+      "end": 923686,
+      "sha256": "15764d8e6c71333fffbc83550864a260c1f873dc9b5f46b5384c1a743c8b58fb"
+    },
+    {
+      "name": "comment-composer",
+      "start": 3801327,
+      "end": 3805763,
+      "sha256": "a655d606efb51a9e18e719e3ce4c51b96d9f0bc6907fc40ba1db17e70d85c222"
+    }
+  ],
+  "source_url": "https://static.linear.app/client/assets/startup-root.CGodYAqU.js",
+  "method": "Focused inert slices from public delivered bundle; no application execution by REA. Offsets are Unicode character offsets into decoded UTF-8, not byte offsets. Added var declaration prefixes where needed for parsing.",
+  "evidence": {
+    "desktop_parent": "ev_a6882102bd56f19d30e99faf25ee9f5b898aad255460b4b8fe057fa6b37317f9",
+    "focused_web_parent": "ev_532f4458eeb7f113996eea7fdc716ebce593204f74c7cb81e8a7b3ab9d00ab48"
+  }
+}

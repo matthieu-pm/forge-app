@@ -8,6 +8,7 @@ import {
   PreferenceSyncStatus,
   usePreferenceGroup,
 } from "./account-preference-provider"
+import { useCommentSubmission } from "./issues/use-comment-submission"
 import type {
   DarkTheme,
   LightTheme,
@@ -265,6 +266,7 @@ function PreferenceSelect<TValue extends string>({
 
 export function PreferencesSettings() {
   const personNamesEnabled = usePersonNamesEnabled()
+  const commentSubmission = useCommentSubmission()
   const sync = usePreferenceGroup("general")
   const preferences = sync.preferences
   const [startedAssignmentAvailable, setStartedAssignmentAvailable] =
@@ -390,7 +392,7 @@ export function PreferencesSettings() {
                 </PreferenceRow>
                 <PreferenceRow
                   label="Send comments on…"
-                  description="Choose which key press is used to submit comments"
+                  description="Command on macOS, Ctrl on Windows/Linux. Shift+Enter always adds a new line."
                 >
                   <PreferenceSelect
                     ariaLabel="Send comments on"
@@ -399,7 +401,10 @@ export function PreferencesSettings() {
                       updatePreference("submitCommentsWith", value)
                     }
                     options={[
-                      { value: "command-enter", label: "⌘ + Enter" },
+                      {
+                        value: "command-enter",
+                        label: commentSubmission.modifierShortcut,
+                      },
                       { value: "enter", label: "Enter" },
                     ]}
                   />
