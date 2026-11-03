@@ -388,6 +388,22 @@ describe("FOR-133 comment submission", () => {
     await waitFor(() => expect(requests.send).toHaveBeenCalledOnce())
   })
 
+  it("does not submit Safari's final IME Enter after compositionend", async () => {
+    vi.spyOn(navigator, "vendor", "get").mockReturnValue("Apple Computer, Inc.")
+    await externalPreferenceEdit("alice", {
+      "general.submitCommentsWith": "enter",
+    })
+    renderPreferences(<SharedCommentInput {...props} />)
+    const editor = await screen.findByRole("textbox", { name: "Comment" })
+    fireEvent.compositionStart(editor)
+    fireEvent.compositionEnd(editor)
+    fireEvent.keyDown(editor, { key: "Enter", keyCode: 13, isComposing: false })
+    expect(requests.send).not.toHaveBeenCalled()
+    expect(editor.textContent).toBe("Intentional draft")
+    fireEvent.keyDown(editor, { key: "Enter", keyCode: 13 })
+    await waitFor(() => expect(requests.send).toHaveBeenCalledOnce())
+  })
+
   it.each(["enter", "command-enter"] as const)(
     "AT-02 %s ignores IME and held keys, blocks pending dispatch, and retries the exact failed draft",
     async (mode) => {

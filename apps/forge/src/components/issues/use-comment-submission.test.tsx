@@ -7,6 +7,36 @@ import { emptyPreferenceSnapshot } from "@/lib/account-preference-contract"
 
 afterEach(cleanup)
 
+it("does not suppress a later Safari submit after another key or an expired composition window", () => {
+  vi.spyOn(navigator, "vendor", "get").mockReturnValue("Apple Computer, Inc.")
+  Object.defineProperty(navigator, "platform", {
+    configurable: true,
+    value: "MacIntel",
+  })
+  const { result } = renderHook(() => useCommentSubmission())
+  const submit = vi.fn()
+  result.current.onCompositionStart()
+  result.current.onCompositionEnd()
+  result.current.handleKeyDown(
+    new KeyboardEvent("keydown", { key: "a" }),
+    submit
+  )
+  result.current.handleKeyDown(
+    new KeyboardEvent("keydown", { key: "Enter", metaKey: true }),
+    submit
+  )
+  expect(submit).toHaveBeenCalledOnce()
+  const clock = vi.spyOn(Date, "now").mockReturnValue(1000)
+  result.current.onCompositionStart()
+  result.current.onCompositionEnd()
+  clock.mockReturnValue(1501)
+  result.current.handleKeyDown(
+    new KeyboardEvent("keydown", { key: "Enter", metaKey: true }),
+    submit
+  )
+  expect(submit).toHaveBeenCalledTimes(2)
+})
+
 it("falls back to the platform modifier when the server disables preference sync", async () => {
   Object.defineProperty(navigator, "platform", {
     configurable: true,

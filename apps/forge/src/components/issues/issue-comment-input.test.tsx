@@ -17,6 +17,26 @@ beforeEach(async () => {
 })
 
 describe("FOR-133 existing issue and review composers", () => {
+  it("ignores Safari's composition confirmation before an intentional Enter", async () => {
+    vi.spyOn(navigator, "vendor", "get").mockReturnValue("Apple Computer, Inc.")
+    await externalPreferenceEdit("alice", {
+      "general.submitCommentsWith": "enter",
+    })
+    const submit = vi.fn().mockReturnValue(true)
+    renderPreferences(
+      <CommentInput onSubmit={submit} initialBody="IME draft" />
+    )
+    const editor = screen.getByRole<HTMLTextAreaElement>("textbox", {
+      name: "Comment",
+    })
+    fireEvent.compositionStart(editor)
+    fireEvent.compositionEnd(editor)
+    fireEvent.keyDown(editor, { key: "Enter", keyCode: 13 })
+    expect(submit).not.toHaveBeenCalled()
+    expect(editor.value).toBe("IME draft")
+    fireEvent.keyDown(editor, { key: "Enter", keyCode: 13 })
+    expect(submit).toHaveBeenCalledOnce()
+  })
   for (const presentation of ["default", "review"] as const) {
     for (const mode of ["enter", "command-enter"] as const) {
       it(`${presentation} ${mode} follows the preference and retains a rejected draft`, async () => {

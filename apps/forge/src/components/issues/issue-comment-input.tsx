@@ -121,6 +121,8 @@ export function CommentInput({
           maxLength={10000}
           value={body}
           onChange={(event) => setBody(event.target.value)}
+          onCompositionStart={submission.onCompositionStart}
+          onCompositionEnd={submission.onCompositionEnd}
           onKeyDown={(event) => {
             submission.handleKeyDown(event.nativeEvent, submit)
           }}

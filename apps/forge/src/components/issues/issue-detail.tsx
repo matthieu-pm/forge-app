@@ -714,6 +714,8 @@ export function IssueDetail({
                 aria-describedby={editHintId}
                 autoFocus
                 maxLength={10000}
+                onCompositionStart={commentSubmission.onCompositionStart}
+                onCompositionEnd={commentSubmission.onCompositionEnd}
                 onKeyDown={(event) => {
                   if (event.key === "Escape") setEditing(undefined)
                   commentSubmission.handleKeyDown(event.nativeEvent, () => {

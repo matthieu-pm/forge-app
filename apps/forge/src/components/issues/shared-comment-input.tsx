@@ -341,6 +341,14 @@ function CommentComposer({
   return (
     <div
       className="group/composer rounded-lg border border-border/50 bg-muted/40 p-2"
+      onCompositionStartCapture={(event) => {
+        if (editor?.view.dom.contains(event.target as globalThis.Node))
+          submission.onCompositionStart()
+      }}
+      onCompositionEndCapture={(event) => {
+        if (editor?.view.dom.contains(event.target as globalThis.Node))
+          submission.onCompositionEnd()
+      }}
       onKeyDownCapture={(event) => {
         if (!editor?.view.dom.contains(event.target as globalThis.Node)) return
         if (
