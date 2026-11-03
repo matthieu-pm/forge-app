@@ -385,13 +385,18 @@ try {
       expectedPreview,
     })
   )
+} catch (error) {
+  console.error(
+    "Acceptance failed:",
+    String(error?.message ?? error).replace(
+      /(_vercel_share=)[A-Za-z0-9_-]+/g,
+      "$1[redacted]"
+    )
+  )
+  throw error
 } finally {
   await browser?.close()
   if (verified) {
-    await pool.query(
-      "DELETE FROM command_receipts WHERE workspace_id=ANY($1::text[])",
-      [workspaces]
-    )
     await pool.query("DELETE FROM organization WHERE id=ANY($1::text[])", [
       workspaces,
     ])
