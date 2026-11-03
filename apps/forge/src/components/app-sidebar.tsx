@@ -13,11 +13,14 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { Link, useRouter, useRouterState } from "@tanstack/react-router"
 import { toast } from "sonner"
 import { useFeatureNavigation } from "./feature-availability"
+import { usePreferenceGroup } from "./account-preference-provider"
+import { SidebarInboxBadge } from "./sidebar-inbox-badge"
 
 import type { MenuRootActions } from "@base-ui/react/menu"
 import type { AppNavChild } from "@/lib/app-navigation"
 import type { AuthState, WorkspaceSummary } from "@/lib/auth-types"
 import type { TeamSummary } from "@/lib/team-contract"
+import { customizeSidebarItems } from "@/lib/sidebar-preference-contract"
 import { ViewFavorites } from "@/components/views/view-favorites"
 import { SidebarIssueButton } from "@/components/issues/sidebar-issue-button"
 import { CheckboxMark } from "@/components/ui/checkbox-mark"
@@ -175,18 +178,31 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     workspaceTeams.map((team) => team.id)
   )
   const featureVisible = useFeatureNavigation()
+  const { preferences } = usePreferenceGroup("general")
   const availableNav = appNav
     .filter((item) => featureVisible(item.to))
     .map((item) => ({
       ...item,
       items: item.items?.filter((child) => featureVisible(child.to)),
     }))
-  const primaryNav = availableNav.filter(
-    (item) => item.title !== "Workspace" && item.title !== "Your teams"
+  const primaryNav = customizeSidebarItems(
+    availableNav.filter(
+      (item) => item.title !== "Workspace" && item.title !== "Your teams"
+    ),
+    "primary",
+    preferences.sidebarLayout
   )
-  const workspaceSection = availableNav.filter(
-    (item) => item.title === "Workspace"
-  )
+  const workspaceSection = availableNav
+    .filter((item) => item.title === "Workspace")
+    .map((item) => ({
+      ...item,
+      items: customizeSidebarItems(
+        item.items ?? [],
+        "workspace",
+        preferences.sidebarLayout
+      ),
+    }))
+    .filter((item) => item.items.length > 0)
   const teamsSection = availableNav
     .filter((item) => item.title === "Your teams")
     .map((item) => ({
@@ -495,6 +511,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         >
           {renderItemIcon(item)}
           {item.title}
+          {item.to === "/inbox" && (
+            <SidebarInboxBadge style={preferences.sidebarBadgeStyle} />
+          )}
         </SidebarMenuButton>
       </SidebarMenuItem>
     )
@@ -612,11 +631,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             {primaryNav.map((item) => renderRootItem(item))}
           </SidebarMenu>
         </SidebarGroup>
-        <SidebarGroup className="shrink-0 pt-4 pb-0">
-          <SidebarMenu>
-            {workspaceSection.map((item) => renderRootItem(item))}
-          </SidebarMenu>
-        </SidebarGroup>
+        {workspaceSection.length > 0 && (
+          <SidebarGroup className="shrink-0 pt-4 pb-0">
+            <SidebarMenu>
+              {workspaceSection.map((item) => renderRootItem(item))}
+            </SidebarMenu>
+          </SidebarGroup>
+        )}
         {workspace && sessionState.data?.user.id && (
           <ViewFavorites
             workspaceId={workspace.id}

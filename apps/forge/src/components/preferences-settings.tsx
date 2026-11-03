@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { toast } from "sonner"
+import { SidebarCustomization } from "./sidebar-customization"
 
 import {
   PreferenceSyncStatus,
@@ -406,17 +407,7 @@ export function PreferencesSettings() {
                     label="App sidebar"
                     description="Customize sidebar item visibility, ordering, and badge style"
                   >
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="rounded-lg px-2.5 text-xs"
-                      onClick={() =>
-                        toast.info("Sidebar customization is coming soon.")
-                      }
-                    >
-                      Customize
-                    </Button>
+                    <SidebarCustomization />
                   </PreferenceRow>
                   <PreferenceRow
                     label="Font size"

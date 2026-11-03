@@ -52,7 +52,11 @@ describe("personal preference contract", () => {
   it("returns independent default objects", () => {
     const first = parsePersonalPreferences(null).preferences
     first.fontSize = "large"
+    first.sidebarLayout[0].visible = false
     expect(parsePersonalPreferences(null).preferences.fontSize).toBe("default")
+    expect(
+      parsePersonalPreferences(null).preferences.sidebarLayout[0].visible
+    ).toBe(true)
   })
 
   it("rejects protected/unknown fields in an outbound patch", () => {
