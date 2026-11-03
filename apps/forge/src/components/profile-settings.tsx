@@ -5,7 +5,7 @@ import { PencilEdit02Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { toast } from "sonner"
 
-import type { LocalProfile } from "@/lib/profile-state"
+import type { ProfileCommand, ProfileSnapshot } from "@/lib/profile-contract"
 import { ChatGPTSignIn } from "@/components/chatgpt-sign-in"
 import { authClient } from "@/lib/auth-client"
 import { AvatarPicker } from "@/components/avatar-picker"
@@ -26,13 +26,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { profileTitleSchema, usernameSchema } from "@/lib/profile-fields"
-import { readLocalProfile, writeLocalProfile } from "@/lib/profile-state"
+import { MAX_AVATAR_BYTES, profileCommandSchema } from "@/lib/profile-contract"
+import { loadProfile, saveProfile } from "@/lib/profile-api"
 import { cn } from "@/lib/utils"
 
 type EmailDialogStep = "entry" | "confirm"
-
-const MAX_AVATAR_BYTES = 2 * 1024 * 1024
 
 function getInitials(name: string) {
   const initials = name
@@ -98,15 +96,24 @@ function ProfileRow({
 }
 
 export function ProfileSettings() {
+  const state = authClient.useSession()
+  return (
+    <ProfileSettingsEditor
+      key={`${state.data?.user.id}:${state.data?.session.id}:${state.data?.session.activeOrganizationId}`}
+    />
+  )
+}
+
+function ProfileSettingsEditor() {
   const sessionState = authClient.useSession()
   const sessionUser = sessionState.data?.user
   const savedNameRef = React.useRef("")
-  const savedTitleRef = React.useRef("")
-  const savedUsernameRef = React.useRef("")
-  const [name, setName] = React.useState("")
-  const [image, setImage] = React.useState<string | null>(null)
-  const [title, setTitle] = React.useState("")
-  const [username, setUsername] = React.useState("")
+  const [name, setName] = React.useState(sessionUser?.name ?? "")
+  const [image, setImage] = React.useState<string | null>(
+    sessionUser?.image ?? null
+  )
+  const [title, setTitle] = React.useState(sessionUser?.title ?? "")
+  const [username, setUsername] = React.useState(sessionUser?.username ?? "")
   const [emailDialogOpen, setEmailDialogOpen] = React.useState(false)
   const [emailDialogStep, setEmailDialogStep] =
     React.useState<EmailDialogStep>("entry")
@@ -115,123 +122,132 @@ export function ProfileSettings() {
   const [isChangingEmail, setIsChangingEmail] = React.useState(false)
   const [isSavingAvatar, setIsSavingAvatar] = React.useState(false)
 
+  const [snapshot, setSnapshot] = React.useState<ProfileSnapshot | null>(null)
+  const [availability, setAvailability] = React.useState("loading")
+  const [saveError, setSaveError] = React.useState("")
+  const [conflict, setConflict] = React.useState<ProfileSnapshot | null>(null)
+  const [isSaving, setIsSaving] = React.useState(false)
+  const pending = React.useRef<ProfileCommand | null>(null)
+  const alive = React.useRef(true)
+
+  function applySnapshot(next: ProfileSnapshot) {
+    setSnapshot(next)
+    savedNameRef.current = next.name
+    setName(next.name)
+    setTitle(next.title)
+    setUsername(next.username ?? "")
+    setImage(next.image)
+  }
   React.useEffect(() => {
-    if (!sessionUser) return
-
-    const nextName = sessionUser.name
-    savedNameRef.current = nextName
-    setName(nextName)
-    setImage(sessionUser.image ?? null)
-
-    const legacyProfile = readLocalProfile(sessionUser.id, sessionUser.email)
-    const nextTitle = sessionUser.title ?? legacyProfile.title
-    const nextUsername = sessionUser.username ?? legacyProfile.username
-    savedTitleRef.current = nextTitle
-    savedUsernameRef.current = nextUsername
-    setTitle(nextTitle)
-    setUsername(nextUsername)
-  }, [
-    sessionUser?.email,
-    sessionUser?.id,
-    sessionUser?.image,
-    sessionUser?.name,
-    sessionUser?.title,
-    sessionUser?.username,
-  ])
-
-  function saveLocalProfile(nextProfile: LocalProfile) {
-    if (!sessionUser) return
-    writeLocalProfile(sessionUser.id, nextProfile)
-  }
-
-  async function saveName() {
-    const nextName = name.trim()
-    if (!nextName) {
-      setName(savedNameRef.current)
-      toast.error("Full name cannot be empty.")
-      return
+    alive.current = true
+    let cancelled = false
+    void loadProfile()
+      .then((result) => {
+        if (cancelled) return
+        setAvailability(result.status)
+        if (result.status === "ready") applySnapshot(result.snapshot)
+      })
+      .catch(() => {
+        if (!cancelled) setAvailability("error")
+      })
+    return () => {
+      cancelled = true
+      alive.current = false
     }
+  }, [])
 
-    if (nextName === savedNameRef.current) return
-
-    const { error } = await authClient.updateUser({ name: nextName })
-    if (error) {
-      setName(savedNameRef.current)
-      toast.error(error.message ?? "Your name could not be updated.")
-      return
+  const editable =
+    availability === "ready" && !isSaving && !conflict && !pending.current
+  const dirty =
+    !!snapshot &&
+    (name !== snapshot.name ||
+      title !== snapshot.title ||
+      username !== (snapshot.username ?? "") ||
+      image !== snapshot.image)
+  React.useEffect(() => {
+    if (!dirty) return
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = ""
     }
+    window.addEventListener("beforeunload", warn)
+    return () => window.removeEventListener("beforeunload", warn)
+  }, [dirty])
 
-    savedNameRef.current = nextName
-    setName(nextName)
-  }
-
-  async function saveTitle() {
-    const parsedTitle = profileTitleSchema.safeParse(title)
-    if (!parsedTitle.success) {
-      setTitle(savedTitleRef.current)
-      toast.error(parsedTitle.error.issues[0]?.message ?? "Invalid title.")
-      return
-    }
-
-    const nextTitle = parsedTitle.data
-    setTitle(nextTitle)
-    if (nextTitle === savedTitleRef.current) return
-
-    const { error } = await authClient.updateUser({ title: nextTitle })
-    if (error) {
-      setTitle(savedTitleRef.current)
-      toast.error(error.message ?? "Your title could not be updated.")
-      return
-    }
-
-    savedTitleRef.current = nextTitle
-    saveLocalProfile({ title: nextTitle, username })
-  }
-
-  async function saveUsername() {
-    const parsedUsername = usernameSchema.safeParse(
-      username.trim().toLocaleLowerCase().replace(/\s+/g, "")
+  async function submitProfile() {
+    if (!snapshot || !sessionState.data || isSaving || conflict) return
+    const patch: ProfileCommand["patch"] = {}
+    if (name !== snapshot.name) patch.name = name
+    if (title !== snapshot.title) patch.title = title
+    if (username !== (snapshot.username ?? ""))
+      patch.username = username.trim().toLowerCase() || null
+    if (image !== snapshot.image) patch.image = image
+    const parsed = profileCommandSchema.safeParse(
+      pending.current ?? {
+        commandKey: crypto.randomUUID(),
+        sessionId: sessionState.data.session.id,
+        expectedWorkspaceId: sessionState.data.session.activeOrganizationId,
+        expectedRevision: snapshot.revision,
+        patch,
+      }
     )
-    if (!parsedUsername.success) {
-      setUsername(savedUsernameRef.current)
-      toast.error(
-        parsedUsername.error.issues[0]?.message ?? "Invalid username."
+    if (!parsed.success) {
+      setSaveError(
+        parsed.error.issues[0]?.message ?? "Check your profile fields."
       )
       return
     }
-
-    const nextUsername = parsedUsername.data
-    setUsername(nextUsername)
-    if (nextUsername === savedUsernameRef.current) return
-
-    const { error } = await authClient.updateUser({ username: nextUsername })
-    if (error) {
-      setUsername(savedUsernameRef.current)
-      toast.error(error.message ?? "Your username could not be updated.")
-      return
+    pending.current = parsed.data
+    setIsSaving(true)
+    setSaveError("")
+    try {
+      const result = await saveProfile({ data: pending.current })
+      if (!alive.current) return
+      pending.current = null
+      if (result.status === "rejected") {
+        setSaveError(result.message)
+      } else if (result.status === "conflict") {
+        setConflict(result.snapshot)
+        setSaveError(
+          "Your profile changed in another session. Your draft is still shown. Load the latest profile before editing again."
+        )
+      } else {
+        applySnapshot(result.snapshot)
+        toast.success("Profile updated.")
+        void sessionState.refetch()
+      }
+    } catch {
+      if (alive.current)
+        setSaveError(
+          "Your profile could not be saved. Retry to check the same update, or reload to review the latest profile."
+        )
+    } finally {
+      if (alive.current) setIsSaving(false)
     }
-
-    savedUsernameRef.current = nextUsername
-    saveLocalProfile({ title, username: nextUsername })
   }
 
-  async function updateAvatar(nextImage: string | null) {
-    const previousImage = image
-    setImage(nextImage)
-    setIsSavingAvatar(true)
-
-    const { error } = await authClient.updateUser({ image: nextImage })
-    setIsSavingAvatar(false)
-
-    if (error) {
-      setImage(previousImage)
-      toast.error(error.message ?? "Your profile picture could not be updated.")
-      return
+  async function reloadProfile() {
+    setIsSaving(true)
+    try {
+      const result = await loadProfile()
+      if (!alive.current) return
+      if (result.status === "ready") {
+        pending.current = null
+        setConflict(null)
+        setSaveError("")
+        applySnapshot(result.snapshot)
+      }
+      setAvailability(result.status)
+    } catch {
+      if (alive.current)
+        setSaveError("Your profile could not be loaded. Try again.")
+    } finally {
+      if (alive.current) setIsSaving(false)
     }
+  }
 
-    toast.success(
-      nextImage ? "Profile picture updated." : "Profile picture removed."
-    )
+  function updateAvatar(nextImage: string | null) {
+    if (editable) setImage(nextImage)
   }
 
   async function handleAvatarFile(event: React.ChangeEvent<HTMLInputElement>) {
@@ -239,8 +255,8 @@ export function ProfileSettings() {
     event.target.value = ""
     if (!file) return
 
-    if (!file.type.startsWith("image/")) {
-      toast.error("Choose an image file.")
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+      toast.error("Choose a PNG, JPEG or WebP image.")
       return
     }
 
@@ -250,9 +266,13 @@ export function ProfileSettings() {
     }
 
     try {
-      await updateAvatar(await readAvatar(file))
+      setIsSavingAvatar(true)
+      const avatar = await readAvatar(file)
+      if (alive.current) updateAvatar(avatar)
     } catch {
       toast.error("The selected image could not be read.")
+    } finally {
+      if (alive.current) setIsSavingAvatar(false)
     }
   }
 
@@ -322,7 +342,7 @@ export function ProfileSettings() {
               <ProfileRow label="Profile picture">
                 <AvatarPicker
                   ariaLabel="Change profile picture"
-                  disabled={!sessionUser || isSavingAvatar}
+                  disabled={!editable || isSavingAvatar}
                   fallback={getInitials(avatarName)}
                   image={image}
                   imageAlt={avatarName}
@@ -355,7 +375,7 @@ export function ProfileSettings() {
                 <Input
                   value={name}
                   onChange={(event) => setName(event.target.value)}
-                  onBlur={() => void saveName()}
+
                   onKeyDown={(event) => {
                     if (event.key === "Enter") event.currentTarget.blur()
                     if (event.key === "Escape") {
@@ -364,7 +384,7 @@ export function ProfileSettings() {
                     }
                   }}
                   aria-label="Full name"
-                  disabled={!sessionUser}
+                  disabled={!editable}
                   maxLength={80}
                   className="h-8 w-full rounded-lg border-border/60 bg-background/60 sm:w-64"
                 />
@@ -374,10 +394,11 @@ export function ProfileSettings() {
                 <Input
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
-                  onBlur={() => void saveTitle()}
+
                   onKeyDown={(event) => {
                     if (event.key === "Enter") event.currentTarget.blur()
                   }}
+                  disabled={!editable}
                   aria-label="Title"
                   placeholder="e.g. Software engineer"
                   maxLength={80}
@@ -392,10 +413,11 @@ export function ProfileSettings() {
                 <Input
                   value={username}
                   onChange={(event) => setUsername(event.target.value)}
-                  onBlur={() => void saveUsername()}
+
                   onKeyDown={(event) => {
                     if (event.key === "Enter") event.currentTarget.blur()
                   }}
+                  disabled={!editable}
                   aria-label="Username"
                   placeholder="username"
                   maxLength={32}
@@ -406,6 +428,51 @@ export function ProfileSettings() {
                 />
               </ProfileRow>
             </SettingsCard>
+            {availability !== "ready" && (
+              <p role="status" className="text-sm text-muted-foreground">
+                {availability === "loading"
+                  ? "Loading profile…"
+                  : availability === "disabled"
+                    ? "Profile editing is unavailable."
+                    : "Your profile could not be loaded. Reload to try again."}
+              </p>
+            )}
+            {saveError && (
+              <p role="alert" className="text-sm text-destructive">
+                {saveError}
+              </p>
+            )}
+            {saveError && !conflict && (
+              <Button
+                variant="outline"
+                disabled={isSaving}
+                onClick={() => void reloadProfile()}
+              >
+                Discard draft and reload profile
+              </Button>
+            )}
+            {conflict ? (
+              <Button disabled={isSaving} onClick={() => void reloadProfile()}>
+                Discard draft and load latest profile
+              </Button>
+            ) : (
+              <Button
+                disabled={
+                  !snapshot ||
+                  availability !== "ready" ||
+                  isSaving ||
+                  isSavingAvatar ||
+                  !dirty
+                }
+                onClick={() => void submitProfile()}
+              >
+                {isSaving
+                  ? "Saving…"
+                  : pending.current
+                    ? "Retry profile update"
+                    : "Save profile"}
+              </Button>
+            )}
           </section>
 
           <ChatGPTSignIn linkAccount redirectTo="/settings/profile" />

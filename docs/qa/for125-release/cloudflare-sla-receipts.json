@@ -1,0 +1,65 @@
+{
+  "success": true,
+  "receipts": [
+    {
+      "timestamp": 1793714027212,
+      "receipt": {
+        "failed": false,
+        "job": "forge.sla.scheduler",
+        "scheduledTime": 1793714026047,
+        "status": 200,
+        "dispatched": 0,
+        "processed": 0
+      },
+      "version": "1ef0f81e-532a-42c0-b413-fd4810e151eb"
+    },
+    {
+      "timestamp": 1793713972444,
+      "receipt": {
+        "failed": false,
+        "job": "forge.sla.scheduler",
+        "scheduledTime": 1793713966047,
+        "status": 200,
+        "dispatched": 2,
+        "processed": 1
+      },
+      "version": "1ef0f81e-532a-42c0-b413-fd4810e151eb"
+    },
+    {
+      "timestamp": 1793713907597,
+      "receipt": {
+        "failed": false,
+        "job": "forge.sla.scheduler",
+        "scheduledTime": 1793713906047,
+        "status": 200,
+        "dispatched": 0,
+        "processed": 0
+      },
+      "version": "1ef0f81e-532a-42c0-b413-fd4810e151eb"
+    },
+    {
+      "timestamp": 1793713847550,
+      "receipt": {
+        "failed": false,
+        "job": "forge.sla.scheduler",
+        "scheduledTime": 1793713846047,
+        "status": 200,
+        "dispatched": 0,
+        "processed": 0
+      },
+      "version": "1ef0f81e-532a-42c0-b413-fd4810e151eb"
+    },
+    {
+      "timestamp": 1793713788451,
+      "receipt": {
+        "failed": false,
+        "job": "forge.sla.scheduler",
+        "scheduledTime": 1793713786047,
+        "status": 200,
+        "dispatched": 0,
+        "processed": 0
+      },
+      "version": "1ef0f81e-532a-42c0-b413-fd4810e151eb"
+    }
+  ]
+}

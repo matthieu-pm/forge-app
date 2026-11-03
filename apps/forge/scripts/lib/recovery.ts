@@ -4,6 +4,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { drizzle } from "drizzle-orm/neon-serverless"
 import * as jobsSchema from "../../src/db/jobs-schema"
+import * as slaSchema from "../../src/db/sla-schema"
 import * as loopsSchema from "../../src/db/loops-schema"
 import * as resourcesSchema from "../../src/db/resources-schema"
 import * as appSchema from "../../src/db/schema"
@@ -646,6 +647,7 @@ export async function enforceRestoredDeadlines(
       schema: {
         ...appSchema,
         ...jobsSchema,
+        ...slaSchema,
         ...planningSchema,
         ...authSchema,
         ...loopsSchema,

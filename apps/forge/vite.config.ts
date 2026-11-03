@@ -11,6 +11,8 @@ import {
   loopSchedulerDriver,
 } from "./src/application/loops/loop-execution-policy"
 
+import { slaSchedulerDriver } from "./src/application/sla/sla-scheduler"
+
 const repositoryRoot = resolve(import.meta.dirname, "../..")
 
 const config = defineConfig(({ mode }) => {
@@ -50,6 +52,10 @@ const config = defineConfig(({ mode }) => {
           config: {
             version: 3,
             crons: [
+              ...(process.env.FORGE_SLA_JOBS_ENABLED === "true" &&
+              slaSchedulerDriver() === "vercel"
+                ? [{ path: "/api/internal/sla-jobs", schedule: "* * * * *" }]
+                : []),
               ...(process.env.FORGE_OPERATIONS_MONITOR_ENABLED === "true"
                 ? [
                     {

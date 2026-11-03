@@ -1,0 +1,40 @@
+{
+  "deploymentId": "dpl_8FaMtRQGUUwTrqNjSD5Yv6qaD3rK",
+  "sourceRevision": "b8fb50dbd1b5eafb415cb8f380fed591f5f947e8",
+  "checks": [
+    {
+      "path": "/api/health/live",
+      "status": 200,
+      "cacheControl": "private, no-store",
+      "location": null,
+      "body": {
+        "status": "ok",
+        "code": "ALIVE"
+      }
+    },
+    {
+      "path": "/api/health/ready",
+      "status": 200,
+      "cacheControl": "private, no-store",
+      "location": null,
+      "body": {
+        "status": "ok",
+        "code": "READY"
+      }
+    },
+    {
+      "path": "/settings/sla",
+      "status": 307,
+      "cacheControl": "private, no-store",
+      "location": "/login?redirect=%2Fsettings%2Fsla",
+      "body": null
+    },
+    {
+      "path": "/api/internal/sla-jobs",
+      "status": 404,
+      "cacheControl": "private, no-store",
+      "location": null,
+      "body": null
+    }
+  ]
+}

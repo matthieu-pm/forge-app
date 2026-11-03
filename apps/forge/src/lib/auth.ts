@@ -2,6 +2,7 @@ import { drizzleAdapter } from "@better-auth/drizzle-adapter"
 import { electron } from "@better-auth/electron"
 import { apiKey } from "@better-auth/api-key"
 import { betterAuth } from "better-auth"
+import { APIError, createAuthMiddleware } from "better-auth/api"
 import { organization } from "better-auth/plugins"
 import { tanstackStartCookies } from "better-auth/tanstack-start"
 import {
@@ -65,6 +66,15 @@ export const auth = betterAuth({
   appName: "Forge",
   baseURL: betterAuthUrl,
   secret: betterAuthSecret,
+  hooks: {
+    before: createAuthMiddleware(async (context) => {
+      if (context.path === "/update-user")
+        throw new APIError("FORBIDDEN", {
+          message:
+            "Use the authenticated profile command to edit your profile.",
+        })
+    }),
+  },
   // Keep session validation database-backed, but fetch its user in the same query.
   experimental: { joins: true },
   trustedOrigins: [

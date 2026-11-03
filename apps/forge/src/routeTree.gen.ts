@@ -75,6 +75,7 @@ import { Route as ApiInternalObservabilityCheckRouteImport } from './routes/api/
 import { Route as ApiInternalOperationsCheckRouteImport } from './routes/api/internal/operations-check'
 import { Route as ApiInternalOperationsMonitorRouteImport } from './routes/api/internal/operations-monitor'
 import { Route as ApiInternalRecoveryKeyExportRouteImport } from './routes/api/internal/recovery-key-export'
+import { Route as ApiInternalSlaJobsRouteImport } from './routes/api/internal/sla-jobs'
 import { Route as ApiInternalStorageRouteImport } from './routes/api/internal/storage'
 import { Route as ApiV1SplatRouteImport } from './routes/api/v1/$'
 import { Route as SettingsAccountAgentsRouteImport } from './routes/settings.account.agents'
@@ -472,6 +473,11 @@ const ApiInternalRecoveryKeyExportRoute =
     path: '/api/internal/recovery-key-export',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiInternalSlaJobsRoute = ApiInternalSlaJobsRouteImport.update({
+  id: '/api/internal/sla-jobs',
+  path: '/api/internal/sla-jobs',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiInternalStorageRoute = ApiInternalStorageRouteImport.update({
   id: '/api/internal/storage',
   path: '/api/internal/storage',
@@ -859,6 +865,7 @@ export interface FileRoutesByFullPath {
   '/api/internal/operations-check': typeof ApiInternalOperationsCheckRoute
   '/api/internal/operations-monitor': typeof ApiInternalOperationsMonitorRoute
   '/api/internal/recovery-key-export': typeof ApiInternalRecoveryKeyExportRoute
+  '/api/internal/sla-jobs': typeof ApiInternalSlaJobsRoute
   '/api/internal/storage': typeof ApiInternalStorageRoute
   '/api/v1/$': typeof ApiV1SplatRoute
   '/settings/account/agents': typeof SettingsAccountAgentsRoute
@@ -982,6 +989,7 @@ export interface FileRoutesByTo {
   '/api/internal/operations-check': typeof ApiInternalOperationsCheckRoute
   '/api/internal/operations-monitor': typeof ApiInternalOperationsMonitorRoute
   '/api/internal/recovery-key-export': typeof ApiInternalRecoveryKeyExportRoute
+  '/api/internal/sla-jobs': typeof ApiInternalSlaJobsRoute
   '/api/internal/storage': typeof ApiInternalStorageRoute
   '/api/v1/$': typeof ApiV1SplatRoute
   '/settings/account/agents': typeof SettingsAccountAgentsRoute
@@ -1104,6 +1112,7 @@ export interface FileRoutesById {
   '/api/internal/operations-check': typeof ApiInternalOperationsCheckRoute
   '/api/internal/operations-monitor': typeof ApiInternalOperationsMonitorRoute
   '/api/internal/recovery-key-export': typeof ApiInternalRecoveryKeyExportRoute
+  '/api/internal/sla-jobs': typeof ApiInternalSlaJobsRoute
   '/api/internal/storage': typeof ApiInternalStorageRoute
   '/api/v1/$': typeof ApiV1SplatRoute
   '/settings/account/agents': typeof SettingsAccountAgentsRoute
@@ -1231,6 +1240,7 @@ export interface FileRouteTypes {
     | '/api/internal/operations-check'
     | '/api/internal/operations-monitor'
     | '/api/internal/recovery-key-export'
+    | '/api/internal/sla-jobs'
     | '/api/internal/storage'
     | '/api/v1/$'
     | '/settings/account/agents'
@@ -1354,6 +1364,7 @@ export interface FileRouteTypes {
     | '/api/internal/operations-check'
     | '/api/internal/operations-monitor'
     | '/api/internal/recovery-key-export'
+    | '/api/internal/sla-jobs'
     | '/api/internal/storage'
     | '/api/v1/$'
     | '/settings/account/agents'
@@ -1475,6 +1486,7 @@ export interface FileRouteTypes {
     | '/api/internal/operations-check'
     | '/api/internal/operations-monitor'
     | '/api/internal/recovery-key-export'
+    | '/api/internal/sla-jobs'
     | '/api/internal/storage'
     | '/api/v1/$'
     | '/settings/account/agents'
@@ -1576,6 +1588,7 @@ export interface RootRouteChildren {
   ApiInternalOperationsCheckRoute: typeof ApiInternalOperationsCheckRoute
   ApiInternalOperationsMonitorRoute: typeof ApiInternalOperationsMonitorRoute
   ApiInternalRecoveryKeyExportRoute: typeof ApiInternalRecoveryKeyExportRoute
+  ApiInternalSlaJobsRoute: typeof ApiInternalSlaJobsRoute
   ApiInternalStorageRoute: typeof ApiInternalStorageRoute
   ApiV1SplatRoute: typeof ApiV1SplatRoute
   WorkspaceInitiativesInitiativeIdRoute: typeof WorkspaceInitiativesInitiativeIdRoute
@@ -2051,6 +2064,13 @@ declare module '@tanstack/react-router' {
       path: '/api/internal/recovery-key-export'
       fullPath: '/api/internal/recovery-key-export'
       preLoaderRoute: typeof ApiInternalRecoveryKeyExportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/sla-jobs': {
+      id: '/api/internal/sla-jobs'
+      path: '/api/internal/sla-jobs'
+      fullPath: '/api/internal/sla-jobs'
+      preLoaderRoute: typeof ApiInternalSlaJobsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/internal/storage': {
@@ -2753,6 +2773,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiInternalOperationsCheckRoute: ApiInternalOperationsCheckRoute,
   ApiInternalOperationsMonitorRoute: ApiInternalOperationsMonitorRoute,
   ApiInternalRecoveryKeyExportRoute: ApiInternalRecoveryKeyExportRoute,
+  ApiInternalSlaJobsRoute: ApiInternalSlaJobsRoute,
   ApiInternalStorageRoute: ApiInternalStorageRoute,
   ApiV1SplatRoute: ApiV1SplatRoute,
   WorkspaceInitiativesInitiativeIdRoute: WorkspaceInitiativesInitiativeIdRoute,

@@ -1,0 +1,251 @@
+{
+  "base": "https://app.forgenow.tech",
+  "checkedAt": "2026-11-03T09:59:46.391Z",
+  "checks": [
+    {
+      "path": "/workspace/signals?preview=true",
+      "status": 307,
+      "login": true,
+      "noStore": true
+    },
+    {
+      "path": "/reviews?preview=true",
+      "status": 307,
+      "login": true,
+      "noStore": true
+    },
+    {
+      "path": "/reviews/created",
+      "status": 307,
+      "login": true,
+      "noStore": true
+    },
+    {
+      "path": "/workspace/insights",
+      "status": 307,
+      "login": true,
+      "noStore": true
+    },
+    {
+      "path": "/settings/signals",
+      "status": 307,
+      "login": true,
+      "noStore": true
+    },
+    {
+      "path": "/settings/billing",
+      "status": 307,
+      "login": true,
+      "noStore": true
+    },
+    {
+      "path": "/settings/applications",
+      "status": 307,
+      "login": true,
+      "noStore": true
+    },
+    {
+      "path": "/settings/account/agents",
+      "status": 307,
+      "login": true,
+      "noStore": true
+    },
+    {
+      "path": "/settings/sla",
+      "status": 307,
+      "login": true,
+      "noStore": true
+    },
+    {
+      "path": "/settings/project-updates",
+      "status": 307,
+      "login": true,
+      "noStore": true
+    },
+    {
+      "path": "/settings/teams/forged/recurring-issues/new",
+      "status": 307,
+      "login": true,
+      "noStore": true
+    },
+    {
+      "path": "/settings/teams/forged/agent-skills/new",
+      "status": 307,
+      "login": true,
+      "noStore": true
+    },
+    {
+      "path": "/teams/forged/signals",
+      "status": 307,
+      "login": true,
+      "noStore": true
+    },
+    {
+      "path": "/teams/forged/insights",
+      "status": 307,
+      "login": true,
+      "noStore": true
+    },
+    {
+      "path": "/api/v1/signals",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/signals",
+      "method": "POST",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/signals",
+      "method": "PATCH",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/signals",
+      "method": "DELETE",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/reviews",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/reviews",
+      "method": "POST",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/reviews",
+      "method": "PATCH",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/reviews",
+      "method": "DELETE",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/insights",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/insights",
+      "method": "POST",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/insights",
+      "method": "PATCH",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/insights",
+      "method": "DELETE",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/billing",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/billing",
+      "method": "POST",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/billing",
+      "method": "PATCH",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/billing",
+      "method": "DELETE",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/applications",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/applications",
+      "method": "POST",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/applications",
+      "method": "PATCH",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/applications",
+      "method": "DELETE",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/integrations",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/integrations",
+      "method": "POST",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/integrations",
+      "method": "PATCH",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/integrations",
+      "method": "DELETE",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/imports",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/imports",
+      "method": "POST",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/imports",
+      "method": "PATCH",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/imports",
+      "method": "DELETE",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/exports",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/exports",
+      "method": "POST",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/exports",
+      "method": "PATCH",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/exports",
+      "method": "DELETE",
+      "status": 404
+    }
+  ],
+  "applicationRevision": "5f12ea0dea026fab58ffb09eb2e96f7f93185d5d"
+}

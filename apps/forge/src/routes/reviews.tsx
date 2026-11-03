@@ -1,25 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { ReviewsPage } from "@/components/reviews/reviews-page"
-import { validateReviewSearch } from "@/lib/review-detail"
 import { protectedRouteBeforeLoad } from "@/lib/auth-state"
+import { loadFeatureAvailability } from "@/lib/feature-state"
+import { FeatureUnavailable } from "@/components/feature-availability"
 
 export const Route = createFileRoute("/reviews")({
-  validateSearch: validateReviewSearch,
   beforeLoad: protectedRouteBeforeLoad,
+  loader: () => loadFeatureAvailability(),
+  staleTime: 0,
   component: Page,
 })
+
 function Page() {
-  const { authState } = Route.useRouteContext()
-  const selection = Route.useSearch()
-  const navigate = Route.useNavigate()
-  return (
-    <ReviewsPage
-      authState={authState}
-      view="for-you"
-      selection={selection}
-      onNavigate={(search) => {
-        void navigate({ search })
-      }}
-    />
-  )
+  const { features } = Route.useLoaderData()
+  return <FeatureUnavailable feature="reviews" mode={features.reviews} />
 }

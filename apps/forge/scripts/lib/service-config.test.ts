@@ -51,6 +51,21 @@ describe("service-specific startup configuration (FOR-26)", () => {
     expect(assertServiceConfiguration(core, "app").ready).toBe(true)
   })
 
+  it("requires scheduler credentials only when SLA jobs are enabled", () => {
+    expect(variables({ ...core, FORGE_SLA_JOBS_ENABLED: "true" })).toContain(
+      "CRON_SECRET"
+    )
+    expect(
+      assertServiceConfiguration(
+        { ...core, FORGE_SLA_JOBS_ENABLED: "true", CRON_SECRET: secret },
+        "app"
+      ).ready
+    ).toBe(true)
+    expect(variables({ ...core, FORGE_SLA_JOBS_ENABLED: "invalid" })).toContain(
+      "FORGE_SLA_JOBS_ENABLED"
+    )
+  })
+
   it("AT-01: enabled Calls fails with the selected provider's variable names, never values", () => {
     const env = {
       ...core,

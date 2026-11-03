@@ -105,6 +105,26 @@ async function sessionRequest(method = "GET") {
 }
 
 describe("database-backed session lookup", () => {
+  it("blocks the unversioned profile endpoint even with the profile gate enabled", async () => {
+    vi.stubEnv("FORGE_PROFILE_EDITING_ENABLED", "true")
+    const response = await auth.handler(
+      new Request("http://localhost:3002/api/auth/update-user", {
+        method: "POST",
+        headers: {
+          origin: "http://localhost:3002",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: "Bypass",
+          image: "https://example.test/image.svg",
+          role: "owner",
+        }),
+      })
+    )
+    expect(response.status).toBe(403)
+    expect(mocks.query).not.toHaveBeenCalled()
+    vi.unstubAllEnvs()
+  })
   beforeEach(() => {
     mocks.query
       .mockReset()

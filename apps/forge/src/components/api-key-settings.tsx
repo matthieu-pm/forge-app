@@ -40,9 +40,7 @@ import {
 } from "@/lib/api-key-state"
 import { mutateWorkspaceSecurity } from "@/lib/security-state"
 
-;
-
-("use client")
+;("use client")
 
 const availableScopes: ReadonlyArray<{
   scope: ApiScope
@@ -116,11 +114,9 @@ function SettingsSection({
 function EmptyResourceCard({
   actionLabel,
   emptyLabel,
-  onAction,
 }: {
   actionLabel: string
   emptyLabel: string
-  onAction: () => void
 }) {
   return (
     <div className="flex min-h-16 flex-col items-start justify-between gap-2 rounded-2xl border border-border/70 bg-muted/35 px-4 py-2.5 sm:flex-row sm:items-center sm:gap-4">
@@ -130,7 +126,7 @@ function EmptyResourceCard({
         variant="ghost"
         size="sm"
         className="shrink-0 self-end rounded-lg font-normal sm:self-auto"
-        onClick={onAction}
+        disabled
       >
         <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
         {actionLabel}
@@ -337,11 +333,8 @@ export function ApiKeySettings({
               }
             >
               <EmptyResourceCard
-                emptyLabel="No OAuth applications"
-                actionLabel="New OAuth application"
-                onAction={() =>
-                  toast.info("OAuth applications are not available yet.")
-                }
+                emptyLabel="OAuth applications are unavailable."
+                actionLabel="OAuth applications unavailable"
               />
             </SettingsSection>
 
@@ -355,9 +348,8 @@ export function ApiKeySettings({
               }
             >
               <EmptyResourceCard
-                emptyLabel="No webhooks"
-                actionLabel="New webhook"
-                onAction={() => toast.info("Webhooks are not available yet.")}
+                emptyLabel="Outbound webhooks are unavailable."
+                actionLabel="Webhooks unavailable"
               />
             </SettingsSection>
 

@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-11-03T13:08:16.009Z",
+  "environment": "built app, local disposable PostgreSQL 17, real Better Auth sessions, Chromium",
+  "checks": [
+    "Admin saves shared policy from an initially disabled, empty configuration",
+    "Two admins resolve a visible revision conflict without losing the local draft",
+    "Definitive stale-reference rejection leaves an editable draft that can be corrected and saved",
+    "Lost response after a committed policy save retries the same receipt exactly once",
+    "Revoked admin loses policy data and editor after live authorization refresh",
+    "Member canonical creation produces and reloads a server deadline and honest system history, independent of browser timezone"
+  ],
+  "pageErrors": [],
+  "browserTimezones": ["Pacific/Honolulu", "Asia/Tokyo"],
+  "memberDeviceClock": "2040-01-01T12:00:00Z",
+  "deadlineDisplayTimezone": "captured Europe/Paris, asserted against saved UTC instant",
+  "expectedTransportFailure": "One intentional response abort after a committed save; receipt retry returned the same effect",
+  "concurrentInvalidCondition": "Retained original revision and required an explicit conflict choice after another admin saved"
+}

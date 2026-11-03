@@ -1,0 +1,31 @@
+{
+  "success": true,
+  "receipts": [
+    {
+      "timestamp": 1793714149062,
+      "receipt": {
+        "enabled": true,
+        "job": "forge.loops.scheduler",
+        "scheduledTime": 1793714146047,
+        "status": 200,
+        "events": 0,
+        "scheduled": 0,
+        "executed": 0
+      },
+      "version": "1ef0f81e-532a-42c0-b413-fd4810e151eb"
+    },
+    {
+      "timestamp": 1793714088968,
+      "receipt": {
+        "enabled": true,
+        "job": "forge.loops.scheduler",
+        "scheduledTime": 1793714086047,
+        "status": 200,
+        "events": 0,
+        "scheduled": 0,
+        "executed": 0
+      },
+      "version": "1ef0f81e-532a-42c0-b413-fd4810e151eb"
+    }
+  ]
+}

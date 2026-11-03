@@ -1,0 +1,30 @@
+{
+  "passed": true,
+  "revision": "86cf1c6af9ee66c69640fc049b5ae235958ae1ce",
+  "environment": "production",
+  "sourceDirty": false,
+  "reviewedContentRecords": 10,
+  "database": "neondb",
+  "branch": "br-muddy-queen-zaeeysjt",
+  "checks": [
+    "explicit preserved-content discovery",
+    "no content publication on discovery or ordinary resume",
+    "explicit snapshot-bound entitlement and destination consent",
+    "canonical project/milestone/initiative deduplication across repeated source projections",
+    "team/project document scopes",
+    "section/link mappings",
+    "saved definitions without personal favorites",
+    "corrupt/ambiguous record quarantine",
+    "reload and exact replay",
+    "independent member reads imported document",
+    "original source bytes retained"
+  ],
+  "counts": {
+    "initiatives": 1,
+    "projects": 1,
+    "documents": 2,
+    "views": 2,
+    "favorites": 0
+  },
+  "pageErrors": []
+}

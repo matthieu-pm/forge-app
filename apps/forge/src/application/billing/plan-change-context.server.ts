@@ -7,6 +7,7 @@ import type { WorkspacePlanChangeContext } from "./polar-plan-change.server"
 import type { EnabledBillingConfig } from "./billing-config.server"
 import type { SelfServePlan } from "./billing-plan-contract"
 import type { Actor } from "@/application/actor"
+import { requireFeatureWrite } from "@/application/features/features.server"
 import { db, workspaceEntitlements, workspaceMemberCapacity } from "@/db"
 
 export async function readPlanChangeContext(
@@ -59,6 +60,7 @@ export async function changeWorkspacePlan(
   target: SelfServePlan,
   config: EnabledBillingConfig
 ) {
+  requireFeatureWrite(actor, "billing")
   return new PolarPlanChanger(config, (candidate) =>
     readPlanChangeContext(candidate, config.environment)
   ).change(actor, target)

@@ -1638,6 +1638,34 @@ export function IssueDetail({
                     </IssuePicker>
                   )}
                 </div>
+                {shared && issue.sla && (
+                  <section
+                    aria-label="Issue SLA"
+                    className="mb-4 space-y-1 rounded-lg border p-3 text-xs"
+                  >
+                    <p className="font-medium">
+                      SLA · {issue.sla.status.replaceAll("-", " ")}
+                    </p>
+                    <p>
+                      Deadline{" "}
+                      <time
+                        dateTime={new Date(issue.sla.deadline).toISOString()}
+                      >
+                        {new Date(issue.sla.deadline).toLocaleString(
+                          undefined,
+                          {
+                            timeZone: issue.sla.timezone,
+                          }
+                        )}
+                      </time>{" "}
+                      · {issue.sla.timezone}
+                    </p>
+                    <p className="text-muted-foreground">
+                      This shared SLA replaces the ordinary due date. Setting a
+                      due date removes this SLA.
+                    </p>
+                  </section>
+                )}
                 {shared && (
                   <IssueHistory
                     issueId={issue.id}

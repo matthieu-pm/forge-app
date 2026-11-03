@@ -1,0 +1,56 @@
+{
+  "checkedAt": "2026-11-03T11:54:49.957277+00:00",
+  "origin": "https://app.forgenow.tech",
+  "checks": [
+    {
+      "path": "/api/health/live",
+      "status": 200,
+      "location": null,
+      "cacheControl": "private, no-store",
+      "body": {
+        "status": "ok",
+        "code": "ALIVE"
+      }
+    },
+    {
+      "path": "/api/health/ready",
+      "status": 200,
+      "location": null,
+      "cacheControl": "private, no-store",
+      "body": {
+        "status": "ok",
+        "code": "READY"
+      }
+    },
+    {
+      "path": "/settings/sla",
+      "status": 307,
+      "location": "/login?redirect=%2Fsettings%2Fsla",
+      "cacheControl": "private, no-store"
+    },
+    {
+      "path": "/api/sla",
+      "status": 404,
+      "location": null,
+      "cacheControl": "private, no-store"
+    },
+    {
+      "path": "/api/slas",
+      "status": 404,
+      "location": null,
+      "cacheControl": "private, no-store"
+    },
+    {
+      "path": "/api/sla/policy",
+      "status": 404,
+      "location": null,
+      "cacheControl": "private, no-store"
+    },
+    {
+      "path": "/api/internal/environment",
+      "status": 404,
+      "location": null,
+      "cacheControl": "private, no-store"
+    }
+  ]
+}

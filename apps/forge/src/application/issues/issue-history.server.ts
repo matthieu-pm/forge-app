@@ -2,6 +2,7 @@ import "@tanstack/react-start/server-only"
 import { createHash } from "node:crypto"
 import { and, eq, sql } from "drizzle-orm"
 import { z } from "zod"
+import { slaGate } from "../sla/sla-gate"
 import type { Transaction } from "@/db"
 import type { Actor } from "@/application/actor"
 import type { IssueHistoryPage } from "@/lib/issue-history-contract"
@@ -14,6 +15,7 @@ import {
 } from "@/application/resource-policy.server"
 import {
   boundedHistoryText,
+  issueHistoryDetailsSchema,
   issueHistoryEnvelopeSchema,
   issueHistoryQuerySchema,
 } from "@/lib/issue-history-contract"
@@ -81,12 +83,22 @@ export async function queryIssueHistory(
     // Exact PostgreSQL microseconds remain in the cursor, never round through JS Date.
     // Audit join proves attribution; receipt join limits this view to completed commands.
     const result = await tx.execute(sql`
-      SELECT e.id, e.topic, e.created_at::text AS time, e.payload,
-        a.actor_user_id, coalesce(u.name, 'Former member') AS actor_name
-      FROM command_outbox_events e
-      JOIN command_audit_events a ON a.command_id=e.command_id AND a.workspace_id=e.workspace_id
-      JOIN command_receipts r ON r.id=e.command_id AND r.workspace_id=e.workspace_id AND r.completed_at IS NOT NULL
-      LEFT JOIN "user" u ON u.id=a.actor_user_id
+      SELECT e.id,e.topic,e.created_at::text AS time,e.payload,e.actor_user_id,e.actor_name,e.system
+      FROM (
+        SELECT e.id,e.workspace_id,e.topic,e.created_at,e.payload,a.actor_user_id,coalesce(u.name,'Former member') AS actor_name,false AS system
+        FROM command_outbox_events e
+        JOIN command_audit_events a ON a.command_id=e.command_id AND a.workspace_id=e.workspace_id
+        JOIN command_receipts r ON r.id=e.command_id AND r.workspace_id=e.workspace_id AND r.completed_at IS NOT NULL
+        LEFT JOIN "user" u ON u.id=a.actor_user_id
+        ${
+          slaGate(current.workspaceId).enabled
+            ? sql`UNION ALL
+          SELECT s.id,s.workspace_id,'issue.sla.'||s.kind,s.created_at,
+            jsonb_build_object('issueId',s.issue_id,'changes',s.changes),'' AS actor_user_id,'Forge SLA' AS actor_name,true AS system
+          FROM issue_sla_events s WHERE s.workspace_id=${current.workspaceId} AND s.issue_id=${input.issueId}::uuid`
+            : sql``
+        }
+      ) e
       WHERE e.workspace_id=${current.workspaceId} AND e.payload->>'issueId'=${input.issueId}
         AND ${readableIssueCondition(current, sql`${input.issueId}::uuid`)}
         AND e.topic LIKE 'issue.%' AND e.topic <> 'issue.comment.mentioned'
@@ -100,6 +112,7 @@ export async function queryIssueHistory(
       payload: Record<string, unknown>
       actor_user_id: string
       actor_name: string
+      system?: boolean
     }>
     // A denied data read must fail rather than look like an empty older page:
     // the client clears protected entries on failure instead of merging stale rows.
@@ -108,6 +121,19 @@ export async function queryIssueHistory(
     const last = page.at(-1)
     return {
       entries: page.map((row) => {
+        if (row.system)
+          return {
+            id: row.id,
+            topic: row.topic,
+            createdAt: new Date(row.time).toISOString(),
+            actor: { userId: "", name: "Forge SLA", kind: "system" as const },
+            origin: "system" as const,
+            changes: issueHistoryDetailsSchema.parse({
+              version: 1,
+              changes: row.payload.changes,
+            }).changes,
+          }
+
         const details = issueHistoryEnvelopeSchema.safeParse(
           row.payload.history
         )

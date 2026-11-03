@@ -1,0 +1,45 @@
+{
+  "checkedAt": "2026-11-03T11:54:08.196014+00:00",
+  "deploymentId": "dpl_8yHP38h41yGGrJZ92g9mVgbojfZo",
+  "checks": [
+    {
+      "path": "/api/health/live",
+      "status": 200,
+      "protectedAccess": "authenticated Vercel CLI",
+      "cacheControl": "private, no-store",
+      "body": {
+        "status": "ok",
+        "code": "ALIVE"
+      }
+    },
+    {
+      "path": "/api/health/ready",
+      "status": 200,
+      "protectedAccess": "authenticated Vercel CLI",
+      "cacheControl": "private, no-store",
+      "body": {
+        "status": "ok",
+        "code": "READY"
+      }
+    },
+    {
+      "path": "/settings/sla",
+      "status": 307,
+      "protectedAccess": "authenticated Vercel CLI",
+      "cacheControl": "private, no-store",
+      "location": "/login?redirect=%2Fsettings%2Fsla"
+    },
+    {
+      "path": "/api/sla/policy",
+      "status": 404,
+      "protectedAccess": "authenticated Vercel CLI",
+      "cacheControl": "private, no-store"
+    },
+    {
+      "path": "/api/internal/environment",
+      "status": 404,
+      "protectedAccess": "authenticated Vercel CLI",
+      "cacheControl": "private, no-store"
+    }
+  ]
+}

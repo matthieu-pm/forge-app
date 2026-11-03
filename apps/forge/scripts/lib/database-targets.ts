@@ -3,6 +3,12 @@ import { STAGING } from "../../../../packages/environment/staging-environment"
 // Verified targets. Production additionally requires an explicit source-bound release approval.
 // Adding a new target requires checking its branch ID with read-only SQL first.
 export const DATABASE_TARGETS = {
+  // FOR-125 production clone; expires 4 November 2026 13:30 UTC.
+  "sla-rehearsal": {
+    branchId: "br-small-darkness-zahmr2fc",
+    host: "ep-lingering-lab-za3xohqt.c-2.eu-west-2.aws.neon.tech",
+    database: "neondb",
+  },
   production: {
     branchId: "br-muddy-queen-zaeeysjt",
     host: "ep-lingering-bread-zazpwrxp.c-2.eu-west-2.aws.neon.tech",

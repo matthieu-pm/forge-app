@@ -1,0 +1,36 @@
+[
+  {
+    "path": "/api/health/live",
+    "status": 200,
+    "cacheControl": "private, no-store",
+    "location": null,
+    "body": {
+      "status": "ok",
+      "code": "ALIVE"
+    }
+  },
+  {
+    "path": "/api/health/ready",
+    "status": 200,
+    "cacheControl": "private, no-store",
+    "location": null,
+    "body": {
+      "status": "ok",
+      "code": "READY"
+    }
+  },
+  {
+    "path": "/settings/sla",
+    "status": 307,
+    "cacheControl": "private, no-store",
+    "location": "/login?redirect=%2Fsettings%2Fsla",
+    "body": null
+  },
+  {
+    "path": "/api/internal/sla-jobs",
+    "status": 404,
+    "cacheControl": "private, no-store",
+    "location": null,
+    "body": null
+  }
+]

@@ -15,6 +15,8 @@ import type {
   ProductStateCommand,
   ProductStateSnapshot,
 } from "@/lib/product-state-contract"
+import { requireFeatureWrite } from "@/application/features/features.server"
+import { featureForStorageKey } from "@/application/features/feature-policy"
 import { pruneTeamDocumentCopies } from "@/application/documents/document-copies.server"
 import {
   isProjectCatalog,
@@ -78,6 +80,8 @@ async function scope(
   write = false
 ) {
   if (!isProductStorageKey(key)) throw new ApplicationAccessError()
+  const deferredFeature = featureForStorageKey(key)
+  if (deferredFeature) requireFeatureWrite(actor, deferredFeature)
   const workspace =
     key.match(/^forge:workspace:([^:]+):/)?.[1] ??
     key.match(/^forge:project-statuses:v1:([^:]+)$/)?.[1]
@@ -385,6 +389,8 @@ export async function saveProductState(actor: Actor, raw: ProductStateCommand) {
   if (input.key === sharedInitiativesKey(actor.workspaceId))
     throw new ApplicationAccessError()
   session(actor, input.workspaceId, input.sessionId)
+  const deferredFeature = featureForStorageKey(input.key)
+  if (deferredFeature) requireFeatureWrite(actor, deferredFeature)
   if (input.key.startsWith(initiativeCommandPrefix)) {
     if (input.value === null) throw new ApplicationAccessError()
     const { saveCanonicalInitiatives } =

@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto"
 import { z } from "zod"
+import { contentEntries } from "./content-manifest"
+import type { ImportModules } from "./content-manifest"
 import type {
   ImportEntry,
   ImportFile,
@@ -52,13 +54,14 @@ export function validatedImportFiles(
   })
 }
 
-/** Only core adapters are enabled. Entire raw envelopes remain in the private manifest. */
+/** Content adapters are versioned and opt-in. Exact source envelopes stay in private backups. */
 export function buildImportManifest(input: {
   id: string
   actorId: string
   workspaceId: string
   sources: Array<{ key: string; raw: string }>
   defaultStatus: string
+  modules?: ImportModules
 }): ImportManifest {
   const entries: Array<ImportEntry> = [],
     exclusions: Array<string> = []
@@ -80,14 +83,40 @@ export function buildImportManifest(input: {
       )
     const projectSource =
       source.key === `forge:workspace:${input.workspaceId}:initiatives:v1`
-    if (!teamMatch && !projectSource) {
+    const contentSource = Boolean(
+      input.modules &&
+      (projectSource ||
+        /^forge:team-home:v1:[^:]+$/.test(source.key) ||
+        source.key ===
+          `forge:workspace:${input.workspaceId}:custom-views:v1:${input.actorId}`)
+    )
+    if (!teamMatch && !projectSource && !contentSource) {
       exclusions.push(`${source.key}: no enabled core adapter.`)
       continue
     }
     try {
       const body = JSON.parse(source.raw)
-      if (!Array.isArray(body) && body.version !== 1)
+      if (
+        !Array.isArray(body) &&
+        body.version !== 1 &&
+        !(/^forge:team-home:v1:/.test(source.key) && body.version === undefined)
+      )
         throw new Error("Unsupported source schema version.")
+      if (contentSource) {
+        const content = contentEntries({
+          key: source.key,
+          checksum: source.checksum,
+          body,
+          actorId: input.actorId,
+          workspaceId: input.workspaceId,
+          modules: input.modules!,
+        })
+        entries.push(...content.entries)
+        exclusions.push(...content.exclusions)
+        recordCount += content.entries.length
+        if (recordCount > 100_000)
+          throw new Error("The import exceeds 100,000 records.")
+      }
       const collections: Array<[string, Array<unknown>]> = projectSource
         ? [
             ["workspaceProjects", body.workspaceProjects ?? []],
@@ -99,12 +128,14 @@ export function buildImportManifest(input: {
                 ]
             ),
           ]
-        : [
-            [
-              teamMatch![1] === "team-issues" ? "issues" : "records",
-              teamMatch![1] === "team-issues" ? body.issues : body,
-            ],
-          ]
+        : !teamMatch
+          ? []
+          : [
+              [
+                teamMatch[1] === "team-issues" ? "issues" : "records",
+                teamMatch[1] === "team-issues" ? body.issues : body,
+              ],
+            ]
       for (const [collection, values] of collections) {
         if (!Array.isArray(values)) throw new Error("Invalid collection.")
         for (const [index, value] of values.entries()) {
@@ -144,7 +175,11 @@ export function buildImportManifest(input: {
               entry.reviewRequired = true
             }
             if (projectSource) {
-              const project = initiativeProjectSchema.parse(value)
+              const project = initiativeProjectSchema.parse(
+                input.modules
+                  ? { ...object, milestones: [], resources: [] }
+                  : value
+              )
               if (!project.teamIds.length)
                 throw new Error("Choose a team for this project before import.")
               if (
@@ -217,6 +252,9 @@ export function buildImportManifest(input: {
   }
   return {
     version: 1,
+    ...(input.modules
+      ? { contentVersion: 2 as const, modules: input.modules }
+      : {}),
     policyVersion: 1,
     id: input.id,
     actorId: input.actorId,
@@ -224,6 +262,7 @@ export function buildImportManifest(input: {
     revision: 0,
     fingerprint: commandInputHash({
       version: 1,
+      ...(input.modules ? { contentVersion: 2, modules: input.modules } : {}),
       sources: sources.map(({ key, checksum }) => ({ key, checksum })),
     }),
     sources,

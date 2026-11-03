@@ -2,7 +2,7 @@ import {
   emitTelemetry,
   withCorrelation,
 } from "../../../../../packages/telemetry/server"
-import { JobError } from "./job-store"
+import { JobDeferred, JobError } from "./job-store"
 import type { JobLease, JobStore } from "./job-store"
 
 export type JobHandler = (store: JobStore, lease: JobLease) => Promise<void>
@@ -28,6 +28,16 @@ export async function runNextJob(
       })
       return { state: "completed" as const, id: lease.id }
     } catch (error) {
+      if (error instanceof JobDeferred) {
+        try {
+          await store.defer(lease)
+          return { state: "deferred" as const, id: lease.id }
+        } catch (failure) {
+          if (failure instanceof JobError && failure.code === "LEASE_LOST")
+            return { state: "lost" as const, id: lease.id }
+          throw failure
+        }
+      }
       if (error instanceof JobError && error.code === "LEASE_LOST") {
         emitTelemetry("operation.rejected", "jobs.run", {
           errorCode: "JOB_LEASE_LOST",
