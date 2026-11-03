@@ -64,6 +64,11 @@ async function saved(page) {
 async function editor(page) {
   const button = page.getByRole("button", { name: "Customize", exact: true })
   await expect(button).toBeEnabled({ timeout: 60000 })
+  // A previous settings selector may leave this control under the sticky
+  // Preferences heading. Scroll it clear using normal browser scrolling.
+  await button.evaluate((element) =>
+    element.scrollIntoView({ block: "center" })
+  )
   await button.click()
   const dialog = page.getByRole("dialog", { name: "Customize sidebar" })
   await expect(dialog).toBeVisible()
