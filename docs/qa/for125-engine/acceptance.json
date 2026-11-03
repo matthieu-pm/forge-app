@@ -1,0 +1,80 @@
+{
+  "issue": "FOR-125",
+  "sourceCommit": "65245c984e00beb5315db10ab3c3f877a0e3f348",
+  "integratedMain": "7e8cd5c2662abebb876c22fc002bd557d120f76a",
+  "contractCommit": "29bd73ea86ed76d848a181de40487b83a78bd6d4",
+  "environment": "Disposable local PostgreSQL17 on loopback; built Forge server, real Better Auth sessions, headless Chromium",
+  "acceptance": {
+    "targetedFiles": 2,
+    "targetedTestsPassed": 24,
+    "realPostgresTests": 20,
+    "admissionAndSchemaUnitTests": 4,
+    "targetedSkipped": 0,
+    "command": "FORGE_SLA_TEST_DATABASE_URL=<dedicated local target> bun run test:sla:postgres",
+    "cases": [
+      "DST spring gap and autumn fold, work weeks and elapsed durations",
+      "admin/member and revoked authority, cross-workspace conditions, revision and exact receipt replay",
+      "atomic issue/deadline/due-date/system-history/intent creation and full command rollback",
+      "first match, frozen calendar/rules, no state pause, concurrent qualifying edits",
+      "independent process kill before/after real breach checkpoint, stale lease fencing and one breach",
+      "overdue removal/supersession/cancellation/archive/delete and original-deadline restoration",
+      "policy disabled after owed and disabled-only crossing, deferred jobs with no retry-budget consumption",
+      "feature-off before/after deadline and interruption reconciliation with stale-observation rejection",
+      "creation anchor, recent versus 30-day reopen and inherited calendar/duration",
+      "one-microsecond early versus exact completion, unique breach and checkpoint replay",
+      "case-insensitive existing team timezone, team-local status identities, legacy insert exclusion and purge cascades",
+      "scheduler default-off, method/credential denial and bounded error handling"
+    ]
+  },
+  "regression": {
+    "appTestFilesPassed": 337,
+    "appTestsPassed": 2660,
+    "appTestFilesSkipped": 33,
+    "appTestsSkipped": 649,
+    "workflowTestFilesPassed": 2,
+    "workflowTestsPassed": 4,
+    "skips": "Other database/provider/host acceptance fixtures, including SLA SQL suite in the general run; SLA suite executed explicitly against the local database",
+    "typecheck": "passed",
+    "build": "passed including protected Workflow verification; SLA scheduler packaging enabled with synthetic credentials for build validation",
+    "schemaGeneration": "No schema changes, nothing to migrate",
+    "changedApplicationEslint": {
+      "errors": 0,
+      "warnings": 42,
+      "note": "Non-blocking warnings including existing touched modules and dynamic SQL result guards"
+    },
+    "diffCheck": "passed"
+  },
+  "migration": {
+    "path": "apps/forge/drizzle/0072_shared_sla_engine.sql",
+    "sha256": "c106eb6dd6154eafe74e50e25c7074c6a2e0aa60a0c5a5d0857d0887e5ac51d5",
+    "freshReplay": "passed, all 73 migrations",
+    "secondReplay": "passed, no-op",
+    "slaTablesWithPrimaryKeyRecoveryAndImmutableTriggers": 6,
+    "issueForeignKey": "DEFERRABLE INITIALLY DEFERRED verified in pg_constraint",
+    "fixtureCleanup": "0 workspaces, policies, commitments and SLA jobs remain"
+  },
+  "browser": {
+    "artifact": "docs/qa/for125-engine/browser.json",
+    "screenshot": "docs/qa/for125-engine/issue-sla.png",
+    "checksPassed": 6,
+    "pageErrors": 0
+  },
+  "review": {
+    "standardsFindingsFixed": 3,
+    "specificationFindingsFixed": 4,
+    "uniqueFindingsFixed": 6,
+    "worstPriorityPerAxis": "P2, all corrected",
+    "finalReReviewCommit": "4d206a7",
+    "remainingMaterialFindings": 0
+  },
+  "releaseBoundary": {
+    "productionMigrationApplied": false,
+    "productionConfigurationChanged": false,
+    "productionDeployed": false,
+    "workspaceRolloutDefault": "disabled without explicit allowlist",
+    "newWorkspacePolicyDefault": "disabled, no rules",
+    "notifications": "excluded conditional FOR-65/FOR-145 extension",
+    "packagedMacOS": "not qualified",
+    "throughputCertification": "not claimed"
+  }
+}

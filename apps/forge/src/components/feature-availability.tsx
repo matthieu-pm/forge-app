@@ -61,6 +61,9 @@ export function useFeatureNavigation() {
     )
   }
 }
+export function useFeatureMode(feature: ProductFeature) {
+  return React.useContext(Context)?.features[feature] ?? "disabled"
+}
 
 /** Read-only samples deliberately have no production components, editors or agent actions. */
 export function FeatureUnavailable({

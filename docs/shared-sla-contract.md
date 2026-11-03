@@ -120,7 +120,10 @@ deadline for a recent resolution; at least 30 elapsed days since completion, cre
 a new generation with the previous duration/calendar and a fresh reopen anchor.
 Reopening a canceled issue evaluates current rules. This makes the historical
 Linear month-reset guidance precise without claiming identical server behavior.
-Explicit removal still wins, and history retains the preceding outcome. For a
+Reopen-specific deadline reuse/reset takes precedence over applying a different
+rule during that same reopen transition. Later relevant edits use normal ordered
+rule matching. Explicit removal still wins, and history retains the preceding
+outcome. For a
 team move, reevaluate filters and retain the old calendar snapshot unless a new
 commitment is created. Purge follows the existing workspace/issue retention
 policy and must also remove dependent SLA data.

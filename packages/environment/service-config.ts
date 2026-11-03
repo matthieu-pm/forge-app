@@ -7,7 +7,11 @@ import { appOrigin, runtimeOrigin } from "./preview-environment.ts"
 export type ServiceEnvironment = Record<string, string | undefined>
 export type Service = "app" | "runtime" | "jobs" | "release"
 export type Job =
-  "calls-sync" | "agent-retention" | "product-retention" | "workflow-health" | "background-jobs"
+  | "calls-sync"
+  | "agent-retention"
+  | "product-retention"
+  | "workflow-health"
+  | "background-jobs"
 export type ReleaseOperation =
   "package" | "prepare" | "upload" | "promote" | "pause"
 export type ConfigurationOptions = {
@@ -243,13 +247,18 @@ export function inspectServiceConfiguration(
     }
   }
   if (service === "app") {
+    if (flag("FORGE_SLA_JOBS_ENABLED")) secret("CRON_SECRET")
     if (flag("FORGE_LOOPS_ENABLED")) {
-      if (env.FORGE_LOOP_SCHEDULER_DRIVER !== undefined && !["vercel", "cloudflare"].includes(env.FORGE_LOOP_SCHEDULER_DRIVER))
+      if (
+        env.FORGE_LOOP_SCHEDULER_DRIVER !== undefined &&
+        !["vercel", "cloudflare"].includes(env.FORGE_LOOP_SCHEDULER_DRIVER)
+      )
         add("FORGE_LOOP_SCHEDULER_DRIVER", "must select vercel or cloudflare")
       secret("CRON_SECRET")
       secret("FORGE_LOOP_WEBHOOK_SECRET")
     }
-    if (flag("FORGE_ISSUE_RETENTION_ENABLED")) secret("FORGE_ISSUE_RETENTION_SECRET")
+    if (flag("FORGE_ISSUE_RETENTION_ENABLED"))
+      secret("FORGE_ISSUE_RETENTION_SECRET")
     if (flag("FORGE_OPERATIONS_MONITOR_ENABLED")) {
       origin("FORGE_OPERATIONS_WEBHOOK_URL", deployed, true)
       secret("FORGE_OPERATIONS_WEBHOOK_TOKEN")
@@ -351,7 +360,11 @@ export function inspectServiceConfiguration(
     database()
     if (!options.job) add("FORGE_CONFIG_JOB", "must select a job profile")
     if (options.job === "calls-sync") calls(true)
-    if (options.job === "agent-retention" || options.job === "product-retention") blob()
+    if (
+      options.job === "agent-retention" ||
+      options.job === "product-retention"
+    )
+      blob()
     if (
       options.job === "product-retention" &&
       flag("FORGE_DESKTOP_RELEASE_ENABLED")

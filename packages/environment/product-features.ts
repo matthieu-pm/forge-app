@@ -8,7 +8,7 @@ export const productFeatures = {
   integrations: { title: "Integrations", ceiling: "disabled" },
   externalImport: { title: "External imports", ceiling: "disabled" },
   externalExport: { title: "Issue export", ceiling: "disabled" },
-  sla: { title: "SLAs", ceiling: "disabled" },
+  sla: { title: "SLAs", ceiling: "enabled" },
   teamAgents: { title: "Team agent integrations", ceiling: "disabled" },
   agentGuidance: { title: "Agent guidance and skills", ceiling: "disabled" },
   recurringIssues: { title: "Recurring issues", ceiling: "disabled" },

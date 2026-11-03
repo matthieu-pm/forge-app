@@ -37,6 +37,7 @@ export type MigrationTarget = {
     | "issue-history-rehearsal"
     | "project-rehearsal"
     | "project-progress-rehearsal"
+    | "sla-rehearsal"
     | "production-storage-rehearsal"
     | "production"
   branchId: string

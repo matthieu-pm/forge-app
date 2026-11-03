@@ -50,6 +50,9 @@ const config = defineConfig(({ mode }) => {
           config: {
             version: 3,
             crons: [
+              ...(process.env.FORGE_SLA_JOBS_ENABLED === "true"
+                ? [{ path: "/api/internal/sla-jobs", schedule: "* * * * *" }]
+                : []),
               ...(process.env.FORGE_OPERATIONS_MONITOR_ENABLED === "true"
                 ? [
                     {

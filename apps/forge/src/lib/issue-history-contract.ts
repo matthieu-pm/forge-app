@@ -57,9 +57,9 @@ export type IssueHistoryEntry = {
   actor: {
     userId: string
     name: string
-    kind: "session" | "apiKey" | "agent" | "unknown"
+    kind: "session" | "apiKey" | "agent" | "unknown" | "system"
   }
-  origin: "command" | "import"
+  origin: "command" | "import" | "system"
   changes: Array<{ field: string; from: string; to: string }>
   commentId?: string
 }
