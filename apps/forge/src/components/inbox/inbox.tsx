@@ -32,6 +32,7 @@ import type {
   InboxView,
 } from "@/lib/inbox-state"
 import { DateInput } from "@/components/ui/date-input"
+import { usePersonName } from "@/components/person-name-provider"
 import { issueSubscriberIds } from "@/lib/issue-engagement-contract"
 import { useQueriedIssue } from "@/lib/issue-query-client"
 import { canonicalIssuesActive } from "@/lib/canonical-issue-cache"
@@ -93,6 +94,8 @@ function tomorrow() {
 }
 
 export function Inbox({ scope }: { scope: InboxScope }) {
+  const personName = usePersonName()
+
   const inbox = useInbox(scope)
   const sync = useWorkspaceView("inbox", "main", scope)
   const state = { ...inbox.state, preferences: sync.value.preferences }
@@ -541,7 +544,14 @@ export function Inbox({ scope }: { scope: InboxScope }) {
                   >
                     <span className="relative mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-medium">
                       {entry.issue ? (
-                        initials(latest?.actor ?? "")
+                        initials(
+                          latest
+                            ? personName({
+                                id: latest.actorId,
+                                name: latest.actor,
+                              })
+                            : ""
+                        )
                       ) : (
                         <ForgeLogo variant="icon" className="size-7" />
                       )}
@@ -561,7 +571,7 @@ export function Inbox({ scope }: { scope: InboxScope }) {
                       {
                         <span className="mt-0.5 block truncate text-xs leading-5 text-muted-foreground">
                           {latest
-                            ? `${latest.actor} ${updateLabel(latest.kind)}${latest.message ? ` · ${latest.message}` : ""}`
+                            ? `${personName({ id: latest.actorId, name: latest.actor })} ${updateLabel(latest.kind)}${latest.message ? ` · ${latest.message}` : ""}`
                             : "A few things to help you find your flow."}
                         </span>
                       }

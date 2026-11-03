@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import { AssigneeMark, IssueIcon } from "./issue-controls"
+import type { PersonIdentity } from "@/lib/person-name"
 import type { IssueDraft } from "@/lib/team-issues"
+import { usePersonName } from "@/components/person-name-provider"
 import { ActionIconButton } from "@/components/ui/action-icon-button"
 import { cn } from "@/lib/utils"
 
@@ -46,8 +48,10 @@ export function CommentInput({
   presentation?: "default" | "review"
   initialBody?: string
   autoFocus?: boolean
-  avatar?: { name: string; image?: string | null }
+  avatar?: PersonIdentity & { name: string; image?: string | null }
 }) {
+  const personName = usePersonName()
+
   const [body, setBody] = useState(initialBody)
   const compact = placeholder === "Leave a reply…"
   const inlineControls = compact || presentation === "review"
@@ -98,7 +102,7 @@ export function CommentInput({
       <div className="flex items-start gap-2">
         {avatar && (
           <span className="flex h-6 shrink-0 items-center">
-            <AssigneeMark name={avatar.name} image={avatar.image} />
+            <AssigneeMark name={personName(avatar)} image={avatar.image} />
           </span>
         )}
         <textarea

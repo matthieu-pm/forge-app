@@ -95,7 +95,9 @@
     "test:sla:postgres": "vitest run src/application/sla/sla.postgres.test.ts src/application/sla/sla-scheduler.test.ts",
     "test:sla:browser": "node scripts/verify-sla-browser.mjs",
     "test:content-import:postgres": "vitest run src/application/imports/imports.postgres.test.ts -t FOR-126",
-    "test:content-import:browser": "bun build scripts/verify-content-import-browser.ts --target node --packages external --outfile node_modules/.cache/for126-browser.mjs && node node_modules/.cache/for126-browser.mjs"
+    "test:content-import:browser": "bun build scripts/verify-content-import-browser.ts --target node --packages external --outfile node_modules/.cache/for126-browser.mjs && node node_modules/.cache/for126-browser.mjs",
+    "test:person-names": "vitest run src/lib/person-name.test.ts src/components/person-name-provider.test.tsx src/components/person-name-consumers.test.tsx src/application/preferences/person-directory.server.test.ts",
+    "dev:person-names-fixture": "vite --config scripts/fixtures/person-names/vite.config.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1104.0",

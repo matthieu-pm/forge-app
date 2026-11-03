@@ -16,6 +16,8 @@ import type { IssueDraft, TeamIssue } from "@/lib/team-issues"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import { DateInput } from "@/components/ui/date-input"
+import { personSearchText } from "@/lib/person-name"
+import { usePersonName } from "@/components/person-name-provider"
 import { TemplateApplicationButton } from "@/components/templates/template-application-button"
 import { stableJson } from "@/lib/stable-json"
 import { productStorage } from "@/lib/product-storage"
@@ -91,6 +93,8 @@ export function IssueComposer({
   presentation?: "dialog" | "inline"
   onDraftChange?: (draft: IssueDraft, team: TeamSummary) => void
 }) {
+  const personName = usePersonName()
+
   const editRecoveryKey = issueId
     ? `forge:team-issue-composer-edit:v1:${team.id}:${issueId}`
     : null
@@ -664,8 +668,14 @@ export function IssueComposer({
               },
               ...members.map((member) => ({
                 value: member.id,
-                label: member.name,
-                icon: <AssigneeMark name={member.name} image={member.image} />,
+                keywords: personSearchText(member),
+                label: personName(member),
+                icon: (
+                  <AssigneeMark
+                    name={personName(member)}
+                    image={member.image}
+                  />
+                ),
               })),
             ]}
             onChange={(value) => update({ assignee: value })}
@@ -679,8 +689,12 @@ export function IssueComposer({
               </Link>
             }
           >
-            <AssigneeMark name={assignee?.name} image={assignee?.image} />
-            {assignee?.name ?? (draft.assignee || "Assignee")}
+            <AssigneeMark
+              name={assignee ? personName(assignee) : undefined}
+              image={assignee?.image}
+            />
+            {(assignee ? personName(assignee) : undefined) ??
+              (draft.assignee || "Assignee")}
           </IssuePicker>
           <IssuePicker
             label="Change project"

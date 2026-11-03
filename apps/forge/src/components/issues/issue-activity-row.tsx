@@ -5,6 +5,8 @@ import type { ReactNode } from "react"
 import type { ActivityReferenceKind } from "@/lib/issue-activity"
 import type { TeamIssue } from "@/lib/team-issues"
 import type { TeamStatus } from "@/lib/team-statuses"
+import { resolvePerson } from "@/lib/person-name"
+import { usePersonName } from "@/components/person-name-provider"
 import { projectDisplayName } from "@/lib/canonical-issue-cache"
 import { cn } from "@/lib/utils"
 import {
@@ -73,13 +75,11 @@ export function ActivityReference({
   color?: string
   presentation?: "inline" | "chip"
 }) {
-  const member =
-    kind === "member"
-      ? members.find((item) => item.id === value || item.name === value)
-      : undefined
+  const personName = usePersonName(members)
+  const member = kind === "member" ? resolvePerson(members, value) : undefined
   const name =
     kind === "member"
-      ? (member?.name ?? "Unknown member")
+      ? personName(member, "Unknown member")
       : kind === "project"
         ? projectDisplayName(value)
         : value

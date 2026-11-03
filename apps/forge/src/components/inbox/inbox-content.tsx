@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router"
 import type { InboxEntry } from "@/lib/inbox-state"
+import { usePersonName } from "@/components/person-name-provider"
 import { ForgeLogo } from "@/components/forge-logo"
 
 export function WelcomeContent() {
@@ -63,6 +64,9 @@ export function WelcomeContent() {
 }
 
 export function IssueContent({ entry }: { entry: InboxEntry }) {
+  const personName = usePersonName(
+    entry.events.map((event) => ({ id: event.actorId, name: event.actor }))
+  )
   const issue = entry.issue!
   return (
     <article className="mx-auto w-full max-w-[800px] px-6 py-10 sm:px-10 lg:px-14">
@@ -100,11 +104,13 @@ export function IssueContent({ entry }: { entry: InboxEntry }) {
                 aria-hidden="true"
                 className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-medium"
               >
-                {initials(event.actor)}
+                {initials(personName({ id: event.actorId, name: event.actor }))}
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-xs">
-                  <span className="font-medium">{event.actor}</span>
+                  <span className="font-medium">
+                    {personName({ id: event.actorId, name: event.actor })}
+                  </span>
                   <span className="text-muted-foreground">
                     {updateLabel(event.kind)}
                   </span>

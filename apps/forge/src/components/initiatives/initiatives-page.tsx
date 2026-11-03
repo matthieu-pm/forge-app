@@ -23,6 +23,7 @@ import type {
   InitiativeView,
 } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
+import { usePersonName } from "@/components/person-name-provider"
 import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
 import { ContentHeader } from "@/components/ui/content-header"
@@ -64,6 +65,8 @@ export function InitiativesPage({
   onView: (view: InitiativeView) => void
   onOpen: (item: Initiative, tab: "overview" | "projects" | "updates") => void
 }) {
+  const personName = usePersonName()
+
   const store = useInitiatives(workspaceId, user.id)
   const agent = useAgent()
   const [creating, setCreating] = useState(false)
@@ -309,11 +312,15 @@ export function InitiativesPage({
             >
               <span className="truncate">
                 {rule.field} {rule.operator}{" "}
-                {filterValueLabel(rule, {
-                  people,
-                  teams,
-                  labels: store.labels,
-                })}
+                {filterValueLabel(
+                  rule,
+                  {
+                    people,
+                    teams,
+                    labels: store.labels,
+                  },
+                  personName
+                )}
               </span>
               <IssueIcon name="close" className="size-3" />
             </Button>

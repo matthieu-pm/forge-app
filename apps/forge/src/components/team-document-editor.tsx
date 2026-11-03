@@ -15,6 +15,7 @@ import { TeamSidebarIcon } from "./team-sidebar-icon"
 import type { JSONContent } from "@tiptap/core"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { HomeStore, TeamResource } from "@/lib/team-home-state"
+import { usePersonName } from "@/components/person-name-provider"
 import { ContentHeader } from "@/components/ui/content-header"
 import {
   defaultDocumentIcon,
@@ -58,6 +59,7 @@ export function TeamDocumentEditor({
   onBack: () => void
   onDelete: () => void
 }) {
+  const personName = usePersonName()
   const [draft, setDraft] = React.useState(resource)
   const [title, setTitle] = React.useState(
     resource.title === "New document" ? "" : resource.title
@@ -261,7 +263,7 @@ export function TeamDocumentEditor({
                 <dt>Last edited</dt>
                 <dd>{new Date(draft.updatedAt).toLocaleString()}</dd>
                 <dt>Owner</dt>
-                <dd className="truncate">{draft.owner?.name ?? "—"}</dd>
+                <dd className="truncate">{personName(draft.owner, "—")}</dd>
               </dl>
             </PopoverContent>
           </Popover>

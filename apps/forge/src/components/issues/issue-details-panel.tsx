@@ -4,6 +4,7 @@ import type { IssueQueryPage } from "@/lib/issue-query-contract"
 import type { KeyboardEvent } from "react"
 import type { IssueFilter, TeamIssue } from "@/lib/team-issues"
 import type { TemplateDirectory } from "@/lib/template-contract"
+import { usePersonName } from "@/components/person-name-provider"
 import { issuePriorities } from "@/lib/team-issues"
 import { cn } from "@/lib/utils"
 
@@ -29,6 +30,7 @@ export function IssueDetailsPanel({
   onFilter: (filter: Omit<IssueFilter, "id">) => void
   onClose: () => void
 }) {
+  const personName = usePersonName(members)
   const [active, setActive] = useState(0)
   const id = useId()
   const tab = tabs[active]
@@ -54,8 +56,10 @@ export function IssueDetailsPanel({
   }
   function label(value: string) {
     return tab.field === "assignee"
-      ? (members.find((member) => member.id === value)?.name ??
-          (value ? "Unknown member" : tab.empty))
+      ? personName(
+          members.find((member) => member.id === value),
+          value ? "Unknown member" : tab.empty
+        )
       : value || tab.empty
   }
   const rows = [...counts].sort(([a, aCount], [b, bCount]) => {

@@ -18,6 +18,7 @@ import type {
   DocumentRevision,
   SharedDocument,
 } from "@/lib/document-contract"
+import { usePersonName } from "@/components/person-name-provider"
 import {
   documentBodySchema,
   documentCommandSchema,
@@ -54,6 +55,7 @@ export function SharedDocumentEditor({
   ) => Promise<DocumentCommandResult>
   sections?: Array<{ id: string; name: string }>
 }) {
+  const personName = usePersonName()
   const preferences = useWorkspaceView("teamHome", "documents")
   const favorite = preferences.value.favoriteResourceIds.includes(resource.id)
   const [wide, setWide] = React.useState(false)
@@ -440,7 +442,7 @@ export function SharedDocumentEditor({
         )}
       </ContentHeader>
       <div className="border-b border-border/40 px-6 py-2 text-xs text-muted-foreground">
-        Owner: {resource.owner?.name ?? "Unknown"} · Created{" "}
+        Owner: {personName(resource.owner, "Unknown")} · Created{" "}
         {new Date(resource.createdAt).toLocaleString()} · Edited by{" "}
         {resource.updatedBy?.name ?? "Unknown"}{" "}
         {new Date(resource.updatedAt).toLocaleString()}
@@ -586,7 +588,7 @@ export function SharedDocumentEditor({
               variant="ghost"
               onClick={() => setViewing(r)}
             >
-              Revision {r.revision} · {r.author?.name ?? "Unknown"} ·{" "}
+              Revision {r.revision} · {personName(r.author, "Unknown")} ·{" "}
               {new Date(r.createdAt).toLocaleString()}
             </Button>
           ))}

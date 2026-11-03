@@ -48,4 +48,8 @@ export const mentionQuerySchema = z
     query: z.string().max(100).default(""),
   })
   .strict()
-export type MentionTarget = { id: string; name: string }
+export type MentionTarget = {
+  id: string
+  name: string
+  username?: string | null
+}

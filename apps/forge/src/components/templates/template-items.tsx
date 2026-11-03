@@ -11,6 +11,8 @@ import { RichEditor, insertFiles } from "./rich-editor"
 import type { Editor, JSONContent } from "@tiptap/core"
 import type { TemplateDirectory, TemplateItem } from "@/lib/template-contract"
 import type { TeamSummary } from "@/lib/team-contract"
+import { personSearchText } from "@/lib/person-name"
+import { usePersonName } from "@/components/person-name-provider"
 import { emptyProperties } from "@/lib/template-contract"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { Button } from "@/components/ui/button"
@@ -214,6 +216,8 @@ export function IssueItems({
   onCreatingChange: (value: boolean) => void
   subIssues?: boolean
 }) {
+  const personName = usePersonName()
+
   const [expanded, setExpanded] = React.useState(true)
   const [editing, setEditing] = React.useState<TemplateItem | undefined>()
   const noun = subIssues ? "sub-issue" : "issue"
@@ -286,7 +290,8 @@ export function IssueItems({
                       { value: "", label: "No assignee" },
                       ...directory.members.map((m) => ({
                         value: m.id,
-                        label: m.name,
+                        keywords: personSearchText(m),
+                        label: personName(m),
                       })),
                     ]}
                     onChange={(id) =>

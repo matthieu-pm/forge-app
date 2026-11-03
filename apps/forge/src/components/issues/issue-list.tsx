@@ -14,6 +14,8 @@ import { IssueCycleBadge } from "./issue-cycle-badge"
 import type { IssueQueryPage } from "@/lib/issue-query-contract"
 import type { IssueDisplay, IssueDraft, TeamIssue } from "@/lib/team-issues"
 import type { TeamStatus } from "@/lib/team-statuses"
+import { personSearchText, resolvePerson } from "@/lib/person-name"
+import { usePersonName } from "@/components/person-name-provider"
 import { blankIssueDraft } from "@/lib/issue-record-contract"
 import { issuePullRequest, issuePullRequests } from "@/lib/issue-pull-requests"
 import { ActionHint } from "@/components/ui/action-icon-button"
@@ -44,6 +46,8 @@ export function InlineIssueProperties({
   compact?: boolean
   emptyLabels?: boolean
 }) {
+  const personName = usePersonName(members)
+
   const label =
     property === "status"
       ? "Change status"
@@ -52,7 +56,7 @@ export function InlineIssueProperties({
         : "Assign to"
   const status = statuses.find((item) => item.id === issue.status)
   const assignedMember = members.find((item) => item.id === issue.assignee)
-  const assignee = assignedMember?.name ?? issue.assignee
+  const assignee = personName(assignedMember, issue.assignee)
   return (
     <IssuePicker
       label={`${label} for ${issue.title}`}
@@ -88,9 +92,13 @@ export function InlineIssueProperties({
                 },
                 ...members.map((member) => ({
                   value: member.id,
-                  label: member.name,
+                  keywords: personSearchText(member),
+                  label: personName(member),
                   icon: (
-                    <AssigneeMark name={member.name} image={member.image} />
+                    <AssigneeMark
+                      name={personName(member)}
+                      image={member.image}
+                    />
                   ),
                 })),
               ]
@@ -255,11 +263,31 @@ export function IssueRows({
   onUpdate: (issue: TeamIssue, patch: Partial<IssueDraft>) => void
   onCreate: (patch?: Partial<IssueDraft>) => void
 }) {
+  const personName = usePersonName(members)
+
   const [collapsed, setCollapsed] = useState<Array<string>>([])
   const [collapsedIssues, setCollapsedIssues] = useState<Array<string>>([])
   const rowScope = useId()
   const { data: session } = authClient.useSession()
   const board = display.layout === "board"
+  function groupValue(
+    issue: TeamIssue,
+    group: IssueDisplay["group"],
+    groupStatuses: Array<TeamStatus>,
+    groupMembers: Members
+  ) {
+    return group === "Assignee"
+      ? issue.assignee || ""
+      : issueGroupValue(issue, group, groupStatuses, groupMembers)
+  }
+  function groupLabel(value: string, group: IssueDisplay["group"]) {
+    return group === "Assignee"
+      ? personName(
+          members.find((member) => member.id === value),
+          value ? "Former member" : "Unassigned"
+        )
+      : value
+  }
   const groups = new Map<string, Array<TeamIssue>>()
   if (display.showEmpty) {
     const empty =
@@ -268,13 +296,13 @@ export function IssueRows({
         : display.group === "Priority"
           ? [...issuePriorities]
           : display.group === "Assignee"
-            ? ["Unassigned", ...members.map((member) => member.name)]
+            ? ["", ...members.map((member) => member.id)]
             : []
     empty.forEach((name) => groups.set(name, []))
   }
   for (const issue of issues) {
     const context = contextFor?.(issue)
-    const key = issueGroupValue(
+    const key = groupValue(
       issue,
       display.group,
       context?.statuses ?? statuses,
@@ -292,7 +320,7 @@ export function IssueRows({
       Labels: "labels",
       "No grouping": "title",
     }[group]
-    return issueGroupValue(
+    return groupValue(
       { ...blankIssueDraft(), [field]: value } as TeamIssue,
       group,
       statuses,
@@ -329,7 +357,6 @@ export function IssueRows({
   function patchFor(name: string, issue?: TeamIssue): Partial<IssueDraft> {
     const context = issue ? contextFor?.(issue) : undefined
     const groupStatuses = context?.statuses ?? statuses
-    const groupMembers = context?.members ?? members
     if (display.group === "Status")
       return {
         status: groupStatuses.find((status) => status.name === name)?.id,
@@ -338,7 +365,7 @@ export function IssueRows({
       return { priority: name as IssueDraft["priority"] }
     if (display.group === "Assignee")
       return {
-        assignee: groupMembers.find((member) => member.name === name)?.id ?? "",
+        assignee: name,
       }
     if (display.group === "Project")
       return { project: name === "No project" ? "" : name }
@@ -371,10 +398,7 @@ export function IssueRows({
     const creator =
       issue.creator === "You"
         ? session?.user
-        : rowMembers.find(
-            (member) =>
-              member.id === issue.creator || member.name === issue.creator
-          )
+        : resolvePerson(rowMembers, issue.creator)
     return (
       <div
         key={issue.id}
@@ -607,11 +631,13 @@ export function IssueRows({
           <span
             className="flex size-6 shrink-0 items-center justify-center"
             role="img"
-            aria-label={`Created by ${creator?.name ?? issue.creator}`}
-            title={`Created by ${creator?.name ?? issue.creator}`}
+            aria-label={`Created by ${(creator ? personName(creator) : undefined) ?? issue.creator}`}
+            title={`Created by ${(creator ? personName(creator) : undefined) ?? issue.creator}`}
           >
             <AssigneeMark
-              name={creator?.name ?? issue.creator}
+              name={
+                (creator ? personName(creator) : undefined) ?? issue.creator
+              }
               image={creator?.image}
             />
           </span>
@@ -686,11 +712,12 @@ export function IssueRows({
       aria-label={board ? "Issue board" : "Issue list"}
     >
       {entries.map(([name, items]) => {
+        const groupName = groupLabel(name, display.group)
         const status = statuses.find((item) => item.name === name)
         const subgroups = new Map<string, Array<TeamIssue>>()
         for (const issue of items) {
           const context = contextFor?.(issue)
-          const sub = issueGroupValue(
+          const sub = groupValue(
             issue,
             display.subgroup,
             context?.statuses ?? statuses,
@@ -702,7 +729,7 @@ export function IssueRows({
           <section
             key={name}
             className={cn(board ? "w-72 shrink-0" : "mb-2")}
-            aria-label={`${name} group`}
+            aria-label={`${groupName} group`}
             onDragOver={(event) => {
               if (board && display.group !== "No grouping")
                 event.preventDefault()
@@ -728,7 +755,7 @@ export function IssueRows({
                   "inline-flex size-7 shrink-0 items-center justify-center bg-transparent p-0 text-inherit outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   !board && "w-3.5"
                 )}
-                aria-label={`${collapsed.includes(name) ? "Expand" : "Collapse"} ${name} group`}
+                aria-label={`${collapsed.includes(name) ? "Expand" : "Collapse"} ${groupName} group`}
                 aria-expanded={!collapsed.includes(name)}
                 onClick={() =>
                   setCollapsed(
@@ -753,7 +780,9 @@ export function IssueRows({
                   <StatusMark id={status.id} statuses={statuses} />
                 </span>
               )}
-              <h2 className={board ? "font-medium" : "font-normal"}>{name}</h2>
+              <h2 className={board ? "font-medium" : "font-normal"}>
+                {groupName}
+              </h2>
               <span
                 className={cn(
                   "text-xs text-muted-foreground",
@@ -766,7 +795,7 @@ export function IssueRows({
                 variant="ghost"
                 size="icon-xs"
                 className="ml-auto"
-                aria-label={`Create issue in ${name}`}
+                aria-label={`Create issue in ${groupName}`}
                 onClick={() => onCreate(patchFor(name))}
               >
                 <IssueIcon name="add" />
@@ -779,7 +808,7 @@ export function IssueRows({
                   : [...subgroups].map(([sub, children]) => (
                       <div key={sub}>
                         <h3 className="px-3 py-2 text-xs text-muted-foreground">
-                          {sub}{" "}
+                          {groupLabel(sub, display.subgroup)}{" "}
                           <span>
                             {subTotals.get(JSON.stringify([name, sub])) ??
                               children.length}

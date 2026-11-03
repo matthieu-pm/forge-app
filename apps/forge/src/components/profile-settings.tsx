@@ -213,6 +213,7 @@ function ProfileSettingsEditor() {
         )
       } else {
         applySnapshot(result.snapshot)
+        window.dispatchEvent(new Event("forge:person-profile-changed"))
         toast.success("Profile updated.")
         void sessionState.refetch()
       }

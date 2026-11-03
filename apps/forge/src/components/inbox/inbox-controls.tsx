@@ -13,6 +13,7 @@ import {
 import type { ComponentProps, ReactNode } from "react"
 import type { InboxEntry } from "@/lib/inbox-state"
 import type { InboxFilters, InboxPreferences } from "@/lib/inbox-view"
+import { usePersonName } from "@/components/person-name-provider"
 import {
   emptyInboxFilters,
   inboxStatusTypes,
@@ -58,7 +59,8 @@ const categories: Array<{
 type FilterOption = { value: string; label: string; count?: number }
 function optionsFor(
   key: keyof InboxFilters,
-  entries: Array<InboxEntry>
+  entries: Array<InboxEntry>,
+  personName: ReturnType<typeof usePersonName>
 ): Array<FilterOption> {
   if (key === "type")
     return notificationTypes.map((type) => ({
@@ -74,7 +76,13 @@ function optionsFor(
     return [
       ...new Map(
         entries.flatMap((entry) =>
-          entry.events.map((event) => [event.actorId, event.actor] as const)
+          entry.events.map(
+            (event) =>
+              [
+                event.actorId,
+                personName({ id: event.actorId, name: event.actor }),
+              ] as const
+          )
         )
       ).entries(),
     ]
@@ -189,9 +197,10 @@ function FilterSubmenu({
   value: InboxFilters
   onChange: (next: InboxFilters) => void
 }) {
+  const personName = usePersonName()
   const [search, setSearch] = useState("")
   const [showAll, setShowAll] = useState(false)
-  const options = optionsFor(field, entries)
+  const options = optionsFor(field, entries, personName)
   const hidden =
     field === "type"
       ? options.filter(
@@ -351,6 +360,7 @@ export function InboxFilterChips({
   entries: Array<InboxEntry>
   onChange: (next: InboxFilters) => void
 }) {
+  const personName = usePersonName()
   return (
     <div className="flex flex-wrap gap-1.5 border-b border-border/40 px-4 py-2">
       {categories.flatMap((category) =>
@@ -358,7 +368,7 @@ export function InboxFilterChips({
           <button
             key={`${category.key}:${selected}`}
             className="flex max-w-full items-center gap-1.5 rounded-md border border-border/70 px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted focus-visible:outline-ring"
-            aria-label={`Remove ${category.label}: ${optionsFor(category.key, entries).find((option) => option.value === selected)?.label ?? selected}`}
+            aria-label={`Remove ${category.label}: ${optionsFor(category.key, entries, personName).find((option) => option.value === selected)?.label ?? selected}`}
             onClick={() =>
               onChange({
                 ...value,
@@ -369,7 +379,7 @@ export function InboxFilterChips({
             }
           >
             <span className="truncate">
-              {optionsFor(category.key, entries).find(
+              {optionsFor(category.key, entries, personName).find(
                 (option) => option.value === selected
               )?.label ?? selected}
             </span>

@@ -6,6 +6,7 @@ import { ProjectDisplayMenu, ProjectFiltersMenu } from "./project-view-controls"
 import type { InitiativePerson, InitiativeProject } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { ProjectFilter, ProjectPreferences } from "@/lib/projects"
+import { usePersonName } from "@/components/person-name-provider"
 import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
 import { ContentHeader } from "@/components/ui/content-header"
 import { ActionIconButton } from "@/components/ui/action-icon-button"
@@ -63,6 +64,8 @@ export function ProjectsPage({
     tab?: "overview" | "activity" | "issues"
   ) => void
 }) {
+  const personName = usePersonName()
+
   const store = useInitiatives(workspaceId, user.id, "projects")
   const display = useProjectPreferences(workspaceId, user.id, team?.id)
   const preferences = display.preferences
@@ -372,7 +375,12 @@ export function ProjectsPage({
               {filter.field === "Title & summary" ||
               filter.field === "Target date"
                 ? filter.value
-                : projectValueLabel(filter.field, filter.value, directory)}
+                : projectValueLabel(
+                    filter.field,
+                    filter.value,
+                    directory,
+                    personName
+                  )}
               <IssueIcon name="close" />
             </Button>
           ))}
@@ -546,7 +554,7 @@ export function ProjectsPage({
                     >
                       {summaryField === "Lead" ? (
                         <AssigneeMark
-                          name={person?.name}
+                          name={person ? personName(person) : undefined}
                           image={person?.image}
                         />
                       ) : summaryField === "Teams" && foundTeam ? (
@@ -564,7 +572,12 @@ export function ProjectsPage({
                         <IssueIcon name="layers" className="text-red-400" />
                       )}
                       <span className="truncate">
-                        {projectValueLabel(summaryField, value, directory)}
+                        {projectValueLabel(
+                          summaryField,
+                          value,
+                          directory,
+                          personName
+                        )}
                       </span>
                       <span className="ml-auto tabular-nums">{count}</span>
                     </Button>

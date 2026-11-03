@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { Link } from "@tanstack/react-router"
 import type { InitiativePerson, InitiativeProject } from "@/lib/initiatives"
+import { usePersonName } from "@/components/person-name-provider"
 import { AssigneeMark, IssueIcon } from "@/components/issues/issue-controls"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
@@ -21,6 +22,8 @@ export function ActivityAuthor({
   projects?: Array<InitiativeProject>
   withAvatar?: boolean
 }) {
+  const personName = usePersonName()
+
   const [open, setOpen] = useState(false)
   const [localTime, setLocalTime] = useState("")
   if (!person) return <span>Former member</span>
@@ -48,18 +51,20 @@ export function ActivityAuthor({
         render={
           <button
             type="button"
-            aria-label={`View ${person.name}'s profile`}
+            aria-label={`View ${personName(person)}'s profile`}
             onClick={() => changeOpen(!open)}
             className="inline-flex min-w-0 items-center gap-2 rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-popup-open:text-foreground"
           />
         }
       >
-        {withAvatar && <AssigneeMark name={person.name} image={person.image} />}
-        <span className="truncate">{person.name}</span>
+        {withAvatar && (
+          <AssigneeMark name={personName(person)} image={person.image} />
+        )}
+        <span className="truncate">{personName(person)}</span>
       </HoverCardTrigger>
       <HoverCardContent
         role="dialog"
-        aria-label={`Member preview: ${person.name}`}
+        aria-label={`Member preview: ${personName(person)}`}
         align="start"
         alignOffset={0}
         side="bottom"
@@ -70,7 +75,7 @@ export function ActivityAuthor({
           <Avatar className="size-8">
             <AvatarImage src={person.image ?? undefined} alt="" />
             <AvatarFallback className="bg-emerald-500 text-xs text-white">
-              {person.name
+              {personName(person)
                 .split(/\s+/)
                 .slice(0, 2)
                 .map((part) => part[0])
@@ -78,7 +83,9 @@ export function ActivityAuthor({
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0">
-            <p className="truncate text-[13px] font-medium">{person.name}</p>
+            <p className="truncate text-[13px] font-medium">
+              {personName(person)}
+            </p>
             {person.username && (
               <p className="mt-0.5 truncate text-muted-foreground">
                 {person.username}

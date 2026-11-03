@@ -7,6 +7,7 @@ import {
 import type { Initiative, InitiativePerson } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamLabel } from "@/lib/team-labels"
+import { usePersonName } from "@/components/person-name-provider"
 import { canonicalIssuesActive } from "@/lib/canonical-issue-cache"
 import { documentTime } from "@/lib/team-documents"
 import { IssueIcon } from "@/components/issues/issue-controls"
@@ -32,6 +33,7 @@ export function InitiativeDetailsPanel({
   onClose: () => void
   onActivity: (entryId?: string) => void
 }) {
+  const personName = usePersonName()
   const [propertiesOpen, setPropertiesOpen] = useState(true)
   const [activityOpen, setActivityOpen] = useState(true)
   const propertiesId = useId()
@@ -46,7 +48,10 @@ export function InitiativeDetailsPanel({
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, 5)
   const name = (id: string) =>
-    people.find((person) => person.id === id)?.name ?? "Former member"
+    personName(
+      people.find((person) => person.id === id),
+      "Former member"
+    )
   return (
     <aside
       aria-label="Initiative details sidebar"

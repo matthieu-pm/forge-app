@@ -15,6 +15,7 @@ import type {
   WorkspaceMemberSummary,
 } from "@/lib/member-contract"
 import type { TeamDirectoryEntry } from "@/lib/team-contract"
+import { usePersonName } from "@/components/person-name-provider"
 import {
   DirectoryDisplay,
   DirectoryHeader,
@@ -81,11 +82,13 @@ function memberDate(value: string | null) {
       }).format(date)
 }
 function MemberAvatar({ member }: { member: WorkspaceMemberSummary }) {
+  const personName = usePersonName()
+
   return (
     <Avatar className="size-6 shrink-0">
       <AvatarImage src={member.image ?? undefined} alt="" />
       <AvatarFallback className="text-[10px]">
-        {member.name
+        {personName(member)
           .trim()
           .split(/\s+/)
           .map((word) => word[0])
@@ -118,6 +121,8 @@ export function WorkspaceMembers({
   access: WorkspaceAccessSummary
   teams: Array<TeamDirectoryEntry>
 }) {
+  const personName = usePersonName(access.members)
+
   const router = useRouter()
   const [query, setQuery] = useState("")
   const [ordering, setOrdering] = useState<Ordering>("name")
@@ -146,7 +151,7 @@ export function WorkspaceMembers({
         const memberTeams = memberships.get(member.userId) ?? []
         return (
           (!search ||
-            `${member.name} ${member.username ?? ""} ${member.email}`
+            `${personName(member)} ${member.name} ${member.username ?? ""} ${member.email}`
               .toLocaleLowerCase()
               .includes(search)) &&
           (role === "all" || memberRole(member).toLowerCase() === role) &&
@@ -163,12 +168,16 @@ export function WorkspaceMembers({
             ? Date.parse(a.joinedAt) - Date.parse(b.joinedAt)
             : ordering === "role"
               ? memberRole(a).localeCompare(memberRole(b))
-              : a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+              : personName(a).localeCompare(personName(b), undefined, {
+                  sensitivity: "base",
+                })
         return (
-          (descending ? -1 : 1) * (comparison || a.name.localeCompare(b.name))
+          (descending ? -1 : 1) *
+          (comparison || a.userId.localeCompare(b.userId))
         )
       })
   }, [
+    personName,
     access.members,
     query,
     role,
@@ -401,13 +410,13 @@ export function WorkspaceMembers({
                         <button
                           type="button"
                           onClick={() => setSelected(member)}
-                          aria-label={`View ${member.name}`}
+                          aria-label={`View ${personName(member)}`}
                           className="flex h-12 max-w-full min-w-0 items-center gap-2.5 rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
                           <MemberAvatar member={member} />
                           <span className="min-w-0">
                             <span className="block truncate text-foreground">
-                              {member.name}
+                              {personName(member)}
                             </span>
                             <span className="block truncate text-xs text-muted-foreground">
                               {member.username ??

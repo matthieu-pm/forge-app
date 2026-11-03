@@ -1,16 +1,23 @@
 import { useEffect, useRef, useState } from "react"
 import { Node } from "@tiptap/core"
-import { EditorContent, useEditor } from "@tiptap/react"
+import {
+  EditorContent,
+  NodeViewWrapper,
+  ReactNodeViewRenderer,
+  useEditor,
+} from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 import Placeholder from "@tiptap/extension-placeholder"
 import { FileUploadPicker } from "./durable-issue-files"
 import { SafeCommentContent } from "./safe-comment-content"
+import type { NodeViewProps } from "@tiptap/react"
 import type { ReadyUpload } from "@/application/files/upload-contract"
 import type { CommentNode } from "@/lib/comment-rich-text"
 import type {
   IssueCommentCommand,
   MentionTarget,
 } from "@/lib/issue-comment-contract"
+import { usePersonName } from "@/components/person-name-provider"
 import { productStorage, saveProductValue } from "@/lib/product-storage"
 import {
   commentFromText,
@@ -27,6 +34,23 @@ import { loadCommentMentions } from "@/lib/issue-comment-state"
 import { Button } from "@/components/ui/button"
 import "./comment-editor.css"
 
+function MentionView({ node }: NodeViewProps) {
+  const personName = usePersonName()
+  return (
+    <NodeViewWrapper
+      as="span"
+      className="rounded bg-primary/10 px-1 text-primary"
+      contentEditable={false}
+    >
+      @
+      {personName({
+        id: String(node.attrs.id),
+        name: String(node.attrs.label),
+      })}
+    </NodeViewWrapper>
+  )
+}
+
 const Mention = Node.create({
   name: "mention",
   group: "inline",
@@ -41,6 +65,7 @@ const Mention = Node.create({
     `@${String(node.attrs.label)}`,
   ],
   renderText: ({ node }) => `@${String(node.attrs.label)}`,
+  addNodeView: () => ReactNodeViewRenderer(MentionView),
 })
 type SharedCommentInputProps = {
   teamId: string
@@ -133,6 +158,7 @@ function CommentComposer({
     [query, setQuery] = useState("")
   const [targets, setTargets] = useState<Array<MentionTarget>>([]),
     [mentionError, setMentionError] = useState("")
+  const personName = usePersonName(targets)
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -421,7 +447,7 @@ function CommentComposer({
                   setMentionOpen(false)
                 }}
               >
-                {p.name}
+                {personName(p)}
               </button>
             ))}
           </div>

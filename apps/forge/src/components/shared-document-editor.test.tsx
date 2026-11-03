@@ -9,6 +9,7 @@ import {
 import { afterEach, beforeEach, expect, it, vi } from "vitest"
 import { StrictMode } from "react"
 import { SharedDocumentEditor } from "./shared-document-editor"
+import type * as PreferenceProvider from "@/components/account-preference-provider"
 import type {
   DocumentCommandResult,
   SharedDocument,
@@ -26,7 +27,8 @@ vi.mock("@/lib/product-storage", () => ({
     sessionId: "session",
   }),
 }))
-vi.mock("@/components/account-preference-provider", () => ({
+vi.mock("@/components/account-preference-provider", async (original) => ({
+  ...(await original<typeof PreferenceProvider>()),
   useWorkspaceView: () => ({
     value: {
       favorite: false,

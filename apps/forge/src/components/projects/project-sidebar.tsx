@@ -9,6 +9,8 @@ import type { ReactNode } from "react"
 import type { InitiativePerson, InitiativeProject } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { IssueField } from "@/lib/team-issues"
+import { personSearchText } from "@/lib/person-name"
+import { usePersonName } from "@/components/person-name-provider"
 import { useIssueQuery } from "@/lib/issue-query-client"
 import { useMyIssueData } from "@/lib/my-issues-state"
 import { projectIcon } from "@/components/initiatives/initiative-projects"
@@ -82,6 +84,8 @@ export function ProjectSidebar({
   onActivity: () => void
   onIssues: (field?: IssueField | "teamId", value?: string) => void
 }) {
+  const personName = usePersonName(people)
+
   const [slackOpen, setSlackOpen] = useState(false)
   const [slackUrl, setSlackUrl] = useState("")
   const [slackError, setSlackError] = useState("")
@@ -133,13 +137,16 @@ export function ProjectSidebar({
       const person = people.find((p) => p.id === key)
       const label =
         breakdown === "Assignees"
-          ? (person?.name ?? (key || "Unassigned"))
+          ? personName(person, key || "Unassigned")
           : breakdown === "Labels"
             ? key || "No label"
             : context.team.name
       const icon =
         breakdown === "Assignees" ? (
-          <AssigneeMark name={person?.name} image={person?.image} />
+          <AssigneeMark
+            name={person ? personName(person) : undefined}
+            image={person?.image}
+          />
         ) : breakdown === "Teams" ? (
           <TeamSidebarIcon name={context.team.name} icon={context.team.icon} />
         ) : (
@@ -180,7 +187,8 @@ export function ProjectSidebar({
         count: row.count,
         label:
           facet === "assignee"
-            ? (person?.name ?? (row.value || "Unassigned"))
+            ? ((person ? personName(person) : undefined) ??
+              (row.value || "Unassigned"))
             : facet === "team"
               ? (context?.team.name ?? row.value)
               : row.value || "No label",
@@ -235,7 +243,11 @@ export function ProjectSidebar({
               value={(project.dependencyIds ?? []).join(",")}
               options={catalog
                 .filter((p) => p.id !== project.id)
-                .map((p) => ({ value: p.id, label: p.name }))}
+                .map((p) => ({
+                  value: p.id,
+                  keywords: personSearchText(p),
+                  label: personName(p),
+                }))}
               onChange={(value) =>
                 onChange({ dependencyIds: value.split(",").filter(Boolean) })
               }
@@ -375,8 +387,14 @@ export function ProjectSidebar({
           />
           <span>
             {latest
-              ? `${people.find((p) => p.id === latest.authorId)?.name ?? "A teammate"} ${"milestoneEvent" in latest ? latest.text : "health" in latest ? "posted an update" : "commented"}`
-              : `${people.find((p) => p.id === project.creatorId)?.name ?? "A teammate"} created the project`}
+              ? `${personName(
+                  people.find((p) => p.id === latest.authorId),
+                  "A teammate"
+                )} ${"milestoneEvent" in latest ? latest.text : "health" in latest ? "posted an update" : "commented"}`
+              : `${personName(
+                  people.find((p) => p.id === project.creatorId),
+                  "A teammate"
+                )} created the project`}
             {(latest?.createdAt ?? project.createdAt) &&
               ` · ${format(new Date(latest?.createdAt ?? project.createdAt!), "MMM d")}`}
           </span>

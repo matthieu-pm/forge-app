@@ -22,6 +22,8 @@ import type {
 } from "@/lib/template-contract"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamLabelDirectory } from "@/lib/team-labels"
+import { personSearchText } from "@/lib/person-name"
+import { usePersonName } from "@/components/person-name-provider"
 import { loadTemplateReferences } from "@/lib/template-application-state"
 import { onPreferenceSessionInvalidated } from "@/lib/preference-session-events"
 import { protectedSessionEpoch } from "@/lib/protected-session"
@@ -442,6 +444,8 @@ export function Properties({
   workspace?: boolean
   children?: ReactNode
 }) {
+  const personName = usePersonName()
+
   const [references, setReferences] =
     React.useState<Awaited<ReturnType<typeof loadTemplateReferences>>>()
   React.useEffect(() => {
@@ -531,8 +535,9 @@ export function Properties({
   ) => onChange({ ...value, [key]: selected })
   const personChoices = directory.members.map((p) => ({
     value: p.id,
-    label: p.name,
-    icon: personIcon(p.name, p.image),
+    keywords: personSearchText(p),
+    label: personName(p),
+    icon: personIcon(personName(p), p.image),
   }))
   const teamChoices = directory.teams.map((t) => ({
     value: t.id,
@@ -679,9 +684,12 @@ export function Properties({
         onChange={(selected) => patch(project ? "lead" : "assignee", selected)}
       >
         <Glyph name="person" />
-        {directory.members.find(
-          (p) => p.id === (project ? value.lead : value.assignee)
-        )?.name ?? (project ? "Lead" : "Assignee")}
+        {personName(
+          directory.members.find(
+            (p) => p.id === (project ? value.lead : value.assignee)
+          ),
+          project ? "Lead" : "Assignee"
+        )}
       </Picker>
       {project && (
         <>

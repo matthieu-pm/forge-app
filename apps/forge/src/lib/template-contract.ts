@@ -214,7 +214,12 @@ export type TemplateDirectory = {
   templates: Array<SavedTemplate>
   defaults: { members: string | null; nonMembers: string | null }
   teams: Array<TeamSummary>
-  members: Array<{ id: string; name: string; image: string | null }>
+  members: Array<{
+    id: string
+    name: string
+    image: string | null
+    username?: string | null
+  }>
   canManage: boolean
 }
 export const templateQuerySchema = z.object({

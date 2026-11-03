@@ -12,6 +12,7 @@ import type {
 } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamLabel } from "@/lib/team-labels"
+import { usePersonName } from "@/components/person-name-provider"
 import { canonicalIssuesActive } from "@/lib/canonical-issue-cache"
 import { IssueIcon } from "@/components/issues/issue-controls"
 import { DirectoryRowIcon } from "@/components/ui/directory-row-icon"
@@ -117,6 +118,7 @@ export function InitiativeTable({
   onOrder: (ordering: InitiativePreferences["ordering"]) => void
   onReorder: (from: string, to: string) => void
 }) {
+  const personName = usePersonName()
   const [collapsed, setCollapsed] = useState<Array<string>>([])
   const [dragged, setDragged] = useState<string>()
   const columns = columnDefinitions.filter((column) =>
@@ -126,8 +128,9 @@ export function InitiativeTable({
     if (preferences.grouping === "Status") return item.status
     if (preferences.grouping === "Priority") return item.priority
     if (preferences.grouping === "Owner")
-      return (
-        people.find((person) => person.id === item.ownerId)?.name ?? "No lead"
+      return personName(
+        people.find((person) => person.id === item.ownerId),
+        "No lead"
       )
     if (preferences.grouping === "Health")
       return initiativeHealth(item, schedule)

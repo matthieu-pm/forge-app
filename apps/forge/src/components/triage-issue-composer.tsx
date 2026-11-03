@@ -4,6 +4,7 @@ import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import type { TriageDraft } from "@/lib/triage-issues"
 import { DateInput } from "@/components/ui/date-input"
+import { usePersonName } from "@/components/person-name-provider"
 import { TemplateApplicationButton } from "@/components/templates/template-application-button"
 import { productStorage } from "@/lib/product-storage"
 import { OptionSelect } from "@/components/ui/option-select"
@@ -104,6 +105,8 @@ export function TriageIssueComposer({
   onError: (message: string | null) => void
   onSave: () => boolean | Promise<boolean>
 }) {
+  const personName = usePersonName()
+
   const [expanded, setExpanded] = useState(false)
   const [createMore, setCreateMore] = useState(false)
   const [directory, setDirectory] = useState<TemplateDirectory>()
@@ -227,9 +230,10 @@ export function TriageIssueComposer({
   const directoryMessage = directoryError
     ? "Could not load team templates and members. Close and reopen to retry."
     : "Loading…"
-  const assignee =
-    directory?.members.find((member) => member.id === draft.assignee)?.name ??
+  const assignee = personName(
+    directory?.members.find((member) => member.id === draft.assignee),
     draft.assignee
+  )
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -411,7 +415,7 @@ export function TriageIssueComposer({
                       <option value="">No assignee</option>
                       {directory.members.map((member) => (
                         <option key={member.id} value={member.id}>
-                          {member.name}
+                          {personName(member)}
                         </option>
                       ))}
                     </OptionSelect>
