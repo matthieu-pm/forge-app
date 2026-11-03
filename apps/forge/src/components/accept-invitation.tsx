@@ -80,7 +80,7 @@ export function AcceptInvitation({ invitationId }: { invitationId?: string }) {
       return
     }
 
-    window.location.assign("/inbox")
+    window.location.assign("/")
   }
 
   return (

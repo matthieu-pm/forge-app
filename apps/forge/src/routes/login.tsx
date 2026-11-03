@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router"
+import { DEFAULT_HOME_ENTRY, authReturnPath } from "@/lib/default-home"
 import { publicRouteBeforeLoad } from "@/lib/auth-state"
 import { LoginForm } from "@/components/login-form"
 import { DesktopAuthPrompt } from "@/components/desktop-auth-prompt"
@@ -22,7 +23,7 @@ function LoginPage() {
         {desktopBrowserAuth === null ? null : desktopBrowserAuth ? (
           <DesktopAuthPrompt
             title="Sign in to Forge"
-            returnTo={redirect || "/inbox"}
+            returnTo={authReturnPath(redirect) ?? DEFAULT_HOME_ENTRY}
           />
         ) : (
           <LoginForm redirectTo={redirect} />

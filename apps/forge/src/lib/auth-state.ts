@@ -3,6 +3,8 @@ import { createServerFn } from "@tanstack/react-start"
 import { protectedSessionEpoch } from "@/lib/protected-session"
 import { createTimedRequestCache } from "@/lib/timed-request-cache"
 import { getTeamRouteState } from "@/lib/team-state"
+import { DEFAULT_HOME_ENTRY, authReturnPath } from "@/lib/default-home"
+import { desktopAuthorizationQuery } from "@/lib/auth-session"
 
 export const getAuthState = createServerFn({ method: "GET" }).handler(
   async () => {
@@ -36,15 +38,27 @@ function redirectTarget(pathname: string, search = "", hash = "") {
   return `${pathname}${search}${hash}`
 }
 
-export async function publicRouteBeforeLoad() {
+export async function publicRouteBeforeLoad({
+  location,
+}: {
+  location?: { searchStr?: string }
+} = {}) {
   const authState = await getNavigationAuthState()
 
   if (!authState.session) {
     return
   }
 
+  // The browser must finish the desktop authorization handshake even when signed in.
+  if (desktopAuthorizationQuery(location?.searchStr ?? "")) return
+  const returnTo = authReturnPath(
+    new URLSearchParams(location?.searchStr).get("redirect")
+  )
+
   throw redirect({
-    to: authState.workspace ? "/inbox" : "/onboarding/workspace",
+    href: authState.workspace
+      ? (returnTo ?? DEFAULT_HOME_ENTRY)
+      : "/onboarding/workspace",
   })
 }
 
@@ -74,7 +88,7 @@ export async function onboardingRouteBeforeLoad({
 
   if (authState.workspace) {
     throw redirect({
-      to: "/inbox",
+      to: DEFAULT_HOME_ENTRY,
     })
   }
 }

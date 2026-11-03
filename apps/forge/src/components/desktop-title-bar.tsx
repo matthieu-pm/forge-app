@@ -14,7 +14,8 @@ import {
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useRouter, useRouterState } from "@tanstack/react-router"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { toast } from "sonner"
 
 import type { AppNavChild } from "@/lib/app-navigation"
 import type { DesktopTabsState } from "@/lib/desktop-tabs"
@@ -25,6 +26,8 @@ import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
 import { ForgeLogo } from "@/components/forge-logo"
 import { Button } from "@/components/ui/button"
 import { getForgeHost } from "@/host/forge-host"
+import { loadDefaultHome } from "@/lib/default-home-state"
+import { protectedSessionEpoch } from "@/lib/protected-session"
 import { appNav, getBreadcrumbItems } from "@/lib/app-navigation"
 import {
   activateDesktopTab,
@@ -236,6 +239,14 @@ function DesktopTitleBarChrome() {
   )
   const [sidebarState, setSidebarState] = useState<SidebarState>("expanded")
   const [workspaceTeams, setWorkspaceTeams] = useState<Array<TeamSummary>>([])
+  const defaultOpenSequence = useRef(0)
+
+  useEffect(
+    () => () => {
+      ++defaultOpenSequence.current
+    },
+    []
+  )
 
   useEffect(() => {
     let cancelled = false
@@ -281,11 +292,32 @@ function DesktopTitleBarChrome() {
   )
 
   const openTab = useCallback(
-    (path = "/forge") => {
-      setTabState((state) => openDesktopTab(state, path))
-      navigate(path)
+    (path?: string) => {
+      const sequence = ++defaultOpenSequence.current
+      const open = (target: string) => {
+        setTabState((state) => openDesktopTab(state, target))
+        navigate(target)
+      }
+      if (path) {
+        open(path)
+        return
+      }
+      const epoch = protectedSessionEpoch()
+      const location = router.latestLocation
+      const current = () =>
+        sequence === defaultOpenSequence.current &&
+        epoch === protectedSessionEpoch() &&
+        location === router.latestLocation
+      void loadDefaultHome()
+        .then((target) => {
+          if (current()) open(target)
+        })
+        .catch(() => {
+          if (current())
+            toast.error("Your home view could not be opened. Please retry.")
+        })
     },
-    [navigate]
+    [navigate, router]
   )
 
   const closeTab = useCallback(

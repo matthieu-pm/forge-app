@@ -1,7 +1,10 @@
 import { createFileRoute, redirect } from "@tanstack/react-router"
+import { protectedRouteBeforeLoad } from "@/lib/auth-state"
+import { loadDefaultHome } from "@/lib/default-home-state"
 
 export const Route = createFileRoute("/")({
-  beforeLoad: () => {
-    throw redirect({ to: "/inbox" })
+  beforeLoad: async (context) => {
+    await protectedRouteBeforeLoad(context)
+    throw redirect({ to: await loadDefaultHome(), replace: true })
   },
 })

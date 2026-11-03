@@ -82,6 +82,50 @@ describe("auth route guards", () => {
     expect(mocks.getAuthState).toHaveBeenCalledOnce()
   })
 
+  it("FOR-131 sends a signed-in default login to the common home entry", async () => {
+    await expect(publicRouteBeforeLoad()).rejects.toMatchObject({
+      options: { href: "/" },
+    })
+  })
+
+  it("FOR-131 preserves explicit auth return URLs including search and hash", async () => {
+    const path = "/teams/product/issues?issue=FOR-131#comment-1"
+    await expect(
+      publicRouteBeforeLoad({
+        location: { searchStr: `?redirect=${encodeURIComponent(path)}` },
+      })
+    ).rejects.toMatchObject({ options: { href: path } })
+  })
+
+  it("FOR-131 lets a signed-in desktop authorization handshake complete", async () => {
+    await expect(
+      publicRouteBeforeLoad({
+        location: {
+          searchStr:
+            "?client_id=electron&state=state&code_challenge=challenge&code_challenge_method=S256",
+        },
+      })
+    ).resolves.toBeUndefined()
+  })
+
+  it("FOR-131 preserves an unauthenticated deep link for sign-in", async () => {
+    mocks.getAuthState.mockResolvedValue({ session: null, workspace: null })
+    await expect(
+      protectedRouteBeforeLoad({
+        location: {
+          pathname: "/teams/product/issues",
+          searchStr: "?issue=FOR-131",
+          hash: "#comment-1",
+        },
+      })
+    ).rejects.toMatchObject({
+      options: {
+        to: "/login",
+        search: { redirect: "/teams/product/issues?issue=FOR-131#comment-1" },
+      },
+    })
+  })
+
   it("shares navigation state beyond five seconds and reloads after invalidation", async () => {
     vi.useFakeTimers()
     try {

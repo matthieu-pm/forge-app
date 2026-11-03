@@ -30,7 +30,7 @@ export function getActiveDesktopTab(state: DesktopTabsState) {
 }
 
 export function getDesktopTabPath(tab: DesktopTab) {
-  return tab.history[tab.historyIndex] ?? "/forge"
+  return tab.history[tab.historyIndex] ?? "/"
 }
 
 export function recordDesktopTabRoute(
