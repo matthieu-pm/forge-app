@@ -10,6 +10,7 @@ import {
   productStorageIdentity,
   saveProductValue,
 } from "./product-storage"
+import { featureForStorageKey } from "@/application/features/feature-policy"
 
 // The only access to persistent browser data: read legacy sources, copy to an
 // authenticated server record, then remove exactly the bytes we verified.
@@ -19,7 +20,9 @@ export async function migrateBrowserData() {
   for (const storage of [window.localStorage, window.sessionStorage]) {
     const keys = Array.from({ length: storage.length }, (_, i) =>
       storage.key(i)
-    ).filter((k): k is string => Boolean(k && isLegacyProductStorageKey(k)))
+    ).filter((k): k is string =>
+      Boolean(k && isLegacyProductStorageKey(k) && !featureForStorageKey(k))
+    )
     for (const key of keys) {
       if (epoch !== protectedSessionEpoch()) return failures
       const identity = productStorageIdentity(),

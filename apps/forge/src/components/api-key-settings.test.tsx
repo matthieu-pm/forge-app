@@ -52,6 +52,16 @@ describe("ApiKeySettings", () => {
     ).toBeTruthy()
     expect(screen.getByRole("heading", { name: "Webhooks" })).toBeTruthy()
     expect(
+      screen
+        .getByRole("button", { name: "OAuth applications unavailable" })
+        .hasAttribute("disabled")
+    ).toBe(true)
+    expect(
+      screen
+        .getByRole("button", { name: "Webhooks unavailable" })
+        .hasAttribute("disabled")
+    ).toBe(true)
+    expect(
       screen.getByRole("heading", { name: "Member API keys" })
     ).toBeTruthy()
 

@@ -1,23 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router"
-
-import { ProjectUpdatesSettings } from "@/components/project-updates-settings"
+import { protectedRouteBeforeLoad } from "@/lib/auth-state"
+import { FeatureUnavailable } from "@/components/feature-availability"
 
 export const Route = createFileRoute("/settings/project-updates")({
-  loader: ({ context }) => {
-    const workspace =
-      "authState" in context ? context.authState.workspace : null
-
-    if (!workspace) {
-      throw new Error("The active workspace could not be loaded.")
-    }
-
-    return { workspaceId: workspace.id }
-  },
-  component: ProjectUpdatesSettingsPage,
+  beforeLoad: protectedRouteBeforeLoad,
+  component: Page,
 })
-
-function ProjectUpdatesSettingsPage() {
-  const { workspaceId } = Route.useLoaderData()
-
-  return <ProjectUpdatesSettings workspaceId={workspaceId} />
+function Page() {
+  return <FeatureUnavailable feature="scheduledUpdates" />
 }

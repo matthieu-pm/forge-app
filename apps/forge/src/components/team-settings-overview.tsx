@@ -22,6 +22,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { Link, useRouter } from "@tanstack/react-router"
 import * as React from "react"
 import { toast } from "sonner"
+import { useFeatureNavigation } from "./feature-availability"
 import type { ComponentProps, ReactNode } from "react"
 
 import type { TeamSummary } from "@/lib/team-contract"
@@ -223,9 +224,27 @@ function SettingsCard({
   items: Array<SettingItem>
   teamSlug?: string
 }) {
+  const featureVisible = useFeatureNavigation()
   return (
     <div className="overflow-hidden rounded-2xl border border-border/70 bg-muted/35">
       {items.map((item, index) => {
+        const section =
+          item.section === "thread-summaries"
+            ? "ai/summaries"
+            : item.section === "project-updates"
+              ? "ai/updates"
+              : item.section
+        const unavailable =
+          section &&
+          teamSlug &&
+          !featureVisible(`/settings/teams/${teamSlug}/${section}`)
+        const presentation = unavailable
+          ? {
+              ...item,
+              description: "This feature is unavailable.",
+              value: "Unavailable",
+            }
+          : item
         const className = cn(
           "group flex min-h-[68px] w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-muted/55 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
           index > 0 && "border-t border-border/60"
@@ -264,7 +283,7 @@ function SettingsCard({
             params={{ teamSlug }}
             className={className}
           >
-            <SettingRowContent item={item} />
+            <SettingRowContent item={presentation} />
           </Link>
         ) : (
           <button
@@ -275,7 +294,7 @@ function SettingsCard({
             }
             className={className}
           >
-            <SettingRowContent item={item} />
+            <SettingRowContent item={presentation} />
           </button>
         )
       })}

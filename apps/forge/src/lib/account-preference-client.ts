@@ -30,6 +30,7 @@ export type PreferenceClientState = {
   message: string
   conflicts: Array<string>
   pending: boolean
+  unavailableDraft?: string
 }
 export class AccountPreferenceClient {
   private snapshot: PreferenceSnapshot
@@ -44,6 +45,7 @@ export class AccountPreferenceClient {
   private cacheKey: string
   private cacheWritable = true
   private draftKey: string
+  private unavailableDraft: string | null = null
   constructor(
     readonly identity: PreferenceIdentity,
     private transport: PreferenceTransport,
@@ -56,6 +58,12 @@ export class AccountPreferenceClient {
         : {}),
     }
     this.draftKey = `forge:preference-draft:v1:${identity.scope ?? "account"}:${encodeURIComponent(identity.userId)}:${encodeURIComponent(identity.workspaceId)}`
+    try {
+      this.unavailableDraft =
+        storage?.getItem(`${this.draftKey}:unavailable`) ?? null
+    } catch {
+      /* The original active draft is still recovered below. */
+    }
     this.cacheKey = preferenceCacheKey(
       identity.scope === "workspace"
         ? {
@@ -92,6 +100,9 @@ export class AccountPreferenceClient {
       message: "Loading your preferences…",
       conflicts: [],
       pending: false,
+      ...(this.unavailableDraft
+        ? { unavailableDraft: this.unavailableDraft }
+        : {}),
     }
     try {
       const raw = JSON.parse(storage?.getItem(this.draftKey) ?? "null")
@@ -174,6 +185,9 @@ export class AccountPreferenceClient {
       message,
       conflicts,
       pending: Object.keys(this.pending).length > 0,
+      ...(this.unavailableDraft
+        ? { unavailableDraft: this.unavailableDraft }
+        : {}),
       values: { ...this.snapshot.values, ...this.pending },
       groups: decodeAccountPreferences({
         ...this.snapshot.values,
@@ -274,6 +288,35 @@ export class AccountPreferenceClient {
       const result = await this.transport.save(command)
       if (!this.active) return
       this.accept(result.snapshot)
+      if (result.status === "unavailable") {
+        // The server explicitly rejected the entire command before any effect.
+        // Preserve its exact identity and all newer typing, including mixed
+        // supported fields, before clearing the active queue. Do not rebase or
+        // silently apply any part of the old draft under a different command.
+        const recovered = [
+          this.unavailableDraft,
+          JSON.stringify({
+            version: 1,
+            identity: this.identity,
+            fields: result.fields,
+            command,
+            pending: this.pending,
+            expected: this.expected,
+          }),
+        ]
+          .filter(Boolean)
+          .join("\n")
+        this.storage?.setItem(`${this.draftKey}:unavailable`, recovered)
+        this.unavailableDraft = recovered
+        this.pending = {}
+        this.expected = {}
+        this.command = null
+        this.publish(
+          "ready",
+          "A draft containing unavailable preferences was preserved separately; it was not applied."
+        )
+        return
+      }
       if (result.status === "conflict") {
         this.command = null
         this.publish(
@@ -345,6 +388,7 @@ export class AccountPreferenceClient {
     this.pending = {}
     this.expected = {}
     this.command = null
+    this.unavailableDraft = null
     this.listeners.clear()
   }
 }

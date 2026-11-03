@@ -168,6 +168,11 @@ export type AccountPreferenceCommand = z.infer<
 >
 export type PreferenceSaveResult =
   | { status: "saved"; snapshot: PreferenceSnapshot }
+  | {
+      status: "unavailable"
+      fields: Array<string>
+      snapshot: PreferenceSnapshot
+    }
   | { status: "conflict"; fields: Array<string>; snapshot: PreferenceSnapshot }
 export type PreferenceLoadResult =
   { status: "ready"; snapshot: PreferenceSnapshot } | { status: "disabled" }

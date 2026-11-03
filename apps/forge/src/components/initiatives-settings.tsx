@@ -184,14 +184,14 @@ export function InitiativesSettings({ workspaceId }: { workspaceId: string }) {
               <p className={copyClass}>
                 Short status reports about the progress and health of your
                 initiative. Updates are ideally written regularly by the owner
-                of the initiative. Subscribers receive these updates directly in
-                their inbox. You can also configure a Slack channel where all
-                initiative updates are posted.
+                of the initiative. Automatic inbox delivery and Slack posting
+                are unavailable.
               </p>
               <h3 className="mt-4 text-sm font-medium">Update schedule</h3>
               <p className={copyClass}>
-                Configure how often updates are expected on initiatives.
-                Initiative owners will receive reminders to post updates.
+                Configure how often updates are expected on initiatives. This
+                frequency is used for initiative health. Automatic reminders are
+                unavailable.
               </p>
             </div>
             <div
@@ -259,8 +259,7 @@ export function InitiativesSettings({ workspaceId }: { workspaceId: string }) {
                 Slack notifications
               </h2>
               <p className={copyClass}>
-                Updates are only posted to Slack for workspace-level initiatives
-                or initiatives led by a public team
+                Posting initiative updates to Slack is unavailable.
               </p>
             </div>
             <div
@@ -275,12 +274,12 @@ export function InitiativesSettings({ workspaceId }: { workspaceId: string }) {
               <div className="min-w-0 flex-1">
                 <p className="text-sm">Slack</p>
                 <p className="text-xs leading-5 text-muted-foreground">
-                  Broadcasting initiative updates
+                  Slack posting unavailable
                 </p>
               </div>
               <Button
                 variant="ghost"
-                disabled={disabled}
+                disabled
                 onClick={() => setSlackOpen(true)}
                 size="default"
                 className="rounded-full px-2 font-normal"

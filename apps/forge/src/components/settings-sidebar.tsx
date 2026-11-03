@@ -34,6 +34,7 @@ import {
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Link, useRouterState } from "@tanstack/react-router"
+import { useFeatureNavigation } from "./feature-availability"
 import type { ComponentProps } from "react"
 import type { TeamSummary } from "@/lib/team-contract"
 
@@ -260,12 +261,15 @@ export function SettingsSidebar() {
       window.removeEventListener(TEAM_LIST_CHANGED_EVENT, loadWorkspaceTeams)
     }
   }, [])
+  const featureVisible = useFeatureNavigation()
   const normalizedQuery = query.trim().toLocaleLowerCase()
   const visibleGroups = settingsGroups
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) =>
-        item.label.toLocaleLowerCase().includes(normalizedQuery)
+      items: group.items.filter(
+        (item) =>
+          (!item.to || featureVisible(item.to)) &&
+          item.label.toLocaleLowerCase().includes(normalizedQuery)
       ),
     }))
     .filter((group) => group.items.length > 0)

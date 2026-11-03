@@ -1,32 +1,14 @@
-import { createFileRoute, getRouteApi } from "@tanstack/react-router"
-import { SignalsPage as SignalsView } from "@/components/signals/signals-page"
-import { readSignalsSearch } from "@/lib/signals-demo"
-import { getNavigationAuthState } from "@/lib/auth-state"
+import { createFileRoute } from "@tanstack/react-router"
+import { loadFeatureAvailability } from "@/lib/feature-state"
+import { FeatureUnavailable } from "@/components/feature-availability"
 
 export const Route = createFileRoute("/teams/$teamSlug/signals")({
-  loader: () => getNavigationAuthState(),
-  staleTime: 30_000,
-  validateSearch: readSignalsSearch,
-  component: SignalsPage,
+  loader: () => loadFeatureAvailability(),
+  staleTime: 0,
+  component: Page,
 })
 
-function SignalsPage() {
-  const authState = Route.useLoaderData()
-  const { team } = getRouteApi("/teams/$teamSlug").useLoaderData()
-  const { preview } = Route.useSearch()
-  const navigate = Route.useNavigate()
-  if (!authState.user) return null
-  return (
-    <SignalsView
-      scope={{
-        workspaceId: authState.workspace?.id ?? "personal",
-        userId: authState.user.id,
-      }}
-      team={team}
-      preview={preview}
-      onPreviewChange={(next) => {
-        void navigate({ search: next ? { preview: true } : {} })
-      }}
-    />
-  )
+function Page() {
+  const { features } = Route.useLoaderData()
+  return <FeatureUnavailable feature="signals" mode={features.signals} />
 }

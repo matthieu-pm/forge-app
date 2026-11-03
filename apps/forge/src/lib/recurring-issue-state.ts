@@ -10,7 +10,11 @@ const dependencies = createServerOnlyFn(async () => {
       import("@/adapters/auth/session-actor.server"),
       import("@/application/recurring-issues/recurring-issues.server"),
     ])
-  return { actor: await requireSessionActor(getRequest()), application }
+  const actor = await requireSessionActor(getRequest())
+  const { requireFeatureWrite } =
+    await import("@/application/features/features.server")
+  requireFeatureWrite(actor, "recurringIssues")
+  return { actor, application }
 })
 export const loadRecurringIssues = createServerFn({ method: "GET" })
   .validator(templateQuerySchema)

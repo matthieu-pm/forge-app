@@ -1,12 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { CodeReviewsSettings } from "@/components/code-reviews-settings"
+import { protectedRouteBeforeLoad } from "@/lib/auth-state"
+import { FeatureUnavailable } from "@/components/feature-availability"
 
 export const Route = createFileRoute("/settings/code-and-reviews")({
-  component: CodeReviewsPage,
+  beforeLoad: protectedRouteBeforeLoad,
+  component: Page,
 })
-function CodeReviewsPage() {
-  const { authState } = Route.useRouteContext()
-  return (
-    <CodeReviewsSettings key={authState.user!.id} userId={authState.user!.id} />
-  )
+
+function Page() {
+  return <FeatureUnavailable feature="reviews" />
 }

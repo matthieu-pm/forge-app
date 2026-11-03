@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { getWorkspaceBillingForRequest } from "./billing-server"
 
 const mocks = vi.hoisted(() => ({
@@ -20,11 +20,31 @@ vi.mock("@/db", () => ({
 
 beforeEach(() => {
   vi.resetAllMocks()
+  vi.stubEnv("FORGE_BILLING_ENABLED", "true")
+  vi.stubEnv(
+    "FORGE_FEATURE_ROLLOUTS",
+    JSON.stringify({
+      billing: { mode: "enabled", workspaceIds: ["trusted-workspace"] },
+    })
+  )
   mocks.actor.mockResolvedValue({ workspaceId: "trusted-workspace" })
   mocks.state.mockResolvedValue(null)
   mocks.counts.mockResolvedValue([{ members: 7 }])
 })
+afterEach(() => vi.unstubAllEnvs())
 describe("billing server snapshot", () => {
+  it("denies a non-selected workspace before any billing query", async () => {
+    mocks.actor.mockResolvedValue({ workspaceId: "other" })
+    await expect(
+      getWorkspaceBillingForRequest(
+        new Request(
+          "http://localhost/settings/billing?workspaceId=trusted-workspace&enabled=true"
+        )
+      )
+    ).rejects.toThrow(/unavailable/)
+    expect(mocks.state).not.toHaveBeenCalled()
+    expect(mocks.counts).not.toHaveBeenCalled()
+  })
   it("uses the active session workspace and actual membership count, ignoring URL overrides", async () => {
     const result = await getWorkspaceBillingForRequest(
       new Request(

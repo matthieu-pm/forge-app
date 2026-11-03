@@ -1,13 +1,11 @@
-import { createFileRoute, getRouteApi } from "@tanstack/react-router"
-import { TeamProjectUpdatesSettings } from "@/components/team-project-updates-settings"
+import { createFileRoute } from "@tanstack/react-router"
+import { protectedRouteBeforeLoad } from "@/lib/auth-state"
+import { FeatureUnavailable } from "@/components/feature-availability"
 
 export const Route = createFileRoute("/settings_/teams/$teamSlug/ai/updates")({
-  component: TeamProjectUpdatesPage,
+  beforeLoad: protectedRouteBeforeLoad,
+  component: Page,
 })
-
-const teamRoute = getRouteApi("/settings_/teams/$teamSlug")
-
-function TeamProjectUpdatesPage() {
-  const { team } = teamRoute.useLoaderData()
-  return <TeamProjectUpdatesSettings key={team.id} team={team} />
+function Page() {
+  return <FeatureUnavailable feature="scheduledUpdates" />
 }

@@ -1,4 +1,5 @@
 import { resolveAuthUrl } from "./auth-origin.ts"
+import { parseFeatureRollouts } from "./product-features.ts"
 import { inspectFileStorage } from "./file-storage.ts"
 import { appOrigin, runtimeOrigin } from "./preview-environment.ts"
 
@@ -61,6 +62,14 @@ export function inspectServiceConfiguration(
   options: ConfigurationOptions = {}
 ) {
   const issues: ConfigurationIssue[] = []
+  try {
+    parseFeatureRollouts(env.FORGE_FEATURE_ROLLOUTS)
+  } catch {
+    issues.push({
+      variable: "FORGE_FEATURE_ROLLOUTS",
+      requirement: "must configure supported modes and explicit workspace IDs",
+    })
+  }
   const add = (variable: string, requirement: string) => {
     if (!issues.some((issue) => issue.variable === variable))
       issues.push({ variable, requirement })

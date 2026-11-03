@@ -20,6 +20,42 @@ vi.mock("@/db", () => ({
 }))
 
 describe("public API HTTP handler", () => {
+  it.each([
+    "signals",
+    "reviews",
+    "insights",
+    "billing",
+    "applications",
+    "integrations",
+    "exports",
+    "imports",
+  ])(
+    "FOR-103: does not publish or execute a deferred %s API",
+    async (feature) => {
+      const discovery = await handlePublicApiRequest(
+        new Request("https://forge.test/api/v1/openapi.json")
+      )
+      const document = await discovery.json()
+      expect(document.paths[`/${feature}`]).toBeUndefined()
+      for (const method of ["GET", "POST", "PATCH", "DELETE"]) {
+        const response = await handlePublicApiRequest(
+          new Request(
+            `https://forge.test/api/v1/${feature}?enabled=true&workspaceId=w1`,
+            {
+              method,
+              headers: {
+                authorization: "Bearer forged",
+                "x-feature-enabled": "true",
+                "x-workspace-id": "w1",
+              },
+            }
+          )
+        )
+        expect(response.status).toBe(404)
+      }
+      expect(mocks.verifyApiKey).not.toHaveBeenCalled()
+    }
+  )
   it("publishes an authenticated OpenAPI 3.1 contract", async () => {
     const response = await handlePublicApiRequest(
       new Request("https://forge.test/api/v1/openapi.json")
