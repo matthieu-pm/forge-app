@@ -1,0 +1,66 @@
+{
+  "issue": "FOR-132",
+  "sourceCommit": "6bcd5392a6e4473ad2fdcd4e9e4c62cc0ee24555",
+  "origin": "https://app.forgenow.tech",
+  "startedAt": "2026-11-03T15:20:10.896Z",
+  "checks": [
+    {
+      "name": "AT-01 opt-in default, persisted setting, independent owner session and account isolation",
+      "status": "passed"
+    },
+    {
+      "name": "AT-01 approved tokens, caret and native keyboard undo/redo in the actual composer",
+      "status": "passed"
+    },
+    {
+      "name": "AT-02 code marks, code blocks, links and URL fragments",
+      "status": "passed"
+    },
+    {
+      "name": "AT-02 structured paste and selection replacement remain literal",
+      "status": "passed"
+    },
+    {
+      "name": "AT-02 Chromium IME composition and completion remain literal",
+      "status": "passed"
+    },
+    {
+      "name": "Converted comment and structured document persist through real command, database and reload",
+      "status": "passed"
+    },
+    {
+      "name": "New reply and edit composers use the persisted choice and save canonical content",
+      "status": "passed"
+    },
+    {
+      "name": "AT-01 disabling reaches an existing composer and saves/reloads literal prose",
+      "status": "passed"
+    }
+  ],
+  "pageErrors": [],
+  "passed": true,
+  "database": {
+    "database": "neondb",
+    "branch": "br-muddy-queen-zaeeysjt"
+  },
+  "browser": "Chromium 151.0.7922.34",
+  "cleanup": {
+    "workspaces": 0,
+    "users": 0,
+    "receipts": 0,
+    "issues": 0,
+    "preferences": 0
+  },
+  "migrations": {
+    "before": {
+      "count": 73,
+      "latest": 73
+    },
+    "after": {
+      "count": 73,
+      "latest": 73
+    }
+  },
+  "finishedAt": "2026-11-03T15:22:13.851Z",
+  "limitation": "Chromium's IME protocol exercises browser composition; native OS IME and packaged macOS are not certified."
+}

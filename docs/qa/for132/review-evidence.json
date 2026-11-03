@@ -1,0 +1,121 @@
+{
+  "issue": "FOR-132",
+  "pr": "https://github.com/matthieu-pm/forge-app/pull/58",
+  "originalHead": "b558912bee20a48db728806c3ff62fca3e3bda12",
+  "reviewedHead": "f97909d3d3a7369f159e472d8628cdd6c14f8cbb",
+  "base": "6e273c7593c3e553e3eef5c9844cc3b07f3c00da",
+  "mergeCommit": "4dab1f4472ec844ebfcbfe8c1fa1064ab1fea69b",
+  "standards": {
+    "findings": 1,
+    "priority": "P2",
+    "fixed": "Cached enabled preferences no longer activate conversion on an initial load failure; require ready/saving client state",
+    "independentReReview": "cleared; 37 editor/composer tests passed"
+  },
+  "spec": {
+    "findings": 0,
+    "independentReReview": "cleared after correction; 49 tests passed"
+  },
+  "validation": {
+    "focused": 53,
+    "fullSuite": {
+      "passed": 2715,
+      "skipped": 650,
+      "passedFiles": 342
+    },
+    "workflowPassed": 4,
+    "typecheck": "passed",
+    "changedFileLint": "passed; zero errors/warnings",
+    "productionBuild": "passed; prerender and protected Workflow handlers verified with local placeholder configuration",
+    "diffCheck": "passed"
+  },
+  "browser": {
+    "issue": "FOR-132",
+    "testedAt": "2026-11-03T15:11:47.811Z",
+    "sourceCommit": "f97909d3d3a7369f159e472d8628cdd6c14f8cbb",
+    "workingTree": "clean",
+    "environment": "local Chromium 151.0.7922.34; shared editor fixture",
+    "limitations": "Composition is checked with synthetic events and Chromium's IME protocol; native OS IME and packaged macOS are not certified. Authenticated preference persistence remains covered by FOR-127; composer refresh is covered by component tests.",
+    "checks": [
+      {
+        "name": "AT-01 opt-in default and live setting",
+        "status": "passed"
+      },
+      {
+        "name": "AT-01 every documented token, caret, native keyboard undo and redo",
+        "status": "passed"
+      },
+      {
+        "name": "AT-02 code, links and URLs",
+        "status": "passed"
+      },
+      {
+        "name": "AT-02 structured HTML and plain paste remain literal after Space",
+        "status": "passed"
+      },
+      {
+        "name": "AT-02 selection replacement preserves literal input",
+        "status": "passed"
+      },
+      {
+        "name": "AT-02 synthetic composition lifecycle stays literal",
+        "status": "passed"
+      },
+      {
+        "name": "AT-02 Chromium IME protocol preserves composition and completion",
+        "status": "passed"
+      }
+    ],
+    "errors": []
+  },
+  "production": {
+    "issue": "FOR-132",
+    "reviewedHead": "f97909d3d3a7369f159e472d8628cdd6c14f8cbb",
+    "mergeCommit": "4dab1f4472ec844ebfcbfe8c1fa1064ab1fea69b",
+    "initialDeployment": {
+      "id": "dpl_FHFGMpqAsaYbPFDF1L2dUiyMSQz9",
+      "source": "4dab1f4472ec844ebfcbfe8c1fa1064ab1fea69b",
+      "state": "READY"
+    },
+    "currentDeployment": {
+      "id": "dpl_Fte5hSFrqevTCMWXvqJhwRkSskea",
+      "url": "forge-fcivkyxm8-matthieu-pm.vercel.app",
+      "state": "READY",
+      "target": "production",
+      "source": "6bcd5392a6e4473ad2fdcd4e9e4c62cc0ee24555",
+      "aliases": [
+        "app.forgenow.tech",
+        "forge-app-mauve.vercel.app",
+        "forge-app-matthieu-pm.vercel.app",
+        "forge-app-git-main-matthieu-pm.vercel.app"
+      ]
+    },
+    "successor": "PR #59 / FOR-134 merged after PR #58 and became production during the initial acceptance window. It contains 4dab1f4. The emoticon transform, shared composer, preference adapter and canonical comment service are byte-identical. The full eight-scenario production browser verifier was rerun successfully on this successor; it was retained rather than rolled back.",
+    "sourceAttestation": "## Runtime Logs\n\n**Project:** prj_S0XLtdngbexhl2ao7WviBrlMScar\n**Deployment:** dpl_Fte5hSFrqevTCMWXvqJhwRkSskea\n**Time range:** 2026-11-03T15:09:14.710Z → 2026-11-03T15:24:14.710Z\n\n### 2026-11-03T15:23:53.220Z GET /_serverFn/39db61be90b1fc4fbeaac4af859dbb725fc8c9ddcf0be47a01da20756ee7b1fd [info/function]\ndep=dpl_Fte5hSFrqevTCMWXvqJhwRkSskea branch=main request=82zp5-1793719431889-6676bc783f7a domain=app.forgenow.tech environment=production region=cdg1 runtime=nodejs24.x stream=stdout\n    {\"schemaVersion\":1,\"event\":\"forge.request.completed\",\"timestamp\":\"2026-11-03T15:23:53.219Z\",\"operation\":\"http\",\"service\":\"app\",\"correlationId\":\"bc1746fc-b61a-4e9d-9028-5e0d4b039c14\",\"requestId\":\"bc1746fc-b61a-4e9d-9028-5e0d4b039c14\",\"deploymentId\":\"dpl_Fte5hSFrqevTCMWXvqJhwRkSskea\",\"sourceRevision\":\"6bcd5392a6e4473ad2fdcd4e9e4c62cc0ee24555\",\"durationMs\":1264.355929000012,\"status\":200}\n\n### 2026-11-03T15:23:52.595Z GET /_serverFn/c469bbff4af3e357a9c37cb9bd248706d6e743a24f1777718ca23327c6df676d [info/function]\ndep=dpl_Fte5hSFrqevTCMWXvqJhwRkSskea branch=main request=jl4vh-1793719431889-af64cffbd6dd domain=app.forgenow.tech environment=production region=cdg1 runtime=nodejs24.x stream=stdout\n    {\"schemaVersion\":1,\"event\":\"forge.request.completed\",\"timestamp\":\"2026-11-03T15:23:52.594Z\",\"operation\":\"http\",\"service\":\"app\",\"correlationId\":\"a914c27d-865a-49d3-bda7-a334b9b7a292\",\"requestId\":\"a914c27d-865a-49d3-bda7-a334b9b7a292\",\"deploymentId\":\"dpl_Fte5hSFrqevTCMWXvqJhwRkSskea\",\"sourceRevision\":\"6bcd5392a6e4473ad2fdcd4e9e4c62cc0ee24555\",\"durationMs\":637.3268870000029,\"status\":200}\n",
+    "errorFatalScan": "## Runtime Log Counts\n\n**Project:** prj_S0XLtdngbexhl2ao7WviBrlMScar\n**Grouped by:** level\n**Showing:** Top 25 groups by log count; this may omit other groups.\n\n| level | count |\n|---|---|",
+    "mergedTreeValidation": {
+      "source": "4dab1f4472ec844ebfcbfe8c1fa1064ab1fea69b",
+      "appPassed": 2785,
+      "appSkipped": 650,
+      "filesPassed": 347,
+      "workflowPassed": 4,
+      "typecheck": "passed"
+    },
+    "noMigration": true,
+    "noGateOrProtectionChange": true,
+    "independentCleanup": {
+      "workspaces": 0,
+      "users": 0,
+      "receipts": 0,
+      "issues": 0,
+      "preferences": 0
+    }
+  },
+  "mergedTreeValidation": {
+    "source": "4dab1f4472ec844ebfcbfe8c1fa1064ab1fea69b",
+    "appPassed": 2785,
+    "appSkipped": 650,
+    "filesPassed": 347,
+    "workflowPassed": 4,
+    "typecheck": "passed"
+  }
+}

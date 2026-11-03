@@ -1,0 +1,27 @@
+{
+  "sourceCommit": "6bcd5392a6e4473ad2fdcd4e9e4c62cc0ee24555",
+  "deploymentId": "dpl_Fte5hSFrqevTCMWXvqJhwRkSskea",
+  "checkedAt": "2026-11-03T15:22:45.712Z",
+  "checks": [
+    {
+      "path": "/api/health/live",
+      "status": 200,
+      "body": {
+        "status": "ok",
+        "code": "ALIVE"
+      },
+      "requestId": "f8ab358d-82ec-4d09-8b9d-3eb6b2d39bc3",
+      "vercelId": "cdg1::iad1::x5zq8-1793719364690-acac34bf76c1"
+    },
+    {
+      "path": "/api/health/ready",
+      "status": 200,
+      "body": {
+        "status": "ok",
+        "code": "READY"
+      },
+      "requestId": "596fbbd8-007a-4085-affa-a0c317271a55",
+      "vercelId": "cdg1::iad1::bhqss-1793719364818-471dbb19d04e"
+    }
+  ]
+}

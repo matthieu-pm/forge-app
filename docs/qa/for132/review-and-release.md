@@ -57,3 +57,42 @@ asserted in cleanup. It cannot access another origin or database.
 Native OS IME and packaged macOS certification remain outside this web release
 claim. Production deployment, alias, health, browser and telemetry results are
 recorded after they have actually been verified.
+
+
+## Verified production release
+
+PR #58 merged as `4dab1f4472ec844ebfcbfe8c1fa1064ab1fea69b` after all checks
+passed for corrected head `f97909d`. A concurrent default-home merge was retained;
+the actual merged tree passed 2,785 app tests in 347 files (650 skipped), four
+Workflow tests and TypeScript. The emoticon runtime remained identical to the
+reviewed head.
+
+Production deployment `dpl_FHFGMpqAsaYbPFDF1L2dUiyMSQz9` became READY at that
+merge commit and served the canonical alias. Public liveness/readiness returned
+200, and request telemetry attested that exact deployment and source.
+Eight authenticated browser scenarios passed using real Better Auth sessions,
+settings writes and canonical comment commands, with SQL readback and reload.
+
+The separately authorized FOR-134/sidebar release then became live at descendant
+`6bcd5392a6e4473ad2fdcd4e9e4c62cc0ee24555`, deployment
+`dpl_Fte5hSFrqevTCMWXvqJhwRkSskea`. It retains PR #58. The emoticon transform,
+shared comment composer, preference adapter and canonical comment service are
+byte-identical between the two sources. The newer release was retained. All
+eight browser scenarios were rerun successfully on it, with zero page errors.
+The alias was independently matched to this READY deployment after the rerun.
+Liveness/readiness returned 200; runtime telemetry attests source `6bcd539`.
+The deployment-scoped error/fatal scan returned no groups in the final window.
+
+The acceptance covers both owner sessions and account isolation; saved setting
+refresh in an existing composer; all eight tokens, caret and native Undo/Redo;
+code, links, URLs, structured paste, selection replacement and browser IME;
+canonical comment/reply/edit persistence; and disabled literal input after reload.
+Both runs removed their owned workspaces, users, issues, preference rows and
+command receipts. Independent SQL verified zero leftovers. The migration journal
+remained at 73 entries. No gate, migration or protection configuration was changed.
+
+[Final browser results](production-browser.json), [initial browser results](initial-production-browser.json),
+[public health](production-http.json), [deployment/telemetry evidence](production-release.json)
+and [complete review evidence](review-evidence.json) retain the exact environment,
+source and results. Evidence is published separately from the deployed application
+so recording this release does not replace the verified production build.
