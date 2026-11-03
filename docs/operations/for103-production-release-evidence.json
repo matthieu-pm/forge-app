@@ -1,0 +1,130 @@
+{
+  "issue": "FOR-103",
+  "pullRequest": "https://github.com/matthieu-pm/forge-app/pull/51",
+  "review": {
+    "base": "d55b9d950855d7a0d0974c183b16c89352655d57",
+    "originalHead": "ff9e15fec8c16c0b5e28e8e90c92794453adbb57",
+    "fixedApplication": "5f12ea0dea026fab58ffb09eb2e96f7f93185d5d",
+    "mergedHead": "8d421a20d4a7acf486168c0419c87f968fa349f2",
+    "standardsFindings": 0,
+    "specificationP1FindingsCorrected": 1,
+    "unresolvedFindings": 0,
+    "additionalCorrections": [
+      "Reject unsupported billing preview configuration",
+      "Reuse team parent access checks",
+      "Update legacy billing fixtures for explicit rollout",
+      "Verifier cleanup respects receipt lifetime; route assertions scope to routed feature content"
+    ],
+    "report": "docs/qa/for103/review-and-release.md"
+  },
+  "mergedRevision": "01d013bcd24267a83b85183f67d214ac9f04dbf9",
+  "servingApplicationRevision": "5f12ea0dea026fab58ffb09eb2e96f7f93185d5d",
+  "harnessRevision": "8d421a20d4a7acf486168c0419c87f968fa349f2",
+  "applicationDiffBetweenServingAndMerge": "none in apps/forge/src, packages, app package.json or bun.lock; later commits change only acceptance harness",
+  "validation": {
+    "appTestsPassed": 2645,
+    "appTestsSkipped": 619,
+    "filesPassed": 335,
+    "filesSkipped": 32,
+    "workflowTestsPassed": 4,
+    "typecheck": "passed",
+    "productionBuildAndWorkflowHandlers": "passed",
+    "localBuiltHttpChecks": 44,
+    "changedSourceLint": {
+      "errors": 0,
+      "warnings": 11
+    },
+    "frozenInstallation": "passed",
+    "diffCheck": "passed",
+    "githubChecksAtMerge": [
+      "Vercel - forge-app: success",
+      "Vercel - forge-preview-runtime: success"
+    ]
+  },
+  "database": {
+    "database": "neondb",
+    "branch": "br-muddy-queen-zaeeysjt",
+    "migrations": 72,
+    "lastMigrationHash": "c87680f803257a96a80961a0d9e521b314d831555a1e360b55a63c65a8d071f5",
+    "newMigrationRequired": false,
+    "applied": 0,
+    "verification": "Read-only independent Neon identity/schema checks before and after rollout"
+  },
+  "production": {
+    "url": "https://app.forgenow.tech",
+    "projectId": "prj_S0XLtdngbexhl2ao7WviBrlMScar",
+    "teamId": "team_KddvwwnftxOOhP8UymRnP0PX",
+    "deploymentId": "dpl_6auiJRv94iCWuR9Hcjd6g4jyjJdF",
+    "deploymentUrl": "https://forge-l4wxhx493-matthieu-pm.vercel.app",
+    "state": "READY",
+    "target": "production",
+    "framework": "tanstack-start",
+    "buildDurationSeconds": 66.268,
+    "previousDeploymentId": "dpl_YLavrTsjsGnj9ycmGLhTcbz8FA1x",
+    "method": "Clean reviewed git archive uploaded with authenticated CLI --prod --skip-domain; source-attested metadata, staged readiness and authenticated API gates; merged PR, then promoted exact tested default-off candidate without rebuilding",
+    "sourceMetadata": {
+      "forgeSourceRevision": "5f12ea0dea026fab58ffb09eb2e96f7f93185d5d",
+      "sourceCommit": "5f12ea0dea026fab58ffb09eb2e96f7f93185d5d",
+      "gitCommitSha": "5f12ea0dea026fab58ffb09eb2e96f7f93185d5d"
+    },
+    "aliasVerified": {
+      "host": "app.forgenow.tech",
+      "deploymentId": "dpl_6auiJRv94iCWuR9Hcjd6g4jyjJdF",
+      "temporaryProtectionEntries": 0
+    },
+    "rollout": "FORGE_FEATURE_ROLLOUTS={} injected only on deployment; no persistent project setting change. No unfinished module enabled for customer workspaces.",
+    "stagedSelectedWorkspaceChecks": 4,
+    "stagedDefaultOffChecks": 4,
+    "stagedGateArtifact": "docs/qa/for103/staged-workspace-gates.json",
+    "authenticatedBrowserChecks": 12,
+    "browserPageErrors": [],
+    "browserArtifact": "docs/qa/for103/production-browser.json",
+    "anonymousHttpChecks": 46,
+    "httpArtifact": "docs/qa/for103/production-http.json",
+    "health": {
+      "/api/health/live": {
+        "status": 200,
+        "code": "ALIVE"
+      },
+      "/api/health/ready": {
+        "status": 200,
+        "code": "READY"
+      }
+    },
+    "fixtureCleanup": {
+      "users": 0,
+      "workspaces": 0,
+      "sessions": 0,
+      "recoveryArchives": 0,
+      "supportedPreferenceRows": 0
+    },
+    "shareCleanup": {
+      "releaseShareRevoked": true,
+      "activeShareLinksOnCandidateAndRelease": 0,
+      "generalDeploymentProtectionRetained": true
+    },
+    "automaticMergeDeploymentCanceled": "dpl_BdN4RTaa6jG3DViAB9KDT8rkJapn (keeps the reviewed staged build on the public alias)",
+    "errorLogScan": {
+      "levels": [
+        "error",
+        "fatal"
+      ],
+      "recordsReturned": 0,
+      "deploymentScoped": true,
+      "start": "2026-11-03T09:46:52.937Z",
+      "end": "2026-11-03T10:01:52.937Z"
+    },
+    "projectDrains": 0
+  },
+  "acceptance": {
+    "AC-01_AT-01": "Passed: real public-domain browser navigation/deep links show unavailable behavior; no live sample write actions; export disabled with no job/email promise; 14 anonymous UI redirects with no-store and 32 unsupported API method requests return 404. Recovered mixed guidance drafts remain unapplied and downloadable while normal settings save, in both workspace accounts.",
+    "AC-02_AT-02": "Passed on staged production builds with real Better Auth accounts: one workspace gets Signals/Reviews preview availability and the other remains denied despite forged flags/headers; both deny real state writes and retain existing bytes. Exact final candidate and promoted public domain show default-off state for both workspaces."
+  },
+  "verificationNotes": [
+    "Protected staged browser-page verification hit Vercel access/protection behavior; staged acceptance therefore uses authenticated native server-function transport. Full browser-page/recovery acceptance passed on the public production origin.",
+    "The acceptance harness uses Node 24; initial Bun/Playwright and fixture-cleanup/locator issues were corrected before the passing evidence runs. Interrupted fixtures were removed.",
+    "No provider/model execution, checkout/payment, general launch or packaged macOS certification is implied.",
+    "No customer accounts/content changed; only randomized owned fixtures were created and removed."
+  ],
+  "recordedAt": "2026-11-03T10:03:44.229547+00:00"
+}

@@ -19,3 +19,15 @@ Full-suite validation also caught redundant team child access guards; these now 
 ## Release verification
 
 No database schema change is introduced by FOR-103. The production database identity and existing 72-migration head were independently checked read-only before release. Live acceptance is scoped to randomized temporary accounts/workspaces and checks real Better Auth sessions, server-function workspace authority, deferred writes, navigation/deep links and export behavior. Fixture cleanup and deployment/alias/source/log evidence are recorded in `docs/operations/for103-production-release-evidence.json` after rollout.
+
+## Verified production result · 3 November 2026
+
+PR #51 merged as `01d013b`. Production serves application source `5f12ea0` from `dpl_6auiJRv94iCWuR9Hcjd6g4jyjJdF` at https://app.forgenow.tech. The merged application/package/lockfile content matches that tested source; follow-up commits only harden the acceptance harness. The canonical alias was independently matched to this deployment. Its predecessor `dpl_YLavrTsjsGnj9ycmGLhTcbz8FA1x` is the rollback target. No schema migration or persistent rollout setting was changed.
+
+Validation passed: 2,645 application tests (619 DB/environment-dependent cases skipped), four workflow tests, TypeScript, build/Workflow protection, changed-file lint with no errors, and 44 local built-server denial checks. Both GitHub preview checks passed before merge.
+
+Staged production-native acceptance passed four checks with previews granted to one temporary workspace only, then four checks on the exact default-off release build. Public-origin Chromium acceptance passed 12 checks across two real Better Auth accounts/workspaces, including direct write denial, retained source bytes, hidden navigation/unavailable routes, preserved mixed guidance drafts and subsequent ordinary preference saves, and honest export controls. There were no page errors. A further 46 anonymous public HTTP checks passed.
+
+All randomized verification users, workspaces, sessions, receipts and recovery/preference records were removed with workspace-owned cascades; independent cleanup checks report zero fixture users/workspaces. Temporary access was revoked/absent, both staged deployments report zero active share links, and general deployment protection remains enabled. A deployment-scoped error/fatal scan returned zero records from 09:46:52–10:01:52 UTC. The project currently has no external drains; existing operational monitoring was unchanged.
+
+Protected staged browser-page access was not used as proof of application behavior: that layer produced access/protection failures, so staged checks used real authenticated server-function calls and browser acceptance ran through the public production origin. No fabricated provider, checkout or launch acceptance is claimed. Full artifacts are linked in `docs/operations/for103-production-release-evidence.json`.

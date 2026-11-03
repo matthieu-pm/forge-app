@@ -1,0 +1,52 @@
+{
+  "selectedWorkspace": {
+    "base": "https://forge-jnspfopwl-matthieu-pm.vercel.app",
+    "identity": {
+      "database": "neondb",
+      "branch": "br-muddy-queen-zaeeysjt"
+    },
+    "scope": "for103-release-223dfd9b-faf5-454b-bb7f-30928915634f",
+    "expectedPreview": true,
+    "checks": [
+      "workspace 1: authenticated feature discovery ignores forged flags",
+      "workspace 1: direct deferred write denied and source bytes retained",
+      "workspace 2: authenticated feature discovery ignores forged flags",
+      "workspace 2: direct deferred write denied and source bytes retained"
+    ],
+    "pageErrors": [],
+    "harnessRevision": "8d421a20d4a7acf486168c0419c87f968fa349f2",
+    "applicationRevision": "5f12ea0dea026fab58ffb09eb2e96f7f93185d5d",
+    "kind": "Authenticated server-function checks, not browser-page acceptance",
+    "rollout": "preview for temporary workspace only",
+    "fixtureCleanup": {
+      "users": 0,
+      "workspaces": 0,
+      "sessions": 0
+    }
+  },
+  "releaseDefaults": {
+    "base": "https://forge-l4wxhx493-matthieu-pm.vercel.app",
+    "identity": {
+      "database": "neondb",
+      "branch": "br-muddy-queen-zaeeysjt"
+    },
+    "scope": "for103-release-223dfd9b-faf5-454b-bb7f-30928915634f",
+    "expectedPreview": false,
+    "checks": [
+      "workspace 1: authenticated feature discovery ignores forged flags",
+      "workspace 1: direct deferred write denied and source bytes retained",
+      "workspace 2: authenticated feature discovery ignores forged flags",
+      "workspace 2: direct deferred write denied and source bytes retained"
+    ],
+    "pageErrors": [],
+    "harnessRevision": "8d421a20d4a7acf486168c0419c87f968fa349f2",
+    "applicationRevision": "5f12ea0dea026fab58ffb09eb2e96f7f93185d5d",
+    "kind": "Authenticated server-function checks, not browser-page acceptance",
+    "rollout": "all deferred features disabled",
+    "fixtureCleanup": {
+      "users": 0,
+      "workspaces": 0,
+      "sessions": 0
+    }
+  }
+}
