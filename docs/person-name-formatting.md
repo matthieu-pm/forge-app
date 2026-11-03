@@ -57,6 +57,10 @@ account by presentation. The inventory records these boundaries.
 
 ## Verification and enablement
 
+The [commit-specific evidence](operations/for130-person-name-evidence.json)
+records local test counts, browser observations, artifact hashes and release
+boundaries.
+
 `bun run --cwd apps/forge test:person-names` runs deterministic fallback/collision,
 mounted consumer, immutable mention/assignee and directory lifecycle tests.
 The mounted fixtures exercise both name modes, missing fields, duplicate full
