@@ -4,7 +4,9 @@ import { z } from "zod"
 import {
   contentCandidates,
   contentDependencies,
+  contentImportConfirmation,
   contentRelationshipsMatch,
+  contentReviewSummary,
   contentTarget,
   createContent,
   importModules,
@@ -281,6 +283,8 @@ function snapshot(
     entries: visible.map((entry) => ({
       ...entry,
       content: undefined,
+      reviewSummary:
+        entry.state === "review" ? contentReviewSummary(entry) : undefined,
       draft:
         entry.state === "review" && entry.draft
           ? {
@@ -531,7 +535,12 @@ const aliasLegacyId = (actor: Actor, entry: ImportEntry) =>
 const aliasScope = (actor: Actor, entry: ImportEntry) =>
   and(
     eq(legacyImportAliases.workspaceId, actor.workspaceId),
-    eq(legacyImportAliases.teamId, entry.teamId || workspaceAliasScope),
+    eq(
+      legacyImportAliases.teamId,
+      entry.kind === "milestone"
+        ? workspaceAliasScope
+        : entry.teamId || workspaceAliasScope
+    ),
     eq(legacyImportAliases.kind, entry.kind),
     eq(legacyImportAliases.legacyId, aliasLegacyId(actor, entry))
   )
@@ -681,7 +690,10 @@ async function recordAlias(
     .insert(legacyImportAliases)
     .values({
       workspaceId: actor.workspaceId,
-      teamId: entry.teamId || workspaceAliasScope,
+      teamId:
+        entry.kind === "milestone"
+          ? workspaceAliasScope
+          : entry.teamId || workspaceAliasScope,
       kind: entry.kind,
       legacyId: aliasLegacyId(actor, entry),
       fingerprint: entry.fingerprint,
@@ -837,14 +849,29 @@ async function reconcile(
     const row = await target(tx, actor, entry, id, true)
     if (row) candidates.push(row)
   }
-  if (!aliases.length && !possible.length && !entry.canonicalProjection) {
+  if (
+    !aliases.length &&
+    !possible.length &&
+    !entry.canonicalProjection &&
+    !entry.content
+  ) {
     delete entry.conflict
     return {}
   }
+  const contentConfirmation = entry.content
+    ? {
+        ...(await contentImportConfirmation(tx, actor, entry, (kind, id) =>
+          reference(tx, actor, manifest, entry, kind, id)
+        )),
+        newRecord:
+          !aliases.length && !possible.length && !entry.canonicalProjection,
+      }
+    : undefined
   const fingerprint = commandInputHash(
     JSON.parse(
       JSON.stringify({
         source: entry.fingerprint,
+        contentConfirmation,
         mapping: mapping ? JSON.parse(JSON.stringify(mapping)) : undefined,
         contentMapping: await Promise.all(
           contentDependencies(entry).map(async ([kind, id]) => [
@@ -860,6 +887,7 @@ async function reconcile(
   )
   entry.conflict = {
     fingerprint,
+    ...(contentConfirmation ? { contentConfirmation } : {}),
     candidates: await Promise.all(
       candidates.map(async ({ id, title, revision, details }) => ({
         id,
@@ -873,8 +901,35 @@ async function reconcile(
   if (entry.decision?.fingerprint !== fingerprint) {
     entry.state = "review"
     entry.message =
-      "A matching or changed shared record needs your review. No shared content was changed."
+      contentConfirmation &&
+      !aliases.length &&
+      !possible.length &&
+      !entry.canonicalProjection
+        ? "Confirm that you are entitled to import this content into the displayed destination. No content has been published."
+        : "A matching or changed shared record needs your review. No shared content was changed."
     return { blocked: true }
+  }
+  if (
+    entry.content &&
+    ["confirm-content", "keep-both"].includes(entry.decision.choice) &&
+    !entry.decision.ownershipConfirmed
+  ) {
+    entry.state = "review"
+    return { blocked: true }
+  }
+  if (entry.decision.choice === "confirm-content") {
+    if (
+      !entry.content ||
+      aliases.length ||
+      possible.length ||
+      entry.canonicalProjection
+    ) {
+      entry.state = "review"
+      entry.message =
+        "This source now matches a shared record. Review the current comparison before importing."
+      return { blocked: true }
+    }
+    return {}
   }
   if (
     entry.canonicalProjection &&
@@ -921,7 +976,8 @@ function referenceEntries(
     e: Pick<ImportEntry, "kind" | "teamId" | "legacyId" | "legacyAliases">
   ) =>
     e.kind === kind &&
-    (["project", "initiative", "view"].includes(kind) ||
+    (["project", "initiative", "view", "milestone"].includes(kind) ||
+      entry.kind === "view" ||
       e.teamId === entry.teamId) &&
     (e.legacyId === legacyId || Boolean(e.legacyAliases?.includes(legacyId)))
   const local = manifest.entries.filter(matches)
@@ -947,7 +1003,7 @@ async function reference(
   entry: ImportEntry,
   kind: ImportEntry["kind"],
   legacyId: string
-) {
+): Promise<string> {
   if (!legacyId) return ""
   const selected = referenceEntries(manifest, entry, kind, legacyId)
   const ids = [
@@ -1019,6 +1075,42 @@ async function reference(
     }
   }
   if (ids.length === 1) return ids[0]
+  if (kind === "milestone" && legacyId.includes("::")) {
+    const delimiter = legacyId.indexOf("::")
+    const projectId = await reference(
+      tx,
+      actor,
+      manifest,
+      entry,
+      "project",
+      legacyId.slice(0, delimiter)
+    )
+    const [project] = await tx
+      .select({ properties: projects.properties })
+      .from(projects)
+      .where(
+        and(
+          eq(projects.id, projectId),
+          readableProjectCondition(actor, projects.id)
+        )
+      )
+      .for("share")
+    const value = legacyId.slice(delimiter + 2)
+    const matches = (
+      (project?.properties.milestones ?? []) as Array<{
+        id: string
+        name: string
+        aliases?: Array<string>
+      }>
+    ).filter(
+      (m) => m.id === value || m.name === value || m.aliases?.includes(value)
+    )
+    if (matches.length !== 1)
+      throw new Error(
+        "A project milestone is missing, ambiguous or unavailable."
+      )
+    return matches[0].id
+  }
   if (kind !== "issue" && kind !== "project") {
     const live = z.uuid().safeParse(legacyId).success
       ? await target(tx, actor, { ...entry, kind }, legacyId)
@@ -1042,7 +1134,9 @@ async function reference(
         ),
         kind === "issue"
           ? and(
-              eq(issues.teamId, entry.teamId),
+              entry.kind === "view"
+                ? undefined
+                : eq(issues.teamId, entry.teamId),
               readableIssueCondition(actor, issues.id),
               isNull(issues.deletedAt),
               isNull(issues.archivedAt)
@@ -1329,6 +1423,8 @@ export async function runImportBatch(
         }
       const events: Array<{ topic: string; payload: Record<string, unknown> }> =
         []
+      for (const entry of manifest.entries)
+        if (entry.state === "waiting") entry.state = "pending"
       const pending = manifest.entries.filter((e) => e.state === "pending")
       // Projects, then roots, then children. Unresolved/circular graphs remain recoverable.
       pending.sort(
@@ -1387,9 +1483,13 @@ export async function runImportBatch(
         )
         if (index < 0) {
           for (const entry of pending) {
-            entry.state = "quarantined"
-            entry.message =
-              "Resolve the missing or circular parent/project reference, then retry unresolved records."
+            const awaitingReview = manifest.entries.some(
+              (e) => e.state === "review"
+            )
+            entry.state = awaitingReview ? "waiting" : "quarantined"
+            entry.message = awaitingReview
+              ? "Waiting for referenced content to be confirmed or resolved."
+              : "Resolve the missing or circular parent/project reference, then retry unresolved records."
           }
           break
         }
@@ -1568,7 +1668,18 @@ export async function chooseImportConflict(
       entry.conflict?.fingerprint !== input.conflictFingerprint
     )
       throw new Error("Review the current conflict first.")
+    if (
+      entry.content &&
+      ["confirm-content", "keep-both"].includes(input.choice) &&
+      input.ownershipConfirmed !== true
+    )
+      throw new Error(
+        "Explicit ownership and destination confirmation is required."
+      )
     entry.decision = {
+      ...(input.ownershipConfirmed
+        ? { ownershipConfirmed: true as const }
+        : {}),
       choice: input.choice,
       fingerprint: input.conflictFingerprint,
     }

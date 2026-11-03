@@ -17,8 +17,15 @@ export const importRequestSchema = importIdentitySchema.extend({
 })
 export const importChoiceSchema = importRequestSchema.extend({
   entryId: z.string().min(1),
-  choice: z.enum(["keep-server", "keep-both", "skip", "migrate-files"]),
+  choice: z.enum([
+    "keep-server",
+    "keep-both",
+    "skip",
+    "migrate-files",
+    "confirm-content",
+  ]),
   conflictFingerprint: z.string().length(64),
+  ownershipConfirmed: z.literal(true).optional(),
 })
 export type ImportFile = {
   legacyId?: string
@@ -60,9 +67,20 @@ export type ImportEntry = {
   reviewRequired?: boolean
   targetFingerprint?: string
   sourceValid?: boolean
-  state: "pending" | "review" | "quarantined" | "saved" | "skipped"
+  state: "pending" | "review" | "quarantined" | "saved" | "skipped" | "waiting"
   message?: string
+  reviewSummary?: string
   conflict?: {
+    contentConfirmation?: {
+      newRecord: boolean
+      destination: string
+      actorId: string
+      workspaceId: string
+      teamId: string
+      policyVersion: number
+      sourceChecksum?: string
+      entryId: string
+    }
     fingerprint: string
     candidates: Array<{
       id: string
@@ -73,7 +91,9 @@ export type ImportEntry = {
     }>
   }
   decision?: {
-    choice: "keep-server" | "keep-both" | "skip" | "migrate-files"
+    choice:
+      "keep-server" | "keep-both" | "skip" | "migrate-files" | "confirm-content"
+    ownershipConfirmed?: true
     fingerprint: string
   }
 }

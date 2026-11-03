@@ -14,9 +14,11 @@ import {
   documents,
   initiativeProjects,
   initiatives,
+  organizations,
   projects,
   savedViews,
   teamResourceBoards,
+  teams,
 } from "@/db"
 import { commandInputHash } from "@/application/commands/command-input"
 import { initiativeSettings } from "@/application/planning/initiative-gate.server"
@@ -39,6 +41,8 @@ import {
   emptyTeamResources,
   teamResourceFieldsSchema,
 } from "@/lib/team-resources-contract"
+import { requireDocumentSection } from "@/application/documents/document-section.server"
+import { documentBodySchema } from "@/lib/document-contract"
 import { documentPlainText } from "@/lib/team-documents"
 import { savedViewDefinitionSchema } from "@/lib/saved-view-contract"
 
@@ -368,8 +372,20 @@ export async function createContent(
       ? await resolve("resource", `section:${c.sectionId}`)
       : null
     const fields = { ...c.fields, sectionId }
-    if (sectionId && !(await importModules(tx, actor)).resources)
-      throw new Error("Resource sections are unavailable.")
+    if (sectionId) {
+      if (projectId)
+        throw new Error(
+          "Project documents cannot be placed in a team resource section."
+        )
+      if (!(await importModules(tx, actor)).resources)
+        throw new Error("Resource sections are unavailable.")
+      await requireDocumentSection(
+        tx,
+        actor.workspaceId,
+        entry.teamId,
+        sectionId
+      )
+    }
     await tx.insert(documents).values({
       id,
       workspaceId: actor.workspaceId,
@@ -562,4 +578,85 @@ export async function contentRelationshipsMatch(
     )
   }
   return true
+}
+
+/** The displayed scope and actor are part of the immutable consent fingerprint. */
+export async function contentImportConfirmation(
+  tx: Transaction,
+  actor: Actor,
+  entry: ImportEntry,
+  resolve: ResolveContentReference
+) {
+  const content = entry.content!
+  const [workspace] = await tx
+    .select({ name: organizations.name })
+    .from(organizations)
+    .where(eq(organizations.id, actor.workspaceId))
+  let scope = "All workspace members"
+  if (content.kind === "view") {
+    scope =
+      content.definition.visibility === "personal"
+        ? "Only your account"
+        : content.definition.visibility === "team"
+          ? "team"
+          : scope
+  } else if (
+    content.kind === "resource" ||
+    (content.kind === "document" && !content.projectId)
+  )
+    scope = "team"
+  if (scope === "team") {
+    const [team] = await tx
+      .select({ name: teams.name })
+      .from(teams)
+      .where(
+        and(
+          eq(teams.id, entry.teamId),
+          eq(teams.workspaceId, actor.workspaceId)
+        )
+      )
+    scope = `Team: ${team.name}`
+  }
+  if (
+    content.kind === "milestone" ||
+    (content.kind === "document" && content.projectId)
+  ) {
+    const id = await resolve("project", content.projectId!)
+    const [project] = await tx
+      .select({ name: projects.name })
+      .from(projects)
+      .where(
+        and(eq(projects.id, id), readableProjectCondition(actor, projects.id))
+      )
+    scope = `Project: ${project.name} (project access)`
+  }
+  return {
+    destination: `${workspace.name} · ${scope}`,
+    actorId: actor.userId,
+    workspaceId: actor.workspaceId,
+    teamId: entry.teamId,
+    policyVersion: 1,
+    sourceChecksum: entry.sourceChecksum,
+    entryId: entry.id,
+  }
+}
+
+/** Bounded plain previews contain source content, never historical authorship claims. */
+export function contentReviewSummary(entry: ImportEntry) {
+  const content = entry.content
+  if (!content) return undefined
+  if (content.kind === "document")
+    return documentPlainText(content.fields.body).slice(0, 4000)
+  if (content.kind === "initiative" || content.kind === "milestone")
+    return `${"summary" in content.fields ? content.fields.summary : content.fields.name}\n${content.fields.description ? documentPlainText(documentBodySchema.parse(content.fields.description)) : ""}`.slice(
+      0,
+      4000
+    )
+  if (content.kind === "view")
+    return JSON.stringify(
+      { kind: content.definition.kind, filters: content.definition.filters },
+      null,
+      2
+    ).slice(0, 4000)
+  return "url" in content.fields ? content.fields.url : content.fields.name
 }

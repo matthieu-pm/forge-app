@@ -1,5 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { resolve } from "node:path"
+import { execFileSync } from "node:child_process"
 import { chromium, expect } from "@playwright/test"
 import { Pool, neonConfig } from "@neondatabase/serverless"
 import { hashPassword } from "better-auth/crypto"
@@ -63,37 +64,72 @@ const newCustomView = (_kind: string, ownerId: string) => ({
     ],
   },
 })
-const file = process.env.FORGE_ISSUE_HISTORY_TEST_DATABASE_FILE
+const authorizedRevision =
+  process.env.FORGE_CONTENT_IMPORT_PRODUCTION_AUTHORIZED_REVISION
+const production = Boolean(authorizedRevision)
+const revision = execFileSync("git", ["rev-parse", "HEAD"], {
+  encoding: "utf8",
+}).trim()
+if (
+  production &&
+  (authorizedRevision !== revision ||
+    execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim())
+)
+  throw new Error(
+    "Production acceptance requires a clean checkout at its exact authorized revision."
+  )
+const file = production
+  ? process.env.FORGE_CONTENT_IMPORT_PRODUCTION_DATABASE_FILE
+  : process.env.FORGE_ISSUE_HISTORY_TEST_DATABASE_FILE
 if (!file)
   throw new Error("An explicit isolated acceptance database is required.")
 const config = JSON.parse(readFileSync(file, "utf8"))
 const target = {
-  environment: "resource-loop-acceptance",
-  ...DATABASE_TARGETS["resource-loop-acceptance"],
+  environment: production
+    ? ("production" as const)
+    : ("resource-loop-acceptance" as const),
+  ...DATABASE_TARGETS[production ? "production" : "resource-loop-acceptance"],
 } as const
-assertMigrationTarget(config.connection, target)
+const migrations = JSON.parse(
+  readFileSync("src/application/operations/migrations.generated.json", "utf8")
+)
+const release = production
+  ? {
+      sourceRevision: revision,
+      expectedCurrentCount: migrations.length,
+      expectedCurrentHash: migrations.at(-1).hash,
+    }
+  : undefined
+assertMigrationTarget(config.connection, target, release)
 assertMigrationTarget(
   config.applicationConnection.replace("-pooler.", "."),
-  target
+  target,
+  release
 )
-const base =
-    process.env.FORGE_CONTENT_IMPORT_BROWSER_URL ?? "http://localhost:3126",
+const base = production
+    ? "https://app.forgenow.tech"
+    : (process.env.FORGE_CONTENT_IMPORT_BROWSER_URL ?? "http://localhost:3126"),
   origin = new URL(base)
 if (
-  origin.protocol !== "http:" ||
-  !["127.0.0.1", "localhost"].includes(origin.hostname) ||
-  origin.username ||
-  origin.password ||
-  origin.pathname !== "/"
+  !production &&
+  (origin.protocol !== "http:" ||
+    !["127.0.0.1", "localhost"].includes(origin.hostname) ||
+    origin.username ||
+    origin.password ||
+    origin.pathname !== "/")
 )
   throw new Error("A local acceptance origin is required.")
 neonConfig.webSocketConstructor = WebSocket
 const pool = new Pool({ connectionString: config.connection })
-const marker = `for126-browser-${crypto.randomUUID()}`,
+const marker = `for126-${production ? "production-" : ""}browser-${crypto.randomUUID()}`,
   teamId = crypto.randomUUID(),
   users = [`${marker}-alice`, `${marker}-bob`],
   password = crypto.randomUUID()
-const output = resolve("../../docs/qa/content-imports")
+const output =
+  process.env.FORGE_CONTENT_IMPORT_ARTIFACT_DIR ??
+  (production
+    ? "/tmp/for126-production-browser"
+    : resolve("../../docs/qa/content-imports"))
 mkdirSync(output, { recursive: true })
 let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined,
   verified = false
@@ -278,7 +314,8 @@ try {
   await expect(progress.locator("summary").first()).toBeVisible({
     timeout: 60000,
   })
-  await progress.locator("summary").first().click()
+  if ((await progress.locator("details").first().getAttribute("open")) === null)
+    await progress.locator("summary").first().click()
   await expect(
     progress.getByRole("button", { name: "Resume import" })
   ).toBeVisible({ timeout: 60000 })
@@ -302,12 +339,6 @@ try {
       { timeout: 60000 }
     )
     .toBe(0)
-  await expect(
-    progress.getByText("Corrupt retained document · quarantined")
-  ).toBeVisible({ timeout: 60000 })
-  await expect(
-    progress.getByText("Ambiguous retained view · quarantined")
-  ).toBeVisible()
   const counts = async () =>
     (
       await pool.query(
@@ -315,6 +346,62 @@ try {
         [marker]
       )
     ).rows[0]
+  expect(await counts()).toEqual({
+    initiatives: 0,
+    projects: 1,
+    documents: 0,
+    views: 0,
+    favorites: 0,
+  })
+  await expect(
+    alice.getByRole("button", { name: "Check for preserved content" })
+  ).toBeEnabled({ timeout: 60000 })
+  await expect(
+    progress
+      .getByRole("button", { name: "Confirm and import", exact: true })
+      .first()
+  ).toBeVisible({ timeout: 60000 })
+  let reviewed = 0
+  for (let guard = 0; guard < 30; guard++) {
+    const candidate = progress
+      .locator("[data-import-entry]")
+      .filter({
+        has: alice.getByRole("button", {
+          name: "Confirm and import",
+          exact: true,
+        }),
+      })
+      .first()
+    if ((await candidate.count()) === 0) break
+    const entryId = await candidate.getAttribute("data-import-entry")
+    if (!entryId || !/^[a-f0-9]{64}$/.test(entryId))
+      throw new Error("Invalid source entry identity.")
+    const card = progress.locator(`[data-import-entry="${entryId}"]`)
+    const confirm = card.getByRole("button", {
+      name: "Confirm and import",
+      exact: true,
+    })
+    await expect(confirm).toBeDisabled()
+    await expect(card.getByText(/^Destination:/)).toBeVisible()
+    await card.getByRole("checkbox").check()
+    await confirm.click()
+    await expect(
+      alice.getByRole("button", { name: "Check for preserved content" })
+    ).toBeEnabled({ timeout: 60000 })
+    await expect(card.locator("p").first()).toContainText("· saved", {
+      timeout: 60000,
+    })
+    reviewed++
+  }
+  expect(reviewed).toBeGreaterThan(0)
+  if ((await progress.locator("details").first().getAttribute("open")) === null)
+    await progress.locator("summary").first().click()
+  await expect(
+    progress.getByText("Corrupt retained document · quarantined")
+  ).toBeVisible({ timeout: 60000 })
+  await expect(
+    progress.getByText("Ambiguous retained view · quarantined")
+  ).toBeVisible()
   expect(await counts()).toEqual({
     initiatives: 1,
     projects: 1,
@@ -326,10 +413,11 @@ try {
   await expect(
     alice.getByRole("heading", { name: "Browser import progress" })
   ).toBeVisible({ timeout: 60000 })
-  await progress.locator("summary").first().click()
+  if ((await progress.locator("details").first().getAttribute("open")) === null)
+    await progress.locator("summary").first().click()
   await alice.getByRole("button", { name: "Resume import" }).click()
   await expect(
-    alice.getByRole("button", { name: "Resume import" })
+    alice.getByRole("button", { name: "Check for preserved content" })
   ).toBeEnabled({ timeout: 60000 })
   expect(await counts()).toEqual({
     initiatives: 1,
@@ -371,6 +459,8 @@ try {
     expect(JSON.parse(row.encoded_value)).toBe(source.raw)
   }
   expect(pageErrors).toEqual([])
+  if ((await progress.locator("details").first().getAttribute("open")) === null)
+    await progress.locator("summary").first().click()
   await alice.screenshot({
     path: resolve(output, "for126-import-progress.png"),
     fullPage: true,
@@ -381,10 +471,20 @@ try {
   })
   const result = {
     passed: true,
+    revision,
+    environment: production ? "production" : "isolated acceptance",
+    sourceDirty: Boolean(
+      execFileSync("git", ["status", "--porcelain"], {
+        encoding: "utf8",
+      }).trim()
+    ),
+    reviewedContentRecords: reviewed,
     database: target.database,
     branch: target.branchId,
     checks: [
       "explicit preserved-content discovery",
+      "no content publication on discovery or ordinary resume",
+      "explicit snapshot-bound entitlement and destination consent",
       "canonical project/milestone/initiative deduplication across repeated source projections",
       "team/project document scopes",
       "section/link mappings",

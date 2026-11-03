@@ -22,7 +22,8 @@ import { Button } from "@/components/ui/button"
 export function LegacyImportExecution() {
   const [imports, setImports] = useState<Array<ImportSnapshot>>([]),
     [error, setError] = useState(""),
-    [busy, setBusy] = useState(false)
+    [busy, setBusy] = useState(false),
+    [contentClaims, setContentClaims] = useState<Record<string, string>>({})
   const generation = useRef(0)
   const refresh = useCallback(async () => {
     const token = ++generation.current,
@@ -47,6 +48,7 @@ export function LegacyImportExecution() {
     const unsubscribe = onPreferenceSessionInvalidated(() => {
       generation.current++
       setImports([])
+      setContentClaims({})
       setError("")
       setBusy(false)
     })
@@ -77,7 +79,12 @@ export function LegacyImportExecution() {
   async function run(
     manifest: ImportSnapshot,
     entryId?: string,
-    choice?: "keep-server" | "keep-both" | "skip" | "migrate-files",
+    choice?:
+      | "keep-server"
+      | "keep-both"
+      | "skip"
+      | "migrate-files"
+      | "confirm-content",
     retry = false
   ) {
     const token = ++generation.current,
@@ -106,6 +113,10 @@ export function LegacyImportExecution() {
               entryId,
               choice,
               conflictFingerprint: entry.conflict!.fingerprint,
+              ...(entry.conflict?.contentConfirmation &&
+              ["confirm-content", "keep-both"].includes(choice)
+                ? { ownershipConfirmed: true as const }
+                : {}),
             },
           })
         ) as ImportSnapshot
@@ -258,7 +269,11 @@ export function LegacyImportExecution() {
               records and attached files remain recorded.
             </p>
             {manifest.entries.map((entry) => (
-              <div key={entry.id} className="space-y-1 text-xs">
+              <div
+                key={entry.id}
+                data-import-entry={entry.id}
+                className="space-y-1 text-xs"
+              >
                 <p className="font-medium break-words">
                   {entry.title} · {entry.state}
                 </p>
@@ -276,11 +291,48 @@ export function LegacyImportExecution() {
                 {entry.message && <p>{entry.message}</p>}
                 {entry.state === "review" && entry.conflict && (
                   <>
+                    {entry.conflict.contentConfirmation && (
+                      <div
+                        className="space-y-2 rounded-md border p-2"
+                        data-content-confirmation
+                      >
+                        <p>
+                          Destination:{" "}
+                          {entry.conflict.contentConfirmation.destination}
+                        </p>
+                        <p>
+                          Your confirmation asserts that you are entitled to
+                          import this source. It does not claim historical
+                          authorship.
+                        </p>
+                        <label className="flex items-start gap-2">
+                          <input
+                            type="checkbox"
+                            disabled={busy}
+                            checked={
+                              contentClaims[entry.id] ===
+                              entry.conflict.fingerprint
+                            }
+                            onChange={(event) =>
+                              setContentClaims((current) => ({
+                                ...current,
+                                [entry.id]: event.target.checked
+                                  ? entry.conflict!.fingerprint
+                                  : "",
+                              }))
+                            }
+                          />
+                          I am entitled to import this content into the
+                          displayed destination.
+                        </label>
+                      </div>
+                    )}
                     <details>
                       <summary>Compare source and shared records</summary>
                       <p className="break-words whitespace-pre-wrap">
                         Source:{" "}
-                        {entry.draft?.description ||
+                        {entry.reviewSummary ||
+                          entry.draft?.description ||
                           entry.project?.summary ||
                           entry.title}
                       </p>
@@ -302,6 +354,21 @@ export function LegacyImportExecution() {
                       ))}
                     </details>
                     <div className="flex flex-wrap gap-2">
+                      {entry.conflict.contentConfirmation?.newRecord && (
+                        <Button
+                          size="sm"
+                          disabled={
+                            busy ||
+                            contentClaims[entry.id] !==
+                              entry.conflict.fingerprint
+                          }
+                          onClick={() =>
+                            void run(manifest, entry.id, "confirm-content")
+                          }
+                        >
+                          Confirm and import
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         disabled={
@@ -316,7 +383,16 @@ export function LegacyImportExecution() {
                       <Button
                         size="sm"
                         variant="secondary"
-                        disabled={busy || entry.canonicalProjection}
+                        disabled={
+                          busy ||
+                          entry.canonicalProjection ||
+                          Boolean(
+                            entry.conflict.contentConfirmation &&
+                            (entry.conflict.contentConfirmation.newRecord ||
+                              contentClaims[entry.id] !==
+                                entry.conflict.fingerprint)
+                          )
+                        }
                         onClick={() =>
                           void run(manifest, entry.id, "keep-both")
                         }

@@ -167,3 +167,62 @@ describe("FOR-56 conflict review", () => {
     await screen.findByText("Import completed · canonical server records")
   })
 })
+
+describe("PR53 explicit content publication", () => {
+  it("requires entitlement for the displayed destination before submitting snapshot-bound consent", async () => {
+    const content: ImportSnapshot = {
+      ...manifest,
+      entries: [
+        {
+          ...manifest.entries[0],
+          kind: "view",
+          conflict: {
+            fingerprint: "c".repeat(64),
+            candidates: [],
+            contentConfirmation: {
+              newRecord: true,
+              destination: "Workspace · Only your account",
+              actorId: "alice",
+              workspaceId: "w",
+              teamId: "",
+              policyVersion: 1,
+              sourceChecksum: "s".repeat(64),
+              entryId: "source-entry",
+            },
+          },
+        },
+      ],
+    }
+    vi.mocked(loadLegacyImports).mockResolvedValue(JSON.stringify([content]))
+    vi.mocked(resolveLegacyImport).mockResolvedValue(JSON.stringify(content))
+    vi.mocked(resumeLegacyImport).mockResolvedValue(content)
+    render(<LegacyImportExecution />)
+    const button = await screen.findByRole("button", {
+      name: "Confirm and import",
+    })
+    expect((button as HTMLButtonElement).disabled).toBe(true)
+    expect(
+      screen.getByText("Destination: Workspace · Only your account")
+    ).toBeTruthy()
+    fireEvent.click(
+      screen.getByRole("checkbox", {
+        name: "I am entitled to import this content into the displayed destination.",
+      })
+    )
+    fireEvent.click(button)
+    await vi.waitFor(() =>
+      expect(resolveLegacyImport).toHaveBeenCalledWith({
+        data: {
+          workspaceId: "w",
+          sessionId: "s",
+          id: manifest.id,
+          revision: manifest.revision,
+          entryId: "source-entry",
+          choice: "confirm-content",
+          conflictFingerprint: "c".repeat(64),
+          ownershipConfirmed: true,
+        },
+      })
+    )
+  })
+})
