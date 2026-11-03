@@ -1,0 +1,144 @@
+{
+  "issue": "FOR-102",
+  "pullRequest": "https://github.com/matthieu-pm/forge-app/pull/50",
+  "review": {
+    "base": "2fcdc886f81342057be6e5dee21212a107d2bc95",
+    "originalHead": "7a25f4374c67523c7ba79adc230ebce44cfab196",
+    "fixedImplementation": "cb40f3605fed703a65ba590b29ef36404dad56cd",
+    "reviewedPRHead": "c1b640a6d7899e92178fcf879810b14097ad3390",
+    "report": "docs/qa/for102/review-and-release.md",
+    "standardsFindings": 0,
+    "specificationFindingsCorrected": 2,
+    "unresolvedFindings": 0,
+    "fixes": [
+      "Deterministic username/avatar rejection preserves editable drafts; ambiguous failures retain exact retry identity.",
+      "Conflict discard fetches the current profile including intervening changes."
+    ]
+  },
+  "mergedRevision": "a1534c33b8275a07c56514eddad8fc9a45a05da3",
+  "validation": {
+    "appTestsPassed": 2597,
+    "appTestsSkipped": 619,
+    "filesPassed": 330,
+    "filesSkipped": 32,
+    "postgresProfileCasesPassed": 10,
+    "workflowTestsPassed": 4,
+    "integratedBrowser": "passed",
+    "typecheck": "passed",
+    "productionBuildAndWorkflowProtection": "passed",
+    "frozenInstallation": "passed",
+    "changedSourceLintErrors": 0,
+    "prettier": "passed",
+    "gitDiffCheck": "passed",
+    "gitPreviewChecksAtMerge": "queued; main has no required status checks; local integrated checks and staged production build were verified"
+  },
+  "database": {
+    "identity": {
+      "database": "neondb",
+      "branch": "br-muddy-queen-zaeeysjt",
+      "role": "neondb_owner"
+    },
+    "migrationCount": 72,
+    "lastMigration": {
+      "hash": "c87680f803257a96a80961a0d9e521b314d831555a1e360b55a63c65a8d071f5",
+      "created_at": "1793666532080"
+    },
+    "matchesSource": true,
+    "newMigrationRequired": false,
+    "verification": "Read-only comparison of all 72 production migration hashes/timestamps with source; no migration applied by this slice."
+  },
+  "production": {
+    "url": "https://app.forgenow.tech",
+    "projectId": "prj_S0XLtdngbexhl2ao7WviBrlMScar",
+    "teamId": "team_KddvwwnftxOOhP8UymRnP0PX",
+    "deploymentId": "dpl_YLavrTsjsGnj9ycmGLhTcbz8FA1x",
+    "deploymentUrl": "https://forge-ajbe49uvd-matthieu-pm.vercel.app",
+    "state": "READY",
+    "target": "production",
+    "sourceRevision": "a1534c33b8275a07c56514eddad8fc9a45a05da3",
+    "previousDeploymentId": "dpl_5vMTcDyoaexJAwxDA47ujJv32Fbp",
+    "deploymentMethod": "Clean merged source uploaded through authenticated Vercel CLI with --prod --skip-domain; candidate readiness HTTP 200 verified, then promoted via Vercel connector.",
+    "gate": {
+      "FORGE_PROFILE_EDITING_ENABLED": "true",
+      "target": "production",
+      "type": "plain"
+    },
+    "aliasVerified": {
+      "host": "app.forgenow.tech",
+      "deploymentId": "dpl_YLavrTsjsGnj9ycmGLhTcbz8FA1x",
+      "sourceVerifiedFromDeploymentMetadata": true
+    },
+    "stagedReadiness": {
+      "status": "ok",
+      "code": "READY"
+    },
+    "postPromotionHealth": [
+      {
+        "path": "/api/health/live",
+        "status": 200,
+        "body": {
+          "status": "ok",
+          "code": "ALIVE"
+        }
+      },
+      {
+        "path": "/api/health/ready",
+        "status": 200,
+        "body": {
+          "status": "ok",
+          "code": "READY"
+        }
+      }
+    ],
+    "browser": {
+      "status": "passed",
+      "sourceRevision": "4dc8ba772dea39dbbcb192ac32b40c97e4bbe738",
+      "target": "production",
+      "environment": {
+        "database": "neondb",
+        "branch": "br-muddy-queen-zaeeysjt"
+      },
+      "checks": [
+        "real Better Auth sign-in",
+        "two owner sessions reload canonical profile",
+        "other account isolation",
+        "stale edit conflict and explicit discard",
+        "offline retry",
+        "raster avatar persistence",
+        "taken username rejected without locking or losing the draft",
+        "unversioned auth endpoint denied"
+      ],
+      "pageErrors": [],
+      "sourceRevisionMeaning": "Browser test harness revision. Serving application revision was independently verified as a1534c3 via Vercel alias/deployment metadata.",
+      "applicationDiffFromDeployedSource": "none; follow-up changes only the browser verifier hydration timeout and waits for avatar save response/reload.",
+      "avatarSaveResponseAndReload": "passed",
+      "firstRunTimingNote": "Initial verifier used a 5-second wait and timed out during third-account shared-definition hydration; timeout raised to 30 seconds, full flow rerun successfully."
+    },
+    "fixtureCleanup": {
+      "users": 0,
+      "workspaces": 0,
+      "sessions": 0,
+      "accounts": 0,
+      "receipts": 0
+    },
+    "errorLogScan": {
+      "levels": ["error", "fatal"],
+      "recordsReturned": 0,
+      "start": "2026-11-03T01:00:08.803Z",
+      "end": "2026-11-03T01:10:08.803Z"
+    },
+    "temporaryShareLinkRevoked": true,
+    "publicAliasTemporaryProtectionEntries": 0,
+    "generalDeploymentProtectionRetained": true
+  },
+  "acceptance": {
+    "AC-01 / AT-01": "Passed: real Better Auth sign-in in independent owner browser contexts, canonical name/title/username reload, avatar persistence and completed-save reload; another account retains its own profile.",
+    "AC-02 / AT-02": "Passed: isolated SQL strict schemas deny another account ID/protected fields including mixed patches without changes; production unversioned endpoint denies target-ID/role/unsafe-avatar requests with HTTP 403 and membership remains member."
+  },
+  "releaseBoundaries": [
+    "No profile schema migration.",
+    "No production customer profiles were changed by verification; only randomized fixture accounts/workspace were used and removed.",
+    "Packaged macOS qualification, legacy profile import and durable offline queues remain outside this slice."
+  ],
+  "recordedAt": "2026-11-03T01:10:33.131245+00:00"
+}

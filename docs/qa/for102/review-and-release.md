@@ -50,5 +50,21 @@ revision. Vercel alias/deployment metadata independently verifies the serving
 revision. Fixtures and command receipts are removed afterward.
 
 The production enablement/deployment identity and final verification results are
-recorded in `docs/operations/for102-production-release-evidence.json` once complete.
+recorded in `docs/operations/for102-production-release-evidence.json`.
 Packaged-macOS qualification and automatic legacy profile import remain separate.
+
+## Production rollout completed
+
+PR #50 merged at `a1534c33b8275a07c56514eddad8fc9a45a05da3`. The reviewed
+production gate is enabled, and deployment `dpl_YLavrTsjsGnj9ycmGLhTcbz8FA1x`
+is READY and serves `https://app.forgenow.tech`. Candidate readiness and promoted
+liveness/readiness returned HTTP 200.
+
+Authenticated production Chromium acceptance passed with two owner sessions and
+another account: reload consistency, other-account isolation, username collision
+correction without losing the draft, conflict discard, offline retry, completed
+avatar save/reload, and protected unversioned endpoint denial. A verifier-only
+follow-up extends hydration waits to 30 seconds and waits for the final avatar
+response; serving application code is unchanged. Final fixture users, workspaces,
+sessions, credential accounts and receipts are zero. The temporary share link was
+revoked. The final deployment error/fatal log scan returned no records.
