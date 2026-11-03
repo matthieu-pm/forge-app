@@ -120,7 +120,16 @@ function Editor({
       setPending(undefined)
       if (result.status === "invalid") {
         setLatest(result.snapshot)
-        setBase(result.snapshot)
+        setBase((previous) =>
+          previous
+            ? {
+                ...previous,
+                teams: result.snapshot.teams,
+                statuses: result.snapshot.statuses,
+                reconciliation: result.snapshot.reconciliation,
+              }
+            : previous
+        )
         setError(result.message)
       } else if (result.status === "conflict") {
         setLatest(result.snapshot)

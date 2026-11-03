@@ -158,6 +158,13 @@ try {
   await alice
     .getByRole("listbox", { name: "Teams", exact: true })
     .selectOption(teamId)
+  await bob
+    .getByRole("combobox", { name: "Work week", exact: true })
+    .selectOption("sun-thu")
+  await bob
+    .getByRole("button", { name: "Save SLA policy", exact: true })
+    .click()
+  await expect(bob.getByRole("status")).toHaveText("SLA policy saved.")
   await pool.query(
     "UPDATE teams SET deleted_at=clock_timestamp() WHERE id=$1",
     [teamId]
@@ -168,12 +175,18 @@ try {
   await expect(alice.getByRole("alert")).toContainText(
     "condition is unavailable"
   )
+  await expect(
+    alice.getByRole("region", { name: "Policy conflict" })
+  ).toBeVisible()
   await expect(targetInput).toBeEnabled()
   await expect(targetInput).toHaveValue("72")
   await alice
     .getByRole("listbox", { name: "Teams", exact: true })
     .selectOption([])
   await pool.query("UPDATE teams SET deleted_at=NULL WHERE id=$1", [teamId])
+  await alice
+    .getByRole("button", { name: "Keep draft with latest revision" })
+    .click()
   await targetInput.fill("48")
   await alice
     .getByRole("button", { name: "Save SLA policy", exact: true })
