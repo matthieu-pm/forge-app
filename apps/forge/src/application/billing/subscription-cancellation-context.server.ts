@@ -5,6 +5,7 @@ import { workspaceBillingIdentity } from "./billing-authority"
 import type { Actor } from "@/application/actor"
 import type { CancellationContext } from "./polar-subscription-cancellation.server"
 import type { EnabledBillingConfig } from "./billing-config.server"
+import { requireFeatureWrite } from "@/application/features/features.server"
 import { hasWorkspaceRole } from "@/application/authorization"
 import { db, members, workspaceEntitlements } from "@/db"
 
@@ -43,6 +44,7 @@ export async function cancelWorkspaceSubscriptionAtPeriodEnd(
   actor: Actor,
   config: EnabledBillingConfig
 ) {
+  requireFeatureWrite(actor, "billing")
   const { PolarSubscriptionCancellation } =
     await import("./polar-subscription-cancellation.server")
   return new PolarSubscriptionCancellation(config, (candidate) =>

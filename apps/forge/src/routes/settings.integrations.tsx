@@ -1,7 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router"
-
-import { IntegrationsSettings } from "@/components/integrations-settings"
+import { protectedRouteBeforeLoad } from "@/lib/auth-state"
+import { FeatureUnavailable } from "@/components/feature-availability"
 
 export const Route = createFileRoute("/settings/integrations")({
-  component: IntegrationsSettings,
+  beforeLoad: protectedRouteBeforeLoad,
+  component: Page,
 })
+
+function Page() {
+  return <FeatureUnavailable feature="integrations" />
+}

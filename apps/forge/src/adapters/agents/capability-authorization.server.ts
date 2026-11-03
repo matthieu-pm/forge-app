@@ -1,6 +1,8 @@
 import "@tanstack/react-start/server-only"
 import type { Actor } from "@/application/actor"
 import type { CapabilityInvocation } from "@/application/agents/capability-contract"
+import { featureForCapability } from "@/application/features/feature-policy"
+import { requireFeatureWrite } from "@/application/features/features.server"
 import {
   ApplicationAccessError,
   canManageTeams,
@@ -17,6 +19,8 @@ export async function authorizeForgeCapability(
   invocation: CapabilityInvocation
 ) {
   actor = await requireCurrentActor(actor)
+  const feature = featureForCapability(invocation.capabilityId)
+  if (feature) requireFeatureWrite(actor, feature)
   switch (invocation.capabilityId) {
     case "teams.list":
     case "teams.get":

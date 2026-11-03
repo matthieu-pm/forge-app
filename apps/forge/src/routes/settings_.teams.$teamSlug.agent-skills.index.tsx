@@ -1,13 +1,13 @@
-import { createFileRoute, getRouteApi } from "@tanstack/react-router"
-import { TeamAgentSkillsSettings } from "@/components/team-agent-skills-settings"
+import { createFileRoute } from "@tanstack/react-router"
+import { protectedRouteBeforeLoad } from "@/lib/auth-state"
+import { FeatureUnavailable } from "@/components/feature-availability"
 
 export const Route = createFileRoute(
   "/settings_/teams/$teamSlug/agent-skills/"
-)({ component: Page })
-const teamRoute = getRouteApi("/settings_/teams/$teamSlug")
-const teamsRoute = getRouteApi("/settings_/teams")
+)({
+  beforeLoad: protectedRouteBeforeLoad,
+  component: Page,
+})
 function Page() {
-  const { team } = teamRoute.useLoaderData()
-  const { items } = teamsRoute.useLoaderData()
-  return <TeamAgentSkillsSettings key={team.id} team={team} teams={items} />
+  return <FeatureUnavailable feature="agentGuidance" />
 }

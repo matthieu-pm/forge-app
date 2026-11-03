@@ -1,9 +1,16 @@
-import { createFileRoute, redirect } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/react-router"
 import { protectedRouteBeforeLoad } from "@/lib/auth-state"
+import { loadFeatureAvailability } from "@/lib/feature-state"
+import { FeatureUnavailable } from "@/components/feature-availability"
 
 export const Route = createFileRoute("/workspace/insights")({
-  beforeLoad: async (context) => {
-    await protectedRouteBeforeLoad(context)
-    throw redirect({ to: "/reviews", replace: true })
-  },
+  beforeLoad: protectedRouteBeforeLoad,
+  loader: () => loadFeatureAvailability(),
+  staleTime: 0,
+  component: Page,
 })
+
+function Page() {
+  const { features } = Route.useLoaderData()
+  return <FeatureUnavailable feature="insights" mode={features.insights} />
+}

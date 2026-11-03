@@ -1,14 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { PagePlaceholder } from "@/components/page-placeholder"
-import { getPageMeta } from "@/lib/app-navigation"
+import { protectedRouteBeforeLoad } from "@/lib/auth-state"
+import { loadFeatureAvailability } from "@/lib/feature-state"
+import { FeatureUnavailable } from "@/components/feature-availability"
 
 export const Route = createFileRoute("/teams/$teamSlug/insights")({
-  component: TeamInsightsPage,
+  beforeLoad: protectedRouteBeforeLoad,
+  loader: () => loadFeatureAvailability(),
+  staleTime: 0,
+  component: Page,
 })
 
-function TeamInsightsPage() {
-  const { teamSlug } = Route.useParams()
-  const pageMeta = getPageMeta(`/teams/${teamSlug}/insights`)
-
-  return <PagePlaceholder {...pageMeta} />
+function Page() {
+  const { features } = Route.useLoaderData()
+  return <FeatureUnavailable feature="insights" mode={features.insights} />
 }

@@ -1,17 +1,13 @@
-import { createFileRoute, getRouteApi } from "@tanstack/react-router"
-import { TeamThreadSummariesSettings } from "@/components/team-thread-summaries-settings"
-import { loadTeamThreadSummariesAccess } from "@/lib/team-thread-summaries-state"
+import { createFileRoute } from "@tanstack/react-router"
+import { protectedRouteBeforeLoad } from "@/lib/auth-state"
+import { FeatureUnavailable } from "@/components/feature-availability"
 
 export const Route = createFileRoute("/settings_/teams/$teamSlug/ai/summaries")(
   {
-    loader: ({ params }) =>
-      loadTeamThreadSummariesAccess({ data: { slug: params.teamSlug } }),
-    component: TeamThreadSummariesPage,
+    beforeLoad: protectedRouteBeforeLoad,
+    component: Page,
   }
 )
-const teamRoute = getRouteApi("/settings_/teams/$teamSlug")
-function TeamThreadSummariesPage() {
-  const { team } = teamRoute.useLoaderData()
-  const access = Route.useLoaderData()
-  return <TeamThreadSummariesSettings key={team.id} team={team} {...access} />
+function Page() {
+  return <FeatureUnavailable feature="threadSummaries" />
 }

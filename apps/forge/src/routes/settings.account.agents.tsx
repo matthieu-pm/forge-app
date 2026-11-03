@@ -1,15 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { AgentPersonalizationSettings } from "@/components/agent-personalization-settings"
+import { protectedRouteBeforeLoad } from "@/lib/auth-state"
+import { FeatureUnavailable } from "@/components/feature-availability"
 
 export const Route = createFileRoute("/settings/account/agents")({
-  component: AgentPersonalizationPage,
+  beforeLoad: protectedRouteBeforeLoad,
+  component: Page,
 })
-function AgentPersonalizationPage() {
-  const { authState } = Route.useRouteContext()
-  return (
-    <AgentPersonalizationSettings
-      key={authState.user!.id}
-      userId={authState.user!.id}
-    />
-  )
+function Page() {
+  return <FeatureUnavailable feature="agentGuidance" />
 }

@@ -62,8 +62,11 @@ export const saveAccountPreferences = createServerFn({ method: "POST" })
       import("@/application/preferences/preferences.server"),
     ])
     setResponseHeader("Cache-Control", "private, no-store")
-    return service.patchAccountPreferences(
-      await requireSessionActor(getRequest()),
-      data
-    )
+    const actor = await requireSessionActor(getRequest())
+    if (Object.keys(data.patch).some((key) => key.startsWith("agent."))) {
+      const { requireFeatureWrite } =
+        await import("@/application/features/features.server")
+      requireFeatureWrite(actor, "agentGuidance")
+    }
+    return service.patchAccountPreferences(actor, data)
   })

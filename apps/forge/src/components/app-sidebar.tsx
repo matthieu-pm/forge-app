@@ -12,6 +12,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Link, useRouter, useRouterState } from "@tanstack/react-router"
 import { toast } from "sonner"
+import { useFeatureNavigation } from "./feature-availability"
 
 import type { MenuRootActions } from "@base-ui/react/menu"
 import type { AppNavChild } from "@/lib/app-navigation"
@@ -173,11 +174,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const enabledTriageTeams = useEnabledTeamTriage(
     workspaceTeams.map((team) => team.id)
   )
-  const primaryNav = appNav.filter(
+  const featureVisible = useFeatureNavigation()
+  const availableNav = appNav
+    .filter((item) => featureVisible(item.to))
+    .map((item) => ({
+      ...item,
+      items: item.items?.filter((child) => featureVisible(child.to)),
+    }))
+  const primaryNav = availableNav.filter(
     (item) => item.title !== "Workspace" && item.title !== "Your teams"
   )
-  const workspaceSection = appNav.filter((item) => item.title === "Workspace")
-  const teamsSection = appNav
+  const workspaceSection = availableNav.filter(
+    (item) => item.title === "Workspace"
+  )
+  const teamsSection = availableNav
     .filter((item) => item.title === "Your teams")
     .map((item) => ({
       ...item,

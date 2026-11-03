@@ -1,41 +1,33 @@
-import { fireEvent, render, screen } from "@testing-library/react"
-import { describe, expect, it, vi } from "vitest"
-
+import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import { ImportExportSettings } from "./import-export-settings"
 
-// The preview has its own interaction suite. Keep this controls-only test from
-// starting a real lazy server-function import during environment teardown.
+const effects = vi.hoisted(() => ({ success: vi.fn(), fetch: vi.fn() }))
+vi.mock("sonner", () => ({ toast: { success: effects.success } }))
 vi.mock("./legacy-import-execution", () => ({
-  LegacyImportExecution: () => null,
+  LegacyImportExecution: () => <p>Browser data recovery</p>,
 }))
 vi.mock("./legacy-import-preview", () => ({ LegacyImportPreview: () => null }))
+afterEach(cleanup)
 
-describe("ImportExportSettings", () => {
-  it("renders the import sources and export controls from the reference", async () => {
+describe("FOR-103 import/export availability", () => {
+  it("preserves real browser recovery without offering a fictional external job", async () => {
     render(<ImportExportSettings />)
-
-    expect(
-      screen.getByRole("heading", { name: "Import & export", level: 1 })
-    ).toBeTruthy()
-
-    for (const source of ["Asana", "Shortcut", "GitHub", "Jira", "Linear"]) {
-      expect(screen.getByRole("button", { name: source })).toBeTruthy()
-    }
-
-    const cliLink = screen.getByRole("button", { name: "Open" })
-    expect(cliLink.getAttribute("href")).toBe(
-      "https://github.com/linear/linear/tree/master/packages/import"
-    )
-
-    const privateTeams = screen.getByRole("button", {
-      name: "Include private teams",
+    expect(await screen.findByText("Browser data recovery")).toBeTruthy()
+    const button = screen.getByRole("button", {
+      name: "Export unavailable",
     })
-    expect(privateTeams.textContent).toContain("None")
-
-    fireEvent.click(privateTeams)
-    fireEvent.click(await screen.findByText("All private teams"))
-
-    expect(privateTeams.textContent).toContain("All private teams")
-    expect(screen.getByRole("button", { name: "Export…" })).toBeTruthy()
+    expect(button.hasAttribute("disabled")).toBe(true)
+    fireEvent.click(button)
+    expect(effects.success).not.toHaveBeenCalled()
+    expect(screen.getByText(/no download email will be sent/)).toBeTruthy()
+    expect(screen.queryByRole("link")).toBeNull()
+    expect(
+      screen
+        .getByRole("button", {
+          name: "External imports unavailable",
+        })
+        .hasAttribute("disabled")
+    ).toBe(true)
   })
 })

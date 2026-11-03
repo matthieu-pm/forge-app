@@ -282,9 +282,9 @@ const pageMetaByPath: Partial<Record<AppPath, PageMeta>> = {
   },
   "/workspace/insights": {
     eyebrow: "Workspace",
-    title: "Reviews",
+    title: "Insights",
     description:
-      "Review proposed changes, coordinate feedback, and keep approvals moving.",
+      "Workspace insights are unavailable until source-backed analysis is ready.",
   },
   "/workspace/views": {
     eyebrow: "Workspace",
