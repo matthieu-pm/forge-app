@@ -69,7 +69,7 @@ export function setupDesktopAuth(
   })
 
   return {
-    async begin(window: BrowserWindow, returnTo = "/inbox") {
+    async begin(window: BrowserWindow, returnTo = "/") {
       const authorizationState = Reflect.get(
         globalThis,
         electronAuthorizationState
@@ -108,7 +108,7 @@ export function setupDesktopAuth(
       const returnTo =
         pendingAuthorization?.windowId === window.id
           ? pendingAuthorization.returnTo
-          : "/inbox"
+          : "/"
       pendingAuthorization = null
 
       return { returnTo }
