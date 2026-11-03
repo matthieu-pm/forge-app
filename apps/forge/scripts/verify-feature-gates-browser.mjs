@@ -36,6 +36,7 @@ if (
   databaseUrl.pathname !== "/neondb"
 )
   throw new Error("Wrong database target")
+const rpcOnly = process.env.FORGE_FEATURE_GATES_RPC_ONLY === "true"
 const expectedPreview =
   process.env.FORGE_FEATURE_GATES_EXPECT_PREVIEW === "true"
 const secretFile = process.env.FORGE_FEATURE_GATES_SHARE_FILE
@@ -239,6 +240,7 @@ try {
     checks.push(
       `workspace ${i + 1}: direct deferred write denied and source bytes retained`
     )
+    if (rpcOnly) continue
     const prefs = await rpc(context, "loadAccountPreferences", "GET", {
       scope: "account",
     })
