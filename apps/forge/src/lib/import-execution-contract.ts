@@ -1,6 +1,10 @@
 import { z } from "zod"
 import type { issueDraftSchema } from "./issue-record-contract"
 import type { initiativeProjectSchema } from "./initiatives"
+import type {
+  ImportContent,
+  ImportModules,
+} from "@/application/imports/content-manifest"
 
 export const IMPORT_VERSION = 1
 export const importIdentitySchema = z.object({
@@ -13,8 +17,15 @@ export const importRequestSchema = importIdentitySchema.extend({
 })
 export const importChoiceSchema = importRequestSchema.extend({
   entryId: z.string().min(1),
-  choice: z.enum(["keep-server", "keep-both", "skip", "migrate-files"]),
+  choice: z.enum([
+    "keep-server",
+    "keep-both",
+    "skip",
+    "migrate-files",
+    "confirm-content",
+  ]),
   conflictFingerprint: z.string().length(64),
+  ownershipConfirmed: z.literal(true).optional(),
 })
 export type ImportFile = {
   legacyId?: string
@@ -33,13 +44,22 @@ export type ImportEntry = {
   sourceChecksum?: string
   path: string
   legacyId: string
-  kind: "issue" | "project"
+  legacyAliases?: Array<string>
+  kind:
+    | "issue"
+    | "project"
+    | "initiative"
+    | "milestone"
+    | "document"
+    | "view"
+    | "resource"
   teamId: string
   teamIds?: Array<string>
   fingerprint: string
   title: string
   draft?: z.infer<typeof issueDraftSchema>
   project?: z.infer<typeof initiativeProjectSchema>
+  content?: ImportContent
   files: Array<ImportFile>
   canonicalId?: string
   replaceLegacyFiles?: boolean
@@ -47,9 +67,20 @@ export type ImportEntry = {
   reviewRequired?: boolean
   targetFingerprint?: string
   sourceValid?: boolean
-  state: "pending" | "review" | "quarantined" | "saved" | "skipped"
+  state: "pending" | "review" | "quarantined" | "saved" | "skipped" | "waiting"
   message?: string
+  reviewSummary?: string
   conflict?: {
+    contentConfirmation?: {
+      newRecord: boolean
+      destination: string
+      actorId: string
+      workspaceId: string
+      teamId: string
+      policyVersion: number
+      sourceChecksum?: string
+      entryId: string
+    }
     fingerprint: string
     candidates: Array<{
       id: string
@@ -60,7 +91,9 @@ export type ImportEntry = {
     }>
   }
   decision?: {
-    choice: "keep-server" | "keep-both" | "skip" | "migrate-files"
+    choice:
+      "keep-server" | "keep-both" | "skip" | "migrate-files" | "confirm-content"
+    ownershipConfirmed?: true
     fingerprint: string
   }
 }
@@ -70,12 +103,15 @@ export type ImportReference = Pick<
   | "sourceKey"
   | "sourceChecksum"
   | "legacyId"
+  | "legacyAliases"
   | "kind"
   | "teamId"
   | "canonicalId"
 > & { manifestId: string; state: "saved" }
 export type ImportManifest = {
   version: 1
+  contentVersion?: 2
+  modules?: ImportModules
   policyVersion: 1
   id: string
   fingerprint: string

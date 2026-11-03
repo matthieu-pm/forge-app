@@ -1,6 +1,7 @@
 import "@tanstack/react-start/server-only"
 import { and, desc, eq, isNull } from "drizzle-orm"
 import { z } from "zod"
+import { requireDocumentSection } from "./document-section.server"
 import {
   LegacyDocumentConflict,
   consumeLegacyDocumentCopy,
@@ -15,14 +16,7 @@ import type {
   DocumentSource,
   SharedDocument,
 } from "@/lib/document-contract"
-import {
-  db,
-  documentRevisions,
-  documents,
-  organizations,
-  teamResourceBoards,
-  users,
-} from "@/db"
+import { db, documentRevisions, documents, organizations, users } from "@/db"
 import { teamResourcesEnabled } from "@/application/resources/team-resources.server"
 import {
   ApplicationAccessError,
@@ -381,25 +375,20 @@ export async function commandDocument(
           fields.sectionId !== null &&
           (input.action === "create" || fields.sectionId !== old?.sectionId)
         ) {
-          const board = (
-            await tx
-              .select({ fields: teamResourceBoards.fields })
-              .from(teamResourceBoards)
-              .where(eq(teamResourceBoards.teamId, teamId))
-          )[0]
-          if (
-            !board?.fields.sections.some(
-              (section) => section.id === fields.sectionId
+          try {
+            await requireDocumentSection(
+              tx,
+              current.workspaceId,
+              teamId,
+              fields.sectionId
             )
-          ) {
+          } catch (error) {
             if (input.action === "restore")
               fields = { ...fields, sectionId: null }
-            else
-              throw new Error(
-                "This resource section is no longer available. Choose a current section or Team resources."
-              )
+            else throw error
           }
         }
+
         const values = {
           ...fields,
           body: fields.body as Record<string, unknown>,
