@@ -43,13 +43,30 @@ Bulk items and newly created children each use the same service.
 | Same rule was edited | Existing commitments retain their snapshot. The updated rule applies to future commitments. |
 | First match is removal | Remove the active SLA and invalidate pending escalation work. Keep past commitment/breach history. |
 | No rule matches | Preserve the existing commitment; explicit removal rules control removal. |
-| Workspace admin disables policy | Stop new commitments and suppress pending escalation side effects. Retain existing snapshots and outcomes. |
-| Policy is reenabled | Resume checks of retained commitments against their original deadlines. Emit at most one breach per retained generation, without a warning catch-up flood. |
+| Workspace admin disables policy | Record an authoritative disable cutoff and preserve breaches owed before it; stop new commitments and defer visible escalation effects. Retain snapshots and outcomes. |
+| Policy is reenabled | Reconcile owed breaches independently of current active status, then resume retained active commitments against their original deadlines. Emit at most one breach per generation, without a warning catch-up flood. |
 
 Before superseding, removing, canceling, archiving or deleting an open commitment,
 the same transaction settles any breach already due while feature and policy are
 enabled. A transition before the deadline produces no breach. Delayed job
 execution must not let a later priority/status change erase a crossed threshold.
+
+Disablement records its database-time cutoff and policy enablement history
+atomically. Retain each generation's deadline and lifecycle eligibility interval
+so an owed breach can be recovered even when no worker observed the crossing.
+A deadline crossed while enabled and eligible remains owed if removal,
+supersession, cancellation, completion, archive or deletion follows during the
+disabled interval. Those transitions preserve the obligation before invalidating
+active work. Reenablement records the one breach from that obligation even if the
+generation is now inactive; optional notification delivery still checks current
+eligibility. Normal purge/retention rules remain authoritative.
+
+A deadline crossed only while disabled does not create a historical obligation
+for a generation closed before reenablement. A retained open generation can
+become immediately breached when policy is reenabled. Feature-gate disablement
+must preserve the same cutoff evidence; if its effective time is unavailable,
+retain the unclassified obligation for explicit reconciliation rather than
+discarding it or guessing past eligibility from the current gate.
 
 A relevant edit means team, priority or status changes. Rule order, calendar and
 policy edits alone do not retroactively rematch issues. Configuration changes
@@ -116,8 +133,9 @@ and appears in authorized issue history with the breached state. It does not
 reassign the issue, increase priority or send repeated reminders. With the feature
 and policy enabled, completion after a deadline must record failure and the one
 breach even if a worker has not yet run; serialization and uniqueness prevent a
-second event. Disabling policy suppresses these side effects as well; reenablement
-can reconcile retained failed commitments without duplicating an earlier breach.
+second event. Disabling policy defers visible effects, while retaining the owed
+breach obligation defined above. Reenablement reconciles owed breaches even for
+removed or closed generations without duplicating an earlier breach.
 
 Warning/notification delivery is a conditional extension: current subscribers
 receive an in-app warning at high risk and a breach notification, once canonical
@@ -159,10 +177,11 @@ simply be called from an issue transaction and described as atomic. Use a
 transactional scheduling intent plus a resumable dispatcher, or add a shared
 transaction enqueue boundary with the same identity validation. Job identity
 includes workspace, issue, commitment generation and deadline. Stale generations
-complete without effects after checking live scope, gate and issue lifecycle.
-Disabling the feature or policy alone defers retained-generation work recoverably;
-it does not permanently consume its scheduling intent. Reenablement resumes the
-same identity and deadline.
+complete without effects only after checking for an owed breach and preserving
+its separate reconciliation intent. Check live scope, gate and issue lifecycle
+before any visible effect. Disabling the feature or policy alone defers work
+recoverably; it does not permanently consume either scheduling or reconciliation
+intent. Reenablement resumes the same identity and deadline.
 
 FOR-64 `sqlStep` commits its mutation and checkpoint together with lease fencing.
 The breach handler must lock and recheck the issue/commitment in that callback;
@@ -200,6 +219,8 @@ are fixture anchor times; they do not define office-opening hours.
 | AT-01i | Pause-like nonterminal state; title edit; same-rule policy edit | Deadline does not pause or restart |
 | AT-01j | Priority downgrade matches removal; old job resumes | Active SLA removed; old generation has no new effect |
 | AT-01j2 | Worker is late; removal, supersession, cancellation, archive or delete occurs just before / after deadline | No breach / one breach settled by the transition; resumed worker cannot duplicate it |
+| AT-01j3 | Deadline 12:00 while enabled; disable 12:01; remove/cancel 12:02; reenable 12:03 before worker recovery | Owed breach survives invalidation and is reconciled exactly once, with the original deadline; replay adds nothing |
+| AT-01j4 | Disable 11:59; deadline 12:00; remove/cancel 12:02; reenable 12:03 | No historical breach is manufactured for the closed generation; an otherwise retained open generation becomes immediately breached |
 | AT-01k | Reopen at 29 days / exactly 30 days from completion | Original deadline / new generation with retained duration and fresh anchor |
 | AT-02a | Nonadmin, revoked admin, foreign workspace or stale policy revision writes | Forbidden or typed revision conflict; no policy, receipt, issue or job side effects |
 | AT-02b | Change browser timezone/clock; change team timezone after commitment | Stored deadline unchanged; server status remains authoritative |
