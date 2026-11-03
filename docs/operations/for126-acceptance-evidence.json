@@ -1,0 +1,152 @@
+{
+  "issue": "FOR-126",
+  "implementationRevision": "58f0ee02dd9a62d4aa3d72683dfb93ef0cb42a6a",
+  "baselineRevision": "9952f50",
+  "verifiedAt": "2026-11-03T11:55:58.534229+00:00",
+  "environment": {
+    "host": "local macOS",
+    "database": "forge_resources_loops_acceptance",
+    "branchId": "br-autumn-union-za0opf1e",
+    "browserOrigin": "http://localhost:3126",
+    "sessions": "Two independent real Better Auth Chromium sessions",
+    "productionChanged": false
+  },
+  "acceptance": {
+    "AC-01 / AT-01": {
+      "passed": true,
+      "evidence": [
+        "FOR-126 AT-01 resumes preserved exclusions after module launch, maps relationships once and retains backups",
+        "FOR-126 maps milestone identities and issue assignments through the canonical project",
+        "FOR-126 concurrent profiles reuse content once and feature revocation denies receipt replay",
+        "Browser: duplicate project/milestone/document projections, source UUID preservation, fresh member document reads and exact replay"
+      ]
+    },
+    "AC-02 / AT-02": {
+      "passed": true,
+      "evidence": [
+        "FOR-126 AT-02 quarantines corrupt documents and ambiguous view owners without changing sources or granting access",
+        "FOR-126 private team revocation prevents pending import and replay without broadening scope",
+        "FOR-126 content effects, revisions, mappings and outbox all roll back on audit failure",
+        "Pure contracts: unsupported schemas, unsafe links, unknown filters, contradictory sharing scope, per-record quarantine, canonical rich-text normalization"
+      ]
+    }
+  },
+  "validation": {
+    "app": {
+      "passed": 2654,
+      "skipped": 625,
+      "filesPassed": 336,
+      "filesSkipped": 32,
+      "command": "bun x vitest run --maxWorkers=4"
+    },
+    "postgres": {
+      "passed": 39,
+      "skipped": 0,
+      "command": "FORGE_ISSUE_HISTORY_TEST_DATABASE_FILE=<private isolated target file> bun x vitest run src/application/imports/imports.postgres.test.ts"
+    },
+    "workflow": {
+      "passed": 4
+    },
+    "typescript": {
+      "passed": true,
+      "command": "bun run typecheck"
+    },
+    "changedFileLint": {
+      "passed": true,
+      "errors": 0,
+      "warnings": 66
+    },
+    "productionBuild": {
+      "passed": true,
+      "prerender": true,
+      "protectedWorkflowVerification": true
+    },
+    "browser": {
+      "passed": true,
+      "database": "forge_resources_loops_acceptance",
+      "branch": "br-autumn-union-za0opf1e",
+      "checks": [
+        "explicit preserved-content discovery",
+        "canonical project/milestone/initiative deduplication across repeated source projections",
+        "team/project document scopes",
+        "section/link mappings",
+        "saved definitions without personal favorites",
+        "corrupt/ambiguous record quarantine",
+        "reload and exact replay",
+        "independent member reads imported document",
+        "original source bytes retained"
+      ],
+      "counts": {
+        "initiatives": 1,
+        "projects": 1,
+        "documents": 2,
+        "views": 2,
+        "favorites": 0
+      },
+      "pageErrors": []
+    },
+    "logDigests": {
+      "app": {
+        "sha256": "f4410f6d606c93c8be255c40ebd12e41f9920658d6a1e7cec0953efe57235ebb",
+        "passed": true
+      },
+      "postgres": {
+        "sha256": "62c45157f55f50165df7ad0e045f9de0c9d36fc3a350726770ea544ee5dff729",
+        "passed": true
+      },
+      "workflow": {
+        "sha256": "425cb7eaae76c1923d02c0c542dcc32bd81d1f0bd5979fbaba33511f1de37a0e",
+        "passed": true
+      },
+      "build": {
+        "sha256": "9868bb9d755cca05c7fbc688e37fcc9a2b58274a81b5dea4982d313059acff3e",
+        "passed": true
+      },
+      "lint": {
+        "sha256": "8462c2aa8db7fa6659806953a31235d6ae753bc2ee35deb9217f580af9d75266",
+        "passed": true
+      }
+    }
+  },
+  "sourceSha256": {
+    "apps/forge/package.json": "01ff7fd11dc2ddcdf706e5d5afcedb443a60b76aa7c9003321b92c3a2d136ac2",
+    "apps/forge/scripts/verify-content-import-browser.ts": "1c3bb4d2ca30bb3eac66ccb4aab8452a5b19343809f5449cfb453b18958ed8ab",
+    "apps/forge/src/application/imports/content-manifest.test.ts": "54b4910fb84331f4d21c2520f9fd466cd25d9a5b356c92a07b7f3abe469248e6",
+    "apps/forge/src/application/imports/content-manifest.ts": "aaab882569f09bf5b25473513152185c09d74ed80795e23c5618079f91872699",
+    "apps/forge/src/application/imports/content.server.ts": "29d900c912e4d1895599eead3bb03e309c32667b62527c9c41d86be05bc49914",
+    "apps/forge/src/application/imports/imports.postgres.test.ts": "3595285ed944dbc2bd5e4e153bd1297389cba1a9d925ece729313dfc8328f8a1",
+    "apps/forge/src/application/imports/imports.server.ts": "afeb04a8b802b0035dc7045da6e22e6b8a3a14c05e64fd3623343c978b4a5629",
+    "apps/forge/src/application/imports/manifest.ts": "06ca9f5007a17e251086f47298bc863be10dcdd5d73b694357e96ed74aabf414",
+    "apps/forge/src/application/views/saved-views.server.ts": "7ea4a92a9a27f8480cdf0b9c970a7404a97d8add2143905f2ad18f6388f263f0",
+    "apps/forge/src/components/legacy-import-execution.test.tsx": "ef31a68f24d811c57f7ae28f6585f159f9980c8039d595c6e78a0aeaa1905648",
+    "apps/forge/src/components/legacy-import-execution.tsx": "6ddb12bb694cf48b91ba8dcf297b6ead5feb725b1c5448fd1997dc18f269897d",
+    "apps/forge/src/lib/import-execution-contract.ts": "061bce7896631ebff4745388782c5a3d1fdfb3ca6313d9c7f7bc28a7f753ef3b"
+  },
+  "cleanup": {
+    "organization": 0,
+    "user": 0,
+    "legacy_imports": 0,
+    "legacy_import_aliases": 0,
+    "command_receipts": 0,
+    "documents": 0,
+    "document_revisions": 0,
+    "saved_views": 0,
+    "team_resource_boards": 0,
+    "initiatives": 0,
+    "projects": 0,
+    "product_state": 0
+  },
+  "acceptanceDatabaseRepair": "The isolated resource-loop acceptance role was missing EXECUTE on the existing public.forge_effective_workspace_plan(text) function. The grant was repaired only on that identity-verified acceptance database before native verification. No product schema or production privilege was changed.",
+  "release": {
+    "newMigrations": 0,
+    "productionDeployment": false,
+    "featureGatesChanged": false,
+    "packagedMacOSAcceptance": false,
+    "hundredThousandRecordQualification": false
+  },
+  "preservedExclusions": [
+    "Personal favorites, subscriptions, display preferences and account/device settings (FOR-144)",
+    "Historical collaboration, authorship claims and drafts",
+    "Initiative resources/views, project links and other unsupported canonical scopes"
+  ]
+}
