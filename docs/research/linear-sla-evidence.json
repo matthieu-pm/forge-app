@@ -1,0 +1,114 @@
+{
+  "issue": "FOR-125",
+  "researchDate": "2026-11-03",
+  "sourceCommit": "9952f50",
+  "scope": "Static selected client source and official documentation; no authenticated SLA execution observed",
+  "discovery": [
+    "https://linear.app/login",
+    "https://static.linear.app/client/assets/html.BbYXDl_5.js",
+    "https://static.linear.app/client/assets/entry.JGupiEJV.js",
+    "https://static.linear.app/client/assets/Root.CySJkU36.js",
+    "https://static.linear.app/client/assets/startup-root.BPxZH7F3.js"
+  ],
+  "sources": [
+    {
+      "id": "S1",
+      "url": "https://static.linear.app/client/assets/WorkspaceSLASettingsPage.B37MiZky.js",
+      "bytes": 16542,
+      "sha256": "ae8dc5535c113215ab6c86a1184110830d4de851f3c9e3f2ca4e7496a6911e75",
+      "coordinates": [
+        {
+          "utf8ByteOffset": 1510,
+          "lineOneBased": 3,
+          "utf16ColumnZeroBased": 1202
+        },
+        {
+          "utf8ByteOffset": 15743,
+          "lineOneBased": 3,
+          "utf16ColumnZeroBased": 15433
+        },
+        {
+          "utf8ByteOffset": 15594,
+          "lineOneBased": 3,
+          "utf16ColumnZeroBased": 15284
+        }
+      ],
+      "analysisEvidence": "ev_b324a2d109d8e9553271ac522d41e7ccf1fd23fe89555047e659aa1a32eb9b68"
+    },
+    {
+      "id": "S2",
+      "url": "https://static.linear.app/client/assets/sla.B6cTmT_0.js",
+      "bytes": 3134,
+      "sha256": "4dcd7a6a547c9ee62026684baecaae9ebef001ce13a4ebb1d592cd1e04d3a26c",
+      "coordinates": [
+        {
+          "utf8ByteOffset": 1794,
+          "lineOneBased": 7,
+          "utf16ColumnZeroBased": 42
+        }
+      ],
+      "analysisEvidence": "ev_b324a2d109d8e9553271ac522d41e7ccf1fd23fe89555047e659aa1a32eb9b68"
+    },
+    {
+      "id": "S3",
+      "url": "https://static.linear.app/client/assets/startup-boot.Y2PH3ouA.js",
+      "bytes": 65849,
+      "sha256": "466f3936a9790733a1410d24b00a428a57cc556aa56f6cd491ee5b861c2329dc",
+      "coordinates": [
+        {
+          "utf8ByteOffset": 4432,
+          "lineOneBased": 3,
+          "utf16ColumnZeroBased": 4124
+        }
+      ],
+      "analysisEvidence": "ev_02a3ab07df762ae50d994a98995e085ac2f15b1bb554bccd0bd9ffb72c8d5014"
+    },
+    {
+      "id": "S4",
+      "url": "https://static.linear.app/client/assets/startup-entry.DA-Y6UMl.js",
+      "bytes": 3028084,
+      "sha256": "65f6432646e54a772b740cb2343c0f384b3f5c5fa5dd70dbec90ad541073a44e",
+      "coordinates": [
+        {
+          "utf8ByteOffset": 52592,
+          "lineOneBased": 30,
+          "utf16ColumnZeroBased": 19184
+        },
+        {
+          "utf8ByteOffset": 53644,
+          "lineOneBased": 30,
+          "utf16ColumnZeroBased": 20236
+        },
+        {
+          "utf8ByteOffset": 2368811,
+          "lineOneBased": 1331,
+          "utf16ColumnZeroBased": 30192
+        },
+        {
+          "utf8ByteOffset": 2398093,
+          "lineOneBased": 1338,
+          "utf16ColumnZeroBased": 25892
+        }
+      ],
+      "analysisEvidence": "manual-inspection"
+    }
+  ],
+  "limitations": [
+    "Selected assets only; unresolved dependencies and dynamic semantics",
+    "Client source is not server behavior or proof of execution",
+    "No authenticated SLA mutation or deadline transition was performed",
+    "No private credentials or source bodies are included"
+  ],
+  "installedShell": {
+    "version": "1.32.7",
+    "sha256": "dcb7a9500b83e76f29a073452f40748c9aa1c5ca1fc6f7e95558448e278ddbfe",
+    "evidence": "ev_bff57cede86f72ced03bc311bd9e6df1bfb86b69ed23f7fd138c995b35bf72e5",
+    "coverage": "partial",
+    "integrityPolicy": "record-and-continue",
+    "limitations": [
+      "Three unpacked native companion integrity mismatches",
+      "Semantic heap exhaustion in main and review-preview sources",
+      "Not used to establish SLA behavior"
+    ]
+  }
+}
