@@ -237,13 +237,16 @@ BEGIN
   IF g.id IS NOT NULL AND g.state='completed' THEN
     IF g.completed_at<=at_time-interval '720 hours' THEN
       IF can_apply THEN
-        carry:=rule IS NULL OR rule->>'id'=g.rule_id::text;
-        IF carry THEN rule:=g.snapshot->'rule'; END IF;
+        -- The reopen contract takes precedence over apply-rule rematching.
+        carry:=true; rule:=g.snapshot->'rule';
         fresh:=true;
       ELSE
         UPDATE issue_slas SET current=false,state='superseded' WHERE id=g.id; RETURN NEW;
       END IF;
-    ELSE UPDATE issue_slas SET state='running',completed_at=NULL WHERE id=g.id; END IF;
+    ELSE
+      UPDATE issue_slas SET state='running',completed_at=NULL WHERE id=g.id;
+      rule:=NULL; -- Recent reopens reuse the original deadline, even after policy edits.
+    END IF;
   END IF;
   IF g.id IS NOT NULL AND rule->>'action'='apply' AND rule->>'id'<>g.rule_id::text THEN fresh:=true; END IF;
   IF g.id IS NOT NULL AND NOT fresh THEN

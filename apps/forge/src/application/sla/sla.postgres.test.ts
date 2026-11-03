@@ -654,6 +654,47 @@ describe.skipIf(!connection)("FOR-125 PostgreSQL acceptance", () => {
       Date.now() - 5000
     )
   })
+  it("AT-01k: reopen guarantees override changed apply rules until the next relevant edit", async () => {
+    const f = await fixture(),
+      id = await create(f)
+    const original = (await generations(id))[0]
+    await edit(f, id, { status: "done" })
+    const newRule = {
+      ...apply(),
+      duration: { unit: "hour" as const, value: 24 },
+      startMode: "issueCreation" as const,
+    }
+    await save(f, { enabled: true, workWeek: "sun-thu", rules: [newRule] })
+    await pool.query(
+      "UPDATE teams SET timezone='Pacific/Auckland' WHERE id=$1",
+      [f.teamId]
+    )
+    await pool.query(
+      "UPDATE issue_slas SET completed_at=clock_timestamp()-interval '29 days' WHERE id=$1",
+      [original.id]
+    )
+    await edit(f, id, { status: "todo" })
+    expect(await generations(id)).toHaveLength(1)
+    expect((await generations(id))[0].deadline_at).toEqual(original.deadline_at)
+    await edit(f, id, { status: "done" })
+    await pool.query(
+      "UPDATE issue_slas SET completed_at=clock_timestamp()-interval '720 hours' WHERE id=$1",
+      [original.id]
+    )
+    await edit(f, id, { status: "todo" })
+    const reopened = (await generations(id))[1]
+    expect(reopened.snapshot).toEqual(original.snapshot)
+    expect(reopened.policy_revision).toBe(original.policy_revision)
+    expect(new Date(reopened.anchor_at).getTime()).toBeGreaterThan(
+      Date.now() - 5000
+    )
+    expect(
+      new Date(reopened.deadline_at).getTime() -
+        new Date(reopened.anchor_at).getTime()
+    ).toBe(3600000)
+    await edit(f, id, { status: "in-progress" })
+    expect((await generations(id))[2].rule_id).toBe(newRule.id)
+  })
   it("AT-01j/j2: late lifecycle transitions settle owed breaches once; suspension and restore preserve deadlines", async () => {
     const f = await fixture([
       apply(),

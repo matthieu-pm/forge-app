@@ -46,7 +46,9 @@ Policy/feature disablement defers jobs without spending their failure retry
 budget. A completed generation can reopen using its original deadline during
 the first 30 elapsed days, so an unbreached job remains recoverably deferred
 through that window. A later reopen creates a new generation from the previous
-duration/calendar and a fresh anchor. Different matching apply rules supersede;
+duration/calendar and a fresh anchor. Reopening preserves that promise even if
+a different apply rule now matches; later relevant edits can supersede it.
+Different matching apply rules on other transitions supersede;
 explicit removal takes precedence.
 
 ## Rollout controls

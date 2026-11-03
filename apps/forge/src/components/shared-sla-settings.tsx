@@ -59,6 +59,7 @@ function Editor({
   React.useEffect(() => {
     alive.current = true
     async function refresh() {
+      if (inFlight.current) return
       const request = ++sequence.current
       try {
         const next = await loadSharedSlaPolicy({ data: identity })
@@ -117,6 +118,7 @@ function Editor({
     try {
       const result = await persistSharedSlaPolicy({ data: command })
       if (!alive.current) return
+      sequence.current++
       setPending(undefined)
       if (result.status === "invalid") {
         setLatest(result.snapshot)
@@ -150,6 +152,7 @@ function Editor({
           "The save could not be confirmed. Retry the same save to check its outcome. Your draft is preserved."
         )
     } finally {
+      sequence.current++
       inFlight.current = false
       if (alive.current) setBusy(false)
     }
@@ -170,6 +173,7 @@ function Editor({
   ) {
     if (evidence.trim().length < 10 || inFlight.current) return
     inFlight.current = true
+    sequence.current++
     setBusy(true)
     try {
       await reconcileSharedSlaGate({
@@ -197,6 +201,7 @@ function Editor({
           "Reconciliation could not be confirmed. Refresh before retrying."
         )
     } finally {
+      sequence.current++
       inFlight.current = false
       if (alive.current) setBusy(false)
     }
