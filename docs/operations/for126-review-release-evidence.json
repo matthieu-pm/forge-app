@@ -1,0 +1,243 @@
+{
+  "issue": "FOR-126",
+  "pullRequest": "https://github.com/matthieu-pm/forge-app/pull/53",
+  "review": {
+    "base": "9952f5039131ba84edcf913b14c54bd6e62f1371",
+    "originalHead": "34d3ea25ab71bfdd27d74a736bd06b7cd547b570",
+    "correctedHead": "ed4e2cd01c035110a254728390440214c951f221",
+    "standardsFindingsCorrected": 1,
+    "specificationFindingsCorrected": 3,
+    "specificationP1Corrected": 1,
+    "unresolvedFindings": 0,
+    "report": "docs/qa/for126/review-and-release.md"
+  },
+  "mergedRevision": "86cf1c6af9ee66c69640fc049b5ae235958ae1ce",
+  "reviewedAndMergedTree": "aedc21aeaa7dbf8566179b246083df84558d1719",
+  "validation": {
+    "appTestsPassed": 2655,
+    "appTestsSkipped": 629,
+    "postgresScenariosPassed": 43,
+    "workflowTestsPassed": 4,
+    "committedSourceFocusedRegressions": 4,
+    "typescript": "passed",
+    "lint": {
+      "errors": 0,
+      "warnings": 65
+    },
+    "productionBuild": "passed, including prerender and protected Workflow handlers",
+    "localBrowserChecks": 11,
+    "localBrowser": "docs/qa/for126/local-browser.json",
+    "githubChecksAtMerge": [
+      "Vercel - forge-app: success",
+      "Vercel - forge-preview-runtime: success",
+      "Vercel Preview Comments: success"
+    ],
+    "logDigests": {
+      "app": {
+        "passed": true,
+        "sha256": "5075ed866bd580a243a19b177b5747433d2e08cc32d0a1adde177b015c0f213c"
+      },
+      "postgres": {
+        "passed": true,
+        "sha256": "0da4f8f91d454ecc6d8616710d88b9844aaacf8d8ac13e455235472e92301ded"
+      },
+      "workflow": {
+        "passed": true,
+        "sha256": "0029635a5b9d23a84ac093d8326116bcaea1aabc81c798e02c6cd181a5e17527"
+      },
+      "build": {
+        "passed": true,
+        "sha256": "8d918290f17088aef90c5b844b9bac4590491ea6172006c848b1f0242af8dcdd"
+      },
+      "lint": {
+        "passed": true,
+        "sha256": "1c6c767da51cd0f8c23a70401b72169e036cbd1429a68846392a85d6683f13b2"
+      }
+    }
+  },
+  "database": {
+    "preflight": {
+      "identity": {
+        "db": "neondb",
+        "branch": "br-muddy-queen-zaeeysjt"
+      },
+      "migrationCount": 72,
+      "lastMigration": {
+        "hash": "c87680f803257a96a80961a0d9e521b314d831555a1e360b55a63c65a8d071f5",
+        "created_at": "1793666532080"
+      },
+      "applicationPrivileges": [
+        "documents",
+        "document_revisions",
+        "initiatives",
+        "initiative_projects",
+        "saved_views",
+        "team_resource_boards",
+        "legacy_imports",
+        "legacy_import_aliases"
+      ],
+      "newMigrationsRequired": false
+    },
+    "after": {
+      "identity": {
+        "db": "neondb",
+        "branch": "br-muddy-queen-zaeeysjt"
+      },
+      "counts": {
+        "organization": 0,
+        "user": 0,
+        "session": 0,
+        "account": 0,
+        "legacy_imports": 0,
+        "legacy_import_aliases": 0,
+        "command_receipts": 0,
+        "documents": 0,
+        "document_revisions": 0,
+        "saved_views": 0,
+        "saved_view_favorites": 0,
+        "team_resource_boards": 0,
+        "initiatives": 0,
+        "initiative_projects": 0,
+        "projects": 0,
+        "product_state": 0
+      },
+      "migrationCount": 72,
+      "lastMigration": {
+        "hash": "c87680f803257a96a80961a0d9e521b314d831555a1e360b55a63c65a8d071f5",
+        "created_at": "1793666532080"
+      }
+    },
+    "newMigrationsRequired": false,
+    "applied": 0,
+    "ledgerVerification": "Read-only complete source hash/timestamp prefix check before and after release"
+  },
+  "production": {
+    "url": "https://app.forgenow.tech",
+    "projectId": "prj_S0XLtdngbexhl2ao7WviBrlMScar",
+    "teamId": "team_KddvwwnftxOOhP8UymRnP0PX",
+    "deploymentId": "dpl_EYN2892LuW3gMds9rcz1Rd3SFEfS",
+    "deploymentUrl": "https://forge-ijl8tu5du-matthieu-pm.vercel.app",
+    "state": "READY",
+    "target": "production",
+    "sourceRevision": "86cf1c6af9ee66c69640fc049b5ae235958ae1ce",
+    "previousDeploymentId": "dpl_8yHP38h41yGGrJZ92g9mVgbojfZo",
+    "method": "Clean reviewed merge Git archive uploaded with scoped authenticated CLI --prod --skip-domain; staged readiness/source verified; exact build promoted without rebuild",
+    "automaticMergeDeploymentCanceled": "dpl_3LjpooX9cJaro8o4KTeHnVvoywdQ",
+    "sourceMetadata": {
+      "forgeSourceRevision": "86cf1c6af9ee66c69640fc049b5ae235958ae1ce",
+      "sourceCommit": "86cf1c6af9ee66c69640fc049b5ae235958ae1ce",
+      "gitCommitSha": "86cf1c6af9ee66c69640fc049b5ae235958ae1ce",
+      "actor": "codex",
+      "lambdaRuntimeStats": "{\"nodejs\":4}"
+    },
+    "publicOriginSourceAttestation": {
+      "sourceRevision": "86cf1c6af9ee66c69640fc049b5ae235958ae1ce",
+      "deploymentId": "dpl_EYN2892LuW3gMds9rcz1Rd3SFEfS",
+      "domain": "app.forgenow.tech",
+      "source": "deployment-scoped forge.request.completed runtime telemetry",
+      "verifiedAt": "2026-11-03T12:43:35.854Z"
+    },
+    "aliasVerified": {
+      "host": "app.forgenow.tech",
+      "deploymentId": "dpl_EYN2892LuW3gMds9rcz1Rd3SFEfS",
+      "protectionBypassEntries": 0
+    },
+    "health": [
+      {
+        "path": "/api/health/live",
+        "status": 200,
+        "body": {
+          "status": "ok",
+          "code": "ALIVE"
+        }
+      },
+      {
+        "path": "/api/health/ready",
+        "status": 200,
+        "body": {
+          "status": "ok",
+          "code": "READY"
+        }
+      }
+    ],
+    "browser": {
+      "passed": true,
+      "revision": "86cf1c6af9ee66c69640fc049b5ae235958ae1ce",
+      "environment": "production",
+      "sourceDirty": false,
+      "reviewedContentRecords": 10,
+      "database": "neondb",
+      "branch": "br-muddy-queen-zaeeysjt",
+      "checks": [
+        "explicit preserved-content discovery",
+        "no content publication on discovery or ordinary resume",
+        "explicit snapshot-bound entitlement and destination consent",
+        "canonical project/milestone/initiative deduplication across repeated source projections",
+        "team/project document scopes",
+        "section/link mappings",
+        "saved definitions without personal favorites",
+        "corrupt/ambiguous record quarantine",
+        "reload and exact replay",
+        "independent member reads imported document",
+        "original source bytes retained"
+      ],
+      "counts": {
+        "initiatives": 1,
+        "projects": 1,
+        "documents": 2,
+        "views": 2,
+        "favorites": 0
+      },
+      "pageErrors": []
+    },
+    "browserArtifact": "docs/qa/for126/production-browser.json",
+    "errorLogScan": {
+      "levels": [
+        "error",
+        "fatal"
+      ],
+      "deploymentScoped": true,
+      "window": "30 minutes ending at final post-acceptance scan",
+      "groupsReturned": 0
+    },
+    "fixtureCleanup": {
+      "organization": 0,
+      "user": 0,
+      "session": 0,
+      "account": 0,
+      "legacy_imports": 0,
+      "legacy_import_aliases": 0,
+      "command_receipts": 0,
+      "documents": 0,
+      "document_revisions": 0,
+      "saved_views": 0,
+      "saved_view_favorites": 0,
+      "team_resource_boards": 0,
+      "initiatives": 0,
+      "initiative_projects": 0,
+      "projects": 0,
+      "product_state": 0
+    },
+    "featureGatesChanged": false,
+    "gateState": {
+      "FORGE_FEATURE_INITIATIVES": "true",
+      "FORGE_FEATURE_SAVED_VIEWS": "true",
+      "FORGE_SHARED_DOCUMENTS_ENABLED": "true",
+      "FORGE_TEAM_RESOURCES_ENABLED": "true",
+      "FORGE_FEATURE_ROLLOUTS": "{}"
+    },
+    "generalDeploymentProtection": "unchanged; all_except_custom_domains"
+  },
+  "acceptance": {
+    "AC-01_AT-01": "Passed source-bound native and live browser checks: excluded content can resume after module enablement with explicit entitlement/destination consent; relationships, source UUIDs, aliases, replay and exact private backups survive.",
+    "AC-02_AT-02": "Passed source-bound native and live browser checks: corrupt/ambiguous data remains quarantined without source overwrite or broader sharing; no content is published by ordinary discovery/Resume."
+  },
+  "verificationNotes": [
+    "One initial production browser attempt timed out at the session-verification screen. The previous deployment was temporarily restored while investigating. A diagnostic rerun and the later unchanged standard verifier both passed all 11 checks against the same candidate, with zero page errors and complete cleanup. No product authentication code or acceptance assertions were changed to obtain the passing runs.",
+    "Promotion is asynchronous; the canonical public alias and deployment/source telemetry were independently verified after promotion.",
+    "The standard passing browser result is the release acceptance artifact; diagnostic instrumentation remained outside the repository.",
+    "No customer accounts/content were modified by acceptance: only generated owned fixture workspaces/users were created and removed.",
+    "Personal preferences (FOR-144), unsupported canonical scopes, packaged macOS and 100,000-record throughput qualification retain their separate scope."
+  ],
+  "recordedAt": "2026-11-03T12:45:06.018792+00:00"
+}
