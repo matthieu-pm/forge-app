@@ -357,7 +357,7 @@ function CommentComposer({
             () => {
               void submit()
             },
-            editor.view.composing
+            editor.view
           )
         )
           event.stopPropagation()

@@ -7,6 +7,23 @@ import { emptyPreferenceSnapshot } from "@/lib/account-preference-contract"
 
 afterEach(cleanup)
 
+it("leaves Safari's confirming editor event for ProseMirror while suppressing submission", () => {
+  vi.spyOn(navigator, "vendor", "get").mockReturnValue("Apple Computer, Inc.")
+  const { result } = renderHook(() => useCommentSubmission())
+  const submit = vi.fn()
+  result.current.onCompositionStart()
+  result.current.onCompositionEnd()
+  const confirmation = new KeyboardEvent("keydown", {
+    key: "Enter",
+    cancelable: true,
+  })
+  expect(
+    result.current.handleKeyDown(confirmation, submit, { composing: false })
+  ).toBe(false)
+  expect(confirmation.defaultPrevented).toBe(false)
+  expect(submit).not.toHaveBeenCalled()
+})
+
 it("does not suppress a later Safari submit after another key or an expired composition window", () => {
   vi.spyOn(navigator, "vendor", "get").mockReturnValue("Apple Computer, Inc.")
   Object.defineProperty(navigator, "platform", {

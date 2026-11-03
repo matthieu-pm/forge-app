@@ -34,11 +34,15 @@ export function useCommentSubmission(action: "send" | "save" = "send") {
     onCompositionEnd() {
       composition.current = { active: false, endedAt: Date.now() }
     },
-    handleKeyDown(event: KeyboardEvent, submit: () => void, composing = false) {
+    handleKeyDown(
+      event: KeyboardEvent,
+      submit: () => void,
+      editor?: { composing: boolean }
+    ) {
       if (
         event.defaultPrevented ||
         composition.current.active ||
-        composing ||
+        editor?.composing ||
         event.isComposing ||
         event.keyCode === 229
       )
@@ -50,6 +54,8 @@ export function useCommentSubmission(action: "send" | "save" = "send") {
       ) {
         composition.current.endedAt = -Infinity
         if (event.key === "Enter") {
+          // Let ProseMirror consume its own post-composition guard.
+          if (editor) return false
           event.preventDefault()
           event.stopPropagation()
           return true
