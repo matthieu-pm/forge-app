@@ -1,0 +1,79 @@
+{
+  "issue": "FOR-131",
+  "pullRequest": "https://github.com/matthieu-pm/forge-app/pull/57",
+  "date": "2026-11-03",
+  "review": {
+    "base": "c6539225aac1ff04b241397652fe54073c940ba4",
+    "originalHead": "2ca0db8e2002a06f269a8bdcba7b7a6bdef57ce8",
+    "fixedSource": "314d67abafcbe6295b1ad252609ddb0d1614dcc9",
+    "mergedSource": "a802e6cbfc6b5472eae7474c8444b18c96cf8965",
+    "standardsBreaches": 0,
+    "specificationFindingsCorrected": 2,
+    "additionalCorrectnessFixes": [
+      "preserve overlapping default-tab requests",
+      "reject router-normalized and encoded auth/onboarding loops",
+      "restart default requests after intervening navigation"
+    ],
+    "remainingBlockers": 0,
+    "report": "docs/qa/for131/review-and-release.md"
+  },
+  "validation": {
+    "applicationTestsPassed": 2755,
+    "applicationTestsSkipped": 650,
+    "filesPassed": 346,
+    "filesSkipped": 33,
+    "workflowTestsPassed": 4,
+    "typescript": "passed",
+    "changedSourceLint": "passed; zero errors or warnings",
+    "productionBuild": "passed including Workflow handler protection",
+    "electronMainAndPreloadCompilation": "passed",
+    "diffCheck": "passed",
+    "githubChecksAtMerge": [
+      "Vercel – forge-app: success",
+      "Vercel – forge-preview-runtime: success"
+    ]
+  },
+  "production": {
+    "url": "https://app.forgenow.tech",
+    "teamId": "team_KddvwwnftxOOhP8UymRnP0PX",
+    "projectId": "prj_S0XLtdngbexhl2ao7WviBrlMScar",
+    "deploymentId": "dpl_CWJanTRqhfb5gmpVwWjTRaDorSxE",
+    "deploymentUrl": "https://forge-j7q7lrs6c-matthieu-pm.vercel.app",
+    "state": "READY",
+    "target": "production",
+    "sourceRevision": "a802e6cbfc6b5472eae7474c8444b18c96cf8965",
+    "method": "Automatic Git production deployment of the exact merged main revision; no manual configuration or rollout changes.",
+    "aliasVerifiedBeforeAndAfterAcceptance": {
+      "alias": "app.forgenow.tech",
+      "deploymentId": "dpl_CWJanTRqhfb5gmpVwWjTRaDorSxE",
+      "temporaryProtectionEntries": 0
+    },
+    "previousDeploymentId": "dpl_2y2LFpPBR3XeNDxU6q1jNvHd2Se8",
+    "browserChecksPassed": 15,
+    "browserPageErrors": [],
+    "browserArtifact": "docs/qa/for131/production-browser.json",
+    "healthArtifact": "docs/qa/for131/production-health.json",
+    "runtimeErrorScan": "## Runtime Logs\n\n**Project:** prj_S0XLtdngbexhl2ao7WviBrlMScar\n**Deployment:** dpl_CWJanTRqhfb5gmpVwWjTRaDorSxE\n**Time range:** 2026-11-03T14:52:51.189Z → 2026-11-03T15:12:51.189Z\n\nNo logs found for the specified criteria."
+  },
+  "database": {
+    "database": "neondb",
+    "branch": "br-muddy-queen-zaeeysjt",
+    "migrationCountBefore": 73,
+    "migrationCountAfter": 73,
+    "schemaChanges": 0,
+    "artifact": "docs/qa/for131/production-database.json"
+  },
+  "acceptanceHarness": {
+    "sourceRevision": "b27bb18221f9deef0492916f052db6b12e5e779a",
+    "applicationDiffFromProduction": "none in apps/forge/src, shared packages, application manifest or lockfile",
+    "adjustment": "Accept the existing canonical ?view=assigned query on My issues default opens; explicit auth/deep-link query and fragment assertions remain exact.",
+    "script": "apps/forge/scripts/verify-default-home-browser.mjs",
+    "completed": true
+  },
+  "cleanup": "Only randomized owned fixture accounts/workspaces/issues/preferences were used. Both acceptance attempts removed fixtures. Independent final database check confirmed zero FOR-131 fixture users, workspaces and sessions. Customer content and preferences were untouched.",
+  "limits": [
+    "Production exercised the enabled-agent configuration. Disabled-agent and all-routes-unavailable fallback are covered by fixture/unit tests; no customer feature gate was toggled.",
+    "Desktop restoration and native commands were tested against the actual production renderer using a fixture host bridge. Packaged macOS integration was not certified by this release.",
+    "650 database/environment-dependent tests were skipped in the local suite. The named production browser checks used real authenticated sessions and the real production database."
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "checkedAt": "2026-11-03T15:08:16.165Z",
+  "results": [
+    {
+      "path": "/api/health/live",
+      "status": 200,
+      "body": {
+        "status": "ok",
+        "code": "ALIVE"
+      }
+    },
+    {
+      "path": "/api/health/ready",
+      "status": 200,
+      "body": {
+        "status": "ok",
+        "code": "READY"
+      }
+    }
+  ]
+}

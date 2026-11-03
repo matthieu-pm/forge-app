@@ -1,0 +1,16 @@
+{
+  "checkedAt": "2026-11-03T15:12:50.374Z",
+  "identity": {
+    "database": "neondb",
+    "branch": "br-muddy-queen-zaeeysjt"
+  },
+  "migrations": {
+    "count": 73,
+    "head": "2a4b45a4864cf75dcf4a8691bbdf779050b85dd76ecf944ce5089a1e6f4ef24d"
+  },
+  "cleanup": {
+    "workspaces": 0,
+    "users": 0,
+    "sessions": 0
+  }
+}

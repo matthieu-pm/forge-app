@@ -1,0 +1,34 @@
+{
+  "revision": "b27bb18221f9deef0492916f052db6b12e5e779a",
+  "completed": true,
+  "base": "https://app.forgenow.tech",
+  "identity": {
+    "database": "neondb",
+    "branch": "br-muddy-queen-zaeeysjt"
+  },
+  "scope": "for131-release-e0317287-2081-4ab6-b85d-d45c476a152d",
+  "checks": [
+    "AC-01: saved inbox through production UI; default startup opened /inbox",
+    "AC-01: saved my-issues through production UI; default startup opened /my-issues",
+    "AC-01: saved agent through production UI; default startup opened /forge",
+    "AC-02: invalid stored home value selected the available historical fallback without a loop",
+    "AC-03: authorized issue deep link retained issue query and fragment instead of home",
+    "AC-03: signed-in auth return retained the exact issue URL",
+    "AC-02: router-equivalent login return URLs safely resolve home without loops",
+    "AC-03: real unauthenticated HTTP redirect and email login retained the carried fragment and issue destination",
+    "AC-03: desktop renderer restored the saved active issue URL before default-home resolution",
+    "AC-01: production desktop renderer default tab opened agent via current server preference",
+    "AC-01: production desktop renderer default tab opened inbox via current server preference",
+    "AC-01: production desktop renderer default tab opened my-issues via current server preference",
+    "AC-01: two overlapping native commands create two independent tabs in the production renderer (fixture bridge)",
+    "AC-01/03: a second account uses its own preference and cannot access the first workspace's issue",
+    "AC-02: revoked workspace membership prevents default destination access"
+  ],
+  "pageErrors": [],
+  "cleanup": {
+    "workspaces": "0",
+    "users": "0",
+    "sessions": "0"
+  },
+  "desktopIntegration": "Production web renderer with fixture host bridge; packaged macOS is separate."
+}
