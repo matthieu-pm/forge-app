@@ -283,12 +283,14 @@ try {
     await expect(
       page.getByRole("heading", { name: "Signals", exact: true })
     ).toBeVisible({ timeout: 60000 })
-    await expect(page.getByRole("main")).toContainText(
+    await expect(page.getByRole("main").last()).toContainText(
       expectedPreview && i === 0
         ? "Fictional preview"
         : "This feature is unavailable"
     )
-    expect(await page.getByRole("main").getByRole("button").count()).toBe(0)
+    expect(
+      await page.getByRole("main").last().getByRole("button").count()
+    ).toBe(0)
     await expect
       .poll(() =>
         page.getByRole("link", { name: "Signals", exact: true }).count()
@@ -346,7 +348,7 @@ try {
       "/settings/sla",
     ]) {
       await page.goto(`${base}${path}`)
-      await expect(page.getByRole("main")).toContainText(
+      await expect(page.getByRole("main").last()).toContainText(
         path === "/reviews/created" && expectedPreview && i === 0
           ? "Fictional preview"
           : "This feature is unavailable",
