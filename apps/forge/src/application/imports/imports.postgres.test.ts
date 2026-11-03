@@ -8,6 +8,8 @@ import { assertMigrationTarget } from "../../../scripts/lib/serialized-migration
 import type { Actor } from "@/application/actor"
 import type * as Imports from "./imports.server"
 import type { ImportSnapshot } from "@/lib/import-execution-contract"
+import { blankInitiative } from "@/lib/initiatives"
+import { newCustomView } from "@/lib/custom-views"
 import { blankIssueDraft } from "@/lib/issue-record-contract"
 
 const file = process.env.FORGE_ISSUE_HISTORY_TEST_DATABASE_FILE
@@ -18,12 +20,18 @@ describe.skipIf(!file)("FOR-56 real PostgreSQL imports", () => {
     workspaces: Array<string> = []
   let pool: Pool, service: typeof Imports
   beforeAll(async () => {
-    const { connection, applicationConnection } = JSON.parse(
-        readFileSync(file!, "utf8")
-      ),
+    const {
+        connection,
+        applicationConnection,
+        target: configuredTarget,
+      } = JSON.parse(readFileSync(file!, "utf8")),
+      environment =
+        configuredTarget === "resource-loop-acceptance"
+          ? "resource-loop-acceptance"
+          : "issue-history-acceptance",
       target = {
-        environment: "issue-history-acceptance",
-        ...DATABASE_TARGETS["issue-history-acceptance"],
+        environment,
+        ...DATABASE_TARGETS[environment],
       } as const
     assertMigrationTarget(connection, target)
     assertMigrationTarget(
@@ -127,6 +135,15 @@ describe.skipIf(!file)("FOR-56 real PostgreSQL imports", () => {
     )
     return (await service.prepareImport(actor))!
   }
+  const request = (actor: Actor, m: ImportSnapshot) => ({
+    workspaceId: actor.workspaceId,
+    sessionId:
+      actor.authentication.kind === "session"
+        ? actor.authentication.sessionId
+        : "",
+    id: m.id,
+    revision: m.revision,
+  })
   const run = (actor: Actor, m: ImportSnapshot) =>
     service.runImportBatch(actor, {
       workspaceId: actor.workspaceId,
@@ -137,10 +154,33 @@ describe.skipIf(!file)("FOR-56 real PostgreSQL imports", () => {
       id: m.id,
       revision: m.revision,
     })
-  async function finish(actor: Actor, m: ImportSnapshot) {
-    let safety = 20
-    while (m.entries.some((e) => e.state === "pending") && safety-- > 0)
-      m = await run(actor, m)
+  async function finish(
+    actor: Actor,
+    m: ImportSnapshot,
+    confirmKinds?: Array<ImportSnapshot["entries"][number]["kind"]>
+  ) {
+    let safety = 80
+    while (safety-- > 0) {
+      if (m.entries.some((e) => e.state === "pending")) m = await run(actor, m)
+      const fresh = m.entries.find(
+        (e) =>
+          e.state === "review" &&
+          e.conflict?.contentConfirmation?.newRecord &&
+          (!confirmKinds || confirmKinds.includes(e.kind))
+      )
+      if (fresh) {
+        m = await decide(actor, m, fresh.id, "confirm-content")
+        continue
+      }
+      if (
+        m.entries.some((e) => e.state === "waiting") &&
+        !m.entries.some((e) => e.state === "review")
+      ) {
+        m = await run(actor, m)
+        continue
+      }
+      if (!m.entries.some((e) => e.state === "pending")) break
+    }
     return m
   }
   it("AT-01 commits ordered batches and exact replay once, including a deep parent chain", async () => {
@@ -402,8 +442,8 @@ describe.skipIf(!file)("FOR-56 real PostgreSQL imports", () => {
       b = await source(f, records, f.actors[1])
     const results = await Promise.all([
       run(f.actors[0], a),
-      run(f.actors[0], a),
-      run(f.actors[1], b),
+      finish(f.actors[0], a),
+      finish(f.actors[1], b),
     ])
     expect(new Set(results.map((m) => m.entries[0].canonicalId)).size).toBe(1)
     expect(
@@ -704,7 +744,7 @@ describe.skipIf(!file)("FOR-56 real PostgreSQL imports", () => {
     actor: Actor,
     m: ImportSnapshot,
     entryId: string,
-    choice: "keep-both" | "keep-server"
+    choice: "keep-both" | "keep-server" | "confirm-content"
   ) {
     const entry = m.entries.find((e) => e.id === entryId)!
     return service.chooseImportConflict(actor, {
@@ -715,6 +755,7 @@ describe.skipIf(!file)("FOR-56 real PostgreSQL imports", () => {
       entryId,
       choice,
       conflictFingerprint: entry.conflict!.fingerprint,
+      ownershipConfirmed: true,
     })
   }
   async function retry(actor: Actor, m: ImportSnapshot) {
@@ -1532,4 +1573,775 @@ describe.skipIf(!file)("FOR-56 real PostgreSQL imports", () => {
     ])
     await expect(service.readImport(f.actors[1], m.id)).rejects.toThrow()
   }, 30000)
+  async function contentSource(
+    f: Awaited<ReturnType<typeof fixture>>,
+    key: string,
+    value: unknown,
+    actor = f.actors[0]
+  ) {
+    const raw = JSON.stringify(value)
+    await pool.query(
+      "INSERT INTO product_state(workspace_id,owner_id,owner_user_id,key,encoded_value) VALUES($1,$2,$3,$4,$5) ON CONFLICT(workspace_id,owner_id,key) DO UPDATE SET encoded_value=excluded.encoded_value",
+      [
+        f.workspaceId,
+        `user:${actor.userId}`,
+        actor.userId,
+        key,
+        JSON.stringify(raw),
+      ]
+    )
+    return raw
+  }
+  const contentFlags = (enabled: boolean) => {
+    vi.stubEnv("FORGE_FEATURE_INITIATIVES", String(enabled))
+    vi.stubEnv("FORGE_SHARED_DOCUMENTS_ENABLED", String(enabled))
+    vi.stubEnv("FORGE_TEAM_RESOURCES_ENABLED", String(enabled))
+    vi.stubEnv("FORGE_FEATURE_SAVED_VIEWS", String(enabled))
+  }
+  it("FOR-126 AT-01 resumes preserved exclusions after module launch, maps relationships once and retains backups", async () => {
+    const f = await fixture(),
+      actor = f.actors[0]
+    contentFlags(false)
+    const project = {
+      id: "legacy-roadmap",
+      name: "Roadmap",
+      status: "Active",
+      health: "On track",
+      teamIds: [f.teamId],
+      milestones: [],
+      resources: [
+        {
+          id: "project-doc",
+          title: "Design",
+          body: {
+            type: "doc",
+            content: [
+              {
+                type: "paragraph",
+                content: [{ type: "text", text: "Original plan" }],
+              },
+            ],
+          },
+        },
+      ],
+    }
+    const initiative = {
+      ...blankInitiative(actor.userId),
+      id: "legacy-strategy",
+      number: 1,
+      name: "Strategy",
+      projects: [project],
+    }
+    const planningKey = `forge:workspace:${f.workspaceId}:initiatives:v1`
+    const original = await contentSource(f, planningKey, {
+      version: 1,
+      initiatives: [initiative],
+      workspaceProjects: [],
+    })
+    const teamDocumentId = randomUUID()
+    const homeKey = `forge:team-home:v1:${f.teamId}`
+    await contentSource(f, homeKey, {
+      favorite: true,
+      sections: [{ id: "notes", name: "Notes", collapsed: true }],
+      resources: [
+        {
+          id: teamDocumentId,
+          kind: "document",
+          title: "Team notes",
+          content: "Private team source",
+          sectionId: "notes",
+        },
+        {
+          id: "link",
+          kind: "link",
+          title: "Reference",
+          content: "https://example.com",
+          sectionId: "notes",
+        },
+      ],
+      loops: [],
+    })
+    const view = {
+      ...newCustomView("issues", actor.userId),
+      id: "legacy-view",
+      name: "Roadmap work",
+      visibility: "team",
+      teamId: f.teamId,
+      favorite: true,
+      filters: {
+        match: "all",
+        rules: [
+          {
+            id: "project",
+            field: "project",
+            operator: "is",
+            value: project.id,
+          },
+        ],
+      },
+    }
+    await contentSource(
+      f,
+      `forge:workspace:${f.workspaceId}:custom-views:v1:${actor.userId}`,
+      { version: 1, views: [view] }
+    )
+    let core = await finish(actor, (await service.prepareImport(actor))!)
+    expect(core.entries.map((e) => e.kind)).toEqual(["project"])
+    let report = await service.cutoverImport(actor, {
+      ...request(actor, core),
+      action: "reconcile",
+      acknowledgeExclusions: true,
+    })
+    expect(report.reconciliation?.ready).toBe(true)
+    core = await service.cutoverImport(actor, {
+      ...request(actor, report),
+      action: "complete",
+      acknowledgeExclusions: true,
+      reportFingerprint: report.reconciliation!.fingerprint,
+    })
+    // Simulate the pre-extension v1 contract: its core checkpoint stays readable;
+    // the new content version builds a separate manifest from the same backups.
+    const oldManifest = JSON.parse(
+      (
+        await pool.query(
+          "SELECT encoded_manifest FROM legacy_imports WHERE id=$1",
+          [core.id]
+        )
+      ).rows[0].encoded_manifest
+    )
+    delete oldManifest.contentVersion
+    delete oldManifest.modules
+    await pool.query(
+      "UPDATE legacy_imports SET encoded_manifest=$1 WHERE id=$2",
+      [JSON.stringify(oldManifest), core.id]
+    )
+    expect(
+      (await service.readImport(actor, core.id)).contentVersion
+    ).toBeUndefined()
+    // Only the retained immutable backup remains for planning, as after a previous cutover.
+    await pool.query(
+      "DELETE FROM product_state WHERE workspace_id=$1 AND key=$2",
+      [f.workspaceId, planningKey]
+    )
+    contentFlags(true)
+    let next = (await service.prepareImport(actor))!
+    expect(next.id).not.toBe(core.id)
+    const first = await run(actor, next)
+    expect((await run(actor, next)).revision).toBe(first.revision)
+    next = await finish(actor, first)
+    expect(next.entries.every((e) => e.state === "saved")).toBe(true)
+    const rows = (
+      await pool.query(
+        "SELECT (SELECT count(*)::int FROM projects WHERE workspace_id=$1) projects,(SELECT count(*)::int FROM initiatives WHERE workspace_id=$1) initiatives,(SELECT count(*)::int FROM documents WHERE workspace_id=$1) documents,(SELECT count(*)::int FROM saved_views WHERE workspace_id=$1) views,(SELECT count(*)::int FROM saved_view_favorites WHERE workspace_id=$1) favorites",
+        [f.workspaceId]
+      )
+    ).rows[0]
+    expect(rows).toEqual({
+      projects: 1,
+      initiatives: 1,
+      documents: 2,
+      views: 1,
+      favorites: 0,
+    })
+    const mapped = (
+      await pool.query(
+        "SELECT project_id FROM initiative_projects WHERE workspace_id=$1",
+        [f.workspaceId]
+      )
+    ).rows[0].project_id
+    expect(
+      (
+        await pool.query(
+          "SELECT project_id FROM documents WHERE workspace_id=$1 AND title='Design'",
+          [f.workspaceId]
+        )
+      ).rows[0].project_id
+    ).toBe(mapped)
+    expect(
+      (
+        await pool.query(
+          "SELECT definition FROM saved_views WHERE workspace_id=$1",
+          [f.workspaceId]
+        )
+      ).rows[0].definition.filters.rules[0].value
+    ).toBe(mapped)
+    const board = (
+      await pool.query(
+        "SELECT fields FROM team_resource_boards WHERE workspace_id=$1",
+        [f.workspaceId]
+      )
+    ).rows[0].fields
+    expect(board.links[0].sectionId).toBe(board.sections[0].id)
+    const document = (
+      await pool.query(
+        "SELECT id,section_id,shared_with_workspace FROM documents WHERE workspace_id=$1 AND title='Team notes'",
+        [f.workspaceId]
+      )
+    ).rows[0]
+    expect(document).toEqual({
+      id: teamDocumentId,
+      section_id: board.sections[0].id,
+      shared_with_workspace: false,
+    })
+    report = await service.cutoverImport(actor, {
+      ...request(actor, next),
+      action: "reconcile",
+      acknowledgeExclusions: true,
+    })
+    expect(report.reconciliation?.ready).toBe(true)
+    const backups = (
+      await pool.query(
+        "SELECT encoded_value FROM product_state WHERE workspace_id=$1 AND key LIKE 'forge:legacy-conflict:v1:import-%'",
+        [f.workspaceId]
+      )
+    ).rows.map((row) => JSON.parse(JSON.parse(row.encoded_value)))
+    expect(
+      backups.some(
+        (backup) => backup.key === planningKey && backup.value === original
+      )
+    ).toBe(true)
+    expect(JSON.stringify(next)).not.toContain("Original plan")
+    contentFlags(false)
+  }, 60000)
+  it("FOR-126 AT-02 quarantines corrupt documents and ambiguous view owners without changing sources or granting access", async () => {
+    const f = await fixture(),
+      actor = f.actors[0]
+    contentFlags(true)
+    const key = `forge:team-home:v1:${f.teamId}`
+    const raw = await contentSource(f, key, {
+      sections: [],
+      resources: [
+        { id: "valid", kind: "document", title: "Valid", content: "Safe" },
+        {
+          id: "corrupt",
+          kind: "document",
+          title: "Corrupt",
+          body: { type: "doc", content: [{ type: "script" }] },
+        },
+      ],
+    })
+    await contentSource(
+      f,
+      `forge:workspace:${f.workspaceId}:custom-views:v1:${actor.userId}`,
+      {
+        version: 1,
+        views: [
+          newCustomView("issues", f.actors[1].userId),
+          { ...newCustomView("issues", actor.userId), visibility: "ambiguous" },
+        ],
+      }
+    )
+    const result = await finish(actor, (await service.prepareImport(actor))!)
+    expect(
+      result.entries.filter((e) => e.state === "quarantined")
+    ).toHaveLength(3)
+    expect(result.entries.filter((e) => e.state === "saved")).toHaveLength(1)
+    expect(
+      (
+        await pool.query(
+          "SELECT count(*)::int n FROM saved_views WHERE workspace_id=$1",
+          [f.workspaceId]
+        )
+      ).rows[0].n
+    ).toBe(0)
+    expect(
+      JSON.parse(
+        (
+          await pool.query(
+            "SELECT encoded_value FROM product_state WHERE workspace_id=$1 AND key=$2",
+            [f.workspaceId, key]
+          )
+        ).rows[0].encoded_value
+      )
+    ).toBe(raw)
+    const retried = await service.retryImportRecords(
+      actor,
+      request(actor, result)
+    )
+    expect(
+      retried.entries.filter((e) => e.state === "quarantined")
+    ).toHaveLength(3)
+    const report = await service.cutoverImport(actor, {
+      ...request(actor, retried),
+      action: "reconcile",
+      acknowledgeExclusions: true,
+    })
+    expect(report.reconciliation?.ready).toBe(false)
+    contentFlags(false)
+  }, 60000)
+  it("FOR-126 maps milestone identities and issue assignments through the canonical project", async () => {
+    const f = await fixture(),
+      actor = f.actors[0]
+    contentFlags(true)
+    const project = {
+      id: "plan",
+      name: "Milestone plan",
+      status: "Active",
+      health: "On track",
+      teamIds: [f.teamId],
+      milestones: [{ id: "launch", name: "Launch", completed: false }],
+    }
+    await contentSource(f, `forge:workspace:${f.workspaceId}:initiatives:v1`, {
+      version: 1,
+      initiatives: [],
+      workspaceProjects: [project],
+    })
+    await source(f, [issue("work", { project: "plan", milestone: "launch" })])
+    const result = await finish(actor, (await service.prepareImport(actor))!)
+    expect(
+      result.entries.every((e) => e.state === "saved"),
+      JSON.stringify(
+        result.entries.map((e) => ({
+          kind: e.kind,
+          state: e.state,
+          message: e.message,
+        }))
+      )
+    ).toBe(true)
+    const p = (
+      await pool.query(
+        "SELECT properties FROM projects WHERE workspace_id=$1",
+        [f.workspaceId]
+      )
+    ).rows[0]
+    const i = (
+      await pool.query("SELECT properties FROM issues WHERE workspace_id=$1", [
+        f.workspaceId,
+      ])
+    ).rows[0]
+    expect(i.properties.milestone).toBe(p.properties.milestones[0].id)
+    const report = await service.cutoverImport(actor, {
+      ...request(actor, result),
+      action: "reconcile",
+      acknowledgeExclusions: true,
+    })
+    expect(report.reconciliation?.ready).toBe(true)
+    contentFlags(false)
+  }, 60000)
+  it("FOR-126 concurrent profiles reuse content once and feature revocation denies receipt replay", async () => {
+    const f = await fixture()
+    contentFlags(true)
+    const key = `forge:team-home:v1:${f.teamId}`,
+      value = {
+        sections: [],
+        resources: [
+          {
+            id: "same-doc",
+            kind: "document",
+            title: "Shared source",
+            content: "Original",
+          },
+        ],
+      }
+    for (const actor of f.actors) await contentSource(f, key, value, actor)
+    const a = (await service.prepareImport(f.actors[0]))!,
+      b = (await service.prepareImport(f.actors[1]))!
+    const [first, second] = await Promise.all([
+      finish(f.actors[0], a),
+      finish(f.actors[1], b),
+    ])
+    expect(first.entries[0].state).toBe("saved")
+    expect(second.entries[0].canonicalId).toBe(first.entries[0].canonicalId)
+    expect(
+      (
+        await pool.query(
+          "SELECT count(*)::int n FROM documents WHERE workspace_id=$1",
+          [f.workspaceId]
+        )
+      ).rows[0].n
+    ).toBe(1)
+    contentFlags(false)
+    await expect(run(f.actors[0], a)).rejects.toThrow(/unavailable/)
+    contentFlags(true)
+    await pool.query(
+      "UPDATE documents SET title='Newer shared edit',revision=revision+1 WHERE id=$1",
+      [first.entries[0].canonicalId]
+    )
+    const review = await finish(
+      f.actors[1],
+      await service.retryImportRecords(
+        f.actors[1],
+        request(f.actors[1], second)
+      )
+    )
+    expect(review.entries[0].state).toBe("review")
+    const both = await finish(
+      f.actors[1],
+      await decide(f.actors[1], review, review.entries[0].id, "keep-both")
+    )
+    expect(both.entries[0].state).toBe("saved")
+    expect(both.entries[0].canonicalId).not.toBe(first.entries[0].canonicalId)
+    expect(
+      (
+        await pool.query("SELECT title FROM documents WHERE id=$1", [
+          first.entries[0].canonicalId,
+        ])
+      ).rows[0].title
+    ).toBe("Newer shared edit")
+    contentFlags(false)
+  }, 60000)
+  it("FOR-126 content effects, revisions, mappings and outbox all roll back on audit failure", async () => {
+    const f = await fixture(),
+      actor = f.actors[0]
+    contentFlags(true)
+    await contentSource(f, `forge:team-home:v1:${f.teamId}`, {
+      sections: [{ id: "section", name: "Notes" }],
+      resources: [
+        {
+          id: "doc",
+          kind: "document",
+          title: "Atomic",
+          content: "Preserved",
+          sectionId: "section",
+        },
+      ],
+    })
+    const m = (await service.prepareImport(actor))!,
+      name = `for126_fault_${randomUUID().replaceAll("-", "")}`
+    await pool.query(
+      `CREATE FUNCTION ${name}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'FOR126 audit fault'; END $$`
+    )
+    await pool.query(
+      `CREATE TRIGGER ${name} BEFORE INSERT ON command_audit_events FOR EACH ROW WHEN (NEW.workspace_id = '${f.workspaceId}') EXECUTE FUNCTION ${name}()`
+    )
+    try {
+      await expect(run(actor, m)).rejects.toThrow()
+    } finally {
+      await pool.query(`DROP TRIGGER ${name} ON command_audit_events`)
+      await pool.query(`DROP FUNCTION ${name}()`)
+    }
+    const counts = (
+      await pool.query(
+        "SELECT (SELECT count(*)::int FROM documents WHERE workspace_id=$1) documents,(SELECT count(*)::int FROM document_revisions WHERE workspace_id=$1) revisions,(SELECT count(*)::int FROM team_resource_boards WHERE workspace_id=$1) boards,(SELECT count(*)::int FROM legacy_import_aliases WHERE workspace_id=$1) aliases,(SELECT count(*)::int FROM command_outbox_events WHERE workspace_id=$1) events",
+        [f.workspaceId]
+      )
+    ).rows[0]
+    expect(counts).toEqual({
+      documents: 0,
+      revisions: 0,
+      boards: 0,
+      aliases: 0,
+      events: 0,
+    })
+    expect((await service.readImport(actor, m.id)).revision).toBe(m.revision)
+    expect(
+      (await finish(actor, m)).entries.every((e) => e.state === "saved")
+    ).toBe(true)
+    contentFlags(false)
+  }, 60000)
+  it("FOR-126 private team revocation prevents pending import and replay without broadening scope", async () => {
+    const f = await fixture(),
+      actor = f.actors[1]
+    contentFlags(true)
+    await pool.query("UPDATE teams SET visibility='private' WHERE id=$1", [
+      f.teamId,
+    ])
+    await pool.query(
+      "INSERT INTO team_members(id,workspace_id,team_id,user_id,role) VALUES($1,$2,$3,$4,'member')",
+      [randomUUID(), f.workspaceId, f.teamId, actor.userId]
+    )
+    await contentSource(
+      f,
+      `forge:team-home:v1:${f.teamId}`,
+      {
+        sections: [],
+        resources: [
+          {
+            id: "private",
+            kind: "document",
+            title: "Private",
+            content: "Team only",
+          },
+        ],
+      },
+      actor
+    )
+    const m = (await service.prepareImport(actor))!
+    const saved = await finish(actor, m)
+    expect(saved.entries[0].state).toBe("saved")
+    await pool.query(
+      "DELETE FROM team_members WHERE team_id=$1 AND user_id=$2",
+      [f.teamId, actor.userId]
+    )
+    await expect(run(actor, m)).rejects.toThrow()
+    await expect(service.readImport(actor, m.id)).rejects.toThrow()
+    expect(
+      (
+        await pool.query(
+          "SELECT shared_with_workspace FROM documents WHERE workspace_id=$1",
+          [f.workspaceId]
+        )
+      ).rows[0].shared_with_workspace
+    ).toBe(false)
+    contentFlags(false)
+  }, 60000)
+  it("PR53 review: same-account content requires snapshot-bound entitlement and visibility confirmation", async () => {
+    const f = await fixture(),
+      actor = f.actors[0]
+    contentFlags(true)
+    const view = {
+      ...newCustomView("issues", actor.userId),
+      id: "reviewed-view",
+      visibility: "workspace",
+    }
+    await contentSource(
+      f,
+      `forge:workspace:${f.workspaceId}:custom-views:v1:${actor.userId}`,
+      { version: 1, views: [view] }
+    )
+    const prepared = (await service.prepareImport(actor))!,
+      review = await run(actor, prepared),
+      entry = review.entries[0]
+    expect(entry.state).toBe("review")
+    expect(entry.conflict?.contentConfirmation?.destination).toContain(
+      "All workspace members"
+    )
+    expect(
+      (
+        await pool.query(
+          "SELECT count(*)::int n FROM saved_views WHERE workspace_id=$1",
+          [f.workspaceId]
+        )
+      ).rows[0].n
+    ).toBe(0)
+    await expect(
+      service.chooseImportConflict(actor, {
+        ...request(actor, review),
+        entryId: entry.id,
+        choice: "confirm-content",
+        conflictFingerprint: entry.conflict!.fingerprint,
+      })
+    ).rejects.toThrow(/confirmation/)
+    const confirmed = await decide(actor, review, entry.id, "confirm-content")
+    await pool.query(
+      "UPDATE organization SET name='Reviewed destination renamed' WHERE id=$1",
+      [f.workspaceId]
+    )
+    const changed = await run(actor, confirmed)
+    expect(changed.entries[0].state).toBe("review")
+    expect(changed.entries[0].conflict!.fingerprint).not.toBe(
+      entry.conflict!.fingerprint
+    )
+    expect(
+      (
+        await pool.query(
+          "SELECT count(*)::int n FROM saved_views WHERE workspace_id=$1",
+          [f.workspaceId]
+        )
+      ).rows[0].n
+    ).toBe(0)
+    const final = await finish(actor, changed)
+    expect(final.entries[0].state).toBe("saved")
+    expect(
+      (
+        await pool.query(
+          "SELECT count(*)::int n FROM saved_views WHERE workspace_id=$1",
+          [f.workspaceId]
+        )
+      ).rows[0].n
+    ).toBe(1)
+    contentFlags(false)
+  }, 60000)
+  it("PR53 review: a deleted mapped section quarantines a later document instead of saving a dangling placement", async () => {
+    const f = await fixture(),
+      actor = f.actors[0]
+    contentFlags(true)
+    await contentSource(f, `forge:team-home:v1:${f.teamId}`, {
+      sections: Array.from({ length: 10 }, (_, i) => ({
+        id: `section-${i}`,
+        name: `Section ${i}`,
+      })),
+      resources: [
+        {
+          id: randomUUID(),
+          kind: "document",
+          title: "Deferred document",
+          content: "Preserved",
+          sectionId: "section-0",
+        },
+      ],
+    })
+    const prepared = (await service.prepareImport(actor))!
+    let m = await finish(actor, prepared, ["resource"])
+    expect(
+      m.entries.filter((e) => e.kind === "resource" && e.state === "saved")
+    ).toHaveLength(10)
+    expect(m.entries.find((e) => e.kind === "document")?.state).toBe("review")
+    const { readTeamResources, commandTeamResources } =
+      await import("@/application/resources/team-resources.server")
+    const board = await readTeamResources(actor, f.teamId),
+      removed = m.entries.find(
+        (e) => e.legacyId === "section:section-0"
+      )!.canonicalId!
+    await commandTeamResources(actor, randomUUID(), {
+      teamId: f.teamId,
+      expectedRevision: board.revision,
+      fields: {
+        sections: board.sections.filter((s) => s.id !== removed),
+        links: board.links,
+        order: board.order,
+      },
+    })
+    m = await finish(actor, m)
+    expect(m.entries.find((e) => e.kind === "document")).toMatchObject({
+      state: "quarantined",
+      message: expect.stringContaining("section is no longer available"),
+    })
+    expect(
+      (
+        await pool.query(
+          "SELECT count(*)::int n FROM documents WHERE workspace_id=$1",
+          [f.workspaceId]
+        )
+      ).rows[0].n
+    ).toBe(0)
+    contentFlags(false)
+  }, 60000)
+  it("PR53 review: shared project milestones map to issues in every contributing team", async () => {
+    const f = await fixture(),
+      actor = f.actors[0],
+      secondTeam = randomUUID()
+    contentFlags(true)
+    await pool.query(
+      "INSERT INTO teams(id,workspace_id,name,slug,identifier,visibility,icon_kind,icon_value,color,timezone,created_by_user_id) VALUES($1::uuid,$2,$1::text,$1::text,$3,'workspace','emoji','x','#94a3b8','Europe/Paris',$4)",
+      [
+        secondTeam,
+        f.workspaceId,
+        secondTeam.slice(0, 5).toUpperCase(),
+        actor.userId,
+      ]
+    )
+    await contentSource(f, `forge:workspace:${f.workspaceId}:initiatives:v1`, {
+      version: 1,
+      initiatives: [],
+      workspaceProjects: [
+        {
+          id: "shared-plan",
+          name: "Shared plan",
+          status: "Active",
+          health: "On track",
+          teamIds: [f.teamId, secondTeam],
+          milestones: [{ id: "launch", name: "Launch", completed: false }],
+        },
+      ],
+    })
+    await contentSource(f, `forge:team-issues:v1:${secondTeam}`, {
+      version: 1,
+      issues: [
+        issue("second-team-work", {
+          project: "shared-plan",
+          milestone: "launch",
+        }),
+      ],
+    })
+    const m = await finish(actor, (await service.prepareImport(actor))!)
+    expect(
+      m.entries.map((e) => ({
+        kind: e.kind,
+        state: e.state,
+        message: e.message,
+      }))
+    ).toEqual(
+      expect.arrayContaining([
+        { kind: "issue", state: "saved", message: undefined },
+      ])
+    )
+    const milestone = m.entries.find((e) => e.kind === "milestone")!.canonicalId
+    expect(
+      (
+        await pool.query(
+          "SELECT properties->>'milestone' milestone FROM issues WHERE workspace_id=$1",
+          [f.workspaceId]
+        )
+      ).rows[0].milestone
+    ).toBe(milestone)
+    expect((await settle(actor, m, "reconcile")).reconciliation?.ready).toBe(
+      true
+    )
+    const canonicalProject = m.entries.find(
+      (e) => e.kind === "project"
+    )!.canonicalId
+    await contentSource(f, `forge:team-issues:v1:${secondTeam}`, {
+      version: 1,
+      issues: [
+        issue("canonical-project-work", {
+          project: canonicalProject,
+          milestone,
+        }),
+      ],
+    })
+    const later = await finish(actor, (await service.prepareImport(actor))!)
+    expect(later.entries.find((e) => e.kind === "issue")?.state).toBe("saved")
+    contentFlags(false)
+  }, 60000)
+  it("PR53 review: unscoped personal and workspace views map authorized parent issues across teams", async () => {
+    const f = await fixture(),
+      actor = f.actors[0]
+    contentFlags(true)
+    await source(f, [issue("legacy-parent")])
+    const views = ["personal", "workspace"].map((visibility) => ({
+      ...newCustomView("issues", actor.userId),
+      id: `view-${visibility}`,
+      name: `${visibility} parent view`,
+      visibility,
+      filters: {
+        match: "all",
+        rules: [
+          {
+            id: "parent",
+            field: "parentId",
+            operator: "is",
+            value: "legacy-parent",
+          },
+        ],
+      },
+    }))
+    await contentSource(
+      f,
+      `forge:workspace:${f.workspaceId}:custom-views:v1:${actor.userId}`,
+      { version: 1, views }
+    )
+    let m = await finish(actor, (await service.prepareImport(actor))!)
+    expect(m.entries.every((e) => e.state === "saved")).toBe(true)
+    const canonical = m.entries.find((e) => e.kind === "issue")!.canonicalId
+    const rows = (
+      await pool.query(
+        "SELECT definition FROM saved_views WHERE workspace_id=$1",
+        [f.workspaceId]
+      )
+    ).rows
+    expect(rows).toHaveLength(2)
+    expect(
+      rows.every((r) => r.definition.filters.rules[0].value === canonical)
+    ).toBe(true)
+    // A canonical ID without a source issue mapping uses the same authorized cross-team fallback.
+    await contentSource(
+      f,
+      `forge:workspace:${f.workspaceId}:custom-views:v1:${actor.userId}`,
+      {
+        version: 1,
+        views: [
+          {
+            ...views[0],
+            id: "canonical-parent-view",
+            name: "Canonical parent",
+            filters: {
+              match: "all",
+              rules: [
+                {
+                  id: "parent",
+                  field: "parentId",
+                  operator: "is",
+                  value: canonical,
+                },
+              ],
+            },
+          },
+        ],
+      }
+    )
+    m = await finish(actor, (await service.prepareImport(actor))!)
+    expect(m.entries.find((e) => e.kind === "view")?.state).toBe("saved")
+    contentFlags(false)
+  }, 60000)
 })

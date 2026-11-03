@@ -1,0 +1,24 @@
+{
+  "passed": true,
+  "database": "forge_resources_loops_acceptance",
+  "branch": "br-autumn-union-za0opf1e",
+  "checks": [
+    "explicit preserved-content discovery",
+    "canonical project/milestone/initiative deduplication across repeated source projections",
+    "team/project document scopes",
+    "section/link mappings",
+    "saved definitions without personal favorites",
+    "corrupt/ambiguous record quarantine",
+    "reload and exact replay",
+    "independent member reads imported document",
+    "original source bytes retained"
+  ],
+  "counts": {
+    "initiatives": 1,
+    "projects": 1,
+    "documents": 2,
+    "views": 2,
+    "favorites": 0
+  },
+  "pageErrors": []
+}
