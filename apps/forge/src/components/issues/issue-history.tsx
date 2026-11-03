@@ -4,6 +4,7 @@ import type {
   IssueHistoryEntry,
   IssueHistoryPage,
 } from "@/lib/issue-history-contract"
+import { usePersonName } from "@/components/person-name-provider"
 import {
   CANONICAL_ISSUES_CHANGED,
   canonicalIssueEpoch,
@@ -54,6 +55,7 @@ export function IssueHistory({
   revision: number
   valueLabel?: (field: string, value: string) => string
 }) {
+  const personName = usePersonName()
   const identityScope = useSyncExternalStore(subscribe, scope, () => "")
   const [refresh, setRefresh] = useState(0)
   const key = `${identityScope}:${issueId}:${revision}:${refresh}`
@@ -177,7 +179,7 @@ export function IssueHistory({
         <ActivityRow key={entry.id} id={`history-${entry.id}`}>
           <p className="min-w-0 break-words">
             <span className="font-medium text-foreground">
-              {entry.actor.name}
+              {personName(entry.actor)}
             </span>
             {entry.actor.kind === "agent"
               ? " via agent"

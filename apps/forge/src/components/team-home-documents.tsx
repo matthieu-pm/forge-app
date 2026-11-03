@@ -11,6 +11,7 @@ import { toast } from "sonner"
 import { SharedDocumentEditor } from "./shared-document-editor"
 import { TeamSidebarIcon } from "./team-sidebar-icon"
 import type { TeamSummary } from "@/lib/team-contract"
+import { usePersonName } from "@/components/person-name-provider"
 import { retainedDocumentTitle } from "@/lib/document-copy-recovery"
 import { downloadDocumentDraft } from "@/lib/document-download"
 import { useSharedDocuments } from "@/lib/shared-document-client"
@@ -54,6 +55,7 @@ export function TeamDocuments({
   documentId?: string
   onOpenDocument?: (id?: string) => void
 }) {
+  const personName = usePersonName()
   const store = useTeamHome(team.id)
   const resources = useTeamResources(team.id)
   const shared = useSharedDocuments({ kind: "team", id: team.id })
@@ -498,7 +500,7 @@ export function TeamDocuments({
                           <Avatar className="size-5">
                             <AvatarImage src={undefined} alt="" />
                             <AvatarFallback className="text-[9px]">
-                              {resource.owner.name
+                              {personName(resource.owner)
                                 .split(/\s+/)
                                 .map((part) => part[0])
                                 .slice(0, 2)
@@ -506,7 +508,7 @@ export function TeamDocuments({
                             </AvatarFallback>
                           </Avatar>
                           <span className="truncate">
-                            {resource.owner.name}
+                            {personName(resource.owner)}
                           </span>
                         </>
                       ) : (

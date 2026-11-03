@@ -17,6 +17,7 @@ import { toast } from "sonner"
 
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamMemberDirectory } from "@/lib/team-member-contract"
+import { usePersonName } from "@/components/person-name-provider"
 import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 import {
   HomeIcon,
@@ -85,6 +86,11 @@ export function TeamMembersSettings({
   home?: boolean
   initialAddOpen?: boolean
 }) {
+  const personName = usePersonName([
+    ...directory.members,
+    ...directory.availableMembers,
+  ])
+
   const router = useRouter()
   const homeStore = useTeamHome(team.id)
   const [showEmail, setShowEmail] = React.useState(true)
@@ -102,7 +108,7 @@ export function TeamMembersSettings({
   const [pickerOpen, setPickerOpen] = React.useState(false)
   const [memberSearch, setMemberSearch] = React.useState("")
   const matchingMembers = directory.availableMembers.filter((member) =>
-    `${member.name} ${member.email} ${member.username ?? ""}`
+    `${personName(member)} ${member.name} ${member.email} ${member.username ?? ""}`
       .toLocaleLowerCase()
       .includes(memberSearch.trim().toLocaleLowerCase())
   )
@@ -111,7 +117,7 @@ export function TeamMembersSettings({
   const visibleMembers = directory.members
     .filter(
       (member) =>
-        `${member.name} ${member.email} ${member.username ?? ""}`
+        `${personName(member)} ${member.name} ${member.email} ${member.username ?? ""}`
           .toLocaleLowerCase()
           .includes(normalizedQuery) &&
         (role === "All" || teamMemberRole(member) === role)
@@ -123,7 +129,7 @@ export function TeamMembersSettings({
           ? left.email.localeCompare(right.email)
           : sortBy === "role"
             ? teamMemberRole(left).localeCompare(teamMemberRole(right))
-            : left.name.localeCompare(right.name))
+            : personName(left).localeCompare(personName(right)))
     )
 
   function exportCsv() {
@@ -266,12 +272,12 @@ export function TeamMembersSettings({
                         className="outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
                       />
                       <AvatarFallback className="text-[10px]">
-                        {initials(member.name)}
+                        {initials(personName(member))}
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0">
                       <p className="truncate text-sm text-foreground">
-                        {member.name}
+                        {personName(member)}
                       </p>
                       {member.username ? (
                         <p className="truncate text-xs text-muted-foreground">
@@ -309,7 +315,7 @@ export function TeamMembersSettings({
                       <DropdownMenuTrigger
                         render={
                           <HomeIconButton
-                            label={`Actions for ${member.name}`}
+                            label={`Actions for ${personName(member)}`}
                             icon={MoreHorizontalIcon}
                             className="opacity-0 group-hover/member:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100"
                           />
@@ -571,7 +577,7 @@ export function TeamMembersSettings({
                         .filter((member) =>
                           selectedUserIds.includes(member.userId)
                         )
-                        .map((member) => member.name)
+                        .map((member) => personName(member))
                         .join(", ")
                     : "Select members..."}
                 </span>
@@ -620,11 +626,11 @@ export function TeamMembersSettings({
                       <Avatar aria-hidden="true" className="size-4 shrink-0">
                         <AvatarImage src={member.image ?? undefined} alt="" />
                         <AvatarFallback className="text-[8px]">
-                          {initials(member.name)}
+                          {initials(personName(member))}
                         </AvatarFallback>
                       </Avatar>
                       <span className="truncate" title={member.email}>
-                        {member.name}
+                        {personName(member)}
                       </span>
                     </label>
                   ))}

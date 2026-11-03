@@ -14,6 +14,7 @@ import type {
   LightTheme,
   PersonalPreferences,
 } from "@/lib/personal-preferences"
+import { usePersonNamesEnabled } from "@/components/person-name-provider"
 import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 import { Button } from "@/components/ui/button"
 import {
@@ -204,12 +205,14 @@ function Section({
 }
 
 function PreferenceSelect<TValue extends string>({
+  disabled = false,
   ariaLabel,
   onValueChange,
   options,
   value,
 }: {
   ariaLabel: string
+  disabled?: boolean
   onValueChange: (value: TValue) => void
   options: ReadonlyArray<{
     label: string
@@ -228,6 +231,7 @@ function PreferenceSelect<TValue extends string>({
         variant="secondary"
         size="sm"
         aria-label={ariaLabel}
+        disabled={disabled}
         render={<DropdownMenuTrigger />}
         className="group rounded-lg font-normal"
       >
@@ -261,6 +265,7 @@ function PreferenceSelect<TValue extends string>({
 }
 
 export function PreferencesSettings() {
+  const personNamesEnabled = usePersonNamesEnabled()
   const commentSubmission = useCommentSubmission()
   const sync = usePreferenceGroup("general")
   const preferences = sync.preferences
@@ -339,6 +344,7 @@ export function PreferencesSettings() {
                 >
                   <PreferenceSelect
                     ariaLabel="Display names"
+                    disabled={!personNamesEnabled}
                     value={preferences.displayNames}
                     onValueChange={(value) =>
                       updatePreference("displayNames", value)

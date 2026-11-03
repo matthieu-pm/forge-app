@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamIssue } from "@/lib/issue-record-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
+import { usePersonName } from "@/components/person-name-provider"
 import { loadTemplates } from "@/lib/template-state"
 import { getIssueStatuses } from "@/lib/team-issues"
 import { enqueueIssueEdits } from "@/lib/canonical-issue-edit-client"
@@ -15,6 +16,8 @@ export function TriageDecisionControls({
   team: TeamSummary
   issue: TeamIssue
 }) {
+  const personName = usePersonName()
+
   // Hold the version the triager reviewed even when background queries refresh.
   const baseline = useRef(issue)
   const statuses = getIssueStatuses(team.id)
@@ -100,7 +103,7 @@ export function TriageDecisionControls({
             <option value="">Unassigned</option>
             {directory?.members.map((member) => (
               <option key={member.id} value={member.id}>
-                {member.name}
+                {personName(member)}
               </option>
             ))}
           </OptionSelect>

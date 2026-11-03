@@ -7,6 +7,7 @@ import type {
   InitiativeView,
 } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
+import { usePersonName } from "@/components/person-name-provider"
 import {
   contributingTeamIds,
   initiativeHealth,
@@ -40,6 +41,8 @@ export function InitiativeSummary({
   onFilters: (next: InitiativeFilters) => void
   onClose: () => void
 }) {
+  const personName = usePersonName(people)
+
   const field: "Owner" | "Health" | "Contributing teams" =
     preferences.sidebarTab === "Owner"
       ? "Owner"
@@ -64,8 +67,10 @@ export function InitiativeSummary({
       counts.set(value, (counts.get(value) ?? 0) + 1)
   const label = (value: string) =>
     field === "Owner"
-      ? (people.find((person) => person.id === value)?.name ??
-        (value ? "Unknown member" : "No lead"))
+      ? personName(
+          people.find((person) => person.id === value),
+          value ? "Unknown member" : "No lead"
+        )
       : field === "Health"
         ? value
         : (teams.find((team) => team.id === value)?.name ?? "Unknown team")
@@ -151,7 +156,10 @@ export function InitiativeSummary({
                 }
               >
                 {field === "Owner" ? (
-                  <AssigneeMark name={person?.name} image={person?.image} />
+                  <AssigneeMark
+                    name={person ? personName(person) : undefined}
+                    image={person?.image}
+                  />
                 ) : field === "Health" ? (
                   <InitiativeHealthMark health={value} />
                 ) : (

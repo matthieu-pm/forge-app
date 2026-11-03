@@ -5,6 +5,7 @@ import type {
 } from "@/lib/loop-contract"
 import { useCalendarWeek } from "@/hooks/use-calendar-week"
 import { DateInput } from "@/components/ui/date-input"
+import { usePersonName } from "@/components/person-name-provider"
 import {
   LOOP_ENTITIES,
   eventProperties,
@@ -134,6 +135,21 @@ export function LoopConditionEditor({
   depth?: number
   total?: number
 }) {
+  const personName = usePersonName()
+  const presentedChoices =
+    choices &&
+    Object.fromEntries(
+      Object.entries(choices).map(([key, entries]) => [
+        key,
+        ["assignee", "creator", "owner", "lead"].includes(key)
+          ? entries.map((person) =>
+              person.id === "__none__"
+                ? person
+                : { ...person, name: personName(person) }
+            )
+          : entries,
+      ])
+    )
   const group =
     conditions.length === 1 && "conditions" in conditions[0]
       ? conditions[0]
@@ -152,8 +168,8 @@ export function LoopConditionEditor({
           { id: "true", name: "In triage" },
           { id: "false", name: "Outside triage" },
         ]
-      : (choices?.[`${entity}.${field}`] ??
-        choices?.[
+      : (presentedChoices?.[`${entity}.${field}`] ??
+        presentedChoices?.[
           field === "id"
             ? entity
             : field === "members"
@@ -330,10 +346,27 @@ export function LoopTriggerEditor({
   timeZone: string
   choices?: Record<string, Array<{ id: string; name: string }>>
 }) {
+  const personName = usePersonName()
+  const presentedChoices =
+    choices &&
+    Object.fromEntries(
+      Object.entries(choices).map(([key, entries]) => [
+        key,
+        ["assignee", "creator", "owner", "lead"].includes(key)
+          ? entries.map((person) =>
+              person.id === "__none__"
+                ? person
+                : { ...person, name: personName(person) }
+            )
+          : entries,
+      ])
+    )
   const propertyOptions =
     value.kind === "event" && value.property
-      ? (choices?.[`${value.entity}.${value.property}`] ??
-        choices?.[value.property === "members" ? "assignee" : value.property])
+      ? (presentedChoices?.[`${value.entity}.${value.property}`] ??
+        presentedChoices?.[
+          value.property === "members" ? "assignee" : value.property
+        ])
       : undefined
   const triggerOptions =
     value.kind === "event" && ["added", "removed"].includes(value.event)
@@ -504,7 +537,7 @@ export function LoopTriggerEditor({
                   Mentioned members
                   <ValuePicker
                     name="Mentioned members"
-                    choices={choices?.assignee ?? []}
+                    choices={presentedChoices?.assignee ?? []}
                     values={value.mentionIds ?? []}
                     onChange={(mentionIds) =>
                       onChange({ ...value, mentionIds })

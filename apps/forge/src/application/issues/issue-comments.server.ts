@@ -1,5 +1,5 @@
 import "@tanstack/react-start/server-only"
-import { and, eq, ilike, inArray, sql } from "drizzle-orm"
+import { and, eq, ilike, inArray, or, sql } from "drizzle-orm"
 import { z } from "zod"
 import { IssueFileInputError, bindIssueFiles } from "./issue-files.server"
 import { readIssueRows, requireIssueTeam } from "./issues.server"
@@ -59,7 +59,11 @@ async function eligibleMentions(
 ) {
   // The recipient is evaluated with its own live member/team access, never the sender's role.
   return tx
-    .select({ id: users.id, name: sql<string>`left(${users.name}, 200)` })
+    .select({
+      id: users.id,
+      name: sql<string>`left(${users.name}, 200)`,
+      username: users.username,
+    })
     .from(members)
     .innerJoin(users, eq(users.id, members.userId))
     .where(
@@ -71,7 +75,10 @@ async function eligibleMentions(
         ),
         ids
           ? inArray(users.id, ids)
-          : ilike(users.name, `%${query.replace(/[\\%_]/g, "\\$&")}%`)
+          : or(
+              ilike(users.name, `%${query.replace(/[\\%_]/g, "\\$&")}%`),
+              ilike(users.username, `%${query.replace(/[\\%_]/g, "\\$&")}%`)
+            )
       )
     )
     .orderBy(users.name, users.id)

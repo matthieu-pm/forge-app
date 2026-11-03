@@ -20,6 +20,7 @@ import { IntegrationsSettings } from "./integrations-settings"
 import { ProjectUpdatesSettings } from "./project-updates-settings"
 import { AgentTranscript } from "./agent/agent-transcript"
 import { AgentComposer } from "./agent/agent-composer"
+import type * as PreferenceProvider from "@/components/account-preference-provider"
 import type { FunctionComponent, ReactNode } from "react"
 import type { TeamDirectoryEntry } from "@/lib/team-contract"
 import type { AgentEvent } from "@/application/agents/event-contract"
@@ -33,7 +34,8 @@ vi.mock("@/lib/team-state", () => ({
   leaveTeam: vi.fn(),
 }))
 vi.mock("@/lib/auth-state", () => ({ protectedRouteBeforeLoad: vi.fn() }))
-vi.mock("@/components/account-preference-provider", () => ({
+vi.mock("@/components/account-preference-provider", async (original) => ({
+  ...(await original<typeof PreferenceProvider>()),
   AccountPreferenceProvider: ({ children }: { children: ReactNode }) =>
     children,
   PreferenceSyncStatus: () => null,

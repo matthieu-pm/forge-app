@@ -8,6 +8,8 @@ import type {
   TeamIssue,
 } from "@/lib/team-issues"
 import type { TeamStatus } from "@/lib/team-statuses"
+import { personSearchText } from "@/lib/person-name"
+import { usePersonName } from "@/components/person-name-provider"
 import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import {
   emptyIssueFilters,
@@ -91,6 +93,8 @@ export function IssueFilters({
   value: Filters
   onChange: (value: Filters) => void
 }) {
+  const personName = usePersonName(members)
+
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
   const [mode, setMode] = useState<"advanced" | "ai" | null>(null)
@@ -127,7 +131,11 @@ export function IssueFilters({
     if (field === "priority")
       return issuePriorities.map((name) => ({ value: name, label: name }))
     if (field === "assignee")
-      return members.map((member) => ({ value: member.id, label: member.name }))
+      return members.map((member) => ({
+        value: member.id,
+        keywords: personSearchText(member),
+        label: personName(member),
+      }))
     if (field === "autoClosed")
       return ["Yes", "No"].map((name) => ({ value: name, label: name }))
     if (field === "parentId")
@@ -156,7 +164,10 @@ export function IssueFilters({
         value: item,
         label:
           field === "creator"
-            ? (members.find((member) => member.id === item)?.name ?? item)
+            ? personName(
+                members.find((member) => member.id === item),
+                item
+              )
             : item,
       }))
   }

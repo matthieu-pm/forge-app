@@ -214,6 +214,13 @@ export function commentMentionIds(doc: CommentNode): Array<string> {
     ),
   ]
 }
+export function commentMentionPeople(
+  doc: CommentNode
+): Array<{ id: string; name: string }> {
+  if (doc.type === "mention")
+    return [{ id: String(doc.attrs!.id), name: String(doc.attrs!.label) }]
+  return (doc.content ?? []).flatMap(commentMentionPeople)
+}
 export function resolveCommentMentions(
   doc: CommentNode,
   people: Map<string, string>

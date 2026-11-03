@@ -6,6 +6,8 @@ import type { TeamSummary } from "@/lib/team-contract"
 import type { CycleIssue, CycleIssueDraft } from "@/lib/cycle-issues"
 import type { IssueDraft, TeamIssue } from "@/lib/team-issues"
 import type { TemplateDirectory } from "@/lib/template-contract"
+import { personSearchText } from "@/lib/person-name"
+import { usePersonName } from "@/components/person-name-provider"
 import { IssueQueryFooter } from "@/components/issues/issue-query-footer"
 import { useIssueQuery } from "@/lib/issue-query-client"
 import { DEFINITIONS_CHANGED } from "@/lib/issue-definition-cache"
@@ -74,6 +76,8 @@ export function UpcomingCycle({
   team: TeamSummary
   cycleNumber?: number
 }) {
+  const personName = usePersonName()
+
   const {
     settings,
     ready,
@@ -575,7 +579,8 @@ export function UpcomingCycle({
                         { value: "", label: "No assignee" },
                         ...members.map((member) => ({
                           value: member.id,
-                          label: member.name,
+                          keywords: personSearchText(member),
+                          label: personName(member),
                         })),
                       ]
               }

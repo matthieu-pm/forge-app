@@ -24,6 +24,7 @@ import type {
   TriageFilter,
   TriageFilterState,
 } from "@/lib/triage-filters"
+import { usePersonName } from "@/components/person-name-provider"
 import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import { OptionSelect } from "@/components/ui/option-select"
 import {
@@ -178,6 +179,8 @@ export function TriageFilters({
   value: TriageFilterState
   onChange: (filters: TriageFilterState) => void
 }) {
+  const personName = usePersonName()
+
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
   const [advanced, setAdvanced] = useState(false)
@@ -243,7 +246,10 @@ export function TriageFilters({
       value: item,
       name:
         field === "assignee"
-          ? (members.find((member) => member.id === item)?.name ?? item)
+          ? personName(
+              members.find((member) => member.id === item),
+              item
+            )
           : item,
     }))
   }
@@ -385,8 +391,10 @@ export function TriageFilters({
   function ruleSummary(rule: TriageFilter) {
     const label =
       rule.field === "assignee"
-        ? (members.find((member) => member.id === rule.value)?.name ??
-          rule.value)
+        ? personName(
+            members.find((member) => member.id === rule.value),
+            rule.value
+          )
         : rule.value
     return `${filterFields[rule.field]} ${operatorLabels[rule.operator]}${needsFilterValue(rule.operator) ? ` ${label}` : ""}`
   }

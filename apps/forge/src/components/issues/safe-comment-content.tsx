@@ -1,22 +1,33 @@
 import { Fragment } from "react"
 import type { ReactNode } from "react"
 import type { CommentNode } from "@/lib/comment-rich-text"
-import { validateCommentDocument } from "@/lib/comment-rich-text"
+import type { PersonIdentity } from "@/lib/person-name"
+import {
+  commentMentionPeople,
+  validateCommentDocument,
+} from "@/lib/comment-rich-text"
+import { usePersonName } from "@/components/person-name-provider"
 
 /** Stored/legacy JSON is untrusted too. React text and a fixed tag map only. */
 export function SafeCommentContent({
   document,
   fallback,
+  people = [],
 }: {
   document?: unknown
   fallback: string
+  people?: ReadonlyArray<PersonIdentity>
 }) {
-  let doc: CommentNode
+  let doc: CommentNode | undefined
   try {
     doc = validateCommentDocument(document)
   } catch {
-    return <p className="whitespace-pre-wrap">{fallback}</p>
+    doc = undefined
   }
+  const personName = usePersonName(
+    doc ? [...commentMentionPeople(doc), ...people] : people
+  )
+  if (!doc) return <p className="whitespace-pre-wrap">{fallback}</p>
   function render(n: CommentNode, key: number): ReactNode {
     if (n.type === "text") {
       let text: ReactNode = n.text
@@ -43,7 +54,11 @@ export function SafeCommentContent({
     if (n.type === "mention")
       return (
         <span key={key} className="rounded bg-primary/10 px-1 text-primary">
-          @{String(n.attrs!.label)}
+          @
+          {personName({
+            id: String(n.attrs!.id),
+            name: String(n.attrs!.label),
+          })}
         </span>
       )
     if (n.type === "hardBreak") return <br key={key} />

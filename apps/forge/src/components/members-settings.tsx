@@ -1,3 +1,5 @@
+"use client"
+
 import * as React from "react"
 import {
   ArrowDown01Icon,
@@ -20,6 +22,7 @@ import type {
   WorkspaceInvitationSummary,
   WorkspaceMemberSummary,
 } from "@/lib/member-contract"
+import { usePersonName } from "@/components/person-name-provider"
 import { OptionSelect } from "@/components/ui/option-select"
 import { DropdownChevron } from "@/components/ui/dropdown-chevron"
 import {
@@ -68,10 +71,6 @@ import {
   retryInvitationDelivery,
 } from "@/lib/member-state"
 import { readLocalProfile, usernameFromEmail } from "@/lib/profile-state"
-
-;
-
-("use client")
 
 type MemberFilter = "all" | "active" | "invited"
 type SortDirection = "asc" | "desc"
@@ -199,6 +198,8 @@ export function MembersSettings({
   access: WorkspaceAccessSummary
   initialInviteOpen?: boolean
 }) {
+  const personName = usePersonName(access.members)
+
   const router = useRouter()
   const { members, invitations, canManage, currentUserId } = access
   const [query, setQuery] = React.useState("")
@@ -257,14 +258,20 @@ export function MembersSettings({
 
         const searchable =
           entry.kind === "member"
-            ? `${entry.member.name} ${entry.member.email} ${entry.member.username ?? ""} ${entry.member.role}`
+            ? `${personName(entry.member)} ${entry.member.name} ${entry.member.email} ${entry.member.username ?? ""} ${entry.member.role}`
             : `${entry.invitation.email} ${entry.invitation.role} invited`
 
         return searchable.toLocaleLowerCase().includes(normalizedQuery)
       })
       .sort((left, right) => {
-        const leftValue = getSortValue(left, sortField)
-        const rightValue = getSortValue(right, sortField)
+        const leftValue =
+          sortField === "name" && left.kind === "member"
+            ? personName(left.member)
+            : getSortValue(left, sortField)
+        const rightValue =
+          sortField === "name" && right.kind === "member"
+            ? personName(right.member)
+            : getSortValue(right, sortField)
         const comparison =
           typeof leftValue === "number" && typeof rightValue === "number"
             ? leftValue - rightValue
@@ -274,7 +281,15 @@ export function MembersSettings({
 
         return sortDirection === "asc" ? comparison : -comparison
       })
-  }, [filter, invitations, members, query, sortDirection, sortField])
+  }, [
+    filter,
+    invitations,
+    members,
+    query,
+    sortDirection,
+    sortField,
+    personName,
+  ])
 
   const activeMembers = visibleEntries.filter(
     (entry): entry is Extract<MemberEntry, { kind: "member" }> =>
@@ -604,11 +619,13 @@ export function MembersSettings({
                   {member.image ? (
                     <AvatarImage src={member.image} alt="" />
                   ) : null}
-                  <AvatarFallback>{initials(member.name)}</AvatarFallback>
+                  <AvatarFallback>
+                    {initials(personName(member))}
+                  </AvatarFallback>
                 </Avatar>
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-medium text-foreground">
-                    {member.name}
+                    {personName(member)}
                   </span>
                   <span className="block truncate text-xs text-muted-foreground">
                     {usernames[member.userId] ??
@@ -656,7 +673,7 @@ export function MembersSettings({
                     type="button"
                     variant="ghost"
                     size="icon-xs"
-                    aria-label={`Open ${member.name} menu`}
+                    aria-label={`Open ${personName(member)} menu`}
                     render={<DropdownMenuTrigger />}
                     className="rounded-md text-muted-foreground opacity-0 transition-opacity group-hover/row:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100 max-md:opacity-100"
                   >
@@ -963,8 +980,10 @@ export function MembersSettings({
             </span>
             <DialogTitle>Edit member role</DialogTitle>
             <DialogDescription className="leading-5">
-              Change {memberToEdit?.name ?? "this member"}’s access to the
-              workspace.
+              Change{" "}
+              {(memberToEdit ? personName(memberToEdit) : undefined) ??
+                "this member"}
+              ’s access to the workspace.
             </DialogDescription>
           </DialogHeader>
 
@@ -1001,7 +1020,7 @@ export function MembersSettings({
                     memberId: memberToEdit.id,
                     role: editedRole,
                   },
-                  `${memberToEdit.name} is now a${editedRole === "admin" ? "n admin" : " member"}.`
+                  `${personName(memberToEdit)} is now a${editedRole === "admin" ? "n admin" : " member"}.`
                 )
                 if (updated) setMemberToEdit(null)
               }}
@@ -1025,7 +1044,10 @@ export function MembersSettings({
               <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
             </AlertDialogMedia>
             <AlertDialogTitle>
-              Remove {memberToRemove?.name ?? "member"}?
+              Remove{" "}
+              {(memberToRemove ? personName(memberToRemove) : undefined) ??
+                "member"}
+              ?
             </AlertDialogTitle>
             <AlertDialogDescription>
               This immediately removes their access to the workspace. They can
@@ -1045,7 +1067,7 @@ export function MembersSettings({
                     action: "remove-member",
                     memberId: memberToRemove.id,
                   },
-                  `${memberToRemove.name} was removed from the workspace.`
+                  `${personName(memberToRemove)} was removed from the workspace.`
                 )
                 if (removed) setMemberToRemove(null)
               }}

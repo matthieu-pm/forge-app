@@ -174,7 +174,12 @@ export function AssigneeMark({
     <IssueIcon name="person" />
   )
 }
-export type PickerOption = { value: string; label: string; icon?: ReactNode }
+export type PickerOption = {
+  value: string
+  label: string
+  icon?: ReactNode
+  keywords?: string
+}
 export function IssuePicker({
   label,
   shortcut,
@@ -217,7 +222,9 @@ export function IssuePicker({
         .filter(Boolean)
     : [value]
   const shown = options.filter((option) =>
-    option.label.toLowerCase().includes(search.toLowerCase())
+    `${option.label} ${option.keywords ?? ""}`
+      .toLowerCase()
+      .includes(search.toLowerCase())
   )
   function choose(next: string) {
     onChange(

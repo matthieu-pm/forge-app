@@ -16,6 +16,7 @@ import type { InitiativePerson } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { ViewIssueMetricGroups } from "./view-issues"
 import type { ViewMetric, ViewProjectMetricGroups } from "./view-projects"
+import { usePersonName } from "@/components/person-name-provider"
 import { PortalScope } from "@/components/ui/portal-scope"
 import { protectedSessionEpoch } from "@/lib/protected-session"
 import { newCustomView, visibleCustomViews } from "@/lib/custom-views"
@@ -149,6 +150,7 @@ export function ViewsPage({
   onNavigate: (search: ViewsSearch) => void
   directoryError?: string
 }) {
+  const personName = usePersonName()
   const portalHost = useRef<HTMLDivElement>(null)
   const [toolbarHost, setToolbarHost] = useState<HTMLDivElement | null>(null)
   const createActionRef = useRef<(() => void) | null>(null)
@@ -819,17 +821,18 @@ export function ViewsPage({
                           </span>
                           <span className="flex items-center gap-2 text-xs">
                             <AssigneeMark
-                              name={
+                              name={personName(
                                 people.find((p) => p.id === current.ownerId)
-                                  ?.name
-                              }
+                              )}
                               image={
                                 people.find((p) => p.id === current.ownerId)
                                   ?.image
                               }
                             />
-                            {people.find((p) => p.id === current.ownerId)
-                              ?.name ?? "Unknown member"}
+                            {personName(
+                              people.find((p) => p.id === current.ownerId),
+                              "Unknown member"
+                            )}
                           </span>
                         </div>
                         {current.description && (
@@ -984,7 +987,7 @@ export function ViewsPage({
                                   <div className="flex h-9 items-center gap-2.5 rounded-lg bg-muted/50 px-3.5 text-xs">
                                     <span className="flex size-5 shrink-0 items-center justify-center">
                                       <AssigneeMark
-                                        name={user.name}
+                                        name={personName(user)}
                                         image={user.image}
                                       />
                                     </span>
@@ -1070,11 +1073,11 @@ export function ViewsPage({
                                         {property === "Owner" ? (
                                           <span className="flex min-w-0 items-center gap-2">
                                             <AssigneeMark
-                                              name={
+                                              name={personName(
                                                 people.find(
                                                   (p) => p.id === view.ownerId
-                                                )?.name
-                                              }
+                                                )
+                                              )}
                                               image={
                                                 people.find(
                                                   (p) => p.id === view.ownerId
@@ -1082,9 +1085,12 @@ export function ViewsPage({
                                               }
                                             />
                                             <span className="truncate">
-                                              {people.find(
-                                                (p) => p.id === view.ownerId
-                                              )?.name ?? "Unknown member"}
+                                              {personName(
+                                                people.find(
+                                                  (p) => p.id === view.ownerId
+                                                ),
+                                                "Unknown member"
+                                              )}
                                             </span>
                                           </span>
                                         ) : (

@@ -10,6 +10,7 @@ import {
 } from "@hugeicons/core-free-icons"
 import type { TeamDirectoryEntry } from "@/lib/team-contract"
 import { DateInput } from "@/components/ui/date-input"
+import { usePersonName } from "@/components/person-name-provider"
 import { CheckboxMark } from "@/components/ui/checkbox-mark"
 import { DirectoryDisplay } from "@/components/directory-controls"
 import { OptionSelect } from "@/components/ui/option-select"
@@ -172,6 +173,8 @@ export function TeamDirectoryFilters({
   value: TeamFiltersState
   onChange: (value: TeamFiltersState) => void
 }) {
+  const personName = usePersonName()
+
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
   const [advanced, setAdvanced] = useState(false)
@@ -218,8 +221,10 @@ export function TeamDirectoryFilters({
           ? "Current user"
           : rule.value === "__none"
             ? "None"
-            : (people(rule.field).find((person) => person.id === rule.value)
-                ?.name ?? rule.value)
+            : personName(
+                people(rule.field).find((person) => person.id === rule.value),
+                rule.value
+              )
     if (rule.field === "private") label = rule.value === "true" ? "Yes" : "No"
     return `${fields[rule.field]} ${rule.operator === "isNot" ? "is not" : rule.operator} ${label}`
   }
@@ -425,7 +430,7 @@ export function TeamDirectoryFilters({
                       {people(label === "Members" ? "members" : "owners").map(
                         (person) =>
                           choice(
-                            person.name,
+                            personName(person),
                             label === "Members" ? "members" : "owners",
                             person.id
                           )
@@ -570,7 +575,7 @@ export function TeamDirectoryFilters({
                         <option value="__none">None</option>
                         {people(rule.field).map((person) => (
                           <option key={person.id} value={person.id}>
-                            {person.name}
+                            {personName(person)}
                           </option>
                         ))}
                       </>

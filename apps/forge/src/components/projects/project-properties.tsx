@@ -1,6 +1,8 @@
 import type { ReactNode } from "react"
 import type { InitiativePerson, InitiativeProject } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
+import { personSearchText } from "@/lib/person-name"
+import { usePersonName } from "@/components/person-name-provider"
 import { useProjectStatusDirectory } from "@/lib/project-status-client"
 import { projectStatusValue } from "@/lib/project-statuses"
 import { canonicalIssuesActive } from "@/lib/canonical-issue-cache"
@@ -66,6 +68,8 @@ export function ProjectProperties({
   expanded?: boolean
   onChange: (patch: Partial<InitiativeProject>) => void
 }) {
+  const personName = usePersonName(people)
+
   const statuses = useProjectStatusDirectory()
   const custom = canonicalIssuesActive()
   const selectedStatus =
@@ -174,15 +178,21 @@ export function ProjectProperties({
             { value: "", label: "No lead" },
             ...people.map((p) => ({
               value: p.id,
-              label: p.name,
-              icon: <AssigneeMark name={p.name} image={p.image} />,
+              keywords: personSearchText(p),
+              label: personName(p),
+              icon: <AssigneeMark name={personName(p)} image={p.image} />,
             })),
           ]}
           onChange={(leadId) => onChange({ leadId })}
           className={style}
         >
-          <AssigneeMark name={lead?.name} image={lead?.image} />
-          <span className="truncate">{lead?.name ?? "Lead"}</span>
+          <AssigneeMark
+            name={lead ? personName(lead) : undefined}
+            image={lead?.image}
+          />
+          <span className="truncate">
+            {(lead ? personName(lead) : undefined) ?? "Lead"}
+          </span>
         </IssuePicker>
       )}
       {expanded && (
@@ -195,8 +205,9 @@ export function ProjectProperties({
               value={(project.memberIds ?? []).join(",")}
               options={people.map((p) => ({
                 value: p.id,
-                label: p.name,
-                icon: <AssigneeMark name={p.name} image={p.image} />,
+                keywords: personSearchText(p),
+                label: personName(p),
+                icon: <AssigneeMark name={personName(p)} image={p.image} />,
               }))}
               onChange={(value) => onChange({ memberIds: split(value) })}
               className={style}

@@ -8,7 +8,13 @@ import type {
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamLabel } from "@/lib/team-labels"
 import type { ProjectFilter, ProjectPreferences } from "@/lib/projects"
-import { AssigneeMark, IssueIcon, PriorityMark  } from "@/components/issues/issue-controls"
+import { personSearchText } from "@/lib/person-name"
+import { usePersonName } from "@/components/person-name-provider"
+import {
+  AssigneeMark,
+  IssueIcon,
+  PriorityMark,
+} from "@/components/issues/issue-controls"
 import {
   projectFilterFields,
   projectGroupings,
@@ -39,7 +45,11 @@ export type ProjectDirectory = {
   initiatives: Array<Initiative>
   catalog: Array<InitiativeProject>
 }
-export function projectChoices(field: string, directory: ProjectDirectory) {
+export function projectChoices(
+  field: string,
+  directory: ProjectDirectory,
+  personName: ReturnType<typeof usePersonName> = (person) => person?.name ?? ""
+) {
   if (field === "Status")
     return projectStatuses.map((value) => ({
       value,
@@ -62,8 +72,9 @@ export function projectChoices(field: string, directory: ProjectDirectory) {
       { value: "", label: "No lead", icon: <AssigneeMark /> },
       ...directory.people.map((person) => ({
         value: person.id,
-        label: person.name,
-        icon: <AssigneeMark name={person.name} image={person.image} />,
+        keywords: personSearchText(person),
+        label: personName(person),
+        icon: <AssigneeMark name={personName(person)} image={person.image} />,
       })),
     ]
   const records =
@@ -80,7 +91,11 @@ export function projectChoices(field: string, directory: ProjectDirectory) {
     ...(["Lead", "Teams", "Initiatives"].includes(field)
       ? [{ value: "", label: `No ${field.toLowerCase()}` }]
       : []),
-    ...records.map((record) => ({ value: record.id, label: record.name })),
+    ...records.map((record) => ({
+      value: record.id,
+      label: records === directory.people ? personName(record) : record.name,
+      keywords: records === directory.people ? personSearchText(record) : "",
+    })),
   ]
 }
 export function ProjectFiltersMenu({
@@ -94,6 +109,8 @@ export function ProjectFiltersMenu({
   onAdd: (filter: ProjectFilter) => void
   directory: ProjectDirectory
 }) {
+  const personName = usePersonName()
+
   const [field, setField] = useState<ProjectFilter["field"] | null>(null)
   const [search, setSearch] = useState("")
   function add(value: string) {
@@ -171,9 +188,11 @@ export function ProjectFiltersMenu({
               Apply filter
             </Button>
           ) : field ? (
-            projectChoices(field, directory)
+            projectChoices(field, directory, personName)
               .filter((choice) =>
-                choice.label.toLowerCase().includes(search.toLowerCase())
+                `${choice.label} ${"keywords" in choice ? choice.keywords : ""}`
+                  .toLowerCase()
+                  .includes(search.toLowerCase())
               )
               .map((choice) => (
                 <Button
@@ -209,8 +228,10 @@ export function ProjectFiltersMenu({
           )}
           {!textField &&
             field &&
-            projectChoices(field, directory).filter((choice) =>
-              choice.label.toLowerCase().includes(search.toLowerCase())
+            projectChoices(field, directory, personName).filter((choice) =>
+              `${choice.label} ${"keywords" in choice ? choice.keywords : ""}`
+                .toLowerCase()
+                .includes(search.toLowerCase())
             ).length === 0 && (
               <p className="px-3 py-4 text-xs text-muted-foreground">
                 No matching options

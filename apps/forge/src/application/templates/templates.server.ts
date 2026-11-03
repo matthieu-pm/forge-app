@@ -81,6 +81,7 @@ export async function loadDirectory(
     members: people.map((m) => ({
       id: m.userId,
       name: m.user.name,
+      username: m.user.username,
       image: m.user.image,
     })),
     canManage: canManageTeams(actor),

@@ -12,6 +12,8 @@ import type {
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamLabel } from "@/lib/team-labels"
 import { DateInput } from "@/components/ui/date-input"
+import { personSearchText } from "@/lib/person-name"
+import { usePersonName } from "@/components/person-name-provider"
 import {
   AssigneeMark,
   IssueIcon,
@@ -61,7 +63,8 @@ type Directory = {
 }
 export function initiativeFilterChoices(
   field: InitiativeFilter["field"],
-  directory: Directory
+  directory: Directory,
+  personName: ReturnType<typeof usePersonName> = (person) => person?.name ?? ""
 ) {
   if (field === "Status")
     return initiativeStatuses.map((value) => ({
@@ -78,8 +81,9 @@ export function initiativeFilterChoices(
   if (field === "Owner" || field === "Creator")
     return directory.people.map((person) => ({
       value: person.id,
-      label: person.name,
-      icon: <AssigneeMark name={person.name} image={person.image} />,
+      keywords: personSearchText(person),
+      label: personName(person),
+      icon: <AssigneeMark name={personName(person)} image={person.image} />,
     }))
   if (field === "Contributing teams")
     return directory.teams.map((team) => ({
@@ -106,9 +110,13 @@ export function initiativeFilterChoices(
     }))
   return []
 }
-export function filterValueLabel(rule: InitiativeFilter, directory: Directory) {
+export function filterValueLabel(
+  rule: InitiativeFilter,
+  directory: Directory,
+  personName: ReturnType<typeof usePersonName> = (person) => person?.name ?? ""
+) {
   return (
-    initiativeFilterChoices(rule.field, directory).find(
+    initiativeFilterChoices(rule.field, directory, personName).find(
       (choice) => choice.value === rule.value
     )?.label ?? rule.value
   )
@@ -138,6 +146,8 @@ export function InitiativeFiltersMenu({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const personName = usePersonName()
+
   const directory = { people, teams, labels }
   const [query, setQuery] = useState("")
   const [mode, setMode] = useState<"advanced" | "description" | null>(null)
@@ -184,7 +194,11 @@ export function InitiativeFiltersMenu({
       "Labels",
       "Health",
     ] as const) {
-      for (const choice of initiativeFilterChoices(field, directory)) {
+      for (const choice of initiativeFilterChoices(
+        field,
+        directory,
+        personName
+      )) {
         if (
           text.includes(choice.label.toLowerCase()) &&
           !(
@@ -275,8 +289,11 @@ export function InitiativeFiltersMenu({
                 field !== "Name" &&
                 !dateField(field) &&
                 (field.toLowerCase().includes(query.toLowerCase()) ||
-                  initiativeFilterChoices(field, directory).some((choice) =>
-                    choice.label.toLowerCase().includes(query.toLowerCase())
+                  initiativeFilterChoices(field, directory, personName).some(
+                    (choice) =>
+                      `${choice.label} ${"keywords" in choice ? choice.keywords : ""}`
+                        .toLowerCase()
+                        .includes(query.toLowerCase())
                   ))
             )
             .map((field) => (
@@ -305,25 +322,27 @@ export function InitiativeFiltersMenu({
                     Is not set
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  {initiativeFilterChoices(field, directory).map((choice) => (
-                    <DropdownMenuItem
-                      key={choice.value}
-                      onClick={() => apply(field, "is", choice.value)}
-                    >
-                      {choice.icon}
-                      <span className="min-w-0 flex-1 truncate">
-                        {field === "Health" ? null : choice.label}
-                      </span>
-                      <CheckboxMark
-                        checked={value.rules.some(
-                          (rule) =>
-                            rule.field === field &&
-                            rule.value === choice.value &&
-                            rule.operator === "is"
-                        )}
-                      />
-                    </DropdownMenuItem>
-                  ))}
+                  {initiativeFilterChoices(field, directory, personName).map(
+                    (choice) => (
+                      <DropdownMenuItem
+                        key={choice.value}
+                        onClick={() => apply(field, "is", choice.value)}
+                      >
+                        {choice.icon}
+                        <span className="min-w-0 flex-1 truncate">
+                          {field === "Health" ? null : choice.label}
+                        </span>
+                        <CheckboxMark
+                          checked={value.rules.some(
+                            (rule) =>
+                              rule.field === field &&
+                              rule.value === choice.value &&
+                              rule.operator === "is"
+                          )}
+                        />
+                      </DropdownMenuItem>
+                    )
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => edit(field)}>
                     More conditions...
@@ -435,7 +454,11 @@ export function InitiativeFiltersMenu({
                           : current
                       ),
                     })
-                  const options = initiativeFilterChoices(rule.field, directory)
+                  const options = initiativeFilterChoices(
+                    rule.field,
+                    directory,
+                    personName
+                  )
                   return (
                     <div
                       key={rule.id}

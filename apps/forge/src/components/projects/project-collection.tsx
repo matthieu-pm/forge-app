@@ -8,6 +8,7 @@ import type { CSSProperties, ReactNode } from "react"
 import type { InitiativeProject, InitiativeStore } from "@/lib/initiatives"
 import type { ProjectPreferences } from "@/lib/projects"
 import type { ProjectDirectory } from "./project-view-controls"
+import { usePersonName } from "@/components/person-name-provider"
 import {
   currentProjectMilestone,
   milestoneDateLabel,
@@ -52,16 +53,19 @@ export const projectMark = (project: InitiativeProject) => (
 export function projectValueLabel(
   field: string,
   value: string,
-  directory: ProjectDirectory
+  directory: ProjectDirectory,
+  personName: ReturnType<typeof usePersonName> = (person) => person?.name ?? ""
 ) {
   if (field === "Health")
     return value === "Update missing" ? "No update expected" : value
   if (field === "Status")
     return projectStatusName(value as InitiativeProject["status"])
   return (
-    projectChoices(field === "Leads" ? "Lead" : field, directory).find(
-      (choice) => choice.value === value
-    )?.label ??
+    projectChoices(
+      field === "Leads" ? "Lead" : field,
+      directory,
+      personName
+    ).find((choice) => choice.value === value)?.label ??
     (value || `No ${field.toLowerCase()}`)
   )
 }
@@ -101,6 +105,8 @@ function ProjectCell({
   property: string
   project: InitiativeProject
 }) {
+  const personName = usePersonName()
+
   const lead = directory.people.find((person) => person.id === project.leadId)
   const pick = (
     field: string,
@@ -138,7 +144,7 @@ function ProjectCell({
             </Link>
           ) : undefined
         }
-        options={projectChoices(field, directory)}
+        options={projectChoices(field, directory, personName)}
         onChange={(next) => onPatch(project, patch(next))}
         className={cn(
           directoryControlClassName,
@@ -164,8 +170,11 @@ function ProjectCell({
         project.leadId ?? "",
         (leadId) => ({ leadId }),
         <>
-          <AssigneeMark name={lead?.name} image={lead?.image} />
-          {lead ? <span className="truncate">{lead.name}</span> : null}
+          <AssigneeMark
+            name={lead ? personName(lead) : undefined}
+            image={lead?.image}
+          />
+          {lead ? <span className="truncate">{personName(lead)}</span> : null}
         </>
       )
     case "Health":
@@ -265,7 +274,7 @@ function ProjectCell({
             return (
               <AssigneeMark
                 key={id}
-                name={person?.name}
+                name={person ? personName(person) : undefined}
                 image={person?.image}
               />
             )
@@ -383,6 +392,8 @@ const columnDefinitions = [
   })),
 ]
 export function ProjectCollection(props: Props) {
+  const personName = usePersonName()
+
   const {
     projects,
     state,
@@ -410,7 +421,7 @@ export function ProjectCollection(props: Props) {
         {[...groups].map(([key, items]) => (
           <section key={key} className="w-72 shrink-0">
             <h2 className="mb-3 flex items-center gap-2 text-xs font-medium">
-              {projectValueLabel(groupField, key, directory)}
+              {projectValueLabel(groupField, key, directory, personName)}
               <span className="text-muted-foreground">{items.length}</span>
             </h2>
             <div className="space-y-2">
@@ -463,7 +474,7 @@ export function ProjectCollection(props: Props) {
           <Fragment key={key}>
             {groupField !== "No grouping" && (
               <DirectoryTableGroup
-                name={projectValueLabel(groupField, key, directory)}
+                name={projectValueLabel(groupField, key, directory, personName)}
                 count={items.length}
                 expanded={!collapsed.includes(key)}
                 colSpan={columns.length + 2}

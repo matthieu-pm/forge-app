@@ -3,6 +3,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { projectChoices } from "./project-view-controls"
 import type { ProjectDirectory } from "./project-view-controls"
 import type { InitiativeProject } from "@/lib/initiatives"
+import { usePersonName } from "@/components/person-name-provider"
 import { IssueIcon, IssuePicker } from "@/components/issues/issue-controls"
 import { Button } from "@/components/ui/button"
 import {
@@ -27,6 +28,8 @@ export function ProjectSelectionToolbar({
   onAsk: () => void
   onClear: () => void
 }) {
+  const personName = usePersonName()
+
   if (!selected.length) return null
   return (
     <div
@@ -69,7 +72,7 @@ export function ProjectSelectionToolbar({
                 key={field}
                 label={`Change ${field.toLowerCase()} for selected projects`}
                 value=""
-                options={projectChoices(field, directory)}
+                options={projectChoices(field, directory, personName)}
                 onChange={(value) =>
                   onBulk(
                     field === "Status"

@@ -5,6 +5,8 @@ import type { Initiative, InitiativePerson } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamLabel } from "@/lib/team-labels"
 import { DateInput } from "@/components/ui/date-input"
+import { personSearchText } from "@/lib/person-name"
+import { usePersonName } from "@/components/person-name-provider"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { parseTargetDateInput } from "@/lib/target-dates"
 import {
@@ -373,6 +375,8 @@ export function InitiativePropertyPicker({
   addOnly?: boolean
   className?: string
 }) {
+  const personName = usePersonName(people)
+
   const suffix = item.name ? ` for ${item.name}` : ""
   const owner = people.find((person) => person.id === item.ownerId)
   const labelAddOnly =
@@ -465,17 +469,24 @@ export function InitiativePropertyPicker({
           { value: "", label: "No owner", icon: <AssigneeMark /> },
           ...people.map((person) => ({
             value: person.id,
-            label: person.name,
-            icon: <AssigneeMark name={person.name} image={person.image} />,
+            keywords: personSearchText(person),
+            label: personName(person),
+            icon: (
+              <AssigneeMark name={personName(person)} image={person.image} />
+            ),
           })),
         ]}
         onChange={(ownerId) => onChange({ ownerId })}
         className={className}
       >
-        <AssigneeMark name={owner?.name} image={owner?.image} />
+        <AssigneeMark
+          name={owner ? personName(owner) : undefined}
+          image={owner?.image}
+        />
         {(owner || !compact) && (
           <span className="truncate">
-            {owner?.name ?? (detail ? "Add owner" : "Owner")}
+            {(owner ? personName(owner) : undefined) ??
+              (detail ? "Add owner" : "Owner")}
           </span>
         )}
       </IssuePicker>

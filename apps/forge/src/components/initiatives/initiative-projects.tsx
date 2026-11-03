@@ -13,6 +13,8 @@ import type {
 } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamLabel } from "@/lib/team-labels"
+import { personSearchText } from "@/lib/person-name"
+import { usePersonName } from "@/components/person-name-provider"
 import { TemplateApplicationButton } from "@/components/templates/template-application-button"
 import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import {
@@ -112,6 +114,8 @@ export function ProjectDialog({
   onClose: () => void
   onAsk: (text: string) => void
 }) {
+  const personName = usePersonName(people)
+
   const sharedMode = canonicalIssuesActive()
   const sharedStatuses = useProjectStatusDirectory()
   const [draft, setDraft] = useState<InitiativeProject>(
@@ -383,9 +387,13 @@ export function ProjectDialog({
                   { value: "", label: "No lead" },
                   ...people.map((person) => ({
                     value: person.id,
-                    label: person.name,
+                    keywords: personSearchText(person),
+                    label: personName(person),
                     icon: (
-                      <AssigneeMark name={person.name} image={person.image} />
+                      <AssigneeMark
+                        name={personName(person)}
+                        image={person.image}
+                      />
                     ),
                   })),
                 ]}
@@ -393,12 +401,15 @@ export function ProjectDialog({
                 className="h-6 rounded-full border border-border/40 bg-muted/50 px-2 text-xs"
               >
                 <AssigneeMark
-                  name={
-                    people.find((person) => person.id === draft.leadId)?.name
-                  }
+                  name={personName(
+                    people.find((person) => person.id === draft.leadId),
+                    "Lead"
+                  )}
                 />
-                {people.find((person) => person.id === draft.leadId)?.name ??
-                  "Lead"}
+                {personName(
+                  people.find((person) => person.id === draft.leadId),
+                  "Lead"
+                ) ?? "Lead"}
               </IssuePicker>
               <IssuePicker
                 label="Change project teams"
@@ -422,7 +433,8 @@ export function ProjectDialog({
                 value={(draft.memberIds ?? []).join(",")}
                 options={people.map((person) => ({
                   value: person.id,
-                  label: person.name,
+                  keywords: personSearchText(person),
+                  label: personName(person),
                 }))}
                 onChange={(value) =>
                   set({
@@ -659,6 +671,8 @@ export function InitiativeProjects({
   filterStatus?: InitiativeProject["status"]
   openCreateSignal?: number
 }) {
+  const personName = usePersonName()
+
   const [editing, setEditing] = useState<InitiativeProject | "new" | null>(null)
   const previousCreateSignal = useRef(openCreateSignal)
   useEffect(() => {
@@ -946,16 +960,19 @@ export function InitiativeProjects({
                           ) : column === "Lead" ? (
                             <span className="flex items-center gap-1.5">
                               <AssigneeMark
-                                name={
+                                name={personName(
                                   people.find(
                                     (person) => person.id === project.leadId
-                                  )?.name
-                                }
+                                  )
+                                )}
                               />
                               <span className="truncate">
-                                {people.find(
-                                  (person) => person.id === project.leadId
-                                )?.name ?? ""}
+                                {personName(
+                                  people.find(
+                                    (person) => person.id === project.leadId
+                                  ),
+                                  ""
+                                )}
                               </span>
                             </span>
                           ) : column === "Target date" ? (

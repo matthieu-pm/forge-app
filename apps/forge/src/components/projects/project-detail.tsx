@@ -11,6 +11,7 @@ import type { ProjectResource } from "@/lib/project-resources"
 import type { InitiativePerson, InitiativeProject } from "@/lib/initiatives"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { ActivityEntry } from "@/components/initiatives/initiative-activity"
+import { usePersonName } from "@/components/person-name-provider"
 import { downloadDocumentDraft } from "@/lib/document-download"
 import { emptyDocumentBody } from "@/lib/document-contract"
 import { defaultDocumentIcon } from "@/lib/team-documents"
@@ -380,6 +381,8 @@ function ProjectDetail({
   onSaveResource: (resource: ProjectResource) => boolean
   onRemoveResource: (id: string) => Promise<boolean>
 }) {
+  const personName = usePersonName()
+
   const preferences = useProjectPreferences(workspaceId, user.id)
   const [editing, setEditing] = useState(false)
   const draftKey = projectPostDraftKey(project.id)
@@ -790,8 +793,10 @@ function ProjectDetail({
           <dd>{project.priority ?? "No priority"}</dd>
           <dt className="text-muted-foreground">Lead</dt>
           <dd>
-            {people.find((person) => person.id === project.leadId)?.name ??
-              "No lead"}
+            {personName(
+              people.find((person) => person.id === project.leadId),
+              "No lead"
+            )}
           </dd>
           <dt className="text-muted-foreground">Target date</dt>
           <dd>
@@ -1119,8 +1124,10 @@ function ProjectDetail({
                         className="flex items-center gap-2 px-3 text-xs text-muted-foreground"
                       >
                         <IssueIcon name="project" />
-                        {people.find((person) => person.id === event.authorId)
-                          ?.name ?? "A teammate"}{" "}
+                        {personName(
+                          people.find((person) => person.id === event.authorId),
+                          "A teammate"
+                        )}{" "}
                         {event.text} ·{" "}
                         {format(new Date(event.createdAt), "MMM d")}
                       </p>
@@ -1130,8 +1137,10 @@ function ProjectDetail({
                       name={project.name}
                       icon={project.icon ?? projectIcon}
                     />
-                    {people.find((person) => person.id === project.creatorId)
-                      ?.name ?? "A teammate"}{" "}
+                    {personName(
+                      people.find((person) => person.id === project.creatorId),
+                      "A teammate"
+                    )}{" "}
                     created the project
                     {project.createdAt &&
                       ` · ${format(new Date(project.createdAt), "MMM d")}`}

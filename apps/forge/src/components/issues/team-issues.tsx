@@ -20,6 +20,8 @@ import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import type { IssueDraft, IssueStore, TeamIssue } from "@/lib/team-issues"
 import type { ActivitySearch } from "@/lib/issue-activity"
+import { personSearchText } from "@/lib/person-name"
+import { usePersonName } from "@/components/person-name-provider"
 import { IssueQueryFooter } from "@/components/issues/issue-query-footer"
 import { useIssueQuery, useQueriedIssue } from "@/lib/issue-query-client"
 import { DEFINITIONS_CHANGED } from "@/lib/issue-definition-cache"
@@ -87,6 +89,8 @@ export function TeamIssues({
   search: IssueSearch
   onNavigate: (search: IssueSearch) => void
 }) {
+  const personName = usePersonName()
+
   const { store: businessStore, error: storageError } = useIssueStore(team.id)
   const viewPreferences = useWorkspaceView("teamIssues", team.id)
   const store = { ...businessStore, ...viewPreferences.value }
@@ -684,7 +688,19 @@ export function TeamIssues({
                   ? "is not set"
                   : rule.operator === "set"
                     ? "is set"
-                    : `${rule.operator} ${rule.field === "status" ? (statuses.find((status) => status.id === rule.value)?.name ?? rule.value) : rule.field === "assignee" ? (members.find((member) => member.id === rule.value)?.name ?? "Selected member") : rule.value}`}
+                    : `${rule.operator} ${
+                        rule.field === "status"
+                          ? (statuses.find((status) => status.id === rule.value)
+                              ?.name ?? rule.value)
+                          : rule.field === "assignee"
+                            ? personName(
+                                members.find(
+                                  (member) => member.id === rule.value
+                                ),
+                                "Selected member"
+                              )
+                            : rule.value
+                      }`}
               </span>
               <IssueIcon name="close" className="size-3" />
             </Button>
@@ -947,7 +963,8 @@ export function TeamIssues({
           onClose={() => setEditor(undefined)}
           onSaved={(issue, savedTeam) => {
             if (!editor.id) setLastCreated({ issue, team: savedTeam })
-            else toast.info("Issue changes are waiting for server confirmation.")
+            else
+              toast.info("Issue changes are waiting for server confirmation.")
           }}
           onDraftSaved={() => toast.success("Draft saved")}
         />
@@ -1079,7 +1096,8 @@ export function TeamIssues({
                 { value: "", label: "No assignee" },
                 ...members.map((member) => ({
                   value: member.id,
-                  label: member.name,
+                  keywords: personSearchText(member),
+                  label: personName(member),
                 })),
               ]}
               onChange={(assignee) => bulk({ assignee })}

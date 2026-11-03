@@ -12,6 +12,7 @@ import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import type { IssueDraft, TeamIssue } from "@/lib/team-issues"
 import type { MyIssuePreferences, MyIssueSearch } from "@/lib/my-issues"
+import { usePersonName } from "@/components/person-name-provider"
 import { IssueQueryFooter } from "@/components/issues/issue-query-footer"
 import { useIssueQuery, useQueriedIssue } from "@/lib/issue-query-client"
 import { sharedDefinitionsActive } from "@/lib/issue-definition-cache"
@@ -72,6 +73,8 @@ export function MyIssues({
   search: MyIssueSearch
   onNavigate: (search: MyIssueSearch) => void
 }) {
+  const personName = usePersonName()
+
   const prefs = useMyIssuePreferences(user.id, workspaceId)
   const { display, filters, details } = prefs.preferences
   const query = useIssueQuery({ personal: search.view, filters, display })
@@ -398,8 +401,10 @@ export function MyIssues({
                   ? (statuses.find((status) => status.id === rule.value)
                       ?.name ?? rule.value)
                   : rule.field === "assignee"
-                    ? (members.find((member) => member.id === rule.value)
-                        ?.name ?? "Selected member")
+                    ? personName(
+                        members.find((member) => member.id === rule.value),
+                        "Selected member"
+                      )
                     : rule.value}
               </span>
               <IssueIcon name="close" className="size-3" />

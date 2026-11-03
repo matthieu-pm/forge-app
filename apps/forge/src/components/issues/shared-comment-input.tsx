@@ -1,20 +1,31 @@
-import { useEffect, useId, useRef, useState } from "react"
+import { useEffect, useId, useMemo, useRef, useState } from "react"
 import { Node } from "@tiptap/core"
-import { EditorContent, useEditor } from "@tiptap/react"
+import {
+  EditorContent,
+  NodeViewWrapper,
+  ReactNodeViewRenderer,
+  useEditor,
+} from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 import Placeholder from "@tiptap/extension-placeholder"
 import { FileUploadPicker } from "./durable-issue-files"
 import { SafeCommentContent } from "./safe-comment-content"
 import { useCommentSubmission } from "./use-comment-submission"
+import type { NodeViewProps } from "@tiptap/react"
 import type { ReadyUpload } from "@/application/files/upload-contract"
 import type { CommentNode } from "@/lib/comment-rich-text"
 import type {
   IssueCommentCommand,
   MentionTarget,
 } from "@/lib/issue-comment-contract"
+import {
+  PersonNamePeers,
+  usePersonName,
+} from "@/components/person-name-provider"
 import { productStorage, saveProductValue } from "@/lib/product-storage"
 import {
   commentFromText,
+  commentMentionPeople,
   commentPlainText,
   validateCommentDocument,
   validateCommentDraft,
@@ -30,6 +41,23 @@ import { useAccountPreferences } from "@/components/account-preference-provider"
 import { EditorEmoticons } from "@/lib/editor-emoticons"
 import "./comment-editor.css"
 
+function MentionView({ node }: NodeViewProps) {
+  const personName = usePersonName()
+  return (
+    <NodeViewWrapper
+      as="span"
+      className="rounded bg-primary/10 px-1 text-primary"
+      contentEditable={false}
+    >
+      @
+      {personName({
+        id: String(node.attrs.id),
+        name: String(node.attrs.label),
+      })}
+    </NodeViewWrapper>
+  )
+}
+
 const Mention = Node.create({
   name: "mention",
   group: "inline",
@@ -44,6 +72,7 @@ const Mention = Node.create({
     `@${String(node.attrs.label)}`,
   ],
   renderText: ({ node }) => `@${String(node.attrs.label)}`,
+  addNodeView: () => ReactNodeViewRenderer(MentionView),
 })
 type SharedCommentInputProps = {
   teamId: string
@@ -138,11 +167,16 @@ function CommentComposer({
       return commentFromText(comment?.body ?? "")
     }
   })
+  const mentionPeople = useMemo(
+    () => commentMentionPeople(document),
+    [document]
+  )
   const busy = useRef(false)
   const [mentionOpen, setMentionOpen] = useState(false),
     [query, setQuery] = useState("")
   const [targets, setTargets] = useState<Array<MentionTarget>>([]),
     [mentionError, setMentionError] = useState("")
+  const personName = usePersonName(targets)
   const editor = useEditor({
     extensions: [
       EditorEmoticons.configure({ enabled: () => conversion.current }),
@@ -446,7 +480,7 @@ function CommentComposer({
                   setMentionOpen(false)
                 }}
               >
-                {p.name}
+                {personName(p)}
               </button>
             ))}
           </div>
@@ -457,7 +491,9 @@ function CommentComposer({
           )}
         </div>
       )}
-      <EditorContent editor={editor} className="comment-editor" />
+      <PersonNamePeers people={mentionPeople}>
+        <EditorContent editor={editor} className="comment-editor" />
+      </PersonNamePeers>
       <div className="space-y-2 p-2">
         {uploads.map((file) => (
           <div

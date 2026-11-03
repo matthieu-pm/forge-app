@@ -12,6 +12,8 @@ import type {
   TeamIssue,
 } from "@/lib/team-issues"
 import type { ProjectMilestone } from "@/lib/project-milestones"
+import { personSearchText } from "@/lib/person-name"
+import { usePersonName } from "@/components/person-name-provider"
 import { IssueQueryFooter } from "@/components/issues/issue-query-footer"
 import { useIssueQuery } from "@/lib/issue-query-client"
 import { NO_MILESTONE, matchesMilestone } from "@/lib/project-milestones"
@@ -101,6 +103,8 @@ export function ViewIssues({
   hideCount = false,
   toolbarClassName,
 }: ViewIssuesProps) {
+  const personName = usePersonName()
+
   const query = useIssueQuery({
     teamIds: team
       ? [team.id]
@@ -234,7 +238,7 @@ export function ViewIssues({
     count(
       "Assignees",
       issue.assignee ?? "",
-      assignee?.name ?? (issue.assignee || "Unassigned"),
+      personName(assignee, issue.assignee || "Unassigned"),
       assignee?.image
     )
     const labels = (issue.labels ?? "")
@@ -252,9 +256,10 @@ export function ViewIssues({
     const facet = query.page?.facets
     groups.Assignees = (facet?.assignee ?? []).map((r) => ({
       ...r,
-      label:
-        members.find((m) => m.id === r.value)?.name ??
-        (r.value || "Unassigned"),
+      label: personName(
+        members.find((m) => m.id === r.value),
+        r.value || "Unassigned"
+      ),
     }))
     groups.Labels = (facet?.labels ?? []).map((r) => ({
       ...r,
@@ -436,8 +441,10 @@ export function ViewIssues({
                   ? (statuses.find((status) => status.id === rule.value)
                       ?.name ?? rule.value)
                   : rule.field === "assignee"
-                    ? (members.find((member) => member.id === rule.value)
-                        ?.name ?? "Unassigned")
+                    ? personName(
+                        members.find((member) => member.id === rule.value),
+                        "Unassigned"
+                      )
                     : rule.value}
               </span>
               <IssueIcon name="close" className="size-3" />
@@ -610,7 +617,8 @@ export function ViewIssues({
                   { value: "", label: "Unassigned" },
                   ...members.map((member) => ({
                     value: member.id,
-                    label: member.name,
+                    keywords: personSearchText(member),
+                    label: personName(member),
                   })),
                 ]}
                 onChange={(assignee) => {

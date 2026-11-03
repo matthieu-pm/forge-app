@@ -5,6 +5,7 @@ import type { MutableRefObject, ReactNode } from "react"
 import type { InitiativePerson, InitiativeProject } from "@/lib/initiatives"
 import type { ProjectFilter, ProjectPreferences } from "@/lib/projects"
 import type { TeamSummary } from "@/lib/team-contract"
+import { usePersonName } from "@/components/person-name-provider"
 import { useViewProjectQuery } from "@/lib/saved-view-project-client"
 import { targetTimestamp } from "@/lib/initiatives"
 import { useInitiatives } from "@/lib/initiatives-state"
@@ -75,6 +76,8 @@ export function ViewProjects({
   scopeTeamId?: string
   canonical?: boolean
 }) {
+  const personName = usePersonName()
+
   useEffect(() => {
     if (createActionRef) createActionRef.current = () => setEditing("new")
     return () => {
@@ -158,7 +161,7 @@ export function ViewProjects({
             [...counts].map(([value, count]) => ({
               value,
               count,
-              label: projectValueLabel(field, value, directory),
+              label: projectValueLabel(field, value, directory, personName),
               image:
                 field === "Leads"
                   ? people.find((p) => p.id === value)?.image
@@ -263,7 +266,12 @@ export function ViewProjects({
               }
             >
               {filter.field}:{" "}
-              {projectValueLabel(filter.field, filter.value, directory)}{" "}
+              {projectValueLabel(
+                filter.field,
+                filter.value,
+                directory,
+                personName
+              )}{" "}
               <IssueIcon name="close" />
             </Button>
           ))}

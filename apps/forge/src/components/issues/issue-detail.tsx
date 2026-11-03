@@ -38,6 +38,8 @@ import type { TeamSummary } from "@/lib/team-contract"
 import type { TemplateDirectory } from "@/lib/template-contract"
 import type { ActivityReferenceKind } from "@/lib/issue-activity"
 import { DateInput } from "@/components/ui/date-input"
+import { personSearchText, resolvePerson } from "@/lib/person-name"
+import { usePersonName } from "@/components/person-name-provider"
 import {
   canonicalIssueEpoch,
   canonicalIssueState,
@@ -137,6 +139,8 @@ export function IssueDetail({
   onOpen: (issue: TeamIssue) => void
   onBack: () => void
 }) {
+  const personName = usePersonName()
+
   const navigate = useNavigate()
   const { data: session } = authClient.useSession()
   const user = session?.user
@@ -218,12 +222,7 @@ export function IssueDetail({
       statuses.find((s) => s.id === child.status)?.group === "completed"
   ).length
   const creator =
-    issue.creator === "You"
-      ? user
-      : members.find(
-          (member) =>
-            member.id === issue.creator || member.name === issue.creator
-        )
+    issue.creator === "You" ? user : resolvePerson(members, issue.creator)
   const engagement = useIssueEngagement(team.id, issue.id)
   const subscribers = issue.subscribers
     .split(",")
@@ -235,7 +234,7 @@ export function IssueDetail({
       return (
         <AssigneeMark
           key={subscriber}
-          name={member?.name ?? subscriber}
+          name={(member ? personName(member) : undefined) ?? subscriber}
           image={member?.image}
         />
       )
@@ -510,10 +509,7 @@ export function IssueDetail({
     const author =
       comment.author === userId || comment.author === "You"
         ? user
-        : members.find(
-            (member) =>
-              member.id === comment.author || member.name === comment.author
-          )
+        : resolvePerson(members, comment.author)
     return (
       <div
         key={comment.id}
@@ -564,14 +560,14 @@ export function IssueDetail({
           <div className="mb-2 flex items-center gap-2 text-xs">
             <AssigneeMark
               name={
-                author?.name ??
+                (author ? personName(author) : undefined) ??
                 comment.authorName ??
                 (shared ? "Former member" : comment.author)
               }
               image={author?.image}
             />
             <span className="min-w-0 truncate">
-              {author?.name ??
+              {(author ? personName(author) : undefined) ??
                 comment.authorName ??
                 (shared ? "Former member" : comment.author)}
             </span>
@@ -586,10 +582,10 @@ export function IssueDetail({
                 title={`Edited ${new Date(comment.editedAt).toLocaleString()}`}
               >
                 edited by{" "}
-                {members.find((member) => member.id === comment.editedBy)
-                  ?.name ??
-                  comment.editedByName ??
-                  "a former member"}
+                {personName(
+                  members.find((member) => member.id === comment.editedBy),
+                  comment.editedByName ?? "a former member"
+                )}
               </span>
             )}
             <div className="ml-auto flex items-center transition-opacity duration-150 group-focus-within/comment:opacity-100 group-hover/comment:opacity-100 has-[[aria-expanded=true]]:opacity-100 motion-reduce:transition-none [@media(hover:hover)]:opacity-0">
@@ -768,6 +764,7 @@ export function IssueDetail({
             <p className="text-sm text-muted-foreground">Comment deleted</p>
           ) : (
             <SafeCommentContent
+              people={members}
               document={comment.document}
               fallback={comment.body}
             />
@@ -1504,9 +1501,13 @@ export function IssueDetail({
                           { value: "", label: "No assignee" },
                           ...members.map((m) => ({
                             value: m.id,
-                            label: m.name,
+                            keywords: personSearchText(m),
+                            label: personName(m),
                             icon: (
-                              <AssigneeMark name={m.name} image={m.image} />
+                              <AssigneeMark
+                                name={personName(m)}
+                                image={m.image}
+                              />
                             ),
                           })),
                         ]}
@@ -1637,8 +1638,11 @@ export function IssueDetail({
                       value={issue.subscribers}
                       options={members.map((m) => ({
                         value: m.id,
-                        label: m.name,
-                        icon: <AssigneeMark name={m.name} image={m.image} />,
+                        keywords: personSearchText(m),
+                        label: personName(m),
+                        icon: (
+                          <AssigneeMark name={personName(m)} image={m.image} />
+                        ),
                       }))}
                       onChange={(value) => patch({ subscribers: value })}
                       className="bg-transparent p-0"
@@ -1687,8 +1691,8 @@ export function IssueDetail({
                             ?.name ?? value
                         )
                       if (field === "assignee")
-                        return (
-                          members.find((member) => member.id === value)?.name ??
+                        return personName(
+                          members.find((member) => member.id === value),
                           "Former member"
                         )
                       if (field === "project") return projectDisplayName(value)
@@ -1697,11 +1701,13 @@ export function IssueDetail({
                       if (field === "subscribers")
                         return value
                           .split(",")
-                          .map(
-                            (subscriberId) =>
+                          .map((subscriberId) =>
+                            personName(
                               members.find(
                                 (member) => member.id === subscriberId.trim()
-                              )?.name ?? "Former member"
+                              ),
+                              "Former member"
+                            )
                           )
                           .join(", ")
                       return value
@@ -1713,7 +1719,10 @@ export function IssueDetail({
                     <ActivityRow id="issue-created">
                       <span className="flex h-5 shrink-0 items-center">
                         <AssigneeMark
-                          name={creator?.name ?? issue.creator}
+                          name={
+                            (creator ? personName(creator) : undefined) ??
+                            issue.creator
+                          }
                           image={creator?.image}
                         />
                       </span>
@@ -1738,11 +1747,7 @@ export function IssueDetail({
                     const actor =
                       event.author === "You" || event.author === userId
                         ? user
-                        : members.find(
-                            (member) =>
-                              member.id === event.author ||
-                              member.name === event.author
-                          )
+                        : resolvePerson(members, event.author)
                     return (
                       <ActivityRow key={entry.id} id={`update-${entry.id}`}>
                         <span className="flex h-5 shrink-0 items-center">
@@ -1752,7 +1757,7 @@ export function IssueDetail({
                             />
                           ) : (
                             <AssigneeMark
-                              name={actor?.name ?? event.author}
+                              name={personName(actor, event.author)}
                               image={actor?.image}
                             />
                           )}

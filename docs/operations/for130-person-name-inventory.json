@@ -1,0 +1,86 @@
+{
+  "issue": "FOR-130",
+  "gate": "FORGE_PERSON_NAME_FORMATTING_ENABLED",
+  "defaultEnabled": false,
+  "dependsOn": "FORGE_PERSONAL_PREFERENCE_SYNC_ENABLED",
+  "consumerCount": 49,
+  "consumers": {
+    "inbox activity and person filters": [
+      "apps/forge/src/components/inbox/inbox-content.tsx",
+      "apps/forge/src/components/inbox/inbox-controls.tsx",
+      "apps/forge/src/components/inbox/inbox.tsx"
+    ],
+    "planning owners, leads, activity and filters": [
+      "apps/forge/src/components/initiatives/activity-author.tsx",
+      "apps/forge/src/components/initiatives/initiative-details-panel.tsx",
+      "apps/forge/src/components/initiatives/initiative-projects.tsx",
+      "apps/forge/src/components/initiatives/initiative-properties.tsx",
+      "apps/forge/src/components/initiatives/initiative-summary.tsx",
+      "apps/forge/src/components/initiatives/initiative-table.tsx",
+      "apps/forge/src/components/initiatives/initiative-view-controls.tsx",
+      "apps/forge/src/components/initiatives/initiatives-page.tsx",
+      "apps/forge/src/components/projects/project-collection.tsx",
+      "apps/forge/src/components/projects/project-detail.tsx",
+      "apps/forge/src/components/projects/project-properties.tsx",
+      "apps/forge/src/components/projects/project-selection-toolbar.tsx",
+      "apps/forge/src/components/projects/project-sidebar.tsx",
+      "apps/forge/src/components/projects/project-view-controls.tsx",
+      "apps/forge/src/components/projects/projects-page.tsx"
+    ],
+    "issue assignees, comments, activity and filters": [
+      "apps/forge/src/components/issues/issue-activity-row.tsx",
+      "apps/forge/src/components/issues/issue-comment-input.tsx",
+      "apps/forge/src/components/issues/issue-composer.tsx",
+      "apps/forge/src/components/issues/issue-detail.tsx",
+      "apps/forge/src/components/issues/issue-details-panel.tsx",
+      "apps/forge/src/components/issues/issue-filters.tsx",
+      "apps/forge/src/components/issues/issue-history.tsx",
+      "apps/forge/src/components/issues/issue-list.tsx",
+      "apps/forge/src/components/issues/my-issues.tsx",
+      "apps/forge/src/components/issues/safe-comment-content.tsx",
+      "apps/forge/src/components/issues/shared-comment-input.tsx",
+      "apps/forge/src/components/issues/team-issues.tsx"
+    ],
+    "member directories, triage, cycles and conditional controls": [
+      "apps/forge/src/components/loop-configuration.tsx",
+      "apps/forge/src/components/members-settings.tsx",
+      "apps/forge/src/components/preferences-settings.tsx",
+      "apps/forge/src/components/shared-document-editor.tsx",
+      "apps/forge/src/components/team-directory-controls.tsx",
+      "apps/forge/src/components/team-document-editor.tsx",
+      "apps/forge/src/components/team-home-documents.tsx",
+      "apps/forge/src/components/team-home.tsx",
+      "apps/forge/src/components/team-members-settings.tsx",
+      "apps/forge/src/components/triage-decision-controls.tsx",
+      "apps/forge/src/components/triage-filters.tsx",
+      "apps/forge/src/components/triage-issue-composer.tsx",
+      "apps/forge/src/components/upcoming-cycle.tsx",
+      "apps/forge/src/components/workspace-members.tsx"
+    ],
+    "template person controls": [
+      "apps/forge/src/components/templates/template-controls.tsx",
+      "apps/forge/src/components/templates/template-items.tsx"
+    ],
+    "saved view person displays": [
+      "apps/forge/src/components/views/view-issues.tsx",
+      "apps/forge/src/components/views/view-projects.tsx",
+      "apps/forge/src/components/views/views-page.tsx"
+    ]
+  },
+  "boundaries": [
+    "Editable profile fields remain raw account data.",
+    "External pull-request author identities retain provider labels.",
+    "Unavailable Reviews demo fixtures do not establish Forge account identity.",
+    "CSV exports retain their explicit Name column contract.",
+    "Plain-text historical activity without an immutable user ID remains a snapshot."
+  ],
+  "acceptance": [
+    "src/lib/person-name.test.ts",
+    "src/components/person-name-provider.test.tsx",
+    "src/components/person-name-consumers.test.tsx",
+    "src/application/preferences/person-directory.server.test.ts"
+  ],
+  "browserFixture": "apps/forge/scripts/fixtures/person-names",
+  "browserArtifact": "docs/qa/for130/person-name-formatting.mp4",
+  "sharedPicker": "apps/forge/src/components/issues/issue-controls.tsx"
+}

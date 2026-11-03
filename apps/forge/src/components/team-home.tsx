@@ -24,6 +24,7 @@ import { TeamSharedResources } from "./team-shared-resources"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { TeamMemberDirectory } from "@/lib/team-member-contract"
 import type { HomeStore, TeamResource } from "@/lib/team-home-state"
+import { usePersonName } from "@/components/person-name-provider"
 import { PageTabs, pageTabClass } from "@/components/ui/page-tabs"
 import { ContentHeader } from "@/components/ui/content-header"
 import { OptionSelect } from "@/components/ui/option-select"
@@ -383,6 +384,8 @@ export function TeamOverview({
   directory: TeamMemberDirectory
   store: HomeStore
 }) {
+  const personName = usePersonName()
+
   const router = useRouter()
   const [name, setName] = React.useState(team.name)
   const [description, setDescription] = React.useState(team.description)
@@ -549,10 +552,10 @@ export function TeamOverview({
                     >
                       <AvatarImage
                         src={member.image ?? undefined}
-                        alt={member.name}
+                        alt={personName(member)}
                       />
                       <AvatarFallback className="text-[9px]">
-                        {member.name.slice(0, 2)}
+                        {personName(member).slice(0, 2)}
                       </AvatarFallback>
                     </Avatar>
                   ))}

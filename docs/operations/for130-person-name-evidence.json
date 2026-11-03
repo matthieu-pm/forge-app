@@ -1,0 +1,72 @@
+{
+  "issue": "FOR-130",
+  "implementationCommit": "700b96b9c3891cb66cb8ab57af8bc5c419066b30",
+  "baseCommit": "6e273c7",
+  "environment": "local macOS; real React components and FOR-127 preference client with in-memory fixture transport",
+  "date": "2026-11-03",
+  "acceptance": {
+    "AT-01": {
+      "result": "passed in local fixtures",
+      "evidence": "17 focused tests include mounted assignee, activity, comment mention, committed history and workspace member rendering; fallback/collision/accessibility; full-name search aliases; feature disabled behavior; directory projection and session/workspace lifecycle."
+    },
+    "AT-02": {
+      "result": "passed in local fixtures",
+      "evidence": "Duplicate assignee groups and create targets retain account IDs across both formats. A chosen editor mention keeps its original ID/label attributes in the submitted command while its displayed label updates."
+    }
+  },
+  "checks": {
+    "appTests": {
+      "command": "bunx vitest run --maxWorkers=2 --testTimeout=30000",
+      "passed": 2702,
+      "skipped": 650,
+      "filesPassed": 345,
+      "filesSkipped": 33
+    },
+    "workflowTests": {
+      "command": "bun run test:workflow",
+      "passed": 4
+    },
+    "focusedTests": {
+      "command": "bun run test:person-names",
+      "passed": 17
+    },
+    "typecheck": "passed",
+    "prettier": "passed",
+    "changedFileLint": {
+      "errors": 0,
+      "warnings": 33
+    },
+    "productionBuild": "passed with repository CI dummy loopback database and prerender-only auth values; protected Workflow verification passed",
+    "diffCheck": "passed"
+  },
+  "browser": {
+    "url": "http://127.0.0.1:3130",
+    "driver": "Dray session browser",
+    "observations": [
+      "Username and Full name update mounted assignee, activity, saved mention, editor mention, groups and member list.",
+      "Searching Alex Smith in username mode returns distinct alex_one and alex_two choices.",
+      "Selecting alex_two and changing formats preserves account-b as assignee and create-in-group target.",
+      "Missing full name, missing username and both fields absent remain readable and distinguishable."
+    ],
+    "artifacts": {
+      "docs/qa/for130/full-name.png": "8f74da17c94558709761c1221af4585647874b9ebc532e743c3d889589a9fd9f",
+      "docs/qa/for130/person-name-formatting.mp4": "8eada55c13bdc76b7ee74a1b8716800c6ed60f08a3ea5dcb6d43770ddf87ec09",
+      "docs/qa/for130/username.png": "b550d6b19f1fa65bab0318e58149a16463113bc209cf6a3886759a2976e59e62"
+    }
+  },
+  "release": {
+    "gateDefault": false,
+    "requires": [
+      "FORGE_PERSON_NAME_FORMATTING_ENABLED=true",
+      "FORGE_PERSONAL_PREFERENCE_SYNC_ENABLED=true"
+    ],
+    "productionEnabled": false,
+    "migrationRequired": false,
+    "limitations": [
+      "No authenticated production or staging acceptance was run.",
+      "PostgreSQL-dependent suites were skipped without configured test databases; directory authorization assertions ran with a mocked transaction and the real session guard.",
+      "The browser fixture stubs backend/auth/file transport and does not certify a deployment or packaged Electron.",
+      "Existing independent feature gates remain authoritative; excluded Reviews demos and provider PR identities retain their source contract."
+    ]
+  }
+}
