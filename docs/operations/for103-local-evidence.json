@@ -1,0 +1,60 @@
+{
+  "issue": "FOR-103",
+  "sourceRevision": "3e946c1c50848eae71f50bbe91a9b696466b561e",
+  "checkedAt": "2026-11-03T00:59:58.049Z",
+  "environment": {
+    "kind": "local macOS isolated worktree",
+    "node": "24.12.0",
+    "bun": "1.3.5",
+    "vitest": "4.1.10",
+    "database": "unreachable synthetic fixture for built HTTP checks; mocks for workspace-specific service fixtures",
+    "providers": "disabled in built HTTP fixture; no paid API/model/OAuth calls"
+  },
+  "acceptance": {
+    "AC-01_AT-01": {
+      "result": "passed locally",
+      "evidence": [
+        "148 targeted tests in 16 files: common unavailable/read-only fictional UI, disabled export and unsupported API controls, generic-state and capability denial, source ceilings and preservation of legacy bytes",
+        "44 built production server HTTP checks: 12 unauthenticated UI login redirects with no-store and 32 deferred namespace method requests returning 404",
+        "Production build and Workflow handler verification passed"
+      ]
+    },
+    "AC-02_AT-02": {
+      "result": "passed with fixture actors/workspaces",
+      "evidence": [
+        "Billing enabled only for w1 by server rollout; w2 denied before subscription/member queries despite forged URL/header/client flags",
+        "Signals/Reviews preview grants cannot allow real writes; capability denied before approval/replay/transactional execution",
+        "Availability snapshot session binding and late previous-workspace response tests",
+        "Malformed rollout startup configuration and runtime fail-closed checks"
+      ]
+    }
+  },
+  "checks": {
+    "targetedTests": {
+      "files": 16,
+      "passed": 148,
+      "failed": 0
+    },
+    "typecheck": "passed; application plus standalone smoke-script check",
+    "productionBuild": "passed",
+    "changedFileLint": {
+      "errors": 0,
+      "warnings": 2,
+      "warningLocations": [
+        "existing product-state.server.ts unnecessary conditional",
+        "existing browser-data-migration.ts unnecessary conditional"
+      ]
+    },
+    "diffCheck": "passed",
+    "httpChecks": {
+      "passed": 44,
+      "artifact": "docs/operations/for103-local-http-evidence.json"
+    }
+  },
+  "reproduction": "docs/operations/feature-gates.md",
+  "limitations": [
+    "No production deployment, migration or rollout configuration change.",
+    "No live authenticated browser/multi-user database or packaged macOS acceptance.",
+    "No feature-provider/payment/ingestion/job execution acceptance; owning feature and FOR-123/124 gates remain."
+  ]
+}
