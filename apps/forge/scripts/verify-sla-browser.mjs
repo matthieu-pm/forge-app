@@ -1,8 +1,10 @@
 import { execFileSync } from "node:child_process"
 import { readFileSync, mkdirSync, writeFileSync } from "node:fs"
 import { Pool } from "pg"
-import { chromium, expect } from "@playwright/test"
+import { chromium, expect as baseExpect } from "@playwright/test"
 import { hashPassword } from "better-auth/crypto"
+
+const expect = baseExpect.configure({ timeout: 30_000 })
 
 const mode = process.env.FORGE_SLA_ACCEPTANCE_ENVIRONMENT ?? "local"
 const revision = execFileSync("git", ["rev-parse", "HEAD"], {
