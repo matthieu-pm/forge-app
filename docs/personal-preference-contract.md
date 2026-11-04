@@ -36,7 +36,7 @@ schema/default contract supplies current defaults.
 
 FOR-127 now integrates authenticated persistence and the scoped cache keys, as described below.
 The existing legacy browser key remains a local source without inferred account
-ownership. FOR-144 will implement consent/conflict-aware account import. Strict
+ownership. FOR-144 implements [consent/conflict-aware account import](operations/legacy-preference-import.md) behind an explicit workspace rollout. Strict
 outbound patches reject owner IDs, roles and unknown keys; future server handlers
 must derive identity from the session and enforce authorization independently.
 
@@ -113,7 +113,7 @@ Corrupt, future or mismatched cache sources are left intact; the server supplies
 safe values. Invalid known fields default independently, unknown stored fields
 survive unrelated patches, and future server schema versions cannot be edited.
 Legacy browser keys are not read into the authenticated settings UI or uploaded.
-Ownership/consent/conflict-aware import remains FOR-144.
+Ownership/consent/conflict-aware import is implemented by [FOR-144](operations/legacy-preference-import.md), independently gated from runtime synchronization.
 
 Pending patches live only in the current authenticated renderer. They survive
 navigation, remain visibly unsaved on failure, retry on reconnect or explicit

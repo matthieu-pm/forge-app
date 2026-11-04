@@ -6,6 +6,10 @@ export const productFeatures = {
   billing: { title: "Billing", ceiling: "enabled" },
   applications: { title: "Applications", ceiling: "disabled" },
   integrations: { title: "Integrations", ceiling: "disabled" },
+  personalPreferenceImport: {
+    title: "Legacy preference import",
+    ceiling: "enabled",
+  },
   externalImport: { title: "External imports", ceiling: "disabled" },
   externalExport: { title: "Issue export", ceiling: "disabled" },
   sla: { title: "SLAs", ceiling: "enabled" },
