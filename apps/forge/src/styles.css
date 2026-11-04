@@ -268,6 +268,30 @@
   --sidebar-ring: oklch(0.71 0.13 315);
 }
 
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+html.forge-theme-switching,
+html.forge-theme-switching * {
+  transition: none !important;
+}
+
+.tiptap,
+.ProseMirror {
+  color: var(--foreground);
+  caret-color: var(--foreground);
+  background-color: transparent;
+}
+
+html :focus-visible {
+  outline-color: var(--ring);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

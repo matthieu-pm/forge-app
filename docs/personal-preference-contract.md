@@ -23,6 +23,10 @@ separates account, workspace and device records, includes actor identity, and us
 JSON tuple encoding to avoid delimiter collisions. Identifiers come from trusted
 adapter context; a storage key itself is not authorization.
 
+FOR-140 preserves the account appearance choice across sessions. System follows
+the current device; explicit light or dark does not. The startup cache is
+described in [the appearance preference contract](appearance-preferences.md).
+
 FOR-132 changes the emoticon conversion default to off, preserving explicit
 account choices, and connects the setting to the canonical comment/reply/edit
 composers. The supported tokens, space trigger, protected content and undo behavior

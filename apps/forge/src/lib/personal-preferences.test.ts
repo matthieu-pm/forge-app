@@ -131,6 +131,8 @@ describe("personal preferences", () => {
 
     expect(document.documentElement.classList.contains("dark")).toBe(true)
     expect(document.documentElement.dataset.forgeTheme).toBe("dark")
+    expect(document.documentElement.dataset.forgeAppearance).toBe("system")
+    expect(document.documentElement.style.colorScheme).toBe("dark")
     expect(document.documentElement.style.fontSize).toBe("17px")
     expect(document.documentElement.dataset.forgePointerCursors).toBe("true")
     expect(document.documentElement.dataset.forgeUnderlineLinks).toBe("true")
@@ -146,6 +148,8 @@ describe("personal preferences", () => {
 
     expect(document.documentElement.classList.contains("dark")).toBe(false)
     expect(document.documentElement.dataset.forgeTheme).toBe("light")
+    expect(document.documentElement.dataset.forgeAppearance).toBe("light")
+    expect(document.documentElement.style.colorScheme).toBe("light")
   })
 
   it("applies the selected palette for the active appearance", () => {

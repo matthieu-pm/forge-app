@@ -25,6 +25,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Switch } from "@/components/ui/switch"
+import {
+  appearanceChoiceResolved,
+  appearanceForAccount,
+  readAppearanceCache,
+} from "@/lib/appearance"
 import { applyPersonalInterfacePreferences } from "@/lib/personal-preferences"
 import { getForgeHost } from "@/host/forge-host"
 import { cn } from "@/lib/utils"
@@ -269,6 +274,25 @@ export function PreferencesSettings() {
   const commentSubmission = useCommentSubmission()
   const sync = usePreferenceGroup("general")
   const preferences = sync.preferences
+  const userId = sync.client?.identity.userId ?? null
+  const choice = React.useMemo(
+    () =>
+      appearanceForAccount({
+        userId,
+        values: sync.client ? sync.values : null,
+        preferences,
+        status: sync.client ? sync.status : "loading",
+        cached:
+          userId && typeof localStorage !== "undefined"
+            ? readAppearanceCache(localStorage, userId)
+            : null,
+      }),
+    [preferences, sync.client, sync.status, sync.values, userId]
+  )
+  const appearanceOnly = !appearanceChoiceResolved(
+    sync.client ? sync.status : "loading",
+    sync.client ? sync.values : null
+  )
   const [startedAssignmentAvailable, setStartedAssignmentAvailable] =
     React.useState(false)
   React.useEffect(() => {
@@ -285,18 +309,26 @@ export function PreferencesSettings() {
     }
   }, [])
   React.useEffect(() => {
-    applyPersonalInterfacePreferences(preferences)
-    void getForgeHost().setThemeSource(preferences.interfaceTheme)
-  }, [preferences])
+    applyPersonalInterfacePreferences(
+      { ...preferences, ...choice },
+      { appearanceOnly }
+    )
+    void getForgeHost().setThemeSource(choice.interfaceTheme)
+  }, [appearanceOnly, choice, preferences])
 
   React.useEffect(() => {
-    if (preferences.interfaceTheme !== "system") return
+    if (choice.interfaceTheme !== "system") return
+    if (typeof window.matchMedia !== "function") return
 
     const colorScheme = window.matchMedia("(prefers-color-scheme: dark)")
-    const handleChange = () => applyPersonalInterfacePreferences(preferences)
+    const handleChange = () =>
+      applyPersonalInterfacePreferences(
+        { ...preferences, ...choice },
+        { appearanceOnly }
+      )
     colorScheme.addEventListener("change", handleChange)
     return () => colorScheme.removeEventListener("change", handleChange)
-  }, [preferences])
+  }, [appearanceOnly, choice, preferences])
 
   function updatePreference<TKey extends keyof PersonalPreferences>(
     key: TKey,

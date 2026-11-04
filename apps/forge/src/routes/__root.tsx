@@ -44,6 +44,7 @@ import { getSettingsBreadcrumbItems } from "@/lib/settings-navigation"
 import { getTeamFromRouteMatches } from "@/lib/team-route-match"
 import { cn } from "@/lib/utils"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
+import { appearanceBootstrapScript } from "@/lib/appearance"
 
 export const Route = createRootRoute({
   head: () => ({
@@ -315,6 +316,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <script
+          dangerouslySetInnerHTML={{ __html: appearanceBootstrapScript }}
+        />
         <HeadContent />
       </head>
       <body>

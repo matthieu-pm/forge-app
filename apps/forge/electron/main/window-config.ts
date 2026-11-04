@@ -1,3 +1,4 @@
+import { hostWindowBackground } from "./appearance"
 import type { BrowserWindowConstructorOptions, Rectangle } from "electron"
 
 export function restoreVisibleBounds(
@@ -31,7 +32,8 @@ export function createWindowOptions(
   preload: string,
   bounds?: Partial<Rectangle>,
   development = false,
-  platform: NodeJS.Platform = process.platform
+  platform: NodeJS.Platform = process.platform,
+  prefersDark = false
 ): BrowserWindowConstructorOptions {
   const nativeBackground: BrowserWindowConstructorOptions =
     platform === "darwin"
@@ -46,7 +48,10 @@ export function createWindowOptions(
           // 48px title bar (14px native buttons centered at y=24).
           trafficLightPosition: { x: 24, y: 17 },
         }
-      : { backgroundColor: "#ffffff" }
+      : {
+          backgroundColor:
+            hostWindowBackground("system", prefersDark, platform) ?? "#ffffff",
+        }
 
   return {
     width: bounds?.width ?? 1280,

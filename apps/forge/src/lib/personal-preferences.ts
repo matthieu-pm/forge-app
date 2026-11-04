@@ -1,3 +1,4 @@
+import { systemPrefersDark } from "./appearance"
 import {
   PERSONAL_PREFERENCE_VERSION,
   parsePersonalPreferences,
@@ -67,10 +68,11 @@ export function savePersonalPreferences(
 }
 
 export function applyPersonalInterfacePreferences(
-  preferences: PersonalPreferences
+  preferences: PersonalPreferences,
+  options?: { appearanceOnly?: boolean }
 ) {
   const root = document.documentElement
-  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
+  const prefersDark = systemPrefersDark()
   const useDarkTheme =
     preferences.interfaceTheme === "dark" ||
     (preferences.interfaceTheme === "system" && prefersDark)
@@ -78,13 +80,22 @@ export function applyPersonalInterfacePreferences(
     ? preferences.darkTheme
     : preferences.lightTheme
 
+  // duration-* leaves transition-property at its initial value, all. Suspend
+  // transitions so a palette variable change repaints mounted dialogs.
+  root.classList.add("forge-theme-switching")
   root.classList.toggle("dark", useDarkTheme)
   root.dataset.forgeTheme = resolvedTheme
-  root.dataset.forgePointerCursors = String(preferences.pointerCursors)
-  root.dataset.forgeUnderlineLinks = String(preferences.underlineLinks)
-  root.style.fontSize = {
-    small: "15px",
-    default: "16px",
-    large: "17px",
-  }[preferences.fontSize]
+  root.dataset.forgeAppearance = preferences.interfaceTheme
+  root.style.colorScheme = useDarkTheme ? "dark" : "light"
+  if (!options?.appearanceOnly) {
+    root.dataset.forgePointerCursors = String(preferences.pointerCursors)
+    root.dataset.forgeUnderlineLinks = String(preferences.underlineLinks)
+    root.style.fontSize = {
+      small: "15px",
+      default: "16px",
+      large: "17px",
+    }[preferences.fontSize]
+  }
+  void root.offsetWidth
+  root.classList.remove("forge-theme-switching")
 }
