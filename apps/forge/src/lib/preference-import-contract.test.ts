@@ -85,6 +85,41 @@ describe("FOR-144 preference source contract", () => {
       {}
     )
   })
+  it("excludes literal dotted source keys and deeply invalid values while preserving valid siblings", () => {
+    const raw =
+      '{"updates.marketing":true,"updates":{"changelog":true,"legal":{},"nested.fake":true}}'
+    const result = inspectPreferenceSource(
+      { location: "local", key: "forge:notifications:v1:alice", raw },
+      "alice"
+    )
+    expect(result.fields).toEqual({ "notifications.updates.changelog": true })
+    expect(result.exclusions).toHaveLength(3)
+    const deep =
+      '{"interfaceTheme":' +
+      '{"x":'.repeat(10000) +
+      "true" +
+      "}".repeat(10000) +
+      ',"fontSize":"large"}'
+    expect(() => inspectPreferenceSource(general(deep), "alice")).not.toThrow()
+    expect(inspectPreferenceSource(general(deep), "alice").fields).toEqual({
+      "general.fontSize": "large",
+    })
+  })
+  it("rejects future key versions even when account IDs contain a current-version substring", () => {
+    const userId = "alice:v1:x"
+    const result = inspectPreferenceSource(
+      {
+        location: "local",
+        key: `forge:notifications:v9:${userId}`,
+        raw: '{"updates":{"marketing":true}}',
+      },
+      userId
+    )
+    expect(result.fields).toEqual({})
+    expect(result.exclusions).toEqual([
+      "Future source version; all fields excluded.",
+    ])
+  })
   it("fingerprints exact original bytes and refuses changed or removed sources", async () => {
     const source = general('{ "interfaceTheme": "dark" }')
     const fingerprint = await preferenceSourceFingerprint(source)

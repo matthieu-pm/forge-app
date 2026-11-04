@@ -11,6 +11,7 @@ import {
 } from "@/lib/preference-import-state"
 
 const mock = vi.hoisted(() => ({
+  status: "ready",
   pending: false,
   mode: "enabled",
   refresh: vi.fn(),
@@ -28,6 +29,7 @@ vi.mock("./account-preference-provider", () => ({
     workspaceId: "w",
   }),
   useAccountPreferences: () => ({
+    status: mock.status,
     editable: true,
     pending: mock.pending,
     client: {
@@ -70,6 +72,7 @@ function confirm() {
   )
 }
 beforeEach(() => {
+  mock.status = "ready"
   mock.pending = false
   mock.mode = "enabled"
   localStorage.clear()
@@ -139,6 +142,8 @@ describe("FOR-144 explicit preference recovery", () => {
         "general.fontSize": "import",
       },
     })
+    expect(plan.snapshot.values).toEqual({})
+    expect(plan.snapshot.fieldVersions).toEqual({})
     expect(applyPreferenceImportField).toHaveBeenCalledTimes(1)
     expect(localStorage.getItem("forge.personal-preferences")).toBe(source)
   })
@@ -258,6 +263,12 @@ describe("FOR-144 explicit preference recovery", () => {
     })
     expect(screen.queryByText("Old account")).toBeNull()
     expect(preparePreferenceImport).not.toHaveBeenCalled()
+  })
+  it("hides the importer when account synchronization is disabled", () => {
+    mock.status = "disabled"
+    const result = render(<PreferenceImport />)
+    expect(result.container.textContent).toBe("")
+    expect(loadPreferenceImports).not.toHaveBeenCalled()
   })
   it("feature gate removes the importer without starting discovery", () => {
     mock.mode = "disabled"

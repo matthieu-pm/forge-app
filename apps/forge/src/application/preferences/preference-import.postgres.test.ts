@@ -90,17 +90,41 @@ describe.skipIf(!connection)("FOR-144 local PostgreSQL acceptance", () => {
         "utf8"
       )
     )
-    for (const migration of journal.entries) {
-      const applied = await database.pool.query(
-        "select to_regclass('public.personal_preference_imports') as name"
-      )
-      if (applied.rows[0].name) break
-      await database.pool.query(
-        readFileSync(
-          new URL(`../../../drizzle/${migration.tag}.sql`, import.meta.url),
-          "utf8"
+    await database.pool.query(
+      "CREATE TABLE IF NOT EXISTS for144_test_migrations (tag text PRIMARY KEY)"
+    )
+    const migrationClient = await database.pool.connect()
+    try {
+      for (const migration of journal.entries) {
+        if (
+          (
+            await migrationClient.query(
+              "select tag from for144_test_migrations where tag=$1",
+              [migration.tag]
+            )
+          ).rowCount
         )
-      )
+          continue
+        await migrationClient.query("BEGIN")
+        try {
+          await migrationClient.query(
+            readFileSync(
+              new URL(`../../../drizzle/${migration.tag}.sql`, import.meta.url),
+              "utf8"
+            )
+          )
+          await migrationClient.query(
+            "insert into for144_test_migrations(tag) values($1)",
+            [migration.tag]
+          )
+          await migrationClient.query("COMMIT")
+        } catch (error) {
+          await migrationClient.query("ROLLBACK")
+          throw error
+        }
+      }
+    } finally {
+      migrationClient.release()
     }
     vi.stubEnv("FORGE_PERSONAL_PREFERENCE_SYNC_ENABLED", "true")
     vi.stubEnv(
@@ -329,6 +353,187 @@ describe.skipIf(!connection)("FOR-144 local PostgreSQL acceptance", () => {
         choices: { "general.checkSpelling": "keep" },
       })
     ).rejects.toThrow()
+  })
+  it("stores only imported field baselines and keeps source bodies outside checkpoint metadata", async () => {
+    const input = await plan('{"fontSize":"large"}')
+    input.snapshot.values["agent.guidance"] = "Unrelated private agent guidance"
+    input.snapshot.fieldVersions["agent.guidance"] = 99
+    const result = await service.preparePreferenceImport(actor, input)
+    expect(result.plan.snapshot.values).toEqual({
+      "general.fontSize": input.snapshot.values["general.fontSize"],
+    })
+    expect(result.plan.snapshot.fieldVersions).not.toHaveProperty(
+      "agent.guidance"
+    )
+    const stored = (
+      await database.pool!.query(
+        "select manifest from personal_preference_imports where id=$1",
+        [input.id]
+      )
+    ).rows[0].manifest
+    expect(stored.plan.source).not.toHaveProperty("raw")
+    expect(stored.plan.snapshot).not.toHaveProperty("values")
+    expect(JSON.stringify(stored)).not.toContain(
+      "Unrelated private agent guidance"
+    )
+    expect(result.plan.source.raw).toBe(input.source.raw)
+  })
+  it("migrates an older manifest without retaining unrelated account choices in metadata or content", async () => {
+    const input = await plan('{"fontSize":"large"}')
+    input.snapshot.values["agent.guidance"] = "Unrelated private agent guidance"
+    input.snapshot.fieldVersions["agent.guidance"] = 99
+    await database.pool!.query(
+      "insert into personal_preference_imports(id,user_id,workspace_id,manifest) values($1,$2,$3,$4)",
+      [
+        input.id,
+        userId,
+        workspaceId,
+        JSON.stringify({
+          plan: input,
+          fields: { "general.fontSize": "pending" },
+        }),
+      ]
+    )
+    const { identity: _identity, ...durable } = input
+    const { executeCommand } =
+      await import("@/application/commands/execute-command.server")
+    await executeCommand({
+      actor,
+      commandKey: input.id,
+      operation: "personalPreferenceImport.prepare@1",
+      input: durable,
+      status: 200,
+      parse: (value) => value as { id: string },
+      authorize: () => Promise.resolve(),
+      run: () =>
+        Promise.resolve({
+          value: { id: input.id },
+          resource: { type: "personalPreferenceImport", id: input.id },
+          events: [],
+        }),
+    })
+    const migration = readFileSync(
+      new URL(
+        "../../../drizzle/0074_preference_import_content.sql",
+        import.meta.url
+      ),
+      "utf8"
+    )
+    const backfill = migration.slice(
+      migration.indexOf('INSERT INTO "personal_preference_import_content"')
+    )
+    await database.pool!.query(backfill)
+    await database.pool!.query(backfill)
+    const stored = (
+      await database.pool!.query(
+        "select manifest from personal_preference_imports where id=$1",
+        [input.id]
+      )
+    ).rows[0].manifest
+    const content = (
+      await database.pool!.query(
+        "select source,baseline from personal_preference_import_content where import_id=$1",
+        [input.id]
+      )
+    ).rows[0]
+    expect(stored.plan.source).not.toHaveProperty("raw")
+    expect(stored.plan.snapshot).not.toHaveProperty("values")
+    expect(content.source.raw).toBe(input.source.raw)
+    expect(content.baseline).toEqual(
+      Object.fromEntries(
+        Object.entries(input.snapshot.values).filter(
+          ([path]) => path === "general.fontSize"
+        )
+      )
+    )
+    expect(JSON.stringify({ stored, content })).not.toContain(
+      "Unrelated private agent guidance"
+    )
+    const replay = await service.preparePreferenceImport(actor, input)
+    expect(replay.plan.id).toBe(input.id)
+    expect(replay.plan.snapshot.values).not.toHaveProperty("agent.guidance")
+  })
+  it("fences authoritative saved sources during preparation and each resumed field", async () => {
+    const input = await plan('{"checkSpelling":true}')
+    input.source.location = "saved"
+    input.fingerprint = await preferenceSourceFingerprint(input.source)
+    await database.pool!.query(
+      "insert into product_state(workspace_id,owner_id,owner_user_id,key,encoded_value) values($1,$2,$3,$4,$5)",
+      [
+        workspaceId,
+        `user:${userId}`,
+        userId,
+        input.source.key,
+        JSON.stringify("{}"),
+      ]
+    )
+    const before = await preferences.readAccountPreferences(actor)
+    await expect(service.preparePreferenceImport(actor, input)).rejects.toThrow(
+      /source changed/i
+    )
+    await database.pool!.query(
+      "update product_state set encoded_value=$1 where workspace_id=$2 and key=$3",
+      [JSON.stringify(input.source.raw), workspaceId, input.source.key]
+    )
+    await service.preparePreferenceImport(actor, input)
+    await database.pool!.query(
+      "update product_state set encoded_value=$1 where workspace_id=$2 and key=$3",
+      [JSON.stringify("{}"), workspaceId, input.source.key]
+    )
+    await expect(step(input, "general.checkSpelling")).rejects.toThrow(
+      /source changed/i
+    )
+    expect(await preferences.readAccountPreferences(actor)).toEqual(before)
+    await database.pool!.query(
+      "delete from product_state where workspace_id=$1 and key=$2",
+      [workspaceId, input.source.key]
+    )
+    await expect(step(input, "general.checkSpelling")).rejects.toThrow(
+      /source changed/i
+    )
+  })
+  it("verifies saved recovery wrappers under the current owner and retains committed checkpoints after source changes", async () => {
+    const input = await plan('{"convertEmoticons":true}')
+    input.source.location = "saved"
+    const key = `forge:legacy-conflict:v1:${randomUUID()}`
+    const raw = JSON.stringify({
+      key: input.source.key,
+      value: input.source.raw,
+    })
+    input.source.recovery = { key, raw }
+    input.fingerprint = await preferenceSourceFingerprint(input.source)
+    for (const owner of [otherId, userId]) {
+      await database.pool!.query(
+        "insert into product_state(workspace_id,owner_id,owner_user_id,key,encoded_value) values($1,$2,$3,$4,$5)",
+        [workspaceId, `user:${owner}`, owner, key, JSON.stringify(raw)]
+      )
+      if (owner === otherId)
+        await expect(
+          service.preparePreferenceImport(actor, input)
+        ).rejects.toThrow(/source changed/i)
+    }
+    await service.preparePreferenceImport(actor, input)
+    await database.pool!.query(
+      "update product_state set encoded_value=$1 where workspace_id=$2 and key=$3 and owner_user_id=$4",
+      [JSON.stringify("{}"), workspaceId, key, otherId]
+    )
+    const checkpoint = await step(input, "general.convertEmoticons")
+    expect(checkpoint.fields["general.convertEmoticons"]).toBe("saved")
+    const after = await preferences.readAccountPreferences(actor)
+    await database.pool!.query(
+      "update product_state set encoded_value=$1 where workspace_id=$2 and key=$3 and owner_user_id=$4",
+      [JSON.stringify("{}"), workspaceId, key, userId]
+    )
+    await expect(step(input, "general.convertEmoticons")).rejects.toThrow(
+      /source changed/i
+    )
+    expect(await preferences.readAccountPreferences(actor)).toEqual(after)
+    const loaded = await service.loadPreferenceImports(actor, identity)
+    expect(
+      loaded.status === "ready" &&
+        loaded.manifests.find((item) => item.plan.id === input.id)?.plan.source
+          .recovery?.raw
+    ).toBe(raw)
   })
   it("rejects cross-account, stale session, fingerprint mismatches, revoked membership and disabled direct writes", async () => {
     const input = await plan('{"convertEmoticons":true}')

@@ -21,6 +21,7 @@ import {
   inspectPreferenceSource,
   preferenceImportFieldLabel,
   preferenceSourceFingerprint,
+  validatePreferenceImportPlan,
 } from "@/lib/preference-import-contract"
 import {
   applyPreferenceImportField,
@@ -47,7 +48,13 @@ function download(source: PreferenceImportSource) {
 export function PreferenceImport() {
   const identity = useProtectedIdentity()
   const mode = useFeatureMode("personalPreferenceImport")
-  if (mode !== "enabled" || !identity?.workspaceId) return null
+  const sync = useAccountPreferences()
+  if (
+    mode !== "enabled" ||
+    sync.status === "disabled" ||
+    !identity?.workspaceId
+  )
+    return null
   const binding = { ...identity, workspaceId: identity.workspaceId }
   return (
     <PreferenceImportReview key={JSON.stringify(binding)} identity={binding} />
@@ -163,7 +170,7 @@ export function PreferenceImportReview({
       resume?.plan ??
       prepared.current ??
       (source && loaded && owned
-        ? {
+        ? validatePreferenceImportPlan({
             id: crypto.randomUUID(),
             identity,
             source,
@@ -171,7 +178,7 @@ export function PreferenceImportReview({
             ownershipConfirmed: true as const,
             fingerprint: await preferenceSourceFingerprint(source),
             snapshot: loaded.snapshot,
-          }
+          })
         : null)
     if (!plan)
       throw new Error("Review ownership and every supported field first.")

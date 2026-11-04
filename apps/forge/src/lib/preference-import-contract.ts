@@ -1,10 +1,10 @@
 import { z } from "zod"
 import {
-  accountPreferenceFields,
-  flattenPreferences,
+  accountPreferenceGroups,
   preferenceSnapshotSchema,
 } from "./account-preference-contract"
 import { legacyChecksum } from "./legacy-import-preview"
+import type { PreferenceSnapshot } from "./account-preference-contract"
 
 export const preferenceSourceSchema = z
   .object({
@@ -65,7 +65,10 @@ export function inspectPreferenceSource(
       fields,
       exclusions: ["Unsupported source or another account's preferences."],
     }
-  if (group !== "general" && !source.key.includes(":v1:"))
+  if (
+    group !== "general" &&
+    source.key.match(/^forge:[^:]+:v(\d+):/)?.[1] !== "1"
+  )
     return {
       fields,
       exclusions: ["Future source version; all fields excluded."],
@@ -104,16 +107,24 @@ export function inspectPreferenceSource(
     )
     values = envelope.values as Record<string, unknown>
   }
-  for (const [path, value] of Object.entries(
-    flattenPreferences(values, group)
-  )) {
-    const schema = Object.hasOwn(accountPreferenceFields, path)
-      ? accountPreferenceFields[path]
-      : undefined
-    const checked = schema?.safeParse(value)
-    if (checked?.success) fields[path] = checked.data
-    else exclusions.push(`${path}: unsupported field or invalid value`)
+  function inspect(schema: z.ZodType, value: unknown, path: string) {
+    if (schema instanceof z.ZodObject) {
+      if (!value || typeof value !== "object" || Array.isArray(value)) {
+        exclusions.push(`${path}: invalid value`)
+        return
+      }
+      for (const [key, child] of Object.entries(value)) {
+        if (Object.hasOwn(schema.shape, key))
+          inspect(schema.shape[key], child, `${path}.${key}`)
+        else exclusions.push(`${path}.${key}: unsupported field`)
+      }
+      return
+    }
+    const checked = schema.safeParse(value)
+    if (checked.success) fields[path] = checked.data
+    else exclusions.push(`${path}: invalid value`)
   }
+  inspect(accountPreferenceGroups.shape[group], values, group)
   return { fields, exclusions }
 }
 export async function preferenceSourceFingerprint(
@@ -167,7 +178,23 @@ export function validatePreferenceImportPlan(raw: unknown) {
     throw new Error("Review every supported field before importing.")
   if (!Object.values(plan.choices).includes("import"))
     throw new Error("Choose at least one field to import.")
-  return plan
+  const imported = keys.filter((path) => plan.choices[path] === "import")
+  return {
+    ...plan,
+    snapshot: {
+      ...plan.snapshot,
+      values: Object.fromEntries(
+        imported
+          .filter((path) => Object.hasOwn(plan.snapshot.values, path))
+          .map((path) => [path, plan.snapshot.values[path]])
+      ),
+      fieldVersions: Object.fromEntries(
+        imported
+          .filter((path) => Object.hasOwn(plan.snapshot.fieldVersions, path))
+          .map((path) => [path, plan.snapshot.fieldVersions[path]])
+      ),
+    },
+  }
 }
 export const preferenceImportRequestSchema = z
   .object({
@@ -189,4 +216,14 @@ export function preferenceImportFieldLabel(path: string) {
       return words.charAt(0).toUpperCase() + words.slice(1)
     })
     .join(" · ")
+}
+
+export type PreferenceImportCheckpoint = {
+  plan: Omit<PreferenceImportPlan, "source" | "snapshot"> & {
+    source: Pick<PreferenceImportSource, "location" | "key"> & {
+      recoveryKey?: string
+    }
+    snapshot: Omit<PreferenceSnapshot, "values">
+  }
+  fields: PreferenceImportManifest["fields"]
 }
