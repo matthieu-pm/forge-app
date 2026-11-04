@@ -1,4 +1,5 @@
 import { Suspense, lazy } from "react"
+import { PreferenceImport } from "./preference-import"
 import { Button } from "@/components/ui/button"
 
 const LegacyImportExecution = lazy(() =>
@@ -26,6 +27,7 @@ export function ImportExportSettings() {
             </p>
           }
         >
+          <PreferenceImport />
           <LegacyImportExecution />
           <LegacyImportPreview />
         </Suspense>

@@ -29,6 +29,10 @@ describe("FOR-103 legacy preservation", () => {
       "forge:agent-personalization:v1:u1",
       "forge:team-agent-skills:v1",
       "forge:team-thread-summaries:v1:t",
+      "forge.personal-preferences",
+      "forge.personal-preferences.recovery.original",
+      "forge:calls-and-transcripts:v1:u1",
+      "forge:notifications:v1:u1",
     ]
     for (const storage of [localStorage, sessionStorage])
       for (const key of keys) storage.setItem(key, "original bytes")

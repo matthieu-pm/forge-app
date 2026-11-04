@@ -19,6 +19,7 @@ import {
 } from "drizzle-orm/pg-core"
 
 import { apiKeys, members, organizations, users } from "./auth-schema"
+import type { PreferenceImportManifest } from "@/lib/preference-import-contract"
 import type { TranscriptEntry } from "@/lib/calls"
 import type { TemplateDraft } from "@/lib/template-contract"
 import type { RecurringIssueDraft } from "@/lib/recurring-issue-contract"
@@ -50,6 +51,26 @@ export const accountPreferences = pgTable(
       "account_preferences_objects_check",
       sql`jsonb_typeof(${t.values}) = 'object' AND jsonb_typeof(${t.fieldVersions}) = 'object'`
     ),
+  ]
+)
+
+export const personalPreferenceImports = pgTable(
+  "personal_preference_imports",
+  {
+    id: uuid("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    manifest: jsonb("manifest").$type<PreferenceImportManifest>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    index("personal_preference_imports_owner").on(t.userId, t.workspaceId),
   ]
 )
 

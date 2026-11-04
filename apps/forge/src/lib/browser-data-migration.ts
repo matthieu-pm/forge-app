@@ -1,3 +1,4 @@
+import { isPreferenceImportSourceKey } from "./preference-import-source-key"
 import { protectedSessionEpoch } from "./protected-session"
 import {
   isLegacyProductStorageKey,
@@ -21,7 +22,12 @@ export async function migrateBrowserData() {
     const keys = Array.from({ length: storage.length }, (_, i) =>
       storage.key(i)
     ).filter((k): k is string =>
-      Boolean(k && isLegacyProductStorageKey(k) && !featureForStorageKey(k))
+      Boolean(
+        k &&
+        isLegacyProductStorageKey(k) &&
+        !featureForStorageKey(k) &&
+        !isPreferenceImportSourceKey(k)
+      )
     )
     for (const key of keys) {
       if (epoch !== protectedSessionEpoch()) return failures
