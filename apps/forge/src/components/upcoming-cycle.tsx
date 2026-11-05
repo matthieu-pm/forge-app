@@ -19,10 +19,10 @@ import {
   getIssueStatuses,
   issueFields,
   issuePriorities,
-  useIssueStore,
   saveTeamIssue,
-  writeIssueStore,
+  useIssueStore,
   visibleIssues,
+  writeIssueStore,
 } from "@/lib/team-issues"
 import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import { ContentHeader } from "@/components/ui/content-header"
