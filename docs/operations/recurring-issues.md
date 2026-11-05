@@ -16,7 +16,7 @@ Matthieu confirmed these choices in the FOR-68 implementation conversation on 5 
 
 ## Transactions and recovery
 
-Migration `0075_recurring_issue_occurrences.sql` expands `team_recurring_issues` with activation/state/cursor data. Existing rows default to inactive. Occurrences have a unique `(schedule_id, due_date)` identity and immutable scheduled time, snapshot and revision. Schedule deletion is a tombstone; it retains the occurrence identities and original issues. New occurrence/event tables use the existing recovery capture triggers.
+Migration `0075_recurring_issue_occurrences.sql` expands `team_recurring_issues` with activation/state/cursor data. Existing rows default to inactive. Occurrences have a unique `(schedule_id, due_date)` identity and immutable scheduled time, snapshot and revision. Schedule deletion is a tombstone; it retains the occurrence identities and original issues. New occurrence/event tables use the existing recovery capture triggers. Additive migration `0076_recurring_skip_calendar.sql` freezes the calendar anchor, unit, interval and index bounds for skipped ranges. Temporal edits and direct reservations retain those exclusions without treating gaps in a weekly/monthly cadence as skipped dates. Older ranges without calendar metadata conservatively retain their date exclusions.
 
 Dispatch locks the workspace and schedule, selects a bounded due occurrence, records skipped ranges and advances the cursor in one transaction. Enqueue happens afterward using the occurrence UUID; a crash between these stages is repaired by the next dispatcher. Enqueue retries share the same durable job identity. Jobs contain only occurrence/workspace identifiers.
 
@@ -34,7 +34,7 @@ bun run jobs run-recurring
 
 Each tick selects at most 100 due schedules, dispatches at most 100 pending occurrences and executes at most 100 jobs. Repeat ticks drain bounded batches. The opt-in GitLab `recurring-issues` maintenance job runs only for scheduled pipelines with `FORGE_RECURRING_SCHEDULE=true`. Operators must configure and verify the actual scheduler cadence and workspace rollout. The CLI exits unsuccessfully if an executed job fails or is deferred. A trigger alone is not delivery evidence.
 
-Before enabling production, apply the additive migration with the repository's guarded migration workflow, verify application/maintenance grants on the new tables, deploy the exact reviewed source, and verify the actual hosted scheduler and authenticated creation/ownership/skip flows. No production rollout or scheduler registration is implied by this implementation.
+Before enabling production, apply additive migrations 0075 and 0076 with the repository's guarded migration workflow, verify application/maintenance grants on the new tables, deploy the exact reviewed source, and verify the actual hosted scheduler and authenticated creation/ownership/skip flows. No production rollout or scheduler registration is implied by this implementation.
 
 ## Local verification
 

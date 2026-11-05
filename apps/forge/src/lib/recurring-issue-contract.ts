@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { occurrenceAt } from "./recurrence-calendar"
 import {
   emptyTemplate,
   templatePayloadSchema,
@@ -48,6 +49,13 @@ export const recurringIssuePayloadSchema = templatePayloadSchema
     timezone: recurrenceTimezoneSchema.optional(),
     generationTime: recurrenceTimeSchema.optional(),
   })
+  .refine((payload) => {
+    try {
+      return Number.isFinite(occurrenceAt(payload, 1).getTime())
+    } catch {
+      return false
+    }
+  }, "Choose an earlier first due date or a shorter repeat interval.")
 export type RecurringIssueDraft = Pick<
   TemplateDraft,
   "icon" | "title" | "content" | "properties" | "subIssues"

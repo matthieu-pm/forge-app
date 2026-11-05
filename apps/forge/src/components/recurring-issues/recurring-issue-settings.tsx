@@ -74,6 +74,17 @@ export function RecurringIssueSettings({
     />
   ) : (
     <RecurringIssues
+      key={team.id}
+      onDeleted={(id) =>
+        setData((current) =>
+          current
+            ? {
+                ...current,
+                issues: current.issues.filter((issue) => issue.id !== id),
+              }
+            : current
+        )
+      }
       team={team}
       issues={data.issues}
       canManage={data.directory.canManage}

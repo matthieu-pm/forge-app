@@ -12,6 +12,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core"
 import { teamRecurringIssues } from "./schema"
+import type { SkippedRecurrence } from "@/lib/recurrence-calendar"
 import type { RecurringIssueDraft } from "@/lib/recurring-issue-contract"
 
 export const recurringIssueOccurrences = pgTable(
@@ -63,6 +64,7 @@ export const recurringIssueEvents = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     workspaceId: text("workspace_id").notNull(),
     scheduleId: uuid("schedule_id").notNull(),
+    calendar: jsonb("calendar").$type<SkippedRecurrence>(),
     reason: text("reason").notNull(),
     fromDate: text("from_date"),
     toDate: text("to_date"),

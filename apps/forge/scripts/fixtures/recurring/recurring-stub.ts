@@ -37,7 +37,9 @@ export async function saveRecurringIssue({
   )
   return { ok: true as const, id: saved.id }
 }
-export async function deleteRecurringIssue() {
+export async function deleteRecurringIssue({ data }: { data: { id: string } }) {
+  for (const [key, record] of records)
+    if (record.id === data.id) records.delete(key)
   return { ok: true }
 }
 export async function loadRecurringIssues() {

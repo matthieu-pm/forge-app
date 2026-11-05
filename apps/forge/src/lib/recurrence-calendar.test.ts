@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import {
   nextRecurrenceIndex,
   recurrenceDate,
+  recurrenceIndexOnDate,
   recurrenceInstant,
 } from "./recurrence-calendar"
 
@@ -55,4 +56,22 @@ describe("recurrence calendar policy", () => {
       )
     ).toBeGreaterThan(9000)
   })
+})
+
+it("recognizes only dates in the original skipped cadence", () => {
+  expect(recurrenceIndexOnDate(schedule, "2026-02-28")).toBe(1)
+  expect(recurrenceIndexOnDate(schedule, "2026-03-31")).toBe(2)
+  expect(recurrenceIndexOnDate(schedule, "2026-03-28")).toBeNull()
+  expect(
+    recurrenceIndexOnDate(
+      { ...schedule, firstDue: "2026-01-01", unit: "week" },
+      "2026-01-02"
+    )
+  ).toBeNull()
+  expect(
+    recurrenceIndexOnDate(
+      { ...schedule, firstDue: "2026-01-01", unit: "week" },
+      "2026-01-08"
+    )
+  ).toBe(1)
 })

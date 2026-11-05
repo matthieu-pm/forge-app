@@ -8,7 +8,10 @@ import { jobStore } from "../jobs/job-store"
 import { runNextJob } from "../jobs/job-runner"
 import type * as RecurringService from "./recurring-issues.server"
 import type * as RecurringJobs from "./recurring-jobs.server"
+import type { RecurringIssueDraft } from "@/lib/recurring-issue-contract"
 import type { Actor } from "../actor"
+import { addCycleDays, cycleToday } from "@/lib/cycle-calendar"
+import { occurrenceAt } from "@/lib/recurrence-calendar"
 import { emptyRecurringIssue } from "@/lib/recurring-issue-contract"
 
 vi.mock("@tanstack/react-start/server-only", () => ({}))
@@ -132,12 +135,23 @@ describe.skipIf(!connection)(
       firstDue: "2026-03-22",
       unit: "day" as const,
     })
-    const create = (payload = draft()) =>
-      service.saveRecurringIssue(owner, {
+    const create = async (payload: RecurringIssueDraft = draft()) => {
+      const result = await service.saveRecurringIssue(owner, {
         commandKey: randomUUID(),
         slug: "recurring",
         payload,
       })
+      // Rewind only this fixture's activation to model downtime after an earlier start.
+      await pool.query(
+        "DELETE FROM recurring_issue_events WHERE workspace_id=$1 AND schedule_id=$2 AND reason='before-activation'",
+        [workspaceId, result.id]
+      )
+      await pool.query(
+        "UPDATE team_recurring_issues SET skipped_count=0,activated_at=$2 WHERE id=$1",
+        [result.id, occurrenceAt(payload, 0)]
+      )
+      return result
+    }
     const row = async (id: string) =>
       (await service.loadRecurringIssues(admin, "recurring")).find(
         (r) => r.id === id
@@ -433,17 +447,23 @@ describe.skipIf(!connection)(
         "DELETE FROM member WHERE organization_id=$1 AND user_id=$2",
         [workspaceId, ownerId]
       )
-      await jobs.runRecurringJobs(pool, store)
-      expect(await row(id)).toMatchObject({
-        state: "paused",
-        lastReason: "owner-access-lost",
-      })
-      await edit(id, { enabled: true, takeOwnership: true }, admin)
-      expect(await row(id)).toMatchObject({ state: "active", ownerId: adminId })
-      await pool.query(
-        "INSERT INTO member(id,organization_id,user_id,role) VALUES($1,$2,$3,'admin')",
-        [randomUUID(), workspaceId, ownerId]
-      )
+      try {
+        await jobs.runRecurringJobs(pool, store)
+        expect(await row(id)).toMatchObject({
+          state: "paused",
+          lastReason: "owner-access-lost",
+        })
+        await edit(id, { enabled: true, takeOwnership: true }, admin)
+        expect(await row(id)).toMatchObject({
+          state: "active",
+          ownerId: adminId,
+        })
+      } finally {
+        await pool.query(
+          "INSERT INTO member(id,organization_id,user_id,role) VALUES($1,$2,$3,'admin')",
+          [randomUUID(), workspaceId, ownerId]
+        )
+      }
     })
     it("keeps legacy definitions inactive until explicit activation", async () => {
       const id = randomUUID()
@@ -566,6 +586,58 @@ describe.skipIf(!connection)(
       const saved = await row(id)
       await edit(id, { payload: { ...saved.payload, generationTime: "02:30" } })
       expect((await row(id)).nextAt).toBe("2030-01-02T01:30:00.000Z")
+    })
+    it("does not resurrect a disabled date after moving its local time later", async () => {
+      const now = new Date(
+        (await pool.query("SELECT clock_timestamp() AS now")).rows[0].now
+      )
+      const timezone = now.getUTCHours() < 12 ? "UTC" : "Etc/GMT+12"
+      const today = cycleToday(timezone, now)
+      const payload = {
+        ...draft(),
+        firstDue: addCycleDays(today, -2),
+        timezone,
+        generationTime: "00:00",
+      }
+      const { id } = await create(payload)
+      await pool.query(
+        "UPDATE team_recurring_issues SET state='disabled',next_index=2,next_at=NULL WHERE id=$1",
+        [id]
+      )
+      await edit(id, { enabled: true })
+      await edit(id, { payload: { ...payload, generationTime: "23:00" } })
+      expect((await row(id)).nextAt).toBe(
+        occurrenceAt({ ...payload, generationTime: "23:00" }, 3).toISOString()
+      )
+    })
+    it("keeps skipped ranges precise and immutable and rejects direct reservation of their dates", async () => {
+      const payload = {
+        ...draft(),
+        firstDue: "2030-01-31",
+        unit: "month" as const,
+      }
+      const { id } = await create(payload)
+      const { db, teamRecurringIssues } = await import("@/db")
+      const { eq } = await import("drizzle-orm")
+      const { recordSkipped, dateWasSkipped, reserveOccurrence } =
+        await import("./occurrences.server")
+      await db.transaction(async (tx) => {
+        const [schedule] = await tx
+          .select()
+          .from(teamRecurringIssues)
+          .where(eq(teamRecurringIssues.id, id))
+        await recordSkipped(tx, schedule, "disabled-period", 1, 2)
+        expect(await dateWasSkipped(tx, id, "2030-02-28")).toBe(true)
+        expect(await dateWasSkipped(tx, id, "2030-03-31")).toBe(true)
+        expect(await dateWasSkipped(tx, id, "2030-03-28")).toBe(false)
+        expect((await reserveOccurrence(tx, schedule, 1)).state).toBe("skipped")
+      })
+      await expect(
+        pool.query(
+          "UPDATE recurring_issue_events SET calendar=calendar||'{\"interval\":2}'::jsonb WHERE schedule_id=$1 AND reason='disabled-period'",
+          [id]
+        )
+      ).rejects.toThrow()
     })
     it("does not let a disabled workspace consume the bounded dispatch batch", async () => {
       const foreignWorkspace = `${marker}-disabled`,

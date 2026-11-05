@@ -95,6 +95,9 @@ function Fixture() {
               Review saved schedule
             </button>
             <RecurringIssues
+              onDeleted={(id) =>
+                setSaved((current) => (current?.id === id ? null : current))
+              }
               team={team}
               canManage
               issues={saved ? [saved] : []}

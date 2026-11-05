@@ -1,5 +1,14 @@
 import type { RecurringIssueDraft } from "./recurring-issue-contract"
 
+export type RecurrenceCalendar = Pick<
+  RecurringIssueDraft,
+  "firstDue" | "unit" | "interval"
+>
+export type SkippedRecurrence = RecurrenceCalendar & {
+  fromIndex: number
+  toIndex: number
+}
+
 type Schedule = Pick<
   RecurringIssueDraft,
   "firstDue" | "unit" | "interval" | "timezone" | "generationTime"
@@ -76,6 +85,29 @@ export function recurrenceDate(schedule: Schedule, index: number) {
     throw new Error("The recurrence exceeds the supported calendar.")
   return anchor.toISOString().slice(0, 10)
 }
+export function recurrenceIndexOnDate(
+  schedule: RecurrenceCalendar,
+  date: string
+) {
+  const anchor = new Date(`${schedule.firstDue}T12:00:00Z`)
+  const target = new Date(`${date}T12:00:00Z`)
+  const distance =
+    schedule.unit === "day" || schedule.unit === "week"
+      ? (target.getTime() - anchor.getTime()) / 86400000
+      : (target.getUTCFullYear() - anchor.getUTCFullYear()) * 12 +
+        target.getUTCMonth() -
+        anchor.getUTCMonth()
+  const step =
+    schedule.interval *
+    (schedule.unit === "week" ? 7 : schedule.unit === "year" ? 12 : 1)
+  const index = distance / step
+  return Number.isSafeInteger(index) &&
+    index >= 0 &&
+    recurrenceDate(schedule, index) === date
+    ? index
+    : null
+}
+
 export function occurrenceAt(schedule: Schedule, index: number) {
   return recurrenceInstant(
     recurrenceDate(schedule, index),

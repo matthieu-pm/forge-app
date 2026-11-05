@@ -6,6 +6,7 @@ import { currentCommandActor } from "../commands/command-actor.server"
 import { TemplateValidationError } from "../templates/template-forms"
 import { executeCommand } from "../commands/execute-command.server"
 import {
+  dateWasSettled,
   generateOccurrence,
   recordSkipped,
   reserveOccurrence,
@@ -215,28 +216,6 @@ export async function saveRecurringIssue(
           )
         : existing.nextIndex
       if (existing?.activatedAt && reset) {
-        while (
-          (
-            await tx
-              .select({ id: recurringIssueOccurrences.id })
-              .from(recurringIssueOccurrences)
-              .where(
-                and(
-                  eq(recurringIssueOccurrences.scheduleId, existing.id),
-                  eq(
-                    recurringIssueOccurrences.dueDate,
-                    recurrenceDate(payload, nextIndex)
-                  )
-                )
-              )
-          )[0]
-        )
-          nextIndex++
-      }
-      const revisionTime = existing
-        ? new Date(Math.max(clock.getTime(), existing.updatedAt.getTime() + 1))
-        : clock
-      if (existing?.activatedAt && reset)
         skipped += await recordSkipped(
           tx,
           existing,
@@ -244,6 +223,18 @@ export async function saveRecurringIssue(
           existing.nextIndex,
           nextRecurrenceIndex(existing.payload, clock, existing.nextIndex) - 1
         )
+        while (
+          await dateWasSettled(
+            tx,
+            existing.id,
+            recurrenceDate(payload, nextIndex)
+          )
+        )
+          nextIndex++
+      }
+      const revisionTime = existing
+        ? new Date(Math.max(clock.getTime(), existing.updatedAt.getTime() + 1))
+        : clock
       const [schedule] = existing
         ? await tx
             .update(teamRecurringIssues)

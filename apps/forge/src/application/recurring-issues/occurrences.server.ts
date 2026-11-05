@@ -1,5 +1,5 @@
 import "@tanstack/react-start/server-only"
-import { and, eq } from "drizzle-orm"
+import { and, eq, gt, gte, inArray, lte } from "drizzle-orm"
 import { z } from "zod"
 import { canonicalTemplateIssueCommand } from "../templates/canonical-template-issue.server"
 import { commandInputHash } from "../commands/command-input"
@@ -9,9 +9,64 @@ import type { Transaction, teamRecurringIssues } from "@/db"
 import type { RecurringIssueDraft } from "@/lib/recurring-issue-contract"
 import { recurringIssueEvents, recurringIssueOccurrences } from "@/db"
 import { recurringIssuePayloadSchema } from "@/lib/recurring-issue-contract"
-import { occurrenceAt, recurrenceDate } from "@/lib/recurrence-calendar"
+import {
+  occurrenceAt,
+  recurrenceDate,
+  recurrenceIndexOnDate,
+} from "@/lib/recurrence-calendar"
 
 export type ScheduleRow = typeof teamRecurringIssues.$inferSelect
+const skippedRangeReasons = [
+  "before-activation",
+  "disabled-period",
+  "downtime-latest-only",
+  "schedule-edited",
+] as const
+
+export async function dateWasSkipped(
+  tx: Transaction,
+  scheduleId: string,
+  date: string
+) {
+  const ranges = await tx
+    .select({ calendar: recurringIssueEvents.calendar })
+    .from(recurringIssueEvents)
+    .where(
+      and(
+        eq(recurringIssueEvents.scheduleId, scheduleId),
+        gt(recurringIssueEvents.count, 0),
+        inArray(recurringIssueEvents.reason, [...skippedRangeReasons]),
+        lte(recurringIssueEvents.fromDate, date),
+        gte(recurringIssueEvents.toDate, date)
+      )
+    )
+  return ranges.some(({ calendar }) => {
+    // Older range records lack cadence metadata and must remain excluded.
+    if (!calendar) return true
+    const index = recurrenceIndexOnDate(calendar, date)
+    return (
+      index !== null && index >= calendar.fromIndex && index <= calendar.toIndex
+    )
+  })
+}
+
+export async function dateWasSettled(
+  tx: Transaction,
+  scheduleId: string,
+  date: string
+) {
+  const [occurrence] = await tx
+    .select({ id: recurringIssueOccurrences.id })
+    .from(recurringIssueOccurrences)
+    .where(
+      and(
+        eq(recurringIssueOccurrences.scheduleId, scheduleId),
+        eq(recurringIssueOccurrences.dueDate, date)
+      )
+    )
+  return Boolean(occurrence) || (await dateWasSkipped(tx, scheduleId, date))
+}
+
 export async function reserveOccurrence(
   tx: Transaction,
   schedule: ScheduleRow,
@@ -19,6 +74,7 @@ export async function reserveOccurrence(
 ) {
   const payload = recurringIssuePayloadSchema.parse(schedule.payload)
   const dueDate = recurrenceDate(payload, index)
+  const skipped = await dateWasSkipped(tx, schedule.id, dueDate)
   const inserted = await tx
     .insert(recurringIssueOccurrences)
     .values({
@@ -27,6 +83,8 @@ export async function reserveOccurrence(
       dueDate,
       scheduledAt: occurrenceAt(payload, index),
       snapshot: payload,
+      state: skipped ? "skipped" : "pending",
+      reason: skipped ? "previously-skipped" : null,
       revision: commandInputHash({
         payload,
         updatedAt: schedule.updatedAt.toISOString(),
@@ -50,7 +108,7 @@ export async function reserveOccurrence(
 export async function recordSkipped(
   tx: Transaction,
   schedule: ScheduleRow,
-  reason: string,
+  reason: (typeof skippedRangeReasons)[number],
   from: number,
   to: number,
   payload: RecurringIssueDraft = schedule.payload
@@ -61,6 +119,13 @@ export async function recordSkipped(
     workspaceId: schedule.workspaceId,
     scheduleId: schedule.id,
     reason,
+    calendar: {
+      firstDue: payload.firstDue,
+      unit: payload.unit,
+      interval: payload.interval,
+      fromIndex: from,
+      toIndex: to,
+    },
     count,
     fromDate: recurrenceDate(payload, from),
     toDate: recurrenceDate(payload, to),

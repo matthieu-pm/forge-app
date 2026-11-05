@@ -533,6 +533,13 @@
       "when": 1793899994582,
       "tag": "0075_recurring_issue_occurrences",
       "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1793902372119,
+      "tag": "0076_recurring_skip_calendar",
+      "breakpoints": true
     }
   ]
 }
