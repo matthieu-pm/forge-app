@@ -504,26 +504,32 @@ export async function saveProductState(actor: Actor, raw: ProductStateCommand) {
         throw new ApplicationAccessError(
           "The pending file source was discarded."
         )
-      if (
-        cycleTeamId &&
-        input.value &&
-        !cycleRolloverEnabled(current.workspaceId)
-      ) {
-        const before = row.encodedValue
+      const beforeCycles =
+        cycleTeamId && row.encodedValue
           ? parseTeamCycles(JSON.parse(row.encodedValue))
-          : null
-        if (
-          (parseTeamCycles(input.value).carryover ?? true) !==
-          (before?.carryover ?? true)
+          : undefined
+      const suppliedCycles =
+        cycleTeamId && input.value ? parseTeamCycles(input.value) : undefined
+      const nextCycles = suppliedCycles
+        ? {
+            ...suppliedCycles,
+            carryover:
+              suppliedCycles.carryover ?? beforeCycles?.carryover ?? true,
+          }
+        : undefined
+      const cycleValue = nextCycles ? JSON.stringify(nextCycles) : input.value
+      if (
+        nextCycles &&
+        !cycleRolloverEnabled(current.workspaceId) &&
+        nextCycles.carryover !== (beforeCycles?.carryover ?? true)
+      )
+        throw new ApplicationAccessError(
+          "Cycle rollover is unavailable in this workspace."
         )
-          throw new ApplicationAccessError(
-            "Cycle rollover is unavailable in this workspace."
-          )
-      }
       if (row.revision !== input.expectedRevision) {
         if (
           (row.encodedValue === null ? null : JSON.parse(row.encodedValue)) ===
-          input.value
+          cycleValue
         )
           return {
             value: { revision: row.revision },
@@ -553,7 +559,7 @@ export async function saveProductState(actor: Actor, raw: ProductStateCommand) {
         tx,
         current,
         input.key,
-        input.value,
+        cycleValue,
         row.encodedValue === null
           ? null
           : (JSON.parse(row.encodedValue) as string)
@@ -574,8 +580,8 @@ export async function saveProductState(actor: Actor, raw: ProductStateCommand) {
           revision: row.revision + 1,
         })
         .where(predicate)
-      if (cycleTeamId && input.value) {
-        const settings = parseTeamCycles(input.value)
+      if (cycleTeamId && nextCycles) {
+        const settings = nextCycles
         const team = (
           await tx.select().from(teams).where(eq(teams.id, cycleTeamId))
         )[0]

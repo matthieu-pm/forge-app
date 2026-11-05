@@ -261,7 +261,7 @@ export function IssueRows({
   onSelect: (id: string) => void
   onOpen: (issue: TeamIssue) => void
   onUpdate: (issue: TeamIssue, patch: Partial<IssueDraft>) => void
-  onCreate: (patch?: Partial<IssueDraft>) => void
+  onCreate?: (patch?: Partial<IssueDraft>) => void
 }) {
   const personName = usePersonName(members)
 
@@ -791,15 +791,17 @@ export function IssueRows({
               >
                 {totals.get(name) ?? items.length}
               </span>
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                className="ml-auto"
-                aria-label={`Create issue in ${groupName}`}
-                onClick={() => onCreate(patchFor(name))}
-              >
-                <IssueIcon name="add" />
-              </Button>
+              {onCreate && (
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  className="ml-auto"
+                  aria-label={`Create issue in ${groupName}`}
+                  onClick={() => onCreate(patchFor(name))}
+                >
+                  <IssueIcon name="add" />
+                </Button>
+              )}
             </div>
             {!collapsed.includes(name) && (
               <div className={cn(board && "space-y-2 pt-2")}>
@@ -822,7 +824,7 @@ export function IssueRows({
                     Load more issues to view this group.
                   </p>
                 )}
-                {!items.length && !(totals.get(name) ?? 0) && (
+                {onCreate && !items.length && !(totals.get(name) ?? 0) && (
                   <button
                     className="w-full rounded-lg border border-dashed border-border/50 p-4 text-xs text-muted-foreground hover:bg-muted"
                     onClick={() => onCreate(patchFor(name))}

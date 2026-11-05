@@ -140,14 +140,21 @@ export function useSharedTeamCycles(
           entry.request !== request
         )
           return
-        const justClosed =
-          entry.snapshot &&
-          snapshot.cycles.some(
-            (c) =>
-              c.closure &&
-              !entry.snapshot?.cycles.find((previous) => previous.id === c.id)
-                ?.closure
-          )
+        const knownClosed = new Set(
+          [...entries.values()]
+            .filter(
+              (other) =>
+                other.teamId === teamId &&
+                other.snapshot &&
+                sameScope(other.snapshot, snapshot)
+            )
+            .flatMap((other) =>
+              other.snapshot!.cycles.filter((c) => c.closure).map((c) => c.id)
+            )
+        )
+        const justClosed = snapshot.cycles.some(
+          (c) => c.closure && !knownClosed.has(c.id)
+        )
         publishSnapshot(entry, snapshot)
         if (justClosed)
           window.dispatchEvent(

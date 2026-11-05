@@ -774,4 +774,27 @@ describe.skipIf(!connection)("FOR-69 PostgreSQL acceptance", () => {
       ).rows[0].cycle_id
     ).toBe(f.next)
   })
+  for (const enabled of [true, false])
+    it(`preserves an opted-out carryover policy when an older client saves schedule changes with gate ${enabled}`, async () => {
+      const f = await fixture({ carryover: false })
+      gate(enabled)
+      const { carryover: _carryover, ...legacy } = f.settings
+      const input = {
+        workspaceId: f.workspaceId,
+        sessionId: f.sessionId,
+        key: teamCyclesStorageKey(f.teamId),
+        expectedRevision: 0,
+        commandKey: randomUUID(),
+        value: JSON.stringify({ ...legacy, duration: 3 }),
+      }
+      await productState.saveProductState(f.actor, input)
+      expect(
+        (await cycles.readTeamCycles(f.actor, f.teamId)).settings
+      ).toMatchObject({ duration: 3, carryover: false })
+      const replay = await productState.saveProductState(f.actor, input)
+      expect(replay.replayed).toBe(true)
+      expect(
+        (await cycles.readTeamCycles(f.actor, f.teamId)).settings.carryover
+      ).toBe(false)
+    })
 })
