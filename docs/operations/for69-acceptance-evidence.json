@@ -1,6 +1,6 @@
 {
   "issue": "FOR-69",
-  "sourceRevision": "38457b682658dc638c2695f2eea679a2e87a1fa0",
+  "sourceRevision": "6482191c53dcdb8d3f0463c047875201c62d2efa",
   "environment": "dedicated local PostgreSQL 17.11 and local UI fixture",
   "date": "2026-11-05",
   "acceptance": {
@@ -24,16 +24,17 @@
   },
   "validation": {
     "appSuite": {
-      "passed": 2903,
-      "skippedEnvironmentGated": 674,
-      "command": "caffeinate -i bunx vitest run --maxWorkers=2 --testTimeout 30000"
+      "passed": 2925,
+      "skipped": 715,
+      "files": 409,
+      "command": "VITEST_MAX_WORKERS=2 caffeinate -i bunx turbo run lint typecheck test build --concurrency=1 --env-mode=loose --summarize"
     },
     "workflowSuite": {
       "passed": 4,
       "command": "caffeinate -i bun run test:workflow"
     },
     "focusedSuite": {
-      "passed": 39,
+      "passed": 45,
       "postgresScenarios": 13,
       "includes": [
         "rollover database acceptance",
@@ -47,23 +48,45 @@
     "typecheck": "passed",
     "changedFileLint": {
       "errors": 0,
-      "warnings": 24
+      "warnings": 25
     },
-    "productionBuildAndPrerender": "passed using explicit local build configuration",
+    "productionBuildAndPrerender": "passed using synthetic CI-only build configuration, with no serving database connection",
     "protectedWorkflowHandlers": "passed",
     "diffCheck": "passed",
     "reviewChangedFileLint": {
       "errors": 0,
       "warnings": 9
     },
-    "reviewInterruptedRuns": "Earlier timing failures passed independently; a later full run overlapped confirmed macOS maintenance sleep. The final full suite passed with idle-sleep prevention."
+    "reviewInterruptedRuns": "Earlier timing failures passed independently; a later full run overlapped confirmed macOS maintenance sleep. The final full suite passed with idle-sleep prevention.",
+    "fullWorkspaceGraph": {
+      "successful": 10,
+      "total": 10,
+      "lintErrors": 0,
+      "lintWarnings": 644,
+      "summary": ".turbo/runs/3Lhhp3pYF8AC4vVsIkhEy8V8B1s.json"
+    },
+    "runtimeSuite": {
+      "passed": 37
+    },
+    "schedulerSuite": {
+      "passed": 28
+    },
+    "agentFixtureEvaluations": {
+      "passed": 5,
+      "gatesPassed": 18,
+      "command": "caffeinate -i bun run eval:agent",
+      "limitation": "Eve reported a development sandbox teardown warning after all fixture gates passed; command exited zero."
+    },
+    "format": "passed for handwritten changed TypeScript; generated routeTree excluded"
   },
   "migration": {
-    "file": "apps/forge/drizzle/0076_cycle_rollover.sql",
+    "file": "apps/forge/drizzle/0078_cycle_rollover.sql",
     "sha256": "0a98fed6e35f46e443931bf6f2f779624bea3984d6fa5fcfd8b3f4df48b7298b",
-    "freshChainAppliedLocally": 76,
-    "rollbackRehearsal": "0075 applied inside transaction; three primary keys verified; rollback left closure table absent; then migration applied normally",
-    "drizzleSnapshotAgreement": "No schema changes on regeneration"
+    "freshChainAppliedLocally": 79,
+    "rollbackRehearsal": "0078 applied inside transaction; three primary keys verified; rollback left closure table absent; then migration applied normally",
+    "drizzleSnapshotAgreement": "No schema changes on regeneration after main0077 plus rollover0078",
+    "immutableMainFilesPreserved": 156,
+    "mainJournalPrefixPreserved": 78
   },
   "cleanup": {
     "ownedWorkspaces": 0,
@@ -88,7 +111,9 @@
     "providerSchedulerConfigured": false,
     "hostedAuthenticatedAcceptance": false,
     "packagedMacOSAcceptance": false,
-    "independentReview": true
+    "independentReview": true,
+    "productionPreflightInheritedFrom": "FOR-68",
+    "productionReadyBeforeMerge": "503 SCHEMA_NOT_READY observed before FOR-68/FOR-69 source merges"
   },
   "initialImplementationRevision": "45ec47e8da386328e6e90881cbd29b57fdf78b99",
   "review": {
@@ -108,16 +133,29 @@
     "newReproducingCases": 7,
     "independentRereviewTestsPassed": 15,
     "report": "docs/qa/for69/review.md",
-    "githubChecksAtValidatedSource": {
-      "head": "38457b682658dc638c2695f2eea679a2e87a1fa0",
-      "Vercel \u2013 forge-app": "SUCCESS",
-      "Vercel \u2013 forge-preview-runtime": "SUCCESS",
-      "Vercel Preview Comments": "SUCCESS"
+    "integrationBaseRevision": "3ee6c8544a7bfb0f6bf45f62b3557ead2ef28e6c",
+    "integrationRevision": "6482191c53dcdb8d3f0463c047875201c62d2efa",
+    "integrationFindings": {
+      "standards": 0,
+      "spec": 0
+    },
+    "githubChecksAtPreviousHead": {
+      "head": "2a8ef6efb7dd9e4c49605694110976d9cd3efc0a",
+      "checks": "all three successful; final integrated head must pass before merge"
     }
   },
   "mergeGate": {
     "mainAutoDeploy": true,
-    "productionMigration0075Authorized": false,
-    "status": "awaiting production migration approval before automatic deployment via merge"
+    "productionOnlySchemaPreflight": true,
+    "appBuildCache": false,
+    "localPostgresProbe": "78 receipts blocked; exact 79 accepted; edited prefix blocked; all probe rows rolled back",
+    "productionMigrationAuthorized": false,
+    "status": "source merge may proceed after final source checks; production promotion requires separately approved migrations",
+    "inheritedHostedPreflightEvidence": {
+      "source": "3ee6c8544a7bfb0f6bf45f62b3557ead2ef28e6c",
+      "deployment": "dpl_ZQP9BPQFicbnLm96wNiMgqu34nkz",
+      "observedBy": "FOR-68 session",
+      "outcome": "production build stopped before Vite; missing migration receipts blocked promotion"
+    }
   }
 }
