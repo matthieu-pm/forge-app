@@ -3,7 +3,7 @@
   "pullRequest": 68,
   "reviewedOriginalHead": "12afa68a9f72c1b2c816c2a2a153b8743a0cd090",
   "base": "ac2f7ebe54a5374e1f50b8705696aa1d35bb3853",
-  "validatedSource": "eef413dcd37b5a740df2a240d6462a1a5655148a",
+  "validatedSource": "91b837be6223dcef63c2a242428f16a26f178f8f",
   "review": {
     "standards": {
       "findings": 1,
@@ -36,7 +36,9 @@
       "warnings": 630
     },
     "format": "passed",
-    "diff": "passed"
+    "diff": "passed",
+    "vercelPresetBuild": "passed after reproducing Workflow virtual-import failure",
+    "recurrencePostgresAfterPolicyExtractionPassed": 17
   },
   "cleanup": {
     "organizations": 0,
@@ -56,5 +58,17 @@
   "productionMigration": "not performed",
   "productionDeployment": "not performed",
   "hostedAuthenticatedAcceptance": "not performed",
-  "liveSchedulerQualification": "not performed"
+  "liveSchedulerQualification": "not performed",
+  "hostedPreviewBeforeImportCleanup": {
+    "source": "25fe1713fa911a98e3b23fef69a5c3aee22c2324",
+    "app": {
+      "id": "dpl_FQxTPAYEqWtrwU1uENBwyV2DKsNX",
+      "state": "READY"
+    },
+    "runtime": {
+      "id": "dpl_BY4UJefDdeYKsoTFPeqkzvkBgFRx",
+      "state": "READY"
+    }
+  },
+  "mergeGate": "Recheck all hosted statuses on final remote head; reject failures or pending checks."
 }

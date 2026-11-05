@@ -2,7 +2,7 @@
 
 Review baseline: `ac2f7ebe54a5374e1f50b8705696aa1d35bb3853` (main).
 Original PR head: `12afa68a9f72c1b2c816c2a2a153b8743a0cd090`.
-Fixed source: `eef413dcd37b5a740df2a240d6462a1a5655148a`. User authorized review, fixes and merge after checks pass; production rollout remains a separate gated step.
+Fixed source: `91b837be6223dcef63c2a242428f16a26f178f8f`. User authorized review, fixes and merge after checks pass; production rollout remains a separate gated step.
 
 ## Standards
 
@@ -31,6 +31,12 @@ Independent re-review: **no remaining blockers**. Pending snapshots, disable/res
 - The wider CI run exposed a pre-existing runtime evaluation harness problem: its temporary service copy omitted the relative workspace packages. `run-evals.mjs` had identical hashes on main and the original PR. `65bec92` preserves the temporary workspace layout/dependency links and binds authored workspace imports through Eve's nested service snapshots. The real evaluation now passes all five scenarios and 18 gates, using fixture models only. The existing Eve sandbox-shutdown warning remains non-fatal.
 - `eef413d` resolves full-workspace lint errors in fixture import order, the new database import location and an ineffective stray API-key-settings expression. These are formatting/dead-expression changes.
 
+## Hosted build regression
+
+Vercel's preview exposed a Workflow bundling failure that the default Node preset did not exercise: recurring authorization imported the full issue service, transitively pulling TanStack request code and unresolved virtual imports into invitation Workflow steps. The failed hosted preview at `f8905c8` was reproduced locally with `VERCEL=1 bun run build`.
+
+`25fe171` extracts the existing `requireIssueTeam` into a lightweight server policy module and retains its issue-service re-export. The policy body is unchanged, including both scope checks and both `FOR SHARE` locks. Independent re-review found no blockers. The same Vercel-preset build now succeeds, including packaged OIDC dependencies and protected Workflow verification. All 17 dedicated recurrence PostgreSQL tests pass after extraction. Both hosted app/runtime previews also reached READY at `25fe171` (`dpl_FQxTPAYEqWtrwU1uENBwyV2DKsNX`, `dpl_BY4UJefDdeYKsoTFPeqkzvkBgFRx`). `91b837b` removes the leftover unused team import and sorts the new module import. All hosted statuses must be rechecked on the final PR head before merge.
+
 ## Final checks
 
 The complete workspace graph passed: **10 successful tasks**, with app/runtime typechecks, builds and repository-wide lint. Command: `VITEST_MAX_WORKERS=2 bunx turbo run lint typecheck test build --concurrency=1 --env-mode=loose --summarize`, using the same synthetic build-only database/auth settings as CI. Loose mode passes the worker limit through Turbo; task concurrency was reduced to keep this shared desktop's UI tests within their normal budgets.
@@ -42,7 +48,7 @@ The complete workspace graph passed: **10 successful tasks**, with app/runtime t
 - Runtime fixture evaluations: **5 passed; all 18 gates passed**.
 - Full repository lint: **zero errors**, 630 existing/conservative warnings.
 - TypeScript, both service/app production builds, schema/readiness consistency, protected Workflow handlers, formatter and diff checks passed.
-- Source reviewed and checked: `eef413d`. The evidence-only commit does not alter implementation.
+- Full graph originally verified at `eef413d`; repeated after policy extraction/import cleanup at `91b837b`. Evidence-only commits do not alter implementation.
 
 Dedicated acceptance passed **48 tests** across recurrence PostgreSQL, editor/settings, calendar/contracts and schema checks. The local database used the complete migration chain through 0076. Temporary fixture counts were zero for organizations, users, schedules, occurrences, events, background jobs and receipts; the PostgreSQL server was stopped.
 
@@ -50,6 +56,6 @@ Dedicated acceptance passed **48 tests** across recurrence PostgreSQL, editor/se
 
 ## Merge and release boundary
 
-The PR must merge only after the final source checks pass and its remote head matches the validated branch. No hosted checks were registered when review began; Vercel Preview Comments later reported success. The remote head and hosted checks are checked again after the review push and before merge. Production migration/deployment and live scheduler qualification are not claimed. Apply migrations 0075 and 0076 through the guarded release process before enablement; recurring rollout remains disabled by default.
+The PR must merge only after the final source checks pass and its remote head matches the validated branch. Vercel Preview Comments alone does not prove a successful app build. The app and runtime deployment statuses and GitHub check rollup are checked on the final remote head before merge. Production migration/deployment and live scheduler qualification are not claimed. Apply migrations 0075 and 0076 through the guarded release process before enablement; recurring rollout remains disabled by default.
 
 Standards: one finding fixed. Specification: two findings fixed, including the overlap. Two distinct review defects; no outstanding review blockers.
