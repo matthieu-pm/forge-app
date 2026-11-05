@@ -1,0 +1,60 @@
+{
+  "issue": "FOR-68",
+  "pullRequest": 68,
+  "reviewedOriginalHead": "12afa68a9f72c1b2c816c2a2a153b8743a0cd090",
+  "base": "ac2f7ebe54a5374e1f50b8705696aa1d35bb3853",
+  "validatedSource": "eef413dcd37b5a740df2a240d6462a1a5655148a",
+  "review": {
+    "standards": {
+      "findings": 1,
+      "remainingBlockers": 0
+    },
+    "specification": {
+      "findings": 2,
+      "remainingBlockers": 0
+    },
+    "distinctDefects": 2,
+    "reproducedFailingRegressionCases": 3,
+    "calendarBoundaryRegressions": 2
+  },
+  "checks": {
+    "workspaceTasksPassed": 10,
+    "app": {
+      "passed": 2893,
+      "skipped": 678
+    },
+    "workflowPassed": 4,
+    "runtimePassed": 37,
+    "loopSchedulerPassed": 28,
+    "focusedAcceptancePassed": 48,
+    "fixtureEvaluationsPassed": 5,
+    "fixtureGatesPassed": 18,
+    "typecheck": "passed",
+    "build": "passed",
+    "lint": {
+      "errors": 0,
+      "warnings": 630
+    },
+    "format": "passed",
+    "diff": "passed"
+  },
+  "cleanup": {
+    "organizations": 0,
+    "users": 0,
+    "schedules": 0,
+    "occurrences": 0,
+    "events": 0,
+    "jobs": 0,
+    "receipts": 0
+  },
+  "localPostgres": "stopped",
+  "rollout": "disabled by default",
+  "requiredMigrations": [
+    "0075_recurring_issue_occurrences",
+    "0076_recurring_skip_calendar"
+  ],
+  "productionMigration": "not performed",
+  "productionDeployment": "not performed",
+  "hostedAuthenticatedAcceptance": "not performed",
+  "liveSchedulerQualification": "not performed"
+}
