@@ -15,7 +15,7 @@ export const productFeatures = {
   sla: { title: "SLAs", ceiling: "enabled" },
   teamAgents: { title: "Team agent integrations", ceiling: "disabled" },
   agentGuidance: { title: "Agent guidance and skills", ceiling: "disabled" },
-  recurringIssues: { title: "Recurring issues", ceiling: "disabled" },
+  recurringIssues: { title: "Recurring issues", ceiling: "enabled" },
   scheduledUpdates: { title: "Scheduled project updates", ceiling: "disabled" },
   threadSummaries: { title: "Resolved thread summaries", ceiling: "disabled" },
 } as const

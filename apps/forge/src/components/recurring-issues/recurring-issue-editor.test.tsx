@@ -17,6 +17,27 @@ const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   invalidate: vi.fn(),
   blocker: vi.fn(),
+  journal: new Map<string, string>(),
+  saveValue: vi.fn(),
+}))
+vi.mock("@/lib/product-storage", () => ({
+  productStorageIdentity: () => ({
+    workspaceId: "workspace",
+    userId: "owner",
+    sessionId: "session",
+  }),
+  productStorage: {
+    get length() {
+      return mocks.journal.size
+    },
+    key: (i: number) => [...mocks.journal.keys()][i] ?? null,
+    getItem: (key: string) => mocks.journal.get(key) ?? null,
+  },
+  saveProductValue: async (key: string, value: string | null) => {
+    mocks.saveValue(key, value)
+    if (value === null) mocks.journal.delete(key)
+    else mocks.journal.set(key, value)
+  },
 }))
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ children }: { children: React.ReactNode }) => (
@@ -58,7 +79,8 @@ const directory = {
 }
 afterEach(cleanup)
 beforeEach(() => {
-  mocks.save.mockResolvedValue({ id: "saved" })
+  mocks.journal.clear()
+  mocks.save.mockResolvedValue({ ok: true, id: "saved" })
   mocks.invalidate.mockResolvedValue(undefined)
 })
 describe("Recurring issue editor", () => {
@@ -114,6 +136,52 @@ describe("Recurring issue editor", () => {
         name: "Issue title",
       }).value
     ).toBe("Weekly review")
+  })
+  it("replays the same command after a lost response and reload", async () => {
+    mocks.save.mockRejectedValueOnce(new Error("Lost response"))
+    const view = render(
+      <RecurringIssueEditor team={team} directory={directory} />
+    )
+    fireEvent.change(screen.getByRole("textbox", { name: "Issue title" }), {
+      target: { value: "Retry me" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Create" }))
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toBe("Lost response")
+    )
+    const original = mocks.save.mock.calls[0][0].data
+    view.unmount()
+    render(<RecurringIssueEditor team={team} directory={directory} />)
+    expect(
+      screen.getByRole<HTMLInputElement>("textbox", { name: "Issue title" })
+        .value
+    ).toBe("Retry me")
+    fireEvent.click(screen.getByRole("button", { name: "Create" }))
+    await waitFor(() => expect(mocks.save).toHaveBeenCalledTimes(2))
+    expect(mocks.save.mock.calls[1][0].data).toEqual(original)
+  })
+  it("allows repair only after the server confirms validation rolled back", async () => {
+    mocks.save.mockResolvedValueOnce({
+      ok: false,
+      message: "Choose a current status",
+    })
+    render(<RecurringIssueEditor team={team} directory={directory} />)
+    fireEvent.change(screen.getByRole("textbox", { name: "Issue title" }), {
+      target: { value: "First" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Create" }))
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toBe(
+        "Choose a current status"
+      )
+    )
+    const key = mocks.save.mock.calls[0][0].data.commandKey
+    fireEvent.change(screen.getByRole("textbox", { name: "Issue title" }), {
+      target: { value: "Repaired" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Create" }))
+    await waitFor(() => expect(mocks.save).toHaveBeenCalledTimes(2))
+    expect(mocks.save.mock.calls[1][0].data.commandKey).not.toBe(key)
   })
   it("blocks save while a nested draft is open and rejects member keyboard saves", () => {
     const saved = {

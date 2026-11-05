@@ -1,0 +1,110 @@
+{
+  "issue": "FOR-68",
+  "pullRequest": 68,
+  "reviewedOriginalHead": "12afa68a9f72c1b2c816c2a2a153b8743a0cd090",
+  "base": "ac2f7ebe54a5374e1f50b8705696aa1d35bb3853",
+  "validatedSource": "79f238e5793ebf06a1e5418dd17f2a17305478d2",
+  "review": {
+    "standards": {
+      "findings": 1,
+      "remainingBlockers": 0
+    },
+    "specification": {
+      "findings": 2,
+      "remainingBlockers": 0
+    },
+    "distinctDefects": 2,
+    "reproducedFailingRegressionCases": 3,
+    "calendarBoundaryRegressions": 2
+  },
+  "checks": {
+    "workspaceTasksPassed": 10,
+    "app": {
+      "passed": 2912,
+      "skipped": 702
+    },
+    "workflowPassed": 4,
+    "runtimePassed": 37,
+    "loopSchedulerPassed": 28,
+    "focusedAcceptancePassed": 48,
+    "fixtureEvaluationsPassed": 5,
+    "fixtureGatesPassed": 18,
+    "typecheck": "passed",
+    "build": "passed",
+    "lint": {
+      "errors": 0,
+      "warnings": 632
+    },
+    "format": "passed",
+    "diff": "passed",
+    "vercelPresetBuild": "passed after reproducing Workflow virtual-import failure",
+    "recurrencePostgresAfterPolicyExtractionPassed": 17,
+    "productionGuardAndReadinessPassed": 16,
+    "drizzleMergedSchemaDiff": "none",
+    "finalWorkspaceSummary": "3LhgqHeifkOXPLJXHiXYurTiVU3"
+  },
+  "cleanup": {
+    "organizations": 0,
+    "users": 0,
+    "schedules": 0,
+    "occurrences": 0,
+    "events": 0,
+    "jobs": 0,
+    "receipts": 0
+  },
+  "localPostgres": "stopped",
+  "rollout": "disabled by default",
+  "requiredMigrations": [
+    "0076_recurring_issue_occurrences",
+    "0077_recurring_skip_calendar"
+  ],
+  "productionMigration": "not performed",
+  "productionDeployment": "not performed",
+  "hostedAuthenticatedAcceptance": "not performed",
+  "liveSchedulerQualification": "not performed",
+  "hostedPreviewBeforeImportCleanup": {
+    "source": "25fe1713fa911a98e3b23fef69a5c3aee22c2324",
+    "app": {
+      "id": "dpl_FQxTPAYEqWtrwU1uENBwyV2DKsNX",
+      "state": "READY"
+    },
+    "runtime": {
+      "id": "dpl_BY4UJefDdeYKsoTFPeqkzvkBgFRx",
+      "state": "READY"
+    }
+  },
+  "mergeGate": "Recheck all hosted statuses on final remote head; reject failures or pending checks.",
+  "integratedBase": "dff9e6ef7c9b72e7deda2fbdcb5698c7c8b1d2b2",
+  "migrationReconciliation": {
+    "sharedInbox0075": "unchanged",
+    "recurrenceSql": "unchanged, renumbered after shared inbox",
+    "snapshotChain": "validated",
+    "drizzleSchemaDiff": "none"
+  },
+  "hostedValidatedSource": {
+    "source": "79f238e5793ebf06a1e5418dd17f2a17305478d2",
+    "app": {
+      "id": "dpl_D87aEdigz8Dzck1rPgYHGkzvmkVu",
+      "state": "READY"
+    },
+    "runtime": {
+      "id": "dpl_TWEkTSHTritnQqWrJyEuEVC7Rmwa",
+      "state": "READY"
+    }
+  },
+  "productionPromotionGuard": {
+    "environment": "VERCEL_ENV=production",
+    "readOnly": true,
+    "validator": "same exact ordered migration prefix as runtime readiness",
+    "timeoutMs": 4000,
+    "appBuildCache": false,
+    "directPackageMissingCredentials": "blocked before bundling as expected",
+    "rootStrictTurboMissingCredentials": "cache bypass and blocked before bundling as expected",
+    "independentReviewRemainingBlockers": 0
+  },
+  "existingProductionReadinessBeforeMerge": {
+    "source": "dff9e6ef7c9b72e7deda2fbdcb5698c7c8b1d2b2",
+    "httpStatus": 503,
+    "code": "SCHEMA_NOT_READY"
+  }
+}

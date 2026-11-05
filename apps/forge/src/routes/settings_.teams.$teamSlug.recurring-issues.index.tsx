@@ -1,6 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, getRouteApi } from "@tanstack/react-router"
 import { protectedRouteBeforeLoad } from "@/lib/auth-state"
-import { FeatureUnavailable } from "@/components/feature-availability"
+import { RecurringIssueSettings } from "@/components/recurring-issues/recurring-issue-settings"
+import {
+  FeatureUnavailable,
+  useFeatureMode,
+} from "@/components/feature-availability"
 
 export const Route = createFileRoute(
   "/settings_/teams/$teamSlug/recurring-issues/"
@@ -9,5 +13,10 @@ export const Route = createFileRoute(
   component: Page,
 })
 function Page() {
-  return <FeatureUnavailable feature="recurringIssues" />
+  const { team } = getRouteApi("/settings_/teams/$teamSlug").useLoaderData()
+  return useFeatureMode("recurringIssues") === "enabled" ? (
+    <RecurringIssueSettings team={team} />
+  ) : (
+    <FeatureUnavailable feature="recurringIssues" />
+  )
 }

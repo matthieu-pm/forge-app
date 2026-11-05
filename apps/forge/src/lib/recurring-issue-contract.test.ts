@@ -91,3 +91,15 @@ describe("Recurring issue schedules", () => {
     ).toBe(false)
   })
 })
+
+it.each([
+  { firstDue: "9999-12-31", unit: "day", interval: 1 },
+  { firstDue: "9999-01-01", unit: "year", interval: 100 },
+])(
+  "rejects calendars with no representable next occurrence: %j",
+  (calendar) => {
+    expect(
+      recurringIssuePayloadSchema.safeParse({ ...draft, ...calendar }).success
+    ).toBe(false)
+  }
+)

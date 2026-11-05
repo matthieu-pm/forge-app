@@ -9,6 +9,12 @@ import type { JobStore, Recovery } from "./job-store"
 
 export async function jobCommand(store: JobStore, args: Array<string>) {
   const [action, id, ...rest] = args
+  if (action === "run-recurring" && args.length === 1) {
+    const { runRecurringJobs } =
+      await import("../recurring-issues/recurring-jobs.server")
+    const { databaseClient } = await import("@/db")
+    return runRecurringJobs(databaseClient, store)
+  }
   if (
     (action === "activate-inbox" || action === "run-inbox") &&
     args.length === 1
