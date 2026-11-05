@@ -67,6 +67,7 @@ import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiFilesSplatRouteImport } from './routes/api/files/$'
 import { Route as ApiHealthLiveRouteImport } from './routes/api/health/live'
 import { Route as ApiHealthReadyRouteImport } from './routes/api/health/ready'
+import { Route as ApiInternalCycleRolloverRouteImport } from './routes/api/internal/cycle-rollover'
 import { Route as ApiInternalDatabaseReleaseRehearsalRouteImport } from './routes/api/internal/database-release-rehearsal'
 import { Route as ApiInternalEnvironmentRouteImport } from './routes/api/internal/environment'
 import { Route as ApiInternalInboxDeliveryRouteImport } from './routes/api/internal/inbox-delivery'
@@ -428,6 +429,12 @@ const ApiHealthReadyRoute = ApiHealthReadyRouteImport.update({
   path: '/api/health/ready',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiInternalCycleRolloverRoute =
+  ApiInternalCycleRolloverRouteImport.update({
+    id: '/api/internal/cycle-rollover',
+    path: '/api/internal/cycle-rollover',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiInternalDatabaseReleaseRehearsalRoute =
   ApiInternalDatabaseReleaseRehearsalRouteImport.update({
     id: '/api/internal/database-release-rehearsal',
@@ -864,6 +871,7 @@ export interface FileRoutesByFullPath {
   '/api/files/$': typeof ApiFilesSplatRoute
   '/api/health/live': typeof ApiHealthLiveRoute
   '/api/health/ready': typeof ApiHealthReadyRoute
+  '/api/internal/cycle-rollover': typeof ApiInternalCycleRolloverRoute
   '/api/internal/database-release-rehearsal': typeof ApiInternalDatabaseReleaseRehearsalRoute
   '/api/internal/environment': typeof ApiInternalEnvironmentRoute
   '/api/internal/inbox-delivery': typeof ApiInternalInboxDeliveryRoute
@@ -989,6 +997,7 @@ export interface FileRoutesByTo {
   '/api/files/$': typeof ApiFilesSplatRoute
   '/api/health/live': typeof ApiHealthLiveRoute
   '/api/health/ready': typeof ApiHealthReadyRoute
+  '/api/internal/cycle-rollover': typeof ApiInternalCycleRolloverRoute
   '/api/internal/database-release-rehearsal': typeof ApiInternalDatabaseReleaseRehearsalRoute
   '/api/internal/environment': typeof ApiInternalEnvironmentRoute
   '/api/internal/inbox-delivery': typeof ApiInternalInboxDeliveryRoute
@@ -1113,6 +1122,7 @@ export interface FileRoutesById {
   '/api/files/$': typeof ApiFilesSplatRoute
   '/api/health/live': typeof ApiHealthLiveRoute
   '/api/health/ready': typeof ApiHealthReadyRoute
+  '/api/internal/cycle-rollover': typeof ApiInternalCycleRolloverRoute
   '/api/internal/database-release-rehearsal': typeof ApiInternalDatabaseReleaseRehearsalRoute
   '/api/internal/environment': typeof ApiInternalEnvironmentRoute
   '/api/internal/inbox-delivery': typeof ApiInternalInboxDeliveryRoute
@@ -1242,6 +1252,7 @@ export interface FileRouteTypes {
     | '/api/files/$'
     | '/api/health/live'
     | '/api/health/ready'
+    | '/api/internal/cycle-rollover'
     | '/api/internal/database-release-rehearsal'
     | '/api/internal/environment'
     | '/api/internal/inbox-delivery'
@@ -1367,6 +1378,7 @@ export interface FileRouteTypes {
     | '/api/files/$'
     | '/api/health/live'
     | '/api/health/ready'
+    | '/api/internal/cycle-rollover'
     | '/api/internal/database-release-rehearsal'
     | '/api/internal/environment'
     | '/api/internal/inbox-delivery'
@@ -1490,6 +1502,7 @@ export interface FileRouteTypes {
     | '/api/files/$'
     | '/api/health/live'
     | '/api/health/ready'
+    | '/api/internal/cycle-rollover'
     | '/api/internal/database-release-rehearsal'
     | '/api/internal/environment'
     | '/api/internal/inbox-delivery'
@@ -1593,6 +1606,7 @@ export interface RootRouteChildren {
   ApiFilesSplatRoute: typeof ApiFilesSplatRoute
   ApiHealthLiveRoute: typeof ApiHealthLiveRoute
   ApiHealthReadyRoute: typeof ApiHealthReadyRoute
+  ApiInternalCycleRolloverRoute: typeof ApiInternalCycleRolloverRoute
   ApiInternalDatabaseReleaseRehearsalRoute: typeof ApiInternalDatabaseReleaseRehearsalRoute
   ApiInternalEnvironmentRoute: typeof ApiInternalEnvironmentRoute
   ApiInternalInboxDeliveryRoute: typeof ApiInternalInboxDeliveryRoute
@@ -2022,6 +2036,13 @@ declare module '@tanstack/react-router' {
       path: '/api/health/ready'
       fullPath: '/api/health/ready'
       preLoaderRoute: typeof ApiHealthReadyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/cycle-rollover': {
+      id: '/api/internal/cycle-rollover'
+      path: '/api/internal/cycle-rollover'
+      fullPath: '/api/internal/cycle-rollover'
+      preLoaderRoute: typeof ApiInternalCycleRolloverRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/internal/database-release-rehearsal': {
@@ -2785,6 +2806,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiFilesSplatRoute: ApiFilesSplatRoute,
   ApiHealthLiveRoute: ApiHealthLiveRoute,
   ApiHealthReadyRoute: ApiHealthReadyRoute,
+  ApiInternalCycleRolloverRoute: ApiInternalCycleRolloverRoute,
   ApiInternalDatabaseReleaseRehearsalRoute:
     ApiInternalDatabaseReleaseRehearsalRoute,
   ApiInternalEnvironmentRoute: ApiInternalEnvironmentRoute,

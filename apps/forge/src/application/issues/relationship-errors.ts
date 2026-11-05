@@ -9,6 +9,8 @@ export function relationshipErrorMessage(error: unknown) {
       constraint?: string
       cause?: unknown
     }
+    if (detail.code === "23514" && detail.constraint === "issues_cycle_closed")
+      return "This cycle is closed. Choose a current or upcoming cycle."
     if (
       detail.code === "23514" &&
       [

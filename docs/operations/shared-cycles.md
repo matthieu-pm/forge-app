@@ -28,8 +28,9 @@ Confirmed by the product owner on 31 October 2026:
   windows deterministically; there is no background scheduler in this change.
 - After a long idle period, create the next future windows instead of synthesizing
   missed historical cycles. No work is silently moved or completed. Rollover,
-  carryover, and status-based automation remain FOR-69 / separately scoped work;
-  the unimplemented automation controls are disabled.
+  carryover are now implemented behind FOR-69's workspace gate; see
+  [cycle rollover](cycle-rollover.md). Status-based automatic assignment remains
+  disabled and separately scoped.
 
 Current/upcoming/past labels use the stored timezone of each window and inclusive
 end dates. Browser timezone and daylight-saving offsets cannot shift dates.

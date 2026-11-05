@@ -25,6 +25,7 @@ export const cyclesSchema = z.object({
   cooldown: z.number().int().min(0).max(4),
   startDay: z.number().int().min(0).max(6),
   futureCycles: z.number().int().min(1).max(6),
+  carryover: z.boolean().optional(),
   activeIssues: z.boolean(),
   startedIssues: z.boolean(),
   completedIssues: z.boolean(),
@@ -38,6 +39,7 @@ export const initialTeamCycles = (): TeamCyclesSettings => ({
   cooldown: 2,
   startDay: 1,
   futureCycles: 2,
+  carryover: true,
   activeIssues: false,
   startedIssues: true,
   completedIssues: true,
@@ -54,7 +56,8 @@ export type SharedCycle = {
   timezone: string
   issueCount: number
   completedCount: number
-  state: "Current" | "Upcoming" | "Planned" | "Past"
+  closure?: { closedAt: string; carriedCount: number }
+  state: "Current" | "Upcoming" | "Planned" | "Past" | "Closed"
 }
 export type SharedCycleSnapshot = {
   workspaceId: string
@@ -62,6 +65,7 @@ export type SharedCycleSnapshot = {
   sessionId: string
   settings: TeamCyclesSettings
   revision: number
+  rolloverAvailable?: boolean
   canManage: boolean
   cycles: Array<SharedCycle>
 }

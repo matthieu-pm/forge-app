@@ -144,6 +144,100 @@ export const issueCycles = pgTable(
   ]
 )
 
+export const cycleRolloverTeams = pgTable(
+  "cycle_rollover_teams",
+  {
+    teamId: uuid("team_id").primaryKey(),
+    workspaceId: workspace(),
+    enabledAt: timestamp("enabled_at", { withTimezone: true })
+      .default(sql`clock_timestamp()`)
+      .notNull(),
+  },
+  (t) => [
+    foreignKey({
+      name: "cycle_rollover_team_fk",
+      columns: [t.workspaceId, t.teamId],
+      foreignColumns: [teams.workspaceId, teams.id],
+    }).onDelete("cascade"),
+  ]
+)
+
+export const cycleClosures = pgTable(
+  "cycle_closures",
+  {
+    cycleId: uuid("cycle_id").primaryKey(),
+    workspaceId: workspace(),
+    teamId: uuid("team_id").notNull(),
+    targetCycleId: uuid("target_cycle_id"),
+    carryover: boolean("carryover").notNull(),
+    closedAt: timestamp("closed_at", { withTimezone: true })
+      .default(sql`clock_timestamp()`)
+      .notNull(),
+  },
+  (t) => [
+    unique("cycle_closure_identity").on(t.workspaceId, t.teamId, t.cycleId),
+    foreignKey({
+      name: "cycle_closure_source_fk",
+      columns: [t.workspaceId, t.teamId, t.cycleId],
+      foreignColumns: [
+        issueCycles.workspaceId,
+        issueCycles.teamId,
+        issueCycles.id,
+      ],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "cycle_closure_target_fk",
+      columns: [t.workspaceId, t.teamId, t.targetCycleId],
+      foreignColumns: [
+        issueCycles.workspaceId,
+        issueCycles.teamId,
+        issueCycles.id,
+      ],
+    }),
+    check(
+      "cycle_closure_target_different",
+      sql`${t.targetCycleId} IS NULL OR ${t.targetCycleId} <> ${t.cycleId}`
+    ),
+  ]
+)
+
+export const cycleMembershipHistory = pgTable(
+  "cycle_membership_history",
+  {
+    id: id(),
+    workspaceId: workspace(),
+    teamId: uuid("team_id").notNull(),
+    cycleId: uuid("cycle_id").notNull(),
+    issueId: uuid("issue_id").notNull(),
+    issueRevision: integer("issue_revision").notNull(),
+    statusGroup: text("status_group").notNull(),
+    carried: boolean("carried").notNull(),
+  },
+  (t) => [
+    unique("cycle_membership_history_once").on(t.cycleId, t.issueId),
+    index("cycle_membership_history_issue").on(t.workspaceId, t.issueId),
+    foreignKey({
+      name: "cycle_membership_history_closure_fk",
+      columns: [t.workspaceId, t.teamId, t.cycleId],
+      foreignColumns: [
+        cycleClosures.workspaceId,
+        cycleClosures.teamId,
+        cycleClosures.cycleId,
+      ],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "cycle_membership_history_issue_fk",
+      columns: [t.workspaceId, t.issueId],
+      foreignColumns: [issues.workspaceId, issues.id],
+    }).onDelete("cascade"),
+    check("cycle_membership_history_revision", sql`${t.issueRevision} >= 0`),
+    check(
+      "cycle_membership_history_status",
+      sql`${t.statusGroup} IN ('backlog','unstarted','started','completed','canceled','duplicate')`
+    ),
+  ]
+)
+
 export const issues = pgTable(
   "issues",
   {

@@ -9,6 +9,11 @@ import type { JobStore, Recovery } from "./job-store"
 
 export async function jobCommand(store: JobStore, args: Array<string>) {
   const [action, id, ...rest] = args
+  if (action === "run-cycles" && args.length === 1) {
+    const { runCycleRollovers } = await import("../cycles/cycle-rollover")
+    const { databaseClient } = await import("@/db")
+    return runCycleRollovers(databaseClient, store)
+  }
   if (action === "run-recurring" && args.length === 1) {
     const { runRecurringJobs } =
       await import("../recurring-issues/recurring-jobs.server")

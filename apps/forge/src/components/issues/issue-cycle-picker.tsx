@@ -23,7 +23,7 @@ export function IssueCyclePicker({
   const { settings, ready, error, cycles: storedCycles } = useTeamCycles(teamId)
   if (!enabled || !settings.enabled || !ready || error) return null
   const cycles = storedCycles.filter(
-    (c) => c.state !== "Past" || c.value === value
+    (c) => (c.state !== "Past" && c.state !== "Closed") || c.value === value
   )
   const selected = cycles.find((cycle) => cycle.value === value)
   const previous = parseISO(value)

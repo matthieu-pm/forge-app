@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import { Link } from "@tanstack/react-router"
 import { format } from "date-fns"
 import { toast } from "sonner"
+import { CycleClosureSummary } from "./cycle-closure-summary"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { CycleIssue, CycleIssueDraft } from "@/lib/cycle-issues"
 import type { IssueDraft, TeamIssue } from "@/lib/team-issues"
@@ -18,8 +19,10 @@ import {
   getIssueStatuses,
   issueFields,
   issuePriorities,
+  saveTeamIssue,
   useIssueStore,
   visibleIssues,
+  writeIssueStore,
 } from "@/lib/team-issues"
 import { IllustratedEmptyState } from "@/components/illustrations/illustrated-empty-state"
 import { ContentHeader } from "@/components/ui/content-header"
@@ -163,6 +166,7 @@ export function UpcomingCycle({
     }
   }, [team.id, team.slug])
   function create(patch: Partial<IssueDraft> = {}) {
+    if (!writable) return
     setComposer({
       ...blankIssueDraft(
         statuses.find((item) => item.group === "unstarted")?.id ??
@@ -174,7 +178,9 @@ export function UpcomingCycle({
   }
   const editingBaseline = useRef<TeamIssue | undefined>(undefined)
   function edit(issue: CycleIssue) {
-    editingBaseline.current = records.find((row) => row.id === issue.id)
+    editingBaseline.current = query.enabled
+      ? query.records.find((row) => row.issue.id === issue.id)?.issue
+      : records.find((row) => row.id === issue.id)
     setDraft(issue)
     setEditingId(issue.id)
     setSaveError(null)
@@ -182,7 +188,24 @@ export function UpcomingCycle({
   }
   function update(ids: Array<string>, patch: Partial<IssueDraft>) {
     try {
-      cycleData.patch(ids, patch)
+      if (query.enabled && selectedCycle?.closure) {
+        writeIssueStore(team.id, (current) => {
+          if (
+            ids.some(
+              (id) =>
+                !query.records.some((row) => row.issue.id === id) ||
+                !current.issues.some((issue) => issue.id === id)
+            )
+          )
+            throw new Error("This issue is no longer available.")
+          return {
+            ...current,
+            issues: current.issues.map((issue) =>
+              ids.includes(issue.id) ? { ...issue, ...patch } : issue
+            ),
+          }
+        })
+      } else cycleData.patch(ids, patch)
       setActionError("")
       return true
     } catch {
@@ -208,10 +231,16 @@ export function UpcomingCycle({
     settingsError ??
     error ??
     workflowError ??
+    (query.enabled ? query.error || null : null) ??
     (ready && settings.enabled && !selectedCycle
       ? "This cycle is unavailable. Choose a cycle from the team schedule."
       : null)
-  const writable = ready && settings.enabled && !!selectedCycle && !failure
+  const writable =
+    !selectedCycle?.closure &&
+    ready &&
+    settings.enabled &&
+    !!selectedCycle &&
+    !failure
   const issueNumber = (issue: CycleIssue) =>
     `${team.identifier}-${issue.number}`
   const hasFilters = filters.rules.length > 0
@@ -342,6 +371,8 @@ export function UpcomingCycle({
           </DropdownMenuContent>
         </DropdownMenu>
       </ContentHeader>
+      {selectedCycle?.closure && <CycleClosureSummary cycle={selectedCycle} />}
+
       <div className="flex min-h-11 shrink-0 items-center justify-end gap-2 px-2 py-2">
         <div className="flex shrink-0 items-center gap-1.5">
           <IssueFilters
@@ -442,40 +473,56 @@ export function UpcomingCycle({
       ) : (
         <div className="relative flex min-h-0 flex-1">
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            {issues.length === 0 && !hasFilters && !display.showEmpty ? (
-              <IllustratedEmptyState
-                kind="cycles"
-                title="Plan your next cycle"
-                actions={
-                  <>
-                    <Button size="sm" onClick={() => create()}>
-                      Create new issue
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      render={
-                        <a
-                          href="https://linear.app/docs/use-cycles"
-                          target="_blank"
-                          rel="noreferrer"
-                        />
-                      }
-                    >
-                      Documentation
-                    </Button>
-                  </>
-                }
-              >
-                <p>
-                  Cycles are time-based intervals to help your team focus on a
-                  predefined set of work.
+            {query.enabled && query.loading && !query.page ? (
+              <p role="status" className="p-6 text-sm text-muted-foreground">
+                Loading cycle issues…
+              </p>
+            ) : (query.enabled
+                ? query.page?.total === 0
+                : issues.length === 0) &&
+              !hasFilters &&
+              !display.showEmpty ? (
+              selectedCycle?.closure ? (
+                <p className="m-auto p-6 text-center text-sm text-muted-foreground">
+                  No visible issues were recorded at closure.
                 </p>
-                <p>
-                  Track capacity, scope, and progress as issues are added, and
-                  as the cycle progresses.
-                </p>
-              </IllustratedEmptyState>
+              ) : (
+                <IllustratedEmptyState
+                  kind="cycles"
+                  title="Plan your next cycle"
+                  actions={
+                    <>
+                      {writable && (
+                        <Button size="sm" onClick={() => create()}>
+                          Create new issue
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        render={
+                          <a
+                            href="https://linear.app/docs/use-cycles"
+                            target="_blank"
+                            rel="noreferrer"
+                          />
+                        }
+                      >
+                        Documentation
+                      </Button>
+                    </>
+                  }
+                >
+                  <p>
+                    Cycles are time-based intervals to help your team focus on a
+                    predefined set of work.
+                  </p>
+                  <p>
+                    Track capacity, scope, and progress as issues are added, and
+                    as the cycle progresses.
+                  </p>
+                </IllustratedEmptyState>
+              )
             ) : !visible.length && !display.showEmpty ? (
               <div className="m-auto text-center text-sm text-muted-foreground">
                 <p>No issues match these filters.</p>
@@ -492,7 +539,11 @@ export function UpcomingCycle({
                 serverGroups={query.page?.groups}
                 showCycleBadge={false}
                 issues={visible}
-                allIssues={records}
+                allIssues={
+                  query.enabled
+                    ? query.records.map((row) => row.issue)
+                    : records
+                }
                 identifier={team.identifier}
                 team={team}
                 labelColors={labelColors}
@@ -511,7 +562,7 @@ export function UpcomingCycle({
                 onUpdate={(issue, patch) => {
                   update([issue.id], patch)
                 }}
-                onCreate={create}
+                onCreate={writable ? create : undefined}
               />
             )}
           </div>
@@ -633,11 +684,24 @@ export function UpcomingCycle({
             onSubmit={async (event) => {
               event.preventDefault()
               try {
-                const issue = await save(
-                  draft,
-                  editingId,
-                  editingBaseline.current
+                const baseline = editingBaseline.current
+                if (
+                  query.enabled &&
+                  selectedCycle?.closure &&
+                  (!editingId || !baseline)
                 )
+                  throw new Error("This issue is no longer available.")
+                const issue =
+                  query.enabled &&
+                  selectedCycle?.closure &&
+                  baseline &&
+                  editingId
+                    ? saveTeamIssue(
+                        team.id,
+                        { ...baseline, ...draft },
+                        { id: editingId, baseline }
+                      )
+                    : await save(draft, editingId, baseline)
                 setEditor(false)
                 toast.success(editingId ? "Issue updated" : "Issue created", {
                   description: `${issueNumber(issue)} — ${issue.title}`,

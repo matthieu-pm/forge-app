@@ -547,6 +547,13 @@
       "when": 1793911299140,
       "tag": "0077_recurring_skip_calendar",
       "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1793912158656,
+      "tag": "0078_cycle_rollover",
+      "breakpoints": true
     }
   ]
 }

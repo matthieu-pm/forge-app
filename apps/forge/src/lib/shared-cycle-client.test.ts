@@ -246,6 +246,54 @@ describe("shared cycle requests", () => {
       numbered.result.current.snapshot?.cycles.some((c) => c.id === "new-cycle")
     ).toBe(true)
   })
+  it("refreshes issue queries once when a scheduled rollover closes a displayed cycle", async () => {
+    const invalidated = vi.fn()
+    window.addEventListener("forge:issue-queries-invalidated", invalidated)
+    try {
+      const { result } = renderHook(() => useSharedTeamCycles("team", true))
+      await waitFor(() => expect(result.current.snapshot).toBeTruthy())
+      snapshot.cycles[0] = {
+        ...snapshot.cycles[0],
+        state: "Closed",
+        closure: { closedAt: "2026-11-16T00:00:00Z", carriedCount: 1 },
+      }
+      await act(async () => {
+        await result.current.refresh()
+      })
+      expect(invalidated).toHaveBeenCalledTimes(1)
+      expect(invalidated.mock.calls[0][0].detail).toEqual({ teamIds: ["team"] })
+      await act(async () => {
+        await result.current.refresh()
+      })
+      expect(invalidated).toHaveBeenCalledTimes(1)
+    } finally {
+      window.removeEventListener("forge:issue-queries-invalidated", invalidated)
+    }
+  })
+  it("invalidates an existing numbered query when a new settings view observes closure first", async () => {
+    const numbered = renderHook(() => useSharedTeamCycles("team", true, 7))
+    await waitFor(() => expect(numbered.result.current.snapshot).toBeTruthy())
+    const invalidated = vi.fn()
+    window.addEventListener("forge:issue-queries-invalidated", invalidated)
+    try {
+      snapshot.cycles[0] = {
+        ...snapshot.cycles[0],
+        state: "Closed",
+        closure: { closedAt: "2026-11-16T00:00:00Z", carriedCount: 1 },
+      }
+      const settings = renderHook(() => useSharedTeamCycles("team", true))
+      await waitFor(() =>
+        expect(settings.result.current.snapshot?.cycles[0].closure).toBeTruthy()
+      )
+      expect(invalidated).toHaveBeenCalledTimes(1)
+      await act(async () => {
+        await numbered.result.current.refresh()
+      })
+      expect(invalidated).toHaveBeenCalledTimes(1)
+    } finally {
+      window.removeEventListener("forge:issue-queries-invalidated", invalidated)
+    }
+  })
   it("resolves retained date-based history within its issue's team", () => {
     const current = canonicalIssueState()!
     const common = { startDate: "2026-11-02", endDate: "2026-11-15" }

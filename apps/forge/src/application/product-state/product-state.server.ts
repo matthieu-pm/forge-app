@@ -26,9 +26,11 @@ import {
   ensureTeamCycles,
   lockTeamCycles,
 } from "@/application/cycles/cycles.server"
+import { cycleRolloverEnabled } from "@/application/cycles/cycle-rollover"
 import { parseTeamCycles } from "@/lib/team-cycles-contract"
 import { parseTeamTriage } from "@/lib/team-triage-contract"
 import {
+  cycleRolloverTeams,
   db,
   issues,
   organizations,
@@ -502,10 +504,32 @@ export async function saveProductState(actor: Actor, raw: ProductStateCommand) {
         throw new ApplicationAccessError(
           "The pending file source was discarded."
         )
+      const beforeCycles =
+        cycleTeamId && row.encodedValue
+          ? parseTeamCycles(JSON.parse(row.encodedValue))
+          : undefined
+      const suppliedCycles =
+        cycleTeamId && input.value ? parseTeamCycles(input.value) : undefined
+      const nextCycles = suppliedCycles
+        ? {
+            ...suppliedCycles,
+            carryover:
+              suppliedCycles.carryover ?? beforeCycles?.carryover ?? true,
+          }
+        : undefined
+      const cycleValue = nextCycles ? JSON.stringify(nextCycles) : input.value
+      if (
+        nextCycles &&
+        !cycleRolloverEnabled(current.workspaceId) &&
+        nextCycles.carryover !== (beforeCycles?.carryover ?? true)
+      )
+        throw new ApplicationAccessError(
+          "Cycle rollover is unavailable in this workspace."
+        )
       if (row.revision !== input.expectedRevision) {
         if (
           (row.encodedValue === null ? null : JSON.parse(row.encodedValue)) ===
-          input.value
+          cycleValue
         )
           return {
             value: { revision: row.revision },
@@ -535,7 +559,7 @@ export async function saveProductState(actor: Actor, raw: ProductStateCommand) {
         tx,
         current,
         input.key,
-        input.value,
+        cycleValue,
         row.encodedValue === null
           ? null
           : (JSON.parse(row.encodedValue) as string)
@@ -556,11 +580,17 @@ export async function saveProductState(actor: Actor, raw: ProductStateCommand) {
           revision: row.revision + 1,
         })
         .where(predicate)
-      if (cycleTeamId && input.value) {
-        const settings = parseTeamCycles(input.value)
+      if (cycleTeamId && nextCycles) {
+        const settings = nextCycles
         const team = (
           await tx.select().from(teams).where(eq(teams.id, cycleTeamId))
         )[0]
+        if (settings.enabled && cycleRolloverEnabled(current.workspaceId)) {
+          await tx
+            .insert(cycleRolloverTeams)
+            .values({ workspaceId: current.workspaceId, teamId: cycleTeamId })
+            .onConflictDoNothing()
+        }
         await ensureTeamCycles(
           tx,
           current.workspaceId,

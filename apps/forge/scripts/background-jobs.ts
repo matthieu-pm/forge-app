@@ -20,6 +20,10 @@ try {
     if (
       ("state" in result &&
         !["idle", "completed"].includes(String(result.state))) ||
+      ("results" in result &&
+        result.results.some(
+          (r) => !["idle", "completed", "deferred"].includes(r.state)
+        )) ||
       ("outcomes" in result &&
         result.outcomes.some(
           (outcome) => !["completed", "deferred"].includes(outcome.state)

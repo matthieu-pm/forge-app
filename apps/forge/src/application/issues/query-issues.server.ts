@@ -196,7 +196,10 @@ export async function queryCanonicalIssues(
         )
       if (query.cycle !== undefined)
         domain.push(
-          sql`EXISTS(SELECT 1 FROM issue_cycles c WHERE c.id = ${issues.cycleId} AND (c.id::text = ${query.cycle} OR c.start_date = ${query.cycle}))`
+          sql`EXISTS(SELECT 1 FROM issue_cycles c WHERE c.workspace_id=${current.workspaceId} AND ${readableTeamCondition(current, sql`c.team_id`)} AND (c.id::text = ${query.cycle} OR c.start_date = ${query.cycle}) AND (
+            (NOT EXISTS(SELECT 1 FROM cycle_closures x WHERE x.cycle_id=c.id) AND c.id=${issues.cycleId})
+            OR EXISTS(SELECT 1 FROM cycle_membership_history h WHERE h.cycle_id=c.id AND h.issue_id=${issues.id} AND h.workspace_id=${current.workspaceId})
+          ))`
         )
       if (query.milestone)
         domain.push(
