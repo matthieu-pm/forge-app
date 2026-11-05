@@ -31,7 +31,7 @@ export const issueHistoryEnvelopeSchema = issueHistoryDetailsSchema.extend({
     .object({
       userId: z.string().min(1),
       name: z.string().max(200),
-      kind: z.enum(["session", "apiKey", "agent", "system"]),
+      kind: z.enum(["session", "apiKey", "agent", "recurring", "system"]),
     })
     .strict(),
 })
@@ -57,7 +57,7 @@ export type IssueHistoryEntry = {
   actor: {
     userId: string
     name: string
-    kind: "session" | "apiKey" | "agent" | "unknown" | "system"
+    kind: "session" | "apiKey" | "agent" | "recurring" | "unknown" | "system"
   }
   origin: "command" | "import" | "system"
   changes: Array<{ field: string; from: string; to: string }>

@@ -7,7 +7,8 @@
     },
     "@forge/app#build": {
       "env": ["DATABASE_URL", "BETTER_AUTH_URL", "BETTER_AUTH_SECRET"],
-      "outputs": [".output/**"]
+      "outputs": [".output/**"],
+      "cache": false
     },
     "@forge/agent-runtime#build": {
       "outputs": [".output/**", ".eve/builds/**"]

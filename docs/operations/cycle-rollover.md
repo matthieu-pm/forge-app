@@ -71,10 +71,17 @@ its original job/checkpoint without consuming retry attempts.
 
 ## Release gate
 
-Apply additive migration `0076_cycle_rollover.sql` using the guarded migration
-runner before deploying this source. It adds three tenant-bound, primary-keyed,
-recovery-captured tables, immutable history and a closed-assignment guard. Retain
-these tables, command receipts and job checkpoints on application rollback.
+Apply additive migration `0078_cycle_rollover.sql` using the guarded migration
+runner before production promotion. It follows the unchanged inbox/recurrence
+migrations 0075–0077 and adds three tenant-bound, primary-keyed, recovery-captured
+tables, immutable history and a closed-assignment guard. Retain these tables,
+command receipts and job checkpoints on application rollback.
+
+The production-only build preflight inherited from FOR-68 checks the exact ordered
+migration hash/timestamp prefix before bundling. Missing, edited or unreachable
+receipts block promotion; preview and local builds remain available. Merging source
+does not apply migrations or grant workspace rollout. Historical reads and runtime
+readiness require this schema even while automatic rollover is disabled.
 
 Default behavior is disabled. Enable only selected workspaces through
 `FORGE_FEATURE_ROLLOUTS` with `cycleRollover: { mode: "enabled", workspaceIds: [...] }`.
@@ -91,13 +98,14 @@ Configure a one-minute external scheduler only after migration and deployed
 acceptance. Trigger an initial scan immediately when enabling, verify team
 `enabled_at` enrollment and inspect due jobs. Confirm scheduler freshness and
 failure alerts through the owning operations gate (FOR-30). This PR does not
-configure a provider scheduler, change production flags, migrate or deploy.
+configure a provider scheduler, change production flags or apply production
+migrations. Production promotion remains separately gated.
 
 ## Verification
 
 The PostgreSQL suite refuses any database except `for69_cycles_test` at
 `127.0.0.1:56469`. Start a dedicated PostgreSQL 17 instance with UTF-8 encoding.
-It applies the complete migration chain on a fresh database, rehearses 0075 inside
+It applies the complete migration chain on a fresh database, rehearses 0078 inside
 a rolled-back transaction, checks its three primary keys, and removes only its
 UUID-scoped fixtures. Never substitute a serving database.
 

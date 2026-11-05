@@ -537,8 +537,22 @@
     {
       "idx": 76,
       "version": "7",
-      "when": 1793911392983,
-      "tag": "0076_cycle_rollover",
+      "when": 1793911299139,
+      "tag": "0076_recurring_issue_occurrences",
+      "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1793911299140,
+      "tag": "0077_recurring_skip_calendar",
+      "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1793912158656,
+      "tag": "0078_cycle_rollover",
       "breakpoints": true
     }
   ]

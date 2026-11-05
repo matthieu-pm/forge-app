@@ -4,6 +4,7 @@ import { toast } from "sonner"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { SavedRecurringIssue } from "@/lib/recurring-issue-contract"
 import { formatDueDate, recurrenceLabel } from "@/lib/recurring-issue-contract"
+import { protectedSessionEpoch } from "@/lib/protected-session"
 import { deleteRecurringIssue } from "@/lib/recurring-issue-state"
 import { Glyph, TemplateShell } from "@/components/templates/template-controls"
 import { TeamSidebarIcon } from "@/components/team-sidebar-icon"
@@ -27,10 +28,12 @@ export function RecurringIssues({
   team,
   issues,
   canManage,
+  onDeleted,
 }: {
   team: TeamSummary
   issues: Array<SavedRecurringIssue>
   canManage: boolean
+  onDeleted?: (id: string) => void
 }) {
   const router = useRouter()
   const [deleting, setDeleting] = React.useState<SavedRecurringIssue | null>(
@@ -38,8 +41,17 @@ export function RecurringIssues({
   )
   const [busy, setBusy] = React.useState(false)
   const busyRef = React.useRef(false)
+  const mounted = React.useRef(true)
+  React.useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
   async function remove() {
     if (!deleting || busyRef.current) return
+    const epoch = protectedSessionEpoch()
+    const active = () => mounted.current && epoch === protectedSessionEpoch()
     busyRef.current = true
     setBusy(true)
     try {
@@ -50,10 +62,17 @@ export function RecurringIssues({
           updatedAt: deleting.updatedAt,
         },
       })
-      await router.invalidate()
+      if (!active()) return
+      onDeleted?.(deleting.id)
       setDeleting(null)
       toast.success("Recurring issue deleted.")
+      try {
+        await router.invalidate()
+      } catch {
+        /* The confirmed deletion is already reflected locally. */
+      }
     } catch (failure) {
+      if (!active()) return
       toast.error(
         failure instanceof Error
           ? failure.message
@@ -61,7 +80,7 @@ export function RecurringIssues({
       )
     } finally {
       busyRef.current = false
-      setBusy(false)
+      if (active()) setBusy(false)
     }
   }
   return (
@@ -72,7 +91,8 @@ export function RecurringIssues({
           <p className="mt-2 text-[13px] leading-[22px] text-muted-foreground">
             Automatically create issues that need to be completed on a regular
             schedule. Each issue is created with a due date set by the schedule.
-            A new instance is created after each due date passes.{" "}
+            The first issue is created immediately; later issues follow the
+            saved local time.{" "}
             <a
               href={docsUrl}
               target="_blank"
@@ -126,7 +146,32 @@ export function RecurringIssues({
                   </span>
                   <span className="mt-0.5 block text-xs text-muted-foreground">
                     {recurrenceLabel(issue.payload)} · First due{" "}
-                    {formatDueDate(issue.payload.firstDue)}
+                    {formatDueDate(issue.payload.firstDue)} ·{" "}
+                    {issue.state ?? "inactive"}
+                    {issue.nextAt && (
+                      <>
+                        {" "}
+                        · Next{" "}
+                        {new Date(issue.nextAt).toLocaleString("en-GB", {
+                          timeZone: issue.payload.timezone ?? team.timezone,
+                        })}{" "}
+                        ({issue.payload.timezone ?? team.timezone})
+                      </>
+                    )}
+                    {!!issue.skippedCount && (
+                      <> · {issue.skippedCount} skipped</>
+                    )}
+                    {issue.lastReason && (
+                      <>
+                        {" "}
+                        ·{" "}
+                        {issue.lastReason === "downtime-latest-only"
+                          ? "Earlier missed dates skipped"
+                          : issue.lastReason === "owner-access-lost"
+                            ? "Owner access needs attention"
+                            : "Schedule needs attention"}
+                      </>
+                    )}
                   </span>
                 </span>
               </Link>

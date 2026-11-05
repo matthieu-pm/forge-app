@@ -101,6 +101,17 @@ product-retention:
   environment:
     name: production-maintenance
 
+recurring-issues:
+  variables:
+    FORGE_ENVIRONMENT: production
+  stage: maintenance
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $FORGE_RECURRING_SCHEDULE == "true"
+  script:
+    - bun run jobs run-recurring
+  environment:
+    name: production-maintenance
+
 workflow-health:
   variables:
     FORGE_ENVIRONMENT: production

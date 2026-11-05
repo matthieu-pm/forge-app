@@ -2010,7 +2010,6 @@ export const teamTemplateDefaults = pgTable(
   })
 )
 
-// Schedule configuration only. Instance generation belongs to the future issue domain.
 export const teamRecurringIssues = pgTable(
   "team_recurring_issues",
   {
@@ -2025,6 +2024,18 @@ export const teamRecurringIssues = pgTable(
     createdByUserId: text("created_by_user_id")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
+    state: text("state")
+      .$type<"inactive" | "active" | "disabled" | "paused" | "deleted">()
+      .default("inactive")
+      .notNull(),
+    activatedAt: timestamp("activated_at", {
+      withTimezone: true,
+      precision: 3,
+    }),
+    nextIndex: integer("next_index").default(1).notNull(),
+    nextAt: timestamp("next_at", { withTimezone: true, precision: 3 }),
+    lastReason: text("last_reason"),
+    skippedCount: integer("skipped_count").default(0).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true, precision: 3 })
       .defaultNow()
       .notNull(),
@@ -2033,6 +2044,22 @@ export const teamRecurringIssues = pgTable(
       .notNull(),
   },
   (table) => ({
+    workspaceIdentity: unique("team_recurring_issues_workspace_identity").on(
+      table.workspaceId,
+      table.id
+    ),
+    dueIndex: index("team_recurring_issues_due_idx").on(
+      table.state,
+      table.nextAt
+    ),
+    validState: check(
+      "team_recurring_issues_state_check",
+      sql`${table.state} in ('inactive','active','disabled','paused','deleted')`
+    ),
+    validCursor: check(
+      "team_recurring_issues_cursor_check",
+      sql`${table.nextIndex} >= 0 and ${table.skippedCount} >= 0`
+    ),
     teamBinding: foreignKey({
       name: "team_recurring_issues_workspace_team_fk",
       columns: [table.workspaceId, table.teamId],

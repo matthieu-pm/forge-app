@@ -3,6 +3,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { drizzle } from "drizzle-orm/neon-serverless"
+import * as recurringSchema from "../../src/db/recurring-schema"
 import * as jobsSchema from "../../src/db/jobs-schema"
 import * as slaSchema from "../../src/db/sla-schema"
 import * as loopsSchema from "../../src/db/loops-schema"
@@ -648,6 +649,7 @@ export async function enforceRestoredDeadlines(
       schema: {
         ...appSchema,
         ...jobsSchema,
+        ...recurringSchema,
         ...slaSchema,
         ...planningSchema,
         ...authSchema,

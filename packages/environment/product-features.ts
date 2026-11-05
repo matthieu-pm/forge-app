@@ -16,7 +16,7 @@ export const productFeatures = {
   teamAgents: { title: "Team agent integrations", ceiling: "disabled" },
   agentGuidance: { title: "Agent guidance and skills", ceiling: "disabled" },
   cycleRollover: { title: "Cycle rollover", ceiling: "enabled" },
-  recurringIssues: { title: "Recurring issues", ceiling: "disabled" },
+  recurringIssues: { title: "Recurring issues", ceiling: "enabled" },
   scheduledUpdates: { title: "Scheduled project updates", ceiling: "disabled" },
   threadSummaries: { title: "Resolved thread summaries", ceiling: "disabled" },
 } as const

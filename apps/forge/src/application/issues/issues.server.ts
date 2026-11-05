@@ -11,6 +11,7 @@ import {
 } from "drizzle-orm"
 import { z } from "zod"
 import { slaGate } from "../sla/sla-gate"
+import { requireIssueTeam } from "./issue-team-policy.server"
 import { startedAssignmentEnabled } from "./started-assignment.server"
 import type { InitiativeProject } from "@/lib/initiatives"
 import type { CommandOptions } from "@/application/commands/execute-command.server"
@@ -45,7 +46,6 @@ import {
   resourceLabels,
   teamIssueNumbers,
   teamMembers,
-  teams,
 } from "@/db"
 import {
   ApplicationAccessError,
@@ -127,42 +127,8 @@ export async function importedProjectSnapshot(
   }
 }
 
-export async function requireIssueTeam(
-  tx: Transaction,
-  actor: Actor,
-  teamId: string
-) {
-  requireResourceScope(actor, "issues:read")
-  requireResourceScope(actor, "issues:write")
-  const team = (
-    await tx
-      .select()
-      .from(teams)
-      .where(and(eq(teams.id, teamId), readableTeamCondition(actor, teams.id)))
-      .for("share")
-  )[0]
-  if (!team) throw new ApplicationAccessError()
-  if (
-    team.visibility === "private" &&
-    !hasWorkspaceRole(actor, ["owner", "admin"])
-  ) {
-    const membership = (
-      await tx
-        .select({ id: teamMembers.id })
-        .from(teamMembers)
-        .where(
-          and(
-            eq(teamMembers.workspaceId, actor.workspaceId),
-            eq(teamMembers.teamId, teamId),
-            eq(teamMembers.userId, actor.userId)
-          )
-        )
-        .for("share")
-    )[0]
-    if (!membership) throw new ApplicationAccessError()
-  }
-  return team
-}
+export { requireIssueTeam }
+
 export async function readIssueRows(
   tx: Transaction,
   actor: Actor,

@@ -14,6 +14,12 @@ export async function jobCommand(store: JobStore, args: Array<string>) {
     const { databaseClient } = await import("@/db")
     return runCycleRollovers(databaseClient, store)
   }
+  if (action === "run-recurring" && args.length === 1) {
+    const { runRecurringJobs } =
+      await import("../recurring-issues/recurring-jobs.server")
+    const { databaseClient } = await import("@/db")
+    return runRecurringJobs(databaseClient, store)
+  }
   if (
     (action === "activate-inbox" || action === "run-inbox") &&
     args.length === 1

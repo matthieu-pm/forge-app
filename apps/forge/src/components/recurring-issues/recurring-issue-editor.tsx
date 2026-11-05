@@ -7,13 +7,22 @@ import type {
   RecurringIssueDraft,
   SavedRecurringIssue,
 } from "@/lib/recurring-issue-contract"
+import { TeamTimezonePicker } from "@/components/team-timezone-picker"
 import { DateInput } from "@/components/ui/date-input"
 import { OptionSelect } from "@/components/ui/option-select"
 import {
   emptyRecurringIssue,
   recurrenceUnitSchema,
   recurringIssuePayloadSchema,
+  saveRecurringIssueSchema,
 } from "@/lib/recurring-issue-contract"
+import {
+  productStorage,
+  productStorageIdentity,
+  saveProductValue,
+} from "@/lib/product-storage"
+import { canonicalCommandInput, withoutUndefined } from "@/lib/canonical-json"
+import { protectedSessionEpoch } from "@/lib/protected-session"
 import { saveRecurringIssue } from "@/lib/recurring-issue-state"
 import {
   Glyph,
@@ -45,6 +54,50 @@ export function RecurringIssueEditor({
   const [draft, setDraft] = React.useState<RecurringIssueDraft>(
     () => saved?.payload ?? emptyRecurringIssue(team.id, team.timezone)
   )
+  const journal = `forge:recurring-issue-intent:v1:${team.id}:${saved?.id ?? "new"}`
+  const commandRef = React.useRef<{ key: string; input: string } | null>(null)
+  const journalKeyRef = React.useRef<string | null>(null)
+  const activeRef = React.useRef(true)
+  const contextRef = React.useRef(0)
+  const journalErrorRef = React.useRef(false)
+  React.useEffect(() => {
+    activeRef.current = true
+    contextRef.current++
+    try {
+      const key = Array.from({ length: productStorage.length }, (_, index) =>
+        productStorage.key(index)
+      )
+        .filter((key): key is string =>
+          Boolean(key?.startsWith(`${journal}:commands:`))
+        )
+        .sort()[0]
+      const pending = key ? productStorage.getItem(key) : null
+      if (pending) {
+        journalKeyRef.current = key
+        const input = saveRecurringIssueSchema.parse(JSON.parse(pending))
+        const { commandKey, ...rest } = input
+        commandRef.current = {
+          key: commandKey,
+          input: canonicalCommandInput(withoutUndefined(rest)),
+        }
+        setDraft(input.payload)
+        setEnabled(input.enabled ?? true)
+        setTakeOwnership(input.takeOwnership ?? false)
+      }
+    } catch {
+      journalErrorRef.current = true
+      setError(
+        "The saved attempt could not be read. Its recovery record is preserved."
+      )
+    }
+    return () => {
+      activeRef.current = false
+    }
+  }, [journal])
+  const [enabled, setEnabled] = React.useState(
+    saved ? saved.state === "active" : true
+  )
+  const [takeOwnership, setTakeOwnership] = React.useState(false)
   const [saving, setSaving] = React.useState(false)
   const [subIssueCreating, setSubIssueCreating] = React.useState(false)
   const [error, setError] = React.useState("")
@@ -53,7 +106,11 @@ export function RecurringIssueEditor({
   const savingRef = React.useRef(false)
   const titleRef = React.useRef<HTMLInputElement>(null)
   const dueDateRef = React.useRef<HTMLInputElement>(null)
-  const dirty = JSON.stringify(draft) !== initial.current || subIssueCreating
+  const dirty =
+    JSON.stringify(draft) !== initial.current ||
+    enabled !== (saved ? saved.state === "active" : true) ||
+    takeOwnership ||
+    subIssueCreating
   const navigate = useNavigate()
   const router = useRouter()
   const blocker = useBlocker({
@@ -89,25 +146,85 @@ export function RecurringIssueEditor({
       if (!draft.title.trim()) titleRef.current?.focus()
       return
     }
+    const epoch = protectedSessionEpoch()
+    const context = contextRef.current
+    const identity = productStorageIdentity()
+    const active = () =>
+      activeRef.current &&
+      contextRef.current === context &&
+      epoch === protectedSessionEpoch() &&
+      identity?.workspaceId === productStorageIdentity()?.workspaceId &&
+      identity?.userId === productStorageIdentity()?.userId &&
+      identity?.sessionId === productStorageIdentity()?.sessionId
     savingRef.current = true
     setSaving(true)
     setError("")
     try {
-      await saveRecurringIssue({
+      if (!identity || !active())
+        throw new Error("The active session changed. Reload before saving.")
+      if (journalErrorRef.current)
+        throw new Error(
+          "The saved attempt needs recovery before another issue can be created."
+        )
+      const original = commandRef.current
+        ? JSON.parse(commandRef.current.input)
+        : null
+      const input = {
+        slug: team.slug,
+        id: saved?.id,
+        updatedAt: original?.updatedAt ?? saved?.updatedAt,
+        payload: parsed.data,
+        enabled,
+        takeOwnership,
+      }
+      const encoded = canonicalCommandInput(withoutUndefined(input))
+      if (commandRef.current && commandRef.current.input !== encoded) {
+        throw new Error(
+          "A previous save is unconfirmed. Retry its unchanged values before making another change."
+        )
+      }
+      commandRef.current ??= { key: crypto.randomUUID(), input: encoded }
+      const attempt = { ...input, commandKey: commandRef.current.key }
+      journalKeyRef.current ??= `${journal}:commands:${attempt.commandKey}`
+      await saveProductValue(journalKeyRef.current, JSON.stringify(attempt))
+      if (!active()) return
+      const result = await saveRecurringIssue({
         data: {
-          slug: team.slug,
-          id: saved?.id,
-          updatedAt: saved?.updatedAt,
-          payload: parsed.data,
+          ...attempt,
+          workspaceId: identity.workspaceId,
+          sessionId: identity.sessionId,
         },
       })
+      if (!active()) return
+      if (!result.ok) {
+        await saveProductValue(journalKeyRef.current, null)
+        if (!active()) return
+        commandRef.current = null
+        journalKeyRef.current = null
+        setError(result.message)
+        return
+      }
+      commandRef.current = null
+      try {
+        await saveProductValue(journalKeyRef.current, null)
+      } catch {
+        /* The committed command remains safe to replay. */
+      }
+      journalKeyRef.current = null
+      if (!active()) return
       safeToLeave.current = true
-      await router.invalidate()
+      try {
+        await router.invalidate()
+      } catch {
+        /* The next load will show the confirmed schedule. */
+      }
+      if (!active()) return
       toast.success(
         saved ? "Recurring issue updated." : "Recurring issue created."
       )
       cancel()
     } catch (failure) {
+      if (!active()) return
       const message =
         failure instanceof Error
           ? failure.message
@@ -117,7 +234,7 @@ export function RecurringIssueEditor({
       safeToLeave.current = false
     } finally {
       savingRef.current = false
-      setSaving(false)
+      if (active()) setSaving(false)
     }
   }
   const saveRef = React.useRef(save)
@@ -145,9 +262,9 @@ export function RecurringIssueEditor({
           {saved ? "Edit recurring issue" : "New recurring issue"}
         </h1>
         <p className="mt-8 px-4 text-[13px] leading-5 text-muted-foreground">
-          Create the first instance of your recurring issue below, including the
-          schedule and initial due date. New instances will be created after
-          each due date passes.{" "}
+          {saved
+            ? "Changes apply to future occurrences. Enabling a schedule for the first time creates its first issue immediately."
+            : "Create the first issue immediately with the selected due date. Later issues follow the schedule in its saved timezone."}{" "}
           <a
             href={recurringDocsUrl}
             target="_blank"
@@ -219,6 +336,92 @@ export function RecurringIssueEditor({
               subIssues
             />
           </div>
+        </fieldset>
+        <fieldset
+          disabled={saving || !directory.canManage}
+          className="mt-6 space-y-3 px-4 text-[13px]"
+        >
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={enabled}
+              disabled={saving || !directory.canManage}
+              onChange={(event) => setEnabled(event.target.checked)}
+            />
+            Enable this schedule
+          </label>
+          {saved && (
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={takeOwnership}
+                disabled={saving || !directory.canManage}
+                onChange={(event) => setTakeOwnership(event.target.checked)}
+              />
+              Run future issues with my current permissions
+            </label>
+          )}
+          {!!saved?.recentEvents?.length && (
+            <details className="text-xs text-muted-foreground">
+              <summary className="cursor-pointer">
+                Skipped dates and schedule activity
+              </summary>
+              <ul className="mt-2 space-y-1">
+                {saved.recentEvents.map((event, index) => (
+                  <li key={index}>
+                    {event.fromDate
+                      ? `${event.fromDate} – ${event.toDate}: `
+                      : ""}
+                    {event.count} skipped ·{" "}
+                    {event.reason === "downtime-latest-only"
+                      ? "Only the latest missed occurrence was generated"
+                      : event.reason === "disabled-period" ||
+                          event.reason === "schedule-disabled"
+                        ? "Schedule was disabled"
+                        : event.reason === "before-activation"
+                          ? "Before activation"
+                          : event.reason === "schedule-edited"
+                            ? "Schedule changed"
+                            : event.reason === "owner-access-lost"
+                              ? "Owner no longer has access"
+                              : "Issue references need repair"}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+          {saved?.state === "paused" && saved.lastReason && (
+            <p role="status">
+              Paused:{" "}
+              {saved.lastReason === "owner-access-lost"
+                ? "The schedule owner no longer has access. Take ownership and enable the schedule to resume."
+                : "Review the issue’s teams, status, labels and members, then enable the schedule to resume."}
+            </p>
+          )}
+          <div className="flex flex-wrap items-center gap-3">
+            <label>
+              Local time{" "}
+              <input
+                aria-label="Generation time"
+                type="time"
+                value={draft.generationTime ?? "09:00"}
+                disabled={saving || !directory.canManage}
+                onChange={(event) =>
+                  patch("generationTime", event.target.value)
+                }
+                className="ml-2 rounded-md border border-border px-2 py-1"
+              />
+            </label>
+            <TeamTimezonePicker
+              value={draft.timezone ?? team.timezone}
+              onValueChange={(value) => patch("timezone", value)}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            After downtime, only the latest missed issue is created. Disabled
+            periods are skipped. When clocks change, missing times move forward
+            and repeated times run once, at the first occurrence.
+          </p>
         </fieldset>
         <div className="mt-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-4 px-4">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-3 text-[13px]">
