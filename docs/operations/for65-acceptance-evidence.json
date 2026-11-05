@@ -1,0 +1,96 @@
+{
+  "issue": "FOR-65",
+  "date": "2026-11-05",
+  "sourceCommit": "8516618627916b1d76587b18c80ab6d3d7096883",
+  "baseCommit": "ac2f7eb",
+  "prerequisite": {
+    "issue": "FOR-33",
+    "originalCommit": "f53c0b4f7858e5deb3e8c30b1bcb6c4655e0352d",
+    "integratedCommit": "c73d4a0"
+  },
+  "environment": {
+    "kind": "isolated local PostgreSQL and full local app",
+    "database": "127.0.0.1:56565/for65_inbox_test",
+    "app": "http://localhost:3165",
+    "transport": "node-postgres fixture replacing only the database adapter; actual Better Auth, canonical application services, outbox worker and read projection"
+  },
+  "acceptedDecision": {
+    "source": "Matthieu in FOR-65 implementation conversation",
+    "rule": "Only new events after activation; no historical backfill. Activation is durable and idempotent."
+  },
+  "acceptance": [
+    {
+      "criterion": "AC-01",
+      "test": "AT-01",
+      "result": "passed",
+      "evidence": "Real producer commands; subscribed Bob mentioned; committed events delivered twice concurrently in reverse order; one grouped issue, exactly mention/comment/update in order, current title, self events suppressed; real worker replay does not add activity."
+    },
+    {
+      "criterion": "AC-02",
+      "test": "AT-02",
+      "result": "passed",
+      "evidence": "Private-team membership removed before worker evaluation; no Bob recipient activity persisted and authorized query empty."
+    }
+  ],
+  "validation": {
+    "focusedTests": {
+      "files": 11,
+      "passed": 111,
+      "failed": 0,
+      "command": "FORGE_INBOX_TEST_DATABASE_URL=<dedicated-local-url> bunx vitest run src/application/inbox/inbox.postgres.test.ts src/lib/shared-inbox-client.test.tsx src/application/inbox/inbox-worker-handler.test.ts src/components/inbox/inbox.test.tsx src/components/inbox/inbox-subscription.test.tsx src/components/sidebar-inbox-badge.test.tsx src/lib/inbox-state.test.ts src/lib/inbox-view.test.ts src/application/operations/monitor.test.ts scripts/lib/service-config.test.ts src/application/observability/telemetry.server.test.ts --maxWorkers 1 --testTimeout 30000"
+    },
+    "typecheck": "passed: bun run typecheck from apps/forge",
+    "lint": "Changed app/fixture source: zero errors. Inbox component retains two existing optional-matchMedia warnings. Shared environment/telemetry packages covered by TypeScript and their 45 focused tests; app ESLint base ignores those external package paths.",
+    "productionBuild": "passed: default production Vite/Nitro build, prerender and protected Workflow handler verification; isolated local DB and random build-only service/auth configuration; no fixture module strings present in production server output",
+    "formatting": "passed Prettier checks for new source and runbook; git diff --check passed",
+    "additionalPostgresCoverage": [
+      "no-backfill activation and unchanged repeat activation",
+      "activation waits for pre-existing uncommitted appends",
+      "transaction begun before activation appends with the post-activation clock",
+      "103 events across session-bound keyset pages",
+      "unsubscribe suppresses optional activity; direct mentions and assignments remain eligible",
+      "previous delivery hidden after access loss and comment deletion",
+      "fanout failure rolls back recipient activity and receipt; safe retry"
+    ],
+    "clientCoverage": [
+      "ignores forged publishInboxUpdate in canonical mode",
+      "only opaque device action metadata persisted",
+      "late responses fenced on session invalidation and account switch",
+      "failed revalidation clears private content",
+      "older pages group and deduplicate",
+      "failed local writes preserve unread state and report failure"
+    ]
+  },
+  "browser": {
+    "result": "passed locally",
+    "checks": [
+      "Bob signs in through actual Better Auth",
+      "one issue entry with latest title and one mention plus later update",
+      "open marks read; mark unread updates entry/badge",
+      "private-team revocation removes the previously delivered entry on refresh"
+    ],
+    "artifacts": [
+      "output/production-readiness/for65/authorized.png",
+      "output/production-readiness/for65/revoked.png"
+    ],
+    "cleanup": {
+      "remainingFixtureWorkspaces": 0,
+      "remainingFixtureInboxActivity": 0,
+      "remainingFixtureOutboxEvents": 0
+    }
+  },
+  "releaseBoundary": {
+    "deployed": false,
+    "productionMigrationApplied": false,
+    "productionActivationPerformed": false,
+    "githubScheduleConfigured": false,
+    "hostedAcceptanceVerified": false,
+    "migration": "0075_shared_inbox",
+    "runbook": "docs/operations/shared-inbox.md",
+    "separateScope": [
+      "FOR-66 shared read/snooze/delete state",
+      "external email/push/channel delivery",
+      "production-like migration rehearsal, authorized deployment/activation and live scheduler/monitoring acceptance"
+    ]
+  }
+}

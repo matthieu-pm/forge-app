@@ -1,14 +1,18 @@
+# Shared inbox delivery
+
+The protected app now uses FOR-65 server-authorized committed activity. See [Shared issue inbox](operations/shared-inbox.md) for activation, delivery, authorization and verification. Read, snooze and delete state remains per device pending FOR-66. The local adapter below remains for prototype fixtures only.
+
 # Inbox
 
-`/inbox` uses Forge's existing shell, with a resizable notification list and an independently scrolling detail pane. Drag the divider to resize the list from 80% to 200% of its default responsive width (360 px on medium screens, 400 px on large screens, capped at 42% of the inbox area before applying the scale). The chosen scale is stored locally per workspace and user. The divider supports Left/Right arrow keys in 5% steps, Home/End for the limits, and double-click to reset. Small screens keep the full-width list or detail pane with a back button and no resize divider. A Forge welcome message is the only initial entry; sample issue activity is not seeded into users' inboxes.
+`/inbox` uses Forge's existing shell, with a resizable notification list and an independently scrolling detail pane. Drag the divider to resize the list from 80% to 200% of its default responsive width (360 px on medium screens, 400 px on large screens, capped at 42% of the inbox area before applying the scale). The chosen scale is stored locally per workspace and user. The divider supports Left/Right arrow keys in 5% steps, Home/End for the limits, and double-click to reset. Small screens keep the full-width list or detail pane with a back button and no resize divider. The shared inbox starts empty until authorized post-activation activity arrives. The prototype keeps its welcome entry.
 
 The page supports grouped issue activity, read/unread state, notification-type filters, snooze presets and custom times, deleted-item recovery, subscription controls, display options, and keyboard shortcuts. Snoozed items return unread. Shortcuts are scoped to the inbox and do not intercept input fields or modal/menu controls.
 
 ## Current data boundary
 
-Forge's team issue and My issues routes are placeholders, and its triage issues are browser-local. There is no shared issue activity service to connect to yet. Inbox state is therefore local to the browser, partitioned by workspace and user. It is not synchronized across devices and does not send email or push notifications.
+The protected app loads durable recipient activity from the authorized server projection. Subscription changes use the canonical issue service. Read, snooze and delete actions remain per device pending FOR-66. This consumer does not send email or push notifications.
 
-`publishInboxUpdate(scope, update)` in `src/lib/inbox-state.ts` is the local delivery adapter for future authorized issue events. An update includes its event ID, workspace, actor, timestamp, kind, issue snapshot, direct recipient IDs, and subscriber IDs. The adapter:
+`publishInboxUpdate(scope, update)` in `src/lib/inbox-state.ts` is retained as a local prototype/fixture adapter. The protected app ignores this store and its recipient lists. An update includes its event ID, workspace, actor, timestamp, kind, issue snapshot, direct recipient IDs, and subscriber IDs. The prototype adapter:
 
 - Accepts assignments and mentions addressed to the current user.
 - Accepts comments and status changes for subscribers, except locally unsubscribed issues.
@@ -18,7 +22,7 @@ Forge's team issue and My issues routes are placeholders, and its triage issues 
 
 Unsubscribing stops comments and status changes; assignments and mentions continue. Deleting a notification never deletes its issue. Malformed storage is preserved, and failed writes are reported.
 
-When the issue service is implemented, persist subscriptions and inbox state on the server, enforce workspace/issue access there, and deliver authenticated events through this boundary. Client recipient checks are not an authorization boundary.
+Server delivery, live authorization, ordering, deduplication and activation are documented in the shared-inbox runbook. Client recipient checks are not an authorization boundary.
 
 ## Verification
 

@@ -48,7 +48,9 @@ const config = defineConfig(({ mode }) => {
           functions:
             process.env.FORGE_LOOPS_ENABLED === "true"
               ? { maxDuration: LOOP_FUNCTION_DURATION_SECONDS }
-              : {},
+              : process.env.FORGE_INBOX_DELIVERY_ENABLED === "true"
+                ? { maxDuration: 60 }
+                : {},
           config: {
             version: 3,
             crons: [

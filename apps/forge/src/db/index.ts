@@ -10,6 +10,7 @@ import * as authSchema from "./auth-schema"
 import * as jobsSchema from "./jobs-schema"
 import * as slaSchema from "./sla-schema"
 import * as resourceSchema from "./resources-schema"
+import * as inboxSchema from "./inbox-schema"
 
 assertStagingEnvironment(process.env, "web")
 
@@ -43,6 +44,7 @@ export const schema = {
   ...planningSchema,
   ...authSchema,
   ...resourceSchema,
+  ...inboxSchema,
 }
 
 export const db = drizzle(client, { schema })
@@ -61,3 +63,4 @@ export * from "./loops-schema"
 
 export * from "./jobs-schema"
 export * from "./sla-schema"
+export * from "./inbox-schema"

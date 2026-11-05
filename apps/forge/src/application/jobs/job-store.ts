@@ -53,7 +53,11 @@ export class JobError extends Error {
   }
 }
 /** Expected gating delay; preserves identity/checkpoints without burning retries. */
-export class JobDeferred extends Error {}
+export class JobDeferred extends Error {
+  constructor(readonly delayMs = 60_000) {
+    super()
+  }
+}
 const hash = (value: unknown) =>
   createHash("sha256").update(canonicalCommandInput(value)).digest("hex")
 const uuid = (v: string) =>
@@ -127,15 +131,17 @@ export function jobStore(pool: JobPool) {
     return recovered
   }
   return {
-    async defer(lease: JobLease) {
+    async defer(lease: JobLease, delayMs = 60_000) {
+      if (!Number.isSafeInteger(delayMs) || delayMs < 0 || delayMs > 3_600_000)
+        throw new JobError("INVALID_INPUT")
       return transaction(async (tx) => {
         await fence(tx, lease)
         const result = await tx.query(
           `UPDATE background_jobs SET state='queued',
-          available_at=clock_timestamp()+interval '1 minute',attempts=greatest(0,attempts-1),
+          available_at=clock_timestamp()+($2::int * interval '1 millisecond'),attempts=greatest(0,attempts-1),
           lease_token=NULL,lease_until=NULL,updated_at=clock_timestamp()
           WHERE id=$1 AND lease_until>clock_timestamp() RETURNING id`,
-          [lease.id]
+          [lease.id, delayMs]
         )
         if (!result.rows.length) throw new JobError("LEASE_LOST")
       })
