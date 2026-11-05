@@ -59,7 +59,7 @@
     "reviewInterruptedRuns": "Earlier timing failures passed independently; a later full run overlapped confirmed macOS maintenance sleep. The final full suite passed with idle-sleep prevention."
   },
   "migration": {
-    "file": "apps/forge/drizzle/0075_cycle_rollover.sql",
+    "file": "apps/forge/drizzle/0076_cycle_rollover.sql",
     "sha256": "0a98fed6e35f46e443931bf6f2f779624bea3984d6fa5fcfd8b3f4df48b7298b",
     "freshChainAppliedLocally": 76,
     "rollbackRehearsal": "0075 applied inside transaction; three primary keys verified; rollback left closure table absent; then migration applied normally",

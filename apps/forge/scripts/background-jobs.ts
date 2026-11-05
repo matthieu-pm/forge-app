@@ -23,6 +23,10 @@ try {
       ("results" in result &&
         result.results.some(
           (r) => !["idle", "completed", "deferred"].includes(r.state)
+        )) ||
+      ("outcomes" in result &&
+        result.outcomes.some(
+          (outcome) => !["completed", "deferred"].includes(outcome.state)
         ))
     )
       process.exitCode = 1

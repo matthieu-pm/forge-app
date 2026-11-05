@@ -1,0 +1,78 @@
+{
+  "issue": "FOR-65",
+  "pullRequest": 66,
+  "date": "2026-11-05",
+  "reviewedOriginalHead": "cd13119c5a789efcb91ec09629ca8fe8f91dca79",
+  "base": "ac2f7ebe54a5374e1f50b8705696aa1d35bb3853",
+  "fixedSource": "6a9a7921bda52a31de3bdb2876f095ea95c10ffb",
+  "review": {
+    "standards": "No remaining blockers after independent read-only re-review",
+    "spec": "No remaining spec findings after independent read-only re-review",
+    "report": "docs/operations/for65-review.md"
+  },
+  "reproductions": {
+    "firstPass": "Six regressions failed before their fixes: bounded adapter execution, source purge, snooze wake, late activity visibility, pagination freshness, disabled reader before migration.",
+    "secondPass": "Three edge-case regressions failed before correction: reconciliation abort, source purge racing lookup, cross-consumer starvation."
+  },
+  "checks": {
+    "fullApp": {
+      "passed": 2948,
+      "skipped": 639,
+      "passedFiles": 369,
+      "skippedFiles": 33,
+      "result": "passed",
+      "command": "FORGE_INBOX_TEST_DATABASE_URL=<isolated-local> FORGE_JOB_TEST_DATABASE_URL=<isolated-local-for64-role> FORGE_OUTBOX_TEST_DATABASE_URL=<isolated-local> bunx vitest run --maxWorkers 4 --testTimeout 30000"
+    },
+    "focusedDeliveryAndRecovery": {
+      "passed": 58,
+      "files": 5,
+      "result": "passed",
+      "covers": [
+        "16 inbox PostgreSQL acceptance/regression tests",
+        "22 existing FOR-64 PostgreSQL lease/recovery tests",
+        "8 existing FOR-33 PostgreSQL external-provider/recovery tests",
+        "9 shared inbox client tests",
+        "3 protected worker handler tests"
+      ]
+    },
+    "runtime": {
+      "passed": 37,
+      "files": 9,
+      "result": "passed"
+    },
+    "workflow": {
+      "passed": 4,
+      "files": 2,
+      "result": "passed"
+    },
+    "static": {
+      "result": "passed",
+      "command": "bunx turbo run lint typecheck --concurrency=2",
+      "tasks": 4,
+      "lintErrors": 0,
+      "lintWarnings": 615,
+      "note": "Existing repository warning-level findings remain. Removed a pre-existing misplaced no-op string expression that blocked full lint."
+    },
+    "workspaceBuild": {
+      "result": "passed",
+      "tasks": 3,
+      "command": "bunx turbo run build --concurrency=2 --env-mode=loose",
+      "configuration": "Isolated local database and generated build-only configuration; production app/runtime build, prerender and protected Workflow verification."
+    },
+    "formatAndDiff": "passed"
+  },
+  "localTargets": {
+    "inbox": "127.0.0.1:56565/for65_inbox_test",
+    "jobs": "127.0.0.1:56464/for64_jobs_test",
+    "outbox": "127.0.0.1:56433/for33_outbox_test",
+    "browser": "http://localhost:3165"
+  },
+  "migration": "0075_shared_inbox was revised before merge to include durable recipient progress and delivery revisions. Final ordered migration SQL passed on a fresh isolated local database. Production migration remains pending.",
+  "releaseBoundary": {
+    "productionMigrationApplied": false,
+    "activationPerformed": false,
+    "productionDeliveryAccepted": false,
+    "readSnoozeDeleteSync": "FOR-66 remains separate"
+  },
+  "mergeAuthorization": "Matthieu explicitly requested review, fixes and merge into main once checks pass."
+}

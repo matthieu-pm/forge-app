@@ -19,6 +19,7 @@ export const jobNames = [
   "workflow.health",
   "calls.sync",
   "issues.retention",
+  "inbox.delivery",
 ] as const
 export type JobName = (typeof jobNames)[number]
 export type Metric =
@@ -44,6 +45,8 @@ export type Heartbeat = {
   failedAt?: number | null
 }
 export type AlertCode =
+  | "OUTBOX_DEAD"
+  | "OUTBOX_RECONCILIATION_REQUIRED"
   | "SWEEP_STALE"
   | "JOB_STALE"
   | "JOB_FAILED"

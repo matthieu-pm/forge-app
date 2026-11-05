@@ -38,6 +38,7 @@ export type Operation =
   | "agent.retention"
   | "product.retention"
   | "issues.retention"
+  | "inbox.delivery"
   | "operations.monitor"
   | "jobs.run"
   | "workflow.health"
@@ -99,6 +100,7 @@ const operations = new Set<Operation>([
   "agent.retention",
   "product.retention",
   "issues.retention",
+  "inbox.delivery",
   "operations.monitor",
   "jobs.run",
   "workflow.health",

@@ -28,6 +28,9 @@ export const notificationTypes = [
   { value: "mention", label: "Mentions" },
   { value: "comment", label: "Comments" },
   { value: "status", label: "Status changes" },
+  { value: "reply", label: "Replies" },
+  { value: "update", label: "Issue updates" },
+  { value: "reaction", label: "Reactions" },
   { value: "system", label: "System notifications" },
 ]
 export const inboxStatusTypes = [

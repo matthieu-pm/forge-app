@@ -5,40 +5,20 @@ import {
   canonicalSuppressionSnapshot,
   isCanonicalIssueSuppressed,
 } from "./canonical-issue-cache"
+import { defaultInboxPreferences, inboxPreferencesSchema } from "./inbox-view"
 import {
-  defaultInboxPreferences,
-  inboxPreferencesSchema,
-  inboxStatusTypes,
-} from "./inbox-view"
+  inboxEventKinds,
+  inboxEventSchema,
+  inboxIssueSchema,
+} from "./shared-inbox-contract"
+import { useSharedInbox } from "./shared-inbox-client"
 import type { InboxPreferences } from "./inbox-view"
 import { productStorage } from "@/lib/product-storage"
 
 export type InboxScope = { workspaceId: string; userId: string }
-export const updateKinds = [
-  "assignment",
-  "mention",
-  "comment",
-  "status",
-] as const
-const issueSchema = z.object({
-  id: z.string().min(1),
-  identifier: z.string().min(1),
-  title: z.string().min(1),
-  description: z.string(),
-  status: z.string(),
-  statusType: z.enum(inboxStatusTypes).optional(),
-  priority: z.string(),
-  assignee: z.string().nullable(),
-  project: z.string().nullable(),
-})
-const eventSchema = z.object({
-  id: z.string().min(1),
-  kind: z.enum(updateKinds),
-  actor: z.string(),
-  actorId: z.string(),
-  createdAt: z.string().datetime(),
-  message: z.string(),
-})
+export const updateKinds = inboxEventKinds
+const issueSchema = inboxIssueSchema
+const eventSchema = inboxEventSchema
 export const inboxUpdateSchema = eventSchema.extend({
   workspaceId: z.string(),
   issue: issueSchema,
@@ -47,6 +27,7 @@ export const inboxUpdateSchema = eventSchema.extend({
 })
 const entrySchema = z.object({
   id: z.string(),
+  deliveryRevision: z.string().optional(),
   issue: issueSchema.nullable(),
   events: z.array(eventSchema),
   unread: z.boolean(),
@@ -243,6 +224,7 @@ export function publishInboxUpdate(scope: InboxScope, update: InboxUpdate) {
   writeInbox(scope, (state) => receiveInboxUpdate(state, scope, update))
 }
 export function useInbox(scope: InboxScope) {
+  const shared = useSharedInbox(scope)
   const suppression = useSyncExternalStore(
     useCallback((notify) => {
       window.addEventListener(CANONICAL_ISSUES_CHANGED, notify)
@@ -289,8 +271,13 @@ export function useInbox(scope: InboxScope) {
       }
     }
   }, [raw, suppression])
+  if (shared.active) return shared
   return {
     ...result,
+    loading: false,
+    hasMore: false,
+    loadMore: () => {},
+    refresh: () => {},
     dispatch: (action: InboxAction) =>
       writeInbox(scope, (state) => reduceInbox(state, action)),
   }

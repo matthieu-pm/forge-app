@@ -30,6 +30,7 @@ export default defineConfig({
     "./src/db/planning-schema.ts",
     "./src/db/loops-schema.ts",
     "./src/db/resources-schema.ts",
+    "./src/db/inbox-schema.ts",
   ],
   dialect: "postgresql",
   dbCredentials: {

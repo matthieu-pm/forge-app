@@ -1,5 +1,11 @@
 import { randomUUID } from "node:crypto"
-import type { AlertEnvelope, Heartbeat, JobName, Sample } from "./monitor"
+import type {
+  AlertEnvelope,
+  Finding,
+  Heartbeat,
+  JobName,
+  Sample,
+} from "./monitor"
 
 export type MonitorSql = {
   query: (
@@ -12,6 +18,37 @@ const millis = (value: unknown) =>
 
 export function monitorStore(sql: MonitorSql) {
   return {
+    async outboxHealth(
+      now: number
+    ): Promise<{ sample: Sample; findings: Array<Finding> }> {
+      const [oldest, failures] = await Promise.all([
+        sql.query(`SELECT min(scheduled_at) AS oldest FROM background_jobs
+          WHERE kind LIKE 'outbox-delivery-v1:%' AND state<>'completed'`),
+        sql.query(`SELECT state,min(updated_at) AS oldest,count(*)::int AS failures FROM background_jobs
+          WHERE kind LIKE 'outbox-delivery-v1:%' AND state IN ('dead','reconcile')
+          GROUP BY state`),
+      ])
+      const since = millis(oldest.rows[0]?.oldest)
+      return {
+        sample: {
+          key: "outbox-age",
+          value: since == null ? 0 : Math.max(0, (now - since) / 1000),
+          observedAt: now,
+          since,
+        },
+        findings: failures.rows.map((row) => ({
+          code:
+            row.state === "dead"
+              ? "OUTBOX_DEAD"
+              : "OUTBOX_RECONCILIATION_REQUIRED",
+          signal: `outbox.${row.state}`,
+          severity: "page",
+          since: millis(row.oldest),
+          value: Number(row.failures),
+          threshold: null,
+        })),
+      }
+    },
     async heartbeat(key: JobName, success: boolean) {
       // A failure never advances freshness. Concurrent completions remain monotonic.
       await sql.query(

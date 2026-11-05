@@ -40,8 +40,6 @@ import {
 } from "@/lib/api-key-state"
 import { mutateWorkspaceSecurity } from "@/lib/security-state"
 
-;("use client")
-
 const availableScopes: ReadonlyArray<{
   scope: ApiScope
   label: string

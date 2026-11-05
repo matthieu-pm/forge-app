@@ -58,7 +58,7 @@ describe.skipIf(!connection)("FOR-69 PostgreSQL acceptance", () => {
         .sort()) {
         try {
           const migration = readFileSync(`drizzle/${file}`, "utf8")
-          if (file === "0075_cycle_rollover.sql") {
+          if (file === "0076_cycle_rollover.sql") {
             const rehearsal = await pool.connect()
             try {
               await rehearsal.query("BEGIN")

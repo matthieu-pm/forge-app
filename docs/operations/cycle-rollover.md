@@ -71,7 +71,7 @@ its original job/checkpoint without consuming retry attempts.
 
 ## Release gate
 
-Apply additive migration `0075_cycle_rollover.sql` using the guarded migration
+Apply additive migration `0076_cycle_rollover.sql` using the guarded migration
 runner before deploying this source. It adds three tenant-bound, primary-keyed,
 recovery-captured tables, immutable history and a closed-assignment guard. Retain
 these tables, command receipts and job checkpoints on application rollback.

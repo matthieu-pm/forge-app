@@ -1,5 +1,5 @@
 {
-  "id": "96c3cf33-48f3-4d58-b665-8233787a1ccc",
+  "id": "1903303e-4c5d-41dd-a3d4-af9cb5d86171",
   "prevId": "83721a64-974c-4d5c-8869-8334ac1b4f5e",
   "version": "7",
   "dialect": "postgresql",
@@ -2641,7 +2641,7 @@
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
-          "default": "now()"
+          "default": "clock_timestamp()"
         }
       },
       "indexes": {
@@ -8963,328 +8963,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.cycle_closures": {
-      "name": "cycle_closures",
-      "schema": "",
-      "columns": {
-        "cycle_id": {
-          "name": "cycle_id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "workspace_id": {
-          "name": "workspace_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "team_id": {
-          "name": "team_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "target_cycle_id": {
-          "name": "target_cycle_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "carryover": {
-          "name": "carryover",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "closed_at": {
-          "name": "closed_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "clock_timestamp()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "cycle_closures_workspace_id_organization_id_fk": {
-          "name": "cycle_closures_workspace_id_organization_id_fk",
-          "tableFrom": "cycle_closures",
-          "tableTo": "organization",
-          "columnsFrom": [
-            "workspace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "cycle_closure_source_fk": {
-          "name": "cycle_closure_source_fk",
-          "tableFrom": "cycle_closures",
-          "tableTo": "issue_cycles",
-          "columnsFrom": [
-            "workspace_id",
-            "team_id",
-            "cycle_id"
-          ],
-          "columnsTo": [
-            "workspace_id",
-            "team_id",
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "cycle_closure_target_fk": {
-          "name": "cycle_closure_target_fk",
-          "tableFrom": "cycle_closures",
-          "tableTo": "issue_cycles",
-          "columnsFrom": [
-            "workspace_id",
-            "team_id",
-            "target_cycle_id"
-          ],
-          "columnsTo": [
-            "workspace_id",
-            "team_id",
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "cycle_closure_identity": {
-          "name": "cycle_closure_identity",
-          "nullsNotDistinct": false,
-          "columns": [
-            "workspace_id",
-            "team_id",
-            "cycle_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "cycle_closure_target_different": {
-          "name": "cycle_closure_target_different",
-          "value": "\"cycle_closures\".\"target_cycle_id\" IS NULL OR \"cycle_closures\".\"target_cycle_id\" <> \"cycle_closures\".\"cycle_id\""
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.cycle_membership_history": {
-      "name": "cycle_membership_history",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "workspace_id": {
-          "name": "workspace_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "team_id": {
-          "name": "team_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "cycle_id": {
-          "name": "cycle_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "issue_id": {
-          "name": "issue_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "issue_revision": {
-          "name": "issue_revision",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "status_group": {
-          "name": "status_group",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "carried": {
-          "name": "carried",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "cycle_membership_history_issue": {
-          "name": "cycle_membership_history_issue",
-          "columns": [
-            {
-              "expression": "workspace_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "issue_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "cycle_membership_history_workspace_id_organization_id_fk": {
-          "name": "cycle_membership_history_workspace_id_organization_id_fk",
-          "tableFrom": "cycle_membership_history",
-          "tableTo": "organization",
-          "columnsFrom": [
-            "workspace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "cycle_membership_history_closure_fk": {
-          "name": "cycle_membership_history_closure_fk",
-          "tableFrom": "cycle_membership_history",
-          "tableTo": "cycle_closures",
-          "columnsFrom": [
-            "workspace_id",
-            "team_id",
-            "cycle_id"
-          ],
-          "columnsTo": [
-            "workspace_id",
-            "team_id",
-            "cycle_id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "cycle_membership_history_issue_fk": {
-          "name": "cycle_membership_history_issue_fk",
-          "tableFrom": "cycle_membership_history",
-          "tableTo": "issues",
-          "columnsFrom": [
-            "workspace_id",
-            "issue_id"
-          ],
-          "columnsTo": [
-            "workspace_id",
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "cycle_membership_history_once": {
-          "name": "cycle_membership_history_once",
-          "nullsNotDistinct": false,
-          "columns": [
-            "cycle_id",
-            "issue_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "cycle_membership_history_revision": {
-          "name": "cycle_membership_history_revision",
-          "value": "\"cycle_membership_history\".\"issue_revision\" >= 0"
-        },
-        "cycle_membership_history_status": {
-          "name": "cycle_membership_history_status",
-          "value": "\"cycle_membership_history\".\"status_group\" IN ('backlog','unstarted','started','completed','canceled','duplicate')"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.cycle_rollover_teams": {
-      "name": "cycle_rollover_teams",
-      "schema": "",
-      "columns": {
-        "team_id": {
-          "name": "team_id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "workspace_id": {
-          "name": "workspace_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "enabled_at": {
-          "name": "enabled_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "clock_timestamp()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "cycle_rollover_teams_workspace_id_organization_id_fk": {
-          "name": "cycle_rollover_teams_workspace_id_organization_id_fk",
-          "tableFrom": "cycle_rollover_teams",
-          "tableTo": "organization",
-          "columnsFrom": [
-            "workspace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "cycle_rollover_team_fk": {
-          "name": "cycle_rollover_team_fk",
-          "tableFrom": "cycle_rollover_teams",
-          "tableTo": "teams",
-          "columnsFrom": [
-            "workspace_id",
-            "team_id"
-          ],
-          "columnsTo": [
-            "workspace_id",
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.document_revisions": {
       "name": "document_revisions",
       "schema": "",
@@ -13076,6 +12754,273 @@
           ],
           "columnsTo": [
             "workspace_id",
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.inbox_activation": {
+      "name": "inbox_activation",
+      "schema": "",
+      "columns": {
+        "consumer": {
+          "name": "consumer",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "activated_at": {
+          "name": "activated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "clock_timestamp()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.inbox_activity": {
+      "name": "inbox_activity",
+      "schema": "",
+      "columns": {
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "issue_id": {
+          "name": "issue_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "command_id": {
+          "name": "command_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_id": {
+          "name": "event_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "delivery_revision": {
+          "name": "delivery_revision",
+          "type": "bigserial",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "inbox_activity_recipient_order": {
+          "name": "inbox_activity_recipient_order",
+          "columns": [
+            {
+              "expression": "workspace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "command_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "inbox_activity_workspace_id_organization_id_fk": {
+          "name": "inbox_activity_workspace_id_organization_id_fk",
+          "tableFrom": "inbox_activity",
+          "tableTo": "organization",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "inbox_activity_user_id_user_id_fk": {
+          "name": "inbox_activity_user_id_user_id_fk",
+          "tableFrom": "inbox_activity",
+          "tableTo": "user",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "inbox_activity_event_id_command_outbox_events_id_fk": {
+          "name": "inbox_activity_event_id_command_outbox_events_id_fk",
+          "tableFrom": "inbox_activity",
+          "tableTo": "command_outbox_events",
+          "columnsFrom": [
+            "event_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "inbox_activity_workspace_id_issue_id_issues_workspace_id_id_fk": {
+          "name": "inbox_activity_workspace_id_issue_id_issues_workspace_id_id_fk",
+          "tableFrom": "inbox_activity",
+          "tableTo": "issues",
+          "columnsFrom": [
+            "workspace_id",
+            "issue_id"
+          ],
+          "columnsTo": [
+            "workspace_id",
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "inbox_activity_workspace_id_command_id_command_receipts_workspace_id_id_fk": {
+          "name": "inbox_activity_workspace_id_command_id_command_receipts_workspace_id_id_fk",
+          "tableFrom": "inbox_activity",
+          "tableTo": "command_receipts",
+          "columnsFrom": [
+            "workspace_id",
+            "command_id"
+          ],
+          "columnsTo": [
+            "workspace_id",
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "inbox_activity_workspace_id_user_id_issue_id_command_id_pk": {
+          "name": "inbox_activity_workspace_id_user_id_issue_id_command_id_pk",
+          "columns": [
+            "workspace_id",
+            "user_id",
+            "issue_id",
+            "command_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "inbox_activity_kind": {
+          "name": "inbox_activity_kind",
+          "value": "\"inbox_activity\".\"kind\" IN ('assignment','mention','comment','reply','status','update','reaction')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.inbox_deliveries": {
+      "name": "inbox_deliveries",
+      "schema": "",
+      "columns": {
+        "event_id": {
+          "name": "event_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "recipient_ids": {
+          "name": "recipient_ids",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "next_recipient": {
+          "name": "next_recipient",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "complete": {
+          "name": "complete",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "delivered_at": {
+          "name": "delivered_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "clock_timestamp()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "inbox_deliveries_event_id_command_outbox_events_id_fk": {
+          "name": "inbox_deliveries_event_id_command_outbox_events_id_fk",
+          "tableFrom": "inbox_deliveries",
+          "tableTo": "command_outbox_events",
+          "columnsFrom": [
+            "event_id"
+          ],
+          "columnsTo": [
             "id"
           ],
           "onDelete": "cascade",

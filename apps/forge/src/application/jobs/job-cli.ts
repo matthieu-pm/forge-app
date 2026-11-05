@@ -14,6 +14,17 @@ export async function jobCommand(store: JobStore, args: Array<string>) {
     const { databaseClient } = await import("@/db")
     return runCycleRollovers(databaseClient, store)
   }
+  if (
+    (action === "activate-inbox" || action === "run-inbox") &&
+    args.length === 1
+  ) {
+    const { activateInbox, runInbox } =
+      await import("../inbox/inbox-delivery.server")
+    const { databaseClient } = await import("@/db")
+    return action === "activate-inbox"
+      ? activateInbox(databaseClient)
+      : runInbox(databaseClient)
+  }
   if (action === "run-sla" && args.length === 1) {
     const { runSlaJobs } = await import("../sla/sla-jobs")
     const { databaseClient } = await import("@/db")
