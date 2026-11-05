@@ -81,6 +81,8 @@ execution does not run retention or retry business effects itself.
 | Database connection slots                  | —                        | No unreserved physical slots left | PostgreSQL settings/`pg_stat_activity`; this is not PgBouncer wait time       |
 | Missing/future enabled sample              | —                        | Immediate                         | Explicit `SIGNAL_MISSING`                                                     |
 | External sample age                        | —                        | >2 min                            | Explicit `SIGNAL_STALE`; collection gaps cannot prove sustained saturation    |
+| Admitted unfinished outbox delivery age     | >30 s                    | >60 s                             | Outbox jobs, enabled with `FORGE_MONITOR_OUTBOX=true`                           |
+| Outbox dead letter or reconciliation        | —                        | Immediate                         | Aggregate retained outbox job states                                           |
 
 The initial workflow queue is the currently implemented durable substrate, not a
 claim that future FOR-64 jobs already exist. New workers must extend collectors
@@ -88,9 +90,14 @@ and parity tests at their enablement gates. Physical database slot detection doe
 not prove CPU, I/O, pooler or capacity health; those require external provider
 monitoring/load evidence. No new agent concurrency limit is introduced.
 
-`evaluateMonitor` also defines the accepted outbox/inbox lag, failed-upload age
+The [outbox runbook](outbox-delivery.md) covers `OUTBOX_DEAD` and
+`OUTBOX_RECONCILIATION_REQUIRED`, inspection and same-job recovery. Its collector
+measures admitted deliveries; consumer scheduling, unadmitted-event lag and real
+provider/on-call routing need integration acceptance.
+
+`evaluateMonitor` also defines the accepted inbox lag, failed-upload age
 (>1 h), sustained backlog and account/issue synthetic result contracts. Their
-canonical backends are separate issues. Enabling `FORGE_MONITOR_OUTBOX`,
+canonical backends are separate issues. Enabling
 `FORGE_MONITOR_UPLOADS`, `FORGE_MONITOR_ACCOUNT_JOURNEY` or
 `FORGE_MONITOR_ISSUE_JOURNEY` without real samples produces `SIGNAL_MISSING`,
 never a green result. Do not present initial email events as a complete inbox

@@ -12,6 +12,9 @@ The substrate has no public HTTP API. The existing scheduler/CI invokes product 
 
 ## Worker contract
 
+The [FOR-33 outbox adapter](outbox-delivery.md) reuses this contract for committed
+event selection, provider reconciliation and per-consumer delivery checkpoints.
+
 - `enqueue` binds `(kind, scope, identity)` to canonical input hash, due time and retry budget. Use versioned kinds and immutable reference-only inputs; keep bodies, credentials and transcripts out. Changed input under an existing identity conflicts. Use a new version for changed checkpoint semantics.
 - `claim` reaps only its requested kind/job ID, then atomically locks one due job with `SKIP LOCKED`. Every claim increments generation, attempt and lifetime attempt count and generates a fresh UUID token. Default lease is five minutes. A handler must renew between bounded steps, and external calls must fit the lease or arrange renewal. Renewal fails after expiry; it cannot resurrect ownership.
 - `sqlStep` locks the job, checks token/generation/expiry, executes a **SQL-only callback on the supplied connection**, writes its bounded JSON result checkpoint, then checks expiry again before commit. Never use the global DB client or make external calls in this callback. Cached results skip the callback on replay. This API does not replace actor/resource authorization in domain commands. Such handlers must authorize in the same transaction using the relevant domain boundary; effects, receipts and outbox intents must share it.
