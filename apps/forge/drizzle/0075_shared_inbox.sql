@@ -10,6 +10,7 @@ CREATE TABLE "inbox_activity" (
 	"command_id" uuid NOT NULL,
 	"event_id" uuid NOT NULL,
 	"kind" text NOT NULL,
+	"delivery_revision" bigserial NOT NULL,
 	"occurred_at" timestamp with time zone NOT NULL,
 	CONSTRAINT "inbox_activity_workspace_id_user_id_issue_id_command_id_pk" PRIMARY KEY("workspace_id","user_id","issue_id","command_id"),
 	CONSTRAINT "inbox_activity_kind" CHECK ("inbox_activity"."kind" IN ('assignment','mention','comment','reply','status','update','reaction'))
@@ -17,6 +18,9 @@ CREATE TABLE "inbox_activity" (
 --> statement-breakpoint
 CREATE TABLE "inbox_deliveries" (
 	"event_id" uuid PRIMARY KEY NOT NULL,
+	"recipient_ids" jsonb DEFAULT '[]'::jsonb NOT NULL,
+	"next_recipient" integer DEFAULT 0 NOT NULL,
+	"complete" boolean DEFAULT true NOT NULL,
 	"delivered_at" timestamp with time zone DEFAULT clock_timestamp() NOT NULL
 );
 --> statement-breakpoint

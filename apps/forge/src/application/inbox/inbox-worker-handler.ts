@@ -27,11 +27,17 @@ export async function handleInboxWorker(
     })
   try {
     const result = await run()
-    const failed = result.outcomes.filter((o) => o.state !== "completed").length
+    const failed = result.outcomes.filter(
+      (o) => !["completed", "deferred"].includes(o.state)
+    ).length
+    const deferred = result.outcomes.filter(
+      (o) => o.state === "deferred"
+    ).length
     return Response.json(
       {
         scheduled: result.scheduled,
-        completed: result.outcomes.length - failed,
+        completed: result.outcomes.length - failed - deferred,
+        deferred,
         failed,
         inactive: result.inactive ?? false,
       },

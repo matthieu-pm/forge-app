@@ -21,6 +21,7 @@ export const inboxIssueSchema = z.object({
   id: z.string().min(1),
   identifier: z.string().min(1),
   title: z.string().min(1),
+  revision: z.number().int().nonnegative().optional(),
   description: z.string(),
   status: z.string(),
   statusType: z
@@ -50,7 +51,10 @@ export const sharedInboxPageSchema = sharedInboxQuerySchema.extend({
   entries: z.array(
     z.object({
       id: z.string(),
-      issue: inboxIssueSchema,
+      issue: inboxIssueSchema.extend({
+        revision: z.number().int().nonnegative(),
+      }),
+      deliveryRevision: z.string().regex(/^[0-9]+$/),
       events: z.array(inboxEventSchema),
     })
   ),

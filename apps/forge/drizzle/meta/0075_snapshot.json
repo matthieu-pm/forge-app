@@ -1,5 +1,5 @@
 {
-  "id": "13418c13-fa1c-466d-b9ec-61fc0340e064",
+  "id": "1903303e-4c5d-41dd-a3d4-af9cb5d86171",
   "prevId": "83721a64-974c-4d5c-8869-8334ac1b4f5e",
   "version": "7",
   "dialect": "postgresql",
@@ -12832,6 +12832,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "delivery_revision": {
+          "name": "delivery_revision",
+          "type": "bigserial",
+          "primaryKey": false,
+          "notNull": true
+        },
         "occurred_at": {
           "name": "occurred_at",
           "type": "timestamp with time zone",
@@ -12975,6 +12981,27 @@
           "type": "uuid",
           "primaryKey": true,
           "notNull": true
+        },
+        "recipient_ids": {
+          "name": "recipient_ids",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "next_recipient": {
+          "name": "next_recipient",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "complete": {
+          "name": "complete",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
         },
         "delivered_at": {
           "name": "delivered_at",

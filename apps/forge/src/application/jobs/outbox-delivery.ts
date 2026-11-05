@@ -208,28 +208,42 @@ export function outboxDelivery(
               [eventId, workspaceId, consumer.topic]
             )
           ).rows.at(0)
-          if (!row) throw new JobError("INVALID_INPUT", true)
-          let payload: unknown
-          try {
-            payload = consumer.parse(row.payload)
-          } catch {
-            throw new JobError("INVALID_INPUT", true)
+          if (!row) {
+            const terminal: unknown = await consumer.reconcile(identity)
+            if (
+              !terminal ||
+              typeof terminal !== "object" ||
+              !("state" in terminal)
+            )
+              throw new JobError("RECONCILIATION_REQUIRED")
+            if (terminal.state === "accepted" && "receipt" in terminal)
+              receipt = terminal.receipt
+            else if (terminal.state === "absent")
+              throw new JobError("INVALID_INPUT", true)
+            else throw new JobError("RECONCILIATION_REQUIRED")
+          } else {
+            let payload: unknown
+            try {
+              payload = consumer.parse(row.payload)
+            } catch {
+              throw new JobError("INVALID_INPUT", true)
+            }
+            await assertDispatchable()
+            receipt = await consumer.deliver(
+              {
+                version: 1,
+                id: row.id,
+                workspaceId: row.workspace_id,
+                commandId: row.command_id,
+                ordinal: row.ordinal,
+                topic: row.topic,
+                eventVersion: consumer.eventVersion,
+                createdAt: new Date(row.created_at).toISOString(),
+                payload,
+              },
+              identity
+            )
           }
-          await assertDispatchable()
-          receipt = await consumer.deliver(
-            {
-              version: 1,
-              id: row.id,
-              workspaceId: row.workspace_id,
-              commandId: row.command_id,
-              ordinal: row.ordinal,
-              topic: row.topic,
-              eventVersion: consumer.eventVersion,
-              createdAt: new Date(row.created_at).toISOString(),
-              payload,
-            },
-            identity
-          )
         } else throw new JobError("RECONCILIATION_REQUIRED")
         if (
           !receipt ||
@@ -262,17 +276,20 @@ export async function runOutbox(
   const handler = outboxDelivery(pool, consumers)
   const scheduled = await scheduleOutbox(pool, store, consumers, limit)
   const outcomes = []
-  while (outcomes.length < limit) {
-    let active = false
-    for (const consumer of consumers) {
-      if (outcomes.length === limit) break
-      const result = await runNextJob(store, outboxKind(consumer.id), handler)
-      if (result.state !== "idle") {
-        outcomes.push(result)
-        active = true
-      }
-    }
-    if (!active) break
+  const kinds = consumers.map((consumer) => outboxKind(consumer.id))
+  for (const kind of kinds) await store.reap(kind)
+  for (let attempt = 0; attempt < limit; attempt++) {
+    const next = (
+      await pool.query(
+        `SELECT id,kind FROM background_jobs WHERE kind=ANY($1::text[])
+       AND state IN ('queued','retry') AND available_at<=clock_timestamp() AND attempts<max_attempts
+       ORDER BY available_at,id LIMIT 1`,
+        [kinds]
+      )
+    ).rows.at(0)
+    if (!next) break
+    const result = await runNextJob(store, next.kind, handler, next.id)
+    if (result.state !== "idle") outcomes.push(result)
   }
   return { scheduled: scheduled.length, outcomes }
 }

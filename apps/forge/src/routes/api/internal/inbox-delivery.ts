@@ -10,7 +10,7 @@ export const Route = createFileRoute("/api/internal/inbox-delivery")({
             import("@/application/inbox/inbox-delivery.server"),
             import("@/db"),
           ])
-          return runInbox(databaseClient, 10)
+          return runInbox(databaseClient, 1)
         }),
     },
   },

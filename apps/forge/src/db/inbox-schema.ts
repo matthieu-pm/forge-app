@@ -1,8 +1,12 @@
 import { sql } from "drizzle-orm"
 import {
+  bigserial,
+  boolean,
   check,
   foreignKey,
   index,
+  integer,
+  jsonb,
   pgTable,
   primaryKey,
   text,
@@ -24,6 +28,12 @@ export const inboxDeliveries = pgTable("inbox_deliveries", {
   eventId: uuid("event_id")
     .primaryKey()
     .references(() => commandOutboxEvents.id, { onDelete: "cascade" }),
+  recipientIds: jsonb("recipient_ids")
+    .$type<Array<string>>()
+    .notNull()
+    .default([]),
+  nextRecipient: integer("next_recipient").notNull().default(0),
+  complete: boolean("complete").notNull().default(true),
   deliveredAt: timestamp("delivered_at", { withTimezone: true })
     .notNull()
     .default(sql`clock_timestamp()`),
@@ -44,6 +54,9 @@ export const inboxActivity = pgTable(
       .notNull()
       .references(() => commandOutboxEvents.id, { onDelete: "cascade" }),
     kind: text("kind").notNull(),
+    deliveryRevision: bigserial("delivery_revision", {
+      mode: "bigint",
+    }).notNull(),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
   },
   (t) => [

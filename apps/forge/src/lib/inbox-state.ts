@@ -27,6 +27,7 @@ export const inboxUpdateSchema = eventSchema.extend({
 })
 const entrySchema = z.object({
   id: z.string(),
+  deliveryRevision: z.string().optional(),
   issue: issueSchema.nullable(),
   events: z.array(eventSchema),
   unread: z.boolean(),

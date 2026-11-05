@@ -57,7 +57,11 @@ function subscribeIdentity(notify: () => void) {
     window.removeEventListener(identityChanged, notify)
   }
 }
-const stamp = (entry: { events: InboxEntry["events"] }) => {
+const stamp = (entry: {
+  events: InboxEntry["events"]
+  deliveryRevision?: string
+}) => {
+  if (entry.deliveryRevision) return entry.deliveryRevision
   const latest = entry.events.at(-1)
   return latest ? `${latest.createdAt}:${latest.id}:${latest.kind}` : ""
 }
@@ -143,9 +147,18 @@ export function useSharedInbox(scope: InboxScope) {
               previous
                 ? {
                     ...previous,
+                    issue:
+                      entry.issue.revision >= previous.issue.revision
+                        ? entry.issue
+                        : previous.issue,
+                    deliveryRevision:
+                      BigInt(entry.deliveryRevision) >
+                      BigInt(previous.deliveryRevision)
+                        ? entry.deliveryRevision
+                        : previous.deliveryRevision,
                     events: [
                       ...new Map(
-                        [...entry.events, ...previous.events].map((e) => [
+                        [...previous.events, ...entry.events].map((e) => [
                           e.id,
                           e,
                         ])
@@ -222,8 +235,10 @@ export function useSharedInbox(scope: InboxScope) {
         local.deletedThrough = stamp(entry)
       if (action.type === "delete" && action.id === entry.id)
         local.deletedThrough = action.deleted ? stamp(entry) : undefined
-      if (action.type === "snooze" && action.id === entry.id)
+      if (action.type === "snooze" && action.id === entry.id) {
         local.snoozedUntil = action.until
+        if (action.until !== null) local.readThrough = undefined
+      }
       next[entry.id] = local
     }
     try {

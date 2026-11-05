@@ -34,6 +34,8 @@ export default defineConfig(async (environment) => {
   process.env.BETTER_AUTH_URL = "http://localhost:3165"
   process.env.BETTER_AUTH_SECRET ??= randomBytes(32).toString("hex")
   process.env.FORGE_PERSONAL_PREFERENCE_SYNC_ENABLED = "true"
+  process.env.FORGE_INBOX_DELIVERY_ENABLED = "true"
+  process.env.FORGE_INBOX_DELIVERY_SECRET = randomBytes(32).toString("hex")
   const config =
     typeof base === "function" ? await base(environment) : await base
   return mergeConfig(config, {

@@ -21,7 +21,9 @@ try {
       ("state" in result &&
         !["idle", "completed"].includes(String(result.state))) ||
       ("outcomes" in result &&
-        result.outcomes.some((outcome) => outcome.state !== "completed"))
+        result.outcomes.some(
+          (outcome) => !["completed", "deferred"].includes(outcome.state)
+        ))
     )
       process.exitCode = 1
   } finally {

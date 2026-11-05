@@ -48,6 +48,14 @@ export async function queryInbox(
         current.authentication.kind === "session"
           ? current.authentication.sessionId
           : ""
+      if (process.env.FORGE_INBOX_DELIVERY_ENABLED !== "true")
+        return {
+          workspaceId: current.workspaceId,
+          userId: current.userId,
+          sessionId,
+          entries: [],
+          nextCursor: null,
+        }
       const binding = createHash("sha256")
         .update(
           JSON.stringify([
@@ -67,7 +75,9 @@ export async function queryInbox(
       }
       const rows = (
         await tx.execute(sql`
+      WITH authorized AS (
       SELECT n.issue_id,n.command_id,n.kind,e.payload,a.actor_user_id,coalesce(u.name,'Former member') actor_name,
+        max(n.delivery_revision) OVER (PARTITION BY n.issue_id)::text AS delivery_revision,
         to_char(n.occurred_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') occurred_at
       FROM inbox_activity n
       JOIN command_outbox_events e ON e.id=n.event_id AND e.workspace_id=n.workspace_id
@@ -79,8 +89,9 @@ export async function queryInbox(
           SELECT 1 FROM issues i,jsonb_array_elements(coalesce(i.properties->'comments','[]'::jsonb)) c
           WHERE i.id=n.issue_id AND c->>'id'=e.payload->>'commentId' AND coalesce(c->>'deleted','false')<>'true'
         ))
-        ${before ? sql`AND (n.occurred_at,n.issue_id,n.command_id)<(${before.time}::timestamptz,${before.issueId}::uuid,${before.commandId}::uuid)` : sql``}
-      ORDER BY n.occurred_at DESC,n.issue_id DESC,n.command_id DESC LIMIT 101
+      ) SELECT * FROM authorized
+      ${before ? sql`WHERE (occurred_at::timestamptz,issue_id,command_id)<(${before.time}::timestamptz,${before.issueId}::uuid,${before.commandId}::uuid)` : sql``}
+      ORDER BY occurred_at DESC,issue_id DESC,command_id DESC LIMIT 101
     `)
       ).rows as Array<{
         issue_id: string
@@ -90,6 +101,7 @@ export async function queryInbox(
         actor_user_id: string
         actor_name: string
         occurred_at: string
+        delivery_revision: string
       }>
       const page = rows.slice(0, 100)
       const ids = [...new Set(page.map((r) => r.issue_id))]
@@ -145,10 +157,12 @@ export async function queryInbox(
         if (!entry) {
           entry = {
             id: `issue:${issue.id}`,
+            deliveryRevision: row.delivery_revision,
             issue: {
               id: issue.id,
               identifier: `${teamRows.find((t) => t.id === record.teamId)?.identifier ?? "ISSUE"}-${issue.number}`,
               title: issue.title,
+              revision: issue.revision ?? 0,
               description: issue.description,
               status: status?.name ?? issue.status,
               statusType: status?.group,

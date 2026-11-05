@@ -42,7 +42,20 @@ it("reports aggregate outcomes and returns failure for inactive or failed delive
   expect(await response.json()).toEqual({
     scheduled: 1,
     completed: 1,
+    deferred: 0,
     failed: 0,
     inactive: false,
+  })
+})
+
+it("reports a resumable batch as progress instead of a failed delivery", async () => {
+  const response = await handleInboxWorker(request(), env, () =>
+    Promise.resolve({ scheduled: 1, outcomes: [{ state: "deferred" }] })
+  )
+  expect(response.status).toBe(200)
+  expect(await response.json()).toMatchObject({
+    completed: 0,
+    deferred: 1,
+    failed: 0,
   })
 })

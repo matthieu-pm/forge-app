@@ -30,7 +30,7 @@ export async function runNextJob(
     } catch (error) {
       if (error instanceof JobDeferred) {
         try {
-          await store.defer(lease)
+          await store.defer(lease, error.delayMs)
           return { state: "deferred" as const, id: lease.id }
         } catch (failure) {
           if (failure instanceof JobError && failure.code === "LEASE_LOST")

@@ -1,6 +1,10 @@
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, expect, it, vi } from "vitest"
-import { publishInboxUpdate, useInbox } from "./inbox-state"
+import {
+  publishInboxUpdate,
+  useInbox,
+  visibleInboxEntries,
+} from "./inbox-state"
 import { replaceCanonicalIssues } from "./canonical-issue-cache"
 import { invalidatePreferenceSession } from "./preference-session-events"
 import { loadSharedInbox } from "./shared-inbox-functions"
@@ -20,7 +24,8 @@ const page = (
   entries: [
     {
       id: "issue:authorized",
-      issue: { ...update().issue, id: "authorized", title },
+      deliveryRevision: "1",
+      issue: { ...update().issue, id: "authorized", title, revision: 1 },
       events: [
         {
           ...update(),
@@ -168,4 +173,92 @@ it("older pages merge once per issue without replacing the newest snapshot", asy
     "committed",
   ])
   expect(result.current.hasMore).toBe(false)
+})
+
+it("new late-delivered activity resurfaces a read and deleted group", async () => {
+  const first = page()
+  Object.assign(first.entries[0], { deliveryRevision: "1" })
+  vi.mocked(loadSharedInbox).mockResolvedValueOnce(first)
+  const { result } = renderHook(() => useInbox(scope))
+  await waitFor(() => expect(result.current.state.entries).toHaveLength(1))
+  act(() =>
+    result.current.dispatch({
+      type: "read",
+      ids: ["issue:authorized"],
+      unread: false,
+    })
+  )
+  act(() =>
+    result.current.dispatch({
+      type: "delete",
+      id: "issue:authorized",
+      deleted: true,
+    })
+  )
+  const next = page()
+  Object.assign(next.entries[0], { deliveryRevision: "2" })
+  next.entries[0].events.unshift({
+    ...next.entries[0].events[0],
+    id: "late",
+    createdAt: "2026-11-04T10:00:00Z",
+  })
+  vi.mocked(loadSharedInbox).mockResolvedValueOnce(next)
+  act(() => result.current.refresh())
+  await waitFor(() =>
+    expect(result.current.state.entries[0].events).toHaveLength(2)
+  )
+  expect(result.current.state.entries[0]).toMatchObject({
+    unread: true,
+    deleted: false,
+  })
+})
+
+it("snoozing a read entry makes it unread when it wakes", async () => {
+  vi.mocked(loadSharedInbox).mockResolvedValue(page())
+  const { result } = renderHook(() => useInbox(scope))
+  await waitFor(() => expect(result.current.state.entries).toHaveLength(1))
+  act(() =>
+    result.current.dispatch({
+      type: "read",
+      ids: ["issue:authorized"],
+      unread: false,
+    })
+  )
+  const until = Date.now() + 60_000
+  act(() =>
+    result.current.dispatch({ type: "snooze", id: "issue:authorized", until })
+  )
+  expect(
+    visibleInboxEntries(result.current.state, {
+      view: "inbox",
+      filter: "all",
+      unreadOnly: true,
+      now: until + 1,
+    })
+  ).toHaveLength(1)
+})
+
+it("pagination accepts a newer canonical issue snapshot returned on a later page", async () => {
+  const first = { ...page("Old title"), nextCursor: "older" }
+  Object.assign(first.entries[0].issue, { revision: 1 })
+  const later = page("Current title")
+  Object.assign(later.entries[0].issue, { revision: 2 })
+  later.entries[0].events = [
+    {
+      ...later.entries[0].events[0],
+      id: "older",
+      createdAt: "2026-11-04T10:00:00Z",
+    },
+  ]
+  vi.mocked(loadSharedInbox)
+    .mockResolvedValueOnce(first)
+    .mockResolvedValueOnce(first)
+    .mockResolvedValueOnce(later)
+  const { result } = renderHook(() => useInbox(scope))
+  await waitFor(() => expect(result.current.hasMore).toBe(true))
+  act(() => result.current.loadMore())
+  await waitFor(() =>
+    expect(result.current.state.entries[0].events).toHaveLength(2)
+  )
+  expect(result.current.state.entries[0].issue?.title).toBe("Current title")
 })

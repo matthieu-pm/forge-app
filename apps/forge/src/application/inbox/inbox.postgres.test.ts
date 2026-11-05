@@ -116,7 +116,7 @@ describe.skipIf(!connection)(
     const events = async () =>
       (
         await pool.query(
-          "SELECT id,topic,payload FROM command_outbox_events WHERE workspace_id=$1 ORDER BY created_at,ordinal,id",
+          "SELECT * FROM command_outbox_events WHERE workspace_id=$1 ORDER BY created_at,ordinal,id",
           [workspace]
         )
       ).rows
@@ -126,6 +126,7 @@ describe.skipIf(!connection)(
       return result
     }
     beforeAll(async () => {
+      vi.stubEnv("FORGE_INBOX_DELIVERY_ENABLED", "true")
       const target = new URL(connection!)
       if (
         target.hostname !== "127.0.0.1" ||
@@ -150,6 +151,14 @@ describe.skipIf(!connection)(
       editing = await import("@/application/issues/edit-issues.server")
     }, 30000)
     beforeEach(async () => {
+      await pool.query(
+        "DELETE FROM background_job_steps WHERE job_id IN (SELECT id FROM background_jobs WHERE input->>'workspaceId'=ANY($1))",
+        [workspaces]
+      )
+      await pool.query(
+        "DELETE FROM background_jobs WHERE input->>'workspaceId'=ANY($1)",
+        [workspaces]
+      )
       await pool.query("DELETE FROM inbox_activation")
       workspace = `for65-${randomUUID()}`
       workspaces.push(workspace)
@@ -196,6 +205,7 @@ describe.skipIf(!connection)(
       const database = await import("@/db")
       await database.databaseClient.end()
       await pool.end()
+      vi.unstubAllEnvs()
     })
 
     it("activation excludes history, survives restart and does not move on retries", async () => {
@@ -209,6 +219,266 @@ describe.skipIf(!connection)(
       await addComment(true, "New activity ")
       await drain()
       expect((await query.queryInbox(bob)).entries[0].events).toHaveLength(1)
+    })
+
+    it("disabled rollout reads safely before the inbox migration exists", async () => {
+      vi.stubEnv("FORGE_INBOX_DELIVERY_ENABLED", "false")
+      await pool.query(
+        "ALTER TABLE inbox_activity RENAME TO for65_pending_inbox_activity"
+      )
+      try {
+        expect((await query.queryInbox(bob)).entries).toEqual([])
+      } finally {
+        await pool.query(
+          "ALTER TABLE for65_pending_inbox_activity RENAME TO inbox_activity"
+        )
+        vi.stubEnv("FORGE_INBOX_DELIVERY_ENABLED", "true")
+      }
+    })
+
+    it("a source event purged after scheduling finishes without a false dead letter", async () => {
+      await delivery.activateInbox(pool)
+      await addComment(true)
+      const { scheduleOutbox } = await import("../jobs/outbox-delivery")
+      const { jobStore } = await import("../jobs/job-store")
+      await scheduleOutbox(
+        pool,
+        jobStore(pool),
+        await delivery.inboxConsumers(pool)
+      )
+      await pool.query(
+        "DELETE FROM command_outbox_events WHERE workspace_id=$1",
+        [workspace]
+      )
+      const result = await delivery.runInbox(pool)
+      expect(result.outcomes.length).toBeGreaterThan(0)
+      expect(result.outcomes.every((o) => o.state === "completed")).toBe(true)
+    })
+
+    it("source purge between reconciliation and source loading also completes safely", async () => {
+      await delivery.activateInbox(pool)
+      await addComment(true)
+      const { runOutbox } = await import("../jobs/outbox-delivery")
+      const consumer = (await delivery.inboxConsumers(pool)).find(
+        (c) => c.topic === "issue.comment.mentioned"
+      )!
+      const reconcile = consumer.reconcile
+      let first = true
+      consumer.reconcile = async (identity) => {
+        const result = await reconcile(identity)
+        if (first) {
+          first = false
+          await pool.query("DELETE FROM command_outbox_events WHERE id=$1", [
+            identity.eventId,
+          ])
+        }
+        return result
+      }
+      expect(
+        (await runOutbox(pool, [consumer], 1)).outcomes.map((o) => o.state)
+      ).toEqual(["completed"])
+    })
+
+    it("single-job drains choose older discussion ahead of newer creation jobs", async () => {
+      await delivery.activateInbox(pool)
+      await subscribe()
+      await addComment(true)
+      for (let i = 0; i < 3; i++)
+        await creation.createCanonicalIssue(alice, {
+          teamId,
+          commandKey: randomUUID(),
+          draft: { ...blankIssueDraft("todo"), title: `New issue ${i}` },
+        })
+      const { scheduleOutbox } = await import("../jobs/outbox-delivery")
+      const { jobStore } = await import("../jobs/job-store")
+      await scheduleOutbox(
+        pool,
+        jobStore(pool),
+        await delivery.inboxConsumers(pool)
+      )
+      await delivery.runInbox(pool, 1)
+      expect(
+        (await query.queryInbox(bob)).entries.some(
+          (entry) => entry.issue.id === issueId
+        )
+      ).toBe(true)
+    })
+
+    it("an aborted reconciliation lookup does not wait for a locked receipt table", async () => {
+      await delivery.activateInbox(pool)
+      await addComment(true)
+      const row = (await events()).find(
+        (e) => e.topic === "issue.comment.mentioned"
+      )!
+      const consumer = (await delivery.inboxConsumers(pool)).find(
+        (c) => c.topic === row.topic
+      )!
+      const blocker = await pool.connect()
+      await blocker.query("BEGIN")
+      await blocker.query(
+        "LOCK TABLE inbox_deliveries IN ACCESS EXCLUSIVE MODE"
+      )
+      const identity = {
+        eventId: row.id,
+        consumerId: consumer.id,
+        providerId: consumer.providerId,
+        idempotencyKey: randomUUID(),
+        deadline: new Date(Date.now() + 60_000),
+        signal: AbortSignal.timeout(75),
+      }
+      const outcome = consumer.reconcile(identity).then(
+        () => "accepted",
+        () => "aborted"
+      )
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      await blocker.query("COMMIT")
+      blocker.release()
+      expect(await outcome).toBe("aborted")
+    })
+
+    it("an aborted adapter waiting for the issue lock never delivers later", async () => {
+      await delivery.activateInbox(pool)
+      await addComment(true)
+      const row = (await events()).find(
+        (e) => e.topic === "issue.comment.mentioned"
+      )!
+      const consumer = (await delivery.inboxConsumers(pool)).find(
+        (c) => c.topic === row.topic
+      )!
+      const blocker = await pool.connect()
+      await blocker.query("BEGIN")
+      await blocker.query("SELECT forge_lock_issue_graph($1)", [workspace])
+      const identity = {
+        eventId: row.id,
+        consumerId: consumer.id,
+        providerId: consumer.providerId,
+        idempotencyKey: randomUUID(),
+        deadline: new Date(Date.now() + 60_000),
+        signal: AbortSignal.timeout(75),
+      }
+      const outcome = consumer
+        .deliver(
+          {
+            version: 1,
+            id: row.id,
+            workspaceId: workspace,
+            commandId: row.command_id,
+            ordinal: row.ordinal,
+            topic: row.topic,
+            eventVersion: 1,
+            createdAt: new Date(row.created_at).toISOString(),
+            payload: row.payload,
+          },
+          identity
+        )
+        .then(
+          () => "accepted",
+          () => "aborted"
+        )
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      await blocker.query("COMMIT")
+      blocker.release()
+      expect(await outcome).toBe("aborted")
+      expect(
+        (
+          await pool.query("SELECT * FROM inbox_activity WHERE user_id=$1", [
+            bob.userId,
+          ])
+        ).rows
+      ).toEqual([])
+    })
+
+    it("fanout resumes bounded recipient batches and rechecks pending recipients", async () => {
+      await delivery.activateInbox(pool)
+      await pool.query(
+        "INSERT INTO workspace_entitlements(workspace_id,plan,status,source) VALUES($1,'enterprise','active','internal')",
+        [workspace]
+      )
+      const recipients = [bob.userId]
+      for (let i = 0; i < delivery.INBOX_RECIPIENT_BATCH + 1; i++) {
+        const member = await actor(
+          `${workspace}-recipient-${String(i).padStart(2, "0")}`,
+          "member"
+        )
+        recipients.push(member.userId)
+      }
+      await pool.query(
+        "UPDATE issues SET properties=jsonb_set(properties,'{subscribers}',to_jsonb($2::text)) WHERE id=$1",
+        [issueId, recipients.join(", ")]
+      )
+      await addComment()
+      const first = await delivery.runInbox(pool, 1)
+      expect(first.outcomes.map((o) => o.state)).toEqual(["deferred"])
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int n FROM inbox_activity WHERE workspace_id=$1",
+            [workspace]
+          )
+        ).rows[0].n
+      ).toBe(delivery.INBOX_RECIPIENT_BATCH)
+      const pending = (
+        await pool.query(
+          "SELECT d.* FROM inbox_deliveries d JOIN command_outbox_events e ON e.id=d.event_id WHERE e.workspace_id=$1 AND NOT d.complete",
+          [workspace]
+        )
+      ).rows[0]
+      expect(pending.next_recipient).toBe(delivery.INBOX_RECIPIENT_BATCH)
+      const removed = [...recipients].sort().at(-1)!
+      await pool.query(
+        "DELETE FROM member WHERE organization_id=$1 AND user_id=$2",
+        [workspace, removed]
+      )
+      await pool.query(
+        "UPDATE background_jobs SET available_at=clock_timestamp() WHERE input->>'workspaceId'=$1",
+        [workspace]
+      )
+      await drain()
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int n FROM inbox_activity WHERE workspace_id=$1",
+            [workspace]
+          )
+        ).rows[0].n
+      ).toBe(recipients.length - 1)
+      expect(
+        (
+          await pool.query(
+            "SELECT complete,next_recipient FROM inbox_deliveries WHERE event_id=$1",
+            [pending.event_id]
+          )
+        ).rows[0]
+      ).toMatchObject({ complete: true, next_recipient: recipients.length })
+      expect(
+        (
+          await pool.query("SELECT * FROM inbox_activity WHERE user_id=$1", [
+            removed,
+          ])
+        ).rows
+      ).toEqual([])
+    })
+
+    it("an older newly delivered event advances the group token but exact retries do not", async () => {
+      await delivery.activateInbox(pool)
+      await subscribe()
+      await addComment(false, "Older")
+      await addComment(false, "Newer")
+      const committed = (await events()).filter(
+        (e) => e.topic === "issue.comment.created"
+      )
+      await delivery.deliverInboxEvent(committed[1].id)
+      const before = (await query.queryInbox(bob)).entries[0]
+      await delivery.deliverInboxEvent(committed[0].id)
+      const after = (await query.queryInbox(bob)).entries[0]
+      expect(BigInt(after.deliveryRevision)).toBeGreaterThan(
+        BigInt(before.deliveryRevision)
+      )
+      expect(after.events.at(-1)?.id).toBe(before.events.at(-1)?.id)
+      await delivery.deliverInboxEvent(committed[0].id)
+      expect((await query.queryInbox(bob)).entries[0].deliveryRevision).toBe(
+        after.deliveryRevision
+      )
     })
 
     it("activation waits for uncommitted appends and includes appends from a transaction begun before activation", async () => {
