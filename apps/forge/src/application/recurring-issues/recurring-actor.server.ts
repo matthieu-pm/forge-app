@@ -1,7 +1,7 @@
 import "@tanstack/react-start/server-only"
 import { and, eq } from "drizzle-orm"
 import { ApplicationAccessError } from "../authorization"
-import { requireIssueTeam } from "../issues/issues.server"
+import { requireIssueTeam } from "../issues/issue-team-policy.server"
 import { requireFeatureWrite } from "../features/features.server"
 import type { Actor } from "../actor"
 import type { Transaction } from "@/db"
