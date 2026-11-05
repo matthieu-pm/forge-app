@@ -46,7 +46,6 @@ import {
   resourceLabels,
   teamIssueNumbers,
   teamMembers,
-  teams,
 } from "@/db"
 import {
   ApplicationAccessError,

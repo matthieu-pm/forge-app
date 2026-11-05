@@ -2,7 +2,7 @@ import "@tanstack/react-start/server-only"
 import { and, eq } from "drizzle-orm"
 import type { Actor } from "@/application/actor"
 import type { Transaction } from "@/db"
-import { teams, teamMembers } from "@/db"
+import { teamMembers, teams } from "@/db"
 import {
   ApplicationAccessError,
   hasWorkspaceRole,
