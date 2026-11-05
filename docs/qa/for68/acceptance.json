@@ -1,0 +1,46 @@
+{
+  "issue": "FOR-68",
+  "implementationCommit": "529186a9cbba8743bfdb92648b5113aa3f78d29d",
+  "environment": "dedicated local PostgreSQL 17 and labelled UI fixture",
+  "databaseTarget": {
+    "host": "127.0.0.1",
+    "port": 56468,
+    "database": "for68_recurring_test"
+  },
+  "acceptance": {
+    "AC-01_AT-01": "passed locally",
+    "AC-02_AT-02": "passed locally"
+  },
+  "checks": {
+    "appTests": {
+      "passed": 2888,
+      "skipped": 676
+    },
+    "focusedAcceptancePassed": 26,
+    "workflowPassed": 4,
+    "typecheck": "passed",
+    "build": "passed",
+    "lint": {
+      "errors": 0,
+      "warnings": 21
+    },
+    "format": "passed",
+    "diff": "passed"
+  },
+  "cleanup": {
+    "organizations": 0,
+    "users": 0,
+    "schedules": 0,
+    "occurrences": 0,
+    "events": 0,
+    "jobs": 0,
+    "receipts": 0
+  },
+  "postgresServer": "stopped",
+  "rollout": "disabled by default",
+  "productionMigration": "not performed",
+  "productionDeployment": "not performed",
+  "hostedAuthenticatedAcceptance": "not performed",
+  "liveSchedulerCadenceAndRegistration": "not performed",
+  "browserFixture": "synthetic save transport; actual editor/list; canonical generation tested separately on PostgreSQL"
+}
