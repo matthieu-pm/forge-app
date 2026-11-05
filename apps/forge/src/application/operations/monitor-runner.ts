@@ -68,6 +68,14 @@ export async function runMonitor(
     store.heartbeats(),
     store.samples(now),
   ])
+  const outbox =
+    env.FORGE_MONITOR_OUTBOX === "true" ? await store.outboxHealth(now) : null
+  const effectiveSamples = outbox
+    ? [
+        outbox.sample,
+        ...samples.filter((sample) => sample.key !== "outbox-age"),
+      ]
+    : samples
   const requiredSignals: Array<Metric> = [
     "job-age",
     "event-age",
@@ -90,9 +98,10 @@ export async function runMonitor(
     now: now + (performance.now() - started),
     jobs,
     heartbeats,
-    samples,
+    samples: effectiveSamples,
     requiredSignals,
   })
+  if (outbox) findings.push(...outbox.findings)
   const delivery = await dispatchFindings(findings, store, env, fetcher)
   return {
     status: delivery.failed

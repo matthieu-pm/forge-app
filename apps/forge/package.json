@@ -26,6 +26,7 @@
     "test": "vitest run && bun run test:workflow",
     "test:workflow": "vitest run --config vitest.workflow.config.ts",
     "test:jobs:postgres": "vitest run src/application/jobs/jobs.postgres.test.ts --testTimeout 30000",
+    "test:outbox:postgres": "vitest run src/application/jobs/outbox.postgres.test.ts --testTimeout 30000",
     "test:commands:postgres": "vitest run src/application/commands/commands.postgres.test.ts",
     "test:member-capacity:postgres": "bun scripts/test-member-capacity-postgres.mjs",
     "agent:policy:check": "bun scripts/check-agent-policy.ts",

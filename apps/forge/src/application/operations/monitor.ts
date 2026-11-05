@@ -44,6 +44,8 @@ export type Heartbeat = {
   failedAt?: number | null
 }
 export type AlertCode =
+  | "OUTBOX_DEAD"
+  | "OUTBOX_RECONCILIATION_REQUIRED"
   | "SWEEP_STALE"
   | "JOB_STALE"
   | "JOB_FAILED"
