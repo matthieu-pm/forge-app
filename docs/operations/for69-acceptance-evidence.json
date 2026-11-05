@@ -1,0 +1,37 @@
+{
+  "issue": "FOR-69",
+  "sourceRevision": "45ec47e8da386328e6e90881cbd29b57fdf78b99",
+  "environment": "dedicated local PostgreSQL 17.11 and local UI fixture",
+  "date": "2026-11-05",
+  "acceptance": {
+    "AC-01 / AT-01": {
+      "result": "passed",
+      "evidence": ["Duplicate dispatch/claim and repeated execution preserve one canonical issue", "Frozen membership/progress, one system history event and one closure receipt", "Carryover off preserves canonical membership"]
+    },
+    "AC-02 / AT-02": {
+      "result": "passed",
+      "evidence": ["Independent Bun worker SIGKILL before SQL commit leaves no partial closure", "SIGKILL after checkpoint commit resumes without repeating membership or outbox", "Latest completed/canceled/duplicate/moved issue state is preserved", "Unrelated title/description edits are retained; stale edits conflict"]
+    }
+  },
+  "validation": {
+    "appSuite": { "passed": 2898, "skippedEnvironmentGated": 672, "command": "bunx vitest run --maxWorkers=2 --testTimeout 30000" },
+    "workflowSuite": { "passed": 4, "command": "bun run test:workflow" },
+    "focusedSuite": { "passed": 32, "postgresScenarios": 11, "includes": ["rollover database acceptance", "scheduler authentication/failures", "UI gate/member controls", "history copy", "client query invalidation"] },
+    "initialBroadRun": "Four unrelated five-second timeouts; all 44 tests in those four files passed on bounded-worker rerun, followed by a clean full-suite run.",
+    "typecheck": "passed",
+    "changedFileLint": { "errors": 0, "warnings": 24 },
+    "productionBuildAndPrerender": "passed using explicit local build configuration",
+    "protectedWorkflowHandlers": "passed",
+    "diffCheck": "passed"
+  },
+  "migration": {
+    "file": "apps/forge/drizzle/0075_cycle_rollover.sql",
+    "sha256": "0a98fed6e35f46e443931bf6f2f779624bea3984d6fa5fcfd8b3f4df48b7298b",
+    "freshChainAppliedLocally": 76,
+    "rollbackRehearsal": "0075 applied inside transaction; three primary keys verified; rollback left closure table absent; then migration applied normally",
+    "drizzleSnapshotAgreement": "No schema changes on regeneration"
+  },
+  "cleanup": { "ownedWorkspaces": 0, "ownedUsers": 0, "rolloverJobs": 0, "closures": 0, "history": 0, "enrollments": 0, "localPostgresServer": "stopped" },
+  "browser": { "evidence": "docs/qa/for69/browser.json", "backend": "simulated UI fixture", "desktopAndMobile": "visually inspected", "mobileFrameWidth": 390, "mobileScrollWidth": 390 },
+  "releaseBoundary": { "default": "disabled without explicit workspace rollout", "productionMigration": false, "productionDeployment": false, "providerSchedulerConfigured": false, "hostedAuthenticatedAcceptance": false, "packagedMacOSAcceptance": false, "independentReview": false }
+}
