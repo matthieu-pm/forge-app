@@ -156,6 +156,9 @@ export function updateLabel(kind: string) {
         mention: "mentioned you",
         comment: "commented",
         status: "changed the status",
+        reply: "replied",
+        update: "updated this issue",
+        reaction: "reacted",
       } as Record<string, string>
     )[kind] ?? kind
   )

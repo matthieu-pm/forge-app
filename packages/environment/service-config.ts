@@ -266,6 +266,8 @@ export function inspectServiceConfiguration(
     }
     if (flag("FORGE_ISSUE_RETENTION_ENABLED"))
       secret("FORGE_ISSUE_RETENTION_SECRET")
+    if (flag("FORGE_INBOX_DELIVERY_ENABLED"))
+      secret("FORGE_INBOX_DELIVERY_SECRET")
     if (flag("FORGE_OPERATIONS_MONITOR_ENABLED")) {
       origin("FORGE_OPERATIONS_WEBHOOK_URL", deployed, true)
       secret("FORGE_OPERATIONS_WEBHOOK_TOKEN")
@@ -281,6 +283,7 @@ export function inspectServiceConfiguration(
                 "workflow.health",
                 "calls.sync",
                 "issues.retention",
+                "inbox.delivery",
               ].includes(key)
           ))
       ) {

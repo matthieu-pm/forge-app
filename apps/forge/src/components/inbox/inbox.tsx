@@ -506,6 +506,9 @@ export function Inbox({ scope }: { scope: InboxScope }) {
         {error ? (
           <p role="alert" className="p-4 text-sm text-destructive">
             {error}
+            <Button variant="ghost" size="sm" onClick={inbox.refresh}>
+              Refresh
+            </Button>
           </p>
         ) : (
           <div
@@ -611,18 +614,29 @@ export function Inbox({ scope }: { scope: InboxScope }) {
                 </Fragment>
               )
             })}
+            {inbox.hasMore && (
+              <Button
+                variant="ghost"
+                className="w-full"
+                onClick={inbox.loadMore}
+              >
+                Load older updates
+              </Button>
+            )}
             {!visible.length && (
               <div className="px-6 py-14 text-center">
                 <p className="text-[13px] text-muted-foreground">
-                  {unreadOnly && !hasFilters
-                    ? "No unreads"
-                    : hasFilters
-                      ? "No matching notifications"
-                      : view === "snoozed"
-                        ? "Nothing snoozed"
-                        : view === "deleted"
-                          ? "No deleted notifications"
-                          : "You're all caught up"}
+                  {inbox.loading
+                    ? "Loading updates…"
+                    : unreadOnly && !hasFilters
+                      ? "No unreads"
+                      : hasFilters
+                        ? "No matching notifications"
+                        : view === "snoozed"
+                          ? "Nothing snoozed"
+                          : view === "deleted"
+                            ? "No deleted notifications"
+                            : "You're all caught up"}
                 </p>
                 {unreadOnly || hasFilters ? (
                   <Button

@@ -19,6 +19,7 @@ export const jobNames = [
   "workflow.health",
   "calls.sync",
   "issues.retention",
+  "inbox.delivery",
 ] as const
 export type JobName = (typeof jobNames)[number]
 export type Metric =

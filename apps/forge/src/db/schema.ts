@@ -2273,7 +2273,7 @@ export const commandOutboxEvents = pgTable(
     topic: text("topic").notNull(),
     payload: jsonb("payload").notNull().$type<Record<string, unknown>>(),
     createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
+      .default(sql`clock_timestamp()`)
       .notNull(),
   },
   (t) => [

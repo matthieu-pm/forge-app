@@ -69,6 +69,7 @@ import { Route as ApiHealthLiveRouteImport } from './routes/api/health/live'
 import { Route as ApiHealthReadyRouteImport } from './routes/api/health/ready'
 import { Route as ApiInternalDatabaseReleaseRehearsalRouteImport } from './routes/api/internal/database-release-rehearsal'
 import { Route as ApiInternalEnvironmentRouteImport } from './routes/api/internal/environment'
+import { Route as ApiInternalInboxDeliveryRouteImport } from './routes/api/internal/inbox-delivery'
 import { Route as ApiInternalIssueRetentionRouteImport } from './routes/api/internal/issue-retention'
 import { Route as ApiInternalLoopsRouteImport } from './routes/api/internal/loops'
 import { Route as ApiInternalObservabilityCheckRouteImport } from './routes/api/internal/observability-check'
@@ -438,6 +439,12 @@ const ApiInternalEnvironmentRoute = ApiInternalEnvironmentRouteImport.update({
   path: '/api/internal/environment',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiInternalInboxDeliveryRoute =
+  ApiInternalInboxDeliveryRouteImport.update({
+    id: '/api/internal/inbox-delivery',
+    path: '/api/internal/inbox-delivery',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiInternalIssueRetentionRoute =
   ApiInternalIssueRetentionRouteImport.update({
     id: '/api/internal/issue-retention',
@@ -859,6 +866,7 @@ export interface FileRoutesByFullPath {
   '/api/health/ready': typeof ApiHealthReadyRoute
   '/api/internal/database-release-rehearsal': typeof ApiInternalDatabaseReleaseRehearsalRoute
   '/api/internal/environment': typeof ApiInternalEnvironmentRoute
+  '/api/internal/inbox-delivery': typeof ApiInternalInboxDeliveryRoute
   '/api/internal/issue-retention': typeof ApiInternalIssueRetentionRoute
   '/api/internal/loops': typeof ApiInternalLoopsRoute
   '/api/internal/observability-check': typeof ApiInternalObservabilityCheckRoute
@@ -983,6 +991,7 @@ export interface FileRoutesByTo {
   '/api/health/ready': typeof ApiHealthReadyRoute
   '/api/internal/database-release-rehearsal': typeof ApiInternalDatabaseReleaseRehearsalRoute
   '/api/internal/environment': typeof ApiInternalEnvironmentRoute
+  '/api/internal/inbox-delivery': typeof ApiInternalInboxDeliveryRoute
   '/api/internal/issue-retention': typeof ApiInternalIssueRetentionRoute
   '/api/internal/loops': typeof ApiInternalLoopsRoute
   '/api/internal/observability-check': typeof ApiInternalObservabilityCheckRoute
@@ -1106,6 +1115,7 @@ export interface FileRoutesById {
   '/api/health/ready': typeof ApiHealthReadyRoute
   '/api/internal/database-release-rehearsal': typeof ApiInternalDatabaseReleaseRehearsalRoute
   '/api/internal/environment': typeof ApiInternalEnvironmentRoute
+  '/api/internal/inbox-delivery': typeof ApiInternalInboxDeliveryRoute
   '/api/internal/issue-retention': typeof ApiInternalIssueRetentionRoute
   '/api/internal/loops': typeof ApiInternalLoopsRoute
   '/api/internal/observability-check': typeof ApiInternalObservabilityCheckRoute
@@ -1234,6 +1244,7 @@ export interface FileRouteTypes {
     | '/api/health/ready'
     | '/api/internal/database-release-rehearsal'
     | '/api/internal/environment'
+    | '/api/internal/inbox-delivery'
     | '/api/internal/issue-retention'
     | '/api/internal/loops'
     | '/api/internal/observability-check'
@@ -1358,6 +1369,7 @@ export interface FileRouteTypes {
     | '/api/health/ready'
     | '/api/internal/database-release-rehearsal'
     | '/api/internal/environment'
+    | '/api/internal/inbox-delivery'
     | '/api/internal/issue-retention'
     | '/api/internal/loops'
     | '/api/internal/observability-check'
@@ -1480,6 +1492,7 @@ export interface FileRouteTypes {
     | '/api/health/ready'
     | '/api/internal/database-release-rehearsal'
     | '/api/internal/environment'
+    | '/api/internal/inbox-delivery'
     | '/api/internal/issue-retention'
     | '/api/internal/loops'
     | '/api/internal/observability-check'
@@ -1582,6 +1595,7 @@ export interface RootRouteChildren {
   ApiHealthReadyRoute: typeof ApiHealthReadyRoute
   ApiInternalDatabaseReleaseRehearsalRoute: typeof ApiInternalDatabaseReleaseRehearsalRoute
   ApiInternalEnvironmentRoute: typeof ApiInternalEnvironmentRoute
+  ApiInternalInboxDeliveryRoute: typeof ApiInternalInboxDeliveryRoute
   ApiInternalIssueRetentionRoute: typeof ApiInternalIssueRetentionRoute
   ApiInternalLoopsRoute: typeof ApiInternalLoopsRoute
   ApiInternalObservabilityCheckRoute: typeof ApiInternalObservabilityCheckRoute
@@ -2022,6 +2036,13 @@ declare module '@tanstack/react-router' {
       path: '/api/internal/environment'
       fullPath: '/api/internal/environment'
       preLoaderRoute: typeof ApiInternalEnvironmentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/inbox-delivery': {
+      id: '/api/internal/inbox-delivery'
+      path: '/api/internal/inbox-delivery'
+      fullPath: '/api/internal/inbox-delivery'
+      preLoaderRoute: typeof ApiInternalInboxDeliveryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/internal/issue-retention': {
@@ -2767,6 +2788,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiInternalDatabaseReleaseRehearsalRoute:
     ApiInternalDatabaseReleaseRehearsalRoute,
   ApiInternalEnvironmentRoute: ApiInternalEnvironmentRoute,
+  ApiInternalInboxDeliveryRoute: ApiInternalInboxDeliveryRoute,
   ApiInternalIssueRetentionRoute: ApiInternalIssueRetentionRoute,
   ApiInternalLoopsRoute: ApiInternalLoopsRoute,
   ApiInternalObservabilityCheckRoute: ApiInternalObservabilityCheckRoute,
