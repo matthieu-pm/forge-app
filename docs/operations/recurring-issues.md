@@ -47,3 +47,9 @@ bunx vite --config scripts/fixtures/recurring/vite.config.ts
 ```
 
 The browser fixture at port 3168 renders the actual editor/list with explicitly labelled synthetic save transports. It verifies layout and interaction separately from the real PostgreSQL canonical-command tests. It is not authenticated hosted acceptance or production evidence.
+
+## Production promotion
+
+Main automatically builds and assigns the production domain. The app build now runs a read-only migration preflight when `VERCEL_ENV=production`. It uses the same ordered hash/timestamp prefix as runtime schema readiness and blocks before bundling if required receipts are missing, edited, reordered or unreachable. App build caching is disabled so the live database check cannot be skipped by Turbo. Local and preview builds do not run this production database check.
+
+This guard never applies migrations. Apply the reviewed migration chain through the authorized release process, then retry the production build and qualify hosted authentication, readiness and the scheduler before workspace enablement. The serving production endpoint was already `503 SCHEMA_NOT_READY` on main `dff9e6e` before FOR-68 merge; source merge does not claim to repair that existing release state.

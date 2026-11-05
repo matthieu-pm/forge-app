@@ -3,7 +3,7 @@
   "pullRequest": 68,
   "reviewedOriginalHead": "12afa68a9f72c1b2c816c2a2a153b8743a0cd090",
   "base": "ac2f7ebe54a5374e1f50b8705696aa1d35bb3853",
-  "validatedSource": "91b837be6223dcef63c2a242428f16a26f178f8f",
+  "validatedSource": "79f238e5793ebf06a1e5418dd17f2a17305478d2",
   "review": {
     "standards": {
       "findings": 1,
@@ -20,8 +20,8 @@
   "checks": {
     "workspaceTasksPassed": 10,
     "app": {
-      "passed": 2893,
-      "skipped": 678
+      "passed": 2912,
+      "skipped": 702
     },
     "workflowPassed": 4,
     "runtimePassed": 37,
@@ -33,12 +33,15 @@
     "build": "passed",
     "lint": {
       "errors": 0,
-      "warnings": 630
+      "warnings": 632
     },
     "format": "passed",
     "diff": "passed",
     "vercelPresetBuild": "passed after reproducing Workflow virtual-import failure",
-    "recurrencePostgresAfterPolicyExtractionPassed": 17
+    "recurrencePostgresAfterPolicyExtractionPassed": 17,
+    "productionGuardAndReadinessPassed": 16,
+    "drizzleMergedSchemaDiff": "none",
+    "finalWorkspaceSummary": "3LhgqHeifkOXPLJXHiXYurTiVU3"
   },
   "cleanup": {
     "organizations": 0,
@@ -77,5 +80,31 @@
     "recurrenceSql": "unchanged, renumbered after shared inbox",
     "snapshotChain": "validated",
     "drizzleSchemaDiff": "none"
+  },
+  "hostedValidatedSource": {
+    "source": "79f238e5793ebf06a1e5418dd17f2a17305478d2",
+    "app": {
+      "id": "dpl_D87aEdigz8Dzck1rPgYHGkzvmkVu",
+      "state": "READY"
+    },
+    "runtime": {
+      "id": "dpl_TWEkTSHTritnQqWrJyEuEVC7Rmwa",
+      "state": "READY"
+    }
+  },
+  "productionPromotionGuard": {
+    "environment": "VERCEL_ENV=production",
+    "readOnly": true,
+    "validator": "same exact ordered migration prefix as runtime readiness",
+    "timeoutMs": 4000,
+    "appBuildCache": false,
+    "directPackageMissingCredentials": "blocked before bundling as expected",
+    "rootStrictTurboMissingCredentials": "cache bypass and blocked before bundling as expected",
+    "independentReviewRemainingBlockers": 0
+  },
+  "existingProductionReadinessBeforeMerge": {
+    "source": "dff9e6ef7c9b72e7deda2fbdcb5698c7c8b1d2b2",
+    "httpStatus": 503,
+    "code": "SCHEMA_NOT_READY"
   }
 }

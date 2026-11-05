@@ -2,7 +2,7 @@
 
 Review baseline: `ac2f7ebe54a5374e1f50b8705696aa1d35bb3853` (main).
 Original PR head: `12afa68a9f72c1b2c816c2a2a153b8743a0cd090`.
-Fixed source: `91b837be6223dcef63c2a242428f16a26f178f8f`. User authorized review, fixes and merge after checks pass; production rollout remains a separate gated step.
+Final validated source: `79f238e5793ebf06a1e5418dd17f2a17305478d2`. User authorized review, fixes and merge after checks pass; production rollout remains a separate gated step.
 
 ## Standards
 
@@ -63,3 +63,15 @@ Standards: one finding fixed. Specification: two findings fixed, including the o
 ## Main integration
 
 Main advanced to `dff9e6e` (FOR-65/shared inbox) while the final review checks were completing. Its migration 0075 is preserved byte for byte. The two still-unreleased recurrence migrations were moved to 0076 and 0077 with unchanged SQL. Their snapshot chain now includes the inbox schema and the readiness manifest was regenerated; Drizzle reports no schema changes. Both inbox and recurrence CLI dispatch and schema registrations were retained. Historical evidence above records the original migration numbering. Final acceptance is rerun on a fresh local database through 0077, together with the full combined workspace graph and final-head hosted checks.
+
+## Production promotion guard
+
+Main's automatic Vercel promotion was verified during reconciliation. Before FOR-68 merge, the existing production endpoint returned `503 SCHEMA_NOT_READY` on `dff9e6e`. `79f238e` adds a production-only read-only preflight before Vite bundling, reusing `schemaIsReady`'s exact required migration prefix with bounded Neon queries and sanitized failure output. It never applies migrations. Preview/local builds skip the database check.
+
+Seven promotion cases plus nine runtime readiness cases pass. Direct package build and root strict-env Turbo build with missing production credentials both exit 1 before bundling, as intended. Independent review found a possible Turbo cache bypass; app build caching is now disabled and the actual root rejection log verifies cache bypass. Re-review found no remaining blockers. Production promotion stays blocked until the separately authorized migration chain is recorded; the current production deployment and database were not changed by this work.
+
+## Final combined-source results
+
+At `79f238e`, after integrating main `dff9e6e` and the production promotion guard, all **10 workspace tasks passed** (one cache hit). App: **2,912 passed / 702 environment-gated skipped**; Workflow: **4 passed**; runtime: **37 passed**; scheduler: **28 passed**. Lint: **zero errors / 632 warnings**. All typechecks and builds passed. Turbo summary: `3LhgqHeifkOXPLJXHiXYurTiVU3`. The 17 PostgreSQL recurrence cases were rerun on the freshly rebuilt complete chain through 0077; all fixture counts returned to zero and the server was stopped.
+
+Both hosted previews reached READY at that source: app `dpl_D87aEdigz8Dzck1rPgYHGkzvmkVu`, runtime `dpl_TWEkTSHTritnQqWrJyEuEVC7Rmwa`. All three GitHub checks passed. Final evidence-only head checks are revalidated before merge. No review blockers remain. Production source promotion remains guarded separately; this is not evidence of production migration, hosted authenticated acceptance or live scheduler qualification.
