@@ -1,4 +1,5 @@
 import type { ProductStateCommand } from "@/lib/product-state-contract"
+
 export const entries = () =>
   JSON.parse(localStorage.getItem("for68-fixture-journal") ?? "[]") as Array<{
     key: string

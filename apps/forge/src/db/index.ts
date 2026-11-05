@@ -10,6 +10,7 @@ import * as authSchema from "./auth-schema"
 import * as jobsSchema from "./jobs-schema"
 import * as slaSchema from "./sla-schema"
 import * as resourceSchema from "./resources-schema"
+import * as recurringSchema from "./recurring-schema"
 
 assertStagingEnvironment(process.env, "web")
 
@@ -34,8 +35,6 @@ if (deletionJournal)
     process.env.BLOB_STORE_ID ?? ""
   )
 export const databaseClient = client
-
-import * as recurringSchema from "./recurring-schema"
 
 export const schema = {
   ...recurringSchema,

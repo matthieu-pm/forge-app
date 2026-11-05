@@ -2,19 +2,20 @@ import * as React from "react"
 import { createRoot } from "react-dom/client"
 import {
   RouterProvider,
+  createMemoryHistory,
   createRootRoute,
   createRoute,
   createRouter,
-  createMemoryHistory,
 } from "@tanstack/react-router"
+import { loadProductState } from "./storage-stub"
 import type { TeamSummary } from "@/lib/team-contract"
-import { emptyRecurringIssue } from "@/lib/recurring-issue-contract"
 import type { SavedRecurringIssue } from "@/lib/recurring-issue-contract"
+import { emptyRecurringIssue } from "@/lib/recurring-issue-contract"
 import { RecurringIssueEditor } from "@/components/recurring-issues/recurring-issue-editor"
 import { RecurringIssues } from "@/components/recurring-issues/recurring-issues"
 import { initializeProductStorage } from "@/lib/product-storage"
-import { loadProductState } from "./storage-stub"
 import "./fixture.css"
+
 const team = {
   id: "00000000-0000-4000-8000-000000000068",
   slug: "planning",
