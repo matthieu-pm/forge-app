@@ -1,12 +1,22 @@
 import "@tanstack/react-start/server-only"
-import { and, desc, eq, isNull, sql } from "drizzle-orm"
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm"
+import { cycleRolloverEnabled } from "./cycle-rollover"
 import type { Actor } from "@/application/actor"
 import type { Transaction } from "@/db"
 import type {
   SharedCycleSnapshot,
   TeamCyclesSettings,
 } from "@/lib/team-cycles-contract"
-import { db, issueCycles, issues, productState, teams } from "@/db"
+import {
+  cycleClosures,
+  cycleMembershipHistory,
+  cycleRolloverTeams,
+  db,
+  issueCycles,
+  issues,
+  productState,
+  teams,
+} from "@/db"
 import { currentCommandActor } from "@/application/commands/command-actor.server"
 import {
   ApplicationAccessError,
@@ -108,11 +118,13 @@ export async function readTeamCycles(
           )
         )
     )[0]
+    const rolloverAvailable = cycleRolloverEnabled(current.workspaceId)
     const stored = row?.encodedValue
       ? parseTeamCycles(JSON.parse(row.encodedValue))
       : initialTeamCycles()
     const settings = {
       ...stored,
+      carryover: stored.carryover ?? true,
       timezone: cycleTimezoneSchema.parse(stored.timezone ?? team.timezone),
     }
     await ensureTeamCycles(
@@ -122,6 +134,11 @@ export async function readTeamCycles(
       settings,
       settings.timezone
     )
+    if (rolloverAvailable && settings.enabled)
+      await tx
+        .insert(cycleRolloverTeams)
+        .values({ workspaceId: current.workspaceId, teamId })
+        .onConflictDoNothing()
     // Bounded recent history plus the requested stable cycle number.
     const recent = await tx
       .select()
@@ -162,6 +179,50 @@ export async function readTeamCycles(
         )
       )
       .groupBy(issues.cycleId)
+    const closed = await tx
+      .select({
+        cycleId: cycleClosures.cycleId,
+        closedAt: cycleClosures.closedAt,
+      })
+      .from(cycleClosures)
+      .where(
+        and(
+          eq(cycleClosures.workspaceId, current.workspaceId),
+          eq(cycleClosures.teamId, teamId),
+          inArray(
+            cycleClosures.cycleId,
+            recent.map((c) => c.id)
+          )
+        )
+      )
+    const historical = closed.length
+      ? await tx
+          .select({
+            cycleId: cycleMembershipHistory.cycleId,
+            count: sql<number>`count(*)::int`,
+            completed: sql<number>`count(*) FILTER(WHERE ${cycleMembershipHistory.statusGroup}='completed')::int`,
+            carried: sql<number>`count(*) FILTER(WHERE ${cycleMembershipHistory.carried})::int`,
+          })
+          .from(cycleMembershipHistory)
+          .where(
+            and(
+              eq(cycleMembershipHistory.workspaceId, current.workspaceId),
+              eq(cycleMembershipHistory.teamId, teamId),
+              inArray(
+                cycleMembershipHistory.cycleId,
+                closed.map((c) => c.cycleId)
+              ),
+              readableIssueCondition(
+                current,
+                cycleMembershipHistory.issueId,
+                true
+              )
+            )
+          )
+          .groupBy(cycleMembershipHistory.cycleId)
+      : []
+    const history = new Map(historical.map((h) => [h.cycleId, h]))
+    const closures = new Map(closed.map((c) => [c.cycleId, c]))
     const counts = new Map(totals.map((t) => [t.cycleId, t]))
     const rows = recent.sort((a, b) => a.startDate.localeCompare(b.startDate))
     const now = new Date()
@@ -177,13 +238,27 @@ export async function readTeamCycles(
           : "",
       settings,
       revision: row?.revision ?? 0,
+      rolloverAvailable,
       canManage: hasWorkspaceRole(current, ["owner", "admin"]),
       cycles: rows.map((c) => ({
         ...c,
-        issueCount: counts.get(c.id)?.count ?? 0,
-        completedCount: counts.get(c.id)?.completed ?? 0,
-        state:
-          c.endDate < cycleToday(c.timezone, now)
+        issueCount: closures.has(c.id)
+          ? (history.get(c.id)?.count ?? 0)
+          : (counts.get(c.id)?.count ?? 0),
+        completedCount: closures.has(c.id)
+          ? (history.get(c.id)?.completed ?? 0)
+          : (counts.get(c.id)?.completed ?? 0),
+        ...(closures.has(c.id)
+          ? {
+              closure: {
+                closedAt: closures.get(c.id)!.closedAt.toISOString(),
+                carriedCount: history.get(c.id)?.carried ?? 0,
+              },
+            }
+          : {}),
+        state: closures.has(c.id)
+          ? "Closed"
+          : c.endDate < cycleToday(c.timezone, now)
             ? "Past"
             : c.startDate <= cycleToday(c.timezone, now)
               ? "Current"

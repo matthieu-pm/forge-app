@@ -26,9 +26,11 @@ import {
   ensureTeamCycles,
   lockTeamCycles,
 } from "@/application/cycles/cycles.server"
+import { cycleRolloverEnabled } from "@/application/cycles/cycle-rollover"
 import { parseTeamCycles } from "@/lib/team-cycles-contract"
 import { parseTeamTriage } from "@/lib/team-triage-contract"
 import {
+  cycleRolloverTeams,
   db,
   issues,
   organizations,
@@ -502,6 +504,22 @@ export async function saveProductState(actor: Actor, raw: ProductStateCommand) {
         throw new ApplicationAccessError(
           "The pending file source was discarded."
         )
+      if (
+        cycleTeamId &&
+        input.value &&
+        !cycleRolloverEnabled(current.workspaceId)
+      ) {
+        const before = row.encodedValue
+          ? parseTeamCycles(JSON.parse(row.encodedValue))
+          : null
+        if (
+          (parseTeamCycles(input.value).carryover ?? true) !==
+          (before?.carryover ?? true)
+        )
+          throw new ApplicationAccessError(
+            "Cycle rollover is unavailable in this workspace."
+          )
+      }
       if (row.revision !== input.expectedRevision) {
         if (
           (row.encodedValue === null ? null : JSON.parse(row.encodedValue)) ===
@@ -561,6 +579,12 @@ export async function saveProductState(actor: Actor, raw: ProductStateCommand) {
         const team = (
           await tx.select().from(teams).where(eq(teams.id, cycleTeamId))
         )[0]
+        if (settings.enabled && cycleRolloverEnabled(current.workspaceId)) {
+          await tx
+            .insert(cycleRolloverTeams)
+            .values({ workspaceId: current.workspaceId, teamId: cycleTeamId })
+            .onConflictDoNothing()
+        }
         await ensureTeamCycles(
           tx,
           current.workspaceId,

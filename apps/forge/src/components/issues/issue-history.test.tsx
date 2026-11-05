@@ -7,7 +7,7 @@ import {
   waitFor,
 } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { IssueHistory } from "./issue-history"
+import { IssueHistory, historyAction } from "./issue-history"
 import type { IssueHistoryEntry } from "@/lib/issue-history-contract"
 
 const context = vi.hoisted(() => ({
@@ -155,4 +155,18 @@ describe("committed issue history", () => {
       exact: false,
     })
   })
+})
+
+it("names automatic cycle carryover explicitly", () => {
+  expect(
+    historyAction({
+      ...entry("rollover", "issue.cycle.carried"),
+      origin: "system",
+      actor: {
+        userId: "system:cycle-rollover",
+        name: "Forge cycles",
+        kind: "system",
+      },
+    })
+  ).toBe("carried the issue into the next cycle")
 })

@@ -140,7 +140,21 @@ export function useSharedTeamCycles(
           entry.request !== request
         )
           return
+        const justClosed =
+          entry.snapshot &&
+          snapshot.cycles.some(
+            (c) =>
+              c.closure &&
+              !entry.snapshot?.cycles.find((previous) => previous.id === c.id)
+                ?.closure
+          )
         publishSnapshot(entry, snapshot)
+        if (justClosed)
+          window.dispatchEvent(
+            new CustomEvent("forge:issue-queries-invalidated", {
+              detail: { teamIds: [teamId] },
+            })
+          )
         if (!entry.intent) entry.error = undefined
       } catch {
         if (current() && entry.request === request) {

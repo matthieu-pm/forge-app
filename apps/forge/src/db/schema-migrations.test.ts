@@ -49,6 +49,9 @@ import {
 } from "./schema"
 
 import {
+  cycleClosures,
+  cycleMembershipHistory,
+  cycleRolloverTeams,
   documents,
   initiativeProjects,
   initiatives,
@@ -97,6 +100,9 @@ describe("database migrations", () => {
       readFileSync(snapshotPath, "utf8")
     ) as MigrationSnapshot
     for (const [tableName, table] of [
+      ["cycle_rollover_teams", cycleRolloverTeams],
+      ["cycle_closures", cycleClosures],
+      ["cycle_membership_history", cycleMembershipHistory],
       ["documents", documents],
       ["background_jobs", backgroundJobs],
       ["background_job_steps", backgroundJobSteps],

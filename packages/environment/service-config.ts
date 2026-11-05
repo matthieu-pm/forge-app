@@ -247,6 +247,7 @@ export function inspectServiceConfiguration(
     }
   }
   if (service === "app") {
+    if (flag("FORGE_CYCLE_ROLLOVER_JOBS_ENABLED")) secret("CRON_SECRET")
     if (flag("FORGE_SLA_JOBS_ENABLED")) {
       secret("CRON_SECRET")
       if (

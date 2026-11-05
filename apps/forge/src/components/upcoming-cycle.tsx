@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import { Link } from "@tanstack/react-router"
 import { format } from "date-fns"
 import { toast } from "sonner"
+import { CycleClosureSummary } from "./cycle-closure-summary"
 import type { TeamSummary } from "@/lib/team-contract"
 import type { CycleIssue, CycleIssueDraft } from "@/lib/cycle-issues"
 import type { IssueDraft, TeamIssue } from "@/lib/team-issues"
@@ -211,7 +212,12 @@ export function UpcomingCycle({
     (ready && settings.enabled && !selectedCycle
       ? "This cycle is unavailable. Choose a cycle from the team schedule."
       : null)
-  const writable = ready && settings.enabled && !!selectedCycle && !failure
+  const writable =
+    !selectedCycle?.closure &&
+    ready &&
+    settings.enabled &&
+    !!selectedCycle &&
+    !failure
   const issueNumber = (issue: CycleIssue) =>
     `${team.identifier}-${issue.number}`
   const hasFilters = filters.rules.length > 0
@@ -342,6 +348,8 @@ export function UpcomingCycle({
           </DropdownMenuContent>
         </DropdownMenu>
       </ContentHeader>
+      {selectedCycle?.closure && <CycleClosureSummary cycle={selectedCycle} />}
+
       <div className="flex min-h-11 shrink-0 items-center justify-end gap-2 px-2 py-2">
         <div className="flex shrink-0 items-center gap-1.5">
           <IssueFilters

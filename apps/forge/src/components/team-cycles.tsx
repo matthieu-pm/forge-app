@@ -40,6 +40,8 @@ function CycleRow({
   start,
   end,
   issueCount,
+  completedCount,
+  closure,
   state,
   timezone,
 }: {
@@ -48,6 +50,8 @@ function CycleRow({
   start: Date
   end: Date
   issueCount: number
+  completedCount?: number
+  closure?: { closedAt: string; carriedCount: number }
   state: string
   timezone: string
 }) {
@@ -75,7 +79,11 @@ function CycleRow({
         <span className="rounded bg-muted/30 px-1.5 py-0.5 text-xs">
           {state}
         </span>
-        <span>{issueCount} scope</span>
+        <span>
+          {closure
+            ? `${completedCount ?? 0}/${issueCount} completed · ${closure.carriedCount} carried`
+            : `${issueCount} scope`}
+        </span>
       </span>
       <span className="absolute right-0 bottom-0 left-[112px] border-b border-border/50 max-sm:left-20" />
     </Link>

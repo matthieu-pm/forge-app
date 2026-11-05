@@ -25,6 +25,8 @@
     "preview": "vite preview",
     "test": "vitest run && bun run test:workflow",
     "test:workflow": "vitest run --config vitest.workflow.config.ts",
+    "test:cycles:rollover": "vitest run src/application/cycles --testTimeout 30000",
+    "dev:cycles:fixture": "vite --config scripts/fixtures/cycle-rollover/vite.config.ts",
     "test:jobs:postgres": "vitest run src/application/jobs/jobs.postgres.test.ts --testTimeout 30000",
     "test:commands:postgres": "vitest run src/application/commands/commands.postgres.test.ts",
     "test:member-capacity:postgres": "bun scripts/test-member-capacity-postgres.mjs",

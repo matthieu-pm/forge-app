@@ -61,3 +61,12 @@ bun scripts/verify-feature-gates.ts
 ```
 
 These are local source/fixture checks, not deployed multi-user, packaged macOS, provider, payment or launch acceptance. Commit-specific results are recorded in the FOR-103 implementation evidence. Release candidate and production checks remain with the owning feature gates and FOR-123/124.
+
+## Cycle rollover (FOR-69)
+
+`cycleRollover` is disabled without an explicit workspace rollout. The team setting,
+generic state-save boundary and worker all enforce it. The internal scheduler also
+requires `FORGE_CYCLE_ROLLOVER_JOBS_ENABLED` and the cron secret. Disabling rollout
+preserves closed history and database assignment guards. Status/due-date assignment
+controls remain unavailable. See [cycle rollover](cycle-rollover.md) for initial
+enrollment, transactional recovery, release gates and acceptance commands.

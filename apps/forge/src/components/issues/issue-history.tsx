@@ -30,6 +30,7 @@ export function historyAction(entry: IssueHistoryEntry) {
     "issue.sla.removed": "removed the SLA",
     "issue.sla.breached": "recorded an SLA breach",
     "issue.updated": "updated the issue",
+    "issue.cycle.carried": "carried the issue into the next cycle",
     "issue.comment.created": "added a comment",
     "issue.comment.edited": "edited a comment",
     "issue.comment.deleted": "deleted a comment",
@@ -179,7 +180,9 @@ export function IssueHistory({
         <ActivityRow key={entry.id} id={`history-${entry.id}`}>
           <p className="min-w-0 break-words">
             <span className="font-medium text-foreground">
-              {personName(entry.actor)}
+              {entry.actor.kind === "system"
+                ? entry.actor.name
+                : personName(entry.actor)}
             </span>
             {entry.actor.kind === "agent"
               ? " via agent"

@@ -11,7 +11,7 @@ export function boundedHistoryText(value: string, limit: number) {
 export const issueHistoryDetailsSchema = z
   .object({
     version: z.literal(1),
-    origin: z.enum(["command", "import"]).default("command"),
+    origin: z.enum(["command", "import", "system"]).default("command"),
     changes: z
       .array(
         z
@@ -31,7 +31,7 @@ export const issueHistoryEnvelopeSchema = issueHistoryDetailsSchema.extend({
     .object({
       userId: z.string().min(1),
       name: z.string().max(200),
-      kind: z.enum(["session", "apiKey", "agent"]),
+      kind: z.enum(["session", "apiKey", "agent", "system"]),
     })
     .strict(),
 })

@@ -1,0 +1,17 @@
+{
+  "environment": "local UI fixture with simulated backend",
+  "url": "http://127.0.0.1:3169",
+  "components": ["TeamCycles", "TeamCyclesSettings", "CycleClosureSummary"],
+  "desktop": { "width": 1440, "height": 900 },
+  "mobile": { "frameWidth": 390, "frameHeight": 844, "documentWidth": 390, "scrollWidth": 390 },
+  "checks": [
+    "Closed, Current and Upcoming labels render together",
+    "Frozen completion and carryover totals render with actual closure date",
+    "Admin toggle changes only carryover; assignment controls remain disabled",
+    "All schedule controls are disabled for ordinary members",
+    "Carryover setting is absent outside workspace rollout",
+    "Desktop and mobile settings/schedule screenshots visually inspected",
+    "Mobile document has no horizontal overflow"
+  ],
+  "limitations": ["Simulated UI backend; real database behavior is checked separately", "No hosted authenticated or packaged desktop acceptance"]
+}

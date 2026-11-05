@@ -168,6 +168,7 @@ export function TeamCyclesSettings({ team }: { team: TeamSummary }) {
     update,
     pending,
     canManage,
+    rolloverAvailable,
     cycles,
     retry,
     discard,
@@ -313,6 +314,25 @@ export function TeamCyclesSettings({ team }: { team: TeamSummary }) {
               </div>
             )}
           </section>
+          {settings.enabled && rolloverAvailable && (
+            <section aria-label="Cycle rollover" className="mt-6 space-y-3">
+              <h2 className="px-4 text-sm font-medium">Cycle rollover</h2>
+              <p className="px-4 text-xs text-muted-foreground">
+                Cycles close after their end date in the cycle timezone. Closing
+                progress stays in history.
+              </p>
+              <div className={cardClass}>
+                <CycleToggle
+                  label="Carry unfinished issues forward"
+                  description="Move unfinished issues to the next available cycle, including during cooldown. Completed, canceled, and duplicate issues stay."
+                  checked={settings.carryover ?? true}
+                  disabled={disabled}
+                  onChange={(carryover) => save({ carryover })}
+                />
+              </div>
+            </section>
+          )}
+
           <section
             aria-labelledby="cycle-automation-title"
             className={`mt-6 ${!settings.enabled ? "opacity-45" : ""}`}
@@ -322,7 +342,9 @@ export function TeamCyclesSettings({ team }: { team: TeamSummary }) {
                 Cycle automation
               </h2>
               <p className="mt-1 text-sm leading-[22px] text-muted-foreground">
-                Automatic assignment and carryover are not available yet.
+                {rolloverAvailable
+                  ? "Automatic assignment is not available yet."
+                  : "Automatic assignment and carryover are not available yet."}
               </p>
             </div>
             <div className={`${cardClass} divide-y divide-border/40`}>

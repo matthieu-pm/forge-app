@@ -105,6 +105,7 @@ export function useTeamCycles(teamId: string, number?: number) {
       error: remote.error,
       update: remote.update,
       pending: remote.pending,
+      rolloverAvailable: remote.snapshot?.rolloverAvailable ?? false,
       canManage: remote.snapshot?.canManage ?? false,
       cycles:
         remote.snapshot?.cycles.map((c) => ({
@@ -122,6 +123,7 @@ export function useTeamCycles(teamId: string, number?: number) {
     error,
     update,
     pending: false,
+    rolloverAvailable: false,
     canManage: true,
     cycles: scheduledTeamCycles(settings).map((c) => ({
       ...c,
@@ -129,6 +131,7 @@ export function useTeamCycles(teamId: string, number?: number) {
       startDate: c.value,
       endDate: format(c.end, "yyyy-MM-dd"),
       teamId,
+      closure: undefined,
       issueCount: 0,
       completedCount: 0,
       timezone: settings.timezone ?? "UTC",
