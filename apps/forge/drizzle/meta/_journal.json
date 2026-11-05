@@ -526,6 +526,13 @@
       "when": 1793801450451,
       "tag": "0074_preference_import_content",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1793899994582,
+      "tag": "0075_recurring_issue_occurrences",
+      "breakpoints": true
     }
   ]
 }

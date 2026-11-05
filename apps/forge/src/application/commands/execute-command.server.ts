@@ -50,6 +50,14 @@ export type CommandOptions<T> = {
 export async function executeCommand<T>(
   options: CommandOptions<T>
 ): Promise<{ replayed: boolean; value: T }> {
+  return db.transaction((tx) => executeCommandInTransaction(tx, options))
+}
+
+/** Compose commands with job checkpoints on the caller's existing transaction. */
+export async function executeCommandInTransaction<T>(
+  tx: Transaction,
+  options: CommandOptions<T>
+): Promise<{ replayed: boolean; value: T }> {
   const { actor, commandKey, operation, input, status, parse, authorize, run } =
     options
   if (
@@ -62,143 +70,139 @@ export async function executeCommand<T>(
   )
     throw new TypeError("Invalid command identity or success status.")
   const inputHash = commandInputHash(input)
-  return db.transaction(async (tx) => {
-    const currentActor = await currentCommandActor(tx, actor)
-    if (currentActor.loopScope)
-      await tx.execute(
-        sql`select set_config('forge.loop_run_id', ${currentActor.loopScope.runId}, true)`
-      )
-    await authorize(tx, currentActor)
-    const sla = slaGate(currentActor.workspaceId)
-    await tx.execute(sql`SELECT set_config('forge.sla.workspace',${currentActor.workspaceId},true),
+  const currentActor = await currentCommandActor(tx, actor)
+  if (currentActor.loopScope)
+    await tx.execute(
+      sql`select set_config('forge.loop_run_id', ${currentActor.loopScope.runId}, true)`
+    )
+  await authorize(tx, currentActor)
+  const sla = slaGate(currentActor.workspaceId)
+  await tx.execute(sql`SELECT set_config('forge.sla.workspace',${currentActor.workspaceId},true),
       set_config('forge.sla.enabled',${sla.enabled ? "on" : "off"},true),
       set_config('forge.sla.identity',${sla.identity},true)`)
-    const scope = and(
-      eq(commandReceipts.workspaceId, actor.workspaceId),
-      eq(commandReceipts.principal, commandPrincipal(actor)),
-      eq(commandReceipts.operation, operation),
-      eq(commandReceipts.commandKey, commandKey)
-    )
-    // The unique index serializes independent processes. A rollback releases the
-    // reservation; a committed owner makes the waiter read its durable receipt.
-    const reserved = (
-      await tx
-        .insert(commandReceipts)
-        .values({
-          workspaceId: actor.workspaceId,
-          userId: actor.userId,
-          principal: commandPrincipal(actor),
-          operation,
-          commandKey,
-          inputHash,
-        })
-        .onConflictDoNothing()
-        .returning()
+  const scope = and(
+    eq(commandReceipts.workspaceId, actor.workspaceId),
+    eq(commandReceipts.principal, commandPrincipal(actor)),
+    eq(commandReceipts.operation, operation),
+    eq(commandReceipts.commandKey, commandKey)
+  )
+  // The unique index serializes independent processes. A rollback releases the
+  // reservation; a committed owner makes the waiter read its durable receipt.
+  const reserved = (
+    await tx
+      .insert(commandReceipts)
+      .values({
+        workspaceId: actor.workspaceId,
+        userId: actor.userId,
+        principal: commandPrincipal(actor),
+        operation,
+        commandKey,
+        inputHash,
+      })
+      .onConflictDoNothing()
+      .returning()
+  ).at(0)
+  if (!reserved) {
+    const existing = (
+      await tx.select().from(commandReceipts).where(scope).for("share")
     ).at(0)
-    if (!reserved) {
-      const existing = (
-        await tx.select().from(commandReceipts).where(scope).for("share")
-      ).at(0)
-      if (
-        !existing ||
-        existing.inputHash !== inputHash ||
-        existing.userId !== actor.userId
+    if (
+      !existing ||
+      existing.inputHash !== inputHash ||
+      existing.userId !== actor.userId
+    )
+      throw new CommandConflictError(
+        "reused",
+        "The command key was already used with different input."
       )
-        throw new CommandConflictError(
-          "reused",
-          "The command key was already used with different input."
-        )
-      if (!existing.completedAt)
-        throw new CommandConflictError(
-          "ambiguous",
-          "The command outcome requires reconciliation before retry."
-        )
-      if (existing.responseBody === null)
-        throw new CommandConflictError(
-          "result-unavailable",
-          "The command result is no longer available; its effect cannot be repeated."
-        )
-      const value = parse(JSON.parse(existing.responseBody))
-      await authorize(tx, currentActor, value)
-      return { replayed: true, value }
-    }
-    const legacy = await options.legacy?.(tx, currentActor)
-    if (legacy) {
-      // Do not invent history/outbox for a legacy effect that cannot be proven.
-      await tx
-        .delete(commandReceipts)
-        .where(eq(commandReceipts.id, reserved.id))
-      await authorize(tx, currentActor, legacy.value)
-      return { replayed: true, value: legacy.value }
-    }
-    const result = await run(tx, currentActor)
-    const value = parse(result.value)
-    const responseBody = canonicalCommandInput(value)
-    if (!result.resource.id || !result.resource.type)
-      throw new TypeError(
-        "Commands must return a JSON result and resource identity."
+    if (!existing.completedAt)
+      throw new CommandConflictError(
+        "ambiguous",
+        "The command outcome requires reconciliation before retry."
       )
+    if (existing.responseBody === null)
+      throw new CommandConflictError(
+        "result-unavailable",
+        "The command result is no longer available; its effect cannot be repeated."
+      )
+    const value = parse(JSON.parse(existing.responseBody))
     await authorize(tx, currentActor, value)
-    await tx.insert(commandAuditEvents).values({
-      workspaceId: actor.workspaceId,
-      commandId: reserved.id,
-      actorUserId: actor.userId,
-      operation,
+    return { replayed: true, value }
+  }
+  const legacy = await options.legacy?.(tx, currentActor)
+  if (legacy) {
+    // Do not invent history/outbox for a legacy effect that cannot be proven.
+    await tx.delete(commandReceipts).where(eq(commandReceipts.id, reserved.id))
+    await authorize(tx, currentActor, legacy.value)
+    return { replayed: true, value: legacy.value }
+  }
+  const result = await run(tx, currentActor)
+  const value = parse(result.value)
+  const responseBody = canonicalCommandInput(value)
+  if (!result.resource.id || !result.resource.type)
+    throw new TypeError(
+      "Commands must return a JSON result and resource identity."
+    )
+  await authorize(tx, currentActor, value)
+  await tx.insert(commandAuditEvents).values({
+    workspaceId: actor.workspaceId,
+    commandId: reserved.id,
+    actorUserId: actor.userId,
+    operation,
+    resourceType: result.resource.type,
+    resourceId: result.resource.id,
+  })
+  if (result.events.length) {
+    const actorName = boundedHistoryText(
+      (
+        await tx
+          .select({ name: users.name })
+          .from(users)
+          .where(eq(users.id, currentActor.userId))
+      )[0]?.name ?? "Member",
+      200
+    )
+    await tx.insert(commandOutboxEvents).values(
+      result.events.map((event, ordinal) => ({
+        workspaceId: actor.workspaceId,
+        commandId: reserved.id,
+        ordinal,
+        topic: event.topic,
+        // Only the authenticated command boundary writes attributable metadata.
+        // Do not retain credential/session secrets or duplicate comment bodies.
+        payload: {
+          ...event.payload,
+          ...(event.topic.startsWith("issue.")
+            ? {
+                history: {
+                  ...issueHistoryDetailsSchema.parse(
+                    event.payload.history ?? { version: 1 }
+                  ),
+                  actor: {
+                    userId: currentActor.userId,
+                    name: actorName,
+                    kind:
+                      currentActor.authentication.kind === "loop"
+                        ? "agent"
+                        : currentActor.authentication.kind,
+                  },
+                },
+              }
+            : {}),
+        },
+        createdAt: sql`clock_timestamp()`,
+      }))
+    )
+  }
+  await tx
+    .update(commandReceipts)
+    .set({
+      responseBody,
+      responseStatus: status,
       resourceType: result.resource.type,
       resourceId: result.resource.id,
+      completedAt: new Date(),
     })
-    if (result.events.length) {
-      const actorName = boundedHistoryText(
-        (
-          await tx
-            .select({ name: users.name })
-            .from(users)
-            .where(eq(users.id, currentActor.userId))
-        )[0]?.name ?? "Member",
-        200
-      )
-      await tx.insert(commandOutboxEvents).values(
-        result.events.map((event, ordinal) => ({
-          workspaceId: actor.workspaceId,
-          commandId: reserved.id,
-          ordinal,
-          topic: event.topic,
-          // Only the authenticated command boundary writes attributable metadata.
-          // Do not retain credential/session secrets or duplicate comment bodies.
-          payload: {
-            ...event.payload,
-            ...(event.topic.startsWith("issue.")
-              ? {
-                  history: {
-                    ...issueHistoryDetailsSchema.parse(
-                      event.payload.history ?? { version: 1 }
-                    ),
-                    actor: {
-                      userId: currentActor.userId,
-                      name: actorName,
-                      kind:
-                        currentActor.authentication.kind === "loop"
-                          ? "agent"
-                          : currentActor.authentication.kind,
-                    },
-                  },
-                }
-              : {}),
-          },
-          createdAt: sql`clock_timestamp()`,
-        }))
-      )
-    }
-    await tx
-      .update(commandReceipts)
-      .set({
-        responseBody,
-        responseStatus: status,
-        resourceType: result.resource.type,
-        resourceId: result.resource.id,
-        completedAt: new Date(),
-      })
-      .where(eq(commandReceipts.id, reserved.id))
-    return { replayed: false, value }
-  })
+    .where(eq(commandReceipts.id, reserved.id))
+  return { replayed: false, value }
 }

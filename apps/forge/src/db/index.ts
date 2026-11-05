@@ -35,7 +35,10 @@ if (deletionJournal)
   )
 export const databaseClient = client
 
+import * as recurringSchema from "./recurring-schema"
+
 export const schema = {
+  ...recurringSchema,
   ...appSchema,
   ...jobsSchema,
   ...slaSchema,
@@ -61,3 +64,5 @@ export * from "./loops-schema"
 
 export * from "./jobs-schema"
 export * from "./sla-schema"
+
+export * from "./recurring-schema"

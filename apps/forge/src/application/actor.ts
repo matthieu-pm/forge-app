@@ -20,6 +20,7 @@ export type Actor = {
   workspaceRole: string
   authentication:
     | { kind: "session"; sessionId: string }
+    | { kind: "recurring"; scheduleId: string }
     | { kind: "apiKey"; credentialId: string }
     | { kind: "loop"; loopId: string; runId: string }
     | { kind: "agent"; runId: string; tokenId: string }

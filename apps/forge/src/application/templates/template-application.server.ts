@@ -1,11 +1,11 @@
 import "@tanstack/react-start/server-only"
 import { and, eq, inArray, isNull, or, sql } from "drizzle-orm"
 import { z } from "zod"
+import { canonicalTemplateIssueCommand } from "./canonical-template-issue.server"
 import { loadDirectory } from "./templates.server"
 import {
   TemplateValidationError,
   formContent,
-  templateDocumentText,
 } from "./template-forms"
 import type { Actor } from "@/application/actor"
 import type { Transaction } from "@/db"
@@ -16,15 +16,12 @@ import type {
 } from "@/lib/template-application-contract"
 import { applyTemplateSchema } from "@/lib/template-application-contract"
 import { templatePayloadSchema } from "@/lib/template-contract"
-import { blankIssueDraft } from "@/lib/issue-record-contract"
 import {
   db,
   initiatives,
-  issueStatuses,
   issues,
   organizations,
   projects,
-  resourceLabels,
   teamMembers,
   teamTemplates,
   teams,
@@ -39,10 +36,7 @@ import {
   readableTeamCondition,
   requireResourceScope,
 } from "@/application/resource-policy.server"
-import {
-  canonicalIssueCreationCommand,
-  requireIssueTeam,
-} from "@/application/issues/issues.server"
+import { requireIssueTeam } from "@/application/issues/issues.server"
 import { canonicalProjectSaveCommand } from "@/application/planning/projects.server"
 import {
   canonicalInitiativeSaveCommand,
@@ -325,77 +319,15 @@ export async function applyTemplate(
               throw new TemplateValidationError(
                 "Choose a team before creating this issue."
               )
-            if (
-              properties.initiatives.length ||
-              properties.dependencies.length ||
-              properties.lead ||
-              properties.members.length
-            )
-              throw new TemplateValidationError(
-                "Issue properties contain project-only settings. Move those settings to the project template."
-              )
-            const statuses = await tx
-              .select()
-              .from(issueStatuses)
-              .where(
-                and(
-                  eq(issueStatuses.workspaceId, current.workspaceId),
-                  eq(issueStatuses.teamId, teamId),
-                  or(
-                    eq(issueStatuses.id, properties.status),
-                    eq(issueStatuses.name, properties.status)
-                  )
-                )
-              )
-              .for("share")
-            if (statuses.length !== 1)
-              throw new TemplateValidationError(
-                "An issue status in this template is unavailable. Choose a current status in the template and try again."
-              )
-            const labelNames: Array<string> = []
-            for (const label of properties.labels) {
-              const matches = await tx
-                .select()
-                .from(resourceLabels)
-                .where(
-                  and(
-                    eq(resourceLabels.workspaceId, current.workspaceId),
-                    or(
-                      isNull(resourceLabels.teamId),
-                      eq(resourceLabels.teamId, teamId)
-                    ),
-                    or(
-                      sql`${resourceLabels.id}::text=${label}`,
-                      eq(resourceLabels.name, label)
-                    )
-                  )
-                )
-                .for("share")
-              const active = matches.filter((l) => !l.definition?.archived)
-              if (active.length !== 1)
-                throw new TemplateValidationError(
-                  "An issue label is unavailable or ambiguous. Choose an active label in the template."
-                )
-              labelNames.push(active[0].name)
-            }
-            const text = templateDocumentText(content)
-            const command = canonicalIssueCreationCommand(current, {
+            const command = await canonicalTemplateIssueCommand(tx, current, {
               commandKey: input.commandKey,
               teamId,
-              assigneeId: properties.assignee || null,
-              draft: {
-                ...blankIssueDraft(statuses[0].id),
-                title,
-                description: text,
-                descriptionDoc: content,
-                priority: properties.priority,
-                assignee: properties.assignee ?? "",
-                labels: labelNames.join(","),
-                project: projectId ?? properties.project ?? "",
-                parentId,
-                triage: !parentId && Boolean(input.triage),
-                estimate: properties.estimate,
-              },
+              title,
+              content,
+              properties,
+              parentId,
+              projectId,
+              triage: Boolean(input.triage),
             })
             await command.authorize(tx, current, undefined)
             const created = await command.run(tx, current)

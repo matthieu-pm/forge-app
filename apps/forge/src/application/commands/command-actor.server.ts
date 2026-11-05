@@ -17,6 +17,11 @@ export async function currentCommandActor(
   const authentication = actor.authentication
   let scopes = actor.scopes
   let loopRunId: string | undefined
+  if (authentication.kind === "recurring") {
+    const { currentRecurringActor } =
+      await import("../recurring-issues/recurring-actor.server")
+    return currentRecurringActor(tx, actor, authentication.scheduleId)
+  }
   if (authentication.kind === "loop") {
     const { currentLoopActor } =
       await import("@/application/loops/loop-actor.server")
@@ -116,6 +121,8 @@ export async function currentCommandActor(
 }
 
 export function commandPrincipal(actor: Actor) {
+  if (actor.authentication.kind === "recurring")
+    return `recurring:${actor.authentication.scheduleId}`
   if (actor.authentication.kind === "loop")
     return `loop:${actor.authentication.loopId}:${actor.authentication.runId}`
   return actor.authentication.kind === "apiKey"

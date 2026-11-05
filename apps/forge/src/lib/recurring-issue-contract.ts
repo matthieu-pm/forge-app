@@ -6,6 +6,20 @@ import {
 } from "./template-contract"
 import type { TemplateDraft } from "./template-contract"
 
+export const recurrenceTimezoneSchema = z
+  .string()
+  .max(100)
+  .refine((value) => {
+    try {
+      new Intl.DateTimeFormat("en", { timeZone: value })
+      return true
+    } catch {
+      return false
+    }
+  }, "Choose a valid timezone.")
+export const recurrenceTimeSchema = z
+  .string()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Choose a valid local time.")
 export const recurrenceUnitSchema = z.enum(["day", "week", "month", "year"])
 export const recurringIssuePayloadSchema = templatePayloadSchema
   .pick({
@@ -31,12 +45,16 @@ export const recurringIssuePayloadSchema = templatePayloadSchema
     }, "Choose a valid first due date."),
     interval: z.number().int().min(1).max(100),
     unit: recurrenceUnitSchema,
+    timezone: recurrenceTimezoneSchema.optional(),
+    generationTime: recurrenceTimeSchema.optional(),
   })
 export type RecurringIssueDraft = Pick<
   TemplateDraft,
   "icon" | "title" | "content" | "properties" | "subIssues"
 > & {
   firstDue: string
+  timezone?: string
+  generationTime?: string
   interval: number
   unit: z.infer<typeof recurrenceUnitSchema>
 }
@@ -45,9 +63,23 @@ export type SavedRecurringIssue = {
   payload: RecurringIssueDraft
   createdAt: string
   updatedAt: string
+  state?: "inactive" | "active" | "disabled" | "paused" | "deleted"
+  ownerId?: string
+  nextAt?: string | null
+  lastReason?: string | null
+  recentEvents?: Array<{
+    reason: string
+    fromDate: string | null
+    toDate: string | null
+    count: number
+  }>
+  skippedCount?: number
 }
 export const saveRecurringIssueSchema = templateQuerySchema
   .extend({
+    commandKey: z.string().uuid(),
+    enabled: z.boolean().optional(),
+    takeOwnership: z.boolean().optional(),
     id: z.string().uuid().optional(),
     updatedAt: z.string().datetime().optional(),
     payload: recurringIssuePayloadSchema,
@@ -81,6 +113,8 @@ export function emptyRecurringIssue(
     properties: template.properties,
     subIssues: [],
     firstDue: date.toISOString().slice(0, 10),
+    timezone,
+    generationTime: "09:00",
     interval: 1,
     unit: "week",
   }
