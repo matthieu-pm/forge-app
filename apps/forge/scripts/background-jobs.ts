@@ -18,8 +18,12 @@ try {
     )
     console.info(JSON.stringify(result, null, 2))
     if (
-      "state" in result &&
-      !["idle", "completed"].includes(String(result.state))
+      ("state" in result &&
+        !["idle", "completed"].includes(String(result.state))) ||
+      ("outcomes" in result &&
+        result.outcomes.some(
+          (outcome) => !["completed", "deferred"].includes(outcome.state)
+        ))
     )
       process.exitCode = 1
   } finally {

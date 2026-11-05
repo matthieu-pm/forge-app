@@ -1,0 +1,51 @@
+name: Inbox delivery
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: production-inbox-delivery
+  cancel-in-progress: false
+
+jobs:
+  deliver:
+    if: github.repository == 'matthieu-pm/forge-app' && github.ref == 'refs/heads/main' && vars.FORGE_INBOX_DELIVERY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      FORGE_INBOX_DELIVERY_SECRET: ${{ secrets.FORGE_INBOX_DELIVERY_SECRET }}
+    steps:
+      - name: Deliver bounded inbox batches
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request
+          secret = os.environ.get('FORGE_INBOX_DELIVERY_SECRET', '')
+          if len(secret) < 32:
+              raise SystemExit('Inbox delivery secret is missing.')
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, *args, **kwargs):
+                  return None
+          opener = urllib.request.build_opener(NoRedirect)
+          completed = 0
+          for batch in range(12):
+              request = urllib.request.Request(
+                  'https://app.forgenow.tech/api/internal/inbox-delivery',
+                  method='POST', headers={'Authorization': 'Bearer ' + secret},
+              )
+              try:
+                  with opener.open(request, timeout=65) as response:
+                      data = json.loads(response.read(4096))
+                  if data.get('failed') != 0 or data.get('inactive') is not False or type(data.get('completed')) is not int:
+                      raise ValueError('Invalid delivery outcome')
+                  completed += data['completed']
+                  if data['completed'] == 0 and data.get('scheduled') == 0:
+                      break
+              except Exception:
+                  raise SystemExit('Inbox delivery failed; retained jobs are available for inspection and retry.')
+          print(json.dumps({'completed': completed}))
+          PY

@@ -56,6 +56,10 @@ Dedicated acceptance passed **48 tests** across recurrence PostgreSQL, editor/se
 
 ## Merge and release boundary
 
-The PR must merge only after the final source checks pass and its remote head matches the validated branch. Vercel Preview Comments alone does not prove a successful app build. The app and runtime deployment statuses and GitHub check rollup are checked on the final remote head before merge. Production migration/deployment and live scheduler qualification are not claimed. Apply migrations 0075 and 0076 through the guarded release process before enablement; recurring rollout remains disabled by default.
+The PR must merge only after the final source checks pass and its remote head matches the validated branch. Vercel Preview Comments alone does not prove a successful app build. The app and runtime deployment statuses and GitHub check rollup are checked on the final remote head before merge. Production migration/deployment and live scheduler qualification are not claimed. Apply migrations 0076 and 0077 through the guarded release process before enablement; recurring rollout remains disabled by default.
 
 Standards: one finding fixed. Specification: two findings fixed, including the overlap. Two distinct review defects; no outstanding review blockers.
+
+## Main integration
+
+Main advanced to `dff9e6e` (FOR-65/shared inbox) while the final review checks were completing. Its migration 0075 is preserved byte for byte. The two still-unreleased recurrence migrations were moved to 0076 and 0077 with unchanged SQL. Their snapshot chain now includes the inbox schema and the readiness manifest was regenerated; Drizzle reports no schema changes. Both inbox and recurrence CLI dispatch and schema registrations were retained. Historical evidence above records the original migration numbering. Final acceptance is rerun on a fresh local database through 0077, together with the full combined workspace graph and final-head hosted checks.

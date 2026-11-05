@@ -530,15 +530,22 @@
     {
       "idx": 75,
       "version": "7",
-      "when": 1793899994582,
-      "tag": "0075_recurring_issue_occurrences",
+      "when": 1793902328449,
+      "tag": "0075_shared_inbox",
       "breakpoints": true
     },
     {
       "idx": 76,
       "version": "7",
-      "when": 1793902372119,
-      "tag": "0076_recurring_skip_calendar",
+      "when": 1793911299139,
+      "tag": "0076_recurring_issue_occurrences",
+      "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1793911299140,
+      "tag": "0077_recurring_skip_calendar",
       "breakpoints": true
     }
   ]

@@ -27,6 +27,9 @@ vi.mock("@/lib/canonical-issue-cache", async (original) => ({
 vi.mock("@/lib/issue-query-client", () => ({
   useQueriedIssue: () => mock.issue,
 }))
+vi.mock("@/lib/shared-inbox-client", () => ({
+  useSharedInbox: () => ({ active: false }),
+}))
 vi.mock("@/components/issues/use-issue-engagement", () => ({
   useIssueEngagement: () => ({
     pending: false,

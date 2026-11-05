@@ -8,6 +8,7 @@ import * as jobsSchema from "../../src/db/jobs-schema"
 import * as slaSchema from "../../src/db/sla-schema"
 import * as loopsSchema from "../../src/db/loops-schema"
 import * as resourcesSchema from "../../src/db/resources-schema"
+import * as inboxSchema from "../../src/db/inbox-schema"
 import * as appSchema from "../../src/db/schema"
 import * as authSchema from "../../src/db/auth-schema"
 import * as planningSchema from "../../src/db/planning-schema"
@@ -654,6 +655,7 @@ export async function enforceRestoredDeadlines(
         ...authSchema,
         ...loopsSchema,
         ...resourcesSchema,
+        ...inboxSchema,
       },
     })
     for (let batch = 0; ; batch++) {

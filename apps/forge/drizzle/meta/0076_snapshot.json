@@ -1,6 +1,6 @@
 {
-  "id": "085fe6f8-79d8-4c3f-8b4c-16cbfc74764d",
-  "prevId": "cd6aa2e7-f0c7-4b46-aca1-af510bd76329",
+  "id": "616686f0-4236-479c-a52d-a109b26db137",
+  "prevId": "1903303e-4c5d-41dd-a3d4-af9cb5d86171",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2641,7 +2641,7 @@
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
-          "default": "now()"
+          "default": "clock_timestamp()"
         }
       },
       "indexes": {
@@ -7108,259 +7108,6 @@
         "workspace_usage_reservation_hashes_check": {
           "name": "workspace_usage_reservation_hashes_check",
           "value": "\"workspace_usage_reservations\".\"request_hash\" ~ '^[a-f0-9]{64}$' AND \"workspace_usage_reservations\".\"pricing_fingerprint\" ~ '^[a-f0-9]{64}$'"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.recurring_issue_events": {
-      "name": "recurring_issue_events",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "workspace_id": {
-          "name": "workspace_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "schedule_id": {
-          "name": "schedule_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "calendar": {
-          "name": "calendar",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "reason": {
-          "name": "reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "from_date": {
-          "name": "from_date",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "to_date": {
-          "name": "to_date",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "count": {
-          "name": "count",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp (3) with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "recurring_issue_events_schedule_idx": {
-          "name": "recurring_issue_events_schedule_idx",
-          "columns": [
-            {
-              "expression": "schedule_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "recurring_issue_events_workspace_id_schedule_id_team_recurring_issues_workspace_id_id_fk": {
-          "name": "recurring_issue_events_workspace_id_schedule_id_team_recurring_issues_workspace_id_id_fk",
-          "tableFrom": "recurring_issue_events",
-          "tableTo": "team_recurring_issues",
-          "columnsFrom": [
-            "workspace_id",
-            "schedule_id"
-          ],
-          "columnsTo": [
-            "workspace_id",
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "recurring_issue_events_count_check": {
-          "name": "recurring_issue_events_count_check",
-          "value": "\"recurring_issue_events\".\"count\" >= 0"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.recurring_issue_occurrences": {
-      "name": "recurring_issue_occurrences",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "workspace_id": {
-          "name": "workspace_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "schedule_id": {
-          "name": "schedule_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "due_date": {
-          "name": "due_date",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "scheduled_at": {
-          "name": "scheduled_at",
-          "type": "timestamp (3) with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "snapshot": {
-          "name": "snapshot",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "revision": {
-          "name": "revision",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "state": {
-          "name": "state",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'pending'"
-        },
-        "issue_id": {
-          "name": "issue_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "reason": {
-          "name": "reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "job_id": {
-          "name": "job_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp (3) with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "recurring_issue_occurrences_pending_idx": {
-          "name": "recurring_issue_occurrences_pending_idx",
-          "columns": [
-            {
-              "expression": "state",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "job_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "recurring_issue_occurrences_workspace_id_schedule_id_team_recurring_issues_workspace_id_id_fk": {
-          "name": "recurring_issue_occurrences_workspace_id_schedule_id_team_recurring_issues_workspace_id_id_fk",
-          "tableFrom": "recurring_issue_occurrences",
-          "tableTo": "team_recurring_issues",
-          "columnsFrom": [
-            "workspace_id",
-            "schedule_id"
-          ],
-          "columnsTo": [
-            "workspace_id",
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "recurring_issue_occurrence_identity": {
-          "name": "recurring_issue_occurrence_identity",
-          "nullsNotDistinct": false,
-          "columns": [
-            "schedule_id",
-            "due_date"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "recurring_issue_occurrence_state_check": {
-          "name": "recurring_issue_occurrence_state_check",
-          "value": "\"recurring_issue_occurrences\".\"state\" in ('pending','created','skipped') and (\"recurring_issue_occurrences\".\"state\" <> 'created' or \"recurring_issue_occurrences\".\"issue_id\" is not null)"
         }
       },
       "isRLSEnabled": false
@@ -13095,6 +12842,520 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.inbox_activation": {
+      "name": "inbox_activation",
+      "schema": "",
+      "columns": {
+        "consumer": {
+          "name": "consumer",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "activated_at": {
+          "name": "activated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "clock_timestamp()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.inbox_activity": {
+      "name": "inbox_activity",
+      "schema": "",
+      "columns": {
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "issue_id": {
+          "name": "issue_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "command_id": {
+          "name": "command_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_id": {
+          "name": "event_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "delivery_revision": {
+          "name": "delivery_revision",
+          "type": "bigserial",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "inbox_activity_recipient_order": {
+          "name": "inbox_activity_recipient_order",
+          "columns": [
+            {
+              "expression": "workspace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "command_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "inbox_activity_workspace_id_organization_id_fk": {
+          "name": "inbox_activity_workspace_id_organization_id_fk",
+          "tableFrom": "inbox_activity",
+          "tableTo": "organization",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "inbox_activity_user_id_user_id_fk": {
+          "name": "inbox_activity_user_id_user_id_fk",
+          "tableFrom": "inbox_activity",
+          "tableTo": "user",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "inbox_activity_event_id_command_outbox_events_id_fk": {
+          "name": "inbox_activity_event_id_command_outbox_events_id_fk",
+          "tableFrom": "inbox_activity",
+          "tableTo": "command_outbox_events",
+          "columnsFrom": [
+            "event_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "inbox_activity_workspace_id_issue_id_issues_workspace_id_id_fk": {
+          "name": "inbox_activity_workspace_id_issue_id_issues_workspace_id_id_fk",
+          "tableFrom": "inbox_activity",
+          "tableTo": "issues",
+          "columnsFrom": [
+            "workspace_id",
+            "issue_id"
+          ],
+          "columnsTo": [
+            "workspace_id",
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "inbox_activity_workspace_id_command_id_command_receipts_workspace_id_id_fk": {
+          "name": "inbox_activity_workspace_id_command_id_command_receipts_workspace_id_id_fk",
+          "tableFrom": "inbox_activity",
+          "tableTo": "command_receipts",
+          "columnsFrom": [
+            "workspace_id",
+            "command_id"
+          ],
+          "columnsTo": [
+            "workspace_id",
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "inbox_activity_workspace_id_user_id_issue_id_command_id_pk": {
+          "name": "inbox_activity_workspace_id_user_id_issue_id_command_id_pk",
+          "columns": [
+            "workspace_id",
+            "user_id",
+            "issue_id",
+            "command_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "inbox_activity_kind": {
+          "name": "inbox_activity_kind",
+          "value": "\"inbox_activity\".\"kind\" IN ('assignment','mention','comment','reply','status','update','reaction')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.inbox_deliveries": {
+      "name": "inbox_deliveries",
+      "schema": "",
+      "columns": {
+        "event_id": {
+          "name": "event_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "recipient_ids": {
+          "name": "recipient_ids",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "next_recipient": {
+          "name": "next_recipient",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "complete": {
+          "name": "complete",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "delivered_at": {
+          "name": "delivered_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "clock_timestamp()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "inbox_deliveries_event_id_command_outbox_events_id_fk": {
+          "name": "inbox_deliveries_event_id_command_outbox_events_id_fk",
+          "tableFrom": "inbox_deliveries",
+          "tableTo": "command_outbox_events",
+          "columnsFrom": [
+            "event_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.recurring_issue_events": {
+      "name": "recurring_issue_events",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "schedule_id": {
+          "name": "schedule_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "from_date": {
+          "name": "from_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "to_date": {
+          "name": "to_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "count": {
+          "name": "count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "recurring_issue_events_schedule_idx": {
+          "name": "recurring_issue_events_schedule_idx",
+          "columns": [
+            {
+              "expression": "schedule_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "recurring_issue_events_workspace_id_schedule_id_team_recurring_issues_workspace_id_id_fk": {
+          "name": "recurring_issue_events_workspace_id_schedule_id_team_recurring_issues_workspace_id_id_fk",
+          "tableFrom": "recurring_issue_events",
+          "tableTo": "team_recurring_issues",
+          "columnsFrom": [
+            "workspace_id",
+            "schedule_id"
+          ],
+          "columnsTo": [
+            "workspace_id",
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "recurring_issue_events_count_check": {
+          "name": "recurring_issue_events_count_check",
+          "value": "\"recurring_issue_events\".\"count\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.recurring_issue_occurrences": {
+      "name": "recurring_issue_occurrences",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "schedule_id": {
+          "name": "schedule_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "due_date": {
+          "name": "due_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scheduled_at": {
+          "name": "scheduled_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "snapshot": {
+          "name": "snapshot",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "revision": {
+          "name": "revision",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "issue_id": {
+          "name": "issue_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "job_id": {
+          "name": "job_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "recurring_issue_occurrences_pending_idx": {
+          "name": "recurring_issue_occurrences_pending_idx",
+          "columns": [
+            {
+              "expression": "state",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "job_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "recurring_issue_occurrences_workspace_id_schedule_id_team_recurring_issues_workspace_id_id_fk": {
+          "name": "recurring_issue_occurrences_workspace_id_schedule_id_team_recurring_issues_workspace_id_id_fk",
+          "tableFrom": "recurring_issue_occurrences",
+          "tableTo": "team_recurring_issues",
+          "columnsFrom": [
+            "workspace_id",
+            "schedule_id"
+          ],
+          "columnsTo": [
+            "workspace_id",
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "recurring_issue_occurrence_identity": {
+          "name": "recurring_issue_occurrence_identity",
+          "nullsNotDistinct": false,
+          "columns": [
+            "schedule_id",
+            "due_date"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "recurring_issue_occurrence_state_check": {
+          "name": "recurring_issue_occurrence_state_check",
+          "value": "\"recurring_issue_occurrences\".\"state\" in ('pending','created','skipped') and (\"recurring_issue_occurrences\".\"state\" <> 'created' or \"recurring_issue_occurrences\".\"issue_id\" is not null)"
+        }
+      },
       "isRLSEnabled": false
     }
   },

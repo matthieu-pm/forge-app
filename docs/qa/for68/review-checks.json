@@ -52,8 +52,8 @@
   "localPostgres": "stopped",
   "rollout": "disabled by default",
   "requiredMigrations": [
-    "0075_recurring_issue_occurrences",
-    "0076_recurring_skip_calendar"
+    "0076_recurring_issue_occurrences",
+    "0077_recurring_skip_calendar"
   ],
   "productionMigration": "not performed",
   "productionDeployment": "not performed",
@@ -70,5 +70,12 @@
       "state": "READY"
     }
   },
-  "mergeGate": "Recheck all hosted statuses on final remote head; reject failures or pending checks."
+  "mergeGate": "Recheck all hosted statuses on final remote head; reject failures or pending checks.",
+  "integratedBase": "dff9e6ef7c9b72e7deda2fbdcb5698c7c8b1d2b2",
+  "migrationReconciliation": {
+    "sharedInbox0075": "unchanged",
+    "recurrenceSql": "unchanged, renumbered after shared inbox",
+    "snapshotChain": "validated",
+    "drizzleSchemaDiff": "none"
+  }
 }
