@@ -10,6 +10,7 @@ pub mod joins;
 pub mod members;
 pub mod oauth;
 pub mod security;
+pub mod teams;
 pub mod workspaces;
 pub use database::Database;
 
@@ -43,6 +44,8 @@ pub enum StoreError {
     DomainTaken,
     #[error("The domain verification TXT record is missing or expired.")]
     DomainUnverified,
+    #[error(transparent)]
+    Team(#[from] forge_core::teams::TeamError),
     #[error("Sign in with your existing method before linking this provider.")]
     AccountNotLinked,
     #[error("Database operation failed.")]

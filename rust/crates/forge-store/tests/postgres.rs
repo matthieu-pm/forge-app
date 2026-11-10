@@ -9,6 +9,372 @@ use serde_json::{Value, json};
 use sqlx::{PgConnection, PgPool, postgres::PgPoolOptions};
 use uuid::Uuid;
 
+fn team_input(n: u32) -> forge_core::teams::CreateTeam {
+    forge_core::teams::CreateTeam::parse(json!({"name":format!("Team {n}"),"identifier":format!("T{n}"),"icon":{"kind":"icon","value":"UserGroup03Icon","color":"#818cf8"},"timezone":"Europe/Paris"})).unwrap()
+}
+async fn team_key(f: &Fixture) -> Actor {
+    let created = forge_store::api_keys::create(
+        &f.database,
+        &f.actor,
+        &forge_store::api_keys::CreateKey {
+            name: "Team API".into(),
+            expires_in_days: 90,
+            scopes: vec![ApiScope::TeamsRead, ApiScope::TeamsWrite],
+        },
+    )
+    .await
+    .unwrap();
+    api_key_actor(&f.database, created["key"].as_str().unwrap())
+        .await
+        .unwrap()
+}
+async fn enter_workspace(f: &Fixture, visitor: &Fixture) -> Actor {
+    sqlx::query("INSERT INTO member(id,organization_id,user_id,role) VALUES($1,$2,$3,'member')")
+        .bind(Uuid::new_v4().to_string())
+        .bind(&f.actor.workspace_id)
+        .bind(&visitor.actor.user_id)
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    forge_store::workspaces::set_active(
+        &visitor.database,
+        &visitor.token,
+        Some(&f.actor.workspace_id),
+    )
+    .await
+    .unwrap();
+    session_actor(&visitor.database, &visitor.token)
+        .await
+        .unwrap()
+}
+
+#[tokio::test]
+async fn concurrent_team_admission_preserves_capacity_memberships_and_seeded_statuses() {
+    use forge_store::teams;
+    let f = Fixture::new().await;
+    teams::create(&f.database, &f.actor, &team_input(0))
+        .await
+        .unwrap();
+    let a = team_input(1);
+    let b = team_input(2);
+    let (first, second) = tokio::join!(
+        teams::create(&f.database, &f.actor, &a),
+        teams::create(&f.database, &f.actor, &b)
+    );
+    assert_eq!(usize::from(first.is_ok()) + usize::from(second.is_ok()), 1);
+    assert!(
+        matches!(
+            first,
+            Err(StoreError::Team(forge_core::teams::TeamError::TeamLimit))
+        ) || matches!(
+            second,
+            Err(StoreError::Team(forge_core::teams::TeamError::TeamLimit))
+        )
+    );
+    let counts:(i64,i64,i64,i32)=sqlx::query_as("SELECT (SELECT count(*) FROM teams WHERE workspace_id=$1),(SELECT count(*) FROM team_members WHERE workspace_id=$1),(SELECT count(*) FROM issue_statuses WHERE workspace_id=$1),(SELECT active_team_count FROM workspace_team_capacity WHERE workspace_id=$1)").bind(&f.actor.workspace_id).fetch_one(&f.pool).await.unwrap();
+    assert_eq!(counts, (2, 2, 14, 2));
+    let statuses:Vec<Value>=sqlx::query_scalar("SELECT jsonb_build_object('id',id,'name',name,'group',status_group,'description',description,'color',color) FROM issue_statuses WHERE workspace_id=$1 AND team_id=(SELECT id FROM teams WHERE workspace_id=$1 ORDER BY name LIMIT 1) ORDER BY position").bind(&f.actor.workspace_id).fetch_all(&f.pool).await.unwrap();
+    let defaults: Value =
+        serde_json::from_str(include_str!("../../forge-core/data/issue-definitions.json")).unwrap();
+    assert_eq!(json!(statuses), defaults["statuses"]["statuses"]);
+}
+
+#[tokio::test]
+async fn team_receipts_replay_once_and_recheck_policy_and_archived_visibility() {
+    use forge_store::teams::{self, Selector};
+    let f = Fixture::new().await;
+    let actor = team_key(&f).await;
+    let input = team_input(1);
+    let (a, b) = tokio::join!(
+        teams::create_idempotent(&f.database, &actor, &input, "same-team"),
+        teams::create_idempotent(&f.database, &actor, &input, "same-team")
+    );
+    let a = a.unwrap();
+    let b = b.unwrap();
+    assert_eq!(a.value.id, b.value.id);
+    assert_ne!(a.replayed, b.replayed);
+    let counts:(i64,i64,i64)=sqlx::query_as("SELECT (SELECT count(*) FROM teams WHERE workspace_id=$1),(SELECT count(*) FROM command_audit_events WHERE workspace_id=$1),(SELECT count(*) FROM command_outbox_events WHERE workspace_id=$1)").bind(&f.actor.workspace_id).fetch_one(&f.pool).await.unwrap();
+    assert_eq!(counts, (1, 1, 1));
+    assert!(matches!(
+        teams::create_idempotent(&f.database, &actor, &team_input(2), "same-team").await,
+        Err(StoreError::CommandReused)
+    ));
+    teams::archive(&f.database, &f.actor, &Selector::Id(a.value.id), None)
+        .await
+        .unwrap();
+    assert!(matches!(
+        teams::create_idempotent(&f.database, &actor, &input, "same-team").await,
+        Err(StoreError::Forbidden)
+    ));
+    teams::restore(&f.database, &f.actor, &Selector::Id(a.value.id))
+        .await
+        .unwrap();
+    sqlx::query("UPDATE member SET role='member' WHERE organization_id=$1")
+        .bind(&f.actor.workspace_id)
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    assert!(matches!(
+        teams::create_idempotent(&f.database, &actor, &input, "same-team").await,
+        Err(StoreError::Forbidden)
+    ));
+}
+
+#[tokio::test]
+async fn legacy_team_receipts_remain_evidence_even_after_expiry_without_new_history() {
+    use forge_store::teams;
+    use sha2::{Digest, Sha256};
+    let f = Fixture::new().await;
+    let actor = team_key(&f).await;
+    let input = team_input(1);
+    let team = teams::create(&f.database, &f.actor, &input).await.unwrap();
+    let Authentication::ApiKey { credential_id } = &actor.authentication else {
+        unreachable!()
+    };
+    let input_json = serde_json::to_value(&input).unwrap();
+    let hash = format!(
+        "{:x}",
+        Sha256::digest(forge_core::canonical::javascript_stringify(&input_json).as_bytes())
+    );
+    sqlx::query("INSERT INTO api_idempotency_keys(workspace_id,credential_id,operation_id,idempotency_key,request_hash,response_body,response_status,expires_at) VALUES($1,$2,'createTeam','legacy',$3,$4,201,now()-interval '1 day')").bind(&f.actor.workspace_id).bind(credential_id).bind(&hash).bind(serde_json::to_string(&team).unwrap()).execute(&f.pool).await.unwrap();
+    let replay = teams::create_idempotent(&f.database, &actor, &input, "legacy")
+        .await
+        .unwrap();
+    assert!(replay.replayed);
+    assert_eq!(replay.value.id, team.id);
+    let counts:(i64,i64,i64)=sqlx::query_as("SELECT (SELECT count(*) FROM command_receipts WHERE workspace_id=$1),(SELECT count(*) FROM command_audit_events WHERE workspace_id=$1),(SELECT count(*) FROM command_outbox_events WHERE workspace_id=$1)").bind(&f.actor.workspace_id).fetch_one(&f.pool).await.unwrap();
+    assert_eq!(counts, (0, 0, 0));
+    assert!(matches!(
+        teams::create_idempotent(&f.database, &actor, &team_input(2), "legacy").await,
+        Err(StoreError::CommandReused)
+    ));
+    sqlx::query("UPDATE api_idempotency_keys SET response_body=NULL WHERE workspace_id=$1")
+        .bind(&f.actor.workspace_id)
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    assert!(matches!(
+        teams::create_idempotent(&f.database, &actor, &input, "legacy").await,
+        Err(StoreError::CommandAmbiguous)
+    ));
+}
+
+#[tokio::test]
+async fn team_archiving_restoration_and_identifier_reuse_preserve_existing_data() {
+    use forge_core::teams::TeamError;
+    use forge_store::teams::{self, Selector};
+    let f = Fixture::new().await;
+    let team = teams::create(&f.database, &f.actor, &team_input(1))
+        .await
+        .unwrap();
+    let selector = Selector::Id(team.id);
+    assert!(matches!(
+        teams::archive(&f.database, &f.actor, &selector, Some("wrong name")).await,
+        Err(StoreError::Team(TeamError::ConfirmationMismatch))
+    ));
+    let settings=forge_core::teams::TeamSettings::parse(json!({"name":"Renamed team","identifier":"new","estimationScheme":"fibonacci","detailedHistoryEnabled":true})).unwrap();
+    let renamed = teams::update(&f.database, &f.actor, &selector, &settings)
+        .await
+        .unwrap();
+    assert_eq!(renamed.slug, team.slug);
+    assert_eq!(renamed.identifier, "NEW");
+    teams::archive(&f.database, &f.actor, &selector, Some("Renamed team"))
+        .await
+        .unwrap();
+    assert!(
+        teams::get(&f.database, &f.actor, &selector)
+            .await
+            .unwrap()
+            .is_none()
+    );
+    assert_eq!(
+        teams::directory(&f.database, &f.actor, true).await.unwrap()["items"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+    let replacement = teams::create(&f.database, &f.actor, &team_input(1))
+        .await
+        .unwrap();
+    assert!(matches!(
+        teams::restore(&f.database, &f.actor, &selector).await,
+        Err(StoreError::Team(TeamError::RestoreConflict))
+    ));
+    teams::archive(&f.database, &f.actor, &Selector::Id(replacement.id), None)
+        .await
+        .unwrap();
+    teams::restore(&f.database, &f.actor, &selector)
+        .await
+        .unwrap();
+    teams::archive(&f.database, &f.actor, &selector, None)
+        .await
+        .unwrap();
+    sqlx::query("UPDATE teams SET deleted_at=now()-interval '31 days' WHERE id=$1")
+        .bind(team.id)
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    assert!(matches!(
+        teams::restore(&f.database, &f.actor, &selector).await,
+        Err(StoreError::Team(TeamError::NotFound))
+    ));
+    let statuses: i64 = sqlx::query_scalar("SELECT count(*) FROM issue_statuses WHERE team_id=$1")
+        .bind(team.id)
+        .fetch_one(&f.pool)
+        .await
+        .unwrap();
+    assert_eq!(statuses, 7);
+}
+
+#[tokio::test]
+async fn private_teams_are_filtered_before_pagination_and_membership_changes_are_atomic() {
+    use forge_store::teams::{self, Selector};
+    let f = Fixture::new().await;
+    let guest = Fixture::new().await;
+    sqlx::query("INSERT INTO workspace_entitlements(workspace_id,plan,status) VALUES($1,'enterprise','active')").bind(&f.actor.workspace_id).execute(&f.pool).await.unwrap();
+    let a = teams::create(&f.database, &f.actor, &team_input(1))
+        .await
+        .unwrap();
+    let b = teams::create(&f.database, &f.actor, &team_input(2))
+        .await
+        .unwrap();
+    let c = teams::create(&f.database, &f.actor, &team_input(3))
+        .await
+        .unwrap();
+    let d = teams::create(&f.database, &f.actor, &team_input(4))
+        .await
+        .unwrap();
+    sqlx::query("UPDATE teams SET visibility='private' WHERE id=ANY($1)")
+        .bind(vec![a.id, c.id])
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    let actor = enter_workspace(&f, &guest).await;
+    let first = teams::list(&guest.database, &actor, None, 1).await.unwrap();
+    assert_eq!(first["items"][0]["id"], json!(b.id));
+    let second = teams::list(&guest.database, &actor, first["nextCursor"].as_str(), 1)
+        .await
+        .unwrap();
+    assert_eq!(second["items"][0]["id"], json!(d.id));
+    assert!(second["nextCursor"].is_null());
+    assert!(
+        teams::get(&guest.database, &actor, &Selector::Id(a.id))
+            .await
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        teams::join(&guest.database, &actor, &Selector::Id(a.id), false)
+            .await
+            .is_err()
+    );
+    assert!(
+        teams::add_members(
+            &f.database,
+            &f.actor,
+            &Selector::Id(a.id),
+            &[actor.user_id.clone(), "foreign-user".into()]
+        )
+        .await
+        .is_err()
+    );
+    let dir = teams::member_directory(&f.database, &f.actor, &Selector::Id(a.id))
+        .await
+        .unwrap();
+    assert_eq!(dir["members"].as_array().unwrap().len(), 1);
+    teams::add_members(
+        &f.database,
+        &f.actor,
+        &Selector::Id(a.id),
+        std::slice::from_ref(&actor.user_id),
+    )
+    .await
+    .unwrap();
+    assert!(
+        teams::get(&guest.database, &actor, &Selector::Id(a.id))
+            .await
+            .unwrap()
+            .is_some()
+    );
+    let directory = teams::directory(&guest.database, &actor, false)
+        .await
+        .unwrap();
+    assert_eq!(directory["items"].as_array().unwrap().len(), 3);
+    assert_eq!(directory["canCreateTeam"], false);
+    let member_dir = teams::member_directory(&guest.database, &actor, &Selector::Id(a.id))
+        .await
+        .unwrap();
+    assert!(
+        member_dir["availableMembers"]
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
+}
+
+#[tokio::test]
+async fn competing_team_leads_cannot_both_leave() {
+    use forge_store::teams::{self, Selector};
+    let f = Fixture::new().await;
+    let guest = Fixture::new().await;
+    let actor = enter_workspace(&f, &guest).await;
+    let team = teams::create(&f.database, &f.actor, &team_input(1))
+        .await
+        .unwrap();
+    let selector = Selector::Id(team.id);
+    teams::add_members(
+        &f.database,
+        &f.actor,
+        &selector,
+        std::slice::from_ref(&actor.user_id),
+    )
+    .await
+    .unwrap();
+    sqlx::query("UPDATE team_members SET role='lead' WHERE team_id=$1")
+        .bind(team.id)
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    let (a, b) = tokio::join!(
+        teams::join(&f.database, &f.actor, &selector, true),
+        teams::join(&guest.database, &actor, &selector, true)
+    );
+    assert_eq!(usize::from(a.is_ok()) + usize::from(b.is_ok()), 1);
+    assert!(
+        matches!(
+            a,
+            Err(StoreError::Team(forge_core::teams::TeamError::LastLead))
+        ) || matches!(
+            b,
+            Err(StoreError::Team(forge_core::teams::TeamError::LastLead))
+        )
+    );
+    let leads: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM team_members WHERE team_id=$1 AND role='lead'")
+            .bind(team.id)
+            .fetch_one(&f.pool)
+            .await
+            .unwrap();
+    assert_eq!(leads, 1);
+}
+
+#[tokio::test]
+async fn api_key_names_use_the_current_reference_unicode_length_and_trim_rules() {
+    let f = Fixture::new().await;
+    let fixtures: Value =
+        serde_json::from_str(include_str!("../../../reference-fixtures.json")).unwrap();
+    for case in fixtures["teamContracts"]["keyNames"].as_array().unwrap() {
+        let input: forge_store::api_keys::CreateKey =
+            serde_json::from_value(case["input"].clone()).unwrap();
+        let result = forge_store::api_keys::create(&f.database, &f.actor, &input).await;
+        assert_eq!(result.is_ok(), case["valid"].as_bool().unwrap(), "{case}");
+        if let Ok(value) = result {
+            assert_eq!(value["summary"]["name"], case["expected"]["name"]);
+        }
+    }
+}
+
 const INVITE_SECRET: &str = "test-workspace-invite-secret-only-1234";
 struct Dns(Vec<String>);
 #[async_trait]

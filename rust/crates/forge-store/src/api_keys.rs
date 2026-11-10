@@ -52,9 +52,9 @@ pub async fn create(
     actor: &Actor,
     input: &CreateKey,
 ) -> Result<Value, StoreError> {
-    let name = input.name.trim();
+    let name = forge_core::text::trim(&input.name);
     if name.is_empty()
-        || name.encode_utf16().count() > 32
+        || forge_core::text::length(name) > 32
         || !(1..=365).contains(&input.expires_in_days)
         || input.scopes.is_empty()
     {

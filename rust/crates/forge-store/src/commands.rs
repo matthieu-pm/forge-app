@@ -51,6 +51,17 @@ pub trait CommandHandler: Send + Sync {
         value: Option<&Self::Output>,
     ) -> Result<(), StoreError>;
 
+    /// Existing pre-command-framework receipts are evidence of a prior effect.
+    /// Replaying one must neither repeat the write nor invent audit/outbox rows.
+    async fn legacy(
+        &self,
+        _connection: &mut PgConnection,
+        _actor: &Actor,
+        _command: &Command<'_>,
+    ) -> Result<Option<Self::Output>, StoreError> {
+        Ok(None)
+    }
+
     /// SQL only, on the supplied connection. Do not start another transaction.
     async fn run(
         &self,
@@ -175,6 +186,19 @@ pub async fn execute<H: CommandHandler>(
             value,
         });
     };
+    if let Some(value) = handler.legacy(&mut tx, &current, &command).await? {
+        tx.prepare().await?;
+        sqlx::query("DELETE FROM command_receipts WHERE id=$1")
+            .bind(command_id)
+            .execute(&mut *tx)
+            .await?;
+        handler.authorize(&mut tx, &current, Some(&value)).await?;
+        tx.commit().await?;
+        return Ok(Executed {
+            replayed: true,
+            value,
+        });
+    }
     tx.prepare().await?;
     let result = handler.run(&mut tx, &current).await?;
     if result.resource_id.is_empty() || result.resource_type.is_empty() {

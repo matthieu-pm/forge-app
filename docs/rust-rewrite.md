@@ -25,7 +25,7 @@ gate pass.
 | 1c | Independent recovery journal, signed archive compatibility and transaction publication | Passed available gate |
 | 1d | ChatGPT OAuth, explicit account linking and desktop PKCE authorization | Passed available gate |
 | 1e | Membership/invitation commands, workspace security policy and API-key management | Passed available gate; workflow delivery belongs to milestone 3 |
-| 2a | Team lifecycle, membership, configuration and default catalogs | Pending |
+| 2a | Team lifecycle, membership, configuration, default catalogs and public team API | Passed available gate |
 | 2b | Issues, triage and cycles | Pending |
 | 2c | Projects, initiatives, documents, views, resources and imports | Pending |
 | 3 | Agent execution, approvals, streams, models, files, jobs, loops, calls and billing | Pending |
@@ -189,3 +189,38 @@ these routes do not represent a completed rewrite.
   `.forge/rust-rewrite/milestone-1e-rust-final.log`, and
   `.forge/rust-rewrite/milestone-1e-clippy.log`. The final Rust rerun includes the
   validation-response correction made after the full gate's Rust phase.
+
+### Milestone 2a
+
+- Full reference gate passed again: 2,959 enabled tests and all TypeScript
+  typechecks. Final Rust verification passed 76 tests, formatting and Clippy;
+  no Rust tests were skipped. The 661 external-fixture reference tests remain
+  skipped and do not count as acceptance.
+- Teams support creation, settings, directory/pagination, joining/leaving,
+  administrative member additions, archiving and restoration within 30 days.
+  Private visibility is applied before pagination. Directory memberships load
+  in one batch rather than one database request per team.
+- PostgreSQL admission/capacity and status-seeding triggers remain authoritative.
+  Competing admissions leave no partial memberships or statuses. Competing team
+  leads cannot both leave. Archive/restore preserves statuses and membership.
+- The public team API supports bearer credentials, scopes, live authorization,
+  rate limits, create receipts, updates and archives. Older idempotency records
+  remain evidence after expiry and replay without inventing command history or
+  repeating effects. Archived resources and revoked policy deny receipt replay.
+- OpenAPI JSON and the existing Scalar documentation page are exported from the
+  source contract as static Rust server assets, checked for drift by the gate.
+  The documentation retains its existing external Scalar loader.
+- 44 creation cases, 28 settings cases, ten slug cases and five key-name cases
+  compare normalization against the source. This found and corrected Unicode
+  length checks: the installed Zod version counts code points, while explicit
+  JavaScript protocol length checks elsewhere still use UTF-16 units.
+- Recovery-enabled tests reject an archive when preparation fails and confirm
+  archived and restored team state is captured independently.
+- Default definition data is exported from the reference; canonical statuses
+  still come from the existing database trigger. Definition editing/workflows
+  and issue classification belong to milestone 2b. Browser UI remains pending.
+- Logs: `.forge/rust-rewrite/milestone-2a-qualified.log`,
+  `.forge/rust-rewrite/milestone-2a-rust-final.log`, and
+  `.forge/rust-rewrite/milestone-2a-clippy.log`. The final Rust rerun includes
+  Unicode key-name and recovery lifecycle checks added after the full gate's
+  Rust phase. All reference/data exports also passed their final drift checks.

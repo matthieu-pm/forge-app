@@ -251,3 +251,42 @@ fn subscription_access_matches_reference_at_payment_and_expiry_boundaries() {
         );
     }
 }
+
+#[test]
+fn team_input_normalization_and_default_catalog_match_reference() {
+    use forge_core::teams::{CreateTeam, TeamSettings, slugify_team_name};
+    let fixture: Value =
+        serde_json::from_str(include_str!("../../../reference-fixtures.json")).unwrap();
+    let cases = &fixture["teamContracts"];
+    for case in cases["create"].as_array().unwrap() {
+        let result = CreateTeam::parse(case["input"].clone());
+        assert_eq!(result.is_ok(), case["valid"].as_bool().unwrap(), "{case}");
+        if let Ok(value) = result {
+            assert_eq!(
+                serde_json::to_value(value).unwrap(),
+                case["expected"],
+                "{case}"
+            );
+        }
+    }
+    for case in cases["settings"].as_array().unwrap() {
+        let result = TeamSettings::parse(case["input"].clone());
+        assert_eq!(result.is_ok(), case["valid"].as_bool().unwrap(), "{case}");
+        if let Ok(value) = result {
+            assert_eq!(
+                serde_json::to_value(value).unwrap(),
+                case["expected"],
+                "{case}"
+            );
+        }
+    }
+    for case in cases["slugs"].as_array().unwrap() {
+        assert_eq!(
+            slugify_team_name(case["input"].as_str().unwrap()),
+            case["expected"].as_str().unwrap()
+        );
+    }
+    let defaults: Value =
+        serde_json::from_str(include_str!("../data/issue-definitions.json")).unwrap();
+    assert_eq!(defaults, cases["defaults"]);
+}

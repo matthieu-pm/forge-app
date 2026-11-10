@@ -13,6 +13,7 @@ import { productFeatures, parseFeatureRollouts, productFeatureMode } from "../pa
 import { sourceDigest, signJournalRecord, recoveryEvent, journalSource } from "../apps/forge/src/application/recovery/journal.ts"
 import { verifyChatGPTIdentity } from "../apps/forge/shared/chatgpt-oauth.ts"
 import { security } from "./rust-security-reference.mjs"
+import { teamContracts } from "./rust-team-reference.mjs"
 
 const teams = [
   { workspaceId: "w1", visibility: "workspace", memberUserIds: [] },
@@ -135,7 +136,12 @@ try {
 } finally {
   globalThis.fetch = originalFetch
 }
-const output = JSON.stringify({ teams, projects, documents, actorCases, canonical, permissions: permissionValues.map(value => ({ value, scopes: permissionsToScopes(value) })), crypto, features, journal, oidc, security }) + "\n"
+const output = JSON.stringify({ teams, projects, documents, actorCases, canonical, permissions: permissionValues.map(value => ({ value, scopes: permissionsToScopes(value) })), crypto, features, journal, oidc, security, teamContracts }) + "\n"
+const defaultsDestination=new URL("../rust/crates/forge-core/data/issue-definitions.json",import.meta.url)
+const defaultsOutput=JSON.stringify(teamContracts.defaults,null,2)+"\n"
+if(process.argv.includes("--check")){
+  if(readFileSync(defaultsDestination,"utf8")!==defaultsOutput){console.error("Reference default definitions changed.");process.exitCode=1}
+}else{writeFileSync(defaultsDestination,defaultsOutput)}
 const destination = new URL("../rust/reference-fixtures.json", import.meta.url)
 if (process.argv.includes("--check")) {
   if (readFileSync(destination, "utf8") !== output) {

@@ -9,4 +9,6 @@ pub mod journal;
 pub mod security;
 pub mod security_commands;
 pub mod subscription;
+pub mod teams;
+pub mod text;
 pub mod visibility;

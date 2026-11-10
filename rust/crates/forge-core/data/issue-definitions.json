@@ -1,0 +1,80 @@
+{
+  "statuses": {
+    "defaultId": "backlog",
+    "statuses": [
+      {
+        "id": "backlog",
+        "group": "backlog",
+        "name": "Backlog",
+        "description": "",
+        "color": "#bec2c8"
+      },
+      {
+        "id": "todo",
+        "group": "unstarted",
+        "name": "Todo",
+        "description": "",
+        "color": "#bec2c8"
+      },
+      {
+        "id": "in-progress",
+        "group": "started",
+        "name": "In Progress",
+        "description": "",
+        "color": "#f2c400"
+      },
+      {
+        "id": "in-review",
+        "group": "started",
+        "name": "In Review",
+        "description": "Pull request is being reviewed",
+        "color": "#4cb782"
+      },
+      {
+        "id": "done",
+        "group": "completed",
+        "name": "Done",
+        "description": "",
+        "color": "#5e6ad2"
+      },
+      {
+        "id": "canceled",
+        "group": "canceled",
+        "name": "Canceled",
+        "description": "",
+        "color": "#95a2b3"
+      },
+      {
+        "id": "duplicate",
+        "group": "duplicate",
+        "name": "Duplicate",
+        "description": "",
+        "color": "#95a2b3"
+      }
+    ]
+  },
+  "labels": {
+    "version": 1,
+    "labels": [],
+    "groups": [],
+    "inheritedCount": 0
+  },
+  "workflows": {
+    "pullRequests": {
+      "draft": "",
+      "open": "in-progress",
+      "review": "in-review",
+      "ready": "",
+      "merge": "done"
+    },
+    "branches": [],
+    "closeParents": false,
+    "closeChildren": false,
+    "closeStale": true,
+    "staleMonths": "6",
+    "staleStatus": "canceled",
+    "archiveMonths": "6",
+    "issueOrder": "first"
+  },
+  "transitions": {}
+}

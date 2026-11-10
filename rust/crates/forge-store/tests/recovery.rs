@@ -193,6 +193,71 @@ async fn security_defaults_and_mutations_are_independently_journaled() {
 }
 
 #[tokio::test]
+async fn team_lifecycle_prepares_before_archiving_and_records_restoration() {
+    let f = Fixture::new().await;
+    forge_store::workspaces::create(
+        &f.database,
+        &f.token,
+        "Recovery teams",
+        &Uuid::new_v4().to_string(),
+        None,
+    )
+    .await
+    .unwrap();
+    let actor = forge_store::authority::session_actor(&f.database, &f.token)
+        .await
+        .unwrap();
+    let input=forge_core::teams::CreateTeam::parse(serde_json::json!({"name":"Recoverable team","identifier":"RCVR","icon":{"kind":"emoji","value":"🛠️","color":"#818cf8"},"timezone":"UTC"})).unwrap();
+    let team = forge_store::teams::create(&f.database, &actor, &input)
+        .await
+        .unwrap();
+    let selector = forge_store::teams::Selector::Id(team.id);
+    f.backend.mode.store(1, Ordering::Relaxed);
+    assert!(
+        forge_store::teams::archive(&f.database, &actor, &selector, None)
+            .await
+            .is_err()
+    );
+    assert!(
+        forge_store::teams::get(&f.database, &actor, &selector)
+            .await
+            .unwrap()
+            .is_some()
+    );
+    f.backend.mode.store(0, Ordering::Relaxed);
+    forge_store::teams::archive(&f.database, &actor, &selector, None)
+        .await
+        .unwrap();
+    assert!(
+        forge_store::teams::get(&f.database, &actor, &selector)
+            .await
+            .unwrap()
+            .is_none()
+    );
+    forge_store::teams::restore(&f.database, &actor, &selector)
+        .await
+        .unwrap();
+    let completed = f.backend.completed.lock().unwrap();
+    let events: Vec<_> = completed
+        .iter()
+        .flat_map(|(_, events)| events)
+        .filter(|event| event.table == "teams")
+        .collect();
+    assert!(events.iter().any(|event| {
+        event
+            .patch
+            .as_ref()
+            .is_some_and(|p| p.get("deleted_at").is_some_and(|v| !v.is_null()))
+    }));
+    assert!(events.iter().any(|event| {
+        event
+            .patch
+            .as_ref()
+            .is_some_and(|p| p.get("deleted_at").is_some_and(serde_json::Value::is_null))
+    }));
+}
+
+#[tokio::test]
 async fn independent_prepare_and_complete_surround_a_committed_deletion() {
     let fixture = Fixture::new().await;
     accounts::sign_out(&fixture.database, &fixture.token)

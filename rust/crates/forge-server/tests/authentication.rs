@@ -343,7 +343,8 @@ impl Fixture {
             pool.clone(),
             AuthSettings::new(SECRET.into(), ORIGIN).unwrap(),
             Some(mailbox.clone()),
-        );
+        )
+        .with_public_api(true);
         Self {
             database: forge_store::Database::new(pool.clone()),
             pool,
@@ -415,6 +416,277 @@ impl Fixture {
             forge_identity::sign_session_token(&token, SECRET).unwrap()
         );
         (user, token, cookie)
+    }
+    async fn api(
+        &self,
+        method: &str,
+        path: &str,
+        key: Option<&str>,
+        idempotency: Option<&str>,
+        body: Option<Value>,
+    ) -> (StatusCode, HeaderMap, Value) {
+        let mut request = Request::builder().method(method).uri(path);
+        if let Some(key) = key {
+            request = request.header(header::AUTHORIZATION, format!("Bearer {key}"));
+        }
+        if let Some(key) = idempotency {
+            request = request.header("idempotency-key", key);
+        }
+        let payload = if let Some(body) = body {
+            request = request.header(header::CONTENT_TYPE, "application/json");
+            Body::from(body.to_string())
+        } else {
+            Body::empty()
+        };
+        let response = self
+            .app
+            .clone()
+            .oneshot(request.body(payload).unwrap())
+            .await
+            .unwrap();
+        let status = response.status();
+        let headers = response.headers().clone();
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let value = serde_json::from_slice(&bytes)
+            .unwrap_or_else(|_| json!(String::from_utf8_lossy(&bytes)));
+        (status, headers, value)
+    }
+}
+
+#[tokio::test]
+async fn team_public_api_keeps_bearer_authentication_receipts_and_openapi_contracts() {
+    let f = Fixture::new().await;
+    let (_, token, cookie) = f.account().await;
+    forge_store::workspaces::create(
+        &f.database,
+        &token,
+        "API teams",
+        &Uuid::new_v4().to_string(),
+        None,
+    )
+    .await
+    .unwrap();
+    let (status, _, created) = f
+        .request(
+            "POST",
+            "/api/workspace/api-keys",
+            Some(&cookie),
+            Some(json!({"name":"Team writer","scopes":["teams:read","teams:write"]})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{created}");
+    let key = created["key"].as_str().unwrap();
+    let (status, headers, denied) = f.api("GET", "/api/v1/teams", None, None, None).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    assert_eq!(denied["defined"], true);
+    assert_eq!(denied["code"], "UNAUTHORIZED");
+    assert!(Uuid::parse_str(headers["x-request-id"].to_str().unwrap()).is_ok());
+    let (status, _, _) = f.request("GET", "/api/v1/teams", Some(&cookie), None).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    let input = json!({"name":"Platform","identifier":"PLAT","icon":{"kind":"emoji","value":"🛠️","color":"#818cf8"},"timezone":"Europe/Paris"});
+    let (status, _, _) = f
+        .api(
+            "POST",
+            "/api/v1/teams",
+            Some(key),
+            None,
+            Some(input.clone()),
+        )
+        .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    let (status, headers, team) = f
+        .api(
+            "POST",
+            "/api/v1/teams",
+            Some(key),
+            Some("platform-create"),
+            Some(input.clone()),
+        )
+        .await;
+    assert_eq!(status, StatusCode::CREATED, "{team}");
+    assert_eq!(headers["cache-control"], "no-store");
+    assert_eq!(team["slug"], "platform");
+    let (status, _, replay) = f
+        .api(
+            "POST",
+            "/api/v1/teams",
+            Some(key),
+            Some("platform-create"),
+            Some(input.clone()),
+        )
+        .await;
+    assert_eq!(status, StatusCode::CREATED, "{replay}");
+    assert_eq!(team, replay);
+    let mut changed = input;
+    changed["name"] = json!("Other platform");
+    let (status, _, conflict) = f
+        .api(
+            "POST",
+            "/api/v1/teams",
+            Some(key),
+            Some("platform-create"),
+            Some(changed),
+        )
+        .await;
+    assert_eq!(status, StatusCode::CONFLICT);
+    assert_eq!(conflict["data"]["reason"], "IDEMPOTENCY_KEY_REUSED");
+    let path = format!("/api/v1/teams/{}", team["id"].as_str().unwrap());
+    let (status, _, updated) = f
+        .api(
+            "PATCH",
+            &path,
+            Some(key),
+            None,
+            Some(json!({"settings":{"name":"Renamed platform","description":"Core systems"}})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{updated}");
+    assert_eq!(updated["slug"], "platform");
+    assert_eq!(updated["name"], "Renamed platform");
+    let (status, _, listed) = f
+        .api("GET", "/api/v1/teams?limit=1", Some(key), None, None)
+        .await;
+    assert_eq!(status, StatusCode::OK, "{listed}");
+    assert_eq!(listed["items"].as_array().unwrap().len(), 1);
+    let (status, _, bad_cursor) = f
+        .api(
+            "GET",
+            "/api/v1/teams?cursor=not-json",
+            Some(key),
+            None,
+            None,
+        )
+        .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{bad_cursor}");
+    let (status, _, archived) = f.api("DELETE", &path, Some(key), None, None).await;
+    assert_eq!(status, StatusCode::OK, "{archived}");
+    assert!(archived["recoverableUntil"].is_string());
+    let (status, _, _) = f.api("GET", &path, Some(key), None, None).await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    let (status, _, spec) = f.api("GET", "/api/v1/openapi.json", None, None, None).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(spec["openapi"], "3.1.1");
+    assert!(spec["paths"]["/teams"]["post"].is_object());
+    assert!(spec["paths"]["/issues"].is_null());
+    let (status, _, docs) = f.api("GET", "/api/v1/docs", None, None, None).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(docs.as_str().unwrap().contains("Scalar.createApiReference"));
+}
+
+#[tokio::test]
+async fn first_party_team_lifecycle_keeps_names_confirmations_and_memberships() {
+    let f = Fixture::new().await;
+    let (_, token, cookie) = f.account().await;
+    forge_store::workspaces::create(
+        &f.database,
+        &token,
+        "Team lifecycle",
+        &Uuid::new_v4().to_string(),
+        None,
+    )
+    .await
+    .unwrap();
+    let input = json!({"name":" Équipe produit ","identifier":" prod ","icon":{"kind":"icon","value":"UserGroup03Icon","color":"#818cf8"},"timezone":"Europe/Paris"});
+    let (status, _, created) = f
+        .request("POST", "/api/workspace/teams", Some(&cookie), Some(input))
+        .await;
+    assert_eq!(status, StatusCode::OK, "{created}");
+    assert_eq!(created["team"]["slug"], "equipe-produit");
+    assert_eq!(created["team"]["identifier"], "PROD");
+    let (status, _, directory) = f
+        .request(
+            "GET",
+            "/api/workspace/team-directory?lifecycle=active",
+            Some(&cookie),
+            None,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{directory}");
+    assert_eq!(directory["items"][0]["memberCount"], 1);
+    assert_eq!(directory["items"][0]["isMember"], true);
+    let (status, _, wrong) = f
+        .request(
+            "POST",
+            "/api/workspace/teams/equipe-produit/archive",
+            Some(&cookie),
+            Some(json!({"confirmationName":"Wrong"})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(wrong["ok"], false);
+    let (status, _, archived) = f
+        .request(
+            "POST",
+            "/api/workspace/teams/equipe-produit/archive",
+            Some(&cookie),
+            Some(json!({"confirmationName":"Équipe produit"})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{archived}");
+    assert_eq!(archived["ok"], true);
+    let (status, _, gone) = f
+        .request(
+            "GET",
+            "/api/workspace/teams/equipe-produit",
+            Some(&cookie),
+            None,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(gone.is_null());
+    let (status, _, restored) = f
+        .request(
+            "POST",
+            "/api/workspace/teams/equipe-produit/restore",
+            Some(&cookie),
+            None,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{restored}");
+    assert_eq!(restored["team"]["id"], created["team"]["id"]);
+    let (status, _, left) = f
+        .request(
+            "POST",
+            "/api/workspace/teams/equipe-produit/leave",
+            Some(&cookie),
+            None,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{left}");
+    assert_eq!(left["ok"], true);
+    let (status, _, joined) = f
+        .request(
+            "POST",
+            "/api/workspace/teams/equipe-produit/join",
+            Some(&cookie),
+            None,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{joined}");
+    assert_eq!(joined["ok"], true);
+    let (status, _, members) = f
+        .request(
+            "GET",
+            "/api/workspace/teams/equipe-produit/members",
+            Some(&cookie),
+            None,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{members}");
+    assert_eq!(members["members"].as_array().unwrap().len(), 1);
+}
+
+#[tokio::test]
+async fn disabled_public_api_hides_resources_and_documentation() {
+    let state = AppState::default().with_public_api(false);
+    let app = forge_server::router_with_state(state);
+    for path in ["/api/v1/teams", "/api/v1/openapi.json", "/api/v1/docs"] {
+        let response = app
+            .clone()
+            .oneshot(Request::get(path).body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
     }
 }
 

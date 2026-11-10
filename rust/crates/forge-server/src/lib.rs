@@ -5,7 +5,9 @@ mod desktop_auth;
 pub mod mail;
 mod oauth;
 pub mod oauth_provider;
+mod public_api;
 pub mod state;
+mod teams;
 mod workspace_access;
 mod workspaces;
 
@@ -23,6 +25,32 @@ pub fn router() -> Router {
 
 pub fn router_with_state(state: state::AppState) -> Router {
     let auth_routes = Router::new()
+        .route("/api/workspace/teams", get(teams::list).post(teams::create))
+        .route("/api/workspace/team-directory", get(teams::directory))
+        .route(
+            "/api/workspace/teams/{slug}",
+            get(teams::get).post(teams::update),
+        )
+        .route(
+            "/api/workspace/teams/{slug}/archive",
+            axum::routing::post(teams::archive),
+        )
+        .route(
+            "/api/workspace/teams/{slug}/restore",
+            axum::routing::post(teams::restore),
+        )
+        .route(
+            "/api/workspace/teams/{slug}/join",
+            axum::routing::post(teams::join),
+        )
+        .route(
+            "/api/workspace/teams/{slug}/leave",
+            axum::routing::post(teams::leave),
+        )
+        .route(
+            "/api/workspace/teams/{slug}/members",
+            get(teams::members).post(teams::add_members),
+        )
         .route(
             "/api/workspace/security",
             get(workspace_access::security_snapshot).post(workspace_access::security_command),
@@ -144,10 +172,28 @@ pub fn router_with_state(state: state::AppState) -> Router {
             state.clone(),
             auth::guard,
         ));
+    let api_routes = Router::new()
+        .route(
+            "/api/v1/teams",
+            get(public_api::list).post(public_api::create),
+        )
+        .route(
+            "/api/v1/teams/{id}",
+            get(public_api::get)
+                .patch(public_api::update)
+                .delete(public_api::archive),
+        )
+        .route("/api/v1/openapi.json", get(public_api::spec))
+        .route("/api/v1/docs", get(public_api::docs))
+        .route_layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            public_api::guard,
+        ));
     Router::new()
         .route("/api/health/live", get(live))
         .route("/api/health/ready", get(ready))
         .merge(auth_routes)
+        .merge(api_routes)
         .with_state(state)
 }
 

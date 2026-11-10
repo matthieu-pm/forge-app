@@ -118,6 +118,7 @@ pub struct AppState {
     pub(crate) throttle: Arc<Throttle>,
     pub(crate) oauth: Option<Arc<crate::oauth_provider::ChatGptClient>>,
     pub(crate) dns: Option<Arc<dyn forge_store::security::TxtResolver>>,
+    pub(crate) public_api: Option<bool>,
 }
 
 impl AppState {
@@ -141,6 +142,7 @@ impl AppState {
             throttle: Arc::default(),
             oauth: None,
             dns: None,
+            public_api: None,
         }
     }
 
@@ -150,6 +152,10 @@ impl AppState {
     }
     pub fn with_dns(mut self, resolver: Arc<dyn forge_store::security::TxtResolver>) -> Self {
         self.dns = Some(resolver);
+        self
+    }
+    pub fn with_public_api(mut self, enabled: bool) -> Self {
+        self.public_api = Some(enabled);
         self
     }
 }

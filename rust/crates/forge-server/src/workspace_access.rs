@@ -67,7 +67,8 @@ pub(crate) async fn security_command(
         return Err(invalid_body());
     }
     if let SecurityCommand::AddDomain { domain, .. } = &command
-        && (domain.trim().is_empty() || domain.trim().encode_utf16().count() > 253)
+        && (forge_core::text::trim(domain).is_empty()
+            || forge_core::text::length(forge_core::text::trim(domain)) > 253)
     {
         return Err(invalid_body());
     }

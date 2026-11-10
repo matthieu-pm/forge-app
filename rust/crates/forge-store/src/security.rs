@@ -423,7 +423,7 @@ async fn mutate(
             )
         }
         SecurityCommand::AddDomain { domain, .. } => {
-            if domain.trim().encode_utf16().count() > 253 {
+            if forge_core::text::length(forge_core::text::trim(domain)) > 253 {
                 return Err(StoreError::InvalidInput);
             }
             let domain = normalized_domain(domain).ok_or(StoreError::InvalidInput)?;
