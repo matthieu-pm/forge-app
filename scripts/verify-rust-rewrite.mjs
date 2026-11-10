@@ -4,9 +4,10 @@ import { spawnSync } from "node:child_process"
 // Continue after a failed command to collect the whole milestone's diagnostics.
 const checks = [
   ["node", ["scripts/rust-rewrite-inventory.mjs", "--check"]],
+  ["bun", ["scripts/export-rust-reference.mjs", "--check"]],
   ["cargo", ["fmt", "--all", "--", "--check"]],
   ["cargo", ["clippy", "--workspace", "--all-targets", "--locked", "--", "-D", "warnings"]],
-  ["cargo", ["test", "--workspace", "--locked"]],
+  ["python3", ["scripts/test-rust-postgres.py"]],
   ["bun", ["run", "test", "--force"]],
   ["bun", ["run", "typecheck", "--force"]],
 ]

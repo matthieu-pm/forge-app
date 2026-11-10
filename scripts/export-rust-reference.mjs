@@ -1,0 +1,85 @@
+// Run with Bun: the existing TypeScript implementation is the reference oracle.
+import { createHash, scryptSync } from "node:crypto"
+import { createRequire } from "node:module"
+import { readFileSync, writeFileSync } from "node:fs"
+import { pathToFileURL } from "node:url"
+import { API_SCOPES } from "../apps/forge/src/application/actor.ts"
+import { hasScope, canManageTeams, canReadAllPrivateTeams } from "../apps/forge/src/application/authorization.ts"
+import { canManageWorkspaceModelConnections } from "../apps/forge/src/application/agents/agent-authorization.ts"
+import { isTeamVisible, isProjectVisible, isDocumentVisible, canShareDocumentWithWorkspace } from "../apps/forge/src/application/resource-visibility.ts"
+import { canonicalCommandInput } from "../apps/forge/src/lib/canonical-json.ts"
+import { permissionsToScopes } from "../apps/forge/src/application/api-keys/api-key-contract.ts"
+
+const teams = [
+  { workspaceId: "w1", visibility: "workspace", memberUserIds: [] },
+  { workspaceId: "w1", visibility: "private", memberUserIds: ["alice"] },
+  { workspaceId: "w1", visibility: "private", memberUserIds: ["bob"] },
+  { workspaceId: "w2", visibility: "workspace", memberUserIds: ["alice"] },
+]
+const projects = [
+  { workspaceId: "w1", teams: [] },
+  { workspaceId: "w1", teams: [teams[0], teams[2]] },
+  { workspaceId: "w1", teams: [teams[2]] },
+  { workspaceId: "w1", teams: [teams[3]] },
+  { workspaceId: "w2", teams: [] },
+]
+const documents = ["w1", "w2"].flatMap(workspaceId => [false, true].flatMap(sharedWithWorkspace => [
+  { kind: "workspace" },
+  ...teams.flatMap(team => [{ kind: "team", team }, { kind: "issue", team }]),
+  ...projects.map(project => ({ kind: "project", project })),
+].map(source => ({ workspaceId, sharedWithWorkspace, source }))))
+const authentications = [
+  { kind: "session", sessionId: "s1" },
+  { kind: "apiKey", credentialId: "k1" },
+  { kind: "agent", runId: "r1", tokenId: "t1" },
+  { kind: "loop", loopId: "l1", runId: "r1" },
+]
+const actors = ["member", "guest", "admin", "member, admin", "owner", "not-admin"].flatMap(workspaceRole => authentications.flatMap(authentication => [
+  null, [], ["issues:read"], ["teams:read"], ["teams:write", "model-connections:write"], [...API_SCOPES],
+].map(scopes => ({ userId: "alice", workspaceId: "w1", workspaceRole, authentication, scopes }))))
+const actorCases = actors.map(actor => ({
+  actor,
+  scopes: API_SCOPES.map(scope => hasScope(actor, scope)),
+  canManageTeams: canManageTeams(actor),
+  canReadAllPrivateTeams: canReadAllPrivateTeams(actor),
+  canManageWorkspaceModels: canManageWorkspaceModelConnections(actor),
+  teams: teams.map(team => isTeamVisible(actor, team)),
+  projects: projects.map(project => isProjectVisible(actor, project)),
+  documents: documents.map(document => isDocumentVisible(actor, document)),
+  documentSharing: documents.map(document => canShareDocumentWithWorkspace(actor, document)),
+}))
+const jsonValues = [null, true, "line\nquote\"😀", [], {},
+  { z: 1, a: { b: 2, a: false }, array: [null, "value", 1] },
+  { "\uE000": 1, "😀": 2, "a": 3, "𐀀": 4 },
+  ...[-0, 1.0, 1e-7, 1e-6, 1e20, 1e21, 0.000123456789, 9007199254740992, -2.5].map(number => ({ number })),
+]
+const canonical = jsonValues.map(value => {
+  const serialized = canonicalCommandInput(value)
+  return { value, serialized, hash: createHash("sha256").update(serialized).digest("hex") }
+})
+const permissionValues = [null, [], {}, { teams: ["read", "write"], issues: ["read"], agents: ["approve"] }, { unknown: ["read"], teams: "read", issues: [null, false, "write", "read", "read"] }]
+
+const requireFromApp = createRequire(new URL("../apps/forge/package.json", import.meta.url))
+const requireFromAuth = createRequire(requireFromApp.resolve("better-auth"))
+const passwordModule = await import(pathToFileURL(requireFromAuth.resolve("@better-auth/utils/password")))
+const cryptoModule = await import(new URL("./crypto.mjs", pathToFileURL(requireFromAuth.resolve("better-call"))))
+const password = "pássword-Å①"
+const salt = "00112233445566778899aabbccddeeff"
+const hash = `${salt}:${scryptSync(password.normalize("NFKC"), salt, 64, { N: 16384, r: 16, p: 1, maxmem: 67108864 }).toString("hex")}`
+if (!await passwordModule.verifyPassword(hash, password)) throw new Error("Reference password compatibility failed")
+const crypto = {
+  password: { password, normalized: password.normalize("NFKC"), hash },
+  cookies: await Promise.all(["token-with.dots", "test-session-token"].map(async token => ({ token, secret: "test-fixture-secret-only", signed: await cryptoModule.signCookieValue(token, "test-fixture-secret-only") }))),
+}
+
+const output = JSON.stringify({ teams, projects, documents, actorCases, canonical, permissions: permissionValues.map(value => ({ value, scopes: permissionsToScopes(value) })), crypto }, null, 2) + "\n"
+const destination = new URL("../rust/reference-fixtures.json", import.meta.url)
+if (process.argv.includes("--check")) {
+  if (readFileSync(destination, "utf8") !== output) {
+    console.error("Rust reference fixtures changed. Review the source behavior before updating them.")
+    process.exitCode = 1
+  }
+} else {
+  writeFileSync(destination, output)
+  console.log(`Exported ${actorCases.length} authority cases, ${documents.length} document contexts and credential/canonical fixtures from the reference implementation.`)
+}

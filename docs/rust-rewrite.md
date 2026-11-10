@@ -20,7 +20,8 @@ gate pass.
 | Milestone | Deliverable | Status |
 | --- | --- | --- |
 | 0 | Baseline inventory, reproducible Rust workspace, HTTP host, full test harness | Passed available gate; external-fixture checks pending |
-| 1 | Identity, authorization, existing-schema persistence, command receipts and transactions | Pending |
+| 1a | Credential compatibility, authorization, existing-schema persistence, command receipts and transactions | Passed available gate |
+| 1b | Authentication lifecycle, workspace and membership management, recovery compatibility | Pending |
 | 2 | Teams, issues, triage, cycles, projects, initiatives, documents, views, resources and imports | Pending |
 | 3 | Agent execution, approvals, streams, models, files, jobs, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
@@ -65,3 +66,23 @@ implemented; that is intentional and does not represent a completed rewrite.
 - Existing PostgreSQL suites default to skipped without isolated test targets;
   these do not count as database acceptance for later milestones.
 - Production, live providers, browser acceptance and packaged desktop: not run.
+
+### Milestone 1a
+
+- Full gate passed: all 2,959 enabled reference tests and TypeScript typechecking;
+  Rust formatting, Clippy, and 18 Rust tests, including 8 real PostgreSQL tests.
+- All 75 reference migrations applied successfully to a disposable local
+  PostgreSQL cluster. The runner never reads the application's database URL.
+- 144 authority cases, with 56 document contexts per case, are exported directly
+  from the TypeScript implementation and compared with Rust. Canonical receipt
+  hashes, password normalization and signed cookies also use reference fixtures.
+- PostgreSQL checks cover concurrent idempotency, one committed effect/audit/
+  outbox, rollback/retry, revoked authority, unavailable receipts, session fallback,
+  and concurrent credential rate limiting.
+- Log: `.forge/rust-rewrite/milestone-1a.log`.
+- These are foundation adapters. They do not yet replace Forge's login or
+  application routes. Loop-linked command authority deliberately fails closed
+  until the loop implementation is ported. Recovery-enabled databases still
+  require the independent deletion journal adapter before destructive operations.
+- The 661 reference tests requiring external fixtures remain skipped. Local Rust
+  PostgreSQL coverage is additional evidence, not a claim that those tests ran.

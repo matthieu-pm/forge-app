@@ -1,0 +1,22 @@
+[package]
+name = "forge-store"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+forge-core = { path = "../forge-core" }
+forge-identity = { path = "../forge-identity" }
+sqlx.workspace = true
+chrono.workspace = true
+uuid.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+base64.workspace = true
+sha2.workspace = true
+async-trait.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true
