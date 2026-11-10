@@ -19,7 +19,6 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use std::{
     net::SocketAddr,
-    sync::OnceLock,
     time::{Duration, Instant},
 };
 
@@ -53,6 +52,27 @@ impl From<StoreError> for AuthError {
                 StatusCode::CONFLICT,
                 "CONFLICT",
                 "The resource conflicts with existing state.",
+            ),
+            StoreError::NotFound => Self(
+                StatusCode::NOT_FOUND,
+                "NOT_FOUND",
+                "The resource was not found.",
+            ),
+            StoreError::InvalidInput => invalid_body(),
+            StoreError::PlanRequired(_) => Self(
+                StatusCode::FORBIDDEN,
+                "PLAN_REQUIRED",
+                "Your workspace plan does not include this setting.",
+            ),
+            StoreError::DomainTaken => Self(
+                StatusCode::CONFLICT,
+                "DOMAIN_TAKEN",
+                "This domain is already registered.",
+            ),
+            StoreError::DomainUnverified => Self(
+                StatusCode::BAD_REQUEST,
+                "VALIDATION_FAILED",
+                "The verification TXT record is missing or expired.",
             ),
             StoreError::AccountNotLinked => Self(
                 StatusCode::FORBIDDEN,
@@ -133,9 +153,8 @@ fn parsed<T>(payload: Result<Json<T>, JsonRejection>) -> Result<T, AuthError> {
 }
 
 pub(crate) fn valid_email(email: &str) -> bool {
-    static EMAIL: OnceLock<regex::Regex> = OnceLock::new();
     // Same ASCII email grammar as the installed Zod validator.
-    !email.starts_with('.') && !email.contains("..") && EMAIL.get_or_init(|| regex::Regex::new(r"^[A-Za-z0-9_'+.\-]*[A-Za-z0-9_+\-]@(?:[A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$").unwrap()).is_match(email)
+    forge_identity::valid_email(email)
 }
 
 pub(crate) async fn guard(

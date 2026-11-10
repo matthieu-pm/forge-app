@@ -241,7 +241,65 @@ pub async fn accept_invitation(
     Ok(accepted)
 }
 
-async fn lock_workspace(
+pub async fn invitation_details(
+    database: &crate::Database,
+    token: &str,
+    id: &str,
+) -> Result<serde_json::Value, StoreError> {
+    let mut tx = database.begin().await?;
+    let workspace: Option<String> =
+        sqlx::query_scalar("SELECT organization_id FROM invitation WHERE id=$1")
+            .bind(id)
+            .fetch_optional(&mut *tx)
+            .await?;
+    let workspace = workspace.ok_or(StoreError::NotFound)?;
+    lock_workspace(&mut tx, &workspace, false).await?;
+    let (_, user) = session_user_tx(&mut tx, token).await?;
+    let invitation=sqlx::query_as::<_,Invitation>("SELECT * FROM invitation WHERE id=$1 AND organization_id=$2 AND status='pending' AND expires_at>clock_timestamp() FOR SHARE").bind(id).bind(&workspace).fetch_optional(&mut *tx).await?.ok_or(StoreError::NotFound)?;
+    if invitation.email.to_lowercase() != user.email.to_lowercase() {
+        return Err(StoreError::Forbidden);
+    }
+    let details:Option<(String,String,String)>=sqlx::query_as("SELECT o.name,o.slug,u.email FROM organization o JOIN member m ON m.organization_id=o.id AND m.user_id=$1 JOIN \"user\" u ON u.id=m.user_id WHERE o.id=$2")
+        .bind(&invitation.inviter_id).bind(&workspace).fetch_optional(&mut *tx).await?;
+    let (name, slug, email) = details.ok_or(StoreError::NotFound)?;
+    let mut value = serde_json::to_value(invitation).map_err(|_| StoreError::InvalidInput)?;
+    value["organizationName"] = serde_json::json!(name);
+    value["organizationSlug"] = serde_json::json!(slug);
+    value["inviterEmail"] = serde_json::json!(email);
+    tx.commit().await?;
+    Ok(value)
+}
+
+pub async fn reject_invitation(
+    database: &crate::Database,
+    token: &str,
+    id: &str,
+) -> Result<Invitation, StoreError> {
+    let mut tx = database.begin().await?;
+    let workspace: Option<String> =
+        sqlx::query_scalar("SELECT organization_id FROM invitation WHERE id=$1")
+            .bind(id)
+            .fetch_optional(&mut *tx)
+            .await?;
+    let workspace = workspace.ok_or(StoreError::NotFound)?;
+    lock_workspace(&mut tx, &workspace, false).await?;
+    let (_, user) = session_user_tx(&mut tx, token).await?;
+    let invitation=sqlx::query_as::<_,Invitation>("SELECT * FROM invitation WHERE id=$1 AND organization_id=$2 AND status='pending' FOR UPDATE").bind(id).bind(&workspace).fetch_optional(&mut *tx).await?.ok_or(StoreError::NotFound)?;
+    if invitation.email.to_lowercase() != user.email.to_lowercase() {
+        return Err(StoreError::Forbidden);
+    }
+    tx.prepare().await?;
+    let result = sqlx::query_as::<_, Invitation>(
+        "UPDATE invitation SET status='rejected' WHERE id=$1 RETURNING *",
+    )
+    .bind(id)
+    .fetch_one(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(result)
+}
+
+pub(crate) async fn lock_workspace(
     connection: &mut PgConnection,
     id: &str,
     exclusive: bool,

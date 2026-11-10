@@ -16,7 +16,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .map_err(|_| "BETTER_AUTH_SECRET is required when DATABASE_URL is configured.")?;
         let url = std::env::var("BETTER_AUTH_URL")
             .map_err(|_| "BETTER_AUTH_URL is required when DATABASE_URL is configured.")?;
-        let settings = AuthSettings::new(secret, &url)?;
+        let mut settings = AuthSettings::new(secret, &url)?;
+        if let Ok(secret) = std::env::var("FORGE_INVITE_LINK_SECRET") {
+            settings = settings.with_invite_secret(secret)?;
+        }
         let pool = sqlx::postgres::PgPoolOptions::new()
             .max_connections(20)
             .connect_lazy(&connection)?;

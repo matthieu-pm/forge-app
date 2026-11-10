@@ -17,3 +17,4 @@ chrono.workspace = true
 uuid.workspace = true
 async-trait.workspace = true
 futures-core.workspace = true
+idna.workspace = true

@@ -9,6 +9,481 @@ use serde_json::{Value, json};
 use sqlx::{PgConnection, PgPool, postgres::PgPoolOptions};
 use uuid::Uuid;
 
+const INVITE_SECRET: &str = "test-workspace-invite-secret-only-1234";
+struct Dns(Vec<String>);
+#[async_trait]
+impl forge_store::security::TxtResolver for Dns {
+    async fn records(&self, _domain: &str) -> Result<Vec<String>, StoreError> {
+        Ok(self.0.clone())
+    }
+}
+async fn security_snapshot(f: &Fixture) -> Value {
+    forge_store::security::snapshot(
+        &f.database,
+        &f.actor,
+        "http://localhost:3100",
+        INVITE_SECRET,
+    )
+    .await
+    .unwrap()
+}
+async fn security_change(f: &Fixture, input: Value, dns: &Dns) -> Result<Value, StoreError> {
+    let command = serde_json::from_value(input).unwrap();
+    forge_store::security::execute(
+        &f.database,
+        &f.actor,
+        &command,
+        dns,
+        "http://localhost:3100",
+        INVITE_SECRET,
+    )
+    .await
+}
+
+#[tokio::test]
+async fn security_commands_check_live_plan_and_version_before_any_domain_effect() {
+    let f = Fixture::new().await;
+    let initial = security_snapshot(&f).await;
+    assert_eq!(initial["version"], 1);
+    assert_eq!(initial["plan"], "free");
+    assert_eq!(
+        initial["settings"],
+        serde_json::to_value(forge_core::security::SecuritySettings::default()).unwrap()
+    );
+    assert!(matches!(security_change(&f,json!({"type":"set-boolean","key":"restrictFileUploads","value":true,"expectedVersion":1}),&Dns(vec![])).await,Err(StoreError::PlanRequired(_))));
+    assert_eq!(security_snapshot(&f).await["version"], 1);
+    sqlx::query("INSERT INTO workspace_entitlements(workspace_id,plan,status,source) VALUES($1,'enterprise','active','internal')").bind(&f.actor.workspace_id).execute(&f.pool).await.unwrap();
+    let changed = security_change(
+        &f,
+        json!({"type":"set-boolean","key":"restrictFileUploads","value":true,"expectedVersion":1}),
+        &Dns(vec![]),
+    )
+    .await
+    .unwrap();
+    assert_eq!(changed["version"], 2);
+    assert_eq!(changed["settings"]["restrictFileUploads"], true);
+    let first = json!({"type":"add-domain","domain":"First.Example.","expectedVersion":2});
+    let second = json!({"type":"add-domain","domain":"Second.Example.","expectedVersion":2});
+    let dns = Dns(vec![]);
+    let (a, b) = tokio::join!(
+        security_change(&f, first, &dns),
+        security_change(&f, second, &dns)
+    );
+    assert_eq!(usize::from(a.is_ok()) + usize::from(b.is_ok()), 1);
+    assert!(matches!(a, Err(StoreError::Conflict)) || matches!(b, Err(StoreError::Conflict)));
+    let current = security_snapshot(&f).await;
+    assert_eq!(current["version"], 3);
+    assert_eq!(current["domains"].as_array().unwrap().len(), 1);
+    let rejected:i64=sqlx::query_scalar("SELECT count(*) FROM workspace_security_audit_events WHERE workspace_id=$1 AND outcome='rejected'").bind(&f.actor.workspace_id).fetch_one(&f.pool).await.unwrap();
+    assert_eq!(rejected, 2);
+    // A cached admin actor cannot bypass a live role downgrade.
+    sqlx::query("UPDATE member SET role='member' WHERE organization_id=$1")
+        .bind(&f.actor.workspace_id)
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    assert!(matches!(
+        security_change(
+            &f,
+            json!({"type":"reset-invite-link","expectedVersion":3}),
+            &dns
+        )
+        .await,
+        Err(StoreError::Forbidden)
+    ));
+    let version: i32 =
+        sqlx::query_scalar("SELECT version FROM workspace_security_settings WHERE workspace_id=$1")
+            .bind(&f.actor.workspace_id)
+            .fetch_one(&f.pool)
+            .await
+            .unwrap();
+    assert_eq!(version, 3);
+}
+
+#[tokio::test]
+async fn domain_proofs_are_expiring_workspace_bound_and_globally_unique() {
+    let a = Fixture::new().await;
+    let b = Fixture::new().await;
+    let domain = format!("{}.example", Uuid::new_v4());
+    let first = security_change(
+        &a,
+        json!({"type":"add-domain","domain":domain,"expectedVersion":1}),
+        &Dns(vec![]),
+    )
+    .await
+    .unwrap();
+    let id = first["domains"][0]["id"].clone();
+    let code = first["domains"][0]["verificationCode"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    assert!(matches!(
+        security_change(
+            &a,
+            json!({"type":"verify-domain","domainId":id,"expectedVersion":2}),
+            &Dns(vec!["wrong".into()])
+        )
+        .await,
+        Err(StoreError::DomainUnverified)
+    ));
+    assert_eq!(security_snapshot(&a).await["version"], 2);
+    let verified = security_change(
+        &a,
+        json!({"type":"verify-domain","domainId":id,"expectedVersion":2}),
+        &Dns(vec![code]),
+    )
+    .await
+    .unwrap();
+    assert!(verified["domains"][0]["verificationCode"].is_null());
+    assert!(verified["domains"][0]["verifiedAt"].is_string());
+    let pending = security_change(
+        &b,
+        json!({"type":"add-domain","domain":domain,"expectedVersion":1}),
+        &Dns(vec![]),
+    )
+    .await
+    .unwrap();
+    let id = pending["domains"][0]["id"].clone();
+    let code = pending["domains"][0]["verificationCode"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    assert!(matches!(
+        security_change(
+            &b,
+            json!({"type":"verify-domain","domainId":id,"expectedVersion":2}),
+            &Dns(vec![code.clone()])
+        )
+        .await,
+        Err(StoreError::DomainTaken)
+    ));
+    assert!(security_snapshot(&b).await["domains"][0]["verifiedAt"].is_null());
+    sqlx::query("UPDATE workspace_approved_domains SET verification_expires_at=now()-interval '1 second' WHERE workspace_id=$1").bind(&b.actor.workspace_id).execute(&b.pool).await.unwrap();
+    assert!(matches!(
+        security_change(
+            &b,
+            json!({"type":"verify-domain","domainId":id,"expectedVersion":2}),
+            &Dns(vec![code])
+        )
+        .await,
+        Err(StoreError::DomainUnverified)
+    ));
+}
+
+#[tokio::test]
+async fn api_keys_are_scoped_to_creator_workspace_and_current_creation_policy() {
+    use forge_store::api_keys::{self, CreateKey};
+    let f = Fixture::new().await;
+    let other = Fixture::new().await;
+    let input = CreateKey {
+        name: " Read and write ".into(),
+        expires_in_days: 90,
+        scopes: vec![
+            ApiScope::IssuesRead,
+            ApiScope::IssuesWrite,
+            ApiScope::IssuesRead,
+        ],
+    };
+    let created = api_keys::create(&f.database, &f.actor, &input)
+        .await
+        .unwrap();
+    let key = created["key"].as_str().unwrap();
+    let id = created["summary"]["id"].as_str().unwrap();
+    assert_eq!(created["summary"]["name"], "Read and write");
+    assert_eq!(
+        created["summary"]["scopes"],
+        json!(["issues:read", "issues:write"])
+    );
+    let listed = api_keys::list(&f.database, &f.actor).await.unwrap();
+    assert_eq!(listed.len(), 1);
+    assert!(!serde_json::to_string(&listed).unwrap().contains(key));
+    assert!(
+        api_keys::list(&other.database, &other.actor)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    assert!(matches!(
+        api_keys::revoke(&other.database, &other.actor, id).await,
+        Err(StoreError::NotFound)
+    ));
+    let actor = api_key_actor(&f.database, key).await.unwrap();
+    assert!(actor.has_scope(ApiScope::IssuesWrite));
+    assert!(!actor.has_scope(ApiScope::TeamsRead));
+    security_change(&f,json!({"type":"set-policy","key":"apiKeyCreationPolicy","value":"admins","expectedVersion":1}),&Dns(vec![])).await.unwrap();
+    sqlx::query("UPDATE member SET role='member' WHERE organization_id=$1")
+        .bind(&f.actor.workspace_id)
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        api_keys::policy(&f.database, &f.actor).await.unwrap()["canCreate"],
+        false
+    );
+    assert!(matches!(
+        api_keys::create(&f.database, &f.actor, &input).await,
+        Err(StoreError::Forbidden)
+    ));
+    api_keys::revoke(&f.database, &f.actor, id).await.unwrap();
+    assert!(api_key_actor(&f.database, key).await.is_err());
+    assert!(
+        api_keys::list(&f.database, &f.actor)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+}
+
+#[tokio::test]
+async fn concurrent_owner_demotions_preserve_an_owner_and_revoke_live_privilege() {
+    use forge_store::members;
+    let f = Fixture::new().await;
+    sqlx::query("UPDATE member SET role='owner' WHERE organization_id=$1")
+        .bind(&f.actor.workspace_id)
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    let other = Uuid::new_v4().to_string();
+    let session = Uuid::new_v4().to_string();
+    let member = Uuid::new_v4().to_string();
+    sqlx::query(
+        "INSERT INTO \"user\"(id,name,email,email_verified) VALUES($1,'Second owner',$2,true)",
+    )
+    .bind(&other)
+    .bind(format!("{other}@example.test"))
+    .execute(&f.pool)
+    .await
+    .unwrap();
+    sqlx::query("INSERT INTO member(id,organization_id,user_id,role) VALUES($1,$2,$3,'owner')")
+        .bind(&member)
+        .bind(&f.actor.workspace_id)
+        .bind(&other)
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    sqlx::query("INSERT INTO session(id,token,user_id,active_organization_id,expires_at) VALUES($1,$1,$2,$3,now()+interval '1 day')").bind(&session).bind(&other).bind(&f.actor.workspace_id).execute(&f.pool).await.unwrap();
+    let second = Actor {
+        user_id: other,
+        workspace_id: f.actor.workspace_id.clone(),
+        workspace_role: "owner".into(),
+        authentication: Authentication::Session {
+            session_id: session,
+        },
+        scopes: None,
+        loop_scope: None,
+    };
+    let first_member: String =
+        sqlx::query_scalar("SELECT id FROM member WHERE user_id=$1 AND organization_id=$2")
+            .bind(&f.actor.user_id)
+            .bind(&f.actor.workspace_id)
+            .fetch_one(&f.pool)
+            .await
+            .unwrap();
+    let (a, b) = tokio::join!(
+        members::change(&f.database, &f.actor, &first_member, Some("member"), false),
+        members::change(&f.database, &second, &member, Some("member"), false)
+    );
+    assert_eq!(usize::from(a.is_ok()) + usize::from(b.is_ok()), 1);
+    let owners: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM member WHERE organization_id=$1 AND role='owner'")
+            .bind(&f.actor.workspace_id)
+            .fetch_one(&f.pool)
+            .await
+            .unwrap();
+    assert_eq!(owners, 1);
+    assert!(matches!(
+        members::change(&f.database, &f.actor, &member, Some("made-up"), false).await,
+        Err(StoreError::InvalidInput)
+    ));
+}
+
+#[tokio::test]
+async fn invitations_reuse_pending_identity_and_cannot_cross_workspace_boundaries() {
+    use forge_store::members::{self, Invite};
+    let f = Fixture::new().await;
+    let foreign = Fixture::new().await;
+    let input = Invite {
+        email: format!("{}@example.test", Uuid::new_v4()),
+        role: "member".into(),
+        resend: false,
+    };
+    let first = members::invite(&f.database, &f.actor, &input)
+        .await
+        .unwrap();
+    assert!(matches!(
+        members::invite(&f.database, &f.actor, &input).await,
+        Err(StoreError::Conflict)
+    ));
+    let resend = Invite {
+        resend: true,
+        ..input
+    };
+    let renewed = members::invite(&f.database, &f.actor, &resend)
+        .await
+        .unwrap();
+    assert_eq!(renewed.id, first.id);
+    assert!(renewed.expires_at >= first.expires_at);
+    assert!(matches!(
+        members::cancel_invitation(&foreign.database, &foreign.actor, &first.id).await,
+        Err(StoreError::NotFound)
+    ));
+    let canceled = members::cancel_invitation(&f.database, &f.actor, &first.id)
+        .await
+        .unwrap();
+    assert_eq!(canceled.status, "canceled");
+    let access = members::summary(&f.database, &f.actor).await.unwrap();
+    assert!(access["invitations"].as_array().unwrap().is_empty());
+    assert_eq!(access["members"][0]["userId"], f.actor.user_id);
+}
+
+#[tokio::test]
+async fn join_links_recheck_generation_and_never_demote_existing_members() {
+    use forge_store::joins;
+    let f = Fixture::new().await;
+    let guest = Fixture::new().await;
+    let initial = security_snapshot(&f).await;
+    let token = initial["inviteLink"]
+        .as_str()
+        .unwrap()
+        .rsplit('/')
+        .next()
+        .unwrap();
+    let preview = joins::preview(&f.database, token, INVITE_SECRET)
+        .await
+        .unwrap();
+    assert_eq!(preview["workspaceName"], "Test workspace");
+    joins::join_invite(&f.database, &f.token, token, INVITE_SECRET)
+        .await
+        .unwrap();
+    let role: String =
+        sqlx::query_scalar("SELECT role FROM member WHERE organization_id=$1 AND user_id=$2")
+            .bind(&f.actor.workspace_id)
+            .bind(&f.actor.user_id)
+            .fetch_one(&f.pool)
+            .await
+            .unwrap();
+    assert_eq!(role, "admin");
+    joins::join_invite(&guest.database, &guest.token, token, INVITE_SECRET)
+        .await
+        .unwrap();
+    assert_eq!(
+        session_actor(&guest.database, &guest.token)
+            .await
+            .unwrap()
+            .workspace_id,
+        f.actor.workspace_id
+    );
+    security_change(
+        &f,
+        json!({"type":"reset-invite-link","expectedVersion":1}),
+        &Dns(vec![]),
+    )
+    .await
+    .unwrap();
+    assert!(
+        joins::join_invite(&guest.database, &guest.token, token, INVITE_SECRET)
+            .await
+            .is_err()
+    );
+    assert!(
+        joins::preview(&f.database, token, INVITE_SECRET)
+            .await
+            .is_err()
+    );
+}
+
+#[tokio::test]
+async fn approved_domain_joins_use_current_verified_email_and_current_domain_binding() {
+    use forge_store::joins;
+    let f = Fixture::new().await;
+    let applicant = Fixture::new().await;
+    let outsider = Fixture::new().await;
+    let domain = format!("{}.example", Uuid::new_v4());
+    let pending = security_change(
+        &f,
+        json!({"type":"add-domain","domain":domain,"expectedVersion":1}),
+        &Dns(vec![]),
+    )
+    .await
+    .unwrap();
+    let id = pending["domains"][0]["id"].clone();
+    let code = pending["domains"][0]["verificationCode"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    sqlx::query("UPDATE \"user\" SET email=$1 WHERE id=$2")
+        .bind(format!("applicant@{domain}"))
+        .bind(&applicant.actor.user_id)
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    assert!(
+        joins::approved_workspace(&applicant.database, &applicant.token)
+            .await
+            .unwrap()
+            .is_null()
+    );
+    security_change(
+        &f,
+        json!({"type":"verify-domain","domainId":id,"expectedVersion":2}),
+        &Dns(vec![code]),
+    )
+    .await
+    .unwrap();
+    let eligible = joins::approved_workspace(&applicant.database, &applicant.token)
+        .await
+        .unwrap();
+    assert_eq!(eligible["workspaceId"], f.actor.workspace_id);
+    assert!(matches!(
+        joins::join_domain(
+            &applicant.database,
+            &applicant.token,
+            &outsider.actor.workspace_id
+        )
+        .await,
+        Err(StoreError::Forbidden)
+    ));
+    let joined = joins::join_domain(&applicant.database, &applicant.token, &f.actor.workspace_id)
+        .await
+        .unwrap();
+    assert_eq!(joined["domain"], domain);
+    sqlx::query("UPDATE \"user\" SET email_verified=false WHERE id=$1")
+        .bind(&applicant.actor.user_id)
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    assert!(matches!(
+        joins::join_domain(&applicant.database, &applicant.token, &f.actor.workspace_id).await,
+        Err(StoreError::EmailNotVerified)
+    ));
+    security_change(
+        &f,
+        json!({"type":"remove-domain","domainId":id,"expectedVersion":3}),
+        &Dns(vec![]),
+    )
+    .await
+    .unwrap();
+    sqlx::query("UPDATE \"user\" SET email=$1 WHERE id=$2")
+        .bind(format!("outsider@{domain}"))
+        .bind(&outsider.actor.user_id)
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    assert!(matches!(
+        joins::join_domain(&outsider.database, &outsider.token, &f.actor.workspace_id).await,
+        Err(StoreError::Forbidden)
+    ));
+    let exists: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM member WHERE organization_id=$1 AND user_id=$2)",
+    )
+    .bind(&f.actor.workspace_id)
+    .bind(&outsider.actor.user_id)
+    .fetch_one(&f.pool)
+    .await
+    .unwrap();
+    assert!(!exists);
+}
+
 struct Fixture {
     pool: PgPool,
     database: forge_store::Database,

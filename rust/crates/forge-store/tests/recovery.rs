@@ -118,6 +118,81 @@ impl Fixture {
 }
 
 #[tokio::test]
+async fn security_defaults_and_mutations_are_independently_journaled() {
+    let f = Fixture::new().await;
+    let workspace = forge_store::workspaces::create(
+        &f.database,
+        &f.token,
+        "Recovery policy",
+        &Uuid::new_v4().to_string(),
+        None,
+    )
+    .await
+    .unwrap();
+    let actor = forge_store::authority::session_actor(&f.database, &f.token)
+        .await
+        .unwrap();
+    let secret = "test-workspace-invite-secret-only-1234";
+    let snapshot =
+        forge_store::security::snapshot(&f.database, &actor, "http://localhost:3100", secret)
+            .await
+            .unwrap();
+    assert_eq!(snapshot["version"], 1);
+    assert!(
+        f.backend
+            .completed
+            .lock()
+            .unwrap()
+            .iter()
+            .flat_map(|(_, events)| events)
+            .any(|e| e.table == "workspace_security_settings")
+    );
+    // A missing independent backend must reject before changing security state.
+    struct NoDns;
+    #[async_trait]
+    impl forge_store::security::TxtResolver for NoDns {
+        async fn records(&self, _domain: &str) -> Result<Vec<String>, StoreError> {
+            panic!("No DNS required")
+        }
+    }
+    let command =
+        serde_json::from_value(serde_json::json!({"type":"reset-invite-link","expectedVersion":1}))
+            .unwrap();
+    let missing = Database::new(f.pool.clone());
+    assert!(
+        forge_store::security::execute(
+            &missing,
+            &actor,
+            &command,
+            &NoDns,
+            "http://localhost:3100",
+            secret
+        )
+        .await
+        .is_err()
+    );
+    let version: i32 =
+        sqlx::query_scalar("SELECT version FROM workspace_security_settings WHERE workspace_id=$1")
+            .bind(&workspace.id)
+            .fetch_one(&f.pool)
+            .await
+            .unwrap();
+    assert_eq!(version, 1);
+    let changed = forge_store::security::execute(
+        &f.database,
+        &actor,
+        &command,
+        &NoDns,
+        "http://localhost:3100",
+        secret,
+    )
+    .await
+    .unwrap();
+    assert_eq!(changed["version"], 2);
+    assert_ne!(snapshot["inviteLink"], changed["inviteLink"]);
+}
+
+#[tokio::test]
 async fn independent_prepare_and_complete_surround_a_committed_deletion() {
     let fixture = Fixture::new().await;
     accounts::sign_out(&fixture.database, &fixture.token)

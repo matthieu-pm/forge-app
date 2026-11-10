@@ -55,7 +55,7 @@ def main():
             environment = os.environ.copy()
             environment["FORGE_RUST_TEST_DATABASE_URL"] = connection
             environment["FORGE_RUST_JOURNAL_TEST_DATABASE_URL"] = journal_connection
-            return subprocess.run(["cargo", "test", "--workspace", "--locked"], cwd=ROOT, env=environment).returncode
+            return subprocess.run(["cargo", "test", "--workspace", "--locked", "--no-fail-fast"], cwd=ROOT, env=environment).returncode
         finally:
             if started:
                 subprocess.run(["pg_ctl", "-D", str(data), "-m", "fast", "-w", "stop"], check=True)

@@ -11,6 +11,18 @@ use sha2::Digest;
 use sha2::Sha256;
 use subtle::ConstantTimeEq;
 use unicode_normalization::UnicodeNormalization;
+pub mod invite;
+
+pub fn random_token(bytes: usize) -> String {
+    let mut value = vec![0; bytes];
+    OsRng.fill_bytes(&mut value);
+    URL_SAFE_NO_PAD.encode(value)
+}
+
+pub fn valid_email(email: &str) -> bool {
+    static EMAIL: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+    !email.starts_with('.') && !email.contains("..") && EMAIL.get_or_init(||regex::Regex::new(r"^[A-Za-z0-9_'+.\-]*[A-Za-z0-9_+\-]@(?:[A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$").unwrap()).is_match(email)
+}
 
 const COOKIE_ENCODE: &AsciiSet = &NON_ALPHANUMERIC
     .remove(b'!')

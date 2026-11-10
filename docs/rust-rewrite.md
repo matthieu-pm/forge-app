@@ -24,8 +24,10 @@ gate pass.
 | 1b | Email/password lifecycle, sessions, workspace CRUD/switching and atomic invitation acceptance | Passed available gate |
 | 1c | Independent recovery journal, signed archive compatibility and transaction publication | Passed available gate |
 | 1d | ChatGPT OAuth, explicit account linking and desktop PKCE authorization | Passed available gate |
-| 1e | Remaining membership/invitation commands and workspace security policy | Pending |
-| 2 | Teams, issues, triage, cycles, projects, initiatives, documents, views, resources and imports | Pending |
+| 1e | Membership/invitation commands, workspace security policy and API-key management | Passed available gate; workflow delivery belongs to milestone 3 |
+| 2a | Team lifecycle, membership, configuration and default catalogs | Pending |
+| 2b | Issues, triage and cycles | Pending |
+| 2c | Projects, initiatives, documents, views, resources and imports | Pending |
 | 3 | Agent execution, approvals, streams, models, files, jobs, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -155,3 +157,35 @@ these routes do not represent a completed rewrite.
 - Provider tests use in-memory mock transport and ephemeral signing keys. No
   OpenAI login, provider credentials or external mail delivery were exercised.
 - Log: `.forge/rust-rewrite/milestone-1d.log`.
+
+### Milestone 1e
+
+- Full gate passed: 64 Rust tests, all 2,959 enabled reference tests, TypeScript
+  typechecking, Rust formatting and Clippy. The 661 external-fixture reference
+  tests remain skipped. All 75 migrations ran against disposable local databases.
+- Security defaults, 2,400 role/action decisions, eight entitlement cases, 20
+  domain normalization cases and 2,168 subscription cases are compared with the
+  reference. Trial expiry, refunds, cancellation and payment grace are evaluated
+  at permission-check time, with live entitlement rows held during mutations.
+- Version conflicts roll back domain changes. DNS challenges expire, remain
+  bound to their workspace, and cannot verify a domain already claimed elsewhere.
+  Domain verification tests inject TXT responses and never perform public lookups.
+- Membership changes serialize owner checks and preserve an owner under competing
+  demotions. Keys expose their raw credential only on creation, remain scoped to
+  their creator/workspace, and honor the live creation policy and revocation.
+- Invitation creation, resend, cancellation, recipient-only details, rejection,
+  acceptance, invite-link reset and verified-domain joining use the existing
+  schema. Mail delivery failures remain visible and can be resent. Invitation
+  HTML is generated from the existing React templates for all supported roles.
+- Recovery-enabled tests verify archived security defaults and updates; missing
+  archive configuration rejects changes before mutating settings.
+- New `/api/workspace/` JSON routes provide security, members, invitations, keys
+  and joins for the Rust frontend. The existing invitation-details/rejection
+  authentication paths are also available. The application UI is still pending.
+- Workflow-backed invitation delivery/retries remain part of milestone 3. A
+  workspace with that workflow enabled receives an explicit unavailable response;
+  the Rust server never claims that an unowned workflow was queued.
+- Logs: `.forge/rust-rewrite/milestone-1e-qualified.log`,
+  `.forge/rust-rewrite/milestone-1e-rust-final.log`, and
+  `.forge/rust-rewrite/milestone-1e-clippy.log`. The final Rust rerun includes the
+  validation-response correction made after the full gate's Rust phase.

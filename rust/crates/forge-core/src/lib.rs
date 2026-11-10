@@ -6,4 +6,7 @@ pub mod actor;
 pub mod canonical;
 pub mod features;
 pub mod journal;
+pub mod security;
+pub mod security_commands;
+pub mod subscription;
 pub mod visibility;

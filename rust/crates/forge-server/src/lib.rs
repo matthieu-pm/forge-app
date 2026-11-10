@@ -6,6 +6,7 @@ pub mod mail;
 mod oauth;
 pub mod oauth_provider;
 pub mod state;
+mod workspace_access;
 mod workspaces;
 
 use axum::{
@@ -22,6 +23,51 @@ pub fn router() -> Router {
 
 pub fn router_with_state(state: state::AppState) -> Router {
     let auth_routes = Router::new()
+        .route(
+            "/api/workspace/security",
+            get(workspace_access::security_snapshot).post(workspace_access::security_command),
+        )
+        .route("/api/workspace/members", get(workspace_access::access))
+        .route(
+            "/api/workspace/members/change",
+            axum::routing::post(workspace_access::change_member),
+        )
+        .route(
+            "/api/workspace/invitations",
+            axum::routing::post(workspace_access::invite),
+        )
+        .route(
+            "/api/workspace/invitations/cancel",
+            axum::routing::post(workspace_access::cancel_invite),
+        )
+        .route(
+            "/api/workspace/api-keys",
+            get(workspace_access::list_keys).post(workspace_access::create_key),
+        )
+        .route(
+            "/api/workspace/api-keys/policy",
+            get(workspace_access::key_policy),
+        )
+        .route(
+            "/api/workspace/api-keys/revoke",
+            axum::routing::post(workspace_access::revoke_key),
+        )
+        .route(
+            "/api/workspace/invite-preview",
+            get(workspace_access::preview_invite),
+        )
+        .route(
+            "/api/workspace/join-invite",
+            axum::routing::post(workspace_access::join_invite),
+        )
+        .route(
+            "/api/workspace/approved-domain",
+            get(workspace_access::approved_domain),
+        )
+        .route(
+            "/api/workspace/join-domain",
+            axum::routing::post(workspace_access::join_domain),
+        )
         .route(
             "/api/auth/electron/init-oauth-proxy",
             get(desktop_auth::init_oauth_proxy),
@@ -85,6 +131,14 @@ pub fn router_with_state(state: state::AppState) -> Router {
         .route(
             "/api/auth/organization/accept-invitation",
             axum::routing::post(workspaces::accept_invitation),
+        )
+        .route(
+            "/api/auth/organization/get-invitation",
+            get(workspaces::invitation_details),
+        )
+        .route(
+            "/api/auth/organization/reject-invitation",
+            axum::routing::post(workspaces::reject_invitation),
         )
         .route_layer(axum::middleware::from_fn_with_state(
             state.clone(),

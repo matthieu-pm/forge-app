@@ -25,6 +25,7 @@ async-trait.workspace = true
 regex.workspace = true
 jsonwebtoken.workspace = true
 subtle.workspace = true
+hickory-resolver.workspace = true
 
 [dev-dependencies]
 rsa = "0.9"

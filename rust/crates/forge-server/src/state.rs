@@ -7,6 +7,7 @@ use url::Url;
 
 pub struct AuthSettings {
     pub(crate) secret: String,
+    pub(crate) invite_secret: String,
     pub(crate) base_url: Url,
     pub(crate) secure_cookies: bool,
 }
@@ -30,10 +31,19 @@ impl AuthSettings {
         }
         let secure_cookies = base_url.scheme() == "https";
         Ok(Self {
+            invite_secret: secret.clone(),
             secret,
             base_url,
             secure_cookies,
         })
+    }
+
+    pub fn with_invite_secret(mut self, secret: String) -> Result<Self, &'static str> {
+        if secret.encode_utf16().count() < 32 {
+            return Err("FORGE_INVITE_LINK_SECRET must contain at least 32 characters.");
+        }
+        self.invite_secret = secret;
+        Ok(self)
     }
 
     pub(crate) fn trusted_origin(&self, origin: &str) -> bool {
@@ -107,6 +117,7 @@ pub struct AppState {
     pub(crate) mailer: Option<Arc<dyn VerificationMailer>>,
     pub(crate) throttle: Arc<Throttle>,
     pub(crate) oauth: Option<Arc<crate::oauth_provider::ChatGptClient>>,
+    pub(crate) dns: Option<Arc<dyn forge_store::security::TxtResolver>>,
 }
 
 impl AppState {
@@ -129,11 +140,16 @@ impl AppState {
             mailer,
             throttle: Arc::default(),
             oauth: None,
+            dns: None,
         }
     }
 
     pub fn with_chatgpt(mut self, client: crate::oauth_provider::ChatGptClient) -> Self {
         self.oauth = Some(Arc::new(client));
+        self
+    }
+    pub fn with_dns(mut self, resolver: Arc<dyn forge_store::security::TxtResolver>) -> Self {
+        self.dns = Some(resolver);
         self
     }
 }

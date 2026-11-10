@@ -4,7 +4,7 @@ use crate::{
 };
 use axum::{
     Json,
-    extract::{State, rejection::JsonRejection},
+    extract::{Query, State, rejection::JsonRejection},
     http::HeaderMap,
 };
 use forge_store::{StoreError, authority, workspaces};
@@ -218,4 +218,34 @@ pub(crate) async fn accept_invitation(
     let token = cookie_token(&headers, auth)?;
     let invitation = workspaces::accept_invitation(pool, &token, &input.invitation_id).await?;
     Ok(Json(json!({"invitation":invitation})))
+}
+
+#[derive(Deserialize)]
+pub(crate) struct InvitationQuery {
+    id: String,
+}
+pub(crate) async fn invitation_details(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(input): Query<InvitationQuery>,
+) -> Result<Json<Value>, AuthError> {
+    let (database, auth) = configuration(&state)?;
+    Ok(Json(
+        workspaces::invitation_details(database, &cookie_token(&headers, auth)?, &input.id).await?,
+    ))
+}
+pub(crate) async fn reject_invitation(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    payload: Result<Json<AcceptInvitation>, JsonRejection>,
+) -> Result<Json<Value>, AuthError> {
+    let input = body(payload)?;
+    let (database, auth) = configuration(&state)?;
+    let invitation = workspaces::reject_invitation(
+        database,
+        &cookie_token(&headers, auth)?,
+        &input.invitation_id,
+    )
+    .await?;
+    Ok(Json(json!({"invitation":invitation,"member":null})))
 }

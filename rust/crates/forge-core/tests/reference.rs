@@ -183,3 +183,71 @@ fn independent_journal_signatures_and_validation_match_the_reference() {
         assert_eq!(valid, case["valid"].as_bool().unwrap());
     }
 }
+
+#[test]
+fn workspace_security_matches_reference_policies_and_entitlements() {
+    use forge_core::security::*;
+    use std::collections::HashMap;
+    let fixture: Value =
+        serde_json::from_str(include_str!("../../../reference-fixtures.json")).unwrap();
+    let fixture = &fixture["security"];
+    assert_eq!(
+        serde_json::to_value(SecuritySettings::default()).unwrap(),
+        fixture["defaults"]
+    );
+    let actions: Vec<SecurityAction> = serde_json::from_value(fixture["actions"].clone()).unwrap();
+    for case in fixture["policies"].as_array().unwrap() {
+        let actor: Actor = serde_json::from_value(case["actor"].clone()).unwrap();
+        let settings: SecuritySettings = serde_json::from_value(case["settings"].clone()).unwrap();
+        let actual: Vec<_> = actions
+            .iter()
+            .map(|action| settings.allows(&actor, *action))
+            .collect();
+        assert_eq!(
+            serde_json::to_value(actual).unwrap(),
+            case["allowed"],
+            "{case}"
+        );
+    }
+    for case in fixture["entitlements"].as_array().unwrap() {
+        let plan: WorkspacePlan = serde_json::from_value(case["plan"].clone()).unwrap();
+        let overrides: HashMap<_, _> = case["overrides"]
+            .as_object()
+            .unwrap()
+            .iter()
+            .filter_map(|(k, v)| {
+                Some((
+                    serde_json::from_value::<SecurityFeature>(Value::String(k.clone())).ok()?,
+                    v.as_bool()?,
+                ))
+            })
+            .collect();
+        assert_eq!(
+            serde_json::to_value(entitlements(plan, &overrides)).unwrap(),
+            case["expected"]
+        );
+    }
+    for case in fixture["domains"].as_array().unwrap() {
+        assert_eq!(
+            serde_json::to_value(normalized_domain(case["input"].as_str().unwrap())).unwrap(),
+            case["expected"],
+            "{case}"
+        );
+    }
+}
+
+#[test]
+fn subscription_access_matches_reference_at_payment_and_expiry_boundaries() {
+    use forge_core::subscription::{SubscriptionState, subscription_access};
+    let fixture: Value =
+        serde_json::from_str(include_str!("../../../reference-fixtures.json")).unwrap();
+    for case in fixture["security"]["subscriptions"].as_array().unwrap() {
+        let state = SubscriptionState::from_json(case["state"].clone());
+        let now = serde_json::from_value(case["now"].clone()).ok();
+        assert_eq!(
+            serde_json::to_value(subscription_access(state.as_ref(), now)).unwrap(),
+            case["expected"],
+            "{case}"
+        );
+    }
+}

@@ -86,3 +86,40 @@ fn verification_jwt_matches_the_installed_authentication_library() {
     assert!(verify_email_token(token, secret, now + 3600).is_err());
     assert!(verify_email_token(token, "wrong-secret", now).is_err());
 }
+
+#[test]
+fn invite_links_match_reference_signatures_and_reject_other_token_types() {
+    use forge_identity::invite::InviteClaims;
+    let fixture = fixtures();
+    let case = &fixture["crypto"]["invite"];
+    let secret = case["secret"].as_str().unwrap();
+    let token = case["token"].as_str().unwrap();
+    let claims: InviteClaims = serde_json::from_value(case["claims"].clone()).unwrap();
+    assert_eq!(claims.sign(secret).unwrap(), token);
+    assert_eq!(
+        serde_json::to_value(InviteClaims::verify(token, secret).unwrap()).unwrap(),
+        case["claims"]
+    );
+    assert!(InviteClaims::verify(token, "different-secret-with-enough-characters").is_err());
+    assert!(
+        InviteClaims::verify(fixture["crypto"]["jwt"]["token"].as_str().unwrap(), secret).is_err()
+    );
+    assert!(
+        InviteClaims {
+            generation: 0,
+            workspace_id: "w1".into()
+        }
+        .sign(secret)
+        .is_err()
+    );
+    assert!(
+        InviteClaims {
+            generation: 1,
+            workspace_id: "".into()
+        }
+        .sign(secret)
+        .is_err()
+    );
+    assert!(InviteClaims::verify(&format!("{token}.extra"), secret).is_err());
+    assert!(claims.sign("short").is_err());
+}

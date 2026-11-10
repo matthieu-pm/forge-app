@@ -5,7 +5,7 @@ use axum::{
     http::{HeaderMap, Request, StatusCode, header},
 };
 use forge_server::{
-    mail::{MailError, VerificationMailer},
+    mail::{InvitationMessage, MailError, VerificationMailer},
     state::{AppState, AuthSettings},
 };
 use forge_store::accounts::{self, User};
@@ -20,10 +20,21 @@ const SECRET: &str = "local-test-secret-that-is-at-least-32-bytes-long";
 const ORIGIN: &str = "http://localhost:3100";
 
 #[derive(Default)]
-struct Mailbox(Mutex<Vec<(String, String)>>);
+struct Mailbox(
+    Mutex<Vec<(String, String)>>,
+    Mutex<Vec<InvitationMessage>>,
+    std::sync::atomic::AtomicBool,
+);
 
 #[async_trait]
 impl VerificationMailer for Mailbox {
+    async fn send_invitation(&self, message: &InvitationMessage) -> Result<(), MailError> {
+        if self.2.load(std::sync::atomic::Ordering::Relaxed) {
+            return Err(MailError);
+        }
+        self.1.lock().unwrap().push(message.clone());
+        Ok(())
+    }
     async fn send(&self, user: &User, url: &str) -> Result<(), MailError> {
         self.0
             .lock()
@@ -31,6 +42,281 @@ impl VerificationMailer for Mailbox {
             .push((user.email.clone(), url.to_owned()));
         Ok(())
     }
+}
+
+#[tokio::test]
+async fn workspace_security_keys_and_invitation_delivery_work_through_http() {
+    let f = Fixture::new().await;
+    let (_, token, cookie) = f.account().await;
+    let workspace = forge_store::workspaces::create(
+        &f.database,
+        &token,
+        "HTTP workspace",
+        &Uuid::new_v4().to_string(),
+        None,
+    )
+    .await
+    .unwrap();
+    let (status, _, snapshot) = f
+        .request("GET", "/api/workspace/security", Some(&cookie), None)
+        .await;
+    assert_eq!(status, StatusCode::OK, "{snapshot}");
+    assert_eq!(snapshot["version"], 1);
+    assert_eq!(snapshot["canManage"], true);
+    let (status, _, invalid_domain) = f
+        .request(
+            "POST",
+            "/api/workspace/security",
+            Some(&cookie),
+            Some(json!({"type":"add-domain","domain":"localhost","expectedVersion":1})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(invalid_domain["code"], "VALIDATION_FAILED");
+    let link = snapshot["inviteLink"]
+        .as_str()
+        .unwrap()
+        .rsplit('/')
+        .next()
+        .unwrap();
+    let (status, _, preview) = f
+        .request(
+            "GET",
+            &format!("/api/workspace/invite-preview?token={link}"),
+            None,
+            None,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(preview["workspaceName"], "HTTP workspace");
+    let (status, _, rejected) = f
+        .request(
+            "POST",
+            "/api/workspace/security",
+            Some(&cookie),
+            Some(
+                json!({"type":"set-boolean","key":"hipaaEnabled","value":true,"expectedVersion":1}),
+            ),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(rejected["code"], "PLAN_REQUIRED");
+    assert_eq!(rejected["requiredPlan"], "enterprise");
+    let (status, _, invalid) = f
+        .request(
+            "POST",
+            "/api/workspace/security",
+            Some(&cookie),
+            Some(
+                json!({"type":"set-boolean","key":"notASetting","value":true,"expectedVersion":1}),
+            ),
+        )
+        .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{invalid}");
+    let (status, _, key) = f
+        .request(
+            "POST",
+            "/api/workspace/api-keys",
+            Some(&cookie),
+            Some(json!({"name":"Integration","scopes":["teams:read"]})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{key}");
+    assert!(key["key"].as_str().unwrap().starts_with("forge_"));
+    let (status, _, listed) = f
+        .request("GET", "/api/workspace/api-keys", Some(&cookie), None)
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(listed[0], key["summary"]);
+    assert!(!listed.to_string().contains(key["key"].as_str().unwrap()));
+    let (recipient, _, recipient_cookie) = f.account().await;
+    let (status, _, invitation) = f
+        .request(
+            "POST",
+            "/api/workspace/invitations",
+            Some(&cookie),
+            Some(json!({"email":recipient.email,"role":"member"})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{invitation}");
+    assert_eq!(invitation["delivery"], "sent-synchronously");
+    let messages = f.mailbox.1.lock().unwrap().clone();
+    assert_eq!(messages.len(), 1);
+    assert_eq!(messages[0].email, recipient.email);
+    assert_eq!(messages[0].organization_name, "HTTP workspace");
+    assert_eq!(messages[0].url, invitation["invitation"]["url"]);
+    let (status, _, accepted) = f
+        .request(
+            "POST",
+            "/api/auth/organization/accept-invitation",
+            Some(&recipient_cookie),
+            Some(json!({"invitationId":invitation["invitation"]["id"]})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{accepted}");
+    let (status, _, access) = f
+        .request(
+            "GET",
+            "/api/workspace/members",
+            Some(&recipient_cookie),
+            None,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{access}");
+    assert_eq!(access["members"].as_array().unwrap().len(), 2);
+    assert_eq!(access["canManage"], false);
+    let (status, _, denied) = f
+        .request(
+            "GET",
+            "/api/workspace/security",
+            Some(&recipient_cookie),
+            None,
+        )
+        .await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{denied}");
+    let active: String =
+        sqlx::query_scalar("SELECT active_organization_id FROM session WHERE user_id=$1")
+            .bind(&recipient.id)
+            .fetch_one(&f.pool)
+            .await
+            .unwrap();
+    assert_eq!(active, workspace.id);
+}
+
+#[tokio::test]
+async fn failed_invitation_delivery_is_reported_and_can_be_resent() {
+    let f = Fixture::new().await;
+    let (_, token, cookie) = f.account().await;
+    let workspace = forge_store::workspaces::create(
+        &f.database,
+        &token,
+        "Mail failure",
+        &Uuid::new_v4().to_string(),
+        None,
+    )
+    .await
+    .unwrap();
+    f.mailbox
+        .2
+        .store(true, std::sync::atomic::Ordering::Relaxed);
+    let email = format!("{}@example.test", Uuid::new_v4());
+    let (status, _, failure) = f
+        .request(
+            "POST",
+            "/api/workspace/invitations",
+            Some(&cookie),
+            Some(json!({"email":email,"role":"admin"})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::BAD_GATEWAY, "{failure}");
+    assert_eq!(failure["code"], "EMAIL_DELIVERY_FAILED");
+    let id: String = sqlx::query_scalar(
+        "SELECT id FROM invitation WHERE organization_id=$1 AND email=$2 AND status='pending'",
+    )
+    .bind(&workspace.id)
+    .bind(&email)
+    .fetch_one(&f.pool)
+    .await
+    .unwrap();
+    assert!(f.mailbox.1.lock().unwrap().is_empty());
+    f.mailbox
+        .2
+        .store(false, std::sync::atomic::Ordering::Relaxed);
+    let (status, _, success) = f
+        .request(
+            "POST",
+            "/api/workspace/invitations",
+            Some(&cookie),
+            Some(json!({"email":email,"role":"member","resend":true})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{success}");
+    assert_eq!(success["invitation"]["id"], id);
+    assert_eq!(success["invitation"]["role"], "admin");
+    assert_eq!(f.mailbox.1.lock().unwrap().len(), 1);
+    let (status, _, canceled) = f
+        .request(
+            "POST",
+            "/api/workspace/invitations/cancel",
+            Some(&cookie),
+            Some(json!({"invitationId":id})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{canceled}");
+    assert_eq!(canceled["status"], "canceled");
+}
+
+#[tokio::test]
+async fn invitation_details_and_rejection_require_the_current_verified_recipient() {
+    let f = Fixture::new().await;
+    let (_, sender_token, sender_cookie) = f.account().await;
+    let workspace = forge_store::workspaces::create(
+        &f.database,
+        &sender_token,
+        "Recipient privacy",
+        &Uuid::new_v4().to_string(),
+        None,
+    )
+    .await
+    .unwrap();
+    let (recipient, _, cookie) = f.account().await;
+    let actor = forge_store::authority::session_actor(&f.database, &sender_token)
+        .await
+        .unwrap();
+    let invitation = forge_store::members::invite(
+        &f.database,
+        &actor,
+        &forge_store::members::Invite {
+            email: recipient.email,
+            role: "member".into(),
+            resend: false,
+        },
+    )
+    .await
+    .unwrap();
+    let path = format!("/api/auth/organization/get-invitation?id={}", invitation.id);
+    let (status, _, details) = f.request("GET", &path, Some(&cookie), None).await;
+    assert_eq!(status, StatusCode::OK, "{details}");
+    assert_eq!(details["organizationName"], workspace.name);
+    assert!(details["inviterEmail"].is_string());
+    let (status, _, _) = f.request("GET", &path, Some(&sender_cookie), None).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    let (status, _, _) = f.request("GET", &path, None, None).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    sqlx::query("UPDATE \"user\" SET email_verified=false WHERE id=$1")
+        .bind(&recipient.id)
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    let (status, _, _) = f.request("GET", &path, Some(&cookie), None).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    let (status, _, _) = f
+        .request(
+            "POST",
+            "/api/auth/organization/reject-invitation",
+            Some(&cookie),
+            Some(json!({"invitationId":invitation.id})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    sqlx::query("UPDATE \"user\" SET email_verified=true WHERE id=$1")
+        .bind(&recipient.id)
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    let (status, _, rejected) = f
+        .request(
+            "POST",
+            "/api/auth/organization/reject-invitation",
+            Some(&cookie),
+            Some(json!({"invitationId":invitation.id})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{rejected}");
+    assert_eq!(rejected["invitation"]["status"], "rejected");
+    assert!(rejected["member"].is_null());
+    let (status, _, _) = f.request("GET", &path, Some(&cookie), None).await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
 }
 
 struct Fixture {

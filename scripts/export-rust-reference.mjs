@@ -1,5 +1,5 @@
 // Run with Bun: the existing TypeScript implementation is the reference oracle.
-import { createHash, scryptSync } from "node:crypto"
+import { createHash, createHmac, scryptSync } from "node:crypto"
 import { createRequire } from "node:module"
 import { readFileSync, writeFileSync } from "node:fs"
 import { pathToFileURL } from "node:url"
@@ -12,6 +12,7 @@ import { permissionsToScopes } from "../apps/forge/src/application/api-keys/api-
 import { productFeatures, parseFeatureRollouts, productFeatureMode } from "../packages/environment/product-features.ts"
 import { sourceDigest, signJournalRecord, recoveryEvent, journalSource } from "../apps/forge/src/application/recovery/journal.ts"
 import { verifyChatGPTIdentity } from "../apps/forge/shared/chatgpt-oauth.ts"
+import { security } from "./rust-security-reference.mjs"
 
 const teams = [
   { workspaceId: "w1", visibility: "workspace", memberUserIds: [] },
@@ -75,7 +76,9 @@ const crypto = {
   cookies: await Promise.all(["token-with.dots", "test-session-token"].map(async token => ({ token, secret: "test-fixture-secret-only", signed: await cryptoModule.signCookieValue(token, "test-fixture-secret-only") }))),
 }
 
-const { SignJWT } = await import(pathToFileURL(requireFromAuth.resolve("jose")))
+const { SignJWT, CompactSign } = await import(pathToFileURL(requireFromAuth.resolve("jose")))
+crypto.invite = { secret: "test-workspace-invite-secret-only-1234", claims: { generation: 7, workspaceId: "workspace-fixture" } }
+crypto.invite.token = await new CompactSign(new TextEncoder().encode(JSON.stringify(crypto.invite.claims))).setProtectedHeader({alg:"HS256",typ:"forge-workspace-invite"}).sign(createHmac("sha256",crypto.invite.secret).update("forge-workspace-invite-link:v1").digest())
 const jwtNow = 1700000000
 crypto.jwt = {
   now: jwtNow, email: "Test@Example.test", secret: "test-fixture-secret-only",
@@ -132,7 +135,7 @@ try {
 } finally {
   globalThis.fetch = originalFetch
 }
-const output = JSON.stringify({ teams, projects, documents, actorCases, canonical, permissions: permissionValues.map(value => ({ value, scopes: permissionsToScopes(value) })), crypto, features, journal, oidc }) + "\n"
+const output = JSON.stringify({ teams, projects, documents, actorCases, canonical, permissions: permissionValues.map(value => ({ value, scopes: permissionsToScopes(value) })), crypto, features, journal, oidc, security }) + "\n"
 const destination = new URL("../rust/reference-fixtures.json", import.meta.url)
 if (process.argv.includes("--check")) {
   if (readFileSync(destination, "utf8") !== output) {
