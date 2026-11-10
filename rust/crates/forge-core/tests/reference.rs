@@ -290,3 +290,36 @@ fn team_input_normalization_and_default_catalog_match_reference() {
         serde_json::from_str(include_str!("../data/issue-definitions.json")).unwrap();
     assert_eq!(defaults, cases["defaults"]);
 }
+
+#[test]
+fn issue_definition_validation_and_transition_rules_match_the_reference() {
+    use forge_core::definitions::DefinitionValue;
+    let fixture: Value =
+        serde_json::from_str(include_str!("../../../reference-fixtures.json")).unwrap();
+    for (i, case) in fixture["definitionCases"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .enumerate()
+    {
+        let result = DefinitionValue::parse(case["input"].clone());
+        assert_eq!(
+            result.is_ok(),
+            case["valid"].as_bool().unwrap(),
+            "case {i}: {}",
+            case["input"]
+        );
+        if let Ok(value) = result {
+            assert_eq!(value.into_value(), case["expected"], "case {i}");
+        }
+    }
+    for case in fixture["transitionCases"].as_array().unwrap() {
+        let mut value = DefinitionValue::defaults().into_value();
+        value["transitions"] = case["rules"].clone();
+        let value = DefinitionValue::parse(value).unwrap();
+        assert_eq!(
+            value.can_transition(case["from"].as_str().unwrap(), case["to"].as_str().unwrap()),
+            case["allowed"].as_bool().unwrap()
+        );
+    }
+}

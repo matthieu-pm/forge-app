@@ -65,6 +65,81 @@ struct Fixture {
     user_id: String,
 }
 
+#[tokio::test]
+async fn definition_deletion_requires_independent_preparation_and_publishes_removed_rows() {
+    use forge_store::definitions::{self, DefinitionCommand};
+    use serde_json::json;
+    let f = Fixture::new().await;
+    forge_store::workspaces::create(
+        &f.database,
+        &f.token,
+        "Recovery definitions",
+        &Uuid::new_v4().to_string(),
+        None,
+    )
+    .await
+    .unwrap();
+    let actor = forge_store::authority::session_actor(&f.database, &f.token)
+        .await
+        .unwrap();
+    let team=forge_store::teams::create(&f.database,&actor,&forge_core::teams::CreateTeam::parse(json!({"name":"Recovery definitions","identifier":"RDEF","icon":{"kind":"emoji","value":"🛠️","color":"#818cf8"},"timezone":"UTC"})).unwrap()).await.unwrap();
+    let snapshot = definitions::read(&f.database, &actor, Some(team.id))
+        .await
+        .unwrap();
+    let mut value = snapshot.value.into_value();
+    value["statuses"]["statuses"].as_array_mut().unwrap().push(
+        json!({"id":"ready","name":"Ready","group":"unstarted","description":"","color":"#abcdef"}),
+    );
+    let forge_core::actor::Authentication::Session { session_id } = &actor.authentication else {
+        panic!("session")
+    };
+    let mut input:DefinitionCommand=serde_json::from_value(json!({"workspaceId":actor.workspace_id,"sessionId":session_id,"teamId":team.id,"commandKey":Uuid::new_v4().to_string(),"expectedRevision":0,"value":value})).unwrap();
+    definitions::save(&f.database, &actor, &input)
+        .await
+        .unwrap();
+    value["statuses"]["statuses"]
+        .as_array_mut()
+        .unwrap()
+        .retain(|s| s["id"] != "ready");
+    input.value = forge_core::definitions::DefinitionValue::parse(value).unwrap();
+    input.expected_revision = 1;
+    input.command_key = Uuid::new_v4().to_string();
+    f.backend.mode.store(1, Ordering::Relaxed);
+    assert!(
+        definitions::save(&f.database, &actor, &input)
+            .await
+            .is_err()
+    );
+    assert!(
+        definitions::read(&f.database, &actor, Some(team.id))
+            .await
+            .unwrap()
+            .value
+            .statuses()
+            .iter()
+            .any(|s| s["id"] == "ready")
+    );
+    f.backend.mode.store(0, Ordering::Relaxed);
+    assert_eq!(
+        definitions::save(&f.database, &actor, &input)
+            .await
+            .unwrap()
+            .revision,
+        2
+    );
+    assert!(
+        f.backend
+            .completed
+            .lock()
+            .unwrap()
+            .iter()
+            .flat_map(|(_, events)| events)
+            .any(|e| e.table == "issue_statuses"
+                && e.action == forge_core::journal::RecoveryAction::Delete
+                && e.key.get("row_id").is_some_and(|v| v.is_string()))
+    );
+}
+
 impl Fixture {
     async fn new() -> Self {
         let connection = std::env::var("FORGE_RUST_JOURNAL_TEST_DATABASE_URL")

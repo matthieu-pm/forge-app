@@ -326,6 +326,88 @@ struct Fixture {
     mailbox: Arc<Mailbox>,
 }
 
+#[tokio::test]
+async fn definition_http_routes_bind_sessions_validate_catalogs_and_surface_conflicts() {
+    let f = Fixture::new().await;
+    let (_, token, cookie) = f.account().await;
+    forge_store::workspaces::create(
+        &f.database,
+        &token,
+        "Definition HTTP",
+        &Uuid::new_v4().to_string(),
+        None,
+    )
+    .await
+    .unwrap();
+    let actor = forge_store::authority::session_actor(&f.database, &token)
+        .await
+        .unwrap();
+    let team=forge_store::teams::create(&f.database,&actor,&forge_core::teams::CreateTeam::parse(json!({"name":"Definitions","identifier":"DEF","icon":{"kind":"emoji","value":"🛠️","color":"#818cf8"},"timezone":"UTC"})).unwrap()).await.unwrap();
+    let path = "/api/workspace/issue-definitions";
+    assert_eq!(
+        f.request("GET", path, None, None).await.0,
+        StatusCode::UNAUTHORIZED
+    );
+    let (status, _, all) = f.request("GET", path, Some(&cookie), None).await;
+    assert_eq!(status, StatusCode::OK, "{all}");
+    let snapshot = all["snapshots"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|s| s["teamId"] == team.id.to_string())
+        .unwrap();
+    let mut value = snapshot["value"].clone();
+    value["statuses"]["defaultId"] = json!("todo");
+    let input = json!({"workspaceId":all["workspaceId"],"sessionId":all["sessionId"],"teamId":team.id,"commandKey":Uuid::new_v4().to_string(),"expectedRevision":0,"value":value});
+    let (status, _, saved) = f
+        .request("POST", path, Some(&cookie), Some(input.clone()))
+        .await;
+    assert_eq!(status, StatusCode::OK, "{saved}");
+    assert_eq!(saved["revision"], 1);
+    let mut conflict = input.clone();
+    conflict["commandKey"] = json!(Uuid::new_v4());
+    let (status, _, error) = f.request("POST", path, Some(&cookie), Some(conflict)).await;
+    assert_eq!(status, StatusCode::CONFLICT, "{error}");
+    assert_eq!(error["code"], "DEFINITION_CONFLICT");
+    let mut invalid = input.clone();
+    invalid.as_object_mut().unwrap().remove("teamId");
+    assert_eq!(
+        f.request("POST", path, Some(&cookie), Some(invalid))
+            .await
+            .0,
+        StatusCode::BAD_REQUEST
+    );
+    let mut invalid = input.clone();
+    invalid["value"]["transitions"] = json!({"missing":["todo"]});
+    assert_eq!(
+        f.request("POST", path, Some(&cookie), Some(invalid))
+            .await
+            .0,
+        StatusCode::BAD_REQUEST
+    );
+    let mut invalid = input;
+    invalid["sessionId"] = json!("not-this-session");
+    assert_eq!(
+        f.request("POST", path, Some(&cookie), Some(invalid))
+            .await
+            .0,
+        StatusCode::FORBIDDEN
+    );
+    let issue = Uuid::new_v4();
+    sqlx::query("INSERT INTO issues(id,workspace_id,team_id,number,title,status_id) VALUES($1,$2,$3,1,'HTTP classification','backlog')").bind(issue).bind(&actor.workspace_id).bind(team.id).execute(&f.pool).await.unwrap();
+    let input = json!({"issueId":issue,"commandKey":Uuid::new_v4().to_string(),"expectedStatusId":"backlog","statusId":"todo","labelIds":[]});
+    let (status, _, result) = f
+        .request(
+            "POST",
+            "/api/workspace/issues/classification",
+            Some(&cookie),
+            Some(input),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{result}");
+    assert_eq!(result["issueId"], issue.to_string());
+}
+
 impl Fixture {
     async fn new() -> Self {
         let connection =

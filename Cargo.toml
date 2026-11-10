@@ -40,6 +40,7 @@ jsonwebtoken = { version = "10", default-features = false, features = ["rust_cry
 hickory-resolver = { version = "0.24", features = ["tokio-runtime", "system-config"] }
 idna = "1"
 chrono-tz = "0.10"
+regress = "0.10"
 
 [profile.release]
 lto = "thin"

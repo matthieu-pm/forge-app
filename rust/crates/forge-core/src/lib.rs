@@ -4,6 +4,7 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub mod actor;
 pub mod canonical;
+pub mod definitions;
 pub mod features;
 pub mod journal;
 pub mod security;

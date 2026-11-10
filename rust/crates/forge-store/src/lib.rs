@@ -5,10 +5,12 @@ pub mod api_keys;
 pub mod authority;
 pub mod commands;
 pub mod database;
+pub mod definitions;
 pub mod desktop_auth;
 pub mod joins;
 pub mod members;
 pub mod oauth;
+pub mod resource_policy;
 pub mod security;
 pub mod teams;
 pub mod workspaces;
@@ -46,6 +48,8 @@ pub enum StoreError {
     DomainUnverified,
     #[error(transparent)]
     Team(#[from] forge_core::teams::TeamError),
+    #[error("{0}")]
+    DefinitionConflict(&'static str),
     #[error("Sign in with your existing method before linking this provider.")]
     AccountNotLinked,
     #[error("Database operation failed.")]

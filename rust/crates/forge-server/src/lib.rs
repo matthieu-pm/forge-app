@@ -1,6 +1,7 @@
 //! Rust HTTP host. Routes are enabled only as their implementation is migrated.
 
 mod auth;
+mod definitions;
 mod desktop_auth;
 pub mod mail;
 mod oauth;
@@ -25,6 +26,14 @@ pub fn router() -> Router {
 
 pub fn router_with_state(state: state::AppState) -> Router {
     let auth_routes = Router::new()
+        .route(
+            "/api/workspace/issue-definitions",
+            get(definitions::read).post(definitions::save),
+        )
+        .route(
+            "/api/workspace/issues/classification",
+            axum::routing::post(definitions::classify),
+        )
         .route("/api/workspace/teams", get(teams::list).post(teams::create))
         .route("/api/workspace/team-directory", get(teams::directory))
         .route(

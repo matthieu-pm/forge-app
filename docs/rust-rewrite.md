@@ -26,7 +26,9 @@ gate pass.
 | 1d | ChatGPT OAuth, explicit account linking and desktop PKCE authorization | Passed available gate |
 | 1e | Membership/invitation commands, workspace security policy and API-key management | Passed available gate; workflow delivery belongs to milestone 3 |
 | 2a | Team lifecycle, membership, configuration, default catalogs and public team API | Passed available gate |
-| 2b | Issues, triage and cycles | Pending |
+| 2b1 | Issue definitions, workflow rules and canonical classification | Passed available gate |
+| 2b2 | Issue creation, editing, comments, relationships and history | Pending |
+| 2b3 | Triage, issue lifecycle and cycles | Pending |
 | 2c | Projects, initiatives, documents, views, resources and imports | Pending |
 | 3 | Agent execution, approvals, streams, models, files, jobs, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
@@ -224,3 +226,28 @@ these routes do not represent a completed rewrite.
   `.forge/rust-rewrite/milestone-2a-clippy.log`. The final Rust rerun includes
   Unicode key-name and recovery lifecycle checks added after the full gate's
   Rust phase. All reference/data exports also passed their final drift checks.
+
+### Milestone 2b1
+
+- Full gate passed: 90 Rust tests, all 2,959 enabled reference tests, TypeScript
+  typechecking, formatting and Clippy. The 661 external-fixture reference tests
+  remain skipped. Both disposable databases applied all 75 source migrations.
+- Definition validation and normalization match 114 reference documents and
+  18 transition cases. Branch expressions use an ECMAScript parser; UUID spelling,
+  catalog limits, workflow references and label groups follow the source contract.
+- Shared and team catalogs reload canonical statuses, assignments and visible
+  issue counts. Private teams and their counts remain unavailable to nonmembers;
+  issue-scoped keys do not also require the teams API scope.
+- Definition saves serialize revisions and protect references in saved templates
+  and recurring issues. Status/label replacement, assignment deduplication, audit
+  and command receipts commit atomically. Competing template insertion and status
+  deletion cannot leave a dangling reference.
+- Classification rechecks live authority, expected status and transition rules.
+  Archived labels can be retained but not newly assigned. Receipt replays never
+  repeat effects, including malformed historical results and revoked permissions.
+- Recovery tests reject changes before destructive SQL when independent
+  preparation fails and confirm deleted status rows reach the archive adapter.
+- Protected JSON routes now expose definition snapshots/saves and classification
+  for the future Rust frontend. Issue CRUD, discussion and the UI remain pending.
+- Log: `.forge/rust-rewrite/milestone-2b1-qualified.log`. The clean gate includes
+  all corrections from the earlier diagnostic runs.
