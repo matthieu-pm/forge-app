@@ -12,6 +12,7 @@ serde_json.workspace = true
 forge-core = { path = "../forge-core" }
 forge-identity = { path = "../forge-identity" }
 forge-store = { path = "../forge-store" }
+forge-recovery = { path = "../forge-recovery" }
 serde.workspace = true
 sqlx.workspace = true
 url.workspace = true

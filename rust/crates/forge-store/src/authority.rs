@@ -5,7 +5,7 @@ use forge_core::actor::{Actor, Authentication, permissions_to_scopes};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
-use sqlx::{FromRow, PgConnection, PgPool};
+use sqlx::{FromRow, PgConnection};
 
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -22,7 +22,10 @@ pub struct SessionIdentity {
     pub email_verified: bool,
 }
 
-pub async fn session_identity(pool: &PgPool, token: &str) -> Result<SessionIdentity, StoreError> {
+pub async fn session_identity(
+    pool: &crate::Database,
+    token: &str,
+) -> Result<SessionIdentity, StoreError> {
     sqlx::query_as::<_, SessionIdentity>(
         r#"SELECT s.id, s.user_id, s.active_organization_id, s.expires_at,
                   s.created_at, s.updated_at, u.email, u.name, u.image, u.email_verified
@@ -30,12 +33,12 @@ pub async fn session_identity(pool: &PgPool, token: &str) -> Result<SessionIdent
            WHERE s.token=$1 AND s.expires_at>clock_timestamp()"#,
     )
     .bind(token)
-    .fetch_optional(pool)
+    .fetch_optional(pool.pool())
     .await?
     .ok_or(StoreError::Unauthenticated)
 }
 
-pub async fn session_actor(pool: &PgPool, token: &str) -> Result<Actor, StoreError> {
+pub async fn session_actor(pool: &crate::Database, token: &str) -> Result<Actor, StoreError> {
     let mut tx = pool.begin().await?;
     // Stabilize candidate workspaces before locking a session that a concurrent
     // organization deletion may need to clear through its foreign key.
@@ -72,6 +75,7 @@ pub async fn session_actor(pool: &PgPool, token: &str) -> Result<Actor, StoreErr
         return Err(StoreError::Forbidden);
     }
     if active_workspace.as_deref() != Some(&workspace_id) {
+        tx.prepare().await?;
         sqlx::query("UPDATE session SET active_organization_id=$1 WHERE id=$2")
             .bind(&workspace_id)
             .bind(&session_id)
@@ -131,7 +135,7 @@ pub fn api_key_hash(credential: &str) -> String {
     URL_SAFE_NO_PAD.encode(Sha256::digest(credential.as_bytes()))
 }
 
-pub async fn api_key_actor(pool: &PgPool, credential: &str) -> Result<Actor, StoreError> {
+pub async fn api_key_actor(pool: &crate::Database, credential: &str) -> Result<Actor, StoreError> {
     if credential.is_empty() {
         return Err(StoreError::Unauthenticated);
     }

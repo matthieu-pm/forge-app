@@ -11,6 +11,7 @@ use uuid::Uuid;
 
 struct Fixture {
     pool: PgPool,
+    database: forge_store::Database,
     actor: Actor,
     token: String,
 }
@@ -65,7 +66,12 @@ impl Fixture {
             scopes: None,
             loop_scope: None,
         };
-        Self { pool, actor, token }
+        Self {
+            database: forge_store::Database::new(pool.clone()),
+            pool,
+            actor,
+            token,
+        }
     }
 
     async fn create_key(&self, maximum: i32) -> (String, String) {
@@ -148,7 +154,9 @@ fn command<'a>(key: &'a str, input: &'a Value) -> Command<'a> {
 #[tokio::test]
 async fn session_authority_uses_live_membership_verification_and_expiry() {
     let fixture = Fixture::new().await;
-    let actor = session_actor(&fixture.pool, &fixture.token).await.unwrap();
+    let actor = session_actor(&fixture.database, &fixture.token)
+        .await
+        .unwrap();
     assert_eq!(actor.workspace_role, "admin");
     assert!(actor.scopes.is_none());
     sqlx::query("UPDATE \"user\" SET email_verified=false WHERE id=$1")
@@ -157,7 +165,7 @@ async fn session_authority_uses_live_membership_verification_and_expiry() {
         .await
         .unwrap();
     assert!(matches!(
-        session_actor(&fixture.pool, &fixture.token).await,
+        session_actor(&fixture.database, &fixture.token).await,
         Err(StoreError::EmailNotVerified)
     ));
     sqlx::query("UPDATE session SET expires_at=now()-interval '1 second' WHERE token=$1")
@@ -166,7 +174,7 @@ async fn session_authority_uses_live_membership_verification_and_expiry() {
         .await
         .unwrap();
     assert!(matches!(
-        session_actor(&fixture.pool, &fixture.token).await,
+        session_actor(&fixture.database, &fixture.token).await,
         Err(StoreError::Unauthenticated)
     ));
 }
@@ -179,7 +187,9 @@ async fn session_falls_back_to_a_live_workspace_and_persists_the_selection() {
         .execute(&fixture.pool)
         .await
         .unwrap();
-    let actor = session_actor(&fixture.pool, &fixture.token).await.unwrap();
+    let actor = session_actor(&fixture.database, &fixture.token)
+        .await
+        .unwrap();
     assert_eq!(actor.workspace_id, fixture.actor.workspace_id);
     let active: Option<String> =
         sqlx::query_scalar("SELECT active_organization_id FROM session WHERE token=$1")
@@ -196,7 +206,7 @@ async fn concurrent_key_checks_cannot_exceed_the_rate_limit() {
     let (credential, _) = fixture.create_key(3).await;
     let mut tasks = vec![];
     for _ in 0..12 {
-        let pool = fixture.pool.clone();
+        let pool = fixture.database.clone();
         let credential = credential.clone();
         tasks.push(tokio::spawn(async move {
             api_key_actor(&pool, &credential).await
@@ -221,7 +231,7 @@ async fn concurrent_key_checks_cannot_exceed_the_rate_limit() {
 async fn api_key_scopes_are_intersected_with_live_authority() {
     let fixture = Fixture::new().await;
     let (credential, key_id) = fixture.create_key(600).await;
-    let actor = api_key_actor(&fixture.pool, &credential).await.unwrap();
+    let actor = api_key_actor(&fixture.database, &credential).await.unwrap();
     assert!(actor.has_scope(ApiScope::IssuesWrite));
     sqlx::query("UPDATE apikey SET permissions=$1 WHERE id=$2")
         .bind(json!({"issues":["read"]}).to_string())
@@ -239,7 +249,7 @@ async fn api_key_scopes_are_intersected_with_live_authority() {
         .await
         .unwrap();
     assert!(matches!(
-        api_key_actor(&fixture.pool, &credential).await,
+        api_key_actor(&fixture.database, &credential).await,
         Err(StoreError::Unauthenticated)
     ));
 }
@@ -249,7 +259,7 @@ async fn concurrent_retries_commit_one_effect_audit_and_outbox() {
     let fixture = Fixture::new().await;
     let mut tasks = vec![];
     for _ in 0..8 {
-        let pool = fixture.pool.clone();
+        let pool = fixture.database.clone();
         let actor = fixture.actor.clone();
         tasks.push(tokio::spawn(async move {
             execute(
@@ -300,7 +310,7 @@ async fn failed_effect_rolls_back_the_reservation_and_can_be_retried() {
     let fixture = Fixture::new().await;
     let input = json!({"a":1});
     let result = execute(
-        &fixture.pool,
+        &fixture.database,
         &fixture.actor,
         command("retry-key", &input),
         &PreferenceChange {
@@ -320,7 +330,7 @@ async fn failed_effect_rolls_back_the_reservation_and_can_be_retried() {
     assert_eq!(receipt_count, 0);
     assert!(
         !execute(
-            &fixture.pool,
+            &fixture.database,
             &fixture.actor,
             command("retry-key", &input),
             &PreferenceChange {
@@ -343,7 +353,7 @@ async fn changed_input_and_revoked_authority_cannot_replay_a_receipt() {
         require_admin: true,
     };
     execute(
-        &fixture.pool,
+        &fixture.database,
         &fixture.actor,
         command("saved-key", &json!({"a":1})),
         &handler,
@@ -352,7 +362,7 @@ async fn changed_input_and_revoked_authority_cannot_replay_a_receipt() {
     .unwrap();
     assert!(matches!(
         execute(
-            &fixture.pool,
+            &fixture.database,
             &fixture.actor,
             command("saved-key", &json!({"a":2})),
             &handler
@@ -368,7 +378,7 @@ async fn changed_input_and_revoked_authority_cannot_replay_a_receipt() {
         .unwrap();
     assert!(matches!(
         execute(
-            &fixture.pool,
+            &fixture.database,
             &fixture.actor,
             command("saved-key", &json!({"a":1})),
             &handler
@@ -387,7 +397,7 @@ async fn unavailable_receipts_fail_without_repeating_the_effect() {
         require_admin: true,
     };
     execute(
-        &fixture.pool,
+        &fixture.database,
         &fixture.actor,
         command("saved-key", &json!({"a":1})),
         &handler,
@@ -401,7 +411,7 @@ async fn unavailable_receipts_fail_without_repeating_the_effect() {
         .unwrap();
     assert!(matches!(
         execute(
-            &fixture.pool,
+            &fixture.database,
             &fixture.actor,
             command("saved-key", &json!({"a":1})),
             &handler

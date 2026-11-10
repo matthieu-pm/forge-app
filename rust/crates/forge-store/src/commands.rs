@@ -11,7 +11,7 @@ use forge_core::{
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
-use sqlx::{FromRow, PgConnection, PgPool};
+use sqlx::{FromRow, PgConnection};
 use std::sync::OnceLock;
 use uuid::Uuid;
 
@@ -125,7 +125,7 @@ fn history_envelope(value: Value, actor: &Actor, actor_name: &str) -> Result<Val
 }
 
 pub async fn execute<H: CommandHandler>(
-    pool: &PgPool,
+    pool: &crate::Database,
     actor: &Actor,
     command: Command<'_>,
     handler: &H,
@@ -175,6 +175,7 @@ pub async fn execute<H: CommandHandler>(
             value,
         });
     };
+    tx.prepare().await?;
     let result = handler.run(&mut tx, &current).await?;
     if result.resource_id.is_empty() || result.resource_type.is_empty() {
         return Err(StoreError::InvalidInput);

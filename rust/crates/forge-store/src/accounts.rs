@@ -4,7 +4,7 @@
 use crate::StoreError;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, PgPool};
+use sqlx::FromRow;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
@@ -41,7 +41,7 @@ pub struct Registration {
 }
 
 pub async fn register_email_user(
-    pool: &PgPool,
+    pool: &crate::Database,
     name: &str,
     email: &str,
     image: Option<&str>,
@@ -79,36 +79,39 @@ pub async fn register_email_user(
 }
 
 pub async fn credential_account(
-    pool: &PgPool,
+    pool: &crate::Database,
     email: &str,
 ) -> Result<Option<(User, String)>, StoreError> {
     let user = sqlx::query_as::<_, User>("SELECT * FROM \"user\" WHERE email=$1")
         .bind(email)
-        .fetch_optional(pool)
+        .fetch_optional(pool.pool())
         .await?;
     let Some(user) = user else { return Ok(None) };
     let password: Option<(Option<String>,)> = sqlx::query_as(
         "SELECT password FROM account WHERE user_id=$1 AND provider_id='credential'",
     )
     .bind(&user.id)
-    .fetch_optional(pool)
+    .fetch_optional(pool.pool())
     .await?;
     Ok(password
         .and_then(|(password,)| password)
         .map(|password| (user, password)))
 }
 
-pub async fn user_by_email(pool: &PgPool, email: &str) -> Result<Option<User>, StoreError> {
+pub async fn user_by_email(
+    pool: &crate::Database,
+    email: &str,
+) -> Result<Option<User>, StoreError> {
     Ok(
         sqlx::query_as::<_, User>("SELECT * FROM \"user\" WHERE email=$1")
             .bind(email)
-            .fetch_optional(pool)
+            .fetch_optional(pool.pool())
             .await?,
     )
 }
 
 pub async fn create_session(
-    pool: &PgPool,
+    pool: &crate::Database,
     user_id: &str,
     token: &str,
     remember: bool,
@@ -130,7 +133,7 @@ pub async fn create_session(
 }
 
 pub async fn session_and_user(
-    pool: &PgPool,
+    pool: &crate::Database,
     token: &str,
     refresh: bool,
     remember: bool,
@@ -150,6 +153,7 @@ pub async fn session_and_user(
         .fetch_one(&mut *tx)
         .await?;
     if refresh && remember && needs_refresh(&session) {
+        tx.prepare().await?;
         session = sqlx::query_as::<_, Session>("UPDATE session SET expires_at=clock_timestamp()+interval '7 days',updated_at=clock_timestamp() WHERE id=$1 RETURNING *")
             .bind(&session.id).fetch_one(&mut *tx).await?;
     }
@@ -161,33 +165,44 @@ pub fn needs_refresh(session: &Session) -> bool {
     session.expires_at - chrono::Duration::days(7) + chrono::Duration::seconds(60) <= Utc::now()
 }
 
-pub async fn verify_email(pool: &PgPool, email: &str) -> Result<bool, StoreError> {
-    let result = sqlx::query(
-        "UPDATE \"user\" SET email_verified=true,updated_at=clock_timestamp() WHERE email=$1 AND NOT email_verified",
-    )
-    .bind(email)
-    .execute(pool)
-    .await?;
-    if result.rows_affected() > 0 {
-        return Ok(true);
-    }
-    Ok(
-        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM \"user\" WHERE email=$1)")
+pub async fn verify_email(pool: &crate::Database, email: &str) -> Result<bool, StoreError> {
+    let mut tx = pool.begin().await?;
+    let verified: Option<(bool,)> =
+        sqlx::query_as("SELECT email_verified FROM \"user\" WHERE email=$1 FOR UPDATE")
             .bind(email)
-            .fetch_one(pool)
-            .await?,
-    )
+            .fetch_optional(&mut *tx)
+            .await?;
+    let Some((verified,)) = verified else {
+        return Ok(false);
+    };
+    if !verified {
+        tx.prepare().await?;
+        sqlx::query(
+            "UPDATE \"user\" SET email_verified=true,updated_at=clock_timestamp() WHERE email=$1",
+        )
+        .bind(email)
+        .execute(&mut *tx)
+        .await?;
+    }
+    tx.commit().await?;
+    Ok(true)
 }
 
-pub async fn sign_out(pool: &PgPool, token: &str) -> Result<(), StoreError> {
+pub async fn sign_out(pool: &crate::Database, token: &str) -> Result<(), StoreError> {
+    let mut tx = pool.begin().await?;
+    tx.prepare().await?;
     sqlx::query("DELETE FROM session WHERE token=$1")
         .bind(token)
-        .execute(pool)
+        .execute(&mut *tx)
         .await?;
+    tx.commit().await?;
     Ok(())
 }
 
-pub async fn list_sessions(pool: &PgPool, token: &str) -> Result<Vec<Session>, StoreError> {
+pub async fn list_sessions(
+    pool: &crate::Database,
+    token: &str,
+) -> Result<Vec<Session>, StoreError> {
     let mut tx = pool.begin().await?;
     let identity: Option<(String,)> = sqlx::query_as(
         "SELECT user_id FROM session WHERE token=$1 AND expires_at>clock_timestamp() FOR SHARE",
@@ -207,7 +222,7 @@ pub async fn list_sessions(pool: &PgPool, token: &str) -> Result<Vec<Session>, S
 }
 
 pub async fn revoke_session(
-    pool: &PgPool,
+    pool: &crate::Database,
     current_token: &str,
     target_token: &str,
 ) -> Result<(), StoreError> {
@@ -220,6 +235,7 @@ pub async fn revoke_session(
         .find(|session| session.token == current_token)
         .ok_or(StoreError::Unauthenticated)?
         .user_id;
+    tx.prepare().await?;
     sqlx::query("DELETE FROM session WHERE user_id=$1 AND token=$2")
         .bind(user_id)
         .bind(target_token)

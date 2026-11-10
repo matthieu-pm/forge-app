@@ -10,6 +10,7 @@ import { isTeamVisible, isProjectVisible, isDocumentVisible, canShareDocumentWit
 import { canonicalCommandInput } from "../apps/forge/src/lib/canonical-json.ts"
 import { permissionsToScopes } from "../apps/forge/src/application/api-keys/api-key-contract.ts"
 import { productFeatures, parseFeatureRollouts, productFeatureMode } from "../packages/environment/product-features.ts"
+import { sourceDigest, signJournalRecord, recoveryEvent, journalSource } from "../apps/forge/src/application/recovery/journal.ts"
 
 const teams = [
   { workspaceId: "w1", visibility: "workspace", memberUserIds: [] },
@@ -90,7 +91,26 @@ const features = [undefined, "null", "[]", "{}", '{"unknown":{"mode":"enabled","
   return { raw: raw ?? null, valid, cases: Object.keys(productFeatures).flatMap(feature => ["w1", "w2", ""].flatMap(workspaceId => [false, true].map(billing => ({ feature, workspaceId, billing, mode: productFeatureMode(feature, workspaceId, { FORGE_FEATURE_ROLLOUTS: raw, FORGE_BILLING_ENABLED: String(billing) }) })))) }
 })
 
-const output = JSON.stringify({ teams, projects, documents, actorCases, canonical, permissions: permissionValues.map(value => ({ value, scopes: permissionsToScopes(value) })), crypto, features }) + "\n"
+const journalFixtureSource = { branchId: "br-rust-fixture", host: "ep-fixture.eu-west-2.aws.neon.tech", database: "forge_fixture", storeId: "store_fixture" }
+const event = { id: "00000000-0000-4000-8000-000000000001", sequence: 1, table: "issues", key: { id: "00000000-0000-4000-8000-000000000002" }, action: "patch", patch: { status: "deleted", version: 1.0 }, storageReference: null, at: "2026-11-10T12:00:00.000Z" }
+const journalKey = Buffer.alloc(32, 9)
+const baseRecord = { version: 1, source: journalFixtureSource, operationId: "00000000-0000-4000-8000-000000000003", at: event.at }
+const journal = {
+  source: journalFixtureSource, sourceDigest: sourceDigest(journalFixtureSource), keyHex: journalKey.toString("hex"),
+  signed: [
+    { ...baseRecord, kind: "prepared" }, { ...baseRecord, kind: "chunk", events: [event] },
+    { ...baseRecord, kind: "completed", chunks: ["chunk-0.json"] }, { ...baseRecord, kind: "aborted" },
+  ].map(record => signJournalRecord(record, journalKey)),
+  events: [event, { ...event, action: "delete", patch: null },
+    { ...event, action: "delete" }, { ...event, patch: { password: "must-not-be-journaled" } },
+    { ...event, patch: { password: null } }, { ...event, key: {} }, { ...event, sequence: 0 },
+    { ...event, patch: { transcript: ["private-content"] } }, { ...event, patch: { transcript: [] } },
+    { ...event, action: "upsert", table: "call_settings", key: { workspace_id: "w1" }, patch: { retention_days: 30 } },
+    { ...event, patch: { unsupported_field: true } },
+  ].map(value => ({ value, valid: recoveryEvent.safeParse(value).success })),
+  sources: [journalFixtureSource, { ...journalFixtureSource, host: "localhost" }, { ...journalFixtureSource, storeId: "store_" }].map(value => ({ value, valid: journalSource.safeParse(value).success })),
+}
+const output = JSON.stringify({ teams, projects, documents, actorCases, canonical, permissions: permissionValues.map(value => ({ value, scopes: permissionsToScopes(value) })), crypto, features, journal }) + "\n"
 const destination = new URL("../rust/reference-fixtures.json", import.meta.url)
 if (process.argv.includes("--check")) {
   if (readFileSync(destination, "utf8") !== output) {

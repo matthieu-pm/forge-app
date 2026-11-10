@@ -22,7 +22,8 @@ gate pass.
 | 0 | Baseline inventory, reproducible Rust workspace, HTTP host, full test harness | Passed available gate; external-fixture checks pending |
 | 1a | Credential compatibility, authorization, existing-schema persistence, command receipts and transactions | Passed available gate |
 | 1b | Email/password lifecycle, sessions, workspace CRUD/switching and atomic invitation acceptance | Passed available gate |
-| 1c | ChatGPT OAuth, desktop authorization, remaining membership/invitation commands and recovery compatibility | Pending |
+| 1c | Independent recovery journal, signed archive compatibility and transaction publication | Passed available gate |
+| 1d | ChatGPT OAuth, desktop authorization and remaining membership/invitation commands | Pending |
 | 2 | Teams, issues, triage, cycles, projects, initiatives, documents, views, resources and imports | Pending |
 | 3 | Agent execution, approvals, streams, models, files, jobs, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
@@ -39,6 +40,8 @@ their own recorded results before the relevant milestone is complete.
   from the server and a future Rust browser implementation.
 - `rust/crates/forge-server`: Rust HTTP host; runs on `127.0.0.1:3100` by default
   so the reference app can continue to run on port 3000.
+- `rust/crates/forge-recovery`: R2 deletion-journal adapter using explicit SDK
+  credentials, signed records and immutable object writes.
 - Existing SQL migrations remain the schema authority during the port. Rust
   adapters must target the existing schema rather than invent an incompatible
   replacement data model.
@@ -110,3 +113,24 @@ these routes do not represent a completed rewrite.
 - Log: `.forge/rust-rewrite/milestone-1b.log`.
 - Live mail, OAuth, desktop login, recovery-enabled writes, other membership
   operations and the full web UI still await their respective milestones.
+
+### Milestone 1c
+
+- All enabled reference tests/typechecks and all 40 Rust tests passed, along
+  with formatting and Clippy. The final Rust rerun also covers JavaScript number
+  formatting when retrying an existing signed journal effect.
+- The local runner now provisions two disposable PostgreSQL databases from all
+  75 migrations: ordinary operation and recovery capture enabled. No application
+  database credentials or remote test databases are used.
+- Journal records and source hashes match exports from the reference signer.
+  Records reject credential contents, unsupported fields and invalid patch shapes.
+- Write transactions prepare independently before destructive SQL, publish after
+  commit, and only acknowledge after publication. Confirmed rollbacks publish
+  aborts. Unknown commit/publication outcomes retain a pending operation.
+- Existing authentication, workspace and command adapters use the journal-aware
+  database module. Databases with capture enabled reject unconfigured writes.
+- R2 configuration/client construction is tested without network access. Live
+  object requests and complete restore rehearsal remain part of release checks.
+- Logs: `.forge/rust-rewrite/milestone-1c-recovery.log`,
+  `.forge/rust-rewrite/milestone-1c-rust-tests.log`, and
+  `.forge/rust-rewrite/milestone-1c-clippy.log`.

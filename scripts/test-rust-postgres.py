@@ -45,9 +45,16 @@ def main():
             if result.returncode:
                 print(result.stderr, file=sys.stderr)
                 return result.returncode
+            subprocess.run(["psql", "-X", "-v", "ON_ERROR_STOP=1", "--dbname", connection, "-c", "CREATE DATABASE forge_rust_journal"], check=True, capture_output=True)
+            journal_connection = f"postgresql://forge_rust_test@127.0.0.1:{port}/forge_rust_journal"
+            journal_setup = subprocess.run(["psql", "-X", "-v", "ON_ERROR_STOP=1", "--dbname", journal_connection], input="\n".join(statements) + "\nSELECT forge_install_recovery_triggers();\nUPDATE recovery_journal_state SET enabled=true WHERE id='singleton';\n", text=True, capture_output=True)
+            if journal_setup.returncode:
+                print(journal_setup.stderr, file=sys.stderr)
+                return journal_setup.returncode
             print(f'Applied all {len(statements)} reference migrations to disposable local PostgreSQL.', flush=True)
             environment = os.environ.copy()
             environment["FORGE_RUST_TEST_DATABASE_URL"] = connection
+            environment["FORGE_RUST_JOURNAL_TEST_DATABASE_URL"] = journal_connection
             return subprocess.run(["cargo", "test", "--workspace", "--locked"], cwd=ROOT, env=environment).returncode
         finally:
             if started:

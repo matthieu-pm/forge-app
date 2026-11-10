@@ -1,7 +1,7 @@
 use crate::{StoreError, accounts::session_user_tx};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, PgConnection, PgPool};
+use sqlx::{FromRow, PgConnection};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
@@ -50,7 +50,7 @@ async fn member_role(
         .ok_or(StoreError::Forbidden)
 }
 
-pub async fn list(pool: &PgPool, token: &str) -> Result<Vec<Workspace>, StoreError> {
+pub async fn list(pool: &crate::Database, token: &str) -> Result<Vec<Workspace>, StoreError> {
     let mut tx = pool.begin().await?;
     let (_, user) = session_user_tx(&mut tx, token).await?;
     let result=sqlx::query_as::<_,Workspace>("SELECT o.* FROM organization o JOIN member m ON m.organization_id=o.id WHERE m.user_id=$1 ORDER BY o.created_at,o.id")
@@ -59,7 +59,11 @@ pub async fn list(pool: &PgPool, token: &str) -> Result<Vec<Workspace>, StoreErr
     Ok(result)
 }
 
-pub async fn slug_available(pool: &PgPool, token: &str, slug: &str) -> Result<bool, StoreError> {
+pub async fn slug_available(
+    pool: &crate::Database,
+    token: &str,
+    slug: &str,
+) -> Result<bool, StoreError> {
     let mut tx = pool.begin().await?;
     session_user_tx(&mut tx, token).await?;
     let exists: bool =
@@ -72,7 +76,7 @@ pub async fn slug_available(pool: &PgPool, token: &str, slug: &str) -> Result<bo
 }
 
 pub async fn create(
-    pool: &PgPool,
+    pool: &crate::Database,
     token: &str,
     name: &str,
     slug: &str,
@@ -93,6 +97,7 @@ pub async fn create(
         .bind(&user.id)
         .execute(&mut *tx)
         .await?;
+    tx.prepare().await?;
     sqlx::query("UPDATE session SET active_organization_id=$1 WHERE id=$2")
         .bind(&id)
         .bind(&session.id)
@@ -103,7 +108,7 @@ pub async fn create(
 }
 
 pub async fn set_active(
-    pool: &PgPool,
+    pool: &crate::Database,
     token: &str,
     workspace_id: Option<&str>,
 ) -> Result<Option<Workspace>, StoreError> {
@@ -123,6 +128,7 @@ pub async fn set_active(
     } else {
         None
     };
+    tx.prepare().await?;
     sqlx::query("UPDATE session SET active_organization_id=$1 WHERE id=$2")
         .bind(workspace_id)
         .bind(&session.id)
@@ -133,7 +139,7 @@ pub async fn set_active(
 }
 
 pub async fn update(
-    pool: &PgPool,
+    pool: &crate::Database,
     token: &str,
     workspace_id: &str,
     name: Option<&str>,
@@ -167,7 +173,11 @@ pub async fn update(
     Ok(updated)
 }
 
-pub async fn delete(pool: &PgPool, token: &str, workspace_id: &str) -> Result<(), StoreError> {
+pub async fn delete(
+    pool: &crate::Database,
+    token: &str,
+    workspace_id: &str,
+) -> Result<(), StoreError> {
     let mut tx = pool.begin().await?;
     lock_workspace(&mut tx, workspace_id, true).await?;
     let (_, user) = session_user_tx(&mut tx, token).await?;
@@ -175,6 +185,7 @@ pub async fn delete(pool: &PgPool, token: &str, workspace_id: &str) -> Result<()
     if !has_role(&role, &["owner"]) {
         return Err(StoreError::Forbidden);
     }
+    tx.prepare().await?;
     sqlx::query("DELETE FROM organization WHERE id=$1")
         .bind(workspace_id)
         .execute(&mut *tx)
@@ -184,7 +195,7 @@ pub async fn delete(pool: &PgPool, token: &str, workspace_id: &str) -> Result<()
 }
 
 pub async fn accept_invitation(
-    pool: &PgPool,
+    pool: &crate::Database,
     token: &str,
     invitation_id: &str,
 ) -> Result<Invitation, StoreError> {
@@ -214,6 +225,7 @@ pub async fn accept_invitation(
     // The capacity trigger's failure rolls back the WHOLE invitation acceptance.
     sqlx::query("INSERT INTO member(id,organization_id,user_id,role) VALUES($1,$2,$3,$4) ON CONFLICT(organization_id,user_id) DO NOTHING")
         .bind(Uuid::new_v4().to_string()).bind(&invitation.organization_id).bind(&user.id).bind(role).execute(&mut *tx).await?;
+    tx.prepare().await?;
     let accepted = sqlx::query_as::<_, Invitation>(
         "UPDATE invitation SET status='accepted' WHERE id=$1 RETURNING *",
     )

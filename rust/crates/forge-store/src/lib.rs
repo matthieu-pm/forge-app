@@ -3,7 +3,9 @@
 pub mod accounts;
 pub mod authority;
 pub mod commands;
+pub mod database;
 pub mod workspaces;
+pub use database::Database;
 
 #[derive(Debug, thiserror::Error)]
 pub enum StoreError {
@@ -29,4 +31,6 @@ pub enum StoreError {
     Conflict,
     #[error("Database operation failed.")]
     Database(#[from] sqlx::Error),
+    #[error(transparent)]
+    Recovery(#[from] forge_core::journal::JournalError),
 }

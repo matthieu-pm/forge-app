@@ -102,7 +102,7 @@ impl Throttle {
 
 #[derive(Clone, Default)]
 pub struct AppState {
-    pub(crate) pool: Option<PgPool>,
+    pub(crate) pool: Option<forge_store::Database>,
     pub(crate) auth: Option<Arc<AuthSettings>>,
     pub(crate) mailer: Option<Arc<dyn VerificationMailer>>,
     pub(crate) throttle: Arc<Throttle>,
@@ -111,6 +111,14 @@ pub struct AppState {
 impl AppState {
     pub fn configured(
         pool: PgPool,
+        auth: AuthSettings,
+        mailer: Option<Arc<dyn VerificationMailer>>,
+    ) -> Self {
+        Self::configured_database(forge_store::Database::new(pool), auth, mailer)
+    }
+
+    pub fn configured_database(
+        pool: forge_store::Database,
         auth: AuthSettings,
         mailer: Option<Arc<dyn VerificationMailer>>,
     ) -> Self {

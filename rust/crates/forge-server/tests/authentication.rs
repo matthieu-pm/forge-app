@@ -35,6 +35,7 @@ impl VerificationMailer for Mailbox {
 
 struct Fixture {
     pool: PgPool,
+    database: forge_store::Database,
     app: Router,
     mailbox: Arc<Mailbox>,
 }
@@ -58,6 +59,7 @@ impl Fixture {
             Some(mailbox.clone()),
         );
         Self {
+            database: forge_store::Database::new(pool.clone()),
             pool,
             app: forge_server::router_with_state(state),
             mailbox,
@@ -104,7 +106,7 @@ impl Fixture {
     async fn account(&self) -> (User, String, String) {
         let email = format!("{}@example.test", Uuid::new_v4());
         let user = accounts::register_email_user(
-            &self.pool,
+            &self.database,
             "Test account",
             &email,
             None,
@@ -119,7 +121,7 @@ impl Fixture {
             .await
             .unwrap();
         let token = Uuid::new_v4().to_string();
-        accounts::create_session(&self.pool, &user.id, &token, true, None)
+        accounts::create_session(&self.database, &user.id, &token, true, None)
             .await
             .unwrap();
         let cookie = format!(
@@ -394,7 +396,7 @@ async fn duplicate_signup_does_not_disclose_or_overwrite_an_existing_account() {
     assert_ne!(result["user"]["id"], existing.id);
     assert_eq!(result["user"]["emailVerified"], false);
     assert_eq!(result["user"]["name"], "Different submitted name");
-    let persisted = accounts::user_by_email(&fixture.pool, &existing.email)
+    let persisted = accounts::user_by_email(&fixture.database, &existing.email)
         .await
         .unwrap()
         .unwrap();
@@ -407,17 +409,17 @@ async fn duplicate_signup_does_not_disclose_or_overwrite_an_existing_account() {
 async fn repeated_verification_links_do_not_change_profile_revisions() {
     let fixture = Fixture::new().await;
     let (user, _, _) = fixture.account().await;
-    let before = accounts::user_by_email(&fixture.pool, &user.email)
+    let before = accounts::user_by_email(&fixture.database, &user.email)
         .await
         .unwrap()
         .unwrap()
         .updated_at;
     assert!(
-        accounts::verify_email(&fixture.pool, &user.email)
+        accounts::verify_email(&fixture.database, &user.email)
             .await
             .unwrap()
     );
-    let after = accounts::user_by_email(&fixture.pool, &user.email)
+    let after = accounts::user_by_email(&fixture.database, &user.email)
         .await
         .unwrap()
         .unwrap()
@@ -463,12 +465,12 @@ async fn simultaneous_session_revocations_settle_without_a_deadlock() {
     let fixture = Fixture::new().await;
     let (user, first, _) = fixture.account().await;
     let second = Uuid::new_v4().to_string();
-    accounts::create_session(&fixture.pool, &user.id, &second, true, None)
+    accounts::create_session(&fixture.database, &user.id, &second, true, None)
         .await
         .unwrap();
     let (first_result, second_result) = tokio::join!(
-        accounts::revoke_session(&fixture.pool, &first, &second),
-        accounts::revoke_session(&fixture.pool, &second, &first)
+        accounts::revoke_session(&fixture.database, &first, &second),
+        accounts::revoke_session(&fixture.database, &second, &first)
     );
     assert!(first_result.is_ok() || second_result.is_ok());
     for result in [first_result, second_result] {
@@ -505,14 +507,14 @@ async fn workspace_update_and_cascading_deletion_use_a_consistent_lock_order() {
         .unwrap();
     let (updated, deleted) = tokio::join!(
         forge_store::workspaces::update(
-            &fixture.pool,
+            &fixture.database,
             &admin_token,
             id,
             Some("Changed"),
             None,
             None
         ),
-        forge_store::workspaces::delete(&fixture.pool, &owner_token, id)
+        forge_store::workspaces::delete(&fixture.database, &owner_token, id)
     );
     assert!(updated.is_ok() || matches!(updated, Err(forge_store::StoreError::Forbidden)));
     assert!(deleted.is_ok(), "{deleted:?}");
@@ -522,7 +524,7 @@ async fn workspace_update_and_cascading_deletion_use_a_consistent_lock_order() {
         .await
         .unwrap();
     assert!(!exists);
-    let owner_session = accounts::session_and_user(&fixture.pool, &owner_token, false, true)
+    let owner_session = accounts::session_and_user(&fixture.database, &owner_token, false, true)
         .await
         .unwrap()
         .unwrap();

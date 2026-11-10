@@ -137,3 +137,49 @@ fn feature_ceilings_and_rollouts_match_the_reference() {
         }
     }
 }
+
+#[test]
+fn independent_journal_signatures_and_validation_match_the_reference() {
+    use forge_core::journal::{JournalRecord, JournalSource, RecoveryEvent};
+    let fixture: Value =
+        serde_json::from_str(include_str!("../../../reference-fixtures.json")).unwrap();
+    let journal = &fixture["journal"];
+    let source: JournalSource = serde_json::from_value(journal["source"].clone()).unwrap();
+    assert_eq!(
+        source.digest().unwrap(),
+        journal["sourceDigest"].as_str().unwrap()
+    );
+    let key = hex::decode(journal["keyHex"].as_str().unwrap()).unwrap();
+    for signed in journal["signed"].as_array().unwrap() {
+        let record = JournalRecord::verify(signed.clone(), &key).unwrap();
+        assert_eq!(record.signed(&key).unwrap(), *signed);
+        if record.events.is_some() {
+            let mut equivalent = record.clone();
+            equivalent.at = "2026-11-10T12:00:02.000Z".into();
+            equivalent.events.as_mut().unwrap()[0]
+                .patch
+                .as_mut()
+                .unwrap()
+                .insert("version".into(), serde_json::json!(1.0));
+            assert!(record.same_effect_as(&equivalent).unwrap());
+            equivalent.at = record.at.clone();
+            assert_eq!(
+                equivalent.signed(&key).unwrap()["signature"],
+                signed["signature"]
+            );
+        }
+        let mut tampered = signed.clone();
+        tampered["at"] = serde_json::json!("2026-11-10T12:00:01.000Z");
+        assert!(JournalRecord::verify(tampered, &key).is_err());
+    }
+    for case in journal["events"].as_array().unwrap() {
+        let valid = serde_json::from_value::<RecoveryEvent>(case["value"].clone())
+            .is_ok_and(|event| event.validate().is_ok());
+        assert_eq!(valid, case["valid"].as_bool().unwrap(), "{}", case["value"]);
+    }
+    for case in journal["sources"].as_array().unwrap() {
+        let valid = serde_json::from_value::<JournalSource>(case["value"].clone())
+            .is_ok_and(|source| source.validate().is_ok());
+        assert_eq!(valid, case["valid"].as_bool().unwrap());
+    }
+}

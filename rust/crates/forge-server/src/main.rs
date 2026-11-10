@@ -23,7 +23,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mailer = ResendMailer::from_environment()
             .map_err(|_| "Email configuration is invalid.")?
             .map(|mailer| Arc::new(mailer) as Arc<dyn forge_server::mail::VerificationMailer>);
-        AppState::configured(pool, settings, mailer)
+        let database = if let Some(journal) = forge_recovery::R2Journal::from_environment()
+            .map_err(|_| "Recovery journal configuration is invalid.")?
+        {
+            let store_id = std::env::var("BLOB_STORE_ID")
+                .map_err(|_| "BLOB_STORE_ID is required for the recovery journal.")?;
+            forge_store::Database::with_journal(pool, Arc::new(journal), store_id)
+        } else {
+            forge_store::Database::new(pool)
+        };
+        AppState::configured_database(database, settings, mailer)
     } else {
         AppState::default()
     };

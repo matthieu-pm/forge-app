@@ -101,7 +101,9 @@ pub(crate) fn invalid_body() -> AuthError {
     )
 }
 
-pub(crate) fn configuration(state: &AppState) -> Result<(&sqlx::PgPool, &AuthSettings), AuthError> {
+pub(crate) fn configuration(
+    state: &AppState,
+) -> Result<(&forge_store::Database, &AuthSettings), AuthError> {
     Ok((
         state.pool.as_ref().ok_or_else(unavailable)?,
         state.auth.as_deref().ok_or_else(unavailable)?,
@@ -160,21 +162,22 @@ pub(crate) async fn guard(
         )
         .into_response();
     }
-    if request.method() != axum::http::Method::GET && request.method() != axum::http::Method::HEAD {
-        if let Some(auth) = &state.auth {
-            let trusted = request
-                .headers()
-                .get(header::ORIGIN)
-                .and_then(|value| value.to_str().ok())
-                .is_some_and(|origin| auth.trusted_origin(origin));
-            if !trusted {
-                return AuthError(
-                    StatusCode::FORBIDDEN,
-                    "INVALID_ORIGIN",
-                    "The request origin is not trusted.",
-                )
-                .into_response();
-            }
+    if request.method() != axum::http::Method::GET
+        && request.method() != axum::http::Method::HEAD
+        && let Some(auth) = &state.auth
+    {
+        let trusted = request
+            .headers()
+            .get(header::ORIGIN)
+            .and_then(|value| value.to_str().ok())
+            .is_some_and(|origin| auth.trusted_origin(origin));
+        if !trusted {
+            return AuthError(
+                StatusCode::FORBIDDEN,
+                "INVALID_ORIGIN",
+                "The request origin is not trusted.",
+            )
+            .into_response();
         }
     }
     let mut response = next.run(request).await;
