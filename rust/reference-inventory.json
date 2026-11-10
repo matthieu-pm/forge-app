@@ -1,0 +1,809 @@
+{
+  "description": "Reference source inventory; presence here does not mean Rust parity is implemented.",
+  "areas": [
+    {
+      "area": "apps/forge/drizzle.config.ts",
+      "sourceFiles": 1,
+      "testFiles": 0
+    },
+    {
+      "area": "apps/forge/electron",
+      "sourceFiles": 23,
+      "testFiles": 14
+    },
+    {
+      "area": "apps/forge/electron.preload.vite.config.ts",
+      "sourceFiles": 1,
+      "testFiles": 0
+    },
+    {
+      "area": "apps/forge/electron.vite.config.ts",
+      "sourceFiles": 1,
+      "testFiles": 0
+    },
+    {
+      "area": "apps/forge/eslint.config.js",
+      "sourceFiles": 1,
+      "testFiles": 0
+    },
+    {
+      "area": "apps/forge/forge.config.ts",
+      "sourceFiles": 1,
+      "testFiles": 0
+    },
+    {
+      "area": "apps/forge/playwright.desktop.config.ts",
+      "sourceFiles": 1,
+      "testFiles": 0
+    },
+    {
+      "area": "apps/forge/scripts",
+      "sourceFiles": 103,
+      "testFiles": 10
+    },
+    {
+      "area": "apps/forge/server",
+      "sourceFiles": 1,
+      "testFiles": 0
+    },
+    {
+      "area": "apps/forge/shared",
+      "sourceFiles": 1,
+      "testFiles": 1
+    },
+    {
+      "area": "apps/forge/src/adapters",
+      "sourceFiles": 39,
+      "testFiles": 13
+    },
+    {
+      "area": "apps/forge/src/api",
+      "sourceFiles": 8,
+      "testFiles": 2
+    },
+    {
+      "area": "apps/forge/src/application/actor.ts",
+      "sourceFiles": 1,
+      "testFiles": 0
+    },
+    {
+      "area": "apps/forge/src/application/agents",
+      "sourceFiles": 43,
+      "testFiles": 21
+    },
+    {
+      "area": "apps/forge/src/application/api-keys",
+      "sourceFiles": 1,
+      "testFiles": 1
+    },
+    {
+      "area": "apps/forge/src/application/authorization.ts",
+      "sourceFiles": 1,
+      "testFiles": 0
+    },
+    {
+      "area": "apps/forge/src/application/billing",
+      "sourceFiles": 42,
+      "testFiles": 32
+    },
+    {
+      "area": "apps/forge/src/application/calls",
+      "sourceFiles": 2,
+      "testFiles": 1
+    },
+    {
+      "area": "apps/forge/src/application/commands",
+      "sourceFiles": 3,
+      "testFiles": 2
+    },
+    {
+      "area": "apps/forge/src/application/cycles",
+      "sourceFiles": 1,
+      "testFiles": 0
+    },
+    {
+      "area": "apps/forge/src/application/desktop-releases",
+      "sourceFiles": 4,
+      "testFiles": 1
+    },
+    {
+      "area": "apps/forge/src/application/documents",
+      "sourceFiles": 3,
+      "testFiles": 1
+    },
+    {
+      "area": "apps/forge/src/application/emojis",
+      "sourceFiles": 1,
+      "testFiles": 1
+    },
+    {
+      "area": "apps/forge/src/application/features",
+      "sourceFiles": 2,
+      "testFiles": 3
+    },
+    {
+      "area": "apps/forge/src/application/files",
+      "sourceFiles": 16,
+      "testFiles": 5
+    },
+    {
+      "area": "apps/forge/src/application/imports",
+      "sourceFiles": 4,
+      "testFiles": 3
+    },
+    {
+      "area": "apps/forge/src/application/issue-definitions",
+      "sourceFiles": 2,
+      "testFiles": 1
+    },
+    {
+      "area": "apps/forge/src/application/issues",
+      "sourceFiles": 15,
+      "testFiles": 3
+    },
+    {
+      "area": "apps/forge/src/application/jobs",
+      "sourceFiles": 4,
+      "testFiles": 1
+    },
+    {
+      "area": "apps/forge/src/application/loops",
+      "sourceFiles": 11,
+      "testFiles": 3
+    },
+    {
+      "area": "apps/forge/src/application/mail",
+      "sourceFiles": 2,
+      "testFiles": 2
+    },
+    {
+      "area": "apps/forge/src/application/observability",
+      "sourceFiles": 2,
+      "testFiles": 3
+    },
+    {
+      "area": "apps/forge/src/application/operations",
+      "sourceFiles": 13,
+      "testFiles": 8
+    },
+    {
+      "area": "apps/forge/src/application/planning",
+      "sourceFiles": 11,
+      "testFiles": 3
+    },
+    {
+      "area": "apps/forge/src/application/preferences",
+      "sourceFiles": 3,
+      "testFiles": 3
+    },
+    {
+      "area": "apps/forge/src/application/product-state",
+      "sourceFiles": 3,
+      "testFiles": 2
+    },
+    {
+      "area": "apps/forge/src/application/profiles",
+      "sourceFiles": 1,
+      "testFiles": 1
+    },
+    {
+      "area": "apps/forge/src/application/recovery",
+      "sourceFiles": 3,
+      "testFiles": 2
+    },
+    {
+      "area": "apps/forge/src/application/recurring-issues",
+      "sourceFiles": 1,
+      "testFiles": 1
+    },
+    {
+      "area": "apps/forge/src/application/resource-authorization.postgres.test.ts",
+      "sourceFiles": 0,
+      "testFiles": 1
+    },
+    {
+      "area": "apps/forge/src/application/resource-policy.server.ts",
+      "sourceFiles": 1,
+      "testFiles": 0
+    },
+    {
+      "area": "apps/forge/src/application/resource-visibility.test.ts",
+      "sourceFiles": 0,
+      "testFiles": 1
+    },
+    {
+      "area": "apps/forge/src/application/resource-visibility.ts",
+      "sourceFiles": 1,
+      "testFiles": 0
+    },
+    {
+      "area": "apps/forge/src/application/resources",
+      "sourceFiles": 1,
+      "testFiles": 1
+    },
+    {
+      "area": "apps/forge/src/application/sla",
+      "sourceFiles": 4,
+      "testFiles": 2
+    },
+    {
+      "area": "apps/forge/src/application/team-content-feature-policy.test.ts",
+      "sourceFiles": 0,
+      "testFiles": 1
+    },
+    {
+      "area": "apps/forge/src/application/team-content-feature-policy.ts",
+      "sourceFiles": 1,
+      "testFiles": 0
+    },
+    {
+      "area": "apps/forge/src/application/teams",
+      "sourceFiles": 5,
+      "testFiles": 4
+    },
+    {
+      "area": "apps/forge/src/application/templates",
+      "sourceFiles": 3,
+      "testFiles": 2
+    },
+    {
+      "area": "apps/forge/src/application/views",
+      "sourceFiles": 1,
+      "testFiles": 1
+    },
+    {
+      "area": "apps/forge/src/application/workflows",
+      "sourceFiles": 7,
+      "testFiles": 4
+    },
+    {
+      "area": "apps/forge/src/application/workspace-security",
+      "sourceFiles": 6,
+      "testFiles": 3
+    },
+    {
+      "area": "apps/forge/src/application/workspaces",
+      "sourceFiles": 2,
+      "testFiles": 0
+    },
+    {
+      "area": "apps/forge/src/components",
+      "sourceFiles": 276,
+      "testFiles": 117
+    },
+    {
+      "area": "apps/forge/src/db",
+      "sourceFiles": 8,
+      "testFiles": 3
+    },
+    {
+      "area": "apps/forge/src/emails",
+      "sourceFiles": 3,
+      "testFiles": 1
+    },
+    {
+      "area": "apps/forge/src/hooks",
+      "sourceFiles": 2,
+      "testFiles": 0
+    },
+    {
+      "area": "apps/forge/src/host",
+      "sourceFiles": 3,
+      "testFiles": 2
+    },
+    {
+      "area": "apps/forge/src/lib",
+      "sourceFiles": 218,
+      "testFiles": 108
+    },
+    {
+      "area": "apps/forge/src/router.test.ts",
+      "sourceFiles": 0,
+      "testFiles": 1
+    },
+    {
+      "area": "apps/forge/src/router.tsx",
+      "sourceFiles": 1,
+      "testFiles": 0
+    },
+    {
+      "area": "apps/forge/src/routes",
+      "sourceFiles": 125,
+      "testFiles": 2
+    },
+    {
+      "area": "apps/forge/src/routeTree.gen.ts",
+      "sourceFiles": 1,
+      "testFiles": 0
+    },
+    {
+      "area": "apps/forge/src/start.ts",
+      "sourceFiles": 1,
+      "testFiles": 0
+    },
+    {
+      "area": "apps/forge/src/test",
+      "sourceFiles": 3,
+      "testFiles": 0
+    },
+    {
+      "area": "apps/forge/src/test-utils",
+      "sourceFiles": 1,
+      "testFiles": 0
+    },
+    {
+      "area": "apps/forge/src/workflows",
+      "sourceFiles": 5,
+      "testFiles": 2
+    },
+    {
+      "area": "apps/forge/tests",
+      "sourceFiles": 0,
+      "testFiles": 2
+    },
+    {
+      "area": "apps/forge/vite.config.ts",
+      "sourceFiles": 1,
+      "testFiles": 0
+    },
+    {
+      "area": "apps/forge/vitest.config.ts",
+      "sourceFiles": 1,
+      "testFiles": 0
+    },
+    {
+      "area": "apps/forge/vitest.workflow.config.ts",
+      "sourceFiles": 1,
+      "testFiles": 0
+    },
+    {
+      "area": "packages/environment",
+      "sourceFiles": 10,
+      "testFiles": 0
+    },
+    {
+      "area": "packages/telemetry",
+      "sourceFiles": 5,
+      "testFiles": 0
+    },
+    {
+      "area": "services/agent-runtime",
+      "sourceFiles": 32,
+      "testFiles": 9
+    },
+    {
+      "area": "services/loop-scheduler-trigger",
+      "sourceFiles": 2,
+      "testFiles": 2
+    }
+  ],
+  "routes": [
+    "apps/forge/src/routes/__root.tsx",
+    "apps/forge/src/routes/accept-invitation.tsx",
+    "apps/forge/src/routes/agent.tsx",
+    "apps/forge/src/routes/api/agent/$.ts",
+    "apps/forge/src/routes/api/auth/$.ts",
+    "apps/forge/src/routes/api/billing/polar/webhook.ts",
+    "apps/forge/src/routes/api/calls/oauth/callback.ts",
+    "apps/forge/src/routes/api/desktop/updates/darwin/$arch.ts",
+    "apps/forge/src/routes/api/docs.ts",
+    "apps/forge/src/routes/api/files/$.ts",
+    "apps/forge/src/routes/api/files/uploads/$.ts",
+    "apps/forge/src/routes/api/files/uploads/index.ts",
+    "apps/forge/src/routes/api/health/live.ts",
+    "apps/forge/src/routes/api/health/ready.ts",
+    "apps/forge/src/routes/api/internal/database-release-rehearsal.ts",
+    "apps/forge/src/routes/api/internal/desktop/releases.ts",
+    "apps/forge/src/routes/api/internal/desktop/releases/$version/pause.ts",
+    "apps/forge/src/routes/api/internal/desktop/releases/$version/promote.ts",
+    "apps/forge/src/routes/api/internal/environment.ts",
+    "apps/forge/src/routes/api/internal/issue-retention.ts",
+    "apps/forge/src/routes/api/internal/loops.ts",
+    "apps/forge/src/routes/api/internal/observability-check.ts",
+    "apps/forge/src/routes/api/internal/operations-check.ts",
+    "apps/forge/src/routes/api/internal/operations-monitor.ts",
+    "apps/forge/src/routes/api/internal/recovery-key-export.ts",
+    "apps/forge/src/routes/api/internal/sla-jobs.ts",
+    "apps/forge/src/routes/api/internal/storage.ts",
+    "apps/forge/src/routes/api/loops/webhooks/$loopId.ts",
+    "apps/forge/src/routes/api/openapi[.]json.ts",
+    "apps/forge/src/routes/api/v1/$.ts",
+    "apps/forge/src/routes/auth/desktop.tsx",
+    "apps/forge/src/routes/download.tsx",
+    "apps/forge/src/routes/forge.tsx",
+    "apps/forge/src/routes/inbox.tsx",
+    "apps/forge/src/routes/index.tsx",
+    "apps/forge/src/routes/join.$token.tsx",
+    "apps/forge/src/routes/login.tsx",
+    "apps/forge/src/routes/my-issues.tsx",
+    "apps/forge/src/routes/onboarding/workspace.tsx",
+    "apps/forge/src/routes/projects/$projectId.tsx",
+    "apps/forge/src/routes/reviews.tsx",
+    "apps/forge/src/routes/reviews_.created.tsx",
+    "apps/forge/src/routes/settings.account.agents.tsx",
+    "apps/forge/src/routes/settings.account.connections.tsx",
+    "apps/forge/src/routes/settings.account.security.tsx",
+    "apps/forge/src/routes/settings.ai.tsx",
+    "apps/forge/src/routes/settings.api.tsx",
+    "apps/forge/src/routes/settings.applications.tsx",
+    "apps/forge/src/routes/settings.billing.tsx",
+    "apps/forge/src/routes/settings.calls-and-transcripts.tsx",
+    "apps/forge/src/routes/settings.code-and-reviews.tsx",
+    "apps/forge/src/routes/settings.emojis.tsx",
+    "apps/forge/src/routes/settings.import-export.tsx",
+    "apps/forge/src/routes/settings.index.tsx",
+    "apps/forge/src/routes/settings.initiative-labels.tsx",
+    "apps/forge/src/routes/settings.initiatives.tsx",
+    "apps/forge/src/routes/settings.integrations.tsx",
+    "apps/forge/src/routes/settings.issue-labels.tsx",
+    "apps/forge/src/routes/settings.issue-templates.tsx",
+    "apps/forge/src/routes/settings.members.tsx",
+    "apps/forge/src/routes/settings.notifications.$channel.tsx",
+    "apps/forge/src/routes/settings.notifications.index.tsx",
+    "apps/forge/src/routes/settings.notifications.tsx",
+    "apps/forge/src/routes/settings.profile.tsx",
+    "apps/forge/src/routes/settings.project-labels.tsx",
+    "apps/forge/src/routes/settings.project-statuses.tsx",
+    "apps/forge/src/routes/settings.project-templates.tsx",
+    "apps/forge/src/routes/settings.project-updates.tsx",
+    "apps/forge/src/routes/settings.security.tsx",
+    "apps/forge/src/routes/settings.signals.tsx",
+    "apps/forge/src/routes/settings.sla.tsx",
+    "apps/forge/src/routes/settings.templates.issue.$templateId.tsx",
+    "apps/forge/src/routes/settings.templates.project.$templateId.tsx",
+    "apps/forge/src/routes/settings.tsx",
+    "apps/forge/src/routes/settings.workspace.tsx",
+    "apps/forge/src/routes/settings_.teams.$teamSlug.agent-skills.$skillId.tsx",
+    "apps/forge/src/routes/settings_.teams.$teamSlug.agent-skills.index.tsx",
+    "apps/forge/src/routes/settings_.teams.$teamSlug.agent-skills.new.tsx",
+    "apps/forge/src/routes/settings_.teams.$teamSlug.agent-skills.tsx",
+    "apps/forge/src/routes/settings_.teams.$teamSlug.agents.tsx",
+    "apps/forge/src/routes/settings_.teams.$teamSlug.ai.summaries.tsx",
+    "apps/forge/src/routes/settings_.teams.$teamSlug.ai.updates.tsx",
+    "apps/forge/src/routes/settings_.teams.$teamSlug.cycles.tsx",
+    "apps/forge/src/routes/settings_.teams.$teamSlug.general.tsx",
+    "apps/forge/src/routes/settings_.teams.$teamSlug.index.tsx",
+    "apps/forge/src/routes/settings_.teams.$teamSlug.labels.tsx",
+    "apps/forge/src/routes/settings_.teams.$teamSlug.members.tsx",
+    "apps/forge/src/routes/settings_.teams.$teamSlug.recurring-issues.$recurringId.tsx",
+    "apps/forge/src/routes/settings_.teams.$teamSlug.recurring-issues.index.tsx",
+    "apps/forge/src/routes/settings_.teams.$teamSlug.recurring-issues.tsx",
+    "apps/forge/src/routes/settings_.teams.$teamSlug.statuses.tsx",
+    "apps/forge/src/routes/settings_.teams.$teamSlug.templates.$kind.$templateId.tsx",
+    "apps/forge/src/routes/settings_.teams.$teamSlug.templates.index.tsx",
+    "apps/forge/src/routes/settings_.teams.$teamSlug.templates.tsx",
+    "apps/forge/src/routes/settings_.teams.$teamSlug.triage.tsx",
+    "apps/forge/src/routes/settings_.teams.$teamSlug.tsx",
+    "apps/forge/src/routes/settings_.teams.$teamSlug.workflows.tsx",
+    "apps/forge/src/routes/settings_.teams.new.tsx",
+    "apps/forge/src/routes/settings_.teams.tsx",
+    "apps/forge/src/routes/signup.tsx",
+    "apps/forge/src/routes/teams/$teamSlug.tsx",
+    "apps/forge/src/routes/teams/$teamSlug/calls.tsx",
+    "apps/forge/src/routes/teams/$teamSlug/cycle/$cycleNumber.tsx",
+    "apps/forge/src/routes/teams/$teamSlug/cycle/upcoming.tsx",
+    "apps/forge/src/routes/teams/$teamSlug/cycles.tsx",
+    "apps/forge/src/routes/teams/$teamSlug/documents.tsx",
+    "apps/forge/src/routes/teams/$teamSlug/insights.tsx",
+    "apps/forge/src/routes/teams/$teamSlug/issues.tsx",
+    "apps/forge/src/routes/teams/$teamSlug/loops.tsx",
+    "apps/forge/src/routes/teams/$teamSlug/members.tsx",
+    "apps/forge/src/routes/teams/$teamSlug/overview.tsx",
+    "apps/forge/src/routes/teams/$teamSlug/projects.tsx",
+    "apps/forge/src/routes/teams/$teamSlug/signals.tsx",
+    "apps/forge/src/routes/teams/$teamSlug/triage.tsx",
+    "apps/forge/src/routes/teams/$teamSlug/views.tsx",
+    "apps/forge/src/routes/workspace/calls.tsx",
+    "apps/forge/src/routes/workspace/documents.tsx",
+    "apps/forge/src/routes/workspace/initiatives/$initiativeId.tsx",
+    "apps/forge/src/routes/workspace/initiatives/index.tsx",
+    "apps/forge/src/routes/workspace/insights.tsx",
+    "apps/forge/src/routes/workspace/members.tsx",
+    "apps/forge/src/routes/workspace/projects.tsx",
+    "apps/forge/src/routes/workspace/signals.tsx",
+    "apps/forge/src/routes/workspace/teams.tsx",
+    "apps/forge/src/routes/workspace/views.tsx"
+  ],
+  "migrations": [
+    {
+      "path": "apps/forge/drizzle/0000_new_blue_blade.sql",
+      "sha256": "a452bc6e7cb5830184916d97e2742a7019ec79b9f5df675e2540b47894937ee3"
+    },
+    {
+      "path": "apps/forge/drizzle/0001_kind_purple_man.sql",
+      "sha256": "dcdc12a50872dd3be90182919f25f33dc3083845a50b519a82fa6537de8c7f78"
+    },
+    {
+      "path": "apps/forge/drizzle/0002_old_omega_sentinel.sql",
+      "sha256": "558f60874f510893e14d0a00c0edb9c0361db429cc4ac8c3969c3e1c7c047a10"
+    },
+    {
+      "path": "apps/forge/drizzle/0003_motionless_bug.sql",
+      "sha256": "953a616de384e440c2fa22a0e427b9ba71c2085ced5b2206b5be1bc3a5e462ec"
+    },
+    {
+      "path": "apps/forge/drizzle/0004_peaceful_wither.sql",
+      "sha256": "cf2fec372cb9fdcdf6d389eeb13677fb725ce788130ec70fe73928831674bd6b"
+    },
+    {
+      "path": "apps/forge/drizzle/0005_hard_betty_ross.sql",
+      "sha256": "5baca8bfb51f125c647cd214ba3522ba3756933fc0031d5f998e5010e7cf7ec9"
+    },
+    {
+      "path": "apps/forge/drizzle/0006_outstanding_jack_power.sql",
+      "sha256": "048242f4baf746b1923c7026f2398eccfd5b5a26255911f8c97fac024060376b"
+    },
+    {
+      "path": "apps/forge/drizzle/0007_wonderful_spiral.sql",
+      "sha256": "9f4c32991147f90e107d9f2c01267a4542d99c74f4b267e5ca2868003ea150fc"
+    },
+    {
+      "path": "apps/forge/drizzle/0008_real_shinobi_shaw.sql",
+      "sha256": "ee83a1c735dfd3d7832a3f8d2e2bd9724166bb027277074ba59ddc4ccfec0c81"
+    },
+    {
+      "path": "apps/forge/drizzle/0009_yielding_hulk.sql",
+      "sha256": "afc8f5a9977b77d51116d992ebe7294e742c0efca4adc498f7a02626fedac051"
+    },
+    {
+      "path": "apps/forge/drizzle/0010_productive_bishop.sql",
+      "sha256": "28e3ff59fde1a277e9e2d1b7f26e22002b868f9db31df42065db4452fbfbc366"
+    },
+    {
+      "path": "apps/forge/drizzle/0011_nervous_kitty_pryde.sql",
+      "sha256": "30d8212ee94b2e62ef79172577582806629e8c4727426748e9a266eb06a5635b"
+    },
+    {
+      "path": "apps/forge/drizzle/0012_fine_madrox.sql",
+      "sha256": "8b188c1bfcf47cb44f716a6d10d6a74af9a5047d103d3bbee0dbbf985192f8db"
+    },
+    {
+      "path": "apps/forge/drizzle/0013_keen_mister_sinister.sql",
+      "sha256": "5ee50103a30348f534521f7fb3f51ad55b08656b11edd028ee9c77ca2cb3e8e0"
+    },
+    {
+      "path": "apps/forge/drizzle/0014_sturdy_monster_badoon.sql",
+      "sha256": "8d69bf340a7eb80ff020269b11dfc7097a69793ba7d538a17cc3b22f55c6479b"
+    },
+    {
+      "path": "apps/forge/drizzle/0015_flippant_puck.sql",
+      "sha256": "08f5add21e79150d8290ef32ff07cb61b7de43547d96f09cd0699f3114a3d93c"
+    },
+    {
+      "path": "apps/forge/drizzle/0016_amazing_calypso.sql",
+      "sha256": "5a68e20e1cf2d4094b81a3a05b11713e7560b52faa6276ecdd1780ed92ce9ee3"
+    },
+    {
+      "path": "apps/forge/drizzle/0017_lean_mariko_yashida.sql",
+      "sha256": "5a3935730e156f61be9239718c30cfc0a0e883074d383a8e0ed7c86ed3982854"
+    },
+    {
+      "path": "apps/forge/drizzle/0018_friendly_salo.sql",
+      "sha256": "030b559030e70bd17a7c533e31d137956380573e5bf892e051b87dc21ff691ea"
+    },
+    {
+      "path": "apps/forge/drizzle/0019_mushy_quicksilver.sql",
+      "sha256": "6270dc802ac38769d8cf74d35a591485f3e192e205335496a6f2d3d1e7b459e8"
+    },
+    {
+      "path": "apps/forge/drizzle/0020_last_gateway.sql",
+      "sha256": "7b66c5d4542329df01274d50ec40e884b20c642877fc4003500a1f63747a5d91"
+    },
+    {
+      "path": "apps/forge/drizzle/0021_team_recurring_issues.sql",
+      "sha256": "94f2aead9faef6b2294e17cc8a551c4668f3f18f063a26eba5229c78a7b8ef94"
+    },
+    {
+      "path": "apps/forge/drizzle/0022_recurring_issue_revision_precision.sql",
+      "sha256": "f06bd559f43d6cd8138bca48a65e1147bdf473ca1302239710de6dc84fc86d29"
+    },
+    {
+      "path": "apps/forge/drizzle/0023_flippant_leo.sql",
+      "sha256": "bfb926ead21cfda2807045acb2b46f0a4e11dcbccdd7b9d4b78a584475a31b5f"
+    },
+    {
+      "path": "apps/forge/drizzle/0024_chubby_penance.sql",
+      "sha256": "c29f44a65637302036b890029d2ef955c053318247b5e4fd9d8e48239dd63cbc"
+    },
+    {
+      "path": "apps/forge/drizzle/0025_tidy_invisible_woman.sql",
+      "sha256": "f75aa12984dcf6bc851fb30dd4faf4d314302b9c529a075e0f1ae1594a8a81f1"
+    },
+    {
+      "path": "apps/forge/drizzle/0026_workspace_member_capacity.sql",
+      "sha256": "076c9657f148a39e4a803c549d6331b40b28aad103bda3ddb00a577843747877"
+    },
+    {
+      "path": "apps/forge/drizzle/0027_subscription_grace.sql",
+      "sha256": "edd3093a0b25aaae197105f6d9aa2a40579f6229c50c0a58b4b09047bf898511"
+    },
+    {
+      "path": "apps/forge/drizzle/0028_subscription_binding.sql",
+      "sha256": "ec2f3b210f94db63a899ecba640196e2b088cf81204bb425350d48a304cbbf1b"
+    },
+    {
+      "path": "apps/forge/drizzle/0029_subscription_cancellation.sql",
+      "sha256": "efb5f12ec5afe00ee91e5a30aa3a1a3d2c9147a94513fe755261809510030ed2"
+    },
+    {
+      "path": "apps/forge/drizzle/0030_subscription_refunds.sql",
+      "sha256": "9668f43fd83226b375f864f9f0d7029fe7ca4bac439ed30ef486f407e186fda6"
+    },
+    {
+      "path": "apps/forge/drizzle/0031_subscription_termination.sql",
+      "sha256": "79443bda416ed8a9bce3fbaf23720955070121a47fcb69bb7845dd3829bd4492"
+    },
+    {
+      "path": "apps/forge/drizzle/0032_upgrade_refund_access.sql",
+      "sha256": "f521db25f96f688ebae03224b0c472a84cce8cbf2e58e8e6499f07a14a7476d8"
+    },
+    {
+      "path": "apps/forge/drizzle/0033_unsupported_pause.sql",
+      "sha256": "750bd1c96b704d0acc0e4986deffe785fe36b34948e6a7ecc6df58e5fa744796"
+    },
+    {
+      "path": "apps/forge/drizzle/0034_renewal_currency_requests.sql",
+      "sha256": "201492ca91b2dd97830c3b7fff5943cb3bd44da17cf214f033f18fbcd70e7680"
+    },
+    {
+      "path": "apps/forge/drizzle/0035_renewal_billing_anchors.sql",
+      "sha256": "8e3e98a122a31c4fc51e87e2224dba8ecdcb4b39a30131a04830e7c327dbb7e3"
+    },
+    {
+      "path": "apps/forge/drizzle/0036_workspace_team_capacity.sql",
+      "sha256": "e0cc6e67f28808cd090ded0806aa748126928af383992bb8e6b0f6a60c001231"
+    },
+    {
+      "path": "apps/forge/drizzle/0037_workspace_trials.sql",
+      "sha256": "1c3da5b416e88f45b36495a92f2f598b5cb1a74f419a1747e1f2bdaecd84c12e"
+    },
+    {
+      "path": "apps/forge/drizzle/0038_workspace_usage_ledger.sql",
+      "sha256": "a292e663dc140909071abc749286a2b8dc2fb095de0c7895fb20e3963ad7c170"
+    },
+    {
+      "path": "apps/forge/drizzle/0039_absent_blade.sql",
+      "sha256": "63a16d26fef7e64a4eaae0f9e022c194ff1d58d070062821cfcdba600e508252"
+    },
+    {
+      "path": "apps/forge/drizzle/0040_tenant_integrity.sql",
+      "sha256": "f28e128252ded3c9f689139b9ffc302877ca0c3c65d697f8b7044f92b1be00f0"
+    },
+    {
+      "path": "apps/forge/drizzle/0041_tenant_ownership_hardening.sql",
+      "sha256": "70c1bbe83eba1e34a656449e7d52ecb99792379e992cfe21e68918ee03cce9cd"
+    },
+    {
+      "path": "apps/forge/drizzle/0042_issue_graph_guard_lifecycle.sql",
+      "sha256": "b06929ab0821fe3b21565b4b323e5887fb7cc02e1a7d9804311b5d9c801a0f31"
+    },
+    {
+      "path": "apps/forge/drizzle/0043_aromatic_jigsaw.sql",
+      "sha256": "c4fb7178409c87f2c36b6a46a8c4ccd34bf6091d184605c93027a115b774e356"
+    },
+    {
+      "path": "apps/forge/drizzle/0044_resource_authorization.sql",
+      "sha256": "2e3cc8a32c03ac0666a27c842039f41e9554ebd6d4d4931487f3dd405b731dba"
+    },
+    {
+      "path": "apps/forge/drizzle/0045_private_resource_files.sql",
+      "sha256": "ed9d484822d65ce2f3a26fbd2bddac6dd0df169fe7f90d0456cd21fec66c6b95"
+    },
+    {
+      "path": "apps/forge/drizzle/0046_previous_green_goblin.sql",
+      "sha256": "c3f89061ea67a99469032e27362dc0e36acfd026ef21cec47a34ae39fc6c690d"
+    },
+    {
+      "path": "apps/forge/drizzle/0047_account_preferences.sql",
+      "sha256": "d9234452abfebf014c56929ca26728c34afac252269230c18a4413c1200dce15"
+    },
+    {
+      "path": "apps/forge/drizzle/0048_workspace_preferences.sql",
+      "sha256": "5aed7b1a20643c52453bc89a2c37edae6dad990c7c68716261c7717b2330ca66"
+    },
+    {
+      "path": "apps/forge/drizzle/0049_recovery_journal.sql",
+      "sha256": "94d2b544b0a89f2264b285753d8831f62eb9d0071f183b737d606fea35fad2a3"
+    },
+    {
+      "path": "apps/forge/drizzle/0050_shared_issue_definitions.sql",
+      "sha256": "5b1e7881939b499de34ad903735b20c265fdf036347ad452c058c92981ac99bc"
+    },
+    {
+      "path": "apps/forge/drizzle/0051_canonical_issues_and_server_state.sql",
+      "sha256": "74fdb6f4913083152ea29bb82e957491d39a92bd69f454acc1892654dc4fe9da"
+    },
+    {
+      "path": "apps/forge/drizzle/0052_bounded_issue_queries.sql",
+      "sha256": "5b06f652804acc7793b052956282936512b846309ca26c1be6f395719c0cd562"
+    },
+    {
+      "path": "apps/forge/drizzle/0053_issue_relationships.sql",
+      "sha256": "0df4ab2d2d9324874180834780d65f76481722ed8319ddb07e400405e8f26a0a"
+    },
+    {
+      "path": "apps/forge/drizzle/0054_issue_lifecycle.sql",
+      "sha256": "b577f4bfe9907fce4b2460ea2be127c47b4de6458efbaae493f43b853cf3e42e"
+    },
+    {
+      "path": "apps/forge/drizzle/0055_issue_recovery_elapsed.sql",
+      "sha256": "73c6d77f2448e28e3c6104a9e679c469956764e1d81775c380acf7ef6a7895d6"
+    },
+    {
+      "path": "apps/forge/drizzle/0056_issue_copy_purge_cursor.sql",
+      "sha256": "e13f8413a909e5764238c01209393a002b449cb14645d77d8d7bccc184f5c88a"
+    },
+    {
+      "path": "apps/forge/drizzle/0057_issue_history.sql",
+      "sha256": "8b8ec0923fc5ce8f3ee310218b69b447572829edc9e6013b19ec7e975cacb057"
+    },
+    {
+      "path": "apps/forge/drizzle/0058_issue_file_bindings.sql",
+      "sha256": "9979cda1e9dfd159bdb8fa04cdb1d286e03f0f1fb16d44838fd170c473acb108"
+    },
+    {
+      "path": "apps/forge/drizzle/0059_issue_upload_binding_backfill.sql",
+      "sha256": "f5c32eb31dc97deecfe9c5bb3dfd77a7c1d2cf107ff4a77325c91658ce5ac3c1"
+    },
+    {
+      "path": "apps/forge/drizzle/0060_shared_cycles.sql",
+      "sha256": "8f405643ec41fdee4e3b20ae493e0d864277db2208274b33766ffc84a712cc1e"
+    },
+    {
+      "path": "apps/forge/drizzle/0061_shared_projects.sql",
+      "sha256": "e432a9fcc5c4225d75f6f46224af34dd0cc3d19f5ecdc7fea0cf69acea16d9d4"
+    },
+    {
+      "path": "apps/forge/drizzle/0062_resumable_legacy_imports.sql",
+      "sha256": "a8a70c5bade9cba71ea82a1f66d0d5c20cb45b981e39c514d8b990064a9827aa"
+    },
+    {
+      "path": "apps/forge/drizzle/0063_project_progress_files.sql",
+      "sha256": "db4a88e0c3ca1b9d07c6d49837579bd7ca7d618e4f5ea87c49db9af9d77ca108"
+    },
+    {
+      "path": "apps/forge/drizzle/0064_saved_views.sql",
+      "sha256": "4f98da00523497cc1d926f232d17d4a91431733aad14bf9a475862a91b927c72"
+    },
+    {
+      "path": "apps/forge/drizzle/0065_shared_initiatives.sql",
+      "sha256": "8743b2aaaea3af4d6d3512991af10fa10b335a065370d752e290fe2fa80bbda5"
+    },
+    {
+      "path": "apps/forge/drizzle/0066_shared_documents.sql",
+      "sha256": "a3bcf92955442f52dafc2dd61877aefde3579d977f9ffda43788d43ca6928dc3"
+    },
+    {
+      "path": "apps/forge/drizzle/0067_team_resources_and_loops.sql",
+      "sha256": "51ac02898a323e512034bceeab15428c4b7b9d5d71ad5f7f4935c2e943466df3"
+    },
+    {
+      "path": "apps/forge/drizzle/0068_loop_lifecycle_fencing.sql",
+      "sha256": "24d2caf1e484cd1bc292702da2b12360d94ff6016052964f2d2b6124f8fca1b6"
+    },
+    {
+      "path": "apps/forge/drizzle/0069_loop_artifact_intents.sql",
+      "sha256": "420b8c70c6fcd3a32d9d3fd4bcbf24f1530e3aea0d2afaba01c591e089d3f74e"
+    },
+    {
+      "path": "apps/forge/drizzle/0070_durable_background_jobs.sql",
+      "sha256": "da444367809e1ae3f5cdff5b255523ce52e91f785850500199941928490d6d24"
+    },
+    {
+      "path": "apps/forge/drizzle/0071_background_job_recovery_primary_key.sql",
+      "sha256": "c87680f803257a96a80961a0d9e521b314d831555a1e360b55a63c65a8d071f5"
+    },
+    {
+      "path": "apps/forge/drizzle/0072_shared_sla_engine.sql",
+      "sha256": "2a4b45a4864cf75dcf4a8691bbdf779050b85dd76ecf944ce5089a1e6f4ef24d"
+    },
+    {
+      "path": "apps/forge/drizzle/0073_personal_preference_imports.sql",
+      "sha256": "30b03494a6d8d94de9c0dae5400f9aea24e274f0344191d9678cdec45b13ffdc"
+    },
+    {
+      "path": "apps/forge/drizzle/0074_preference_import_content.sql",
+      "sha256": "5a037dd6b2413473fe4c45c99900ba97634b87063274ae4636cc502da1900b7a"
+    }
+  ]
+}

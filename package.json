@@ -11,6 +11,7 @@
     "vite": "8.2.1"
   },
   "scripts": {
+    "rewrite:verify": "node scripts/verify-rust-rewrite.mjs",
     "prepare:local": "bun apps/forge/scripts/ensure-local-agent-secrets.ts",
     "dev": "bun run prepare:local && turbo run dev --filter=@forge/app --filter=@forge/agent-runtime --ui=stream",
     "dev:forge": "bun run prepare:local && turbo run dev --filter=@forge/app --ui=stream",
