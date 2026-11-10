@@ -54,6 +54,11 @@ impl From<StoreError> for AuthError {
                 "CONFLICT",
                 "The resource conflicts with existing state.",
             ),
+            StoreError::AccountNotLinked => Self(
+                StatusCode::FORBIDDEN,
+                "ACCOUNT_NOT_LINKED",
+                "Sign in with your existing method before linking ChatGPT.",
+            ),
             StoreError::Forbidden | StoreError::NoActiveWorkspace => Self(
                 StatusCode::FORBIDDEN,
                 "FORBIDDEN",
@@ -127,7 +132,7 @@ fn parsed<T>(payload: Result<Json<T>, JsonRejection>) -> Result<T, AuthError> {
     payload.map(|Json(value)| value).map_err(|_| invalid_body())
 }
 
-fn valid_email(email: &str) -> bool {
+pub(crate) fn valid_email(email: &str) -> bool {
     static EMAIL: OnceLock<regex::Regex> = OnceLock::new();
     // Same ASCII email grammar as the installed Zod validator.
     !email.starts_with('.') && !email.contains("..") && EMAIL.get_or_init(|| regex::Regex::new(r"^[A-Za-z0-9_'+.\-]*[A-Za-z0-9_+\-]@(?:[A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$").unwrap()).is_match(email)
@@ -169,6 +174,7 @@ pub(crate) async fn guard(
         let trusted = request
             .headers()
             .get(header::ORIGIN)
+            .or_else(|| request.headers().get("electron-origin"))
             .and_then(|value| value.to_str().ok())
             .is_some_and(|origin| auth.trusted_origin(origin));
         if !trusted {
@@ -208,8 +214,9 @@ pub(crate) struct Signup {
 
 pub(crate) async fn signup(
     State(state): State<AppState>,
+    Query(desktop): Query<crate::desktop_auth::DesktopQuery>,
     payload: Result<Json<Signup>, JsonRejection>,
-) -> Result<Json<Value>, AuthError> {
+) -> Result<Response, AuthError> {
     let input = parsed(payload)?;
     let (pool, auth) = configuration(&state)?;
     let mailer = state.mailer.as_ref().ok_or(AuthError(
@@ -263,7 +270,9 @@ pub(crate) async fn signup(
                 )
             })?;
     }
-    Ok(Json(json!({"token": null,"user": registration.user})))
+    let mut response = Json(json!({"token": null,"user": registration.user})).into_response();
+    crate::desktop_auth::save_context(auth, &desktop, &mut response)?;
+    Ok(response)
 }
 
 fn verification_url(
@@ -296,6 +305,7 @@ pub(crate) struct Signin {
 pub(crate) async fn signin(
     State(state): State<AppState>,
     headers: HeaderMap,
+    Query(desktop): Query<crate::desktop_auth::DesktopQuery>,
     payload: Result<Json<Signin>, JsonRejection>,
 ) -> Result<Response, AuthError> {
     let input = parsed(payload)?;
@@ -350,7 +360,23 @@ pub(crate) async fn signin(
     )
     .await?;
     let signed = sign_session_token(&token, &auth.secret).map_err(|_| unavailable())?;
-    let mut response = Json(json!({"redirect": callback.is_some(), "token": token, "url": callback.as_ref().map(|url| url.as_str()), "user":user})).into_response();
+    let mut body = json!({"redirect": callback.is_some(), "token": token, "url": callback.as_ref().map(|url| url.as_str()), "user":user});
+    let mut context_response = Response::new(Body::empty());
+    if let Some(code) = crate::desktop_auth::apply_context(
+        &state,
+        &headers,
+        &desktop,
+        &token,
+        &mut context_response,
+    )
+    .await?
+    {
+        body["electron_authorization_code"] = Value::String(code);
+    }
+    let mut response = Json(body).into_response();
+    response
+        .headers_mut()
+        .extend(context_response.into_parts().0.headers);
     response.headers_mut().append(
         header::SET_COOKIE,
         auth.cookie(&signed, remember)

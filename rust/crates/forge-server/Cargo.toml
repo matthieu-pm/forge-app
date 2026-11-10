@@ -23,7 +23,10 @@ base64.workspace = true
 reqwest.workspace = true
 async-trait.workspace = true
 regex.workspace = true
+jsonwebtoken.workspace = true
+subtle.workspace = true
 
 [dev-dependencies]
+rsa = "0.9"
 tower.workspace = true
 http-body-util.workspace = true

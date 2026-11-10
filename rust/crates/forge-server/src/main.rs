@@ -32,7 +32,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         } else {
             forge_store::Database::new(pool)
         };
-        AppState::configured_database(database, settings, mailer)
+        let state = AppState::configured_database(database, settings, mailer);
+        if let Some(client) = forge_server::oauth_provider::ChatGptClient::from_environment()
+            .map_err(|_| "OAuth configuration is invalid.")?
+        {
+            state.with_chatgpt(client)
+        } else {
+            state
+        }
     } else {
         AppState::default()
     };

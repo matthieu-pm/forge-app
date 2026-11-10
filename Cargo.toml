@@ -30,12 +30,13 @@ ryu-js = "1"
 uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres", "uuid", "chrono", "json", "derive"] }
-url = "2"
+url = { version = "2", features = ["serde"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 regex = "1"
 futures-core = "0.3"
 futures-util = "0.3"
 aws-sdk-s3 = { version = "1", default-features = false, features = ["rt-tokio", "rustls", "default-https-client"] }
+jsonwebtoken = { version = "10", default-features = false, features = ["rust_crypto"] }
 
 [profile.release]
 lto = "thin"

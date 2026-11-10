@@ -7,6 +7,7 @@ use hmac::{Hmac, Mac};
 use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, percent_decode_str, utf8_percent_encode};
 use rand::{RngCore, rngs::OsRng};
 use serde::{Deserialize, Serialize};
+use sha2::Digest;
 use sha2::Sha256;
 use subtle::ConstantTimeEq;
 use unicode_normalization::UnicodeNormalization;
@@ -110,6 +111,14 @@ pub fn session_token_from_cookies(
     } else {
         "better-auth.session_token"
     };
+    signed_cookie_from_header(header, expected, secret)
+}
+
+pub fn signed_cookie_from_header(
+    header: &str,
+    expected: &str,
+    secret: &str,
+) -> Result<String, CredentialError> {
     let mut values = header
         .split(';')
         .filter_map(|part| part.trim().split_once('='))
@@ -120,6 +129,13 @@ pub fn session_token_from_cookies(
         return Err(CredentialError::Invalid);
     }
     verify_session_token(cookie, secret)
+}
+
+pub fn pkce_challenge(verifier: &str) -> String {
+    URL_SAFE_NO_PAD.encode(Sha256::digest(verifier.as_bytes()))
+}
+pub fn website_nonce(verifier: &str) -> String {
+    pkce_challenge(&format!("forge-chatgpt-nonce:{verifier}"))
 }
 
 pub fn bearer_credential(authorization: &str) -> Option<&str> {
@@ -141,6 +157,16 @@ pub struct EmailVerificationClaims {
     pub request_type: Option<String>,
     pub iat: i64,
     pub exp: i64,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SocialIdentity {
+    pub subject: String,
+    pub email: Option<String>,
+    pub name: Option<String>,
+    pub image: Option<String>,
+    pub email_verified: bool,
 }
 
 pub fn email_verification_token(

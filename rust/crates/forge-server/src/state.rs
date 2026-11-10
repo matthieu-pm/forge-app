@@ -106,6 +106,7 @@ pub struct AppState {
     pub(crate) auth: Option<Arc<AuthSettings>>,
     pub(crate) mailer: Option<Arc<dyn VerificationMailer>>,
     pub(crate) throttle: Arc<Throttle>,
+    pub(crate) oauth: Option<Arc<crate::oauth_provider::ChatGptClient>>,
 }
 
 impl AppState {
@@ -127,6 +128,12 @@ impl AppState {
             auth: Some(Arc::new(auth)),
             mailer,
             throttle: Arc::default(),
+            oauth: None,
         }
+    }
+
+    pub fn with_chatgpt(mut self, client: crate::oauth_provider::ChatGptClient) -> Self {
+        self.oauth = Some(Arc::new(client));
+        self
     }
 }

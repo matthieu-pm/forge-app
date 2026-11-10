@@ -11,6 +11,7 @@ import { canonicalCommandInput } from "../apps/forge/src/lib/canonical-json.ts"
 import { permissionsToScopes } from "../apps/forge/src/application/api-keys/api-key-contract.ts"
 import { productFeatures, parseFeatureRollouts, productFeatureMode } from "../packages/environment/product-features.ts"
 import { sourceDigest, signJournalRecord, recoveryEvent, journalSource } from "../apps/forge/src/application/recovery/journal.ts"
+import { verifyChatGPTIdentity } from "../apps/forge/shared/chatgpt-oauth.ts"
 
 const teams = [
   { workspaceId: "w1", visibility: "workspace", memberUserIds: [] },
@@ -110,7 +111,28 @@ const journal = {
   ].map(value => ({ value, valid: recoveryEvent.safeParse(value).success })),
   sources: [journalFixtureSource, { ...journalFixtureSource, host: "localhost" }, { ...journalFixtureSource, storeId: "store_" }].map(value => ({ value, valid: journalSource.safeParse(value).success })),
 }
-const output = JSON.stringify({ teams, projects, documents, actorCases, canonical, permissions: permissionValues.map(value => ({ value, scopes: permissionsToScopes(value) })), crypto, features, journal }) + "\n"
+const oidc = JSON.parse(readFileSync(new URL("../rust/oidc-fixtures.json", import.meta.url), "utf8"))
+const originalFetch = globalThis.fetch
+globalThis.fetch = async input => {
+  const url = String(input instanceof Request ? input.url : input)
+  if (url === "https://auth.openai.com/.well-known/openid-configuration") return Response.json({ issuer: "https://auth.openai.com", authorization_endpoint: "https://auth.openai.com/api/accounts/authorize", token_endpoint: "https://auth.openai.com/api/accounts/oauth/token", jwks_uri: "https://auth.openai.com/.well-known/jwks.json" })
+  if (url === "https://auth.openai.com/.well-known/jwks.json") return Response.json(oidc.jwks)
+  throw new Error("Unexpected network access in OIDC reference fixture export")
+}
+try {
+  for (const fixture of oidc.cases) {
+    try {
+      const identity = await verifyChatGPTIdentity(fixture.token, oidc.clientId, oidc.nonce)
+      fixture.valid = true
+      fixture.identity = { ...identity, image: identity.image ?? null }
+    } catch {
+      fixture.valid = false
+    }
+  }
+} finally {
+  globalThis.fetch = originalFetch
+}
+const output = JSON.stringify({ teams, projects, documents, actorCases, canonical, permissions: permissionValues.map(value => ({ value, scopes: permissionsToScopes(value) })), crypto, features, journal, oidc }) + "\n"
 const destination = new URL("../rust/reference-fixtures.json", import.meta.url)
 if (process.argv.includes("--check")) {
   if (readFileSync(destination, "utf8") !== output) {

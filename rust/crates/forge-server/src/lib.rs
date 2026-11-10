@@ -1,7 +1,10 @@
 //! Rust HTTP host. Routes are enabled only as their implementation is migrated.
 
 mod auth;
+mod desktop_auth;
 pub mod mail;
+mod oauth;
+pub mod oauth_provider;
 pub mod state;
 mod workspaces;
 
@@ -19,6 +22,24 @@ pub fn router() -> Router {
 
 pub fn router_with_state(state: state::AppState) -> Router {
     let auth_routes = Router::new()
+        .route(
+            "/api/auth/electron/init-oauth-proxy",
+            get(desktop_auth::init_oauth_proxy),
+        )
+        .route(
+            "/api/auth/electron/transfer-user",
+            axum::routing::post(desktop_auth::transfer_user),
+        )
+        .route(
+            "/api/auth/electron/token",
+            axum::routing::post(desktop_auth::redeem),
+        )
+        .route(
+            "/api/auth/sign-in/social",
+            axum::routing::post(oauth::sign_in),
+        )
+        .route("/api/auth/link-social", axum::routing::post(oauth::link))
+        .route("/api/auth/callback/chatgpt", get(oauth::callback))
         .route("/api/auth/sign-up/email", axum::routing::post(auth::signup))
         .route("/api/auth/sign-in/email", axum::routing::post(auth::signin))
         .route(

@@ -4,6 +4,8 @@ pub mod accounts;
 pub mod authority;
 pub mod commands;
 pub mod database;
+pub mod desktop_auth;
+pub mod oauth;
 pub mod workspaces;
 pub use database::Database;
 
@@ -29,6 +31,8 @@ pub enum StoreError {
     InvalidInput,
     #[error("The resource conflicts with existing state.")]
     Conflict,
+    #[error("Sign in with your existing method before linking this provider.")]
+    AccountNotLinked,
     #[error("Database operation failed.")]
     Database(#[from] sqlx::Error),
     #[error(transparent)]

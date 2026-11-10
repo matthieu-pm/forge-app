@@ -23,7 +23,8 @@ gate pass.
 | 1a | Credential compatibility, authorization, existing-schema persistence, command receipts and transactions | Passed available gate |
 | 1b | Email/password lifecycle, sessions, workspace CRUD/switching and atomic invitation acceptance | Passed available gate |
 | 1c | Independent recovery journal, signed archive compatibility and transaction publication | Passed available gate |
-| 1d | ChatGPT OAuth, desktop authorization and remaining membership/invitation commands | Pending |
+| 1d | ChatGPT OAuth, explicit account linking and desktop PKCE authorization | Passed available gate |
+| 1e | Remaining membership/invitation commands and workspace security policy | Pending |
 | 2 | Teams, issues, triage, cycles, projects, initiatives, documents, views, resources and imports | Pending |
 | 3 | Agent execution, approvals, streams, models, files, jobs, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
@@ -134,3 +135,23 @@ these routes do not represent a completed rewrite.
 - Logs: `.forge/rust-rewrite/milestone-1c-recovery.log`,
   `.forge/rust-rewrite/milestone-1c-rust-tests.log`, and
   `.forge/rust-rewrite/milestone-1c-clippy.log`.
+
+### Milestone 1d
+
+- Full gate passed: 50 Rust tests, all 2,959 enabled reference tests, TypeScript
+  typechecking, Rust formatting and Clippy.
+- ChatGPT OIDC constrains discovery endpoints to the issuer and validates
+  asymmetric signatures, audience, issuer, expiry, subject and transaction nonce.
+  Ten signed identity cases are checked against Forge's existing verifier.
+- Browser state is signed, database-backed, expiring and single use. Matching
+  email addresses never implicitly merge accounts. Explicit linking requires the
+  initiating live account/session and the provider email to agree.
+- OpenAI access, refresh and ID tokens are transient; account rows store the
+  verified provider identity association only.
+- Desktop handoff uses the existing Electron-compatible one-time-code and PKCE
+  protocol, including browser transfer cookies and the OAuth proxy. Tests cover
+  replay, wrong verifiers, native origin headers and separation of native/browser
+  PKCE transactions. Native UI and keychain adoption still belong to milestone 4.
+- Provider tests use in-memory mock transport and ephemeral signing keys. No
+  OpenAI login, provider credentials or external mail delivery were exercised.
+- Log: `.forge/rust-rewrite/milestone-1d.log`.
