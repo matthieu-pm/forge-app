@@ -21,7 +21,8 @@ gate pass.
 | --- | --- | --- |
 | 0 | Baseline inventory, reproducible Rust workspace, HTTP host, full test harness | Passed available gate; external-fixture checks pending |
 | 1a | Credential compatibility, authorization, existing-schema persistence, command receipts and transactions | Passed available gate |
-| 1b | Authentication lifecycle, workspace and membership management, recovery compatibility | Pending |
+| 1b | Email/password lifecycle, sessions, workspace CRUD/switching and atomic invitation acceptance | Passed available gate |
+| 1c | ChatGPT OAuth, desktop authorization, remaining membership/invitation commands and recovery compatibility | Pending |
 | 2 | Teams, issues, triage, cycles, projects, initiatives, documents, views, resources and imports | Pending |
 | 3 | Agent execution, approvals, streams, models, files, jobs, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
@@ -49,9 +50,12 @@ cargo run -p forge-server
 bun run rewrite:verify
 ```
 
-`FORGE_RUST_BIND` overrides the Rust listener address. The host currently serves
-liveness only. Readiness returns 503 until application dependencies and routes are
-implemented; that is intentional and does not represent a completed rewrite.
+`FORGE_RUST_BIND` overrides the Rust listener address. With `DATABASE_URL`,
+`BETTER_AUTH_URL` and `BETTER_AUTH_SECRET` configured, the host also serves the
+ported email authentication/session and workspace routes. Verification mail uses
+`RESEND_API_KEY` and `RESEND_FROM_EMAIL`; tests inject a local capture adapter.
+Readiness returns 503 until the whole application is implemented and qualified;
+these routes do not represent a completed rewrite.
 
 ## Evidence
 
@@ -86,3 +90,23 @@ implemented; that is intentional and does not represent a completed rewrite.
   require the independent deletion journal adapter before destructive operations.
 - The 661 reference tests requiring external fixtures remain skipped. Local Rust
   PostgreSQL coverage is additional evidence, not a claim that those tests ran.
+
+### Milestone 1b
+
+- Full gate passed: 2,959 enabled reference tests, TypeScript typechecking, Rust
+  formatting and Clippy, and 30 Rust tests. All 75 SQL migrations ran locally.
+- New HTTP tests exercise signup, captured verification mail, verification JWTs,
+  verified-email enforcement, login, sessions, workspace creation/listing, active
+  workspace selection and logout. Further checks cover foreign-workspace access,
+  forged cookies, CSRF origins, deferred refresh, duplicate-signup privacy,
+  verification throttling, repeated links, concurrent session revocation, and
+  concurrent workspace update/deletion.
+- A real PostgreSQL acceptance test confirms that invitation acceptance at the
+  Free plan member limit rolls back membership, invitation and session changes.
+- Verification HTML is generated from the existing React email template, then
+  filled and escaped by Rust at runtime. No JavaScript renderer is used by Rust.
+- Feature ceilings and rollout parsing have 810 reference cases. Email
+  verification JWT bytes match the installed Better Auth/Jose implementation.
+- Log: `.forge/rust-rewrite/milestone-1b.log`.
+- Live mail, OAuth, desktop login, recovery-enabled writes, other membership
+  operations and the full web UI still await their respective milestones.

@@ -37,6 +37,10 @@ pub async fn session_identity(pool: &PgPool, token: &str) -> Result<SessionIdent
 
 pub async fn session_actor(pool: &PgPool, token: &str) -> Result<Actor, StoreError> {
     let mut tx = pool.begin().await?;
+    // Stabilize candidate workspaces before locking a session that a concurrent
+    // organization deletion may need to clear through its foreign key.
+    sqlx::query("SELECT o.id FROM organization o JOIN member m ON m.organization_id=o.id JOIN session s ON s.user_id=m.user_id WHERE s.token=$1 AND s.expires_at>clock_timestamp() ORDER BY o.id FOR KEY SHARE OF o")
+        .bind(token).fetch_all(&mut *tx).await?;
     let row: Option<(String, String, Option<String>, bool)> = sqlx::query_as(
         r#"SELECT s.id, s.user_id, s.active_organization_id, u.email_verified
            FROM session s JOIN "user" u ON u.id=s.user_id

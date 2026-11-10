@@ -9,6 +9,7 @@ import { canManageWorkspaceModelConnections } from "../apps/forge/src/applicatio
 import { isTeamVisible, isProjectVisible, isDocumentVisible, canShareDocumentWithWorkspace } from "../apps/forge/src/application/resource-visibility.ts"
 import { canonicalCommandInput } from "../apps/forge/src/lib/canonical-json.ts"
 import { permissionsToScopes } from "../apps/forge/src/application/api-keys/api-key-contract.ts"
+import { productFeatures, parseFeatureRollouts, productFeatureMode } from "../packages/environment/product-features.ts"
 
 const teams = [
   { workspaceId: "w1", visibility: "workspace", memberUserIds: [] },
@@ -72,7 +73,24 @@ const crypto = {
   cookies: await Promise.all(["token-with.dots", "test-session-token"].map(async token => ({ token, secret: "test-fixture-secret-only", signed: await cryptoModule.signCookieValue(token, "test-fixture-secret-only") }))),
 }
 
-const output = JSON.stringify({ teams, projects, documents, actorCases, canonical, permissions: permissionValues.map(value => ({ value, scopes: permissionsToScopes(value) })), crypto }, null, 2) + "\n"
+const { SignJWT } = await import(pathToFileURL(requireFromAuth.resolve("jose")))
+const jwtNow = 1700000000
+crypto.jwt = {
+  now: jwtNow, email: "Test@Example.test", secret: "test-fixture-secret-only",
+  token: await new SignJWT({ email: "test@example.test" }).setProtectedHeader({ alg: "HS256" }).setIssuedAt(jwtNow).setExpirationTime(jwtNow + 3600).sign(new TextEncoder().encode("test-fixture-secret-only")),
+}
+const features = [undefined, "null", "[]", "{}", '{"unknown":{"mode":"enabled","workspaceIds":["w1"]}}',
+  JSON.stringify({ sla: { mode: "enabled", workspaceIds: ["w1"] }, billing: { mode: "enabled", workspaceIds: ["w1"] }, signals: { mode: "preview", workspaceIds: ["w1"] } }),
+  JSON.stringify({ insights: { mode: "enabled", workspaceIds: ["w1"] } }),
+  JSON.stringify({ sla: { mode: "enabled", workspaceIds: ["*"] } }),
+  JSON.stringify({ sla: { mode: "enabled", workspaceIds: [" w1"] } }),
+].map(raw => {
+  let valid = true
+  try { parseFeatureRollouts(raw) } catch { valid = false }
+  return { raw: raw ?? null, valid, cases: Object.keys(productFeatures).flatMap(feature => ["w1", "w2", ""].flatMap(workspaceId => [false, true].map(billing => ({ feature, workspaceId, billing, mode: productFeatureMode(feature, workspaceId, { FORGE_FEATURE_ROLLOUTS: raw, FORGE_BILLING_ENABLED: String(billing) }) })))) }
+})
+
+const output = JSON.stringify({ teams, projects, documents, actorCases, canonical, permissions: permissionValues.map(value => ({ value, scopes: permissionsToScopes(value) })), crypto, features }) + "\n"
 const destination = new URL("../rust/reference-fixtures.json", import.meta.url)
 if (process.argv.includes("--check")) {
   if (readFileSync(destination, "utf8") !== output) {

@@ -1,7 +1,9 @@
 //! PostgreSQL adapters targeting Forge's existing Drizzle-managed schema.
 
+pub mod accounts;
 pub mod authority;
 pub mod commands;
+pub mod workspaces;
 
 #[derive(Debug, thiserror::Error)]
 pub enum StoreError {
@@ -23,6 +25,8 @@ pub enum StoreError {
     CommandResultUnavailable,
     #[error("Invalid command input.")]
     InvalidInput,
+    #[error("The resource conflicts with existing state.")]
+    Conflict,
     #[error("Database operation failed.")]
     Database(#[from] sqlx::Error),
 }

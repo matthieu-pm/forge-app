@@ -16,6 +16,5 @@ subtle.workspace = true
 unicode-normalization.workspace = true
 percent-encoding.workspace = true
 thiserror.workspace = true
-
-[dev-dependencies]
+serde.workspace = true
 serde_json.workspace = true

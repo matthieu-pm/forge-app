@@ -140,6 +140,11 @@ pub async fn execute<H: CommandHandler>(
     let hash = command_input_hash(command.input);
     let principal = actor.command_principal();
     let mut tx = pool.begin().await?;
+    sqlx::query("SELECT id FROM organization WHERE id=$1 FOR KEY SHARE")
+        .bind(&actor.workspace_id)
+        .fetch_optional(&mut *tx)
+        .await?
+        .ok_or(StoreError::Forbidden)?;
     let current = current_actor(&mut tx, actor).await?;
     handler.authorize(&mut tx, &current, None).await?;
     let (sla_enabled, sla_identity) = sla_gate(&current.workspace_id);

@@ -113,3 +113,27 @@ fn permission_parsing_preserves_scope_order_and_duplicates() {
         );
     }
 }
+
+#[test]
+fn feature_ceilings_and_rollouts_match_the_reference() {
+    use forge_core::features::{FeatureRollouts, ProductFeature};
+    let fixture: Value =
+        serde_json::from_str(include_str!("../../../reference-fixtures.json")).unwrap();
+    for configuration in fixture["features"].as_array().unwrap() {
+        let parsed = FeatureRollouts::parse(configuration["raw"].as_str());
+        assert_eq!(parsed.is_ok(), configuration["valid"].as_bool().unwrap());
+        let rollouts = parsed.unwrap_or_default();
+        for case in configuration["cases"].as_array().unwrap() {
+            let feature: ProductFeature = serde_json::from_value(case["feature"].clone()).unwrap();
+            assert_eq!(
+                serde_json::to_value(rollouts.mode(
+                    feature,
+                    case["workspaceId"].as_str().unwrap(),
+                    case["billing"].as_bool().unwrap()
+                ))
+                .unwrap(),
+                case["mode"]
+            );
+        }
+    }
+}

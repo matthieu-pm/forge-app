@@ -6,6 +6,10 @@ and agent-driven workflows in one shared web and macOS product.
 
 Current build: `v0.1.0` (unreleased)
 
+The in-progress [Rust rewrite](docs/rust-rewrite.md) lives in `rust/` alongside
+this reference implementation. Run `bun run rewrite:verify` for its milestone
+gate. The Rust host uses port 3100 and is not a production replacement yet.
+
 ## Stack
 
 - TanStack Start, TanStack Router, React, and TypeScript

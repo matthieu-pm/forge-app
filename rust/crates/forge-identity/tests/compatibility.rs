@@ -66,3 +66,23 @@ fn bearer_parser_accepts_only_one_complete_credential() {
         assert_eq!(bearer_credential(invalid), None, "{invalid}");
     }
 }
+
+#[test]
+fn verification_jwt_matches_the_installed_authentication_library() {
+    use forge_identity::{email_verification_token, verify_email_token};
+    let fixture = fixtures();
+    let case = &fixture["crypto"]["jwt"];
+    let token = case["token"].as_str().unwrap();
+    let secret = case["secret"].as_str().unwrap();
+    let now = case["now"].as_i64().unwrap();
+    assert_eq!(
+        email_verification_token(case["email"].as_str().unwrap(), secret, now).unwrap(),
+        token
+    );
+    assert_eq!(
+        verify_email_token(token, secret, now).unwrap().email,
+        "test@example.test"
+    );
+    assert!(verify_email_token(token, secret, now + 3600).is_err());
+    assert!(verify_email_token(token, "wrong-secret", now).is_err());
+}
