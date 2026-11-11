@@ -52,7 +52,8 @@ gate pass.
 | 3b5d | Capability dispatch, current target authority and atomic approved team commands | Passed available gate |
 | 3b5e | Agent attachments/artifacts, private bytes, integrity and retention | Passed available gate |
 | 3b5f | Model credentials, provider discovery, connection management and routing catalogs | Passed available gate |
-| 3b5g | Run-scoped model proxy, live credential authority and streaming HTTP delivery | In progress |
+| 3b5g | Run-scoped model proxy, live credential authority and streaming HTTP delivery | Passed available gate |
+| 3b5h | EVE runtime protocol, event normalization, durable cursors and cancellation | In progress |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -984,3 +985,30 @@ these routes do not represent a completed rewrite.
   deletion/concurrency cases exposed a test-fixture setup error, corrected before
   the final complete rerun. Live provider accounts and agent HTTP composition
   have not been qualified.
+
+### Milestone 3b5g
+
+- Full gate passed: 325 Rust tests, 2,959 enabled reference tests, typechecking,
+  formatting, Clippy and source export checks. The 661 fixture-dependent
+  reference tests remain skipped. Log: `.forge/rust-rewrite/milestone-3b5g-final.log`.
+- Both model/openai runtime URL variants now use signed model-access tokens,
+  preserve request/error ordering and enforce the four-MiB body limit. The body
+  model must match the signed claim before a server credential can be opened.
+  Session cookies cannot substitute for a run token.
+- Stored credential access rechecks active run ownership, live membership,
+  workspace/personal visibility, connection/catalog availability and provider
+  flags/allowlists. Staging excludes imported/BYOK credentials. Managed access
+  retains the source's separate configured-model path and still requires current
+  run and membership authority before reading its environment key.
+- Native provider forwarding pins custom endpoint addresses, refuses redirects
+  and inherited proxies, forwards only reviewed request/response headers and
+  preserves exact request bytes. Response bodies stream with backpressure;
+  downstream body cancellation drops the upstream reader without a detached pump.
+- Twenty-four cases run against the owning source handler and compare status,
+  error bodies, headers, credential access, provider dispatch and body bytes.
+  Additional checks cover HTTP routing/feature gates, streaming cancellation,
+  staging exclusion, private connections and revoked/completed runs.
+- Initial gates identified a missing startup-state initializer and an error
+  Content-Type difference. Both were corrected before the complete passing gate.
+  Live provider requests, runtime execution/coordinator composition and the UI
+  still require their respective milestones; readiness remains 503.

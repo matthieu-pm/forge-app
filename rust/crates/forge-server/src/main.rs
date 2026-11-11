@@ -41,7 +41,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .filter(|v| !v.is_empty())
             .or_else(|| std::env::var("FORGE_AGENT_CAPABILITY_SECRET").ok())
             .unwrap_or_default();
+        let model_proxy = forge_server::model_proxy::Settings::configured(
+            database.clone(),
+            &std::env::vars().collect(),
+        );
         let state = AppState::configured_database(database, settings, mailer)
+            .with_model_proxy(model_proxy)
             .with_files(storage, grant_secret)
             .with_profile_editing(
                 std::env::var("FORGE_PROFILE_EDITING_ENABLED").as_deref() == Ok("true"),

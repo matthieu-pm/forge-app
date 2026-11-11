@@ -9,6 +9,7 @@ mod imports;
 mod issues;
 pub mod mail;
 pub mod model_providers;
+pub mod model_proxy;
 mod oauth;
 pub mod oauth_provider;
 mod planning;
@@ -347,6 +348,14 @@ pub fn router_with_state(state: state::AppState) -> Router {
             public_api::guard,
         ));
     Router::new()
+        .route(
+            "/api/agent/runtime/model/{*path}",
+            axum::routing::any(model_proxy::route),
+        )
+        .route(
+            "/api/agent/runtime/openai/{*path}",
+            axum::routing::any(model_proxy::route),
+        )
         .route("/api/health/live", get(live))
         .route("/api/health/ready", get(ready))
         .route("/api/files/{*path}", axum::routing::any(files::handle))

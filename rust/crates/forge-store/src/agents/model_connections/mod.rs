@@ -19,6 +19,7 @@ use uuid::Uuid;
 mod records;
 mod refresh;
 mod registry;
+mod runtime;
 use records::*;
 
 pub trait Vault: Send + Sync {

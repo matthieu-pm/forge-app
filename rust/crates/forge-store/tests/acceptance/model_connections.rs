@@ -452,3 +452,204 @@ async fn agent_refresh_and_connection_deletion_use_the_same_workspace_run_lock_o
             .is_none()
     );
 }
+
+fn model_claims(f: &Fixture, run: Uuid, connection: Uuid) -> policy::ModelClaims {
+    policy::ModelClaims {
+        sub: f.actor.user_id.clone(),
+        workspace_id: f.actor.workspace_id.clone(),
+        run_id: run.to_string(),
+        connection_id: connection.to_string(),
+        provider: "openai".into(),
+        model_id: "gpt-5".into(),
+        token_id: Uuid::new_v4().to_string(),
+    }
+}
+#[tokio::test]
+async fn runtime_credentials_check_current_run_private_ownership_catalog_policy_and_staging() {
+    let f = Fixture::new().await;
+    let (mut service, _) = service(&f);
+    let personal = service.create(&f.actor, input("personal")).await.unwrap();
+    let shared = service.create(&f.actor, input("workspace")).await.unwrap();
+    let thread = thread(&f).await;
+    let run = run(&f, thread.id).await;
+    sqlx::query("UPDATE agent_runs SET state='running' WHERE id=$1")
+        .bind(run.id)
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    let mut claims = model_claims(&f, run.id, id(&personal));
+    let flags = forge_core::agents::policy::features(&Default::default());
+    let credential = service
+        .runtime_credential(&claims, false, &flags)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(credential.api_key, "fixture-secret-1234");
+    assert_eq!(credential.provider, "openai");
+    assert!(
+        service
+            .runtime_credential(&claims, true, &flags)
+            .await
+            .unwrap()
+            .is_none()
+    );
+    let mut blocked = flags.clone();
+    blocked["agent_provider_openai"] = json!(false);
+    assert!(
+        service
+            .runtime_credential(&claims, false, &blocked)
+            .await
+            .unwrap()
+            .is_none()
+    );
+    service.allowed_providers = Some(Default::default());
+    assert!(
+        service
+            .runtime_credential(&claims, false, &flags)
+            .await
+            .unwrap()
+            .is_none()
+    );
+    service.allowed_providers = None;
+    claims.model_id = "missing".into();
+    assert!(
+        service
+            .runtime_credential(&claims, false, &flags)
+            .await
+            .unwrap()
+            .is_none()
+    );
+    claims.model_id = "gpt-5".into();
+    claims.provider = "anthropic".into();
+    assert!(
+        service
+            .runtime_credential(&claims, false, &flags)
+            .await
+            .unwrap()
+            .is_none()
+    );
+    claims.provider = "openai".into();
+    sqlx::query("UPDATE model_catalog_entries SET status='hidden' WHERE connection_id=$1")
+        .bind(id(&personal))
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    assert!(
+        service
+            .runtime_credential(&claims, false, &flags)
+            .await
+            .unwrap()
+            .is_none()
+    );
+    let mut other = Fixture::new().await;
+    other.actor = enter_workspace(&f, &other).await;
+    let other_thread = super::thread(&other).await;
+    let other_run = super::run(&other, other_thread.id).await;
+    sqlx::query("UPDATE agent_runs SET state='running' WHERE id=$1")
+        .bind(other_run.id)
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    let mut foreign = model_claims(&other, other_run.id, id(&personal));
+    assert!(
+        service
+            .runtime_credential(&foreign, false, &flags)
+            .await
+            .unwrap()
+            .is_none()
+    );
+    foreign.connection_id = id(&shared).to_string();
+    assert!(
+        service
+            .runtime_credential(&foreign, false, &flags)
+            .await
+            .unwrap()
+            .is_some()
+    );
+    sqlx::query("UPDATE model_connections SET status='repair-required' WHERE id=$1")
+        .bind(id(&shared))
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    assert!(
+        service
+            .runtime_credential(&foreign, false, &flags)
+            .await
+            .unwrap()
+            .is_none()
+    );
+    foreign.run_id = run.id.to_string();
+    assert!(matches!(
+        service.runtime_credential(&foreign, false, &flags).await,
+        Err(StoreError::Forbidden)
+    ));
+}
+
+#[tokio::test]
+async fn managed_runtime_credentials_still_require_an_active_run_and_live_membership() {
+    let f = Fixture::new().await;
+    let (mut service, _) = service(&f);
+    service
+        .managed_environment
+        .insert("OPENAI_API_KEY".into(), "fixture-managed".into());
+    service
+        .managed_environment
+        .insert("FORGE_MANAGED_OPENAI_MODELS".into(), "gpt-5".into());
+    let thread = thread(&f).await;
+    let run = run(&f, thread.id).await;
+    let claims = model_claims(
+        &f,
+        run.id,
+        policy::managed_id(&f.actor.workspace_id).parse().unwrap(),
+    );
+    let flags = forge_core::agents::policy::features(&Default::default());
+    assert!(matches!(
+        service.runtime_credential(&claims, false, &flags).await,
+        Err(StoreError::Forbidden)
+    ));
+    sqlx::query("UPDATE agent_runs SET state='running' WHERE id=$1")
+        .bind(run.id)
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        service
+            .runtime_credential(&claims, true, &flags)
+            .await
+            .unwrap()
+            .unwrap()
+            .api_key,
+        "fixture-managed"
+    );
+    sqlx::query("UPDATE agent_runs SET state='completed' WHERE id=$1")
+        .bind(run.id)
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    assert!(matches!(
+        service.runtime_credential(&claims, false, &flags).await,
+        Err(StoreError::Forbidden)
+    ));
+    sqlx::query("UPDATE agent_runs SET state='waiting-for-approval' WHERE id=$1")
+        .bind(run.id)
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    assert!(
+        service
+            .runtime_credential(&claims, false, &flags)
+            .await
+            .unwrap()
+            .is_some()
+    );
+    sqlx::query("DELETE FROM member WHERE organization_id=$1 AND user_id=$2")
+        .bind(&f.actor.workspace_id)
+        .bind(&f.actor.user_id)
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    assert!(matches!(
+        service.runtime_credential(&claims, true, &flags).await,
+        Err(StoreError::Forbidden)
+    ));
+}

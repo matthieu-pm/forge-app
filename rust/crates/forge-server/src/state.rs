@@ -112,6 +112,7 @@ impl Throttle {
 
 #[derive(Clone, Default)]
 pub struct AppState {
+    pub(crate) model_proxy: Option<Arc<crate::model_proxy::Settings>>,
     pub(crate) profile_editing: bool,
     pub(crate) sla_scheduler: Option<Arc<crate::retention::Settings>>,
     pub(crate) issue_retention: Option<Arc<crate::retention::Settings>>,
@@ -126,6 +127,10 @@ pub struct AppState {
 }
 
 impl AppState {
+    pub fn with_model_proxy(mut self, settings: crate::model_proxy::Settings) -> Self {
+        self.model_proxy = Some(Arc::new(settings));
+        self
+    }
     pub fn configured(
         pool: PgPool,
         auth: AuthSettings,
@@ -140,6 +145,7 @@ impl AppState {
         mailer: Option<Arc<dyn VerificationMailer>>,
     ) -> Self {
         Self {
+            model_proxy: None,
             pool: Some(pool),
             auth: Some(Arc::new(auth)),
             mailer,

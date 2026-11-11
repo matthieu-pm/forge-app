@@ -52,6 +52,30 @@ pub trait Discovery: Send + Sync {
     async fn validate_endpoint(&self, value: &str) -> Result<String, Error>;
     async fn discover(&self, input: &DiscoveryInput) -> Result<Vec<Model>, Error>;
 }
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelClaims {
+    pub sub: String,
+    pub workspace_id: String,
+    pub run_id: String,
+    pub connection_id: String,
+    pub provider: String,
+    pub model_id: String,
+    pub token_id: String,
+}
+/// Server-only credential material: intentionally neither Debug nor Serialize.
+pub struct RuntimeCredential {
+    pub api_key: String,
+    pub provider: String,
+    pub endpoint_url: Option<String>,
+}
+pub fn execution_endpoint(provider: &str) -> Option<&'static str> {
+    if provider == "google" {
+        Some("https://generativelanguage.googleapis.com/v1beta/openai/")
+    } else {
+        built_in(provider)
+    }
+}
 pub fn label(provider: &str) -> &str {
     match provider {
         "openai" => "OpenAI",
