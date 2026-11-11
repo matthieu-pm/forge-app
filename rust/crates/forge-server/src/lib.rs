@@ -15,6 +15,7 @@ mod preferences;
 mod product_state;
 mod projects;
 mod public_api;
+pub mod retention;
 pub mod state;
 mod teams;
 mod views;
@@ -337,6 +338,10 @@ pub fn router_with_state(state: state::AppState) -> Router {
         .route("/api/health/live", get(live))
         .route("/api/health/ready", get(ready))
         .route("/api/files/{*path}", axum::routing::any(files::handle))
+        .route(
+            "/api/internal/issue-retention",
+            axum::routing::any(retention::route),
+        )
         .merge(auth_routes)
         .merge(api_routes)
         .with_state(state)

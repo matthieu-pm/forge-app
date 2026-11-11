@@ -51,6 +51,14 @@ def main():
             if journal_setup.returncode:
                 print(journal_setup.stderr, file=sys.stderr)
                 return journal_setup.returncode
+            # Global retention workers must not delete expired lifecycle fixtures
+            # while the ordinary acceptance suite is inspecting them.
+            subprocess.run(["psql", "-X", "-v", "ON_ERROR_STOP=1", "--dbname", connection, "-c", "CREATE DATABASE forge_rust_retention"], check=True, capture_output=True)
+            retention_connection = f"postgresql://forge_rust_test@127.0.0.1:{port}/forge_rust_retention"
+            retention_setup = subprocess.run(["psql", "-X", "-v", "ON_ERROR_STOP=1", "--dbname", retention_connection], input="\n".join(statements), text=True, capture_output=True)
+            if retention_setup.returncode:
+                print(retention_setup.stderr, file=sys.stderr)
+                return retention_setup.returncode
             print(f'Applied all {len(statements)} reference migrations to disposable local PostgreSQL.', flush=True)
             environment = os.environ.copy()
             environment["FORGE_FEATURE_INITIATIVES"] = "true"
@@ -61,6 +69,7 @@ def main():
             environment["FORGE_TEAM_RESOURCES_ENABLED"] = "true"
             environment["FORGE_RUST_TEST_DATABASE_URL"] = connection
             environment["FORGE_RUST_JOURNAL_TEST_DATABASE_URL"] = journal_connection
+            environment["FORGE_RUST_RETENTION_TEST_DATABASE_URL"] = retention_connection
             return subprocess.run(["cargo", "test", "--workspace", "--locked", "--no-fail-fast"], cwd=ROOT, env=environment).returncode
         finally:
             if started:

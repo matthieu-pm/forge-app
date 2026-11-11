@@ -5,6 +5,7 @@ pub use relationships::{relationship, relationships, search_relationships};
 mod cycles;
 mod history;
 mod lifecycle;
+pub mod purge;
 pub use cycles::{read_cycles, read_cycles_at, read_triage, save_team_settings};
 pub use lifecycle::{inactive, lifecycle};
 mod query;

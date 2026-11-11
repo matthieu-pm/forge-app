@@ -66,6 +66,99 @@ struct Fixture {
 }
 
 #[tokio::test]
+async fn issue_purge_prepares_before_bytes_and_records_deletion_and_storage_evidence() {
+    use forge_core::{
+        files::{
+            UploadError,
+            upload::{Intent, Reader, Transport},
+        },
+        issues::CreateIssue,
+    };
+    use forge_store::issues::{self, IssueOptions, purge};
+    use serde_json::{Value, json};
+    struct Blobs(std::sync::atomic::AtomicUsize);
+    #[async_trait]
+    impl Transport for Blobs {
+        async fn grant(&self, _: &Intent) -> Result<Value, UploadError> {
+            unreachable!()
+        }
+        async fn read(&self, _: &str) -> Result<Option<Box<dyn Reader>>, UploadError> {
+            unreachable!()
+        }
+        async fn delete(&self, _: &str) -> Result<(), UploadError> {
+            self.0.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        }
+    }
+    let f = Fixture::new().await;
+    forge_store::workspaces::create(
+        &f.database,
+        &f.token,
+        "Purge recovery",
+        &Uuid::new_v4().to_string(),
+        None,
+    )
+    .await
+    .unwrap();
+    let actor = forge_store::authority::session_actor(&f.database, &f.token)
+        .await
+        .unwrap();
+    let team=forge_store::teams::create(&f.database,&actor,&forge_core::teams::CreateTeam::parse(json!({"name":"Purge recovery","identifier":"PRG","icon":{"kind":"emoji","value":"🛠️","color":"#818cf8"},"timezone":"UTC"})).unwrap()).await.unwrap();
+    let mut draft = forge_core::issues::blank("todo");
+    draft["title"] = json!("Retained private title");
+    let issue = issues::create(
+        &f.database,
+        &actor,
+        &CreateIssue::parse(json!({"teamId":team.id,"commandKey":Uuid::new_v4(),"draft":draft}))
+            .unwrap(),
+        IssueOptions::default(),
+    )
+    .await
+    .unwrap();
+    let id: Uuid = issue["issue"]["id"].as_str().unwrap().parse().unwrap();
+    let doc = Uuid::new_v4();
+    let reference = format!("files/{}", Uuid::new_v4());
+    let mut tx = f.database.begin().await.unwrap();
+    tx.prepare().await.unwrap();
+    sqlx::query("INSERT INTO documents(id,workspace_id,title,issue_id,body) VALUES($1,$2,'Private',$3,'{}')").bind(doc).bind(&actor.workspace_id).bind(id).execute(&mut *tx).await.unwrap();
+    sqlx::query("INSERT INTO resource_files(workspace_id,created_by_user_id,document_id,name,content_type,size_bytes,checksum,storage_reference) VALUES($1,$2,$3,'private.txt','text/plain',1,$4,$5)").bind(&actor.workspace_id).bind(&actor.user_id).bind(doc).bind("a".repeat(64)).bind(&reference).execute(&mut *tx).await.unwrap();
+    sqlx::query("UPDATE issues SET deleted_at=clock_timestamp()-interval '31 days' WHERE id=$1")
+        .bind(id)
+        .execute(&mut *tx)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
+    let blobs = Blobs(std::sync::atomic::AtomicUsize::new(0));
+    f.backend.mode.store(1, Ordering::Relaxed);
+    assert!(purge::purge(&f.database, &blobs, 25).await.is_err());
+    assert_eq!(blobs.0.load(Ordering::SeqCst), 0);
+    f.backend.mode.store(0, Ordering::Relaxed);
+    assert_eq!(
+        purge::purge(&f.database, &blobs, 25).await.unwrap().purged,
+        1
+    );
+    assert_eq!(blobs.0.load(Ordering::SeqCst), 1);
+    let scrubbed: (String, Value, bool) =
+        sqlx::query_as("SELECT title,properties,purged_at IS NOT NULL FROM issues WHERE id=$1")
+            .bind(id)
+            .fetch_one(&f.pool)
+            .await
+            .unwrap();
+    assert_eq!(scrubbed, (String::new(), json!({}), true));
+    let completed = f.backend.completed.lock().unwrap();
+    for table in ["resource_files", "documents"] {
+        assert!(completed.iter().any(|(_, events)| {
+            events.iter().any(|e| {
+                e.table == table && e.action == forge_core::journal::RecoveryAction::Delete
+            })
+        }));
+    }
+    assert!(completed.iter().any(|(_, events)| events.iter().any(|e| {
+        e.table == "resource_files" && e.storage_reference.as_deref() == Some(reference.as_str())
+    })));
+}
+
+#[tokio::test]
 async fn workflow_retention_prepares_recovery_and_archives_deleted_rows() {
     use forge_store::jobs::{self, Enqueue, JobStore, runner};
     use serde_json::json;

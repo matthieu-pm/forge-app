@@ -42,7 +42,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .or_else(|| std::env::var("FORGE_AGENT_CAPABILITY_SECRET").ok())
             .unwrap_or_default();
         let state = AppState::configured_database(database, settings, mailer)
-            .with_files(storage, grant_secret);
+            .with_files(storage, grant_secret)
+            .with_issue_retention(
+                std::env::var("FORGE_ISSUE_RETENTION_ENABLED").as_deref() == Ok("true"),
+                std::env::var("FORGE_ISSUE_RETENTION_SECRET").unwrap_or_default(),
+            );
         if let Some(client) = forge_server::oauth_provider::ChatGptClient::from_environment()
             .map_err(|_| "OAuth configuration is invalid.")?
         {

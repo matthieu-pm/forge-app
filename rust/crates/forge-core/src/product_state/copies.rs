@@ -1,5 +1,5 @@
 use super::*;
-const PREFIXES: &[&str] = &[
+pub const PREFIXES: &[&str] = &[
     "forge:inbox:v1:",
     "forge:team-issue-edit-drafts:v1:",
     "forge:team-relationship-draft:v1:",

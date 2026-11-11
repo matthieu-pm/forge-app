@@ -23,6 +23,8 @@ mod initiative_acceptance;
 mod issue_acceptance;
 #[path = "acceptance/issue_lifecycle.rs"]
 mod issue_lifecycle_acceptance;
+#[path = "acceptance/issue_purge.rs"]
+mod issue_purge_acceptance;
 #[path = "acceptance/issue_queries.rs"]
 mod issue_query_acceptance;
 #[path = "acceptance/jobs.rs"]
@@ -886,8 +888,11 @@ struct Fixture {
 
 impl Fixture {
     async fn new() -> Self {
+        Self::using("FORGE_RUST_TEST_DATABASE_URL").await
+    }
+    async fn using(variable: &str) -> Self {
         // This suite fails without the isolated runner instead of silently skipping.
-        let connection = std::env::var("FORGE_RUST_TEST_DATABASE_URL")
+        let connection = std::env::var(variable)
             .expect("Run bun run rewrite:verify, or python3 scripts/test-rust-postgres.py");
         let options: sqlx::postgres::PgConnectOptions = connection.parse().unwrap();
         assert_eq!(

@@ -43,7 +43,8 @@ gate pass.
 | 3a2a | Upload reservations, quotas and atomic file metadata publication | Passed available gate |
 | 3a2b | Private blob adapters, delivery lookup and HTTP routes | Passed available gate; live provider qualification pending |
 | 3b1 | Durable background jobs, fenced checkpoints, operator recovery and workflow retention | Passed available gate |
-| 3b2 | Issue purge, source-bound copy cleanup and retention endpoint | In progress |
+| 3b2 | Issue purge, source-bound copy cleanup and retention endpoint | Passed available gate |
+| 3b3 | Shared SLA policies, reconciliation and durable breach jobs | In progress |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -750,3 +751,26 @@ these routes do not represent a completed rewrite.
 - The first gate found an async SQL-executor lifetime issue in batched timeout
   setup; ordinary SQL statements resolved it. Compile-time test fixes and the
   complete rerun passed before moving to issue retention.
+
+### Milestone 3b2
+
+- Full gate passed: 253 Rust tests, 2,959 enabled reference tests, typechecking,
+  formatting, Clippy and export checks. The 661 fixture-dependent reference tests
+  remain skipped. Log: `.forge/rust-rewrite/milestone-3b2-rerun.log`.
+- Issue purge claims preserve the fixed 720-hour recovery deadline and prevent
+  later writes from refilling cleared content. Bounded groups drain files, upload
+  intents, loop snapshots/events/approvals/artifacts, private local copies and
+  history before scrubbing the source. Independently shared documents survive.
+- Failed byte deletion retains metadata and a sanitized retry marker. Live loop
+  artifact reservations wait out their 20-minute lifetime; late agent writes are
+  still constrained by the authoritative database fences. Copy cursors and final
+  relationship cleanup share workspace/graph locks and SQL transactions.
+- Added the secret-gated `/api/internal/issue-retention` endpoint and operational
+  heartbeat updates. Failed cleanup never advances successful-job freshness.
+  Tests use a third disposable database so global purges cannot interfere with
+  ordinary lifecycle fixtures; all three databases use the same 75 migrations.
+- The first gate exposed two fixture assumptions: direct expiry increments the
+  issue revision, and the existing journal captures deletion/storage identifiers
+  rather than purge markers or removed private content. Tests now use the current
+  revision and assert the source-owned journal contract plus the actual scrubbed
+  database state. The journal's field coverage remains unchanged.
