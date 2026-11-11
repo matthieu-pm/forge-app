@@ -2,19 +2,9 @@
 //! three sweeps have settled, including any per-object failures.
 use super::files::Service;
 use crate::StoreError;
+pub use crate::retention::Report;
 use chrono::{DateTime, Utc};
 use forge_core::files::upload;
-use serde::Serialize;
-#[derive(Debug, Serialize)]
-pub struct Report {
-    pub count: usize,
-    pub failures: usize,
-}
-impl Report {
-    pub fn successful(&self) -> bool {
-        self.failures == 0
-    }
-}
 pub async fn run(
     files: &Service,
     uploads: &upload::Service,
@@ -45,7 +35,6 @@ pub async fn run(
         })
     })();
     let success = result.as_ref().is_ok_and(Report::successful);
-    sqlx::query("INSERT INTO operational_job_health(key,completed_at,failed_at) VALUES('agent.retention',CASE WHEN $1 THEN clock_timestamp() END,CASE WHEN NOT $1 THEN clock_timestamp() END) ON CONFLICT(key) DO UPDATE SET completed_at=CASE WHEN $1 THEN clock_timestamp() ELSE operational_job_health.completed_at END,failed_at=CASE WHEN NOT $1 THEN clock_timestamp() ELSE operational_job_health.failed_at END")
-        .bind(success).execute(files.database.pool()).await?;
+    crate::retention::heartbeat(&files.database, "agent.retention", success).await?;
     result
 }

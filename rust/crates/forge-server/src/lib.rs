@@ -5,6 +5,7 @@ pub mod agents;
 mod auth;
 mod definitions;
 mod desktop_auth;
+pub mod desktop_retention;
 mod documents;
 pub mod files;
 mod imports;

@@ -12,13 +12,21 @@ use forge_store::{
     },
 };
 use std::{collections::HashMap, sync::Arc};
-async fn run() -> Result<Report, &'static str> {
-    if std::env::args().skip(1).collect::<Vec<_>>() != ["agent"] {
-        return Err("INVALID_COMMAND");
-    }
+async fn run() -> Result<(&'static str, Report), &'static str> {
+    let args = std::env::args().skip(1).collect::<Vec<_>>();
+    let kind = match args.as_slice() {
+        [kind] if kind == "agent" => "agent.retention",
+        [kind] if kind == "product" => "product.retention",
+        _ => return Err("INVALID_COMMAND"),
+    };
     let env: HashMap<String, String> = std::env::vars().collect();
     let connection = operator::database_url(&env)?;
     let storage = Storage::from_config(&env).map_err(|_| "INVALID_CONFIGURATION")?;
+    let desktop = if kind == "product.retention" {
+        forge_server::desktop_retention::Storage::configured(&env)?
+    } else {
+        None
+    };
     let journal =
         forge_recovery::R2Journal::from_environment().map_err(|_| "INVALID_CONFIGURATION")?;
     let store_id = if journal.is_some() {
@@ -39,25 +47,42 @@ async fn run() -> Result<Report, &'static str> {
     } else {
         Database::new(pool.clone())
     };
-    let files = Service::new(database.clone(), Arc::new(storage.clone()));
-    let uploads = upload::Service {
-        store: Arc::new(forge_store::files::UploadStore::new(database)),
-        transport: Arc::new(storage),
-        inspector: Arc::new(Inspector),
-    };
-    let result = retention::run(&files, &uploads, chrono::Utc::now())
+    let now =
+        chrono::DateTime::from_timestamp_millis(chrono::Utc::now().timestamp_millis()).unwrap();
+    let result = if kind == "agent.retention" {
+        let files = Service::new(database.clone(), Arc::new(storage.clone()));
+        let uploads = upload::Service {
+            store: Arc::new(forge_store::files::UploadStore::new(database)),
+            transport: Arc::new(storage),
+            inspector: Arc::new(Inspector),
+        };
+        retention::run(&files, &uploads, now)
+            .await
+            .map_err(|_| "RETENTION_FAILED")
+    } else {
+        forge_store::retention::run_product(
+            &database,
+            &storage,
+            desktop
+                .as_ref()
+                .map(|v| v as &dyn forge_store::retention::DesktopBlobs),
+            env.get("FORGE_RECOVERY_JOURNAL_ENABLED")
+                .is_some_and(|v| v == "true"),
+            now,
+        )
         .await
-        .map_err(|_| "RETENTION_FAILED");
+        .map_err(|_| "RETENTION_FAILED")
+    };
     pool.close().await;
-    result
+    result.map(|report| (kind, report))
 }
 #[tokio::main]
 async fn main() -> std::process::ExitCode {
     match run().await {
-        Ok(report) => {
+        Ok((kind, report)) => {
             println!(
                 "{}",
-                serde_json::json!({"job":"agent.retention","count":report.count,"failures":report.failures})
+                serde_json::json!({"job":kind,"count":report.count,"failures":report.failures})
             );
             if report.successful() {
                 std::process::ExitCode::SUCCESS

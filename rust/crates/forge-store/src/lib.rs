@@ -20,6 +20,7 @@ pub mod planning;
 pub mod profiles;
 pub mod projects;
 pub mod resource_policy;
+pub mod retention;
 pub mod security;
 pub mod sla;
 pub mod teams;

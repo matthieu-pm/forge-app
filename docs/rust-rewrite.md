@@ -80,6 +80,7 @@ gate pass.
 | 3b5af | Provider search request/response protocols and citations | Passed |
 | 3b5ag | Provider search execution, durable receipts and cross-provider history | Passed |
 | 3b6 | Scheduled agent-file retention and operational failure reporting | Passed |
+| 3b7 | Product retention, published recovery receipts and expired desktop drafts | Passed |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -1996,3 +1997,39 @@ these routes do not represent a completed rewrite.
 - Full milestone gate passed: 519 Rust tests, 2,959 enabled TypeScript tests,
   source-fixture drift checks, formatting, Clippy and three package typechecks.
   Evidence: `.forge/rust-rewrite/milestone-3b6-verified.log`.
+
+### Milestone 3b7
+
+- `cargo run -p forge-server --bin forge-retention -- product` composes the
+  existing issue purge (25 candidates), durable workflow retention, permanently
+  deleted teams and optional desktop-draft cleanup. The command shares the
+  explicit environment validation and redacted operational reporting of agent
+  retention. Cleanup failures never advance successful `product.retention`
+  freshness; no schedule or production setting is changed by this command.
+- Team deletion and draft expiration use the source's strict 30-day cutoff.
+  Recovery cleanup is enabled only with the journal flag and removes at most
+  1,000 operations published strictly more than 365 days earlier, deleting their
+  events in the same transaction. Unpublished operations and exact-boundary
+  records remain. Recovery bookkeeping does not recursively journal itself.
+- Desktop cleanup is gated by `FORGE_DESKTOP_RELEASE_ENABLED`. Eligible drafts
+  enter a committed `expiring` state before object deletion; prior expiring
+  releases are retried regardless of creation age. Published, paused and
+  superseded releases do not become eligible through age alone.
+- Each expiring release and its artifact rows are locked while its artifact
+  objects, manifest and both architecture checksum files are deleted. The parent
+  lock also fences late artifact insertion through its foreign key. Any object
+  deletion error retains the database records needed for a retry. Product row
+  mutations use the existing recovery-aware transaction adapter.
+- The native R2 adapter uses explicit credentials and bucket, validates endpoint
+  configuration, limits deletion requests to the provider's 1,000-key/1,024-byte
+  key bounds, checks per-object errors and bounds provider work to 30 seconds.
+  Tests use a local HTTP endpoint; live R2 qualification remains pending.
+- Acceptance uses another isolated disposable database for the global product
+  job, with strict cutoff cases, disabled cleanup gates, published/unpublished
+  receipt retention, failed desktop cleanup, retry, concurrent artifact insertion
+  and the actual product command. Other background services, private runtime
+  cleanup, Rust UI/macOS and final qualification remain unfinished.
+
+- Full milestone gate passed: 522 Rust tests, 2,959 enabled TypeScript tests,
+  all source-fixture drift checks, formatting, Clippy and three package
+  typechecks. Evidence: `.forge/rust-rewrite/milestone-3b7-initial.log`.

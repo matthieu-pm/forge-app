@@ -67,6 +67,12 @@ def main():
             if agent_retention_setup.returncode:
                 print(agent_retention_setup.stderr, file=sys.stderr)
                 return agent_retention_setup.returncode
+            subprocess.run(["psql", "-X", "-v", "ON_ERROR_STOP=1", "--dbname", connection, "-c", "CREATE DATABASE forge_rust_product_retention"], check=True, capture_output=True)
+            product_retention_connection = f"postgresql://forge_rust_test@127.0.0.1:{port}/forge_rust_product_retention"
+            product_retention_setup = subprocess.run(["psql", "-X", "-v", "ON_ERROR_STOP=1", "--dbname", product_retention_connection], input="\n".join(statements), text=True, capture_output=True)
+            if product_retention_setup.returncode:
+                print(product_retention_setup.stderr, file=sys.stderr)
+                return product_retention_setup.returncode
             # The native runtime owns a private schema and explicit installer.
             # Keep its journal tests independent of the reference app's schema.
             subprocess.run(["psql", "-X", "-v", "ON_ERROR_STOP=1", "--dbname", connection, "-c", "CREATE DATABASE forge_rust_runtime"], check=True, capture_output=True)
@@ -84,6 +90,7 @@ def main():
             environment["FORGE_RUST_JOURNAL_TEST_DATABASE_URL"] = journal_connection
             environment["FORGE_RUST_RETENTION_TEST_DATABASE_URL"] = retention_connection
             environment["FORGE_RUST_AGENT_RETENTION_TEST_DATABASE_URL"] = agent_retention_connection
+            environment["FORGE_RUST_PRODUCT_RETENTION_TEST_DATABASE_URL"] = product_retention_connection
             return subprocess.run(["cargo", "test", "--workspace", "--locked", "--no-fail-fast"], cwd=ROOT, env=environment).returncode
         finally:
             if started:

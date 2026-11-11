@@ -125,7 +125,7 @@ async fn retention_executable_rejects_unknown_commands_and_never_loads_dotenv() 
     for (args, code) in [
         (&[][..], "INVALID_COMMAND"),
         (&["agent", "unexpected"][..], "INVALID_COMMAND"),
-        (&["product"][..], "INVALID_COMMAND"),
+        (&["unknown"][..], "INVALID_COMMAND"),
         (&["agent"][..], "INVALID_CONFIGURATION"),
     ] {
         let output = command(&root.0, None, args).await;
