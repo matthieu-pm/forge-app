@@ -110,8 +110,10 @@ impl Throttle {
     }
 }
 
+type InvitationGate = dyn Fn(&str) -> bool + Send + Sync;
 #[derive(Clone, Default)]
 pub struct AppState {
+    pub(crate) invitation_gate: Option<Arc<InvitationGate>>,
     pub(crate) agents: Option<Arc<crate::agents::Settings>>,
     pub(crate) model_proxy: Option<Arc<crate::model_proxy::Settings>>,
     pub(crate) profile_editing: bool,
@@ -128,6 +130,23 @@ pub struct AppState {
 }
 
 impl AppState {
+    pub fn with_invitation_gate(mut self, gate: Arc<InvitationGate>) -> Self {
+        self.invitation_gate = Some(gate);
+        self
+    }
+    pub(crate) fn invitation_workflow(&self, workspace: &str) -> bool {
+        self.invitation_gate.as_ref().map_or_else(
+            || {
+                forge_core::invitations::enabled(
+                    &std::env::var("FORGE_FEATURE_INVITATION_WORKFLOW").unwrap_or_default(),
+                    &std::env::var("FORGE_INVITATION_WORKFLOW_WORKSPACE_ALLOWLIST")
+                        .unwrap_or_default(),
+                    workspace,
+                )
+            },
+            |gate| gate(workspace),
+        )
+    }
     pub fn with_agents(mut self, settings: crate::agents::Settings) -> Self {
         self.agents = Some(Arc::new(settings));
         self
@@ -151,6 +170,7 @@ impl AppState {
     ) -> Self {
         Self {
             model_proxy: None,
+            invitation_gate: None,
             agents: None,
             pool: Some(pool),
             auth: Some(Arc::new(auth)),

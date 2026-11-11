@@ -14,6 +14,13 @@ pub trait VerificationMailer: Send + Sync {
     async fn send_invitation(&self, _invitation: &InvitationMessage) -> Result<(), MailError> {
         Err(MailError)
     }
+    fn invitation_fingerprint(
+        &self,
+        _invitation: &InvitationMessage,
+        _effect: Effect,
+    ) -> Result<String, DeliveryError> {
+        Err(DeliveryError::invalid())
+    }
     /// Implementations must honor the effect's stable provider idempotency key.
     /// The durable caller owns its persisted replay deadline and live authority.
     async fn send_invitation_effect(
@@ -228,6 +235,15 @@ pub fn invitation_payload(
 
 #[async_trait]
 impl VerificationMailer for ResendMailer {
+    fn invitation_fingerprint(
+        &self,
+        invitation: &InvitationMessage,
+        effect: Effect,
+    ) -> Result<String, DeliveryError> {
+        let payload = invitation_payload(&self.from, invitation, effect)
+            .map_err(|_| DeliveryError::invalid())?;
+        Ok(forge_core::canonical::command_input_hash(&payload))
+    }
     async fn send_invitation(&self, invitation: &InvitationMessage) -> Result<(), MailError> {
         let payload = invitation_payload(&self.from, invitation, Effect::Initial)?;
         self.deliver(&invitation.email, payload).await

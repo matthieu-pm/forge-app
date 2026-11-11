@@ -21,6 +21,8 @@ mod file_acceptance;
 mod import_acceptance;
 #[path = "acceptance/initiatives.rs"]
 mod initiative_acceptance;
+#[path = "acceptance/invitations.rs"]
+mod invitation_workflow_acceptance;
 #[path = "acceptance/issues.rs"]
 mod issue_acceptance;
 #[path = "acceptance/issue_lifecycle.rs"]

@@ -189,18 +189,17 @@ pub(crate) async fn invite(
     let (database, auth) = configuration(&state)?;
     let token = cookie_token(&headers, auth)?;
     let actor = authority::session_actor(database, &token).await?;
-    // Durable invitation workflow and retries are ported with background jobs.
-    // Never acknowledge an invitation as queued when no Rust worker owns it.
-    if std::env::var("FORGE_FEATURE_INVITATION_WORKFLOW").as_deref() == Ok("true")
-        && std::env::var("FORGE_INVITATION_WORKFLOW_WORKSPACE_ALLOWLIST")
-            .unwrap_or_default()
-            .split(',')
-            .any(|id| id.trim() == actor.workspace_id)
-    {
-        return Err(AuthError(
-            StatusCode::SERVICE_UNAVAILABLE,
-            "INVITATION_WORKFLOW_UNAVAILABLE",
-            "The invitation workflow is not available in this Rust milestone.",
+    if state.invitation_workflow(&actor.workspace_id) {
+        let invitation = members::invite(database, &actor, &input).await?;
+        let delivery =
+            forge_store::jobs::invitations::start(database, &actor, &invitation.id).await?;
+        let mut url = auth
+            .base_url
+            .join("/accept-invitation")
+            .map_err(|_| invalid_body())?;
+        url.query_pairs_mut().append_pair("id", &invitation.id);
+        return Ok(Json(
+            json!({"ok":true,"invitation":{"id":invitation.id,"email":invitation.email,"role":invitation.role,"url":url},"delivery":delivery}),
         ));
     }
     let mailer = state.mailer.as_ref().ok_or_else(unavailable)?;
@@ -238,6 +237,25 @@ pub(crate) async fn invite(
     })?;
     Ok(Json(
         json!({"ok":true,"invitation":{"id":invitation.id,"email":invitation.email,"role":invitation.role,"url":url},"delivery":"sent-synchronously"}),
+    ))
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct InvitationRetry {
+    business_run_id: uuid::Uuid,
+}
+pub(crate) async fn retry_invite(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    payload: Result<Json<InvitationRetry>, JsonRejection>,
+) -> Result<Json<Value>, AuthError> {
+    let input = body(payload)?;
+    let (database, auth) = configuration(&state)?;
+    let actor = authority::session_actor(database, &cookie_token(&headers, auth)?).await?;
+    let result =
+        forge_store::jobs::invitations::retry(database, &actor, input.business_run_id).await?;
+    Ok(Json(
+        json!({"ok":true,"state":result["state"],"businessRunId":result["businessRunId"]}),
     ))
 }
 #[derive(Deserialize)]

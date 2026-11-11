@@ -1,6 +1,7 @@
 //! Persistent job leases and checkpoints. Every write uses the same independent
 //! deletion-journal preparation as application commands, including callback SQL.
 pub mod cli;
+pub mod invitations;
 mod recovery;
 pub mod retention;
 pub mod runner;
@@ -60,8 +61,15 @@ impl JobStore {
         Ok(())
     }
     pub async fn enqueue(&self, input: &Enqueue) -> Result<Uuid> {
-        let (body, hash) = input.validate()?;
+        input.validate()?;
         let mut tx = self.transaction().await?;
+        let id = Self::enqueue_in(&mut tx, input).await?;
+        tx.commit().await.map_err(failed)?;
+        Ok(id)
+    }
+    // The caller prepares the recovery journal before entering this helper.
+    async fn enqueue_in(tx: &mut PgConnection, input: &Enqueue) -> Result<Uuid> {
+        let (body, hash) = input.validate()?;
         // JavaScript Date persists millisecond precision, including its identity.
         let scheduled =
             chrono::DateTime::from_timestamp_millis(input.scheduled_at.timestamp_millis())
@@ -80,7 +88,6 @@ impl JobStore {
         if row.1 != hash {
             return Err(Code::IdentityConflict.into());
         }
-        tx.commit().await.map_err(failed)?;
         Ok(row.0)
     }
     pub async fn reap(&self, kind: Option<&str>, id: Option<Uuid>) -> Result<Vec<Value>> {

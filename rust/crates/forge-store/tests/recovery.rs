@@ -17,6 +17,8 @@ mod agent_file_recovery;
 mod agent_recovery;
 #[path = "acceptance/coordinator_recovery.rs"]
 mod coordinator_recovery;
+#[path = "acceptance/invitation_recovery.rs"]
+mod invitation_recovery;
 #[path = "acceptance/model_recovery.rs"]
 mod model_recovery;
 

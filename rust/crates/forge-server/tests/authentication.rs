@@ -23,6 +23,8 @@ use uuid::Uuid;
 mod agents_http;
 #[path = "acceptance/files_http.rs"]
 mod files_http;
+#[path = "acceptance/invitations_http.rs"]
+mod invitations_http;
 #[path = "acceptance/profiles_http.rs"]
 mod profiles_http;
 #[path = "acceptance/sla_http.rs"]

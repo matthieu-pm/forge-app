@@ -121,6 +121,119 @@ fn mailer(endpoint: url::Url) -> ResendMailer {
 }
 
 #[tokio::test]
+async fn persistent_worker_delivers_through_the_native_mail_adapter_and_local_provider() {
+    use forge_core::actor::{Actor, Authentication};
+    use forge_store::{
+        Database,
+        jobs::{JobStore, invitations},
+        members,
+    };
+    use uuid::Uuid;
+    let connection = std::env::var("FORGE_RUST_TEST_DATABASE_URL").unwrap();
+    let options: sqlx::postgres::PgConnectOptions = connection.parse().unwrap();
+    assert_eq!(options.get_host(), "127.0.0.1");
+    assert_eq!(options.get_username(), "forge_rust_test");
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(5)
+        .connect_with(options)
+        .await
+        .unwrap();
+    let user = Uuid::new_v4().to_string();
+    let workspace = Uuid::new_v4().to_string();
+    let session = Uuid::new_v4().to_string();
+    sqlx::query("INSERT INTO \"user\"(id,name,email,email_verified) VALUES($1,'Ada',$2,true)")
+        .bind(&user)
+        .bind(format!("{user}@example.test"))
+        .execute(&pool)
+        .await
+        .unwrap();
+    sqlx::query("INSERT INTO organization(id,name,slug) VALUES($1,'Workflow integration',$1)")
+        .bind(&workspace)
+        .execute(&pool)
+        .await
+        .unwrap();
+    sqlx::query("INSERT INTO member(id,organization_id,user_id,role) VALUES($1,$2,$3,'owner')")
+        .bind(Uuid::new_v4().to_string())
+        .bind(&workspace)
+        .bind(&user)
+        .execute(&pool)
+        .await
+        .unwrap();
+    sqlx::query("INSERT INTO session(id,token,user_id,active_organization_id,expires_at) VALUES($1,$1,$2,$3,now()+interval '1 day')").bind(&session).bind(&user).bind(&workspace).execute(&pool).await.unwrap();
+    let actor = Actor {
+        user_id: user,
+        workspace_id: workspace,
+        workspace_role: "owner".into(),
+        authentication: Authentication::Session {
+            session_id: session,
+        },
+        scopes: None,
+        loop_scope: None,
+    };
+    let database = Database::new(pool.clone());
+    let invitation = members::invite(
+        &database,
+        &actor,
+        &members::Invite {
+            email: "delivered@resend.dev".into(),
+            role: "member".into(),
+            resend: false,
+        },
+    )
+    .await
+    .unwrap();
+    let started = invitations::start(&database, &actor, &invitation.id)
+        .await
+        .unwrap();
+    let business = Uuid::parse_str(started["businessRunId"].as_str().unwrap()).unwrap();
+    let job = sqlx::query_scalar("SELECT id FROM background_jobs WHERE identity=$1 AND kind=$2")
+        .bind(business.to_string())
+        .bind(invitations::KIND)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    let (provider, endpoint, task) = Provider::new().await;
+    let transport = forge_server::invitation_workflow::MailTransport::new(
+        Arc::new(mailer(endpoint)),
+        "https://forge.example.test",
+    )
+    .unwrap();
+    let store = JobStore::new(database);
+    assert_eq!(
+        invitations::run_next(&store, &transport, Some(job))
+            .await
+            .unwrap()["state"],
+        "deferred"
+    );
+    assert_eq!(
+        invitations::run_next(&store, &transport, Some(job))
+            .await
+            .unwrap()["state"],
+        "idle"
+    );
+    let requests = provider.requests.lock().unwrap().clone();
+    assert_eq!(requests.len(), 1);
+    assert_eq!(
+        requests[0].0["idempotency-key"],
+        Effect::Initial.key(&invitation.id)
+    );
+    assert!(requests[0].1["text"].as_str().unwrap().contains(&format!(
+        "https://forge.example.test/accept-invitation?id={}",
+        invitation.id
+    )));
+    let receipt: String = sqlx::query_scalar(
+        "SELECT provider_reference FROM business_workflow_effects WHERE business_run_id=$1",
+    )
+    .bind(business)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(receipt, "fixture-delivery");
+    task.abort();
+    pool.close().await;
+}
+
+#[tokio::test]
 async fn provider_receipts_and_stable_effect_keys_cross_the_actual_http_boundary() {
     let (provider, endpoint, task) = Provider::new().await;
     let transport = mailer(endpoint.clone());

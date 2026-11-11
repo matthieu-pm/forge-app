@@ -9,6 +9,7 @@ pub mod desktop_retention;
 mod documents;
 pub mod files;
 mod imports;
+pub mod invitation_workflow;
 mod issues;
 pub mod mail;
 pub mod model_providers;
@@ -230,6 +231,10 @@ pub fn router_with_state(state: state::AppState) -> Router {
         .route(
             "/api/workspace/invitations/cancel",
             axum::routing::post(workspace_access::cancel_invite),
+        )
+        .route(
+            "/api/workspace/invitations/retry",
+            axum::routing::post(workspace_access::retry_invite),
         )
         .route(
             "/api/workspace/api-keys",

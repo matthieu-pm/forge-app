@@ -82,6 +82,7 @@ gate pass.
 | 3b6 | Scheduled agent-file retention and operational failure reporting | Passed |
 | 3b7 | Product retention, published recovery receipts and expired desktop drafts | Passed |
 | 3b8a | Invitation delivery policies, reminder mail and idempotent provider receipts | Passed |
+| 3b8b | Durable invitation queue, live delivery authority and lifecycle recovery | Passed |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -2066,3 +2067,49 @@ these routes do not represent a completed rewrite.
 - Full milestone gate passed: 528 Rust tests, 2,959 enabled TypeScript tests,
   source-fixture drift checks, formatting, Clippy and three package typechecks.
   Evidence: `.forge/rust-rewrite/milestone-3b8a-verified.log`.
+
+### Milestone 3b8b
+
+- Workflow-enabled invitation requests now reserve an existing-schema business
+  workflow and its native background job in one recovery-aware transaction.
+  The deployment flag plus workspace allowlist still gates new invitations.
+  `/api/workspace/invitations/retry` requires a live owner/admin session and
+  scopes the run to that workspace. Existing SDK-owned runs are never adopted.
+  A repeated invitation/resend keeps the source's original business/effect
+  identity; it does not create another initial email.
+- `cargo run -p forge-server --bin forge-invitations -- run [job-id]` runs one due
+  lifecycle job using explicitly configured database, mailer and application URL.
+  It never reads dotenv files or installs a schedule. Between initial delivery,
+  the 24-hour reminder and the originally captured invitation expiry, the job
+  releases its lease and records its next eligible time in PostgreSQL.
+- The worker resolves the inviter from the persisted invitation and rechecks
+  current membership and workspace policy before reserving delivery and again
+  before provider I/O. Invitation, inviter membership/user and workspace locks
+  cover the bounded send. Canceled, accepted, expired and near-expiry invitations
+  follow the source policy; extending expiry never causes an early expiration.
+- Dispatch is committed before provider I/O. The delivery ID, completed external
+  step and lifecycle receipt then commit together under the current lease. An
+  interrupted attempt reuses the source effect key and exact payload digest.
+  Only the digest and small lifecycle metadata enter job checkpoints; mail body
+  and recipient details are not copied into the job ledger or CLI output.
+- A persisted 23-hour-55-minute replay deadline leaves margin below Resend's
+  24-hour key lifetime. Unknown outcomes past that deadline, or payload changes
+  during an uncertain retry, require operator reconciliation. The existing
+  `forge-jobs resolve`/`replay` flow can confirm delivery without sending again.
+  Temporary mail failures use source retry delays; native jobs allow at most 20
+  failed claims before operator recovery. Normal lifecycle deferrals do not
+  consume that retry allowance. Terminal native jobs mark their business run
+  failed; external SDK ownership remains untouched.
+- Acceptance covers concurrent reservation/claim, the full initial/reminder/
+  expiry sequence, cancellation and revoked authority, retry delays, provider
+  acceptance followed by worker loss, expired/changed uncertain retries, manual
+  reconciliation, journal preparation and lost archive acknowledgements. A local
+  provider test joins the PostgreSQL worker to the actual native mail adapter.
+  HTTP and real operator-binary tests cover queueing, isolation and configuration.
+  No real emails or production mutations are performed. Workflow health checks,
+  scheduled deployment, live-provider qualification and other remaining services
+  still need their own milestones.
+
+- Full milestone gate passed: 539 Rust tests, 2,959 enabled TypeScript tests,
+  source-fixture drift checks, formatting, Clippy and three package typechecks.
+  Evidence: `.forge/rust-rewrite/milestone-3b8b-initial.log`.
