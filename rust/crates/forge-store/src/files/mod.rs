@@ -10,7 +10,9 @@ use sqlx::{FromRow, PgConnection};
 use std::sync::Arc;
 use uuid::Uuid;
 mod authorization;
+mod lookup;
 mod publication;
+pub use lookup::FileLookup;
 mod reservations;
 use authorization::{assert_policy, authorize_target, fence};
 

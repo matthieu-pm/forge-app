@@ -41,8 +41,9 @@ gate pass.
 | 2c4d2b | Canonical import execution, reconciliation and cleanup | Passed available gate |
 | 3a1 | File contracts, grants and verified upload state machine | Passed available gate |
 | 3a2a | Upload reservations, quotas and atomic file metadata publication | Passed available gate |
-| 3a2b | Private blob adapters, delivery lookup and HTTP routes | In progress |
-| 3b | Agent execution, approvals, streams, models, retention, jobs, loops, calls and billing | Pending |
+| 3a2b | Private blob adapters, delivery lookup and HTTP routes | Passed available gate; live provider qualification pending |
+| 3b1 | Durable background jobs, fenced checkpoints and operator recovery | In progress |
+| 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
 
@@ -701,3 +702,24 @@ these routes do not represent a completed rewrite.
   the current SQL schema stores `basic`; corrected fixtures passed the full gate.
 - Log: `.forge/rust-rewrite/milestone-3a2a-final.log`. Production storage, HTTP
   transport, provider acceptance and file previews remain in 3a2b.
+
+### Milestone 3a2b
+
+- Full gate passed: 232 Rust tests, 2,959 enabled reference tests, TypeScript
+  typechecking, formatting, Clippy and source export checks. The 661
+  fixture-dependent reference tests remain skipped.
+- Added bounded local/private blob adapters, exclusive local writes, cancellation
+  cleanup, source-compatible provider tokens and upload/delivery HTTP routes.
+  Provider request shape, failures, redirects and timeouts are exercised against
+  a local HTTP fixture; live provider acceptance remains unqualified.
+- Delivery rechecks current resource and attachment ownership, thread visibility,
+  historical loop scope and source activity. Reads verify size and checksum before
+  returning bytes and recheck authority after storage I/O.
+- Preview responses retain the existing sandbox, headers, HTML/SVG allowlists and
+  byte limits. Reference exports cover 72 storage configurations, three signed
+  provider tokens, 52 detector inputs and 64 complete rendered responses.
+- The gate caught an HTML MIME-classification difference in the binary detector;
+  excluding its text guesses restored the owning source's UTF-8 classification.
+  Native browser preview qualification remains part of milestone 5. The unused
+  internal resource-file service will be considered with agent tool integration.
+- Log: `.forge/rust-rewrite/milestone-3a2b-final.log`.

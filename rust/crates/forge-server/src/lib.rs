@@ -4,6 +4,7 @@ mod auth;
 mod definitions;
 mod desktop_auth;
 mod documents;
+pub mod files;
 mod imports;
 mod issues;
 pub mod mail;
@@ -335,6 +336,7 @@ pub fn router_with_state(state: state::AppState) -> Router {
     Router::new()
         .route("/api/health/live", get(live))
         .route("/api/health/ready", get(ready))
+        .route("/api/files/{*path}", axum::routing::any(files::handle))
         .merge(auth_routes)
         .merge(api_routes)
         .with_state(state)

@@ -112,6 +112,7 @@ impl Throttle {
 
 #[derive(Clone, Default)]
 pub struct AppState {
+    pub(crate) files: Option<Arc<crate::files::Services>>,
     pub(crate) pool: Option<forge_store::Database>,
     pub(crate) auth: Option<Arc<AuthSettings>>,
     pub(crate) mailer: Option<Arc<dyn VerificationMailer>>,
@@ -143,9 +144,18 @@ impl AppState {
             oauth: None,
             dns: None,
             public_api: None,
+            files: None,
         }
     }
 
+    pub fn with_files(mut self, storage: crate::files::storage::Storage, secret: String) -> Self {
+        if let Some(database) = self.pool.clone() {
+            self.files = Some(Arc::new(crate::files::Services::new(
+                database, storage, secret,
+            )));
+        }
+        self
+    }
     pub fn with_chatgpt(mut self, client: crate::oauth_provider::ChatGptClient) -> Self {
         self.oauth = Some(Arc::new(client));
         self

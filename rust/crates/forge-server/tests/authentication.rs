@@ -16,6 +16,9 @@ use std::sync::{Arc, Mutex};
 use tower::ServiceExt;
 use uuid::Uuid;
 
+#[path = "acceptance/files_http.rs"]
+mod files_http;
+
 const SECRET: &str = "local-test-secret-that-is-at-least-32-bytes-long";
 const ORIGIN: &str = "http://localhost:3100";
 

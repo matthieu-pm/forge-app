@@ -1,4 +1,5 @@
 import {fileContracts} from "./rust-file-reference.mjs"
+import {fileDelivery} from './rust-delivery-reference.mjs'
 import {importContracts} from "./rust-import-reference.mjs"
 import {preferenceContracts} from "./rust-preference-reference.mjs"
 // Run with Bun: the existing TypeScript implementation is the reference oracle.
@@ -153,7 +154,7 @@ try {
 } finally {
   globalThis.fetch = originalFetch
 }
-const output = JSON.stringify({ teams, projects, documents, actorCases, canonical, permissions: permissionValues.map(value => ({ value, scopes: permissionsToScopes(value) })), crypto, features, journal, oidc, security, teamContracts, definitionCases, transitionCases, issueCases, issuePure, issueQueries, cycleCases, cycleCalendar, projectCases, projectDates, projectContent, projectMilestones, initiativeCases, documentContracts, viewContracts, stateContracts, preferenceContracts, importContracts, fileContracts }) + "\n"
+const output = JSON.stringify({ teams, projects, documents, actorCases, canonical, permissions: permissionValues.map(value => ({ value, scopes: permissionsToScopes(value) })), crypto, features, journal, oidc, security, teamContracts, definitionCases, transitionCases, issueCases, issuePure, issueQueries, cycleCases, cycleCalendar, projectCases, projectDates, projectContent, projectMilestones, initiativeCases, documentContracts, viewContracts, stateContracts, preferenceContracts, importContracts, fileContracts, fileDelivery }) + "\n"
 const zonesDestination=new URL("../rust/crates/forge-core/data/cycle-timezones.json",import.meta.url)
 const zonesOutput=JSON.stringify(cycleTimezones)+"\n"
 if(process.argv.includes("--check")){if(readFileSync(zonesDestination,"utf8")!==zonesOutput){console.error("Reference cycle timezone names changed.");process.exitCode=1}}else{writeFileSync(zonesDestination,zonesOutput)}

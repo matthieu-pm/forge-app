@@ -572,3 +572,196 @@ async fn upload_publication_preserves_unavailable_receipts_and_refuses_unsupport
     ));
     assert_eq!(count(&f, &pending.id).await, (0, 0, 0, 0));
 }
+#[tokio::test]
+async fn delivery_requires_current_issue_and_project_attachment_ownership_including_legacy_null_states()
+ {
+    use forge_store::files::FileLookup;
+    let f = Fixture::new().await;
+    let visitor = Fixture::new().await;
+    let member = enter_workspace(&f, &visitor).await;
+    let lookup = FileLookup(f.database.clone());
+    let store = UploadStore::new(f.database.clone());
+    let target = issue(&f).await;
+    let i = store.create(&f.actor, input(target.clone())).await.unwrap();
+    store.publish(&f.actor, &i.id, verified(&i)).await.unwrap();
+    let t = json!({"kind":"resources","id":i.id});
+    assert!(lookup.read(&f.actor, &t).await.unwrap().is_none());
+    sqlx::query("UPDATE resource_files SET attachment_state=NULL WHERE id=$1")
+        .bind(Uuid::parse_str(&i.id).unwrap())
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    assert!(lookup.read(&f.actor, &t).await.unwrap().is_none());
+    let comment = Uuid::new_v4();
+    sqlx::query("UPDATE resource_files SET attachment_state='attached',comment_id=$2 WHERE id=$1")
+        .bind(Uuid::parse_str(&i.id).unwrap())
+        .bind(comment)
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    let props =
+        json!({"comments":[{"id":comment,"text":"posted","attachments":[{"fileId":i.id}]}]});
+    sqlx::query("UPDATE issues SET properties=$1 WHERE id=$2")
+        .bind(&props)
+        .bind(Uuid::parse_str(target["id"].as_str().unwrap()).unwrap())
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    assert!(lookup.read(&member, &t).await.unwrap().is_some());
+    for field in ["deleted", "attachments"] {
+        let mut hidden = props.clone();
+        hidden["comments"][0][field] = if field == "deleted" {
+            json!(true)
+        } else {
+            json!([])
+        };
+        sqlx::query("UPDATE issues SET properties=$1 WHERE id=$2")
+            .bind(hidden)
+            .bind(Uuid::parse_str(target["id"].as_str().unwrap()).unwrap())
+            .execute(&f.pool)
+            .await
+            .unwrap();
+        assert!(lookup.read(&f.actor, &t).await.unwrap().is_none());
+    }
+    // An internal legacy file without an intent keeps its pre-upload binding contract.
+    let legacy = Uuid::new_v4();
+    sqlx::query("INSERT INTO resource_files(id,workspace_id,created_by_user_id,issue_id,name,content_type,size_bytes,checksum,storage_reference) SELECT $1,workspace_id,created_by_user_id,issue_id,name,content_type,size_bytes,checksum,$2 FROM resource_files WHERE id=$3").bind(legacy).bind(format!("files/{}",Uuid::new_v4())).bind(Uuid::parse_str(&i.id).unwrap()).execute(&f.pool).await.unwrap();
+    assert!(
+        lookup
+            .read(&member, &json!({"kind":"resources","id":legacy}))
+            .await
+            .unwrap()
+            .is_some()
+    );
+    let p = Uuid::new_v4();
+    forge_store::projects::save(
+        &f.database,
+        &f.actor,
+        &Uuid::new_v4().to_string(),
+        json!([{"id":p,"expectedRevision":null,"changes":{"name":"P","teamIds":[]}}]),
+    )
+    .await
+    .unwrap();
+    let project = store
+        .create(&f.actor, input(json!({"kind":"project","id":p})))
+        .await
+        .unwrap();
+    store
+        .publish(&f.actor, &project.id, verified(&project))
+        .await
+        .unwrap();
+    let target = json!({"kind":"resources","id":project.id});
+    assert!(lookup.read(&member, &target).await.unwrap().is_none());
+    let post = Uuid::new_v4();
+    sqlx::query(
+        "UPDATE resource_files SET attachment_state='attached',project_post_id=$2 WHERE id=$1",
+    )
+    .bind(Uuid::parse_str(&project.id).unwrap())
+    .bind(post)
+    .execute(&f.pool)
+    .await
+    .unwrap();
+    sqlx::query("UPDATE projects SET properties=$1 WHERE id=$2").bind(json!({"updates":[{"id":Uuid::new_v4(),"comments":[{"id":post,"attachments":[{"fileId":project.id}]}]}]})).bind(p).execute(&f.pool).await.unwrap();
+    assert!(lookup.read(&member, &target).await.unwrap().is_some());
+    sqlx::query("UPDATE resource_files SET project_post_id=$2 WHERE id=$1")
+        .bind(Uuid::parse_str(&project.id).unwrap())
+        .bind(Uuid::new_v4())
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    assert!(lookup.read(&member, &target).await.unwrap().is_none());
+}
+#[tokio::test]
+async fn delivery_attachments_and_artifacts_recheck_owner_expiry_loop_scope_and_triggering_activity()
+ {
+    use forge_store::files::FileLookup;
+    let f = Fixture::new().await;
+    let visitor = Fixture::new().await;
+    let member = enter_workspace(&f, &visitor).await;
+    let lookup = FileLookup(f.database.clone());
+    let store = UploadStore::new(f.database.clone());
+    let i = store
+        .create(&f.actor, input(json!({"kind":"agent"})))
+        .await
+        .unwrap();
+    store.publish(&f.actor, &i.id, verified(&i)).await.unwrap();
+    let target = json!({"kind":"attachments","id":i.id});
+    assert!(lookup.read(&f.actor, &target).await.unwrap().is_some());
+    assert!(lookup.read(&member, &target).await.unwrap().is_none());
+    sqlx::query("UPDATE agent_attachments SET expires_at=now()-interval '1 minute' WHERE id=$1")
+        .bind(Uuid::parse_str(&i.id).unwrap())
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    assert!(lookup.read(&f.actor, &target).await.unwrap().is_none());
+    let own = team(&f, 1).await;
+    let other = team(&f, 2).await;
+    let source = create(&f, other, "Loop source").await;
+    let comment = Uuid::new_v4();
+    let source_id = Uuid::parse_str(source["id"].as_str().unwrap()).unwrap();
+    sqlx::query("UPDATE issues SET properties=$1 WHERE id=$2")
+        .bind(json!({"comments":[{"id":comment,"text":"Original","attachments":[]}]}))
+        .bind(source_id)
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    let thread = Uuid::new_v4();
+    let run = Uuid::new_v4();
+    let artifact = Uuid::new_v4();
+    sqlx::query("INSERT INTO agent_threads(id,workspace_id,created_by_user_id,title) VALUES($1,$2,$3,'Files')").bind(thread).bind(&f.actor.workspace_id).bind(&f.actor.user_id).execute(&f.pool).await.unwrap();
+    sqlx::query("INSERT INTO agent_runs(id,thread_id,initiated_by_user_id,state,execution_kind,requested_selection) VALUES($1,$2,$3,'completed','forge-native','{}')").bind(run).bind(thread).bind(&f.actor.user_id).execute(&f.pool).await.unwrap();
+    sqlx::query("INSERT INTO agent_artifacts(id,run_id,kind,name,content_type,size_bytes,storage_reference,checksum,retention_expires_at) VALUES($1,$2,'file','artifact.txt','text/plain',5,$3,$4,now()+interval '1 day')").bind(artifact).bind(run).bind(format!("{run}/{}",Uuid::new_v4())).bind(files::checksum(b"hello")).execute(&f.pool).await.unwrap();
+    let target = json!({"kind":"artifacts","id":artifact});
+    assert!(lookup.read(&f.actor, &target).await.unwrap().is_some());
+    assert!(lookup.read(&member, &target).await.unwrap().is_none());
+    let loop_id = Uuid::new_v4();
+    let loop_run = Uuid::new_v4();
+    let event = json!({"entity":"issue","entityId":source_id,"comment":{"id":comment,"text":"Original","mentionIds":[]}});
+    sqlx::query("INSERT INTO team_loops(id,workspace_id,team_id,fields) VALUES($1,$2,$3,$4)")
+        .bind(loop_id)
+        .bind(&f.actor.workspace_id)
+        .bind(own)
+        .bind(json!({"teamAccess":"all-public-teams"}))
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    sqlx::query("INSERT INTO loop_runs(id,workspace_id,loop_id,loop_revision,event_key,event_hash,event,fields,authorizer_id,state,thread_id,agent_run_id) VALUES($1,$2,$3,1,'file-test',$4,$5,$6,$7,'completed',$8,$9)").bind(loop_run).bind(&f.actor.workspace_id).bind(loop_id).bind("a".repeat(64)).bind(&event).bind(json!({"teamAccess":"all-public-teams"})).bind(&f.actor.user_id).bind(thread).bind(run).execute(&f.pool).await.unwrap();
+    assert!(lookup.read(&member, &target).await.unwrap().is_some());
+    for table in ["team_loops", "loop_runs"] {
+        let id = if table == "team_loops" {
+            loop_id
+        } else {
+            loop_run
+        };
+        let q = format!("UPDATE {table} SET fields=$1 WHERE id=$2");
+        sqlx::query(&q)
+            .bind(json!({"teamAccess":"own-team"}))
+            .bind(id)
+            .execute(&f.pool)
+            .await
+            .unwrap();
+        assert!(lookup.read(&f.actor, &target).await.unwrap().is_none());
+        sqlx::query(&q)
+            .bind(json!({"teamAccess":"all-public-teams"}))
+            .bind(id)
+            .execute(&f.pool)
+            .await
+            .unwrap();
+    }
+    for text in ["Edited", ""] {
+        sqlx::query("UPDATE issues SET properties=$1 WHERE id=$2")
+            .bind(json!({"comments":[{"id":comment,"text":text}]}))
+            .bind(source_id)
+            .execute(&f.pool)
+            .await
+            .unwrap();
+        assert!(lookup.read(&member, &target).await.unwrap().is_none());
+    }
+    sqlx::query("UPDATE issues SET properties=$1 WHERE id=$2")
+        .bind(json!({"comments":[{"id":comment,"text":"Original","deleted":true}]}))
+        .bind(source_id)
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    assert!(lookup.read(&member, &target).await.unwrap().is_none());
+}
