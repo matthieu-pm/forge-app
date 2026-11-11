@@ -451,6 +451,34 @@ async fn issue_http_commands_preserve_bound_sessions_and_expose_discussion_and_h
         .0,
         StatusCode::FORBIDDEN
     );
+    let initiative = Uuid::new_v4();
+    let (status,_,saved)=f.request("POST","/api/workspace/initiatives",Some(&cookie),Some(bind(json!({"commandKey":Uuid::new_v4(),"changes":[{"id":initiative,"expectedRevision":null,"changes":{"name":"HTTP initiative"},"addProjectIds":[project]}]})))).await;
+    assert_eq!(status, StatusCode::OK, "{saved}");
+    let (status, _, snapshot) = f
+        .request("GET", "/api/workspace/initiatives", Some(&cookie), None)
+        .await;
+    assert_eq!(status, StatusCode::OK, "{snapshot}");
+    assert_eq!(
+        snapshot["initiatives"][0]["projects"][0]["id"],
+        project.to_string()
+    );
+    let (status, _, planning_page) = f
+        .request(
+            "POST",
+            "/api/workspace/planning/list",
+            Some(&cookie),
+            Some(bind(json!({"kind":"initiative","query":{"limit":1}}))),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{planning_page}");
+    assert_eq!(planning_page["items"][0]["id"], initiative.to_string());
+    let (status,_,saved)=f.request("POST","/api/workspace/initiative-settings",Some(&cookie),Some(bind(json!({"commandKey":Uuid::new_v4(),"expectedRevision":0,"value":"{\"enabled\":false,\"schedule\":\"none\"}"})))).await;
+    assert_eq!(status, StatusCode::OK, "{saved}");
+    let (status, _, snapshot) = f
+        .request("GET", "/api/workspace/initiatives", Some(&cookie), None)
+        .await;
+    assert_eq!(status, StatusCode::OK, "{snapshot}");
+    assert_eq!(snapshot["initiatives"], json!([]));
     let mut cycle_settings = forge_core::cycles::initial();
     cycle_settings["enabled"] = json!(true);
     let (status,_,saved)=f.request("POST","/api/workspace/team-settings",Some(&cookie),Some(bind(json!({"teamId":team.id,"kind":"cycles","commandKey":Uuid::new_v4(),"expectedRevision":0,"value":cycle_settings.to_string()})))).await;

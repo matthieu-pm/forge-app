@@ -514,3 +514,27 @@ fn canonical_project_contracts_catalogs_and_content_match_reference() {
         );
     }
 }
+
+#[test]
+fn initiative_contracts_and_settings_match_reference() {
+    use forge_core::initiatives as i;
+    let f: Value = serde_json::from_str(include_str!("../../../reference-fixtures.json")).unwrap();
+    for (n, c) in f["initiativeCases"].as_array().unwrap().iter().enumerate() {
+        let v = c["input"].clone();
+        let result = match c["kind"].as_str().unwrap() {
+            "changes" => i::changes(v),
+            "fields" => i::fields(v, false, true),
+            "initiative" => i::initiative(v),
+            "settings" => i::settings(v),
+            _ => unreachable!(),
+        };
+        assert_eq!(
+            result.is_ok(),
+            c["valid"],
+            "initiative case {n}: {result:?}"
+        );
+        if let Ok(v) = result {
+            assert_eq!(v, c["expected"], "initiative case {n}");
+        }
+    }
+}

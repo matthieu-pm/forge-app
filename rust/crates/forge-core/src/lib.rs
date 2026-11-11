@@ -9,6 +9,7 @@ mod contract;
 pub mod cycles;
 pub mod definitions;
 pub mod features;
+pub mod initiatives;
 pub mod issue_query;
 pub mod issues;
 pub mod journal;

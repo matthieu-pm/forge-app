@@ -3,6 +3,14 @@ pub use crate::contract::ContractError as PlanningError;
 use crate::contract::*;
 use serde_json::{Value, json};
 
+pub fn page(value: Value) -> Result<Value> {
+    let mut o = Object::new(value, &["after", "limit", "search"], true)?;
+    o.optional("after", uuid)?;
+    o.default("limit", json!(50), |v| number(v, 1., 100., true))?;
+    o.optional("search", |v| text(v, 0, 200, true))?;
+    Ok(o.finish())
+}
+
 fn chart(v: Value) -> Result<Value> {
     let mut o = Object::new(
         v,
@@ -186,7 +194,7 @@ fn reaction(v: Value) -> Result<Value> {
 fn comments(v: Value, thread: bool) -> Result<Value> {
     list(v, 0, usize::MAX, |v| comment(v, thread))
 }
-fn comment(v: Value, thread: bool) -> Result<Value> {
+pub(crate) fn comment(v: Value, thread: bool) -> Result<Value> {
     let keys = if thread {
         &[
             "id",
@@ -221,7 +229,7 @@ fn comment(v: Value, thread: bool) -> Result<Value> {
     }
     Ok(o.finish())
 }
-fn update(v: Value) -> Result<Value> {
+pub(crate) fn update(v: Value) -> Result<Value> {
     let mut o = Object::new(
         v,
         &[
@@ -250,7 +258,7 @@ fn update(v: Value) -> Result<Value> {
     o.default("comments", json!([]), |v| comments(v, false))?;
     Ok(o.finish())
 }
-fn resource(v: Value) -> Result<Value> {
+pub(crate) fn resource(v: Value) -> Result<Value> {
     let mut o = Object::new(
         v,
         &[

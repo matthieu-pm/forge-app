@@ -31,7 +31,7 @@ gate pass.
 | 2b3 | Server issue queries, filtering, facets and pagination | Passed available gate |
 | 2b4 | Triage, recoverable issue lifecycle and cycles | Passed available gate; retention workers belong to milestone 3 |
 | 2c1 | Shared projects, catalogs, milestones and posts | Passed available gate |
-| 2c2 | Shared initiatives and planning queries | Pending |
+| 2c2 | Shared initiatives and planning queries | Passed available gate |
 | 2c3 | Documents, views, resources and imports | Pending |
 | 3 | Agent execution, approvals, streams, models, files, retention, jobs, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
@@ -369,3 +369,37 @@ these routes do not represent a completed rewrite.
 - Recovery acceptance checks preparation failure rollback and publication of
   removed project-team rows. All 75 migrations run in both disposable databases.
 - Gate log: `.forge/rust-rewrite/milestone-2c1-qualified.log`.
+
+### Milestone 2c2
+
+- Full gate passed: 144 Rust tests, all 2,959 enabled reference tests, TypeScript
+  typechecking, formatting and Clippy. The 661 external-fixture reference tests
+  remain skipped; both disposable databases applied all 75 source migrations.
+- Initiative commands preserve source `initiatives.save@1` receipts, serialize
+  numbering and version checks, and apply project membership as deltas. Access
+  to linked projects is locked and rechecked on retries; disabled workspace or
+  deployment settings reject writes. External credential transports remain denied.
+- Shared initiative settings retain product-state encoding and receipt identity,
+  use administrator sessions and compare-and-swap revisions, and serialize with
+  content writes. HTTP qualification enables the flag only in the disposable
+  test child process; production configuration is untouched.
+- Initiative posts preserve attribution, moderation and caller-owned reactions.
+  Completion timestamps survive unrelated edits and clear on reopening. Departed
+  owners do not prevent unrelated changes; new owner selections require a current
+  member. Attachments remain unavailable as in the reference initiative command.
+- Snapshots project only visible children, teams and dependencies, and calculate
+  issue/project progress from that same authorized set. Hidden project links are
+  preserved on edits. Team projections are loaded in bulk for projects and
+  initiatives, avoiding one database round trip per child project.
+- Bounded planning lists/exports, resource details, rollups and relationship reads
+  use resource-specific scopes and visibility before selection. Literal search
+  escapes wildcard characters. Shared documents redact private origin backlinks;
+  deleted documents and inactive issues stay outside ordinary query results.
+- 66 initiative contract/settings fixtures match source behavior, including the
+  Zod description default inside partial changes. The first gate found a missing
+  HTTP route import; the second found this defaulting mismatch. Both were fixed
+  before the final gate. Recovery checks cover removed initiative-project rows.
+- Document mutations/sharing and the legacy unused direct-relationship wrappers
+  are not claimed by these read APIs; canonical issue relationship writes already
+  use the milestone 2b commands. The full UI remains pending.
+- Gate log: `.forge/rust-rewrite/milestone-2c2-final.log`.

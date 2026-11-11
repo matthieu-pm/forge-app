@@ -11,12 +11,16 @@ use uuid::Uuid;
 
 #[path = "acceptance/definitions.rs"]
 mod definition_acceptance;
+#[path = "acceptance/initiatives.rs"]
+mod initiative_acceptance;
 #[path = "acceptance/issues.rs"]
 mod issue_acceptance;
 #[path = "acceptance/issue_lifecycle.rs"]
 mod issue_lifecycle_acceptance;
 #[path = "acceptance/issue_queries.rs"]
 mod issue_query_acceptance;
+#[path = "acceptance/planning.rs"]
+mod planning_acceptance;
 #[path = "acceptance/projects.rs"]
 mod project_acceptance;
 

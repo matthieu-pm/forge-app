@@ -7,6 +7,7 @@ mod issues;
 pub mod mail;
 mod oauth;
 pub mod oauth_provider;
+mod planning;
 mod projects;
 mod public_api;
 pub mod state;
@@ -18,7 +19,7 @@ use axum::{
     Json, Router,
     http::{StatusCode, header},
     response::{IntoResponse, Response},
-    routing::get,
+    routing::{get, post},
 };
 use serde_json::json;
 
@@ -28,6 +29,18 @@ pub fn router() -> Router {
 
 pub fn router_with_state(state: state::AppState) -> Router {
     let auth_routes = Router::new()
+        .route(
+            "/api/workspace/initiatives",
+            get(planning::initiatives).post(planning::save_initiatives),
+        )
+        .route(
+            "/api/workspace/initiative-settings",
+            get(planning::settings).post(planning::save_settings),
+        )
+        .route("/api/workspace/planning/list", post(planning::list))
+        .route("/api/workspace/planning/get", post(planning::get))
+        .route("/api/workspace/planning/rollup", post(planning::rollup))
+        .route("/api/workspace/planning/related", post(planning::related))
         .route(
             "/api/workspace/projects",
             get(projects::read).post(projects::save),

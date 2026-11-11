@@ -219,6 +219,38 @@ async fn project_relation_removal_requires_preparation_and_publishes_recovery_ro
             .iter()
             .any(|(_, events)| events.iter().any(|e| e.table == "project_teams"))
     );
+    use forge_store::initiatives::{self, InitiativeOptions};
+    let options = InitiativeOptions { enabled: true };
+    let initiative = Uuid::new_v4();
+    initiatives::save(&f.database,&a,&Uuid::new_v4().to_string(),json!([{"id":initiative,"expectedRevision":null,"changes":{"name":"Recovery initiative"},"addProjectIds":[id]}]),options).await.unwrap();
+    let snapshot = initiatives::read(&f.database, &a, options).await.unwrap();
+    let changes = json!([{"id":initiative,"expectedRevision":snapshot["initiatives"][0]["revision"],"changes":{},"removeProjectIds":[id]}]);
+    let key = Uuid::new_v4().to_string();
+    f.backend.mode.store(1, Ordering::Relaxed);
+    assert!(
+        initiatives::save(&f.database, &a, &key, changes.clone(), options)
+            .await
+            .is_err()
+    );
+    assert_eq!(
+        initiatives::read(&f.database, &a, options).await.unwrap()["initiatives"][0]["projects"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+    f.backend.mode.store(0, Ordering::Relaxed);
+    initiatives::save(&f.database, &a, &key, changes, options)
+        .await
+        .unwrap();
+    assert!(
+        f.backend
+            .completed
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|(_, events)| events.iter().any(|e| e.table == "initiative_projects"))
+    );
 }
 
 #[tokio::test]

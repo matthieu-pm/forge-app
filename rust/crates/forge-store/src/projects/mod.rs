@@ -580,24 +580,62 @@ pub async fn read(database: &Database, actor: &Actor) -> Result<Value, StoreErro
         .await?;
     let actor = current_actor(&mut tx, actor).await?;
     policy::scope(&actor, ApiScope::ProjectsRead)?;
+    let result = snapshot(&mut tx, &actor, None).await?;
+    let catalog = catalog::projected(&mut tx, &actor).await?;
+    tx.commit().await?;
+    let session = if let Authentication::Session { session_id } = &actor.authentication {
+        session_id.as_str()
+    } else {
+        ""
+    };
+    Ok(
+        json!({"workspaceId":actor.workspace_id,"userId":actor.user_id,"sessionId":session,"projects":result,"catalog":catalog}),
+    )
+}
+
+pub(crate) async fn snapshot(
+    c: &mut PgConnection,
+    actor: &Actor,
+    selected: Option<&[Uuid]>,
+) -> Result<Vec<Value>, StoreError> {
     let q = format!(
         "SELECT p.id,p.name,p.revision,p.properties FROM projects p WHERE p.workspace_id=$1 AND {} ORDER BY p.id",
         policy::readable_project("p.id")
     );
     let rows: Vec<Row> = sqlx::query_as(&q)
         .bind(&actor.workspace_id)
-        .bind(policy::privileged(&actor))
+        .bind(policy::privileged(actor))
         .bind(&actor.user_id)
-        .fetch_all(&mut *tx)
+        .fetch_all(&mut *c)
         .await?;
     let visible: HashSet<String> = rows.iter().map(|r| r.id.to_string()).collect();
+    let link_query = format!(
+        "SELECT p.project_id,p.team_id FROM project_teams p WHERE p.workspace_id=$1 AND {} AND ($4::uuid[] IS NULL OR p.project_id=ANY($4))",
+        policy::readable_team("p.team_id")
+    );
+    let team_links: Vec<(Uuid, Uuid)> = sqlx::query_as(&link_query)
+        .bind(&actor.workspace_id)
+        .bind(policy::privileged(actor))
+        .bind(&actor.user_id)
+        .bind(selected)
+        .fetch_all(&mut *c)
+        .await?;
     let mut result = vec![];
-    for row in rows {
+    for row in rows
+        .into_iter()
+        .filter(|r| selected.is_none_or(|ids| ids.contains(&r.id)))
+    {
         let mut p = row.properties;
         p["id"] = json!(row.id);
         p["name"] = json!(row.name);
         p["revision"] = json!(row.revision);
-        p["teamIds"] = json!(visible_teams(&mut tx, &actor, row.id).await?);
+        p["teamIds"] = json!(
+            team_links
+                .iter()
+                .filter(|(id, _)| *id == row.id)
+                .map(|(_, team)| team)
+                .collect::<Vec<_>>()
+        );
         p["dependencyIds"] = json!(
             array(&p, "dependencyIds")
                 .iter()
@@ -612,14 +650,5 @@ pub async fn read(database: &Database, actor: &Actor) -> Result<Value, StoreErro
         }
         result.push(parsed(forge_core::planning::project(p))?);
     }
-    let catalog = catalog::projected(&mut tx, &actor).await?;
-    tx.commit().await?;
-    let session = if let Authentication::Session { session_id } = &actor.authentication {
-        session_id.as_str()
-    } else {
-        ""
-    };
-    Ok(
-        json!({"workspaceId":actor.workspace_id,"userId":actor.user_id,"sessionId":session,"projects":result,"catalog":catalog}),
-    )
+    Ok(result)
 }

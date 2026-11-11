@@ -30,7 +30,7 @@ impl From<StoreError> for IssueHttpError {
         if let StoreError::Planning(message) = &error {
             return Self(AuthError(
                 StatusCode::BAD_REQUEST,
-                "INVALID_PROJECT",
+                "INVALID_PLANNING",
                 message,
             ));
         }

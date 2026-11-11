@@ -40,6 +40,14 @@ pub(crate) fn readable_project(column: &'static str) -> String {
         readable_team("authz_pt.team_id")
     )
 }
+pub(crate) fn readable_document(column: &'static str) -> String {
+    format!(
+        "EXISTS(SELECT 1 FROM documents authz_doc WHERE authz_doc.id={column} AND authz_doc.workspace_id=$1 AND authz_doc.deleted_at IS NULL AND (authz_doc.shared_with_workspace OR (authz_doc.team_id IS NULL AND authz_doc.issue_id IS NULL AND authz_doc.project_id IS NULL) OR {} OR {} OR {}))",
+        readable_team("authz_doc.team_id"),
+        readable_issue("authz_doc.issue_id"),
+        readable_project("authz_doc.project_id")
+    )
+}
 pub async fn team(
     connection: &mut PgConnection,
     actor: &Actor,
