@@ -145,7 +145,7 @@ async fn plan(
     Ok((access.plan, entitlements(access.plan, &overrides)))
 }
 
-fn valid_subscription_row(value: &Value) -> bool {
+pub(crate) fn valid_subscription_row(value: &Value) -> bool {
     for key in ["trial_redemption_id", "paid_upgrade_order_id"] {
         if let Some(v) = value.get(key)
             && !v.is_null()

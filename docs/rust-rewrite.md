@@ -40,8 +40,8 @@ gate pass.
 | 2c4d2a | Authenticated import previews and private source checkpoints | Passed available gate |
 | 2c4d2b | Canonical import execution, reconciliation and cleanup | Passed available gate |
 | 3a1 | File contracts, grants and verified upload state machine | Passed available gate |
-| 3a2a | Upload reservations, quotas and atomic file metadata publication | In progress |
-| 3a2b | Private blob adapters, delivery lookup and HTTP routes | Pending |
+| 3a2a | Upload reservations, quotas and atomic file metadata publication | Passed available gate |
+| 3a2b | Private blob adapters, delivery lookup and HTTP routes | In progress |
 | 3b | Agent execution, approvals, streams, models, retention, jobs, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -678,3 +678,26 @@ these routes do not represent a completed rewrite.
   part of 3a2; these contracts do not expose production file routes yet.
 - Logs: `.forge/rust-rewrite/milestone-3a1-final.log` (all suites/typechecks;
   initial mutex lint) and `.forge/rust-rewrite/milestone-3a1-clippy.log` (fixed).
+
+### Milestone 3a2a
+
+- Full gate passed: 224 Rust tests, 2,959 enabled reference tests, TypeScript
+  typechecking, formatting, Clippy and all source export checks. The 661
+  fixture-dependent reference tests remain skipped.
+- PostgreSQL reservations preserve exact-input idempotency, account capacity
+  across workspaces, workspace-wide admission, rolling completed bytes, fixed
+  expiry and five token attempts per hour. Publication rechecks live resource
+  authority, subscription access and verified MIME against workspace policy.
+- Publication writes one file, reservation result, receipt, audit and outbox event
+  atomically. Direct issue/project uploads remain unbound until an authorized
+  content command attaches them. Agent attachments use the existing type allowlist
+  and 24-hour expiry; documents preserve their canonical owner.
+- Nine new database tests cover concurrent admission/publication, scope and
+  private-team revocation, paid-plan downgrade, unsupported verified content,
+  ownership, missing receipts, revoked-user cancellation and delayed cleanup.
+  Cleanup preserves orphan inventory, waits out issued tokens and revisits deleted
+  bytes after an hour to catch delayed provider writes.
+- The first gate found two fixtures using the public plan name `starter` where
+  the current SQL schema stores `basic`; corrected fixtures passed the full gate.
+- Log: `.forge/rust-rewrite/milestone-3a2a-final.log`. Production storage, HTTP
+  transport, provider acceptance and file previews remain in 3a2b.

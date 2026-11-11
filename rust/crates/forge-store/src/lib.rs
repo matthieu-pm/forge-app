@@ -8,6 +8,7 @@ pub mod database;
 pub mod definitions;
 pub mod desktop_auth;
 pub mod documents;
+pub mod files;
 pub mod initiatives;
 pub mod issues;
 pub mod joins;
@@ -23,6 +24,8 @@ pub use database::Database;
 
 #[derive(Debug, thiserror::Error)]
 pub enum StoreError {
+    #[error(transparent)]
+    Upload(#[from] forge_core::files::UploadError),
     #[error("Authenticated session required.")]
     Unauthenticated,
     #[error("You do not have permission to perform this action.")]
