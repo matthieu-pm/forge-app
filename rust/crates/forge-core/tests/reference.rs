@@ -918,3 +918,78 @@ fn legacy_import_checkpoints_and_reference_selection_match_source() {
         );
     }
 }
+
+#[test]
+fn file_contracts_grants_and_stream_verification_match_source() {
+    use base64::{Engine, engine::general_purpose::STANDARD};
+    use forge_core::files as f;
+    let fixture: Value =
+        serde_json::from_str(include_str!("../../../reference-fixtures.json")).unwrap();
+    let cases = &fixture["fileContracts"];
+    for (i, c) in cases["schemas"].as_array().unwrap().iter().enumerate() {
+        let input = c["input"].clone();
+        let result = match c["kind"].as_str().unwrap() {
+            "upload" => f::upload_input(input),
+            "target" => f::upload_target(input),
+            "resource" => f::resource_target(input),
+            "delivery" => f::delivery_target(input),
+            "ready" => f::ready_upload(input),
+            "resource-input" => f::resource_input(input),
+            _ => panic!("schema"),
+        };
+        assert_eq!(result.is_ok(), c["valid"], "schema {i}: {c}");
+        if let Ok(v) = result {
+            assert_eq!(v, c["expected"], "schema {i}");
+        }
+    }
+    for c in cases["references"].as_array().unwrap() {
+        assert_eq!(
+            f::reference(c["input"].as_str().unwrap()),
+            c["valid"],
+            "reference {c}"
+        );
+    }
+    for (i, c) in cases["grants"].as_array().unwrap().iter().enumerate() {
+        let actor = serde_json::from_value(c["actor"].clone()).unwrap();
+        let secret = c["secret"].as_str().unwrap();
+        let token = c["token"].as_str().unwrap();
+        let purpose = c["purpose"].as_str().unwrap();
+        let now = c["now"].as_i64().unwrap();
+        if c["mint"] == true {
+            assert_eq!(
+                f::grants::mint(secret, &actor, &c["target"], purpose, now).unwrap(),
+                token,
+                "mint {i}"
+            );
+        }
+        assert_eq!(
+            f::grants::verify(secret, token, &actor, &c["target"], purpose, now).is_ok(),
+            c["valid"],
+            "verify {i}: {c}"
+        );
+    }
+    for (i, c) in cases["verification"].as_array().unwrap().iter().enumerate() {
+        let bytes = STANDARD.decode(c["bytes"].as_str().unwrap()).unwrap();
+        let result = (|| {
+            let mut v = f::verification::Verification::new(&c["input"])?;
+            for bytes in bytes.chunks(c["chunkSize"].as_u64().unwrap() as usize) {
+                v.push(bytes)?;
+            }
+            v.finish()?.metadata(c["detected"].as_str())
+        })();
+        match result {
+            Ok(metadata) => {
+                assert!(c["error"].is_null(), "verification {i}: {c}");
+                assert_eq!(metadata, c["output"], "verification {i}");
+            }
+            Err(error) => {
+                assert_eq!(error.code(), c["error"]["code"], "verification {i}: {c}");
+                assert_eq!(
+                    error.to_string(),
+                    c["error"]["message"],
+                    "verification {i}: {c}"
+                );
+            }
+        }
+    }
+}

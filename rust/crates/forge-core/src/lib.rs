@@ -32,4 +32,5 @@ pub mod product_state;
 
 pub mod preferences;
 
+pub mod files;
 pub mod imports;

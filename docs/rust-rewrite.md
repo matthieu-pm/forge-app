@@ -39,7 +39,10 @@ gate pass.
 | 2c4d1 | Legacy source validation, content adapters and import manifests | Passed available gate |
 | 2c4d2a | Authenticated import previews and private source checkpoints | Passed available gate |
 | 2c4d2b | Canonical import execution, reconciliation and cleanup | Passed available gate |
-| 3 | Agent execution, approvals, streams, models, files, retention, jobs, loops, calls and billing | Pending |
+| 3a1 | File contracts, grants and verified upload state machine | Passed available gate |
+| 3a2a | Upload reservations, quotas and atomic file metadata publication | In progress |
+| 3a2b | Private blob adapters, delivery lookup and HTTP routes | Pending |
+| 3b | Agent execution, approvals, streams, models, retention, jobs, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
 
@@ -654,3 +657,24 @@ these routes do not represent a completed rewrite.
   The reference suite still skips **661 tests in 34 files**; hosted/provider
   acceptance remains separately qualified.
 - Gate log: `.forge/rust-rewrite/milestone-2c4d2b-final.log`.
+
+### Milestone 3a1
+
+- All 215 Rust tests and 2,959 enabled reference tests passed; the 661
+  fixture-dependent reference tests remain skipped. Typechecking, source exports,
+  formatting and Clippy passed. The final suite exposed a test mutex-scope lint;
+  its lexical-scope fix passed a separate full-workspace Clippy check.
+- Added 220 schema cases, 10 storage-reference cases, 162 signed grant cases and
+  144 streamed verification cases exported from the owning TypeScript code.
+  Byte-stream cases run that source in Node, matching the server/test runtime;
+  Bun 1.3.5 mishandles a UTF-8 BOM split across one-byte chunks.
+- Upload orchestration verifies bounded streamed size, SHA-256, UTF-8 and JSON,
+  cancels readers, preserves retryable outages and rejects permanent failures.
+  JSON syntax inspection is iterative and accepts JavaScript's large numeric
+  literals and escaped surrogates without allocating a recursive value tree.
+- File grants bind actor, workspace, target, purpose and expiry. Reads recheck
+  current authority and metadata after blob I/O; revocation, replacement and
+  grant expiry during the read prevent delivery. Storage/format adapters remain
+  part of 3a2; these contracts do not expose production file routes yet.
+- Logs: `.forge/rust-rewrite/milestone-3a1-final.log` (all suites/typechecks;
+  initial mutex lint) and `.forge/rust-rewrite/milestone-3a1-clippy.log` (fixed).
