@@ -10,7 +10,16 @@ use serde_json::{Value, json};
 use sqlx::PgConnection;
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
+mod create;
+mod execution;
+mod references;
+mod review;
 mod targets;
+pub use execution::{batch, choose, pause, read_one};
+mod reconciliation;
+pub use reconciliation::{cutover, download_report, retry};
+mod files;
+pub use files::finalize_file;
 use targets::{conversion_available, target};
 
 #[derive(Clone, Copy, Default)]
@@ -36,6 +45,11 @@ fn text<'a>(v: &'a Value, k: &str) -> &'a str {
 }
 fn array<'a>(v: &'a Value, k: &str) -> &'a [Value] {
     v[k].as_array().map(Vec::as_slice).unwrap_or_default()
+}
+fn legacy_uuid(value: &str) -> Option<Uuid> {
+    forge_core::text::is_uuid(value)
+        .then(|| value.parse().ok())
+        .flatten()
 }
 fn id(v: &Value, k: &str) -> Result<Uuid, StoreError> {
     text(v, k).parse().map_err(|_| StoreError::InvalidInput)

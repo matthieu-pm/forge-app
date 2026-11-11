@@ -4,6 +4,17 @@ use super::*;
 fn entries(v: &Value) -> &[Value] {
     v.as_array().map(Vec::as_slice).unwrap_or_default()
 }
+pub fn ordered_entries(manifest: &Value) -> Vec<&Value> {
+    let mut values: Vec<_> = entries(&manifest["entries"]).iter().collect();
+    let collator = icu_collator::Collator::try_new(Default::default(), Default::default()).unwrap();
+    values.sort_by(|a, b| {
+        collator.compare(
+            a["canonicalId"].as_str().unwrap_or(text(a, "id")),
+            b["canonicalId"].as_str().unwrap_or(text(b, "id")),
+        )
+    });
+    values
+}
 fn remove(v: &mut Value, keys: &[&str]) {
     if let Some(o) = v.as_object_mut() {
         for key in keys {

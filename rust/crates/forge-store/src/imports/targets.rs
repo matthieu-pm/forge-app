@@ -162,7 +162,7 @@ pub(super) async fn target(
     lock: bool,
     options: ImportOptions,
 ) -> Result<Option<Value>, StoreError> {
-    let Ok(uid) = identifier.parse::<Uuid>() else {
+    let Some(uid) = legacy_uuid(identifier) else {
         return Ok(None);
     };
     let kind = text(e, "kind");
@@ -248,7 +248,7 @@ pub(super) async fn conversion_available(
     if e["kind"] != "issue" || array(e, "files").is_empty() {
         return Ok(false);
     }
-    let Ok(uid) = identifier.parse::<Uuid>() else {
+    let Some(uid) = legacy_uuid(identifier) else {
         return Ok(false);
     };
     let Some(row) = raw(c, a, "issue", uid, false).await? else {

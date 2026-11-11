@@ -28,6 +28,38 @@ async fn lock(connection: &mut PgConnection, team: Uuid) -> Result<(), StoreErro
         .await?;
     Ok(())
 }
+pub(super) async fn import_date(
+    c: &mut PgConnection,
+    a: &Actor,
+    team: Uuid,
+    start: &str,
+) -> Result<Uuid, StoreError> {
+    lock(c, team).await?;
+    if let Some(id) = sqlx::query_scalar::<_, Uuid>(
+        "SELECT id FROM issue_cycles WHERE team_id=$1 AND start_date=$2",
+    )
+    .bind(team)
+    .bind(start)
+    .fetch_optional(&mut *c)
+    .await?
+    {
+        return Ok(id);
+    }
+    fields::require_team(c, a, team).await?;
+    let stored = stored(c, a, team, "cycles").await?;
+    let settings = decoded(stored.as_ref(), "cycles")?;
+    let zone = timezone(c, team, &settings).await?;
+    let end = calendar::add_days(
+        start,
+        settings["duration"]
+            .as_i64()
+            .ok_or(StoreError::InvalidInput)?
+            * 7
+            - 1,
+    )
+    .map_err(|_| StoreError::InvalidInput)?;
+    Ok(sqlx::query_scalar("INSERT INTO issue_cycles(workspace_id,team_id,start_date,end_date,timezone) VALUES($1,$2,$3,$4,$5) RETURNING id").bind(&a.workspace_id).bind(team).bind(start).bind(end).bind(zone).fetch_one(c).await?)
+}
 async fn stored(
     connection: &mut PgConnection,
     actor: &Actor,

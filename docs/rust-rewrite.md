@@ -38,7 +38,7 @@ gate pass.
 | 2c4c | Account/workspace preferences and preference import | Passed available gate |
 | 2c4d1 | Legacy source validation, content adapters and import manifests | Passed available gate |
 | 2c4d2a | Authenticated import previews and private source checkpoints | Passed available gate |
-| 2c4d2b | Canonical import execution, reconciliation and cleanup | Pending |
+| 2c4d2b | Canonical import execution, reconciliation and cleanup | Passed available gate |
 | 3 | Agent execution, approvals, streams, models, files, retention, jobs, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -623,3 +623,34 @@ these routes do not represent a completed rewrite.
   The original **661 skipped tests in 34 files** remain skipped; they are not
   counted as executed acceptance.
 - Gate log: `.forge/rust-rewrite/milestone-2c4d2a-final.log`.
+
+### Milestone 2c4d2b
+
+- Added command-backed batches with live authorization on receipt replay, ten-record
+  limits, graph and workspace locks, per-record SQL savepoints and atomic import
+  checkpoints, audit events and outbox publication. Failed records remain private
+  and retryable while successful records retain their canonical identities.
+- Dependency resolution prefers the reviewed source snapshot and checks completed
+  reference mappings against the original owner, preserved bytes and current
+  resource visibility. Aliases, canonical projections and changed shared records
+  require current comparisons; an imported revision marker cannot authorize a
+  duplicate canonical record.
+- Added explicit reviewed choices and destination confirmation. Canonical project
+  and initiative commands, issue field resolution, resource boards, document
+  revisions and view reference validation are shared with ordinary writes.
+- File finalization checks source checksums, verified upload intents, ownership
+  and attachment targets. Legacy inline conversion preserves anchors and widths;
+  attaching a file does not silently accept unrelated later shared edits.
+- Reconciliation checks the locked backups, record fingerprints, relationships and
+  attached files. Completion and cleanup require the current report fingerprint
+  and acknowledgement of retained exclusions. Cleanup compares exact source
+  bytes, preserves newer drafts and existing favorites, and retains private
+  recovery backups. Explicit retry can reopen an uncleaned settlement.
+- Added authenticated read, batch, choice, file, retry, pause, report and cutover
+  endpoints beneath `/api/workspace/imports`. These are first-party services;
+  the import UI and provider-backed upload transport remain later milestones.
+- Full milestone gate passed: **208 Rust tests**, **2,959 enabled TypeScript
+  tests**, all typechecks, source-reference drift checks, formatting and Clippy.
+  The reference suite still skips **661 tests in 34 files**; hosted/provider
+  acceptance remains separately qualified.
+- Gate log: `.forge/rust-rewrite/milestone-2c4d2b-final.log`.

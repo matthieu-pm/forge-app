@@ -36,6 +36,14 @@ pub fn router_with_state(state: state::AppState) -> Router {
     let auth_routes = Router::new()
         .route("/api/workspace/imports", post(imports::read))
         .route("/api/workspace/imports/prepare", post(imports::prepare))
+        .route("/api/workspace/imports/read", post(imports::read_one))
+        .route("/api/workspace/imports/batch", post(imports::batch))
+        .route("/api/workspace/imports/choose", post(imports::choose))
+        .route("/api/workspace/imports/file", post(imports::file))
+        .route("/api/workspace/imports/retry", post(imports::retry))
+        .route("/api/workspace/imports/pause", post(imports::pause))
+        .route("/api/workspace/imports/cutover", post(imports::cutover))
+        .route("/api/workspace/imports/report", post(imports::report))
         .merge(
             Router::new()
                 .route(

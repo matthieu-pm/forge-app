@@ -109,6 +109,20 @@ struct Save<'a> {
     changes: &'a Value,
     options: InitiativeOptions,
 }
+pub(crate) async fn import_changes(
+    c: &mut PgConnection,
+    a: &Actor,
+    changes: Value,
+    options: InitiativeOptions,
+) -> Result<Vec<OutboxEvent>, StoreError> {
+    let changes = parse(contract::changes(changes))?;
+    let handler = Save {
+        changes: &changes,
+        options,
+    };
+    handler.authorize(c, a, None).await?;
+    Ok(handler.run(c, a).await?.events)
+}
 #[async_trait]
 impl CommandHandler for Save<'_> {
     type Output = Saved;

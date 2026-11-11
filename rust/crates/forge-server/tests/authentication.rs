@@ -1792,3 +1792,102 @@ async fn imports_http_binds_private_previews_to_the_active_session() {
         StatusCode::UNAUTHORIZED
     );
 }
+
+#[tokio::test]
+async fn import_execution_http_uses_private_server_sources_and_reconciles_before_cleanup() {
+    let f = Fixture::new().await;
+    let (_, token, cookie) = f.account().await;
+    forge_store::workspaces::create(
+        &f.database,
+        &token,
+        "Import execution HTTP",
+        &Uuid::new_v4().to_string(),
+        None,
+    )
+    .await
+    .unwrap();
+    let actor = forge_store::authority::session_actor(&f.database, &token)
+        .await
+        .unwrap();
+    let team=forge_store::teams::create(&f.database,&actor,&forge_core::teams::CreateTeam::parse(json!({"name":"Import team","identifier":"IMP","icon":{"kind":"icon","value":"UserGroup03Icon","color":"#818cf8"},"timezone":"Europe/Paris"})).unwrap()).await.unwrap();
+    let (_, _, state) = f
+        .request("GET", "/api/workspace/product-state", Some(&cookie), None)
+        .await;
+    let identity = json!({"workspaceId":state["workspaceId"],"sessionId":state["sessionId"]});
+    let mut issue = forge_core::issues::blank("todo");
+    for (k, v) in [
+        ("id", json!("http-legacy")),
+        ("title", json!("HTTP imported issue")),
+        ("number", json!(1)),
+        ("creator", json!(actor.user_id)),
+        ("createdAt", json!("2026-01-01T00:00:00.000Z")),
+        ("updatedAt", json!("2026-01-01T00:00:00.000Z")),
+        ("statusChangedAt", json!("2026-01-01T00:00:00.000Z")),
+        ("completedAt", Value::Null),
+        ("suggestedLabel", json!("")),
+    ] {
+        issue[k] = v;
+    }
+    let source = json!({"version":1,"issues":[issue]}).to_string();
+    sqlx::query("INSERT INTO product_state(workspace_id,owner_id,owner_user_id,key,encoded_value) VALUES($1,$2,$3,$4,$5)").bind(&actor.workspace_id).bind(format!("user:{}",actor.user_id)).bind(&actor.user_id).bind(format!("forge:team-issues:v1:{}",team.id)).bind(serde_json::to_string(&source).unwrap()).execute(f.database.pool()).await.unwrap();
+    let (status, _, prepared) = f
+        .request(
+            "POST",
+            "/api/workspace/imports/prepare",
+            Some(&cookie),
+            Some(identity.clone()),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{prepared}");
+    assert_eq!(prepared["pendingCount"], 1);
+    let mut request = identity;
+    request["id"] = prepared["id"].clone();
+    request["revision"] = prepared["revision"].clone();
+    let (status, _, saved) = f
+        .request(
+            "POST",
+            "/api/workspace/imports/batch",
+            Some(&cookie),
+            Some(request.clone()),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{saved}");
+    assert_eq!(saved["savedCount"], 1);
+    request["revision"] = saved["revision"].clone();
+    let (status, _, report) = f
+        .request(
+            "POST",
+            "/api/workspace/imports/report",
+            Some(&cookie),
+            Some(request.clone()),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{report}");
+    assert_eq!(report["report"]["ready"], true);
+    let mut cleanup = request.clone();
+    cleanup["action"] = json!("cleanup");
+    cleanup["reportFingerprint"] = report["report"]["fingerprint"].clone();
+    cleanup["acknowledgeExclusions"] = json!(true);
+    let (status, _, cleaned) = f
+        .request(
+            "POST",
+            "/api/workspace/imports/cutover",
+            Some(&cookie),
+            Some(cleanup),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{cleaned}");
+    assert!(cleaned["cleanedAt"].is_string());
+    for route in [
+        "read", "batch", "choose", "file", "retry", "pause", "cutover", "report",
+    ] {
+        let path = format!("/api/workspace/imports/{route}");
+        assert_eq!(
+            f.request("POST", &path, None, Some(request.clone()))
+                .await
+                .0,
+            StatusCode::UNAUTHORIZED,
+            "{route}"
+        );
+    }
+}

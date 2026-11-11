@@ -13,6 +13,17 @@ pub use history::history;
 pub use query::query;
 mod edit;
 mod fields;
+mod import;
+pub(crate) use import::{import_issue, import_project_snapshot};
+pub(crate) async fn bind_import_files(
+    c: &mut PgConnection,
+    a: &Actor,
+    issue: Uuid,
+    ids: &[Uuid],
+    existing: Value,
+) -> Result<Value, StoreError> {
+    comments::bind_files(c, a, issue, ids, existing, None).await
+}
 use crate::{
     Database, StoreError,
     authority::current_actor,
