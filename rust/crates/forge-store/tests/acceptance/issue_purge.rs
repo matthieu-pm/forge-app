@@ -9,7 +9,7 @@ use std::sync::{
     Mutex,
     atomic::{AtomicBool, Ordering},
 };
-static SERIAL: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+pub(super) static SERIAL: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 #[derive(Default)]
 struct Blobs {
     fail: AtomicBool,

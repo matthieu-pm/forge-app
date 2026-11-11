@@ -50,7 +50,8 @@ gate pass.
 | 3b5b | Agent thread/run persistence, event ledger, approval and invocation reservations | Passed available gate |
 | 3b5c | Live approval authority, exact input binding and single-use consumption | Passed available gate |
 | 3b5d | Capability dispatch, current target authority and atomic approved team commands | Passed available gate |
-| 3b5e | Agent attachments/artifacts, private bytes, integrity and retention | In progress |
+| 3b5e | Agent attachments/artifacts, private bytes, integrity and retention | Passed available gate |
+| 3b5f | Model credentials, provider discovery, connection management and routing catalogs | In progress |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -927,3 +928,27 @@ these routes do not represent a completed rewrite.
 - Artifact capability dispatch has an injected owning-service boundary and
   validates its public projection. The actual artifact/attachment byte lifecycle
   is the next milestone; no agent execution HTTP endpoint is exposed yet.
+
+### Milestone 3b5e
+
+- Full gate passed: 307 Rust tests, 2,959 enabled reference tests, typechecking,
+  formatting, Clippy and source export checks. The 661 fixture-dependent
+  reference tests remain skipped. Log: `.forge/rust-rewrite/milestone-3b5e-final.log`.
+- Agent attachments preserve ordered, private resolution, canonical base64,
+  upload policy, per-file/per-turn limits and expiration. Artifacts preserve
+  deduplication, permissive content decoding, empty files and legacy download
+  tokens. Both verify byte length/checksum and recheck access after storage I/O.
+- Artifact metadata and its event publish atomically. Failed publication probes
+  acquire the publication lock before deciding whether metadata owns the bytes;
+  failed recovery publication cannot delete a committed object's content.
+- Retention prepares the independent journal before deleting bytes, rechecks rows
+  under locks, retries provider failures and serializes competing workers. Expired
+  loop upload reservations preserve published objects and remove only abandoned
+  bytes. Loop-authorized reservation/publication still belongs to the loop work.
+- Source exports cover 96 configuration cases and 90 content-decoding cases.
+  PostgreSQL acceptance covers cross-user access, revocation during I/O,
+  corruption, atomic rollback, retention races and journal failure modes. The
+  local storage adapter also verifies empty agent objects and exclusive writes.
+- The initial gate found one test lock-scope lint; all functional tests passed.
+  After correction, the complete gate passed. Runtime/HTTP composition and live
+  provider qualification remain pending.

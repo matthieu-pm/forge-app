@@ -58,7 +58,7 @@ pub fn provider_enabled(flags: &Value, provider: &str) -> bool {
     PROVIDERS.contains(&provider)
         && flags[format!("agent_provider_{}", provider.replace('-', "_"))] == true
 }
-fn positive(value: Option<&String>) -> Option<f64> {
+pub(super) fn positive(value: Option<&String>) -> Option<f64> {
     let value = crate::text::trim(value?);
     let n = if let Some(raw) = value
         .strip_prefix("0x")

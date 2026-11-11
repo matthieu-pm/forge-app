@@ -52,7 +52,7 @@ impl FileLookup {
             }
             _ => {
                 policy::scope(&a, ApiScope::AgentsRead)?;
-                artifact(&mut tx, &a, key).await?
+                artifact_metadata(&mut tx, &a, key, true).await?
             }
         };
         tx.commit().await?;
@@ -130,7 +130,12 @@ fn within_team(column: &str) -> String {
         "EXISTS(SELECT 1 FROM teams scope_team WHERE scope_team.id={column} AND scope_team.workspace_id=l.workspace_id AND scope_team.deleted_at IS NULL AND (scope_team.id=l.team_id OR (lr.fields->>'teamAccess'='all-public-teams' AND l.fields->>'teamAccess'='all-public-teams' AND scope_team.visibility='workspace' AND EXISTS(SELECT 1 FROM teams owner_team WHERE owner_team.id=l.team_id AND owner_team.workspace_id=l.workspace_id AND owner_team.visibility='workspace' AND owner_team.deleted_at IS NULL))))"
     )
 }
-async fn artifact(c: &mut PgConnection, a: &Actor, key: Uuid) -> Result<Option<Value>, StoreError> {
+pub(crate) async fn artifact_metadata(
+    c: &mut PgConnection,
+    a: &Actor,
+    key: Uuid,
+    only_live: bool,
+) -> Result<Option<Value>, StoreError> {
     let source = format!(
         "((lr.event->>'entity' IS DISTINCT FROM 'issue' OR {}) AND (lr.event->>'entity' IS DISTINCT FROM 'project' OR {}) AND (lr.event->>'entity' IS DISTINCT FROM 'team' OR {}) AND (lr.event->>'entity' IS DISTINCT FROM 'cycle' OR EXISTS(SELECT 1 FROM issue_cycles cycle WHERE cycle.workspace_id=$1 AND cycle.id::text=lr.event->>'entityId' AND {})) AND (lr.event->>'entity' IS DISTINCT FROM 'initiative' OR EXISTS(SELECT 1 FROM initiative_projects ip JOIN project_teams pt ON pt.project_id=ip.project_id AND pt.workspace_id=ip.workspace_id WHERE ip.workspace_id=$1 AND ip.initiative_id::text=lr.event->>'entityId' AND {})))",
         policy::readable_issue("(lr.event->>'entityId')::uuid"),
@@ -148,19 +153,25 @@ async fn artifact(c: &mut PgConnection, a: &Actor, key: Uuid) -> Result<Option<V
         within_team("(lr.event->>'entityId')::uuid")
     );
     let q = format!(
-        "SELECT to_jsonb(f),(SELECT lr.event FROM loop_runs lr WHERE lr.agent_run_id=r.id),(SELECT CASE WHEN lr.event ? 'comment' OR lr.event ? 'update' THEN forge_loop_snapshot(lr.event->>'entity',(lr.event->>'entityId')::uuid,lr.workspace_id) ELSE NULL END FROM loop_runs lr WHERE lr.agent_run_id=r.id)::text FROM agent_artifacts f JOIN agent_runs r ON r.id=f.run_id JOIN agent_threads t ON t.id=r.thread_id WHERE f.id=$4 AND t.workspace_id=$1 AND f.deleted_at IS NULL AND (f.retention_expires_at IS NULL OR f.retention_expires_at>clock_timestamp()) AND ((t.created_by_user_id=$3 AND NOT EXISTS(SELECT 1 FROM loop_runs lr WHERE lr.agent_run_id=r.id)) OR EXISTS(SELECT 1 FROM loop_runs lr JOIN team_loops l ON l.id=lr.loop_id AND l.workspace_id=lr.workspace_id WHERE lr.agent_run_id=r.id AND l.workspace_id=$1 AND l.deleted_at IS NULL AND {source} AND ({scope}) AND {}))",
+        "SELECT to_jsonb(f),(SELECT lr.event FROM loop_runs lr WHERE lr.agent_run_id=r.id)::text,(SELECT CASE WHEN lr.event ? 'comment' OR lr.event ? 'update' THEN forge_loop_snapshot(lr.event->>'entity',(lr.event->>'entityId')::uuid,lr.workspace_id) ELSE NULL END FROM loop_runs lr WHERE lr.agent_run_id=r.id)::text FROM agent_artifacts f JOIN agent_runs r ON r.id=f.run_id JOIN agent_threads t ON t.id=r.thread_id WHERE f.id=$4 AND t.workspace_id=$1 AND (NOT $5::boolean OR (f.deleted_at IS NULL AND (f.retention_expires_at IS NULL OR f.retention_expires_at>clock_timestamp()))) AND ((t.created_by_user_id=$3 AND NOT EXISTS(SELECT 1 FROM loop_runs lr WHERE lr.agent_run_id=r.id)) OR EXISTS(SELECT 1 FROM loop_runs lr JOIN team_loops l ON l.id=lr.loop_id AND l.workspace_id=lr.workspace_id WHERE lr.agent_run_id=r.id AND l.workspace_id=$1 AND l.deleted_at IS NULL AND {source} AND ({scope}) AND {}))",
         policy::readable_team("l.team_id")
     );
-    let row: Option<(Value, Option<Value>, Option<String>)> = sqlx::query_as(&q)
+    let row: Option<(Value, Option<String>, Option<String>)> = sqlx::query_as(&q)
         .bind(&a.workspace_id)
         .bind(policy::privileged(a))
         .bind(&a.user_id)
         .bind(key)
+        .bind(only_live)
         .fetch_optional(c)
         .await?;
     let Some((file, event, source)) = row else {
         return Ok(None);
     };
+    let event = event
+        .as_deref()
+        .map(forge_core::json::parse)
+        .transpose()
+        .map_err(|_| StoreError::InvalidInput)?;
     let source = source
         .as_deref()
         .map(forge_core::json::parse)

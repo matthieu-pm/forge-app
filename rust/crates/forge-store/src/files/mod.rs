@@ -13,6 +13,7 @@ mod authorization;
 mod lookup;
 mod publication;
 pub use lookup::FileLookup;
+pub(crate) use lookup::artifact_metadata;
 mod reservations;
 use authorization::{assert_policy, authorize_target, fence};
 

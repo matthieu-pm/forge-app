@@ -2,6 +2,8 @@ use super::*;
 use chrono::{DateTime, Duration, Utc};
 use forge_store::agents::*;
 
+#[path = "agent_files.rs"]
+mod agent_file_acceptance;
 #[path = "agent_approvals.rs"]
 mod approval_service_acceptance;
 #[path = "agent_capabilities.rs"]

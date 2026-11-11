@@ -11,6 +11,8 @@ use std::sync::{
 };
 use uuid::Uuid;
 
+#[path = "acceptance/agent_file_recovery.rs"]
+mod agent_file_recovery;
 #[path = "acceptance/agent_recovery.rs"]
 mod agent_recovery;
 

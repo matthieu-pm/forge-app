@@ -6,6 +6,7 @@ pub mod approval_service;
 pub mod approvals;
 pub mod capabilities;
 pub mod events;
+pub mod files;
 pub mod invocations;
 pub mod preferences;
 pub mod records;

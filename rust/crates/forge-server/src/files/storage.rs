@@ -440,6 +440,20 @@ impl delivery::Blobs for Storage {
 }
 pub struct Inspector;
 #[async_trait]
+impl forge_core::agents::files::Blobs for Storage {
+    async fn put(&self, reference: &str, bytes: Vec<u8>) -> Result<(), UploadError> {
+        Storage::put(self, reference, bytes).await
+    }
+    async fn get(&self, reference: &str, max_bytes: usize) -> Result<Option<Vec<u8>>, UploadError> {
+        delivery::Blobs::get(self, reference, max_bytes, 30_000)
+            .await
+            .map_err(|_| UploadError::Transport)
+    }
+    async fn delete(&self, reference: &str) -> Result<(), UploadError> {
+        upload::Transport::delete(self, reference).await
+    }
+}
+#[async_trait]
 impl upload::Inspector for Inspector {
     async fn detect(&self, head: &[u8]) -> Result<Option<String>, UploadError> {
         let mut head = head;

@@ -157,6 +157,30 @@ async fn file_preview_and_download_responses_match_reference_and_legacy_filename
 async fn local_storage_has_bounded_reads_exclusive_writes_and_recoverable_cancelled_uploads() {
     let dir = Directory::new();
     let storage = Storage::local(&dir.0).unwrap();
+    let agent_key = format!("attachments/{}", Uuid::new_v4());
+    forge_core::agents::files::Blobs::put(&storage, &agent_key, Vec::new())
+        .await
+        .unwrap();
+    assert_eq!(
+        forge_core::agents::files::Blobs::get(&storage, &agent_key, 0)
+            .await
+            .unwrap(),
+        Some(Vec::new())
+    );
+    assert!(
+        forge_core::agents::files::Blobs::put(&storage, &agent_key, vec![1])
+            .await
+            .is_err()
+    );
+    forge_core::agents::files::Blobs::delete(&storage, &agent_key)
+        .await
+        .unwrap();
+    assert!(
+        forge_core::agents::files::Blobs::get(&storage, &agent_key, 0)
+            .await
+            .unwrap()
+            .is_none()
+    );
     let key = format!("files/{}", Uuid::new_v4());
     assert!(storage.get(&key, 5, 1000).await.unwrap().is_none());
     storage.put(&key, b"hello".to_vec()).await.unwrap();

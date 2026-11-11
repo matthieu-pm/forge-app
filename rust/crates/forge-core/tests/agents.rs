@@ -14,6 +14,42 @@ fn cases(group: &str) -> &'static Vec<Value> {
     DATA["agents"][group].as_array().unwrap()
 }
 #[test]
+fn agent_file_configuration_and_byte_decoding_match_source() {
+    use forge_core::agents::files;
+    for case in DATA["agentFiles"]["settings"].as_array().unwrap() {
+        assert_eq!(
+            json!(files::Settings::from_environment(
+                &serde_json::from_value(case["env"].clone()).unwrap()
+            )),
+            case["value"],
+            "{case}"
+        );
+    }
+    for case in DATA["agentFiles"]["decoding"].as_array().unwrap() {
+        let content = case["content"].as_str().unwrap();
+        if case["kind"] == "artifact" {
+            assert_eq!(
+                json!(files::decode_artifact(
+                    content,
+                    case["encoding"] == "base64"
+                )),
+                case["bytes"],
+                "{case}"
+            );
+        } else {
+            let result = files::decode_attachment(content);
+            assert_eq!(result.is_ok(), case["valid"].as_bool().unwrap(), "{case}");
+            match result {
+                Ok(bytes) => assert_eq!(json!(bytes), case["bytes"], "{case}"),
+                Err(error) => {
+                    assert_eq!(json!(error.code), case["code"]);
+                    assert_eq!(error.message, case["message"]);
+                }
+            }
+        }
+    }
+}
+#[test]
 fn production_capability_registry_and_input_schemas_match_the_source() {
     use forge_core::agents::capabilities;
     assert_eq!(
