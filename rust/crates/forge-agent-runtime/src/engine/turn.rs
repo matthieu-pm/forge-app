@@ -260,7 +260,7 @@ impl Engine {
                             .await?;
                         continue;
                     }
-                    let prepared = match self.executor.prepare(&call.name, call.input.clone()) {
+                    let prepared = match self.prepare_authored(&call.name, call.input.clone()) {
                         Ok(value) => value,
                         Err(error) => {
                             self.settle_tool(

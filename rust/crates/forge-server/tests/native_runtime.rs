@@ -333,3 +333,50 @@ async fn native_frames_reject_gaps_foreign_turns_truncation_invalid_utf8_and_wro
         server.abort();
     }
 }
+
+#[tokio::test]
+async fn oversized_and_sensitive_tool_data_are_private_while_display_receipts_replay_safely() {
+    for mode in [Mode::LargeToolData, Mode::SensitiveToolData] {
+        let f = Fixture::new(mode, false).await;
+        let runtime = NativeRuntime::new(f.options()).unwrap();
+        let saved = Arc::new(Saved::default());
+        let ctx = context(saved.clone());
+        let events = collect(runtime.start(ctx.clone(), "Keep this task".into(), vec![])).await;
+        assert_eq!(events.last().unwrap()["type"], "run.completed");
+        for event in &events {
+            assert!(forge_core::agents::contracts::safe_payload(&event["payload"]).is_ok());
+        }
+        let started = events.iter().find(|e| e["type"] == "tool.started").unwrap();
+        let completed = events
+            .iter()
+            .find(|e| e["type"] == "tool.completed")
+            .unwrap();
+        assert_eq!(started["payload"]["displayDataOmitted"], true);
+        assert_eq!(completed["payload"]["displayDataOmitted"], true);
+        let expected = if matches!(mode, Mode::SensitiveToolData) {
+            "Bearer fixture-credential-should-not-display".to_string()
+        } else {
+            "😀".repeat(40_000)
+        };
+        assert!(!serde_json::to_string(&events).unwrap().contains(&expected));
+        let private = f.store.load(&channel(&ctx)).await.unwrap();
+        assert_eq!(private.state.snapshot()["todos"][0]["content"], expected);
+        let private_events = f.store.events(&channel(&ctx), 0, 64).await.unwrap();
+        assert!(
+            serde_json::to_string(&private_events.iter().map(|e| &e.value).collect::<Vec<_>>())
+                .unwrap()
+                .contains(&expected)
+        );
+        let mut replay = ctx.clone();
+        let mut cursor = Cursor::decode(&saved.last()).unwrap();
+        cursor.stream_index = 0;
+        replay.runtime_session_id = Some(cursor.encode());
+        let repeated = collect(runtime.reconnect(replay)).await;
+        let repeated_tool = repeated
+            .iter()
+            .filter(|e| matches!(e["type"].as_str(), Some("tool.started" | "tool.completed")))
+            .collect::<Vec<_>>();
+        assert_eq!(repeated_tool, vec![started, completed]);
+        f.shutdown().await;
+    }
+}

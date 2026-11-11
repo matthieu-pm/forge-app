@@ -467,3 +467,44 @@ fn compaction_state_is_closed_and_only_allows_settled_tool_boundaries() {
     snapshot["calls"] = json!([{"id":"call","name":"read_file","input":{},"input_hash":null,"phase":"queued","request_id":null,"decision":null,"output":null}]);
     assert!(State::restore(snapshot, &channel).is_err());
 }
+
+#[tokio::test]
+async fn unreviewable_write_inputs_fail_before_approval_or_any_external_effect() {
+    for code in [
+        "λ".repeat(80_000),
+        "return 'Bearer fixture-credential-should-not-display'".into(),
+    ] {
+        let channel = make_channel("owner");
+        let mut state = initial(&channel);
+        let journal = Arc::new(Memory::new(state.clone()));
+        let model = Arc::new(Scripted::new(vec![vec![call(
+            "execute_program",
+            json!({"language":"javascript","code":code,"capabilityManifest":[{"id":"teams.update","version":"1","maximumCalls":1}]}),
+        )]]));
+        let sandbox = Arc::new(FakeSandbox::default());
+        let (engine, calls) = setup(model, journal.clone(), Some(sandbox.clone()));
+        engine
+            .drive(
+                &channel,
+                &mut state,
+                journal.as_ref(),
+                &Cancellation::default(),
+                deadline(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(state.phase(), Phase::Complete);
+        assert_eq!(sandbox.runs.load(Ordering::SeqCst), 0);
+        assert!(calls.requests.lock().unwrap().is_empty());
+        let events = journal.normalized();
+        assert!(!events.iter().any(|e| e["type"] == "approval.requested"));
+        assert!(state.history().iter().any(|m| {
+            m.to_string()
+                .contains("approval input cannot be displayed safely")
+        }));
+        for event in events {
+            let event = forge_core::agents::presentation::native_event(event).unwrap();
+            assert!(forge_core::agents::contracts::safe_payload(&event["payload"]).is_ok());
+        }
+    }
+}

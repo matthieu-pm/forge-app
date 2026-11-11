@@ -390,7 +390,11 @@ impl Stream {
                     Some(cursor.stream_index as f64),
                 )
                 .map_err(|_| FAILED)?
-                .into();
+                .into_iter()
+                .map(|event| {
+                    forge_core::agents::presentation::native_event(event).map_err(|_| FAILED)
+                })
+                .collect::<Result<VecDeque<_>, _>>()?;
                 self.terminal_seen |= self.queue.iter().any(|e| {
                     matches!(
                         e["type"].as_str(),

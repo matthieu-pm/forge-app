@@ -17,6 +17,17 @@ pub(super) struct Session {
     tools: framework::Executor,
 }
 impl Engine {
+    pub(super) fn prepare_authored(
+        &self,
+        name: &str,
+        input: Value,
+    ) -> Result<crate::tools::Prepared> {
+        let prepared = self.executor.prepare(name, input)?;
+        if prepared.requires_approval() {
+            forge_core::agents::presentation::approval_input(prepared.input()).map_err(|_|Error("The approval input cannot be displayed safely. Reduce its size or remove authentication data."))?;
+        }
+        Ok(prepared)
+    }
     pub(super) fn prepare_input(&self, name: &str, input: Value) -> Result<Value> {
         if name == "todo" {
             forge_core::agents::context::input(name, input)
@@ -25,7 +36,7 @@ impl Engine {
             forge_core::agents::framework::input(name, input)
                 .map_err(|_| Error("Invalid framework tool input."))
         } else {
-            Ok(self.executor.prepare(name, input)?.input().clone())
+            Ok(self.prepare_authored(name, input)?.input().clone())
         }
     }
     pub(super) async fn ensure_workspace(

@@ -826,68 +826,106 @@ async fn configured_agent_services_start_fixture_turns_without_provider_network_
 
 #[tokio::test]
 async fn configured_native_transport_runs_successive_public_agent_turns_through_the_rust_service() {
-    let native =
-        native_runtime_support::Fixture::new(native_runtime_support::Mode::Finish, false).await;
-    let mut f = AgentFixture::new().await;
-    let env = std::collections::HashMap::from([
-        ("FORGE_RUST_AGENT_TRANSPORT".into(), "native".into()),
-        (
-            "FORGE_NATIVE_AGENT_RUNTIME_URL".into(),
-            native.origin.to_string(),
-        ),
-        (
-            "FORGE_AGENT_CHANNEL_SECRET".into(),
-            native_runtime_support::SECRET.into(),
-        ),
-        ("FORGE_AGENT_LOCAL_INGEST_SECRET".into(), SECRET.into()),
-        ("FORGE_AGENT_CAPABILITY_SECRET".into(), SECRET.into()),
-        ("FORGE_AGENT_MODEL_ACCESS_SECRET".into(), SECRET.into()),
-        ("OPENAI_API_KEY".into(), "fixture-managed-key".into()),
-        ("FORGE_MANAGED_OPENAI_MODELS".into(), "gpt-5".into()),
-    ]);
-    let settings = forge_server::agents::Settings::configured(
-        f.f.database.clone(),
-        forge_server::files::storage::Storage::local(&f.dir).unwrap(),
-        &env,
-    )
-    .unwrap();
-    f.f.app = forge_server::router_with_state(
-        AppState::configured_database(
+    for mode in [
+        native_runtime_support::Mode::Finish,
+        native_runtime_support::Mode::LargeToolData,
+        native_runtime_support::Mode::SensitiveToolData,
+    ] {
+        let native = native_runtime_support::Fixture::new(mode, false).await;
+        let mut f = AgentFixture::new().await;
+        let env = std::collections::HashMap::from([
+            ("FORGE_RUST_AGENT_TRANSPORT".into(), "native".into()),
+            (
+                "FORGE_NATIVE_AGENT_RUNTIME_URL".into(),
+                native.origin.to_string(),
+            ),
+            (
+                "FORGE_AGENT_CHANNEL_SECRET".into(),
+                native_runtime_support::SECRET.into(),
+            ),
+            ("FORGE_AGENT_LOCAL_INGEST_SECRET".into(), SECRET.into()),
+            ("FORGE_AGENT_CAPABILITY_SECRET".into(), SECRET.into()),
+            ("FORGE_AGENT_MODEL_ACCESS_SECRET".into(), SECRET.into()),
+            ("OPENAI_API_KEY".into(), "fixture-managed-key".into()),
+            ("FORGE_MANAGED_OPENAI_MODELS".into(), "gpt-5".into()),
+        ]);
+        let settings = forge_server::agents::Settings::configured(
             f.f.database.clone(),
-            AuthSettings::new(SECRET.into(), ORIGIN).unwrap(),
-            None,
+            forge_server::files::storage::Storage::local(&f.dir).unwrap(),
+            &env,
         )
-        .with_agents(settings),
-    );
-    let thread = f.thread().await;
-    for message in ["Remember marigold.", "What is the marker?"] {
-        let response = f
-            .raw(
-                "POST",
-                "/api/agent/runs",
-                Some(&f.cookie),
-                &[("origin", ORIGIN)],
-                Body::from(
-                    json!({"threadId":thread,"selectionMode":"auto","message":message}).to_string(),
-                ),
+        .unwrap();
+        f.f.app = forge_server::router_with_state(
+            AppState::configured_database(
+                f.f.database.clone(),
+                AuthSettings::new(SECRET.into(), ORIGIN).unwrap(),
+                None,
             )
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-        let bytes = response.into_body().collect().await.unwrap().to_bytes();
-        let text = String::from_utf8_lossy(&bytes);
-        assert!(text.contains("event: run.completed"), "{text}");
-        assert!(text.contains("The marker is marigold."));
-        assert!(!text.contains("fixture-managed-key"));
+            .with_agents(settings),
+        );
+        let thread = f.thread().await;
+        for message in ["Remember marigold.", "What is the marker?"] {
+            let response = f
+                .raw(
+                    "POST",
+                    "/api/agent/runs",
+                    Some(&f.cookie),
+                    &[("origin", ORIGIN)],
+                    Body::from(
+                        json!({"threadId":thread,"selectionMode":"auto","message":message})
+                            .to_string(),
+                    ),
+                )
+                .await;
+            assert_eq!(response.status(), StatusCode::OK);
+            let bytes = response.into_body().collect().await.unwrap().to_bytes();
+            let text = String::from_utf8_lossy(&bytes);
+            assert!(text.contains("event: run.completed"), "{text}");
+            assert!(text.contains("The marker is marigold."));
+            assert!(!text.contains("fixture-managed-key"));
+        }
+        let cursor: String =
+            sqlx::query_scalar("SELECT runtime_session_id FROM agent_threads WHERE id=$1")
+                .bind(uuid::Uuid::parse_str(&thread).unwrap())
+                .fetch_one(&f.f.pool)
+                .await
+                .unwrap();
+        let cursor = forge_server::native_runtime::Cursor::decode(&cursor).unwrap();
+        assert_eq!(cursor.conversation_id.to_string(), thread);
+        assert!(cursor.previous_run_id.is_some());
+        assert_eq!(
+            native.script.models.load(Ordering::SeqCst),
+            if matches!(mode, native_runtime_support::Mode::Finish) {
+                2
+            } else {
+                3
+            }
+        );
+        let payloads: Vec<String> = sqlx::query_scalar(
+            "SELECT payload_json::text FROM agent_events WHERE thread_id=$1 ORDER BY sequence",
+        )
+        .bind(uuid::Uuid::parse_str(&thread).unwrap())
+        .fetch_all(&f.f.pool)
+        .await
+        .unwrap();
+        for payload in &payloads {
+            assert!(
+                forge_core::agents::contracts::safe_payload(
+                    &forge_core::json::parse(payload).unwrap()
+                )
+                .is_ok()
+            );
+            assert!(!payload.contains("fixture-credential-should-not-display"));
+        }
+        if !matches!(mode, native_runtime_support::Mode::Finish) {
+            assert_eq!(
+                payloads
+                    .iter()
+                    .filter(|v| v.contains("displayDataOmitted"))
+                    .count(),
+                2
+            );
+        }
+        native.shutdown().await;
     }
-    let cursor: String =
-        sqlx::query_scalar("SELECT runtime_session_id FROM agent_threads WHERE id=$1")
-            .bind(uuid::Uuid::parse_str(&thread).unwrap())
-            .fetch_one(&f.f.pool)
-            .await
-            .unwrap();
-    let cursor = forge_server::native_runtime::Cursor::decode(&cursor).unwrap();
-    assert_eq!(cursor.conversation_id.to_string(), thread);
-    assert!(cursor.previous_run_id.is_some());
-    assert_eq!(native.script.models.load(Ordering::SeqCst), 2);
-    native.shutdown().await;
 }

@@ -437,3 +437,47 @@ async fn unavailable_workspace_and_foreign_read_stamps_fail_without_file_effects
     let legacy = State::restore(legacy, &channel).unwrap();
     assert!(legacy.snapshot()["workspace"].is_null());
 }
+
+#[tokio::test]
+async fn large_file_writes_keep_exact_private_data_with_a_bounded_display_receipt() {
+    let channel = make_channel("owner");
+    let mut state = initial(&channel);
+    let journal = Arc::new(Memory::new(state.clone()));
+    let provider = Arc::new(Provider::new(journal.clone()));
+    let content = "λ".repeat(80_000);
+    let model = model(vec![vec![call(
+        "write_file",
+        json!({"filePath":"/workspace/new","content":content}),
+    )]]);
+    let (engine, _) = configured(model, journal.clone(), provider.clone());
+    engine
+        .drive(
+            &channel,
+            &mut state,
+            journal.as_ref(),
+            &Cancellation::default(),
+            deadline(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(provider.writes.load(Ordering::SeqCst), 1);
+    assert_eq!(
+        provider
+            .files
+            .lock()
+            .unwrap()
+            .as_ref()
+            .unwrap()
+            .get("/workspace/new"),
+        Some(&content)
+    );
+    let events = journal.normalized();
+    let proposed = events
+        .iter()
+        .find(|e| e["type"] == "file.patch.proposed")
+        .unwrap();
+    assert_eq!(proposed["payload"]["input"]["content"], content);
+    let displayed = forge_core::agents::presentation::native_event(proposed.clone()).unwrap();
+    assert_eq!(displayed["payload"]["input"]["omitted"], true);
+    assert!(forge_core::agents::contracts::safe_payload(&displayed["payload"]).is_ok());
+}

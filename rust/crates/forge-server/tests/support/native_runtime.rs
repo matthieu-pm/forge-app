@@ -30,6 +30,8 @@ pub enum Mode {
     Finish,
     Approve,
     Stall,
+    LargeToolData,
+    SensitiveToolData,
 }
 pub struct Script {
     mode: Mode,
@@ -54,15 +56,28 @@ impl Model for Adapter {
         }
         let approval = matches!(self.0.mode, Mode::Approve)
             && !turn.prompt.iter().any(|v| v["role"] == "tool");
+        let tool_data = matches!(self.0.mode, Mode::LargeToolData | Mode::SensitiveToolData)
+            && !turn.prompt.iter().any(|v| v["role"] == "tool");
+        let content = if !tool_data {
+            String::new()
+        } else if matches!(self.0.mode, Mode::SensitiveToolData) {
+            "Bearer fixture-credential-should-not-display".into()
+        } else {
+            "😀".repeat(40_000)
+        };
         Ok(Completion {
-            content: if approval {
+            content: if tool_data {
+                vec![
+                    json!({"type":"tool-call","toolCallId":"save-task","toolName":"todo","input":{"todos":[{"content":content,"priority":"high","status":"pending"}]}}),
+                ]
+            } else if approval {
                 vec![
                     json!({"type":"tool-call","toolCallId":"change-team","toolName":"update_team","input":{"slug":"forge","settings":{"name":"Changed"}}}),
                 ]
             } else {
                 vec![json!({"type":"text","text":"The marker is marigold."})]
             },
-            finish: if approval {
+            finish: if approval || tool_data {
                 Finish::ToolCalls
             } else {
                 Finish::Stop

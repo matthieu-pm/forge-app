@@ -74,6 +74,7 @@ gate pass.
 | 3b5z | Engine workspace checkpoints, default file tools and conversation inheritance | Passed available gate |
 | 3b5aa | Durable task lists and source-compatible context compaction planning | Passed available gate |
 | 3b5ab | Automatic context compaction, private summaries and restart recovery | Passed available gate |
+| 3b5ac | Bounded native tool displays and exact approval-input validation | Passed available gate |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -1786,3 +1787,39 @@ these routes do not represent a completed rewrite.
   All model calls use local fixtures; no real provider or production service was
   contacted. Other framework tools, session-budget continuation, runtime cleanup,
   existing EVE conversation import and live qualification remain outstanding.
+
+
+### Milestone 3b5ac
+
+- Full milestone gate passed: 488 Rust tests and 2,959 enabled TypeScript tests.
+  Formatting, Clippy, source contracts and typechecking passed; 661 reference
+  tests across 34 files remain skipped. An initial fixture field-name error was
+  corrected before the complete rerun. Log:
+  `.forge/rust-rewrite/milestone-3b5ac-verified.log`.
+
+- Native tool inputs and results can exceed the application's 128-KiB inline
+  event limit, particularly file writes and large task lists. The application
+  adapter now projects only the display copy of oversized or sensitive tool
+  data to an explicit omission notice. The full input, output and conversation
+  remain in the private runtime journal; filesystem operations receive the
+  original contents. Public event IDs and call IDs remain stable across replay.
+  Overlong or noncanonical source receipt IDs get a stable digest-based public
+  ID; complete provider call bindings remain unchanged.
+- Small safe events remain unchanged. Call metadata must still pass the original
+  guard. Approval requests, assistant messages, artifacts and usage events are
+  never silently altered to bypass that guard; they retain their existing
+  payload limits. Downloadable representations for oversized semantic events
+  remain future work.
+- Authored write inputs must fit within 120 KiB and pass the existing sensitive
+  data checks before requesting approval. The reserved space covers approval
+  metadata and the binding hash. Inputs that cannot be presented in full become
+  explicit tool errors before any approval, sandbox allocation or write effect.
+  Canonical hashing and the approval service's exact-input checks are unchanged.
+- Acceptance exercises large and sensitive task data through the actual private
+  HTTP service and public agent API, including successive turns and stream replay.
+  The private journal retains exact data while public stored events pass their
+  existing safety/size checks. Engine tests verify exact large file writes and
+  rejection of unreviewable programs before effects; core tests prevent protected
+  event types or unsafe metadata from being made acceptable through projection.
+- No provider or production service was used. The default EVE transport remains
+  unchanged; these display projections belong to the opt-in native transport.
