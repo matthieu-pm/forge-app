@@ -4,6 +4,7 @@ pub mod auth;
 pub mod callback;
 pub use forge_core::agents::sandbox as contracts;
 pub mod execution;
+pub mod model;
 pub mod sandbox;
 pub mod tools;
 pub mod vercel;
