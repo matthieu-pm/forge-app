@@ -665,3 +665,76 @@ fn saved_views_resource_boards_and_project_queries_match_source() {
         );
     }
 }
+
+#[test]
+fn product_state_and_retained_copy_protocols_match_source() {
+    use forge_core::product_state::{self as p, copies as c};
+    let fixtures: Value =
+        serde_json::from_str(include_str!("../../../reference-fixtures.json")).unwrap();
+    let f = &fixtures["stateContracts"];
+    for case in f["commands"].as_array().unwrap() {
+        let result = p::command(case["input"].clone());
+        assert_eq!(result.is_ok(), case["valid"]);
+        if let Ok(v) = result {
+            assert_eq!(v, case["expected"]);
+        }
+    }
+    for case in f["keys"].as_array().unwrap() {
+        let key = case["key"].as_str().unwrap();
+        assert_eq!(p::product_key(key), case["product"]);
+        assert_eq!(c::issue_key(key), case["issueCopy"]);
+        assert_eq!(serde_json::json!(p::feature(key)), case["feature"]);
+    }
+    for (i, case) in f["copies"].as_array().unwrap().iter().enumerate() {
+        let key = case["key"].as_str().unwrap();
+        let value = case["value"].as_str();
+        let mut keep = |id: &str| case["keep"].as_array().unwrap().iter().any(|v| v == id);
+        let result = match case["kind"].as_str().unwrap() {
+            "issueRead" | "issueScrub" => c::filter_issue(
+                key,
+                value,
+                &mut keep,
+                0,
+                if case["kind"] == "issueRead" {
+                    c::Mode::Read
+                } else {
+                    c::Mode::Scrub
+                },
+            )
+            .map(|v| serde_json::json!(v)),
+            "issueIds" => c::issue_ids(key, value).map(|v| serde_json::json!(v)),
+            "project" => c::filter_project(key, value, &mut keep, 0).map(|v| serde_json::json!(v)),
+            "projectIds" => c::project_ids(key, value).map(|v| serde_json::json!(v)),
+            _ => unreachable!(),
+        };
+        assert_eq!(result.is_ok(), case["valid"], "copy {i}: {result:?}");
+        if let Ok(v) = result {
+            assert_eq!(v, case["expected"], "copy {i}");
+        }
+    }
+    for (i, case) in f["retained"].as_array().unwrap().iter().enumerate() {
+        let key = case["key"].as_str().unwrap();
+        let ids = case["retained"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v.as_str().unwrap().to_owned())
+            .collect();
+        let result = c::retain_hidden(
+            key,
+            case["incoming"].as_str(),
+            case["previous"].as_str(),
+            &ids,
+            0,
+        )
+        .and_then(|value| {
+            c::retained_command(key, case["previous"].as_str(), &ids, 0)
+                .map(|command| (value, command))
+        });
+        assert_eq!(result.is_ok(), case["valid"], "retention {i}: {result:?}");
+        if let Ok((v, command)) = result {
+            assert_eq!(serde_json::json!(v), case["expected"], "retention {i}");
+            assert_eq!(command, case["command"], "retention command {i}");
+        }
+    }
+}

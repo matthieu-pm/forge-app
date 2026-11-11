@@ -34,7 +34,9 @@ gate pass.
 | 2c2 | Shared initiatives and planning queries | Passed available gate |
 | 2c3 | Shared documents, revision history and legacy document recovery | Passed available gate |
 | 2c4a | Saved views and shared team resources | Passed available gate |
-| 2c4b | Product state and explicit legacy imports | Pending |
+| 2c4b | Product state and retained draft projections | Passed available gate |
+| 2c4c | Account/workspace preferences and preference import | Pending |
+| 2c4d | Explicit legacy content import, review and execution | Pending |
 | 3 | Agent execution, approvals, streams, models, files, retention, jobs, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -482,3 +484,35 @@ these routes do not represent a completed rewrite.
 - Product-state persistence, explicit legacy imports, the Rust UI and production
   qualification remain pending.
 - Gate log: `.forge/rust-rewrite/milestone-2c4a-final.log`.
+
+### Milestone 2c4b
+
+- Generic product state stays bound to the current workspace and session. Reads
+  return only the owner's personal state and authorized shared configuration;
+  writes recheck current team access, administrator rights and feature ceilings.
+  Canonical project/initiative commands, catalogs and cycle settings dispatch to
+  their existing transaction handlers instead of creating competing copies.
+- Opaque values retain their original string bytes in the existing double-encoded
+  storage format. Exact retries use command receipts; stale writes that already
+  equal the stored value acknowledge the existing revision. Creation-file
+  tombstones cannot be republished by refreshing their revision.
+- Recovery projections inspect only protocol-declared issue/project identities.
+  An unavailable project hides the entire dependent command batch. Inactive issue
+  copies stay private and recoverable until the existing deletion deadline;
+  immutable batches require restoration or explicit discard before replacement.
+  Expired issue edits become an inert review proposal, never an automatic replay.
+- Inbox saves merge recoverable hidden writing, while canonical document copies
+  move into retained drafts even when the requested local value is null. Neither
+  projection drops unrelated draft text nor exposes private underlying resources.
+- The source oracle covers 11 command contracts, 14 storage-key classifications,
+  600 copy projections/identity extractions and 122 retention examples. Database
+  acceptance covers ownership, access revocation, retry/conflict behavior,
+  recoverable and expired issues, canonical dispatch and document/file copies.
+  HTTP acceptance includes session binding and Unicode values exceeding 2 MiB.
+- The first gate caught a Clippy warning and a fixture that attempted to renew a
+  deletion deadline. The fixture now uses a separately created expired issue; the
+  database recovery guard and behavioral assertions remain intact.
+- Full gate passed: 178 Rust tests, all 2,959 enabled reference tests, TypeScript
+  typechecking, formatting and Clippy. The 661 external-fixture reference tests
+  remain skipped. Both disposable databases applied all 75 source migrations.
+- Gate log: `.forge/rust-rewrite/milestone-2c4b-final.log`.

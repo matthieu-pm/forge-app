@@ -532,6 +532,64 @@ async fn saved_view_and_resource_http_enforce_identity_and_expose_shared_state()
 }
 
 #[tokio::test]
+async fn product_state_http_preserves_private_large_values_and_current_session_binding() {
+    let f = Fixture::new().await;
+    let (_, token, cookie) = f.account().await;
+    forge_store::workspaces::create(
+        &f.database,
+        &token,
+        "State HTTP",
+        &Uuid::new_v4().to_string(),
+        None,
+    )
+    .await
+    .unwrap();
+    let (status, _, snapshot) = f
+        .request("GET", "/api/workspace/product-state", Some(&cookie), None)
+        .await;
+    assert_eq!(status, StatusCode::OK, "{snapshot}");
+    let key = "forge:desktop-tabs";
+    let value = "☃".repeat(710_000);
+    let input = json!({"workspaceId":snapshot["workspaceId"],"sessionId":snapshot["sessionId"],"commandKey":Uuid::new_v4(),"key":key,"value":value,"expectedRevision":0});
+    let (status, _, saved) = f
+        .request(
+            "POST",
+            "/api/workspace/product-state",
+            Some(&cookie),
+            Some(input.clone()),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{saved}");
+    assert_eq!(saved["value"]["revision"], 1);
+    let (status, _, snapshot) = f
+        .request("GET", "/api/workspace/product-state", Some(&cookie), None)
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        snapshot["entries"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|v| v["key"] == key)
+            .unwrap()["value"],
+        value
+    );
+    let mut wrong = input;
+    wrong["sessionId"] = json!("previous-session");
+    assert_eq!(
+        f.request(
+            "POST",
+            "/api/workspace/product-state",
+            Some(&cookie),
+            Some(wrong)
+        )
+        .await
+        .0,
+        StatusCode::FORBIDDEN
+    );
+}
+
+#[tokio::test]
 async fn issue_http_commands_preserve_bound_sessions_and_expose_discussion_and_history() {
     let f = Fixture::new().await;
     let (_, token, cookie) = f.account().await;

@@ -1,0 +1,25 @@
+import {isProductStorageKey,productStateCommandSchema} from '../apps/forge/src/lib/product-state-contract.ts'
+import {featureForStorageKey} from '../apps/forge/src/application/features/feature-policy.ts'
+import {filterIssueCopy,issueCopyIds,retainHiddenIssueCopies,hasRetainedCommandCopy,isIssueCopyKey} from '../apps/forge/src/application/product-state/issue-copies.ts'
+import {filterProjectCopy,projectCopyIds} from '../apps/forge/src/application/product-state/project-copies.ts'
+export const stateContracts={commands:[],keys:[],copies:[],retained:[]}
+const uuid=n=>`abcdefab-0000-4000-8000-${String(n).padStart(12,'0')}`
+const command={workspaceId:'workspace',sessionId:'session',commandKey:uuid(1),key:'forge:desktop-tabs',value:'opaque string',expectedRevision:0}
+for(const change of [{},{workspaceId:''},{sessionId:null},{commandKey:'legacy'},{key:'unrelated'},{key:'["forge.preferences","x"]'},{value:null},{value:{}},{expectedRevision:-1},{expectedRevision:1.5},{extra:true}]){const input={...command,...change};try{stateContracts.commands.push({input,valid:true,expected:productStateCommandSchema.parse(input)})}catch{stateContracts.commands.push({input,valid:false})}}
+for(const key of ['forge:desktop-tabs','forge.personal-preferences','unrelated','["forge.preferences",1]','[]','{}','forge:signals:v1:x:y','forge:reviews-display:v1:[]','forge:workspace:w:sla-settings','forge:team-project-updates:v1:t','forge:team-thread-summaries:v1:t','forge:agent-personalization:v1:u','forge:workspace:w:project-updates-settings:v1','forge:team-home:v1:t'])stateContracts.keys.push({key,product:isProductStorageKey(key),feature:featureForStorageKey(key)??null,issueCopy:isIssueCopyKey(key)})
+const editKey='forge:team-issue-edit-drafts:v1:team:command'
+const edit=JSON.stringify({commandKey:'original',edits:[{issueId:uuid(1).toUpperCase(),changes:{title:'Retained draft'}},{issueId:uuid(2),changes:{title:'Visible draft'}}]})
+const inbox=JSON.stringify({entries:[{id:'x',issue:{id:uuid(1)},body:'Keep writing'},{id:'y',issue:{id:uuid(2)}},{id:'plain',body:'No issue reference'}]})
+const project=JSON.stringify([{id:uuid(1),expectedRevision:2,changes:{name:'First'}},{id:uuid(2),expectedRevision:null,changes:{name:'New'},relocation:{milestoneId:'milestone',targetId:uuid(3),targetRevision:1}}])
+const sources=[
+ [editKey,edit],['forge:inbox:v1:[]',inbox],['forge:comment-draft:v1:x',JSON.stringify({issueId:uuid(1),document:{type:'doc'}})],['forge:file-draft:v1:x:issue',JSON.stringify({issueId:uuid(1),fileIds:[uuid(2)]})],['forge:issue-engagement-draft:v1:x',JSON.stringify({issueId:uuid(1),present:true})],['forge:team-relationship-draft:v1:team:source',JSON.stringify({input:{issueId:uuid(1),targetId:uuid(2)}})],['forge:team-issues:v1:t','untouched raw bytes'],['forge:project-command:v1:key',project],['forge:project-post-draft:v1:'+uuid(1),'unchanged draft'],['forge:initiative-command:v1:key',JSON.stringify([{id:uuid(1),expectedRevision:1,changes:{name:'Initiative'},addProjectIds:[uuid(2)],removeProjectIds:[uuid(3)]}])],
+ [editKey,null],[editKey,'{}'],[editKey,'[]'],[editKey,'bad JSON'],[editKey,JSON.stringify({edits:[{issueId:'invalid'}]})],['forge:pending-recovery:v1:x',JSON.stringify({key:editKey,value:edit})],['forge:pending-recovery:v1:x',JSON.stringify({key:'forge:project-command:v1:key',value:project})],['forge:pending-recovery:v1:x',JSON.stringify({key:editKey,value:null})],['forge:pending-recovery:v1:x',JSON.stringify({key:editKey,value:5})],['forge:inbox:v1:[]',JSON.stringify({entries:[{issue:false},{issue:{id:'legacy'}},{issue:null}]})],
+]
+for(let depth=0;depth<10;depth++){let key=editKey,value=edit;for(let i=0;i<depth;i++){value=JSON.stringify({key,value});key='forge:pending-recovery:v1:wrapper'}sources.push([key,value])}
+for(const [key,value] of sources)for(const keep of [[],[uuid(1)],[uuid(2)],[uuid(1),uuid(2),uuid(3)]])for(const kind of ['issueRead','issueScrub','issueIds','project','projectIds']){
+ const c={kind,key,value,keep};try{c.expected=kind==='issueIds'?issueCopyIds(key,value):kind==='projectIds'?projectCopyIds(key,value):kind==='project'?filterProjectCopy(key,value,id=>keep.includes(id)):filterIssueCopy(key,value,id=>keep.includes(id),0,kind==='issueRead'?'read':'scrub');c.valid=true}catch{c.valid=false}stateContracts.copies.push(c)
+}
+for(const [key,previous] of sources)for(const retained of [[],[uuid(1)]])for(const incoming of [null,previous]){
+ const c={key,previous,incoming,retained};try{c.expected=retainHiddenIssueCopies(key,incoming,previous,new Set(retained));c.command=hasRetainedCommandCopy(key,previous,new Set(retained));c.valid=true}catch{c.valid=false}stateContracts.retained.push(c)
+}
+for(const [key,previous] of [[editKey,edit],['forge:inbox:v1:[]',inbox]]){const incoming=filterIssueCopy(key,previous,id=>id===uuid(2));stateContracts.retained.push({key,previous,incoming,retained:[uuid(1)],valid:true,expected:retainHiddenIssueCopies(key,incoming,previous,new Set([uuid(1)])),command:hasRetainedCommandCopy(key,previous,new Set([uuid(1)]))})}

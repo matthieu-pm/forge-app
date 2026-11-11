@@ -23,6 +23,8 @@ mod issue_lifecycle_acceptance;
 mod issue_query_acceptance;
 #[path = "acceptance/planning.rs"]
 mod planning_acceptance;
+#[path = "acceptance/product_state.rs"]
+mod product_state_acceptance;
 #[path = "acceptance/projects.rs"]
 mod project_acceptance;
 #[path = "acceptance/views.rs"]

@@ -27,3 +27,5 @@ pub mod json;
 
 pub mod saved_views;
 pub mod team_resources;
+
+pub mod product_state;

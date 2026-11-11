@@ -65,7 +65,7 @@ struct Settings {
     encoded_value: Option<String>,
     revision: i32,
 }
-async fn settings(
+pub(crate) async fn settings(
     c: &mut PgConnection,
     a: &Actor,
     options: InitiativeOptions,

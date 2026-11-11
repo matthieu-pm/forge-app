@@ -9,6 +9,7 @@ pub mod mail;
 mod oauth;
 pub mod oauth_provider;
 mod planning;
+mod product_state;
 mod projects;
 mod public_api;
 pub mod state;
@@ -31,6 +32,14 @@ pub fn router() -> Router {
 
 pub fn router_with_state(state: state::AppState) -> Router {
     let auth_routes = Router::new()
+        .merge(
+            Router::new()
+                .route(
+                    "/api/workspace/product-state",
+                    get(product_state::read).post(product_state::save),
+                )
+                .layer(axum::extract::DefaultBodyLimit::max(128 * 1024 * 1024)),
+        )
         .route("/api/workspace/team-resources", post(views::save_resources))
         .route("/api/workspace/team-resources/read", post(views::resources))
         .route("/api/workspace/views", post(views::mutate))
