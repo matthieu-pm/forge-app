@@ -54,7 +54,8 @@ gate pass.
 | 3b5f | Model credentials, provider discovery, connection management and routing catalogs | Passed available gate |
 | 3b5g | Run-scoped model proxy, live credential authority and streaming HTTP delivery | Passed available gate |
 | 3b5h | EVE runtime protocol, event normalization, durable cursors and cancellation | Passed available gate |
-| 3b5i | Authenticated agent threads, local run preparation, ingestion and checkpoints | In progress |
+| 3b5i | Authenticated agent threads, local run preparation, ingestion and checkpoints | Passed available gate |
+| 3b5j | Hosted run coordination, streaming, reconnects, limits and approval resume | In progress |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -1035,3 +1036,35 @@ these routes do not represent a completed rewrite.
 - The initial gate found the newly added flow fixtures had not been regenerated;
   they were exported before the complete passing rerun. Database coordinator
   integration, the hosted runtime service and live execution remain pending.
+
+### Milestone 3b5i
+
+- Full gate passed: 339 Rust tests, 2,959 enabled reference tests, typechecking,
+  formatting, Clippy and export checks. The 661 fixture-dependent reference tests
+  remain skipped. Log: `.forge/rust-rewrite/milestone-3b5i-verified.log`.
+- Conversation operations now resolve current authority and scope, enforce private
+  ownership, and exclude shared loop histories. Local admission rechecks workspace
+  policy, monthly budgets, thread state and attachments after storage I/O. One
+  active run owns each thread's shared runtime cursor; independent threads retain
+  independent execution without a per-user/workspace concurrency cap.
+- Local preparation publishes the connection mapping, preference, runtime change,
+  run and initial events together. Checkpoint updates are atomic. Ingestion locks
+  the run, validates safe payloads and runtime provenance, counts each persisted
+  usage event once, and keeps terminal runs terminal on late delivery. Approval
+  requests use the canonical ledger; desktop acknowledgements cannot resolve it,
+  and replaying a request cannot reopen an already resolved approval.
+- The desktop's fixed Codex connection ID now maps to a private workspace/user
+  connection without provider credentials. Preference responses preserve the
+  client-facing ID. The old fixed ID could not satisfy the existing PostgreSQL
+  tenant relationship; unrelated personal connections remain inaccessible.
+- Compatibility migration `0075_agent_auto_connection_preference.sql` aligns the
+  stale database check with the existing Auto-preference contract. Auto may prefer
+  a connection while leaving the model unpinned; foreign keys and tenant checks
+  remain enforced. Schema, snapshot, readiness manifest and inventory agree. All
+  76 migrations were applied only to disposable local databases, not production.
+- Eight source-executed flows and database tests cover lifecycle behavior,
+  concurrent retries, ownership, revocation during attachment reads, atomic
+  rollback, budgets and recovery publication failure. The deletion journal records
+  cancellation but intentionally does not copy new chat content. Initial gates
+  exposed visibility/manifest issues and test fixture assumptions; all were fixed
+  before the passing rerun. Hosted coordination and HTTP composition are next.

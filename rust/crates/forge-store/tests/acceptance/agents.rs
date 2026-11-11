@@ -1,6 +1,8 @@
 use super::*;
 use chrono::{DateTime, Duration, Utc};
 use forge_store::agents::*;
+#[path = "../support/agent_blobs.rs"]
+mod blobs;
 
 #[path = "agent_files.rs"]
 mod agent_file_acceptance;
@@ -8,6 +10,8 @@ mod agent_file_acceptance;
 mod approval_service_acceptance;
 #[path = "agent_capabilities.rs"]
 mod capability_acceptance;
+#[path = "agent_coordinator.rs"]
+mod coordinator_acceptance;
 #[path = "model_connections.rs"]
 mod model_connection_acceptance;
 

@@ -1585,7 +1585,7 @@ export const threadModelPreferences = pgTable(
     ),
     selectionCheck: check(
       "thread_model_preferences_selection_check",
-      sql`(${table.mode} = 'auto' and ${table.selectedConnectionId} is null and ${table.selectedModelId} is null) or (${table.mode} = 'manual' and ${table.selectedConnectionId} is not null and ${table.selectedModelId} is not null)`
+      sql`(${table.mode} = 'auto' and ${table.selectedModelId} is null) or (${table.mode} = 'manual' and ${table.selectedConnectionId} is not null and ${table.selectedModelId} is not null)`
     ),
     effortCheck: check(
       "thread_model_preferences_effort_check",

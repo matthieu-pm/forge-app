@@ -1,14 +1,12 @@
 use super::*;
 use base64::{Engine, engine::general_purpose::STANDARD};
+use blobs::Memory;
 use forge_core::agents::files::Code;
 use forge_store::agents::files::Service;
 use std::sync::{
     Arc,
     atomic::{AtomicI64, Ordering},
 };
-#[path = "../support/agent_blobs.rs"]
-mod blobs;
-use blobs::Memory;
 fn service(f: &Fixture) -> (Service, Arc<Memory>, Arc<AtomicI64>) {
     let blobs = Arc::new(Memory::default());
     let clock = Arc::new(AtomicI64::new(at().timestamp_millis()));

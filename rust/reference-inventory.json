@@ -804,6 +804,10 @@
     {
       "path": "apps/forge/drizzle/0074_preference_import_content.sql",
       "sha256": "5a037dd6b2413473fe4c45c99900ba97634b87063274ae4636cc502da1900b7a"
+    },
+    {
+      "path": "apps/forge/drizzle/0075_agent_auto_connection_preference.sql",
+      "sha256": "42cfde24ca913cf80771322799199130a875d0c2c3163be62bc33673a21c44c1"
     }
   ]
 }

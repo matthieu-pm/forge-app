@@ -15,7 +15,7 @@ fn checked(event: Event) -> Result<Event, StoreError> {
     .map_err(|_| StoreError::InvalidInput)?;
     Ok(event)
 }
-async fn existing(
+pub(crate) async fn existing(
     conn: &mut PgConnection,
     run: Uuid,
     source: &str,
@@ -87,12 +87,19 @@ pub async fn list_run(
     run: Uuid,
     after_sequence: i32,
 ) -> Result<Vec<Event>, StoreError> {
+    list_run_in(&mut *db.pool().acquire().await?, run, after_sequence).await
+}
+pub(crate) async fn list_run_in(
+    conn: &mut PgConnection,
+    run: Uuid,
+    after_sequence: i32,
+) -> Result<Vec<Event>, StoreError> {
     sqlx::query_as(&format!(
         "SELECT {COLUMNS} FROM agent_events WHERE run_id=$1 AND sequence>$2 ORDER BY sequence"
     ))
     .bind(run)
     .bind(after_sequence.max(0))
-    .fetch_all(db.pool())
+    .fetch_all(conn)
     .await?
     .into_iter()
     .map(checked)
@@ -103,6 +110,13 @@ pub async fn list_thread(
     thread: Uuid,
     after_sequence: i32,
 ) -> Result<Vec<Event>, StoreError> {
+    list_thread_in(&mut *db.pool().acquire().await?, thread, after_sequence).await
+}
+pub(crate) async fn list_thread_in(
+    conn: &mut PgConnection,
+    thread: Uuid,
+    after_sequence: i32,
+) -> Result<Vec<Event>, StoreError> {
     sqlx::query_as(&format!("SELECT {COLUMNS} FROM agent_events WHERE thread_id=$1 AND sequence>$2 ORDER BY occurred_at,sequence"))
-        .bind(thread).bind(after_sequence.max(0)).fetch_all(db.pool()).await?.into_iter().map(checked).collect()
+        .bind(thread).bind(after_sequence.max(0)).fetch_all(conn).await?.into_iter().map(checked).collect()
 }

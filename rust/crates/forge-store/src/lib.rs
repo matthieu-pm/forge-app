@@ -28,6 +28,11 @@ pub use database::Database;
 
 #[derive(Debug, thiserror::Error)]
 pub enum StoreError {
+    #[error("{message}")]
+    AgentCoordinator {
+        code: &'static str,
+        message: &'static str,
+    },
     #[error(transparent)]
     AgentFile(#[from] forge_core::agents::files::Error),
     #[error(transparent)]

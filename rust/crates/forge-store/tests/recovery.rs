@@ -15,6 +15,8 @@ use uuid::Uuid;
 mod agent_file_recovery;
 #[path = "acceptance/agent_recovery.rs"]
 mod agent_recovery;
+#[path = "acceptance/coordinator_recovery.rs"]
+mod coordinator_recovery;
 #[path = "acceptance/model_recovery.rs"]
 mod model_recovery;
 

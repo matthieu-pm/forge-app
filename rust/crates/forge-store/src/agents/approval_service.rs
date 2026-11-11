@@ -87,13 +87,24 @@ impl Service {
     }
     pub async fn request(&self, actor: &Actor, input: &Request) -> Result<Resolution, StoreError> {
         let (mut tx, actor) = self.begin(actor).await?;
+        let result = self.request_in(&mut tx, &actor, input).await?;
+        tx.commit().await?;
+        Ok(result)
+    }
+    /// Caller holds the workspace fence and has resolved current actor authority.
+    pub(crate) async fn request_in(
+        &self,
+        tx: &mut JournalTransaction,
+        actor: &Actor,
+        input: &Request,
+    ) -> Result<Resolution, StoreError> {
         if !actor.has_scope(ApiScope::AgentsWrite) {
             return Err(StoreError::Forbidden);
         }
-        let run = runs::get_in(&mut tx, &actor.workspace_id, input.run_id)
+        let run = runs::get_in(tx, &actor.workspace_id, input.run_id)
             .await?
             .filter(|run| {
-                run.initiated_by_user_id == actor.user_id && agent_run_matches(&actor, run.id)
+                run.initiated_by_user_id == actor.user_id && agent_run_matches(actor, run.id)
             })
             .ok_or_else(|| {
                 error(
@@ -119,7 +130,7 @@ impl Service {
             resolved_at: None,
             resolved_by_user_id: None,
         };
-        let approval = approvals::create(&mut tx, &record).await?;
+        let approval = approvals::create(tx, &record).await?;
         if approval.workspace_id != record.workspace_id
             || approval.run_id != record.run_id
             || approval.requested_for_user_id != record.requested_for_user_id
@@ -132,14 +143,13 @@ impl Service {
                 "The approval identifier was already used for another request.",
             ));
         }
-        let event=events::append_in(&mut tx,json!({"threadId":run.thread_id,"runId":run.id,"sourceEventId":format!("approval:{}:requested",approval.id),"occurredAt":iso(approval.requested_at),"source":"forge","type":"approval.requested","schemaVersion":1,
+        let event=events::append_in(tx,json!({"threadId":run.thread_id,"runId":run.id,"sourceEventId":format!("approval:{}:requested",approval.id),"occurredAt":iso(approval.requested_at),"source":"forge","type":"approval.requested","schemaVersion":1,
             "payload":{"approvalId":approval.id,"capabilityId":approval.capability_id,"capabilityVersion":approval.capability_version,"risk":approval.risk,"inputHash":approval.input_hash,"summary":approval.redacted_input_summary,"expiresAt":iso(approval.expires_at)}})).await?;
         sqlx::query("UPDATE agent_runs SET state='waiting-for-approval',updated_at=$2 WHERE id=$1")
             .bind(run.id)
             .bind(now)
-            .execute(&mut *tx)
+            .execute(&mut **tx)
             .await?;
-        tx.commit().await?;
         Ok(Resolution { approval, event })
     }
     pub async fn resolve(
