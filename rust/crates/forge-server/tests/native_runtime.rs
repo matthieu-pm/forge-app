@@ -117,6 +117,10 @@ async fn actual_native_service_handles_approval_continuation_next_turn_and_provi
         "Remember marigold"
     );
     assert_eq!(f.script.effects.load(Ordering::SeqCst), 1);
+    assert_eq!(
+        *f.script.output_limits.lock().unwrap(),
+        vec![50000, 49995, 49990]
+    );
     f.shutdown().await;
 }
 #[tokio::test]
@@ -377,6 +381,91 @@ async fn oversized_and_sensitive_tool_data_are_private_while_display_receipts_re
             .filter(|e| matches!(e["type"].as_str(), Some("tool.started" | "tool.completed")))
             .collect::<Vec<_>>();
         assert_eq!(repeated_tool, vec![started, completed]);
+        f.shutdown().await;
+    }
+}
+
+#[tokio::test]
+async fn conversation_allowances_cross_turns_and_responses_never_grant_twice() {
+    for approved in [true, false] {
+        let f = Fixture::new(Mode::Budget, false).await;
+        let runtime = NativeRuntime::new(f.options()).unwrap();
+        let saved = Arc::new(Saved::default());
+        let mut ctx = context(saved.clone());
+        let events = collect(runtime.start(ctx.clone(), "First".into(), vec![])).await;
+        assert!(events.iter().any(|e| e["type"] == "run.completed"));
+        ctx.run_id = Uuid::new_v4().to_string();
+        ctx.runtime_session_id = Some(saved.last());
+        let events = collect(runtime.start(ctx.clone(), "Continue".into(), vec![])).await;
+        let request = events
+            .iter()
+            .find(|e| e["type"] == "approval.requested")
+            .unwrap()["payload"]["details"]["runtimeRequestId"]
+            .as_str()
+            .unwrap()
+            .to_owned();
+        assert_eq!(f.script.models.load(Ordering::SeqCst), 1);
+        let waiting = f.store.load(&channel(&ctx)).await.unwrap();
+        assert_eq!(waiting.state.session_usage(), (10, 5));
+        assert_eq!(waiting.state.usage(), (0, 0));
+        ctx.runtime_session_id = Some(saved.last());
+        let replay = collect(runtime.reconnect(ctx.clone())).await;
+        assert!(replay.iter().any(|e| e["type"] == "run.waiting"));
+        ctx.runtime_session_id = Some(saved.last());
+        let response = json!({"requestId":request,"optionId":if approved{"approve"}else{"deny"}});
+        let done = collect(runtime.resume(ctx.clone(), vec![response.clone()])).await;
+        let terminal = if approved {
+            "run.completed"
+        } else {
+            "run.cancelled"
+        };
+        assert!(done.iter().any(|e| e["type"] == terminal), "{done:?}");
+        let state = f.store.load(&channel(&ctx)).await.unwrap().state;
+        assert_eq!(
+            state.session_usage(),
+            if approved { (20, 10) } else { (10, 5) }
+        );
+        assert_eq!(state.usage(), if approved { (10, 5) } else { (0, 0) });
+        ctx.runtime_session_id = Some(saved.last());
+        let replay_events = collect(runtime.resume(ctx.clone(), vec![response])).await;
+        assert!(replay_events.iter().any(|e| e["type"] == terminal));
+        assert!(!replay_events.iter().any(|e| e["type"]
+            == if approved {
+                "run.cancelled"
+            } else {
+                "run.completed"
+            }));
+        let replay = f.store.load(&channel(&ctx)).await.unwrap().state;
+        assert_eq!(state.snapshot(), replay.snapshot());
+        assert_eq!(
+            f.script.models.load(Ordering::SeqCst),
+            if approved { 2 } else { 1 }
+        );
+        assert_eq!(f.script.effects.load(Ordering::SeqCst), 0);
+        assert_eq!(
+            *f.script.output_limits.lock().unwrap(),
+            if approved {
+                vec![50000, 50000]
+            } else {
+                vec![50000]
+            }
+        );
+        ctx.runtime_session_id = Some(saved.last());
+        ctx.run_id = Uuid::new_v4().to_string();
+        let next = collect(runtime.start(ctx.clone(), "Another turn".into(), vec![])).await;
+        let approval = next
+            .iter()
+            .find(|e| e["type"] == "approval.requested")
+            .unwrap();
+        assert_ne!(approval["payload"]["details"]["runtimeRequestId"], request);
+        assert_eq!(
+            approval["payload"]["input"]["usedTokens"],
+            if approved { 20 } else { 10 }
+        );
+        assert_eq!(
+            f.script.models.load(Ordering::SeqCst),
+            if approved { 2 } else { 1 }
+        );
         f.shutdown().await;
     }
 }

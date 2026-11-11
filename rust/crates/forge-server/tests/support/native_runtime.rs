@@ -19,7 +19,7 @@ use forge_agent_runtime::{
 use serde_json::{Value, json};
 use sqlx::postgres::PgPoolOptions;
 use std::sync::{
-    Arc,
+    Arc, Mutex,
     atomic::{AtomicUsize, Ordering},
 };
 use tokio::sync::Notify;
@@ -28,6 +28,7 @@ pub const SECRET: &str = "public-native-adapter-fixture-signing-secret";
 #[derive(Clone, Copy)]
 pub enum Mode {
     Finish,
+    Budget,
     Approve,
     Stall,
     LargeToolData,
@@ -37,6 +38,7 @@ pub struct Script {
     mode: Mode,
     pub models: AtomicUsize,
     pub effects: AtomicUsize,
+    pub output_limits: Mutex<Vec<u32>>,
     pub began: Notify,
 }
 struct Adapter(Arc<Script>);
@@ -50,6 +52,11 @@ impl Model for Adapter {
         _: &mut dyn Sink,
     ) -> Result<Completion> {
         self.0.models.fetch_add(1, Ordering::SeqCst);
+        self.0
+            .output_limits
+            .lock()
+            .unwrap()
+            .push(turn.max_output_tokens.unwrap());
         self.0.began.notify_one();
         if matches!(self.0.mode, Mode::Stall) {
             std::future::pending::<()>().await;
@@ -100,14 +107,18 @@ impl Capabilities for Adapter {
 #[async_trait]
 impl Factory for Adapter {
     async fn create(&self, _: &Channel, _: &State, _: &Cancellation) -> Result<Engine> {
-        Ok(Engine::new(
+        let mut engine = Engine::new(
             Arc::new(Adapter(self.0.clone())),
             Arc::new(Executor {
                 capabilities: Arc::new(Adapter(self.0.clone())),
                 sandbox: None,
                 features: Features::default(),
             }),
-        ))
+        );
+        if matches!(self.0.mode, Mode::Budget) {
+            engine.max_input_tokens = 10;
+        }
+        Ok(engine)
     }
 }
 pub struct Fixture {
@@ -136,6 +147,7 @@ impl Fixture {
             mode,
             models: AtomicUsize::new(0),
             effects: AtomicUsize::new(0),
+            output_limits: Mutex::new(vec![]),
             began: Notify::new(),
         });
         let host = Host::new(

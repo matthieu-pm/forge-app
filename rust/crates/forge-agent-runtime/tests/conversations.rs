@@ -131,6 +131,7 @@ async fn completed_turns_keep_materialized_history_across_provider_changes_witho
     );
     assert_eq!(saved.state.history()[3], message("What is the marker?"));
     assert_eq!(saved.state.usage(), (0, 0));
+    assert_eq!(saved.state.session_usage(), (123, 17));
     assert_eq!(saved.state.snapshot()["decisions"], json!({}));
     assert_eq!(saved.state.phase(), Phase::Ready);
     assert_eq!(f.head().await.to_string(), next.run_id());
@@ -504,6 +505,10 @@ async fn completed_and_cancelled_conversations_inherit_only_their_own_context() 
         let mut snapshot = state.snapshot();
         snapshot["revision"] = json!(state.revision() + 1);
         snapshot["workspace"]["provisioned"] = json!(true);
+        snapshot["input_tokens"] = json!(11);
+        snapshot["output_tokens"] = json!(3);
+        snapshot["budget"]["prior"] = json!({"input":100,"output":20});
+        snapshot["budget"]["granted"] = json!({"input":300,"output":80});
         snapshot["todos"] =
             json!([{ "content":"Continue the task","status":"in_progress","priority":"high"}]);
         let key = snapshot["workspace"]["key"].as_str().unwrap().to_owned();
@@ -542,6 +547,11 @@ async fn completed_and_cancelled_conversations_inherit_only_their_own_context() 
             saved.snapshot()["todos"]
         );
         assert_eq!(admitted.state.usage(), (0, 0));
+        assert_eq!(admitted.state.session_usage(), (111, 23));
+        assert_eq!(
+            admitted.state.snapshot()["budget"]["granted"],
+            json!({"input":300,"output":80})
+        );
         let replay = fixture
             .store
             .admit(
@@ -582,4 +592,86 @@ async fn completed_and_cancelled_conversations_inherit_only_their_own_context() 
                 .is_empty()
         );
     }
+}
+
+#[tokio::test]
+async fn budget_upgrade_reconstructs_legacy_usage_and_fences_an_old_worker() {
+    let f = Fixture::new().await;
+    f.admit_first().await;
+    f.complete(&f.channel, vec![json!({"type":"text","text":"First"})])
+        .await;
+    let second = f.next("openai");
+    f.store
+        .admit(
+            &second,
+            f.conversation,
+            Some(f.run),
+            message("Second"),
+            f.deadline,
+        )
+        .await
+        .unwrap();
+    f.complete(&second, vec![json!({"type":"text","text":"Second"})])
+        .await;
+    let third = f.next("anthropic");
+    f.store
+        .admit(
+            &third,
+            f.conversation,
+            Some(second.run_id().parse().unwrap()),
+            message("Third"),
+            f.deadline,
+        )
+        .await
+        .unwrap();
+    let (lease, old) = f
+        .store
+        .acquire(&third, Uuid::new_v4(), Duration::from_secs(30))
+        .await
+        .unwrap();
+    let mut tx = f.pool.begin().await.unwrap();
+    sqlx::query("UPDATE forge_runtime.sessions SET engine_state=engine_state-'budget' WHERE conversation_id=$1").bind(f.conversation).execute(&mut *tx).await.unwrap();
+    sqlx::raw_sql(include_str!("../migrations/0004_session_budgets.sql"))
+        .execute(&mut *tx)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
+    let upgraded = f.store.load(&third).await.unwrap().state;
+    assert_eq!(upgraded.usage(), (0, 0));
+    assert_eq!(upgraded.session_usage(), (246, 34));
+    assert_eq!(upgraded.revision(), old.revision() + 1);
+    assert!(
+        lease
+            .append(
+                old.revision(),
+                json!({"type":"message.appended","data":{"text":"stale"}})
+            )
+            .await
+            .is_err()
+    );
+    let mut tx = f.pool.begin().await.unwrap();
+    sqlx::raw_sql(include_str!("../migrations/0004_session_budgets.sql"))
+        .execute(&mut *tx)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
+    assert_eq!(
+        f.store.load(&third).await.unwrap().state.snapshot(),
+        upgraded.snapshot()
+    );
+    // A missing legacy ancestor cannot silently turn into a fresh allowance.
+    let mut tx = f.pool.begin().await.unwrap();
+    sqlx::query("UPDATE forge_runtime.sessions SET engine_state=engine_state-'budget',parent_run_id=$2 WHERE run_id=$1")
+        .bind(Uuid::parse_str(third.run_id()).unwrap()).bind(Uuid::new_v4()).execute(&mut *tx).await.unwrap();
+    assert!(
+        sqlx::raw_sql(include_str!("../migrations/0004_session_budgets.sql"))
+            .execute(&mut *tx)
+            .await
+            .is_err()
+    );
+    tx.rollback().await.unwrap();
+    assert_eq!(
+        f.store.load(&third).await.unwrap().state.snapshot(),
+        upgraded.snapshot()
+    );
 }

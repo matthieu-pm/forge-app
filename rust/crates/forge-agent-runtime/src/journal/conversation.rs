@@ -91,7 +91,10 @@ impl Store {
                 &previous.to_string(),
             )?;
             if parent.cancelled_at.is_none()
-                && !matches!(state.phase(), Phase::Complete | Phase::Failed)
+                && !matches!(
+                    state.phase(),
+                    Phase::Complete | Phase::Cancelled | Phase::Failed
+                )
             {
                 return Err(Error("The previous conversation run has not ended."));
             }

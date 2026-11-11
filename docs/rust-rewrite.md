@@ -76,6 +76,7 @@ gate pass.
 | 3b5ab | Automatic context compaction, private summaries and restart recovery | Passed available gate |
 | 3b5ac | Bounded native tool displays and exact approval-input validation | Passed available gate |
 | 3b5ad | Native public web retrieval, HTML conversion and durable read recovery | Passed |
+| 3b5ae | Conversation token budgets and durable allowance continuation | Passed |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -1864,3 +1865,39 @@ these routes do not represent a completed rewrite.
 - Full milestone gate passed: 497 Rust tests, 2,959 enabled TypeScript tests,
   all source-fixture drift checks, formatting, Clippy and all three package
   typechecks. Evidence: `.forge/rust-rewrite/milestone-3b5ad-verified.log`.
+
+
+### Milestone 3b5ae
+
+- Session input/output usage now survives user turns, failures, cancellation and
+  provider changes. Per-run usage events remain deltas for the application's
+  accounting. Compaction continues to follow the source's separate summary-usage
+  behavior; this does not implement pricing or billing.
+- Exhaustion parks before the next model call. The existing Forge approval ledger
+  presents the source continuation prompt and the exact limit/usage binding.
+  Approval grants the captured input and output allowances above current session
+  usage; denial emits cancellation without further model or tool work. Its
+  terminal cancelled phase preserves that outcome on reconnect after the event
+  cursor, and a later user turn still inherits the consumed session allowance.
+- The private request uses a UUID and Forge's approve/deny response options. The
+  source uses continue/stop IDs; the private adapter translates through the
+  existing boolean decision contract. This internal request is never advertised
+  as a model tool and grants no capability or sandbox permissions.
+- Request, decision and grant checkpoints tolerate lost acknowledgements and
+  replay. Repeating a recorded decision cannot grant twice; conflicting/stale
+  decisions fail. Amounts offered before a deployment remain fixed across its
+  restart. The original run deadline still applies during the approval pause.
+- Explicit private migration 4 reconstructs usage for older snapshots along their
+  owned conversation chain. Existing budget snapshots are independent anchors,
+  retaining grants and tolerating previously retained-away ancestors. Missing
+  legacy ancestry and out-of-range totals abort the upgrade. Changed snapshots
+  advance revision and revoke their previous worker lease.
+- Tests cover source arithmetic/prompt fixtures (42 cases and 30 requests), worker
+  replacement, before/after persistence failures, denial, malformed state,
+  ordinary approval-route integration and independent run/session accounting.
+  Live providers, general questions, provider search, delegation, remaining
+  background work, billing/calls, Rust UI/macOS and final qualification remain.
+
+- Full milestone gate passed: 504 Rust tests, 2,959 enabled TypeScript tests,
+  source-fixture drift checks, formatting, Clippy and all three package
+  typechecks. Evidence: `.forge/rust-rewrite/milestone-3b5ae-verified.log`.

@@ -118,11 +118,13 @@ impl Worker {
                 }
             }
         }
-        if matches!(session.state.phase(), Phase::Complete | Phase::Failed)
-            || (session.state.phase() == Phase::Waiting
-                && response
-                    .as_ref()
-                    .is_none_or(|r| session.state.decision(&r.request).is_some()))
+        if matches!(
+            session.state.phase(),
+            Phase::Complete | Phase::Cancelled | Phase::Failed
+        ) || (session.state.phase() == Phase::Waiting
+            && response
+                .as_ref()
+                .is_none_or(|r| session.state.decision(&r.request).is_some()))
         {
             return Ok(session.state.phase());
         }

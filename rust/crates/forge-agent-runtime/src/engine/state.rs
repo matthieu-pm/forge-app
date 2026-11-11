@@ -18,6 +18,7 @@ pub enum Phase {
     Tools,
     Waiting,
     Complete,
+    Cancelled,
     Failed,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -33,6 +34,7 @@ pub(super) enum CallPhase {
     Calling,
     Waiting,
     Complete,
+    Cancelled,
 }
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -78,6 +80,8 @@ pub struct State {
     pub(super) todos: Vec<Value>,
     #[serde(default)]
     pub(super) compaction: Compaction,
+    #[serde(default)]
+    pub(super) budget: super::budget::Budget,
 }
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -117,6 +121,7 @@ impl State {
             files: FileState::default(),
             todos: vec![],
             compaction: Compaction::default(),
+            budget: super::budget::Budget::default(),
         };
         state.validate(channel)?;
         Ok(state)
@@ -197,6 +202,11 @@ impl State {
         self.workspace = parent.workspace.clone();
         self.files = parent.files.clone();
         self.todos = parent.todos.clone();
+        self.budget = super::budget::Budget {
+            prior: parent.total_usage().expect("validated parent usage"),
+            granted: parent.budget.granted,
+            pending: None,
+        };
     }
     pub(crate) fn resolve(
         &self,
@@ -224,11 +234,16 @@ impl State {
         }
         let mut next = self.clone();
         next.revision = next.revision.checked_add(1).ok_or(INVALID)?;
-        next.phase = Phase::Tools;
         next.decisions.insert(request.to_owned(), decision);
-        let call = &mut next.calls[next.next_call];
-        call.decision = Some(decision);
-        call.phase = CallPhase::Queued;
+        if let Some(pending) = &mut next.budget.pending {
+            pending.decision = Some(decision);
+            next.phase = Phase::Ready;
+        } else {
+            next.phase = Phase::Tools;
+            let call = &mut next.calls[next.next_call];
+            call.decision = Some(decision);
+            call.phase = CallPhase::Queued;
+        }
         next.validate(channel)?;
         if forge_core::canonical::javascript_stringify(&next.snapshot()).len() > 8 * 1024 * 1024 {
             return Err(INVALID);
@@ -260,6 +275,9 @@ impl State {
         if self.phase != Phase::Waiting {
             return None;
         }
+        if let Some(pending) = &self.budget.pending {
+            return Some(&pending.request_id);
+        }
         self.calls.get(self.next_call)?.request_id.as_deref()
     }
     pub(crate) fn validate(&self, channel: &Channel) -> Result<()> {
@@ -275,6 +293,7 @@ impl State {
         self.validate_structure()
     }
     fn validate_structure(&self) -> Result<()> {
+        self.validate_budget()?;
         if self.compaction.last_input_tokens.is_some()
             != self.compaction.last_prompt_messages.is_some()
             || self
@@ -332,6 +351,7 @@ impl State {
         )
         .map_err(|_| INVALID)?;
         if self.phase == Phase::Waiting
+            && self.budget.pending.is_none()
             && !self.calls.get(self.next_call).is_some_and(|c| {
                 c.phase == CallPhase::Waiting
                     && c.request_id.is_some()

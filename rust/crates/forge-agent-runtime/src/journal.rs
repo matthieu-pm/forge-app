@@ -21,6 +21,7 @@ const SCHEMAS: &[&str] = &[
     include_str!("../migrations/0001_runtime.sql"),
     include_str!("../migrations/0002_conversations.sql"),
     include_str!("../migrations/0003_compaction_recovery.sql"),
+    include_str!("../migrations/0004_session_budgets.sql"),
 ];
 fn versions() -> Vec<(i32, String)> {
     SCHEMAS
@@ -190,6 +191,8 @@ impl Store {
             || snapshot["calls"] != json!([])
             || snapshot["decisions"] != json!({})
             || snapshot["todos"] != json!([])
+            || snapshot["budget"]
+                != json!({"prior":{"input":0,"output":0},"granted":null,"pending":null})
             || snapshot["compaction"]
                 != json!({"last_input_tokens":null,"last_prompt_messages":null,"active":null})
             || snapshot["workspace"]["provisioned"] == true

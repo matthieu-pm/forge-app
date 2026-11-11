@@ -696,7 +696,7 @@ async fn token_limits_stop_the_next_model_step_and_large_deltas_preserve_unicode
     )]]));
     let (mut engine, calls) = setup(model.clone(), journal.clone(), None);
     engine.max_input_tokens = 10;
-    assert!(
+    assert_eq!(
         engine
             .drive(
                 &channel,
@@ -706,9 +706,10 @@ async fn token_limits_stop_the_next_model_step_and_large_deltas_preserve_unicode
                 deadline()
             )
             .await
-            .is_err()
+            .unwrap(),
+        Phase::Waiting
     );
-    assert_eq!(state.phase(), Phase::Failed);
+    assert_eq!(state.phase(), Phase::Waiting);
     assert_eq!(model.calls.load(Ordering::SeqCst), 1);
     assert_eq!(calls.requests.lock().unwrap().len(), 1);
     let message = "😀hé".repeat(5000);
@@ -818,3 +819,6 @@ mod context_engine;
 
 #[path = "acceptance/web_engine.rs"]
 mod web_engine;
+
+#[path = "acceptance/budget_engine.rs"]
+mod budget_engine;

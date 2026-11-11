@@ -118,6 +118,7 @@ impl Engine {
         let mut next = state.clone();
         next.phase = Phase::Failed;
         next.compaction.active = None;
+        next.budget.pending = None;
         self.commit(
             state,
             journal,
@@ -141,20 +142,25 @@ impl Engine {
     ) -> Result<Phase> {
         let mut workspace = None;
         loop {
+            if state
+                .budget
+                .pending
+                .as_ref()
+                .is_some_and(|p| p.decision.is_some())
+            {
+                self.apply_budget_decision(state, journal).await?;
+                continue;
+            }
             match state.phase {
-                Phase::Complete | Phase::Waiting => return Ok(state.phase),
+                Phase::Complete | Phase::Cancelled | Phase::Waiting => return Ok(state.phase),
                 Phase::Failed => return Err(Error("The agent turn has already failed.")),
                 Phase::Compacting => {
                     self.compact(channel, state, journal, cancellation, deadline)
                         .await?;
                 }
                 Phase::Ready | Phase::Generating => {
-                    if state.input_tokens >= self.max_input_tokens
-                        || state.output_tokens >= self.max_output_tokens
-                    {
-                        return self
-                            .fail(state, journal, "The agent token limit was reached.")
-                            .await;
+                    if self.check_budget(state, journal).await? {
+                        return Ok(Phase::Waiting);
                     }
                     if state.phase == Phase::Ready
                         && crate::context::should_compact(
@@ -191,8 +197,7 @@ impl Engine {
                     if self.workspace_factory.is_some() {
                         definitions.extend(forge_core::agents::framework::descriptors().iter().map(|v|json!({"type":"function","name":v["name"],"description":v["description"],"inputSchema":v["inputSchema"]})));
                     }
-                    let max =
-                        (self.max_output_tokens - state.output_tokens).min(u32::MAX as u64) as u32;
+                    let max = self.remaining_output(state)?;
                     let mut sink = Progress { journal, state };
                     let prompt = crate::context::model_messages(&state.messages);
                     let completion = self

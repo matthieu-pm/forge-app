@@ -828,6 +828,7 @@ async fn configured_agent_services_start_fixture_turns_without_provider_network_
 async fn configured_native_transport_runs_successive_public_agent_turns_through_the_rust_service() {
     for mode in [
         native_runtime_support::Mode::Finish,
+        native_runtime_support::Mode::Budget,
         native_runtime_support::Mode::LargeToolData,
         native_runtime_support::Mode::SensitiveToolData,
     ] {
@@ -880,8 +881,33 @@ async fn configured_native_transport_runs_successive_public_agent_turns_through_
             assert_eq!(response.status(), StatusCode::OK);
             let bytes = response.into_body().collect().await.unwrap().to_bytes();
             let text = String::from_utf8_lossy(&bytes);
-            assert!(text.contains("event: run.completed"), "{text}");
-            assert!(text.contains("The marker is marigold."));
+            if matches!(mode, native_runtime_support::Mode::Budget)
+                && message == "What is the marker?"
+            {
+                assert!(text.contains("event: approval.requested"), "{text}");
+                assert!(!text.contains("event: run.completed"));
+                assert_eq!(native.script.models.load(Ordering::SeqCst), 1);
+                let approval: Uuid = sqlx::query_scalar("SELECT id FROM agent_approvals WHERE run_id IN (SELECT id FROM agent_runs WHERE thread_id=$1) AND capability_id='eve.tool.session_limit_continuation'")
+                    .bind(Uuid::parse_str(&thread).unwrap()).fetch_one(&f.f.pool).await.unwrap();
+                let response = f
+                    .raw(
+                        "POST",
+                        &format!("/api/agent/approvals/{approval}"),
+                        Some(&f.cookie),
+                        &[("origin", ORIGIN)],
+                        Body::from(json!({"decision":"approved"}).to_string()),
+                    )
+                    .await;
+                assert_eq!(response.status(), StatusCode::OK);
+                let bytes = response.into_body().collect().await.unwrap().to_bytes();
+                let resumed = String::from_utf8_lossy(&bytes);
+                assert!(resumed.contains("event: approval.resolved"), "{resumed}");
+                assert!(resumed.contains("event: run.completed"), "{resumed}");
+                assert!(resumed.contains("The marker is marigold."));
+            } else {
+                assert!(text.contains("event: run.completed"), "{text}");
+                assert!(text.contains("The marker is marigold."));
+            }
             assert!(!text.contains("fixture-managed-key"));
         }
         let cursor: String =
@@ -895,7 +921,10 @@ async fn configured_native_transport_runs_successive_public_agent_turns_through_
         assert!(cursor.previous_run_id.is_some());
         assert_eq!(
             native.script.models.load(Ordering::SeqCst),
-            if matches!(mode, native_runtime_support::Mode::Finish) {
+            if matches!(
+                mode,
+                native_runtime_support::Mode::Finish | native_runtime_support::Mode::Budget
+            ) {
                 2
             } else {
                 3
@@ -917,7 +946,11 @@ async fn configured_native_transport_runs_successive_public_agent_turns_through_
             );
             assert!(!payload.contains("fixture-credential-should-not-display"));
         }
-        if !matches!(mode, native_runtime_support::Mode::Finish) {
+        if matches!(
+            mode,
+            native_runtime_support::Mode::LargeToolData
+                | native_runtime_support::Mode::SensitiveToolData
+        ) {
             assert_eq!(
                 payloads
                     .iter()

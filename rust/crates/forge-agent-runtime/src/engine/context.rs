@@ -68,10 +68,7 @@ impl Engine {
                     // while a discarded summary has no authored tool effects.
                     self.commit(state, journal, state.clone(), vec![]).await?;
                     let prompt = context::model_messages(&summary.prompt().messages());
-                    let remaining = self
-                        .max_output_tokens
-                        .saturating_sub(state.output_tokens)
-                        .min(u32::MAX as u64) as u32;
+                    let remaining = self.remaining_output(state)?;
                     if remaining == 0 {
                         return self
                             .fail(state, journal, "The agent token limit was reached.")

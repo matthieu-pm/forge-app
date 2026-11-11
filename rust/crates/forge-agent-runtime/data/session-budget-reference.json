@@ -1,0 +1,2074 @@
+{
+  "limits": [
+    {
+      "configured": {
+        "input": 10,
+        "output": 5
+      },
+      "usage": {
+        "input": 0,
+        "output": 0
+      },
+      "runtime": {
+        "input": 10,
+        "output": 5
+      },
+      "grant": {
+        "input": 10,
+        "output": 5
+      },
+      "remaining": {
+        "input": 10,
+        "output": 5
+      },
+      "violation": null
+    },
+    {
+      "configured": {
+        "input": 10,
+        "output": 5
+      },
+      "usage": {
+        "input": 9,
+        "output": 4
+      },
+      "runtime": {
+        "input": 10,
+        "output": 5
+      },
+      "grant": {
+        "input": 19,
+        "output": 9
+      },
+      "remaining": {
+        "input": 1,
+        "output": 1
+      },
+      "violation": null
+    },
+    {
+      "configured": {
+        "input": 10,
+        "output": 5
+      },
+      "usage": {
+        "input": 10,
+        "output": 0
+      },
+      "runtime": {
+        "input": 10,
+        "output": 5
+      },
+      "grant": {
+        "input": 20,
+        "output": 5
+      },
+      "remaining": {
+        "input": 0,
+        "output": 5
+      },
+      "violation": {
+        "kind": "input",
+        "limit": 10,
+        "usedTokens": 10
+      }
+    },
+    {
+      "configured": {
+        "input": 10,
+        "output": 5
+      },
+      "usage": {
+        "input": 0,
+        "output": 5
+      },
+      "runtime": {
+        "input": 10,
+        "output": 5
+      },
+      "grant": {
+        "input": 10,
+        "output": 10
+      },
+      "remaining": {
+        "input": 10,
+        "output": 0
+      },
+      "violation": {
+        "kind": "output",
+        "limit": 5,
+        "usedTokens": 5
+      }
+    },
+    {
+      "configured": {
+        "input": 10,
+        "output": 5
+      },
+      "usage": {
+        "input": 35,
+        "output": 15
+      },
+      "runtime": {
+        "input": 10,
+        "output": 5
+      },
+      "grant": {
+        "input": 45,
+        "output": 20
+      },
+      "remaining": {
+        "input": 0,
+        "output": 0
+      },
+      "violation": {
+        "kind": "input",
+        "limit": 10,
+        "usedTokens": 35
+      }
+    },
+    {
+      "configured": {
+        "input": 10,
+        "output": 5
+      },
+      "usage": {
+        "input": 200001,
+        "output": 50001
+      },
+      "runtime": {
+        "input": 10,
+        "output": 5
+      },
+      "grant": {
+        "input": 200011,
+        "output": 50006
+      },
+      "remaining": {
+        "input": 0,
+        "output": 0
+      },
+      "violation": {
+        "kind": "input",
+        "limit": 10,
+        "usedTokens": 200001
+      }
+    },
+    {
+      "configured": {
+        "input": 10,
+        "output": 5
+      },
+      "usage": {
+        "input": 900000,
+        "output": 100000
+      },
+      "runtime": {
+        "input": 10,
+        "output": 5
+      },
+      "grant": {
+        "input": 900010,
+        "output": 100005
+      },
+      "remaining": {
+        "input": 0,
+        "output": 0
+      },
+      "violation": {
+        "kind": "input",
+        "limit": 10,
+        "usedTokens": 900000
+      }
+    },
+    {
+      "configured": {
+        "input": 10,
+        "output": 5
+      },
+      "stored": {
+        "input": 35,
+        "output": 15
+      },
+      "usage": {
+        "input": 0,
+        "output": 0
+      },
+      "runtime": {
+        "input": 35,
+        "output": 15
+      },
+      "grant": {
+        "input": 10,
+        "output": 5
+      },
+      "remaining": {
+        "input": 35,
+        "output": 15
+      },
+      "violation": null
+    },
+    {
+      "configured": {
+        "input": 10,
+        "output": 5
+      },
+      "stored": {
+        "input": 35,
+        "output": 15
+      },
+      "usage": {
+        "input": 9,
+        "output": 4
+      },
+      "runtime": {
+        "input": 35,
+        "output": 15
+      },
+      "grant": {
+        "input": 19,
+        "output": 9
+      },
+      "remaining": {
+        "input": 26,
+        "output": 11
+      },
+      "violation": null
+    },
+    {
+      "configured": {
+        "input": 10,
+        "output": 5
+      },
+      "stored": {
+        "input": 35,
+        "output": 15
+      },
+      "usage": {
+        "input": 10,
+        "output": 0
+      },
+      "runtime": {
+        "input": 35,
+        "output": 15
+      },
+      "grant": {
+        "input": 20,
+        "output": 5
+      },
+      "remaining": {
+        "input": 25,
+        "output": 15
+      },
+      "violation": null
+    },
+    {
+      "configured": {
+        "input": 10,
+        "output": 5
+      },
+      "stored": {
+        "input": 35,
+        "output": 15
+      },
+      "usage": {
+        "input": 0,
+        "output": 5
+      },
+      "runtime": {
+        "input": 35,
+        "output": 15
+      },
+      "grant": {
+        "input": 10,
+        "output": 10
+      },
+      "remaining": {
+        "input": 35,
+        "output": 10
+      },
+      "violation": null
+    },
+    {
+      "configured": {
+        "input": 10,
+        "output": 5
+      },
+      "stored": {
+        "input": 35,
+        "output": 15
+      },
+      "usage": {
+        "input": 35,
+        "output": 15
+      },
+      "runtime": {
+        "input": 35,
+        "output": 15
+      },
+      "grant": {
+        "input": 45,
+        "output": 20
+      },
+      "remaining": {
+        "input": 0,
+        "output": 0
+      },
+      "violation": {
+        "kind": "input",
+        "limit": 10,
+        "usedTokens": 35
+      }
+    },
+    {
+      "configured": {
+        "input": 10,
+        "output": 5
+      },
+      "stored": {
+        "input": 35,
+        "output": 15
+      },
+      "usage": {
+        "input": 200001,
+        "output": 50001
+      },
+      "runtime": {
+        "input": 35,
+        "output": 15
+      },
+      "grant": {
+        "input": 200011,
+        "output": 50006
+      },
+      "remaining": {
+        "input": 0,
+        "output": 0
+      },
+      "violation": {
+        "kind": "input",
+        "limit": 10,
+        "usedTokens": 200001
+      }
+    },
+    {
+      "configured": {
+        "input": 10,
+        "output": 5
+      },
+      "stored": {
+        "input": 35,
+        "output": 15
+      },
+      "usage": {
+        "input": 900000,
+        "output": 100000
+      },
+      "runtime": {
+        "input": 35,
+        "output": 15
+      },
+      "grant": {
+        "input": 900010,
+        "output": 100005
+      },
+      "remaining": {
+        "input": 0,
+        "output": 0
+      },
+      "violation": {
+        "kind": "input",
+        "limit": 10,
+        "usedTokens": 900000
+      }
+    },
+    {
+      "configured": {
+        "input": 10,
+        "output": 5
+      },
+      "stored": {
+        "input": 400000,
+        "output": 100000
+      },
+      "usage": {
+        "input": 0,
+        "output": 0
+      },
+      "runtime": {
+        "input": 400000,
+        "output": 100000
+      },
+      "grant": {
+        "input": 10,
+        "output": 5
+      },
+      "remaining": {
+        "input": 400000,
+        "output": 100000
+      },
+      "violation": null
+    },
+    {
+      "configured": {
+        "input": 10,
+        "output": 5
+      },
+      "stored": {
+        "input": 400000,
+        "output": 100000
+      },
+      "usage": {
+        "input": 9,
+        "output": 4
+      },
+      "runtime": {
+        "input": 400000,
+        "output": 100000
+      },
+      "grant": {
+        "input": 19,
+        "output": 9
+      },
+      "remaining": {
+        "input": 399991,
+        "output": 99996
+      },
+      "violation": null
+    },
+    {
+      "configured": {
+        "input": 10,
+        "output": 5
+      },
+      "stored": {
+        "input": 400000,
+        "output": 100000
+      },
+      "usage": {
+        "input": 10,
+        "output": 0
+      },
+      "runtime": {
+        "input": 400000,
+        "output": 100000
+      },
+      "grant": {
+        "input": 20,
+        "output": 5
+      },
+      "remaining": {
+        "input": 399990,
+        "output": 100000
+      },
+      "violation": null
+    },
+    {
+      "configured": {
+        "input": 10,
+        "output": 5
+      },
+      "stored": {
+        "input": 400000,
+        "output": 100000
+      },
+      "usage": {
+        "input": 0,
+        "output": 5
+      },
+      "runtime": {
+        "input": 400000,
+        "output": 100000
+      },
+      "grant": {
+        "input": 10,
+        "output": 10
+      },
+      "remaining": {
+        "input": 400000,
+        "output": 99995
+      },
+      "violation": null
+    },
+    {
+      "configured": {
+        "input": 10,
+        "output": 5
+      },
+      "stored": {
+        "input": 400000,
+        "output": 100000
+      },
+      "usage": {
+        "input": 35,
+        "output": 15
+      },
+      "runtime": {
+        "input": 400000,
+        "output": 100000
+      },
+      "grant": {
+        "input": 45,
+        "output": 20
+      },
+      "remaining": {
+        "input": 399965,
+        "output": 99985
+      },
+      "violation": null
+    },
+    {
+      "configured": {
+        "input": 10,
+        "output": 5
+      },
+      "stored": {
+        "input": 400000,
+        "output": 100000
+      },
+      "usage": {
+        "input": 200001,
+        "output": 50001
+      },
+      "runtime": {
+        "input": 400000,
+        "output": 100000
+      },
+      "grant": {
+        "input": 200011,
+        "output": 50006
+      },
+      "remaining": {
+        "input": 199999,
+        "output": 49999
+      },
+      "violation": null
+    },
+    {
+      "configured": {
+        "input": 10,
+        "output": 5
+      },
+      "stored": {
+        "input": 400000,
+        "output": 100000
+      },
+      "usage": {
+        "input": 900000,
+        "output": 100000
+      },
+      "runtime": {
+        "input": 400000,
+        "output": 100000
+      },
+      "grant": {
+        "input": 900010,
+        "output": 100005
+      },
+      "remaining": {
+        "input": 0,
+        "output": 0
+      },
+      "violation": {
+        "kind": "input",
+        "limit": 10,
+        "usedTokens": 900000
+      }
+    },
+    {
+      "configured": {
+        "input": 200000,
+        "output": 50000
+      },
+      "usage": {
+        "input": 0,
+        "output": 0
+      },
+      "runtime": {
+        "input": 200000,
+        "output": 50000
+      },
+      "grant": {
+        "input": 200000,
+        "output": 50000
+      },
+      "remaining": {
+        "input": 200000,
+        "output": 50000
+      },
+      "violation": null
+    },
+    {
+      "configured": {
+        "input": 200000,
+        "output": 50000
+      },
+      "usage": {
+        "input": 9,
+        "output": 4
+      },
+      "runtime": {
+        "input": 200000,
+        "output": 50000
+      },
+      "grant": {
+        "input": 200009,
+        "output": 50004
+      },
+      "remaining": {
+        "input": 199991,
+        "output": 49996
+      },
+      "violation": null
+    },
+    {
+      "configured": {
+        "input": 200000,
+        "output": 50000
+      },
+      "usage": {
+        "input": 10,
+        "output": 0
+      },
+      "runtime": {
+        "input": 200000,
+        "output": 50000
+      },
+      "grant": {
+        "input": 200010,
+        "output": 50000
+      },
+      "remaining": {
+        "input": 199990,
+        "output": 50000
+      },
+      "violation": null
+    },
+    {
+      "configured": {
+        "input": 200000,
+        "output": 50000
+      },
+      "usage": {
+        "input": 0,
+        "output": 5
+      },
+      "runtime": {
+        "input": 200000,
+        "output": 50000
+      },
+      "grant": {
+        "input": 200000,
+        "output": 50005
+      },
+      "remaining": {
+        "input": 200000,
+        "output": 49995
+      },
+      "violation": null
+    },
+    {
+      "configured": {
+        "input": 200000,
+        "output": 50000
+      },
+      "usage": {
+        "input": 35,
+        "output": 15
+      },
+      "runtime": {
+        "input": 200000,
+        "output": 50000
+      },
+      "grant": {
+        "input": 200035,
+        "output": 50015
+      },
+      "remaining": {
+        "input": 199965,
+        "output": 49985
+      },
+      "violation": null
+    },
+    {
+      "configured": {
+        "input": 200000,
+        "output": 50000
+      },
+      "usage": {
+        "input": 200001,
+        "output": 50001
+      },
+      "runtime": {
+        "input": 200000,
+        "output": 50000
+      },
+      "grant": {
+        "input": 400001,
+        "output": 100001
+      },
+      "remaining": {
+        "input": 0,
+        "output": 0
+      },
+      "violation": {
+        "kind": "input",
+        "limit": 200000,
+        "usedTokens": 200001
+      }
+    },
+    {
+      "configured": {
+        "input": 200000,
+        "output": 50000
+      },
+      "usage": {
+        "input": 900000,
+        "output": 100000
+      },
+      "runtime": {
+        "input": 200000,
+        "output": 50000
+      },
+      "grant": {
+        "input": 1100000,
+        "output": 150000
+      },
+      "remaining": {
+        "input": 0,
+        "output": 0
+      },
+      "violation": {
+        "kind": "input",
+        "limit": 200000,
+        "usedTokens": 900000
+      }
+    },
+    {
+      "configured": {
+        "input": 200000,
+        "output": 50000
+      },
+      "stored": {
+        "input": 35,
+        "output": 15
+      },
+      "usage": {
+        "input": 0,
+        "output": 0
+      },
+      "runtime": {
+        "input": 35,
+        "output": 15
+      },
+      "grant": {
+        "input": 200000,
+        "output": 50000
+      },
+      "remaining": {
+        "input": 35,
+        "output": 15
+      },
+      "violation": null
+    },
+    {
+      "configured": {
+        "input": 200000,
+        "output": 50000
+      },
+      "stored": {
+        "input": 35,
+        "output": 15
+      },
+      "usage": {
+        "input": 9,
+        "output": 4
+      },
+      "runtime": {
+        "input": 35,
+        "output": 15
+      },
+      "grant": {
+        "input": 200009,
+        "output": 50004
+      },
+      "remaining": {
+        "input": 26,
+        "output": 11
+      },
+      "violation": null
+    },
+    {
+      "configured": {
+        "input": 200000,
+        "output": 50000
+      },
+      "stored": {
+        "input": 35,
+        "output": 15
+      },
+      "usage": {
+        "input": 10,
+        "output": 0
+      },
+      "runtime": {
+        "input": 35,
+        "output": 15
+      },
+      "grant": {
+        "input": 200010,
+        "output": 50000
+      },
+      "remaining": {
+        "input": 25,
+        "output": 15
+      },
+      "violation": null
+    },
+    {
+      "configured": {
+        "input": 200000,
+        "output": 50000
+      },
+      "stored": {
+        "input": 35,
+        "output": 15
+      },
+      "usage": {
+        "input": 0,
+        "output": 5
+      },
+      "runtime": {
+        "input": 35,
+        "output": 15
+      },
+      "grant": {
+        "input": 200000,
+        "output": 50005
+      },
+      "remaining": {
+        "input": 35,
+        "output": 10
+      },
+      "violation": null
+    },
+    {
+      "configured": {
+        "input": 200000,
+        "output": 50000
+      },
+      "stored": {
+        "input": 35,
+        "output": 15
+      },
+      "usage": {
+        "input": 35,
+        "output": 15
+      },
+      "runtime": {
+        "input": 35,
+        "output": 15
+      },
+      "grant": {
+        "input": 200035,
+        "output": 50015
+      },
+      "remaining": {
+        "input": 0,
+        "output": 0
+      },
+      "violation": {
+        "kind": "input",
+        "limit": 200000,
+        "usedTokens": 35
+      }
+    },
+    {
+      "configured": {
+        "input": 200000,
+        "output": 50000
+      },
+      "stored": {
+        "input": 35,
+        "output": 15
+      },
+      "usage": {
+        "input": 200001,
+        "output": 50001
+      },
+      "runtime": {
+        "input": 35,
+        "output": 15
+      },
+      "grant": {
+        "input": 400001,
+        "output": 100001
+      },
+      "remaining": {
+        "input": 0,
+        "output": 0
+      },
+      "violation": {
+        "kind": "input",
+        "limit": 200000,
+        "usedTokens": 200001
+      }
+    },
+    {
+      "configured": {
+        "input": 200000,
+        "output": 50000
+      },
+      "stored": {
+        "input": 35,
+        "output": 15
+      },
+      "usage": {
+        "input": 900000,
+        "output": 100000
+      },
+      "runtime": {
+        "input": 35,
+        "output": 15
+      },
+      "grant": {
+        "input": 1100000,
+        "output": 150000
+      },
+      "remaining": {
+        "input": 0,
+        "output": 0
+      },
+      "violation": {
+        "kind": "input",
+        "limit": 200000,
+        "usedTokens": 900000
+      }
+    },
+    {
+      "configured": {
+        "input": 200000,
+        "output": 50000
+      },
+      "stored": {
+        "input": 400000,
+        "output": 100000
+      },
+      "usage": {
+        "input": 0,
+        "output": 0
+      },
+      "runtime": {
+        "input": 400000,
+        "output": 100000
+      },
+      "grant": {
+        "input": 200000,
+        "output": 50000
+      },
+      "remaining": {
+        "input": 400000,
+        "output": 100000
+      },
+      "violation": null
+    },
+    {
+      "configured": {
+        "input": 200000,
+        "output": 50000
+      },
+      "stored": {
+        "input": 400000,
+        "output": 100000
+      },
+      "usage": {
+        "input": 9,
+        "output": 4
+      },
+      "runtime": {
+        "input": 400000,
+        "output": 100000
+      },
+      "grant": {
+        "input": 200009,
+        "output": 50004
+      },
+      "remaining": {
+        "input": 399991,
+        "output": 99996
+      },
+      "violation": null
+    },
+    {
+      "configured": {
+        "input": 200000,
+        "output": 50000
+      },
+      "stored": {
+        "input": 400000,
+        "output": 100000
+      },
+      "usage": {
+        "input": 10,
+        "output": 0
+      },
+      "runtime": {
+        "input": 400000,
+        "output": 100000
+      },
+      "grant": {
+        "input": 200010,
+        "output": 50000
+      },
+      "remaining": {
+        "input": 399990,
+        "output": 100000
+      },
+      "violation": null
+    },
+    {
+      "configured": {
+        "input": 200000,
+        "output": 50000
+      },
+      "stored": {
+        "input": 400000,
+        "output": 100000
+      },
+      "usage": {
+        "input": 0,
+        "output": 5
+      },
+      "runtime": {
+        "input": 400000,
+        "output": 100000
+      },
+      "grant": {
+        "input": 200000,
+        "output": 50005
+      },
+      "remaining": {
+        "input": 400000,
+        "output": 99995
+      },
+      "violation": null
+    },
+    {
+      "configured": {
+        "input": 200000,
+        "output": 50000
+      },
+      "stored": {
+        "input": 400000,
+        "output": 100000
+      },
+      "usage": {
+        "input": 35,
+        "output": 15
+      },
+      "runtime": {
+        "input": 400000,
+        "output": 100000
+      },
+      "grant": {
+        "input": 200035,
+        "output": 50015
+      },
+      "remaining": {
+        "input": 399965,
+        "output": 99985
+      },
+      "violation": null
+    },
+    {
+      "configured": {
+        "input": 200000,
+        "output": 50000
+      },
+      "stored": {
+        "input": 400000,
+        "output": 100000
+      },
+      "usage": {
+        "input": 200001,
+        "output": 50001
+      },
+      "runtime": {
+        "input": 400000,
+        "output": 100000
+      },
+      "grant": {
+        "input": 400001,
+        "output": 100001
+      },
+      "remaining": {
+        "input": 199999,
+        "output": 49999
+      },
+      "violation": null
+    },
+    {
+      "configured": {
+        "input": 200000,
+        "output": 50000
+      },
+      "stored": {
+        "input": 400000,
+        "output": 100000
+      },
+      "usage": {
+        "input": 900000,
+        "output": 100000
+      },
+      "runtime": {
+        "input": 400000,
+        "output": 100000
+      },
+      "grant": {
+        "input": 1100000,
+        "output": 150000
+      },
+      "remaining": {
+        "input": 0,
+        "output": 0
+      },
+      "violation": {
+        "kind": "input",
+        "limit": 200000,
+        "usedTokens": 900000
+      }
+    }
+  ],
+  "requests": [
+    {
+      "action": {
+        "callId": "fixture:limit:input:1",
+        "input": {
+          "kind": "input",
+          "limit": 1,
+          "usedTokens": 1
+        },
+        "kind": "tool-call",
+        "toolName": "session_limit_continuation"
+      },
+      "allowFreeform": false,
+      "display": "confirmation",
+      "kind": "session-limit",
+      "options": [
+        {
+          "description": "Grant a fresh token budget",
+          "id": "continue",
+          "label": "Approve",
+          "style": "primary"
+        },
+        {
+          "description": "Stop now",
+          "id": "stop",
+          "label": "Stop",
+          "style": "danger"
+        }
+      ],
+      "prompt": "This session has hit the input-token limit (1) per session. This is a guardrail against defective long-running sessions. If session activity looks fine, just approve to keep going.",
+      "requestId": "fixture:limit:input:1"
+    },
+    {
+      "action": {
+        "callId": "fixture:limit:input:999",
+        "input": {
+          "kind": "input",
+          "limit": 999,
+          "usedTokens": 999
+        },
+        "kind": "tool-call",
+        "toolName": "session_limit_continuation"
+      },
+      "allowFreeform": false,
+      "display": "confirmation",
+      "kind": "session-limit",
+      "options": [
+        {
+          "description": "Grant a fresh token budget",
+          "id": "continue",
+          "label": "Approve",
+          "style": "primary"
+        },
+        {
+          "description": "Stop now",
+          "id": "stop",
+          "label": "Stop",
+          "style": "danger"
+        }
+      ],
+      "prompt": "This session has hit the input-token limit (999) per session. This is a guardrail against defective long-running sessions. If session activity looks fine, just approve to keep going.",
+      "requestId": "fixture:limit:input:999"
+    },
+    {
+      "action": {
+        "callId": "fixture:limit:input:1000",
+        "input": {
+          "kind": "input",
+          "limit": 1000,
+          "usedTokens": 1000
+        },
+        "kind": "tool-call",
+        "toolName": "session_limit_continuation"
+      },
+      "allowFreeform": false,
+      "display": "confirmation",
+      "kind": "session-limit",
+      "options": [
+        {
+          "description": "Grant a fresh token budget",
+          "id": "continue",
+          "label": "Approve",
+          "style": "primary"
+        },
+        {
+          "description": "Stop now",
+          "id": "stop",
+          "label": "Stop",
+          "style": "danger"
+        }
+      ],
+      "prompt": "This session has hit the input-token limit (1K) per session. This is a guardrail against defective long-running sessions. If session activity looks fine, just approve to keep going.",
+      "requestId": "fixture:limit:input:1000"
+    },
+    {
+      "action": {
+        "callId": "fixture:limit:input:1050",
+        "input": {
+          "kind": "input",
+          "limit": 1050,
+          "usedTokens": 1050
+        },
+        "kind": "tool-call",
+        "toolName": "session_limit_continuation"
+      },
+      "allowFreeform": false,
+      "display": "confirmation",
+      "kind": "session-limit",
+      "options": [
+        {
+          "description": "Grant a fresh token budget",
+          "id": "continue",
+          "label": "Approve",
+          "style": "primary"
+        },
+        {
+          "description": "Stop now",
+          "id": "stop",
+          "label": "Stop",
+          "style": "danger"
+        }
+      ],
+      "prompt": "This session has hit the input-token limit (1.1K) per session. This is a guardrail against defective long-running sessions. If session activity looks fine, just approve to keep going.",
+      "requestId": "fixture:limit:input:1050"
+    },
+    {
+      "action": {
+        "callId": "fixture:limit:input:1150",
+        "input": {
+          "kind": "input",
+          "limit": 1150,
+          "usedTokens": 1150
+        },
+        "kind": "tool-call",
+        "toolName": "session_limit_continuation"
+      },
+      "allowFreeform": false,
+      "display": "confirmation",
+      "kind": "session-limit",
+      "options": [
+        {
+          "description": "Grant a fresh token budget",
+          "id": "continue",
+          "label": "Approve",
+          "style": "primary"
+        },
+        {
+          "description": "Stop now",
+          "id": "stop",
+          "label": "Stop",
+          "style": "danger"
+        }
+      ],
+      "prompt": "This session has hit the input-token limit (1.1K) per session. This is a guardrail against defective long-running sessions. If session activity looks fine, just approve to keep going.",
+      "requestId": "fixture:limit:input:1150"
+    },
+    {
+      "action": {
+        "callId": "fixture:limit:input:1250",
+        "input": {
+          "kind": "input",
+          "limit": 1250,
+          "usedTokens": 1250
+        },
+        "kind": "tool-call",
+        "toolName": "session_limit_continuation"
+      },
+      "allowFreeform": false,
+      "display": "confirmation",
+      "kind": "session-limit",
+      "options": [
+        {
+          "description": "Grant a fresh token budget",
+          "id": "continue",
+          "label": "Approve",
+          "style": "primary"
+        },
+        {
+          "description": "Stop now",
+          "id": "stop",
+          "label": "Stop",
+          "style": "danger"
+        }
+      ],
+      "prompt": "This session has hit the input-token limit (1.3K) per session. This is a guardrail against defective long-running sessions. If session activity looks fine, just approve to keep going.",
+      "requestId": "fixture:limit:input:1250"
+    },
+    {
+      "action": {
+        "callId": "fixture:limit:input:1950",
+        "input": {
+          "kind": "input",
+          "limit": 1950,
+          "usedTokens": 1950
+        },
+        "kind": "tool-call",
+        "toolName": "session_limit_continuation"
+      },
+      "allowFreeform": false,
+      "display": "confirmation",
+      "kind": "session-limit",
+      "options": [
+        {
+          "description": "Grant a fresh token budget",
+          "id": "continue",
+          "label": "Approve",
+          "style": "primary"
+        },
+        {
+          "description": "Stop now",
+          "id": "stop",
+          "label": "Stop",
+          "style": "danger"
+        }
+      ],
+      "prompt": "This session has hit the input-token limit (1.9K) per session. This is a guardrail against defective long-running sessions. If session activity looks fine, just approve to keep going.",
+      "requestId": "fixture:limit:input:1950"
+    },
+    {
+      "action": {
+        "callId": "fixture:limit:input:9950",
+        "input": {
+          "kind": "input",
+          "limit": 9950,
+          "usedTokens": 9950
+        },
+        "kind": "tool-call",
+        "toolName": "session_limit_continuation"
+      },
+      "allowFreeform": false,
+      "display": "confirmation",
+      "kind": "session-limit",
+      "options": [
+        {
+          "description": "Grant a fresh token budget",
+          "id": "continue",
+          "label": "Approve",
+          "style": "primary"
+        },
+        {
+          "description": "Stop now",
+          "id": "stop",
+          "label": "Stop",
+          "style": "danger"
+        }
+      ],
+      "prompt": "This session has hit the input-token limit (9.9K) per session. This is a guardrail against defective long-running sessions. If session activity looks fine, just approve to keep going.",
+      "requestId": "fixture:limit:input:9950"
+    },
+    {
+      "action": {
+        "callId": "fixture:limit:input:999999",
+        "input": {
+          "kind": "input",
+          "limit": 999999,
+          "usedTokens": 999999
+        },
+        "kind": "tool-call",
+        "toolName": "session_limit_continuation"
+      },
+      "allowFreeform": false,
+      "display": "confirmation",
+      "kind": "session-limit",
+      "options": [
+        {
+          "description": "Grant a fresh token budget",
+          "id": "continue",
+          "label": "Approve",
+          "style": "primary"
+        },
+        {
+          "description": "Stop now",
+          "id": "stop",
+          "label": "Stop",
+          "style": "danger"
+        }
+      ],
+      "prompt": "This session has hit the input-token limit (1000K) per session. This is a guardrail against defective long-running sessions. If session activity looks fine, just approve to keep going.",
+      "requestId": "fixture:limit:input:999999"
+    },
+    {
+      "action": {
+        "callId": "fixture:limit:input:1000000",
+        "input": {
+          "kind": "input",
+          "limit": 1000000,
+          "usedTokens": 1000000
+        },
+        "kind": "tool-call",
+        "toolName": "session_limit_continuation"
+      },
+      "allowFreeform": false,
+      "display": "confirmation",
+      "kind": "session-limit",
+      "options": [
+        {
+          "description": "Grant a fresh token budget",
+          "id": "continue",
+          "label": "Approve",
+          "style": "primary"
+        },
+        {
+          "description": "Stop now",
+          "id": "stop",
+          "label": "Stop",
+          "style": "danger"
+        }
+      ],
+      "prompt": "This session has hit the input-token limit (1M) per session. This is a guardrail against defective long-running sessions. If session activity looks fine, just approve to keep going.",
+      "requestId": "fixture:limit:input:1000000"
+    },
+    {
+      "action": {
+        "callId": "fixture:limit:input:1250000",
+        "input": {
+          "kind": "input",
+          "limit": 1250000,
+          "usedTokens": 1250000
+        },
+        "kind": "tool-call",
+        "toolName": "session_limit_continuation"
+      },
+      "allowFreeform": false,
+      "display": "confirmation",
+      "kind": "session-limit",
+      "options": [
+        {
+          "description": "Grant a fresh token budget",
+          "id": "continue",
+          "label": "Approve",
+          "style": "primary"
+        },
+        {
+          "description": "Stop now",
+          "id": "stop",
+          "label": "Stop",
+          "style": "danger"
+        }
+      ],
+      "prompt": "This session has hit the input-token limit (1.3M) per session. This is a guardrail against defective long-running sessions. If session activity looks fine, just approve to keep going.",
+      "requestId": "fixture:limit:input:1250000"
+    },
+    {
+      "action": {
+        "callId": "fixture:limit:input:2550000",
+        "input": {
+          "kind": "input",
+          "limit": 2550000,
+          "usedTokens": 2550000
+        },
+        "kind": "tool-call",
+        "toolName": "session_limit_continuation"
+      },
+      "allowFreeform": false,
+      "display": "confirmation",
+      "kind": "session-limit",
+      "options": [
+        {
+          "description": "Grant a fresh token budget",
+          "id": "continue",
+          "label": "Approve",
+          "style": "primary"
+        },
+        {
+          "description": "Stop now",
+          "id": "stop",
+          "label": "Stop",
+          "style": "danger"
+        }
+      ],
+      "prompt": "This session has hit the input-token limit (2.5M) per session. This is a guardrail against defective long-running sessions. If session activity looks fine, just approve to keep going.",
+      "requestId": "fixture:limit:input:2550000"
+    },
+    {
+      "action": {
+        "callId": "fixture:limit:input:200000",
+        "input": {
+          "kind": "input",
+          "limit": 200000,
+          "usedTokens": 200000
+        },
+        "kind": "tool-call",
+        "toolName": "session_limit_continuation"
+      },
+      "allowFreeform": false,
+      "display": "confirmation",
+      "kind": "session-limit",
+      "options": [
+        {
+          "description": "Grant a fresh token budget",
+          "id": "continue",
+          "label": "Approve",
+          "style": "primary"
+        },
+        {
+          "description": "Stop now",
+          "id": "stop",
+          "label": "Stop",
+          "style": "danger"
+        }
+      ],
+      "prompt": "This session has hit the input-token limit (200K) per session. This is a guardrail against defective long-running sessions. If session activity looks fine, just approve to keep going.",
+      "requestId": "fixture:limit:input:200000"
+    },
+    {
+      "action": {
+        "callId": "fixture:limit:input:50000",
+        "input": {
+          "kind": "input",
+          "limit": 50000,
+          "usedTokens": 50000
+        },
+        "kind": "tool-call",
+        "toolName": "session_limit_continuation"
+      },
+      "allowFreeform": false,
+      "display": "confirmation",
+      "kind": "session-limit",
+      "options": [
+        {
+          "description": "Grant a fresh token budget",
+          "id": "continue",
+          "label": "Approve",
+          "style": "primary"
+        },
+        {
+          "description": "Stop now",
+          "id": "stop",
+          "label": "Stop",
+          "style": "danger"
+        }
+      ],
+      "prompt": "This session has hit the input-token limit (50K) per session. This is a guardrail against defective long-running sessions. If session activity looks fine, just approve to keep going.",
+      "requestId": "fixture:limit:input:50000"
+    },
+    {
+      "action": {
+        "callId": "fixture:limit:input:9007199254740991",
+        "input": {
+          "kind": "input",
+          "limit": 9007199254740991,
+          "usedTokens": 9007199254740991
+        },
+        "kind": "tool-call",
+        "toolName": "session_limit_continuation"
+      },
+      "allowFreeform": false,
+      "display": "confirmation",
+      "kind": "session-limit",
+      "options": [
+        {
+          "description": "Grant a fresh token budget",
+          "id": "continue",
+          "label": "Approve",
+          "style": "primary"
+        },
+        {
+          "description": "Stop now",
+          "id": "stop",
+          "label": "Stop",
+          "style": "danger"
+        }
+      ],
+      "prompt": "This session has hit the input-token limit (9007199254.7M) per session. This is a guardrail against defective long-running sessions. If session activity looks fine, just approve to keep going.",
+      "requestId": "fixture:limit:input:9007199254740991"
+    },
+    {
+      "action": {
+        "callId": "fixture:limit:output:1",
+        "input": {
+          "kind": "output",
+          "limit": 1,
+          "usedTokens": 1
+        },
+        "kind": "tool-call",
+        "toolName": "session_limit_continuation"
+      },
+      "allowFreeform": false,
+      "display": "confirmation",
+      "kind": "session-limit",
+      "options": [
+        {
+          "description": "Grant a fresh token budget",
+          "id": "continue",
+          "label": "Approve",
+          "style": "primary"
+        },
+        {
+          "description": "Stop now",
+          "id": "stop",
+          "label": "Stop",
+          "style": "danger"
+        }
+      ],
+      "prompt": "This session has hit the output-token limit (1) per session. This is a guardrail against defective long-running sessions. If session activity looks fine, just approve to keep going.",
+      "requestId": "fixture:limit:output:1"
+    },
+    {
+      "action": {
+        "callId": "fixture:limit:output:999",
+        "input": {
+          "kind": "output",
+          "limit": 999,
+          "usedTokens": 999
+        },
+        "kind": "tool-call",
+        "toolName": "session_limit_continuation"
+      },
+      "allowFreeform": false,
+      "display": "confirmation",
+      "kind": "session-limit",
+      "options": [
+        {
+          "description": "Grant a fresh token budget",
+          "id": "continue",
+          "label": "Approve",
+          "style": "primary"
+        },
+        {
+          "description": "Stop now",
+          "id": "stop",
+          "label": "Stop",
+          "style": "danger"
+        }
+      ],
+      "prompt": "This session has hit the output-token limit (999) per session. This is a guardrail against defective long-running sessions. If session activity looks fine, just approve to keep going.",
+      "requestId": "fixture:limit:output:999"
+    },
+    {
+      "action": {
+        "callId": "fixture:limit:output:1000",
+        "input": {
+          "kind": "output",
+          "limit": 1000,
+          "usedTokens": 1000
+        },
+        "kind": "tool-call",
+        "toolName": "session_limit_continuation"
+      },
+      "allowFreeform": false,
+      "display": "confirmation",
+      "kind": "session-limit",
+      "options": [
+        {
+          "description": "Grant a fresh token budget",
+          "id": "continue",
+          "label": "Approve",
+          "style": "primary"
+        },
+        {
+          "description": "Stop now",
+          "id": "stop",
+          "label": "Stop",
+          "style": "danger"
+        }
+      ],
+      "prompt": "This session has hit the output-token limit (1K) per session. This is a guardrail against defective long-running sessions. If session activity looks fine, just approve to keep going.",
+      "requestId": "fixture:limit:output:1000"
+    },
+    {
+      "action": {
+        "callId": "fixture:limit:output:1050",
+        "input": {
+          "kind": "output",
+          "limit": 1050,
+          "usedTokens": 1050
+        },
+        "kind": "tool-call",
+        "toolName": "session_limit_continuation"
+      },
+      "allowFreeform": false,
+      "display": "confirmation",
+      "kind": "session-limit",
+      "options": [
+        {
+          "description": "Grant a fresh token budget",
+          "id": "continue",
+          "label": "Approve",
+          "style": "primary"
+        },
+        {
+          "description": "Stop now",
+          "id": "stop",
+          "label": "Stop",
+          "style": "danger"
+        }
+      ],
+      "prompt": "This session has hit the output-token limit (1.1K) per session. This is a guardrail against defective long-running sessions. If session activity looks fine, just approve to keep going.",
+      "requestId": "fixture:limit:output:1050"
+    },
+    {
+      "action": {
+        "callId": "fixture:limit:output:1150",
+        "input": {
+          "kind": "output",
+          "limit": 1150,
+          "usedTokens": 1150
+        },
+        "kind": "tool-call",
+        "toolName": "session_limit_continuation"
+      },
+      "allowFreeform": false,
+      "display": "confirmation",
+      "kind": "session-limit",
+      "options": [
+        {
+          "description": "Grant a fresh token budget",
+          "id": "continue",
+          "label": "Approve",
+          "style": "primary"
+        },
+        {
+          "description": "Stop now",
+          "id": "stop",
+          "label": "Stop",
+          "style": "danger"
+        }
+      ],
+      "prompt": "This session has hit the output-token limit (1.1K) per session. This is a guardrail against defective long-running sessions. If session activity looks fine, just approve to keep going.",
+      "requestId": "fixture:limit:output:1150"
+    },
+    {
+      "action": {
+        "callId": "fixture:limit:output:1250",
+        "input": {
+          "kind": "output",
+          "limit": 1250,
+          "usedTokens": 1250
+        },
+        "kind": "tool-call",
+        "toolName": "session_limit_continuation"
+      },
+      "allowFreeform": false,
+      "display": "confirmation",
+      "kind": "session-limit",
+      "options": [
+        {
+          "description": "Grant a fresh token budget",
+          "id": "continue",
+          "label": "Approve",
+          "style": "primary"
+        },
+        {
+          "description": "Stop now",
+          "id": "stop",
+          "label": "Stop",
+          "style": "danger"
+        }
+      ],
+      "prompt": "This session has hit the output-token limit (1.3K) per session. This is a guardrail against defective long-running sessions. If session activity looks fine, just approve to keep going.",
+      "requestId": "fixture:limit:output:1250"
+    },
+    {
+      "action": {
+        "callId": "fixture:limit:output:1950",
+        "input": {
+          "kind": "output",
+          "limit": 1950,
+          "usedTokens": 1950
+        },
+        "kind": "tool-call",
+        "toolName": "session_limit_continuation"
+      },
+      "allowFreeform": false,
+      "display": "confirmation",
+      "kind": "session-limit",
+      "options": [
+        {
+          "description": "Grant a fresh token budget",
+          "id": "continue",
+          "label": "Approve",
+          "style": "primary"
+        },
+        {
+          "description": "Stop now",
+          "id": "stop",
+          "label": "Stop",
+          "style": "danger"
+        }
+      ],
+      "prompt": "This session has hit the output-token limit (1.9K) per session. This is a guardrail against defective long-running sessions. If session activity looks fine, just approve to keep going.",
+      "requestId": "fixture:limit:output:1950"
+    },
+    {
+      "action": {
+        "callId": "fixture:limit:output:9950",
+        "input": {
+          "kind": "output",
+          "limit": 9950,
+          "usedTokens": 9950
+        },
+        "kind": "tool-call",
+        "toolName": "session_limit_continuation"
+      },
+      "allowFreeform": false,
+      "display": "confirmation",
+      "kind": "session-limit",
+      "options": [
+        {
+          "description": "Grant a fresh token budget",
+          "id": "continue",
+          "label": "Approve",
+          "style": "primary"
+        },
+        {
+          "description": "Stop now",
+          "id": "stop",
+          "label": "Stop",
+          "style": "danger"
+        }
+      ],
+      "prompt": "This session has hit the output-token limit (9.9K) per session. This is a guardrail against defective long-running sessions. If session activity looks fine, just approve to keep going.",
+      "requestId": "fixture:limit:output:9950"
+    },
+    {
+      "action": {
+        "callId": "fixture:limit:output:999999",
+        "input": {
+          "kind": "output",
+          "limit": 999999,
+          "usedTokens": 999999
+        },
+        "kind": "tool-call",
+        "toolName": "session_limit_continuation"
+      },
+      "allowFreeform": false,
+      "display": "confirmation",
+      "kind": "session-limit",
+      "options": [
+        {
+          "description": "Grant a fresh token budget",
+          "id": "continue",
+          "label": "Approve",
+          "style": "primary"
+        },
+        {
+          "description": "Stop now",
+          "id": "stop",
+          "label": "Stop",
+          "style": "danger"
+        }
+      ],
+      "prompt": "This session has hit the output-token limit (1000K) per session. This is a guardrail against defective long-running sessions. If session activity looks fine, just approve to keep going.",
+      "requestId": "fixture:limit:output:999999"
+    },
+    {
+      "action": {
+        "callId": "fixture:limit:output:1000000",
+        "input": {
+          "kind": "output",
+          "limit": 1000000,
+          "usedTokens": 1000000
+        },
+        "kind": "tool-call",
+        "toolName": "session_limit_continuation"
+      },
+      "allowFreeform": false,
+      "display": "confirmation",
+      "kind": "session-limit",
+      "options": [
+        {
+          "description": "Grant a fresh token budget",
+          "id": "continue",
+          "label": "Approve",
+          "style": "primary"
+        },
+        {
+          "description": "Stop now",
+          "id": "stop",
+          "label": "Stop",
+          "style": "danger"
+        }
+      ],
+      "prompt": "This session has hit the output-token limit (1M) per session. This is a guardrail against defective long-running sessions. If session activity looks fine, just approve to keep going.",
+      "requestId": "fixture:limit:output:1000000"
+    },
+    {
+      "action": {
+        "callId": "fixture:limit:output:1250000",
+        "input": {
+          "kind": "output",
+          "limit": 1250000,
+          "usedTokens": 1250000
+        },
+        "kind": "tool-call",
+        "toolName": "session_limit_continuation"
+      },
+      "allowFreeform": false,
+      "display": "confirmation",
+      "kind": "session-limit",
+      "options": [
+        {
+          "description": "Grant a fresh token budget",
+          "id": "continue",
+          "label": "Approve",
+          "style": "primary"
+        },
+        {
+          "description": "Stop now",
+          "id": "stop",
+          "label": "Stop",
+          "style": "danger"
+        }
+      ],
+      "prompt": "This session has hit the output-token limit (1.3M) per session. This is a guardrail against defective long-running sessions. If session activity looks fine, just approve to keep going.",
+      "requestId": "fixture:limit:output:1250000"
+    },
+    {
+      "action": {
+        "callId": "fixture:limit:output:2550000",
+        "input": {
+          "kind": "output",
+          "limit": 2550000,
+          "usedTokens": 2550000
+        },
+        "kind": "tool-call",
+        "toolName": "session_limit_continuation"
+      },
+      "allowFreeform": false,
+      "display": "confirmation",
+      "kind": "session-limit",
+      "options": [
+        {
+          "description": "Grant a fresh token budget",
+          "id": "continue",
+          "label": "Approve",
+          "style": "primary"
+        },
+        {
+          "description": "Stop now",
+          "id": "stop",
+          "label": "Stop",
+          "style": "danger"
+        }
+      ],
+      "prompt": "This session has hit the output-token limit (2.5M) per session. This is a guardrail against defective long-running sessions. If session activity looks fine, just approve to keep going.",
+      "requestId": "fixture:limit:output:2550000"
+    },
+    {
+      "action": {
+        "callId": "fixture:limit:output:200000",
+        "input": {
+          "kind": "output",
+          "limit": 200000,
+          "usedTokens": 200000
+        },
+        "kind": "tool-call",
+        "toolName": "session_limit_continuation"
+      },
+      "allowFreeform": false,
+      "display": "confirmation",
+      "kind": "session-limit",
+      "options": [
+        {
+          "description": "Grant a fresh token budget",
+          "id": "continue",
+          "label": "Approve",
+          "style": "primary"
+        },
+        {
+          "description": "Stop now",
+          "id": "stop",
+          "label": "Stop",
+          "style": "danger"
+        }
+      ],
+      "prompt": "This session has hit the output-token limit (200K) per session. This is a guardrail against defective long-running sessions. If session activity looks fine, just approve to keep going.",
+      "requestId": "fixture:limit:output:200000"
+    },
+    {
+      "action": {
+        "callId": "fixture:limit:output:50000",
+        "input": {
+          "kind": "output",
+          "limit": 50000,
+          "usedTokens": 50000
+        },
+        "kind": "tool-call",
+        "toolName": "session_limit_continuation"
+      },
+      "allowFreeform": false,
+      "display": "confirmation",
+      "kind": "session-limit",
+      "options": [
+        {
+          "description": "Grant a fresh token budget",
+          "id": "continue",
+          "label": "Approve",
+          "style": "primary"
+        },
+        {
+          "description": "Stop now",
+          "id": "stop",
+          "label": "Stop",
+          "style": "danger"
+        }
+      ],
+      "prompt": "This session has hit the output-token limit (50K) per session. This is a guardrail against defective long-running sessions. If session activity looks fine, just approve to keep going.",
+      "requestId": "fixture:limit:output:50000"
+    },
+    {
+      "action": {
+        "callId": "fixture:limit:output:9007199254740991",
+        "input": {
+          "kind": "output",
+          "limit": 9007199254740991,
+          "usedTokens": 9007199254740991
+        },
+        "kind": "tool-call",
+        "toolName": "session_limit_continuation"
+      },
+      "allowFreeform": false,
+      "display": "confirmation",
+      "kind": "session-limit",
+      "options": [
+        {
+          "description": "Grant a fresh token budget",
+          "id": "continue",
+          "label": "Approve",
+          "style": "primary"
+        },
+        {
+          "description": "Stop now",
+          "id": "stop",
+          "label": "Stop",
+          "style": "danger"
+        }
+      ],
+      "prompt": "This session has hit the output-token limit (9007199254.7M) per session. This is a guardrail against defective long-running sessions. If session activity looks fine, just approve to keep going.",
+      "requestId": "fixture:limit:output:9007199254740991"
+    }
+  ]
+}

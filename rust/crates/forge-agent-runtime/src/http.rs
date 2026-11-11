@@ -147,7 +147,7 @@ fn parse<T: serde::de::DeserializeOwned>(headers: &HeaderMap, bytes: &[u8]) -> H
     serde_json::from_value(value).map_err(|_| BAD)
 }
 fn public(session: &Session) -> Value {
-    json!({"phase":session.state.phase(),"cancelled":session.cancelled,"nextIndex":session.next_index,"deadline":session.deadline.timestamp_millis(),"pendingRequestId":session.state.pending_request(),"workerActive":session.worker_active})
+    json!({"phase":session.state.phase(),"cancelled":session.cancelled || session.state.phase() == Phase::Cancelled,"nextIndex":session.next_index,"deadline":session.deadline.timestamp_millis(),"pendingRequestId":session.state.pending_request(),"workerActive":session.worker_active})
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -240,7 +240,7 @@ async fn admit(
     if !session.cancelled
         && !matches!(
             session.state.phase(),
-            Phase::Complete | Phase::Failed | Phase::Waiting
+            Phase::Complete | Phase::Cancelled | Phase::Failed | Phase::Waiting
         )
     {
         if session.deadline <= Utc::now() {
@@ -310,7 +310,10 @@ async fn recover(
     let session = service.load(&channel).await?;
     if session.cancelled
         || (session.deadline <= Utc::now()
-            && !matches!(session.state.phase(), Phase::Complete | Phase::Failed))
+            && !matches!(
+                session.state.phase(),
+                Phase::Complete | Phase::Cancelled | Phase::Failed
+            ))
     {
         return Err(CONFLICT);
     }
@@ -436,7 +439,7 @@ impl Reader {
             if session.cancelled
                 || matches!(
                     session.state.phase(),
-                    Phase::Waiting | Phase::Complete | Phase::Failed
+                    Phase::Waiting | Phase::Complete | Phase::Cancelled | Phase::Failed
                 )
             {
                 self.done = true;
