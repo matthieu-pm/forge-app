@@ -289,7 +289,7 @@ pub(crate) fn resource(v: Value) -> Result<Value> {
     o.optional("updatedAt", datetime)?;
     Ok(o.finish())
 }
-fn milestone(v: Value) -> Result<Value> {
+pub(crate) fn milestone(v: Value) -> Result<Value> {
     let mut o = Object::new(
         v,
         &[

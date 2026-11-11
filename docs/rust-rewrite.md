@@ -36,7 +36,8 @@ gate pass.
 | 2c4a | Saved views and shared team resources | Passed available gate |
 | 2c4b | Product state and retained draft projections | Passed available gate |
 | 2c4c | Account/workspace preferences and preference import | Passed available gate |
-| 2c4d | Explicit legacy content import, review and execution | Pending |
+| 2c4d1 | Legacy source validation, content adapters and import manifests | Passed available gate |
+| 2c4d2 | Authenticated import preview, canonical execution, reconciliation and cleanup | Pending |
 | 3 | Agent execution, approvals, streams, models, files, retention, jobs, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -562,3 +563,36 @@ these routes do not represent a completed rewrite.
   typechecking, formatting and Clippy. The 661 external-fixture reference tests
   remain skipped. Both disposable databases applied all 75 source migrations.
 - Gate log: `.forge/rust-rewrite/milestone-2c4c-final.log`.
+
+### Milestone 2c4d1
+
+- Import requests retain the reference's identity, revision, review choice, file
+  index and cutover boundaries. Source inventories deduplicate exact key/byte
+  pairs, sort with the existing ICU ordering, preserve raw text and compute stable
+  source, record and manifest fingerprints. Limits count all source bytes and
+  records, including quarantined records.
+- Team, triage and cycle issues normalize through the existing issue contracts.
+  Project and optional content adapters preserve stable source paths and identify
+  canonical projections for mandatory live review. Child-title drafts and
+  unsupported historical content remain in private sources; inventory creation
+  does not publish work or replay notifications.
+- Versioned adapters independently validate initiatives, milestones, documents,
+  saved views, sections and links. Ambiguous sharing/ownership is quarantined.
+  Project links and unsupported initiative-scoped content remain excluded instead
+  of being widened to another scope. Disabled modules retain their source data.
+- Legacy files require nonempty canonical Base64, valid names/media types and
+  matching recorded checksums/sizes. SHA-256 bytes and UTF-16 legacy attachment
+  anchors match the reference. Existing canonical file IDs cannot stand in for
+  missing legacy source bytes.
+- Source fixtures cover 40 request variants, 15 file cases and 43 manifests across
+  core-only, enabled-content and disabled-content modes. Comparisons include every
+  source/record identity, state, normalized payload, checksum and fingerprint.
+  Rust uses concise validation messages instead of Zod's serialized exception
+  arrays; validation-message text and JSON-parser wording are not byte-compared.
+- No new import execution routes are exposed by this foundation milestone.
+  Authenticated preview, live-target checks, reviewed execution, file finalization
+  and reconciliation/cleanup remain with milestone 2c4d2.
+- Full gate passed: 192 Rust tests, all 2,959 enabled reference tests, TypeScript
+  typechecking, formatting and Clippy. The 661 external-fixture reference tests
+  remain skipped. Both disposable databases applied all 75 source migrations.
+- Gate log: `.forge/rust-rewrite/milestone-2c4d1-final.log`.

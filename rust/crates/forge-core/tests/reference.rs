@@ -803,3 +803,66 @@ fn preference_contracts_decoding_and_reviewed_imports_match_source() {
         }
     }
 }
+
+#[test]
+fn legacy_import_manifests_and_files_match_source_inventory() {
+    use forge_core::imports as i;
+    let fixture: Value =
+        serde_json::from_str(include_str!("../../../reference-fixtures.json")).unwrap();
+    let f = &fixture["importContracts"];
+    for c in f["requests"].as_array().unwrap() {
+        let result = i::request(c["input"].clone(), c["kind"].as_str().unwrap());
+        assert_eq!(result.is_ok(), c["valid"], "request {c}");
+        if let Ok(v) = result {
+            assert_eq!(v, c["expected"], "request {c}")
+        }
+    }
+    for c in f["files"].as_array().unwrap() {
+        let result = i::validated_files(c["input"].as_array().unwrap());
+        assert_eq!(result.is_ok(), c["valid"], "files {c}");
+        if let Ok(v) = result {
+            assert_eq!(serde_json::json!(v), c["expected"], "files {c}")
+        }
+    }
+    fn comparable(mut value: Value) -> Value {
+        // Validation diagnostics differ from Zod's serialized exception format. Keep
+        // all source identities, effects, exclusions, quarantine states and payloads.
+        for e in value["entries"].as_array_mut().unwrap() {
+            if let Some(message) = e.as_object_mut().unwrap().remove("message") {
+                assert!(!message.as_str().unwrap().is_empty());
+            }
+        }
+        for exclusion in value["exclusions"].as_array_mut().unwrap() {
+            let s = exclusion.as_str().unwrap();
+            if s.ends_with(" Exact bytes preserved.") {
+                *exclusion = serde_json::json!(format!(
+                    "{}: Source parse failed. Exact bytes preserved.",
+                    s.split(": ").next().unwrap()
+                ))
+            }
+        }
+        value
+    }
+    for (index, c) in f["manifests"].as_array().unwrap().iter().enumerate() {
+        let input = &c["input"];
+        let sources = serde_json::from_value::<Vec<i::Source>>(input["sources"].clone()).unwrap();
+        let modules = input
+            .get("modules")
+            .map(|v| serde_json::from_value(v.clone()).unwrap());
+        let actual = i::build(
+            input["id"].as_str().unwrap(),
+            input["actorId"].as_str().unwrap(),
+            input["workspaceId"].as_str().unwrap(),
+            &sources,
+            input["defaultStatus"].as_str().unwrap(),
+            modules,
+            c["now"].as_str().unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            comparable(actual),
+            comparable(c["expected"].clone()),
+            "manifest {index}"
+        );
+    }
+}
