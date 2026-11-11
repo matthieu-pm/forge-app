@@ -35,6 +35,7 @@ pub struct Options {
 }
 #[derive(Clone)]
 struct Active {
+    owner: uuid::Uuid,
     cursor: Cursor,
     token: String,
 }
@@ -203,6 +204,7 @@ impl EveRuntime {
     }
     fn stream(&self, context: Context, mode: Mode) -> Events {
         let state = State {
+            owner: uuid::Uuid::new_v4(),
             runtime: self.clone(),
             context,
             mode: Some(mode),
@@ -234,6 +236,7 @@ enum Mode {
     Reconnect,
 }
 struct State {
+    owner: uuid::Uuid,
     runtime: EveRuntime,
     context: Context,
     mode: Option<Mode>,
@@ -246,6 +249,21 @@ struct State {
     first_line: bool,
 }
 impl State {
+    fn release(&self) -> Result<(), Error> {
+        let mut active = self
+            .runtime
+            .0
+            .active
+            .lock()
+            .map_err(|_| Error("The runtime state is unavailable."))?;
+        if active
+            .get(&self.context.run_id)
+            .is_some_and(|entry| entry.owner == self.owner)
+        {
+            active.remove(&self.context.run_id);
+        }
+        Ok(())
+    }
     async fn initialize(&mut self, mode: Mode) -> Result<(), Error> {
         let previous = self
             .context
@@ -341,6 +359,7 @@ impl State {
                     .insert(
                         self.context.run_id.clone(),
                         Active {
+                            owner: self.owner,
                             cursor: cursor.clone(),
                             token: self.token.clone(),
                         },
@@ -357,6 +376,7 @@ impl State {
             .insert(
                 self.context.run_id.clone(),
                 Active {
+                    owner: self.owner,
                     cursor: cursor.clone(),
                     token: self.token.clone(),
                 },
@@ -389,15 +409,13 @@ impl State {
         }
         loop {
             if let Some(value) = self.queue.pop_front() {
+                if self.terminal && self.queue.is_empty() {
+                    self.release()?;
+                }
                 return Ok(Some(value));
             }
             if self.terminal {
-                self.runtime
-                    .0
-                    .active
-                    .lock()
-                    .map_err(|_| Error("The runtime state is unavailable."))?
-                    .remove(&self.context.run_id);
+                self.release()?;
                 return Ok(None);
             }
             if let Some(end) = self.buffer.iter().position(|b| *b == b'\n') {
@@ -429,18 +447,19 @@ impl State {
                 {
                     cursor.continuation_token = Some(token.into());
                 }
-                self.runtime
-                    .0
-                    .active
-                    .lock()
-                    .map_err(|_| Error("The runtime state is unavailable."))?
-                    .insert(
-                        self.context.run_id.clone(),
-                        Active {
-                            cursor: cursor.clone(),
-                            token: self.token.clone(),
-                        },
-                    );
+                {
+                    let mut active = self
+                        .runtime
+                        .0
+                        .active
+                        .lock()
+                        .map_err(|_| Error("The runtime state is unavailable."))?;
+                    let entry = active
+                        .get_mut(&self.context.run_id)
+                        .filter(|entry| entry.owner == self.owner)
+                        .ok_or(Error("The runtime stream has been superseded."))?;
+                    entry.cursor = cursor.clone();
+                }
                 self.context.checkpoint.save(cursor.encode()).await?;
                 self.queue = eve::normalize(
                     value.clone(),

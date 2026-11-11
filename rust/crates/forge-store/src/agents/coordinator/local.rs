@@ -270,7 +270,7 @@ impl Service {
         Ok(event)
     }
 }
-fn active_thread(thread: &Thread) -> Result<(), StoreError> {
+pub(super) fn active_thread(thread: &Thread) -> Result<(), StoreError> {
     if thread.status == ThreadStatus::Archived {
         Err(error(
             "THREAD_ARCHIVED",
@@ -280,7 +280,7 @@ fn active_thread(thread: &Thread) -> Result<(), StoreError> {
         Ok(())
     }
 }
-async fn forge_event(
+pub(super) async fn forge_event(
     tx: &mut JournalTransaction,
     run: &Run,
     suffix: &str,
@@ -290,7 +290,7 @@ async fn forge_event(
 ) -> Result<Event, StoreError> {
     events::append_in(tx,json!({"threadId":run.thread_id,"runId":run.id,"sourceEventId":format!("{}:{suffix}",run.id),"occurredAt":iso(now),"source":"forge","type":kind,"payload":payload})).await
 }
-fn add_usage(run: &mut Run, payload: &Value) -> Result<(), StoreError> {
+pub(super) fn add_usage(run: &mut Run, payload: &Value) -> Result<(), StoreError> {
     for (key, current) in [
         ("inputTokens", &mut run.input_tokens),
         ("outputTokens", &mut run.output_tokens),

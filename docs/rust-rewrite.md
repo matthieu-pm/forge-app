@@ -55,7 +55,8 @@ gate pass.
 | 3b5g | Run-scoped model proxy, live credential authority and streaming HTTP delivery | Passed available gate |
 | 3b5h | EVE runtime protocol, event normalization, durable cursors and cancellation | Passed available gate |
 | 3b5i | Authenticated agent threads, local run preparation, ingestion and checkpoints | Passed available gate |
-| 3b5j | Hosted run coordination, streaming, reconnects, limits and approval resume | In progress |
+| 3b5j | Hosted run coordination, streaming, reconnects, limits and approval resume | Passed available gate |
+| 3b5k | Agent HTTP endpoints, session/token boundaries and event streaming | In progress |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -1068,3 +1069,45 @@ these routes do not represent a completed rewrite.
   cancellation but intentionally does not copy new chat content. Initial gates
   exposed visibility/manifest issues and test fixture assumptions; all were fixed
   before the passing rerun. Hosted coordination and HTTP composition are next.
+
+### Milestone 3b5j
+
+- Full gate passed: 348 Rust tests and 2,959 enabled reference tests, plus all
+  typechecking, formatting, Clippy and reference-export checks. The 661
+  fixture-dependent reference tests remain skipped. Log:
+  `.forge/rust-rewrite/milestone-3b5j-rerun.log`.
+- Hosted admission refreshes stale model catalogs outside the write transaction,
+  then rechecks the catalog, actor, workspace policy, attachments, budget and
+  thread ownership together before creating the run. A client model reference
+  cannot replace the catalog's provider. Preferences and initial events commit
+  with the selected run, and provider execution begins only when the stream is
+  consumed.
+- Hosted streams persist events and usage atomically, deduplicate usage retries,
+  keep terminal states terminal, and reconnect once using the durable cursor.
+  Input/output limits and the original stream deadline survive reconnects. Run
+  cancellation closes database authority before bounded remote cleanup. Fresh
+  membership and session checks precede writes and checkpoints; reconnecting runs
+  retain active run-scoped authority until cancellation or completion.
+- Approval resolution shares the coordinator transaction and validates the EVE
+  request binding before spending the decision. Expiration is committed even when
+  resolution returns an error. Completed/cancelled/failed runs cannot be revived.
+  Each resolution transfers stream ownership, so an earlier stream cannot publish
+  a stale checkpoint or put the resumed run back into waiting. Both approval and
+  denial resume the runtime; local decisions remain provider-owned IPC resumes.
+- EVE transport instances own their cancellation entry. Superseded streams cannot
+  overwrite or remove a newer transport's entry; terminal delivery releases it
+  without requiring another consumer poll. Transport diagnostics remain private.
+- Ten source-executed hosted flows cover completion, usage, waiting, terminal
+  outcomes, one reconnect, reconnect failure and token limits. PostgreSQL and HTTP
+  transport tests add duplicate delivery, concurrent admission, cancellation before
+  startup, revocation, deadline preservation, unsafe payloads, approval expiry and
+  approval/stream races. The initial gate found one lint issue and an inaccurate
+  reference catalog label, corrected before the complete rerun.
+- HTTP composition, hosted runtime deployment/service implementation, linked loop
+  authority and production qualification remain later work. These tests use
+  disposable local PostgreSQL and injected provider transports, not live provider
+  credentials or deployed production acceptance. A resumed approval phase retains
+  the source's separate phase deadline; loop execution's overall deadline is
+  reserved for the loop milestone. The EVE protocol still checkpoints before
+  event publication as in the source; atomic transport-cursor/event recovery needs
+  qualification before any production claim of lossless replay.

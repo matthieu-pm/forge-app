@@ -256,7 +256,7 @@ pub async fn current_actor(
         Authentication::Agent { run_id, .. } => {
             let run_id = uuid::Uuid::parse_str(run_id).map_err(|_| StoreError::Forbidden)?;
             let row: Option<(String,)> = sqlx::query_as(
-                "SELECT r.requested_selection::text FROM agent_runs r JOIN agent_threads t ON t.id=r.thread_id WHERE r.id=$1 AND r.initiated_by_user_id=$2 AND t.workspace_id=$3 AND r.state IN ('running','waiting-for-approval') FOR SHARE OF r,t",
+                "SELECT r.requested_selection::text FROM agent_runs r JOIN agent_threads t ON t.id=r.thread_id WHERE r.id=$1 AND r.initiated_by_user_id=$2 AND t.workspace_id=$3 AND r.state IN ('running','waiting-for-approval','reconnecting') FOR SHARE OF r,t",
             ).bind(run_id).bind(&actor.user_id).bind(&actor.workspace_id).fetch_optional(&mut *connection).await?;
             let (selection,) = row.ok_or(StoreError::Forbidden)?;
             let selection =

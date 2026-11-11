@@ -1,0 +1,543 @@
+use super::*;
+use async_trait::async_trait;
+use base64::{Engine, engine::general_purpose::STANDARD};
+use forge_core::agents::runtime::{self, Runtime as AgentRuntime};
+use forge_store::agents::coordinator::{Hosted, Service};
+use futures_util::{StreamExt, TryStreamExt};
+use std::sync::{
+    Arc, Mutex,
+    atomic::{AtomicUsize, Ordering},
+};
+
+#[derive(Default)]
+struct RuntimeFixture {
+    start: Mutex<Vec<Value>>,
+    resume: Mutex<Vec<Value>>,
+    reconnect: Mutex<Vec<Value>>,
+    contexts: Mutex<Vec<runtime::Context>>,
+    responses: Mutex<Vec<Value>>,
+    starts: AtomicUsize,
+    reconnects: AtomicUsize,
+    cancels: AtomicUsize,
+}
+fn scripted(context: runtime::Context, steps: Vec<Value>) -> runtime::Events {
+    Box::pin(futures_util::stream::try_unfold(
+        (context, steps.into_iter()),
+        |(context, mut steps)| async move {
+            loop {
+                match steps.next() {
+                    None => return Ok(None),
+                    Some(v) if v["checkpoint"] == true => {
+                        context
+                            .checkpoint
+                            .save(format!("cursor:{}", context.run_id))
+                            .await?
+                    }
+                    Some(v) if v["error"] == true => {
+                        return Err(runtime::Error("private-provider-error"));
+                    }
+                    Some(v) if v["pending"] == true => std::future::pending::<()>().await,
+                    Some(v) => return Ok(Some((v, (context, steps)))),
+                }
+            }
+        },
+    ))
+}
+#[async_trait]
+impl AgentRuntime for RuntimeFixture {
+    fn kind(&self) -> &'static str {
+        "eve"
+    }
+    fn start(&self, c: runtime::Context, _: String, _: Vec<Value>) -> runtime::Events {
+        self.starts.fetch_add(1, Ordering::SeqCst);
+        self.contexts.lock().unwrap().push(c.clone());
+        scripted(c, self.start.lock().unwrap().clone())
+    }
+    fn resume(&self, c: runtime::Context, responses: Vec<Value>) -> runtime::Events {
+        self.responses.lock().unwrap().extend(responses);
+        self.contexts.lock().unwrap().push(c.clone());
+        scripted(c, self.resume.lock().unwrap().clone())
+    }
+    fn reconnect(&self, c: runtime::Context) -> runtime::Events {
+        self.reconnects.fetch_add(1, Ordering::SeqCst);
+        self.contexts.lock().unwrap().push(c.clone());
+        scripted(c, self.reconnect.lock().unwrap().clone())
+    }
+    async fn cancel(
+        &self,
+        _: &str,
+        _: Option<&str>,
+        _: Option<&runtime::Context>,
+    ) -> Result<(), runtime::Error> {
+        self.cancels.fetch_add(1, Ordering::SeqCst);
+        Ok(())
+    }
+}
+async fn setup(f: &Fixture) -> (Service, Arc<RuntimeFixture>, Value) {
+    let provider = Arc::new(discovery::Provider::default());
+    let vault =
+        Arc::new(forge_identity::model_vault::Vault::new(&STANDARD.encode([7; 32])).unwrap());
+    let mut models = model_connections::Service::new(f.database.clone(), provider, vault);
+    models.now = Arc::new(at);
+    models.create(&f.actor,json!({"provider":"openai","scope":"personal","displayName":"Fixture API","apiKey":"fixture-secret"})).await.unwrap();
+    let catalog = models.catalog(&f.actor, true).await.unwrap().remove(0);
+    let runtime = Arc::new(RuntimeFixture::default());
+    let mut service = Service::new(f.database.clone());
+    service.now = Arc::new(at);
+    service.hosted = Some(Arc::new(Hosted::new(
+        Arc::new(models),
+        vec![runtime.clone()],
+    )));
+    (service, runtime, catalog)
+}
+fn pick(v: Value, keys: &[&str]) -> Value {
+    Value::Object(keys.iter().map(|k| ((*k).into(), v[*k].clone())).collect())
+}
+fn input(thread: Uuid, model: &Value) -> Value {
+    json!({"threadId":thread,"message":"Summarize this workspace","selectionMode":"manual","model":pick(model.clone(),&["selectionId","connectionId","executionKind","provider","modelId"]),"reasoningEffort":"high","attachmentIds":[]})
+}
+fn event(id: &str, kind: &str, payload: Value) -> Value {
+    json!({"sourceEventId":id,"source":"eve","type":kind,"payload":payload})
+}
+fn delta() -> Value {
+    event(
+        "eve:delta",
+        "assistant.delta",
+        json!({"messageId":"message","delta":"Hello"}),
+    )
+}
+async fn current(f: &Fixture, id: Uuid) -> Run {
+    runs::get(&f.database, &f.actor.workspace_id, id)
+        .await
+        .unwrap()
+        .unwrap()
+}
+fn normalize(v: Value, connection: &str, run: Uuid) -> Value {
+    match v {
+        Value::String(s) => json!(
+            s.replace(connection, "00000000-0000-4000-8000-000000000066")
+                .replace(&format!("cursor:{run}"), "fixture-cursor")
+        ),
+        Value::Array(a) => json!(
+            a.into_iter()
+                .map(|v| normalize(v, connection, run))
+                .collect::<Vec<_>>()
+        ),
+        Value::Object(o) => Value::Object(
+            o.into_iter()
+                .map(|(k, v)| (k, normalize(v, connection, run)))
+                .collect(),
+        ),
+        other => other,
+    }
+}
+#[tokio::test]
+async fn hosted_streams_match_executed_source_flows() {
+    let fixtures: Value =
+        serde_json::from_str(include_str!("../../../../reference-fixtures.json")).unwrap();
+    for case in fixtures["coordinator"]["hosted"].as_array().unwrap() {
+        let f = Fixture::new().await;
+        let (mut service, runtime, model) = setup(&f).await;
+        let spec = &case["spec"];
+        for key in ["maxInputTokens", "maxOutputTokens"] {
+            if let Some(v) = spec.get(key) {
+                service.controls[key] = v.clone();
+            }
+        }
+        let mut steps = vec![];
+        if spec["checkpoint"] == true {
+            steps.push(json!({"checkpoint":true}));
+        }
+        steps.push(delta());
+        if let Some(usage) = spec.get("usage") {
+            steps.push(event("eve:usage", "run.usage", usage.clone()));
+        }
+        if let Some(terminal) = spec["terminal"].as_str() {
+            steps.push(event("eve:terminal", terminal, json!({})));
+        }
+        if spec["error"] == true {
+            steps.push(json!({"error":true}));
+        }
+        *runtime.start.lock().unwrap() = steps;
+        *runtime.reconnect.lock().unwrap() = vec![if spec["reconnectError"] == true {
+            json!({"error":true})
+        } else {
+            event(
+                "eve:reconnected",
+                "assistant.message",
+                json!({"messageId":"message","text":"Hello"}),
+            )
+        }];
+        let thread = service.create_thread(&f.actor, json!({})).await.unwrap();
+        let session = service
+            .start_turn(
+                &f.actor,
+                input(thread.id, &model),
+                Some("fixture-correlation".into()),
+            )
+            .await
+            .unwrap();
+        let id = session.run.id;
+        assert_eq!(runtime.starts.load(Ordering::SeqCst), 0);
+        let result: Vec<Event> = session.events.try_collect().await.unwrap();
+        let actual = json!(
+            result
+                .into_iter()
+                .map(|e| pick(
+                    json!(e),
+                    &["sequence", "occurredAt", "source", "type", "payload"]
+                ))
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(
+            normalize(actual, model["connectionId"].as_str().unwrap(), id),
+            case["events"],
+            "{spec}"
+        );
+        let run = current(&f, id).await;
+        let actual = pick(
+            json!(run),
+            &[
+                "state",
+                "executionKind",
+                "requestedSelection",
+                "resolvedModelId",
+                "reasoningEffort",
+                "routingPolicyVersion",
+                "routingReason",
+                "runtimeRunId",
+                "inputTokens",
+                "outputTokens",
+                "cachedInputTokens",
+                "costMicros",
+                "startedAt",
+                "completedAt",
+                "errorCode",
+            ],
+        );
+        assert_eq!(
+            normalize(actual, model["connectionId"].as_str().unwrap(), id),
+            case["run"],
+            "{spec}"
+        );
+        assert_eq!(
+            runtime.cancels.load(Ordering::SeqCst) as u64,
+            case["cancelled"].as_u64().unwrap()
+        );
+        let contexts = runtime.contexts.lock().unwrap();
+        assert_eq!(contexts[0].identity.workspace_role, "admin");
+        assert_eq!(
+            contexts[0].correlation_id.as_deref(),
+            Some("fixture-correlation")
+        );
+        if spec["checkpoint"] == true {
+            assert_eq!(
+                contexts.last().unwrap().runtime_session_id,
+                Some(format!("cursor:{id}"))
+            );
+        }
+    }
+}
+#[tokio::test]
+async fn hosted_replay_counts_usage_once_and_terminal_events_stop_late_writes() {
+    let f = Fixture::new().await;
+    let (service, runtime, model) = setup(&f).await;
+    let usage = event(
+        "usage",
+        "run.usage",
+        json!({"inputTokens":9,"costMicros":7}),
+    );
+    *runtime.start.lock().unwrap() = vec![
+        usage.clone(),
+        usage,
+        event("done", "run.failed", json!({})),
+        delta(),
+    ];
+    let thread = service.create_thread(&f.actor, json!({})).await.unwrap();
+    let session = service
+        .start_turn(&f.actor, input(thread.id, &model), None)
+        .await
+        .unwrap();
+    let id = session.run.id;
+    let result: Vec<Event> = session.events.try_collect().await.unwrap();
+    assert_eq!(result[3], result[4]);
+    assert_eq!(result.last().unwrap().kind, "run.failed");
+    let run = current(&f, id).await;
+    assert_eq!(
+        (run.input_tokens, run.cost_micros, run.state),
+        (9, 7, RunState::Failed)
+    );
+    assert!(matches!(
+        service.cancel_run(&f.actor, id).await,
+        Err(StoreError::Conflict)
+    ));
+}
+#[tokio::test]
+async fn cancellation_and_revocation_prevent_lazy_runtime_start_and_late_checkpoints() {
+    let f = Fixture::new().await;
+    let (service, runtime, model) = setup(&f).await;
+    *runtime.start.lock().unwrap() = vec![
+        json!({"checkpoint":true}),
+        delta(),
+        event("late", "assistant.delta", json!({"delta":"late"})),
+    ];
+    let thread = service.create_thread(&f.actor, json!({})).await.unwrap();
+    let mut session = service
+        .start_turn(&f.actor, input(thread.id, &model), None)
+        .await
+        .unwrap();
+    let cancelled = service.cancel_run(&f.actor, session.run.id).await.unwrap();
+    assert_eq!(
+        service.cancel_run(&f.actor, session.run.id).await.unwrap(),
+        cancelled
+    );
+    assert!(session.events.next().await.is_none());
+    assert_eq!(runtime.starts.load(Ordering::SeqCst), 0);
+    let mut session = service
+        .start_turn(&f.actor, input(thread.id, &model), None)
+        .await
+        .unwrap();
+    for _ in 0..4 {
+        session.events.next().await.unwrap().unwrap();
+    }
+    let context = runtime.contexts.lock().unwrap().last().unwrap().clone();
+    service.cancel_run(&f.actor, session.run.id).await.unwrap();
+    assert!(context.checkpoint.save("late-cursor".into()).await.is_err());
+    assert!(session.events.next().await.is_none());
+    let mut session = service
+        .start_turn(&f.actor, input(thread.id, &model), None)
+        .await
+        .unwrap();
+    sqlx::query("DELETE FROM session WHERE token=$1")
+        .bind(&f.token)
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    assert!(matches!(
+        session.events.next().await.unwrap(),
+        Err(StoreError::Forbidden)
+    ));
+    assert_eq!(runtime.starts.load(Ordering::SeqCst), 1);
+}
+#[tokio::test]
+async fn approval_resume_transfers_stream_ownership_and_rejects_terminal_resolution() {
+    for decision in [
+        approval_service::Decision::Approved,
+        approval_service::Decision::Denied,
+    ] {
+        let f = Fixture::new().await;
+        let (service, runtime, model) = setup(&f).await;
+        *runtime.start.lock().unwrap() = vec![
+            json!({"checkpoint":true}),
+            event(
+                "approval",
+                "approval.requested",
+                json!({"capabilityId":"teams.update","risk":"reversible-write","summary":"Rename a team","details":{"runtimeRequestId":"eve-input"},"input":{"name":"Updated"}}),
+            ),
+            event("stale-waiting", "run.waiting", json!({})),
+        ];
+        *runtime.resume.lock().unwrap() = vec![delta()];
+        let thread = service.create_thread(&f.actor, json!({})).await.unwrap();
+        let mut original = service
+            .start_turn(&f.actor, input(thread.id, &model), None)
+            .await
+            .unwrap();
+        let id = original.run.id;
+        for _ in 0..3 {
+            original.events.next().await.unwrap().unwrap();
+        }
+        let approval = original.events.next().await.unwrap().unwrap();
+        let approval_id: Uuid = approval.payload["approvalId"]
+            .as_str()
+            .unwrap()
+            .parse()
+            .unwrap();
+        let old_context = runtime.contexts.lock().unwrap().last().unwrap().clone();
+        let resumed = service
+            .resolve_approval(&f.actor, approval_id, decision, None)
+            .await
+            .unwrap();
+        assert!(old_context.checkpoint.save("stale".into()).await.is_err());
+        assert!(original.events.next().await.is_none());
+        let result: Vec<Event> = resumed.events.try_collect().await.unwrap();
+        assert_eq!(result[0].kind, "approval.resolved");
+        assert_eq!(result.last().unwrap().kind, "run.completed");
+        assert_eq!(current(&f, id).await.state, RunState::Completed);
+        assert_eq!(
+            *runtime.responses.lock().unwrap(),
+            vec![
+                json!({"requestId":"eve-input","optionId":match decision{approval_service::Decision::Approved=>"approve",approval_service::Decision::Denied=>"deny"}})
+            ]
+        );
+        assert!(
+            service
+                .resolve_approval(&f.actor, approval_id, decision, None)
+                .await
+                .is_err()
+        );
+    }
+}
+#[tokio::test]
+async fn approval_after_cancel_cannot_resurrect_run_and_expiry_commits() {
+    let f = Fixture::new().await;
+    let (mut service, runtime, model) = setup(&f).await;
+    *runtime.start.lock().unwrap() = vec![
+        json!({"checkpoint":true}),
+        event(
+            "approval",
+            "approval.requested",
+            json!({"capabilityId":"teams.update","risk":"reversible-write","summary":"Rename","details":{"runtimeRequestId":"eve-input"}}),
+        ),
+    ];
+    for expires in [false, true] {
+        let thread = service.create_thread(&f.actor, json!({})).await.unwrap();
+        let session = service
+            .start_turn(&f.actor, input(thread.id, &model), None)
+            .await
+            .unwrap();
+        let run = session.run.id;
+        let events: Vec<Event> = session.events.try_collect().await.unwrap();
+        let approval: Uuid = events.last().unwrap().payload["approvalId"]
+            .as_str()
+            .unwrap()
+            .parse()
+            .unwrap();
+        if expires {
+            service.now = Arc::new(|| at() + Duration::minutes(6));
+        } else {
+            service.cancel_run(&f.actor, run).await.unwrap();
+        }
+        assert!(
+            service
+                .resolve_approval(
+                    &f.actor,
+                    approval,
+                    approval_service::Decision::Approved,
+                    None
+                )
+                .await
+                .is_err()
+        );
+        let stored = approvals::get(&mut f.pool.acquire().await.unwrap(), approval)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            stored.state,
+            if expires {
+                ApprovalState::Expired
+            } else {
+                ApprovalState::Pending
+            }
+        );
+        if !expires {
+            assert_eq!(current(&f, run).await.state, RunState::Cancelled);
+        }
+    }
+}
+#[tokio::test]
+async fn hosted_wall_clock_limit_cancels_without_completing_and_bad_payload_is_redacted() {
+    let f = Fixture::new().await;
+    let (mut service, runtime, model) = setup(&f).await;
+    service.controls["runWallClockMs"] = json!(10);
+    for malformed in [false, true] {
+        *runtime.start.lock().unwrap() = vec![if malformed {
+            event(
+                "unsafe",
+                "assistant.message",
+                json!({"access_token":"private-provider-secret"}),
+            )
+        } else {
+            json!({"pending":true})
+        }];
+        let thread = service.create_thread(&f.actor, json!({})).await.unwrap();
+        let session = service
+            .start_turn(&f.actor, input(thread.id, &model), None)
+            .await
+            .unwrap();
+        let result: Vec<Event> = session.events.try_collect().await.unwrap();
+        let last = result.last().unwrap();
+        assert_eq!(last.kind, "run.failed");
+        assert_eq!(
+            last.payload["errorCode"],
+            if malformed {
+                "RUNTIME_EXECUTION_FAILED"
+            } else {
+                "RUN_WALL_CLOCK_LIMIT"
+            }
+        );
+        assert!(
+            !json!(result)
+                .to_string()
+                .contains("private-provider-secret")
+        );
+    }
+    assert_eq!(runtime.cancels.load(Ordering::SeqCst), 2);
+}
+#[tokio::test]
+async fn admission_rejects_spoofed_provider_and_concurrent_turns() {
+    let f = Fixture::new().await;
+    let (service, _, model) = setup(&f).await;
+    let thread = service.create_thread(&f.actor, json!({})).await.unwrap();
+    let mut spoofed = input(thread.id, &model);
+    spoofed["model"]["provider"] = json!("anthropic");
+    assert!(service.start_turn(&f.actor, spoofed, None).await.is_err());
+    let (a, b) = tokio::join!(
+        service.start_turn(&f.actor, input(thread.id, &model), None),
+        service.start_turn(&f.actor, input(thread.id, &model), None)
+    );
+    assert_ne!(a.is_ok(), b.is_ok());
+    let count: i64 = sqlx::query_scalar("SELECT count(*) FROM agent_runs WHERE thread_id=$1")
+        .bind(thread.id)
+        .fetch_one(&f.pool)
+        .await
+        .unwrap();
+    assert_eq!(count, 1);
+}
+
+#[tokio::test]
+async fn reconnect_keeps_live_credentials_but_never_renews_the_deadline() {
+    let f = Fixture::new().await;
+    let (mut service, runtime, model) = setup(&f).await;
+    service.controls["runWallClockMs"] = json!(200);
+    *runtime.start.lock().unwrap() =
+        vec![json!({"checkpoint":true}), delta(), json!({"error":true})];
+    *runtime.reconnect.lock().unwrap() =
+        vec![event("late", "assistant.delta", json!({"delta":"late"}))];
+    let thread = service.create_thread(&f.actor, json!({})).await.unwrap();
+    let mut session = service
+        .start_turn(&f.actor, input(thread.id, &model), None)
+        .await
+        .unwrap();
+    for _ in 0..5 {
+        session.events.next().await.unwrap().unwrap();
+    }
+    assert_eq!(
+        current(&f, session.run.id).await.state,
+        RunState::Reconnecting
+    );
+    let agent = Actor {
+        authentication: Authentication::Agent {
+            run_id: session.run.id.to_string(),
+            token_id: "fixture".into(),
+        },
+        ..f.actor.clone()
+    };
+    let mut conn = f.pool.acquire().await.unwrap();
+    assert!(
+        forge_store::authority::current_actor(&mut conn, &agent)
+            .await
+            .is_ok()
+    );
+    drop(conn);
+    tokio::time::sleep(std::time::Duration::from_millis(220)).await;
+    let failed = session.events.next().await.unwrap().unwrap();
+    assert_eq!(failed.payload["errorCode"], "RUN_WALL_CLOCK_LIMIT");
+    assert_eq!(runtime.cancels.load(Ordering::SeqCst), 1);
+    let mut conn = f.pool.acquire().await.unwrap();
+    assert!(
+        forge_store::authority::current_actor(&mut conn, &agent)
+            .await
+            .is_err()
+    );
+}

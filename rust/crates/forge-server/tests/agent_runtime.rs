@@ -212,6 +212,44 @@ fn channel(headers: &HeaderMap) -> (String, Value) {
     )
 }
 struct IdentityProvider(AtomicUsize);
+
+#[tokio::test]
+async fn superseded_stream_cannot_overwrite_or_release_current_cancellation_state() {
+    for terminal in [false, true] {
+        let mut body =
+            "{\"type\":\"message.appended\",\"data\":{\"messageDelta\":\"Hello\"}}\n".to_string();
+        if terminal {
+            body.push_str("{\"type\":\"turn.failed\",\"data\":{}}\n");
+        }
+        let fixture = Fixture::new(json!({"stream":body})).await;
+        let runtime = fixture.runtime();
+        let ctx = context(Arc::new(Checkpoints::default()));
+        let mut old = runtime.start(ctx.clone(), "Old".into(), vec![]);
+        old.next().await.unwrap().unwrap();
+        let mut current = runtime.start(ctx, "Current".into(), vec![]);
+        current.next().await.unwrap().unwrap();
+        if terminal {
+            assert!(old.next().await.unwrap().is_err());
+        } else {
+            assert!(old.next().await.is_none());
+        }
+        runtime.cancel(RUN, None, None).await.unwrap();
+        assert!(
+            fixture.capture.requests.lock().unwrap().last().unwrap()["path"]
+                .as_str()
+                .unwrap()
+                .ends_with("/cancel")
+        );
+        if terminal {
+            assert_eq!(current.next().await.unwrap().unwrap()["type"], "run.failed");
+        } else {
+            assert!(current.next().await.is_none());
+        }
+        let before = fixture.capture.requests.lock().unwrap().len();
+        runtime.cancel(RUN, None, None).await.unwrap();
+        assert_eq!(fixture.capture.requests.lock().unwrap().len(), before);
+    }
+}
 #[async_trait]
 impl PeerIdentity for IdentityProvider {
     async fn token(&self) -> Result<String, Error> {

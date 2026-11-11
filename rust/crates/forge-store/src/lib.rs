@@ -28,6 +28,8 @@ pub use database::Database;
 
 #[derive(Debug, thiserror::Error)]
 pub enum StoreError {
+    #[error(transparent)]
+    AgentRouting(#[from] forge_core::agents::routing::RoutingError),
     #[error("{message}")]
     AgentCoordinator {
         code: &'static str,

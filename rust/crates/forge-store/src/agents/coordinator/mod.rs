@@ -12,8 +12,10 @@ use serde_json::{Value, json};
 use std::sync::Arc;
 use uuid::Uuid;
 
+mod hosted;
 mod local;
 mod selection;
+pub use hosted::{Hosted, RunSession};
 pub use local::PreparedLocal;
 pub const CODEX_LOCAL_CONNECTION_ID: &str = "00000000-0000-4000-8000-000000000099";
 
@@ -21,6 +23,7 @@ pub const CODEX_LOCAL_CONNECTION_ID: &str = "00000000-0000-4000-8000-00000000009
 pub struct Service {
     pub database: Database,
     pub attachments: Option<Arc<files::Service>>,
+    pub hosted: Option<Arc<Hosted>>,
     pub controls: Value,
     pub now: Arc<dyn Fn() -> DateTime<Utc> + Send + Sync>,
 }
@@ -29,6 +32,7 @@ impl Service {
         Self {
             database,
             attachments: None,
+            hosted: None,
             controls: policy::controls(&Default::default()),
             now: Arc::new(Utc::now),
         }

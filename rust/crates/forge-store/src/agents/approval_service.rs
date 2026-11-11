@@ -159,15 +159,32 @@ impl Service {
         decision: Decision,
     ) -> Result<Resolution, StoreError> {
         let (mut tx, actor) = self.begin(actor).await?;
+        let result = self.resolve_in(&mut tx, &actor, id, decision).await;
+        if result.is_ok()
+            || matches!(&result,Err(StoreError::Approval(e))if e.code==Code::ApprovalExpired)
+        {
+            tx.commit().await?;
+        }
+        result
+    }
+    /// Shares a coordinator transaction and preserves expiry as a committed
+    /// transition. The caller must commit an ApprovalExpired result as well.
+    pub(crate) async fn resolve_in(
+        &self,
+        tx: &mut JournalTransaction,
+        actor: &Actor,
+        id: Uuid,
+        decision: Decision,
+    ) -> Result<Resolution, StoreError> {
         if !actor.has_scope(ApiScope::AgentsApprove) {
             return Err(StoreError::Forbidden);
         }
-        let existing = bound(&mut tx, &actor, id).await?;
+        let existing = bound(tx, actor, id).await?;
         let now = self.now();
         if existing.expires_at <= now {
             if existing.state == ApprovalState::Pending {
                 approvals::compare_and_set(
-                    &mut tx,
+                    tx,
                     id,
                     ApprovalState::Pending,
                     ApprovalState::Expired,
@@ -176,7 +193,6 @@ impl Service {
                 )
                 .await?;
             }
-            tx.commit().await?;
             return Err(error(
                 Code::ApprovalExpired,
                 "This approval request has expired.",
@@ -188,12 +204,29 @@ impl Service {
                 "This approval request has already been resolved.",
             ));
         }
+        let run = runs::get_in(tx, &actor.workspace_id, existing.run_id)
+            .await?
+            .ok_or_else(|| {
+                error(
+                    Code::ApprovalBindingMismatch,
+                    "The approval run is unavailable.",
+                )
+            })?;
+        if matches!(
+            run.state,
+            super::RunState::Cancelled | super::RunState::Completed | super::RunState::Failed
+        ) {
+            return Err(error(
+                Code::ApprovalBindingMismatch,
+                "A finished run cannot be resumed by an approval.",
+            ));
+        }
         let next = match decision {
             Decision::Approved => ApprovalState::Approved,
             Decision::Denied => ApprovalState::Denied,
         };
         let approval = approvals::compare_and_set(
-            &mut tx,
+            tx,
             id,
             ApprovalState::Pending,
             next,
@@ -207,23 +240,14 @@ impl Service {
                 "This approval request has already been resolved.",
             )
         })?;
-        let run = runs::get_in(&mut tx, &actor.workspace_id, approval.run_id)
-            .await?
-            .ok_or_else(|| {
-                error(
-                    Code::ApprovalBindingMismatch,
-                    "The approval run is unavailable.",
-                )
-            })?;
-        let event=events::append_in(&mut tx,json!({"threadId":run.thread_id,"runId":run.id,"sourceEventId":format!("approval:{}:resolved",approval.id),"occurredAt":iso(now),"source":"forge","type":"approval.resolved","schemaVersion":1,
+        let event=events::append_in(tx,json!({"threadId":run.thread_id,"runId":run.id,"sourceEventId":format!("approval:{}:resolved",approval.id),"occurredAt":iso(now),"source":"forge","type":"approval.resolved","schemaVersion":1,
             "payload":{"approvalId":approval.id,"decision":decision,"inputHash":approval.input_hash}})).await?;
         // A denial resumes the turn with a denied tool result, as in the source.
         sqlx::query("UPDATE agent_runs SET state='running',updated_at=$2 WHERE id=$1")
             .bind(run.id)
             .bind(now)
-            .execute(&mut *tx)
+            .execute(&mut **tx)
             .await?;
-        tx.commit().await?;
         Ok(Resolution { approval, event })
     }
     pub async fn consume(

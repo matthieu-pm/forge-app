@@ -3,8 +3,6 @@ use base64::{Engine, engine::general_purpose::STANDARD};
 use forge_core::agents::providers::{self as policy, Code};
 use forge_store::agents::model_connections::Service;
 use std::sync::{Arc, atomic::Ordering};
-#[path = "../support/model_discovery.rs"]
-mod discovery;
 fn service(f: &Fixture) -> (Service, Arc<discovery::Provider>) {
     let provider = Arc::new(discovery::Provider::default());
     let vault =
