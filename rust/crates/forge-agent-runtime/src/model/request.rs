@@ -340,6 +340,50 @@ pub fn build(
         max_output_tokens,
     )
 }
+/// The source summarizer requests temperature zero. Its provider SDK omits
+/// sampling parameters for reasoning models and newer Claude families.
+pub fn build_compaction(
+    channel: &Channel,
+    prompt: &[Value],
+    max_output_tokens: Option<u32>,
+) -> Result<Request> {
+    let mut request = build(channel, prompt, &[], max_output_tokens)?;
+    let model = channel.model_id();
+    let supported = match request.protocol {
+        Protocol::Responses => !reasoning_model(model),
+        Protocol::Chat => {
+            !reasoning_model(model)
+                && !model.starts_with("gpt-4o-search-preview")
+                && !model.starts_with("gpt-4o-mini-search-preview")
+        }
+        Protocol::Anthropic => anthropic_sampling(model),
+    };
+    if supported {
+        request.body["temperature"] = json!(0);
+    }
+    Ok(request)
+}
+fn anthropic_sampling(model: &str) -> bool {
+    if [
+        "claude-opus-5",
+        "claude-opus-4-8",
+        "claude-opus-4-7",
+        "claude-fable-5",
+        "claude-sonnet-5",
+    ]
+    .iter()
+    .any(|v| model.contains(v))
+    {
+        return false;
+    }
+    if anthropic_max(model).1 || !model.contains("claude-") {
+        return true;
+    }
+    static LEGACY: LazyLock<regex::Regex> = LazyLock::new(|| {
+        regex::Regex::new(r"claude-(?:instant(?:-|$)|v?2(?:$|[-.:])|3(?:$|[-.]))").unwrap()
+    });
+    LEGACY.is_match(model)
+}
 pub(crate) fn build_for(
     provider: &str,
     model: &str,

@@ -2,6 +2,7 @@
 //! the engine owns its persistence, cancellation and usage policy.
 pub mod prompt;
 use forge_core::{canonical::javascript_stringify, text::trim};
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::sync::LazyLock;
 pub const CHECKPOINT: &str = "Summary of our conversation so far:";
@@ -13,10 +14,32 @@ static OVERHEAD: LazyLock<f64> = LazyLock::new(|| {
         {"content":prompt::envelope("",""),"role":"user"}
     ]))
 });
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Config {
     pub threshold: u64,
     pub recent_window: usize,
+}
+impl Config {
+    pub fn is_valid(self) -> bool {
+        self.threshold > 0 && self.threshold <= 9_007_199_254_740_991 && self.recent_window <= 10000
+    }
+}
+/// The harness stores checkpoint/user strings; the provider boundary uses AI
+/// SDK content parts. Keep the stored representation for checkpoint detection.
+pub fn model_messages(messages: &[Value]) -> Vec<Value> {
+    messages
+        .iter()
+        .map(|message| {
+            let mut message = message.clone();
+            if matches!(message["role"].as_str(), Some("user" | "assistant"))
+                && let Some(content) = message["content"].as_str()
+            {
+                message["content"] = json!([{"type":"text","text":content}]);
+            }
+            message
+        })
+        .collect()
 }
 impl Default for Config {
     fn default() -> Self {

@@ -202,6 +202,7 @@ async fn generate(
                 tools: &[],
                 max_output_tokens: Some(1024),
                 deadline,
+                purpose: forge_agent_runtime::model::transport::Purpose::Response,
             },
             cancel,
             sink,

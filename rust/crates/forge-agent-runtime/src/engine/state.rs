@@ -14,6 +14,7 @@ const INSTRUCTIONS: &str =
 pub enum Phase {
     Ready,
     Generating,
+    Compacting,
     Tools,
     Waiting,
     Complete,
@@ -75,6 +76,15 @@ pub struct State {
     pub(super) files: FileState,
     #[serde(default)]
     pub(super) todos: Vec<Value>,
+    #[serde(default)]
+    pub(super) compaction: Compaction,
+}
+#[derive(Clone, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct Compaction {
+    pub last_input_tokens: Option<u64>,
+    pub last_prompt_messages: Option<usize>,
+    pub active: Option<crate::context::Config>,
 }
 impl State {
     /// `history` is trusted stored conversation history, never a client-supplied
@@ -106,6 +116,7 @@ impl State {
             workspace: Some(Reference::new()),
             files: FileState::default(),
             todos: vec![],
+            compaction: Compaction::default(),
         };
         state.validate(channel)?;
         Ok(state)
@@ -264,6 +275,22 @@ impl State {
         self.validate_structure()
     }
     fn validate_structure(&self) -> Result<()> {
+        if self.compaction.last_input_tokens.is_some()
+            != self.compaction.last_prompt_messages.is_some()
+            || self
+                .compaction
+                .last_input_tokens
+                .is_some_and(|n| n > 9_007_199_254_740_991)
+            || self
+                .compaction
+                .last_prompt_messages
+                .is_some_and(|n| n > 10000)
+            || self.compaction.active.is_some() != (self.phase == Phase::Compacting)
+            || self.compaction.active.is_some_and(|c| !c.is_valid())
+            || self.phase == Phase::Compacting && (!self.calls.is_empty() || self.next_call != 0)
+        {
+            return Err(INVALID);
+        }
         forge_core::agents::context::items(json!(self.todos)).map_err(|_| INVALID)?;
         if self.workspace.as_ref().is_none_or(|w| !w.provisioned) && !self.files.is_empty() {
             return Err(INVALID);
@@ -296,8 +323,14 @@ impl State {
         if self.messages.first() != Some(&json!({"role":"system","content":INSTRUCTIONS})) {
             return Err(INVALID);
         }
-        request::build_for(&b.provider, &b.model, &self.messages, &[], None)
-            .map_err(|_| INVALID)?;
+        request::build_for(
+            &b.provider,
+            &b.model,
+            &crate::context::model_messages(&self.messages),
+            &[],
+            None,
+        )
+        .map_err(|_| INVALID)?;
         if self.phase == Phase::Waiting
             && !self.calls.get(self.next_call).is_some_and(|c| {
                 c.phase == CallPhase::Waiting

@@ -494,3 +494,62 @@ async fn native_turn_restarts_on_a_new_connection_and_a_parked_lease_can_be_take
     assert_eq!(calls.0.load(Ordering::SeqCst), 1);
     assert_eq!(f.store.load(&f.channel).await.unwrap().next_index, before);
 }
+
+#[tokio::test]
+async fn compacting_runs_remain_recoverable_and_the_replaced_worker_cannot_settle_them() {
+    let f = Fixture::new().await;
+    let (old, state) = f
+        .store
+        .acquire(&f.channel, Uuid::new_v4(), Duration::from_secs(30))
+        .await
+        .unwrap();
+    let mut snapshot = state.snapshot();
+    snapshot["revision"] = json!(1);
+    snapshot["phase"] = json!("compacting");
+    snapshot["compaction"] = json!({"last_input_tokens":100_000,"last_prompt_messages":1,"active":{"threshold":100_000,"recent_window":10}});
+    let compacting = State::restore(snapshot, &f.channel).unwrap();
+    old.commit(
+        0,
+        &compacting,
+        &[json!({"type":"compaction.requested","data":{}})],
+    )
+    .await
+    .unwrap();
+    old.release().await.unwrap();
+    let (replacement, state) = f
+        .store
+        .acquire(&f.channel, Uuid::new_v4(), Duration::from_secs(30))
+        .await
+        .unwrap();
+    assert_eq!(state.phase(), Phase::Compacting);
+    assert_eq!(state.snapshot(), compacting.snapshot());
+    let mut snapshot = state.snapshot();
+    snapshot["revision"] = json!(2);
+    snapshot["phase"] = json!("generating");
+    snapshot["compaction"] =
+        json!({"last_input_tokens":null,"last_prompt_messages":null,"active":null});
+    snapshot["messages"].as_array_mut().unwrap().truncate(1);
+    snapshot["messages"].as_array_mut().unwrap().extend([
+        json!({"role":"user","content":"Summary of our conversation so far:"}),
+        json!({"role":"assistant","content":"Saved context."}),
+        json!({"role":"user","content":"Continue."}),
+    ]);
+    let completed = State::restore(snapshot, &f.channel).unwrap();
+    assert!(old.commit(1, &completed, &[]).await.is_err());
+    replacement
+        .commit(
+            1,
+            &completed,
+            &[json!({"type":"compaction.completed","data":{}})],
+        )
+        .await
+        .unwrap();
+    replacement.release().await.unwrap();
+    assert_eq!(
+        f.store.load(&f.channel).await.unwrap().state.snapshot(),
+        completed.snapshot()
+    );
+    assert_eq!(f.store.events(&f.channel, 0, 32).await.unwrap().len(), 2);
+    let definition:String=sqlx::query_scalar("SELECT indexdef FROM pg_indexes WHERE schemaname='forge_runtime' AND indexname='runtime_sessions_recovery'").fetch_one(&f.pool).await.unwrap();
+    assert!(definition.contains("compacting"));
+}

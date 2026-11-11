@@ -22,15 +22,24 @@ fn requests_match_installed_sdk_protocols_histories_files_and_token_limits() {
     for (index, fixture) in cases.iter().enumerate() {
         assert_eq!(fixture["failed"], false, "SDK fixture {index}");
         let input = &fixture["input"];
-        let result = request::build(
-            &channel(
-                input["provider"].as_str().unwrap(),
-                input["modelId"].as_str().unwrap(),
-            ),
-            input["prompt"].as_array().unwrap(),
-            input["tools"].as_array().unwrap(),
-            input["maxOutputTokens"].as_u64().map(|v| v as u32),
-        )
+        let bound = channel(
+            input["provider"].as_str().unwrap(),
+            input["modelId"].as_str().unwrap(),
+        );
+        let result = if input["temperature"] == 0 {
+            request::build_compaction(
+                &bound,
+                input["prompt"].as_array().unwrap(),
+                input["maxOutputTokens"].as_u64().map(|v| v as u32),
+            )
+        } else {
+            request::build(
+                &bound,
+                input["prompt"].as_array().unwrap(),
+                input["tools"].as_array().unwrap(),
+                input["maxOutputTokens"].as_u64().map(|v| v as u32),
+            )
+        }
         .unwrap_or_else(|error| panic!("fixture {index}: {error}"));
         assert_eq!(
             result.body, fixture["request"]["body"],

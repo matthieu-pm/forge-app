@@ -22,6 +22,12 @@ pub struct Turn<'a> {
     pub tools: &'a [Value],
     pub max_output_tokens: Option<u32>,
     pub deadline: Instant,
+    pub purpose: Purpose,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Purpose {
+    Response,
+    Compaction,
 }
 #[async_trait]
 pub trait Sink: Send {
@@ -72,7 +78,15 @@ impl HttpModel {
         turn: &Turn<'_>,
         sink: &mut dyn Sink,
     ) -> Result<Completion> {
-        let request = request::build(channel, turn.prompt, turn.tools, turn.max_output_tokens)?;
+        let request = match turn.purpose {
+            Purpose::Response => {
+                request::build(channel, turn.prompt, turn.tools, turn.max_output_tokens)?
+            }
+            Purpose::Compaction if turn.tools.is_empty() => {
+                request::build_compaction(channel, turn.prompt, turn.max_output_tokens)?
+            }
+            _ => return Err(FAILED),
+        };
         let mut target = self.origin.clone();
         target.set_path(&format!(
             "/api/agent/runtime/model/{}",

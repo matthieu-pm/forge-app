@@ -73,6 +73,7 @@ gate pass.
 | 3b5y | Persistent sandbox snapshots, session replacement and recovery fencing | Passed available gate |
 | 3b5z | Engine workspace checkpoints, default file tools and conversation inheritance | Passed available gate |
 | 3b5aa | Durable task lists and source-compatible context compaction planning | Passed available gate |
+| 3b5ab | Automatic context compaction, private summaries and restart recovery | Passed available gate |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -1742,3 +1743,46 @@ these routes do not represent a completed rewrite.
   The next integration must checkpoint summary generation, preserve task lists,
   clear file read permissions after compaction and use the current run's model
   authority and deadline. Model/provider calls and production were not used.
+
+
+### Milestone 3b5ab
+
+- Full milestone gate passed: 483 Rust tests and 2,959 enabled TypeScript tests.
+  Formatting, Clippy, source contracts and typechecking passed; 661 reference
+  tests across 34 files remain skipped. Log:
+  `.forge/rust-rewrite/milestone-3b5ab-initial.log`.
+
+- The engine now automatically compacts settled conversation history using the
+  pinned harness's default 100,000-token threshold and recent-message window.
+  It combines the latest reported input usage with estimates for newly appended
+  messages; fresh admitted turns start from a fresh estimate. Model-specific
+  context-window catalogs are not introduced by this milestone.
+- A private `compacting` phase records the selected compaction configuration
+  before summary generation. Each summary request obtains a new journal revision.
+  A restored worker resumes that phase using the stored configuration, while a
+  committed summary resumes model generation without summarizing it again.
+  Interrupted summaries may be regenerated; they execute no authored tools.
+- Context replacement, task-list preservation, removal of stale file read stamps
+  and the completion receipt commit together. The original system instructions
+  remain separate. Stored checkpoint strings are converted to provider content
+  parts at the model boundary, retaining their checkpoint identity in history.
+- Summaries use the run-bound model proxy, cancellation signal and original
+  deadline. Their stream is private, with no assistant text or tool effects
+  published. Failed, empty, truncated or tool-calling summary responses retain
+  the original history and fail the turn. This deliberately rejects unusable
+  summaries instead of installing an incomplete checkpoint.
+- Summary requests follow the installed SDK's temperature-zero behavior,
+  including its omission for reasoning/search models and newer Claude families.
+  Twenty-eight additional captured SDK requests verify these rules. As in the
+  source harness, summary usage is separate from ordinary step totals; complete
+  cost/allowance accounting remains an outstanding runtime milestone.
+- Explicit private schema migration 3 expands the active-run recovery index to
+  include compaction. Existing migrations remain immutable; request paths run
+  no DDL. PostgreSQL acceptance checks phase recovery, ownership replacement,
+  stale summary completion rejection and persisted checkpoint history.
+- Engine acceptance covers failures before and after each compaction commit,
+  cancellation, deadline expiry, older-output reduction without a model call,
+  private summary streams, malformed continuations and unusable summaries.
+  All model calls use local fixtures; no real provider or production service was
+  contacted. Other framework tools, session-budget continuation, runtime cleanup,
+  existing EVE conversation import and live qualification remain outstanding.

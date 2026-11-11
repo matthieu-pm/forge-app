@@ -7,7 +7,7 @@ use crate::{
     auth::Channel,
     model::{
         stream::{Completion, Delta, Finish},
-        transport::{Model, Sink, Turn},
+        transport::{Model, Purpose, Sink, Turn},
     },
     sandbox::{Cancellation, Sandbox},
     tools::{Approval, Executor, Outcome},
@@ -24,6 +24,7 @@ pub struct Engine {
     pub max_input_tokens: u64,
     pub max_output_tokens: u64,
     pub workspace_factory: Option<Arc<dyn crate::workspace::Factory>>,
+    pub compaction: crate::context::Config,
 }
 impl Engine {
     pub fn new(model: Arc<dyn Model>, executor: Arc<Executor>) -> Self {
@@ -33,6 +34,7 @@ impl Engine {
             max_input_tokens: 200_000,
             max_output_tokens: 50_000,
             workspace_factory: None,
+            compaction: crate::context::Config::default(),
         }
     }
     pub(super) async fn commit(
@@ -82,6 +84,7 @@ impl Engine {
             || self.max_output_tokens == 0
             || self.max_input_tokens > 9_007_199_254_740_991
             || self.max_output_tokens > 9_007_199_254_740_991
+            || !self.compaction.is_valid()
         {
             return Err(INVALID);
         }
@@ -104,7 +107,7 @@ impl Engine {
         }
         Ok(result)
     }
-    async fn fail(
+    pub(super) async fn fail(
         &self,
         state: &mut State,
         journal: &dyn Journal,
@@ -112,6 +115,7 @@ impl Engine {
     ) -> Result<Phase> {
         let mut next = state.clone();
         next.phase = Phase::Failed;
+        next.compaction.active = None;
         self.commit(
             state,
             journal,
@@ -138,6 +142,10 @@ impl Engine {
             match state.phase {
                 Phase::Complete | Phase::Waiting => return Ok(state.phase),
                 Phase::Failed => return Err(Error("The agent turn has already failed.")),
+                Phase::Compacting => {
+                    self.compact(channel, state, journal, cancellation, deadline)
+                        .await?;
+                }
                 Phase::Ready | Phase::Generating => {
                     if state.input_tokens >= self.max_input_tokens
                         || state.output_tokens >= self.max_output_tokens
@@ -145,6 +153,25 @@ impl Engine {
                         return self
                             .fail(state, journal, "The agent token limit was reached.")
                             .await;
+                    }
+                    if state.phase == Phase::Ready
+                        && crate::context::should_compact(
+                            &state.messages[1..],
+                            self.compaction,
+                            state.compaction.last_input_tokens.map(|n| n as f64),
+                            state.compaction.last_prompt_messages.map(|n| n as f64),
+                        )
+                    {
+                        let mut next = state.clone();
+                        next.phase = Phase::Compacting;
+                        next.compaction.active = Some(self.compaction);
+                        let mut events = vec![];
+                        if state.step == 0 {
+                            events.push(event(state, "turn.started", json!({})));
+                        }
+                        events.push(event(state,"compaction.requested",json!({"modelId":channel.model_id(),"usageInputTokens":crate::context::input_count(&state.messages[1..],state.compaction.last_input_tokens.map(|n|n as f64),state.compaction.last_prompt_messages.map(|n|n as f64))})));
+                        self.commit(state, journal, next, events).await?;
+                        continue;
                     }
                     let mut events = vec![];
                     if state.phase == Phase::Ready && state.step == 0 {
@@ -164,15 +191,17 @@ impl Engine {
                     let max =
                         (self.max_output_tokens - state.output_tokens).min(u32::MAX as u64) as u32;
                     let mut sink = Progress { journal, state };
+                    let prompt = crate::context::model_messages(&state.messages);
                     let completion = self
                         .model
                         .generate(
                             channel,
                             Turn {
-                                prompt: &state.messages,
+                                prompt: &prompt,
                                 tools: &definitions,
                                 max_output_tokens: Some(max),
                                 deadline,
+                                purpose: Purpose::Response,
                             },
                             cancellation,
                             &mut sink,
@@ -320,6 +349,11 @@ impl Engine {
         completion: Completion,
     ) -> Result<()> {
         let mut next = state.clone();
+        next.compaction.last_input_tokens = completion.usage["inputTokens"].as_u64();
+        next.compaction.last_prompt_messages = next
+            .compaction
+            .last_input_tokens
+            .map(|_| state.messages.len() - 1);
         let mut actions = vec![];
         let mut message = String::new();
         let mut content = completion.content;
@@ -508,7 +542,7 @@ impl Engine {
         .await
     }
 }
-fn event(state: &State, kind: &str, mut data: Value) -> Value {
+pub(super) fn event(state: &State, kind: &str, mut data: Value) -> Value {
     data["turnId"] = json!(state.run_id());
     data["stepIndex"] = json!(state.step);
     json!({"type":kind,"data":data})

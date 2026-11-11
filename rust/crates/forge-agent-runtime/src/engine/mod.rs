@@ -1,5 +1,6 @@
 //! Checkpointed authored and sandbox-tool turns. Persistence is supplied by an owning
 //! service; this module never treats in-memory progress as a durable receipt.
+mod context;
 mod state;
 mod turn;
 mod workspace;
