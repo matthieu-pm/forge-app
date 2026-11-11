@@ -28,7 +28,7 @@ gate pass.
 | 2a | Team lifecycle, membership, configuration, default catalogs and public team API | Passed available gate |
 | 2b1 | Issue definitions, workflow rules and canonical classification | Passed available gate |
 | 2b2 | Issue creation, editing, comments, relationships and history | Passed available gate |
-| 2b3 | Server issue queries, filtering, facets, pagination and public issue API | Pending |
+| 2b3 | Server issue queries, filtering, facets and pagination | Passed available gate |
 | 2b4 | Triage, issue lifecycle and cycles | Pending |
 | 2c | Projects, initiatives, documents, views, resources and imports | Pending |
 | 3 | Agent execution, approvals, streams, models, files, jobs, loops, calls and billing | Pending |
@@ -285,3 +285,28 @@ these routes do not represent a completed rewrite.
   retries commit once. The existing deletion journal intentionally excludes
   ordinary issue title/status and history inserts; this is not a full event log.
 - Log: `.forge/rust-rewrite/milestone-2b2-qualified.log`.
+
+### Milestone 2b3
+
+- Full gate passed: 115 Rust tests, all 2,959 enabled reference tests, TypeScript
+  typechecking, formatting and Clippy. The same 661 external-fixture reference
+  tests remain skipped. Both local databases applied all 75 migrations.
+- 208 query contract cases compare validation, defaults, Unicode limits and
+  cursor-binding hashes with the source. JSON property order is normalized to
+  the source schema before hashing, so equivalent requests can continue a page.
+- A shared authorized SQL relation owns records, counts, facets, groups, project
+  totals and milestone rollups. Private issue identities and project links are
+  removed before these projections. Facets and groups have explicit bounds and
+  a truncation flag.
+- Queries support all source filter operators, literal text search, sort modes,
+  nested issue expansion, personal views and triage/snoozed selection. Stable
+  keyset cursors exclude later creations and bind to the actor and query, while
+  every continuation rechecks live credentials and resource visibility. The
+  creation cutoff does not freeze subsequent edits to existing issues.
+- Real PostgreSQL tests cover pagination across a concurrent create, private
+  membership revocation, every sort direction, stale/invalid cursors, authoritative
+  status and label names, aggregate truncation and issue-only API credentials.
+- `/api/workspace/issues/query` exposes the existing first-party contract with
+  session/workspace binding. The source public REST contract exposes only teams;
+  no new public issue endpoints were invented during this rewrite.
+- Log: `.forge/rust-rewrite/milestone-2b3-qualified.log`.

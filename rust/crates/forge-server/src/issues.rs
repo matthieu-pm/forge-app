@@ -154,6 +154,17 @@ pub(crate) async fn engagement(
 struct QueryEnvelope {
     query: Value,
 }
+pub(crate) async fn query(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    payload: Payload,
+) -> Result<Json<Value>, IssueHttpError> {
+    let (database, actor, input) = context(&state, &headers, payload).await?;
+    let input: QueryEnvelope = serde_json::from_value(input).map_err(|_| auth::invalid_body())?;
+    let input = forge_core::issue_query::IssueQuery::parse(input.query)
+        .map_err(|_| auth::invalid_body())?;
+    Ok(Json(issues::query(database, &actor, &input).await?))
+}
 pub(crate) async fn history(
     State(state): State<AppState>,
     headers: HeaderMap,

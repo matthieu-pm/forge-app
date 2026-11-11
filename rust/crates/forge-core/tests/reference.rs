@@ -382,3 +382,32 @@ fn issue_planning_and_discussion_contracts_match_reference_documents() {
         );
     }
 }
+
+#[test]
+fn issue_query_validation_normalization_and_cursor_bindings_match_reference() {
+    use forge_core::issue_query::IssueQuery;
+    let fixture: Value =
+        serde_json::from_str(include_str!("../../../reference-fixtures.json")).unwrap();
+    for (index, case) in fixture["issueQueries"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .enumerate()
+    {
+        let result = IssueQuery::parse(case["input"].clone());
+        assert_eq!(
+            result.is_ok(),
+            case["valid"].as_bool().unwrap(),
+            "case {index}: {case}"
+        );
+        if let Ok(query) = result {
+            assert_eq!(query.as_value(), &case["expected"], "case {index}");
+            let actor = serde_json::from_value(case["actor"].clone()).unwrap();
+            assert_eq!(
+                query.binding(&actor),
+                case["binding"].as_str().unwrap(),
+                "binding case {index}"
+            );
+        }
+    }
+}

@@ -410,6 +410,41 @@ async fn issue_http_commands_preserve_bound_sessions_and_expose_discussion_and_h
         .await;
     assert_eq!(status, StatusCode::OK, "{history}");
     assert_eq!(history["entries"].as_array().unwrap().len(), 3);
+    let (status, _, page) = f
+        .request(
+            "POST",
+            "/api/workspace/issues/query",
+            Some(&cookie),
+            Some(bind(json!({"query":{"search":"HTTP updated","limit":1}}))),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{page}");
+    assert_eq!(page["total"], 1);
+    assert_eq!(page["records"][0]["issue"]["id"], created["issue"]["id"]);
+    let mut wrong = bind(json!({"query":{}}));
+    wrong["workspaceId"] = json!("another-workspace");
+    assert_eq!(
+        f.request(
+            "POST",
+            "/api/workspace/issues/query",
+            Some(&cookie),
+            Some(wrong)
+        )
+        .await
+        .0,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        f.request(
+            "POST",
+            "/api/workspace/issues/query",
+            Some(&cookie),
+            Some(bind(json!({"query":{"limit":101}})))
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
 }
 
 #[tokio::test]

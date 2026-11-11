@@ -32,6 +32,10 @@ pub fn router_with_state(state: state::AppState) -> Router {
             get(issues::read).post(issues::create),
         )
         .route(
+            "/api/workspace/issues/query",
+            axum::routing::post(issues::query),
+        )
+        .route(
             "/api/workspace/issues/edit",
             axum::routing::post(issues::edit),
         )

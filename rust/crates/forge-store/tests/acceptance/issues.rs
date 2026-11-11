@@ -11,18 +11,18 @@ use forge_store::{
 };
 use serde_json::{Value, json};
 use uuid::Uuid;
-async fn team(f: &Fixture, n: u32) -> Uuid {
+pub(super) async fn team(f: &Fixture, n: u32) -> Uuid {
     teams::create(&f.database, &f.actor, &team_input(n))
         .await
         .unwrap()
         .id
 }
-fn create_input(team: Uuid, title: &str) -> Value {
+pub(super) fn create_input(team: Uuid, title: &str) -> Value {
     let mut draft = forge_core::issues::blank("todo");
     draft["title"] = json!(title);
     json!({"teamId":team,"commandKey":Uuid::new_v4().to_string(),"draft":draft})
 }
-async fn create(f: &Fixture, team: Uuid, title: &str) -> Value {
+pub(super) async fn create(f: &Fixture, team: Uuid, title: &str) -> Value {
     issues::create(
         &f.database,
         &f.actor,

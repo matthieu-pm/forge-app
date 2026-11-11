@@ -3,8 +3,10 @@ mod engagement;
 mod relationships;
 pub use relationships::{relationship, relationships, search_relationships};
 mod history;
+mod query;
 pub use engagement::engagement;
 pub use history::history;
+pub use query::query;
 mod edit;
 mod fields;
 use crate::{

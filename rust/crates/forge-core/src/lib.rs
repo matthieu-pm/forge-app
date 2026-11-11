@@ -8,6 +8,7 @@ pub mod comments;
 mod contract;
 pub mod definitions;
 pub mod features;
+pub mod issue_query;
 pub mod issues;
 pub mod journal;
 pub mod planning;
