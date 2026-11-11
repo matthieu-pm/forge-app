@@ -1,5 +1,6 @@
 [package]
 name = "forge-server"
+default-run = "forge-server"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

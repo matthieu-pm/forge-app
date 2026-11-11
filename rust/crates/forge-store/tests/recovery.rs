@@ -66,6 +66,80 @@ struct Fixture {
 }
 
 #[tokio::test]
+async fn workflow_retention_prepares_recovery_and_archives_deleted_rows() {
+    use forge_store::jobs::{self, Enqueue, JobStore, runner};
+    use serde_json::json;
+    let f = Fixture::new().await;
+    forge_store::workspaces::create(
+        &f.database,
+        &f.token,
+        "Job recovery",
+        &Uuid::new_v4().to_string(),
+        None,
+    )
+    .await
+    .unwrap();
+    let actor = forge_store::authority::session_actor(&f.database, &f.token)
+        .await
+        .unwrap();
+    let id = Uuid::new_v4();
+    let mut tx = f.database.begin().await.unwrap();
+    tx.prepare().await.unwrap();
+    sqlx::query("INSERT INTO business_workflow_runs(id,workspace_id,kind,subject_type,subject_id,idempotency_key,state,completed_at) VALUES($1,$2,'fixture','fixture',$1::text,$1::text,'completed','1900-01-01')").bind(id).bind(&actor.workspace_id).execute(&mut *tx).await.unwrap();
+    tx.commit().await.unwrap();
+    let store = JobStore::new(f.database.clone());
+    let kind = format!("retention:{}", Uuid::new_v4());
+    let job = store
+        .enqueue(&Enqueue {
+            kind: kind.clone(),
+            scope: actor.workspace_id,
+            identity: Uuid::new_v4().to_string(),
+            input: json!({"cutoff":"1901-01-01T00:00:00.000Z"}),
+            scheduled_at: "2020-01-01T00:00:00Z".parse().unwrap(),
+            max_attempts: 5,
+        })
+        .await
+        .unwrap();
+    let lease = store.claim(&kind, Some(job)).await.unwrap().unwrap();
+    f.backend.mode.store(1, Ordering::Relaxed);
+    assert!(
+        runner::Handler::run(&jobs::retention::WorkflowRetention, &store, &lease)
+            .await
+            .is_err()
+    );
+    let exists: bool =
+        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM business_workflow_runs WHERE id=$1)")
+            .bind(id)
+            .fetch_one(&f.pool)
+            .await
+            .unwrap();
+    assert!(exists);
+    f.backend.mode.store(0, Ordering::Relaxed);
+    runner::Handler::run(&jobs::retention::WorkflowRetention, &store, &lease)
+        .await
+        .unwrap();
+    store.complete(&lease).await.unwrap();
+    let exists: bool =
+        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM business_workflow_runs WHERE id=$1)")
+            .bind(id)
+            .fetch_one(&f.pool)
+            .await
+            .unwrap();
+    assert!(!exists);
+    assert!(
+        f.backend
+            .completed
+            .lock()
+            .unwrap()
+            .iter()
+            .any(
+                |(_, events)| events.iter().any(|e| e.table == "business_workflow_runs"
+                    && e.action == forge_core::journal::RecoveryAction::Delete)
+            )
+    );
+}
+
+#[tokio::test]
 async fn saved_view_deletion_and_favorite_removal_share_recovery_preparation() {
     use forge_store::saved_views::{self, ViewOptions};
     use serde_json::json;

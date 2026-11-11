@@ -25,6 +25,8 @@ mod issue_acceptance;
 mod issue_lifecycle_acceptance;
 #[path = "acceptance/issue_queries.rs"]
 mod issue_query_acceptance;
+#[path = "acceptance/jobs.rs"]
+mod job_acceptance;
 #[path = "acceptance/planning.rs"]
 mod planning_acceptance;
 #[path = "acceptance/product_state.rs"]

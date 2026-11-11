@@ -11,6 +11,7 @@ pub mod documents;
 pub mod files;
 pub mod initiatives;
 pub mod issues;
+pub mod jobs;
 pub mod joins;
 pub mod members;
 pub mod oauth;

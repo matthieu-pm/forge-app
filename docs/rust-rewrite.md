@@ -42,7 +42,8 @@ gate pass.
 | 3a1 | File contracts, grants and verified upload state machine | Passed available gate |
 | 3a2a | Upload reservations, quotas and atomic file metadata publication | Passed available gate |
 | 3a2b | Private blob adapters, delivery lookup and HTTP routes | Passed available gate; live provider qualification pending |
-| 3b1 | Durable background jobs, fenced checkpoints and operator recovery | In progress |
+| 3b1 | Durable background jobs, fenced checkpoints, operator recovery and workflow retention | Passed available gate |
+| 3b2 | Issue purge, source-bound copy cleanup and retention endpoint | In progress |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -723,3 +724,29 @@ these routes do not represent a completed rewrite.
   Native browser preview qualification remains part of milestone 5. The unused
   internal resource-file service will be considered with agent tool integration.
 - Log: `.forge/rust-rewrite/milestone-3a2b-final.log`.
+
+### Milestone 3b1
+
+- Full gate passed: 246 Rust tests, 2,959 enabled reference tests, typechecking,
+  formatting, Clippy and source export checks. The 661 fixture-dependent
+  reference tests remain skipped. Log: `.forge/rust-rewrite/milestone-3b1-rerun.log`.
+- Durable jobs preserve immutable enqueue identities, exclusive leases,
+  generations, bounded retry/backoff and deferral without consuming an attempt.
+  SQL effects and checkpoints share one transaction and recheck ownership before
+  commit. All mutations prepare the independent deletion journal when enabled.
+- External steps persist intent before invoking providers. Retries retain the
+  original idempotency key and deadline; ambiguous effects require evidence and
+  explicit quiescence, followed by a separate replay action. Recovery is itself
+  idempotent and records the database identity without exposing private payloads.
+- Tests kill real worker processes before and after commit, delay execution past
+  lease expiry with real database locks, race enqueue/claim/recovery, and verify
+  provider deadlines, cancellation, redacted inspection and retained checkpoints.
+  Ninety-three input/hash/operator cases are exported from the owning source.
+- Workflow retention freezes each daily cutoff and drains terminal records in
+  500-row checkpoints, preserving active/recent records. Recovery-enabled deletion
+  is covered. The new `forge-jobs` binary requires an explicit database/environment
+  and provides list, inspect, reap, schedule-retention, run, resolve and replay.
+  SLA dispatch and host-wide telemetry transport remain in later job integration.
+- The first gate found an async SQL-executor lifetime issue in batched timeout
+  setup; ordinary SQL statements resolved it. Compile-time test fixes and the
+  complete rerun passed before moving to issue retention.
