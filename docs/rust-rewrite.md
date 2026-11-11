@@ -62,6 +62,7 @@ gate pass.
 | 3b5n | Native Vercel sandbox creation, private files, bounded command streams and teardown | Passed available gate |
 | 3b5o | Native authored-tool schemas, dispatch and approval binding | Passed available gate |
 | 3b5p | Native model request formatting and provider conversation contracts | Passed available gate |
+| 3b5q | Native model streaming transport and response interpretation | Passed available gate |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -1326,3 +1327,41 @@ these routes do not represent a completed rewrite.
   these SDK calls, and this request milestone preserves that behavior.
 - Provider streaming, the native turn loop and durable runtime service are still
   outstanding. Request compatibility alone does not qualify live agent execution.
+
+### Milestone 3b5q
+
+- Full milestone gate passed after fixing one lint finding and tightening optional
+  identity-field validation: 397 Rust tests and 2,959 enabled TypeScript tests.
+  Formatting, Clippy, source contracts and typechecking passed; 661 reference tests
+  across 34 files remain skipped. Log: `.forge/rust-rewrite/milestone-3b5q-rerun.log`.
+- Native model transport uses the configured application proxy, the verified
+  channel's nested model-access token and optional exact-origin peer identity.
+  Request paths and model selection are derived internally. Redirects, proxy
+  environment variables, wrong response media types and upstream error bodies
+  cannot redirect or disclose those credentials. No live model provider was called.
+- Incremental SSE decoding handles UTF-8 split across network chunks, BOMs,
+  multiline data, CR/LF/CRLF boundaries and comments. Event, aggregate stream,
+  content and tool-count bounds apply while reading. Truncated frames, malformed
+  input and provider errors fail closed. A failed parser cannot later be resumed
+  into a successful completion.
+- OpenAI Responses, compatible Chat Completions and Anthropic Messages are
+  interpreted into conversation content, incremental text/reasoning/tool input,
+  completion reasons and aggregate usage. Twenty-three streams executed through
+  the installed provider SDKs compare text, reasoning, parallel/empty tool calls,
+  output limits, unknown usage, cache counters and Anthropic iteration/fallback
+  accounting. Parser tests separately cover identity changes, duplicate blocks,
+  invalid counters, unregistered provider execution and incomplete arguments.
+- Tool calls become available only after a terminal response with complete JSON
+  arguments. Incomplete calls at an output limit are omitted while preserving
+  usage. Anthropic requires its message-stop boundary; compatible Chat accepts
+  EOF after an explicit finish reason, including providers that omit `[DONE]`.
+  Unknown provider-built-in tool types remain unsupported rather than executing
+  through a broader authority than the authored tool dispatcher.
+- The original deadline and cancellation cover identity acquisition, HTTP work
+  and downstream event persistence. Awaited event delivery supplies backpressure;
+  a failed sink stops generation. Isolated HTTP fixtures cover all three protocols,
+  fragmented Unicode, credential headers, redirects, stalls and cancellation.
+- The turn engine, durable runtime sessions, framework built-ins/context compaction
+  and live provider qualification remain outstanding. The existing EVE runtime
+  includes those framework behaviors in addition to Forge's seven authored tools;
+  the rewrite's remaining runtime scope must account for them explicitly.
