@@ -63,6 +63,7 @@ gate pass.
 | 3b5o | Native authored-tool schemas, dispatch and approval binding | Passed available gate |
 | 3b5p | Native model request formatting and provider conversation contracts | Passed available gate |
 | 3b5q | Native model streaming transport and response interpretation | Passed available gate |
+| 3b5r | Native authored-tool turn engine and checkpointed approval continuation | Passed available gate |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -1365,3 +1366,43 @@ these routes do not represent a completed rewrite.
   and live provider qualification remain outstanding. The existing EVE runtime
   includes those framework behaviors in addition to Forge's seven authored tools;
   the rewrite's remaining runtime scope must account for them explicitly.
+
+### Milestone 3b5r
+
+- Full milestone gate passed after fixing a test lock held across an await:
+  408 Rust tests and 2,959 enabled TypeScript tests. Formatting, Clippy, source
+  contract checks and typechecking passed; 661 reference tests across 34 files
+  remain skipped. Log: `.forge/rust-rewrite/milestone-3b5r-rerun.log`.
+- The native authored-tool engine now performs model/tool/model turns, records
+  normalized tool input and results in conversation history, emits compatible
+  Forge-consumed EVE events, handles invalid tools as model-visible failures,
+  and continues after denied writes. The existing authored instructions remain
+  the source; model requests receive all seven authored tool definitions.
+- Continuations bind user, workspace, run, provider and model, include no channel,
+  capability or model-access credentials, and validate pending input fingerprints.
+  Restore adopts the current deployment's instructions while preserving history.
+  Approval decisions match an exact persisted request and are rechecked by the
+  tool executor; the application gateway still owns live approval authority.
+- A revision-checked journal interface checkpoints model output before dispatch,
+  reserves each tool invocation before effects, and commits each result before
+  continuing. Stream output uses the same revision fence and awaited persistence.
+  The owning adapter must additionally enforce worker ownership and supply the
+  original deadline; the interface alone is not durable storage.
+- Completed results survive a lost commit acknowledgement without repeating the
+  tool. Interrupted reads and canonical idempotent team updates can be retried.
+  Unreceipted artifact/code/program work instead fails for reconciliation; this
+  avoids claiming exactly-once effects when a remote outcome is unknown. A stale
+  worker cannot start another model step, and changed pending input cannot resume.
+- Input/output counters stop the next model step at the configured limits, and
+  each model request caps output at the remaining allowance. Unknown provider
+  usage stays unknown at the transport boundary; the original wall deadline still
+  bounds the turn. Cancellation and persistence failures prevent later tools.
+- In addition to fault-injected journal tests, a complete native HTTP model →
+  capability → model turn passes for Responses, compatible Chat and Anthropic.
+  These use isolated local HTTP fixtures, verify credential separation, preserve
+  tool-result history and strip private extra callback fields. No real provider
+  or production workspace was used.
+- Durable journal/session adapters, runtime HTTP hosting, reconciliation UX,
+  framework built-ins/compaction, sandbox resume/local backends and deployment
+  qualification remain outstanding. This milestone implements the turn mechanism
+  and its persistence contract, not the complete replacement runtime service.

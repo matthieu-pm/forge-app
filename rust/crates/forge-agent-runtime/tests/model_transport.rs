@@ -57,13 +57,26 @@ struct Provider {
     mime: &'static str,
     stall: bool,
     requests: Mutex<Vec<Value>>,
+    continuation: Mutex<Option<Vec<u8>>>,
 }
 async fn handle(State(state): State<Arc<Provider>>, request: Request) -> Response<Body> {
     let (parts, body) = request.into_parts();
     let bytes = to_bytes(body, 4 * 1024 * 1024).await.unwrap();
     state.requests.lock().unwrap().push(json!({"path":parts.uri.to_string(),"authorization":parts.headers.get("authorization").unwrap().to_str().unwrap(),"correlation":parts.headers.get("x-correlation-id").unwrap().to_str().unwrap(),"run":parts.headers.get("x-forge-agent-run-id").unwrap().to_str().unwrap(),"workspace":parts.headers.get("x-forge-workspace-id").unwrap().to_str().unwrap(),"peer":parts.headers.get("x-vercel-trusted-oidc-idp-token").map(|v|v.to_str().unwrap()),"body":serde_json::from_slice::<Value>(&bytes).unwrap()}));
-    let chunks: Vec<_> = state
-        .wire
+    if parts.uri.path().starts_with("/api/agent/capabilities/") {
+        let team = json!({"id":RUN,"slug":"forge","identifier":"FOR","name":"Forge","timezone":"Europe/Paris","description":"Fixture","privateExtra":"strip-this-field"});
+        return Response::builder()
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&team).unwrap()))
+            .unwrap();
+    }
+    let next = if state.requests.lock().unwrap().len() > 1 {
+        state.continuation.lock().unwrap().clone()
+    } else {
+        None
+    };
+    let wire = next.as_ref().unwrap_or(&state.wire);
+    let chunks: Vec<_> = wire
         .chunks(7)
         .map(|v| Ok::<_, std::io::Error>(v.to_vec()))
         .collect();
@@ -93,11 +106,13 @@ impl Server {
             mime,
             stall,
             requests: Mutex::new(vec![]),
+            continuation: Mutex::new(None),
         });
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let address = listener.local_addr().unwrap();
         let app = Router::new()
             .route("/api/agent/runtime/model/{*path}", post(handle))
+            .route("/api/agent/capabilities/{capability}", post(handle))
             .with_state(state.clone());
         let task = tokio::spawn(async move {
             axum::serve(listener, app).await.unwrap();
@@ -439,4 +454,125 @@ async fn credential_acquisition_is_cancelled_and_sink_failures_stop_generation()
         .is_err()
     );
     assert_eq!(sink.events.len(), 1);
+}
+
+struct TurnJournal(Mutex<(forge_agent_runtime::engine::State, Vec<Value>)>);
+#[async_trait]
+impl forge_agent_runtime::engine::Journal for TurnJournal {
+    async fn commit(
+        &self,
+        expected: u64,
+        next: &forge_agent_runtime::engine::State,
+        events: &[Value],
+    ) -> Result<()> {
+        let mut data = self.0.lock().unwrap();
+        if data.0.revision() != expected {
+            return Err(Error("Stale turn."));
+        }
+        data.0 = next.clone();
+        data.1.extend_from_slice(events);
+        Ok(())
+    }
+    async fn append(&self, revision: u64, event: Value) -> Result<()> {
+        let mut data = self.0.lock().unwrap();
+        if data.0.revision() != revision {
+            return Err(Error("Stale output."));
+        }
+        data.1.push(event);
+        Ok(())
+    }
+}
+#[tokio::test]
+async fn native_http_model_and_capability_transports_complete_a_real_turn_for_each_protocol() {
+    use forge_agent_runtime::{
+        callback::HttpCapabilities,
+        engine::{Engine, Phase, State as AgentState},
+        execution::Features,
+        tools::Executor,
+    };
+    let fixtures: Value =
+        serde_json::from_str(include_str!("../../../reference-fixtures.json")).unwrap();
+    for (protocol, provider) in [
+        ("responses", "openai"),
+        ("chat", "custom-openai"),
+        ("anthropic", "anthropic"),
+    ] {
+        let server = Server::new(wire(protocol), StatusCode::OK, "text/event-stream", false).await;
+        let events = fixtures["modelStreams"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|v| v["protocol"] == protocol && v["mode"] == "text")
+            .unwrap()["events"]
+            .as_array()
+            .unwrap();
+        let final_wire = events
+            .iter()
+            .map(|v| {
+                format!(
+                    "data: {}\n\n",
+                    v.as_str()
+                        .map(str::to_owned)
+                        .unwrap_or_else(|| serde_json::to_string(v).unwrap())
+                )
+            })
+            .collect::<String>()
+            .into_bytes();
+        *server.state.continuation.lock().unwrap() = Some(final_wire);
+        let channel = channel(provider);
+        let mut state = AgentState::new(
+            &channel,
+            vec![json!({"role":"user","content":[{"type":"text","text":"Get the Forge team."}]})],
+        )
+        .unwrap();
+        let journal = TurnJournal(Mutex::new((state.clone(), vec![])));
+        let engine = Engine::new(
+            Arc::new(HttpModel::new(server.origin.clone(), None).unwrap()),
+            Arc::new(Executor {
+                capabilities: Arc::new(HttpCapabilities::new(server.origin.clone(), None).unwrap()),
+                sandbox: None,
+                features: Features::default(),
+            }),
+        );
+        assert_eq!(
+            engine
+                .drive(
+                    &channel,
+                    &mut state,
+                    &journal,
+                    &Cancellation::default(),
+                    Instant::now() + Duration::from_secs(5)
+                )
+                .await
+                .unwrap(),
+            Phase::Complete
+        );
+        let requests = server.state.requests.lock().unwrap();
+        assert_eq!(requests.len(), 3);
+        assert_eq!(requests[1]["path"], "/api/agent/capabilities/teams.get");
+        assert_eq!(
+            requests[1]["authorization"],
+            "Bearer public-capability-token"
+        );
+        assert_eq!(
+            requests[1]["body"],
+            json!({"version":"1","input":{"slug":"forge"}})
+        );
+        assert_eq!(
+            state.history()[3]["content"][0]["output"]["value"]["name"],
+            "Forge"
+        );
+        assert!(
+            state.history()[3]["content"][0]["output"]["value"]
+                .get("privateExtra")
+                .is_none()
+        );
+        let model_history = serde_json::to_string(&requests[2]["body"]).unwrap();
+        assert!(model_history.contains("Fixture"));
+        assert!(!model_history.contains("strip-this-field"));
+        assert_eq!(
+            state.history().last().unwrap()["content"][0]["text"],
+            "Hello hé😀"
+        );
+    }
 }
