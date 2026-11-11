@@ -97965,6 +97965,2694 @@
         "interval": 1,
         "unit": "week"
       }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "ACT",
+      "now": "2026-12-31T12:00:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2027-01-07",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "ACT",
+      "now": "2026-03-29T00:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2026-04-05",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "ACT",
+      "now": "2028-02-27T23:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2028-03-06",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "AET",
+      "now": "2026-12-31T12:00:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2027-01-07",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "AET",
+      "now": "2026-03-29T00:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2026-04-05",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "AET",
+      "now": "2028-02-27T23:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2028-03-06",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "AGT",
+      "now": "2026-12-31T12:00:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2027-01-07",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "AGT",
+      "now": "2026-03-29T00:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2026-04-04",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "AGT",
+      "now": "2028-02-27T23:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2028-03-05",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "ART",
+      "now": "2026-12-31T12:00:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2027-01-07",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "ART",
+      "now": "2026-03-29T00:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2026-04-05",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "ART",
+      "now": "2028-02-27T23:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2028-03-06",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "AST",
+      "now": "2026-12-31T12:00:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2027-01-07",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "AST",
+      "now": "2026-03-29T00:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2026-04-04",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "AST",
+      "now": "2028-02-27T23:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2028-03-05",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "BET",
+      "now": "2026-12-31T12:00:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2027-01-07",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "BET",
+      "now": "2026-03-29T00:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2026-04-04",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "BET",
+      "now": "2028-02-27T23:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2028-03-05",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "BST",
+      "now": "2026-12-31T12:00:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2027-01-07",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "BST",
+      "now": "2026-03-29T00:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2026-04-05",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "BST",
+      "now": "2028-02-27T23:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2028-03-06",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "CAT",
+      "now": "2026-12-31T12:00:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2027-01-07",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "CAT",
+      "now": "2026-03-29T00:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2026-04-05",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "CAT",
+      "now": "2028-02-27T23:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2028-03-06",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "CNT",
+      "now": "2026-12-31T12:00:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2027-01-07",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "CNT",
+      "now": "2026-03-29T00:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2026-04-04",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "CNT",
+      "now": "2028-02-27T23:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2028-03-05",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "CST",
+      "now": "2026-12-31T12:00:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2027-01-07",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "CST",
+      "now": "2026-03-29T00:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2026-04-04",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "CST",
+      "now": "2028-02-27T23:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2028-03-05",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "CTT",
+      "now": "2026-12-31T12:00:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2027-01-07",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "CTT",
+      "now": "2026-03-29T00:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2026-04-05",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "CTT",
+      "now": "2028-02-27T23:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2028-03-06",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "EAT",
+      "now": "2026-12-31T12:00:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2027-01-07",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "EAT",
+      "now": "2026-03-29T00:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2026-04-05",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "EAT",
+      "now": "2028-02-27T23:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2028-03-06",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "ECT",
+      "now": "2026-12-31T12:00:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2027-01-07",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "ECT",
+      "now": "2026-03-29T00:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2026-04-05",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "ECT",
+      "now": "2028-02-27T23:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2028-03-06",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "EST",
+      "now": "2026-12-31T12:00:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2027-01-07",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "EST",
+      "now": "2026-03-29T00:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2026-04-04",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "EST",
+      "now": "2028-02-27T23:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2028-03-05",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "HST",
+      "now": "2026-12-31T12:00:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2027-01-07",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "HST",
+      "now": "2026-03-29T00:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2026-04-04",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "HST",
+      "now": "2028-02-27T23:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2028-03-05",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "IET",
+      "now": "2026-12-31T12:00:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2027-01-07",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "IET",
+      "now": "2026-03-29T00:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2026-04-04",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "IET",
+      "now": "2028-02-27T23:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2028-03-05",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "IST",
+      "now": "2026-12-31T12:00:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2027-01-07",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "IST",
+      "now": "2026-03-29T00:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2026-04-05",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "IST",
+      "now": "2028-02-27T23:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2028-03-06",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "JST",
+      "now": "2026-12-31T12:00:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2027-01-07",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "JST",
+      "now": "2026-03-29T00:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2026-04-05",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "JST",
+      "now": "2028-02-27T23:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2028-03-06",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "MIT",
+      "now": "2026-12-31T12:00:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2027-01-08",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "MIT",
+      "now": "2026-03-29T00:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2026-04-05",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "MIT",
+      "now": "2028-02-27T23:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2028-03-06",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "MST",
+      "now": "2026-12-31T12:00:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2027-01-07",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "MST",
+      "now": "2026-03-29T00:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2026-04-04",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "MST",
+      "now": "2028-02-27T23:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2028-03-05",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "NET",
+      "now": "2026-12-31T12:00:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2027-01-07",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "NET",
+      "now": "2026-03-29T00:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2026-04-05",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "NET",
+      "now": "2028-02-27T23:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2028-03-06",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "NST",
+      "now": "2026-12-31T12:00:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2027-01-08",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "NST",
+      "now": "2026-03-29T00:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2026-04-05",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "NST",
+      "now": "2028-02-27T23:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2028-03-06",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "PLT",
+      "now": "2026-12-31T12:00:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2027-01-07",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "PLT",
+      "now": "2026-03-29T00:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2026-04-05",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "PLT",
+      "now": "2028-02-27T23:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2028-03-06",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "PNT",
+      "now": "2026-12-31T12:00:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2027-01-07",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "PNT",
+      "now": "2026-03-29T00:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2026-04-04",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "PNT",
+      "now": "2028-02-27T23:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2028-03-05",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "PRT",
+      "now": "2026-12-31T12:00:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2027-01-07",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "PRT",
+      "now": "2026-03-29T00:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2026-04-04",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "PRT",
+      "now": "2028-02-27T23:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2028-03-05",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "PST",
+      "now": "2026-12-31T12:00:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2027-01-07",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "PST",
+      "now": "2026-03-29T00:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2026-04-04",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "PST",
+      "now": "2028-02-27T23:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2028-03-05",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "SST",
+      "now": "2026-12-31T12:00:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2027-01-07",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "SST",
+      "now": "2026-03-29T00:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2026-04-05",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "SST",
+      "now": "2028-02-27T23:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2028-03-06",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "VST",
+      "now": "2026-12-31T12:00:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2027-01-07",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "VST",
+      "now": "2026-03-29T00:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2026-04-05",
+        "interval": 1,
+        "unit": "week"
+      }
+    },
+    {
+      "team": "00000000-0000-4000-8000-000000000001",
+      "timezone": "VST",
+      "now": "2028-02-27T23:30:00Z",
+      "output": {
+        "icon": {
+          "kind": "icon",
+          "value": "File01Icon",
+          "color": "#a1a1aa"
+        },
+        "title": "",
+        "content": null,
+        "properties": {
+          "teamIds": [
+            "00000000-0000-4000-8000-000000000001"
+          ],
+          "status": "Backlog",
+          "priority": "No priority",
+          "assignee": null,
+          "lead": null,
+          "members": [],
+          "project": null,
+          "initiatives": [],
+          "labels": [],
+          "dependencies": []
+        },
+        "subIssues": [],
+        "firstDue": "2028-03-06",
+        "interval": 1,
+        "unit": "week"
+      }
     }
   ],
   "sizeBase": {

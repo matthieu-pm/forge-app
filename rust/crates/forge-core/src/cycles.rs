@@ -86,12 +86,8 @@ pub fn triage(v: Value) -> Result<Value> {
 }
 pub fn today(zone: &str, now: DateTime<Utc>) -> Result<String> {
     let canonical = timezone(json!(zone))?;
-    let zone: chrono_tz::Tz = canonical
-        .as_str()
-        .unwrap()
-        .parse()
-        .map_err(|_| ContractError("timezone calendar"))?;
-    Ok(now.with_timezone(&zone).format("%Y-%m-%d").to_string())
+    let zone = crate::timezones::Zone::parse(canonical.as_str().unwrap())?;
+    Ok(zone.local(now)?.format("%Y-%m-%d").to_string())
 }
 fn day(value: &str) -> Result<NaiveDate> {
     date(json!(value))?;

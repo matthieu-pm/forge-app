@@ -1,3 +1,4 @@
+import {legacyIntlTimezones} from './rust-intl-timezones.mjs'
 import {readFileSync,writeFileSync} from 'node:fs'
 import {createRequire} from 'node:module'
 import * as t from '../apps/forge/src/lib/template-contract.ts'
@@ -35,7 +36,7 @@ for(const extra of [0,1]){const count=8_000_000-sizeOverhead+extra;const input={
 const empty=[]
 for(const kind of ['issue','project','document'])for(const id of [undefined,team])empty.push({kind,team:id??null,output:t.emptyTemplate(kind,id)})
 const schedules=[]
-for(const timezone of ['UTC','Europe/Paris','America/Los_Angeles','Pacific/Kiritimati','Australia/Lord_Howe'])for(const now of ['2026-12-31T12:00:00Z','2026-03-29T00:30:00Z','2028-02-27T23:30:00Z'])schedules.push({team,timezone,now,output:r.emptyRecurringIssue(team,timezone,new Date(now))})
+for(const timezone of ['UTC','Europe/Paris','America/Los_Angeles','Pacific/Kiritimati','Australia/Lord_Howe',...legacyIntlTimezones])for(const now of ['2026-12-31T12:00:00Z','2026-03-29T00:30:00Z','2028-02-27T23:30:00Z'])schedules.push({team,timezone,now,output:r.emptyRecurringIssue(team,timezone,new Date(now))})
 const output=JSON.stringify({cases,empty,schedules,sizeBase,sizes},null,2)+'\n'
 const path=new URL('../rust/crates/forge-core/data/templates-reference.json',import.meta.url)
 if(process.argv.includes('--check')){if(readFileSync(path,'utf8')!==output)throw Error('Template reference changed')}else writeFileSync(path,output)

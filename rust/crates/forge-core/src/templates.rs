@@ -308,10 +308,10 @@ pub fn empty(kind: &str, team: Option<&str>) -> Value {
     json!({"name":"","kind":kind,"icon":{"kind":"icon","value":if kind=="project"{"CubeIcon"}else{"File01Icon"},"color":"#a1a1aa"},"description":"","title":"","summary":"","content":null,"properties":empty_properties(team),"visibility":team.unwrap_or_default(),"milestones":[],"issues":[],"subIssues":[],"issueType":"standard","fields":[]})
 }
 pub fn empty_recurring(team: &str, timezone: &str, now: DateTime<Utc>) -> Result<Value> {
-    let zone: chrono_tz::Tz = timezone.parse().map_err(|_| ContractError("timezone"))?;
-    let first = now
-        .with_timezone(&zone)
-        .date_naive()
+    let zone = crate::timezones::Zone::parse(timezone)?;
+    let first = zone
+        .local(now)?
+        .date()
         .checked_add_signed(Duration::days(7))
         .ok_or(ContractError("date"))?;
     let template = empty("issue", Some(team));

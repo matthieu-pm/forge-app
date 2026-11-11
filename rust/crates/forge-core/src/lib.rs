@@ -21,6 +21,7 @@ pub mod security_commands;
 pub mod subscription;
 pub mod teams;
 pub mod text;
+mod timezones;
 pub mod visibility;
 
 pub mod json;
@@ -37,6 +38,7 @@ pub mod files;
 pub mod imports;
 pub mod invitations;
 pub mod jobs;
+pub mod loops;
 pub mod profiles;
 pub mod sla;
 pub mod template_application;

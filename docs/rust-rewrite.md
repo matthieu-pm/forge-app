@@ -87,6 +87,7 @@ gate pass.
 | 3b8d | Disposable local fixtures for original jobs, SLA and preference-import acceptance | Passed |
 | 3b9a | Template authoring, team defaults and gated recurring definitions | Passed |
 | 3b9b | Atomic template application into canonical issues and projects | Passed |
+| 3b10a | Loop contracts, event filters, calendar scheduling and published model policy | Passed |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -2254,3 +2255,48 @@ these routes do not represent a completed rewrite.
   all source-fixture drift checks, formatting, Clippy and three package
   typechecks. The 607 external-fixture tests across 31 files remain skipped.
   Evidence: `.forge/rust-rewrite/milestone-3b9b-trust-bundle.log`.
+
+### Milestone 3b10a
+
+- Shared-loop contracts now preserve strict command boundaries, revision and
+  approval identities, supported entity/property combinations, nested condition
+  depth and total-leaf limits, comment modes, schedule inputs and normalized
+  published fields. This milestone does not activate loop routes or workers.
+- Event matching retains empty-value sentinels, literal case-insensitive text,
+  actual collection additions/removals, ordered property changes, linked member
+  mentions, new comment threads and triage-entry behavior with post-change
+  conditions. Numeric and boolean snapshots retain JavaScript string semantics.
+- Calendar scheduling coalesces missed ticks, preserves the original interval
+  anchor, applies selected weekdays only in active weeks, clamps short months
+  and leap years, advances missing wall times and chooses repeated wall times
+  once. Hourly intervals remain elapsed-time intervals. Source timezone aliases and
+  numeric UTC offsets remain supported. Published starts require seconds; the
+  calendar function also preserves the source's direct minute-precision inputs.
+- Published model selection uses the existing Auto route with cloud/native
+  candidates only, validates explicit reasoning through the manual-effort
+  contract, and retains Auto's selection and audit fields. Scheduler-driver and
+  feature-gate policy preserve the source defaults; execution/cancellation/lease
+  constants are available for the following storage/runtime integration.
+- The deterministic source exporter adds 1,924 contract cases, 708 condition
+  cases, 723 events, 576 schedules, 105 local-date conversions, 35 model routes,
+  six scheduler choices and 45 trigger labels. Its output is included in every
+  milestone's source-drift gate.
+- Initial verification exposed the source's stricter timestamp/local-date
+  boundary and chrono-tz's fixed offsets beyond its precomputed transitions.
+  Loop scheduling now uses pinned Jiff with bundled TZif data and recurring
+  transition rules; it never depends on host timezone files. Calendar-year
+  rollover also preserves the source's signed six-digit ISO years. The
+  comparison tests report all mismatches in each affected category together.
+  The first run's rustdoc phase also saw the new dependency before rebuilding
+  the crate; the complete rerun verifies one consistent code/dependency state.
+- The next run isolated the remaining failures to Intl's `CST` alias and the
+  test reader's RFC3339 parser rejecting the expected signed six-digit year.
+  The fixture now records the source epoch timestamp for display comparisons,
+  while still comparing the complete ISO output. A shared timezone adapter maps
+  the 28 accepted ICU legacy identifiers to their canonical zone rules. Cycles
+  and recurring-template defaults use this adapter too, with 99 source calendar
+  cases for each path, avoiding the same accepted-name/runtime mismatch there.
+- Full verification passed: 568 Rust tests, 3,013 enabled reference tests,
+  all source-fixture drift checks, formatting, Clippy and three package
+  typechecks. The 607 external-fixture tests across 31 files remain skipped.
+  Evidence: `.forge/rust-rewrite/milestone-3b10a-aliases.log`.

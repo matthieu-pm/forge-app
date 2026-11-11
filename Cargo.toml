@@ -40,6 +40,7 @@ jsonwebtoken = { version = "10", default-features = false, features = ["rust_cry
 hickory-resolver = { version = "0.24", features = ["tokio-runtime", "system-config"] }
 idna = "1"
 chrono-tz = "0.10"
+jiff = { version = "=0.2.38", default-features = false, features = ["std", "tzdb-bundle-always"] }
 regress = "0.10"
 icu_collator = "2"
 ring = "0.17"
