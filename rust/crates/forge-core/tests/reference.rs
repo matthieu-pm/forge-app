@@ -347,6 +347,8 @@ fn issue_planning_and_discussion_contracts_match_reference_documents() {
             "relationshipQuery" => i::relationship_query(v),
             "relationshipSearch" => i::relationship_search(v),
             "engagement" => i::engagement(v),
+            "lifecycle" => i::lifecycle(v),
+            "inactive" => i::inactive_query(v),
             kind => panic!("Missing contract {kind}"),
         };
         assert_eq!(
@@ -409,5 +411,58 @@ fn issue_query_validation_normalization_and_cursor_bindings_match_reference() {
                 "binding case {index}"
             );
         }
+    }
+}
+
+#[test]
+fn shared_cycle_calendars_settings_and_timezone_names_match_reference() {
+    use forge_core::cycles as c;
+    let f: Value = serde_json::from_str(include_str!("../../../reference-fixtures.json")).unwrap();
+    for (i, case) in f["cycleCases"].as_array().unwrap().iter().enumerate() {
+        let input = case["input"].clone();
+        let result = match case["kind"].as_str().unwrap() {
+            "timezone" => c::timezone(input),
+            "settings" => c::Settings::parse(input).map(c::Settings::into_value),
+            "triage" => c::triage(input),
+            _ => unreachable!(),
+        };
+        assert_eq!(
+            result.is_ok(),
+            case["valid"].as_bool().unwrap(),
+            "case {i}: {case}"
+        );
+        if let Ok(value) = result {
+            assert_eq!(value, case["expected"], "case {i}: {case}");
+        }
+    }
+    for case in f["cycleCalendar"]["today"].as_array().unwrap() {
+        let now = chrono::DateTime::parse_from_rfc3339(case["now"].as_str().unwrap())
+            .unwrap()
+            .with_timezone(&chrono::Utc);
+        assert_eq!(
+            c::today(case["zone"].as_str().unwrap(), now).unwrap(),
+            case["expected"]
+        );
+    }
+    for case in f["cycleCalendar"]["add"].as_array().unwrap() {
+        assert_eq!(
+            c::add_days(
+                case["date"].as_str().unwrap(),
+                case["days"].as_i64().unwrap()
+            )
+            .unwrap(),
+            case["expected"]
+        );
+    }
+    for case in f["cycleCalendar"]["next"].as_array().unwrap() {
+        assert_eq!(
+            c::next_date(
+                case["date"].as_str().unwrap(),
+                case["weekday"].as_u64().unwrap() as u32,
+                case["strict"].as_bool().unwrap()
+            )
+            .unwrap(),
+            case["expected"]
+        );
     }
 }

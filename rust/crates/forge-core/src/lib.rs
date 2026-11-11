@@ -6,6 +6,7 @@ pub mod actor;
 pub mod canonical;
 pub mod comments;
 mod contract;
+pub mod cycles;
 pub mod definitions;
 pub mod features;
 pub mod issue_query;

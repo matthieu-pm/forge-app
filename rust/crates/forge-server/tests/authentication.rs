@@ -421,6 +421,43 @@ async fn issue_http_commands_preserve_bound_sessions_and_expose_discussion_and_h
     assert_eq!(status, StatusCode::OK, "{page}");
     assert_eq!(page["total"], 1);
     assert_eq!(page["records"][0]["issue"]["id"], created["issue"]["id"]);
+    let mut cycle_settings = forge_core::cycles::initial();
+    cycle_settings["enabled"] = json!(true);
+    let (status,_,saved)=f.request("POST","/api/workspace/team-settings",Some(&cookie),Some(bind(json!({"teamId":team.id,"kind":"cycles","commandKey":Uuid::new_v4(),"expectedRevision":0,"value":cycle_settings.to_string()})))).await;
+    assert_eq!(status, StatusCode::OK, "{saved}");
+    let (status, _, cycles) = f
+        .request(
+            "POST",
+            "/api/workspace/cycles",
+            Some(&cookie),
+            Some(bind(json!({"teamId":team.id}))),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{cycles}");
+    assert_eq!(cycles["cycles"].as_array().unwrap().len(), 2);
+    let (status, _, triage) = f
+        .request(
+            "POST",
+            "/api/workspace/triage",
+            Some(&cookie),
+            Some(bind(json!({"teamId":team.id}))),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{triage}");
+    assert_eq!(triage["settings"]["enabled"], false);
+    let (status,_,archived)=f.request("POST","/api/workspace/issues/lifecycle",Some(&cookie),Some(bind(json!({"teamId":team.id,"issueId":created["issue"]["id"],"commandKey":Uuid::new_v4(),"expectedRevision":page["records"][0]["issue"]["revision"],"action":"archive"})))).await;
+    assert_eq!(status, StatusCode::OK, "{archived}");
+    assert_eq!(archived["value"]["active"], false);
+    let (status, _, inactive) = f
+        .request(
+            "POST",
+            "/api/workspace/issues/inactive",
+            Some(&cookie),
+            Some(bind(json!({"teamId":team.id,"kind":"archived"}))),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{inactive}");
+    assert_eq!(inactive["items"][0]["id"], created["issue"]["id"]);
     let mut wrong = bind(json!({"query":{}}));
     wrong["workspaceId"] = json!("another-workspace");
     assert_eq!(

@@ -132,12 +132,46 @@ async fn canonical_issue_effects_and_history_roll_back_when_preparation_fails() 
     // The source journal captures destructive/security patches. Issue title,
     // status_id, and history inserts are deliberately outside its patch set;
     // these commands still require preparation and completed publication.
-    let completed = f.backend.completed.lock().unwrap();
-    assert_eq!(completed.len(), completed_before + 2);
-    for (operation, events) in &completed[completed_before..] {
-        assert!(f.backend.prepared.lock().unwrap().contains(operation));
-        assert!(events.is_empty());
+    {
+        let completed = f.backend.completed.lock().unwrap();
+        assert_eq!(completed.len(), completed_before + 2);
+        for (operation, events) in &completed[completed_before..] {
+            assert!(f.backend.prepared.lock().unwrap().contains(operation));
+            assert!(events.is_empty());
+        }
     }
+    let archive = json!({"teamId":team.id,"issueId":created["issue"]["id"],"commandKey":Uuid::new_v4(),"expectedRevision":1,"action":"archive"});
+    f.backend.mode.store(1, Ordering::Relaxed);
+    assert!(
+        issues::lifecycle(&f.database, &actor, archive.clone())
+            .await
+            .is_err()
+    );
+    assert_eq!(
+        issues::read(&f.database, &actor, false).await.unwrap()["records"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+    f.backend.mode.store(0, Ordering::Relaxed);
+    assert_eq!(
+        issues::lifecycle(&f.database, &actor, archive)
+            .await
+            .unwrap()["value"]["active"],
+        false
+    );
+    assert!(
+        f.backend
+            .completed
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|(_, events)| events.iter().any(|e| e.table == "issues"
+                && e.patch
+                    .as_ref()
+                    .is_some_and(|p| p.get("archived_at").is_some_and(|v| !v.is_null()))))
+    );
 }
 
 #[tokio::test]

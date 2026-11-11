@@ -9,12 +9,15 @@ import {issueCommentCommandSchema} from "../apps/forge/src/lib/issue-comment-con
 import {issueHistoryQuerySchema,issueHistoryEnvelopeSchema} from "../apps/forge/src/lib/issue-history-contract.ts"
 import {changeRelationshipSchema,relationshipQuerySchema,relationshipSearchSchema} from "../apps/forge/src/lib/issue-relationship-contract.ts"
 import {issueEngagementCommandSchema,normalizeReactionEmoji,issueSubscriberIds} from "../apps/forge/src/lib/issue-engagement-contract.ts"
+import {issueLifecycleSchema,inactiveIssuesSchema} from "../apps/forge/src/lib/issue-lifecycle-contract.ts"
 const require=createRequire(new URL("../apps/forge/package.json",import.meta.url))
 export const reactionEmoji=[...new Set(require("emojibase-data/en/compact.json").flatMap(item=>[item.unicode,...(item.skins?.map(s=>s.unicode)??[])]).map(normalizeReactionEmoji))].sort()
 const uuid=n=>`00000000-0000-4000-8000-${String(n).padStart(12,"0")}`
 const date="2026-11-01T00:00:00.000Z"
 export const issueCases=[]
 const schemas={draft:issueDraftSchema,issue:issueSchema,create:createCanonicalIssueSchema,edit:editIssueBatchSchema,project:initiativeProjectSchema,document:documentSchema,comment:issueCommentCommandSchema,historyQuery:issueHistoryQuerySchema,history:issueHistoryEnvelopeSchema,relationship:changeRelationshipSchema,relationshipQuery:relationshipQuerySchema,relationshipSearch:relationshipSearchSchema,engagement:issueEngagementCommandSchema}
+schemas.lifecycle=issueLifecycleSchema
+schemas.inactive=inactiveIssuesSchema
 function add(kind,input){try{const expected=kind==="commentDocument"?validateCommentDocument(input):kind==="commentDraft"?validateCommentDraft(input):schemas[kind].parse(input);issueCases.push({kind,input,valid:true,expected})}catch{issueCases.push({kind,input,valid:false})}}
 function mutate(kind,base,change){const v=structuredClone(base);change(v);add(kind,v)}
 const draft=blankIssueDraft();add("draft",draft)
@@ -61,6 +64,9 @@ const history={version:1,actor:{userId:"user",name:"User",kind:"session"}};add("
 const relationship={commandKey:uuid(1),issueId:uuid(2).toUpperCase(),expectedRevision:0,targetId:uuid(3),expectedTargetRevision:1,kind:"parent",action:"add"};add("relationship",relationship);mutate("relationship",relationship,v=>{v.targetId=v.issueId.toLowerCase()});add("relationshipQuery",{issueId:uuid(1)});add("relationshipSearch",{issueId:uuid(1),search:" Search "})
 for(const emoji of ["👍","❤️","\uFE0F","👨‍👩‍👦","not an emoji",""])add("engagement",{commandKey:uuid(1),teamId:uuid(2),issueId:uuid(3),action:"reaction",emoji,present:true})
 add("engagement",{commandKey:uuid(1),teamId:uuid(2),issueId:uuid(3),action:"subscription",subscribed:false})
+for(const action of ["archive","unarchive","delete","restore","purge"])add("lifecycle",{commandKey:uuid(1),teamId:uuid(2),issueId:uuid(3),expectedRevision:0,action})
+for(const kind of ["deleted","archived","active"])add("inactive",{teamId:uuid(1),kind})
+add("inactive",{teamId:uuid(1),kind:"deleted",after:"bad-cursor"})
 export const issuePure={
     legacy:[undefined,null,"",uuid(2)].map(assignee=>({draft:{...draft,assignee:"original",subIssues:["Child"]},...(assignee!==undefined?{assignee}:{}),expected:legacyIssueSource({...draft,assignee:"original",subIssues:["Child"]},assignee)})),
     comments:documents.filter(d=>{try{validateCommentDraft(d);return true}catch{return false}}).map(doc=>({doc,plain:commentPlainText(doc),ids:commentMentionIds(doc)})),

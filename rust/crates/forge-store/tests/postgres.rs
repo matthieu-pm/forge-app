@@ -13,6 +13,8 @@ use uuid::Uuid;
 mod definition_acceptance;
 #[path = "acceptance/issues.rs"]
 mod issue_acceptance;
+#[path = "acceptance/issue_lifecycle.rs"]
+mod issue_lifecycle_acceptance;
 #[path = "acceptance/issue_queries.rs"]
 mod issue_query_acceptance;
 

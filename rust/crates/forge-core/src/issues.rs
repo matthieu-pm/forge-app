@@ -4,6 +4,35 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 pub const PRIORITIES: &[&str] = &["No priority", "Urgent", "High", "Medium", "Low"];
 
+pub fn lifecycle(v: Value) -> Result<Value> {
+    let mut o = Object::new(
+        v,
+        &[
+            "commandKey",
+            "teamId",
+            "issueId",
+            "expectedRevision",
+            "action",
+        ],
+        true,
+    )?;
+    for key in ["commandKey", "teamId", "issueId"] {
+        o.required(key, uuid)?;
+    }
+    o.required("expectedRevision", integer)?;
+    o.required("action", |v| {
+        enumeration(v, &["delete", "restore", "archive", "unarchive"])
+    })?;
+    Ok(o.finish())
+}
+pub fn inactive_query(v: Value) -> Result<Value> {
+    let mut o = Object::new(v, &["teamId", "kind", "after"], true)?;
+    o.required("teamId", uuid)?;
+    o.required("kind", |v| enumeration(v, &["deleted", "archived"]))?;
+    o.optional("after", uuid)?;
+    Ok(o.finish())
+}
+
 pub fn history_query(v: Value) -> Result<Value> {
     let mut o = Object::new(v, &["issueId", "limit", "cursor"], true)?;
     o.required("issueId", uuid)?;

@@ -29,9 +29,9 @@ gate pass.
 | 2b1 | Issue definitions, workflow rules and canonical classification | Passed available gate |
 | 2b2 | Issue creation, editing, comments, relationships and history | Passed available gate |
 | 2b3 | Server issue queries, filtering, facets and pagination | Passed available gate |
-| 2b4 | Triage, issue lifecycle and cycles | Pending |
+| 2b4 | Triage, recoverable issue lifecycle and cycles | Passed available gate; retention workers belong to milestone 3 |
 | 2c | Projects, initiatives, documents, views, resources and imports | Pending |
-| 3 | Agent execution, approvals, streams, models, files, jobs, loops, calls and billing | Pending |
+| 3 | Agent execution, approvals, streams, models, files, retention, jobs, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
 
@@ -310,3 +310,32 @@ these routes do not represent a completed rewrite.
   session/workspace binding. The source public REST contract exposes only teams;
   no new public issue endpoints were invented during this rewrite.
 - Log: `.forge/rust-rewrite/milestone-2b3-qualified.log`.
+
+### Milestone 2b4
+
+- Full gate passed: 124 Rust tests, all 2,959 enabled reference tests, TypeScript
+  typechecking, formatting and Clippy. Both disposable databases applied all 75
+  migrations. The 661 external-fixture reference tests remain skipped.
+- Issues support revision-checked archive, unarchive, soft deletion and restoration.
+  Exact receipt replay reports current availability after another actor's changes.
+  Discussion, subscriptions and relationships survive recovery; inactive lists
+  omit protected content and enforce the elapsed 720-hour recovery deadline.
+- Tests cover competing lifecycle commands, restoration versus creation for the
+  final capacity slot, bounded inactive pagination and live private-team access.
+  Recovery-enabled writes require preparation and publish archive patches.
+- Triage decisions clear triage/snooze state in the existing edit transaction,
+  retain the issue identity, and publish one decision under competing commands.
+  Shared triage settings require a live administrator session.
+- Cycle schedules preserve existing dates, numbers, zones and issue memberships.
+  Settings use the existing product-state encoding, revision checks and command
+  receipt identity. Concurrent settings changes serialize; exact stale values
+  remain safe no-ops. Recent history can include an older requested cycle number.
+- 636 settings/timezone cases and 77 calendar cases match source behavior,
+  including daylight-saving boundaries. Canonical timezone names are exported
+  from the source Intl validator over the pinned Rust timezone vocabulary.
+- First-party HTTP routes expose lifecycle, inactive issues, cycle snapshots and
+  shared cycle/triage settings with the same session/workspace checks.
+- Permanent purge, private-copy cleanup, byte deletion, recurrence and scheduled
+  cycle closure/rollover remain with milestone 3's files and background workers.
+  This milestone does not qualify a production retention service or frontend.
+- Log: `.forge/rust-rewrite/milestone-2b4-gate.log`.

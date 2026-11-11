@@ -165,6 +165,82 @@ pub(crate) async fn query(
         .map_err(|_| auth::invalid_body())?;
     Ok(Json(issues::query(database, &actor, &input).await?))
 }
+pub(crate) async fn lifecycle(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    payload: Payload,
+) -> Result<Json<Value>, IssueHttpError> {
+    let (database, actor, input) = context(&state, &headers, payload).await?;
+    Ok(Json(issues::lifecycle(database, &actor, input).await?))
+}
+pub(crate) async fn inactive(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    payload: Payload,
+) -> Result<Json<Value>, IssueHttpError> {
+    let (database, actor, input) = context(&state, &headers, payload).await?;
+    Ok(Json(issues::inactive(database, &actor, input).await?))
+}
+pub(crate) async fn save_team_settings(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    payload: Payload,
+) -> Result<Json<Value>, IssueHttpError> {
+    let (database, actor, input) = context(&state, &headers, payload).await?;
+    Ok(Json(
+        issues::save_team_settings(database, &actor, input).await?,
+    ))
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct CycleQuery {
+    team_id: String,
+    number: Option<i64>,
+}
+pub(crate) async fn cycles(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    payload: Payload,
+) -> Result<Json<Value>, IssueHttpError> {
+    let (database, actor, input) = context(&state, &headers, payload).await?;
+    let input: CycleQuery = serde_json::from_value(input).map_err(|_| auth::invalid_body())?;
+    if !forge_core::text::is_uuid(&input.team_id) {
+        return Err(auth::invalid_body().into());
+    }
+    Ok(Json(
+        issues::read_cycles(
+            database,
+            &actor,
+            input.team_id.parse().map_err(|_| auth::invalid_body())?,
+            input.number,
+        )
+        .await?,
+    ))
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct TeamQuery {
+    team_id: String,
+}
+pub(crate) async fn triage(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    payload: Payload,
+) -> Result<Json<Value>, IssueHttpError> {
+    let (database, actor, input) = context(&state, &headers, payload).await?;
+    let input: TeamQuery = serde_json::from_value(input).map_err(|_| auth::invalid_body())?;
+    if !forge_core::text::is_uuid(&input.team_id) {
+        return Err(auth::invalid_body().into());
+    }
+    Ok(Json(
+        issues::read_triage(
+            database,
+            &actor,
+            input.team_id.parse().map_err(|_| auth::invalid_body())?,
+        )
+        .await?,
+    ))
+}
 pub(crate) async fn history(
     State(state): State<AppState>,
     headers: HeaderMap,

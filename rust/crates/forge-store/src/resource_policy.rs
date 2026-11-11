@@ -28,6 +28,12 @@ pub(crate) fn readable_issue(column: &'static str) -> String {
         readable_team("authz_issue.team_id")
     )
 }
+pub(crate) fn retained_issue(column: &'static str) -> String {
+    format!(
+        "EXISTS(SELECT 1 FROM issues authz_issue WHERE authz_issue.id={column} AND authz_issue.workspace_id=$1 AND authz_issue.purged_at IS NULL AND {})",
+        readable_team("authz_issue.team_id")
+    )
+}
 pub(crate) fn readable_project(column: &'static str) -> String {
     format!(
         "EXISTS(SELECT 1 FROM projects authz_project WHERE authz_project.id={column} AND authz_project.workspace_id=$1 AND (NOT EXISTS(SELECT 1 FROM project_teams authz_pt WHERE authz_pt.project_id=authz_project.id) OR EXISTS(SELECT 1 FROM project_teams authz_pt WHERE authz_pt.project_id=authz_project.id AND authz_pt.workspace_id=$1 AND {})))",

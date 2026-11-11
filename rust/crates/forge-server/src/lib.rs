@@ -28,12 +28,26 @@ pub fn router() -> Router {
 pub fn router_with_state(state: state::AppState) -> Router {
     let auth_routes = Router::new()
         .route(
+            "/api/workspace/team-settings",
+            axum::routing::post(issues::save_team_settings),
+        )
+        .route("/api/workspace/cycles", axum::routing::post(issues::cycles))
+        .route("/api/workspace/triage", axum::routing::post(issues::triage))
+        .route(
             "/api/workspace/issues",
             get(issues::read).post(issues::create),
         )
         .route(
             "/api/workspace/issues/query",
             axum::routing::post(issues::query),
+        )
+        .route(
+            "/api/workspace/issues/lifecycle",
+            axum::routing::post(issues::lifecycle),
+        )
+        .route(
+            "/api/workspace/issues/inactive",
+            axum::routing::post(issues::inactive),
         )
         .route(
             "/api/workspace/issues/edit",
