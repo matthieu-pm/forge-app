@@ -5,6 +5,7 @@ pub mod callback;
 pub use forge_core::agents::sandbox as contracts;
 pub mod execution;
 pub mod sandbox;
+pub mod vercel;
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 #[error("{0}")]

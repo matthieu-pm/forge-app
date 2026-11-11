@@ -59,6 +59,7 @@ gate pass.
 | 3b5k | Agent HTTP endpoints, session/token boundaries and event streaming | Passed available gate |
 | 3b5l | Capability HTTP, diagnostics and agent startup composition | Passed available gate |
 | 3b5m | Native runtime authentication, capability callbacks and sandbox program orchestration | Passed available gate |
+| 3b5n | Native Vercel sandbox creation, private files, bounded command streams and teardown | Passed available gate |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -1225,3 +1226,43 @@ these routes do not represent a completed rewrite.
   production isolated sandbox adapter, model execution/session HTTP service,
   retention scheduling and linked-loop execution remain outstanding. This crate
   does not launch an agent service or provide a host-process execution fallback.
+
+### Milestone 3b5n
+
+- Full milestone gate passed: 377 Rust tests and 2,959 enabled TypeScript tests;
+  661 reference tests across 34 files remain skipped. Formatting, Clippy, source
+  contract checks and TypeScript typechecking passed. The SDK comparison caught a
+  duplicate JSON/gzip Content-Type header; the upload transport was corrected before
+  the complete passing rerun. Log: `.forge/rust-rewrite/milestone-3b5n-rerun.log`.
+
+- Added a native Vercel Sandbox adapter using the v2 protocol in the installed EVE
+  0.31.0 dependency. An executable SDK fixture captures creation, network policy,
+  command streaming, compressed file upload, removal and shutdown requests. The
+  Rust acceptance fixture compares the SDK requests and results, including file
+  path interpretation and byte-preserving UTF-8 stdout/stderr.
+- Provider credentials are obtained for each API request and sent only to the
+  fixed Vercel API origin. No provider, application, database, model or capability
+  credentials are passed as sandbox environment variables or file contents.
+  Redirects are rejected; upstream error bodies never become tool error messages.
+- Resources are named before creation and have an explicit provider lifetime capped
+  at 30 minutes. Creation requests deny network access immediately and require the
+  provider to acknowledge that policy before a fixed bootstrap command can run.
+  Bootstrap checks bash/Node and creates the workspace; authored commands have no
+  elevated-permission flag. File paths remain relative to the workspace and uploads
+  use bounded gzip/tar archives with no host file reads.
+- Command streams validate session/command identity, require a terminal exit code,
+  preserve UTF-8 across network chunks and enforce line, wire and combined output
+  bounds while reading. An interrupted or invalid stream revokes the handle before
+  requesting remote shutdown. Operations serialize within a sandbox; subsequent
+  commands cannot use a revoked resource. Explicit shutdown can retry a failed
+  provider request, while successful shutdown is idempotent.
+- Dropped/ambiguous creation attempts reconcile by their preallocated name without
+  resuming stopped resources. This is a bounded best-effort cleanup: if the provider
+  is unavailable or creation becomes visible after reconciliation, its configured
+  lifetime remains the final bound. Dropping a command or handle schedules shutdown;
+  callers can await `shutdown` for the provider acknowledgement. These are not claims
+  of instantaneous remote termination during a network outage.
+- No live Vercel resource was created. Provider-backed acceptance, durable sandbox
+  reconnect/resume, Docker/microsandbox adapters, runtime model/session execution,
+  background services and the Rust UI/macOS host remain outstanding. The reference
+  app and deployed service continue to use their original paths.
