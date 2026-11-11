@@ -84,6 +84,7 @@ gate pass.
 | 3b8a | Invitation delivery policies, reminder mail and idempotent provider receipts | Passed |
 | 3b8b | Durable invitation queue, live delivery authority and lifecycle recovery | Passed |
 | 3b8c | Workflow health, native queue stalls and bounded operator diagnostics | Passed |
+| 3b8d | Disposable local fixtures for original jobs, SLA and preference-import acceptance | Passed |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -2149,3 +2150,33 @@ these routes do not represent a completed rewrite.
 - Full milestone gate passed: 543 Rust tests, 2,959 enabled TypeScript tests,
   source-fixture drift checks, formatting, Clippy and three package typechecks.
   Evidence: `.forge/rust-rewrite/milestone-3b8c-initial.log`.
+
+### Milestone 3b8d
+
+- The full reference-test stage now owns three temporary PostgreSQL clusters for
+  the source suites that explicitly support local acceptance: durable jobs
+  (`127.0.0.1:56464/for64_jobs_test`), SLA deadlines
+  (`127.0.0.1:56525/for125_sla_test`) and preference import
+  (`127.0.0.1:55444/for144_acceptance`). Occupied ports fail instead of reusing an
+  existing database. Every cluster is stopped and removed after the run.
+- Jobs and SLA receive all reference migrations in journal order. Preference
+  import applies that same journal through its own migration checkpoints. The
+  original assertions and database-target guards remain unchanged, including
+  the job/SLA tests that kill independent workers around real commit boundaries.
+- A minimal child environment contains only local runtime settings and the three
+  generated fixture URLs. A temporary Bun launcher disables automatic dotenv
+  loading for the main run and the spawned workers. Other external fixture
+  opt-ins are not inherited from the invoking shell.
+- This replaces the ordinary reference-test command inside `rewrite:verify`;
+  every original workspace test suite still runs once at the milestone boundary.
+  Cloud-specific fixture suites, browser/desktop and live-provider qualification
+  remain separately pending.
+
+- The initial gate found a fixture-role mismatch: the jobs audit requires its
+  original local role `for64`. The runner now provisions that role rather than
+  changing the audit assertion. No application source or assertions were changed.
+- The complete rerun passed: 543 Rust tests, 3,013 TypeScript tests (54 previously
+  skipped local PostgreSQL tests included), source-fixture drift checks,
+  formatting, Clippy and three package typechecks. 607 reference tests across
+  31 files still require external fixtures and remain skipped.
+  Evidence: `.forge/rust-rewrite/milestone-3b8d-verified.log`.

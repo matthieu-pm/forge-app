@@ -19,7 +19,7 @@ const checks = [
   ["cargo", ["fmt", "--all", "--", "--check"]],
   ["cargo", ["clippy", "--workspace", "--all-targets", "--locked", "--", "-D", "warnings"]],
   ["python3", ["scripts/test-rust-postgres.py"]],
-  ["bun", ["run", "test", "--force"]],
+  ["python3", ["scripts/test-reference-postgres.py"]],
   ["bun", ["run", "typecheck", "--force"]],
 ]
 
