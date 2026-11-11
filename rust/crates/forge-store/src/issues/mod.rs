@@ -558,6 +558,40 @@ async fn write_labels(
     }
     Ok(())
 }
+/// Compose canonical issue effects in a caller-owned command transaction.
+pub(crate) async fn create_in(
+    connection: &mut PgConnection,
+    actor: &Actor,
+    input: &CreateIssue,
+    options: IssueOptions,
+) -> Result<CommandResult<Uuid>, StoreError> {
+    let input = input.as_value();
+    if input.get("legacyId").is_some() {
+        return Err(StoreError::InvalidInput);
+    }
+    let handler = Create {
+        input,
+        team: id(input, "teamId")?,
+        options,
+        legacy_fingerprint: None,
+    };
+    handler.authorize(connection, actor, None).await?;
+    let result = handler.run(connection, actor).await?;
+    Ok(CommandResult {
+        value: result.value.issue_id,
+        resource_type: result.resource_type,
+        resource_id: result.resource_id,
+        events: result.events,
+    })
+}
+pub(crate) async fn require_issue_team(
+    connection: &mut PgConnection,
+    actor: &Actor,
+    team: Uuid,
+) -> Result<(), StoreError> {
+    fields::require_team(connection, actor, team).await?;
+    Ok(())
+}
 pub async fn create(
     database: &Database,
     actor: &Actor,

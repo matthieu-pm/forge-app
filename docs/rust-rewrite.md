@@ -86,6 +86,7 @@ gate pass.
 | 3b8c | Workflow health, native queue stalls and bounded operator diagnostics | Passed |
 | 3b8d | Disposable local fixtures for original jobs, SLA and preference-import acceptance | Passed |
 | 3b9a | Template authoring, team defaults and gated recurring definitions | Passed |
+| 3b9b | Atomic template application into canonical issues and projects | Passed |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -2220,3 +2221,36 @@ these routes do not represent a completed rewrite.
   source-fixture drift checks, formatting, Clippy and all three package
   typechecks. The 607 external-fixture tests across 31 files remain skipped.
   Evidence: `.forge/rust-rewrite/milestone-3b9a-bounded.log`.
+
+### Milestone 3b9b
+
+- The template application directory combines accessible workspace/team
+  definitions, preserves member/non-member preselection and binds each choice to
+  the source-compatible payload/timestamp hash. Reference selectors return only
+  visible projects and enabled workspace initiatives. Application remains behind
+  `FORGE_FEATURE_TEMPLATES=true`; authoring does not activate it.
+- A single `templates.apply@1` command composes the existing canonical issue,
+  project and initiative handlers. Issue trees, form answers, project milestones,
+  dependency edits and initiative membership share one receipt, audit, outbox and
+  recovery-prepared transaction. No nested command independently commits.
+- Current session authority, template visibility and created resource visibility
+  are rechecked on replay. Changes to a template do not repeat an already committed
+  creation. Missing templates and revoked result visibility keep the original
+  command identity. Only pre-commit validation failures are repairable; recovery,
+  SQL transport and deferred COMMIT failures remain errors.
+- The source exporter records 47 input contracts, 175 form cases, 19 legacy
+  description conversions and three revision hashes. PostgreSQL/HTTP acceptance
+  covers exact concurrent retries, distinct creations, forms, scope/defaults,
+  private dependencies, atomic nested creation, rollback, replay revocation,
+  deleted templates, preparation failure and a real deferred COMMIT failure.
+- Initial verification caught a complex tuple in a test and a rollback fixture
+  that attempted to save an already-invalid status. The test now removes a status
+  after saving a valid template, retaining the database definition constraint.
+  A subsequent run exposed macOS returning no native TLS roots during storage SDK
+  construction. The disposable Rust runner now copies and checks the system PEM
+  bundle on macOS and supplies it through `SSL_CERT_FILE` for its child tests.
+  Production TLS configuration and certificate verification are unchanged.
+- Full verification passed: 560 Rust tests, 3,013 enabled reference tests,
+  all source-fixture drift checks, formatting, Clippy and three package
+  typechecks. The 607 external-fixture tests across 31 files remain skipped.
+  Evidence: `.forge/rust-rewrite/milestone-3b9b-trust-bundle.log`.

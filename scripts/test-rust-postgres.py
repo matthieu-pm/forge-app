@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import shutil
 import socket
+import ssl
 import subprocess
 import sys
 import tempfile
@@ -87,6 +88,22 @@ def main():
             runtime_connection = f"postgresql://forge_rust_test@127.0.0.1:{port}/forge_rust_runtime"
             print(f'Applied all {len(statements)} reference migrations to disposable local PostgreSQL.', flush=True)
             environment = os.environ.copy()
+            if sys.platform == "darwin":
+                # SDK construction initializes TLS even for our loopback HTTP
+                # fixtures. macOS trust-settings reads can transiently return no
+                # roots, which Smithy treats as a panic. Pin a checked copy of the
+                # system PEM bundle for this isolated run; never disable TLS
+                # verification or change production client configuration.
+                system_roots = Path(ssl.get_default_verify_paths().openssl_cafile)
+                roots = temporary / "system-ca-roots.pem"
+                roots.write_bytes(system_roots.read_bytes())
+                context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+                context.load_verify_locations(cafile=str(roots))
+                if not context.get_ca_certs():
+                    raise RuntimeError("The local test trust bundle contains no CA certificates")
+                environment["SSL_CERT_FILE"] = str(roots)
+                environment.pop("SSL_CERT_DIR", None)
+                print("Using a verified system PEM trust bundle for local SDK construction.", flush=True)
             environment["FORGE_FEATURE_INITIATIVES"] = "true"
             environment["FORGE_FEATURE_SAVED_VIEWS"] = "true"
             environment["FORGE_PERSONAL_PREFERENCE_SYNC_ENABLED"] = "true"

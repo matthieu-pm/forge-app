@@ -17,7 +17,7 @@ fn decode(encoded: &str) -> Result<Value, StoreError> {
     let raw: String = serde_json::from_str(encoded).map_err(|_| StoreError::InvalidInput)?;
     serde_json::from_str(&raw).map_err(|_| StoreError::InvalidInput)
 }
-pub(super) async fn read(c: &mut PgConnection, a: &Actor) -> Result<Value, StoreError> {
+pub(crate) async fn read(c: &mut PgConnection, a: &Actor) -> Result<Value, StoreError> {
     let mut result = json!({});
     for kind in ["statuses", "labels"] {
         let row:Option<Stored>=sqlx::query_as("SELECT id,encoded_value,revision FROM product_state WHERE workspace_id=$1 AND owner_id='workspace' AND key=$2").bind(&a.workspace_id).bind(key(a,kind)).fetch_optional(&mut *c).await?;

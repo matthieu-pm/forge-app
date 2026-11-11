@@ -103,6 +103,15 @@ pub fn router_with_state(state: state::AppState) -> Router {
         .merge(
             Router::new()
                 .route("/api/workspace/templates/read", post(templates::read))
+                .route(
+                    "/api/workspace/templates/applications",
+                    post(templates::application_directory),
+                )
+                .route(
+                    "/api/workspace/templates/references",
+                    post(templates::application_references),
+                )
+                .route("/api/workspace/templates/apply", post(templates::apply))
                 .route("/api/workspace/templates/save", post(templates::save))
                 .route("/api/workspace/templates/delete", post(templates::delete))
                 .route(

@@ -109,7 +109,7 @@ struct Save<'a> {
     changes: &'a Value,
     options: InitiativeOptions,
 }
-pub(crate) async fn import_changes(
+pub(crate) async fn apply_changes(
     c: &mut PgConnection,
     a: &Actor,
     changes: Value,

@@ -111,10 +111,20 @@ pub async fn read(
     input: Value,
     recurring: bool,
 ) -> Result<Value, StoreError> {
-    let input = contract::scope(input, recurring).map_err(|_| StoreError::InvalidInput)?;
     let mut tx = db.begin().await?;
-    let s = scope(&mut tx, actor, &input, false).await?;
-    let rows:Vec<Row>=sqlx::query_as(&format!("SELECT t.id,t.payload::text payload,t.created_at,t.updated_at,u.name creator FROM {} t JOIN \"user\" u ON u.id=t.created_by_user_id WHERE t.workspace_id=$1 AND t.team_id IS NOT DISTINCT FROM $2 ORDER BY t.created_at DESC,t.id",table(recurring))).bind(&s.actor.workspace_id).bind(s.team).fetch_all(&mut *tx).await?;
+    let result = read_in(&mut tx, actor, input, recurring).await?;
+    tx.commit().await?;
+    Ok(result)
+}
+pub(crate) async fn read_in(
+    c: &mut PgConnection,
+    actor: &Actor,
+    input: Value,
+    recurring: bool,
+) -> Result<Value, StoreError> {
+    let input = contract::scope(input, recurring).map_err(|_| StoreError::InvalidInput)?;
+    let s = scope(c, actor, &input, false).await?;
+    let rows:Vec<Row>=sqlx::query_as(&format!("SELECT t.id,t.payload::text payload,t.created_at,t.updated_at,u.name creator FROM {} t JOIN \"user\" u ON u.id=t.created_by_user_id WHERE t.workspace_id=$1 AND t.team_id IS NOT DISTINCT FROM $2 ORDER BY t.created_at DESC,t.id",table(recurring))).bind(&s.actor.workspace_id).bind(s.team).fetch_all(&mut *c).await?;
     let records: Vec<_> = rows
         .into_iter()
         .map(|r| r.value(recurring))
@@ -136,12 +146,11 @@ pub async fn read(
             "SELECT audience,template_id FROM team_template_defaults WHERE team_id=$1",
         )
         .bind(s.team)
-        .fetch_all(&mut *tx)
+        .fetch_all(&mut *c)
         .await?;
-        let people:Vec<Value>=sqlx::query_scalar("SELECT jsonb_build_object('id',m.user_id,'name',u.name,'username',u.username,'image',u.image) FROM member m JOIN \"user\" u ON u.id=m.user_id WHERE m.organization_id=$1 ORDER BY m.created_at,m.id").bind(&s.actor.workspace_id).fetch_all(&mut *tx).await?;
+        let people:Vec<Value>=sqlx::query_scalar("SELECT jsonb_build_object('id',m.user_id,'name',u.name,'username',u.username,'image',u.image) FROM member m JOIN \"user\" u ON u.id=m.user_id WHERE m.organization_id=$1 ORDER BY m.created_at,m.id").bind(&s.actor.workspace_id).fetch_all(&mut *c).await?;
         json!({"templates":records,"defaults":{"members":defaults.iter().find(|(a,_)|a=="members").and_then(|(_,id)|*id),"nonMembers":defaults.iter().find(|(a,_)|a=="nonMembers").and_then(|(_,id)|*id)},"teams":s.directory["items"],"members":people,"canManage":s.actor.can_manage_teams()})
     };
-    tx.commit().await?;
     Ok(result)
 }
 async fn references(

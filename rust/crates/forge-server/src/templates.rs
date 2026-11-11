@@ -8,6 +8,46 @@ use forge_core::features::{FeatureMode, FeatureRollouts, ProductFeature};
 use forge_store::{StoreError, templates};
 use serde_json::Value;
 
+pub(crate) async fn application_directory(
+    State(s): State<AppState>,
+    h: HeaderMap,
+    p: Payload,
+) -> Result<Json<Value>, IssueHttpError> {
+    let (db, actor, input) = context(&s, &h, p).await?;
+    let options = s
+        .template_application
+        .unwrap_or_else(forge_store::template_application::Options::from_env);
+    Ok(Json(
+        forge_store::template_application::directory(db, &actor, input, options).await?,
+    ))
+}
+pub(crate) async fn application_references(
+    State(s): State<AppState>,
+    h: HeaderMap,
+    p: Payload,
+) -> Result<Json<Value>, IssueHttpError> {
+    let (db, actor, _) = context(&s, &h, p).await?;
+    let options = s
+        .template_application
+        .unwrap_or_else(forge_store::template_application::Options::from_env);
+    Ok(Json(
+        forge_store::template_application::references(db, &actor, options).await?,
+    ))
+}
+pub(crate) async fn apply(
+    State(s): State<AppState>,
+    h: HeaderMap,
+    p: Payload,
+) -> Result<Json<Value>, IssueHttpError> {
+    let (db, actor, input) = context(&s, &h, p).await?;
+    let options = s
+        .template_application
+        .unwrap_or_else(forge_store::template_application::Options::from_env);
+    Ok(Json(
+        forge_store::template_application::apply(db, &actor, input, options).await?,
+    ))
+}
+
 async fn dispatch(
     state: AppState,
     headers: HeaderMap,

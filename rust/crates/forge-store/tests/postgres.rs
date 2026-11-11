@@ -45,6 +45,8 @@ mod project_acceptance;
 mod sla_acceptance;
 #[path = "acceptance/templates.rs"]
 mod template_acceptance;
+#[path = "acceptance/template_application.rs"]
+mod template_application_acceptance;
 #[path = "acceptance/views.rs"]
 mod view_acceptance;
 

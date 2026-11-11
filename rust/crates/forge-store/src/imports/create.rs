@@ -181,7 +181,7 @@ async fn create_content(
             }
             let fields = forge_core::initiatives::fields(fields.clone(), false, false)
                 .map_err(|_| StoreError::InvalidInput)?;
-            result.events=crate::initiatives::import_changes(c,a,json!([{"id":uid,"expectedRevision":null,"changes":fields,"addProjectIds":projects}]),crate::initiatives::InitiativeOptions{enabled:options.modules.initiatives}).await?;
+            result.events=crate::initiatives::apply_changes(c,a,json!([{"id":uid,"expectedRevision":null,"changes":fields,"addProjectIds":projects}]),crate::initiatives::InitiativeOptions{enabled:options.modules.initiatives}).await?;
         }
         "milestone" => {
             let project =
@@ -202,7 +202,7 @@ async fn create_content(
             let mut milestone = fields.clone();
             milestone["id"] = json!(uid);
             milestones.push(milestone);
-            result.events=crate::projects::import_changes(c,a,json!([{"id":project_id,"expectedRevision":revision,"changes":{"milestones":milestones}}])).await?;
+            result.events=crate::projects::apply_changes(c,a,json!([{"id":project_id,"expectedRevision":revision,"changes":{"milestones":milestones}}])).await?;
             result.changed_project = Some(project);
         }
         "document" => {

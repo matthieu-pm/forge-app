@@ -19,6 +19,7 @@ use uuid::Uuid;
 mod catalog;
 mod content;
 mod relocation;
+pub(crate) use catalog::read as catalog_in;
 pub use catalog::{read_catalog, save_catalog};
 fn text<'a>(v: &'a Value, k: &str) -> &'a str {
     v[k].as_str().unwrap_or_default()
@@ -237,7 +238,7 @@ fn one<'de, D: serde::Deserializer<'de>>(d: D) -> Result<u8, D::Error> {
 struct Save<'a> {
     changes: &'a Value,
 }
-pub(crate) async fn import_changes(
+pub(crate) async fn apply_changes(
     c: &mut PgConnection,
     a: &Actor,
     changes: Value,

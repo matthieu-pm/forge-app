@@ -39,5 +39,6 @@ pub mod invitations;
 pub mod jobs;
 pub mod profiles;
 pub mod sla;
+pub mod template_application;
 pub mod templates;
 pub mod workflow_health;
