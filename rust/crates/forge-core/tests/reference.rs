@@ -623,3 +623,45 @@ fn bounded_json_accepts_supported_nesting_and_rejects_excess_and_trailing_data()
     let raw = serde_json::to_string(&"[\\\"".repeat(300)).unwrap();
     assert!(forge_core::json::parse(&raw).is_ok());
 }
+
+#[test]
+fn saved_views_resource_boards_and_project_queries_match_source() {
+    use forge_core::{saved_views as v, team_resources as r};
+    let fixtures: Value =
+        serde_json::from_str(include_str!("../../../reference-fixtures.json")).unwrap();
+    let f = &fixtures["viewContracts"];
+    for (i, c) in f["cases"].as_array().unwrap().iter().enumerate() {
+        let input = c["input"].clone();
+        let result = match c["kind"].as_str().unwrap() {
+            "definition" => v::definition(input),
+            "mutation" => v::mutation(input),
+            "resources" => r::fields(input),
+            "resourceCommand" => r::command(input),
+            _ => unreachable!(),
+        };
+        assert_eq!(
+            result.is_ok(),
+            c["valid"],
+            "view/resource case {i}: {result:?}"
+        );
+        if let Ok(value) = result {
+            assert_eq!(value, c["expected"], "view/resource case {i}");
+        }
+    }
+    for c in f["urls"].as_array().unwrap() {
+        assert_eq!(
+            serde_json::json!(r::url(c["raw"].as_str().unwrap())),
+            c["expected"],
+            "URL {c}"
+        );
+    }
+    for (i, c) in f["projects"].as_array().unwrap().iter().enumerate() {
+        assert_eq!(
+            serde_json::json!(
+                v::visible_projects(c["catalog"].as_array().unwrap(), &c["definition"]).unwrap()
+            ),
+            c["expected"],
+            "project query {i}"
+        );
+    }
+}

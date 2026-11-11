@@ -24,3 +24,6 @@ pub mod text;
 pub mod visibility;
 
 pub mod json;
+
+pub mod saved_views;
+pub mod team_resources;

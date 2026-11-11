@@ -282,9 +282,18 @@ pub async fn history(
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Saved {
-    id: Uuid,
+    #[serde(deserialize_with = "saved_id")]
+    id: String,
     #[serde(deserialize_with = "positive")]
     revision: i32,
+}
+fn saved_id<'de, D: serde::Deserializer<'de>>(d: D) -> Result<String, D::Error> {
+    let s = String::deserialize(d)?;
+    if forge_core::text::is_uuid(&s) {
+        Ok(s)
+    } else {
+        Err(serde::de::Error::custom("UUID"))
+    }
 }
 fn positive<'de, D: serde::Deserializer<'de>>(d: D) -> Result<i32, D::Error> {
     let n = i32::deserialize(d)?;
@@ -312,7 +321,14 @@ impl CommandHandler for Write<'_> {
         if action == "create" {
             source_access(c, a, &self.input["source"], self.options).await?;
             if let Some(saved) = saved {
-                accessible(c, a, saved.id, true, self.options).await?;
+                accessible(
+                    c,
+                    a,
+                    saved.id.parse().map_err(|_| StoreError::InvalidInput)?,
+                    true,
+                    self.options,
+                )
+                .await?;
             }
         } else {
             let row = accessible(
@@ -351,7 +367,9 @@ impl CommandHandler for Write<'_> {
             return Err(StoreError::DocumentConflict);
         }
         let now = Utc::now();
-        let revision = old.as_ref().map_or(1, |r| r.revision + 1);
+        let revision = old.as_ref().map_or(Ok(1), |r| {
+            r.revision.checked_add(1).ok_or(StoreError::InvalidInput)
+        })?;
         let mut fields = if action == "restore" {
             let saved:String=sqlx::query_scalar("SELECT snapshot::text FROM document_revisions WHERE workspace_id=$1 AND document_id=$2 AND revision::bigint=$3").bind(&a.workspace_id).bind(id).bind(input["revision"].as_i64().unwrap()).fetch_optional(&mut *c).await?.ok_or(StoreError::Forbidden)?;
             parse(contract::fields(
@@ -420,12 +438,15 @@ impl CommandHandler for Write<'_> {
         }
         sqlx::query("INSERT INTO document_revisions(workspace_id,document_id,revision,snapshot,author_id,created_at) VALUES($1,$2,$3,$4,$5,$6)").bind(&a.workspace_id).bind(id).bind(revision).bind(fields).bind(&a.user_id).bind(now).execute(c).await?;
         Ok(CommandResult {
-            value: Saved { id, revision },
+            value: Saved {
+                id: text(input, "id").into(),
+                revision,
+            },
             resource_type: "document".into(),
-            resource_id: id.to_string(),
+            resource_id: text(input, "id").into(),
             events: vec![OutboxEvent {
                 topic: format!("document.{action}"),
-                payload: json!({"documentId":id,"revision":revision})
+                payload: json!({"documentId":input["id"],"revision":revision})
                     .as_object()
                     .unwrap()
                     .clone(),

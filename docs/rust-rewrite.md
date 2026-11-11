@@ -33,7 +33,8 @@ gate pass.
 | 2c1 | Shared projects, catalogs, milestones and posts | Passed available gate |
 | 2c2 | Shared initiatives and planning queries | Passed available gate |
 | 2c3 | Shared documents, revision history and legacy document recovery | Passed available gate |
-| 2c4 | Views, resources, product state and imports | Pending |
+| 2c4a | Saved views and shared team resources | Passed available gate |
+| 2c4b | Product state and explicit legacy imports | Pending |
 | 3 | Agent execution, approvals, streams, models, files, retention, jobs, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -442,3 +443,42 @@ these routes do not represent a completed rewrite.
 - The document editor, upload/download transports and production qualification
   remain with later milestones. No production state was modified.
 - Gate log: `.forge/rust-rewrite/milestone-2c3-final.log`.
+
+### Milestone 2c4a
+
+- Full gate passed: 170 Rust tests, all 2,959 enabled reference tests, TypeScript
+  typechecking, formatting and Clippy. The 661 external-fixture reference tests
+  remain skipped. Both disposable databases applied all 75 source migrations.
+
+- Shared resource boards keep sections, normalized browser links and ordering in
+  one revisioned row. `team-resources.write@1` saves serialize with document
+  section changes, return current state on conflicts and reauthorize exact retries.
+  Invalid links, missing sections, private sources and external transports are
+  rejected before a business effect.
+- Versioned saved-view definitions preserve every filter and display option.
+  Personal, workspace and team visibility always respects a team restriction;
+  favorites remain personal. Owners and shared-view administrators can edit with
+  revision checks. An admin can make another creator's view personal and receives
+  only the acknowledgement before losing access, including access to later retries.
+- Saved views recheck referenced teams, projects, issues and members. Unavailable
+  or unsupported references remove the definition from the usable directory and
+  return an error; execution never silently drops a filter. Initiative filters
+  stay unavailable, matching the current source even when initiatives are enabled.
+- Project-view execution filters only authorized canonical projects, redacts hidden
+  team/dependency links and returns all readable identities separately from filtered
+  results. Closed-item modes and stable ordering match 30 source query examples.
+  Both project catalogs and saved-view directories enforce the source's 500 limit.
+- 131 definition/mutation/resource cases and 14 URL normalization examples are
+  exported from the source. HTTP routes use the current workspace/session binding.
+  The feature flag is enabled only in the disposable test process.
+- Deletion clears view favorites without deleting underlying work; recovery
+  acceptance checks atomic rollback and tombstone publication. Lock-wait acceptance
+  checks that a project reference is rejected if membership is revoked while the
+  save waits for the project row. Shared board and view edits include concurrent
+  revision/last-slot admission checks.
+- Document and saved-view acknowledgements preserve caller-supplied UUID spelling,
+  matching source receipts; SQL lookup still uses typed UUID identities. Revision
+  increments reject integer overflow before any mutation.
+- Product-state persistence, explicit legacy imports, the Rust UI and production
+  qualification remain pending.
+- Gate log: `.forge/rust-rewrite/milestone-2c4a-final.log`.

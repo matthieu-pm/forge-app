@@ -639,7 +639,8 @@ async fn project_legacy_imports_preserve_links_and_issue_sources_follow_active_v
         "conflict"
     );
     input["legacyImport"] = json!(true);
-    command(&f, &f.actor, input).await.unwrap();
+    let saved = command(&f, &f.actor, input).await.unwrap();
+    assert_eq!(saved["id"], id.to_string().to_uppercase());
     let remaining: Value =
         sqlx::query_scalar("SELECT properties->'resources' FROM projects WHERE id=$1")
             .bind(project)

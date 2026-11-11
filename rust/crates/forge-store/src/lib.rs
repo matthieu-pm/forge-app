@@ -55,6 +55,8 @@ pub enum StoreError {
     Team(#[from] forge_core::teams::TeamError),
     #[error("This document changed in another session.")]
     DocumentConflict,
+    #[error("The shared resource board changed in another session.")]
+    ResourceConflict,
     #[error("{0}")]
     Planning(&'static str),
     #[error("{0}")]
@@ -74,3 +76,6 @@ pub enum StoreError {
     #[error(transparent)]
     Recovery(#[from] forge_core::journal::JournalError),
 }
+
+pub mod saved_views;
+pub mod team_resources;

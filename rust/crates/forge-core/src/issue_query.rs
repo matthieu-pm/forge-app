@@ -76,14 +76,23 @@ pub fn default_display() -> Value {
     json!({"layout":"list","group":"Status","subgroup":"No grouping","order":"Priority","descending":false,"groupDescending":false,"completedByRecency":false,"showSubIssues":true,"nested":"Show matching","showEmpty":false,"properties":["ID","Status","Assignee","Priority","Project","Due date","Labels","Created"]})
 }
 pub fn filters(value: Value) -> Result<Value> {
-    let mut o = Object::new(value, &["match", "rules"], false)?;
+    filters_with_mode(value, false)
+}
+pub(crate) fn saved_filters(value: Value) -> Result<Value> {
+    filters_with_mode(value, true)
+}
+fn filters_with_mode(value: Value, strict: bool) -> Result<Value> {
+    let mut o = Object::new(value, &["match", "rules"], strict)?;
     o.required("match", |v| enumeration(v, &["all", "any"]))?;
     o.required("rules", |v| {
         list(v, 0, 20, |v| {
             let keys = &["id", "field", "operator", "value"];
-            let mut o = Object::new(v, keys, false)?;
+            let mut o = Object::new(v, keys, strict)?;
             for (key, maximum) in [("id", 200), ("value", 500)] {
                 o.required(key, |v| {
+                    if strict {
+                        return text(v, 0, maximum, false);
+                    }
                     let v = string(v)?;
                     if v.as_str().unwrap().encode_utf16().count() > maximum {
                         return Err(ContractError("filter length"));
@@ -111,6 +120,9 @@ pub fn filters(value: Value) -> Result<Value> {
         })
     })?;
     Ok(ordered(o.finish(), &["match", "rules"]))
+}
+pub(crate) fn saved_display(value: Value) -> Result<Value> {
+    display(Object::new(value, DISPLAY, true)?.finish())
 }
 pub fn display(value: Value) -> Result<Value> {
     let mut o = Object::new(value, DISPLAY, false)?;

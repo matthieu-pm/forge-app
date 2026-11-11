@@ -443,6 +443,95 @@ async fn document_http_supports_rich_depth_large_unicode_history_and_bound_sessi
 }
 
 #[tokio::test]
+async fn saved_view_and_resource_http_enforce_identity_and_expose_shared_state() {
+    let f = Fixture::new().await;
+    let (_, token, cookie) = f.account().await;
+    forge_store::workspaces::create(
+        &f.database,
+        &token,
+        "Views HTTP",
+        &Uuid::new_v4().to_string(),
+        None,
+    )
+    .await
+    .unwrap();
+    let actor = forge_store::authority::session_actor(&f.database, &token)
+        .await
+        .unwrap();
+    let team=forge_store::teams::create(&f.database,&actor,&forge_core::teams::CreateTeam::parse(json!({"name":"Resources","identifier":"RES","icon":{"kind":"emoji","value":"🛠️","color":"#818cf8"},"timezone":"UTC"})).unwrap()).await.unwrap();
+    let forge_core::actor::Authentication::Session { session_id } = &actor.authentication else {
+        panic!("session")
+    };
+    let bind = |mut v: Value| {
+        v["workspaceId"] = json!(actor.workspace_id);
+        v["sessionId"] = json!(session_id);
+        v
+    };
+    let (status,_,saved)=f.request("POST","/api/workspace/team-resources",Some(&cookie),Some(bind(json!({"commandKey":Uuid::new_v4(),"command":{"teamId":team.id,"expectedRevision":0,"fields":{"sections":[],"links":[],"order":[]}}})))).await;
+    assert_eq!(status, StatusCode::OK, "{saved}");
+    assert_eq!(saved["revision"], 1);
+    let (status, _, board) = f
+        .request(
+            "POST",
+            "/api/workspace/team-resources/read",
+            Some(&cookie),
+            Some(bind(json!({"teamId":team.id}))),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{board}");
+    assert_eq!(board["revision"], 1);
+    let id = Uuid::new_v4();
+    let definition = json!({"version":1,"name":"View","description":"","icon":null,"visibility":"workspace","kind":"projects","filters":[],"display":forge_core::saved_views::default_project_display()});
+    let (status,_,saved)=f.request("POST","/api/workspace/views",Some(&cookie),Some(bind(json!({"commandKey":Uuid::new_v4(),"mutation":{"action":"save","id":id,"expectedRevision":null,"definition":definition}})))).await;
+    assert_eq!(status, StatusCode::OK, "{saved}");
+    assert_eq!(saved["value"]["revision"], 1);
+    let (status, _, directory) = f
+        .request(
+            "POST",
+            "/api/workspace/views/read",
+            Some(&cookie),
+            Some(bind(json!({}))),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{directory}");
+    assert_eq!(directory["views"][0]["id"], id.to_string());
+    let (status, _, query) = f
+        .request(
+            "POST",
+            "/api/workspace/views/projects",
+            Some(&cookie),
+            Some(bind(json!({"definition":definition}))),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{query}");
+    assert_eq!(query, json!({"projects":[],"authorizedProjectIds":[]}));
+    let mut wrong = bind(json!({}));
+    wrong["workspaceId"] = json!("other-workspace");
+    assert_eq!(
+        f.request(
+            "POST",
+            "/api/workspace/views/read",
+            Some(&cookie),
+            Some(wrong)
+        )
+        .await
+        .0,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        f.request(
+            "POST",
+            "/api/workspace/views/read",
+            Some(&cookie),
+            Some(bind(json!({"unexpected":true})))
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
+}
+
+#[tokio::test]
 async fn issue_http_commands_preserve_bound_sessions_and_expose_discussion_and_history() {
     let f = Fixture::new().await;
     let (_, token, cookie) = f.account().await;

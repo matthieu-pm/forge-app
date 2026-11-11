@@ -72,7 +72,7 @@ pub struct TeamIcon {
     pub color: String,
 }
 impl TeamIcon {
-    fn normalize(&mut self) -> Result<(), TeamError> {
+    pub(crate) fn normalize(&mut self) -> Result<(), TeamError> {
         if !TEAM_COLORS.contains(&self.color.as_str()) {
             return Err(TeamError::InvalidInput);
         }

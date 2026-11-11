@@ -66,6 +66,81 @@ struct Fixture {
 }
 
 #[tokio::test]
+async fn saved_view_deletion_and_favorite_removal_share_recovery_preparation() {
+    use forge_store::saved_views::{self, ViewOptions};
+    use serde_json::json;
+    let f = Fixture::new().await;
+    forge_store::workspaces::create(
+        &f.database,
+        &f.token,
+        "Recovery views",
+        &Uuid::new_v4().to_string(),
+        None,
+    )
+    .await
+    .unwrap();
+    let actor = forge_store::authority::session_actor(&f.database, &f.token)
+        .await
+        .unwrap();
+    let options = ViewOptions { enabled: true };
+    let id = Uuid::new_v4();
+    let definition = json!({"version":1,"name":"Retained view","description":"","icon":null,"visibility":"workspace","kind":"issues","filters":{"match":"all","rules":[]},"display":forge_core::issue_query::default_display()});
+    saved_views::mutate(
+        &f.database,
+        &actor,
+        &Uuid::new_v4().to_string(),
+        json!({"action":"save","id":id,"expectedRevision":null,"definition":definition}),
+        options,
+    )
+    .await
+    .unwrap();
+    saved_views::mutate(
+        &f.database,
+        &actor,
+        &Uuid::new_v4().to_string(),
+        json!({"action":"favorite","id":id,"favorite":true}),
+        options,
+    )
+    .await
+    .unwrap();
+    let key = Uuid::new_v4().to_string();
+    let delete = json!({"action":"delete","id":id,"expectedRevision":1});
+    f.backend.mode.store(1, Ordering::Relaxed);
+    assert!(
+        saved_views::mutate(&f.database, &actor, &key, delete.clone(), options)
+            .await
+            .is_err()
+    );
+    assert_eq!(
+        saved_views::read(&f.database, &actor, options)
+            .await
+            .unwrap()["views"][0]["favorite"],
+        true
+    );
+    f.backend.mode.store(0, Ordering::Relaxed);
+    saved_views::mutate(&f.database, &actor, &key, delete, options)
+        .await
+        .unwrap();
+    assert_eq!(
+        saved_views::read(&f.database, &actor, options)
+            .await
+            .unwrap()["views"],
+        json!([])
+    );
+    assert!(
+        f.backend
+            .completed
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|(_, events)| events.iter().any(|e| e.table == "saved_views"
+                && e.patch
+                    .as_ref()
+                    .is_some_and(|p| p.get("deleted_at").is_some_and(|v| !v.is_null()))))
+    );
+}
+
+#[tokio::test]
 async fn document_tombstone_and_history_wait_for_recovery_preparation() {
     use forge_store::documents::{self, DocumentOptions};
     use serde_json::json;

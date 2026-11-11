@@ -25,6 +25,8 @@ mod issue_query_acceptance;
 mod planning_acceptance;
 #[path = "acceptance/projects.rs"]
 mod project_acceptance;
+#[path = "acceptance/views.rs"]
+mod view_acceptance;
 
 fn team_input(n: u32) -> forge_core::teams::CreateTeam {
     forge_core::teams::CreateTeam::parse(json!({"name":format!("Team {n}"),"identifier":format!("T{n}"),"icon":{"kind":"icon","value":"UserGroup03Icon","color":"#818cf8"},"timezone":"Europe/Paris"})).unwrap()

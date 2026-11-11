@@ -13,6 +13,7 @@ mod projects;
 mod public_api;
 pub mod state;
 mod teams;
+mod views;
 mod workspace_access;
 mod workspaces;
 
@@ -30,6 +31,11 @@ pub fn router() -> Router {
 
 pub fn router_with_state(state: state::AppState) -> Router {
     let auth_routes = Router::new()
+        .route("/api/workspace/team-resources", post(views::save_resources))
+        .route("/api/workspace/team-resources/read", post(views::resources))
+        .route("/api/workspace/views", post(views::mutate))
+        .route("/api/workspace/views/read", post(views::read))
+        .route("/api/workspace/views/projects", post(views::query))
         .merge(
             Router::new()
                 .route("/api/workspace/documents", post(documents::write))

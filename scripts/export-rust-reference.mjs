@@ -25,6 +25,8 @@ import {initiativeCases} from "./rust-initiative-reference.mjs"
 
 import {documentContracts} from "./rust-document-reference.mjs"
 
+import {viewContracts} from "./rust-view-reference.mjs"
+
 const teams = [
   { workspaceId: "w1", visibility: "workspace", memberUserIds: [] },
   { workspaceId: "w1", visibility: "private", memberUserIds: ["alice"] },
@@ -146,7 +148,7 @@ try {
 } finally {
   globalThis.fetch = originalFetch
 }
-const output = JSON.stringify({ teams, projects, documents, actorCases, canonical, permissions: permissionValues.map(value => ({ value, scopes: permissionsToScopes(value) })), crypto, features, journal, oidc, security, teamContracts, definitionCases, transitionCases, issueCases, issuePure, issueQueries, cycleCases, cycleCalendar, projectCases, projectDates, projectContent, projectMilestones, initiativeCases, documentContracts }) + "\n"
+const output = JSON.stringify({ teams, projects, documents, actorCases, canonical, permissions: permissionValues.map(value => ({ value, scopes: permissionsToScopes(value) })), crypto, features, journal, oidc, security, teamContracts, definitionCases, transitionCases, issueCases, issuePure, issueQueries, cycleCases, cycleCalendar, projectCases, projectDates, projectContent, projectMilestones, initiativeCases, documentContracts, viewContracts }) + "\n"
 const zonesDestination=new URL("../rust/crates/forge-core/data/cycle-timezones.json",import.meta.url)
 const zonesOutput=JSON.stringify(cycleTimezones)+"\n"
 if(process.argv.includes("--check")){if(readFileSync(zonesDestination,"utf8")!==zonesOutput){console.error("Reference cycle timezone names changed.");process.exitCode=1}}else{writeFileSync(zonesDestination,zonesOutput)}
