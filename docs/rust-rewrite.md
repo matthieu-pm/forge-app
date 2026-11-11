@@ -71,6 +71,7 @@ gate pass.
 | 3b5w | Application/native runtime transport, durable replay and coordinator integration | Passed available gate |
 | 3b5x | Sandbox framework file/shell tools and isolated filesystem transport | Passed available gate |
 | 3b5y | Persistent sandbox snapshots, session replacement and recovery fencing | Passed available gate |
+| 3b5z | Engine workspace checkpoints, default file tools and conversation inheritance | Passed available gate |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -1667,3 +1668,43 @@ these routes do not represent a completed rewrite.
   connect these APIs before default framework tools are exposed to models.
   Local sandbox backends, remaining framework tools, compaction, private runtime
   retention and deployment qualification remain outstanding.
+
+
+### Milestone 3b5z
+
+- Full milestone gate passed: 472 Rust tests and 2,959 enabled TypeScript tests.
+  Formatting, Clippy, source contracts and typechecking passed; 661 reference
+  tests across 34 files remain skipped. Log:
+  `.forge/rust-rewrite/milestone-3b5z-initial.log`.
+- With an explicit persistent sandbox backend, the native engine now advertises
+  and executes `bash`, `read_file`, `write_file`, `glob` and `grep`. Authored code
+  and program tools use the same workspace. Capability-only runs allocate no
+  sandbox; denied program approvals also allocate none.
+- A private workspace UUID is recorded in the admitted run before provider IO.
+  Successful provisioning is checkpointed before any model-authored workspace
+  operation. Ambiguous provisioning receipts require an authoritative reload;
+  an established workspace is never reopened with permission to create anew.
+- File read stamps and tool results commit in the same revision. Interrupted
+  reads/searches may resume; unconfirmed shell/file-write dispatches require
+  reconciliation instead of automatic replay. A replaced engine preserves read
+  permission only for the same logical workspace and unchanged file contents.
+- Conversation admission inherits the parent's workspace and file state under
+  the existing ownership/previous-run lock, including from cancelled parents.
+  New conversations receive a different key. Existing private snapshots without
+  the new fields remain readable; no application or private SQL migration is
+  needed. Fresh standalone admissions reject pre-provisioned resource state.
+- The configured factory now uses persistent Vercel workspaces. Optional
+  `FORGE_RUST_RUNTIME_SANDBOX_RETENTION_MS` defaults to 30 days and accepts one
+  minute through 30 days, measured by the provider from snapshot last use.
+  Resource acquisition remains lazy inside a leased worker and credentials
+  remain outside the VM. Native limits still include 8-KiB shell commands,
+  128-KiB raw command output and two-MiB file reads/writes.
+- Seven engine acceptance tests cover model/file turns, approval pauses,
+  checkpoint failures before/after acknowledgement, interrupted tool recovery,
+  lazy allocation, shared code/file state and invalid private continuations.
+  PostgreSQL acceptance additionally verifies conversation resource inheritance,
+  provider switching, idempotent admission and isolation between conversations.
+  No real model, sandbox or production service was used.
+- The other enabled framework tools, context compaction, local sandbox backends,
+  private runtime retention/reconciliation, existing EVE conversation migration
+  and live deployment qualification remain outstanding. Readiness remains 503.

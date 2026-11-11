@@ -453,6 +453,9 @@ impl Workspace for VercelSandbox {
     fn identity(&self) -> &str {
         &self.state.session_id
     }
+    fn is_usable(&self) -> bool {
+        self.state.active().is_ok()
+    }
     async fn read_text(&self, path: &str) -> Result<Option<String>> {
         absolute_file_path(path)?;
         let _lock = self.operations.lock().await;

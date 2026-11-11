@@ -33,6 +33,19 @@ fn configuration_is_explicit_and_rejects_credential_destinations_and_unimplement
     );
     assert!(ConfiguredFactory::new(&env).is_err());
     env.remove("FORGE_RUST_RUNTIME_PEER_ORIGIN");
+    for duration in ["0", "59999", "2592000001", "NaN", "60000.5"] {
+        env.insert(
+            "FORGE_RUST_RUNTIME_SANDBOX_RETENTION_MS".into(),
+            duration.into(),
+        );
+        assert!(ConfiguredFactory::new(&env).is_err());
+    }
+    env.insert(
+        "FORGE_RUST_RUNTIME_SANDBOX_RETENTION_MS".into(),
+        "60000".into(),
+    );
+    assert!(ConfiguredFactory::new(&env).is_ok());
+    env.remove("FORGE_RUST_RUNTIME_SANDBOX_RETENTION_MS");
     for origin in [
         "http://user:fixture-secret@127.0.0.1:9",
         "http://127.0.0.1:9/path",

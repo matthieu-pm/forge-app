@@ -15,6 +15,7 @@ pub mod sandbox;
 pub mod tools;
 pub mod vercel;
 pub mod worker;
+pub mod workspace;
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 #[error("{0}")]

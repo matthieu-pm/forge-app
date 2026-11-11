@@ -490,3 +490,89 @@ async fn private_schema_upgrade_preserves_existing_runs_and_rejects_changed_migr
         .await
         .unwrap();
 }
+
+#[tokio::test]
+async fn completed_and_cancelled_conversations_inherit_only_their_own_workspace_and_read_state() {
+    for cancelled in [false, true] {
+        let fixture = Fixture::new().await;
+        let initial = fixture.admit_first().await;
+        let (lease, state) = fixture
+            .store
+            .acquire(&fixture.channel, Uuid::new_v4(), Duration::from_secs(30))
+            .await
+            .unwrap();
+        let mut snapshot = state.snapshot();
+        snapshot["revision"] = json!(state.revision() + 1);
+        snapshot["workspace"]["provisioned"] = json!(true);
+        let key = snapshot["workspace"]["key"].as_str().unwrap().to_owned();
+        snapshot["files"] = json!({"workspace":format!("native-workspace:{key}"),"stamps":{"/workspace/a":{"bytes":8,"hash":format!("{:x}",Sha256::digest(b"original"))}}});
+        if !cancelled {
+            snapshot["phase"] = json!("complete");
+        }
+        let saved = State::restore(snapshot, &fixture.channel).unwrap();
+        lease.commit(state.revision(), &saved, &[]).await.unwrap();
+        lease.release().await.unwrap();
+        if cancelled {
+            fixture.store.cancel(&fixture.channel).await.unwrap();
+        }
+        let next = fixture.next("anthropic");
+        let admitted = fixture
+            .store
+            .admit(
+                &next,
+                fixture.conversation,
+                Some(fixture.run),
+                message("Continue with the saved file."),
+                fixture.deadline,
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            admitted.state.snapshot()["workspace"],
+            saved.snapshot()["workspace"]
+        );
+        assert_eq!(
+            admitted.state.snapshot()["files"],
+            saved.snapshot()["files"]
+        );
+        assert_eq!(admitted.state.usage(), (0, 0));
+        let replay = fixture
+            .store
+            .admit(
+                &next,
+                fixture.conversation,
+                Some(fixture.run),
+                message("Continue with the saved file."),
+                fixture.deadline,
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            replay.state.snapshot()["workspace"],
+            saved.snapshot()["workspace"]
+        );
+        let other = fixture.next("openai");
+        let new = fixture
+            .store
+            .admit(
+                &other,
+                Uuid::new_v4(),
+                None,
+                message("Separate conversation."),
+                fixture.deadline,
+            )
+            .await
+            .unwrap();
+        assert_ne!(
+            new.state.snapshot()["workspace"]["key"],
+            initial.snapshot()["workspace"]["key"]
+        );
+        assert_eq!(new.state.snapshot()["workspace"]["provisioned"], false);
+        assert!(
+            new.state.snapshot()["files"]["stamps"]
+                .as_object()
+                .unwrap()
+                .is_empty()
+        );
+    }
+}

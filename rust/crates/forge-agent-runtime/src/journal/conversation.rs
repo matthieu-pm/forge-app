@@ -72,7 +72,7 @@ impl Store {
         if deadline <= now(&mut tx).await? {
             return Err(Error("The agent run deadline has elapsed."));
         }
-        let mut history = if let Some(previous) = previous {
+        let parent_state = if let Some(previous) = previous {
             let parent = sqlx::query_as::<_, Row>(&format!(
                 "SELECT {COLUMNS} FROM forge_runtime.sessions WHERE run_id=$1 FOR UPDATE"
             ))
@@ -95,12 +95,19 @@ impl Store {
             {
                 return Err(Error("The previous conversation run has not ended."));
             }
-            state.next_history()
+            Some(state)
         } else {
-            vec![]
+            None
         };
+        let mut history = parent_state
+            .as_ref()
+            .map(State::next_history)
+            .unwrap_or_default();
         history.push(message);
-        let state = State::new(channel, history)?;
+        let mut state = State::new(channel, history)?;
+        if let Some(parent) = parent_state {
+            state.inherit_workspace(&parent);
+        }
         let text = javascript_stringify(&state.snapshot());
         if text.len() > LIMIT {
             return Err(INVALID);

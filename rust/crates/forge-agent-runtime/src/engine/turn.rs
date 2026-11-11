@@ -9,7 +9,7 @@ use crate::{
         stream::{Completion, Delta, Finish},
         transport::{Model, Sink, Turn},
     },
-    sandbox::Cancellation,
+    sandbox::{Cancellation, Sandbox},
     tools::{Approval, Executor, Outcome},
 };
 use async_trait::async_trait;
@@ -23,6 +23,7 @@ pub struct Engine {
     pub executor: Arc<Executor>,
     pub max_input_tokens: u64,
     pub max_output_tokens: u64,
+    pub workspace_factory: Option<Arc<dyn crate::workspace::Factory>>,
 }
 impl Engine {
     pub fn new(model: Arc<dyn Model>, executor: Arc<Executor>) -> Self {
@@ -31,9 +32,10 @@ impl Engine {
             executor,
             max_input_tokens: 200_000,
             max_output_tokens: 50_000,
+            workspace_factory: None,
         }
     }
-    async fn commit(
+    pub(super) async fn commit(
         &self,
         state: &mut State,
         journal: &dyn Journal,
@@ -131,6 +133,7 @@ impl Engine {
         cancellation: &Cancellation,
         deadline: Instant,
     ) -> Result<Phase> {
+        let mut workspace = None;
         loop {
             match state.phase {
                 Phase::Complete | Phase::Waiting => return Ok(state.phase),
@@ -153,7 +156,10 @@ impl Engine {
                     // A retry gets a new revision before contacting a model. An
                     // older worker can neither append output nor settle this step.
                     self.commit(state, journal, next, events).await?;
-                    let definitions=forge_core::agents::tools::descriptors().iter().map(|v|json!({"type":"function","name":v["name"],"description":v["description"],"inputSchema":v["inputSchema"]})).collect::<Vec<_>>();
+                    let mut definitions=forge_core::agents::tools::descriptors().iter().map(|v|json!({"type":"function","name":v["name"],"description":v["description"],"inputSchema":v["inputSchema"]})).collect::<Vec<_>>();
+                    if self.workspace_factory.is_some() {
+                        definitions.extend(forge_core::agents::framework::descriptors().iter().map(|v|json!({"type":"function","name":v["name"],"description":v["description"],"inputSchema":v["inputSchema"]})));
+                    }
                     let max =
                         (self.max_output_tokens - state.output_tokens).min(u32::MAX as u64) as u32;
                     let mut sink = Progress { journal, state };
@@ -201,10 +207,23 @@ impl Engine {
                     if call.phase == CallPhase::Calling
                         && !matches!(
                             call.name.as_str(),
-                            "list_teams" | "get_team" | "describe_workspace" | "update_team"
+                            "list_teams"
+                                | "get_team"
+                                | "describe_workspace"
+                                | "update_team"
+                                | "read_file"
+                                | "glob"
+                                | "grep"
                         )
                     {
                         return self.fail(state,journal,"An interrupted tool requires reconciliation before it can run again.").await;
+                    }
+                    if super::workspace::is_framework(&call.name)
+                        && self.workspace_factory.is_some()
+                    {
+                        self.execute_framework(state, journal, cancellation, &mut workspace)
+                            .await?;
+                        continue;
                     }
                     let prepared = match self.executor.prepare(&call.name, call.input.clone()) {
                         Ok(value) => value,
@@ -253,12 +272,31 @@ impl Engine {
                         },
                         None => Approval::Pending,
                     };
+                    let isolated = if self.workspace_factory.is_some()
+                        && matches!(call.name.as_str(), "run_code" | "execute_program")
+                        && call.decision != Some(Decision::Denied)
+                    {
+                        Some(
+                            self.ensure_workspace(state, journal, &mut workspace)
+                                .await?
+                                .sandbox
+                                .clone() as Arc<dyn Sandbox>,
+                        )
+                    } else {
+                        None
+                    };
+                    let executor = isolated.map(|sandbox| Executor {
+                        capabilities: self.executor.capabilities.clone(),
+                        sandbox: Some(sandbox),
+                        features: self.executor.features,
+                    });
+                    let executor = executor.as_ref().unwrap_or(self.executor.as_ref());
                     let mut next = state.clone();
                     next.calls[next.next_call].phase = CallPhase::Calling;
                     // A committed dispatch reservation precedes every external
                     // effect. Ambiguous reservations must be reloaded by the owner.
                     self.commit(state, journal, next, vec![]).await?;
-                    match self.executor.execute(channel,prepared,approval,cancellation).await {
+                    match executor.execute(channel,prepared,approval,cancellation).await {
                         Ok(Outcome::Completed(output))=>self.settle_tool(state,journal,json!({"type":"json","value":output}),"completed").await?,
                         Ok(Outcome::Denied)=>self.settle_tool(state,journal,json!({"type":"execution-denied","reason":"The user denied this action."}),"rejected").await?,
                         Ok(Outcome::ApprovalRequired(_))=>return Err(INVALID),
@@ -299,13 +337,12 @@ impl Engine {
                     if !part["input"].is_object() || !ids.insert(id.clone()) || ids.len() > 128 {
                         return Err(INVALID);
                     }
-                    let hash =
-                        if let Ok(prepared) = self.executor.prepare(&name, part["input"].clone()) {
-                            part["input"] = prepared.input().clone();
-                            Some(prepared.input_hash().to_owned())
-                        } else {
-                            None
-                        };
+                    let hash = if let Ok(input) = self.prepare_input(&name, part["input"].clone()) {
+                        part["input"] = input;
+                        Some(forge_core::agents::approval::input_hash(&part["input"]))
+                    } else {
+                        None
+                    };
                     actions.push(json!({"callId":id,"kind":"tool-call","toolName":name,"input":part["input"]}));
                     next.calls.push(Call {
                         id,
@@ -375,17 +412,31 @@ impl Engine {
         next.validate(channel)?;
         self.commit(state, journal, next, events).await
     }
-    async fn settle_tool(
+    pub(super) async fn settle_tool(
         &self,
         state: &mut State,
         journal: &dyn Journal,
         output: Value,
         status: &str,
     ) -> Result<()> {
+        self.settle_tool_with_files(state, journal, output, status, None)
+            .await
+    }
+    pub(super) async fn settle_tool_with_files(
+        &self,
+        state: &mut State,
+        journal: &dyn Journal,
+        output: Value,
+        status: &str,
+        files: Option<crate::framework::FileState>,
+    ) -> Result<()> {
         let call = &state.calls[state.next_call];
         let result =
             json!({"callId":call.id,"kind":"tool-call","toolName":call.name,"output":output});
         let mut next = state.clone();
+        if let Some(files) = files {
+            next.files = files;
+        }
         let call = &mut next.calls[next.next_call];
         call.phase = CallPhase::Complete;
         call.output = Some(output);

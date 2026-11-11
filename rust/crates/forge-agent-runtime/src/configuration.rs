@@ -7,19 +7,19 @@ use crate::{
     engine::{Engine, State},
     execution::Features,
     model::transport::HttpModel,
-    sandbox::{Cancellation, Execution, Sandbox},
+    sandbox::Cancellation,
     tools::Executor,
-    vercel, worker,
+    vercel, worker, workspace,
 };
 use async_trait::async_trait;
 use std::{collections::HashMap, sync::Arc};
-use tokio::{io::AsyncReadExt, sync::Mutex};
+use tokio::io::AsyncReadExt;
 use url::Url;
 
 pub struct ConfiguredFactory {
     model: Arc<HttpModel>,
     capabilities: Arc<HttpCapabilities>,
-    sandbox: Option<Arc<vercel::Factory>>,
+    sandbox: Option<Arc<dyn workspace::Factory>>,
     features: Features,
     input_limit: u64,
     output_limit: u64,
@@ -122,6 +122,23 @@ impl ConfiguredFactory {
             }
         };
         let controls = forge_core::agents::policy::controls(env);
+        let retention = value(env, "FORGE_RUST_RUNTIME_SANDBOX_RETENTION_MS");
+        let retention = if retention.is_empty() {
+            2_592_000_000_u64
+        } else {
+            retention
+                .parse()
+                .map_err(|_| Error("Invalid sandbox snapshot retention."))?
+        };
+        if !(60_000..=2_592_000_000).contains(&retention) {
+            return Err(Error("Invalid sandbox snapshot retention."));
+        }
+        let sandbox = sandbox.map(|factory| {
+            Arc::new(workspace::VercelFactory {
+                factory,
+                snapshot_retention_ms: retention,
+            }) as Arc<dyn workspace::Factory>
+        });
         Ok(Self {
             model: Arc::new(HttpModel::new(origin.clone(), peer.clone())?),
             capabilities: Arc::new(HttpCapabilities::new(origin, peer)?),
@@ -138,53 +155,17 @@ impl worker::Factory for ConfiguredFactory {
         if cancellation.is_cancelled() {
             return Err(Error("The runtime worker has stopped."));
         }
-        let sandbox = self.sandbox.as_ref().map(|factory| {
-            Arc::new(LazySandbox {
-                factory: factory.clone(),
-                inner: Mutex::new(None),
-            }) as Arc<dyn Sandbox>
-        });
         let mut engine = Engine::new(
             self.model.clone(),
             Arc::new(Executor {
                 capabilities: self.capabilities.clone(),
-                sandbox,
+                sandbox: None,
                 features: self.features,
             }),
         );
         engine.max_input_tokens = self.input_limit;
         engine.max_output_tokens = self.output_limit;
+        engine.workspace_factory = self.sandbox.clone();
         Ok(engine)
-    }
-}
-struct LazySandbox {
-    factory: Arc<vercel::Factory>,
-    inner: Mutex<Option<Arc<vercel::VercelSandbox>>>,
-}
-impl LazySandbox {
-    async fn get(&self) -> Result<Arc<vercel::VercelSandbox>> {
-        let mut inner = self.inner.lock().await;
-        if inner.is_none() {
-            *inner = Some(self.factory.create().await?);
-        }
-        Ok(inner.as_ref().unwrap().clone())
-    }
-}
-#[async_trait]
-impl Sandbox for LazySandbox {
-    async fn write(&self, path: &str, content: &str) -> Result<()> {
-        self.get().await?.write(path, content).await
-    }
-    async fn run(&self, command: &str) -> Result<Execution> {
-        self.get().await?.run(command).await
-    }
-    async fn remove(&self, path: &str) -> Result<()> {
-        // Cleanup must never create a new provider resource.
-        let inner = self.inner.lock().await.clone();
-        if let Some(inner) = inner {
-            inner.remove(path).await
-        } else {
-            Ok(())
-        }
     }
 }

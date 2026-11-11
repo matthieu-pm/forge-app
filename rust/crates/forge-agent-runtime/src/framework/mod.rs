@@ -1,6 +1,6 @@
 //! Sandbox framework tools. The owner must checkpoint FileState together with
 //! the tool result and supply the same isolated workspace on continuation.
-//! This module is not advertised by the engine until that ownership is wired.
+//! The engine advertises these tools only with an explicit persistent backend.
 mod output;
 mod search;
 use crate::{
@@ -26,6 +26,19 @@ struct Stamp {
     hash: String,
 }
 impl FileState {
+    pub(crate) fn is_empty(&self) -> bool {
+        self.workspace.is_none() && self.stamps.is_empty()
+    }
+    pub(crate) fn validate(&self, expected: Option<&str>) -> Result<()> {
+        if self.workspace.is_some() && self.workspace.as_deref() != expected
+            || self.workspace.is_none() && !self.stamps.is_empty()
+        {
+            return Err(Error(
+                "The file read state belongs to a different workspace.",
+            ));
+        }
+        self.validate_stamps()
+    }
     pub fn clear(&mut self) {
         self.stamps.clear();
     }
@@ -37,6 +50,9 @@ impl FileState {
             self.workspace = Some(workspace.into());
             self.clear();
         }
+        self.validate_stamps()
+    }
+    fn validate_stamps(&self) -> Result<()> {
         if self.stamps.len() > 4096
             || self.stamps.iter().any(|(path, stamp)| {
                 path.len() > 4096

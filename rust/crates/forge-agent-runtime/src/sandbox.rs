@@ -26,6 +26,9 @@ pub trait Sandbox: Send + Sync {
 #[async_trait]
 pub trait Workspace: Sandbox {
     fn identity(&self) -> &str;
+    fn is_usable(&self) -> bool {
+        true
+    }
     async fn read_text(&self, path: &str) -> Result<Option<String>>;
     async fn write_text(&self, path: &str, content: &str) -> Result<()>;
 }

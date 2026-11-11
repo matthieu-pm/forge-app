@@ -111,6 +111,7 @@ struct Scripted {
     pending: bool,
     entered: Notify,
     usage: u64,
+    tools: usize,
 }
 impl Scripted {
     fn new(steps: Vec<Vec<Value>>) -> Self {
@@ -121,6 +122,7 @@ impl Scripted {
             pending: false,
             entered: Notify::new(),
             usage: 10,
+            tools: 7,
         }
     }
 }
@@ -136,7 +138,7 @@ impl Model for Scripted {
         self.calls.fetch_add(1, Ordering::SeqCst);
         self.entered.notify_one();
         self.prompts.lock().unwrap().push(turn.prompt.to_vec());
-        assert_eq!(turn.tools.len(), 7);
+        assert_eq!(turn.tools.len(), self.tools);
         assert!(turn.max_output_tokens.unwrap() > 0);
         if self.pending {
             std::future::pending::<()>().await;
@@ -807,3 +809,6 @@ async fn cancellation_deadline_and_stream_persistence_failure_stop_before_tools(
     );
     assert!(calls.requests.lock().unwrap().is_empty());
 }
+
+#[path = "acceptance/framework_engine.rs"]
+mod framework_engine;

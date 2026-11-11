@@ -1,4 +1,6 @@
-use crate::{Error, Result, auth::Channel, model::request};
+use crate::{
+    Error, Result, auth::Channel, framework::FileState, model::request, workspace::Reference,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
@@ -67,6 +69,10 @@ pub struct State {
     pub(super) output_tokens: u64,
     #[serde(default)]
     pub(super) decisions: BTreeMap<String, Decision>,
+    #[serde(default)]
+    pub(super) workspace: Option<Reference>,
+    #[serde(default)]
+    pub(super) files: FileState,
 }
 impl State {
     /// `history` is trusted stored conversation history, never a client-supplied
@@ -95,6 +101,8 @@ impl State {
             input_tokens: 0,
             output_tokens: 0,
             decisions: BTreeMap::new(),
+            workspace: Some(Reference::new()),
+            files: FileState::default(),
         };
         state.validate(channel)?;
         Ok(state)
@@ -170,6 +178,10 @@ impl State {
                 || message["content"].as_array().is_none_or(|v| !v.is_empty())
         });
         messages
+    }
+    pub(crate) fn inherit_workspace(&mut self, parent: &Self) {
+        self.workspace = parent.workspace.clone();
+        self.files = parent.files.clone();
     }
     pub(crate) fn resolve(
         &self,
@@ -248,6 +260,15 @@ impl State {
         self.validate_structure()
     }
     fn validate_structure(&self) -> Result<()> {
+        if self.workspace.as_ref().is_none_or(|w| !w.provisioned) && !self.files.is_empty() {
+            return Err(INVALID);
+        }
+        if self.workspace.as_ref().is_some_and(|w| w.key.is_nil()) {
+            return Err(INVALID);
+        }
+        self.files
+            .validate(self.workspace.as_ref().map(|w| w.identity()).as_deref())
+            .map_err(|_| INVALID)?;
         if self.decisions.len() > 4096
             || self
                 .decisions
@@ -297,6 +318,7 @@ impl State {
             }
             if let Some(hash) = &c.input_hash {
                 let input = forge_core::agents::tools::input(&c.name, c.input.clone())
+                    .or_else(|_| forge_core::agents::framework::input(&c.name, c.input.clone()))
                     .map_err(|_| INVALID)?;
                 if input != c.input || forge_core::agents::approval::input_hash(&input) != *hash {
                     return Err(INVALID);

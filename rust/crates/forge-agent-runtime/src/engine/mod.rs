@@ -1,7 +1,8 @@
-//! Checkpointed authored-tool turns. Persistence is supplied by an owning
+//! Checkpointed authored and sandbox-tool turns. Persistence is supplied by an owning
 //! service; this module never treats in-memory progress as a durable receipt.
 mod state;
 mod turn;
+mod workspace;
 use crate::Result;
 use async_trait::async_trait;
 use serde_json::Value;
