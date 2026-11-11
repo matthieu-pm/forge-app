@@ -53,7 +53,9 @@
     "recovery:run": "bun apps/forge/scripts/recovery.ts",
     "recovery:rehearse": "bun apps/forge/scripts/rehearse-recovery.ts",
     "recovery:maintenance": "bun apps/forge/scripts/recovery-maintenance.ts",
-    "loops:dispatch": "turbo run loops:dispatch --filter=@forge/app"
+    "loops:dispatch": "turbo run loops:dispatch --filter=@forge/app",
+    "dev:website": "bun run --cwd apps/website dev",
+    "build:website": "bun run --cwd apps/website build"
   },
   "devDependencies": {
     "prettier": "^3.9.6",

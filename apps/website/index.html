@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#fafbf9" />
+    <title>Forge · Built for humans. Ready for agents.</title>
+    <meta
+      name="description"
+      content="A shared workspace for human judgment and agent execution. Bring your issues, projects, and teams together in Forge."
+    />
+    <link rel="icon" type="image/svg+xml" href="/assets/forge-mark.svg" />
+    <link
+      rel="preload"
+      href="/fonts/host-grotesk-300_700-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="world" aria-hidden="true"><canvas id="people"></canvas></div>
+    <div class="reading-light" aria-hidden="true"></div>
+    <header class="header">
+      <a class="brand" href="/" aria-label="Forge home"
+        ><img src="/assets/forge-mark.svg" width="30" height="30" alt="" /><span
+          >Forge</span
+        ></a
+      >
+      <a class="sign-in" href="https://app.forgenow.tech"
+        >Sign in <span aria-hidden="true">↗</span></a
+      >
+    </header>
+    <main id="main" tabindex="-1">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <button class="intro-link" data-about>
+            <span class="status-dot" aria-hidden="true"></span>A shared space
+            for what’s next <span aria-hidden="true">↗</span>
+          </button>
+          <h1 id="hero-title">
+            Built for humans.<br /><span>Ready for agents.</span>
+          </h1>
+          <p class="description">
+            Big ideas need human direction.<br class="desktop-break" />
+            Bring your people, projects, and agents together in Forge.
+          </p>
+          <div class="actions">
+            <a class="button primary" href="https://app.forgenow.tech/signup"
+              >Start building <span aria-hidden="true">↗</span></a
+            >
+            <button class="button secondary" data-about>
+              Meet Forge <span aria-hidden="true">+</span>
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+    <footer class="footer">
+      <p>Your team. Your agents. <span>One workspace.</span></p>
+      <button
+        class="motion-control"
+        id="motion"
+        aria-pressed="false"
+        aria-label="Pause animation"
+      >
+        <svg
+          class="pause-icon"
+          width="12"
+          height="12"
+          viewBox="0 0 12 12"
+          fill="currentColor"
+          aria-hidden="true"
+        >
+          <path d="M3 2h2v8H3zm4 0h2v8H7z" /></svg
+        ><span>Pause motion</span>
+      </button>
+    </footer>
+    <dialog id="about" aria-labelledby="about-title">
+      <div class="dialog-top">
+        <span class="brand"
+          ><img
+            src="/assets/forge-mark.svg"
+            width="24"
+            height="24"
+            alt=""
+          />Forge</span
+        ><button class="close" aria-label="Close introduction">×</button>
+      </div>
+      <p class="dialog-label">People lead. Agents help.</p>
+      <h2 id="about-title">A shared place to<br />move work forward.</h2>
+      <p>
+        Forge brings issues, projects, and team context into one workspace, with
+        a place for agents to work alongside you.
+      </p>
+      <dl>
+        <div>
+          <dt>Find the work that matters.</dt>
+          <dd>Connect incoming signals to issues and projects.</dd>
+        </div>
+        <div>
+          <dt>Give your team the whole picture.</dt>
+          <dd>Keep decisions and context close to the work.</dd>
+        </div>
+        <div>
+          <dt>Build with agents.</dt>
+          <dd>Bring human direction to agent-assisted execution.</dd>
+        </div>
+      </dl>
+      <a class="button primary" href="https://app.forgenow.tech/signup"
+        >Start building <span aria-hidden="true">↗</span></a
+      >
+    </dialog>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
