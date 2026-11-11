@@ -36,3 +36,41 @@ const cases=[
 const modules={initiatives:true,documents:true,views:true,resources:true,milestones:true}
 for(const source of cases)for(const flags of [undefined,modules,{...modules,initiatives:false,documents:false,views:false,resources:false,milestones:false}]){const input={id:uuid,actorId,workspaceId,sources:source.map(([key,raw])=>({key,raw})),defaultStatus:'todo',...(flags?{modules:flags}:{})};const expected=buildImportManifest(input);expected.createdAt=now;importContracts.manifests.push({input,now,expected})}
 const duplicate={id:uuid,actorId,workspaceId,sources:[...cases[0],...cases[0],...cases[4]].map(([key,raw])=>({key,raw})),defaultStatus:'todo',modules};const expected=buildImportManifest(duplicate);expected.createdAt=now;importContracts.manifests.push({input:duplicate,now,expected})
+
+// Evaluate the reference's pure checkpoint functions without loading server I/O.
+// These are extracted from the owning source, so edits fail the fixture drift gate.
+const {readFileSync}=await import('node:fs')
+const {documentPlainText}=await import('../apps/forge/src/lib/team-documents.ts')
+const {documentBodySchema}=await import('../apps/forge/src/lib/document-contract.ts')
+const server=readFileSync(new URL('../apps/forge/src/application/imports/imports.server.ts',import.meta.url),'utf8')
+const contentServer=readFileSync(new URL('../apps/forge/src/application/imports/content.server.ts',import.meta.url),'utf8')
+const transpiler=new Bun.Transpiler({loader:'ts'})
+const summaryCode=contentServer.slice(contentServer.indexOf('export function contentReviewSummary')).replace('export function','function')
+const summary=new Function('documentPlainText','documentBodySchema',transpiler.transformSync(summaryCode)+';return contentReviewSummary')(documentPlainText,documentBodySchema)
+function extract(source,start,end,name,context={}) {
+ const code=source.slice(source.indexOf(start),source.indexOf(end,source.indexOf(start))).replace('export function','function')
+ return new Function(...Object.keys(context),transpiler.transformSync(code)+`;return ${name}`)(...Object.values(context))
+}
+const encode=extract(server,'function encodeManifest(','async function hydrate(','encodeManifest')
+const snapshot=extract(server,'function snapshot(','/** Source bytes','snapshot',{contentReviewSummary:summary})
+const dependencies=extract(contentServer,'export function contentDependencies(','async function mappedView(','contentDependencies')
+const references=extract(server,'function referenceEntries(','async function reference(','referenceEntries')
+importContracts.checkpoints=[]
+for(const {expected:manifest} of importContracts.manifests) {
+ for(const state of ['pending','review','saved','skipped']) {
+  const m=structuredClone(manifest)
+  m.referenceContext=[{id:'private reference',title:'not part of client projection'}]
+  m.entries.forEach((e,i)=>{e.state=state;e.conflict={fingerprint:'x'.repeat(64),candidates:[{id:uuid,revision:4,title:'Private server title',details:{description:'Server content'}}]};if(state==='saved'&&i%2===1)e.files.forEach(f=>f.fileId=uuid)})
+  importContracts.checkpoints.push({input:m,encoded:JSON.parse(encode(m)),snapshot:snapshot(m),filesSnapshot:snapshot(m,true),dependencies:m.entries.map(dependencies)})
+ }
+}
+const many=structuredClone(importContracts.checkpoints.find(c=>c.input.entries.some(e=>e.files.length)).input)
+many.entries=Array.from({length:130},(_,i)=>({...structuredClone(many.entries[0]),id:`entry-${i}`,state:i>119?'pending':i>115?'review':'saved'}))
+importContracts.checkpoints.push({input:many,encoded:JSON.parse(encode(many)),snapshot:snapshot(many),filesSnapshot:snapshot(many,true),dependencies:many.entries.map(dependencies)})
+importContracts.references=[]
+for(const kind of ['issue','project','milestone','document','resource','view','initiative']) for(const entryKind of ['issue','view']) for(const same of ['both','source','neither']) for(const local of [true,false]) {
+ const entry={kind:entryKind,teamId:'team',sourceKey:'source',sourceChecksum:'checksum'}
+ const candidates=[{id:'other',kind,teamId:'other',legacyId:'legacy',sourceKey:'other',sourceChecksum:'other'},{id:'match',kind,teamId:'team',legacyId:'legacy',legacyAliases:['alias'],sourceKey:same==='neither'?'other':'source',sourceChecksum:same==='both'?'checksum':'other'}]
+ const manifest={entries:local?candidates:[],referenceContext:local?[{...candidates[1],id:'reference'}]:candidates}
+ for(const legacyId of ['legacy','alias',''])importContracts.references.push({manifest,entry,kind,legacyId,expected:references(manifest,entry,kind,legacyId)})
+}

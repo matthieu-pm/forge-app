@@ -866,3 +866,55 @@ fn legacy_import_manifests_and_files_match_source_inventory() {
         );
     }
 }
+
+#[test]
+fn legacy_import_checkpoints_and_reference_selection_match_source() {
+    use forge_core::imports::checkpoint as c;
+    let fixture: Value =
+        serde_json::from_str(include_str!("../../../reference-fixtures.json")).unwrap();
+    for (i, case) in fixture["importContracts"]["checkpoints"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .enumerate()
+    {
+        assert_eq!(
+            forge_core::json::parse(&c::encode(&case["input"])).unwrap(),
+            case["encoded"],
+            "checkpoint {i}"
+        );
+        assert_eq!(
+            c::snapshot(&case["input"], false),
+            case["snapshot"],
+            "snapshot {i}"
+        );
+        assert_eq!(
+            c::snapshot(&case["input"], true),
+            case["filesSnapshot"],
+            "files {i}"
+        );
+        let deps: Vec<_> = case["input"]["entries"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(c::content_dependencies)
+            .collect();
+        assert_eq!(
+            serde_json::json!(deps),
+            case["dependencies"],
+            "dependencies {i}"
+        );
+    }
+    for case in fixture["importContracts"]["references"].as_array().unwrap() {
+        assert_eq!(
+            serde_json::json!(c::references(
+                &case["manifest"],
+                &case["entry"],
+                case["kind"].as_str().unwrap(),
+                case["legacyId"].as_str().unwrap()
+            )),
+            case["expected"],
+            "references {case}"
+        );
+    }
+}

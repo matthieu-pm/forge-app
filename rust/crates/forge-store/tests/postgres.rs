@@ -13,6 +13,8 @@ use uuid::Uuid;
 mod definition_acceptance;
 #[path = "acceptance/documents.rs"]
 mod document_acceptance;
+#[path = "acceptance/imports.rs"]
+mod import_acceptance;
 #[path = "acceptance/initiatives.rs"]
 mod initiative_acceptance;
 #[path = "acceptance/issues.rs"]

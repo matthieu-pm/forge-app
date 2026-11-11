@@ -4,6 +4,7 @@ mod auth;
 mod definitions;
 mod desktop_auth;
 mod documents;
+mod imports;
 mod issues;
 pub mod mail;
 mod oauth;
@@ -33,6 +34,8 @@ pub fn router() -> Router {
 
 pub fn router_with_state(state: state::AppState) -> Router {
     let auth_routes = Router::new()
+        .route("/api/workspace/imports", post(imports::read))
+        .route("/api/workspace/imports/prepare", post(imports::prepare))
         .merge(
             Router::new()
                 .route(

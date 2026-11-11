@@ -37,7 +37,8 @@ gate pass.
 | 2c4b | Product state and retained draft projections | Passed available gate |
 | 2c4c | Account/workspace preferences and preference import | Passed available gate |
 | 2c4d1 | Legacy source validation, content adapters and import manifests | Passed available gate |
-| 2c4d2 | Authenticated import preview, canonical execution, reconciliation and cleanup | Pending |
+| 2c4d2a | Authenticated import previews and private source checkpoints | Passed available gate |
+| 2c4d2b | Canonical import execution, reconciliation and cleanup | Pending |
 | 3 | Agent execution, approvals, streams, models, files, retention, jobs, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -596,3 +597,29 @@ these routes do not represent a completed rewrite.
   typechecking, formatting and Clippy. The 661 external-fixture reference tests
   remain skipped. Both disposable databases applied all 75 source migrations.
 - Gate log: `.forge/rust-rewrite/milestone-2c4d1-final.log`.
+
+### Milestone 2c4d2a
+
+- Added authenticated, owner-scoped import preparation and listing under
+  `/api/workspace/imports/prepare` and `/api/workspace/imports`. Source payloads
+  are loaded from private product state using the active workspace and session.
+- Checkpoints retain source checksums and entry identities separately from exact
+  source bytes. Every reload rebuilds content from the preserved backups;
+  missing or modified backups quarantine unresolved entries and report inventory
+  discrepancies. Concurrent previews reuse one checkpoint for the same sources.
+- Preserved completed-source suppression, module-change re-inventory, retained
+  backups and completed-manifest reference context. Client previews omit that
+  context, source bodies and historical authorship payloads, and bound visible
+  records and attachment bytes. Conflict candidates refresh through current
+  resource visibility instead of retained server content.
+- Reference fixtures evaluate the source's checkpoint encoding, preview,
+  dependency and reference-selection functions directly. Database acceptance
+  exercises source preservation, ownership, concurrent previews, stale sessions,
+  damaged backups, changed live drafts, permission revocation and feature gates.
+- Import effects, reviewed choices, file finalization, reconciliation and cleanup
+  remain in 2c4d2b. No imported canonical record is created by preparation.
+- Full milestone gate passed: **199 Rust tests**, **2,959 enabled TypeScript
+  tests**, all typechecks, source-reference drift checks, formatting and Clippy.
+  The original **661 skipped tests in 34 files** remain skipped; they are not
+  counted as executed acceptance.
+- Gate log: `.forge/rust-rewrite/milestone-2c4d2a-final.log`.

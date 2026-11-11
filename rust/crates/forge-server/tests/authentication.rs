@@ -1734,3 +1734,61 @@ async fn preferences_http_binds_sessions_and_handles_gated_fields_without_partia
     assert_eq!(status, StatusCode::OK, "{value}");
     assert_eq!(value["status"], "disabled");
 }
+
+#[tokio::test]
+async fn imports_http_binds_private_previews_to_the_active_session() {
+    let f = Fixture::new().await;
+    let (_, token, cookie) = f.account().await;
+    forge_store::workspaces::create(
+        &f.database,
+        &token,
+        "Import HTTP",
+        &Uuid::new_v4().to_string(),
+        None,
+    )
+    .await
+    .unwrap();
+    let (_, _, state) = f
+        .request("GET", "/api/workspace/product-state", Some(&cookie), None)
+        .await;
+    let identity = json!({"workspaceId":state["workspaceId"],"sessionId":state["sessionId"]});
+    let (status, _, value) = f
+        .request(
+            "POST",
+            "/api/workspace/imports/prepare",
+            Some(&cookie),
+            Some(identity.clone()),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{value}");
+    assert!(value.is_null());
+    let (status, _, value) = f
+        .request(
+            "POST",
+            "/api/workspace/imports",
+            Some(&cookie),
+            Some(identity.clone()),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{value}");
+    assert_eq!(value, json!([]));
+    let mut wrong = identity.clone();
+    wrong["sessionId"] = json!("old-session");
+    assert_eq!(
+        f.request(
+            "POST",
+            "/api/workspace/imports/prepare",
+            Some(&cookie),
+            Some(wrong)
+        )
+        .await
+        .0,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        f.request("POST", "/api/workspace/imports", None, Some(identity))
+            .await
+            .0,
+        StatusCode::UNAUTHORIZED
+    );
+}
