@@ -118,13 +118,25 @@ impl Settings {
         files.settings = forge_core::agents::files::Settings::from_environment(env);
         let files = Arc::new(files);
         let peer = reviewed_peer(env)?;
+        let native = match value(env, "FORGE_RUST_AGENT_TRANSPORT") {
+            "" | "eve" => false,
+            "native" => true,
+            _ => return Err("The agent transport must be eve or native."),
+        };
         let origin = if value(env, "FORGE_RESOURCE_PROFILE") == "preview" {
             peer.as_ref().map(ToString::to_string)
         } else {
-            env.get("EVE_AGENT_RUNTIME_URL")
-                .filter(|v| !v.is_empty())
-                .cloned()
+            env.get(if native {
+                "FORGE_NATIVE_AGENT_RUNTIME_URL"
+            } else {
+                "EVE_AGENT_RUNTIME_URL"
+            })
+            .filter(|v| !v.is_empty())
+            .cloned()
         };
+        if native && origin.is_none() {
+            return Err("FORGE_NATIVE_AGENT_RUNTIME_URL is required for the native transport.");
+        }
         let mut runtimes: Vec<Arc<dyn Runtime>> = vec![];
         if features["agent_eve_runtime"] == true && origin.is_some() {
             if !value(env, "FORGE_AGENT_CHANNEL_SECRET").is_empty() {
@@ -159,18 +171,27 @@ impl Settings {
                             .cloned(),
                     }) as Arc<dyn PeerIdentity>
                 });
-                runtimes.push(Arc::new(
-                    EveRuntime::new(Options {
-                        base_url,
-                        channel_secret: value(env, "FORGE_AGENT_CHANNEL_SECRET").into(),
-                        capability_secret: value(env, "FORGE_AGENT_CAPABILITY_SECRET").into(),
-                        model_secret: value(env, "FORGE_AGENT_MODEL_ACCESS_SECRET").into(),
-                        peer_origin: peer,
-                        peer_identity: identity,
-                        now: Arc::new(|| chrono::Utc::now().timestamp()),
-                    })
-                    .map_err(|_| "The agent runtime configuration is invalid.")?,
-                ));
+                let options = Options {
+                    base_url,
+                    channel_secret: value(env, "FORGE_AGENT_CHANNEL_SECRET").into(),
+                    capability_secret: value(env, "FORGE_AGENT_CAPABILITY_SECRET").into(),
+                    model_secret: value(env, "FORGE_AGENT_MODEL_ACCESS_SECRET").into(),
+                    peer_origin: peer,
+                    peer_identity: identity,
+                    now: Arc::new(|| chrono::Utc::now().timestamp()),
+                };
+                let runtime: Arc<dyn Runtime> = if native {
+                    Arc::new(
+                        crate::native_runtime::NativeRuntime::new(options)
+                            .map_err(|_| "The native agent runtime configuration is invalid.")?,
+                    )
+                } else {
+                    Arc::new(
+                        EveRuntime::new(options)
+                            .map_err(|_| "The agent runtime configuration is invalid.")?,
+                    )
+                };
+                runtimes.push(runtime);
             }
         } else if value(env, "AGENT_FAKE_RUNTIME_ENABLED") == "true" {
             if value(env, "FORGE_RESOURCE_PROFILE") == "preview"

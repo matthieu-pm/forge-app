@@ -6,7 +6,7 @@ use forge_store::agents::coordinator::{Hosted, Service};
 use futures_util::{StreamExt, TryStreamExt};
 use std::sync::{
     Arc, Mutex,
-    atomic::{AtomicUsize, Ordering},
+    atomic::{AtomicBool, AtomicUsize, Ordering},
 };
 
 #[derive(Default)]
@@ -19,6 +19,8 @@ struct RuntimeFixture {
     starts: AtomicUsize,
     reconnects: AtomicUsize,
     cancels: AtomicUsize,
+    native: AtomicBool,
+    resume_errors: AtomicUsize,
 }
 fn scripted(context: runtime::Context, steps: Vec<Value>) -> runtime::Events {
     Box::pin(futures_util::stream::try_unfold(
@@ -48,6 +50,12 @@ impl AgentRuntime for RuntimeFixture {
     fn kind(&self) -> &'static str {
         "eve"
     }
+    fn idempotent_resumption(&self) -> bool {
+        self.native.load(Ordering::SeqCst)
+    }
+    fn cancel_after_transport_failure(&self) -> bool {
+        self.native.load(Ordering::SeqCst)
+    }
     fn start(&self, c: runtime::Context, _: String, _: Vec<Value>) -> runtime::Events {
         self.starts.fetch_add(1, Ordering::SeqCst);
         self.contexts.lock().unwrap().push(c.clone());
@@ -56,7 +64,15 @@ impl AgentRuntime for RuntimeFixture {
     fn resume(&self, c: runtime::Context, responses: Vec<Value>) -> runtime::Events {
         self.responses.lock().unwrap().extend(responses);
         self.contexts.lock().unwrap().push(c.clone());
-        scripted(c, self.resume.lock().unwrap().clone())
+        if self
+            .resume_errors
+            .try_update(Ordering::SeqCst, Ordering::SeqCst, |v| v.checked_sub(1))
+            .is_ok()
+        {
+            scripted(c, vec![json!({"error":true})])
+        } else {
+            scripted(c, self.resume.lock().unwrap().clone())
+        }
     }
     fn reconnect(&self, c: runtime::Context) -> runtime::Events {
         self.reconnects.fetch_add(1, Ordering::SeqCst);
@@ -540,4 +556,86 @@ async fn reconnect_keeps_live_credentials_but_never_renews_the_deadline() {
             .await
             .is_err()
     );
+}
+
+#[tokio::test]
+async fn native_resume_retries_the_same_decision_keeps_the_original_deadline_and_revokes_after_failure()
+ {
+    for errors in [1, 2] {
+        let f = Fixture::new().await;
+        let (mut service, runtime, model) = setup(&f).await;
+        runtime.native.store(true, Ordering::SeqCst);
+        runtime.resume_errors.store(errors, Ordering::SeqCst);
+        *runtime.start.lock().unwrap() = vec![
+            json!({"checkpoint":true}),
+            event(
+                "approval",
+                "approval.requested",
+                json!({"capabilityId":"teams.update","risk":"reversible-write","summary":"Rename","details":{"runtimeRequestId":"native-input"},"input":{"name":"Updated"}}),
+            ),
+        ];
+        *runtime.resume.lock().unwrap() = vec![delta()];
+        let thread = service.create_thread(&f.actor, json!({})).await.unwrap();
+        let session = service
+            .start_turn(&f.actor, input(thread.id, &model), None)
+            .await
+            .unwrap();
+        let id = session.run.id;
+        let events: Vec<Event> = session.events.try_collect().await.unwrap();
+        let approval_id = events
+            .iter()
+            .find(|e| e.kind == "approval.requested")
+            .unwrap()
+            .payload["approvalId"]
+            .as_str()
+            .unwrap()
+            .parse()
+            .unwrap();
+        let deadline = runtime.contexts.lock().unwrap()[0].deadline_ms;
+        service.now = Arc::new(|| at() + chrono::Duration::seconds(30));
+        let resumed = service
+            .resolve_approval(
+                &f.actor,
+                approval_id,
+                approval_service::Decision::Approved,
+                None,
+            )
+            .await
+            .unwrap();
+        let events: Vec<Event> = resumed.events.try_collect().await.unwrap();
+        assert_eq!(
+            events.last().unwrap().kind,
+            if errors == 1 {
+                "run.completed"
+            } else {
+                "run.failed"
+            }
+        );
+        assert_eq!(
+            current(&f, id).await.state,
+            if errors == 1 {
+                RunState::Completed
+            } else {
+                RunState::Failed
+            }
+        );
+        assert_eq!(runtime.reconnects.load(Ordering::SeqCst), 0);
+        assert_eq!(
+            runtime.cancels.load(Ordering::SeqCst),
+            usize::from(errors == 2)
+        );
+        assert_eq!(
+            *runtime.responses.lock().unwrap(),
+            vec![json!({"requestId":"native-input","optionId":"approve"}); 2]
+        );
+        assert!(
+            runtime
+                .contexts
+                .lock()
+                .unwrap()
+                .iter()
+                .all(|c| c.deadline_ms == deadline)
+        );
+        assert_eq!(deadline, at().timestamp_millis() + 900000);
+    }
 }

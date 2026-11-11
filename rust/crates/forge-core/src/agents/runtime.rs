@@ -26,6 +26,8 @@ pub struct Context {
     pub identity: Identity,
     pub model: Value,
     pub reasoning_effort: String,
+    /// Absolute deadline derived from the persisted start and configured limit.
+    pub deadline_ms: i64,
     pub runtime_session_id: Option<String>,
     pub correlation_id: Option<String>,
     pub checkpoint: Arc<dyn Checkpoint>,
@@ -33,6 +35,14 @@ pub struct Context {
 #[async_trait]
 pub trait Runtime: Send + Sync {
     fn kind(&self) -> &'static str;
+    /// Whether repeating the same approval delivery is a durable no-op.
+    fn idempotent_resumption(&self) -> bool {
+        false
+    }
+    /// Native run journals must be ended when the application gives up recovery.
+    fn cancel_after_transport_failure(&self) -> bool {
+        false
+    }
     fn start(&self, context: Context, message: String, attachments: Vec<Value>) -> Events;
     fn resume(&self, context: Context, input_responses: Vec<Value>) -> Events;
     fn reconnect(&self, context: Context) -> Events;

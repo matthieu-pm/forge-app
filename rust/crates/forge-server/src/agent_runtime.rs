@@ -70,7 +70,7 @@ impl EveRuntime {
             active: Mutex::new(HashMap::new()),
         })))
     }
-    fn channel(&self, context: &Context, cancel: bool) -> Result<String, Error> {
+    pub(crate) fn channel(&self, context: &Context, cancel: bool) -> Result<String, Error> {
         let now = (self.0.options.now)();
         let (capability, model) = if cancel {
             (
@@ -146,7 +146,7 @@ impl EveRuntime {
             URL_SAFE_NO_PAD.encode(mac.finalize().into_bytes())
         ))
     }
-    async fn request(
+    pub(crate) async fn request(
         &self,
         path: &str,
         method: reqwest::Method,
@@ -265,6 +265,16 @@ impl State {
         Ok(())
     }
     async fn initialize(&mut self, mode: Mode) -> Result<(), Error> {
+        if self
+            .context
+            .runtime_session_id
+            .as_deref()
+            .is_some_and(|cursor| cursor.starts_with("native-v1."))
+        {
+            return Err(Error(
+                "This native conversation cannot be opened by the EVE transport.",
+            ));
+        }
         let previous = self
             .context
             .runtime_session_id
@@ -553,7 +563,7 @@ impl Runtime for EveRuntime {
         Ok(())
     }
 }
-async fn bounded_json(mut response: reqwest::Response) -> Result<Value, Error> {
+pub(crate) async fn bounded_json(mut response: reqwest::Response) -> Result<Value, Error> {
     let mut bytes = Vec::new();
     while let Some(chunk) = response
         .chunk()

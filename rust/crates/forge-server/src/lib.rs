@@ -12,6 +12,7 @@ mod issues;
 pub mod mail;
 pub mod model_providers;
 pub mod model_proxy;
+pub mod native_runtime;
 mod oauth;
 pub mod oauth_provider;
 mod planning;

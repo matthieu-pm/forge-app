@@ -68,6 +68,7 @@ gate pass.
 | 3b5t | Supervised native workers, credential lifetime and approval replay receipts | Passed available gate |
 | 3b5u | Native runtime HTTP admission, supervised hosting and durable approval delivery | Passed available gate |
 | 3b5v | Durable conversation continuity, interrupted tool history and resolved attachments | Passed available gate |
+| 3b5w | Application/native runtime transport, durable replay and coordinator integration | Passed available gate |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -1559,3 +1560,35 @@ these routes do not represent a completed rewrite.
   production database was used. Application/native-runtime integration, existing
   EVE conversation migration, framework built-ins, compaction, private runtime
   retention and sandbox continuity remain outstanding; readiness remains 503.
+
+
+### Milestone 3b5w
+
+- Full milestone gate passed: 449 Rust tests and 2,959 enabled TypeScript tests.
+  Formatting, Clippy, source contracts and typechecking passed; 661 reference
+  tests across 34 files remain skipped. Log:
+  `.forge/rust-rewrite/milestone-3b5w-verified.log`.
+- The application can opt into the private native service with
+  `FORGE_RUST_AGENT_TRANSPORT=native` and `FORGE_NATIVE_AGENT_RUNTIME_URL`.
+  The default remains the EVE transport. Existing channel authentication,
+  callback tokens and exact-origin platform identity protect native requests.
+- Versioned native conversation cursors bind the thread, current/previous run,
+  original deadline and next event index. Admission, approval delivery and
+  recovery retry lost acknowledgements. Event positions advance only after the
+  coordinator has received the normalized events, so interrupted delivery can
+  replay stable source IDs without skipping application events.
+- Approval transport retries resend the same durable decision. If recovery
+  ultimately fails, the coordinator cancels native work before ending the public
+  run. The original persisted run deadline survives approval waits and recovery.
+  Reconnecting to a parked run restores waiting status without issuing a second
+  approval request. Cancellation also works after the original reader is gone.
+- Switching between native and EVE cursors fails explicitly before starting a
+  replacement conversation; importing existing EVE model context remains work.
+  Native streams reject gaps, foreign turns, invalid UTF-8, truncated/missing
+  terminal frames, incorrect content types and oversized lines.
+- Acceptance tests exercise the real private HTTP host, durable PostgreSQL
+  journal and application HTTP/SSE path, including two successive conversation
+  turns, approval replay, cancellation and acknowledgement failures. Providers
+  are local fixtures; no live model or production database was used. Framework
+  built-ins, compaction, sandbox continuity, private runtime retention and
+  deployment qualification remain outstanding; readiness remains 503.

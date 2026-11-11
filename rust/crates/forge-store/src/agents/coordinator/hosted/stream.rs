@@ -60,6 +60,16 @@ pub(super) fn context(
             .as_str()
             .unwrap()
             .into(),
+        deadline_ms: run
+            .started_at
+            .unwrap_or_else(|| service.time())
+            .timestamp_millis()
+            .saturating_add(
+                service.controls["runWallClockMs"]
+                    .as_i64()
+                    .unwrap_or(900000)
+                    .clamp(1, 900000),
+            ),
         runtime_session_id: thread.runtime_session_id.clone(),
         correlation_id: correlation,
         checkpoint: Arc::new(Checkpoint {
@@ -243,16 +253,24 @@ pub(super) fn open(mut p: Prepared) -> EventStream {
                             state.p.actor = actor;
                             state.p.thread = thread;
                             state.p.run = run;
-                            state.events = Some(state.p.runtime.reconnect(state.context()));
+                            state.events = Some(match &state.p.mode {
+                                Mode::Resume(responses)
+                                    if state.p.runtime.idempotent_resumption() =>
+                                {
+                                    state.p.runtime.resume(state.context(), responses.clone())
+                                }
+                                _ => state.p.runtime.reconnect(state.context()),
+                            });
                             return Ok(Some((event, state)));
                         }
                         tx.commit().await?;
                     }
+                    let cancel = state.p.runtime.cancel_after_transport_failure();
                     state
                         .fail(
                             "RUNTIME_EXECUTION_FAILED",
                             "Forge could not complete this run.",
-                            false,
+                            cancel,
                         )
                         .await
                 }

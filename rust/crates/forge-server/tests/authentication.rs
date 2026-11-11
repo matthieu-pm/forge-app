@@ -1,3 +1,6 @@
+#[path = "support/native_runtime.rs"]
+#[allow(dead_code)] // Shared fixture also exercises approval/stall paths in native_runtime.rs.
+mod native_runtime_support;
 use async_trait::async_trait;
 use axum::{
     Router,

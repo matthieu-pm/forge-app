@@ -1180,6 +1180,7 @@ dependencies = [
  "axum",
  "base64 0.22.1",
  "chrono",
+ "forge-agent-runtime",
  "forge-core",
  "forge-identity",
  "forge-recovery",

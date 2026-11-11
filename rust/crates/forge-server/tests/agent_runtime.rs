@@ -132,6 +132,7 @@ fn context(checkpoint: Arc<dyn Checkpoint>) -> Context {
         },
         model: json!({"connectionId":"00000000-0000-4000-8000-000000000003","provider":"openai","modelId":"gpt-fixture"}),
         reasoning_effort: "high".into(),
+        deadline_ms: NOW * 1000 + 900000,
         runtime_session_id: None,
         correlation_id: Some("correlation-fixture".into()),
         checkpoint,
@@ -395,4 +396,32 @@ async fn runtime_rejects_redirects_and_does_not_request_identity_for_unreviewed_
     let mut options = fixture.options();
     options.peer_identity = Some(identity);
     assert!(EveRuntime::new(options).is_err());
+}
+
+#[tokio::test]
+async fn changing_back_to_eve_cannot_silently_replace_a_saved_native_conversation() {
+    let fixture = Fixture::new(json!({})).await;
+    let saved = Arc::new(Checkpoints::default());
+    let mut ctx = context(saved.clone());
+    ctx.runtime_session_id = Some(
+        forge_server::native_runtime::Cursor {
+            conversation_id: ctx.thread_id.parse().unwrap(),
+            run_id: ctx.run_id.parse().unwrap(),
+            previous_run_id: None,
+            stream_index: 0,
+            deadline_ms: ctx.deadline_ms,
+        }
+        .encode(),
+    );
+    assert!(
+        fixture
+            .runtime()
+            .start(ctx, "Continue".into(), vec![])
+            .next()
+            .await
+            .unwrap()
+            .is_err()
+    );
+    assert!(fixture.capture.requests.lock().unwrap().is_empty());
+    assert!(saved.values.lock().unwrap().is_empty());
 }
