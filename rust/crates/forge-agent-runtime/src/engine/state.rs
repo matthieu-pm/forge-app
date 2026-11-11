@@ -101,6 +101,22 @@ impl State {
     }
     /// Restore only from the owner's private journal, not an HTTP request body.
     pub fn restore(snapshot: Value, channel: &Channel) -> Result<Self> {
+        let state = Self::decode(snapshot)?;
+        state.validate(channel)?;
+        Ok(state)
+    }
+    pub(crate) fn restore_parent(snapshot: Value, channel: &Channel, parent: &str) -> Result<Self> {
+        let state = Self::decode(snapshot)?;
+        if state.binding.user != channel.principal_id()
+            || state.binding.workspace != channel.workspace_id()
+            || state.binding.run != parent
+        {
+            return Err(INVALID);
+        }
+        state.validate_structure()?;
+        Ok(state)
+    }
+    fn decode(snapshot: Value) -> Result<Self> {
         if forge_core::canonical::javascript_stringify(&snapshot).len() > 8 * 1024 * 1024 {
             return Err(INVALID);
         }
@@ -114,8 +130,46 @@ impl State {
         {
             state.messages[0] = json!({"role":"system","content":INSTRUCTIONS});
         }
-        state.validate(channel)?;
         Ok(state)
+    }
+    /// Only the owning journal may call this after observing a terminal or
+    /// cancelled parent. Incomplete tools get explicit outcomes, never retries.
+    pub(crate) fn next_history(&self) -> Vec<Value> {
+        let mut messages = self.messages.iter().skip(1).cloned().collect::<Vec<_>>();
+        if !self.calls.is_empty() {
+            let results=self.calls.iter().map(|call| {
+                let output=match call.phase {
+                    CallPhase::Complete => call.output.clone().unwrap_or_else(||json!({"type":"error-text","value":"The previous tool result is unavailable."})),
+                    CallPhase::Calling => json!({"type":"error-text","value":"The previous run ended before this tool's outcome could be confirmed. Check the current state before repeating the action."}),
+                    _ => json!({"type":"execution-denied","reason":"The previous run ended before this tool was executed."}),
+                };
+                json!({"type":"tool-result","toolCallId":call.id,"toolName":call.name,"output":output})
+            }).collect::<Vec<_>>();
+            messages.push(json!({"role":"tool","content":results}));
+        }
+        // Provider item IDs and signed reasoning belong to the previous model
+        // connection. Keep materialized text/tools so switching connections or
+        // providers cannot reuse an inaccessible item or invalid signature.
+        for message in &mut messages {
+            if let Some(object) = message.as_object_mut() {
+                object.remove("providerOptions");
+            }
+            if message["role"] == "assistant"
+                && let Some(parts) = message["content"].as_array_mut()
+            {
+                parts.retain(|part| part["type"] != "reasoning");
+                for part in parts {
+                    if let Some(object) = part.as_object_mut() {
+                        object.remove("providerOptions");
+                    }
+                }
+            }
+        }
+        messages.retain(|message| {
+            message["role"] != "assistant"
+                || message["content"].as_array().is_none_or(|v| !v.is_empty())
+        });
+        messages
     }
     pub(crate) fn resolve(
         &self,
@@ -182,6 +236,18 @@ impl State {
         self.calls.get(self.next_call)?.request_id.as_deref()
     }
     pub(crate) fn validate(&self, channel: &Channel) -> Result<()> {
+        let b = &self.binding;
+        if b.user != channel.principal_id()
+            || b.workspace != channel.workspace_id()
+            || b.run != channel.run_id()
+            || b.provider != channel.provider()
+            || b.model != channel.model_id()
+        {
+            return Err(INVALID);
+        }
+        self.validate_structure()
+    }
+    fn validate_structure(&self) -> Result<()> {
         if self.decisions.len() > 4096
             || self
                 .decisions
@@ -192,11 +258,6 @@ impl State {
         }
         let b = &self.binding;
         if self.version != 1
-            || b.user != channel.principal_id()
-            || b.workspace != channel.workspace_id()
-            || b.run != channel.run_id()
-            || b.provider != channel.provider()
-            || b.model != channel.model_id()
             || self.revision >= 9_007_199_254_740_991
             || self.step >= 9_007_199_254_740_991
             || self.calls.len() > 128
@@ -209,7 +270,8 @@ impl State {
         if self.messages.first() != Some(&json!({"role":"system","content":INSTRUCTIONS})) {
             return Err(INVALID);
         }
-        request::build(channel, &self.messages, &[], None).map_err(|_| INVALID)?;
+        request::build_for(&b.provider, &b.model, &self.messages, &[], None)
+            .map_err(|_| INVALID)?;
         if self.phase == Phase::Waiting
             && !self.calls.get(self.next_call).is_some_and(|c| {
                 c.phase == CallPhase::Waiting

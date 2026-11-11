@@ -332,6 +332,21 @@ pub fn build(
     tools: &[Value],
     max_output_tokens: Option<u32>,
 ) -> Result<Request> {
+    build_for(
+        channel.provider(),
+        channel.model_id(),
+        prompt,
+        tools,
+        max_output_tokens,
+    )
+}
+pub(crate) fn build_for(
+    provider: &str,
+    model: &str,
+    prompt: &[Value],
+    tools: &[Value],
+    max_output_tokens: Option<u32>,
+) -> Result<Request> {
     if prompt.is_empty()
         || prompt.len() > 10000
         || tools.len() > 128
@@ -339,8 +354,7 @@ pub fn build(
     {
         return Err(INVALID);
     }
-    let protocol = Protocol::for_provider(channel.provider());
-    let model = channel.model_id();
+    let protocol = Protocol::for_provider(provider);
     let reasoning = reasoning_model(model);
     let system = if reasoning { "developer" } else { "system" };
     let mut body = json!({"model":model});

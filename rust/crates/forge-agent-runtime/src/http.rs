@@ -154,6 +154,43 @@ fn public(session: &Session) -> Value {
 struct Admission {
     message: String,
     deadline: i64,
+    #[serde(default)]
+    conversation_id: Option<Uuid>,
+    #[serde(default)]
+    previous_run_id: Option<Uuid>,
+    #[serde(default)]
+    attachments: Vec<Attachment>,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct Attachment {
+    name: String,
+    content_type: String,
+    content_base64: String,
+}
+impl Admission {
+    fn message(&self) -> HttpResult<Value> {
+        let text = forge_core::text::trim(&self.message);
+        if text.is_empty()
+            || text.chars().count() > 100_000
+            || self.attachments.len() > 20
+            || (self.previous_run_id.is_some() && self.conversation_id.is_none())
+        {
+            return Err(BAD);
+        }
+        let mut parts = vec![json!({"type":"text","text":text})];
+        for file in &self.attachments {
+            if file.name.is_empty()
+                || file.name.chars().count() > 255
+                || file.name.chars().any(char::is_control)
+            {
+                return Err(BAD);
+            }
+            forge_core::agents::files::decode_attachment(&file.content_base64).map_err(|_| BAD)?;
+            parts.push(json!({"type":"file","data":{"type":"data","data":file.content_base64},"mediaType":file.content_type,"filename":file.name}));
+        }
+        Ok(json!({"role":"user","content":parts}))
+    }
 }
 async fn admit(
     State(service): State<Service>,
@@ -163,10 +200,8 @@ async fn admit(
 ) -> HttpResult<Response> {
     let channel = service.channel(&headers, &run)?;
     let input: Admission = parse(&headers, &body)?;
-    let message = forge_core::text::trim(&input.message);
-    if message.is_empty() || message.chars().count() > 100_000 {
-        return Err(BAD);
-    }
+    let message = input.message()?;
+    EngineState::new(&channel, vec![message.clone()]).map_err(|_| BAD)?;
     let deadline = DateTime::from_timestamp_millis(input.deadline).ok_or(BAD)?;
     // The trusted application supplies its original deadline. Repeating admission
     // cannot change it; expired requests may retrieve an existing identical run.
@@ -176,18 +211,32 @@ async fn admit(
     if deadline <= Utc::now() && service.load(&channel).await.is_err() {
         return Err(BAD);
     }
-    let state = EngineState::new(
-        &channel,
-        vec![json!({"role":"user","content":[{"type":"text","text":message}]})],
-    )
-    .map_err(|_| BAD)?;
-    let session = timeout(
-        Duration::from_secs(5),
-        service.host.store().create(&channel, &state, deadline),
-    )
-    .await
-    .map_err(|_| UNAVAILABLE)?
-    .map_err(|_| CONFLICT)?;
+    let admission = async {
+        if let Some(conversation) = input.conversation_id {
+            service
+                .host
+                .store()
+                .admit(
+                    &channel,
+                    conversation,
+                    input.previous_run_id,
+                    message,
+                    deadline,
+                )
+                .await
+        } else {
+            let state = EngineState::new(&channel, vec![message])?;
+            service
+                .host
+                .store()
+                .create(&channel, &state, deadline)
+                .await
+        }
+    };
+    let session = timeout(Duration::from_secs(5), admission)
+        .await
+        .map_err(|_| UNAVAILABLE)?
+        .map_err(|_| CONFLICT)?;
     if !session.cancelled
         && !matches!(
             session.state.phase(),

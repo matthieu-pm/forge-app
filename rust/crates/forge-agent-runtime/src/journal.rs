@@ -16,7 +16,23 @@ use sqlx::{PgConnection, PgPool};
 use std::time::Duration;
 use uuid::Uuid;
 
-const SCHEMA: &str = include_str!("../migrations/0001_runtime.sql");
+mod conversation;
+const SCHEMAS: &[&str] = &[
+    include_str!("../migrations/0001_runtime.sql"),
+    include_str!("../migrations/0002_conversations.sql"),
+];
+fn versions() -> Vec<(i32, String)> {
+    SCHEMAS
+        .iter()
+        .enumerate()
+        .map(|(i, s)| {
+            (
+                (i + 1) as i32,
+                format!("{:x}", Sha256::digest(s.as_bytes())),
+            )
+        })
+        .collect()
+}
 const FAILED: Error = Error("The runtime journal is unavailable.");
 const INVALID: Error = Error("The runtime session is unavailable or outside this run's scope.");
 const BUSY: Error = Error("Another worker owns the runtime session.");
@@ -50,6 +66,8 @@ pub struct Lease {
 struct Row {
     workspace_id: String,
     user_id: String,
+    conversation_id: Option<Uuid>,
+    parent_run_id: Option<Uuid>,
     initial_hash: String,
     revision: i64,
     snapshot: String,
@@ -62,7 +80,7 @@ struct Row {
     cancelled_at: Option<DateTime<Utc>>,
     worker_active: bool,
 }
-const COLUMNS: &str = "workspace_id,user_id,initial_hash,revision,engine_state::text AS snapshot,next_index,journal_bytes,epoch,lease_owner,lease_until,deadline,cancelled_at,COALESCE(lease_until > clock_timestamp() AND deadline > clock_timestamp() AND cancelled_at IS NULL,false) AS worker_active";
+const COLUMNS: &str = "workspace_id,user_id,conversation_id,parent_run_id,initial_hash,revision,engine_state::text AS snapshot,next_index,journal_bytes,epoch,lease_owner,lease_until,deadline,cancelled_at,COALESCE(lease_until > clock_timestamp() AND deadline > clock_timestamp() AND cancelled_at IS NULL,false) AS worker_active";
 fn run(channel: &Channel) -> Result<Uuid> {
     channel.run_id().parse().map_err(|_| INVALID)
 }
@@ -118,21 +136,23 @@ impl Store {
                 .fetch_all(&mut *tx)
                 .await
                 .map_err(|_| FAILED)?;
-        let digest = format!("{:x}", Sha256::digest(SCHEMA.as_bytes()));
-        if installed.is_empty() {
-            sqlx::raw_sql(SCHEMA)
-                .execute(&mut *tx)
-                .await
-                .map_err(|_| FAILED)?;
-            sqlx::query("INSERT INTO forge_runtime.migrations(version,digest) VALUES(1,$1)")
-                .bind(&digest)
-                .execute(&mut *tx)
-                .await
-                .map_err(|_| FAILED)?;
-        } else if installed != [(1, digest)] {
+        let expected = versions();
+        if installed.len() > expected.len() || installed != expected[..installed.len()] {
             return Err(Error(
                 "The runtime journal schema does not match this build.",
             ));
+        }
+        for (version, digest) in expected.iter().skip(installed.len()) {
+            sqlx::raw_sql(SCHEMAS[*version as usize - 1])
+                .execute(&mut *tx)
+                .await
+                .map_err(|_| FAILED)?;
+            sqlx::query("INSERT INTO forge_runtime.migrations(version,digest) VALUES($1,$2)")
+                .bind(version)
+                .bind(digest)
+                .execute(&mut *tx)
+                .await
+                .map_err(|_| FAILED)?;
         }
         tx.commit().await.map_err(|_| FAILED)
     }
@@ -142,7 +162,7 @@ impl Store {
                 .fetch_all(pool)
                 .await
                 .map_err(|_| FAILED)?;
-        if installed != vec![(1, format!("{:x}", Sha256::digest(SCHEMA.as_bytes())))] {
+        if installed != versions() {
             return Err(Error(
                 "The runtime journal schema does not match this build.",
             ));
@@ -185,7 +205,7 @@ impl Store {
         let mut tx = self.pool.begin().await.map_err(|_| FAILED)?;
         sqlx::query("INSERT INTO forge_runtime.sessions(run_id,workspace_id,user_id,initial_hash,engine_state,deadline) VALUES($1,$2,$3,$4,$5::jsonb,$6) ON CONFLICT(run_id) DO NOTHING").bind(run(channel)?).bind(channel.workspace_id()).bind(channel.principal_id()).bind(&hash).bind(text).bind(deadline).execute(&mut *tx).await.map_err(|_|FAILED)?;
         let row = locked(&mut tx, channel).await?;
-        if row.initial_hash != hash || row.deadline != deadline {
+        if row.initial_hash != hash || row.deadline != deadline || row.conversation_id.is_some() {
             return Err(Error("The run already has a different runtime admission."));
         }
         let state = restored(&row, channel)?;

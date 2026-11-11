@@ -623,3 +623,66 @@ async fn stream_credentials_expire_independently_of_the_process_owned_worker() {
     );
     f.host.shutdown().await.unwrap();
 }
+
+#[tokio::test]
+async fn conversation_admission_carries_resolved_attachments_and_prior_turns_into_a_new_run() {
+    let f = Fixture::new(Mode::Finish, 2, 2).await;
+    let conversation = Uuid::new_v4();
+    let mut first = f.admission.clone();
+    first["conversationId"] = json!(conversation);
+    first["attachments"] = json!([{"name":"fixture.pdf","contentType":"application/pdf","contentBase64":"cHVibGljLWZpeHR1cmU="}]);
+    assert_eq!(
+        f.request("POST", "", Some(first.clone())).await.status(),
+        StatusCode::ACCEPTED
+    );
+    f.phase(Phase::Complete).await;
+    f.idle().await;
+    let run = Uuid::new_v4();
+    let token = token(
+        run,
+        "fixture-user",
+        "fixture-workspace",
+        Utc::now().timestamp(),
+        900.,
+    );
+    let path = format!("/native/v1/runs/{run}");
+    let next = json!({"conversationId":conversation,"previousRunId":f.run,"message":"Continue the conversation","deadline":f.admission["deadline"]});
+    assert_eq!(
+        request(&f.app, "POST", &path, Some(&token), Some(next))
+            .await
+            .status(),
+        StatusCode::ACCEPTED
+    );
+    let channel =
+        Channel::verify(SECRET, &format!("Bearer {token}"), Utc::now().timestamp()).unwrap();
+    let saved = f.store.load(&channel).await.unwrap();
+    assert_eq!(
+        saved.state.history()[1]["content"][1]["data"]["data"],
+        "cHVibGljLWZpeHR1cmU="
+    );
+    assert_eq!(saved.state.history()[2]["content"][0]["text"], "Saved.");
+    assert_eq!(
+        saved.state.history()[3]["content"][0]["text"],
+        "Continue the conversation"
+    );
+    for attachment in [
+        json!({"name":"bad.pdf","contentType":"application/pdf","contentBase64":"not base64!!"}),
+        json!({"name":"bad.txt","contentType":"text/plain","contentBase64":"aGk="}),
+        json!({"name":"bad.pdf","contentType":"application/pdf","contentBase64":"aGk=","url":"https://example.invalid/private"}),
+    ] {
+        let mut body = first.clone();
+        body["attachments"] = json!([attachment]);
+        assert_eq!(
+            f.request("POST", "", Some(body)).await.status(),
+            StatusCode::BAD_REQUEST
+        );
+    }
+    let mut missing = first;
+    missing.as_object_mut().unwrap().remove("conversationId");
+    missing["previousRunId"] = json!(f.run);
+    assert_eq!(
+        f.request("POST", "", Some(missing)).await.status(),
+        StatusCode::BAD_REQUEST
+    );
+    f.host.shutdown().await.unwrap();
+}

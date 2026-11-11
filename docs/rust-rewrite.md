@@ -67,6 +67,7 @@ gate pass.
 | 3b5s | Durable native run journal, ordered replay and worker fencing | Passed available gate |
 | 3b5t | Supervised native workers, credential lifetime and approval replay receipts | Passed available gate |
 | 3b5u | Native runtime HTTP admission, supervised hosting and durable approval delivery | Passed available gate |
+| 3b5v | Durable conversation continuity, interrupted tool history and resolved attachments | Passed available gate |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -1519,3 +1520,42 @@ these routes do not represent a completed rewrite.
   multi-turn conversations, resolved attachments and the application runtime
   adapter remain outstanding, along with framework built-ins/compaction, sandbox
   continuity and deployment qualification. `/ready` deliberately returns 503.
+
+
+### Milestone 3b5v
+
+- Full milestone gate passed: 440 Rust tests and 2,959 enabled TypeScript tests.
+  Formatting, Clippy, source contracts and typechecking passed; 661 reference
+  tests across 34 files remain skipped. Log:
+  `.forge/rust-rewrite/milestone-3b5v-initial.log`.
+- Private runtime conversations now bind the application's thread ID to one
+  principal/workspace and serialize admission against an exact previous run.
+  Concurrent sibling submissions cannot both advance the conversation. Identical
+  admission retries return the saved run, including after later turns, without
+  rewinding the latest-run pointer or rebuilding already accepted history.
+- Each new run inherits the parent's materialized messages and tool results and
+  receives fresh usage counters, pending actions and approval receipts. Only a
+  completed, failed or explicitly cancelled parent can be continued. Provider
+  item references and hidden reasoning/signatures are omitted between runs so a
+  different provider or model connection cannot reuse inaccessible cached items.
+- Interrupted tool steps preserve completed results, mark calls with unknown
+  outcomes explicitly and mark unstarted calls as unexecuted. No parent tool or
+  approval is automatically resumed in the child. Reconciliation UX remains
+  separate work; these history records do not claim that an unknown remote effect
+  failed or never occurred.
+- Native admission now optionally accepts `conversationId`, `previousRunId` and
+  `attachments`. Attachments contain application-authorized inline bytes as
+  `{name,contentType,contentBase64}`; remote URLs and arbitrary supplied history
+  are not accepted. Base64, count, filename and provider message bounds apply.
+  The existing four-MiB request/model envelope remains a limit; context compaction
+  and larger attachment strategies are still outstanding.
+- The private schema has an explicit second migration, with prefix/digest checks
+  and transactional upgrades. Tests upgrade an isolated v1 database containing a
+  saved run, reject altered migration digests and retain inherited history after
+  an ancestor is removed. The application's original 76 migrations are unchanged.
+- Six PostgreSQL conversation tests and an HTTP continuation/attachment test cover
+  provider switching, concurrent admission, ownership, active-parent rejection,
+  interrupted calls, old admission replay and schema upgrade. No real model or
+  production database was used. Application/native-runtime integration, existing
+  EVE conversation migration, framework built-ins, compaction, private runtime
+  retention and sandbox continuity remain outstanding; readiness remains 503.
