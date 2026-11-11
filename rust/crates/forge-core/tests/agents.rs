@@ -14,6 +14,18 @@ fn cases(group: &str) -> &'static Vec<Value> {
     DATA["agents"][group].as_array().unwrap()
 }
 #[test]
+fn operational_diagnostics_match_source_aggregates_and_percentiles() {
+    for case in DATA["agentDiagnostics"].as_array().unwrap() {
+        assert_eq!(
+            forge_core::agents::diagnostics::summarize(
+                &case["input"],
+                case["result"]["generatedAt"].as_str().unwrap()
+            ),
+            case["result"]
+        );
+    }
+}
+#[test]
 fn eve_runtime_events_and_durable_cursors_match_source() {
     use forge_core::agents::eve;
     for case in DATA["eve"]["events"].as_array().unwrap() {

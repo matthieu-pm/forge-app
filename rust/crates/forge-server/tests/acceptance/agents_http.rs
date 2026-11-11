@@ -126,6 +126,7 @@ impl AgentFixture {
             forge_server::agents::Settings::new(self.service.clone(), self.models.clone());
         settings.local_secret = SECRET.into();
         settings.artifact_secret = SECRET.into();
+        settings.capability_secret = SECRET.into();
         for flag in disabled {
             settings.features[*flag] = json!(false);
         }
@@ -627,4 +628,198 @@ async fn artifact_http_uses_bound_grants_and_inert_download_headers() {
         )
         .await;
     assert_eq!(r.status(), StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn capability_http_uses_only_bound_live_tokens_and_preserves_gateway_errors() {
+    use forge_core::agents::tokens::{self, Kind};
+    let mut f = AgentFixture::new().await;
+    let run = f.local_run(&f.thread().await).await;
+    let run = run["run"]["id"].as_str().unwrap();
+    let path = "/api/agent/capabilities/workspace.describe";
+    assert_eq!(
+        f.raw("GET", path, None, &[], Body::empty()).await.status(),
+        StatusCode::METHOD_NOT_ALLOWED
+    );
+    let r = f
+        .raw(
+            "POST",
+            path,
+            Some(&f.cookie),
+            &[("origin", ORIGIN)],
+            Body::from("{}"),
+        )
+        .await;
+    assert_eq!(value(r).await.1["error"]["code"], "UNAUTHORIZED");
+    let claims = tokens::capability_claims(
+        &f.actor,
+        run,
+        &Uuid::new_v4().to_string(),
+        &["workspace.describe".into()],
+    );
+    let token = tokens::mint(
+        SECRET,
+        Kind::Capability,
+        claims,
+        chrono::Utc::now().timestamp(),
+        900.,
+    )
+    .unwrap();
+    let bearer = format!("Bearer {token}");
+    let headers = [
+        ("authorization", bearer.as_str()),
+        ("x-forge-agent-run-id", run),
+        ("x-forge-workspace-id", f.actor.workspace_id.as_str()),
+    ];
+    let r = f
+        .raw(
+            "POST",
+            path,
+            None,
+            &headers,
+            Body::from("{\"version\":\"1\",\"input\":{}}"),
+        )
+        .await;
+    let (s, v) = value(r).await;
+    assert_eq!(s, StatusCode::OK, "{v}");
+    assert!(!v.to_string().contains(&token));
+    let r = f
+        .raw(
+            "POST",
+            "/api/agent/capabilities/teams.list",
+            None,
+            &headers,
+            Body::from("{\"version\":\"1\",\"input\":{}}"),
+        )
+        .await;
+    assert_eq!(r.status(), StatusCode::FORBIDDEN);
+    let r = f
+        .raw("POST", path, None, &headers, Body::from("{not-json-secret"))
+        .await;
+    let (s, v) = value(r).await;
+    assert_eq!(s, StatusCode::FORBIDDEN);
+    assert!(!v.to_string().contains("secret"));
+    f.service
+        .cancel_run(&f.actor, run.parse().unwrap())
+        .await
+        .unwrap();
+    let r = f
+        .raw(
+            "POST",
+            path,
+            None,
+            &headers,
+            Body::from("{\"version\":\"1\",\"input\":{}}"),
+        )
+        .await;
+    let (s, v) = value(r).await;
+    assert_eq!(s, StatusCode::BAD_REQUEST);
+    assert_eq!(v["error"]["code"], "FORBIDDEN");
+    f.configure(&["agent_write_tools"]);
+    assert_eq!(
+        f.raw(
+            "POST",
+            "/api/agent/capabilities/teams.update",
+            None,
+            &[],
+            Body::empty()
+        )
+        .await
+        .status(),
+        StatusCode::FORBIDDEN
+    );
+}
+
+#[tokio::test]
+async fn diagnostics_http_is_current_admin_only_and_contains_aggregates_without_chat_data() {
+    let f = AgentFixture::new().await;
+    let run = f.local_run(&f.thread().await).await;
+    let id = run["run"]["id"].as_str().unwrap();
+    f.service.ingest_local(&f.actor,id.parse().unwrap(),json!([{"sourceEventId":"diagnostic-usage","source":"codex","type":"run.usage","occurredAt":chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis,true),"payload":{"inputTokens":15,"outputTokens":4,"costMicros":12}},{"sourceEventId":"diagnostic-private","source":"codex","type":"assistant.delta","occurredAt":chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis,true),"payload":{"delta":"private sensitive chat text"}}])).await.unwrap();
+    let (s, _, v) =
+        f.f.request(
+            "GET",
+            "/api/agent/diagnostics?days=30",
+            Some(&f.cookie),
+            None,
+        )
+        .await;
+    assert_eq!(s, StatusCode::OK, "{v}");
+    assert_eq!(v["runs"]["total"], 1);
+    assert_eq!(v["usage"]["costMicros"], 12);
+    assert_eq!(v["usage"]["inputTokens"], 15);
+    assert!(!v.to_string().contains("private sensitive chat text"));
+    assert!(!v.to_string().contains(&f.actor.user_id));
+    for days in ["0", "91", "1.5", "NaN"] {
+        assert_eq!(
+            f.f.request(
+                "GET",
+                &format!("/api/agent/diagnostics?days={days}"),
+                Some(&f.cookie),
+                None
+            )
+            .await
+            .0,
+            StatusCode::BAD_REQUEST
+        );
+    }
+    sqlx::query("UPDATE member SET role='member' WHERE organization_id=$1 AND user_id=$2")
+        .bind(&f.actor.workspace_id)
+        .bind(&f.actor.user_id)
+        .execute(&f.f.pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        f.f.request("GET", "/api/agent/diagnostics", Some(&f.cookie), None)
+            .await
+            .0,
+        StatusCode::FORBIDDEN
+    );
+}
+
+#[tokio::test]
+async fn configured_agent_services_start_fixture_turns_without_provider_network_calls() {
+    let mut f = AgentFixture::new().await;
+    let env = std::collections::HashMap::from([
+        ("FORGE_AGENT_LOCAL_INGEST_SECRET".into(), SECRET.into()),
+        ("FORGE_AGENT_CAPABILITY_SECRET".into(), SECRET.into()),
+        ("FORGE_AGENT_MODEL_ACCESS_SECRET".into(), SECRET.into()),
+        ("AGENT_FAKE_RUNTIME_ENABLED".into(), "true".into()),
+        ("OPENAI_API_KEY".into(), "fixture-managed-key".into()),
+        ("FORGE_MANAGED_OPENAI_MODELS".into(), "gpt-5".into()),
+    ]);
+    let storage = forge_server::files::storage::Storage::local(&f.dir).unwrap();
+    let settings =
+        forge_server::agents::Settings::configured(f.f.database.clone(), storage, &env).unwrap();
+    assert!(settings.coordinator.attachments.is_some());
+    assert_eq!(
+        settings.coordinator.hosted.as_ref().unwrap().runtimes.len(),
+        1
+    );
+    f.f.app = forge_server::router_with_state(
+        AppState::configured_database(
+            f.f.database.clone(),
+            AuthSettings::new(SECRET.into(), ORIGIN).unwrap(),
+            None,
+        )
+        .with_agents(settings),
+    );
+    let thread = f.thread().await;
+    let r = f
+        .raw(
+            "POST",
+            "/api/agent/runs",
+            Some(&f.cookie),
+            &[("origin", ORIGIN)],
+            Body::from(
+                json!({"threadId":thread,"selectionMode":"auto","message":"Hello"}).to_string(),
+            ),
+        )
+        .await;
+    assert_eq!(r.status(), StatusCode::OK);
+    let bytes = r.into_body().collect().await.unwrap().to_bytes();
+    let text = String::from_utf8_lossy(&bytes);
+    assert!(text.contains("\"content\":\"Done\""));
+    assert!(text.contains("event: run.completed"));
+    assert!(!text.contains("fixture-managed-key"));
 }

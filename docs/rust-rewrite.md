@@ -57,7 +57,7 @@ gate pass.
 | 3b5i | Authenticated agent threads, local run preparation, ingestion and checkpoints | Passed available gate |
 | 3b5j | Hosted run coordination, streaming, reconnects, limits and approval resume | Passed available gate |
 | 3b5k | Agent HTTP endpoints, session/token boundaries and event streaming | Passed available gate |
-| 3b5l | Capability HTTP, diagnostics and agent startup composition | In progress |
+| 3b5l | Capability HTTP, diagnostics and agent startup composition | Passed available gate |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -1143,3 +1143,44 @@ these routes do not represent a completed rewrite.
   integration slice. Main has not yet composed these injected HTTP services; the
   product readiness endpoint remains unavailable, and no server or deployment was
   started for this milestone.
+
+### Milestone 3b5l
+
+- Full milestone gate passed: 360 Rust tests and 2,959 enabled TypeScript tests;
+  661 reference tests across 34 files remain skipped. Formatting, Clippy, source
+  contract checks and TypeScript typechecking passed. Log:
+  `.forge/rust-rewrite/milestone-3b5l-rerun.log`.
+
+- Capability HTTP accepts only the capability token audience and exact run,
+  workspace and capability bindings. It never falls back to a session, and the
+  canonical gateway checks current run/member/target authority before execution.
+  Write-tool feature checks apply to decoded capability names. Missing credentials,
+  rejected requests and structured gateway failures preserve the reference HTTP
+  status families without exposing upstream bodies or credentials.
+- Administrator diagnostics aggregate run states, routing, usage, approval and
+  tool outcomes, latency percentiles, sandbox activity and reconnects. Queries
+  require current workspace administrator authority and project only the two event
+  payload fields needed for aggregation. Prompts, tool arguments, actor IDs and
+  credentials do not appear in the response. Nine source-executed datasets cover
+  empty and mixed populations, absent measurements, repeated reconnects and
+  percentile boundaries.
+- Server startup now composes the agent coordinator, current model registry,
+  approved capability gateway, private file services and EVE adapter from explicit
+  configuration. Provider/capability allowlists and feature flags reach their owning
+  services. Model proxy and conversation setup share connection configuration.
+  The fixture runtime is selected only by the existing explicit fixture flag and
+  cannot substitute for staging/preview execution.
+- Runtime peer identity is restricted to the repository's reviewed staging peer
+  or the unique Vercel-injected preview branch. Missing, ambiguous or unrelated
+  peers fail closed. The native identity adapter reads a rotating token file on
+  each request, with a bounded read, or uses an explicitly provided environment
+  token. It never treats a caller-supplied HTTP header as trusted platform context.
+  Vercel's Node request-context/interactive refresh integration is not implemented;
+  hosted Rust deployment must supply a rotating file or valid environment identity
+  and pass separate deployment acceptance. The broader preview environment and
+  native hosting configuration remain part of deployment qualification.
+- Initial verification found whole-number JSON formatting differences in diagnostic
+  rates and invalid version/timestamp assumptions in two HTTP test fixtures. The
+  implementation formatting and fixtures were corrected before the complete rerun.
+  The hosted runtime service itself, linked loop authority, retention scheduling,
+  Rust UI/macOS host and production cutover remain outstanding.

@@ -27,6 +27,8 @@ use futures_util::StreamExt;
 use serde_json::{Value, json};
 use std::{convert::Infallible, sync::Arc};
 use uuid::Uuid;
+mod capability;
+mod configuration;
 mod errors;
 use errors::*;
 
@@ -37,6 +39,7 @@ pub struct Settings {
     pub features: Value,
     pub local_secret: String,
     pub artifact_secret: String,
+    pub capability_secret: String,
     pub now: Arc<dyn Fn() -> i64 + Send + Sync>,
 }
 impl Settings {
@@ -49,6 +52,7 @@ impl Settings {
             features: policy::features(&Default::default()),
             local_secret: String::new(),
             artifact_secret: String::new(),
+            capability_secret: String::new(),
             now: Arc::new(|| chrono::Utc::now().timestamp()),
         }
     }
@@ -241,6 +245,16 @@ async fn handle_inner(state: AppState, request: Request) -> Result<Response, Err
             "Model connections are not enabled.",
         ));
     }
+    if let ["capabilities", id] = parts.as_slice() {
+        if *id == "teams.update" && settings.features["agent_write_tools"] != true {
+            return Err(failure(
+                403,
+                "FEATURE_DISABLED",
+                "Agent write tools are not enabled.",
+            ));
+        }
+        return Ok(capability::handle(settings, request, id).await);
+    }
     let (db, auth) = auth::configuration(&state).map_err(|_| unavailable())?;
     if !matches!(
         *request.method(),
@@ -268,6 +282,24 @@ async fn handle_inner(state: AppState, request: Request) -> Result<Response, Err
     let c = &settings.coordinator;
     match (request.method().as_str(), parts.as_slice()) {
         ("GET", ["features"]) => Ok(json_response(settings.features.clone(), 200)),
+        ("GET", ["diagnostics"]) => {
+            let days = after(&query(request.uri(), "days").unwrap_or_else(|| "30".into()))?;
+            if !(1..=90).contains(&days) {
+                return Err(invalid());
+            }
+            let now = chrono::DateTime::from_timestamp_millis((c.now)().timestamp_millis())
+                .ok_or_else(invalid)?;
+            Ok(json_response(
+                forge_store::agents::diagnostics::read(
+                    db,
+                    &actor,
+                    now - chrono::Duration::days(i64::from(days)),
+                    now,
+                )
+                .await?,
+                200,
+            ))
+        }
         ("GET", ["threads"]) => Ok(json_response(json!(c.list_threads(&actor).await?), 200)),
         ("POST", ["threads"]) => Ok(json_response(
             json!(c.create_thread(&actor, body(request).await?).await?),

@@ -2,6 +2,7 @@
 pub mod approval;
 pub mod capabilities;
 pub mod contracts;
+pub mod diagnostics;
 pub mod eve;
 pub mod files;
 pub mod models;

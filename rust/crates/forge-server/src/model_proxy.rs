@@ -156,28 +156,8 @@ impl Vault for UnavailableVault {
 }
 impl Settings {
     pub fn configured(database: forge_store::Database, env: &HashMap<String, String>) -> Self {
-        let vault: Arc<dyn Vault> = env
-            .get("FORGE_MODEL_CREDENTIAL_KEK")
-            .and_then(|v| forge_identity::model_vault::Vault::new(v).ok())
-            .map_or_else(
-                || Arc::new(UnavailableVault) as Arc<dyn Vault>,
-                |v| Arc::new(v),
-            );
-        let mut service = Service::new(database, Arc::new(ProviderDiscovery::default()), vault);
+        let service = configured_connections(database, env);
         let features = policy::features(env);
-        let controls = policy::controls(env);
-        service.allowed_providers = controls["allowedProviders"].as_array().map(|v| {
-            v.iter()
-                .filter_map(|v| v.as_str().map(str::to_owned))
-                .collect()
-        });
-        service.managed_environment = env
-            .iter()
-            .filter(|(key, _)| {
-                ["OPENAI_API_KEY", "FORGE_MANAGED_OPENAI_MODELS"].contains(&key.as_str())
-            })
-            .map(|(k, v)| (k.clone(), v.clone()))
-            .collect();
         Self {
             secret: env
                 .get("FORGE_AGENT_MODEL_ACCESS_SECRET")
@@ -194,6 +174,33 @@ impl Settings {
             now: Arc::new(|| chrono::Utc::now().timestamp()),
         }
     }
+}
+pub(crate) fn configured_connections(
+    database: forge_store::Database,
+    env: &HashMap<String, String>,
+) -> Service {
+    let vault: Arc<dyn Vault> = env
+        .get("FORGE_MODEL_CREDENTIAL_KEK")
+        .and_then(|v| forge_identity::model_vault::Vault::new(v).ok())
+        .map_or_else(
+            || Arc::new(UnavailableVault) as Arc<dyn Vault>,
+            |v| Arc::new(v),
+        );
+    let mut service = Service::new(database, Arc::new(ProviderDiscovery::default()), vault);
+    let controls = policy::controls(env);
+    service.allowed_providers = controls["allowedProviders"].as_array().map(|v| {
+        v.iter()
+            .filter_map(|v| v.as_str().map(str::to_owned))
+            .collect()
+    });
+    service.managed_environment = env
+        .iter()
+        .filter(|(key, _)| {
+            ["OPENAI_API_KEY", "FORGE_MANAGED_OPENAI_MODELS"].contains(&key.as_str())
+        })
+        .map(|(k, v)| (k.clone(), v.clone()))
+        .collect();
+    service
 }
 fn error(status: StatusCode, code: &str, message: &str) -> Response {
     (
