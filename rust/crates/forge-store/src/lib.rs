@@ -1,6 +1,7 @@
 //! PostgreSQL adapters targeting Forge's existing Drizzle-managed schema.
 
 pub mod accounts;
+pub mod agents;
 pub mod api_keys;
 pub mod authority;
 pub mod commands;

@@ -47,7 +47,8 @@ gate pass.
 | 3b3 | Shared SLA policies, reconciliation and durable breach jobs | Passed available gate |
 | 3b4 | Account profiles, private avatar validation and concurrent profile edits | Passed available gate |
 | 3b5a | Agent protocols, model routing, execution policy and scoped credentials | Passed available gate |
-| 3b5b | Agent thread/run persistence, event ledger, approval and invocation reservations | In progress |
+| 3b5b | Agent thread/run persistence, event ledger, approval and invocation reservations | Passed available gate |
+| 3b5c | Live approval authority, exact input binding and single-use consumption | In progress |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -847,3 +848,28 @@ these routes do not represent a completed rewrite.
 - The initial gate found one character-classification lint; the complete rerun
   passed after correction. Agent execution, provider integration and the UI remain
   pending; this milestone does not expose an executable agent endpoint.
+
+### Milestone 3b5b
+
+- Full gate passed: 285 Rust tests, 2,959 enabled reference tests, typechecking,
+  formatting, Clippy and export checks. The 661 fixture-dependent reference tests
+  remain skipped. Log: `.forge/rust-rewrite/milestone-3b5b-final.log`.
+- Thread and run storage preserves workspace/creator filters, exclusion of loop
+  threads from ordinary chat lists, last-run state, nullable patches and runtime
+  identity constraints. Usage windows are inclusive/exclusive for costs; active
+  runs are counted independently of the billing window.
+- The event ledger preserves source-event replay, per-run sequence numbers and
+  the original five-attempt append policy. Payload safety is checked before
+  replay. Thread cursors remain per-run, with occurrence/sequence ordering.
+- Approval storage preserves nonce uniqueness and atomic state comparison.
+  Capability reservations preserve the original input hash and completed result
+  for the service to validate before replay. Model preferences retain the current
+  schema constraints. These are trusted persistence adapters, not exposed routes;
+  current-actor and target authorization belong to the next service integration.
+- Eight PostgreSQL/recovery cases cover competing appends/reservations/decisions,
+  identity filters, explicit nulls, billing boundaries, nested JSON, rollback of
+  approval/event pairs, failed journal preparation and archived reservation
+  deletion. The journal retains its existing identifier/deletion field coverage.
+- Initial gates found a SQLx generated-conversion incompatibility and two test
+  lints. Explicit bounded JSON row decoding fixed the conversion without changing
+  dependencies; the final complete gate passed after all corrections.

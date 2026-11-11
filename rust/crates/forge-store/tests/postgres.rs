@@ -9,6 +9,8 @@ use serde_json::{Value, json};
 use sqlx::{PgConnection, PgPool, postgres::PgPoolOptions};
 use uuid::Uuid;
 
+#[path = "acceptance/agents.rs"]
+mod agent_acceptance;
 #[path = "acceptance/definitions.rs"]
 mod definition_acceptance;
 #[path = "acceptance/documents.rs"]
