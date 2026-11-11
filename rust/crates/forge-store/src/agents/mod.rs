@@ -13,6 +13,7 @@ pub mod invocations;
 pub mod model_connections;
 pub mod preferences;
 pub mod records;
+pub mod retention;
 pub mod runs;
 pub mod threads;
 

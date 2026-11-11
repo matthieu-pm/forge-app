@@ -6,30 +6,11 @@ use forge_store::{
 use std::sync::Arc;
 
 async fn run() -> Result<serde_json::Value, Error> {
-    let connection = std::env::var("DATABASE_URL").map_err(|_| Code::InvalidInput)?;
-    let environment = std::env::var("FORGE_ENVIRONMENT").map_err(|_| Code::InvalidInput)?;
-    if !["development", "staging", "production"].contains(&environment.as_str())
-        || (environment == "development"
-            && ["NODE_ENV", "VERCEL_ENV"]
-                .iter()
-                .any(|k| std::env::var(k).as_deref() == Ok("production")))
-    {
-        return Err(Code::InvalidInput.into());
-    }
-    let url = url::Url::parse(&connection).map_err(|_| Code::InvalidInput)?;
-    if !["postgres", "postgresql"].contains(&url.scheme())
-        || url.host_str().is_none()
-        || url.path().len() <= 1
-    {
-        return Err(Code::InvalidInput.into());
-    }
-    forge_core::features::FeatureRollouts::parse(
-        std::env::var("FORGE_FEATURE_ROLLOUTS").ok().as_deref(),
-    )
-    .map_err(|_| Code::InvalidInput)?;
+    let env = std::env::vars().collect();
+    let connection = forge_server::operator::database_url(&env).map_err(|_| Code::InvalidInput)?;
     let pool = sqlx::postgres::PgPoolOptions::new()
         .max_connections(5)
-        .connect(&connection)
+        .connect(connection)
         .await
         .map_err(|_| Code::JobFailed)?;
     let journal = forge_recovery::R2Journal::from_environment().map_err(|_| Code::InvalidInput)?;

@@ -79,6 +79,7 @@ gate pass.
 | 3b5ae | Conversation token budgets and durable allowance continuation | Passed |
 | 3b5af | Provider search request/response protocols and citations | Passed |
 | 3b5ag | Provider search execution, durable receipts and cross-provider history | Passed |
+| 3b6 | Scheduled agent-file retention and operational failure reporting | Passed |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -1966,3 +1967,32 @@ these routes do not represent a completed rewrite.
 - Full milestone gate passed: 516 Rust tests, 2,959 enabled TypeScript tests,
   all source-fixture drift checks, formatting, Clippy and three package
   typechecks. Evidence: `.forge/rust-rewrite/milestone-3b5ag-verified.log`.
+
+### Milestone 3b6
+
+- `cargo run -p forge-server --bin forge-retention -- agent` runs the existing
+  artifact, attachment and upload cleanup services together, with the source
+  limit of 1,000 candidates per sweep. Every started sweep settles before the
+  process returns, including when another sweep fails early.
+- The job records `agent.retention` health using the existing operational table.
+  Success advances `completed_at`; partial object failures and query failures
+  advance only `failed_at`. Reports contain counts, and process errors contain
+  fixed codes without SQL, credentials, storage paths or private file content.
+  Any cleanup failure produces an unsuccessful process exit.
+- Native operator commands require an explicit `DATABASE_URL` and
+  `FORGE_ENVIRONMENT`, reject production-to-development downgrades and never load
+  dotenv files. The existing jobs operator shares the same validation. Storage
+  and recovery-journal configuration are checked before the retention database
+  connection is opened. No external schedule is registered by this command.
+- Acceptance runs the real executable with local files and a separate disposable
+  database containing all 76 application migrations. It covers partial deletion
+  failures, retries, successful/failure heartbeat transitions, a failed query
+  alongside another completing sweep, upload-token quarantine and redacted CLI
+  failures. Existing service tests retain their journal and concurrency coverage.
+- This job cleans application file objects only. Product/desktop retention,
+  private native-runtime/sandbox retention, other scheduled services and final
+  deployment qualification remain separate unfinished work.
+
+- Full milestone gate passed: 519 Rust tests, 2,959 enabled TypeScript tests,
+  source-fixture drift checks, formatting, Clippy and three package typechecks.
+  Evidence: `.forge/rust-rewrite/milestone-3b6-verified.log`.

@@ -15,6 +15,7 @@ pub mod model_proxy;
 pub mod native_runtime;
 mod oauth;
 pub mod oauth_provider;
+pub mod operator;
 mod planning;
 mod preferences;
 mod product_state;
