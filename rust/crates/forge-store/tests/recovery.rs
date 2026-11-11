@@ -66,6 +66,75 @@ struct Fixture {
 }
 
 #[tokio::test]
+async fn document_tombstone_and_history_wait_for_recovery_preparation() {
+    use forge_store::documents::{self, DocumentOptions};
+    use serde_json::json;
+    let f = Fixture::new().await;
+    forge_store::workspaces::create(
+        &f.database,
+        &f.token,
+        "Recovery documents",
+        &Uuid::new_v4().to_string(),
+        None,
+    )
+    .await
+    .unwrap();
+    let actor = forge_store::authority::session_actor(&f.database, &f.token)
+        .await
+        .unwrap();
+    let options = DocumentOptions {
+        enabled: true,
+        team_resources: false,
+    };
+    let id = Uuid::new_v4();
+    documents::command(&f.database,&actor,&Uuid::new_v4().to_string(),json!({"action":"create","id":id,"source":{"kind":"workspace"},"fields":{"title":"Retained writing","body":forge_core::documents::empty_body(),"icon":forge_core::documents::default_icon()}}),options).await.unwrap();
+    let key = Uuid::new_v4().to_string();
+    let input = json!({"action":"delete","id":id,"expectedRevision":1});
+    f.backend.mode.store(1, Ordering::Relaxed);
+    assert!(
+        documents::command(&f.database, &actor, &key, input.clone(), options)
+            .await
+            .is_err()
+    );
+    assert_eq!(
+        documents::read(&f.database, &actor, None, Some(id), options)
+            .await
+            .unwrap()[0]["revision"],
+        1
+    );
+    let history: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM document_revisions WHERE document_id=$1")
+            .bind(id)
+            .fetch_one(&f.pool)
+            .await
+            .unwrap();
+    assert_eq!(history, 1);
+    f.backend.mode.store(0, Ordering::Relaxed);
+    assert_eq!(
+        documents::command(&f.database, &actor, &key, input, options)
+            .await
+            .unwrap()["revision"],
+        2
+    );
+    assert!(
+        documents::read(&f.database, &actor, None, Some(id), options)
+            .await
+            .is_err()
+    );
+    assert!(
+        f.backend
+            .completed
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|(_, events)| events.iter().any(|e| e.table == "documents"
+                && e.patch
+                    .as_ref()
+                    .is_some_and(|p| p.get("deleted_at").is_some_and(|v| !v.is_null()))))
+    );
+}
+
+#[tokio::test]
 async fn canonical_issue_effects_and_history_roll_back_when_preparation_fails() {
     use forge_core::issues::{CreateIssue, EditIssues};
     use forge_store::issues::{self, IssueOptions};

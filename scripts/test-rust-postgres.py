@@ -54,6 +54,8 @@ def main():
             print(f'Applied all {len(statements)} reference migrations to disposable local PostgreSQL.', flush=True)
             environment = os.environ.copy()
             environment["FORGE_FEATURE_INITIATIVES"] = "true"
+            environment["FORGE_SHARED_DOCUMENTS_ENABLED"] = "true"
+            environment["FORGE_TEAM_RESOURCES_ENABLED"] = "true"
             environment["FORGE_RUST_TEST_DATABASE_URL"] = connection
             environment["FORGE_RUST_JOURNAL_TEST_DATABASE_URL"] = journal_connection
             return subprocess.run(["cargo", "test", "--workspace", "--locked", "--no-fail-fast"], cwd=ROOT, env=environment).returncode

@@ -538,3 +538,88 @@ fn initiative_contracts_and_settings_match_reference() {
         }
     }
 }
+
+#[test]
+fn documents_match_closed_content_commands_and_lossless_legacy_recovery() {
+    use forge_core::documents as d;
+    use serde_json::json;
+    let fixtures: Value =
+        serde_json::from_str(include_str!("../../../reference-fixtures.json")).unwrap();
+    let f = &fixtures["documentContracts"];
+    for (i, c) in f["cases"].as_array().unwrap().iter().enumerate() {
+        let v = c["input"].clone();
+        let result = match c["kind"].as_str().unwrap() {
+            "body" => d::body(v),
+            "fields" => d::fields(v),
+            "source" => d::source(v),
+            "command" => d::command(v),
+            _ => unreachable!(),
+        };
+        assert_eq!(result.is_ok(), c["valid"], "document case {i}: {result:?}");
+        if let Ok(value) = result {
+            assert_eq!(value, c["expected"], "document case {i}");
+            if c["kind"] == "body" {
+                assert_eq!(d::plain_text(&value), c["plain"], "document text {i}");
+            }
+        }
+    }
+    for c in f["stress"].as_array().unwrap() {
+        let n = c["count"].as_u64().unwrap() as usize;
+        let body = match c["kind"].as_str().unwrap() {
+            "depth" => {
+                let mut node = json!({"type":"paragraph"});
+                for _ in 1..n {
+                    node = json!({"type":"blockquote","content":[node]});
+                }
+                json!({"type":"doc","content":[node]})
+            }
+            "nodes" => json!({"type":"doc","content":vec![json!({"type":"paragraph"});n]}),
+            "size" => {
+                json!({"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"a".repeat(n)}]}]})
+            }
+            _ => unreachable!(),
+        };
+        let raw = serde_json::to_string(&body).unwrap();
+        assert_eq!(forge_core::json::parse(&raw).unwrap(), body);
+        assert_eq!(d::body(body).is_ok(), c["valid"], "document boundary {c}");
+    }
+    for c in f["features"].as_array().unwrap() {
+        assert_eq!(
+            d::feature_enabled(&c["env"], "FORGE_SHARED_DOCUMENTS_ENABLED"),
+            c["expected"]
+        );
+    }
+    for c in f["matches"].as_array().unwrap() {
+        assert_eq!(
+            d::matches_legacy(&c["resource"], &c["fields"], c["kind"].as_str().unwrap()),
+            c["expected"],
+            "legacy {c}"
+        );
+    }
+    for c in f["retained"].as_array().unwrap() {
+        let ids = c["ids"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v.as_str().unwrap().to_owned())
+            .collect();
+        let result = d::retain_copies(c["value"].as_str(), c["previous"].as_str(), &ids);
+        assert_eq!(result.is_ok(), c["valid"], "retention {c}");
+        if let Ok(value) = result {
+            assert_eq!(json!(value), c["expected"]);
+        }
+    }
+}
+
+#[test]
+fn bounded_json_accepts_supported_nesting_and_rejects_excess_and_trailing_data() {
+    for count in [128, 256, 257] {
+        let raw = format!("{}0{}", "[".repeat(count), "]".repeat(count));
+        assert_eq!(forge_core::json::parse(&raw).is_ok(), count <= 256);
+    }
+    for raw in ["{} {}", "[}", "[", "\"unterminated", "{\"a\": NaN}"] {
+        assert!(forge_core::json::parse(raw).is_err());
+    }
+    let raw = serde_json::to_string(&"[\\\"".repeat(300)).unwrap();
+    assert!(forge_core::json::parse(&raw).is_ok());
+}

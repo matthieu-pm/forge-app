@@ -8,6 +8,7 @@ pub mod comments;
 mod contract;
 pub mod cycles;
 pub mod definitions;
+pub mod documents;
 pub mod features;
 pub mod initiatives;
 pub mod issue_query;
@@ -21,3 +22,5 @@ pub mod subscription;
 pub mod teams;
 pub mod text;
 pub mod visibility;
+
+pub mod json;

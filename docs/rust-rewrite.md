@@ -32,7 +32,8 @@ gate pass.
 | 2b4 | Triage, recoverable issue lifecycle and cycles | Passed available gate; retention workers belong to milestone 3 |
 | 2c1 | Shared projects, catalogs, milestones and posts | Passed available gate |
 | 2c2 | Shared initiatives and planning queries | Passed available gate |
-| 2c3 | Documents, views, resources and imports | Pending |
+| 2c3 | Shared documents, revision history and legacy document recovery | Passed available gate |
+| 2c4 | Views, resources, product state and imports | Pending |
 | 3 | Agent execution, approvals, streams, models, files, retention, jobs, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -403,3 +404,41 @@ these routes do not represent a completed rewrite.
   are not claimed by these read APIs; canonical issue relationship writes already
   use the milestone 2b commands. The full UI remains pending.
 - Gate log: `.forge/rust-rewrite/milestone-2c2-final.log`.
+
+### Milestone 2c3
+
+- Full gate passed: 158 Rust tests, all 2,959 enabled reference tests, TypeScript
+  typechecking, formatting and Clippy. The 661 external-fixture reference tests
+  remain skipped. Both disposable databases applied all 75 source migrations.
+
+- Document content, source and command normalization match 142 source fixtures,
+  eight size/depth/node boundaries, 11 environment flag cases, 20 reviewed-import
+  comparisons and 10 lossless draft-retention cases.
+- Canonical `documents.write@1` commands serialize source visibility, revision
+  checks, history, receipts and outbox events. Replays recheck current authority;
+  conflicting edits return a freshly authorized snapshot without durable effects.
+- Shared reads preserve current team/project/issue visibility, owner/admin delete
+  rights and administrator-only workspace sharing. Sharing exposes the document
+  without disclosing private source metadata. Deleted content stays out of reads
+  and history; uncertain create/delete receipts can acknowledge existing tombstones.
+- History pages retain 30 descending revisions. Restoring content appends history,
+  refuses stale revisions and rejects unsafe snapshots. Unsafe stored bodies stay
+  recoverable as raw data with an explicit marker. Team sections validate new
+  placements, preserve unchanged legacy placements and restore removed sections at
+  the root without overwriting current board state.
+- Explicit legacy imports consume only the author's exact reviewed team copy or
+  the selected project copy. Divergent duplicate or removed sources conflict;
+  unrelated resources and other authors' writing remain intact. Canonical IDs,
+  including tombstones, move remaining personal copies into raw recovery drafts
+  through a helper to be integrated with product-state writes in milestone 2c4.
+- Bounded JSON parsing supports the source's 64-node depth through HTTP, PostgreSQL,
+  planning details and history. The document routes accept valid Unicode bodies
+  larger than the ordinary 2 MiB HTTP limit while enforcing the source content
+  limit. Request bytes and JSON container nesting are bounded separately.
+- Database acceptance covers concurrent edits, rollback on history failure,
+  sharing/revocation, deletion, imports and feature gates. HTTP checks include
+  session/workspace binding, nested content and large Unicode bodies. Recovery
+  checks verify tombstone rollback on preparation failure and journal publication.
+- The document editor, upload/download transports and production qualification
+  remain with later milestones. No production state was modified.
+- Gate log: `.forge/rust-rewrite/milestone-2c3-final.log`.

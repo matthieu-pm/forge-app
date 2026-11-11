@@ -147,17 +147,19 @@ async fn resource(
         _ => format!("jsonb_build_object('id',r.id,'title',{})", kind.title()),
     };
     let q = format!(
-        "{CONTEXT} SELECT {projection} FROM {} r WHERE r.workspace_id=$1 AND r.id=$4 AND {}",
+        "{CONTEXT} SELECT ({projection})::text FROM {} r WHERE r.workspace_id=$1 AND r.id=$4 AND {}",
         kind.table(),
         kind.visibility()
     );
-    Ok(sqlx::query_scalar(&q)
+    let raw: Option<String> = sqlx::query_scalar(&q)
         .bind(&a.workspace_id)
         .bind(policy::privileged(a))
         .bind(&a.user_id)
         .bind(id)
         .fetch_optional(c)
-        .await?)
+        .await?;
+    raw.map(|s| forge_core::json::parse(&s).map_err(|_| StoreError::InvalidInput))
+        .transpose()
 }
 pub async fn get(db: &Database, a: &Actor, kind: Resource, id: Uuid) -> Result<Value, StoreError> {
     let mut tx = db.begin().await?;

@@ -7,6 +7,7 @@ pub mod commands;
 pub mod database;
 pub mod definitions;
 pub mod desktop_auth;
+pub mod documents;
 pub mod initiatives;
 pub mod issues;
 pub mod joins;
@@ -52,6 +53,8 @@ pub enum StoreError {
     DomainUnverified,
     #[error(transparent)]
     Team(#[from] forge_core::teams::TeamError),
+    #[error("This document changed in another session.")]
+    DocumentConflict,
     #[error("{0}")]
     Planning(&'static str),
     #[error("{0}")]

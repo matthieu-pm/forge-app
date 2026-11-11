@@ -11,7 +11,7 @@ pub fn page(value: Value) -> Result<Value> {
     Ok(o.finish())
 }
 
-fn chart(v: Value) -> Result<Value> {
+pub(crate) fn chart(v: Value) -> Result<Value> {
     let mut o = Object::new(
         v,
         &[

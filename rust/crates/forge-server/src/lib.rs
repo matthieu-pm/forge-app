@@ -3,6 +3,7 @@
 mod auth;
 mod definitions;
 mod desktop_auth;
+mod documents;
 mod issues;
 pub mod mail;
 mod oauth;
@@ -29,6 +30,14 @@ pub fn router() -> Router {
 
 pub fn router_with_state(state: state::AppState) -> Router {
     let auth_routes = Router::new()
+        .merge(
+            Router::new()
+                .route("/api/workspace/documents", post(documents::write))
+                .route("/api/workspace/documents/read", post(documents::read))
+                .route("/api/workspace/documents/history", post(documents::history))
+                .route("/api/workspace/documents/share", post(documents::share))
+                .layer(axum::extract::DefaultBodyLimit::max(8 * 1024 * 1024)),
+        )
         .route(
             "/api/workspace/initiatives",
             get(planning::initiatives).post(planning::save_initiatives),

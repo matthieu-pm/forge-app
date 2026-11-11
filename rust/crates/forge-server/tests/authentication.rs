@@ -327,6 +327,122 @@ struct Fixture {
 }
 
 #[tokio::test]
+async fn document_http_supports_rich_depth_large_unicode_history_and_bound_session_context() {
+    let f = Fixture::new().await;
+    let (_, token, cookie) = f.account().await;
+    forge_store::workspaces::create(
+        &f.database,
+        &token,
+        "Document HTTP",
+        &Uuid::new_v4().to_string(),
+        None,
+    )
+    .await
+    .unwrap();
+    let actor = forge_store::authority::session_actor(&f.database, &token)
+        .await
+        .unwrap();
+    let forge_core::actor::Authentication::Session { session_id } = actor.authentication else {
+        panic!("session")
+    };
+    let bind = |mut v: Value| {
+        v["workspaceId"] = json!(actor.workspace_id);
+        v["sessionId"] = json!(session_id);
+        v
+    };
+    let id = Uuid::new_v4();
+    let mut body = json!({"type":"paragraph"});
+    for _ in 1..64 {
+        body = json!({"type":"blockquote","content":[body]});
+    }
+    body = json!({"type":"doc","content":[body]});
+    let fields =
+        json!({"title":"Deep document","body":body,"icon":forge_core::documents::default_icon()});
+    let input = bind(
+        json!({"commandKey":Uuid::new_v4(),"command":{"action":"create","id":id,"source":{"kind":"workspace"},"fields":fields}}),
+    );
+    let (status, _, saved) = f
+        .request(
+            "POST",
+            "/api/workspace/documents",
+            Some(&cookie),
+            Some(input.clone()),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{saved}");
+    assert_eq!(saved["revision"], 1);
+    let (status, _, rows) = f
+        .request(
+            "POST",
+            "/api/workspace/documents/read",
+            Some(&cookie),
+            Some(bind(json!({"id":id}))),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{rows}");
+    assert_eq!(rows[0]["body"], body);
+    let (status, _, history) = f
+        .request(
+            "POST",
+            "/api/workspace/documents/history",
+            Some(&cookie),
+            Some(bind(json!({"id":id}))),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{history}");
+    assert_eq!(history[0]["body"], body);
+    let (status, _, shared) = f
+        .request(
+            "POST",
+            "/api/workspace/documents/share",
+            Some(&cookie),
+            Some(bind(json!({"id":id,"shared":true}))),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{shared}");
+    assert_eq!(shared["id"], id.to_string());
+    let mut wrong = input.clone();
+    wrong["sessionId"] = json!("other-session");
+    assert_eq!(
+        f.request(
+            "POST",
+            "/api/workspace/documents",
+            Some(&cookie),
+            Some(wrong)
+        )
+        .await
+        .0,
+        StatusCode::FORBIDDEN
+    );
+    let mut invalid = input.clone();
+    invalid["command"]["fields"]["body"] = json!({"type":"script"});
+    assert_eq!(
+        f.request(
+            "POST",
+            "/api/workspace/documents",
+            Some(&cookie),
+            Some(invalid)
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
+    let mut large = input;
+    large["commandKey"] = json!(Uuid::new_v4());
+    large["command"]["id"] = json!(Uuid::new_v4());
+    large["command"]["fields"]["body"] = json!({"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"☃".repeat(710_000)}]}]});
+    let (status, _, saved) = f
+        .request(
+            "POST",
+            "/api/workspace/documents",
+            Some(&cookie),
+            Some(large),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{saved}");
+}
+
+#[tokio::test]
 async fn issue_http_commands_preserve_bound_sessions_and_expose_discussion_and_history() {
     let f = Fixture::new().await;
     let (_, token, cookie) = f.account().await;
@@ -683,7 +799,7 @@ impl Fixture {
         let body = if bytes.is_empty() {
             Value::Null
         } else {
-            serde_json::from_slice(&bytes).unwrap()
+            forge_core::json::parse(std::str::from_utf8(&bytes).unwrap()).unwrap()
         };
         (status, headers, body)
     }
