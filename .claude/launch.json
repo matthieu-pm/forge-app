@@ -6,6 +6,12 @@
       "runtimeExecutable": "bun",
       "runtimeArgs": ["run", "dev"],
       "port": 3000
+    },
+    {
+      "name": "forge-website",
+      "runtimeExecutable": "apps/website/node_modules/.bin/vite",
+      "runtimeArgs": ["apps/website", "--host", "127.0.0.1", "--port", "4410", "--strictPort"],
+      "port": 4410
     }
   ]
 }
