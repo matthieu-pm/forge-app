@@ -77,6 +77,7 @@ gate pass.
 | 3b5ac | Bounded native tool displays and exact approval-input validation | Passed available gate |
 | 3b5ad | Native public web retrieval, HTML conversion and durable read recovery | Passed |
 | 3b5ae | Conversation token budgets and durable allowance continuation | Passed |
+| 3b5af | Provider search request/response protocols and citations | Passed |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -1901,3 +1902,33 @@ these routes do not represent a completed rewrite.
 - Full milestone gate passed: 504 Rust tests, 2,959 enabled TypeScript tests,
   source-fixture drift checks, formatting, Clippy and all three package
   typechecks. Evidence: `.forge/rust-rewrite/milestone-3b5ae-verified.log`.
+
+
+### Milestone 3b5af
+
+- The model protocol layer accepts the pinned OpenAI Responses `web_search` and
+  Anthropic `web_search_20250305` definitions. Requests, item references, search
+  history, opaque Anthropic results and provider errors follow SDK fixtures.
+  Chat-completions providers omit the unsupported provider tool as the SDK does.
+- Stream parsing distinguishes provider-executed search from authored function
+  calls. Search results require their matching completed call and a terminal
+  response; duplicate, foreign, unsupported and incomplete items fail closed.
+  Search-only results retain the provider's stop reason for the engine's later
+  continuation decision. No host capability or sandbox executes these parts.
+- URL citations retain source links and native display metadata, plus provider
+  annotations needed by subsequent model steps. Anthropic encrypted citation
+  references stay in the private provider history. Existing event and body byte
+  bounds still apply; citation arrays additionally cap at 1,024 entries.
+- Source fixtures capture 24 requests and 14 streams using the installed SDKs
+  with in-memory fetches. Tests cover request/history parity, results, citations,
+  truncated responses, forged provider actions and malformed/oversized metadata.
+- This milestone does not yet advertise search in the engine. Execution receipts,
+  conversation/compaction handling and public presentation follow in the next
+  milestone. Inspection also found that EVE's dynamic model reference drops the
+  source field used to select a search backend, defaulting it to the Gateway's
+  parallel tool. Native enablement will use the authenticated provider binding;
+  it does not change the existing default EVE transport.
+
+- Full milestone gate passed: 508 Rust tests, 2,959 enabled TypeScript tests,
+  all source-fixture drift checks, formatting, Clippy and three package
+  typechecks. Evidence: `.forge/rust-rewrite/milestone-3b5af-verified2.log`.

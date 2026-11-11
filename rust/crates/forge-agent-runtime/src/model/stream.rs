@@ -56,6 +56,8 @@ enum Kind {
     Text,
     Reasoning,
     Tool,
+    Search,
+    SearchResult,
 }
 struct Block {
     kind: Kind,
@@ -66,6 +68,7 @@ struct Block {
     metadata: Value,
     closed: bool,
     incomplete: bool,
+    result: Option<Value>,
 }
 impl Block {
     fn new(kind: Kind, id: String) -> Self {
@@ -78,6 +81,7 @@ impl Block {
             metadata: json!({}),
             closed: false,
             incomplete: false,
+            result: None,
         }
     }
     fn append(&mut self, text: &str) -> Result<Delta> {
@@ -94,11 +98,12 @@ impl Block {
                 id: self.id.clone(),
                 text: text.into(),
             },
-            Kind::Tool => Delta::ToolInput {
+            Kind::Tool | Kind::Search => Delta::ToolInput {
                 id: self.id.clone(),
                 name: self.name.clone(),
                 text: text.into(),
             },
+            Kind::SearchResult => return Err(INVALID),
         })
     }
 }
@@ -235,7 +240,9 @@ impl Parser {
     fn insert(&mut self, index: u64, block: Block) -> Result<()> {
         if self.blocks.len() >= 128
             || self.blocks.contains_key(&index)
-            || self.blocks.values().any(|b| b.id == block.id)
+            || self.blocks.values().any(|b| {
+                b.id == block.id && b.kind != Kind::SearchResult && block.kind != Kind::SearchResult
+            })
         {
             return Err(INVALID);
         }
@@ -288,7 +295,13 @@ impl Parser {
         let size = self
             .blocks
             .values()
-            .map(|b| b.text.len() + javascript_stringify(&b.metadata).len())
+            .map(|b| {
+                b.text.len()
+                    + javascript_stringify(&b.metadata).len()
+                    + b.result
+                        .as_ref()
+                        .map_or(0, |v| javascript_stringify(v).len())
+            })
             .sum::<usize>();
         if size > LIMIT {
             return Err(INVALID);
@@ -321,6 +334,7 @@ impl Parser {
                     "message" => Kind::Text,
                     "reasoning" => Kind::Reasoning,
                     "function_call" => Kind::Tool,
+                    "web_search_call" => Kind::Search,
                     _ => return Err(INVALID),
                 };
                 let mut b = Block::new(
@@ -332,7 +346,12 @@ impl Parser {
                     },
                 );
                 b.item_id = Some(item_id.clone());
-                b.metadata = json!({"openai":{"itemId":item_id}});
+                if kind == Kind::Search {
+                    b.name = "web_search".into();
+                    b.text = "{}".into();
+                } else {
+                    b.metadata = json!({"openai":{"itemId":item_id}});
+                }
                 if let Some(phase) = item.get("phase").filter(|v| !v.is_null()) {
                     b.metadata["openai"]["phase"] = phase.clone();
                 }
@@ -372,6 +391,8 @@ impl Parser {
                     Kind::Text => "message",
                     Kind::Reasoning => "reasoning",
                     Kind::Tool => "function_call",
+                    Kind::Search => "web_search_call",
+                    Kind::SearchResult => return Err(INVALID),
                 };
                 if text(item, "type")? != expected {
                     return Err(INVALID);
@@ -391,6 +412,14 @@ impl Parser {
                     } else if b.text != arguments {
                         return Err(INVALID);
                     }
+                }
+                if b.kind == Kind::Search {
+                    if text(item, "status")? != "completed" {
+                        return Err(INVALID);
+                    }
+                    b.result = Some(
+                        json!({"type":"json","value":super::search::response_output(&item["action"])?}),
+                    );
                 }
                 b.closed = true;
             }
@@ -425,6 +454,27 @@ impl Parser {
                 });
                 self.raw_usage = response["usage"].clone();
                 self.terminal = true;
+            }
+            "response.web_search_call.in_progress"
+            | "response.web_search_call.searching"
+            | "response.web_search_call.completed" => {
+                let b = self
+                    .blocks
+                    .get(&index(&value, "output_index")?)
+                    .ok_or(INVALID)?;
+                if b.kind != Kind::Search || b.closed || b.id != text(&value, "item_id")? {
+                    return Err(INVALID);
+                }
+            }
+            "response.output_text.annotation.added" => {
+                let b = self.by_item(text(&value, "item_id")?)?;
+                if b.kind != Kind::Text || b.closed {
+                    return Err(INVALID);
+                }
+                let a = &value["annotation"];
+                let source = super::search::citation(Protocol::Responses, a)?;
+                add_source(b, source)?;
+                add_citation(b, "openai", "annotations", a.clone())?;
             }
             "response.in_progress"
             | "response.content_part.added"
@@ -537,17 +587,21 @@ impl Parser {
                     "text" => Kind::Text,
                     "thinking" | "redacted_thinking" => Kind::Reasoning,
                     "tool_use" => Kind::Tool,
+                    "server_tool_use" if block["name"] == "web_search" => Kind::Search,
+                    "web_search_tool_result" => Kind::SearchResult,
                     _ => return Err(INVALID),
                 };
                 let mut b = Block::new(
                     kind,
-                    if kind == Kind::Tool {
+                    if matches!(kind, Kind::Tool | Kind::Search) {
                         identity(block, "id")?
+                    } else if kind == Kind::SearchResult {
+                        identity(block, "tool_use_id")?
                     } else {
                         i.to_string()
                     },
                 );
-                if kind == Kind::Tool {
+                if matches!(kind, Kind::Tool | Kind::Search) {
                     b.name = identity(block, "name")?;
                     if let Some(object) = block["input"].as_object() {
                         if !object.is_empty() {
@@ -559,6 +613,20 @@ impl Parser {
                     if !block["caller"].is_null() && block["caller"]["type"] != "direct" {
                         return Err(INVALID);
                     }
+                } else if kind == Kind::SearchResult {
+                    if !self
+                        .blocks
+                        .values()
+                        .any(|p| p.kind == Kind::Search && p.id == b.id && p.closed)
+                        || self
+                            .blocks
+                            .values()
+                            .any(|p| p.kind == Kind::SearchResult && p.id == b.id)
+                    {
+                        return Err(INVALID);
+                    }
+                    b.name = "web_search".into();
+                    b.result = Some(super::search::anthropic_output(&block["content"])?);
                 } else if block["type"] == "redacted_thinking" {
                     b.metadata = json!({"anthropic":{"redactedData":text(block,"data")?}});
                 }
@@ -573,7 +641,23 @@ impl Parser {
                 let (kind, key) = match text(d, "type")? {
                     "text_delta" => (Kind::Text, "text"),
                     "thinking_delta" => (Kind::Reasoning, "thinking"),
-                    "input_json_delta" => (Kind::Tool, "partial_json"),
+                    "input_json_delta" => (
+                        if b.kind == Kind::Search {
+                            Kind::Search
+                        } else {
+                            Kind::Tool
+                        },
+                        "partial_json",
+                    ),
+                    "citations_delta" => {
+                        if b.kind != Kind::Text || b.closed {
+                            return Err(INVALID);
+                        }
+                        let c = &d["citation"];
+                        add_source(b, super::search::citation(Protocol::Anthropic, c)?)?;
+                        add_citation(b, "anthropic", "citations", c.clone())?;
+                        return Ok(out);
+                    }
                     "signature_delta" => {
                         if b.kind != Kind::Reasoning
                             || b.closed
@@ -605,7 +689,7 @@ impl Parser {
                 if b.closed {
                     return Err(INVALID);
                 }
-                if b.kind == Kind::Tool && b.text.is_empty() {
+                if matches!(b.kind, Kind::Tool | Kind::Search) && b.text.is_empty() {
                     b.text = "{}".into();
                 }
                 b.closed = true;
@@ -652,11 +736,37 @@ impl Parser {
         {
             return Err(INVALID);
         }
+        for b in self.blocks.values().filter(|b| b.kind == Kind::Search) {
+            if b.result.is_none()
+                && !self
+                    .blocks
+                    .values()
+                    .any(|r| r.kind == Kind::SearchResult && r.id == b.id)
+            {
+                return Err(INVALID);
+            }
+        }
         let mut content = vec![];
         for b in self.blocks.into_values() {
+            if matches!(b.kind, Kind::Search | Kind::SearchResult) {
+                if b.kind == Kind::Search {
+                    let input = forge_core::json::parse(&b.text).map_err(|_| INVALID)?;
+                    if !input.is_object()
+                        || self.protocol == Protocol::Anthropic && !input["query"].is_string()
+                    {
+                        return Err(INVALID);
+                    }
+                    content.push(json!({"type":"tool-call","toolCallId":b.id,"toolName":"web_search","input":input,"providerExecuted":true}));
+                }
+                if let Some(result) = b.result {
+                    content.push(json!({"type":"tool-result","toolCallId":b.id,"toolName":"web_search","output":result}));
+                }
+                continue;
+            }
             let mut part = match b.kind {
                 Kind::Text => json!({"type":"text","text":b.text}),
                 Kind::Reasoning => json!({"type":"reasoning","text":b.text}),
+                Kind::Search | Kind::SearchResult => unreachable!(),
                 Kind::Tool => {
                     if b.incomplete {
                         if matches!(
@@ -694,4 +804,35 @@ impl Parser {
             usage: usage(self.protocol, &self.raw_usage)?,
         })
     }
+}
+
+fn add_source(block: &mut Block, source: Value) -> Result<()> {
+    if block.metadata["forge"]["sources"].is_null() {
+        block.metadata["forge"] = json!({"sources":[]});
+    }
+    let values = block.metadata["forge"]["sources"]
+        .as_array_mut()
+        .ok_or(INVALID)?;
+    if values.len() >= 1024 {
+        return Err(INVALID);
+    }
+    values.push(source);
+    Ok(())
+}
+
+fn add_citation(block: &mut Block, provider: &str, key: &str, citation: Value) -> Result<()> {
+    if block.metadata[provider].is_null() {
+        block.metadata[provider] = json!({});
+    }
+    if block.metadata[provider][key].is_null() {
+        block.metadata[provider][key] = json!([]);
+    }
+    let values = block.metadata[provider][key]
+        .as_array_mut()
+        .ok_or(INVALID)?;
+    if values.len() >= 1024 {
+        return Err(INVALID);
+    }
+    values.push(citation);
+    Ok(())
 }

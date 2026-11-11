@@ -13,6 +13,7 @@ const checks = [
   ["bun", ["scripts/rust-context-reference.mjs", "--check"]],
   ["bun", ["scripts/rust-web-reference.mjs", "--check"]],
   ["bun", ["scripts/rust-session-budget-reference.mjs", "--check"]],
+  ["bun", ["scripts/rust-search-reference.mjs", "--check"]],
   ["cargo", ["fmt", "--all", "--", "--check"]],
   ["cargo", ["clippy", "--workspace", "--all-targets", "--locked", "--", "-D", "warnings"]],
   ["python3", ["scripts/test-rust-postgres.py"]],

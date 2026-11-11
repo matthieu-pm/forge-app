@@ -188,6 +188,9 @@ fn responses(prompt: &[Value], system: &str) -> Result<Vec<Value>> {
             "assistant" => {
                 for part in parts(message)? {
                     let kind = string(part, "type")?;
+                    if kind == "tool-call" && part["providerExecuted"] == true {
+                        super::search::call(part)?;
+                    }
                     if let Some(id) = part["providerOptions"]["openai"]["itemId"]
                         .as_str()
                         .filter(|_| ["text", "tool-call", "reasoning"].contains(&kind))
@@ -195,7 +198,12 @@ fn responses(prompt: &[Value], system: &str) -> Result<Vec<Value>> {
                         output.push(json!({"type":"item_reference","id":id}));
                         continue;
                     }
+                    if kind == "tool-call" && part["providerExecuted"] == true {
+                        super::search::call(part)?;
+                        continue;
+                    }
                     match kind {
+                    "tool-result"=>output.push(super::search::response_result(part)?),
                     "text"=>{let mut value=json!({"role":"assistant","content":[{"type":"output_text","text":string(part,"text")?}]});if let Some(phase)=part["providerOptions"]["openai"].get("phase").filter(|v|!v.is_null()){value["phase"]=phase.clone();}output.push(value);},
                     "tool-call"=>output.push(json!({"type":"function_call","call_id":string(part,"toolCallId")?,"name":string(part,"toolName")?,"arguments":javascript_stringify(part.get("input").unwrap_or(&json!({})))})),
                     "reasoning"=>{},_=>return Err(INVALID),
@@ -239,6 +247,7 @@ fn chat(prompt: &[Value], system: &str) -> Result<Vec<Value>> {
                 for part in parts(message)? {
                     match string(part,"type")? {
                     "text"=>text.push_str(string(part,"text")?),
+                    "tool-result" if part["toolName"]=="web_search"=>{},
                     "tool-call"=>calls.push(json!({"id":string(part,"toolCallId")?,"type":"function","function":{"name":string(part,"toolName")?,"arguments":javascript_stringify(part.get("input").unwrap_or(&json!({})))}})),
                     "reasoning"=>{},_=>return Err(INVALID),
                 }
@@ -283,15 +292,49 @@ fn anthropic(prompt: &[Value]) -> Result<(Vec<Value>, Vec<Value>)> {
             "user" => converted = user_parts(content, Protocol::Anthropic)?,
             "assistant" => {
                 for (index, part) in content.iter().enumerate() {
-                    match string(part,"type")? {
-                "text"=>{let text=string(part,"text")?;let text=if message_index+1==prompt.len()&&index+1==content.len(){forge_core::text::trim(text)}else{text};converted.push(json!({"type":"text","text":text}));},
-                "tool-call"=>converted.push(json!({"type":"tool_use","id":string(part,"toolCallId")?,"name":string(part,"toolName")?,"input":part.get("input").ok_or(INVALID)?})),
-                "reasoning"=>{
-                    let metadata=&part["providerOptions"]["anthropic"];
-                    if let Some(signature)=metadata["signature"].as_str(){converted.push(json!({"type":"thinking","thinking":string(part,"text")?,"signature":signature}));}
-                    else if let Some(data)=metadata["redactedData"].as_str(){converted.push(json!({"type":"redacted_thinking","data":data}));}
-                },_=>return Err(INVALID),
-            }
+                    match string(part, "type")? {
+                        "text" => {
+                            let text = string(part, "text")?;
+                            let text = if message_index + 1 == prompt.len()
+                                && index + 1 == content.len()
+                            {
+                                forge_core::text::trim(text)
+                            } else {
+                                text
+                            };
+                            let mut value = json!({"type":"text","text":text});
+                            if let Some(citations) =
+                                part["providerOptions"]["anthropic"].get("citations")
+                            {
+                                for citation in citations.as_array().ok_or(INVALID)? {
+                                    super::search::citation(Protocol::Anthropic, citation)?;
+                                }
+                                value["citations"] = citations.clone();
+                            }
+                            converted.push(value);
+                        }
+                        "tool-call" => {
+                            let kind = if part["providerExecuted"] == true {
+                                super::search::call(part)?;
+                                "server_tool_use"
+                            } else {
+                                "tool_use"
+                            };
+                            converted.push(json!({"type":kind,"id":string(part,"toolCallId")?,"name":string(part,"toolName")?,"input":part.get("input").ok_or(INVALID)?}));
+                        }
+                        "tool-result" => {
+                            converted.push(super::search::anthropic_request_result(part)?)
+                        }
+                        "reasoning" => {
+                            let metadata = &part["providerOptions"]["anthropic"];
+                            if let Some(signature) = metadata["signature"].as_str() {
+                                converted.push(json!({"type":"thinking","thinking":string(part,"text")?,"signature":signature}));
+                            } else if let Some(data) = metadata["redactedData"].as_str() {
+                                converted.push(json!({"type":"redacted_thinking","data":data}));
+                            }
+                        }
+                        _ => return Err(INVALID),
+                    }
                 }
             }
             "tool" => {
@@ -432,17 +475,50 @@ pub(crate) fn build_for(
         }
     }
     if !tools.is_empty() {
-        let definitions=tools.iter().map(|tool|{
-            if tool["type"]!="function"||!tool["inputSchema"].is_object(){return Err(INVALID);}
-            let name=string(tool,"name")?;if name.is_empty(){return Err(INVALID);}
-            let mut value=match protocol{
-                Protocol::Responses=>json!({"type":"function","name":name,"parameters":tool["inputSchema"]}),
-                Protocol::Chat=>json!({"type":"function","function":{"name":name,"parameters":tool["inputSchema"]}}),
-                Protocol::Anthropic=>json!({"name":name,"input_schema":tool["inputSchema"],"eager_input_streaming":true}),
+        let mut definitions = vec![];
+        let mut search = false;
+        for tool in tools {
+            if tool["type"] == "provider" {
+                if search {
+                    return Err(INVALID);
+                }
+                search = true;
+                if let Some(value) = super::search::definition(protocol, tool)? {
+                    definitions.push(value);
+                }
+                continue;
+            }
+            if tool["type"] != "function" || !tool["inputSchema"].is_object() {
+                return Err(INVALID);
+            }
+            let name = string(tool, "name")?;
+            if name.is_empty() {
+                return Err(INVALID);
+            }
+            let mut value = match protocol {
+                Protocol::Responses => {
+                    json!({"type":"function","name":name,"parameters":tool["inputSchema"]})
+                }
+                Protocol::Chat => {
+                    json!({"type":"function","function":{"name":name,"parameters":tool["inputSchema"]}})
+                }
+                Protocol::Anthropic => {
+                    json!({"name":name,"input_schema":tool["inputSchema"],"eager_input_streaming":true})
+                }
             };
-            if let Some(description)=tool.get("description") {let description=description.as_str().ok_or(INVALID)?;if protocol==Protocol::Chat{value["function"]["description"]=json!(description);}else{value["description"]=json!(description);}}
-            Ok(value)
-        }).collect::<Result<Vec<_>>>()?;
+            if let Some(description) = tool.get("description") {
+                let description = description.as_str().ok_or(INVALID)?;
+                if protocol == Protocol::Chat {
+                    value["function"]["description"] = json!(description);
+                } else {
+                    value["description"] = json!(description);
+                }
+            }
+            definitions.push(value);
+        }
+        if search && protocol == Protocol::Responses {
+            body["include"] = json!(["web_search_call.action.sources"]);
+        }
         body["tools"] = json!(definitions);
         body["tool_choice"] = if protocol == Protocol::Anthropic {
             json!({"type":"auto"})

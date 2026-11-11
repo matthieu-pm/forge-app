@@ -1,0 +1,4432 @@
+{
+  "requests": [
+    {
+      "input": {
+        "provider": "openai",
+        "modelId": "gpt-5.6-luna",
+        "prompt": [
+          {
+            "role": "system",
+            "content": "You are Forge."
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Search for Forge."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "provider",
+            "id": "openai.web_search",
+            "name": "web_search",
+            "args": {}
+          }
+        ],
+        "maxOutputTokens": 1024
+      },
+      "request": {
+        "path": "/v1/responses",
+        "body": {
+          "model": "gpt-5.6-luna",
+          "input": [
+            {
+              "role": "developer",
+              "content": "You are Forge."
+            },
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "input_text",
+                  "text": "Search for Forge."
+                }
+              ]
+            }
+          ],
+          "max_output_tokens": 1024,
+          "include": [
+            "web_search_call.action.sources"
+          ],
+          "tools": [
+            {
+              "type": "web_search"
+            }
+          ],
+          "tool_choice": "auto",
+          "stream": true
+        }
+      },
+      "failed": false,
+      "warnings": []
+    },
+    {
+      "input": {
+        "provider": "openai",
+        "modelId": "gpt-5.6-luna",
+        "prompt": [
+          {
+            "role": "system",
+            "content": "You are Forge."
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Search for Forge."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool-call",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "input": {
+                  "query": "Forge"
+                },
+                "providerExecuted": true
+              },
+              {
+                "type": "tool-result",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "output": {
+                  "type": "json",
+                  "value": [
+                    {
+                      "type": "web_search_result",
+                      "url": "https://example.com",
+                      "title": "Example",
+                      "pageAge": null,
+                      "encryptedContent": "fixture-encrypted-content"
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "text",
+                "text": "Found this.",
+                "providerOptions": {
+                  "anthropic": {
+                    "citations": [
+                      {
+                        "type": "web_search_result_location",
+                        "url": "https://example.com",
+                        "title": "Example",
+                        "cited_text": "Found this.",
+                        "encrypted_index": "fixture-opaque-citation"
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "provider",
+            "id": "openai.web_search",
+            "name": "web_search",
+            "args": {}
+          }
+        ],
+        "maxOutputTokens": 1024
+      },
+      "request": {
+        "path": "/v1/responses",
+        "body": {
+          "model": "gpt-5.6-luna",
+          "input": [
+            {
+              "role": "developer",
+              "content": "You are Forge."
+            },
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "input_text",
+                  "text": "Search for Forge."
+                }
+              ]
+            },
+            {
+              "type": "item_reference",
+              "id": "search_fixture"
+            },
+            {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "output_text",
+                  "text": "Found this."
+                }
+              ]
+            }
+          ],
+          "max_output_tokens": 1024,
+          "include": [
+            "web_search_call.action.sources"
+          ],
+          "tools": [
+            {
+              "type": "web_search"
+            }
+          ],
+          "tool_choice": "auto",
+          "stream": true
+        }
+      },
+      "failed": false,
+      "warnings": []
+    },
+    {
+      "input": {
+        "provider": "openai",
+        "modelId": "gpt-5.6-luna",
+        "prompt": [
+          {
+            "role": "system",
+            "content": "You are Forge."
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Search for Forge."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool-call",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "input": {
+                  "query": "Forge"
+                },
+                "providerExecuted": true
+              },
+              {
+                "type": "tool-result",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "output": {
+                  "type": "json",
+                  "value": [
+                    {
+                      "type": "web_search_result",
+                      "url": "https://example.com",
+                      "title": "Example",
+                      "pageAge": null,
+                      "encryptedContent": "fixture-encrypted-content"
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "text",
+                "text": "Found this."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "provider",
+            "id": "openai.web_search",
+            "name": "web_search",
+            "args": {}
+          }
+        ],
+        "maxOutputTokens": 1024
+      },
+      "request": {
+        "path": "/v1/responses",
+        "body": {
+          "model": "gpt-5.6-luna",
+          "input": [
+            {
+              "role": "developer",
+              "content": "You are Forge."
+            },
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "input_text",
+                  "text": "Search for Forge."
+                }
+              ]
+            },
+            {
+              "type": "item_reference",
+              "id": "search_fixture"
+            },
+            {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "output_text",
+                  "text": "Found this."
+                }
+              ]
+            }
+          ],
+          "max_output_tokens": 1024,
+          "include": [
+            "web_search_call.action.sources"
+          ],
+          "tools": [
+            {
+              "type": "web_search"
+            }
+          ],
+          "tool_choice": "auto",
+          "stream": true
+        }
+      },
+      "failed": false,
+      "warnings": []
+    },
+    {
+      "input": {
+        "provider": "openai",
+        "modelId": "gpt-5.6-luna",
+        "prompt": [
+          {
+            "role": "system",
+            "content": "You are Forge."
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Search for Forge."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool-call",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "input": {
+                  "query": "Forge"
+                },
+                "providerExecuted": true
+              },
+              {
+                "type": "tool-result",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "output": {
+                  "type": "error-json",
+                  "value": {
+                    "type": "web_search_tool_result_error",
+                    "errorCode": "unavailable"
+                  }
+                }
+              },
+              {
+                "type": "text",
+                "text": "Found this."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "provider",
+            "id": "openai.web_search",
+            "name": "web_search",
+            "args": {}
+          }
+        ],
+        "maxOutputTokens": 1024
+      },
+      "request": {
+        "path": "/v1/responses",
+        "body": {
+          "model": "gpt-5.6-luna",
+          "input": [
+            {
+              "role": "developer",
+              "content": "You are Forge."
+            },
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "input_text",
+                  "text": "Search for Forge."
+                }
+              ]
+            },
+            {
+              "type": "item_reference",
+              "id": "search_fixture"
+            },
+            {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "output_text",
+                  "text": "Found this."
+                }
+              ]
+            }
+          ],
+          "max_output_tokens": 1024,
+          "include": [
+            "web_search_call.action.sources"
+          ],
+          "tools": [
+            {
+              "type": "web_search"
+            }
+          ],
+          "tool_choice": "auto",
+          "stream": true
+        }
+      },
+      "failed": false,
+      "warnings": []
+    },
+    {
+      "input": {
+        "provider": "openai",
+        "modelId": "gpt-5.6-luna",
+        "prompt": [
+          {
+            "role": "system",
+            "content": "You are Forge."
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Search for Forge."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool-call",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "input": {
+                  "query": "Empty"
+                },
+                "providerExecuted": true
+              },
+              {
+                "type": "tool-result",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "output": {
+                  "type": "json",
+                  "value": []
+                }
+              },
+              {
+                "type": "text",
+                "text": "Found this."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "provider",
+            "id": "openai.web_search",
+            "name": "web_search",
+            "args": {}
+          }
+        ],
+        "maxOutputTokens": 1024
+      },
+      "request": {
+        "path": "/v1/responses",
+        "body": {
+          "model": "gpt-5.6-luna",
+          "input": [
+            {
+              "role": "developer",
+              "content": "You are Forge."
+            },
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "input_text",
+                  "text": "Search for Forge."
+                }
+              ]
+            },
+            {
+              "type": "item_reference",
+              "id": "search_fixture"
+            },
+            {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "output_text",
+                  "text": "Found this."
+                }
+              ]
+            }
+          ],
+          "max_output_tokens": 1024,
+          "include": [
+            "web_search_call.action.sources"
+          ],
+          "tools": [
+            {
+              "type": "web_search"
+            }
+          ],
+          "tool_choice": "auto",
+          "stream": true
+        }
+      },
+      "failed": false,
+      "warnings": []
+    },
+    {
+      "input": {
+        "provider": "openai",
+        "modelId": "gpt-5.6-luna",
+        "prompt": [
+          {
+            "role": "system",
+            "content": "You are Forge."
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Search for Forge."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool-call",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "input": {
+                  "query": "Forge"
+                },
+                "providerExecuted": true,
+                "providerOptions": {
+                  "openai": {
+                    "itemId": "search_item_fixture"
+                  }
+                }
+              },
+              {
+                "type": "tool-result",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "output": {
+                  "type": "json",
+                  "value": [
+                    {
+                      "type": "web_search_result",
+                      "url": "https://example.com",
+                      "title": "Example",
+                      "pageAge": null,
+                      "encryptedContent": "fixture-encrypted-content"
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "text",
+                "text": "Found this."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "provider",
+            "id": "openai.web_search",
+            "name": "web_search",
+            "args": {}
+          }
+        ],
+        "maxOutputTokens": 1024
+      },
+      "request": {
+        "path": "/v1/responses",
+        "body": {
+          "model": "gpt-5.6-luna",
+          "input": [
+            {
+              "role": "developer",
+              "content": "You are Forge."
+            },
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "input_text",
+                  "text": "Search for Forge."
+                }
+              ]
+            },
+            {
+              "type": "item_reference",
+              "id": "search_item_fixture"
+            },
+            {
+              "type": "item_reference",
+              "id": "search_fixture"
+            },
+            {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "output_text",
+                  "text": "Found this."
+                }
+              ]
+            }
+          ],
+          "max_output_tokens": 1024,
+          "include": [
+            "web_search_call.action.sources"
+          ],
+          "tools": [
+            {
+              "type": "web_search"
+            }
+          ],
+          "tool_choice": "auto",
+          "stream": true
+        }
+      },
+      "failed": false,
+      "warnings": []
+    },
+    {
+      "input": {
+        "provider": "anthropic",
+        "modelId": "claude-sonnet-4-5",
+        "prompt": [
+          {
+            "role": "system",
+            "content": "You are Forge."
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Search for Forge."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "provider",
+            "id": "anthropic.web_search_20250305",
+            "name": "web_search",
+            "args": {}
+          }
+        ],
+        "maxOutputTokens": 1024
+      },
+      "request": {
+        "path": "/v1/messages",
+        "body": {
+          "model": "claude-sonnet-4-5",
+          "max_tokens": 1024,
+          "system": [
+            {
+              "type": "text",
+              "text": "You are Forge."
+            }
+          ],
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Search for Forge."
+                }
+              ]
+            }
+          ],
+          "tools": [
+            {
+              "type": "web_search_20250305",
+              "name": "web_search"
+            }
+          ],
+          "tool_choice": {
+            "type": "auto"
+          },
+          "stream": true
+        }
+      },
+      "failed": false,
+      "warnings": []
+    },
+    {
+      "input": {
+        "provider": "anthropic",
+        "modelId": "claude-sonnet-4-5",
+        "prompt": [
+          {
+            "role": "system",
+            "content": "You are Forge."
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Search for Forge."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool-call",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "input": {
+                  "query": "Forge"
+                },
+                "providerExecuted": true
+              },
+              {
+                "type": "tool-result",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "output": {
+                  "type": "json",
+                  "value": [
+                    {
+                      "type": "web_search_result",
+                      "url": "https://example.com",
+                      "title": "Example",
+                      "pageAge": null,
+                      "encryptedContent": "fixture-encrypted-content"
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "text",
+                "text": "Found this.",
+                "providerOptions": {
+                  "anthropic": {
+                    "citations": [
+                      {
+                        "type": "web_search_result_location",
+                        "url": "https://example.com",
+                        "title": "Example",
+                        "cited_text": "Found this.",
+                        "encrypted_index": "fixture-opaque-citation"
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "provider",
+            "id": "anthropic.web_search_20250305",
+            "name": "web_search",
+            "args": {}
+          }
+        ],
+        "maxOutputTokens": 1024
+      },
+      "request": {
+        "path": "/v1/messages",
+        "body": {
+          "model": "claude-sonnet-4-5",
+          "max_tokens": 1024,
+          "system": [
+            {
+              "type": "text",
+              "text": "You are Forge."
+            }
+          ],
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Search for Forge."
+                }
+              ]
+            },
+            {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "server_tool_use",
+                  "id": "search_fixture",
+                  "name": "web_search",
+                  "input": {
+                    "query": "Forge"
+                  }
+                },
+                {
+                  "type": "web_search_tool_result",
+                  "tool_use_id": "search_fixture",
+                  "content": [
+                    {
+                      "url": "https://example.com",
+                      "title": "Example",
+                      "page_age": null,
+                      "encrypted_content": "fixture-encrypted-content",
+                      "type": "web_search_result"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": "Found this.",
+                  "citations": [
+                    {
+                      "type": "web_search_result_location",
+                      "url": "https://example.com",
+                      "title": "Example",
+                      "cited_text": "Found this.",
+                      "encrypted_index": "fixture-opaque-citation"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "tools": [
+            {
+              "type": "web_search_20250305",
+              "name": "web_search"
+            }
+          ],
+          "tool_choice": {
+            "type": "auto"
+          },
+          "stream": true
+        }
+      },
+      "failed": false,
+      "warnings": []
+    },
+    {
+      "input": {
+        "provider": "anthropic",
+        "modelId": "claude-sonnet-4-5",
+        "prompt": [
+          {
+            "role": "system",
+            "content": "You are Forge."
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Search for Forge."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool-call",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "input": {
+                  "query": "Forge"
+                },
+                "providerExecuted": true
+              },
+              {
+                "type": "tool-result",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "output": {
+                  "type": "json",
+                  "value": [
+                    {
+                      "type": "web_search_result",
+                      "url": "https://example.com",
+                      "title": "Example",
+                      "pageAge": null,
+                      "encryptedContent": "fixture-encrypted-content"
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "text",
+                "text": "Found this."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "provider",
+            "id": "anthropic.web_search_20250305",
+            "name": "web_search",
+            "args": {}
+          }
+        ],
+        "maxOutputTokens": 1024
+      },
+      "request": {
+        "path": "/v1/messages",
+        "body": {
+          "model": "claude-sonnet-4-5",
+          "max_tokens": 1024,
+          "system": [
+            {
+              "type": "text",
+              "text": "You are Forge."
+            }
+          ],
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Search for Forge."
+                }
+              ]
+            },
+            {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "server_tool_use",
+                  "id": "search_fixture",
+                  "name": "web_search",
+                  "input": {
+                    "query": "Forge"
+                  }
+                },
+                {
+                  "type": "web_search_tool_result",
+                  "tool_use_id": "search_fixture",
+                  "content": [
+                    {
+                      "url": "https://example.com",
+                      "title": "Example",
+                      "page_age": null,
+                      "encrypted_content": "fixture-encrypted-content",
+                      "type": "web_search_result"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": "Found this."
+                }
+              ]
+            }
+          ],
+          "tools": [
+            {
+              "type": "web_search_20250305",
+              "name": "web_search"
+            }
+          ],
+          "tool_choice": {
+            "type": "auto"
+          },
+          "stream": true
+        }
+      },
+      "failed": false,
+      "warnings": []
+    },
+    {
+      "input": {
+        "provider": "anthropic",
+        "modelId": "claude-sonnet-4-5",
+        "prompt": [
+          {
+            "role": "system",
+            "content": "You are Forge."
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Search for Forge."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool-call",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "input": {
+                  "query": "Forge"
+                },
+                "providerExecuted": true
+              },
+              {
+                "type": "tool-result",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "output": {
+                  "type": "error-json",
+                  "value": {
+                    "type": "web_search_tool_result_error",
+                    "errorCode": "unavailable"
+                  }
+                }
+              },
+              {
+                "type": "text",
+                "text": "Found this."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "provider",
+            "id": "anthropic.web_search_20250305",
+            "name": "web_search",
+            "args": {}
+          }
+        ],
+        "maxOutputTokens": 1024
+      },
+      "request": {
+        "path": "/v1/messages",
+        "body": {
+          "model": "claude-sonnet-4-5",
+          "max_tokens": 1024,
+          "system": [
+            {
+              "type": "text",
+              "text": "You are Forge."
+            }
+          ],
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Search for Forge."
+                }
+              ]
+            },
+            {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "server_tool_use",
+                  "id": "search_fixture",
+                  "name": "web_search",
+                  "input": {
+                    "query": "Forge"
+                  }
+                },
+                {
+                  "type": "web_search_tool_result",
+                  "tool_use_id": "search_fixture",
+                  "content": {
+                    "type": "web_search_tool_result_error",
+                    "error_code": "unavailable"
+                  }
+                },
+                {
+                  "type": "text",
+                  "text": "Found this."
+                }
+              ]
+            }
+          ],
+          "tools": [
+            {
+              "type": "web_search_20250305",
+              "name": "web_search"
+            }
+          ],
+          "tool_choice": {
+            "type": "auto"
+          },
+          "stream": true
+        }
+      },
+      "failed": false,
+      "warnings": []
+    },
+    {
+      "input": {
+        "provider": "anthropic",
+        "modelId": "claude-sonnet-4-5",
+        "prompt": [
+          {
+            "role": "system",
+            "content": "You are Forge."
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Search for Forge."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool-call",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "input": {
+                  "query": "Empty"
+                },
+                "providerExecuted": true
+              },
+              {
+                "type": "tool-result",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "output": {
+                  "type": "json",
+                  "value": []
+                }
+              },
+              {
+                "type": "text",
+                "text": "Found this."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "provider",
+            "id": "anthropic.web_search_20250305",
+            "name": "web_search",
+            "args": {}
+          }
+        ],
+        "maxOutputTokens": 1024
+      },
+      "request": {
+        "path": "/v1/messages",
+        "body": {
+          "model": "claude-sonnet-4-5",
+          "max_tokens": 1024,
+          "system": [
+            {
+              "type": "text",
+              "text": "You are Forge."
+            }
+          ],
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Search for Forge."
+                }
+              ]
+            },
+            {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "server_tool_use",
+                  "id": "search_fixture",
+                  "name": "web_search",
+                  "input": {
+                    "query": "Empty"
+                  }
+                },
+                {
+                  "type": "web_search_tool_result",
+                  "tool_use_id": "search_fixture",
+                  "content": []
+                },
+                {
+                  "type": "text",
+                  "text": "Found this."
+                }
+              ]
+            }
+          ],
+          "tools": [
+            {
+              "type": "web_search_20250305",
+              "name": "web_search"
+            }
+          ],
+          "tool_choice": {
+            "type": "auto"
+          },
+          "stream": true
+        }
+      },
+      "failed": false,
+      "warnings": []
+    },
+    {
+      "input": {
+        "provider": "anthropic",
+        "modelId": "claude-sonnet-4-5",
+        "prompt": [
+          {
+            "role": "system",
+            "content": "You are Forge."
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Search for Forge."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool-call",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "input": {
+                  "query": "Forge"
+                },
+                "providerExecuted": true,
+                "providerOptions": {
+                  "openai": {
+                    "itemId": "search_item_fixture"
+                  }
+                }
+              },
+              {
+                "type": "tool-result",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "output": {
+                  "type": "json",
+                  "value": [
+                    {
+                      "type": "web_search_result",
+                      "url": "https://example.com",
+                      "title": "Example",
+                      "pageAge": null,
+                      "encryptedContent": "fixture-encrypted-content"
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "text",
+                "text": "Found this."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "provider",
+            "id": "anthropic.web_search_20250305",
+            "name": "web_search",
+            "args": {}
+          }
+        ],
+        "maxOutputTokens": 1024
+      },
+      "request": {
+        "path": "/v1/messages",
+        "body": {
+          "model": "claude-sonnet-4-5",
+          "max_tokens": 1024,
+          "system": [
+            {
+              "type": "text",
+              "text": "You are Forge."
+            }
+          ],
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Search for Forge."
+                }
+              ]
+            },
+            {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "server_tool_use",
+                  "id": "search_fixture",
+                  "name": "web_search",
+                  "input": {
+                    "query": "Forge"
+                  }
+                },
+                {
+                  "type": "web_search_tool_result",
+                  "tool_use_id": "search_fixture",
+                  "content": [
+                    {
+                      "url": "https://example.com",
+                      "title": "Example",
+                      "page_age": null,
+                      "encrypted_content": "fixture-encrypted-content",
+                      "type": "web_search_result"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": "Found this."
+                }
+              ]
+            }
+          ],
+          "tools": [
+            {
+              "type": "web_search_20250305",
+              "name": "web_search"
+            }
+          ],
+          "tool_choice": {
+            "type": "auto"
+          },
+          "stream": true
+        }
+      },
+      "failed": false,
+      "warnings": []
+    },
+    {
+      "input": {
+        "provider": "custom-anthropic",
+        "modelId": "claude-sonnet-4-5",
+        "prompt": [
+          {
+            "role": "system",
+            "content": "You are Forge."
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Search for Forge."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "provider",
+            "id": "anthropic.web_search_20250305",
+            "name": "web_search",
+            "args": {}
+          }
+        ],
+        "maxOutputTokens": 1024
+      },
+      "request": {
+        "path": "/v1/messages",
+        "body": {
+          "model": "claude-sonnet-4-5",
+          "max_tokens": 1024,
+          "system": [
+            {
+              "type": "text",
+              "text": "You are Forge."
+            }
+          ],
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Search for Forge."
+                }
+              ]
+            }
+          ],
+          "tools": [
+            {
+              "type": "web_search_20250305",
+              "name": "web_search"
+            }
+          ],
+          "tool_choice": {
+            "type": "auto"
+          },
+          "stream": true
+        }
+      },
+      "failed": false,
+      "warnings": []
+    },
+    {
+      "input": {
+        "provider": "custom-anthropic",
+        "modelId": "claude-sonnet-4-5",
+        "prompt": [
+          {
+            "role": "system",
+            "content": "You are Forge."
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Search for Forge."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool-call",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "input": {
+                  "query": "Forge"
+                },
+                "providerExecuted": true
+              },
+              {
+                "type": "tool-result",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "output": {
+                  "type": "json",
+                  "value": [
+                    {
+                      "type": "web_search_result",
+                      "url": "https://example.com",
+                      "title": "Example",
+                      "pageAge": null,
+                      "encryptedContent": "fixture-encrypted-content"
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "text",
+                "text": "Found this.",
+                "providerOptions": {
+                  "anthropic": {
+                    "citations": [
+                      {
+                        "type": "web_search_result_location",
+                        "url": "https://example.com",
+                        "title": "Example",
+                        "cited_text": "Found this.",
+                        "encrypted_index": "fixture-opaque-citation"
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "provider",
+            "id": "anthropic.web_search_20250305",
+            "name": "web_search",
+            "args": {}
+          }
+        ],
+        "maxOutputTokens": 1024
+      },
+      "request": {
+        "path": "/v1/messages",
+        "body": {
+          "model": "claude-sonnet-4-5",
+          "max_tokens": 1024,
+          "system": [
+            {
+              "type": "text",
+              "text": "You are Forge."
+            }
+          ],
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Search for Forge."
+                }
+              ]
+            },
+            {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "server_tool_use",
+                  "id": "search_fixture",
+                  "name": "web_search",
+                  "input": {
+                    "query": "Forge"
+                  }
+                },
+                {
+                  "type": "web_search_tool_result",
+                  "tool_use_id": "search_fixture",
+                  "content": [
+                    {
+                      "url": "https://example.com",
+                      "title": "Example",
+                      "page_age": null,
+                      "encrypted_content": "fixture-encrypted-content",
+                      "type": "web_search_result"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": "Found this.",
+                  "citations": [
+                    {
+                      "type": "web_search_result_location",
+                      "url": "https://example.com",
+                      "title": "Example",
+                      "cited_text": "Found this.",
+                      "encrypted_index": "fixture-opaque-citation"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "tools": [
+            {
+              "type": "web_search_20250305",
+              "name": "web_search"
+            }
+          ],
+          "tool_choice": {
+            "type": "auto"
+          },
+          "stream": true
+        }
+      },
+      "failed": false,
+      "warnings": []
+    },
+    {
+      "input": {
+        "provider": "custom-anthropic",
+        "modelId": "claude-sonnet-4-5",
+        "prompt": [
+          {
+            "role": "system",
+            "content": "You are Forge."
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Search for Forge."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool-call",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "input": {
+                  "query": "Forge"
+                },
+                "providerExecuted": true
+              },
+              {
+                "type": "tool-result",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "output": {
+                  "type": "json",
+                  "value": [
+                    {
+                      "type": "web_search_result",
+                      "url": "https://example.com",
+                      "title": "Example",
+                      "pageAge": null,
+                      "encryptedContent": "fixture-encrypted-content"
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "text",
+                "text": "Found this."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "provider",
+            "id": "anthropic.web_search_20250305",
+            "name": "web_search",
+            "args": {}
+          }
+        ],
+        "maxOutputTokens": 1024
+      },
+      "request": {
+        "path": "/v1/messages",
+        "body": {
+          "model": "claude-sonnet-4-5",
+          "max_tokens": 1024,
+          "system": [
+            {
+              "type": "text",
+              "text": "You are Forge."
+            }
+          ],
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Search for Forge."
+                }
+              ]
+            },
+            {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "server_tool_use",
+                  "id": "search_fixture",
+                  "name": "web_search",
+                  "input": {
+                    "query": "Forge"
+                  }
+                },
+                {
+                  "type": "web_search_tool_result",
+                  "tool_use_id": "search_fixture",
+                  "content": [
+                    {
+                      "url": "https://example.com",
+                      "title": "Example",
+                      "page_age": null,
+                      "encrypted_content": "fixture-encrypted-content",
+                      "type": "web_search_result"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": "Found this."
+                }
+              ]
+            }
+          ],
+          "tools": [
+            {
+              "type": "web_search_20250305",
+              "name": "web_search"
+            }
+          ],
+          "tool_choice": {
+            "type": "auto"
+          },
+          "stream": true
+        }
+      },
+      "failed": false,
+      "warnings": []
+    },
+    {
+      "input": {
+        "provider": "custom-anthropic",
+        "modelId": "claude-sonnet-4-5",
+        "prompt": [
+          {
+            "role": "system",
+            "content": "You are Forge."
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Search for Forge."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool-call",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "input": {
+                  "query": "Forge"
+                },
+                "providerExecuted": true
+              },
+              {
+                "type": "tool-result",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "output": {
+                  "type": "error-json",
+                  "value": {
+                    "type": "web_search_tool_result_error",
+                    "errorCode": "unavailable"
+                  }
+                }
+              },
+              {
+                "type": "text",
+                "text": "Found this."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "provider",
+            "id": "anthropic.web_search_20250305",
+            "name": "web_search",
+            "args": {}
+          }
+        ],
+        "maxOutputTokens": 1024
+      },
+      "request": {
+        "path": "/v1/messages",
+        "body": {
+          "model": "claude-sonnet-4-5",
+          "max_tokens": 1024,
+          "system": [
+            {
+              "type": "text",
+              "text": "You are Forge."
+            }
+          ],
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Search for Forge."
+                }
+              ]
+            },
+            {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "server_tool_use",
+                  "id": "search_fixture",
+                  "name": "web_search",
+                  "input": {
+                    "query": "Forge"
+                  }
+                },
+                {
+                  "type": "web_search_tool_result",
+                  "tool_use_id": "search_fixture",
+                  "content": {
+                    "type": "web_search_tool_result_error",
+                    "error_code": "unavailable"
+                  }
+                },
+                {
+                  "type": "text",
+                  "text": "Found this."
+                }
+              ]
+            }
+          ],
+          "tools": [
+            {
+              "type": "web_search_20250305",
+              "name": "web_search"
+            }
+          ],
+          "tool_choice": {
+            "type": "auto"
+          },
+          "stream": true
+        }
+      },
+      "failed": false,
+      "warnings": []
+    },
+    {
+      "input": {
+        "provider": "custom-anthropic",
+        "modelId": "claude-sonnet-4-5",
+        "prompt": [
+          {
+            "role": "system",
+            "content": "You are Forge."
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Search for Forge."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool-call",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "input": {
+                  "query": "Empty"
+                },
+                "providerExecuted": true
+              },
+              {
+                "type": "tool-result",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "output": {
+                  "type": "json",
+                  "value": []
+                }
+              },
+              {
+                "type": "text",
+                "text": "Found this."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "provider",
+            "id": "anthropic.web_search_20250305",
+            "name": "web_search",
+            "args": {}
+          }
+        ],
+        "maxOutputTokens": 1024
+      },
+      "request": {
+        "path": "/v1/messages",
+        "body": {
+          "model": "claude-sonnet-4-5",
+          "max_tokens": 1024,
+          "system": [
+            {
+              "type": "text",
+              "text": "You are Forge."
+            }
+          ],
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Search for Forge."
+                }
+              ]
+            },
+            {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "server_tool_use",
+                  "id": "search_fixture",
+                  "name": "web_search",
+                  "input": {
+                    "query": "Empty"
+                  }
+                },
+                {
+                  "type": "web_search_tool_result",
+                  "tool_use_id": "search_fixture",
+                  "content": []
+                },
+                {
+                  "type": "text",
+                  "text": "Found this."
+                }
+              ]
+            }
+          ],
+          "tools": [
+            {
+              "type": "web_search_20250305",
+              "name": "web_search"
+            }
+          ],
+          "tool_choice": {
+            "type": "auto"
+          },
+          "stream": true
+        }
+      },
+      "failed": false,
+      "warnings": []
+    },
+    {
+      "input": {
+        "provider": "custom-anthropic",
+        "modelId": "claude-sonnet-4-5",
+        "prompt": [
+          {
+            "role": "system",
+            "content": "You are Forge."
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Search for Forge."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool-call",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "input": {
+                  "query": "Forge"
+                },
+                "providerExecuted": true,
+                "providerOptions": {
+                  "openai": {
+                    "itemId": "search_item_fixture"
+                  }
+                }
+              },
+              {
+                "type": "tool-result",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "output": {
+                  "type": "json",
+                  "value": [
+                    {
+                      "type": "web_search_result",
+                      "url": "https://example.com",
+                      "title": "Example",
+                      "pageAge": null,
+                      "encryptedContent": "fixture-encrypted-content"
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "text",
+                "text": "Found this."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "provider",
+            "id": "anthropic.web_search_20250305",
+            "name": "web_search",
+            "args": {}
+          }
+        ],
+        "maxOutputTokens": 1024
+      },
+      "request": {
+        "path": "/v1/messages",
+        "body": {
+          "model": "claude-sonnet-4-5",
+          "max_tokens": 1024,
+          "system": [
+            {
+              "type": "text",
+              "text": "You are Forge."
+            }
+          ],
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Search for Forge."
+                }
+              ]
+            },
+            {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "server_tool_use",
+                  "id": "search_fixture",
+                  "name": "web_search",
+                  "input": {
+                    "query": "Forge"
+                  }
+                },
+                {
+                  "type": "web_search_tool_result",
+                  "tool_use_id": "search_fixture",
+                  "content": [
+                    {
+                      "url": "https://example.com",
+                      "title": "Example",
+                      "page_age": null,
+                      "encrypted_content": "fixture-encrypted-content",
+                      "type": "web_search_result"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": "Found this."
+                }
+              ]
+            }
+          ],
+          "tools": [
+            {
+              "type": "web_search_20250305",
+              "name": "web_search"
+            }
+          ],
+          "tool_choice": {
+            "type": "auto"
+          },
+          "stream": true
+        }
+      },
+      "failed": false,
+      "warnings": []
+    },
+    {
+      "input": {
+        "provider": "custom-openai",
+        "modelId": "compatible",
+        "prompt": [
+          {
+            "role": "system",
+            "content": "You are Forge."
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Search for Forge."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "provider",
+            "id": "openai.web_search",
+            "name": "web_search",
+            "args": {}
+          }
+        ],
+        "maxOutputTokens": 1024
+      },
+      "request": {
+        "path": "/v1/chat/completions",
+        "body": {
+          "model": "compatible",
+          "max_tokens": 1024,
+          "messages": [
+            {
+              "role": "system",
+              "content": "You are Forge."
+            },
+            {
+              "role": "user",
+              "content": "Search for Forge."
+            }
+          ],
+          "tools": [],
+          "tool_choice": "auto",
+          "stream": true,
+          "stream_options": {
+            "include_usage": true
+          }
+        }
+      },
+      "failed": false,
+      "warnings": [
+        {
+          "type": "unsupported",
+          "feature": "tool type: provider"
+        }
+      ]
+    },
+    {
+      "input": {
+        "provider": "custom-openai",
+        "modelId": "compatible",
+        "prompt": [
+          {
+            "role": "system",
+            "content": "You are Forge."
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Search for Forge."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool-call",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "input": {
+                  "query": "Forge"
+                },
+                "providerExecuted": true
+              },
+              {
+                "type": "tool-result",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "output": {
+                  "type": "json",
+                  "value": [
+                    {
+                      "type": "web_search_result",
+                      "url": "https://example.com",
+                      "title": "Example",
+                      "pageAge": null,
+                      "encryptedContent": "fixture-encrypted-content"
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "text",
+                "text": "Found this.",
+                "providerOptions": {
+                  "anthropic": {
+                    "citations": [
+                      {
+                        "type": "web_search_result_location",
+                        "url": "https://example.com",
+                        "title": "Example",
+                        "cited_text": "Found this.",
+                        "encrypted_index": "fixture-opaque-citation"
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "provider",
+            "id": "openai.web_search",
+            "name": "web_search",
+            "args": {}
+          }
+        ],
+        "maxOutputTokens": 1024
+      },
+      "request": {
+        "path": "/v1/chat/completions",
+        "body": {
+          "model": "compatible",
+          "max_tokens": 1024,
+          "messages": [
+            {
+              "role": "system",
+              "content": "You are Forge."
+            },
+            {
+              "role": "user",
+              "content": "Search for Forge."
+            },
+            {
+              "role": "assistant",
+              "content": "Found this.",
+              "tool_calls": [
+                {
+                  "id": "search_fixture",
+                  "type": "function",
+                  "function": {
+                    "name": "web_search",
+                    "arguments": "{\"query\":\"Forge\"}"
+                  }
+                }
+              ]
+            }
+          ],
+          "tools": [],
+          "tool_choice": "auto",
+          "stream": true,
+          "stream_options": {
+            "include_usage": true
+          }
+        }
+      },
+      "failed": false,
+      "warnings": [
+        {
+          "type": "unsupported",
+          "feature": "tool type: provider"
+        }
+      ]
+    },
+    {
+      "input": {
+        "provider": "custom-openai",
+        "modelId": "compatible",
+        "prompt": [
+          {
+            "role": "system",
+            "content": "You are Forge."
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Search for Forge."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool-call",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "input": {
+                  "query": "Forge"
+                },
+                "providerExecuted": true
+              },
+              {
+                "type": "tool-result",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "output": {
+                  "type": "json",
+                  "value": [
+                    {
+                      "type": "web_search_result",
+                      "url": "https://example.com",
+                      "title": "Example",
+                      "pageAge": null,
+                      "encryptedContent": "fixture-encrypted-content"
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "text",
+                "text": "Found this."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "provider",
+            "id": "openai.web_search",
+            "name": "web_search",
+            "args": {}
+          }
+        ],
+        "maxOutputTokens": 1024
+      },
+      "request": {
+        "path": "/v1/chat/completions",
+        "body": {
+          "model": "compatible",
+          "max_tokens": 1024,
+          "messages": [
+            {
+              "role": "system",
+              "content": "You are Forge."
+            },
+            {
+              "role": "user",
+              "content": "Search for Forge."
+            },
+            {
+              "role": "assistant",
+              "content": "Found this.",
+              "tool_calls": [
+                {
+                  "id": "search_fixture",
+                  "type": "function",
+                  "function": {
+                    "name": "web_search",
+                    "arguments": "{\"query\":\"Forge\"}"
+                  }
+                }
+              ]
+            }
+          ],
+          "tools": [],
+          "tool_choice": "auto",
+          "stream": true,
+          "stream_options": {
+            "include_usage": true
+          }
+        }
+      },
+      "failed": false,
+      "warnings": [
+        {
+          "type": "unsupported",
+          "feature": "tool type: provider"
+        }
+      ]
+    },
+    {
+      "input": {
+        "provider": "custom-openai",
+        "modelId": "compatible",
+        "prompt": [
+          {
+            "role": "system",
+            "content": "You are Forge."
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Search for Forge."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool-call",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "input": {
+                  "query": "Forge"
+                },
+                "providerExecuted": true
+              },
+              {
+                "type": "tool-result",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "output": {
+                  "type": "error-json",
+                  "value": {
+                    "type": "web_search_tool_result_error",
+                    "errorCode": "unavailable"
+                  }
+                }
+              },
+              {
+                "type": "text",
+                "text": "Found this."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "provider",
+            "id": "openai.web_search",
+            "name": "web_search",
+            "args": {}
+          }
+        ],
+        "maxOutputTokens": 1024
+      },
+      "request": {
+        "path": "/v1/chat/completions",
+        "body": {
+          "model": "compatible",
+          "max_tokens": 1024,
+          "messages": [
+            {
+              "role": "system",
+              "content": "You are Forge."
+            },
+            {
+              "role": "user",
+              "content": "Search for Forge."
+            },
+            {
+              "role": "assistant",
+              "content": "Found this.",
+              "tool_calls": [
+                {
+                  "id": "search_fixture",
+                  "type": "function",
+                  "function": {
+                    "name": "web_search",
+                    "arguments": "{\"query\":\"Forge\"}"
+                  }
+                }
+              ]
+            }
+          ],
+          "tools": [],
+          "tool_choice": "auto",
+          "stream": true,
+          "stream_options": {
+            "include_usage": true
+          }
+        }
+      },
+      "failed": false,
+      "warnings": [
+        {
+          "type": "unsupported",
+          "feature": "tool type: provider"
+        }
+      ]
+    },
+    {
+      "input": {
+        "provider": "custom-openai",
+        "modelId": "compatible",
+        "prompt": [
+          {
+            "role": "system",
+            "content": "You are Forge."
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Search for Forge."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool-call",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "input": {
+                  "query": "Empty"
+                },
+                "providerExecuted": true
+              },
+              {
+                "type": "tool-result",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "output": {
+                  "type": "json",
+                  "value": []
+                }
+              },
+              {
+                "type": "text",
+                "text": "Found this."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "provider",
+            "id": "openai.web_search",
+            "name": "web_search",
+            "args": {}
+          }
+        ],
+        "maxOutputTokens": 1024
+      },
+      "request": {
+        "path": "/v1/chat/completions",
+        "body": {
+          "model": "compatible",
+          "max_tokens": 1024,
+          "messages": [
+            {
+              "role": "system",
+              "content": "You are Forge."
+            },
+            {
+              "role": "user",
+              "content": "Search for Forge."
+            },
+            {
+              "role": "assistant",
+              "content": "Found this.",
+              "tool_calls": [
+                {
+                  "id": "search_fixture",
+                  "type": "function",
+                  "function": {
+                    "name": "web_search",
+                    "arguments": "{\"query\":\"Empty\"}"
+                  }
+                }
+              ]
+            }
+          ],
+          "tools": [],
+          "tool_choice": "auto",
+          "stream": true,
+          "stream_options": {
+            "include_usage": true
+          }
+        }
+      },
+      "failed": false,
+      "warnings": [
+        {
+          "type": "unsupported",
+          "feature": "tool type: provider"
+        }
+      ]
+    },
+    {
+      "input": {
+        "provider": "custom-openai",
+        "modelId": "compatible",
+        "prompt": [
+          {
+            "role": "system",
+            "content": "You are Forge."
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Search for Forge."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool-call",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "input": {
+                  "query": "Forge"
+                },
+                "providerExecuted": true,
+                "providerOptions": {
+                  "openai": {
+                    "itemId": "search_item_fixture"
+                  }
+                }
+              },
+              {
+                "type": "tool-result",
+                "toolCallId": "search_fixture",
+                "toolName": "web_search",
+                "output": {
+                  "type": "json",
+                  "value": [
+                    {
+                      "type": "web_search_result",
+                      "url": "https://example.com",
+                      "title": "Example",
+                      "pageAge": null,
+                      "encryptedContent": "fixture-encrypted-content"
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "text",
+                "text": "Found this."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "provider",
+            "id": "openai.web_search",
+            "name": "web_search",
+            "args": {}
+          }
+        ],
+        "maxOutputTokens": 1024
+      },
+      "request": {
+        "path": "/v1/chat/completions",
+        "body": {
+          "model": "compatible",
+          "max_tokens": 1024,
+          "messages": [
+            {
+              "role": "system",
+              "content": "You are Forge."
+            },
+            {
+              "role": "user",
+              "content": "Search for Forge."
+            },
+            {
+              "role": "assistant",
+              "content": "Found this.",
+              "tool_calls": [
+                {
+                  "id": "search_fixture",
+                  "type": "function",
+                  "function": {
+                    "name": "web_search",
+                    "arguments": "{\"query\":\"Forge\"}"
+                  }
+                }
+              ]
+            }
+          ],
+          "tools": [],
+          "tool_choice": "auto",
+          "stream": true,
+          "stream_options": {
+            "include_usage": true
+          }
+        }
+      },
+      "failed": false,
+      "warnings": [
+        {
+          "type": "unsupported",
+          "feature": "tool type: provider"
+        }
+      ]
+    }
+  ],
+  "streams": [
+    {
+      "protocol": "responses",
+      "variant": "search",
+      "events": [
+        {
+          "type": "response.created",
+          "response": {
+            "id": "response_fixture",
+            "created_at": 1000,
+            "model": "gpt-5.6-luna"
+          }
+        },
+        {
+          "type": "response.output_item.added",
+          "output_index": 0,
+          "item": {
+            "type": "web_search_call",
+            "id": "search_fixture",
+            "status": "in_progress"
+          }
+        },
+        {
+          "type": "response.output_item.done",
+          "output_index": 0,
+          "item": {
+            "type": "web_search_call",
+            "id": "search_fixture",
+            "status": "completed",
+            "action": {
+              "type": "search",
+              "query": "Forge",
+              "queries": [
+                "Forge",
+                "Forge Rust"
+              ],
+              "sources": [
+                {
+                  "type": "url",
+                  "url": "https://example.com"
+                },
+                {
+                  "type": "api",
+                  "name": "Fixture API"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "response.output_item.added",
+          "output_index": 1,
+          "item": {
+            "type": "message",
+            "id": "message_fixture"
+          }
+        },
+        {
+          "type": "response.output_text.delta",
+          "output_index": 1,
+          "item_id": "message_fixture",
+          "content_index": 0,
+          "delta": "Found this."
+        },
+        {
+          "type": "response.output_item.done",
+          "output_index": 1,
+          "item": {
+            "type": "message",
+            "id": "message_fixture"
+          }
+        },
+        {
+          "type": "response.completed",
+          "response": {
+            "id": "response_fixture",
+            "incomplete_details": null,
+            "usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          }
+        }
+      ],
+      "expected": {
+        "parts": [
+          {
+            "type": "tool-call",
+            "toolCallId": "search_fixture",
+            "toolName": "web_search",
+            "input": {},
+            "providerExecuted": true
+          },
+          {
+            "type": "tool-result",
+            "toolCallId": "search_fixture",
+            "toolName": "web_search",
+            "output": {
+              "type": "json",
+              "value": {
+                "action": {
+                  "type": "search",
+                  "query": "Forge",
+                  "queries": [
+                    "Forge",
+                    "Forge Rust"
+                  ]
+                },
+                "sources": [
+                  {
+                    "type": "url",
+                    "url": "https://example.com"
+                  },
+                  {
+                    "type": "api",
+                    "name": "Fixture API"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "text",
+            "text": "Found this."
+          }
+        ],
+        "finish": "stop",
+        "usage": {
+          "inputTokens": 10,
+          "outputTokens": 5,
+          "cacheReadTokens": 0,
+          "cacheWriteTokens": null,
+          "reasoningTokens": 0
+        },
+        "citations": []
+      },
+      "failed": false
+    },
+    {
+      "protocol": "responses",
+      "variant": "empty",
+      "events": [
+        {
+          "type": "response.created",
+          "response": {
+            "id": "response_fixture",
+            "created_at": 1000,
+            "model": "gpt-5.6-luna"
+          }
+        },
+        {
+          "type": "response.output_item.added",
+          "output_index": 0,
+          "item": {
+            "type": "web_search_call",
+            "id": "search_fixture",
+            "status": "in_progress"
+          }
+        },
+        {
+          "type": "response.output_item.done",
+          "output_index": 0,
+          "item": {
+            "type": "web_search_call",
+            "id": "search_fixture",
+            "status": "completed"
+          }
+        },
+        {
+          "type": "response.output_item.added",
+          "output_index": 1,
+          "item": {
+            "type": "message",
+            "id": "message_fixture"
+          }
+        },
+        {
+          "type": "response.output_text.delta",
+          "output_index": 1,
+          "item_id": "message_fixture",
+          "content_index": 0,
+          "delta": "Found this."
+        },
+        {
+          "type": "response.output_item.done",
+          "output_index": 1,
+          "item": {
+            "type": "message",
+            "id": "message_fixture"
+          }
+        },
+        {
+          "type": "response.completed",
+          "response": {
+            "id": "response_fixture",
+            "incomplete_details": null,
+            "usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          }
+        }
+      ],
+      "expected": {
+        "parts": [
+          {
+            "type": "tool-call",
+            "toolCallId": "search_fixture",
+            "toolName": "web_search",
+            "input": {},
+            "providerExecuted": true
+          },
+          {
+            "type": "tool-result",
+            "toolCallId": "search_fixture",
+            "toolName": "web_search",
+            "output": {
+              "type": "json",
+              "value": {}
+            }
+          },
+          {
+            "type": "text",
+            "text": "Found this."
+          }
+        ],
+        "finish": "stop",
+        "usage": {
+          "inputTokens": 10,
+          "outputTokens": 5,
+          "cacheReadTokens": 0,
+          "cacheWriteTokens": null,
+          "reasoningTokens": 0
+        },
+        "citations": []
+      },
+      "failed": false
+    },
+    {
+      "protocol": "responses",
+      "variant": "open",
+      "events": [
+        {
+          "type": "response.created",
+          "response": {
+            "id": "response_fixture",
+            "created_at": 1000,
+            "model": "gpt-5.6-luna"
+          }
+        },
+        {
+          "type": "response.output_item.added",
+          "output_index": 0,
+          "item": {
+            "type": "web_search_call",
+            "id": "search_fixture",
+            "status": "in_progress"
+          }
+        },
+        {
+          "type": "response.output_item.done",
+          "output_index": 0,
+          "item": {
+            "type": "web_search_call",
+            "id": "search_fixture",
+            "status": "completed",
+            "action": {
+              "type": "open_page",
+              "url": "https://example.com"
+            }
+          }
+        },
+        {
+          "type": "response.output_item.added",
+          "output_index": 1,
+          "item": {
+            "type": "message",
+            "id": "message_fixture"
+          }
+        },
+        {
+          "type": "response.output_text.delta",
+          "output_index": 1,
+          "item_id": "message_fixture",
+          "content_index": 0,
+          "delta": "Found this."
+        },
+        {
+          "type": "response.output_item.done",
+          "output_index": 1,
+          "item": {
+            "type": "message",
+            "id": "message_fixture"
+          }
+        },
+        {
+          "type": "response.completed",
+          "response": {
+            "id": "response_fixture",
+            "incomplete_details": null,
+            "usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          }
+        }
+      ],
+      "expected": {
+        "parts": [
+          {
+            "type": "tool-call",
+            "toolCallId": "search_fixture",
+            "toolName": "web_search",
+            "input": {},
+            "providerExecuted": true
+          },
+          {
+            "type": "tool-result",
+            "toolCallId": "search_fixture",
+            "toolName": "web_search",
+            "output": {
+              "type": "json",
+              "value": {
+                "action": {
+                  "type": "openPage",
+                  "url": "https://example.com"
+                }
+              }
+            }
+          },
+          {
+            "type": "text",
+            "text": "Found this."
+          }
+        ],
+        "finish": "stop",
+        "usage": {
+          "inputTokens": 10,
+          "outputTokens": 5,
+          "cacheReadTokens": 0,
+          "cacheWriteTokens": null,
+          "reasoningTokens": 0
+        },
+        "citations": []
+      },
+      "failed": false
+    },
+    {
+      "protocol": "responses",
+      "variant": "find",
+      "events": [
+        {
+          "type": "response.created",
+          "response": {
+            "id": "response_fixture",
+            "created_at": 1000,
+            "model": "gpt-5.6-luna"
+          }
+        },
+        {
+          "type": "response.output_item.added",
+          "output_index": 0,
+          "item": {
+            "type": "web_search_call",
+            "id": "search_fixture",
+            "status": "in_progress"
+          }
+        },
+        {
+          "type": "response.output_item.done",
+          "output_index": 0,
+          "item": {
+            "type": "web_search_call",
+            "id": "search_fixture",
+            "status": "completed",
+            "action": {
+              "type": "find_in_page",
+              "url": "https://example.com",
+              "pattern": "Forge"
+            }
+          }
+        },
+        {
+          "type": "response.output_item.added",
+          "output_index": 1,
+          "item": {
+            "type": "message",
+            "id": "message_fixture"
+          }
+        },
+        {
+          "type": "response.output_text.delta",
+          "output_index": 1,
+          "item_id": "message_fixture",
+          "content_index": 0,
+          "delta": "Found this."
+        },
+        {
+          "type": "response.output_item.done",
+          "output_index": 1,
+          "item": {
+            "type": "message",
+            "id": "message_fixture"
+          }
+        },
+        {
+          "type": "response.completed",
+          "response": {
+            "id": "response_fixture",
+            "incomplete_details": null,
+            "usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          }
+        }
+      ],
+      "expected": {
+        "parts": [
+          {
+            "type": "tool-call",
+            "toolCallId": "search_fixture",
+            "toolName": "web_search",
+            "input": {},
+            "providerExecuted": true
+          },
+          {
+            "type": "tool-result",
+            "toolCallId": "search_fixture",
+            "toolName": "web_search",
+            "output": {
+              "type": "json",
+              "value": {
+                "action": {
+                  "type": "findInPage",
+                  "url": "https://example.com",
+                  "pattern": "Forge"
+                }
+              }
+            }
+          },
+          {
+            "type": "text",
+            "text": "Found this."
+          }
+        ],
+        "finish": "stop",
+        "usage": {
+          "inputTokens": 10,
+          "outputTokens": 5,
+          "cacheReadTokens": 0,
+          "cacheWriteTokens": null,
+          "reasoningTokens": 0
+        },
+        "citations": []
+      },
+      "failed": false
+    },
+    {
+      "protocol": "responses",
+      "variant": "open-missing",
+      "events": [
+        {
+          "type": "response.created",
+          "response": {
+            "id": "response_fixture",
+            "created_at": 1000,
+            "model": "gpt-5.6-luna"
+          }
+        },
+        {
+          "type": "response.output_item.added",
+          "output_index": 0,
+          "item": {
+            "type": "web_search_call",
+            "id": "search_fixture",
+            "status": "in_progress"
+          }
+        },
+        {
+          "type": "response.output_item.done",
+          "output_index": 0,
+          "item": {
+            "type": "web_search_call",
+            "id": "search_fixture",
+            "status": "completed",
+            "action": {
+              "type": "open_page"
+            }
+          }
+        },
+        {
+          "type": "response.output_item.added",
+          "output_index": 1,
+          "item": {
+            "type": "message",
+            "id": "message_fixture"
+          }
+        },
+        {
+          "type": "response.output_text.delta",
+          "output_index": 1,
+          "item_id": "message_fixture",
+          "content_index": 0,
+          "delta": "Found this."
+        },
+        {
+          "type": "response.output_item.done",
+          "output_index": 1,
+          "item": {
+            "type": "message",
+            "id": "message_fixture"
+          }
+        },
+        {
+          "type": "response.completed",
+          "response": {
+            "id": "response_fixture",
+            "incomplete_details": null,
+            "usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          }
+        }
+      ],
+      "expected": {
+        "parts": [
+          {
+            "type": "tool-call",
+            "toolCallId": "search_fixture",
+            "toolName": "web_search",
+            "input": {},
+            "providerExecuted": true
+          },
+          {
+            "type": "tool-result",
+            "toolCallId": "search_fixture",
+            "toolName": "web_search",
+            "output": {
+              "type": "json",
+              "value": {
+                "action": {
+                  "type": "openPage"
+                }
+              }
+            }
+          },
+          {
+            "type": "text",
+            "text": "Found this."
+          }
+        ],
+        "finish": "stop",
+        "usage": {
+          "inputTokens": 10,
+          "outputTokens": 5,
+          "cacheReadTokens": 0,
+          "cacheWriteTokens": null,
+          "reasoningTokens": 0
+        },
+        "citations": []
+      },
+      "failed": false
+    },
+    {
+      "protocol": "responses",
+      "variant": "find-null",
+      "events": [
+        {
+          "type": "response.created",
+          "response": {
+            "id": "response_fixture",
+            "created_at": 1000,
+            "model": "gpt-5.6-luna"
+          }
+        },
+        {
+          "type": "response.output_item.added",
+          "output_index": 0,
+          "item": {
+            "type": "web_search_call",
+            "id": "search_fixture",
+            "status": "in_progress"
+          }
+        },
+        {
+          "type": "response.output_item.done",
+          "output_index": 0,
+          "item": {
+            "type": "web_search_call",
+            "id": "search_fixture",
+            "status": "completed",
+            "action": {
+              "type": "find_in_page",
+              "url": null,
+              "pattern": null
+            }
+          }
+        },
+        {
+          "type": "response.output_item.added",
+          "output_index": 1,
+          "item": {
+            "type": "message",
+            "id": "message_fixture"
+          }
+        },
+        {
+          "type": "response.output_text.delta",
+          "output_index": 1,
+          "item_id": "message_fixture",
+          "content_index": 0,
+          "delta": "Found this."
+        },
+        {
+          "type": "response.output_item.done",
+          "output_index": 1,
+          "item": {
+            "type": "message",
+            "id": "message_fixture"
+          }
+        },
+        {
+          "type": "response.completed",
+          "response": {
+            "id": "response_fixture",
+            "incomplete_details": null,
+            "usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          }
+        }
+      ],
+      "expected": {
+        "parts": [
+          {
+            "type": "tool-call",
+            "toolCallId": "search_fixture",
+            "toolName": "web_search",
+            "input": {},
+            "providerExecuted": true
+          },
+          {
+            "type": "tool-result",
+            "toolCallId": "search_fixture",
+            "toolName": "web_search",
+            "output": {
+              "type": "json",
+              "value": {
+                "action": {
+                  "type": "findInPage",
+                  "url": null,
+                  "pattern": null
+                }
+              }
+            }
+          },
+          {
+            "type": "text",
+            "text": "Found this."
+          }
+        ],
+        "finish": "stop",
+        "usage": {
+          "inputTokens": 10,
+          "outputTokens": 5,
+          "cacheReadTokens": 0,
+          "cacheWriteTokens": null,
+          "reasoningTokens": 0
+        },
+        "citations": []
+      },
+      "failed": false
+    },
+    {
+      "protocol": "responses",
+      "variant": "only",
+      "events": [
+        {
+          "type": "response.created",
+          "response": {
+            "id": "response_fixture",
+            "created_at": 1000,
+            "model": "gpt-5.6-luna"
+          }
+        },
+        {
+          "type": "response.output_item.added",
+          "output_index": 0,
+          "item": {
+            "type": "web_search_call",
+            "id": "search_fixture",
+            "status": "in_progress"
+          }
+        },
+        {
+          "type": "response.output_item.done",
+          "output_index": 0,
+          "item": {
+            "type": "web_search_call",
+            "id": "search_fixture",
+            "status": "completed",
+            "action": {
+              "type": "search",
+              "query": "Forge",
+              "queries": [
+                "Forge",
+                "Forge Rust"
+              ],
+              "sources": [
+                {
+                  "type": "url",
+                  "url": "https://example.com"
+                },
+                {
+                  "type": "api",
+                  "name": "Fixture API"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "response.completed",
+          "response": {
+            "id": "response_fixture",
+            "incomplete_details": null,
+            "usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          }
+        }
+      ],
+      "expected": {
+        "parts": [
+          {
+            "type": "tool-call",
+            "toolCallId": "search_fixture",
+            "toolName": "web_search",
+            "input": {},
+            "providerExecuted": true
+          },
+          {
+            "type": "tool-result",
+            "toolCallId": "search_fixture",
+            "toolName": "web_search",
+            "output": {
+              "type": "json",
+              "value": {
+                "action": {
+                  "type": "search",
+                  "query": "Forge",
+                  "queries": [
+                    "Forge",
+                    "Forge Rust"
+                  ]
+                },
+                "sources": [
+                  {
+                    "type": "url",
+                    "url": "https://example.com"
+                  },
+                  {
+                    "type": "api",
+                    "name": "Fixture API"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "finish": "stop",
+        "usage": {
+          "inputTokens": 10,
+          "outputTokens": 5,
+          "cacheReadTokens": 0,
+          "cacheWriteTokens": null,
+          "reasoningTokens": 0
+        },
+        "citations": []
+      },
+      "failed": false
+    },
+    {
+      "protocol": "responses",
+      "variant": "citations",
+      "events": [
+        {
+          "type": "response.created",
+          "response": {
+            "id": "response_fixture",
+            "created_at": 1000,
+            "model": "gpt-5.6-luna"
+          }
+        },
+        {
+          "type": "response.output_item.added",
+          "output_index": 0,
+          "item": {
+            "type": "web_search_call",
+            "id": "search_fixture",
+            "status": "in_progress"
+          }
+        },
+        {
+          "type": "response.output_item.done",
+          "output_index": 0,
+          "item": {
+            "type": "web_search_call",
+            "id": "search_fixture",
+            "status": "completed",
+            "action": {
+              "type": "search",
+              "query": "Forge",
+              "queries": [
+                "Forge",
+                "Forge Rust"
+              ],
+              "sources": [
+                {
+                  "type": "url",
+                  "url": "https://example.com"
+                },
+                {
+                  "type": "api",
+                  "name": "Fixture API"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "response.output_item.added",
+          "output_index": 1,
+          "item": {
+            "type": "message",
+            "id": "message_fixture"
+          }
+        },
+        {
+          "type": "response.output_text.delta",
+          "output_index": 1,
+          "item_id": "message_fixture",
+          "content_index": 0,
+          "delta": "Found this."
+        },
+        {
+          "type": "response.output_text.annotation.added",
+          "item_id": "message_fixture",
+          "output_index": 1,
+          "content_index": 0,
+          "annotation_index": 0,
+          "annotation": {
+            "type": "url_citation",
+            "url": "https://example.com",
+            "title": "Example",
+            "start_index": 0,
+            "end_index": 11
+          }
+        },
+        {
+          "type": "response.output_item.done",
+          "output_index": 1,
+          "item": {
+            "type": "message",
+            "id": "message_fixture"
+          }
+        },
+        {
+          "type": "response.completed",
+          "response": {
+            "id": "response_fixture",
+            "incomplete_details": null,
+            "usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          }
+        }
+      ],
+      "expected": {
+        "parts": [
+          {
+            "type": "tool-call",
+            "toolCallId": "search_fixture",
+            "toolName": "web_search",
+            "input": {},
+            "providerExecuted": true
+          },
+          {
+            "type": "tool-result",
+            "toolCallId": "search_fixture",
+            "toolName": "web_search",
+            "output": {
+              "type": "json",
+              "value": {
+                "action": {
+                  "type": "search",
+                  "query": "Forge",
+                  "queries": [
+                    "Forge",
+                    "Forge Rust"
+                  ]
+                },
+                "sources": [
+                  {
+                    "type": "url",
+                    "url": "https://example.com"
+                  },
+                  {
+                    "type": "api",
+                    "name": "Fixture API"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "text",
+            "text": "Found this."
+          }
+        ],
+        "finish": "stop",
+        "usage": {
+          "inputTokens": 10,
+          "outputTokens": 5,
+          "cacheReadTokens": 0,
+          "cacheWriteTokens": null,
+          "reasoningTokens": 0
+        },
+        "citations": [
+          {
+            "url": "https://example.com",
+            "title": "Example"
+          }
+        ]
+      },
+      "failed": false
+    },
+    {
+      "protocol": "anthropic",
+      "variant": "search",
+      "events": [
+        {
+          "type": "message_start",
+          "message": {
+            "id": "message_fixture",
+            "model": "claude-sonnet-4-5",
+            "role": "assistant",
+            "content": [],
+            "usage": {
+              "input_tokens": 10,
+              "output_tokens": 0
+            }
+          }
+        },
+        {
+          "type": "content_block_start",
+          "index": 0,
+          "content_block": {
+            "type": "server_tool_use",
+            "id": "search_fixture",
+            "name": "web_search",
+            "input": {}
+          }
+        },
+        {
+          "type": "content_block_delta",
+          "index": 0,
+          "delta": {
+            "type": "input_json_delta",
+            "partial_json": "{\"query\":\"Forge\"}"
+          }
+        },
+        {
+          "type": "content_block_stop",
+          "index": 0
+        },
+        {
+          "type": "content_block_start",
+          "index": 1,
+          "content_block": {
+            "type": "web_search_tool_result",
+            "tool_use_id": "search_fixture",
+            "content": [
+              {
+                "type": "web_search_result",
+                "url": "https://example.com",
+                "title": "Example",
+                "encrypted_content": "fixture-encrypted-content",
+                "page_age": "Today"
+              }
+            ]
+          }
+        },
+        {
+          "type": "content_block_stop",
+          "index": 1
+        },
+        {
+          "type": "content_block_start",
+          "index": 2,
+          "content_block": {
+            "type": "text",
+            "text": ""
+          }
+        },
+        {
+          "type": "content_block_delta",
+          "index": 2,
+          "delta": {
+            "type": "text_delta",
+            "text": "Found this."
+          }
+        },
+        {
+          "type": "content_block_stop",
+          "index": 2
+        },
+        {
+          "type": "message_delta",
+          "delta": {
+            "stop_reason": "end_turn",
+            "stop_sequence": null
+          },
+          "usage": {
+            "output_tokens": 5
+          }
+        },
+        {
+          "type": "message_stop"
+        }
+      ],
+      "expected": {
+        "parts": [
+          {
+            "type": "tool-call",
+            "toolCallId": "search_fixture",
+            "toolName": "web_search",
+            "input": {
+              "query": "Forge"
+            },
+            "providerExecuted": true
+          },
+          {
+            "type": "tool-result",
+            "toolCallId": "search_fixture",
+            "toolName": "web_search",
+            "output": {
+              "type": "json",
+              "value": [
+                {
+                  "url": "https://example.com",
+                  "title": "Example",
+                  "pageAge": "Today",
+                  "encryptedContent": "fixture-encrypted-content",
+                  "type": "web_search_result"
+                }
+              ]
+            }
+          },
+          {
+            "type": "text",
+            "text": "Found this."
+          }
+        ],
+        "finish": "stop",
+        "usage": {
+          "inputTokens": 10,
+          "outputTokens": 5,
+          "cacheReadTokens": 0,
+          "cacheWriteTokens": 0,
+          "reasoningTokens": null
+        },
+        "citations": []
+      },
+      "failed": false
+    },
+    {
+      "protocol": "anthropic",
+      "variant": "empty",
+      "events": [
+        {
+          "type": "message_start",
+          "message": {
+            "id": "message_fixture",
+            "model": "claude-sonnet-4-5",
+            "role": "assistant",
+            "content": [],
+            "usage": {
+              "input_tokens": 10,
+              "output_tokens": 0
+            }
+          }
+        },
+        {
+          "type": "content_block_start",
+          "index": 0,
+          "content_block": {
+            "type": "server_tool_use",
+            "id": "search_fixture",
+            "name": "web_search",
+            "input": {}
+          }
+        },
+        {
+          "type": "content_block_delta",
+          "index": 0,
+          "delta": {
+            "type": "input_json_delta",
+            "partial_json": "{\"query\":\"Forge\"}"
+          }
+        },
+        {
+          "type": "content_block_stop",
+          "index": 0
+        },
+        {
+          "type": "content_block_start",
+          "index": 1,
+          "content_block": {
+            "type": "web_search_tool_result",
+            "tool_use_id": "search_fixture",
+            "content": []
+          }
+        },
+        {
+          "type": "content_block_stop",
+          "index": 1
+        },
+        {
+          "type": "content_block_start",
+          "index": 2,
+          "content_block": {
+            "type": "text",
+            "text": ""
+          }
+        },
+        {
+          "type": "content_block_delta",
+          "index": 2,
+          "delta": {
+            "type": "text_delta",
+            "text": "Found this."
+          }
+        },
+        {
+          "type": "content_block_stop",
+          "index": 2
+        },
+        {
+          "type": "message_delta",
+          "delta": {
+            "stop_reason": "end_turn",
+            "stop_sequence": null
+          },
+          "usage": {
+            "output_tokens": 5
+          }
+        },
+        {
+          "type": "message_stop"
+        }
+      ],
+      "expected": {
+        "parts": [
+          {
+            "type": "tool-call",
+            "toolCallId": "search_fixture",
+            "toolName": "web_search",
+            "input": {
+              "query": "Forge"
+            },
+            "providerExecuted": true
+          },
+          {
+            "type": "tool-result",
+            "toolCallId": "search_fixture",
+            "toolName": "web_search",
+            "output": {
+              "type": "json",
+              "value": []
+            }
+          },
+          {
+            "type": "text",
+            "text": "Found this."
+          }
+        ],
+        "finish": "stop",
+        "usage": {
+          "inputTokens": 10,
+          "outputTokens": 5,
+          "cacheReadTokens": 0,
+          "cacheWriteTokens": 0,
+          "reasoningTokens": null
+        },
+        "citations": []
+      },
+      "failed": false
+    },
+    {
+      "protocol": "anthropic",
+      "variant": "error",
+      "events": [
+        {
+          "type": "message_start",
+          "message": {
+            "id": "message_fixture",
+            "model": "claude-sonnet-4-5",
+            "role": "assistant",
+            "content": [],
+            "usage": {
+              "input_tokens": 10,
+              "output_tokens": 0
+            }
+          }
+        },
+        {
+          "type": "content_block_start",
+          "index": 0,
+          "content_block": {
+            "type": "server_tool_use",
+            "id": "search_fixture",
+            "name": "web_search",
+            "input": {}
+          }
+        },
+        {
+          "type": "content_block_delta",
+          "index": 0,
+          "delta": {
+            "type": "input_json_delta",
+            "partial_json": "{\"query\":\"Forge\"}"
+          }
+        },
+        {
+          "type": "content_block_stop",
+          "index": 0
+        },
+        {
+          "type": "content_block_start",
+          "index": 1,
+          "content_block": {
+            "type": "web_search_tool_result",
+            "tool_use_id": "search_fixture",
+            "content": {
+              "type": "web_search_tool_result_error",
+              "error_code": "too_many_requests"
+            }
+          }
+        },
+        {
+          "type": "content_block_stop",
+          "index": 1
+        },
+        {
+          "type": "content_block_start",
+          "index": 2,
+          "content_block": {
+            "type": "text",
+            "text": ""
+          }
+        },
+        {
+          "type": "content_block_delta",
+          "index": 2,
+          "delta": {
+            "type": "text_delta",
+            "text": "Found this."
+          }
+        },
+        {
+          "type": "content_block_stop",
+          "index": 2
+        },
+        {
+          "type": "message_delta",
+          "delta": {
+            "stop_reason": "end_turn",
+            "stop_sequence": null
+          },
+          "usage": {
+            "output_tokens": 5
+          }
+        },
+        {
+          "type": "message_stop"
+        }
+      ],
+      "expected": {
+        "parts": [
+          {
+            "type": "tool-call",
+            "toolCallId": "search_fixture",
+            "toolName": "web_search",
+            "input": {
+              "query": "Forge"
+            },
+            "providerExecuted": true
+          },
+          {
+            "type": "tool-result",
+            "toolCallId": "search_fixture",
+            "toolName": "web_search",
+            "output": {
+              "type": "error-json",
+              "value": {
+                "type": "web_search_tool_result_error",
+                "errorCode": "too_many_requests"
+              }
+            }
+          },
+          {
+            "type": "text",
+            "text": "Found this."
+          }
+        ],
+        "finish": "stop",
+        "usage": {
+          "inputTokens": 10,
+          "outputTokens": 5,
+          "cacheReadTokens": 0,
+          "cacheWriteTokens": 0,
+          "reasoningTokens": null
+        },
+        "citations": []
+      },
+      "failed": false
+    },
+    {
+      "protocol": "anthropic",
+      "variant": "inline",
+      "events": [
+        {
+          "type": "message_start",
+          "message": {
+            "id": "message_fixture",
+            "model": "claude-sonnet-4-5",
+            "role": "assistant",
+            "content": [],
+            "usage": {
+              "input_tokens": 10,
+              "output_tokens": 0
+            }
+          }
+        },
+        {
+          "type": "content_block_start",
+          "index": 0,
+          "content_block": {
+            "type": "server_tool_use",
+            "id": "search_fixture",
+            "name": "web_search",
+            "input": {
+              "query": "Forge"
+            }
+          }
+        },
+        {
+          "type": "content_block_stop",
+          "index": 0
+        },
+        {
+          "type": "content_block_start",
+          "index": 1,
+          "content_block": {
+            "type": "web_search_tool_result",
+            "tool_use_id": "search_fixture",
+            "content": [
+              {
+                "type": "web_search_result",
+                "url": "https://example.com",
+                "title": "Example",
+                "encrypted_content": "fixture-encrypted-content",
+                "page_age": "Today"
+              }
+            ]
+          }
+        },
+        {
+          "type": "content_block_stop",
+          "index": 1
+        },
+        {
+          "type": "content_block_start",
+          "index": 2,
+          "content_block": {
+            "type": "text",
+            "text": ""
+          }
+        },
+        {
+          "type": "content_block_delta",
+          "index": 2,
+          "delta": {
+            "type": "text_delta",
+            "text": "Found this."
+          }
+        },
+        {
+          "type": "content_block_stop",
+          "index": 2
+        },
+        {
+          "type": "message_delta",
+          "delta": {
+            "stop_reason": "end_turn",
+            "stop_sequence": null
+          },
+          "usage": {
+            "output_tokens": 5
+          }
+        },
+        {
+          "type": "message_stop"
+        }
+      ],
+      "expected": {
+        "parts": [
+          {
+            "type": "tool-call",
+            "toolCallId": "search_fixture",
+            "toolName": "web_search",
+            "input": {
+              "query": "Forge"
+            },
+            "providerExecuted": true
+          },
+          {
+            "type": "tool-result",
+            "toolCallId": "search_fixture",
+            "toolName": "web_search",
+            "output": {
+              "type": "json",
+              "value": [
+                {
+                  "url": "https://example.com",
+                  "title": "Example",
+                  "pageAge": "Today",
+                  "encryptedContent": "fixture-encrypted-content",
+                  "type": "web_search_result"
+                }
+              ]
+            }
+          },
+          {
+            "type": "text",
+            "text": "Found this."
+          }
+        ],
+        "finish": "stop",
+        "usage": {
+          "inputTokens": 10,
+          "outputTokens": 5,
+          "cacheReadTokens": 0,
+          "cacheWriteTokens": 0,
+          "reasoningTokens": null
+        },
+        "citations": []
+      },
+      "failed": false
+    },
+    {
+      "protocol": "anthropic",
+      "variant": "only",
+      "events": [
+        {
+          "type": "message_start",
+          "message": {
+            "id": "message_fixture",
+            "model": "claude-sonnet-4-5",
+            "role": "assistant",
+            "content": [],
+            "usage": {
+              "input_tokens": 10,
+              "output_tokens": 0
+            }
+          }
+        },
+        {
+          "type": "content_block_start",
+          "index": 0,
+          "content_block": {
+            "type": "server_tool_use",
+            "id": "search_fixture",
+            "name": "web_search",
+            "input": {}
+          }
+        },
+        {
+          "type": "content_block_delta",
+          "index": 0,
+          "delta": {
+            "type": "input_json_delta",
+            "partial_json": "{\"query\":\"Forge\"}"
+          }
+        },
+        {
+          "type": "content_block_stop",
+          "index": 0
+        },
+        {
+          "type": "content_block_start",
+          "index": 1,
+          "content_block": {
+            "type": "web_search_tool_result",
+            "tool_use_id": "search_fixture",
+            "content": [
+              {
+                "type": "web_search_result",
+                "url": "https://example.com",
+                "title": "Example",
+                "encrypted_content": "fixture-encrypted-content",
+                "page_age": "Today"
+              }
+            ]
+          }
+        },
+        {
+          "type": "content_block_stop",
+          "index": 1
+        },
+        {
+          "type": "message_delta",
+          "delta": {
+            "stop_reason": "end_turn",
+            "stop_sequence": null
+          },
+          "usage": {
+            "output_tokens": 5
+          }
+        },
+        {
+          "type": "message_stop"
+        }
+      ],
+      "expected": {
+        "parts": [
+          {
+            "type": "tool-call",
+            "toolCallId": "search_fixture",
+            "toolName": "web_search",
+            "input": {
+              "query": "Forge"
+            },
+            "providerExecuted": true
+          },
+          {
+            "type": "tool-result",
+            "toolCallId": "search_fixture",
+            "toolName": "web_search",
+            "output": {
+              "type": "json",
+              "value": [
+                {
+                  "url": "https://example.com",
+                  "title": "Example",
+                  "pageAge": "Today",
+                  "encryptedContent": "fixture-encrypted-content",
+                  "type": "web_search_result"
+                }
+              ]
+            }
+          }
+        ],
+        "finish": "stop",
+        "usage": {
+          "inputTokens": 10,
+          "outputTokens": 5,
+          "cacheReadTokens": 0,
+          "cacheWriteTokens": 0,
+          "reasoningTokens": null
+        },
+        "citations": []
+      },
+      "failed": false
+    },
+    {
+      "protocol": "anthropic",
+      "variant": "citations",
+      "events": [
+        {
+          "type": "message_start",
+          "message": {
+            "id": "message_fixture",
+            "model": "claude-sonnet-4-5",
+            "role": "assistant",
+            "content": [],
+            "usage": {
+              "input_tokens": 10,
+              "output_tokens": 0
+            }
+          }
+        },
+        {
+          "type": "content_block_start",
+          "index": 0,
+          "content_block": {
+            "type": "server_tool_use",
+            "id": "search_fixture",
+            "name": "web_search",
+            "input": {}
+          }
+        },
+        {
+          "type": "content_block_delta",
+          "index": 0,
+          "delta": {
+            "type": "input_json_delta",
+            "partial_json": "{\"query\":\"Forge\"}"
+          }
+        },
+        {
+          "type": "content_block_stop",
+          "index": 0
+        },
+        {
+          "type": "content_block_start",
+          "index": 1,
+          "content_block": {
+            "type": "web_search_tool_result",
+            "tool_use_id": "search_fixture",
+            "content": [
+              {
+                "type": "web_search_result",
+                "url": "https://example.com",
+                "title": "Example",
+                "encrypted_content": "fixture-encrypted-content",
+                "page_age": "Today"
+              }
+            ]
+          }
+        },
+        {
+          "type": "content_block_stop",
+          "index": 1
+        },
+        {
+          "type": "content_block_start",
+          "index": 2,
+          "content_block": {
+            "type": "text",
+            "text": ""
+          }
+        },
+        {
+          "type": "content_block_delta",
+          "index": 2,
+          "delta": {
+            "type": "text_delta",
+            "text": "Found this."
+          }
+        },
+        {
+          "type": "content_block_delta",
+          "index": 2,
+          "delta": {
+            "type": "citations_delta",
+            "citation": {
+              "type": "web_search_result_location",
+              "url": "https://example.com",
+              "title": "Example",
+              "cited_text": "Found this.",
+              "encrypted_index": "fixture-opaque-citation"
+            }
+          }
+        },
+        {
+          "type": "content_block_stop",
+          "index": 2
+        },
+        {
+          "type": "message_delta",
+          "delta": {
+            "stop_reason": "end_turn",
+            "stop_sequence": null
+          },
+          "usage": {
+            "output_tokens": 5
+          }
+        },
+        {
+          "type": "message_stop"
+        }
+      ],
+      "expected": {
+        "parts": [
+          {
+            "type": "tool-call",
+            "toolCallId": "search_fixture",
+            "toolName": "web_search",
+            "input": {
+              "query": "Forge"
+            },
+            "providerExecuted": true
+          },
+          {
+            "type": "tool-result",
+            "toolCallId": "search_fixture",
+            "toolName": "web_search",
+            "output": {
+              "type": "json",
+              "value": [
+                {
+                  "url": "https://example.com",
+                  "title": "Example",
+                  "pageAge": "Today",
+                  "encryptedContent": "fixture-encrypted-content",
+                  "type": "web_search_result"
+                }
+              ]
+            }
+          },
+          {
+            "type": "text",
+            "text": "Found this."
+          }
+        ],
+        "finish": "stop",
+        "usage": {
+          "inputTokens": 10,
+          "outputTokens": 5,
+          "cacheReadTokens": 0,
+          "cacheWriteTokens": 0,
+          "reasoningTokens": null
+        },
+        "citations": [
+          {
+            "url": "https://example.com",
+            "title": "Example",
+            "citedText": "Found this."
+          }
+        ]
+      },
+      "failed": false
+    }
+  ]
+}
