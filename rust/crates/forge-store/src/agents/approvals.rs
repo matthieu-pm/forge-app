@@ -59,6 +59,17 @@ pub async fn compare_and_set(
     resolved_by: Option<&str>,
 ) -> Result<Option<Approval>, StoreError> {
     tx.prepare().await?;
+    compare_and_set_in(tx, id, expected, next, resolved_at, resolved_by).await
+}
+/// The caller must already have prepared the surrounding journal transaction.
+pub(crate) async fn compare_and_set_in(
+    connection: &mut PgConnection,
+    id: Uuid,
+    expected: ApprovalState,
+    next: ApprovalState,
+    resolved_at: Option<DateTime<Utc>>,
+    resolved_by: Option<&str>,
+) -> Result<Option<Approval>, StoreError> {
     Ok(sqlx::query_as(&format!("UPDATE agent_approvals SET state=$3,resolved_at=COALESCE($4,resolved_at),resolved_by_user_id=COALESCE($5,resolved_by_user_id) WHERE id=$1 AND state=$2 RETURNING {COLUMNS}"))
-        .bind(id).bind(expected).bind(next).bind(resolved_at).bind(resolved_by.filter(|s|!s.is_empty())).fetch_optional(&mut **tx).await?)
+        .bind(id).bind(expected).bind(next).bind(resolved_at).bind(resolved_by.filter(|s|!s.is_empty())).fetch_optional(connection).await?)
 }

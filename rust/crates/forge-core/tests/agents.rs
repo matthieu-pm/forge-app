@@ -14,6 +14,29 @@ fn cases(group: &str) -> &'static Vec<Value> {
     DATA["agents"][group].as_array().unwrap()
 }
 #[test]
+fn approval_fingerprints_and_program_manifests_match_the_owning_service() {
+    use forge_core::agents::approval;
+    for case in DATA["agentApprovals"]["hashes"].as_array().unwrap() {
+        assert_eq!(
+            approval::input_hash(&case["input"]),
+            case["hash"].as_str().unwrap(),
+            "{case}"
+        );
+    }
+    for case in DATA["agentApprovals"]["grants"].as_array().unwrap() {
+        assert_eq!(
+            approval::program_grant_allows(
+                case["capabilityId"].as_str().unwrap(),
+                &case["summary"],
+                "teams.update",
+                case["version"].as_str().unwrap()
+            ),
+            case["allowed"].as_bool().unwrap(),
+            "{case}"
+        );
+    }
+}
+#[test]
 fn agent_protocols_normalize_and_reject_like_the_owning_schemas() {
     for case in cases("contracts") {
         let v = case["input"].clone();

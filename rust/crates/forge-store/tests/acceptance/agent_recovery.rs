@@ -236,6 +236,70 @@ async fn agent_mutations_prepare_before_changes_and_archive_released_reservation
     invocations::release(&f.database, invocation.id)
         .await
         .unwrap();
+    use forge_store::agents::approval_service::{Binding, Decision, Request, Service};
+    let service = Service::new(f.database.clone());
+    let request = Request {
+        approval_id: Some(Uuid::new_v4()),
+        run_id: run.id,
+        capability_id: "teams.update".into(),
+        capability_version: "1".into(),
+        risk: Risk::ReversibleWrite,
+        input: json!({"slug":"fixture"}),
+        redacted_input_summary: json!({"summary":"Team change"}),
+        expires_at: None,
+    };
+    let id = request.approval_id.unwrap();
+    f.backend.mode.store(1, Ordering::Relaxed);
+    assert!(service.request(&actor, &request).await.is_err());
+    assert!(
+        approvals::get(&mut f.pool.acquire().await.unwrap(), id)
+            .await
+            .unwrap()
+            .is_none()
+    );
+    f.backend.mode.store(0, Ordering::Relaxed);
+    service.request(&actor, &request).await.unwrap();
+    f.backend.mode.store(1, Ordering::Relaxed);
+    assert!(
+        service
+            .resolve(&actor, id, Decision::Approved)
+            .await
+            .is_err()
+    );
+    assert_eq!(
+        approvals::get(&mut f.pool.acquire().await.unwrap(), id)
+            .await
+            .unwrap()
+            .unwrap()
+            .state,
+        ApprovalState::Pending
+    );
+    f.backend.mode.store(0, Ordering::Relaxed);
+    service
+        .resolve(&actor, id, Decision::Approved)
+        .await
+        .unwrap();
+    let binding = Binding {
+        run_id: run.id,
+        capability_id: request.capability_id.clone(),
+        capability_version: "1".into(),
+        capability_input: request.input,
+    };
+    f.backend.mode.store(1, Ordering::Relaxed);
+    assert!(service.consume(&actor, id, &binding).await.is_err());
+    assert_eq!(
+        approvals::get(&mut f.pool.acquire().await.unwrap(), id)
+            .await
+            .unwrap()
+            .unwrap()
+            .state,
+        ApprovalState::Approved
+    );
+    f.backend.mode.store(0, Ordering::Relaxed);
+    assert_eq!(
+        service.consume(&actor, id, &binding).await.unwrap().state,
+        ApprovalState::Consumed
+    );
     let archived = f.backend.completed.lock().unwrap();
     assert!(
         archived

@@ -48,7 +48,8 @@ gate pass.
 | 3b4 | Account profiles, private avatar validation and concurrent profile edits | Passed available gate |
 | 3b5a | Agent protocols, model routing, execution policy and scoped credentials | Passed available gate |
 | 3b5b | Agent thread/run persistence, event ledger, approval and invocation reservations | Passed available gate |
-| 3b5c | Live approval authority, exact input binding and single-use consumption | In progress |
+| 3b5c | Live approval authority, exact input binding and single-use consumption | Passed available gate |
+| 3b5d | Capability dispatch, current target authority and atomic approved team commands | In progress |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -873,3 +874,29 @@ these routes do not represent a completed rewrite.
 - Initial gates found a SQLx generated-conversion incompatibility and two test
   lints. Explicit bounded JSON row decoding fixed the conversion without changing
   dependencies; the final complete gate passed after all corrections.
+
+### Milestone 3b5c
+
+- Full gate passed on the first run: 291 Rust tests, 2,959 enabled reference tests,
+  typechecking, formatting, Clippy and source export checks. The 661
+  fixture-dependent reference tests remain skipped.
+  Log: `.forge/rust-rewrite/milestone-3b5c.log`.
+- Approval fingerprints preserve the source's ICU locale ordering and JavaScript
+  numeric-key/number serialization; command-receipt hashing remains distinct.
+  Source exports cover fingerprints, program manifests and eight complete approval
+  lifecycles evaluated by the existing service and its in-memory adapters.
+- Live sessions, API-key scopes, memberships and active agent runs are rechecked.
+  Requests bind user/workspace/run identity; exact capability/version/input hashes
+  control single-use consumption. Program grants retain manifest-scoped reuse,
+  original expiration ordering and exact-approval preference over fallback grants.
+- Request/resolution events and run-state changes now share the approval SQL
+  transaction. A denied action resumes the turn with a denied tool result.
+  Canonical command adapters can consume an approval inside their own prepared
+  transaction so failed effects cannot spend the approval.
+- PostgreSQL coverage compares every exported lifecycle step and races requests,
+  resolutions and consumption. Revoked sessions/memberships, wrong runs/scopes,
+  expired grants, unsafe summaries, event-write failures and journal preparation
+  failures leave unauthorized or incomplete changes uncommitted.
+- Agent authority now uses the same bounded JSON decoder as run storage, allowing
+  deeply nested stored selections while still denying unported loop authority.
+  Runtime dispatch and agent HTTP routes remain pending.

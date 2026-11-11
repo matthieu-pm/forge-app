@@ -1,4 +1,5 @@
 //! Agent protocols and decisions shared by hosted and local execution adapters.
+pub mod approval;
 pub mod contracts;
 pub mod models;
 pub mod policy;

@@ -18,8 +18,16 @@ pub async fn create(db: &Database, input: &CreateRun) -> Result<Run, StoreError>
     Ok(row)
 }
 pub async fn get(db: &Database, workspace: &str, id: Uuid) -> Result<Option<Run>, StoreError> {
+    let mut connection = db.pool().acquire().await?;
+    get_in(&mut connection, workspace, id).await
+}
+pub(crate) async fn get_in(
+    connection: &mut sqlx::PgConnection,
+    workspace: &str,
+    id: Uuid,
+) -> Result<Option<Run>, StoreError> {
     Ok(sqlx::query_as(&format!("SELECT {COLUMNS} FROM agent_runs WHERE id=$2 AND EXISTS(SELECT 1 FROM agent_threads t WHERE t.id=agent_runs.thread_id AND t.workspace_id=$1)"))
-        .bind(workspace).bind(id).fetch_optional(db.pool()).await?)
+        .bind(workspace).bind(id).fetch_optional(connection).await?)
 }
 pub async fn update(db: &Database, id: Uuid, patch: &RunPatch) -> Result<Option<Run>, StoreError> {
     let mut tx = db.begin().await?;

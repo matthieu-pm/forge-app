@@ -28,6 +28,8 @@ pub use database::Database;
 
 #[derive(Debug, thiserror::Error)]
 pub enum StoreError {
+    #[error(transparent)]
+    Approval(#[from] forge_core::agents::approval::Error),
     #[error("Profile editing is unavailable.")]
     ProfileDisabled,
     #[error("This profile changed in another session.")]

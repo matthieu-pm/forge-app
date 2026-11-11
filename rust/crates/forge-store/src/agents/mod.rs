@@ -2,6 +2,7 @@
 //! actor, workspace and run before calling these stores. They are not HTTP APIs.
 //! Mutations share the existing schema's constraints and deletion journal.
 
+pub mod approval_service;
 pub mod approvals;
 pub mod events;
 pub mod invocations;
