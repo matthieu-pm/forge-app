@@ -73,17 +73,18 @@ a:focus-visible {
   background-image:
     linear-gradient(#e9ece75c 1px, transparent 1px),
     linear-gradient(90deg, #e9ece75c 1px, transparent 1px);
-  background-size: 8px 8px;
+  /* The renderer sets --cell so the graph paper lines up with the ASCII tiles. */
+  background-size: var(--cell, 12px) var(--cell, 12px);
 }
 .world:after {
   content: "";
   position: absolute;
   inset: 0;
   background: linear-gradient(
-    var(--ground),
-    transparent 17%,
-    transparent 85%,
-    var(--ground)
+    #fafbf9d9,
+    transparent 13%,
+    transparent 91%,
+    #fafbf9d9
   );
 }
 canvas {
@@ -95,11 +96,19 @@ canvas {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(
-    ellipse 34% 33% at 50% 49%,
-    #fafbf9 50%,
-    #fafbf9eb 68%,
-    #fafbf900 100%
+  /* Frosted glass: people pass behind the copy as soft shapes, not hidden. */
+  background: #fafbf9b3;
+  -webkit-backdrop-filter: blur(9px);
+  backdrop-filter: blur(9px);
+  -webkit-mask-image: radial-gradient(
+    ellipse 37% 36% at 50% 49%,
+    #000 42%,
+    transparent 100%
+  );
+  mask-image: radial-gradient(
+    ellipse 37% 36% at 50% 49%,
+    #000 42%,
+    transparent 100%
   );
 }
 .header,
@@ -421,11 +430,16 @@ dd {
     padding-bottom: 5px;
   }
   .reading-light {
-    background: radial-gradient(
-      ellipse 58% 29% at 50% 49%,
-      #fafbf9 55%,
-      #fafbf9f0 75%,
-      #fafbf900 100%
+    background: #fafbf9cc;
+    -webkit-mask-image: radial-gradient(
+      ellipse 62% 31% at 50% 49%,
+      #000 50%,
+      transparent 100%
+    );
+    mask-image: radial-gradient(
+      ellipse 62% 31% at 50% 49%,
+      #000 50%,
+      transparent 100%
     );
   }
   dialog {
