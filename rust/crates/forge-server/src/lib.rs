@@ -1,5 +1,6 @@
 //! Rust HTTP host. Routes are enabled only as their implementation is migrated.
 
+pub mod agent_runtime;
 mod auth;
 mod definitions;
 mod desktop_auth;

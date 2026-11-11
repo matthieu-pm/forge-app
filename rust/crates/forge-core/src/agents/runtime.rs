@@ -1,0 +1,45 @@
+use async_trait::async_trait;
+use futures_core::Stream;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use std::{pin::Pin, sync::Arc};
+
+#[derive(Debug, thiserror::Error)]
+#[error("{0}")]
+pub struct Error(pub &'static str);
+pub type Events = Pin<Box<dyn Stream<Item = Result<Value, Error>> + Send>>;
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Identity {
+    pub workspace_id: String,
+    pub user_id: String,
+    pub workspace_role: String,
+}
+#[async_trait]
+pub trait Checkpoint: Send + Sync {
+    async fn save(&self, cursor: String) -> Result<(), Error>;
+}
+#[derive(Clone)]
+pub struct Context {
+    pub thread_id: String,
+    pub run_id: String,
+    pub identity: Identity,
+    pub model: Value,
+    pub reasoning_effort: String,
+    pub runtime_session_id: Option<String>,
+    pub correlation_id: Option<String>,
+    pub checkpoint: Arc<dyn Checkpoint>,
+}
+#[async_trait]
+pub trait Runtime: Send + Sync {
+    fn kind(&self) -> &'static str;
+    fn start(&self, context: Context, message: String, attachments: Vec<Value>) -> Events;
+    fn resume(&self, context: Context, input_responses: Vec<Value>) -> Events;
+    fn reconnect(&self, context: Context) -> Events;
+    async fn cancel(
+        &self,
+        run: &str,
+        cursor: Option<&str>,
+        context: Option<&Context>,
+    ) -> Result<(), Error>;
+}

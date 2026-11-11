@@ -2,11 +2,13 @@
 pub mod approval;
 pub mod capabilities;
 pub mod contracts;
+pub mod eve;
 pub mod files;
 pub mod models;
 pub mod policy;
 pub mod providers;
 pub mod routing;
+pub mod runtime;
 pub mod tokens;
 pub const RUNTIMES: &[&str] = &["eve", "codex", "claude"];
 pub const EFFORTS: &[&str] = &["none", "minimal", "low", "medium", "high", "xhigh", "max"];

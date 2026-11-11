@@ -14,6 +14,28 @@ fn cases(group: &str) -> &'static Vec<Value> {
     DATA["agents"][group].as_array().unwrap()
 }
 #[test]
+fn eve_runtime_events_and_durable_cursors_match_source() {
+    use forge_core::agents::eve;
+    for case in DATA["eve"]["events"].as_array().unwrap() {
+        let result = eve::normalize(
+            case["input"].clone(),
+            "session/fixture",
+            case["index"].as_f64(),
+        );
+        assert_eq!(result.is_ok(), case["valid"], "{case}");
+        if let Ok(events) = result {
+            assert_eq!(json!(events), case["events"], "{case}");
+        }
+    }
+    for case in DATA["eve"]["cursors"].as_array().unwrap() {
+        let result = eve::Cursor::decode(case["encoded"].as_str().unwrap());
+        assert_eq!(json!(result), case["decoded"], "{case}");
+        if let Some(cursor) = result {
+            assert_eq!(cursor.encode(), case["canonical"], "{case}");
+        }
+    }
+}
+#[test]
 fn model_provider_catalogs_endpoints_and_managed_models_match_source() {
     use forge_core::agents::providers as p;
     for case in DATA["modelProviders"]["catalogs"].as_array().unwrap() {

@@ -53,7 +53,8 @@ gate pass.
 | 3b5e | Agent attachments/artifacts, private bytes, integrity and retention | Passed available gate |
 | 3b5f | Model credentials, provider discovery, connection management and routing catalogs | Passed available gate |
 | 3b5g | Run-scoped model proxy, live credential authority and streaming HTTP delivery | Passed available gate |
-| 3b5h | EVE runtime protocol, event normalization, durable cursors and cancellation | In progress |
+| 3b5h | EVE runtime protocol, event normalization, durable cursors and cancellation | Passed available gate |
+| 3b5i | Authenticated agent threads, local run preparation, ingestion and checkpoints | In progress |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -1012,3 +1013,25 @@ these routes do not represent a completed rewrite.
   Content-Type difference. Both were corrected before the complete passing gate.
   Live provider requests, runtime execution/coordinator composition and the UI
   still require their respective milestones; readiness remains 503.
+
+### Milestone 3b5h
+
+- Full gate passed: 329 Rust tests, 2,959 enabled reference tests, typechecking,
+  formatting, Clippy and source export checks. The 661 fixture-dependent
+  reference tests remain skipped. Log: `.forge/rust-rewrite/milestone-3b5h-rerun.log`.
+- The EVE adapter implements session delivery, attachment parts, structured
+  approval responses, reconnecting from the saved offset and cancellation using
+  a persisted cursor after adapter restart. Channel credentials bind the user,
+  workspace, run, model and scoped capability credentials; cancellation-only
+  credentials cannot be exercised as capability/model credentials.
+- NDJSON decoding preserves split UTF-8 characters, repeated provider sequence
+  numbers, terminal events and the source's incomplete-tail behavior. Checkpoint
+  callbacks finish before events are emitted. Session responses and event lines
+  have explicit size bounds, HTTP requests do not inherit proxies or follow
+  redirects, and peer identity is requested only for its reviewed origin.
+- Source fixtures cover 552 event cases, 14 cursor cases and 25 executions of the
+  owning adapter. HTTP acceptance additionally verifies token signatures/binding,
+  cancellation, private diagnostic redaction, checkpoints and peer identity.
+- The initial gate found the newly added flow fixtures had not been regenerated;
+  they were exported before the complete passing rerun. Database coordinator
+  integration, the hosted runtime service and live execution remain pending.
