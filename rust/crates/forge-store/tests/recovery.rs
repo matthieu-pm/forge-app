@@ -66,6 +66,81 @@ struct Fixture {
 }
 
 #[tokio::test]
+async fn canonical_issue_effects_and_history_roll_back_when_preparation_fails() {
+    use forge_core::issues::{CreateIssue, EditIssues};
+    use forge_store::issues::{self, IssueOptions};
+    use serde_json::json;
+    let f = Fixture::new().await;
+    forge_store::workspaces::create(
+        &f.database,
+        &f.token,
+        "Recovery issues",
+        &Uuid::new_v4().to_string(),
+        None,
+    )
+    .await
+    .unwrap();
+    let actor = forge_store::authority::session_actor(&f.database, &f.token)
+        .await
+        .unwrap();
+    let team=forge_store::teams::create(&f.database,&actor,&forge_core::teams::CreateTeam::parse(json!({"name":"Recovery issues","identifier":"RISS","icon":{"kind":"emoji","value":"🛠️","color":"#818cf8"},"timezone":"UTC"})).unwrap()).await.unwrap();
+    let mut draft = forge_core::issues::blank("todo");
+    draft["title"] = json!("Recoverable issue");
+    let input =
+        CreateIssue::parse(json!({"teamId":team.id,"commandKey":Uuid::new_v4(),"draft":draft}))
+            .unwrap();
+    let completed_before = f.backend.completed.lock().unwrap().len();
+    f.backend.mode.store(1, Ordering::Relaxed);
+    assert!(
+        issues::create(&f.database, &actor, &input, IssueOptions::default())
+            .await
+            .is_err()
+    );
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM issues WHERE workspace_id=$1")
+            .bind(&actor.workspace_id)
+            .fetch_one(&f.pool)
+            .await
+            .unwrap(),
+        0
+    );
+    assert_eq!(sqlx::query_scalar::<_,i64>("SELECT count(*) FROM command_outbox_events WHERE workspace_id=$1 AND topic LIKE 'issue.%'").bind(&actor.workspace_id).fetch_one(&f.pool).await.unwrap(),0);
+    f.backend.mode.store(0, Ordering::Relaxed);
+    let created = issues::create(&f.database, &actor, &input, IssueOptions::default())
+        .await
+        .unwrap();
+    let edit=EditIssues::parse(json!({"teamId":team.id,"commandKey":Uuid::new_v4(),"edits":[{"issueId":created["issue"]["id"],"expectedRevision":0,"changes":{"title":"Updated recovery issue","status":"in-progress"}}]})).unwrap();
+    f.backend.mode.store(1, Ordering::Relaxed);
+    assert!(
+        issues::edit(&f.database, &actor, &edit, IssueOptions::default())
+            .await
+            .is_err()
+    );
+    let after_failure = issues::read(&f.database, &actor, false).await.unwrap();
+    assert_eq!(
+        after_failure["records"][0]["issue"]["title"],
+        "Recoverable issue"
+    );
+    assert_eq!(after_failure["records"][0]["issue"]["revision"], 0);
+    assert_eq!(sqlx::query_scalar::<_,i64>("SELECT count(*) FROM command_outbox_events WHERE workspace_id=$1 AND topic LIKE 'issue.%'").bind(&actor.workspace_id).fetch_one(&f.pool).await.unwrap(),1);
+    f.backend.mode.store(0, Ordering::Relaxed);
+    let saved = issues::edit(&f.database, &actor, &edit, IssueOptions::default())
+        .await
+        .unwrap();
+    assert_eq!(saved["records"][0]["issue"]["revision"], 1);
+    assert_eq!(sqlx::query_scalar::<_,i64>("SELECT count(*) FROM command_outbox_events WHERE workspace_id=$1 AND topic LIKE 'issue.%'").bind(&actor.workspace_id).fetch_one(&f.pool).await.unwrap(),2);
+    // The source journal captures destructive/security patches. Issue title,
+    // status_id, and history inserts are deliberately outside its patch set;
+    // these commands still require preparation and completed publication.
+    let completed = f.backend.completed.lock().unwrap();
+    assert_eq!(completed.len(), completed_before + 2);
+    for (operation, events) in &completed[completed_before..] {
+        assert!(f.backend.prepared.lock().unwrap().contains(operation));
+        assert!(events.is_empty());
+    }
+}
+
+#[tokio::test]
 async fn definition_deletion_requires_independent_preparation_and_publishes_removed_rows() {
     use forge_store::definitions::{self, DefinitionCommand};
     use serde_json::json;

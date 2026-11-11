@@ -242,7 +242,7 @@ pub async fn execute<H: CommandHandler>(
     })
 }
 
-fn sla_gate(workspace_id: &str) -> (bool, String) {
+pub(crate) fn sla_gate(workspace_id: &str) -> (bool, String) {
     static PROCESS_ID: OnceLock<Uuid> = OnceLock::new();
     let raw = std::env::var("FORGE_FEATURE_ROLLOUTS").ok();
     let rollouts = FeatureRollouts::parse(raw.as_deref()).unwrap_or_default();

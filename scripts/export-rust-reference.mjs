@@ -15,6 +15,7 @@ import { verifyChatGPTIdentity } from "../apps/forge/shared/chatgpt-oauth.ts"
 import { security } from "./rust-security-reference.mjs"
 import { teamContracts } from "./rust-team-reference.mjs"
 import { definitionCases, transitionCases } from "./rust-definition-reference.mjs"
+import { issueCases, issuePure, reactionEmoji } from "./rust-issue-reference.mjs"
 
 const teams = [
   { workspaceId: "w1", visibility: "workspace", memberUserIds: [] },
@@ -137,7 +138,10 @@ try {
 } finally {
   globalThis.fetch = originalFetch
 }
-const output = JSON.stringify({ teams, projects, documents, actorCases, canonical, permissions: permissionValues.map(value => ({ value, scopes: permissionsToScopes(value) })), crypto, features, journal, oidc, security, teamContracts, definitionCases, transitionCases }) + "\n"
+const output = JSON.stringify({ teams, projects, documents, actorCases, canonical, permissions: permissionValues.map(value => ({ value, scopes: permissionsToScopes(value) })), crypto, features, journal, oidc, security, teamContracts, definitionCases, transitionCases, issueCases, issuePure }) + "\n"
+const emojiDestination=new URL("../rust/crates/forge-core/data/reaction-emoji.json",import.meta.url)
+const emojiOutput=JSON.stringify(reactionEmoji)+"\n"
+if(process.argv.includes("--check")){if(readFileSync(emojiDestination,"utf8")!==emojiOutput){console.error("Reference reaction choices changed.");process.exitCode=1}}else{writeFileSync(emojiDestination,emojiOutput)}
 const defaultsDestination=new URL("../rust/crates/forge-core/data/issue-definitions.json",import.meta.url)
 const defaultsOutput=JSON.stringify(teamContracts.defaults,null,2)+"\n"
 if(process.argv.includes("--check")){

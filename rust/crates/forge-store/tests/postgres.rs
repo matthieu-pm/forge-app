@@ -11,6 +11,8 @@ use uuid::Uuid;
 
 #[path = "acceptance/definitions.rs"]
 mod definition_acceptance;
+#[path = "acceptance/issues.rs"]
+mod issue_acceptance;
 
 fn team_input(n: u32) -> forge_core::teams::CreateTeam {
     forge_core::teams::CreateTeam::parse(json!({"name":format!("Team {n}"),"identifier":format!("T{n}"),"icon":{"kind":"icon","value":"UserGroup03Icon","color":"#818cf8"},"timezone":"Europe/Paris"})).unwrap()

@@ -3,6 +3,7 @@
 mod auth;
 mod definitions;
 mod desktop_auth;
+mod issues;
 pub mod mail;
 mod oauth;
 pub mod oauth_provider;
@@ -26,6 +27,42 @@ pub fn router() -> Router {
 
 pub fn router_with_state(state: state::AppState) -> Router {
     let auth_routes = Router::new()
+        .route(
+            "/api/workspace/issues",
+            get(issues::read).post(issues::create),
+        )
+        .route(
+            "/api/workspace/issues/edit",
+            axum::routing::post(issues::edit),
+        )
+        .route(
+            "/api/workspace/issues/comment",
+            axum::routing::post(issues::comment),
+        )
+        .route(
+            "/api/workspace/issues/mentions",
+            axum::routing::post(issues::mentions),
+        )
+        .route(
+            "/api/workspace/issues/engagement",
+            axum::routing::post(issues::engagement),
+        )
+        .route(
+            "/api/workspace/issues/history",
+            axum::routing::post(issues::history),
+        )
+        .route(
+            "/api/workspace/issues/relationship",
+            axum::routing::post(issues::relationship),
+        )
+        .route(
+            "/api/workspace/issues/relationships",
+            axum::routing::post(issues::relationships),
+        )
+        .route(
+            "/api/workspace/issues/relationship-search",
+            axum::routing::post(issues::search_relationships),
+        )
         .route(
             "/api/workspace/issue-definitions",
             get(definitions::read).post(definitions::save),

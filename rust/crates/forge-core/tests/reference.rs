@@ -323,3 +323,62 @@ fn issue_definition_validation_and_transition_rules_match_the_reference() {
         );
     }
 }
+
+#[test]
+fn issue_planning_and_discussion_contracts_match_reference_documents() {
+    use forge_core::{comments as c, issues as i, planning as p};
+    let fixture: Value =
+        serde_json::from_str(include_str!("../../../reference-fixtures.json")).unwrap();
+    for (index, case) in fixture["issueCases"].as_array().unwrap().iter().enumerate() {
+        let v = case["input"].clone();
+        let result = match case["kind"].as_str().unwrap() {
+            "draft" => i::draft(v, false),
+            "issue" => i::team_issue(v),
+            "create" => i::CreateIssue::parse(v).map(i::CreateIssue::into_value),
+            "edit" => i::EditIssues::parse(v).map(i::EditIssues::into_value),
+            "project" => p::project(v),
+            "document" => p::document(v),
+            "commentDocument" => c::document(v, false),
+            "commentDraft" => c::document(v, true),
+            "comment" => c::CommentCommand::parse(v).map(c::CommentCommand::into_value),
+            "historyQuery" => i::history_query(v),
+            "history" => i::history_details(v, true),
+            "relationship" => i::relationship_change(v),
+            "relationshipQuery" => i::relationship_query(v),
+            "relationshipSearch" => i::relationship_search(v),
+            "engagement" => i::engagement(v),
+            kind => panic!("Missing contract {kind}"),
+        };
+        assert_eq!(
+            result.is_ok(),
+            case["valid"].as_bool().unwrap(),
+            "case {index}: {case}, error={:?}",
+            result.as_ref().err()
+        );
+        if let Ok(value) = result {
+            assert_eq!(value, case["expected"], "case {index}: {}", case["kind"]);
+        }
+    }
+    for case in fixture["issuePure"]["legacy"].as_array().unwrap() {
+        assert_eq!(
+            i::legacy_source(&case["draft"], case.get("assignee")).unwrap(),
+            case["expected"]
+        );
+    }
+    for case in fixture["issuePure"]["comments"].as_array().unwrap() {
+        assert_eq!(c::plain_text(&case["doc"]), case["plain"].as_str().unwrap());
+        assert_eq!(serde_json::json!(c::mention_ids(&case["doc"])), case["ids"]);
+    }
+    for case in fixture["issuePure"]["links"].as_array().unwrap() {
+        assert_eq!(
+            c::safe_link(&case["value"]),
+            case["valid"].as_bool().unwrap()
+        );
+    }
+    for case in fixture["issuePure"]["subscribers"].as_array().unwrap() {
+        assert_eq!(
+            serde_json::json!(i::subscriber_ids(case["value"].as_str().unwrap())),
+            case["expected"]
+        );
+    }
+}

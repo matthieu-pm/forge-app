@@ -27,8 +27,9 @@ gate pass.
 | 1e | Membership/invitation commands, workspace security policy and API-key management | Passed available gate; workflow delivery belongs to milestone 3 |
 | 2a | Team lifecycle, membership, configuration, default catalogs and public team API | Passed available gate |
 | 2b1 | Issue definitions, workflow rules and canonical classification | Passed available gate |
-| 2b2 | Issue creation, editing, comments, relationships and history | Pending |
-| 2b3 | Triage, issue lifecycle and cycles | Pending |
+| 2b2 | Issue creation, editing, comments, relationships and history | Passed available gate |
+| 2b3 | Server issue queries, filtering, facets, pagination and public issue API | Pending |
+| 2b4 | Triage, issue lifecycle and cycles | Pending |
 | 2c | Projects, initiatives, documents, views, resources and imports | Pending |
 | 3 | Agent execution, approvals, streams, models, files, jobs, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
@@ -251,3 +252,36 @@ these routes do not represent a completed rewrite.
   for the future Rust frontend. Issue CRUD, discussion and the UI remain pending.
 - Log: `.forge/rust-rewrite/milestone-2b1-qualified.log`. The clean gate includes
   all corrections from the earlier diagnostic runs.
+
+### Milestone 2b2
+
+- Full gate passed: 107 Rust tests, all 2,959 enabled reference tests, TypeScript
+  typechecking, formatting and Clippy. All 75 source migrations applied to both
+  disposable local databases. The 661 external-fixture reference tests remain
+  skipped and are not counted as acceptance.
+- 136 issue, planning-import and discussion contracts compare validation and
+  normalization directly with the source. URL whitespace normalization follows
+  the installed source validator; comment links use their separate stricter rule.
+- Creation allocates canonical team numbers, imports legacy project/cycle
+  references and creates sub-issues atomically. Tests cover competing commands,
+  receipt replay, the active-issue capacity boundary and rollback without number
+  gaps. Omitted assignment and explicit unassignment retain distinct behavior.
+- Bulk edits use database revisions, reject stale batches without partial writes,
+  preserve authoritative discussion behind redacted projections, and return fresh
+  records on conflict or replay. Private teams and related projects remain scoped
+  to the current actor's live access.
+- Comments validate rich text, resolve eligible mention names on the server,
+  preserve authorship through moderation and support versioned edits, deletion
+  and restoration. Verified upload binding checks file ownership and metadata;
+  byte upload, delivery and cleanup still belong to the file milestone.
+- Subscriptions and reactions apply the user's desired state with no-op handling.
+  Relationships support parents, children, reciprocal related links and blocking,
+  with revision checks and database cycle guards. History uses attributed,
+  body-free events and actor/view-bound pagination.
+- New first-party HTTP endpoints expose these operations with workspace/session
+  binding and CSRF protection. Creation attachment sources persist as private
+  recovery jobs; their delivery worker and frontend remain pending.
+- Recovery preparation failures leave no issue or history changes, and exact
+  retries commit once. The existing deletion journal intentionally excludes
+  ordinary issue title/status and history inserts; this is not a full event log.
+- Log: `.forge/rust-rewrite/milestone-2b2-qualified.log`.

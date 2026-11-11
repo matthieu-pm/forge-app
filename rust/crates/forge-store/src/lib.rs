@@ -7,6 +7,7 @@ pub mod commands;
 pub mod database;
 pub mod definitions;
 pub mod desktop_auth;
+pub mod issues;
 pub mod joins;
 pub mod members;
 pub mod oauth;
@@ -50,6 +51,14 @@ pub enum StoreError {
     Team(#[from] forge_core::teams::TeamError),
     #[error("{0}")]
     DefinitionConflict(&'static str),
+    #[error("{0}")]
+    IssueValidation(&'static str),
+    #[error("These issues changed in another session.")]
+    IssueEditConflict,
+    #[error("{0}")]
+    IssueRejected(&'static str),
+    #[error("The comment changed in another session.")]
+    CommentConflict,
     #[error("Sign in with your existing method before linking this provider.")]
     AccountNotLinked,
     #[error("Database operation failed.")]

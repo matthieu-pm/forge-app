@@ -327,6 +327,92 @@ struct Fixture {
 }
 
 #[tokio::test]
+async fn issue_http_commands_preserve_bound_sessions_and_expose_discussion_and_history() {
+    let f = Fixture::new().await;
+    let (_, token, cookie) = f.account().await;
+    forge_store::workspaces::create(
+        &f.database,
+        &token,
+        "Issue HTTP",
+        &Uuid::new_v4().to_string(),
+        None,
+    )
+    .await
+    .unwrap();
+    let actor = forge_store::authority::session_actor(&f.database, &token)
+        .await
+        .unwrap();
+    let team=forge_store::teams::create(&f.database,&actor,&forge_core::teams::CreateTeam::parse(json!({"name":"Issues","identifier":"ISS","icon":{"kind":"emoji","value":"🛠️","color":"#818cf8"},"timezone":"UTC"})).unwrap()).await.unwrap();
+    let (status, _, snapshot) = f
+        .request("GET", "/api/workspace/issues", Some(&cookie), None)
+        .await;
+    assert_eq!(status, StatusCode::OK, "{snapshot}");
+    assert_eq!(snapshot["records"], json!([]));
+    let bind = |mut value: Value| {
+        value["workspaceId"] = snapshot["workspaceId"].clone();
+        value["sessionId"] = snapshot["sessionId"].clone();
+        value
+    };
+    let mut draft = forge_core::issues::blank("todo");
+    draft["title"] = json!("HTTP issue");
+    let input = bind(json!({"teamId":team.id,"commandKey":Uuid::new_v4(),"draft":draft}));
+    let (status, _, created) = f
+        .request(
+            "POST",
+            "/api/workspace/issues",
+            Some(&cookie),
+            Some(input.clone()),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{created}");
+    assert_eq!(created["issue"]["title"], "HTTP issue");
+    let mut wrong = input;
+    wrong["sessionId"] = json!("different-session");
+    assert_eq!(
+        f.request("POST", "/api/workspace/issues", Some(&cookie), Some(wrong))
+            .await
+            .0,
+        StatusCode::FORBIDDEN
+    );
+    let input = bind(
+        json!({"teamId":team.id,"commandKey":Uuid::new_v4(),"edits":[{"issueId":created["issue"]["id"],"expectedRevision":created["issue"]["revision"],"changes":{"title":"HTTP updated"}}]}),
+    );
+    let (status, _, edited) = f
+        .request(
+            "POST",
+            "/api/workspace/issues/edit",
+            Some(&cookie),
+            Some(input),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{edited}");
+    assert_eq!(edited["status"], "saved");
+    let input = bind(
+        json!({"teamId":team.id,"issueId":created["issue"]["id"],"commandKey":Uuid::new_v4(),"commentId":Uuid::new_v4(),"action":"create","document":{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"HTTP comment"}]}]}}),
+    );
+    let (status, _, comment) = f
+        .request(
+            "POST",
+            "/api/workspace/issues/comment",
+            Some(&cookie),
+            Some(input),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{comment}");
+    assert_eq!(comment["status"], "saved");
+    let (status, _, history) = f
+        .request(
+            "POST",
+            "/api/workspace/issues/history",
+            Some(&cookie),
+            Some(bind(json!({"query":{"issueId":created["issue"]["id"]}}))),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{history}");
+    assert_eq!(history["entries"].as_array().unwrap().len(), 3);
+}
+
+#[tokio::test]
 async fn definition_http_routes_bind_sessions_validate_catalogs_and_surface_conflicts() {
     let f = Fixture::new().await;
     let (_, token, cookie) = f.account().await;
