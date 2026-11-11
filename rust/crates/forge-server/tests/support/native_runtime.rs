@@ -28,6 +28,7 @@ pub const SECRET: &str = "public-native-adapter-fixture-signing-secret";
 #[derive(Clone, Copy)]
 pub enum Mode {
     Finish,
+    Search,
     Budget,
     Approve,
     Stall,
@@ -46,7 +47,7 @@ struct Adapter(Arc<Script>);
 impl Model for Adapter {
     async fn generate(
         &self,
-        _: &Channel,
+        channel: &Channel,
         turn: Turn<'_>,
         _: &Cancellation,
         _: &mut dyn Sink,
@@ -60,6 +61,29 @@ impl Model for Adapter {
         self.0.began.notify_one();
         if matches!(self.0.mode, Mode::Stall) {
             std::future::pending::<()>().await;
+        }
+        if matches!(self.0.mode, Mode::Search) {
+            let searched = turn.prompt.iter().any(|m| {
+                m["content"]
+                    .as_array()
+                    .is_some_and(|p| p.iter().any(|p| p["toolName"] == "web_search"))
+            });
+            let anthropic = channel.provider() == "anthropic";
+            let content = if searched {
+                vec![
+                    json!({"type":"text","text":"The marker is marigold.","providerOptions":{"forge":{"sources":[{"url":"https://example.com/forge","title":"Forge reference"}]}}}),
+                ]
+            } else {
+                vec![
+                    json!({"type":"tool-call","toolCallId":"search_native","toolName":"web_search","providerExecuted":true,"input":if anthropic{json!({"query":"Forge"})}else{json!({})}}),
+                    json!({"type":"tool-result","toolCallId":"search_native","toolName":"web_search","output":{"type":"json","value":if anthropic{json!([{"type":"web_search_result","url":"https://example.com/forge","title":"Forge reference","pageAge":null,"encryptedContent":"fixture-private-search-content"}])}else{json!({"action":{"type":"search","query":"Forge"},"sources":[{"type":"url","url":"https://example.com/forge"}]})}}}),
+                ]
+            };
+            return Ok(Completion {
+                content,
+                finish: Finish::Stop,
+                usage: json!({"inputTokens":10,"outputTokens":5}),
+            });
         }
         let approval = matches!(self.0.mode, Mode::Approve)
             && !turn.prompt.iter().any(|v| v["role"] == "tool");

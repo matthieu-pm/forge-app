@@ -384,6 +384,7 @@ impl Stream {
                 {
                     return Err(FAILED);
                 }
+                let sources = event["data"]["sources"].clone();
                 self.queue = eve::normalize(
                     event,
                     &format!("native:{}", cursor.run_id),
@@ -392,6 +393,8 @@ impl Stream {
                 .map_err(|_| FAILED)?
                 .into_iter()
                 .map(|event| {
+                    let event = forge_core::agents::presentation::native_sources(event, &sources)
+                        .map_err(|_| FAILED)?;
                     forge_core::agents::presentation::native_event(event).map_err(|_| FAILED)
                 })
                 .collect::<Result<VecDeque<_>, _>>()?;

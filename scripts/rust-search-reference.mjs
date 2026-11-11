@@ -1,5 +1,6 @@
 // Provider search wire fixtures from the installed SDK; fetch is in-memory only.
 import {readFileSync,writeFileSync} from 'node:fs'
+import {normalizeProviderToolHistory} from '../services/agent-runtime/node_modules/eve/dist/src/harness/provider-tool-history.js'
 import {createOpenAI} from '../services/agent-runtime/node_modules/@ai-sdk/openai/dist/index.js'
 import {createAnthropic} from '../services/agent-runtime/node_modules/@ai-sdk/anthropic/dist/index.js'
 const simple=[{role:'system',content:'You are Forge.'},{role:'user',content:[{type:'text',text:'Search for Forge.'}]}]
@@ -72,7 +73,13 @@ for(const protocol of ['responses','anthropic']) for(const variant of protocol==
  }catch{failed=true}
  streams.push({protocol,variant,events,expected:{parts,finish,usage,citations},failed})
 }
+const continuations=[]
+const pair=streams.find(s=>s.protocol==='responses'&&s.variant==='only').expected.parts
+for(const content of [pair,[{type:'text',text:'Checking.'},...pair],[...pair,{type:'text',text:'Answer.'}],[...pair,{type:'text',text:' \ufeff '}],[...pair,{type:'text',text:'Answer.'},...pair.map(p=>({...p,toolCallId:'search_second'}))]]) {
+ const expected=normalizeProviderToolHistory({messages:[{role:'assistant',content}],providerExecutedOutcomeIds:new Set(content.filter(p=>p.type==='tool-result').map(p=>p.toolCallId))})
+ continuations.push({content,continues:expected.outcomeEndsResponse})
+}
 const path=new URL('../rust/crates/forge-agent-runtime/data/search-reference.json',import.meta.url)
-const text=JSON.stringify({requests,streams},null,2)+'\n'
+const text=JSON.stringify({requests,streams,continuations},null,2)+'\n'
 if(process.argv.includes('--check')){if(readFileSync(path,'utf8')!==text)throw Error('Provider search reference changed')}else writeFileSync(path,text)
-console.log(`Provider search reference: ${requests.length} requests and ${streams.length} streams`)
+console.log(`Provider search reference: ${requests.length} requests and ${streams.length} streams and ${continuations.length} continuation cases`)

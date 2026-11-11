@@ -469,3 +469,60 @@ async fn conversation_allowances_cross_turns_and_responses_never_grant_twice() {
         f.shutdown().await;
     }
 }
+#[tokio::test]
+async fn native_provider_search_replays_readable_receipts_and_keeps_opaque_history_private() {
+    let f = Fixture::new(Mode::Search, false).await;
+    let runtime = NativeRuntime::new(f.options()).unwrap();
+    let saved = Arc::new(Saved::default());
+    let mut ctx = context(saved.clone());
+    ctx.model["provider"] = json!("anthropic");
+    let events = collect(runtime.start(ctx.clone(), "Search for the marker".into(), vec![])).await;
+    assert!(events.iter().any(|e| e["type"] == "run.completed"));
+    assert_eq!(
+        events
+            .iter()
+            .filter(|e| e["type"] == "tool.completed")
+            .count(),
+        1
+    );
+    let answer = events
+        .iter()
+        .find(|e| e["type"] == "assistant.message")
+        .unwrap();
+    assert_eq!(
+        answer["payload"]["sources"],
+        json!([{"url":"https://example.com/forge","title":"Forge reference"}])
+    );
+    assert!(
+        !json!(events)
+            .to_string()
+            .contains("fixture-private-search-content")
+    );
+    let state = f.store.load(&channel(&ctx)).await.unwrap().state;
+    assert!(
+        json!(state.history())
+            .to_string()
+            .contains("fixture-private-search-content")
+    );
+    assert_eq!(f.script.models.load(Ordering::SeqCst), 2);
+    assert_eq!(f.script.effects.load(Ordering::SeqCst), 0);
+    ctx.runtime_session_id = Some(saved.last());
+    let replay = collect(runtime.reconnect(ctx.clone())).await;
+    assert_eq!(f.script.models.load(Ordering::SeqCst), 2);
+    assert!(replay.iter().any(|e| e["type"] == "run.completed"));
+    ctx.runtime_session_id = Some(saved.last());
+    ctx.run_id = Uuid::new_v4().to_string();
+    ctx.model["provider"] = json!("openai");
+    ctx.model["connectionId"] = json!(Uuid::new_v4());
+    let next = collect(runtime.start(ctx.clone(), "Use those findings".into(), vec![])).await;
+    assert!(next.iter().any(|e| e["type"] == "run.completed"));
+    let state = f.store.load(&channel(&ctx)).await.unwrap().state;
+    assert!(
+        !json!(state.history())
+            .to_string()
+            .contains("fixture-private-search-content")
+    );
+    assert_eq!(f.script.models.load(Ordering::SeqCst), 3);
+    assert_eq!(f.script.effects.load(Ordering::SeqCst), 0);
+    f.shutdown().await;
+}

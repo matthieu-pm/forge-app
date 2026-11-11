@@ -4428,5 +4428,258 @@
       },
       "failed": false
     }
+  ],
+  "continuations": [
+    {
+      "content": [
+        {
+          "type": "tool-call",
+          "toolCallId": "search_fixture",
+          "toolName": "web_search",
+          "input": {},
+          "providerExecuted": true
+        },
+        {
+          "type": "tool-result",
+          "toolCallId": "search_fixture",
+          "toolName": "web_search",
+          "output": {
+            "type": "json",
+            "value": {
+              "action": {
+                "type": "search",
+                "query": "Forge",
+                "queries": [
+                  "Forge",
+                  "Forge Rust"
+                ]
+              },
+              "sources": [
+                {
+                  "type": "url",
+                  "url": "https://example.com"
+                },
+                {
+                  "type": "api",
+                  "name": "Fixture API"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "continues": true
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "Checking."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "search_fixture",
+          "toolName": "web_search",
+          "input": {},
+          "providerExecuted": true
+        },
+        {
+          "type": "tool-result",
+          "toolCallId": "search_fixture",
+          "toolName": "web_search",
+          "output": {
+            "type": "json",
+            "value": {
+              "action": {
+                "type": "search",
+                "query": "Forge",
+                "queries": [
+                  "Forge",
+                  "Forge Rust"
+                ]
+              },
+              "sources": [
+                {
+                  "type": "url",
+                  "url": "https://example.com"
+                },
+                {
+                  "type": "api",
+                  "name": "Fixture API"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "continues": true
+    },
+    {
+      "content": [
+        {
+          "type": "tool-call",
+          "toolCallId": "search_fixture",
+          "toolName": "web_search",
+          "input": {},
+          "providerExecuted": true
+        },
+        {
+          "type": "tool-result",
+          "toolCallId": "search_fixture",
+          "toolName": "web_search",
+          "output": {
+            "type": "json",
+            "value": {
+              "action": {
+                "type": "search",
+                "query": "Forge",
+                "queries": [
+                  "Forge",
+                  "Forge Rust"
+                ]
+              },
+              "sources": [
+                {
+                  "type": "url",
+                  "url": "https://example.com"
+                },
+                {
+                  "type": "api",
+                  "name": "Fixture API"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "text",
+          "text": "Answer."
+        }
+      ],
+      "continues": false
+    },
+    {
+      "content": [
+        {
+          "type": "tool-call",
+          "toolCallId": "search_fixture",
+          "toolName": "web_search",
+          "input": {},
+          "providerExecuted": true
+        },
+        {
+          "type": "tool-result",
+          "toolCallId": "search_fixture",
+          "toolName": "web_search",
+          "output": {
+            "type": "json",
+            "value": {
+              "action": {
+                "type": "search",
+                "query": "Forge",
+                "queries": [
+                  "Forge",
+                  "Forge Rust"
+                ]
+              },
+              "sources": [
+                {
+                  "type": "url",
+                  "url": "https://example.com"
+                },
+                {
+                  "type": "api",
+                  "name": "Fixture API"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "text",
+          "text": " ﻿ "
+        }
+      ],
+      "continues": true
+    },
+    {
+      "content": [
+        {
+          "type": "tool-call",
+          "toolCallId": "search_fixture",
+          "toolName": "web_search",
+          "input": {},
+          "providerExecuted": true
+        },
+        {
+          "type": "tool-result",
+          "toolCallId": "search_fixture",
+          "toolName": "web_search",
+          "output": {
+            "type": "json",
+            "value": {
+              "action": {
+                "type": "search",
+                "query": "Forge",
+                "queries": [
+                  "Forge",
+                  "Forge Rust"
+                ]
+              },
+              "sources": [
+                {
+                  "type": "url",
+                  "url": "https://example.com"
+                },
+                {
+                  "type": "api",
+                  "name": "Fixture API"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "text",
+          "text": "Answer."
+        },
+        {
+          "type": "tool-call",
+          "toolCallId": "search_second",
+          "toolName": "web_search",
+          "input": {},
+          "providerExecuted": true
+        },
+        {
+          "type": "tool-result",
+          "toolCallId": "search_second",
+          "toolName": "web_search",
+          "output": {
+            "type": "json",
+            "value": {
+              "action": {
+                "type": "search",
+                "query": "Forge",
+                "queries": [
+                  "Forge",
+                  "Forge Rust"
+                ]
+              },
+              "sources": [
+                {
+                  "type": "url",
+                  "url": "https://example.com"
+                },
+                {
+                  "type": "api",
+                  "name": "Fixture API"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "continues": true
+    }
   ]
 }

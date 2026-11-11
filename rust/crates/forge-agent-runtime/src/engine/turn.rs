@@ -194,6 +194,11 @@ impl Engine {
                     let mut definitions=forge_core::agents::tools::descriptors().iter().map(|v|json!({"type":"function","name":v["name"],"description":v["description"],"inputSchema":v["inputSchema"]})).collect::<Vec<_>>();
                     definitions.extend(forge_core::agents::context::descriptors().iter().map(|v|json!({"type":"function","name":v["name"],"description":v["description"],"inputSchema":v["inputSchema"]})));
                     definitions.extend(forge_core::agents::web::descriptors().iter().map(|v|json!({"type":"function","name":v["name"],"description":v["description"],"inputSchema":v["inputSchema"]})));
+                    if let Some(search) = crate::model::search::descriptor(
+                        crate::model::request::Protocol::for_provider(channel.provider()),
+                    ) {
+                        definitions.push(search);
+                    }
                     if self.workspace_factory.is_some() {
                         definitions.extend(forge_core::agents::framework::descriptors().iter().map(|v|json!({"type":"function","name":v["name"],"description":v["description"],"inputSchema":v["inputSchema"]})));
                     }
@@ -370,12 +375,17 @@ impl Engine {
         let mut actions = vec![];
         let mut message = String::new();
         let mut content = completion.content;
+        let searches = super::search::inspect(
+            &content,
+            crate::model::request::Protocol::for_provider(channel.provider()),
+        )?;
         let may_call = matches!(completion.finish, Finish::Stop | Finish::ToolCalls);
         let mut ids = std::collections::HashSet::new();
         for part in &mut content {
             match part["type"].as_str() {
                 Some("text") => message.push_str(part["text"].as_str().ok_or(INVALID)?),
-                Some("reasoning") => {}
+                Some("reasoning" | "tool-result") => {}
+                Some("tool-call") if part["providerExecuted"] == true => {}
                 Some("tool-call") if may_call => {
                     let id = part["toolCallId"]
                         .as_str()
@@ -413,7 +423,7 @@ impl Engine {
             }
         }
         if !may_call {
-            content.retain(|p| p["type"] != "tool-call");
+            content.retain(|p| p["type"] != "tool-call" || p["providerExecuted"] == true);
         }
         next.messages
             .push(json!({"role":"assistant","content":content}));
@@ -438,11 +448,26 @@ impl Engine {
             .map(|(k, v)| (k.clone(), v.clone()))
             .collect::<serde_json::Map<_, _>>();
         let mut events = vec![];
+        if !searches.actions.is_empty() {
+            events.push(event(
+                state,
+                "actions.requested",
+                json!({"actions":searches.actions}),
+            ));
+            for result in searches.results {
+                let failed = result["output"]["type"] == "error-json";
+                events.push(event(
+                    state,
+                    "action.result",
+                    json!({"result":result,"status":if failed{"failed"}else{"completed"}}),
+                ));
+            }
+        }
         if !message.is_empty() {
             events.push(event(
                 state,
                 "message.completed",
-                json!({"message":message,"finishReason":completion.finish.as_str()}),
+                json!({"message":message,"finishReason":completion.finish.as_str(),"sources":searches.sources}),
             ));
         }
         events.push(event(
@@ -450,7 +475,10 @@ impl Engine {
             "step.completed",
             json!({"finishReason":completion.finish.as_str(),"usage":usage}),
         ));
-        if next.calls.is_empty() {
+        if next.calls.is_empty() && may_call && searches.continue_model {
+            next.step = next.step.checked_add(1).ok_or(INVALID)?;
+            next.phase = Phase::Ready;
+        } else if next.calls.is_empty() {
             next.phase = Phase::Complete;
             events.push(event(state, "turn.completed", json!({})));
             events.push(event(state, "session.waiting", json!({})));

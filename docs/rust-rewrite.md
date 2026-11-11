@@ -78,6 +78,7 @@ gate pass.
 | 3b5ad | Native public web retrieval, HTML conversion and durable read recovery | Passed |
 | 3b5ae | Conversation token budgets and durable allowance continuation | Passed |
 | 3b5af | Provider search request/response protocols and citations | Passed |
+| 3b5ag | Provider search execution, durable receipts and cross-provider history | Passed |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -1932,3 +1933,36 @@ these routes do not represent a completed rewrite.
 - Full milestone gate passed: 508 Rust tests, 2,959 enabled TypeScript tests,
   all source-fixture drift checks, formatting, Clippy and three package
   typechecks. Evidence: `.forge/rust-rewrite/milestone-3b5af-verified2.log`.
+
+### Milestone 3b5ag
+
+- Native model steps advertise the supported search tool from the authenticated
+  provider binding. OpenAI Responses and Anthropic use their native search
+  dialects; chat-completions models do not receive an unsupported definition.
+  The default EVE transport is unchanged.
+- Provider searches are part of the model's atomic completion receipt. Their
+  calls and results never dispatch host capabilities or create a sandbox.
+  A completed search after the last nonblank assistant text starts another model
+  step, matching five continuation-order fixtures from the installed harness.
+  Completed receipts survive worker replacement without repeating the search;
+  an uncommitted model response may be retried.
+- Search results and annotations retain the opaque data required by later model
+  steps in the same run. New user turns convert searches to ordinary call/result
+  history, remove provider references and encrypted content, and retain readable
+  citation links. Calls remain grouped before their materialized results, so
+  mixed host/search exchanges keep valid message ordering.
+- Public search receipts omit encrypted content. Native assistant events expose
+  at most 32 distinct HTTP(S) citation links, bounded title/URL lengths and an
+  omitted count within the existing payload limit. Credentials, unsafe schemes
+  and sensitive metadata are excluded; original assistant content must still
+  pass the full semantic payload guard. The reference transcript does not render
+  this metadata; citation rendering belongs to the Rust UI milestone.
+- Tests cover all 14 provider stream fixtures through the engine, continuation
+  order, interrupted commits, forged actions, private/public HTTP delivery and
+  PostgreSQL-backed history across both native providers and chat-completions.
+  Live model/search providers, general questions, delegation, remaining services,
+  Rust UI/macOS and final qualification remain outstanding.
+
+- Full milestone gate passed: 516 Rust tests, 2,959 enabled TypeScript tests,
+  all source-fixture drift checks, formatting, Clippy and three package
+  typechecks. Evidence: `.forge/rust-rewrite/milestone-3b5ag-verified.log`.

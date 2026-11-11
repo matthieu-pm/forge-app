@@ -675,3 +675,66 @@ async fn budget_upgrade_reconstructs_legacy_usage_and_fences_an_old_worker() {
         upgraded.snapshot()
     );
 }
+#[tokio::test]
+async fn search_history_materializes_across_provider_changes_without_opaque_references() {
+    use forge_agent_runtime::model::{request, stream::Parser};
+    let fixtures: Value =
+        serde_json::from_str(include_str!("../data/search-reference.json")).unwrap();
+    for original in ["responses", "anthropic"] {
+        for target in ["openai", "anthropic", "custom-openai"] {
+            let mut f = Fixture::new().await;
+            let provider = if original == "responses" {
+                "openai"
+            } else {
+                "anthropic"
+            };
+            f.channel = channel(f.run, "owner", "workspace", provider);
+            f.admit_first().await;
+            let case = fixtures["streams"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|c| c["protocol"] == original && c["variant"] == "citations")
+                .unwrap();
+            let mut parser = Parser::new(request::Protocol::for_provider(provider));
+            for event in case["events"].as_array().unwrap() {
+                parser.push(&event.to_string()).unwrap();
+            }
+            f.complete(&f.channel, parser.finish().unwrap().content)
+                .await;
+            let next = f.next(target);
+            let saved = f
+                .store
+                .admit(
+                    &next,
+                    f.conversation,
+                    Some(f.run),
+                    message("Use those findings."),
+                    f.deadline,
+                )
+                .await
+                .unwrap();
+            let history = json!(saved.state.history()).to_string();
+            for forbidden in [
+                "encryptedContent",
+                "fixture-encrypted",
+                "fixture-opaque",
+                "providerOptions",
+                "providerExecuted",
+            ] {
+                assert!(
+                    !history.contains(forbidden),
+                    "{original}->{target}: {forbidden}"
+                );
+            }
+            assert!(history.contains("Sources referenced in the preceding text:"));
+            assert!(history.contains("https://example.com"));
+            assert_eq!(saved.state.history()[2]["role"], "assistant");
+            assert_eq!(saved.state.history()[3]["role"], "tool");
+            let request = request::build(&next, saved.state.history(), &[], None).unwrap();
+            assert!(!request.body.to_string().contains("item_reference"));
+            assert!(!request.body.to_string().contains("server_tool_use"));
+            assert!(request.body.to_string().contains("web_search"));
+        }
+    }
+}

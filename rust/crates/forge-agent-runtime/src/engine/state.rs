@@ -174,6 +174,7 @@ impl State {
             }).collect::<Vec<_>>();
             messages.push(json!({"role":"tool","content":results}));
         }
+        let mut messages = Self::materialize_search_history(messages);
         // Provider item IDs and signed reasoning belong to the previous model
         // connection. Keep materialized text/tools so switching connections or
         // providers cannot reuse an inaccessible item or invalid signature.

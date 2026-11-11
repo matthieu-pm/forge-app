@@ -69,3 +69,45 @@ fn approval_and_semantic_events_cannot_be_truncated_or_redacted_into_acceptance(
     assert!(approval_input(&json!({"secret":"private"})).is_err());
     assert!(approval_input(&json!({"code":"safe","capabilities":["teams.update"]})).is_ok());
 }
+#[test]
+fn native_citations_are_readable_deduplicated_bounded_and_never_weaken_content_guards() {
+    use forge_core::agents::presentation::native_sources;
+    let event =
+        json!({"type":"assistant.message","payload":{"content":"Answer.","finishReason":"stop"}});
+    let sources = json!([
+        {"url":"https://example.com","title":"Example","encrypted_index":"private","citedText":"private document"},
+        {"url":"https://example.com/","title":"Duplicate"},
+        {"url":"javascript:alert(1)","title":"Unsafe"},
+        {"url":"https://user:secret@example.com/","title":"Credentials"},
+        {"url":"https://example.org","title":"Bearer private-fixture"},
+        {"url":"https://example.net","title":"Another"}
+    ]);
+    let result = native_sources(event.clone(), &sources).unwrap();
+    assert_eq!(result["payload"]["content"], "Answer.");
+    assert_eq!(
+        result["payload"]["sources"],
+        json!([{"url":"https://example.com/","title":"Example"},{"url":"https://example.net/","title":"Another"}])
+    );
+    assert_eq!(result["payload"]["sourcesOmitted"], 4);
+    assert!(!result.to_string().contains("private"));
+    let many = json!(
+        (0..2000)
+            .map(|n| json!({"url":format!("https://example.com/{n}"),"title":"Source"}))
+            .collect::<Vec<_>>()
+    );
+    let result = native_sources(event.clone(), &many).unwrap();
+    assert_eq!(result["payload"]["sources"].as_array().unwrap().len(), 32);
+    assert_eq!(result["payload"]["sourcesOmitted"], 1968);
+    assert!(safe_payload(&result["payload"]).is_ok());
+    for content in ["x".repeat(128 * 1024), "Bearer private-fixture".into()] {
+        let mut unsafe_event = event.clone();
+        unsafe_event["payload"]["content"] = json!(content);
+        assert!(native_sources(unsafe_event, &sources).is_err());
+    }
+    let mut near = event;
+    near["payload"]["content"] = json!("x".repeat(128 * 1024 - 64));
+    assert!(safe_payload(&near["payload"]).is_ok());
+    let result = native_sources(near.clone(), &many).unwrap();
+    assert_eq!(result["payload"]["content"], near["payload"]["content"]);
+    assert!(safe_payload(&result["payload"]).is_ok());
+}

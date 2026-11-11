@@ -134,7 +134,7 @@ impl Workspace for Handle {
 }
 fn model(steps: Vec<Vec<Value>>) -> Arc<Scripted> {
     let mut model = Scripted::new(steps);
-    model.tools = 14;
+    model.tools = 15;
     Arc::new(model)
 }
 fn configured(

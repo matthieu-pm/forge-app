@@ -27,8 +27,11 @@ use std::{
 use tokio::{sync::Notify, time::Instant};
 const RUN: &str = "00000000-0000-4000-8000-000000000001";
 fn make_channel(user: &str) -> Channel {
+    make_provider_channel(user, "openai")
+}
+fn make_provider_channel(user: &str, provider: &str) -> Channel {
     let secret = "public-engine-fixture-signing-secret";
-    let token=mint(secret,Kind::RuntimeChannel,json!({"sub":user,"workspaceId":"workspace","runId":RUN,"forgeCapabilityToken":"public-fixture-capability-token","forgeModelAccessToken":"public-fixture-model-access-token","provider":"openai","modelId":"bound-model","reasoningEffort":"medium"}),1000,900.).unwrap();
+    let token=mint(secret,Kind::RuntimeChannel,json!({"sub":user,"workspaceId":"workspace","runId":RUN,"forgeCapabilityToken":"public-fixture-capability-token","forgeModelAccessToken":"public-fixture-model-access-token","provider":provider,"modelId":"bound-model","reasoningEffort":"medium"}),1000,900.).unwrap();
     Channel::verify(secret, &format!("Bearer {token}"), 1001).unwrap()
 }
 fn initial(channel: &Channel) -> State {
@@ -122,7 +125,7 @@ impl Scripted {
             pending: false,
             entered: Notify::new(),
             usage: 10,
-            tools: 9,
+            tools: 10,
         }
     }
 }
@@ -162,7 +165,10 @@ impl Model for Scripted {
                 .await?;
             }
         }
-        let finish = if content.iter().any(|v| v["type"] == "tool-call") {
+        let finish = if content
+            .iter()
+            .any(|v| v["type"] == "tool-call" && v["providerExecuted"] != true)
+        {
             Finish::ToolCalls
         } else {
             Finish::Stop
@@ -822,3 +828,6 @@ mod web_engine;
 
 #[path = "acceptance/budget_engine.rs"]
 mod budget_engine;
+
+#[path = "acceptance/search_engine.rs"]
+mod search_engine;

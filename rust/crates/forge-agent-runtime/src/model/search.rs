@@ -172,3 +172,42 @@ pub(super) fn citation(protocol: Protocol, value: &Value) -> Result<Value> {
     }
     Ok(source)
 }
+
+pub(crate) fn validate_output(protocol: Protocol, output: &Value) -> Result<()> {
+    match protocol {
+        Protocol::Anthropic => {
+            let wire = anthropic_request_result(
+                &json!({"toolName":"web_search","toolCallId":"validate","output":output}),
+            )?;
+            if anthropic_output(&wire["content"])? != *output {
+                return Err(INVALID);
+            }
+        }
+        Protocol::Responses => {
+            if output["type"] != "json" || !output["value"].is_object() {
+                return Err(INVALID);
+            }
+            let value = &output["value"];
+            let mut action = value["action"].clone();
+            if let Some(kind) = action["type"].as_str() {
+                action["type"] = json!(match kind {
+                    "search" => "search",
+                    "openPage" => "open_page",
+                    "findInPage" => "find_in_page",
+                    _ => return Err(INVALID),
+                });
+            }
+            if value.get("sources").is_some() {
+                if action["type"] != "search" {
+                    return Err(INVALID);
+                }
+                action["sources"] = value["sources"].clone();
+            }
+            if response_output(&action)? != *value {
+                return Err(INVALID);
+            }
+        }
+        Protocol::Chat => return Err(INVALID),
+    }
+    Ok(())
+}

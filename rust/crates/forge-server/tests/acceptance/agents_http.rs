@@ -828,6 +828,7 @@ async fn configured_agent_services_start_fixture_turns_without_provider_network_
 async fn configured_native_transport_runs_successive_public_agent_turns_through_the_rust_service() {
     for mode in [
         native_runtime_support::Mode::Finish,
+        native_runtime_support::Mode::Search,
         native_runtime_support::Mode::Budget,
         native_runtime_support::Mode::LargeToolData,
         native_runtime_support::Mode::SensitiveToolData,
@@ -945,6 +946,17 @@ async fn configured_native_transport_runs_successive_public_agent_turns_through_
                 .is_ok()
             );
             assert!(!payload.contains("fixture-credential-should-not-display"));
+        }
+        if matches!(mode, native_runtime_support::Mode::Search) {
+            let sources = payloads
+                .iter()
+                .map(|p| forge_core::json::parse(p).unwrap())
+                .filter_map(|p| p.get("sources").cloned())
+                .collect::<Vec<_>>();
+            assert_eq!(
+                sources,
+                vec![json!([{"url":"https://example.com/forge","title":"Forge reference"}]); 2]
+            );
         }
         if matches!(
             mode,
