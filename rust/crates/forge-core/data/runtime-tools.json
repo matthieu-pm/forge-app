@@ -1,0 +1,273 @@
+[
+  {
+    "name": "list_teams",
+    "description": "List teams in the caller's current Forge workspace. This is read-only.",
+    "inputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+        "cursor": {
+          "type": "string"
+        },
+        "limit": {
+          "default": 50,
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      }
+    }
+  },
+  {
+    "name": "get_team",
+    "description": "Get one team by id or slug in the caller's current Forge workspace. This is read-only.",
+    "inputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        },
+        "slug": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "describe_workspace",
+    "description": "Describe the caller's current Forge workspace. This is read-only.",
+    "inputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "update_team",
+    "description": "Update settings for one Forge team. Every invocation requires explicit user approval and is replay-safe.",
+    "inputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+        "slug": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "settings": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "identifier": {
+              "type": "string",
+              "pattern": "^[A-Za-z][A-Za-z0-9]{0,4}$"
+            },
+            "description": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "timezone": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "estimationScheme": {
+              "type": "string",
+              "enum": [
+                "none",
+                "exponential",
+                "fibonacci",
+                "linear",
+                "tshirt"
+              ]
+            },
+            "issueEmailEnabled": {
+              "type": "boolean"
+            },
+            "detailedHistoryEnabled": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "slug",
+        "settings"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "create_artifact",
+    "description": "Save a bounded file generated during this run and show it as a downloadable Forge artifact.",
+    "inputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "default": "file",
+          "type": "string",
+          "enum": [
+            "file",
+            "text",
+            "data",
+            "report",
+            "code"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "contentType": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "encoding": {
+          "default": "utf8",
+          "type": "string",
+          "enum": [
+            "utf8",
+            "base64"
+          ]
+        },
+        "content": {
+          "type": "string",
+          "maxLength": 8000000
+        }
+      },
+      "required": [
+        "name",
+        "contentType",
+        "content"
+      ]
+    }
+  },
+  {
+    "name": "run_code",
+    "description": "Run bounded JavaScript, TypeScript, or a shell script in an isolated, deny-network sandbox. It can use only the provided data files and has no Forge credentials.",
+    "inputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+        "language": {
+          "type": "string",
+          "enum": [
+            "javascript",
+            "typescript",
+            "shell"
+          ]
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100000
+        },
+        "files": {
+          "default": [],
+          "maxItems": 20,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200,
+                "pattern": "^[a-z0-9._/-]+$"
+              },
+              "content": {
+                "type": "string",
+                "maxLength": 500000
+              }
+            },
+            "required": [
+              "path",
+              "content"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "timeoutMs": {
+          "default": 10000,
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 30000
+        }
+      },
+      "required": [
+        "language",
+        "code"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "execute_program",
+    "description": "Run JavaScript in the isolated sandbox. The program can call only declared Forge capabilities through await forge.call(id, input, options). A manifest containing writes requires approval and every write needs an idempotency key.",
+    "inputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+        "language": {
+          "type": "string",
+          "const": "javascript"
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100000
+        },
+        "capabilityManifest": {
+          "minItems": 1,
+          "maxItems": 10,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "version": {
+                "type": "string",
+                "minLength": 1
+              },
+              "maximumCalls": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 20
+              }
+            },
+            "required": [
+              "id",
+              "version",
+              "maximumCalls"
+            ]
+          }
+        },
+        "timeoutMs": {
+          "default": 10000,
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 30000
+        }
+      },
+      "required": [
+        "language",
+        "code",
+        "capabilityManifest"
+      ]
+    }
+  }
+]

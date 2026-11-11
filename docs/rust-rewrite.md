@@ -60,6 +60,7 @@ gate pass.
 | 3b5l | Capability HTTP, diagnostics and agent startup composition | Passed available gate |
 | 3b5m | Native runtime authentication, capability callbacks and sandbox program orchestration | Passed available gate |
 | 3b5n | Native Vercel sandbox creation, private files, bounded command streams and teardown | Passed available gate |
+| 3b5o | Native authored-tool schemas, dispatch and approval binding | Passed available gate |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -1266,3 +1267,36 @@ these routes do not represent a completed rewrite.
   reconnect/resume, Docker/microsandbox adapters, runtime model/session execution,
   background services and the Rust UI/macOS host remain outstanding. The reference
   app and deployed service continue to use their original paths.
+
+### Milestone 3b5o
+
+- Full milestone gate passed on the first run: 383 Rust tests and 2,959 enabled
+  TypeScript tests; 661 reference tests across 34 files remain skipped. Formatting,
+  Clippy, source contract checks and TypeScript typechecking passed. Log:
+  `.forge/rust-rewrite/milestone-3b5o-initial.log`.
+
+- The seven authored tools now have native input validation, dispatch and exported
+  model-facing descriptions/JSON schemas. Schemas are generated from the actual
+  TypeScript definitions and checked for drift by the full gate. Thirty-eight
+  source-executed cases compare normalization, unknown-field behavior, defaults,
+  approval requirements and locale-ordered input fingerprints.
+- Runtime tool validation preserves the authored boundary before the independently
+  stricter application capability boundary. Team lookup and update tools, for
+  example, retain their source normalization instead of silently substituting the
+  application's broader team-settings schema. The application remains responsible
+  for canonical team validation and current target authority.
+- Preparation records an immutable normalized input fingerprint. Pending and denied
+  writes produce no callback or sandbox effects; resolved approvals must bind the
+  current run, tool name and input fingerprint. Feature gates are checked again at
+  dispatch. Runtime approval does not grant database authority: the existing gateway
+  still requires its canonical approval ledger and live run/member checks.
+- Team writes retain `eve:<run>:teams.update:<hash>` idempotency keys. Reads and
+  artifact creation use the existing run-scoped capability transport; code and
+  program execution require an explicitly injected isolated sandbox. Callback
+  cancellation drops pending transport work. Required public result fields are
+  validated and extra fields are stripped before returning tool results to models.
+  Artifact results additionally retain the app capability's ISO-date/checksum
+  validation rather than accepting arbitrary malformed provider metadata.
+- The native provider/model loop, durable runtime sessions and HTTP execution
+  service are still outstanding. This milestone does not connect the authored tools
+  to live model generation or change the deployed agent service.
