@@ -8,6 +8,7 @@ pub mod files;
 mod imports;
 mod issues;
 pub mod mail;
+pub mod model_providers;
 mod oauth;
 pub mod oauth_provider;
 mod planning;

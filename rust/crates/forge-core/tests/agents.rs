@@ -14,6 +14,74 @@ fn cases(group: &str) -> &'static Vec<Value> {
     DATA["agents"][group].as_array().unwrap()
 }
 #[test]
+fn model_provider_catalogs_endpoints_and_managed_models_match_source() {
+    use forge_core::agents::providers as p;
+    for case in DATA["modelProviders"]["catalogs"].as_array().unwrap() {
+        assert_eq!(
+            json!(p::normalize(
+                case["provider"].as_str().unwrap(),
+                Some(&case["payload"]),
+                &serde_json::from_value::<Vec<String>>(case["manual"].clone()).unwrap()
+            )),
+            case["models"]
+        );
+        let provider = case["provider"].as_str().unwrap();
+        let mut headers = serde_json::Map::new();
+        headers.insert("accept".into(), json!("application/json"));
+        for (name, value) in p::headers(provider, "fixture-key") {
+            headers.insert(name.into(), json!(value));
+        }
+        assert_eq!(json!(headers), case["request"]["headers"]);
+        assert_eq!(
+            format!(
+                "{}models",
+                p::built_in(provider).unwrap_or("https://provider.test/v1/")
+            ),
+            case["request"]["url"]
+        );
+    }
+    for case in DATA["modelProviders"]["addresses"].as_array().unwrap() {
+        assert_eq!(
+            p::private_address(case["address"].as_str().unwrap()),
+            case["private"],
+            "{case}"
+        );
+    }
+    // Normalize IPv6 before classification: expanded loopback and documentation
+    // spellings must not bypass the private-network fence.
+    for address in [
+        "0:0:0:0:0:0:0:1",
+        "2001:0db8::1",
+        "0:0:0:0:0:ffff:0808:0808",
+    ] {
+        assert!(p::private_address(address));
+    }
+    for case in DATA["modelProviders"]["endpoints"].as_array().unwrap() {
+        let result = p::endpoint(case["input"].as_str().unwrap());
+        assert_eq!(result.is_ok(), case["valid"]);
+        if let Ok(url) = result {
+            assert_eq!(url.as_str(), case["url"]);
+        }
+    }
+    for case in DATA["modelProviders"]["managed"].as_array().unwrap() {
+        let env = serde_json::from_value(case["env"].clone()).unwrap();
+        let id = p::managed_id(case["workspace"].as_str().unwrap());
+        assert_eq!(id, case["id"]);
+        assert_eq!(json!(p::managed_models(&id, &env)), case["models"]);
+        let model = case["models"][0]["modelId"].as_str().unwrap_or("missing");
+        assert_eq!(
+            json!(p::managed_key(
+                &id,
+                case["workspace"].as_str().unwrap(),
+                "openai",
+                model,
+                &env
+            )),
+            case["key"]
+        );
+    }
+}
+#[test]
 fn agent_file_configuration_and_byte_decoding_match_source() {
     use forge_core::agents::files;
     for case in DATA["agentFiles"]["settings"].as_array().unwrap() {

@@ -12,6 +12,7 @@ use sha2::Sha256;
 use subtle::ConstantTimeEq;
 use unicode_normalization::UnicodeNormalization;
 pub mod invite;
+pub mod model_vault;
 
 pub fn random_token(bytes: usize) -> String {
     let mut value = vec![0; bytes];

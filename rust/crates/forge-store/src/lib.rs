@@ -30,6 +30,8 @@ pub use database::Database;
 pub enum StoreError {
     #[error(transparent)]
     AgentFile(#[from] forge_core::agents::files::Error),
+    #[error(transparent)]
+    ModelConnection(#[from] forge_core::agents::providers::Error),
     #[error("{message}")]
     CapabilityConflict { reused: bool, message: &'static str },
     #[error(transparent)]

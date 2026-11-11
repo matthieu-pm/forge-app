@@ -8,6 +8,7 @@ pub mod capabilities;
 pub mod events;
 pub mod files;
 pub mod invocations;
+pub mod model_connections;
 pub mod preferences;
 pub mod records;
 pub mod runs;

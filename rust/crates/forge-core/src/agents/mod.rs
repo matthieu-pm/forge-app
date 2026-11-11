@@ -5,6 +5,7 @@ pub mod contracts;
 pub mod files;
 pub mod models;
 pub mod policy;
+pub mod providers;
 pub mod routing;
 pub mod tokens;
 pub const RUNTIMES: &[&str] = &["eve", "codex", "claude"];

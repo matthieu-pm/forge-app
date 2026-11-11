@@ -8,6 +8,8 @@ mod agent_file_acceptance;
 mod approval_service_acceptance;
 #[path = "agent_capabilities.rs"]
 mod capability_acceptance;
+#[path = "model_connections.rs"]
+mod model_connection_acceptance;
 
 fn at() -> DateTime<Utc> {
     "2026-11-01T12:00:00.000Z".parse().unwrap()

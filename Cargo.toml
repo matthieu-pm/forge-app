@@ -42,6 +42,7 @@ idna = "1"
 chrono-tz = "0.10"
 regress = "0.10"
 icu_collator = "2"
+ring = "0.17"
 
 [profile.release]
 lto = "thin"

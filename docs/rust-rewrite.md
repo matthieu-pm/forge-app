@@ -51,7 +51,8 @@ gate pass.
 | 3b5c | Live approval authority, exact input binding and single-use consumption | Passed available gate |
 | 3b5d | Capability dispatch, current target authority and atomic approved team commands | Passed available gate |
 | 3b5e | Agent attachments/artifacts, private bytes, integrity and retention | Passed available gate |
-| 3b5f | Model credentials, provider discovery, connection management and routing catalogs | In progress |
+| 3b5f | Model credentials, provider discovery, connection management and routing catalogs | Passed available gate |
+| 3b5g | Run-scoped model proxy, live credential authority and streaming HTTP delivery | In progress |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -952,3 +953,34 @@ these routes do not represent a completed rewrite.
 - The initial gate found one test lock-scope lint; all functional tests passed.
   After correction, the complete gate passed. Runtime/HTTP composition and live
   provider qualification remain pending.
+
+### Milestone 3b5f
+
+- Full gate passed: 320 Rust tests, 2,959 enabled reference tests, typechecking,
+  formatting, Clippy and export checks. The 661 fixture-dependent reference tests
+  remain skipped. Log: `.forge/rust-rewrite/milestone-3b5f-rerun.log`.
+- Existing AES-256-GCM credential envelopes retain workspace/connection binding;
+  Rust can decrypt the source's envelopes and produces identical ciphertext with
+  fixed test nonces. Runtime encryption uses fresh operating-system randomness.
+  Provider errors, public summaries and recovery records omit credentials.
+- Provider discovery preserves official endpoints, authentication headers, manual
+  fallback, model filtering, locale ordering, capability heuristics and limits.
+  Custom endpoints validate all DNS answers, pin public addresses, disable
+  redirects/proxies and bound response size/time. IPv6 classification additionally
+  normalizes expanded spellings so loopback cannot bypass address checks.
+- Connections and catalogs publish atomically after fresh authorization. Refresh
+  failure preserves the earlier catalog and records repair status; overlapping
+  refreshes cannot overwrite newer results. Read, write and routing scopes remain
+  distinct, with current membership, role and API-key checks.
+- Managed models retain deterministic workspace identities, environment-backed
+  credentials and configured/default catalogs. Catalogs exclude inaccessible,
+  unavailable and expired entries. Runtime credential delivery remains separate.
+- Removing a selected connection now clears affected thread preferences before
+  deleting the connection, avoiding the existing manual-selection FK/check
+  conflict. Both deletions are journaled in order. Publication takes the workspace
+  fence before run locks, including concurrent agent refresh/deletion coverage.
+- Source fixtures cover 12 credential envelopes, 120 catalog cases, 37 addresses,
+  10 URL cases and 24 managed configurations. The initial gate passed; additional
+  deletion/concurrency cases exposed a test-fixture setup error, corrected before
+  the final complete rerun. Live provider accounts and agent HTTP composition
+  have not been qualified.

@@ -1094,6 +1094,7 @@ dependencies = [
  "percent-encoding",
  "rand 0.8.8",
  "regex",
+ "ring",
  "scrypt",
  "serde",
  "serde_json",
