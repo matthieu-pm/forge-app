@@ -27,6 +27,20 @@ impl From<AuthError> for IssueHttpError {
 }
 impl From<StoreError> for IssueHttpError {
     fn from(error: StoreError) -> Self {
+        if let StoreError::Template(message) = &error {
+            return Self(AuthError(
+                StatusCode::BAD_REQUEST,
+                "INVALID_TEMPLATE",
+                message,
+            ));
+        }
+        if matches!(error, StoreError::TemplateConflict) {
+            return Self(AuthError(
+                StatusCode::CONFLICT,
+                "TEMPLATE_CONFLICT",
+                "This definition changed in another window. Reload before editing it.",
+            ));
+        }
         if let StoreError::Planning(message) = &error {
             return Self(AuthError(
                 StatusCode::BAD_REQUEST,

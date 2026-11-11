@@ -29,6 +29,8 @@ mod invitations_http;
 mod profiles_http;
 #[path = "acceptance/sla_http.rs"]
 mod sla_http;
+#[path = "acceptance/templates_http.rs"]
+mod templates_http;
 
 const SECRET: &str = "local-test-secret-that-is-at-least-32-bytes-long";
 const ORIGIN: &str = "http://localhost:3100";

@@ -21,6 +21,8 @@ mod coordinator_recovery;
 mod invitation_recovery;
 #[path = "acceptance/model_recovery.rs"]
 mod model_recovery;
+#[path = "acceptance/template_recovery.rs"]
+mod template_recovery;
 
 #[derive(Default)]
 struct CaptureJournal {

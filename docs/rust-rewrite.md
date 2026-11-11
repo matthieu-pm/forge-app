@@ -85,6 +85,7 @@ gate pass.
 | 3b8b | Durable invitation queue, live delivery authority and lifecycle recovery | Passed |
 | 3b8c | Workflow health, native queue stalls and bounded operator diagnostics | Passed |
 | 3b8d | Disposable local fixtures for original jobs, SLA and preference-import acceptance | Passed |
+| 3b9a | Template authoring, team defaults and gated recurring definitions | Passed |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -2180,3 +2181,42 @@ these routes do not represent a completed rewrite.
   formatting, Clippy and three package typechecks. 607 reference tests across
   31 files still require external fixtures and remain skipped.
   Evidence: `.forge/rust-rewrite/milestone-3b8d-verified.log`.
+
+### Milestone 3b9a
+
+- Rust now validates and persists workspace/team templates, selects eligible
+  member/non-member defaults and preserves recurring-issue authoring definitions
+  in the existing tables. Template application into canonical issues/projects
+  remains a separate pending service; this milestone does not claim that path.
+- The source exporter records 216 validation/normalization cases, six empty
+  templates, 15 timezone-sensitive recurring defaults and the exact eight-million
+  serialized UTF-16-unit payload boundary. Legacy template documents retain their
+  own editor vocabulary, attachment rules and unknown node metadata.
+- Mutations recheck live session authority, accessible teams and workspace member
+  references under the workspace/definition locks. Duplicate names serialize by
+  scope and kind. Template kinds remain immutable, defaults exclude ineligible
+  forms, and recurring updates/deletions require the reviewed revision.
+  Rust additionally makes every saved revision advance by at least one millisecond
+  to prevent same-millisecond writes from bypassing stale-edit protection.
+- Template HTTP routes require the existing session/workspace binding and support
+  up to 32 MiB of transport bytes. Bounded JSON parsing covers both HTTP and stored
+  documents so the valid 64-node depth remains readable. The source's disabled
+  recurring-issue feature ceiling remains enforced at every public recurring
+  route; internal storage qualification does not activate that product feature.
+- Team-directory loading can share its caller's transaction, avoiding a second
+  pool checkout and keeping template authority/read data in the same transaction.
+  Recovery preparation precedes mutations, including cascading default clearing.
+- Acceptance covers concurrent duplicate creation and stale saves, future legacy
+  revisions, private visibility, foreign members/workspaces, role revocation,
+  default eligibility, recurring revisions, journal failure and large/deep HTTP
+  round trips. Initial gates caught an unnecessary borrow and an incorrect new
+  recovery-test expectation: migration 0049 journals the template deletion and
+  its existing foreign key clears the default during replay. Both were corrected.
+- The milestone runner now supplies `VITEST_MAX_WORKERS=2` through Turbo's
+  environment allowlist. Earlier reference runs hit UI timeouts under the default
+  CPU-wide concurrency; the bounded run passed with original assertions and
+  timeout limits unchanged. Ordinary developer commands keep their defaults.
+- Full verification passed: 550 Rust tests, 3,013 enabled reference tests,
+  source-fixture drift checks, formatting, Clippy and all three package
+  typechecks. The 607 external-fixture tests across 31 files remain skipped.
+  Evidence: `.forge/rust-rewrite/milestone-3b9a-bounded.log`.

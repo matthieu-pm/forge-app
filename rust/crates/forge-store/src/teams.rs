@@ -625,14 +625,24 @@ pub async fn directory(
     let mut tx = database.begin().await?;
     lock_workspace(&mut tx, &actor.workspace_id, false).await?;
     let live = current_actor(&mut tx, actor).await?;
-    require_read(&live)?;
+    let result = directory_in(&mut tx, &live, archived).await?;
+    tx.commit().await?;
+    Ok(result)
+}
+
+pub(crate) async fn directory_in(
+    connection: &mut PgConnection,
+    live: &Actor,
+    archived: bool,
+) -> Result<Value, StoreError> {
+    require_read(live)?;
     let rows=sqlx::query_as::<_,TeamRow>(&format!("SELECT t.* FROM teams t WHERE t.workspace_id=$1 AND {} AND (t.visibility='workspace' OR $2 OR EXISTS(SELECT 1 FROM team_members tm WHERE tm.workspace_id=t.workspace_id AND tm.team_id=t.id AND tm.user_id=$3)) ORDER BY t.name,t.id",if archived{"t.deleted_at>clock_timestamp()-interval '30 days'"}else{"t.deleted_at IS NULL"}))
-        .bind(&live.workspace_id).bind(live.can_read_all_private_teams()).bind(&live.user_id).fetch_all(&mut *tx).await?;
+        .bind(&live.workspace_id).bind(live.can_read_all_private_teams()).bind(&live.user_id).fetch_all(&mut *connection).await?;
     let can_manage = live.can_manage_teams();
     let can_create = live.has_scope(ApiScope::TeamsWrite)
-        && security::settings(&mut tx, &live.workspace_id)
+        && security::settings(&mut *connection, &live.workspace_id)
             .await?
-            .allows(&live, SecurityAction::TeamsCreate);
+            .allows(live, SecurityAction::TeamsCreate);
     #[derive(FromRow)]
     struct BatchMember {
         team_id: Uuid,
@@ -641,7 +651,7 @@ pub async fn directory(
     }
     let ids: Vec<_> = rows.iter().map(|r| r.id).collect();
     let memberships=sqlx::query_as::<_,BatchMember>("SELECT tm.team_id,u.id user_id,u.name,u.email,u.image,u.username,m.role workspace_role,tm.role team_role,tm.created_at team_joined_at FROM team_members tm JOIN member m ON m.organization_id=tm.workspace_id AND m.user_id=tm.user_id JOIN \"user\" u ON u.id=tm.user_id WHERE tm.workspace_id=$1 AND tm.team_id=ANY($2) ORDER BY m.created_at,m.id")
-        .bind(&live.workspace_id).bind(ids).fetch_all(&mut *tx).await?;
+        .bind(&live.workspace_id).bind(ids).fetch_all(&mut *connection).await?;
     let mut by_team = std::collections::HashMap::<Uuid, Vec<DirectoryMember>>::new();
     for membership in memberships {
         by_team
@@ -681,7 +691,6 @@ pub async fn directory(
         for (key,value_field) in json!({"lifecycle":if archived{"archived"}else{"active"},"isMember":is_member,"memberCount":members.len(),"directoryMembers":people,"owners":owners,"updatedAt":row.updated_at,"memberPreviews":previews,"issueCount":null,"recoverableUntil":until,"capabilities":{"canOpenSettings":!archived,"canLeave":can_leave,"canDelete":!archived&&can_manage,"canRestore":archived&&can_manage&&until.is_some_and(|at|at>Utc::now())}}).as_object().unwrap(){value[key]=value_field.clone();}
         items.push(value);
     }
-    tx.commit().await?;
     Ok(json!({"items":items,"canCreateTeam":can_create}))
 }
 

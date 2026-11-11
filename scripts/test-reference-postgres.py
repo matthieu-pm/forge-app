@@ -79,6 +79,10 @@ def main():
     environment = {key: value for key, value in os.environ.items()
                    if key in {"PATH", "HOME", "TMPDIR", "TMP", "TEMP", "LANG", "TZ", "CI"}
                    or key.startswith("LC_")}
+    # Vitest otherwise starts available CPUs minus one workers per package.
+    # Bound the full gate's pressure on a shared desktop without changing any
+    # assertions, timeouts, fixture opt-ins or the ordinary developer command.
+    environment["VITEST_MAX_WORKERS"] = "2"
     with tempfile.TemporaryDirectory(prefix="forge-reference-pg-") as temporary_name:
         temporary = Path(temporary_name)
         binaries = temporary / "bin"
@@ -93,7 +97,7 @@ def main():
             for variable, port, name, user, migrate in FIXTURES:
                 environment[variable] = stack.enter_context(
                     fixture(temporary, environment, port, name, user, migrate))
-            print("Running every reference suite with jobs, SLA and preference-import local fixtures enabled.", flush=True)
+            print("Running every reference suite with jobs, SLA and preference-import local fixtures enabled; two Vitest workers per package.", flush=True)
             return subprocess.run([str(shim), "run", "test", "--force"],
                                   cwd=ROOT, env=environment).returncode
 

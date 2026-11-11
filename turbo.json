@@ -165,5 +165,5 @@
       ]
     }
   },
-  "globalPassThroughEnv": ["CI", "NODE_ENV", "VERCEL*", "FORGE_*"]
+  "globalPassThroughEnv": ["CI", "NODE_ENV", "VERCEL*", "FORGE_*", "VITEST_MAX_WORKERS"]
 }

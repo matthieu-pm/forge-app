@@ -25,11 +25,16 @@ pub mod retention;
 pub mod security;
 pub mod sla;
 pub mod teams;
+pub mod templates;
 pub mod workspaces;
 pub use database::Database;
 
 #[derive(Debug, thiserror::Error)]
 pub enum StoreError {
+    #[error("{0}")]
+    Template(&'static str),
+    #[error("This definition changed in another window. Reload before editing it.")]
+    TemplateConflict,
     #[error(transparent)]
     Job(#[from] forge_core::jobs::Error),
     #[error(transparent)]

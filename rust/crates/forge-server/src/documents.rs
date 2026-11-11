@@ -16,8 +16,8 @@ use uuid::Uuid;
 
 // A valid 64-node document can exceed serde_json's default 128 JSON containers.
 // The route bounds bytes; this parser separately bounds container nesting.
-type Payload = Result<Bytes, BytesRejection>;
-async fn document_context<'a>(
+pub(crate) type Payload = Result<Bytes, BytesRejection>;
+pub(crate) async fn document_context<'a>(
     state: &'a AppState,
     headers: &HeaderMap,
     payload: Payload,

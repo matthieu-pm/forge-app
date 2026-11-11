@@ -28,6 +28,7 @@ pub mod retention;
 pub mod sla;
 pub mod state;
 mod teams;
+mod templates;
 mod views;
 mod workspace_access;
 mod workspaces;
@@ -99,6 +100,29 @@ pub fn router_with_state(state: state::AppState) -> Router {
         .route("/api/workspace/views", post(views::mutate))
         .route("/api/workspace/views/read", post(views::read))
         .route("/api/workspace/views/projects", post(views::query))
+        .merge(
+            Router::new()
+                .route("/api/workspace/templates/read", post(templates::read))
+                .route("/api/workspace/templates/save", post(templates::save))
+                .route("/api/workspace/templates/delete", post(templates::delete))
+                .route(
+                    "/api/workspace/templates/default",
+                    post(templates::set_default),
+                )
+                .route(
+                    "/api/workspace/recurring-issues/read",
+                    post(templates::recurring_read),
+                )
+                .route(
+                    "/api/workspace/recurring-issues/save",
+                    post(templates::recurring_save),
+                )
+                .route(
+                    "/api/workspace/recurring-issues/delete",
+                    post(templates::recurring_delete),
+                )
+                .layer(axum::extract::DefaultBodyLimit::max(32 * 1024 * 1024)),
+        )
         .merge(
             Router::new()
                 .route("/api/workspace/documents", post(documents::write))

@@ -43,6 +43,8 @@ mod profile_acceptance;
 mod project_acceptance;
 #[path = "acceptance/sla.rs"]
 mod sla_acceptance;
+#[path = "acceptance/templates.rs"]
+mod template_acceptance;
 #[path = "acceptance/views.rs"]
 mod view_acceptance;
 
