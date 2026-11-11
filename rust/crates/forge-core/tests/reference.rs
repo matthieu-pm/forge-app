@@ -466,3 +466,51 @@ fn shared_cycle_calendars_settings_and_timezone_names_match_reference() {
         );
     }
 }
+
+#[test]
+fn canonical_project_contracts_catalogs_and_content_match_reference() {
+    use forge_core::projects as p;
+    let f: Value = serde_json::from_str(include_str!("../../../reference-fixtures.json")).unwrap();
+    for (i, c) in f["projectCases"].as_array().unwrap().iter().enumerate() {
+        let v = c["input"].clone();
+        let result = match c["kind"].as_str().unwrap() {
+            "changes" => p::changes(v),
+            "fields" => p::fields(v, false, true),
+            "statuses" => p::statuses(v),
+            "labels" => p::labels(v, false),
+            _ => unreachable!(),
+        };
+        assert_eq!(
+            result.is_ok(),
+            c["valid"],
+            "project contract {i}: {result:?}"
+        );
+        if let Ok(value) = result {
+            assert_eq!(value, c["expected"], "project contract {i}");
+        }
+    }
+    for c in f["projectDates"].as_array().unwrap() {
+        let value =
+            p::target_day(c["value"].as_str().unwrap()).map(|v| v.format("%Y-%m-%d").to_string());
+        assert_eq!(serde_json::json!(value), c["expected"]);
+    }
+    for (i, c) in f["projectContent"].as_array().unwrap().iter().enumerate() {
+        let actor = serde_json::from_value(c["actor"].clone()).unwrap();
+        let result = p::reconcile(
+            &actor,
+            c["before"].as_array().unwrap(),
+            c["submitted"].as_array().unwrap(),
+            "2026-11-11T00:00:00.000Z",
+        );
+        assert_eq!(result.is_ok(), c["valid"], "post {i}: {result:?}");
+        if let Ok(v) = result {
+            assert_eq!(serde_json::json!(v), c["expected"], "post {i}");
+        }
+    }
+    for c in f["projectMilestones"].as_array().unwrap() {
+        assert_eq!(
+            p::unique_milestones(c["value"].as_array().unwrap()).is_ok(),
+            c["valid"]
+        );
+    }
+}

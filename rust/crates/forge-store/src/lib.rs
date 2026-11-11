@@ -11,6 +11,7 @@ pub mod issues;
 pub mod joins;
 pub mod members;
 pub mod oauth;
+pub mod projects;
 pub mod resource_policy;
 pub mod security;
 pub mod teams;
@@ -49,6 +50,8 @@ pub enum StoreError {
     DomainUnverified,
     #[error(transparent)]
     Team(#[from] forge_core::teams::TeamError),
+    #[error("{0}")]
+    Planning(&'static str),
     #[error("{0}")]
     DefinitionConflict(&'static str),
     #[error("{0}")]

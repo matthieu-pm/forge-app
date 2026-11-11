@@ -421,6 +421,36 @@ async fn issue_http_commands_preserve_bound_sessions_and_expose_discussion_and_h
     assert_eq!(status, StatusCode::OK, "{page}");
     assert_eq!(page["total"], 1);
     assert_eq!(page["records"][0]["issue"]["id"], created["issue"]["id"]);
+    let project = Uuid::new_v4();
+    let (status,_,saved)=f.request("POST","/api/workspace/projects",Some(&cookie),Some(bind(json!({"commandKey":Uuid::new_v4(),"changes":[{"id":project,"expectedRevision":null,"changes":{"name":"HTTP project","teamIds":[team.id]}}]})))).await;
+    assert_eq!(status, StatusCode::OK, "{saved}");
+    let (status, _, projects) = f
+        .request("GET", "/api/workspace/projects", Some(&cookie), None)
+        .await;
+    assert_eq!(status, StatusCode::OK, "{projects}");
+    assert_eq!(projects["projects"][0]["id"], project.to_string());
+    let mut project_statuses = forge_core::projects::initial_statuses();
+    project_statuses["version"] = json!(1);
+    let (status,_,saved)=f.request("POST","/api/workspace/project-catalog",Some(&cookie),Some(bind(json!({"kind":"statuses","commandKey":Uuid::new_v4(),"expectedRevision":0,"value":project_statuses.to_string()})))).await;
+    assert_eq!(status, StatusCode::OK, "{saved}");
+    let (status, _, catalog) = f
+        .request("GET", "/api/workspace/project-catalog", Some(&cookie), None)
+        .await;
+    assert_eq!(status, StatusCode::OK, "{catalog}");
+    assert_eq!(catalog["statusesRevision"], 1);
+    let mut wrong = bind(json!({"commandKey":Uuid::new_v4(),"changes":[]}));
+    wrong["sessionId"] = json!("wrong");
+    assert_eq!(
+        f.request(
+            "POST",
+            "/api/workspace/projects",
+            Some(&cookie),
+            Some(wrong)
+        )
+        .await
+        .0,
+        StatusCode::FORBIDDEN
+    );
     let mut cycle_settings = forge_core::cycles::initial();
     cycle_settings["enabled"] = json!(true);
     let (status,_,saved)=f.request("POST","/api/workspace/team-settings",Some(&cookie),Some(bind(json!({"teamId":team.id,"kind":"cycles","commandKey":Uuid::new_v4(),"expectedRevision":0,"value":cycle_settings.to_string()})))).await;

@@ -27,6 +27,13 @@ impl From<AuthError> for IssueHttpError {
 }
 impl From<StoreError> for IssueHttpError {
     fn from(error: StoreError) -> Self {
+        if let StoreError::Planning(message) = &error {
+            return Self(AuthError(
+                StatusCode::BAD_REQUEST,
+                "INVALID_PROJECT",
+                message,
+            ));
+        }
         let message = match &error {
             StoreError::IssueValidation(message) | StoreError::IssueRejected(message) => {
                 Some(*message)
@@ -58,8 +65,8 @@ impl IntoResponse for IssueHttpError {
         self.0.into_response()
     }
 }
-type Payload = Result<Json<Value>, JsonRejection>;
-async fn context<'a>(
+pub(crate) type Payload = Result<Json<Value>, JsonRejection>;
+pub(crate) async fn context<'a>(
     state: &'a AppState,
     headers: &HeaderMap,
     payload: Payload,

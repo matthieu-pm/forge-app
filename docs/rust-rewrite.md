@@ -30,7 +30,9 @@ gate pass.
 | 2b2 | Issue creation, editing, comments, relationships and history | Passed available gate |
 | 2b3 | Server issue queries, filtering, facets and pagination | Passed available gate |
 | 2b4 | Triage, recoverable issue lifecycle and cycles | Passed available gate; retention workers belong to milestone 3 |
-| 2c | Projects, initiatives, documents, views, resources and imports | Pending |
+| 2c1 | Shared projects, catalogs, milestones and posts | Passed available gate |
+| 2c2 | Shared initiatives and planning queries | Pending |
+| 2c3 | Documents, views, resources and imports | Pending |
 | 3 | Agent execution, approvals, streams, models, files, retention, jobs, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -339,3 +341,31 @@ these routes do not represent a completed rewrite.
   cycle closure/rollover remain with milestone 3's files and background workers.
   This milestone does not qualify a production retention service or frontend.
 - Log: `.forge/rust-rewrite/milestone-2b4-gate.log`.
+
+### Milestone 2c1
+
+- Full gate passed: 134 Rust tests, all 2,959 enabled reference tests, TypeScript
+  typechecking, formatting and Clippy. The 661 external-fixture reference tests
+  remain skipped. Optional-field mutation initially inserted null milestones into
+  otherwise valid new projects; the defect was fixed before the successful gate.
+- 64 contract/catalog cases, 10 date comparisons, 35 post reconciliation cases
+  and five milestone identity cases match exports from the source implementation.
+- Shared project saves preserve inaccessible team and dependency links, check
+  current project scopes and membership, and reject stale revisions atomically.
+  Exact retries reuse the existing `projects.save@1` receipt and recheck access.
+- Project dependencies reject cycles. Milestone renames retain canonical IDs and
+  prior aliases; description history and event attribution come from the server.
+  Move, conversion and deletion update active, archived and recoverable issues in
+  the same transaction, rejecting inaccessible or purging assignments.
+- Post reconciliation preserves authorship and creation time, permits only the
+  caller's reaction changes, and enforces author/admin editing rights. Existing
+  private file rows bind to one post, supply verified metadata and detach when
+  removed. Byte upload/download and cleanup workers remain in milestone 3.
+- Catalogs preserve source product-state encoding and receipt identity, enforce
+  live administrator sessions and revision checks, and prevent removing statuses
+  or labels in use. Label usage counts include only visible projects.
+- Authenticated HTTP routes expose projects and catalogs with workspace/session
+  binding. The user interface and production qualification remain pending.
+- Recovery acceptance checks preparation failure rollback and publication of
+  removed project-team rows. All 75 migrations run in both disposable databases.
+- Gate log: `.forge/rust-rewrite/milestone-2c1-qualified.log`.

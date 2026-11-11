@@ -7,6 +7,7 @@ mod issues;
 pub mod mail;
 mod oauth;
 pub mod oauth_provider;
+mod projects;
 mod public_api;
 pub mod state;
 mod teams;
@@ -27,6 +28,14 @@ pub fn router() -> Router {
 
 pub fn router_with_state(state: state::AppState) -> Router {
     let auth_routes = Router::new()
+        .route(
+            "/api/workspace/projects",
+            get(projects::read).post(projects::save),
+        )
+        .route(
+            "/api/workspace/project-catalog",
+            get(projects::catalog).post(projects::save_catalog),
+        )
         .route(
             "/api/workspace/team-settings",
             axum::routing::post(issues::save_team_settings),

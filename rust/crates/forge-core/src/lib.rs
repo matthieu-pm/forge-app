@@ -13,6 +13,7 @@ pub mod issue_query;
 pub mod issues;
 pub mod journal;
 pub mod planning;
+pub mod projects;
 pub mod security;
 pub mod security_commands;
 pub mod subscription;

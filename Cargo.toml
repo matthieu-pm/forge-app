@@ -41,6 +41,7 @@ hickory-resolver = { version = "0.24", features = ["tokio-runtime", "system-conf
 idna = "1"
 chrono-tz = "0.10"
 regress = "0.10"
+icu_collator = "2"
 
 [profile.release]
 lto = "thin"

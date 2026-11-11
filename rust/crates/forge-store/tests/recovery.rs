@@ -175,6 +175,53 @@ async fn canonical_issue_effects_and_history_roll_back_when_preparation_fails() 
 }
 
 #[tokio::test]
+async fn project_relation_removal_requires_preparation_and_publishes_recovery_rows() {
+    use forge_store::projects;
+    use serde_json::json;
+    let f = Fixture::new().await;
+    forge_store::workspaces::create(
+        &f.database,
+        &f.token,
+        "Recovery projects",
+        &Uuid::new_v4().to_string(),
+        None,
+    )
+    .await
+    .unwrap();
+    let a = forge_store::authority::session_actor(&f.database, &f.token)
+        .await
+        .unwrap();
+    let team=forge_store::teams::create(&f.database,&a,&forge_core::teams::CreateTeam::parse(json!({"name":"Project team","identifier":"RPJ","icon":{"kind":"emoji","value":"🛠️","color":"#818cf8"},"timezone":"UTC"})).unwrap()).await.unwrap();
+    let id = Uuid::new_v4();
+    projects::save(&f.database,&a,&Uuid::new_v4().to_string(),json!([{"id":id,"expectedRevision":null,"changes":{"name":"Recovery project","teamIds":[team.id]}}])).await.unwrap();
+    let row = projects::read(&f.database, &a).await.unwrap()["projects"][0].clone();
+    let key = Uuid::new_v4().to_string();
+    let changes = json!([{"id":id,"expectedRevision":row["revision"],"changes":{"teamIds":[]}}]);
+    f.backend.mode.store(1, Ordering::Relaxed);
+    assert!(
+        projects::save(&f.database, &a, &key, changes.clone())
+            .await
+            .is_err()
+    );
+    assert_eq!(
+        projects::read(&f.database, &a).await.unwrap()["projects"][0]["teamIds"],
+        json!([team.id])
+    );
+    f.backend.mode.store(0, Ordering::Relaxed);
+    projects::save(&f.database, &a, &key, changes)
+        .await
+        .unwrap();
+    assert!(
+        f.backend
+            .completed
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|(_, events)| events.iter().any(|e| e.table == "project_teams"))
+    );
+}
+
+#[tokio::test]
 async fn definition_deletion_requires_independent_preparation_and_publishes_removed_rows() {
     use forge_store::definitions::{self, DefinitionCommand};
     use serde_json::json;
