@@ -46,7 +46,8 @@ gate pass.
 | 3b2 | Issue purge, source-bound copy cleanup and retention endpoint | Passed available gate |
 | 3b3 | Shared SLA policies, reconciliation and durable breach jobs | Passed available gate |
 | 3b4 | Account profiles, private avatar validation and concurrent profile edits | Passed available gate |
-| 3b5a | Agent protocols, model routing, execution policy and scoped credentials | In progress |
+| 3b5a | Agent protocols, model routing, execution policy and scoped credentials | Passed available gate |
+| 3b5b | Agent thread/run persistence, event ledger, approval and invocation reservations | In progress |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -823,3 +824,26 @@ these routes do not represent a completed rewrite.
   `FORGE_PROFILE_EDITING_ENABLED`; disabled reads still require authentication.
 - The initial gate found one nested-if lint. It was corrected, and the complete
   rerun passed with no behavioral test failures.
+
+### Milestone 3b5a
+
+- Full gate passed: 277 Rust tests, 2,959 enabled reference tests, typechecking,
+  formatting, Clippy and source export checks. The 661 fixture-dependent reference
+  tests remain skipped. Log: `.forge/rust-rewrite/milestone-3b5a-rerun.log`.
+- Agent contracts cover commands, runtime events, capabilities, local ingestion,
+  model selections, attachments and artifact inputs. Payload checks preserve the
+  owning source's byte limits and recursive credential redaction checks.
+- Model routing retains automatic complexity signals, manual selection, effort
+  fallback and runtime selection. Feature controls, budgets, provider funding and
+  qualification evidence preserve source decisions and error ordering.
+- Capability, local-event, model-access and artifact tokens are byte-compatible
+  with the owning JOSE implementation. Fixtures cover claim types, expiry, header
+  handling, signatures and run/user/resource binding. Live database authority is
+  still required by the adapters that consume these credentials.
+- Reference exports include 1,854 contract cases, 17 payload safety cases, 200
+  feature cases, 64 controls, 16 budget decisions, 40 provider decisions, 38
+  qualification assessments, 81 routes, 40 minted tokens, 314 token verifications,
+  11 binding cases and nine capability-scope mappings.
+- The initial gate found one character-classification lint; the complete rerun
+  passed after correction. Agent execution, provider integration and the UI remain
+  pending; this milestone does not expose an executable agent endpoint.

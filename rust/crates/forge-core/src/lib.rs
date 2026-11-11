@@ -32,6 +32,7 @@ pub mod product_state;
 
 pub mod preferences;
 
+pub mod agents;
 pub mod files;
 pub mod imports;
 pub mod jobs;
