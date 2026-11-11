@@ -70,6 +70,7 @@ gate pass.
 | 3b5v | Durable conversation continuity, interrupted tool history and resolved attachments | Passed available gate |
 | 3b5w | Application/native runtime transport, durable replay and coordinator integration | Passed available gate |
 | 3b5x | Sandbox framework file/shell tools and isolated filesystem transport | Passed available gate |
+| 3b5y | Persistent sandbox snapshots, session replacement and recovery fencing | Passed available gate |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -1627,3 +1628,42 @@ these routes do not represent a completed rewrite.
   and atomic engine/file-state integration must be connected first. Other default
   tools, compaction, sandbox continuity, private runtime retention and deployment
   qualification remain outstanding. No provider or production service was used.
+
+
+### Milestone 3b5y
+
+- Full milestone gate passed: 464 Rust tests and 2,959 enabled TypeScript tests.
+  Formatting, Clippy, source contracts and typechecking passed; 661 reference
+  tests across 34 files remain skipped. Log:
+  `.forge/rust-rewrite/milestone-3b5y-verified.log`.
+- The isolated transport can open a persistent workspace by a stable, journaled
+  UUID. A separate creation-intent flag permits initial creation or recovery of
+  an unacknowledged creation. Established missing workspaces and expired/missing
+  snapshots fail without replacing the files with an empty environment.
+- Replacement first validates the named resource, stops the previous provider
+  session and waits through snapshotting. It then resumes the exact saved
+  snapshot into a different session ID. Cleanup from an older worker addresses
+  only that old session, so it cannot stop the replacement. This uses the pinned
+  SDK's v2 named-sandbox protocol; Vercel's [persistent sandbox documentation](https://vercel.com/docs/sandbox/concepts/persistent-sandboxes)
+  and [snapshot documentation](https://vercel.com/docs/sandbox/concepts/snapshots)
+  confirm that resuming restores the saved filesystem into a new session.
+- Every created/resumed workspace acknowledges denied network access before
+  bootstrap or authored execution. Names, ownership tags, persistence, session
+  identity and bounded snapshot retention are checked. The caller must choose a
+  retention duration between one minute and 30 days; only the latest snapshot is
+  retained. Provider snapshot expiration is measured from last use, not an
+  absolute deletion deadline for the conversation or private journal.
+- Lost create/stop/resume acknowledgements and interrupted recovery remain
+  discoverable by the saved name. Durable creation never schedules detached
+  cleanup by name, which could otherwise target a newer worker's session;
+  unknown outcomes are bounded by the provider session lifetime. Opening and
+  stop/snapshot polling also have bounded deadlines.
+- Seven acceptance tests use an HTTP provider fixture with separate files for
+  each VM and saved snapshot. They cover restored files, stale cleanup, missing
+  workspaces, unavailable snapshots, incorrect ownership/policy/retention,
+  mismatched snapshot/session identity and ambiguous or aborted requests. No live
+  sandbox or production service was used.
+- Engine checkpointing, conversation inheritance and configuration must still
+  connect these APIs before default framework tools are exposed to models.
+  Local sandbox backends, remaining framework tools, compaction, private runtime
+  retention and deployment qualification remain outstanding.

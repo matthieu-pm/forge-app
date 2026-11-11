@@ -24,6 +24,8 @@ const FAILED: Error = Error("The isolated sandbox is unavailable.");
 const OUTPUT_LIMIT: usize = 128 * 1024;
 const WIRE_LIMIT: usize = 2 * 1024 * 1024;
 const LINE_LIMIT: usize = 1024 * 1024;
+mod workspace;
+pub use workspace::WorkspaceOptions;
 
 pub struct Options {
     pub team_id: String,
@@ -91,6 +93,11 @@ impl Factory {
             )
             .await?;
         let value = json_response(response).await?;
+        let sandbox = self.handle(&name, &value)?;
+        pending.name = None;
+        self.activate(sandbox).await
+    }
+    fn handle(&self, name: &str, value: &Value) -> Result<Arc<VercelSandbox>> {
         let session_id = value["session"]["id"]
             .as_str()
             .filter(|s| identifier(s))
@@ -104,7 +111,7 @@ impl Factory {
         {
             return Err(FAILED);
         }
-        let sandbox = Arc::new(VercelSandbox {
+        Ok(Arc::new(VercelSandbox {
             state: Arc::new(Remote {
                 api: self.0.clone(),
                 session_id,
@@ -113,8 +120,9 @@ impl Factory {
                 stop_lock: Mutex::new(()),
             }),
             operations: Mutex::new(()),
-        });
-        pending.name = None;
+        }))
+    }
+    async fn activate(&self, sandbox: Arc<VercelSandbox>) -> Result<Arc<VercelSandbox>> {
         // Acknowledge the policy before any execution; never silently accept a
         // provider that ignores or cannot enforce denied network access.
         let policy = sandbox
