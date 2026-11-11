@@ -55,6 +55,8 @@ def main():
             environment = os.environ.copy()
             environment["FORGE_FEATURE_INITIATIVES"] = "true"
             environment["FORGE_FEATURE_SAVED_VIEWS"] = "true"
+            environment["FORGE_PERSONAL_PREFERENCE_SYNC_ENABLED"] = "true"
+            environment["FORGE_PERSON_NAME_FORMATTING_ENABLED"] = "true"
             environment["FORGE_SHARED_DOCUMENTS_ENABLED"] = "true"
             environment["FORGE_TEAM_RESOURCES_ENABLED"] = "true"
             environment["FORGE_RUST_TEST_DATABASE_URL"] = connection

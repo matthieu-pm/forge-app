@@ -35,7 +35,7 @@ gate pass.
 | 2c3 | Shared documents, revision history and legacy document recovery | Passed available gate |
 | 2c4a | Saved views and shared team resources | Passed available gate |
 | 2c4b | Product state and retained draft projections | Passed available gate |
-| 2c4c | Account/workspace preferences and preference import | Pending |
+| 2c4c | Account/workspace preferences and preference import | Passed available gate |
 | 2c4d | Explicit legacy content import, review and execution | Pending |
 | 3 | Agent execution, approvals, streams, models, files, retention, jobs, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
@@ -516,3 +516,49 @@ these routes do not represent a completed rewrite.
   typechecking, formatting and Clippy. The 661 external-fixture reference tests
   remain skipped. Both disposable databases applied all 75 source migrations.
 - Gate log: `.forge/rust-rewrite/milestone-2c4b-final.log`.
+
+### Milestone 2c4c
+
+- Account choices and workspace view settings use independent per-field versions.
+  Concurrent changes to unrelated fields merge; a conflicting patch rolls back in
+  full and returns a fresh owner-only snapshot. Exact command retries return the
+  latest snapshot without repeating a mutation. Session and originating workspace
+  checks apply before durable receipt lookup.
+- Preference schemas and defaults are compiled into a checked-in data description;
+  Rust performs all runtime validation, normalization and decoding. The exporter
+  fails on unknown validation rules, and the gate detects descriptor drift. The
+  application requires no JavaScript preference runtime. Unknown stored fields are
+  retained, invalid supported fields decode independently, and future storage
+  versions reject writes.
+- Reviewed imports require explicit ownership confirmation and a keep/import
+  choice for every supported field. Each field compares both its version and its
+  reviewed baseline value/presence before applying. Conflicts remain reviewable;
+  no batch is silently retried with refreshed expectations.
+- Original source text and baseline values live in the existing private content
+  table. Checkpoints and receipts contain identity/progress only. Saved sources
+  must still match the owner's exact stored copy, including on receipt replays;
+  recovery wrappers verify their enclosed key and original raw text.
+- Imports accept only the source's supported general, call and notification
+  settings. Foreign accounts, future source versions, corrupt envelopes and
+  unsupported fields remain excluded with an explanation and retained raw source.
+- HTTP routes retain synchronization/import/agent-guidance feature gates. An
+  unavailable guidance patch produces no partial preference change. Person names
+  require both flags and current team-read authority; the directory returns only
+  current workspace members' IDs, names and usernames, never their email addresses.
+- Source comparison covers 3,619 field cases, 3,627 command cases, 31 decoding
+  examples, 74 source inspections/fingerprints, 74 reviewed plans and six resource
+  prefixes. Database checks include owner isolation, both concurrency outcomes,
+  audit-failure rollback, stale/changed sources, unversioned targets, unsupported
+  field versions, malformed durable receipts and private-content separation. HTTP checks cover gates and
+  session binding, including JSON's equivalent integer/decimal literal spellings.
+- The first gate exposed two fixtures inserting an already-provisioned preference
+  row; they now update that row. Assertions and production constraints remain
+  unchanged. During review, unsupported field-version values were also made to
+  conflict rather than being treated as an unset field.
+- Receipt validation also rejects malformed import IDs. Its fixture seeds imported
+  evidence with a matching audit row, preserving the source database's prohibition
+  on rewriting a completed receipt. An unavailable result never repeats the effect.
+- Full gate passed: 191 Rust tests, all 2,959 enabled reference tests, TypeScript
+  typechecking, formatting and Clippy. The 661 external-fixture reference tests
+  remain skipped. Both disposable databases applied all 75 source migrations.
+- Gate log: `.forge/rust-rewrite/milestone-2c4c-final.log`.

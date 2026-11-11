@@ -53,6 +53,8 @@ pub enum StoreError {
     DomainUnverified,
     #[error(transparent)]
     Team(#[from] forge_core::teams::TeamError),
+    #[error("These preferences changed in another session.")]
+    PreferenceConflict(Vec<String>),
     #[error("This document changed in another session.")]
     DocumentConflict,
     #[error("The shared resource board changed in another session.")]
@@ -81,3 +83,5 @@ pub mod saved_views;
 pub mod team_resources;
 
 pub mod product_state;
+
+pub mod preferences;

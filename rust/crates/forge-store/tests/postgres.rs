@@ -1283,3 +1283,6 @@ async fn unavailable_receipts_fail_without_repeating_the_effect() {
     ));
     assert_eq!(fixture.effect_count().await, 1);
 }
+
+#[path = "acceptance/preferences.rs"]
+mod preference_acceptance;

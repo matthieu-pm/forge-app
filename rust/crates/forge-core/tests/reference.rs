@@ -738,3 +738,68 @@ fn product_state_and_retained_copy_protocols_match_source() {
         }
     }
 }
+
+#[test]
+fn preference_contracts_decoding_and_reviewed_imports_match_source() {
+    use forge_core::preferences::{self as p, imports as i};
+    let fixtures: Value =
+        serde_json::from_str(include_str!("../../../reference-fixtures.json")).unwrap();
+    let f = &fixtures["preferenceContracts"];
+    for c in f["fields"].as_array().unwrap() {
+        let v = p::field(
+            c["scope"].as_str().unwrap(),
+            c["key"].as_str().unwrap(),
+            c["value"].clone(),
+            false,
+        );
+        assert_eq!(v.is_ok(), c["valid"], "field {c}");
+        if let Ok(v) = v {
+            assert_eq!(v, c["expected"], "field {c}")
+        }
+    }
+    for c in f["commands"].as_array().unwrap() {
+        let v = p::command(c["input"].clone());
+        assert_eq!(v.is_ok(), c["valid"], "command {c}");
+        if let Ok(v) = v {
+            assert_eq!(v, c["expected"], "command {c}")
+        }
+    }
+    for c in f["decode"].as_array().unwrap() {
+        assert_eq!(
+            p::decode(
+                c["scope"].as_str().unwrap(),
+                c["kind"]
+                    .as_str()
+                    .map(|k| (k, c["resource"].as_str().unwrap())),
+                &c["values"]
+            )
+            .unwrap(),
+            c["expected"],
+            "decode {c}"
+        )
+    }
+    for c in f["prefix"].as_array().unwrap() {
+        assert_eq!(
+            format!(
+                "teamIssues.{}",
+                p::encode_resource(c["resource"].as_str().unwrap())
+            ),
+            c["expected"]
+        )
+    }
+    for c in f["inspect"].as_array().unwrap() {
+        assert_eq!(
+            i::inspect(&c["source"], c["user"].as_str().unwrap()),
+            c["expected"],
+            "inspect {c}"
+        );
+        assert_eq!(i::fingerprint(&c["source"]), c["fingerprint"])
+    }
+    for c in f["plans"].as_array().unwrap() {
+        let v = i::validate(c["input"].clone());
+        assert_eq!(v.is_ok(), c["valid"], "plan {c}");
+        if let Ok(v) = v {
+            assert_eq!(v, c["expected"], "plan {c}")
+        }
+    }
+}

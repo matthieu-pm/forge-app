@@ -9,6 +9,7 @@ pub mod mail;
 mod oauth;
 pub mod oauth_provider;
 mod planning;
+mod preferences;
 mod product_state;
 mod projects;
 mod public_api;
@@ -32,6 +33,27 @@ pub fn router() -> Router {
 
 pub fn router_with_state(state: state::AppState) -> Router {
     let auth_routes = Router::new()
+        .merge(
+            Router::new()
+                .route(
+                    "/api/workspace/preferences",
+                    get(preferences::read).post(preferences::patch),
+                )
+                .route("/api/workspace/people", post(preferences::directory))
+                .route(
+                    "/api/workspace/preference-imports",
+                    post(preferences::imports),
+                )
+                .route(
+                    "/api/workspace/preference-imports/prepare",
+                    post(preferences::prepare),
+                )
+                .route(
+                    "/api/workspace/preference-imports/apply",
+                    post(preferences::apply),
+                )
+                .layer(axum::extract::DefaultBodyLimit::max(64 * 1024 * 1024)),
+        )
         .merge(
             Router::new()
                 .route(

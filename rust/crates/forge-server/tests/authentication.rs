@@ -1650,3 +1650,87 @@ async fn workspace_update_and_cascading_deletion_use_a_consistent_lock_order() {
     assert_eq!(owner_session.0.active_organization_id, None);
     assert_eq!(owner_session.1.id, owner.id);
 }
+
+#[tokio::test]
+async fn preferences_http_binds_sessions_and_handles_gated_fields_without_partial_writes() {
+    let f = Fixture::new().await;
+    let (_, token, cookie) = f.account().await;
+    forge_store::workspaces::create(
+        &f.database,
+        &token,
+        "Preferences HTTP",
+        &Uuid::new_v4().to_string(),
+        None,
+    )
+    .await
+    .unwrap();
+    let actor = forge_store::authority::session_actor(&f.database, &token)
+        .await
+        .unwrap();
+    let session = match &actor.authentication {
+        forge_core::actor::Authentication::Session { session_id } => session_id,
+        _ => unreachable!(),
+    };
+    let (status, _, value) = f
+        .request("GET", "/api/workspace/preferences", Some(&cookie), None)
+        .await;
+    assert_eq!(status, StatusCode::OK, "{value}");
+    assert_eq!(value["status"], "ready");
+    let input = json!({"sessionId":session,"commandKey":Uuid::new_v4(),"version":1.0,"patch":{"general.interfaceTheme":"dark"},"expectedVersions":{"general.interfaceTheme":0}});
+    let (status, _, value) = f
+        .request(
+            "POST",
+            "/api/workspace/preferences",
+            Some(&cookie),
+            Some(input.clone()),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{value}");
+    assert_eq!(
+        value["snapshot"]["values"]["general.interfaceTheme"],
+        "dark"
+    );
+    let mut wrong = input;
+    wrong["sessionId"] = json!("previous-login");
+    assert_eq!(
+        f.request(
+            "POST",
+            "/api/workspace/preferences",
+            Some(&cookie),
+            Some(wrong)
+        )
+        .await
+        .0,
+        StatusCode::FORBIDDEN
+    );
+    let gated = json!({"sessionId":session,"commandKey":Uuid::new_v4(),"version":1,"patch":{"agent.guidance":"Original guidance","general.fontSize":"large"},"expectedVersions":{"agent.guidance":0,"general.fontSize":0}});
+    let (status, _, value) = f
+        .request(
+            "POST",
+            "/api/workspace/preferences",
+            Some(&cookie),
+            Some(gated),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{value}");
+    assert_eq!(value["status"], "unavailable");
+    assert!(
+        value["snapshot"]["values"]
+            .get("general.fontSize")
+            .is_none()
+    );
+    let (status, _, value) = f
+        .request(
+            "POST",
+            "/api/workspace/people",
+            Some(&cookie),
+            Some(json!({"sessionId":session,"workspaceId":actor.workspace_id})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{value}");
+    assert_eq!(value["people"].as_array().unwrap().len(), 1);
+    assert!(value["people"][0].get("email").is_none());
+    let(status,_,value)=f.request("POST","/api/workspace/preference-imports",Some(&cookie),Some(json!({"sessionId":session,"workspaceId":actor.workspace_id,"userId":actor.user_id}))).await;
+    assert_eq!(status, StatusCode::OK, "{value}");
+    assert_eq!(value["status"], "disabled");
+}

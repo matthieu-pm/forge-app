@@ -1,0 +1,2800 @@
+{
+  "version": 1,
+  "account": {
+    "kind": "object",
+    "fields": {
+      "general": {
+        "kind": "object",
+        "fields": {
+          "defaultHomeView": {
+            "kind": "enum",
+            "values": [
+              "agent",
+              "inbox",
+              "my-issues"
+            ],
+            "checks": []
+          },
+          "displayNames": {
+            "kind": "enum",
+            "values": [
+              "username",
+              "full-name"
+            ],
+            "checks": []
+          },
+          "firstDayOfWeek": {
+            "kind": "enum",
+            "values": [
+              "sunday",
+              "monday",
+              "saturday"
+            ],
+            "checks": []
+          },
+          "convertEmoticons": {
+            "kind": "boolean",
+            "checks": []
+          },
+          "submitCommentsWith": {
+            "kind": "enum",
+            "values": [
+              "command-enter",
+              "enter"
+            ],
+            "checks": []
+          },
+          "fontSize": {
+            "kind": "enum",
+            "values": [
+              "small",
+              "default",
+              "large"
+            ],
+            "checks": []
+          },
+          "pointerCursors": {
+            "kind": "boolean",
+            "checks": []
+          },
+          "underlineLinks": {
+            "kind": "boolean",
+            "checks": []
+          },
+          "interfaceTheme": {
+            "kind": "enum",
+            "values": [
+              "system",
+              "light",
+              "dark"
+            ],
+            "checks": []
+          },
+          "lightTheme": {
+            "kind": "enum",
+            "values": [
+              "light",
+              "paper"
+            ],
+            "checks": []
+          },
+          "darkTheme": {
+            "kind": "enum",
+            "values": [
+              "dark",
+              "midnight",
+              "forest",
+              "plum"
+            ],
+            "checks": []
+          },
+          "notificationBadge": {
+            "kind": "enum",
+            "values": [
+              "unread",
+              "count",
+              "off"
+            ],
+            "checks": []
+          },
+          "sidebarLayout": {
+            "kind": "array",
+            "element": {
+              "kind": "object",
+              "fields": {
+                "id": {
+                  "kind": "string",
+                  "checks": [
+                    {
+                      "kind": "min",
+                      "value": 1
+                    },
+                    {
+                      "kind": "max",
+                      "value": 80
+                    },
+                    {
+                      "kind": "pattern",
+                      "value": "^[a-z][a-z0-9-]*$"
+                    }
+                  ]
+                },
+                "visible": {
+                  "kind": "boolean",
+                  "checks": []
+                }
+              },
+              "strict": true,
+              "checks": []
+            },
+            "checks": [
+              {
+                "kind": "max",
+                "value": 100
+              },
+              {
+                "kind": "uniqueIds"
+              }
+            ]
+          },
+          "sidebarBadgeStyle": {
+            "kind": "enum",
+            "values": [
+              "count",
+              "dot",
+              "off"
+            ],
+            "checks": []
+          },
+          "checkSpelling": {
+            "kind": "boolean",
+            "checks": []
+          },
+          "autoAssignToSelf": {
+            "kind": "boolean",
+            "checks": []
+          },
+          "assignStartedIssues": {
+            "kind": "boolean",
+            "checks": []
+          }
+        },
+        "strict": true,
+        "checks": []
+      },
+      "calls": {
+        "kind": "object",
+        "fields": {
+          "recordingMode": {
+            "kind": "enum",
+            "values": [
+              "manual",
+              "ask",
+              "automatic"
+            ],
+            "checks": []
+          },
+          "recordingContent": {
+            "kind": "enum",
+            "values": [
+              "audio",
+              "audio-video"
+            ],
+            "checks": []
+          },
+          "language": {
+            "kind": "enum",
+            "values": [
+              "auto",
+              "en",
+              "fr",
+              "es",
+              "de",
+              "it",
+              "pt",
+              "ja"
+            ],
+            "checks": []
+          },
+          "speakerLabels": {
+            "kind": "boolean",
+            "checks": []
+          },
+          "timestamps": {
+            "kind": "boolean",
+            "checks": []
+          },
+          "removeFillers": {
+            "kind": "boolean",
+            "checks": []
+          },
+          "generateSummary": {
+            "kind": "boolean",
+            "checks": []
+          },
+          "summaryFormat": {
+            "kind": "enum",
+            "values": [
+              "bullets",
+              "paragraphs"
+            ],
+            "checks": []
+          },
+          "summaryDetail": {
+            "kind": "enum",
+            "values": [
+              "concise",
+              "detailed"
+            ],
+            "checks": []
+          },
+          "actionItems": {
+            "kind": "boolean",
+            "checks": []
+          },
+          "decisions": {
+            "kind": "boolean",
+            "checks": []
+          },
+          "instructions": {
+            "kind": "string",
+            "checks": [
+              {
+                "kind": "max",
+                "value": 2000
+              }
+            ]
+          }
+        },
+        "strict": false,
+        "checks": []
+      },
+      "reviews": {
+        "kind": "object",
+        "fields": {
+          "issueCodingTool": {
+            "kind": "string",
+            "checks": [
+              {
+                "kind": "max",
+                "value": 120
+              }
+            ]
+          },
+          "codeTheme": {
+            "kind": "enum",
+            "values": [
+              "forge-dark",
+              "github-dark",
+              "github-light"
+            ],
+            "checks": []
+          },
+          "attachmentFormat": {
+            "kind": "enum",
+            "values": [
+              "title",
+              "title-and-number",
+              "number"
+            ],
+            "checks": []
+          },
+          "startOnBranchCopy": {
+            "kind": "boolean",
+            "checks": []
+          },
+          "startOnToolOpen": {
+            "kind": "boolean",
+            "checks": []
+          },
+          "pullRequestTool": {
+            "kind": "enum",
+            "values": [
+              "github",
+              "browser"
+            ],
+            "checks": []
+          },
+          "codingTools": {
+            "kind": "array",
+            "element": {
+              "kind": "enum",
+              "values": [
+                "vscode",
+                "cursor",
+                "windsurf",
+                "zed",
+                "terminal"
+              ],
+              "checks": []
+            },
+            "checks": []
+          }
+        },
+        "strict": false,
+        "checks": []
+      },
+      "notifications": {
+        "kind": "object",
+        "fields": {
+          "priorityInbox": {
+            "kind": "boolean",
+            "checks": []
+          },
+          "priorityTypes": {
+            "kind": "array",
+            "element": {
+              "kind": "enum",
+              "values": [
+                "assignments",
+                "status",
+                "mentions",
+                "comments",
+                "replies",
+                "reactions",
+                "due-dates",
+                "issue-updates",
+                "project-updates",
+                "project-status",
+                "milestones",
+                "cycles",
+                "documents",
+                "subscriptions",
+                "team-updates",
+                "agent-updates"
+              ],
+              "checks": []
+            },
+            "checks": [
+              {
+                "kind": "unique"
+              }
+            ]
+          },
+          "channels": {
+            "kind": "object",
+            "fields": {
+              "desktop": {
+                "kind": "object",
+                "fields": {
+                  "enabled": {
+                    "kind": "boolean",
+                    "checks": []
+                  },
+                  "types": {
+                    "kind": "array",
+                    "element": {
+                      "kind": "enum",
+                      "values": [
+                        "assignments",
+                        "status",
+                        "mentions",
+                        "comments",
+                        "replies",
+                        "reactions",
+                        "due-dates",
+                        "issue-updates",
+                        "project-updates",
+                        "project-status",
+                        "milestones",
+                        "cycles",
+                        "documents",
+                        "subscriptions",
+                        "team-updates",
+                        "agent-updates"
+                      ],
+                      "checks": []
+                    },
+                    "checks": [
+                      {
+                        "kind": "unique"
+                      }
+                    ]
+                  }
+                },
+                "strict": false,
+                "checks": []
+              },
+              "mobile": {
+                "kind": "object",
+                "fields": {
+                  "enabled": {
+                    "kind": "boolean",
+                    "checks": []
+                  },
+                  "types": {
+                    "kind": "array",
+                    "element": {
+                      "kind": "enum",
+                      "values": [
+                        "assignments",
+                        "status",
+                        "mentions",
+                        "comments",
+                        "replies",
+                        "reactions",
+                        "due-dates",
+                        "issue-updates",
+                        "project-updates",
+                        "project-status",
+                        "milestones",
+                        "cycles",
+                        "documents",
+                        "subscriptions",
+                        "team-updates",
+                        "agent-updates"
+                      ],
+                      "checks": []
+                    },
+                    "checks": [
+                      {
+                        "kind": "unique"
+                      }
+                    ]
+                  }
+                },
+                "strict": false,
+                "checks": []
+              },
+              "email": {
+                "kind": "object",
+                "fields": {
+                  "enabled": {
+                    "kind": "boolean",
+                    "checks": []
+                  },
+                  "types": {
+                    "kind": "array",
+                    "element": {
+                      "kind": "enum",
+                      "values": [
+                        "assignments",
+                        "status",
+                        "mentions",
+                        "comments",
+                        "replies",
+                        "reactions",
+                        "due-dates",
+                        "issue-updates",
+                        "project-updates",
+                        "project-status",
+                        "milestones",
+                        "cycles",
+                        "documents",
+                        "subscriptions",
+                        "team-updates",
+                        "agent-updates"
+                      ],
+                      "checks": []
+                    },
+                    "checks": [
+                      {
+                        "kind": "unique"
+                      }
+                    ]
+                  }
+                },
+                "strict": false,
+                "checks": []
+              },
+              "slack": {
+                "kind": "object",
+                "fields": {
+                  "enabled": {
+                    "kind": "boolean",
+                    "checks": []
+                  },
+                  "types": {
+                    "kind": "array",
+                    "element": {
+                      "kind": "enum",
+                      "values": [
+                        "assignments",
+                        "status",
+                        "mentions",
+                        "comments",
+                        "replies",
+                        "reactions",
+                        "due-dates",
+                        "issue-updates",
+                        "project-updates",
+                        "project-status",
+                        "milestones",
+                        "cycles",
+                        "documents",
+                        "subscriptions",
+                        "team-updates",
+                        "agent-updates"
+                      ],
+                      "checks": []
+                    },
+                    "checks": [
+                      {
+                        "kind": "unique"
+                      }
+                    ]
+                  }
+                },
+                "strict": false,
+                "checks": []
+              }
+            },
+            "strict": false,
+            "checks": []
+          },
+          "updates": {
+            "kind": "object",
+            "fields": {
+              "sidebar": {
+                "kind": "boolean",
+                "checks": []
+              },
+              "changelog": {
+                "kind": "boolean",
+                "checks": []
+              },
+              "marketing": {
+                "kind": "boolean",
+                "checks": []
+              },
+              "invite": {
+                "kind": "boolean",
+                "checks": []
+              },
+              "legal": {
+                "kind": "boolean",
+                "checks": []
+              },
+              "dpa": {
+                "kind": "boolean",
+                "checks": []
+              }
+            },
+            "strict": false,
+            "checks": []
+          }
+        },
+        "strict": false,
+        "checks": []
+      },
+      "agent": {
+        "kind": "object",
+        "fields": {
+          "guidance": {
+            "kind": "string",
+            "checks": [
+              {
+                "kind": "max",
+                "value": 50000
+              }
+            ]
+          },
+          "skills": {
+            "kind": "array",
+            "element": {
+              "kind": "object",
+              "fields": {
+                "id": {
+                  "kind": "string",
+                  "checks": [
+                    {
+                      "kind": "min",
+                      "value": 1
+                    }
+                  ]
+                },
+                "name": {
+                  "kind": "string",
+                  "checks": [
+                    {
+                      "kind": "trim"
+                    },
+                    {
+                      "kind": "min",
+                      "value": 1
+                    },
+                    {
+                      "kind": "max",
+                      "value": 120
+                    }
+                  ]
+                },
+                "instructions": {
+                  "kind": "string",
+                  "checks": [
+                    {
+                      "kind": "trim"
+                    },
+                    {
+                      "kind": "min",
+                      "value": 1
+                    },
+                    {
+                      "kind": "max",
+                      "value": 50000
+                    }
+                  ]
+                },
+                "createdAt": {
+                  "kind": "string",
+                  "checks": [
+                    {
+                      "kind": "datetime"
+                    }
+                  ]
+                },
+                "revision": {
+                  "kind": "number",
+                  "checks": [
+                    {
+                      "kind": "integer"
+                    },
+                    {
+                      "kind": "minimum",
+                      "value": 0
+                    }
+                  ]
+                }
+              },
+              "strict": true,
+              "checks": []
+            },
+            "checks": [
+              {
+                "kind": "max",
+                "value": 100
+              }
+            ]
+          }
+        },
+        "strict": false,
+        "checks": []
+      }
+    },
+    "strict": false,
+    "checks": []
+  },
+  "workspace": {
+    "inbox": {
+      "kind": "object",
+      "fields": {
+        "preferences": {
+          "kind": "object",
+          "fields": {
+            "priorityEnabled": {
+              "kind": "default",
+              "inner": {
+                "kind": "boolean",
+                "checks": []
+              },
+              "value": false,
+              "checks": []
+            },
+            "priorityInclude": {
+              "kind": "default",
+              "inner": {
+                "kind": "enum",
+                "values": [
+                  "all",
+                  "direct",
+                  "mentions"
+                ],
+                "checks": []
+              },
+              "value": "all",
+              "checks": []
+            },
+            "badgeCount": {
+              "kind": "default",
+              "inner": {
+                "kind": "enum",
+                "values": [
+                  "all",
+                  "priority",
+                  "none"
+                ],
+                "checks": []
+              },
+              "value": "all",
+              "checks": []
+            },
+            "groupBy": {
+              "kind": "default",
+              "inner": {
+                "kind": "enum",
+                "values": [
+                  "none",
+                  "project",
+                  "type"
+                ],
+                "checks": []
+              },
+              "value": "none",
+              "checks": []
+            },
+            "ordering": {
+              "kind": "default",
+              "inner": {
+                "kind": "enum",
+                "values": [
+                  "newest",
+                  "oldest"
+                ],
+                "checks": []
+              },
+              "value": "newest",
+              "checks": []
+            },
+            "showSnoozed": {
+              "kind": "default",
+              "inner": {
+                "kind": "boolean",
+                "checks": []
+              },
+              "value": false,
+              "checks": []
+            },
+            "unreadFirst": {
+              "kind": "default",
+              "inner": {
+                "kind": "boolean",
+                "checks": []
+              },
+              "value": false,
+              "checks": []
+            }
+          },
+          "strict": false,
+          "checks": []
+        },
+        "filters": {
+          "kind": "object",
+          "fields": {
+            "type": {
+              "kind": "array",
+              "element": {
+                "kind": "string",
+                "checks": []
+              },
+              "checks": []
+            },
+            "from": {
+              "kind": "array",
+              "element": {
+                "kind": "string",
+                "checks": []
+              },
+              "checks": []
+            },
+            "project": {
+              "kind": "array",
+              "element": {
+                "kind": "string",
+                "checks": []
+              },
+              "checks": []
+            },
+            "priority": {
+              "kind": "array",
+              "element": {
+                "kind": "string",
+                "checks": []
+              },
+              "checks": []
+            },
+            "status": {
+              "kind": "array",
+              "element": {
+                "kind": "string",
+                "checks": []
+              },
+              "checks": []
+            }
+          },
+          "strict": false,
+          "checks": []
+        },
+        "unreadOnly": {
+          "kind": "boolean",
+          "checks": []
+        },
+        "priorityTab": {
+          "kind": "enum",
+          "values": [
+            "priority",
+            "other"
+          ],
+          "checks": []
+        }
+      },
+      "strict": false,
+      "checks": []
+    },
+    "myIssues": {
+      "kind": "object",
+      "fields": {
+        "display": {
+          "kind": "object",
+          "fields": {
+            "layout": {
+              "kind": "enum",
+              "values": [
+                "list",
+                "board"
+              ],
+              "checks": []
+            },
+            "group": {
+              "kind": "enum",
+              "values": [
+                "Status",
+                "Priority",
+                "Assignee",
+                "Project",
+                "Labels",
+                "No grouping"
+              ],
+              "checks": []
+            },
+            "subgroup": {
+              "kind": "enum",
+              "values": [
+                "Status",
+                "Priority",
+                "Assignee",
+                "Project",
+                "Labels",
+                "No grouping"
+              ],
+              "checks": []
+            },
+            "order": {
+              "kind": "enum",
+              "values": [
+                "Priority",
+                "Created",
+                "Updated",
+                "Due date",
+                "Title",
+                "Status"
+              ],
+              "checks": []
+            },
+            "descending": {
+              "kind": "boolean",
+              "checks": []
+            },
+            "groupDescending": {
+              "kind": "boolean",
+              "checks": []
+            },
+            "completedByRecency": {
+              "kind": "boolean",
+              "checks": []
+            },
+            "showSubIssues": {
+              "kind": "boolean",
+              "checks": []
+            },
+            "nested": {
+              "kind": "enum",
+              "values": [
+                "Show matching",
+                "Show all",
+                "Hide"
+              ],
+              "checks": []
+            },
+            "showEmpty": {
+              "kind": "boolean",
+              "checks": []
+            },
+            "properties": {
+              "kind": "array",
+              "element": {
+                "kind": "string",
+                "checks": []
+              },
+              "checks": []
+            },
+            "showPullRequests": {
+              "kind": "optional",
+              "inner": {
+                "kind": "boolean",
+                "checks": []
+              },
+              "checks": []
+            }
+          },
+          "strict": false,
+          "checks": []
+        },
+        "defaultDisplay": {
+          "kind": "object",
+          "fields": {
+            "layout": {
+              "kind": "enum",
+              "values": [
+                "list",
+                "board"
+              ],
+              "checks": []
+            },
+            "group": {
+              "kind": "enum",
+              "values": [
+                "Status",
+                "Priority",
+                "Assignee",
+                "Project",
+                "Labels",
+                "No grouping"
+              ],
+              "checks": []
+            },
+            "subgroup": {
+              "kind": "enum",
+              "values": [
+                "Status",
+                "Priority",
+                "Assignee",
+                "Project",
+                "Labels",
+                "No grouping"
+              ],
+              "checks": []
+            },
+            "order": {
+              "kind": "enum",
+              "values": [
+                "Priority",
+                "Created",
+                "Updated",
+                "Due date",
+                "Title",
+                "Status"
+              ],
+              "checks": []
+            },
+            "descending": {
+              "kind": "boolean",
+              "checks": []
+            },
+            "groupDescending": {
+              "kind": "boolean",
+              "checks": []
+            },
+            "completedByRecency": {
+              "kind": "boolean",
+              "checks": []
+            },
+            "showSubIssues": {
+              "kind": "boolean",
+              "checks": []
+            },
+            "nested": {
+              "kind": "enum",
+              "values": [
+                "Show matching",
+                "Show all",
+                "Hide"
+              ],
+              "checks": []
+            },
+            "showEmpty": {
+              "kind": "boolean",
+              "checks": []
+            },
+            "properties": {
+              "kind": "array",
+              "element": {
+                "kind": "string",
+                "checks": []
+              },
+              "checks": []
+            },
+            "showPullRequests": {
+              "kind": "optional",
+              "inner": {
+                "kind": "boolean",
+                "checks": []
+              },
+              "checks": []
+            }
+          },
+          "strict": false,
+          "checks": []
+        },
+        "filters": {
+          "kind": "object",
+          "fields": {
+            "match": {
+              "kind": "enum",
+              "values": [
+                "all",
+                "any"
+              ],
+              "checks": []
+            },
+            "rules": {
+              "kind": "array",
+              "element": {
+                "kind": "object",
+                "fields": {
+                  "id": {
+                    "kind": "string",
+                    "checks": []
+                  },
+                  "field": {
+                    "kind": "enum",
+                    "values": [
+                      "status",
+                      "assignee",
+                      "agent",
+                      "agentSession",
+                      "creator",
+                      "priority",
+                      "labels",
+                      "parentId",
+                      "suggestedLabel",
+                      "dueDate",
+                      "createdAt",
+                      "updatedAt",
+                      "project",
+                      "milestone",
+                      "subscribers",
+                      "autoClosed",
+                      "content",
+                      "description",
+                      "links",
+                      "templateName"
+                    ],
+                    "checks": []
+                  },
+                  "operator": {
+                    "kind": "enum",
+                    "values": [
+                      "is",
+                      "isNot",
+                      "contains",
+                      "notContains",
+                      "set",
+                      "notSet",
+                      "before",
+                      "after"
+                    ],
+                    "checks": []
+                  },
+                  "value": {
+                    "kind": "string",
+                    "checks": []
+                  }
+                },
+                "strict": false,
+                "checks": []
+              },
+              "checks": []
+            }
+          },
+          "strict": false,
+          "checks": []
+        },
+        "version": {
+          "kind": "literal",
+          "values": [
+            1
+          ],
+          "checks": []
+        },
+        "details": {
+          "kind": "boolean",
+          "checks": []
+        }
+      },
+      "strict": false,
+      "checks": []
+    },
+    "teamIssues": {
+      "kind": "object",
+      "fields": {
+        "display": {
+          "kind": "object",
+          "fields": {
+            "layout": {
+              "kind": "enum",
+              "values": [
+                "list",
+                "board"
+              ],
+              "checks": []
+            },
+            "group": {
+              "kind": "enum",
+              "values": [
+                "Status",
+                "Priority",
+                "Assignee",
+                "Project",
+                "Labels",
+                "No grouping"
+              ],
+              "checks": []
+            },
+            "subgroup": {
+              "kind": "enum",
+              "values": [
+                "Status",
+                "Priority",
+                "Assignee",
+                "Project",
+                "Labels",
+                "No grouping"
+              ],
+              "checks": []
+            },
+            "order": {
+              "kind": "enum",
+              "values": [
+                "Priority",
+                "Created",
+                "Updated",
+                "Due date",
+                "Title",
+                "Status"
+              ],
+              "checks": []
+            },
+            "descending": {
+              "kind": "boolean",
+              "checks": []
+            },
+            "groupDescending": {
+              "kind": "boolean",
+              "checks": []
+            },
+            "completedByRecency": {
+              "kind": "boolean",
+              "checks": []
+            },
+            "showSubIssues": {
+              "kind": "boolean",
+              "checks": []
+            },
+            "nested": {
+              "kind": "enum",
+              "values": [
+                "Show matching",
+                "Show all",
+                "Hide"
+              ],
+              "checks": []
+            },
+            "showEmpty": {
+              "kind": "boolean",
+              "checks": []
+            },
+            "properties": {
+              "kind": "array",
+              "element": {
+                "kind": "string",
+                "checks": []
+              },
+              "checks": []
+            },
+            "showPullRequests": {
+              "kind": "optional",
+              "inner": {
+                "kind": "boolean",
+                "checks": []
+              },
+              "checks": []
+            }
+          },
+          "strict": false,
+          "checks": []
+        },
+        "defaultDisplay": {
+          "kind": "object",
+          "fields": {
+            "layout": {
+              "kind": "enum",
+              "values": [
+                "list",
+                "board"
+              ],
+              "checks": []
+            },
+            "group": {
+              "kind": "enum",
+              "values": [
+                "Status",
+                "Priority",
+                "Assignee",
+                "Project",
+                "Labels",
+                "No grouping"
+              ],
+              "checks": []
+            },
+            "subgroup": {
+              "kind": "enum",
+              "values": [
+                "Status",
+                "Priority",
+                "Assignee",
+                "Project",
+                "Labels",
+                "No grouping"
+              ],
+              "checks": []
+            },
+            "order": {
+              "kind": "enum",
+              "values": [
+                "Priority",
+                "Created",
+                "Updated",
+                "Due date",
+                "Title",
+                "Status"
+              ],
+              "checks": []
+            },
+            "descending": {
+              "kind": "boolean",
+              "checks": []
+            },
+            "groupDescending": {
+              "kind": "boolean",
+              "checks": []
+            },
+            "completedByRecency": {
+              "kind": "boolean",
+              "checks": []
+            },
+            "showSubIssues": {
+              "kind": "boolean",
+              "checks": []
+            },
+            "nested": {
+              "kind": "enum",
+              "values": [
+                "Show matching",
+                "Show all",
+                "Hide"
+              ],
+              "checks": []
+            },
+            "showEmpty": {
+              "kind": "boolean",
+              "checks": []
+            },
+            "properties": {
+              "kind": "array",
+              "element": {
+                "kind": "string",
+                "checks": []
+              },
+              "checks": []
+            },
+            "showPullRequests": {
+              "kind": "optional",
+              "inner": {
+                "kind": "boolean",
+                "checks": []
+              },
+              "checks": []
+            }
+          },
+          "strict": false,
+          "checks": []
+        },
+        "filters": {
+          "kind": "object",
+          "fields": {
+            "match": {
+              "kind": "enum",
+              "values": [
+                "all",
+                "any"
+              ],
+              "checks": []
+            },
+            "rules": {
+              "kind": "array",
+              "element": {
+                "kind": "object",
+                "fields": {
+                  "id": {
+                    "kind": "string",
+                    "checks": []
+                  },
+                  "field": {
+                    "kind": "enum",
+                    "values": [
+                      "status",
+                      "assignee",
+                      "agent",
+                      "agentSession",
+                      "creator",
+                      "priority",
+                      "labels",
+                      "parentId",
+                      "suggestedLabel",
+                      "dueDate",
+                      "createdAt",
+                      "updatedAt",
+                      "project",
+                      "milestone",
+                      "subscribers",
+                      "autoClosed",
+                      "content",
+                      "description",
+                      "links",
+                      "templateName"
+                    ],
+                    "checks": []
+                  },
+                  "operator": {
+                    "kind": "enum",
+                    "values": [
+                      "is",
+                      "isNot",
+                      "contains",
+                      "notContains",
+                      "set",
+                      "notSet",
+                      "before",
+                      "after"
+                    ],
+                    "checks": []
+                  },
+                  "value": {
+                    "kind": "string",
+                    "checks": []
+                  }
+                },
+                "strict": false,
+                "checks": []
+              },
+              "checks": []
+            }
+          },
+          "strict": false,
+          "checks": []
+        },
+        "favorite": {
+          "kind": "boolean",
+          "checks": []
+        },
+        "notifications": {
+          "kind": "array",
+          "element": {
+            "kind": "string",
+            "checks": [
+              {
+                "kind": "choices",
+                "value": [
+                  "New issues",
+                  "Status changes"
+                ]
+              }
+            ]
+          },
+          "checks": []
+        },
+        "views": {
+          "kind": "array",
+          "element": {
+            "kind": "object",
+            "fields": {
+              "id": {
+                "kind": "string",
+                "checks": []
+              },
+              "name": {
+                "kind": "string",
+                "checks": [
+                  {
+                    "kind": "trim"
+                  },
+                  {
+                    "kind": "min",
+                    "value": 1
+                  },
+                  {
+                    "kind": "max",
+                    "value": 60
+                  }
+                ]
+              },
+              "scope": {
+                "kind": "enum",
+                "values": [
+                  "active",
+                  "backlog",
+                  "all"
+                ],
+                "checks": []
+              },
+              "filters": {
+                "kind": "object",
+                "fields": {
+                  "match": {
+                    "kind": "enum",
+                    "values": [
+                      "all",
+                      "any"
+                    ],
+                    "checks": []
+                  },
+                  "rules": {
+                    "kind": "array",
+                    "element": {
+                      "kind": "object",
+                      "fields": {
+                        "id": {
+                          "kind": "string",
+                          "checks": []
+                        },
+                        "field": {
+                          "kind": "enum",
+                          "values": [
+                            "status",
+                            "assignee",
+                            "agent",
+                            "agentSession",
+                            "creator",
+                            "priority",
+                            "labels",
+                            "parentId",
+                            "suggestedLabel",
+                            "dueDate",
+                            "createdAt",
+                            "updatedAt",
+                            "project",
+                            "milestone",
+                            "subscribers",
+                            "autoClosed",
+                            "content",
+                            "description",
+                            "links",
+                            "templateName"
+                          ],
+                          "checks": []
+                        },
+                        "operator": {
+                          "kind": "enum",
+                          "values": [
+                            "is",
+                            "isNot",
+                            "contains",
+                            "notContains",
+                            "set",
+                            "notSet",
+                            "before",
+                            "after"
+                          ],
+                          "checks": []
+                        },
+                        "value": {
+                          "kind": "string",
+                          "checks": []
+                        }
+                      },
+                      "strict": false,
+                      "checks": []
+                    },
+                    "checks": []
+                  }
+                },
+                "strict": false,
+                "checks": []
+              },
+              "display": {
+                "kind": "object",
+                "fields": {
+                  "layout": {
+                    "kind": "enum",
+                    "values": [
+                      "list",
+                      "board"
+                    ],
+                    "checks": []
+                  },
+                  "group": {
+                    "kind": "enum",
+                    "values": [
+                      "Status",
+                      "Priority",
+                      "Assignee",
+                      "Project",
+                      "Labels",
+                      "No grouping"
+                    ],
+                    "checks": []
+                  },
+                  "subgroup": {
+                    "kind": "enum",
+                    "values": [
+                      "Status",
+                      "Priority",
+                      "Assignee",
+                      "Project",
+                      "Labels",
+                      "No grouping"
+                    ],
+                    "checks": []
+                  },
+                  "order": {
+                    "kind": "enum",
+                    "values": [
+                      "Priority",
+                      "Created",
+                      "Updated",
+                      "Due date",
+                      "Title",
+                      "Status"
+                    ],
+                    "checks": []
+                  },
+                  "descending": {
+                    "kind": "boolean",
+                    "checks": []
+                  },
+                  "groupDescending": {
+                    "kind": "boolean",
+                    "checks": []
+                  },
+                  "completedByRecency": {
+                    "kind": "boolean",
+                    "checks": []
+                  },
+                  "showSubIssues": {
+                    "kind": "boolean",
+                    "checks": []
+                  },
+                  "nested": {
+                    "kind": "enum",
+                    "values": [
+                      "Show matching",
+                      "Show all",
+                      "Hide"
+                    ],
+                    "checks": []
+                  },
+                  "showEmpty": {
+                    "kind": "boolean",
+                    "checks": []
+                  },
+                  "properties": {
+                    "kind": "array",
+                    "element": {
+                      "kind": "string",
+                      "checks": []
+                    },
+                    "checks": []
+                  },
+                  "showPullRequests": {
+                    "kind": "optional",
+                    "inner": {
+                      "kind": "boolean",
+                      "checks": []
+                    },
+                    "checks": []
+                  }
+                },
+                "strict": false,
+                "checks": []
+              }
+            },
+            "strict": false,
+            "checks": []
+          },
+          "checks": []
+        }
+      },
+      "strict": false,
+      "checks": []
+    },
+    "cycles": {
+      "kind": "object",
+      "fields": {
+        "display": {
+          "kind": "object",
+          "fields": {
+            "layout": {
+              "kind": "enum",
+              "values": [
+                "list",
+                "board"
+              ],
+              "checks": []
+            },
+            "group": {
+              "kind": "enum",
+              "values": [
+                "Status",
+                "Priority",
+                "Assignee",
+                "Project",
+                "Labels",
+                "No grouping"
+              ],
+              "checks": []
+            },
+            "subgroup": {
+              "kind": "enum",
+              "values": [
+                "Status",
+                "Priority",
+                "Assignee",
+                "Project",
+                "Labels",
+                "No grouping"
+              ],
+              "checks": []
+            },
+            "order": {
+              "kind": "enum",
+              "values": [
+                "Priority",
+                "Created",
+                "Updated",
+                "Due date",
+                "Title",
+                "Status"
+              ],
+              "checks": []
+            },
+            "descending": {
+              "kind": "boolean",
+              "checks": []
+            },
+            "groupDescending": {
+              "kind": "boolean",
+              "checks": []
+            },
+            "completedByRecency": {
+              "kind": "boolean",
+              "checks": []
+            },
+            "showSubIssues": {
+              "kind": "boolean",
+              "checks": []
+            },
+            "nested": {
+              "kind": "enum",
+              "values": [
+                "Show matching",
+                "Show all",
+                "Hide"
+              ],
+              "checks": []
+            },
+            "showEmpty": {
+              "kind": "boolean",
+              "checks": []
+            },
+            "properties": {
+              "kind": "array",
+              "element": {
+                "kind": "string",
+                "checks": []
+              },
+              "checks": []
+            },
+            "showPullRequests": {
+              "kind": "optional",
+              "inner": {
+                "kind": "boolean",
+                "checks": []
+              },
+              "checks": []
+            }
+          },
+          "strict": false,
+          "checks": []
+        },
+        "defaultDisplay": {
+          "kind": "object",
+          "fields": {
+            "layout": {
+              "kind": "enum",
+              "values": [
+                "list",
+                "board"
+              ],
+              "checks": []
+            },
+            "group": {
+              "kind": "enum",
+              "values": [
+                "Status",
+                "Priority",
+                "Assignee",
+                "Project",
+                "Labels",
+                "No grouping"
+              ],
+              "checks": []
+            },
+            "subgroup": {
+              "kind": "enum",
+              "values": [
+                "Status",
+                "Priority",
+                "Assignee",
+                "Project",
+                "Labels",
+                "No grouping"
+              ],
+              "checks": []
+            },
+            "order": {
+              "kind": "enum",
+              "values": [
+                "Priority",
+                "Created",
+                "Updated",
+                "Due date",
+                "Title",
+                "Status"
+              ],
+              "checks": []
+            },
+            "descending": {
+              "kind": "boolean",
+              "checks": []
+            },
+            "groupDescending": {
+              "kind": "boolean",
+              "checks": []
+            },
+            "completedByRecency": {
+              "kind": "boolean",
+              "checks": []
+            },
+            "showSubIssues": {
+              "kind": "boolean",
+              "checks": []
+            },
+            "nested": {
+              "kind": "enum",
+              "values": [
+                "Show matching",
+                "Show all",
+                "Hide"
+              ],
+              "checks": []
+            },
+            "showEmpty": {
+              "kind": "boolean",
+              "checks": []
+            },
+            "properties": {
+              "kind": "array",
+              "element": {
+                "kind": "string",
+                "checks": []
+              },
+              "checks": []
+            },
+            "showPullRequests": {
+              "kind": "optional",
+              "inner": {
+                "kind": "boolean",
+                "checks": []
+              },
+              "checks": []
+            }
+          },
+          "strict": false,
+          "checks": []
+        },
+        "filters": {
+          "kind": "object",
+          "fields": {
+            "match": {
+              "kind": "enum",
+              "values": [
+                "all",
+                "any"
+              ],
+              "checks": []
+            },
+            "rules": {
+              "kind": "array",
+              "element": {
+                "kind": "object",
+                "fields": {
+                  "id": {
+                    "kind": "string",
+                    "checks": []
+                  },
+                  "field": {
+                    "kind": "enum",
+                    "values": [
+                      "status",
+                      "assignee",
+                      "agent",
+                      "agentSession",
+                      "creator",
+                      "priority",
+                      "labels",
+                      "parentId",
+                      "suggestedLabel",
+                      "dueDate",
+                      "createdAt",
+                      "updatedAt",
+                      "project",
+                      "milestone",
+                      "subscribers",
+                      "autoClosed",
+                      "content",
+                      "description",
+                      "links",
+                      "templateName"
+                    ],
+                    "checks": []
+                  },
+                  "operator": {
+                    "kind": "enum",
+                    "values": [
+                      "is",
+                      "isNot",
+                      "contains",
+                      "notContains",
+                      "set",
+                      "notSet",
+                      "before",
+                      "after"
+                    ],
+                    "checks": []
+                  },
+                  "value": {
+                    "kind": "string",
+                    "checks": []
+                  }
+                },
+                "strict": false,
+                "checks": []
+              },
+              "checks": []
+            }
+          },
+          "strict": false,
+          "checks": []
+        },
+        "favorite": {
+          "kind": "boolean",
+          "checks": []
+        }
+      },
+      "strict": false,
+      "checks": []
+    },
+    "reviews": {
+      "kind": "object",
+      "fields": {
+        "display": {
+          "kind": "object",
+          "fields": {
+            "groupBy": {
+              "kind": "enum",
+              "values": [
+                "focus",
+                "status",
+                "author",
+                "repository",
+                "none"
+              ],
+              "checks": []
+            },
+            "orderBy": {
+              "kind": "enum",
+              "values": [
+                "importance",
+                "updated",
+                "opened"
+              ],
+              "checks": []
+            },
+            "closedReviews": {
+              "kind": "enum",
+              "values": [
+                "none",
+                "day",
+                "week",
+                "all"
+              ],
+              "checks": []
+            },
+            "showDrafts": {
+              "kind": "boolean",
+              "checks": []
+            },
+            "showTeamReviews": {
+              "kind": "boolean",
+              "checks": []
+            },
+            "properties": {
+              "kind": "array",
+              "element": {
+                "kind": "enum",
+                "values": [
+                  "repository",
+                  "id",
+                  "author",
+                  "timestamp",
+                  "labels",
+                  "status"
+                ],
+                "checks": []
+              },
+              "checks": []
+            }
+          },
+          "strict": false,
+          "checks": []
+        },
+        "filters": {
+          "kind": "object",
+          "fields": {
+            "status": {
+              "kind": "string",
+              "checks": []
+            },
+            "author": {
+              "kind": "string",
+              "checks": []
+            },
+            "repository": {
+              "kind": "string",
+              "checks": []
+            },
+            "content": {
+              "kind": "string",
+              "checks": []
+            }
+          },
+          "strict": false,
+          "checks": []
+        }
+      },
+      "strict": false,
+      "checks": []
+    },
+    "projects": {
+      "kind": "object",
+      "fields": {
+        "layout": {
+          "kind": "enum",
+          "values": [
+            "List",
+            "Board",
+            "Timeline"
+          ],
+          "checks": []
+        },
+        "grouping": {
+          "kind": "enum",
+          "values": [
+            "No grouping",
+            "Status",
+            "Priority",
+            "Health",
+            "Teams",
+            "Initiatives",
+            "Lead"
+          ],
+          "checks": []
+        },
+        "ordering": {
+          "kind": "enum",
+          "values": [
+            "Manual",
+            "Name",
+            "Priority",
+            "Status",
+            "Health",
+            "Target date",
+            "Created",
+            "Updated"
+          ],
+          "checks": []
+        },
+        "descending": {
+          "kind": "boolean",
+          "checks": []
+        },
+        "closed": {
+          "kind": "enum",
+          "values": [
+            "All",
+            "Hide",
+            "Only"
+          ],
+          "checks": []
+        },
+        "properties": {
+          "kind": "array",
+          "element": {
+            "kind": "enum",
+            "values": [
+              "ID",
+              "Milestones",
+              "Summary",
+              "Priority",
+              "Status",
+              "Health",
+              "Teams",
+              "Initiatives",
+              "Lead",
+              "Members",
+              "Dependencies",
+              "Start date",
+              "Target date",
+              "Issues",
+              "Created",
+              "Updated",
+              "Labels"
+            ],
+            "checks": []
+          },
+          "checks": []
+        },
+        "sidebar": {
+          "kind": "boolean",
+          "checks": []
+        },
+        "favoriteIds": {
+          "kind": "default",
+          "inner": {
+            "kind": "array",
+            "element": {
+              "kind": "string",
+              "checks": []
+            },
+            "checks": []
+          },
+          "value": [],
+          "checks": []
+        },
+        "subscribedIds": {
+          "kind": "default",
+          "inner": {
+            "kind": "array",
+            "element": {
+              "kind": "string",
+              "checks": []
+            },
+            "checks": []
+          },
+          "value": [],
+          "checks": []
+        },
+        "detailSidebar": {
+          "kind": "default",
+          "inner": {
+            "kind": "boolean",
+            "checks": []
+          },
+          "value": false,
+          "checks": []
+        },
+        "sidebarTab": {
+          "kind": "enum",
+          "values": [
+            "Health",
+            "Initiatives",
+            "Teams",
+            "Leads"
+          ],
+          "checks": []
+        },
+        "views": {
+          "kind": "array",
+          "element": {
+            "kind": "object",
+            "fields": {
+              "id": {
+                "kind": "string",
+                "checks": []
+              },
+              "name": {
+                "kind": "string",
+                "checks": [
+                  {
+                    "kind": "trim"
+                  },
+                  {
+                    "kind": "min",
+                    "value": 1
+                  },
+                  {
+                    "kind": "max",
+                    "value": 60
+                  }
+                ]
+              },
+              "filters": {
+                "kind": "array",
+                "element": {
+                  "kind": "object",
+                  "fields": {
+                    "field": {
+                      "kind": "enum",
+                      "values": [
+                        "Status",
+                        "Priority",
+                        "Labels",
+                        "Teams",
+                        "Lead",
+                        "Members",
+                        "Health",
+                        "Target date",
+                        "Initiatives",
+                        "Title & summary",
+                        "Specific project"
+                      ],
+                      "checks": []
+                    },
+                    "value": {
+                      "kind": "string",
+                      "checks": []
+                    }
+                  },
+                  "strict": false,
+                  "checks": []
+                },
+                "checks": []
+              }
+            },
+            "strict": false,
+            "checks": []
+          },
+          "checks": []
+        }
+      },
+      "strict": false,
+      "checks": []
+    },
+    "initiatives": {
+      "kind": "object",
+      "fields": {
+        "grouping": {
+          "kind": "enum",
+          "values": [
+            "No grouping",
+            "Status",
+            "Priority",
+            "Owner",
+            "Contributing team",
+            "Health"
+          ],
+          "checks": []
+        },
+        "ordering": {
+          "kind": "enum",
+          "values": [
+            "Manual",
+            "Name",
+            "Priority",
+            "Owner",
+            "Target",
+            "Health",
+            "Created",
+            "Updated"
+          ],
+          "checks": []
+        },
+        "descending": {
+          "kind": "boolean",
+          "checks": []
+        },
+        "properties": {
+          "kind": "array",
+          "element": {
+            "kind": "enum",
+            "values": [
+              "ID",
+              "Description",
+              "Owner",
+              "Status",
+              "Priority",
+              "Contributing teams",
+              "Health",
+              "Projects",
+              "Active projects",
+              "Target date",
+              "Created",
+              "Updated",
+              "Completed",
+              "Labels"
+            ],
+            "checks": []
+          },
+          "checks": []
+        },
+        "sidebar": {
+          "kind": "boolean",
+          "checks": []
+        },
+        "sidebarTab": {
+          "kind": "enum",
+          "values": [
+            "Owner",
+            "Contributing team",
+            "Health"
+          ],
+          "checks": []
+        },
+        "favoriteIds": {
+          "kind": "default",
+          "inner": {
+            "kind": "array",
+            "element": {
+              "kind": "string",
+              "checks": []
+            },
+            "checks": []
+          },
+          "value": [],
+          "checks": []
+        },
+        "subscribedIds": {
+          "kind": "default",
+          "inner": {
+            "kind": "array",
+            "element": {
+              "kind": "string",
+              "checks": []
+            },
+            "checks": []
+          },
+          "value": [],
+          "checks": []
+        },
+        "detailSidebar": {
+          "kind": "default",
+          "inner": {
+            "kind": "boolean",
+            "checks": []
+          },
+          "value": false,
+          "checks": []
+        }
+      },
+      "strict": false,
+      "checks": []
+    },
+    "directory": {
+      "kind": "object",
+      "fields": {
+        "favoriteIds": {
+          "kind": "array",
+          "element": {
+            "kind": "string",
+            "checks": []
+          },
+          "checks": []
+        },
+        "ordering": {
+          "kind": "enum",
+          "values": [
+            "Name",
+            "Created",
+            "Updated"
+          ],
+          "checks": []
+        },
+        "descending": {
+          "kind": "boolean",
+          "checks": []
+        },
+        "properties": {
+          "kind": "array",
+          "element": {
+            "kind": "enum",
+            "values": [
+              "Owner",
+              "Created",
+              "Updated"
+            ],
+            "checks": []
+          },
+          "checks": []
+        }
+      },
+      "strict": false,
+      "checks": []
+    },
+    "teamHome": {
+      "kind": "object",
+      "fields": {
+        "favorite": {
+          "kind": "boolean",
+          "checks": []
+        },
+        "collapsedSectionIds": {
+          "kind": "array",
+          "element": {
+            "kind": "string",
+            "checks": []
+          },
+          "checks": []
+        },
+        "favoriteResourceIds": {
+          "kind": "array",
+          "element": {
+            "kind": "string",
+            "checks": []
+          },
+          "checks": []
+        }
+      },
+      "strict": false,
+      "checks": []
+    }
+  },
+  "defaults": {
+    "account": {
+      "general": {
+        "defaultHomeView": "agent",
+        "displayNames": "username",
+        "firstDayOfWeek": "sunday",
+        "convertEmoticons": false,
+        "submitCommentsWith": "command-enter",
+        "fontSize": "default",
+        "pointerCursors": false,
+        "underlineLinks": false,
+        "interfaceTheme": "system",
+        "lightTheme": "light",
+        "darkTheme": "dark",
+        "notificationBadge": "unread",
+        "sidebarLayout": [
+          {
+            "id": "inbox",
+            "visible": true
+          },
+          {
+            "id": "forge",
+            "visible": true
+          },
+          {
+            "id": "signals",
+            "visible": true
+          },
+          {
+            "id": "reviews",
+            "visible": true
+          },
+          {
+            "id": "my-issues",
+            "visible": true
+          },
+          {
+            "id": "workspace-initiatives",
+            "visible": true
+          },
+          {
+            "id": "workspace-projects",
+            "visible": true
+          },
+          {
+            "id": "workspace-documents",
+            "visible": true
+          },
+          {
+            "id": "workspace-calls",
+            "visible": true
+          },
+          {
+            "id": "workspace-views",
+            "visible": true
+          },
+          {
+            "id": "workspace-teams",
+            "visible": true
+          },
+          {
+            "id": "workspace-members",
+            "visible": true
+          }
+        ],
+        "sidebarBadgeStyle": "count",
+        "checkSpelling": true,
+        "autoAssignToSelf": false,
+        "assignStartedIssues": false
+      },
+      "calls": {
+        "recordingMode": "manual",
+        "recordingContent": "audio",
+        "language": "auto",
+        "speakerLabels": true,
+        "timestamps": true,
+        "removeFillers": true,
+        "generateSummary": true,
+        "summaryFormat": "bullets",
+        "summaryDetail": "concise",
+        "actionItems": true,
+        "decisions": true,
+        "instructions": ""
+      },
+      "reviews": {
+        "issueCodingTool": "",
+        "codeTheme": "forge-dark",
+        "attachmentFormat": "title",
+        "startOnBranchCopy": true,
+        "startOnToolOpen": true,
+        "pullRequestTool": "github",
+        "codingTools": [
+          "vscode",
+          "cursor"
+        ]
+      },
+      "notifications": {
+        "priorityInbox": false,
+        "priorityTypes": [
+          "assignments",
+          "status",
+          "mentions",
+          "comments",
+          "replies",
+          "reactions",
+          "due-dates",
+          "issue-updates",
+          "project-updates",
+          "project-status",
+          "milestones"
+        ],
+        "channels": {
+          "desktop": {
+            "enabled": true,
+            "types": [
+              "assignments",
+              "status",
+              "mentions",
+              "comments",
+              "replies",
+              "reactions",
+              "due-dates",
+              "issue-updates",
+              "project-updates",
+              "project-status",
+              "milestones",
+              "cycles",
+              "documents",
+              "subscriptions"
+            ]
+          },
+          "mobile": {
+            "enabled": true,
+            "types": [
+              "assignments",
+              "status",
+              "mentions",
+              "comments",
+              "replies",
+              "reactions",
+              "due-dates",
+              "issue-updates",
+              "project-updates",
+              "project-status",
+              "milestones",
+              "cycles",
+              "documents",
+              "subscriptions",
+              "team-updates",
+              "agent-updates"
+            ]
+          },
+          "email": {
+            "enabled": true,
+            "types": [
+              "assignments",
+              "status",
+              "mentions",
+              "comments",
+              "replies",
+              "reactions",
+              "due-dates",
+              "issue-updates",
+              "project-updates",
+              "project-status",
+              "milestones",
+              "cycles",
+              "documents",
+              "subscriptions",
+              "team-updates",
+              "agent-updates"
+            ]
+          },
+          "slack": {
+            "enabled": false,
+            "types": [
+              "assignments",
+              "status",
+              "mentions",
+              "comments",
+              "replies",
+              "reactions",
+              "due-dates",
+              "issue-updates",
+              "project-updates",
+              "project-status",
+              "milestones",
+              "cycles",
+              "documents",
+              "subscriptions",
+              "team-updates",
+              "agent-updates"
+            ]
+          }
+        },
+        "updates": {
+          "sidebar": false,
+          "changelog": false,
+          "marketing": false,
+          "invite": true,
+          "legal": true,
+          "dpa": false
+        }
+      },
+      "agent": {
+        "guidance": "",
+        "skills": []
+      }
+    },
+    "workspace": {
+      "inbox": {
+        "preferences": {
+          "priorityEnabled": false,
+          "priorityInclude": "all",
+          "badgeCount": "all",
+          "groupBy": "none",
+          "ordering": "newest",
+          "showSnoozed": false,
+          "unreadFirst": false
+        },
+        "filters": {
+          "type": [],
+          "from": [],
+          "project": [],
+          "priority": [],
+          "status": []
+        },
+        "unreadOnly": false,
+        "priorityTab": "priority"
+      },
+      "myIssues": {
+        "display": {
+          "layout": "list",
+          "group": "Status",
+          "subgroup": "No grouping",
+          "order": "Priority",
+          "descending": false,
+          "groupDescending": false,
+          "completedByRecency": false,
+          "showSubIssues": true,
+          "nested": "Show matching",
+          "showEmpty": false,
+          "properties": [
+            "ID",
+            "Status",
+            "Assignee",
+            "Priority",
+            "Project",
+            "Due date",
+            "Labels",
+            "Created"
+          ]
+        },
+        "defaultDisplay": {
+          "layout": "list",
+          "group": "Status",
+          "subgroup": "No grouping",
+          "order": "Priority",
+          "descending": false,
+          "groupDescending": false,
+          "completedByRecency": false,
+          "showSubIssues": true,
+          "nested": "Show matching",
+          "showEmpty": false,
+          "properties": [
+            "ID",
+            "Status",
+            "Assignee",
+            "Priority",
+            "Project",
+            "Due date",
+            "Labels",
+            "Created"
+          ]
+        },
+        "filters": {
+          "match": "all",
+          "rules": []
+        },
+        "version": 1,
+        "details": false
+      },
+      "teamIssues": {
+        "display": {
+          "layout": "list",
+          "group": "Status",
+          "subgroup": "No grouping",
+          "order": "Priority",
+          "descending": false,
+          "groupDescending": false,
+          "completedByRecency": false,
+          "showSubIssues": true,
+          "nested": "Show matching",
+          "showEmpty": false,
+          "properties": [
+            "ID",
+            "Status",
+            "Assignee",
+            "Priority",
+            "Project",
+            "Due date",
+            "Labels",
+            "Created"
+          ]
+        },
+        "defaultDisplay": {
+          "layout": "list",
+          "group": "Status",
+          "subgroup": "No grouping",
+          "order": "Priority",
+          "descending": false,
+          "groupDescending": false,
+          "completedByRecency": false,
+          "showSubIssues": true,
+          "nested": "Show matching",
+          "showEmpty": false,
+          "properties": [
+            "ID",
+            "Status",
+            "Assignee",
+            "Priority",
+            "Project",
+            "Due date",
+            "Labels",
+            "Created"
+          ]
+        },
+        "filters": {
+          "match": "all",
+          "rules": []
+        },
+        "favorite": false,
+        "notifications": [],
+        "views": []
+      },
+      "cycles": {
+        "display": {
+          "layout": "list",
+          "group": "Status",
+          "subgroup": "No grouping",
+          "order": "Priority",
+          "descending": false,
+          "groupDescending": false,
+          "completedByRecency": false,
+          "showSubIssues": true,
+          "nested": "Show matching",
+          "showEmpty": false,
+          "properties": [
+            "ID",
+            "Status",
+            "Assignee",
+            "Priority",
+            "Project",
+            "Due date",
+            "Labels",
+            "Created"
+          ]
+        },
+        "defaultDisplay": {
+          "layout": "list",
+          "group": "Status",
+          "subgroup": "No grouping",
+          "order": "Priority",
+          "descending": false,
+          "groupDescending": false,
+          "completedByRecency": false,
+          "showSubIssues": true,
+          "nested": "Show matching",
+          "showEmpty": false,
+          "properties": [
+            "ID",
+            "Status",
+            "Assignee",
+            "Priority",
+            "Project",
+            "Due date",
+            "Labels",
+            "Created"
+          ]
+        },
+        "filters": {
+          "match": "all",
+          "rules": []
+        },
+        "favorite": false
+      },
+      "reviews": {
+        "display": {
+          "groupBy": "focus",
+          "orderBy": "importance",
+          "closedReviews": "day",
+          "showDrafts": true,
+          "showTeamReviews": true,
+          "properties": [
+            "timestamp"
+          ]
+        },
+        "filters": {
+          "status": "all",
+          "author": "all",
+          "repository": "all",
+          "content": ""
+        }
+      },
+      "projects": {
+        "layout": "List",
+        "grouping": "No grouping",
+        "ordering": "Manual",
+        "descending": false,
+        "closed": "All",
+        "properties": [
+          "Health",
+          "Priority",
+          "Lead",
+          "Target date",
+          "Issues",
+          "Status"
+        ],
+        "sidebar": false,
+        "favoriteIds": [],
+        "subscribedIds": [],
+        "detailSidebar": false,
+        "sidebarTab": "Health",
+        "views": []
+      },
+      "initiatives": {
+        "grouping": "No grouping",
+        "ordering": "Manual",
+        "descending": false,
+        "properties": [
+          "Description",
+          "Priority",
+          "Owner",
+          "Target date",
+          "Projects",
+          "Health",
+          "Active projects"
+        ],
+        "sidebar": false,
+        "sidebarTab": "Owner",
+        "favoriteIds": [],
+        "subscribedIds": [],
+        "detailSidebar": false
+      },
+      "directory": {
+        "favoriteIds": [],
+        "ordering": "Name",
+        "descending": false,
+        "properties": [
+          "Owner"
+        ]
+      },
+      "teamHome": {
+        "favorite": false,
+        "collapsedSectionIds": [],
+        "favoriteResourceIds": []
+      }
+    }
+  }
+}
