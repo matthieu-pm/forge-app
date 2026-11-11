@@ -35,4 +35,5 @@ pub mod preferences;
 pub mod files;
 pub mod imports;
 pub mod jobs;
+pub mod profiles;
 pub mod sla;

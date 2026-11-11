@@ -26,6 +26,24 @@ use uuid::Uuid;
 fn fixture() -> Value {
     serde_json::from_str(include_str!("../../../reference-fixtures.json")).unwrap()
 }
+#[tokio::test]
+async fn avatar_decoding_and_real_signature_validation_match_owning_source() {
+    for case in fixture()["profiles"]["avatars"].as_array().unwrap() {
+        let mut image = case["image"].as_str().unwrap().to_owned();
+        if let Some(size) = case["resize"].as_u64() {
+            let (prefix, content) = image.split_once(',').unwrap();
+            let mut bytes = STANDARD.decode(content).unwrap();
+            bytes.resize(size as usize, 0);
+            image = format!("{prefix},{}", STANDARD.encode(bytes));
+        }
+        let result = forge_core::profiles::validate_avatar(&image, &Inspector).await;
+        assert_eq!(
+            result.err().map(|e| e.to_string()),
+            case["error"].as_str().map(str::to_owned),
+            "{case}"
+        );
+    }
+}
 fn intent(reference: &str, size: usize) -> upload::Intent {
     upload::Intent {
         id: Uuid::new_v4().to_string(),

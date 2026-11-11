@@ -13,6 +13,7 @@ pub mod oauth_provider;
 mod planning;
 mod preferences;
 mod product_state;
+mod profiles;
 mod projects;
 mod public_api;
 pub mod retention;
@@ -37,6 +38,12 @@ pub fn router() -> Router {
 
 pub fn router_with_state(state: state::AppState) -> Router {
     let auth_routes = Router::new()
+        .route(
+            "/api/account/profile",
+            get(profiles::read)
+                .post(profiles::patch)
+                .layer(axum::extract::DefaultBodyLimit::max(32 * 1024 * 1024)),
+        )
         .route("/api/workspace/sla", post(sla::read))
         .route("/api/workspace/sla/save", post(sla::save))
         .route("/api/workspace/sla/reconcile", post(sla::reconcile))

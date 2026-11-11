@@ -33,6 +33,8 @@ mod job_acceptance;
 mod planning_acceptance;
 #[path = "acceptance/product_state.rs"]
 mod product_state_acceptance;
+#[path = "acceptance/profiles.rs"]
+mod profile_acceptance;
 #[path = "acceptance/projects.rs"]
 mod project_acceptance;
 #[path = "acceptance/sla.rs"]

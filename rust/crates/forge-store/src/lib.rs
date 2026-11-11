@@ -16,6 +16,7 @@ pub mod joins;
 pub mod members;
 pub mod oauth;
 pub mod planning;
+pub mod profiles;
 pub mod projects;
 pub mod resource_policy;
 pub mod security;
@@ -26,6 +27,10 @@ pub use database::Database;
 
 #[derive(Debug, thiserror::Error)]
 pub enum StoreError {
+    #[error("Profile editing is unavailable.")]
+    ProfileDisabled,
+    #[error("This profile changed in another session.")]
+    ProfileConflict,
     #[error("The SLA policy changed.")]
     SlaPolicyConflict,
     #[error("A team or status condition is unavailable. Review the conditions and save again.")]

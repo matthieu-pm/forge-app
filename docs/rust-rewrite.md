@@ -45,7 +45,8 @@ gate pass.
 | 3b1 | Durable background jobs, fenced checkpoints, operator recovery and workflow retention | Passed available gate |
 | 3b2 | Issue purge, source-bound copy cleanup and retention endpoint | Passed available gate |
 | 3b3 | Shared SLA policies, reconciliation and durable breach jobs | Passed available gate |
-| 3b4 | Account profiles, private avatar validation and concurrent profile edits | In progress |
+| 3b4 | Account profiles, private avatar validation and concurrent profile edits | Passed available gate |
+| 3b5a | Agent protocols, model routing, execution policy and scoped credentials | In progress |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -802,3 +803,23 @@ these routes do not represent a completed rewrite.
 - The initial gate caught a complex row-type lint and a private-field access in
   the HTTP fixture. A named database row and the existing configured-database
   constructor fixed both; the complete rerun passed before the next milestone.
+
+### Milestone 3b4
+
+- Full gate passed: 271 Rust tests, 2,959 enabled reference tests, typechecking,
+  formatting, Clippy and export checks. The 661 fixture-dependent reference tests
+  remain skipped. Log: `.forge/rust-rewrite/milestone-3b4-rerun.log`.
+- Profiles preserve session/workspace binding, normalized fields, protected-field
+  rejection, username uniqueness and whole-profile optimistic concurrency using
+  the existing account timestamp. Revisions advance even within one millisecond.
+  Receipts contain only identity/revision; profile edits emit no content outbox.
+- Avatar validation enforces canonical base64, the existing 2 MB decoded limit
+  and actual PNG/JPEG/WebP signatures. Source fixtures include 102 input cases
+  and 14 cases evaluated by the owning avatar validator. Full-size avatars and
+  explicit removal are exercised through `/api/account/profile`.
+- PostgreSQL tests cover competing edits, stale writes, private receipt contents,
+  revoked-session replay, other-account isolation, username collisions and full
+  rollback after an injected audit failure. Read/write behavior remains behind
+  `FORGE_PROFILE_EDITING_ENABLED`; disabled reads still require authentication.
+- The initial gate found one nested-if lint. It was corrected, and the complete
+  rerun passed with no behavioral test failures.

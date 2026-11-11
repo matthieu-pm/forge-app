@@ -112,6 +112,7 @@ impl Throttle {
 
 #[derive(Clone, Default)]
 pub struct AppState {
+    pub(crate) profile_editing: bool,
     pub(crate) sla_scheduler: Option<Arc<crate::retention::Settings>>,
     pub(crate) issue_retention: Option<Arc<crate::retention::Settings>>,
     pub(crate) files: Option<Arc<crate::files::Services>>,
@@ -149,6 +150,7 @@ impl AppState {
             files: None,
             issue_retention: None,
             sla_scheduler: None,
+            profile_editing: false,
         }
     }
 
@@ -166,6 +168,10 @@ impl AppState {
     }
     pub fn with_sla_scheduler(mut self, enabled: bool, secret: String) -> Self {
         self.sla_scheduler = Some(Arc::new(crate::retention::Settings { enabled, secret }));
+        self
+    }
+    pub fn with_profile_editing(mut self, enabled: bool) -> Self {
+        self.profile_editing = enabled;
         self
     }
     pub fn with_chatgpt(mut self, client: crate::oauth_provider::ChatGptClient) -> Self {

@@ -18,6 +18,8 @@ use uuid::Uuid;
 
 #[path = "acceptance/files_http.rs"]
 mod files_http;
+#[path = "acceptance/profiles_http.rs"]
+mod profiles_http;
 #[path = "acceptance/sla_http.rs"]
 mod sla_http;
 

@@ -43,6 +43,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .unwrap_or_default();
         let state = AppState::configured_database(database, settings, mailer)
             .with_files(storage, grant_secret)
+            .with_profile_editing(
+                std::env::var("FORGE_PROFILE_EDITING_ENABLED").as_deref() == Ok("true"),
+            )
             .with_issue_retention(
                 std::env::var("FORGE_ISSUE_RETENTION_ENABLED").as_deref() == Ok("true"),
                 std::env::var("FORGE_ISSUE_RETENTION_SECRET").unwrap_or_default(),
