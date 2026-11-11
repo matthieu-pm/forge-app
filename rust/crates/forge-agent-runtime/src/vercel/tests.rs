@@ -184,8 +184,48 @@ async fn handler(State(state): State<Arc<FixtureState>>, request: Request) -> Ht
             response(StatusCode::OK, json!({}))
         };
     }
+    if path.ends_with("/fs/read") {
+        return match mode {
+            21 => response(StatusCode::NOT_FOUND, json!({"message":"missing"})),
+            22 => response(
+                StatusCode::FORBIDDEN,
+                json!({"message":"sk-private-file-error"}),
+            ),
+            23 => HttpResponse::builder()
+                .status(StatusCode::TEMPORARY_REDIRECT)
+                .header("location", "/leak")
+                .body(Body::empty())
+                .unwrap(),
+            24 => HttpResponse::builder()
+                .header("content-type", "application/octet-stream")
+                .body(Body::from("x".repeat(FILE_LIMIT + 1)))
+                .unwrap(),
+            25 => response(StatusCode::OK, json!({"message":"not file content"})),
+            26 => HttpResponse::builder()
+                .header("content-type", "application/octet-stream")
+                .body(Body::from_stream(futures_util::stream::pending::<
+                    std::result::Result<Bytes, Infallible>,
+                >()))
+                .unwrap(),
+            _ => HttpResponse::builder()
+                .header("content-type", "application/octet-stream")
+                .body(Body::from(vec![b'a', 0xff, b'\n']))
+                .unwrap(),
+        };
+    }
     if path.ends_with("/cmd") {
         let bootstrap = body["sudo"] == true;
+        if !bootstrap && mode == 27 {
+            let data = format!(
+                "{}\n{}\n",
+                json!({"command":command(None)}),
+                json!({"command":command(Some(1))})
+            );
+            return HttpResponse::builder()
+                .header("content-type", "application/x-ndjson")
+                .body(Body::from(data))
+                .unwrap();
+        }
         if !bootstrap && mode == 9 {
             return HttpResponse::builder()
                 .status(StatusCode::TEMPORARY_REDIRECT)
@@ -451,4 +491,92 @@ async fn shutdown_failures_remain_revoked_and_can_be_retried() {
         )
         .is_err()
     );
+}
+
+#[tokio::test]
+async fn workspace_files_use_provider_streams_and_rooted_archives() {
+    let fixture = Fixture::new().await;
+    let sandbox = fixture.factory().create().await.unwrap();
+    let path = "/home/user/name ' $(bad) é.txt";
+    assert_eq!(sandbox.identity(), "sbx_fixture");
+    assert_eq!(sandbox.read_text(path).await.unwrap(), Some("a�\n".into()));
+    sandbox.write_text(path, "new contents").await.unwrap();
+    let requests = fixture.state.requests.lock().unwrap().clone();
+    let read = requests
+        .iter()
+        .find(|v| v["path"].as_str().unwrap().ends_with("/fs/read"))
+        .unwrap();
+    assert_eq!(read["body"], json!({"path":path,"cwd":"/workspace"}));
+    let preflight = requests
+        .iter()
+        .find(|v| v["body"]["args"][2] == "forge-read")
+        .unwrap();
+    assert_eq!(preflight["body"]["args"][3], path);
+    assert_eq!(preflight["body"]["sudo"], false);
+    let write = requests
+        .iter()
+        .find(|v| v["path"].as_str().unwrap().ends_with("/fs/write"))
+        .unwrap();
+    assert_eq!(write["headers"]["x-cwd"], "/");
+    assert_eq!(write["archive"]["path"], path.trim_start_matches('/'));
+    assert_eq!(write["archive"]["content"], "new contents");
+    drop(requests);
+    fixture.mode(21);
+    assert_eq!(sandbox.read_text(path).await.unwrap(), None);
+    for path in [
+        "relative",
+        "/workspace/../escape",
+        "/workspace/./a",
+        "/bad\0path",
+    ] {
+        assert!(sandbox.read_text(path).await.is_err());
+        assert!(sandbox.write_text(path, "").await.is_err());
+    }
+    sandbox.shutdown().await.unwrap();
+}
+#[tokio::test]
+async fn workspace_reads_reject_provider_errors_oversize_and_non_regular_files() {
+    for mode in [22, 23, 24, 25, 27] {
+        let fixture = Fixture::new().await;
+        let sandbox = fixture.factory().create().await.unwrap();
+        fixture.mode(mode);
+        let error = sandbox.read_text("/workspace/a").await.unwrap_err();
+        assert!(!error.to_string().contains("sk-private"));
+        if mode == 27 {
+            assert!(
+                !fixture
+                    .state
+                    .requests
+                    .lock()
+                    .unwrap()
+                    .iter()
+                    .any(|v| v["path"].as_str().unwrap().ends_with("/fs/read"))
+            );
+        }
+        assert!(
+            !fixture
+                .state
+                .requests
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|v| v["path"] == "/leak")
+        );
+        sandbox.shutdown().await.unwrap();
+    }
+}
+#[tokio::test]
+async fn dropping_a_file_stream_revokes_the_sandbox() {
+    let fixture = Fixture::new().await;
+    let sandbox = fixture.factory().create().await.unwrap();
+    fixture.mode(26);
+    let cloned = sandbox.clone();
+    let task = tokio::spawn(async move { cloned.read_text("/workspace/a").await });
+    fixture.wait_path("/fs/read").await;
+    // The response is deliberately silent. Aborting cannot leave an open file
+    // operation or a reusable sandbox with uncertain execution ownership.
+    task.abort();
+    let _ = task.await;
+    fixture.wait_path("/stop").await;
+    assert!(sandbox.read_text("/workspace/a").await.is_err());
 }

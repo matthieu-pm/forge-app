@@ -69,6 +69,7 @@ gate pass.
 | 3b5u | Native runtime HTTP admission, supervised hosting and durable approval delivery | Passed available gate |
 | 3b5v | Durable conversation continuity, interrupted tool history and resolved attachments | Passed available gate |
 | 3b5w | Application/native runtime transport, durable replay and coordinator integration | Passed available gate |
+| 3b5x | Sandbox framework file/shell tools and isolated filesystem transport | Passed available gate |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -1592,3 +1593,37 @@ these routes do not represent a completed rewrite.
   are local fixtures; no live model or production database was used. Framework
   built-ins, compaction, sandbox continuity, private runtime retention and
   deployment qualification remain outstanding; readiness remains 503.
+
+
+### Milestone 3b5x
+
+- Full milestone gate passed after correcting a test lock lifetime: 457 Rust
+  tests and 2,959 enabled TypeScript tests. Formatting, Clippy, source contracts
+  and typechecking passed; 661 reference tests across 34 files remain skipped.
+  Log: `.forge/rust-rewrite/milestone-3b5x-rerun.log`.
+- Native implementations now cover the default sandbox `bash`, `read_file`,
+  `write_file`, `glob` and `grep` contracts. The installed SDK supplies 46 schema
+  cases and 22 execution scenarios, including exact generated search commands,
+  home-directory paths, missing/binary files, output truncation, search fallbacks
+  and retrying an unsuccessful ripgrep probe. The full gate checks these source
+  fixtures for drift.
+- File reads produce source-compatible line numbers, offsets and bounded output.
+  Existing-file writes require a matching SHA-256/byte-length read stamp; changed
+  files must be read again. Stamps are serializable, bounded and tied to a sandbox
+  identity, and can be cleared on context compaction. Failed/cancelled operations
+  do not publish new overwrite permission.
+- The Vercel transport reads bounded binary response streams and writes rooted
+  tar archives entirely inside the isolated sandbox. File preflights pass paths
+  as positional arguments; no model-provided path or command executes on the
+  host. Cancellation drops the active operation and revokes its sandbox.
+  HTTP fixtures cover unavailable files, provider errors, redirects, wrong media
+  types, oversized streams, non-regular files and silent-stream interruption.
+- Native operational bounds include two-MiB files, four-MiB tool input, 4,096
+  tracked read stamps, and the existing 128-KiB raw command-output ceiling.
+  The SDK's 50-KiB presentation limit applies within that command envelope;
+  arbitrary larger shell output is still rejected by the transport. Invalid
+  half-surrogate UTF-16 cuts become replacement characters in native UTF-8.
+- These tools are not yet advertised to native models: durable sandbox ownership
+  and atomic engine/file-state integration must be connected first. Other default
+  tools, compaction, sandbox continuity, private runtime retention and deployment
+  qualification remain outstanding. No provider or production service was used.

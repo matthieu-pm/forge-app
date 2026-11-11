@@ -20,6 +20,16 @@ pub trait Sandbox: Send + Sync {
     async fn run(&self, command: &str) -> Result<Execution>;
     async fn remove(&self, path: &str) -> Result<()>;
 }
+/// Filesystem access is always inside the isolated sandbox. Implementations
+/// bound reads before allocating, reject non-regular files, and retain the
+/// Sandbox cancellation/drop guarantees. The identity changes on replacement.
+#[async_trait]
+pub trait Workspace: Sandbox {
+    fn identity(&self) -> &str;
+    async fn read_text(&self, path: &str) -> Result<Option<String>>;
+    async fn write_text(&self, path: &str, content: &str) -> Result<()>;
+}
+pub const FILE_LIMIT: usize = 2 * 1024 * 1024;
 #[derive(Clone)]
 pub struct Cancellation(watch::Sender<bool>);
 impl Default for Cancellation {

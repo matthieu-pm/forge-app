@@ -3,7 +3,7 @@
 use crate::{
     Error, Result,
     callback::PeerIdentity,
-    sandbox::{Execution, Sandbox},
+    sandbox::{Execution, FILE_LIMIT, Sandbox, Workspace},
 };
 use async_trait::async_trait;
 use flate2::{Compression, write::GzEncoder};
@@ -426,6 +426,112 @@ impl Sandbox for VercelSandbox {
         if result.exit_code != 0 {
             return Err(FAILED);
         }
+        Ok(())
+    }
+}
+
+fn absolute_file_path(path: &str) -> Result<()> {
+    if !path.starts_with('/')
+        || path.len() > 4096
+        || path.contains('\0')
+        || path.split('/').any(|part| matches!(part, "." | ".."))
+    {
+        return Err(FAILED);
+    }
+    Ok(())
+}
+#[async_trait]
+impl Workspace for VercelSandbox {
+    fn identity(&self) -> &str {
+        &self.state.session_id
+    }
+    async fn read_text(&self, path: &str) -> Result<Option<String>> {
+        absolute_file_path(path)?;
+        let _lock = self.operations.lock().await;
+        // Reject devices/directories/FIFOs before the provider opens a stream.
+        // Path is a positional argument, never executable shell text.
+        let check = self
+            .command(
+                "bash",
+                &[
+                    "-c",
+                    "if [ -e \"$1\" ]; then [ -f \"$1\" ]; else exit 44; fi",
+                    "forge-read",
+                    path,
+                ],
+                "/workspace",
+                false,
+            )
+            .await?;
+        if check.exit_code == 44 {
+            return Ok(None);
+        }
+        if check.exit_code != 0 {
+            return Err(Error("Only regular sandbox files can be read."));
+        }
+        let mut guard = CommandGuard(Some(self.state.clone()));
+        let mut response = self
+            .state
+            .api
+            .request(
+                Method::POST,
+                &self.state.path("fs/read"),
+                Some(json!({"path":path,"cwd":"/workspace"})),
+            )
+            .await?;
+        if response.status() == reqwest::StatusCode::NOT_FOUND {
+            guard.0 = None;
+            return Ok(None);
+        }
+        if !response.status().is_success()
+            || response
+                .headers()
+                .get("content-type")
+                .and_then(|v| v.to_str().ok())
+                .is_none_or(|v| v.split(';').next() != Some("application/octet-stream"))
+        {
+            return Err(FAILED);
+        }
+        if response
+            .content_length()
+            .is_some_and(|n| n > FILE_LIMIT as u64)
+        {
+            return Err(Error("Sandbox file exceeds the read size limit."));
+        }
+        let mut bytes = Vec::new();
+        while let Some(chunk) = response.chunk().await.map_err(|_| FAILED)? {
+            if bytes.len() + chunk.len() > FILE_LIMIT {
+                return Err(Error("Sandbox file exceeds the read size limit."));
+            }
+            bytes.extend_from_slice(&chunk);
+        }
+        guard.0 = None;
+        self.state.active()?;
+        Ok(Some(String::from_utf8_lossy(&bytes).into_owned()))
+    }
+    async fn write_text(&self, path: &str, content: &str) -> Result<()> {
+        absolute_file_path(path)?;
+        if path.ends_with('/') || content.len() > FILE_LIMIT {
+            return Err(FAILED);
+        }
+        let bytes = archive(path.trim_start_matches('/'), content)?;
+        let _lock = self.operations.lock().await;
+        self.state.active()?;
+        let mut guard = CommandGuard(Some(self.state.clone()));
+        let response = self
+            .state
+            .api
+            .builder(Method::POST, &self.state.path("fs/write"))
+            .await?
+            .header("content-type", "application/gzip")
+            .header("x-cwd", "/")
+            .body(bytes)
+            .send()
+            .await
+            .map_err(|_| FAILED)?;
+        json_response(response).await?;
+        guard.0 = None;
+        self.state.active()?;
         Ok(())
     }
 }

@@ -1,0 +1,147 @@
+[
+  {
+    "name": "bash",
+    "description": "Execute a shell command in the shared workspace environment.",
+    "inputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+        "command": {
+          "type": "string",
+          "description": "The shell command to execute."
+        }
+      },
+      "required": [
+        "command"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "read_file",
+    "description": "Read a file from the local filesystem. If the path does not exist, an error is returned.\n\nUsage:\n- The filePath parameter should be an absolute path or begin with $HOME/.\n- By default, this tool returns up to 2000 lines from the start of the file.\n- The offset parameter is the line number to start from (1-indexed).\n- To read later sections, call this tool again with a larger offset.\n- Use the grep tool to find specific content in large files or files with long lines.\n- If you are unsure of the correct file path, use the glob tool to look up filenames by glob pattern.\n- Contents are returned with each line prefixed by its line number as `<line>: <content>`. For example, if a file has contents \"foo\\n\", you will receive \"1: foo\\n\".\n- Any line longer than 2000 characters is truncated.\n- Call this tool in parallel when you know there are multiple files you want to read.\n- Avoid tiny repeated slices (30 line chunks). If you need more context, read a larger window.",
+    "inputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+        "filePath": {
+          "type": "string",
+          "description": "The absolute path to the file to read. A leading $HOME is supported."
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991,
+          "description": "Maximum number of lines to return. Defaults to 2000."
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991,
+          "description": "1-based line number to start from. Defaults to 1."
+        }
+      },
+      "required": [
+        "filePath"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "write_file",
+    "description": "Writes a file to the local filesystem.\n\nUsage:\n- This tool will overwrite the existing file if there is one at the provided path.\n- If this is an existing file, you MUST use the read_file tool first to read the file's contents. This tool will fail if you did not read the file first.\n- ALWAYS prefer editing existing files in the codebase. NEVER write new files unless explicitly required.\n- NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.\n- Only use emojis if the user explicitly requests it. Avoid writing emojis to files unless asked.",
+    "inputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string",
+          "description": "Complete replacement file contents."
+        },
+        "filePath": {
+          "type": "string",
+          "description": "The absolute path to the file to write. A leading $HOME is supported."
+        }
+      },
+      "required": [
+        "content",
+        "filePath"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "glob",
+    "description": "Fast file pattern matching tool that works with any codebase size.\n\nUsage:\n- Supports glob patterns like \"**/*.js\" or \"src/**/*.ts\".\n- Returns matching file paths.\n- Use this tool when you need to find files by name patterns.\n- If you are unsure of the correct file path, use the glob tool to look up filenames by glob pattern.\n- Use the grep tool instead if you need to search file contents.\n- Call this tool in parallel when you know there are multiple patterns to search for.",
+    "inputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "description": "Maximum number of results to return. Defaults to 100."
+        },
+        "path": {
+          "type": "string",
+          "description": "The directory to search in. Defaults to /workspace. Must be an absolute path or begin with $HOME/. Omit to use the default."
+        },
+        "pattern": {
+          "type": "string",
+          "description": "The glob pattern to match files against (e.g. \"**/*.ts\", \"src/**/*.js\")."
+        }
+      },
+      "required": [
+        "pattern"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "grep",
+    "description": "Fast content search tool that works with any codebase size.\n\nUsage:\n- Searches file contents using regular expressions.\n- Supports full regex syntax (e.g. \"log.*Error\", \"function\\s+\\w+\").\n- Filter files by pattern with the glob parameter (e.g. \"*.js\", \"*.{ts,tsx}\").\n- Returns matching lines with file paths and line numbers.\n- Use this tool when you need to find files containing specific patterns.\n- Use the glob tool instead if you only need to find files by name.\n- Call this tool in parallel when you have multiple independent searches.\n- Any line longer than 2000 characters is truncated.",
+    "inputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+        "context": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "Number of surrounding context lines to include before and after each match. Defaults to 0."
+        },
+        "glob": {
+          "type": "string",
+          "description": "Filter files by glob pattern (e.g. \"*.ts\", \"*.{ts,tsx}\")."
+        },
+        "ignoreCase": {
+          "type": "boolean",
+          "description": "Perform case-insensitive search. Defaults to false."
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "description": "Maximum number of matches to return per file. Defaults to 100."
+        },
+        "literal": {
+          "type": "boolean",
+          "description": "Treat the pattern as a literal string instead of a regular expression. Defaults to false."
+        },
+        "path": {
+          "type": "string",
+          "description": "The directory or file to search in. Defaults to /workspace. Must be an absolute path or begin with $HOME/. Omit to use the default."
+        },
+        "pattern": {
+          "type": "string",
+          "description": "The regex pattern to search for in file contents (e.g. \"log.*Error\", \"function\\s+\\w+\")."
+        }
+      },
+      "required": [
+        "pattern"
+      ],
+      "additionalProperties": false
+    }
+  }
+]

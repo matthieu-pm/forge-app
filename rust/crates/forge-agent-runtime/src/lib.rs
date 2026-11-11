@@ -6,6 +6,7 @@ pub mod configuration;
 pub use forge_core::agents::sandbox as contracts;
 pub mod engine;
 pub mod execution;
+pub mod framework;
 pub mod host;
 pub mod http;
 pub mod journal;

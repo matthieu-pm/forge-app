@@ -5,6 +5,7 @@ pub mod contracts;
 pub mod diagnostics;
 pub mod eve;
 pub mod files;
+pub mod framework;
 pub mod models;
 pub mod policy;
 pub mod providers;
