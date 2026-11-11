@@ -1,6 +1,7 @@
 //! Rust HTTP host. Routes are enabled only as their implementation is migrated.
 
 pub mod agent_runtime;
+pub mod agents;
 mod auth;
 mod definitions;
 mod desktop_auth;
@@ -349,6 +350,8 @@ pub fn router_with_state(state: state::AppState) -> Router {
             public_api::guard,
         ));
     Router::new()
+        .route("/api/agent", axum::routing::any(agents::handle))
+        .route("/api/agent/{*path}", axum::routing::any(agents::handle))
         .route(
             "/api/agent/runtime/model/{*path}",
             axum::routing::any(model_proxy::route),

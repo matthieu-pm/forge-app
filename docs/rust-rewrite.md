@@ -56,7 +56,8 @@ gate pass.
 | 3b5h | EVE runtime protocol, event normalization, durable cursors and cancellation | Passed available gate |
 | 3b5i | Authenticated agent threads, local run preparation, ingestion and checkpoints | Passed available gate |
 | 3b5j | Hosted run coordination, streaming, reconnects, limits and approval resume | Passed available gate |
-| 3b5k | Agent HTTP endpoints, session/token boundaries and event streaming | In progress |
+| 3b5k | Agent HTTP endpoints, session/token boundaries and event streaming | Passed available gate |
+| 3b5l | Capability HTTP, diagnostics and agent startup composition | In progress |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -1111,3 +1112,34 @@ these routes do not represent a completed rewrite.
   reserved for the loop milestone. The EVE protocol still checkpoints before
   event publication as in the source; atomic transport-cursor/event recovery needs
   qualification before any production claim of lossless replay.
+
+### Milestone 3b5k
+
+- Full gate passed on its first run: 354 Rust tests, 2,959 enabled reference tests,
+  typechecking, formatting, Clippy and export checks; 661 reference tests remain
+  skipped. Log: `.forge/rust-rewrite/milestone-3b5k-initial.log`.
+- The Rust router now hosts session-authenticated agent conversation, model
+  connection, local runtime, approval and artifact endpoints. JSON responses are
+  non-cacheable; mutation origins must match the configured application origin.
+  Feature gates run before authentication. Request bodies are bounded to 16 MiB,
+  unknown path suffixes are rejected, and internal diagnostics are never returned
+  as HTTP errors.
+- Desktop callbacks need both a current signed session and a valid token for the
+  requested run. Missing token configuration is rejected before run creation.
+  Checkpoint and event ingestion use the coordinator's live authority checks;
+  local read tools also use run-scoped live authority, so cancellation immediately
+  stops further tool calls even while the signed token remains unexpired.
+- Server-sent event bodies preserve sequence IDs, event names and public JSON,
+  reauthorize before every emission and report a generic transport error on
+  failure. Pull-based streaming retains backpressure and dropping the response
+  drops its iterator. Artifact downloads verify grants before and after byte I/O
+  and use the existing inert attachment renderer with sandbox and nosniff headers.
+- HTTP acceptance tests exercise session/origin and feature boundaries, local
+  token binding, checkpoint/usage retries, tool cancellation, streaming revocation,
+  model refresh/test/delete, preferences, local approval responses and private
+  artifact downloads. Coordinator and file acceptance suites cover the underlying
+  transaction and tenant boundaries.
+- Capability-token HTTP, admin diagnostics and startup configuration are the next
+  integration slice. Main has not yet composed these injected HTTP services; the
+  product readiness endpoint remains unavailable, and no server or deployment was
+  started for this milestone.

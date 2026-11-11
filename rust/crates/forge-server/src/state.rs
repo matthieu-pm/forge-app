@@ -112,6 +112,7 @@ impl Throttle {
 
 #[derive(Clone, Default)]
 pub struct AppState {
+    pub(crate) agents: Option<Arc<crate::agents::Settings>>,
     pub(crate) model_proxy: Option<Arc<crate::model_proxy::Settings>>,
     pub(crate) profile_editing: bool,
     pub(crate) sla_scheduler: Option<Arc<crate::retention::Settings>>,
@@ -127,6 +128,10 @@ pub struct AppState {
 }
 
 impl AppState {
+    pub fn with_agents(mut self, settings: crate::agents::Settings) -> Self {
+        self.agents = Some(Arc::new(settings));
+        self
+    }
     pub fn with_model_proxy(mut self, settings: crate::model_proxy::Settings) -> Self {
         self.model_proxy = Some(Arc::new(settings));
         self
@@ -146,6 +151,7 @@ impl AppState {
     ) -> Self {
         Self {
             model_proxy: None,
+            agents: None,
             pool: Some(pool),
             auth: Some(Arc::new(auth)),
             mailer,

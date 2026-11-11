@@ -16,6 +16,8 @@ use std::sync::{Arc, Mutex};
 use tower::ServiceExt;
 use uuid::Uuid;
 
+#[path = "acceptance/agents_http.rs"]
+mod agents_http;
 #[path = "acceptance/files_http.rs"]
 mod files_http;
 #[path = "acceptance/profiles_http.rs"]
