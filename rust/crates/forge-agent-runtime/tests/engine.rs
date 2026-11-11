@@ -122,7 +122,7 @@ impl Scripted {
             pending: false,
             entered: Notify::new(),
             usage: 10,
-            tools: 8,
+            tools: 9,
         }
     }
 }
@@ -815,3 +815,6 @@ mod framework_engine;
 
 #[path = "acceptance/context_engine.rs"]
 mod context_engine;
+
+#[path = "acceptance/web_engine.rs"]
+mod web_engine;

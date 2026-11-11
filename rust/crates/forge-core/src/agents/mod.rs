@@ -16,6 +16,7 @@ pub mod runtime;
 pub mod sandbox;
 pub mod tokens;
 pub mod tools;
+pub mod web;
 pub const RUNTIMES: &[&str] = &["eve", "codex", "claude"];
 pub const EFFORTS: &[&str] = &["none", "minimal", "low", "medium", "high", "xhigh", "max"];
 pub const EXECUTIONS: &[&str] = &["forge-native", "external-agent"];

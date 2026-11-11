@@ -25,6 +25,7 @@ pub struct Engine {
     pub max_output_tokens: u64,
     pub workspace_factory: Option<Arc<dyn crate::workspace::Factory>>,
     pub compaction: crate::context::Config,
+    pub web: Arc<crate::web::Executor>,
 }
 impl Engine {
     pub fn new(model: Arc<dyn Model>, executor: Arc<Executor>) -> Self {
@@ -35,6 +36,7 @@ impl Engine {
             max_output_tokens: 50_000,
             workspace_factory: None,
             compaction: crate::context::Config::default(),
+            web: Arc::new(crate::web::Executor::default()),
         }
     }
     pub(super) async fn commit(
@@ -185,6 +187,7 @@ impl Engine {
                     self.commit(state, journal, next, events).await?;
                     let mut definitions=forge_core::agents::tools::descriptors().iter().map(|v|json!({"type":"function","name":v["name"],"description":v["description"],"inputSchema":v["inputSchema"]})).collect::<Vec<_>>();
                     definitions.extend(forge_core::agents::context::descriptors().iter().map(|v|json!({"type":"function","name":v["name"],"description":v["description"],"inputSchema":v["inputSchema"]})));
+                    definitions.extend(forge_core::agents::web::descriptors().iter().map(|v|json!({"type":"function","name":v["name"],"description":v["description"],"inputSchema":v["inputSchema"]})));
                     if self.workspace_factory.is_some() {
                         definitions.extend(forge_core::agents::framework::descriptors().iter().map(|v|json!({"type":"function","name":v["name"],"description":v["description"],"inputSchema":v["inputSchema"]})));
                     }
@@ -245,12 +248,17 @@ impl Engine {
                                 | "glob"
                                 | "grep"
                                 | "todo"
+                                | "web_fetch"
                         )
                     {
                         return self.fail(state,journal,"An interrupted tool requires reconciliation before it can run again.").await;
                     }
                     if call.name == "todo" {
                         self.execute_todo(state, journal).await?;
+                        continue;
+                    }
+                    if call.name == "web_fetch" {
+                        self.execute_web(state, journal, cancellation).await?;
                         continue;
                     }
                     if super::workspace::is_framework(&call.name)

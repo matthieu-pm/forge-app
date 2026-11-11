@@ -15,6 +15,7 @@ pub mod model;
 pub mod sandbox;
 pub mod tools;
 pub mod vercel;
+pub mod web;
 pub mod worker;
 pub mod workspace;
 

@@ -75,6 +75,7 @@ gate pass.
 | 3b5aa | Durable task lists and source-compatible context compaction planning | Passed available gate |
 | 3b5ab | Automatic context compaction, private summaries and restart recovery | Passed available gate |
 | 3b5ac | Bounded native tool displays and exact approval-input validation | Passed available gate |
+| 3b5ad | Native public web retrieval, HTML conversion and durable read recovery | Passed |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -1823,3 +1824,43 @@ these routes do not represent a completed rewrite.
   event types or unsafe metadata from being made acceptable through projection.
 - No provider or production service was used. The default EVE transport remains
   unchanged; these display projections belong to the opt-in native transport.
+
+
+### Milestone 3b5ad
+
+- The native engine advertises and executes `web_fetch` without allocating a
+  sandbox. Input validation follows the pinned framework schema; runtime defaults
+  are Markdown, 30 seconds and a maximum 120-second timeout. The original run
+  deadline and cancellation also cover the operation.
+- HTTPS destinations reject credentials, localhost and the source's private,
+  reserved and transition-address ranges. All returned IPv4/IPv6 DNS answers are
+  checked before being pinned to a credential-free request. The client disables
+  proxies and redirects. Redirects return an explicit destination for a separate
+  tool call; a Cloudflare challenge gets at most one retry with the source's
+  alternate user agent and a fresh address check.
+- Responses are limited to five MiB on the wire and after decompression, including
+  gzip, deflate and Brotli. HTML can be returned as Markdown, text or unchanged
+  HTML. Conversion uses a native HTML parser and the configured source renderer's
+  rules, followed by its 50-KiB/2,000-line output budget and UTF-16 line cap.
+- Additional native resource bounds reject more than 64 DNS answers, markup with
+  over 50,000 opening brackets, DOMs above 100,000 nodes/256 levels and conversions
+  above eight MiB. The DOM owns nodes in a flat arena for bounded destruction;
+  comment/empty-node removal and hidden-content filtering avoid repeated scans.
+  Plain-text/HTML retrieval remains available for pages too complex to convert.
+- Request dispatch commits before network IO. Completed tool results are durable;
+  interrupted reads can be repeated after an authoritative reload without
+  repeating the completed model step. Errors produce ordinary tool results, and
+  unsafe literal URLs never reach a transport or sandbox.
+- Source fixtures cover 13 input cases, 50 addresses, 30 HTML conversions, six
+  output limits, 11 low-level requests and six tool executions. They run against
+  in-memory fetch/dispatch implementations, never the network. Local HTTP tests
+  cover pinned connections, headers, decompression, oversized/chunked responses
+  and redirect-body cancellation. Engine tests cover receipt failures and reads
+  after worker replacement. Live HTTPS/provider qualification remains pending.
+- This completes public page retrieval only. Provider web search, interactive
+  questions, agent delegation, remaining background work, billing/calls,
+  Rust UI/macOS and final migration/deployment qualification remain outstanding.
+
+- Full milestone gate passed: 497 Rust tests, 2,959 enabled TypeScript tests,
+  all source-fixture drift checks, formatting, Clippy and all three package
+  typechecks. Evidence: `.forge/rust-rewrite/milestone-3b5ad-verified.log`.

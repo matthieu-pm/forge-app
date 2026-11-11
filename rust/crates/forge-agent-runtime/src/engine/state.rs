@@ -358,6 +358,7 @@ impl State {
                 let input = forge_core::agents::tools::input(&c.name, c.input.clone())
                     .or_else(|_| forge_core::agents::framework::input(&c.name, c.input.clone()))
                     .or_else(|_| forge_core::agents::context::input(&c.name, c.input.clone()))
+                    .or_else(|_| forge_core::agents::web::input(&c.name, c.input.clone()))
                     .map_err(|_| INVALID)?;
                 if input != c.input || forge_core::agents::approval::input_hash(&input) != *hash {
                     return Err(INVALID);

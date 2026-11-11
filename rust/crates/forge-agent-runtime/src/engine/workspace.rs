@@ -32,6 +32,9 @@ impl Engine {
         if name == "todo" {
             forge_core::agents::context::input(name, input)
                 .map_err(|_| Error("Invalid task list input."))
+        } else if name == "web_fetch" {
+            forge_core::agents::web::input(name, input)
+                .map_err(|_| Error("Invalid web-fetch input."))
         } else if is_framework(name) && self.workspace_factory.is_some() {
             forge_core::agents::framework::input(name, input)
                 .map_err(|_| Error("Invalid framework tool input."))

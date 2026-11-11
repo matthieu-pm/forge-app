@@ -3,6 +3,7 @@
 mod context;
 mod state;
 mod turn;
+mod web;
 mod workspace;
 use crate::Result;
 use async_trait::async_trait;
