@@ -5,6 +5,7 @@ pub mod callback;
 pub use forge_core::agents::sandbox as contracts;
 pub mod engine;
 pub mod execution;
+pub mod journal;
 pub mod model;
 pub mod sandbox;
 pub mod tools;

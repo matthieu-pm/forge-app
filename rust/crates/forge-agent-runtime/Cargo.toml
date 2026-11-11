@@ -19,6 +19,9 @@ futures-util.workspace = true
 flate2 = "1"
 tar = "0.4"
 regex.workspace = true
+sqlx.workspace = true
+chrono.workspace = true
+sha2.workspace = true
 
 [dev-dependencies]
 axum.workspace = true

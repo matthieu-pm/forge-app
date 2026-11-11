@@ -64,6 +64,7 @@ gate pass.
 | 3b5p | Native model request formatting and provider conversation contracts | Passed available gate |
 | 3b5q | Native model streaming transport and response interpretation | Passed available gate |
 | 3b5r | Native authored-tool turn engine and checkpointed approval continuation | Passed available gate |
+| 3b5s | Durable native run journal, ordered replay and worker fencing | Passed available gate |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -1406,3 +1407,36 @@ these routes do not represent a completed rewrite.
   framework built-ins/compaction, sandbox resume/local backends and deployment
   qualification remain outstanding. This milestone implements the turn mechanism
   and its persistence contract, not the complete replacement runtime service.
+
+
+### Milestone 3b5s
+
+- Full milestone gate passed: 416 Rust tests and 2,959 enabled TypeScript tests.
+  Formatting, Clippy, source contracts and typechecking passed; 661 reference
+  tests across 34 files remain skipped. Log:
+  `.forge/rust-rewrite/milestone-3b5s-initial.log`.
+- A private PostgreSQL journal now stores run-bound continuations and ordered
+  events atomically. Installation is explicit, serialized and checks the schema
+  digest. Request operations never run DDL; the existing 76 application migrations
+  remain unchanged. The acceptance harness provisions a fourth disposable local
+  database solely for runtime storage.
+- Admission binds the initial conversation, principal, workspace, run, model and
+  original deadline. Repeating the same admission is safe; changing its input or
+  crossing ownership boundaries fails. Stored continuations contain no runtime,
+  model or capability credentials.
+- Worker leases use database time, expiring ownership and monotonically increasing
+  epochs. Revision checks, event appends and lease validation share a transaction;
+  another check before commit rejects work whose lease expired during database
+  processing. An approval handler can claim a durably parked run immediately.
+- Event IDs and indices survive reconnects. Reads have count and byte bounds;
+  journal storage has a per-run quota with reserved cancellation capacity.
+  Cancellation is idempotent and revokes worker ownership, including when ordinary
+  events have exhausted their quota or the original execution deadline has elapsed.
+- Eight PostgreSQL acceptance tests cover concurrent admission/claims, expiry,
+  stale workers, atomic rollback under injected database errors, replay, large
+  Unicode/deep JSON, cancellation at quota and complete approval continuation
+  across separate store handles. A delayed database trigger verifies rollback
+  after lease expiry. No production database or provider was used.
+- Runtime HTTP hosting, worker supervision/heartbeat, multi-turn history,
+  reconciliation UX, framework built-ins/compaction, sandbox resume/local backends
+  and deployment qualification remain outstanding.

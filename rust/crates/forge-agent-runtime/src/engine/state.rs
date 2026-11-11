@@ -137,7 +137,7 @@ impl State {
         }
         self.calls.get(self.next_call)?.request_id.as_deref()
     }
-    pub(super) fn validate(&self, channel: &Channel) -> Result<()> {
+    pub(crate) fn validate(&self, channel: &Channel) -> Result<()> {
         let b = &self.binding;
         if self.version != 1
             || b.user != channel.principal_id()
