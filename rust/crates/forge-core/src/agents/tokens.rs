@@ -21,6 +21,7 @@ pub enum Kind {
     LocalIngest,
     ModelAccess,
     Artifact,
+    RuntimeChannel,
 }
 impl Kind {
     pub fn audience(self) -> &'static str {
@@ -29,6 +30,7 @@ impl Kind {
             Self::LocalIngest => "forge-local-ingest",
             Self::ModelAccess => "forge-model-access",
             Self::Artifact => "forge-agent-artifact",
+            Self::RuntimeChannel => "forge-agent-runtime",
         }
     }
 }
@@ -96,7 +98,7 @@ pub fn mint(
     }
     claims["iss"] = json!("forge");
     claims["aud"] = json!(kind.audience());
-    if kind != Kind::Artifact {
+    if !matches!(kind, Kind::Artifact | Kind::RuntimeChannel) {
         claims["jti"] = claims["tokenId"].clone();
     }
     claims["iat"] = json!(now);
@@ -144,6 +146,15 @@ fn claims(kind: Kind, payload: Value) -> Result<Value> {
         Kind::LocalIngest => vec!["runId", "threadId", "tokenId"],
         Kind::ModelAccess => vec!["runId", "connectionId", "provider", "modelId", "tokenId"],
         Kind::Artifact => vec!["artifactId"],
+        Kind::RuntimeChannel => vec![
+            "correlationId",
+            "runId",
+            "forgeCapabilityToken",
+            "forgeModelAccessToken",
+            "provider",
+            "modelId",
+            "reasoningEffort",
+        ],
     });
     let mut o = c::Object::new(payload, &keys, false).map_err(|_| TokenError)?;
     for key in ["sub", "workspaceId"] {
@@ -159,13 +170,23 @@ fn claims(kind: Kind, payload: Value) -> Result<Value> {
                     .map_err(|_| TokenError)?;
             }
         }
-        Kind::ModelAccess => {
+        Kind::ModelAccess | Kind::RuntimeChannel => {
             o.required("provider", |v| c::text(v, 1, 100, false))
                 .map_err(|_| TokenError)?;
             o.required("modelId", |v| c::text(v, 1, 255, false))
                 .map_err(|_| TokenError)?;
         }
         _ => {}
+    }
+    if kind == Kind::RuntimeChannel {
+        o.optional("correlationId", c::uuid)
+            .map_err(|_| TokenError)?;
+        for key in ["forgeCapabilityToken", "forgeModelAccessToken"] {
+            o.required(key, |v| c::text(v, 20, usize::MAX, false))
+                .map_err(|_| TokenError)?;
+        }
+        o.required("reasoningEffort", |v| c::enumeration(v, super::EFFORTS))
+            .map_err(|_| TokenError)?;
     }
     for key in keys
         .into_iter()

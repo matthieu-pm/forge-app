@@ -1,5 +1,5 @@
 [workspace]
-members = ["rust/crates/forge-core", "rust/crates/forge-identity", "rust/crates/forge-recovery", "rust/crates/forge-store", "rust/crates/forge-server"]
+members = ["rust/crates/forge-core", "rust/crates/forge-identity", "rust/crates/forge-recovery", "rust/crates/forge-store", "rust/crates/forge-server", "rust/crates/forge-agent-runtime"]
 resolver = "2"
 
 [workspace.package]

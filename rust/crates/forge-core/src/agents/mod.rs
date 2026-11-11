@@ -10,6 +10,7 @@ pub mod policy;
 pub mod providers;
 pub mod routing;
 pub mod runtime;
+pub mod sandbox;
 pub mod tokens;
 pub const RUNTIMES: &[&str] = &["eve", "codex", "claude"];
 pub const EFFORTS: &[&str] = &["none", "minimal", "low", "medium", "high", "xhigh", "max"];

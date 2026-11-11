@@ -350,6 +350,7 @@ fn agent_credential_minting_and_claim_validation_interoperate_with_source_jose()
             }
             Kind::ModelAccess => tokens::verify(secret, Kind::ModelAccess, token, now).is_ok(),
             Kind::Artifact => tokens::verify_artifact(secret, token, &actor(), RUN, now).is_ok(),
+            Kind::RuntimeChannel => unreachable!(),
         };
         assert_eq!(valid, case["valid"].as_bool().unwrap(), "{case}");
     }
@@ -403,7 +404,7 @@ fn agent_credentials_remain_bound_to_the_run_user_workspace_and_resource() {
                 now,
             )
             .is_ok(),
-            Kind::ModelAccess => unreachable!(),
+            Kind::ModelAccess | Kind::RuntimeChannel => unreachable!(),
         };
         assert_eq!(valid, case["valid"].as_bool().unwrap(), "{case}");
     }

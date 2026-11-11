@@ -58,6 +58,7 @@ gate pass.
 | 3b5j | Hosted run coordination, streaming, reconnects, limits and approval resume | Passed available gate |
 | 3b5k | Agent HTTP endpoints, session/token boundaries and event streaming | Passed available gate |
 | 3b5l | Capability HTTP, diagnostics and agent startup composition | Passed available gate |
+| 3b5m | Native runtime authentication, capability callbacks and sandbox program orchestration | Passed available gate |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -1184,3 +1185,43 @@ these routes do not represent a completed rewrite.
   implementation formatting and fixtures were corrected before the complete rerun.
   The hosted runtime service itself, linked loop authority, retention scheduling,
   Rust UI/macOS host and production cutover remain outstanding.
+
+### Milestone 3b5m
+
+- Full milestone gate passed: 370 Rust tests and 2,959 enabled TypeScript tests;
+  661 reference tests across 34 files remain skipped. Formatting, Clippy, source
+  contract checks and TypeScript typechecking passed. Initial runs caught a crate
+  visibility error and fixture executable discovery after environment clearing;
+  both were corrected before the complete passing rerun. Log:
+  `.forge/rust-rewrite/milestone-3b5m-rerun2.log`.
+
+- Added the native `forge-agent-runtime` crate for runtime-side orchestration.
+  Channel authentication preserves the source issuer/audience, schema, correlation
+  fallback and nested run-scoped credentials. Credentials have no debug/serialization
+  implementation and never enter sandbox files. Seventy-one source-executed channel
+  cases cover malformed, missing, expired, future and wrong-audience claims.
+- Capability callbacks retain run/workspace/correlation binding, encoded capability
+  paths, version and idempotency keys. Peer identity is acquired only after checking
+  the configured destination. Redirects are rejected, response reads are bounded to
+  4 MiB and failures expose a constant message without upstream private bodies.
+- Pure code/file/manifest contracts live in the shared core crate. Thirty code and
+  nine manifest fixtures compare to the existing Zod contracts. Native orchestration
+  supports JavaScript, TypeScript and shell, validates aggregate UTF-8 file size,
+  limits output, and removes per-execution files on success, errors, cancellation,
+  timeout and dropped consumers. One deadline covers writes, all replay passes and
+  callbacks; cleanup has its own bounded attempt.
+- Program execution retains declared capability versions, deterministic replay,
+  nested input comparison, call order and idempotency propagation. Nine source-run
+  flows compare outcomes, callback requests and persisted replay state. A test-only
+  Node adapter executes repository-owned fixture programs to verify the actual
+  JavaScript payload and replay divergence; it is unavailable in production.
+- Intentional strengthening: the trusted Rust process enforces per-capability and
+  total call budgets, mandatory write idempotency, bounded marker output and a
+  4 MiB replay-state ceiling. Sandbox code can forge stdout or modify its runner,
+  so its own checks cannot authorize additional callbacks. The canonical app gateway
+  remains responsible for live target authority and single-use write approval.
+- The JavaScript runner is a payload for the supported sandbox language; application
+  authentication, callback transport, deadlines and orchestration are Rust. A
+  production isolated sandbox adapter, model execution/session HTTP service,
+  retention scheduling and linked-loop execution remain outstanding. This crate
+  does not launch an agent service or provide a host-process execution fallback.
