@@ -6,6 +6,7 @@ struct EditedIssues {
     issue_ids: Vec<Uuid>,
 }
 struct Edit<'a> {
+    database: &'a Database,
     input: &'a Value,
     team: Uuid,
     ids: Vec<Uuid>,
@@ -69,7 +70,13 @@ impl CommandHandler for Edit<'_> {
         }) {
             return Err(StoreError::IssueEditConflict);
         }
-        let originals = read_rows(connection, actor, Some(&self.ids)).await?;
+        let originals = read_rows(
+            connection,
+            actor,
+            Some(&self.ids),
+            self.database.sla_gate(&actor.workspace_id).0,
+        )
+        .await?;
         let mut created = vec![];
         let mut events = vec![];
         for edit in edits {
@@ -289,6 +296,7 @@ pub async fn edit(
             status: 200,
         },
         &Edit {
+            database,
             input,
             team,
             ids: ids.clone(),
@@ -305,7 +313,13 @@ pub async fn edit(
             lock_workspace(&mut tx, &actor.workspace_id, false).await?;
             let current = current_actor(&mut tx, actor).await?;
             fields::require_team(&mut tx, &current, team).await?;
-            let records = read_rows(&mut tx, &current, Some(&ids)).await?;
+            let records = read_rows(
+                &mut tx,
+                &current,
+                Some(&ids),
+                database.sla_gate(&current.workspace_id).0,
+            )
+            .await?;
             tx.commit().await?;
             Ok(json!({"status":"conflict","records":records}))
         }

@@ -69,7 +69,7 @@ pub async fn history(
     } else {
         None
     };
-    let sla = if commands::sla_gate(&actor.workspace_id).0 {
+    let sla = if database.sla_gate(&actor.workspace_id).0 {
         " UNION ALL SELECT s.id,s.workspace_id,'issue.sla.'||s.kind,s.created_at,jsonb_build_object('issueId',s.issue_id,'changes',s.changes),'' AS actor_user_id,'Forge SLA' AS actor_name,true AS system FROM issue_sla_events s WHERE s.workspace_id=$1 AND s.issue_id=$4"
     } else {
         ""

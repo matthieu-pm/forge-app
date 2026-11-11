@@ -99,7 +99,13 @@ pub async fn query(
     let mut records = if ids.is_empty() {
         vec![]
     } else {
-        read_rows(&mut tx, &actor, Some(&ids)).await?
+        read_rows(
+            &mut tx,
+            &actor,
+            Some(&ids),
+            database.sla_gate(&actor.workspace_id).0,
+        )
+        .await?
     };
     records.sort_by_key(|r| {
         ids.iter()

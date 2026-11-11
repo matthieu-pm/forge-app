@@ -16,6 +16,7 @@ mod product_state;
 mod projects;
 mod public_api;
 pub mod retention;
+pub mod sla;
 pub mod state;
 mod teams;
 mod views;
@@ -36,6 +37,9 @@ pub fn router() -> Router {
 
 pub fn router_with_state(state: state::AppState) -> Router {
     let auth_routes = Router::new()
+        .route("/api/workspace/sla", post(sla::read))
+        .route("/api/workspace/sla/save", post(sla::save))
+        .route("/api/workspace/sla/reconcile", post(sla::reconcile))
         .route("/api/workspace/imports", post(imports::read))
         .route("/api/workspace/imports/prepare", post(imports::prepare))
         .route("/api/workspace/imports/read", post(imports::read_one))
@@ -338,6 +342,7 @@ pub fn router_with_state(state: state::AppState) -> Router {
         .route("/api/health/live", get(live))
         .route("/api/health/ready", get(ready))
         .route("/api/files/{*path}", axum::routing::any(files::handle))
+        .route("/api/internal/sla-jobs", axum::routing::any(sla::scheduler))
         .route(
             "/api/internal/issue-retention",
             axum::routing::any(retention::route),

@@ -82,6 +82,7 @@ pub async fn command(
         .as_slice()
     {
         ["list"] => store.inspect(None).await,
+        ["run-sla"] => crate::sla::run_jobs(store.database(), store).await,
         ["inspect", id] if !id.is_empty() => {
             let mut result = store.inspect(Some(uuid(id)?)).await?;
             let recovery = result["jobs"].as_array().ok_or(Code::JobFailed)?.iter().map(|job| {

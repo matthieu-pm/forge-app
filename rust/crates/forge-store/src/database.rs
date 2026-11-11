@@ -18,7 +18,9 @@ pub struct Database {
     pool: PgPool,
     journal: Option<Arc<dyn DeletionJournalBackend>>,
     store_id: String,
+    sla_gate: Option<Arc<SlaGate>>,
 }
+type SlaGate = dyn Fn(&str) -> (bool, String) + Send + Sync;
 
 impl Database {
     pub fn new(pool: PgPool) -> Self {
@@ -26,6 +28,7 @@ impl Database {
             pool,
             journal: None,
             store_id: String::new(),
+            sla_gate: None,
         }
     }
     pub fn with_journal(
@@ -37,10 +40,23 @@ impl Database {
             pool,
             journal: Some(journal),
             store_id,
+            sla_gate: None,
         }
     }
     pub fn pool(&self) -> &PgPool {
         &self.pool
+    }
+    /// One gate provider serves policy, ordinary commands and background jobs.
+    /// Defaults to the process's explicit deployment/workspace rollout settings.
+    pub fn with_sla_gate(mut self, gate: Arc<SlaGate>) -> Self {
+        self.sla_gate = Some(gate);
+        self
+    }
+    pub(crate) fn sla_gate(&self, workspace: &str) -> (bool, String) {
+        self.sla_gate.as_ref().map_or_else(
+            || crate::commands::sla_gate(workspace),
+            |gate| gate(workspace),
+        )
     }
     pub async fn begin(&self) -> Result<JournalTransaction, StoreError> {
         Ok(JournalTransaction {

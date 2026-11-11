@@ -19,12 +19,19 @@ pub mod planning;
 pub mod projects;
 pub mod resource_policy;
 pub mod security;
+pub mod sla;
 pub mod teams;
 pub mod workspaces;
 pub use database::Database;
 
 #[derive(Debug, thiserror::Error)]
 pub enum StoreError {
+    #[error("The SLA policy changed.")]
+    SlaPolicyConflict,
+    #[error("A team or status condition is unavailable. Review the conditions and save again.")]
+    SlaPolicyValidation,
+    #[error("This interruption changed. Refresh the policy before classifying it.")]
+    SlaReconciliationConflict,
     #[error(transparent)]
     Upload(#[from] forge_core::files::UploadError),
     #[error("Authenticated session required.")]

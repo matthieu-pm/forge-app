@@ -33,6 +33,11 @@ impl IntoResponse for AuthError {
 impl From<StoreError> for AuthError {
     fn from(error: StoreError) -> Self {
         match error {
+            StoreError::SlaReconciliationConflict => Self(
+                StatusCode::CONFLICT,
+                "SLA_RECONCILIATION_CONFLICT",
+                "This interruption changed. Refresh the policy before classifying it.",
+            ),
             StoreError::Unauthenticated => Self(
                 StatusCode::UNAUTHORIZED,
                 "UNAUTHORIZED",

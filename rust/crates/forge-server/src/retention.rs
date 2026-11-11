@@ -13,12 +13,8 @@ pub struct Settings {
     pub enabled: bool,
     pub secret: String,
 }
-pub async fn handle<F, Fut>(request: Request, settings: Option<&Settings>, run: F) -> Response
-where
-    F: FnOnce() -> Fut,
-    Fut: Future<Output = Result<Report, forge_store::StoreError>>,
-{
-    let allowed = settings.is_some_and(|s| {
+pub(crate) fn authorized(request: &Request, settings: Option<&Settings>) -> bool {
+    settings.is_some_and(|s| {
         s.enabled
             && s.secret.encode_utf16().count() >= 32
             && request.method() == Method::GET
@@ -38,8 +34,14 @@ where
                 )
                 .ct_eq(&Sha256::digest(format!("Bearer {}", s.secret).as_bytes())),
             )
-    });
-    if !allowed {
+    })
+}
+pub async fn handle<F, Fut>(request: Request, settings: Option<&Settings>, run: F) -> Response
+where
+    F: FnOnce() -> Fut,
+    Fut: Future<Output = Result<Report, forge_store::StoreError>>,
+{
+    if !authorized(&request, settings) {
         return (StatusCode::NOT_FOUND, [(header::CACHE_CONTROL, "no-store")]).into_response();
     }
     match run().await {

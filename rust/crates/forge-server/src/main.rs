@@ -46,6 +46,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .with_issue_retention(
                 std::env::var("FORGE_ISSUE_RETENTION_ENABLED").as_deref() == Ok("true"),
                 std::env::var("FORGE_ISSUE_RETENTION_SECRET").unwrap_or_default(),
+            )
+            .with_sla_scheduler(
+                std::env::var("FORGE_SLA_JOBS_ENABLED").as_deref() == Ok("true"),
+                std::env::var("CRON_SECRET").unwrap_or_default(),
             );
         if let Some(client) = forge_server::oauth_provider::ChatGptClient::from_environment()
             .map_err(|_| "OAuth configuration is invalid.")?

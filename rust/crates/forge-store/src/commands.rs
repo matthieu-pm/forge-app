@@ -158,7 +158,7 @@ pub async fn execute<H: CommandHandler>(
         .ok_or(StoreError::Forbidden)?;
     let current = current_actor(&mut tx, actor).await?;
     handler.authorize(&mut tx, &current, None).await?;
-    let (sla_enabled, sla_identity) = sla_gate(&current.workspace_id);
+    let (sla_enabled, sla_identity) = pool.sla_gate(&current.workspace_id);
     sqlx::query("SELECT set_config('forge.sla.workspace',$1,true),set_config('forge.sla.enabled',$2,true),set_config('forge.sla.identity',$3,true)")
         .bind(&current.workspace_id).bind(if sla_enabled { "on" } else { "off" }).bind(sla_identity).execute(&mut *tx).await?;
     let reservation: Option<(Uuid,)> = sqlx::query_as(

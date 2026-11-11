@@ -35,6 +35,8 @@ mod planning_acceptance;
 mod product_state_acceptance;
 #[path = "acceptance/projects.rs"]
 mod project_acceptance;
+#[path = "acceptance/sla.rs"]
+mod sla_acceptance;
 #[path = "acceptance/views.rs"]
 mod view_acceptance;
 

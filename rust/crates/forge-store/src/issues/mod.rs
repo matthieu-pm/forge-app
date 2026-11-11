@@ -111,13 +111,14 @@ async fn read_rows(
     connection: &mut PgConnection,
     actor: &Actor,
     ids: Option<&[Uuid]>,
+    sla_enabled: bool,
 ) -> Result<Vec<IssueRecord>, StoreError> {
     policy::scope(actor, ApiScope::IssuesRead)?;
     let query = format!(
         "SELECT i.id,i.team_id,i.revision,i.number,i.title,i.status_id,i.assignee_id,i.creator_id,CASE WHEN {} THEN i.project_id ELSE NULL END project_id,CASE WHEN {} THEN i.parent_id ELSE NULL END parent_id,i.cycle_id,i.legacy_id,i.properties,i.created_at,i.updated_at,{} sla FROM issues i WHERE i.workspace_id=$1 AND {} AND ($4::uuid[] IS NULL OR i.id=ANY($4)) ORDER BY i.number",
         policy::readable_project("i.project_id"),
         policy::readable_issue("i.parent_id"),
-        if commands::sla_gate(&actor.workspace_id).0 {
+        if sla_enabled {
             "forge_sla_snapshot(i.id)"
         } else {
             "NULL::jsonb"
@@ -309,7 +310,13 @@ pub async fn read(
     let records = if metadata_only {
         vec![]
     } else {
-        read_rows(&mut tx, &actor, None).await?
+        read_rows(
+            &mut tx,
+            &actor,
+            None,
+            database.sla_gate(&actor.workspace_id).0,
+        )
+        .await?
     };
     let value = json!({"workspaceId":actor.workspace_id,"userId":actor.user_id,"sessionId":session(&actor),"records":records,"projects":projects,"cycles":cycles});
     tx.commit().await?;
@@ -323,7 +330,13 @@ async fn read_current(
     let mut tx = database.begin().await?;
     lock_workspace(&mut tx, &actor.workspace_id, false).await?;
     let live = current_actor(&mut tx, actor).await?;
-    let rows = read_rows(&mut tx, &live, Some(ids)).await?;
+    let rows = read_rows(
+        &mut tx,
+        &live,
+        Some(ids),
+        database.sla_gate(&live.workspace_id).0,
+    )
+    .await?;
     tx.commit().await?;
     Ok(rows)
 }

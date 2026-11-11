@@ -237,7 +237,13 @@ pub async fn relationship(
             lock_workspace(&mut tx, &actor.workspace_id, false).await?;
             let current = current_actor(&mut tx, actor).await?;
             visible(&mut tx, &current, &ids, false).await?;
-            let records = read_rows(&mut tx, &current, Some(&ids)).await?;
+            let records = read_rows(
+                &mut tx,
+                &current,
+                Some(&ids),
+                database.sla_gate(&current.workspace_id).0,
+            )
+            .await?;
             tx.commit().await?;
             Ok(json!({"status":"conflict","records":records}))
         }

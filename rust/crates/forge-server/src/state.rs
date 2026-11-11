@@ -112,6 +112,7 @@ impl Throttle {
 
 #[derive(Clone, Default)]
 pub struct AppState {
+    pub(crate) sla_scheduler: Option<Arc<crate::retention::Settings>>,
     pub(crate) issue_retention: Option<Arc<crate::retention::Settings>>,
     pub(crate) files: Option<Arc<crate::files::Services>>,
     pub(crate) pool: Option<forge_store::Database>,
@@ -147,6 +148,7 @@ impl AppState {
             public_api: None,
             files: None,
             issue_retention: None,
+            sla_scheduler: None,
         }
     }
 
@@ -160,6 +162,10 @@ impl AppState {
     }
     pub fn with_issue_retention(mut self, enabled: bool, secret: String) -> Self {
         self.issue_retention = Some(Arc::new(crate::retention::Settings { enabled, secret }));
+        self
+    }
+    pub fn with_sla_scheduler(mut self, enabled: bool, secret: String) -> Self {
+        self.sla_scheduler = Some(Arc::new(crate::retention::Settings { enabled, secret }));
         self
     }
     pub fn with_chatgpt(mut self, client: crate::oauth_provider::ChatGptClient) -> Self {

@@ -44,7 +44,8 @@ gate pass.
 | 3a2b | Private blob adapters, delivery lookup and HTTP routes | Passed available gate; live provider qualification pending |
 | 3b1 | Durable background jobs, fenced checkpoints, operator recovery and workflow retention | Passed available gate |
 | 3b2 | Issue purge, source-bound copy cleanup and retention endpoint | Passed available gate |
-| 3b3 | Shared SLA policies, reconciliation and durable breach jobs | In progress |
+| 3b3 | Shared SLA policies, reconciliation and durable breach jobs | Passed available gate |
+| 3b4 | Account profiles, private avatar validation and concurrent profile edits | In progress |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -774,3 +775,30 @@ these routes do not represent a completed rewrite.
   rather than purge markers or removed private content. Tests now use the current
   revision and assert the source-owned journal contract plus the actual scrubbed
   database state. The journal's field coverage remains unchanged.
+
+### Milestone 3b3
+
+- Full gate passed: 263 Rust tests, 2,959 enabled reference tests, typechecking,
+  formatting, Clippy and source export checks. The 661 fixture-dependent reference
+  tests remain skipped. Log: `.forge/rust-rewrite/milestone-3b3-rerun.log`.
+- SLA policies retain tenant-owned team/status validation, current admin authority,
+  optimistic revisions, command replay and atomic outbox publication. The existing
+  PostgreSQL calendar/lifecycle engine remains authoritative; no migrations changed.
+  Exported 332 schema cases and 12 gate/reconciliation hash fixtures.
+- Durable breach jobs preserve the issue's committed intent and frozen deadline.
+  Gate observations commit before deferral, while the breach effect/checkpoint
+  remains atomic. Deferral consumes no retry attempt; unknown availability requires
+  an explicitly versioned reconciliation with evidence. Issue views, history,
+  policy and jobs use the same gate provider.
+- PostgreSQL acceptance covers canonical member issue creation, system history,
+  calendar/DST boundaries, policy races and replay, revoked admin permissions,
+  tenant-owned references, duplicate workers, future deferral, interrupted gates,
+  stale evidence and reconciliation replay. HTTP acceptance covers bound session
+  context, live authorization, scheduler secrets and redacted failure responses.
+- Added `/api/workspace/sla`, `/save`, `/reconcile`, the internal SLA scheduler
+  endpoint and `forge-jobs run-sla`. HTTP scheduling requires
+  `FORGE_SLA_JOBS_ENABLED=true` and `CRON_SECRET`; SLA rollout/deployment settings
+  still control worker behavior. No hosted scheduler has been activated or tested.
+- The initial gate caught a complex row-type lint and a private-field access in
+  the HTTP fixture. A named database row and the existing configured-database
+  constructor fixed both; the complete rerun passed before the next milestone.

@@ -25,6 +25,9 @@ impl JobStore {
     pub fn new(database: Database) -> Self {
         Self { database }
     }
+    pub(crate) fn database(&self) -> &Database {
+        &self.database
+    }
     async fn transaction(&self) -> Result<JournalTransaction> {
         let mut tx = self.database.begin().await.map_err(failed)?;
         for statement in [
@@ -137,8 +140,23 @@ impl JobStore {
     where
         F: for<'a> FnOnce(&'a mut PgConnection) -> BoxFuture<'a, Result<Value>> + Send,
     {
+        self.sql_step_control(lease, step, run).await
+    }
+    /// Expected deferral can leave this checkpoint uncommitted while preserving
+    /// earlier observation checkpoints. The caller retains its typed control flow.
+    pub async fn sql_step_control<E, F>(
+        &self,
+        lease: &Lease,
+        step: &str,
+        run: F,
+    ) -> std::result::Result<Value, E>
+    where
+        E: From<Error> + Send,
+        F: for<'a> FnOnce(&'a mut PgConnection) -> BoxFuture<'a, std::result::Result<Value, E>>
+            + Send,
+    {
         if !key(step) {
-            return Err(Code::InvalidInput.into());
+            return Err(Error::from(Code::InvalidInput).into());
         }
         let mut tx = self.transaction().await?;
         Self::fence(&mut tx, lease, true).await?;
@@ -152,7 +170,7 @@ impl JobStore {
         .map_err(failed)?;
         if let Some((mode, state, result)) = existing {
             if mode != "transactional" || state != "completed" {
-                return Err(Code::IdentityConflict.into());
+                return Err(Error::from(Code::IdentityConflict).into());
             }
             let result =
                 forge_core::json::parse(result.as_deref().unwrap_or("null")).map_err(failed)?;
