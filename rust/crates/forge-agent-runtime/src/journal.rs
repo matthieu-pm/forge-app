@@ -4,7 +4,7 @@
 use crate::{
     Error, Result,
     auth::Channel,
-    engine::{Journal, Phase, State},
+    engine::{Decision, Journal, Phase, State},
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Duration as ChronoDuration, Utc};
@@ -33,6 +33,7 @@ pub struct Session {
     pub next_index: u64,
     pub deadline: DateTime<Utc>,
     pub cancelled: bool,
+    pub worker_active: bool,
 }
 pub struct Event {
     pub index: u64,
@@ -59,8 +60,9 @@ struct Row {
     lease_until: Option<DateTime<Utc>>,
     deadline: DateTime<Utc>,
     cancelled_at: Option<DateTime<Utc>>,
+    worker_active: bool,
 }
-const COLUMNS: &str = "workspace_id,user_id,initial_hash,revision,engine_state::text AS snapshot,next_index,journal_bytes,epoch,lease_owner,lease_until,deadline,cancelled_at";
+const COLUMNS: &str = "workspace_id,user_id,initial_hash,revision,engine_state::text AS snapshot,next_index,journal_bytes,epoch,lease_owner,lease_until,deadline,cancelled_at,COALESCE(lease_until > clock_timestamp() AND deadline > clock_timestamp() AND cancelled_at IS NULL,false) AS worker_active";
 fn run(channel: &Channel) -> Result<Uuid> {
     channel.run_id().parse().map_err(|_| INVALID)
 }
@@ -134,6 +136,19 @@ impl Store {
         }
         tx.commit().await.map_err(|_| FAILED)
     }
+    pub async fn verify(pool: &PgPool) -> Result<()> {
+        let installed: Vec<(i32, String)> =
+            sqlx::query_as("SELECT version,digest FROM forge_runtime.migrations ORDER BY version")
+                .fetch_all(pool)
+                .await
+                .map_err(|_| FAILED)?;
+        if installed != vec![(1, format!("{:x}", Sha256::digest(SCHEMA.as_bytes())))] {
+            return Err(Error(
+                "The runtime journal schema does not match this build.",
+            ));
+        }
+        Ok(())
+    }
     pub async fn create(
         &self,
         channel: &Channel,
@@ -180,6 +195,7 @@ impl Store {
             next_index: row.next_index as u64,
             deadline: row.deadline,
             cancelled: row.cancelled_at.is_some(),
+            worker_active: row.worker_active,
         })
     }
     pub async fn load(&self, channel: &Channel) -> Result<Session> {
@@ -196,7 +212,39 @@ impl Store {
             next_index: row.next_index as u64,
             deadline: row.deadline,
             cancelled: row.cancelled_at.is_some(),
+            worker_active: row.worker_active,
         })
+    }
+    /// Persist a resolved approval before acknowledging delivery. Only a parked
+    /// run may transition; the epoch change fences its old worker's return.
+    pub async fn respond(
+        &self,
+        channel: &Channel,
+        request: &str,
+        decision: Decision,
+    ) -> Result<bool> {
+        let mut tx = self.pool.begin().await.map_err(|_| FAILED)?;
+        let row = locked(&mut tx, channel).await?;
+        if row.cancelled_at.is_some() {
+            return Err(LOST);
+        }
+        let state = restored(&row, channel)?;
+        let Some(next) = state.resolve(channel, request, decision)? else {
+            tx.commit().await.map_err(|_| FAILED)?;
+            return Ok(false);
+        };
+        let at = now(&mut tx).await?;
+        if row.deadline <= at {
+            return Err(LOST);
+        }
+        let epoch = row.epoch.checked_add(1).ok_or(LOST)?;
+        sqlx::query("UPDATE forge_runtime.sessions SET revision=$2,engine_state=$3::jsonb,epoch=$4,lease_owner=NULL,lease_until=NULL,updated_at=$5 WHERE run_id=$1")
+            .bind(run(channel)?).bind(next.revision() as i64).bind(javascript_stringify(&next.snapshot())).bind(epoch).bind(at).execute(&mut *tx).await.map_err(|_|FAILED)?;
+        if row.deadline <= now(&mut tx).await? {
+            return Err(LOST);
+        }
+        tx.commit().await.map_err(|_| FAILED)?;
+        Ok(true)
     }
     pub async fn acquire(
         &self,

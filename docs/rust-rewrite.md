@@ -66,6 +66,7 @@ gate pass.
 | 3b5r | Native authored-tool turn engine and checkpointed approval continuation | Passed available gate |
 | 3b5s | Durable native run journal, ordered replay and worker fencing | Passed available gate |
 | 3b5t | Supervised native workers, credential lifetime and approval replay receipts | Passed available gate |
+| 3b5u | Native runtime HTTP admission, supervised hosting and durable approval delivery | Passed available gate |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -1472,3 +1473,49 @@ these routes do not represent a completed rewrite.
 - These are supervised worker primitives, not an HTTP service or a deployed
   replacement runtime. Hosting/task ownership, multi-turn conversations, built-ins,
   compaction, sandbox continuity and application integration remain outstanding.
+
+
+### Milestone 3b5u
+
+- Full milestone gate passed after correcting an overly narrow future-deadline
+  test fixture: 433 Rust tests and 2,959 enabled TypeScript tests. Formatting,
+  Clippy, source contracts and typechecking passed; 661 reference tests across
+  34 files remain skipped. Log: `.forge/rust-rewrite/milestone-3b5u-rerun.log`.
+- The native runtime now has an HTTP executable and a bounded process-owned
+  worker registry. Readers have separate capacity limits; dropping a stream does
+  not drop its worker. Wakeups arriving as a parked worker exits are coalesced
+  under the registry lock. Graceful shutdown stops workers, releases leases and
+  closes readers without permanently cancelling the saved runs.
+- Signed, run-bound service channels protect admission, status, recovery,
+  cancellation, approval delivery and event replay. JSON bodies are bounded,
+  admission/resume fields are closed, request processing has a timeout, and
+  responses disable caching. Private prompts and credentials are absent from
+  status responses. Streaming readers recheck credential expiration.
+- Approval delivery atomically records the decision and revokes the parked
+  worker's epoch before acknowledging it. Capacity/shutdown failures after that
+  commit return a retryable response; repeating the decision can wake a new host
+  without repeating the approved write. Tests exercise this delivery failure,
+  concurrent retries, scope mismatches, stream disconnect, capacity exhaustion,
+  process shutdown/recovery, credential expiry and ordered event replay.
+- `forge-agent-runtime migrate` explicitly installs/verifies the private schema;
+  `serve` only verifies it. Configuration uses `FORGE_RUST_RUNTIME_DATABASE_URL`,
+  `FORGE_AGENT_CHANNEL_SECRET` and `FORGE_APP_ORIGIN`. The listener defaults to
+  `127.0.0.1:3101` (`FORGE_RUST_RUNTIME_BIND` overrides it). No environment file is
+  loaded. A subprocess acceptance test installs the disposable schema and checks
+  the actual compiled server's loopback health endpoints.
+- Code mode requires an explicit isolated backend. The supported configuration
+  is `FORGE_RUST_RUNTIME_SANDBOX=vercel` with `VERCEL_TEAM_ID`, `VERCEL_PROJECT_ID`
+  and a configured `VERCEL_OIDC_TOKEN_FILE` or `VERCEL_OIDC_TOKEN`. Otherwise set
+  `FORGE_FEATURE_AGENT_CODE_MODE=false` for authored capability-only execution.
+  Sandbox creation is lazy within a leased worker. Optional platform identity for
+  callbacks requires an exact `FORGE_RUST_RUNTIME_PEER_ORIGIN`; credentials cannot
+  be sent to a different origin. No live provider was contacted.
+- The private protocol is `/native/v1/runs/{run}`: POST admits `{message,deadline}`,
+  GET returns status; POST subpaths `resume`, `recover`, `cancel` control the run.
+  `resume` accepts `{requestId,approved}`. GET `events` and `stream` accept `after`
+  and `limit`; stream frames contain `{index,event}`, then terminal `{status}` or
+  an explicit `{error}`. Events retain their journal IDs and indices across reads.
+- This first native admission accepts text for one run. It is not EVE's HTTP API;
+  multi-turn conversations, resolved attachments and the application runtime
+  adapter remain outstanding, along with framework built-ins/compaction, sandbox
+  continuity and deployment qualification. `/ready` deliberately returns 503.

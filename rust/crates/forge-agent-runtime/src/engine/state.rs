@@ -117,6 +117,43 @@ impl State {
         state.validate(channel)?;
         Ok(state)
     }
+    pub(crate) fn resolve(
+        &self,
+        channel: &Channel,
+        request: &str,
+        decision: Decision,
+    ) -> Result<Option<Self>> {
+        self.validate(channel)?;
+        if let Some(recorded) = self.decision(request) {
+            return if recorded == decision {
+                Ok(None)
+            } else {
+                Err(Error(
+                    "The approval response conflicts with the recorded decision.",
+                ))
+            };
+        }
+        if self.pending_request() != Some(request) {
+            return Err(Error(
+                "The approval response is stale or belongs to another request.",
+            ));
+        }
+        if self.decisions.len() >= 4096 {
+            return Err(Error("The agent approval history exceeds its size limit."));
+        }
+        let mut next = self.clone();
+        next.revision = next.revision.checked_add(1).ok_or(INVALID)?;
+        next.phase = Phase::Tools;
+        next.decisions.insert(request.to_owned(), decision);
+        let call = &mut next.calls[next.next_call];
+        call.decision = Some(decision);
+        call.phase = CallPhase::Queued;
+        next.validate(channel)?;
+        if forge_core::canonical::javascript_stringify(&next.snapshot()).len() > 8 * 1024 * 1024 {
+            return Err(INVALID);
+        }
+        Ok(Some(next))
+    }
     pub fn decision(&self, request: &str) -> Option<Decision> {
         self.decisions.get(request).copied()
     }

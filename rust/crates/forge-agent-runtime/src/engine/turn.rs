@@ -58,32 +58,13 @@ impl Engine {
         request: &str,
         decision: Decision,
     ) -> Result<()> {
-        state.validate(channel)?;
-        if let Some(recorded) = state.decision(request) {
-            return if recorded == decision {
-                Ok(())
-            } else {
-                Err(Error(
-                    "The approval response conflicts with the recorded decision.",
-                ))
-            };
+        if let Some(next) = state.resolve(channel, request, decision)? {
+            journal.commit(state.revision(), &next, &[]).await?;
+            *state = next;
         }
-        if state.pending_request() != Some(request) {
-            return Err(Error(
-                "The approval response is stale or belongs to another request.",
-            ));
-        }
-        let mut next = state.clone();
-        next.phase = Phase::Tools;
-        if next.decisions.len() >= 4096 {
-            return Err(Error("The agent approval history exceeds its size limit."));
-        }
-        next.decisions.insert(request.to_owned(), decision);
-        let call = &mut next.calls[next.next_call];
-        call.decision = Some(decision);
-        call.phase = CallPhase::Queued;
-        self.commit(state, journal, next, vec![]).await
+        Ok(())
     }
+
     /// `deadline` is the original persisted run deadline converted to monotonic
     /// time by the owner, including after approval pauses and process restarts.
     pub async fn drive(

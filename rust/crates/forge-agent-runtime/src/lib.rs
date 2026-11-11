@@ -2,9 +2,12 @@
 //! explicit isolated Sandbox adapter; this library has no local-process fallback.
 pub mod auth;
 pub mod callback;
+pub mod configuration;
 pub use forge_core::agents::sandbox as contracts;
 pub mod engine;
 pub mod execution;
+pub mod host;
+pub mod http;
 pub mod journal;
 pub mod model;
 pub mod sandbox;
