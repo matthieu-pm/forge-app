@@ -65,6 +65,7 @@ gate pass.
 | 3b5q | Native model streaming transport and response interpretation | Passed available gate |
 | 3b5r | Native authored-tool turn engine and checkpointed approval continuation | Passed available gate |
 | 3b5s | Durable native run journal, ordered replay and worker fencing | Passed available gate |
+| 3b5t | Supervised native workers, credential lifetime and approval replay receipts | Passed available gate |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -1440,3 +1441,34 @@ these routes do not represent a completed rewrite.
 - Runtime HTTP hosting, worker supervision/heartbeat, multi-turn history,
   reconciliation UX, framework built-ins/compaction, sandbox resume/local backends
   and deployment qualification remain outstanding.
+
+
+### Milestone 3b5t
+
+- Full milestone gate passed after updating the prior rejection-only approval
+  replay assertion for durable idempotency: 424 Rust tests and 2,959 enabled
+  TypeScript tests. Formatting, Clippy, source contracts and typechecking passed;
+  661 reference tests across 34 files remain skipped. Log:
+  `.forge/rust-rewrite/milestone-3b5t-rerun.log`.
+- A worker attempt acquires its run lease before creating resources, renews it
+  while both resource setup and model/tool work are pending, and drops execution
+  on renewal failure, shutdown, persisted cancellation or deadline. Normal exit
+  releases ownership; aborts also attempt bounded release, with lease expiry as
+  the fallback. No detached model/tool future survives a dropped worker attempt.
+- Signed credential expiration is retained separately from source-compatible
+  claims and remains memory-only. Native workers require bounded credentials and
+  stop at the earlier of credential expiry and the persisted original run
+  deadline. Recovery requires a fresh authenticated owner request; this does not
+  implement a background credential minting or recovery scheduler.
+- Approval decisions now have persistent request/decision receipts. Repeating an
+  identical decision after a lost acknowledgement or after completion is a no-op;
+  changing that decision or submitting a stale request fails before execution.
+  The engine's fault-injected acknowledgement test covers both approval and denial.
+- Eight worker acceptance tests cover long resource setup/model calls, competing
+  workers, cancellation through another store, task abortion and recovery,
+  shutdown, superseded ownership, silent-work deadlines, credential expiry and
+  approval replay after completion. Journal tests additionally reject a lease
+  whose acquisition transaction itself outlives its TTL.
+- These are supervised worker primitives, not an HTTP service or a deployed
+  replacement runtime. Hosting/task ownership, multi-turn conversations, built-ins,
+  compaction, sandbox continuity and application integration remain outstanding.

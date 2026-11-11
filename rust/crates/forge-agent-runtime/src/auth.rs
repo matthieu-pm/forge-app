@@ -4,7 +4,7 @@ use serde_json::Value;
 
 /// Server-only credentials. Deliberately no Debug or Serialize implementation.
 #[derive(Clone)]
-pub struct Channel(Value);
+pub struct Channel(Value, Option<f64>);
 impl Channel {
     pub fn verify(secret: &str, authorization: &str, now: i64) -> Result<Self> {
         let token = authorization
@@ -12,9 +12,13 @@ impl Channel {
             .map(forge_core::text::trim)
             .filter(|s| !s.is_empty() && s.len() <= 32768)
             .ok_or(Error("Unauthorized runtime request."))?;
-        tokens::verify(secret, Kind::RuntimeChannel, token, now)
-            .map(Self)
+        tokens::verify_with_expiration(secret, Kind::RuntimeChannel, token, now)
+            .map(|(claims, expiration)| Self(claims, expiration))
             .map_err(|_| Error("Unauthorized runtime request."))
+    }
+    /// Signed expiry, retained in memory only. Workers require a bounded token.
+    pub fn expires_at(&self) -> Option<f64> {
+        self.1
     }
     fn field(&self, key: &str) -> &str {
         self.0[key].as_str().unwrap()

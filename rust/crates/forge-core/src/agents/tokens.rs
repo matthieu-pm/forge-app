@@ -197,6 +197,16 @@ fn claims(kind: Kind, payload: Value) -> Result<Value> {
     Ok(o.finish())
 }
 pub fn verify(secret: &str, kind: Kind, token: &str, now: i64) -> Result<Value> {
+    verify_with_expiration(secret, kind, token, now).map(|(claims, _)| claims)
+}
+/// Verified expiration is returned separately from the source-compatible claims.
+/// Callers that own long-lived work can enforce its credential lifetime.
+pub fn verify_with_expiration(
+    secret: &str,
+    kind: Kind,
+    token: &str,
+    now: i64,
+) -> Result<(Value, Option<f64>)> {
     let parts: Vec<_> = token.split('.').collect();
     if parts.len() != 3 {
         return Err(TokenError);
@@ -251,7 +261,8 @@ pub fn verify(secret: &str, kind: Kind, token: &str, now: i64) -> Result<Value> 
             return Err(TokenError);
         }
     }
-    claims(kind, payload)
+    let expiration = payload["exp"].as_f64();
+    Ok((claims(kind, payload)?, expiration))
 }
 pub fn verify_capability(
     secret: &str,

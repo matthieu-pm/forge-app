@@ -1,6 +1,7 @@
 use crate::{Error, Result, auth::Channel, model::request};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+use std::collections::BTreeMap;
 
 pub(super) const INVALID: Error =
     Error("The agent continuation is invalid or belongs to a different run.");
@@ -64,6 +65,8 @@ pub struct State {
     pub(super) next_call: usize,
     pub(super) input_tokens: u64,
     pub(super) output_tokens: u64,
+    #[serde(default)]
+    pub(super) decisions: BTreeMap<String, Decision>,
 }
 impl State {
     /// `history` is trusted stored conversation history, never a client-supplied
@@ -91,6 +94,7 @@ impl State {
             next_call: 0,
             input_tokens: 0,
             output_tokens: 0,
+            decisions: BTreeMap::new(),
         };
         state.validate(channel)?;
         Ok(state)
@@ -112,6 +116,9 @@ impl State {
         }
         state.validate(channel)?;
         Ok(state)
+    }
+    pub fn decision(&self, request: &str) -> Option<Decision> {
+        self.decisions.get(request).copied()
     }
     pub fn snapshot(&self) -> Value {
         serde_json::to_value(self).expect("serializable agent state")
@@ -138,6 +145,14 @@ impl State {
         self.calls.get(self.next_call)?.request_id.as_deref()
     }
     pub(crate) fn validate(&self, channel: &Channel) -> Result<()> {
+        if self.decisions.len() > 4096
+            || self
+                .decisions
+                .keys()
+                .any(|id| uuid::Uuid::parse_str(id).is_err())
+        {
+            return Err(INVALID);
+        }
         let b = &self.binding;
         if self.version != 1
             || b.user != channel.principal_id()

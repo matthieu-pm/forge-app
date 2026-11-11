@@ -358,6 +358,24 @@ async fn approvals_survive_restore_bind_normalized_input_and_denials_continue_th
                 .await
                 .is_err()
         );
+        journal
+            .fail_after
+            .store(journal.commits.load(Ordering::SeqCst) + 1, Ordering::SeqCst);
+        assert!(
+            engine
+                .resume(
+                    &channel,
+                    &mut restored,
+                    journal.as_ref(),
+                    &request,
+                    decision
+                )
+                .await
+                .is_err()
+        );
+        assert!(calls.requests.lock().unwrap().is_empty());
+        restored = journal.load(&channel);
+        assert_eq!(restored.decision(&request), Some(decision));
         engine
             .resume(
                 &channel,
@@ -396,6 +414,24 @@ async fn approvals_survive_restore_bind_normalized_input_and_denials_continue_th
                 "execution-denied"
             );
         }
+        let settled_revision = restored.revision();
+        engine
+            .resume(
+                &channel,
+                &mut restored,
+                journal.as_ref(),
+                &request,
+                decision,
+            )
+            .await
+            .unwrap();
+        assert_eq!(restored.revision(), settled_revision);
+        assert_eq!(restored.decision(&request), Some(decision));
+        let opposite = if decision == Decision::Approved {
+            Decision::Denied
+        } else {
+            Decision::Approved
+        };
         assert!(
             engine
                 .resume(
@@ -403,7 +439,7 @@ async fn approvals_survive_restore_bind_normalized_input_and_denials_continue_th
                     &mut restored,
                     journal.as_ref(),
                     &request,
-                    decision
+                    opposite
                 )
                 .await
                 .is_err()

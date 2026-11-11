@@ -311,6 +311,32 @@ async fn lease_must_still_be_live_after_database_work_before_commit() {
     .unwrap();
     assert_eq!(f.store.load(&f.channel).await.unwrap().state.revision(), 0);
     assert!(f.store.events(&f.channel, 0, 32).await.unwrap().is_empty());
+    lease.release().await.unwrap();
+    let ddl = format!(
+        "CREATE FUNCTION forge_runtime.{name}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN PERFORM pg_sleep(1.1); RETURN NEW; END $$; CREATE TRIGGER {name} BEFORE UPDATE ON forge_runtime.sessions FOR EACH ROW WHEN (NEW.run_id='{}'::uuid) EXECUTE FUNCTION forge_runtime.{name}();",
+        f.run
+    );
+    sqlx::raw_sql(&ddl).execute(&f.pool).await.unwrap();
+    assert!(
+        f.store
+            .acquire(&f.channel, Uuid::new_v4(), Duration::from_secs(1))
+            .await
+            .is_err()
+    );
+    sqlx::raw_sql(&format!(
+        "DROP TRIGGER {name} ON forge_runtime.sessions; DROP FUNCTION forge_runtime.{name}();"
+    ))
+    .execute(&f.pool)
+    .await
+    .unwrap();
+    let unclaimed: bool = sqlx::query_scalar(
+        "SELECT lease_owner IS NULL FROM forge_runtime.sessions WHERE run_id=$1",
+    )
+    .bind(f.run)
+    .fetch_one(&f.pool)
+    .await
+    .unwrap();
+    assert!(unclaimed);
 }
 #[tokio::test]
 async fn replay_pages_preserve_large_unicode_and_deep_payloads_with_byte_bounds() {

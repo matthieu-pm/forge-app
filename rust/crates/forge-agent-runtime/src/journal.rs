@@ -152,6 +152,7 @@ impl Store {
             || snapshot["input_tokens"] != 0
             || snapshot["output_tokens"] != 0
             || snapshot["calls"] != json!([])
+            || snapshot["decisions"] != json!({})
         {
             return Err(INVALID);
         }
@@ -224,17 +225,16 @@ impl Store {
         }
         let epoch = row.epoch.checked_add(1).ok_or(LOST)?;
         sqlx::query("UPDATE forge_runtime.sessions SET lease_owner=$2,lease_until=$3,epoch=$4,updated_at=$5 WHERE run_id=$1").bind(run(channel)?).bind(owner).bind(until(now,row.deadline,ttl_ms)).bind(epoch).bind(now).execute(&mut *tx).await.map_err(|_|FAILED)?;
+        let lease = Lease {
+            store: self.clone(),
+            channel: channel.clone(),
+            owner,
+            epoch,
+            ttl_ms,
+        };
+        lease.check(&mut tx).await?;
         tx.commit().await.map_err(|_| FAILED)?;
-        Ok((
-            Lease {
-                store: self.clone(),
-                channel: channel.clone(),
-                owner,
-                epoch,
-                ttl_ms,
-            },
-            state,
-        ))
+        Ok((lease, state))
     }
     pub async fn events(&self, channel: &Channel, after: u64, limit: usize) -> Result<Vec<Event>> {
         let after = i64::try_from(after).map_err(|_| INVALID)?;
