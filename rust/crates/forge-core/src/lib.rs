@@ -39,3 +39,4 @@ pub mod invitations;
 pub mod jobs;
 pub mod profiles;
 pub mod sla;
+pub mod workflow_health;

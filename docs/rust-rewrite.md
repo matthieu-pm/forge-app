@@ -83,6 +83,7 @@ gate pass.
 | 3b7 | Product retention, published recovery receipts and expired desktop drafts | Passed |
 | 3b8a | Invitation delivery policies, reminder mail and idempotent provider receipts | Passed |
 | 3b8b | Durable invitation queue, live delivery authority and lifecycle recovery | Passed |
+| 3b8c | Workflow health, native queue stalls and bounded operator diagnostics | Passed |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -2113,3 +2114,38 @@ these routes do not represent a completed rewrite.
 - Full milestone gate passed: 539 Rust tests, 2,959 enabled TypeScript tests,
   source-fixture drift checks, formatting, Clippy and three package typechecks.
   Evidence: `.forge/rust-rewrite/milestone-3b8b-initial.log`.
+
+### Milestone 3b8c
+
+- `cargo run -p forge-server --bin forge-health -- workflows` checks the existing
+  business-workflow ledger without delivering mail, reclaiming leases or changing
+  workflow state. It requires an explicit database/environment and does not load
+  dotenv files, provider credentials or external schedules.
+- A source exporter evaluates the owning health script against an isolated
+  relational adapter, with 136 cases for missing SDK owners, terminal failures,
+  initial delivery delay and overdue reminders. Native policy retains the exact
+  inclusive five-minute, fifteen-minute and 24-hour-15-minute thresholds and the
+  source's initial-effect precedence.
+- Native jobs are additionally checked for missing/mismatched ownership, terminal
+  job failure, expired leases, completed-job/state inconsistencies and wakes that
+  are overdue by five minutes. A legitimate future reminder/expiry wake remains
+  healthy. SDK-owned work is assessed with the original rules.
+- Collection uses one read-only, repeatable-read snapshot, pages of 1,000 runs,
+  indexed native-job lookup and a 60-second collection deadline. Reports count
+  all failures but expose at most 1,000 issue records plus an omitted count.
+  Records contain only workflow/job identifiers, state and fixed issue codes;
+  they do not expose job inputs, provider IDs, SDK IDs or private mail content.
+- Workflow and retention jobs share operational heartbeat storage. Only a clean
+  health result advances `completed_at`; unhealthy results and query failures
+  advance `failed_at` while preserving the last success. Unexpected CLI errors
+  expose one fixed code. Global acceptance uses a seventh disposable database so
+  deliberately failed jobs in other suites cannot contaminate its results.
+- Acceptance covers the source fixtures through PostgreSQL, native stalls and
+  future schedules, more than 1,000 failures, redacted real-command output,
+  successful/failure freshness and a failed query. Deployment scheduling, live
+  provider qualification, the remaining services, Rust UI/macOS and final
+  migration qualification remain separate unfinished work.
+
+- Full milestone gate passed: 543 Rust tests, 2,959 enabled TypeScript tests,
+  source-fixture drift checks, formatting, Clippy and three package typechecks.
+  Evidence: `.forge/rust-rewrite/milestone-3b8c-initial.log`.

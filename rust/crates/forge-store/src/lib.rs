@@ -16,6 +16,7 @@ pub mod jobs;
 pub mod joins;
 pub mod members;
 pub mod oauth;
+pub mod operational_health;
 pub mod planning;
 pub mod profiles;
 pub mod projects;

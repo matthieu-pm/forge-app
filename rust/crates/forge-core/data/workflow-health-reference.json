@@ -1,0 +1,2818 @@
+[
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "queued",
+      "sdkRunId": null,
+      "createdAt": "2029-12-31T23:55:00.001Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": null,
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "queued",
+      "sdkRunId": null,
+      "createdAt": "2029-12-31T23:55:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": null,
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "sdk_run_id_missing_5m",
+    "count": 1
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "queued",
+      "sdkRunId": null,
+      "createdAt": "2029-12-31T23:54:59.999Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": null,
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "sdk_run_id_missing_5m",
+    "count": 1
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "queued",
+      "sdkRunId": "",
+      "createdAt": "2029-12-31T23:55:00.001Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": null,
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "queued",
+      "sdkRunId": "",
+      "createdAt": "2029-12-31T23:55:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": null,
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "queued",
+      "sdkRunId": "",
+      "createdAt": "2029-12-31T23:54:59.999Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": null,
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "queued",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:55:00.001Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": null,
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "queued",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:55:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": null,
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "queued",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:54:59.999Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": null,
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "starting",
+      "sdkRunId": null,
+      "createdAt": "2029-12-31T23:55:00.001Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": null,
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "starting",
+      "sdkRunId": null,
+      "createdAt": "2029-12-31T23:55:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": null,
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "sdk_run_id_missing_5m",
+    "count": 1
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "starting",
+      "sdkRunId": null,
+      "createdAt": "2029-12-31T23:54:59.999Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": null,
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "sdk_run_id_missing_5m",
+    "count": 1
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "starting",
+      "sdkRunId": "",
+      "createdAt": "2029-12-31T23:55:00.001Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": null,
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "starting",
+      "sdkRunId": "",
+      "createdAt": "2029-12-31T23:55:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": null,
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "starting",
+      "sdkRunId": "",
+      "createdAt": "2029-12-31T23:54:59.999Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": null,
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "starting",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:55:00.001Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": null,
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "starting",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:55:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": null,
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "starting",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:54:59.999Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": null,
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "failed-to-start",
+      "sdkRunId": null,
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": null,
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "terminal_workflow_failure",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "failed-to-start",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": null,
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "terminal_workflow_failure",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "failed",
+      "sdkRunId": null,
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": null,
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "terminal_workflow_failure",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "failed",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": null,
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "terminal_workflow_failure",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "cancelled",
+      "sdkRunId": null,
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": null,
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "terminal_workflow_failure",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "cancelled",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": null,
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "terminal_workflow_failure",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "completed",
+      "sdkRunId": null,
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": null,
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "completed",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": null,
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": null,
+      "initial": null,
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": null,
+      "initial": null,
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": null,
+      "initial": null,
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": null,
+      "initial": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": null,
+      "initial": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": null,
+      "initial": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": null,
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:45:00.001Z"
+      },
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": null,
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:45:00.001Z"
+      },
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": null,
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:45:00.001Z"
+      },
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": null,
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:45:00.000Z"
+      },
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "reminder_overdue_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": null,
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:45:00.000Z"
+      },
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "reminder_overdue_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": null,
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:45:00.000Z"
+      },
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": null,
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:44:59.999Z"
+      },
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "reminder_overdue_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": null,
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:44:59.999Z"
+      },
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "reminder_overdue_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": null,
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:44:59.999Z"
+      },
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": null,
+      "initial": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": null,
+      "initial": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": null,
+      "initial": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": null,
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:45:00.001Z"
+      },
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": null,
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:45:00.001Z"
+      },
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": null,
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:45:00.001Z"
+      },
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": null,
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:45:00.000Z"
+      },
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "reminder_overdue_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": null,
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:45:00.000Z"
+      },
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "reminder_overdue_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": null,
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:45:00.000Z"
+      },
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": null,
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:44:59.999Z"
+      },
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "reminder_overdue_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": null,
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:44:59.999Z"
+      },
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "reminder_overdue_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": null,
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:44:59.999Z"
+      },
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.001Z",
+      "initial": null,
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.001Z",
+      "initial": null,
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.001Z",
+      "initial": null,
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.001Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.001Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.001Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.001Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:45:00.001Z"
+      },
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.001Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:45:00.001Z"
+      },
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.001Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:45:00.001Z"
+      },
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.001Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:45:00.000Z"
+      },
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "reminder_overdue_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.001Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:45:00.000Z"
+      },
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "reminder_overdue_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.001Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:45:00.000Z"
+      },
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.001Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:44:59.999Z"
+      },
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "reminder_overdue_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.001Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:44:59.999Z"
+      },
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "reminder_overdue_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.001Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:44:59.999Z"
+      },
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.001Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.001Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.001Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.001Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:45:00.001Z"
+      },
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.001Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:45:00.001Z"
+      },
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.001Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:45:00.001Z"
+      },
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.001Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:45:00.000Z"
+      },
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "reminder_overdue_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.001Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:45:00.000Z"
+      },
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "reminder_overdue_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.001Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:45:00.000Z"
+      },
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.001Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:44:59.999Z"
+      },
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "reminder_overdue_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.001Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:44:59.999Z"
+      },
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "reminder_overdue_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.001Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:44:59.999Z"
+      },
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": null,
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "initial_effect_incomplete_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": null,
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "initial_effect_incomplete_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": null,
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "initial_effect_incomplete_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "initial_effect_incomplete_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "initial_effect_incomplete_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "initial_effect_incomplete_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:45:00.001Z"
+      },
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "initial_effect_incomplete_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:45:00.001Z"
+      },
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "initial_effect_incomplete_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:45:00.001Z"
+      },
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "initial_effect_incomplete_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:45:00.000Z"
+      },
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "initial_effect_incomplete_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:45:00.000Z"
+      },
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "initial_effect_incomplete_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:45:00.000Z"
+      },
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "initial_effect_incomplete_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:44:59.999Z"
+      },
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "initial_effect_incomplete_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:44:59.999Z"
+      },
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "initial_effect_incomplete_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:44:59.999Z"
+      },
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "initial_effect_incomplete_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:45:00.001Z"
+      },
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:45:00.001Z"
+      },
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:45:00.001Z"
+      },
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:45:00.000Z"
+      },
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "reminder_overdue_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:45:00.000Z"
+      },
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "reminder_overdue_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:45:00.000Z"
+      },
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:44:59.999Z"
+      },
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "reminder_overdue_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:44:59.999Z"
+      },
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "reminder_overdue_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:44:59.999Z"
+      },
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:44:59.999Z",
+      "initial": null,
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "initial_effect_incomplete_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:44:59.999Z",
+      "initial": null,
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "initial_effect_incomplete_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:44:59.999Z",
+      "initial": null,
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "initial_effect_incomplete_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:44:59.999Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "initial_effect_incomplete_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:44:59.999Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "initial_effect_incomplete_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:44:59.999Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "initial_effect_incomplete_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:44:59.999Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:45:00.001Z"
+      },
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "initial_effect_incomplete_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:44:59.999Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:45:00.001Z"
+      },
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "initial_effect_incomplete_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:44:59.999Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:45:00.001Z"
+      },
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "initial_effect_incomplete_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:44:59.999Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:45:00.000Z"
+      },
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "initial_effect_incomplete_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:44:59.999Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:45:00.000Z"
+      },
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "initial_effect_incomplete_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:44:59.999Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:45:00.000Z"
+      },
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "initial_effect_incomplete_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:44:59.999Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:44:59.999Z"
+      },
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "initial_effect_incomplete_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:44:59.999Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:44:59.999Z"
+      },
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "initial_effect_incomplete_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:44:59.999Z",
+      "initial": {
+        "state": "sending",
+        "completedAt": "2029-12-30T23:44:59.999Z"
+      },
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "initial_effect_incomplete_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:44:59.999Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:44:59.999Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:44:59.999Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:44:59.999Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:45:00.001Z"
+      },
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:44:59.999Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:45:00.001Z"
+      },
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:44:59.999Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:45:00.001Z"
+      },
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:44:59.999Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:45:00.000Z"
+      },
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "reminder_overdue_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:44:59.999Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:45:00.000Z"
+      },
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "reminder_overdue_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:44:59.999Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:45:00.000Z"
+      },
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:44:59.999Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:44:59.999Z"
+      },
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "reminder_overdue_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:44:59.999Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:44:59.999Z"
+      },
+      "reminder": {
+        "state": "sending",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": "reminder_overdue_15m",
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:44:59.999Z",
+      "initial": {
+        "state": "completed",
+        "completedAt": "2029-12-30T23:44:59.999Z"
+      },
+      "reminder": {
+        "state": "completed",
+        "completedAt": null
+      },
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "other-workflow",
+      "state": "running",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": null,
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  },
+  {
+    "input": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "workspaceId": "fixture",
+      "kind": "workspace-invitation-lifecycle-v1",
+      "state": "queued",
+      "sdkRunId": "external-sdk-fixture",
+      "createdAt": "2029-12-31T23:00:00.000Z",
+      "startedAt": "2029-12-31T23:45:00.000Z",
+      "initial": null,
+      "reminder": null,
+      "job": null
+    },
+    "now": "2030-01-01T00:00:00.000Z",
+    "code": null,
+    "count": 0
+  }
+]
