@@ -157,6 +157,7 @@ impl Engine {
                     // older worker can neither append output nor settle this step.
                     self.commit(state, journal, next, events).await?;
                     let mut definitions=forge_core::agents::tools::descriptors().iter().map(|v|json!({"type":"function","name":v["name"],"description":v["description"],"inputSchema":v["inputSchema"]})).collect::<Vec<_>>();
+                    definitions.extend(forge_core::agents::context::descriptors().iter().map(|v|json!({"type":"function","name":v["name"],"description":v["description"],"inputSchema":v["inputSchema"]})));
                     if self.workspace_factory.is_some() {
                         definitions.extend(forge_core::agents::framework::descriptors().iter().map(|v|json!({"type":"function","name":v["name"],"description":v["description"],"inputSchema":v["inputSchema"]})));
                     }
@@ -214,9 +215,14 @@ impl Engine {
                                 | "read_file"
                                 | "glob"
                                 | "grep"
+                                | "todo"
                         )
                     {
                         return self.fail(state,journal,"An interrupted tool requires reconciliation before it can run again.").await;
+                    }
+                    if call.name == "todo" {
+                        self.execute_todo(state, journal).await?;
+                        continue;
                     }
                     if super::workspace::is_framework(&call.name)
                         && self.workspace_factory.is_some()
@@ -430,13 +436,61 @@ impl Engine {
         status: &str,
         files: Option<crate::framework::FileState>,
     ) -> Result<()> {
-        let call = &state.calls[state.next_call];
-        let result =
-            json!({"callId":call.id,"kind":"tool-call","toolName":call.name,"output":output});
         let mut next = state.clone();
         if let Some(files) = files {
             next.files = files;
         }
+        self.settle_tool_state(state, journal, next, output, status)
+            .await
+    }
+    async fn execute_todo(&self, state: &mut State, journal: &dyn Journal) -> Result<()> {
+        let call = &state.calls[state.next_call];
+        let input = match self.prepare_input(&call.name, call.input.clone()) {
+            Ok(input) => input,
+            Err(error) => {
+                return self
+                    .settle_tool(
+                        state,
+                        journal,
+                        json!({"type":"error-text","value":error.to_string()}),
+                        "failed",
+                    )
+                    .await;
+            }
+        };
+        if call.input_hash.as_deref() != Some(&forge_core::agents::approval::input_hash(&input))
+            || call.request_id.is_some()
+            || call.decision.is_some()
+        {
+            return Err(INVALID);
+        }
+        let mut next = state.clone();
+        if let Some(todos) = input["todos"].as_array() {
+            next.todos = todos.clone();
+        }
+        let output = forge_core::agents::context::output(&next.todos);
+        // The task list and receipt are one local transaction: no external
+        // dispatch reservation or resource allocation is required.
+        self.settle_tool_state(
+            state,
+            journal,
+            next,
+            json!({"type":"json","value":output}),
+            "completed",
+        )
+        .await
+    }
+    async fn settle_tool_state(
+        &self,
+        state: &mut State,
+        journal: &dyn Journal,
+        mut next: State,
+        output: Value,
+        status: &str,
+    ) -> Result<()> {
+        let call = &state.calls[state.next_call];
+        let result =
+            json!({"callId":call.id,"kind":"tool-call","toolName":call.name,"output":output});
         let call = &mut next.calls[next.next_call];
         call.phase = CallPhase::Complete;
         call.output = Some(output);

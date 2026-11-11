@@ -72,6 +72,7 @@ gate pass.
 | 3b5x | Sandbox framework file/shell tools and isolated filesystem transport | Passed available gate |
 | 3b5y | Persistent sandbox snapshots, session replacement and recovery fencing | Passed available gate |
 | 3b5z | Engine workspace checkpoints, default file tools and conversation inheritance | Passed available gate |
+| 3b5aa | Durable task lists and source-compatible context compaction planning | Passed available gate |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -1708,3 +1709,36 @@ these routes do not represent a completed rewrite.
 - The other enabled framework tools, context compaction, local sandbox backends,
   private runtime retention/reconciliation, existing EVE conversation migration
   and live deployment qualification remain outstanding. Readiness remains 503.
+
+
+### Milestone 3b5aa
+
+- Full milestone gate passed: 477 Rust tests and 2,959 enabled TypeScript tests.
+  Formatting, Clippy, source contracts and typechecking passed; 661 reference
+  tests across 34 files remain skipped. Log:
+  `.forge/rust-rewrite/milestone-3b5aa-initial.log`.
+
+- The native engine always offers the source framework's `todo` tool. Full-list
+  replacements and their tool receipts commit atomically; reads return the
+  stored list and status counts. This local operation allocates no sandbox and
+  can recover from either a rejected commit or a lost acknowledgement without
+  duplicate receipts or repeating the completed model step.
+- Completed and cancelled conversations inherit their own task list together
+  with their workspace and file read stamps. New conversations start empty.
+  Legacy private snapshots default to an empty list; malformed stored items and
+  nonempty fresh standalone admissions are rejected. No SQL migration is needed.
+- The pure compaction planner reproduces token estimates, recent-message
+  selection, tool/result boundaries, older tool-output reduction, previous
+  checkpoints, summary transcript rendering and resumption guards. If a summary
+  still exceeds the target, it reduces the recent window and requests another
+  summary. At a zero-size recent window it retains the source's final fallback,
+  which can still exceed the token target.
+- Fixtures execute the pinned SDK's task-list functions and compaction harness
+  with a mocked summary function: 12 input cases, five task-list transitions,
+  56 token estimates, 48 rendered prompts and 33 compaction scenarios. They cover
+  file stubs, Unicode/whitespace, hidden reasoning, forced compaction and repeated
+  summary attempts. Their drift check now runs in the full milestone gate.
+- Pure planning does not yet make running conversations compact automatically.
+  The next integration must checkpoint summary generation, preserve task lists,
+  clear file read permissions after compaction and use the current run's model
+  authority and deadline. Model/provider calls and production were not used.

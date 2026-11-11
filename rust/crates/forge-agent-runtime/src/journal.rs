@@ -188,6 +188,7 @@ impl Store {
             || snapshot["output_tokens"] != 0
             || snapshot["calls"] != json!([])
             || snapshot["decisions"] != json!({})
+            || snapshot["todos"] != json!([])
             || snapshot["workspace"]["provisioned"] == true
             || !snapshot["files"]["workspace"].is_null()
             || snapshot["files"]["stamps"] != json!({})

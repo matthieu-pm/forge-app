@@ -18,7 +18,10 @@ pub(super) struct Session {
 }
 impl Engine {
     pub(super) fn prepare_input(&self, name: &str, input: Value) -> Result<Value> {
-        if is_framework(name) && self.workspace_factory.is_some() {
+        if name == "todo" {
+            forge_core::agents::context::input(name, input)
+                .map_err(|_| Error("Invalid task list input."))
+        } else if is_framework(name) && self.workspace_factory.is_some() {
             forge_core::agents::framework::input(name, input)
                 .map_err(|_| Error("Invalid framework tool input."))
         } else {

@@ -106,7 +106,7 @@ impl Store {
         history.push(message);
         let mut state = State::new(channel, history)?;
         if let Some(parent) = parent_state {
-            state.inherit_workspace(&parent);
+            state.inherit_context(&parent);
         }
         let text = javascript_stringify(&state.snapshot());
         if text.len() > LIMIT {

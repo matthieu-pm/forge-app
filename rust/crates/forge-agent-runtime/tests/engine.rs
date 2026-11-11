@@ -122,7 +122,7 @@ impl Scripted {
             pending: false,
             entered: Notify::new(),
             usage: 10,
-            tools: 7,
+            tools: 8,
         }
     }
 }
@@ -812,3 +812,6 @@ async fn cancellation_deadline_and_stream_persistence_failure_stop_before_tools(
 
 #[path = "acceptance/framework_engine.rs"]
 mod framework_engine;
+
+#[path = "acceptance/context_engine.rs"]
+mod context_engine;

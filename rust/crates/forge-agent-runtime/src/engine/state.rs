@@ -73,6 +73,8 @@ pub struct State {
     pub(super) workspace: Option<Reference>,
     #[serde(default)]
     pub(super) files: FileState,
+    #[serde(default)]
+    pub(super) todos: Vec<Value>,
 }
 impl State {
     /// `history` is trusted stored conversation history, never a client-supplied
@@ -103,6 +105,7 @@ impl State {
             decisions: BTreeMap::new(),
             workspace: Some(Reference::new()),
             files: FileState::default(),
+            todos: vec![],
         };
         state.validate(channel)?;
         Ok(state)
@@ -179,9 +182,10 @@ impl State {
         });
         messages
     }
-    pub(crate) fn inherit_workspace(&mut self, parent: &Self) {
+    pub(crate) fn inherit_context(&mut self, parent: &Self) {
         self.workspace = parent.workspace.clone();
         self.files = parent.files.clone();
+        self.todos = parent.todos.clone();
     }
     pub(crate) fn resolve(
         &self,
@@ -260,6 +264,7 @@ impl State {
         self.validate_structure()
     }
     fn validate_structure(&self) -> Result<()> {
+        forge_core::agents::context::items(json!(self.todos)).map_err(|_| INVALID)?;
         if self.workspace.as_ref().is_none_or(|w| !w.provisioned) && !self.files.is_empty() {
             return Err(INVALID);
         }
@@ -319,6 +324,7 @@ impl State {
             if let Some(hash) = &c.input_hash {
                 let input = forge_core::agents::tools::input(&c.name, c.input.clone())
                     .or_else(|_| forge_core::agents::framework::input(&c.name, c.input.clone()))
+                    .or_else(|_| forge_core::agents::context::input(&c.name, c.input.clone()))
                     .map_err(|_| INVALID)?;
                 if input != c.input || forge_core::agents::approval::input_hash(&input) != *hash {
                     return Err(INVALID);

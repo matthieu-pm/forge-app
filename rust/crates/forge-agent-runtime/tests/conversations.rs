@@ -492,7 +492,7 @@ async fn private_schema_upgrade_preserves_existing_runs_and_rejects_changed_migr
 }
 
 #[tokio::test]
-async fn completed_and_cancelled_conversations_inherit_only_their_own_workspace_and_read_state() {
+async fn completed_and_cancelled_conversations_inherit_only_their_own_context() {
     for cancelled in [false, true] {
         let fixture = Fixture::new().await;
         let initial = fixture.admit_first().await;
@@ -504,6 +504,8 @@ async fn completed_and_cancelled_conversations_inherit_only_their_own_workspace_
         let mut snapshot = state.snapshot();
         snapshot["revision"] = json!(state.revision() + 1);
         snapshot["workspace"]["provisioned"] = json!(true);
+        snapshot["todos"] =
+            json!([{ "content":"Continue the task","status":"in_progress","priority":"high"}]);
         let key = snapshot["workspace"]["key"].as_str().unwrap().to_owned();
         snapshot["files"] = json!({"workspace":format!("native-workspace:{key}"),"stamps":{"/workspace/a":{"bytes":8,"hash":format!("{:x}",Sha256::digest(b"original"))}}});
         if !cancelled {
@@ -534,6 +536,10 @@ async fn completed_and_cancelled_conversations_inherit_only_their_own_workspace_
         assert_eq!(
             admitted.state.snapshot()["files"],
             saved.snapshot()["files"]
+        );
+        assert_eq!(
+            admitted.state.snapshot()["todos"],
+            saved.snapshot()["todos"]
         );
         assert_eq!(admitted.state.usage(), (0, 0));
         let replay = fixture
@@ -568,6 +574,7 @@ async fn completed_and_cancelled_conversations_inherit_only_their_own_workspace_
             initial.snapshot()["workspace"]["key"]
         );
         assert_eq!(new.state.snapshot()["workspace"]["provisioned"], false);
+        assert_eq!(new.state.snapshot()["todos"], json!([]));
         assert!(
             new.state.snapshot()["files"]["stamps"]
                 .as_object()

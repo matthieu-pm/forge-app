@@ -1,0 +1,51 @@
+[
+  {
+    "name": "todo",
+    "description": "Use this tool to create and manage a structured task list for the current session.\nThis helps you track progress, organize complex tasks, and demonstrate thoroughness.\n\nWhen to use:\n- Complex multistep tasks requiring 3 or more distinct steps\n- When the user provides multiple tasks or a numbered list\n- After receiving new instructions, to capture requirements\n- After completing a task, to mark it complete and add follow-ups\n\nWhen NOT to use:\n- Single, straightforward tasks that need no tracking\n- Purely conversational or informational requests\n\nUsage:\n- Call with `todos` to replace the entire list (full replacement write)\n- Call without `todos` to read the current list\n- Both return the full current list with status counts\n- Mark tasks in_progress when you start, completed when done\n- Only have ONE task in_progress at a time",
+    "inputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+        "todos": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "content": {
+                "type": "string",
+                "description": "Brief description of the task."
+              },
+              "priority": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "description": "Priority level of the task."
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "in_progress",
+                  "completed",
+                  "cancelled"
+                ],
+                "description": "Current status of the task."
+              }
+            },
+            "required": [
+              "content",
+              "priority",
+              "status"
+            ],
+            "additionalProperties": false
+          },
+          "description": "The updated todo list. Omit to read the current list without modifying it."
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+]
