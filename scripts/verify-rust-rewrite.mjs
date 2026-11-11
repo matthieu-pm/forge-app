@@ -5,6 +5,7 @@ import { spawnSync } from "node:child_process"
 const checks = [
   ["node", ["scripts/rust-rewrite-inventory.mjs", "--check"]],
   ["bun", ["scripts/export-rust-reference.mjs", "--check"]],
+  ["bun", ["scripts/export-rust-capabilities.mjs", "--check"]],
   ["bun", ["scripts/export-rust-email-templates.mjs", "--check"]],
   ["bun", ["scripts/export-rust-openapi.mjs", "--check"]],
   ["bun", ["scripts/export-rust-preferences.mjs", "--check"]],

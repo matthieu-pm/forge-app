@@ -14,6 +14,21 @@ fn cases(group: &str) -> &'static Vec<Value> {
     DATA["agents"][group].as_array().unwrap()
 }
 #[test]
+fn production_capability_registry_and_input_schemas_match_the_source() {
+    use forge_core::agents::capabilities;
+    assert_eq!(
+        json!(capabilities::descriptors()),
+        DATA["agentCapabilities"]["descriptors"]
+    );
+    for case in DATA["agentCapabilities"]["inputs"].as_array().unwrap() {
+        let result = capabilities::input(case["id"].as_str().unwrap(), case["input"].clone());
+        assert_eq!(result.is_ok(), case["valid"].as_bool().unwrap(), "{case}");
+        if let Ok(value) = result {
+            assert_eq!(value, case["value"], "{case}");
+        }
+    }
+}
+#[test]
 fn approval_fingerprints_and_program_manifests_match_the_owning_service() {
     use forge_core::agents::approval;
     for case in DATA["agentApprovals"]["hashes"].as_array().unwrap() {

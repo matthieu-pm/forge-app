@@ -28,6 +28,8 @@ pub use database::Database;
 
 #[derive(Debug, thiserror::Error)]
 pub enum StoreError {
+    #[error("{message}")]
+    CapabilityConflict { reused: bool, message: &'static str },
     #[error(transparent)]
     Approval(#[from] forge_core::agents::approval::Error),
     #[error("Profile editing is unavailable.")]

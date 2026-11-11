@@ -300,6 +300,59 @@ async fn agent_mutations_prepare_before_changes_and_archive_released_reservation
         service.consume(&actor, id, &binding).await.unwrap().state,
         ApprovalState::Consumed
     );
+    let team=forge_store::teams::create(&f.database,&actor,&forge_core::teams::CreateTeam::parse(json!({"name":"Agent team","identifier":"AG","icon":{"kind":"emoji","value":"🛠️","color":"#818cf8"},"timezone":"UTC"})).unwrap()).await.unwrap();
+    let request = Request {
+        approval_id: None,
+        run_id: run.id,
+        capability_id: "teams.update".into(),
+        capability_version: "1".into(),
+        risk: Risk::ReversibleWrite,
+        input: json!({"slug":team.slug,"settings":{"description":"Journaled action"}}),
+        redacted_input_summary: json!({"summary":"Team change"}),
+        expires_at: None,
+    };
+    let approval = service.request(&actor, &request).await.unwrap().approval;
+    service
+        .resolve(&actor, approval.id, Decision::Approved)
+        .await
+        .unwrap();
+    let call = json!({"capabilityId":"teams.update","capabilityVersion":"1","input":request.input,"approvalId":approval.id,"idempotencyKey":Uuid::new_v4()});
+    let gateway = forge_store::agents::capabilities::Gateway::new(f.database.clone());
+    f.backend.mode.store(1, Ordering::Relaxed);
+    assert_eq!(
+        gateway.invoke(&actor, call.clone(), run.id).await["errorCode"],
+        "CAPABILITY_EXECUTION_FAILED"
+    );
+    assert_eq!(
+        approvals::get(&mut f.pool.acquire().await.unwrap(), approval.id)
+            .await
+            .unwrap()
+            .unwrap()
+            .state,
+        ApprovalState::Approved
+    );
+    assert_eq!(
+        forge_store::teams::get(
+            &f.database,
+            &actor,
+            &forge_store::teams::Selector::Id(team.id)
+        )
+        .await
+        .unwrap()
+        .unwrap()
+        .description,
+        ""
+    );
+    f.backend.mode.store(0, Ordering::Relaxed);
+    assert_eq!(gateway.invoke(&actor, call, run.id).await["ok"], true);
+    assert_eq!(
+        approvals::get(&mut f.pool.acquire().await.unwrap(), approval.id)
+            .await
+            .unwrap()
+            .unwrap()
+            .state,
+        ApprovalState::Consumed
+    );
     let archived = f.backend.completed.lock().unwrap();
     assert!(
         archived

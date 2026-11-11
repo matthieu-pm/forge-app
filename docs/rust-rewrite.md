@@ -49,7 +49,8 @@ gate pass.
 | 3b5a | Agent protocols, model routing, execution policy and scoped credentials | Passed available gate |
 | 3b5b | Agent thread/run persistence, event ledger, approval and invocation reservations | Passed available gate |
 | 3b5c | Live approval authority, exact input binding and single-use consumption | Passed available gate |
-| 3b5d | Capability dispatch, current target authority and atomic approved team commands | In progress |
+| 3b5d | Capability dispatch, current target authority and atomic approved team commands | Passed available gate |
+| 3b5e | Agent attachments/artifacts, private bytes, integrity and retention | In progress |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -900,3 +901,29 @@ these routes do not represent a completed rewrite.
 - Agent authority now uses the same bounded JSON decoder as run storage, allowing
   deeply nested stored selections while still denying unported loop authority.
   Runtime dispatch and agent HTTP routes remain pending.
+
+### Milestone 3b5d
+
+- Full gate passed on the first run: 298 Rust tests, 2,959 enabled reference tests,
+  typechecking, formatting, Clippy and source export checks. The 661
+  fixture-dependent reference tests remain skipped.
+  Log: `.forge/rust-rewrite/milestone-3b5d.log`.
+- The production registry's five capability descriptors are exported from the
+  owning source into a separate runtime artifact, checked by the full gate.
+  Three hundred input cases verify normalization, defaults and strict shapes.
+  The gateway preserves authority/policy/version/input ordering, private team
+  visibility, run binding and output/inline byte limits.
+- Approved team updates consume the exact approval inside the existing command
+  transaction with the SQL effect, receipt, audit and outbox. Replays reauthorize
+  the saved target. Legacy invocation evidence requires a matching source hash
+  and successful result; ambiguous records require reconciliation.
+- Added an optional command fence hook before agent authority locks. Team
+  capability commands and approval requests use the same workspace/run lock
+  order, covered by concurrent execution. Ordinary command handlers retain their
+  previous default. Team settings writes reuse the existing mutation code.
+- Acceptance covers duplicate delivery, permission revocation, expired run
+  authority, private reads, invalid requests, failed SQL effects, legacy receipts,
+  concurrent approvals and failed journal preparation without spending approval.
+- Artifact capability dispatch has an injected owning-service boundary and
+  validates its public projection. The actual artifact/attachment byte lifecycle
+  is the next milestone; no agent execution HTTP endpoint is exposed yet.

@@ -4,6 +4,8 @@ use forge_store::agents::*;
 
 #[path = "agent_approvals.rs"]
 mod approval_service_acceptance;
+#[path = "agent_capabilities.rs"]
+mod capability_acceptance;
 
 fn at() -> DateTime<Utc> {
     "2026-11-01T12:00:00.000Z".parse().unwrap()

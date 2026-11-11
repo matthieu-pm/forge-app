@@ -334,11 +334,35 @@ pub async fn get(
     let mut tx = database.begin().await?;
     lock_workspace(&mut tx, &actor.workspace_id, false).await?;
     let live = current_actor(&mut tx, actor).await?;
-    require_read(&live)?;
-    let row = select_team(&mut tx, &live, selector, false, false).await?;
-    let value = row.map(|r| r.summary()).transpose()?;
+    let value = get_in(&mut tx, &live, selector).await?;
     tx.commit().await?;
     Ok(value)
+}
+
+pub(crate) async fn get_in(
+    connection: &mut PgConnection,
+    actor: &Actor,
+    selector: &Selector,
+) -> Result<Option<TeamSummary>, StoreError> {
+    require_read(actor)?;
+    select_team(connection, actor, selector, false, false)
+        .await?
+        .map(|r| r.summary())
+        .transpose()
+}
+
+pub(crate) async fn authorize_capability_update(
+    connection: &mut PgConnection,
+    actor: &Actor,
+    selector: &Selector,
+    before: bool,
+) -> Result<(), StoreError> {
+    require_read(actor)?;
+    require_manage(actor)?;
+    select_team(connection, actor, selector, false, before)
+        .await?
+        .ok_or(StoreError::Forbidden)?;
+    Ok(())
 }
 
 pub async fn update(
@@ -358,14 +382,38 @@ pub async fn update(
         .await?
         .ok_or(TeamError::NotFound)?;
     tx.prepare().await?;
+    let value = apply_settings(&mut tx, &row, &settings).await?;
+    tx.commit().await?;
+    Ok(value)
+}
+
+/// For prepared canonical commands: current authority and target were already
+/// checked inside the same transaction by authorize_capability_update.
+pub(crate) async fn update_in(
+    connection: &mut PgConnection,
+    actor: &Actor,
+    selector: &Selector,
+    settings: &TeamSettings,
+) -> Result<TeamSummary, StoreError> {
+    require_manage(actor)?;
+    let row = managed_team(connection, actor, selector, false)
+        .await?
+        .ok_or(TeamError::NotFound)?;
+    apply_settings(connection, &row, settings).await
+}
+
+async fn apply_settings(
+    connection: &mut PgConnection,
+    row: &TeamRow,
+    settings: &TeamSettings,
+) -> Result<TeamSummary, StoreError> {
     let icon = settings.icon.as_ref();
     let kind = icon.map(|i| serde_json::to_value(i.kind).expect("icon kind"));
     let scheme = settings
         .estimation_scheme
         .map(|s| serde_json::to_value(s).expect("scheme"));
     let updated=sqlx::query_as::<_,TeamRow>("UPDATE teams SET name=$1,identifier=$2,description=$3,timezone=$4,estimation_scheme=$5,issue_email_enabled=$6,detailed_history_enabled=$7,icon_kind=$8,icon_value=$9,color=$10,updated_at=clock_timestamp() WHERE id=$11 RETURNING *")
-        .bind(settings.name.as_deref().unwrap_or(&row.name)).bind(settings.identifier.as_deref().unwrap_or(&row.identifier)).bind(settings.description.as_deref().unwrap_or(&row.description)).bind(settings.timezone.as_deref().unwrap_or(&row.timezone)).bind(scheme.as_ref().and_then(Value::as_str).unwrap_or(&row.estimation_scheme)).bind(settings.issue_email_enabled.unwrap_or(row.issue_email_enabled)).bind(settings.detailed_history_enabled.unwrap_or(row.detailed_history_enabled)).bind(kind.as_ref().and_then(Value::as_str).unwrap_or(&row.icon_kind)).bind(icon.map(|i|i.value.as_str()).unwrap_or(&row.icon_value)).bind(icon.map(|i|i.color.as_str()).unwrap_or(&row.color)).bind(row.id).fetch_one(&mut *tx).await.map_err(|e|team_error(e,false))?;
-    tx.commit().await?;
+        .bind(settings.name.as_deref().unwrap_or(&row.name)).bind(settings.identifier.as_deref().unwrap_or(&row.identifier)).bind(settings.description.as_deref().unwrap_or(&row.description)).bind(settings.timezone.as_deref().unwrap_or(&row.timezone)).bind(scheme.as_ref().and_then(Value::as_str).unwrap_or(&row.estimation_scheme)).bind(settings.issue_email_enabled.unwrap_or(row.issue_email_enabled)).bind(settings.detailed_history_enabled.unwrap_or(row.detailed_history_enabled)).bind(kind.as_ref().and_then(Value::as_str).unwrap_or(&row.icon_kind)).bind(icon.map(|i|i.value.as_str()).unwrap_or(&row.icon_value)).bind(icon.map(|i|i.color.as_str()).unwrap_or(&row.color)).bind(row.id).fetch_one(connection).await.map_err(|e|team_error(e,false))?;
     updated.summary()
 }
 async fn managed_team(

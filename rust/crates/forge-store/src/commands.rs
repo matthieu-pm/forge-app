@@ -43,6 +43,16 @@ pub struct Executed<T> {
 pub trait CommandHandler: Send + Sync {
     type Output: Serialize + DeserializeOwned + Send + Sync;
 
+    /// Acquire any mutation fence before current_actor locks an agent run. This
+    /// keeps approval transitions and their consuming commands in one lock order.
+    async fn before_actor(
+        &self,
+        _connection: &mut PgConnection,
+        _actor: &Actor,
+    ) -> Result<(), StoreError> {
+        Ok(())
+    }
+
     /// Runs before receipt lookup and again with the saved/resulting resource.
     async fn authorize(
         &self,
@@ -156,6 +166,7 @@ pub async fn execute<H: CommandHandler>(
         .fetch_optional(&mut *tx)
         .await?
         .ok_or(StoreError::Forbidden)?;
+    handler.before_actor(&mut tx, actor).await?;
     let current = current_actor(&mut tx, actor).await?;
     handler.authorize(&mut tx, &current, None).await?;
     let (sla_enabled, sla_identity) = pool.sla_gate(&current.workspace_id);
