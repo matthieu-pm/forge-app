@@ -1,0 +1,2256 @@
+{
+  "decisions": [
+    {
+      "effect": "initial",
+      "status": "pending",
+      "expiresAt": "2029-12-31T23:59:59.999Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "expired",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "pending",
+      "expiresAt": "2030-01-01T00:00:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "expired",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "pending",
+      "expiresAt": "2030-01-01T00:00:00.001Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "deliver",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "pending",
+      "expiresAt": "2030-01-01T00:14:59.999Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "deliver",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "pending",
+      "expiresAt": "2030-01-01T00:15:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "deliver",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "pending",
+      "expiresAt": "2030-01-01T00:15:00.001Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "deliver",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "pending",
+      "expiresAt": "2030-01-02T00:00:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "deliver",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "accepted",
+      "expiresAt": "2029-12-31T23:59:59.999Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "accepted",
+      "expiresAt": "2030-01-01T00:00:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "accepted",
+      "expiresAt": "2030-01-01T00:00:00.001Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "accepted",
+      "expiresAt": "2030-01-01T00:14:59.999Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "accepted",
+      "expiresAt": "2030-01-01T00:15:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "accepted",
+      "expiresAt": "2030-01-01T00:15:00.001Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "accepted",
+      "expiresAt": "2030-01-02T00:00:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "rejected",
+      "expiresAt": "2029-12-31T23:59:59.999Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "rejected",
+      "expiresAt": "2030-01-01T00:00:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "rejected",
+      "expiresAt": "2030-01-01T00:00:00.001Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "rejected",
+      "expiresAt": "2030-01-01T00:14:59.999Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "rejected",
+      "expiresAt": "2030-01-01T00:15:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "rejected",
+      "expiresAt": "2030-01-01T00:15:00.001Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "rejected",
+      "expiresAt": "2030-01-02T00:00:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "canceled",
+      "expiresAt": "2029-12-31T23:59:59.999Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "canceled",
+      "expiresAt": "2030-01-01T00:00:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "canceled",
+      "expiresAt": "2030-01-01T00:00:00.001Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "canceled",
+      "expiresAt": "2030-01-01T00:14:59.999Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "canceled",
+      "expiresAt": "2030-01-01T00:15:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "canceled",
+      "expiresAt": "2030-01-01T00:15:00.001Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "canceled",
+      "expiresAt": "2030-01-02T00:00:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "expired",
+      "expiresAt": "2029-12-31T23:59:59.999Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "expired",
+      "expiresAt": "2030-01-01T00:00:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "expired",
+      "expiresAt": "2030-01-01T00:00:00.001Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "expired",
+      "expiresAt": "2030-01-01T00:14:59.999Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "expired",
+      "expiresAt": "2030-01-01T00:15:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "expired",
+      "expiresAt": "2030-01-01T00:15:00.001Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "expired",
+      "expiresAt": "2030-01-02T00:00:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "",
+      "expiresAt": "2029-12-31T23:59:59.999Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "",
+      "expiresAt": "2030-01-01T00:00:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "",
+      "expiresAt": "2030-01-01T00:00:00.001Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "",
+      "expiresAt": "2030-01-01T00:14:59.999Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "",
+      "expiresAt": "2030-01-01T00:15:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "",
+      "expiresAt": "2030-01-01T00:15:00.001Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "initial",
+      "status": "",
+      "expiresAt": "2030-01-02T00:00:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:initial:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "pending",
+      "expiresAt": "2029-12-31T23:59:59.999Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "expired",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "pending",
+      "expiresAt": "2030-01-01T00:00:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "expired",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "pending",
+      "expiresAt": "2030-01-01T00:00:00.001Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "too-close-to-expiry",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "pending",
+      "expiresAt": "2030-01-01T00:14:59.999Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "too-close-to-expiry",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "pending",
+      "expiresAt": "2030-01-01T00:15:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "deliver",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "pending",
+      "expiresAt": "2030-01-01T00:15:00.001Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "deliver",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "pending",
+      "expiresAt": "2030-01-02T00:00:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "deliver",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "accepted",
+      "expiresAt": "2029-12-31T23:59:59.999Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "accepted",
+      "expiresAt": "2030-01-01T00:00:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "accepted",
+      "expiresAt": "2030-01-01T00:00:00.001Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "accepted",
+      "expiresAt": "2030-01-01T00:14:59.999Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "accepted",
+      "expiresAt": "2030-01-01T00:15:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "accepted",
+      "expiresAt": "2030-01-01T00:15:00.001Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "accepted",
+      "expiresAt": "2030-01-02T00:00:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "rejected",
+      "expiresAt": "2029-12-31T23:59:59.999Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "rejected",
+      "expiresAt": "2030-01-01T00:00:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "rejected",
+      "expiresAt": "2030-01-01T00:00:00.001Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "rejected",
+      "expiresAt": "2030-01-01T00:14:59.999Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "rejected",
+      "expiresAt": "2030-01-01T00:15:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "rejected",
+      "expiresAt": "2030-01-01T00:15:00.001Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "rejected",
+      "expiresAt": "2030-01-02T00:00:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "canceled",
+      "expiresAt": "2029-12-31T23:59:59.999Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "canceled",
+      "expiresAt": "2030-01-01T00:00:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "canceled",
+      "expiresAt": "2030-01-01T00:00:00.001Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "canceled",
+      "expiresAt": "2030-01-01T00:14:59.999Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "canceled",
+      "expiresAt": "2030-01-01T00:15:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "canceled",
+      "expiresAt": "2030-01-01T00:15:00.001Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "canceled",
+      "expiresAt": "2030-01-02T00:00:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "expired",
+      "expiresAt": "2029-12-31T23:59:59.999Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "expired",
+      "expiresAt": "2030-01-01T00:00:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "expired",
+      "expiresAt": "2030-01-01T00:00:00.001Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "expired",
+      "expiresAt": "2030-01-01T00:14:59.999Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "expired",
+      "expiresAt": "2030-01-01T00:15:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "expired",
+      "expiresAt": "2030-01-01T00:15:00.001Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "expired",
+      "expiresAt": "2030-01-02T00:00:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "",
+      "expiresAt": "2029-12-31T23:59:59.999Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "",
+      "expiresAt": "2030-01-01T00:00:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "",
+      "expiresAt": "2030-01-01T00:00:00.001Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "",
+      "expiresAt": "2030-01-01T00:14:59.999Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "",
+      "expiresAt": "2030-01-01T00:15:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "",
+      "expiresAt": "2030-01-01T00:15:00.001Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    },
+    {
+      "effect": "reminder-24h",
+      "status": "",
+      "expiresAt": "2030-01-02T00:00:00.000Z",
+      "now": "2030-01-01T00:00:00.000Z",
+      "decision": "not-pending",
+      "key": "workspace-invitation:fixture-invitation:reminder-24h:v1"
+    }
+  ],
+  "starts": [
+    {
+      "sdkRunId": null,
+      "state": "queued",
+      "allowed": true
+    },
+    {
+      "sdkRunId": null,
+      "state": "starting",
+      "allowed": true
+    },
+    {
+      "sdkRunId": null,
+      "state": "running",
+      "allowed": false
+    },
+    {
+      "sdkRunId": null,
+      "state": "completed",
+      "allowed": false
+    },
+    {
+      "sdkRunId": null,
+      "state": "failed-to-start",
+      "allowed": true
+    },
+    {
+      "sdkRunId": null,
+      "state": "failed",
+      "allowed": false
+    },
+    {
+      "sdkRunId": null,
+      "state": "cancelled",
+      "allowed": false
+    },
+    {
+      "sdkRunId": null,
+      "state": "",
+      "allowed": false
+    },
+    {
+      "sdkRunId": "",
+      "state": "queued",
+      "allowed": false
+    },
+    {
+      "sdkRunId": "",
+      "state": "starting",
+      "allowed": false
+    },
+    {
+      "sdkRunId": "",
+      "state": "running",
+      "allowed": false
+    },
+    {
+      "sdkRunId": "",
+      "state": "completed",
+      "allowed": false
+    },
+    {
+      "sdkRunId": "",
+      "state": "failed-to-start",
+      "allowed": false
+    },
+    {
+      "sdkRunId": "",
+      "state": "failed",
+      "allowed": false
+    },
+    {
+      "sdkRunId": "",
+      "state": "cancelled",
+      "allowed": false
+    },
+    {
+      "sdkRunId": "",
+      "state": "",
+      "allowed": false
+    },
+    {
+      "sdkRunId": "external-sdk-id",
+      "state": "queued",
+      "allowed": false
+    },
+    {
+      "sdkRunId": "external-sdk-id",
+      "state": "starting",
+      "allowed": false
+    },
+    {
+      "sdkRunId": "external-sdk-id",
+      "state": "running",
+      "allowed": false
+    },
+    {
+      "sdkRunId": "external-sdk-id",
+      "state": "completed",
+      "allowed": false
+    },
+    {
+      "sdkRunId": "external-sdk-id",
+      "state": "failed-to-start",
+      "allowed": false
+    },
+    {
+      "sdkRunId": "external-sdk-id",
+      "state": "failed",
+      "allowed": false
+    },
+    {
+      "sdkRunId": "external-sdk-id",
+      "state": "cancelled",
+      "allowed": false
+    },
+    {
+      "sdkRunId": "external-sdk-id",
+      "state": "",
+      "allowed": false
+    }
+  ],
+  "flags": [
+    {
+      "flag": "true",
+      "allowlist": "",
+      "workspace": "fixture",
+      "enabled": false
+    },
+    {
+      "flag": "true",
+      "allowlist": "",
+      "workspace": "other",
+      "enabled": false
+    },
+    {
+      "flag": "true",
+      "allowlist": "",
+      "workspace": "",
+      "enabled": false
+    },
+    {
+      "flag": "true",
+      "allowlist": ",",
+      "workspace": "fixture",
+      "enabled": false
+    },
+    {
+      "flag": "true",
+      "allowlist": ",",
+      "workspace": "other",
+      "enabled": false
+    },
+    {
+      "flag": "true",
+      "allowlist": ",",
+      "workspace": "",
+      "enabled": false
+    },
+    {
+      "flag": "true",
+      "allowlist": "fixture",
+      "workspace": "fixture",
+      "enabled": true
+    },
+    {
+      "flag": "true",
+      "allowlist": "fixture",
+      "workspace": "other",
+      "enabled": false
+    },
+    {
+      "flag": "true",
+      "allowlist": "fixture",
+      "workspace": "",
+      "enabled": false
+    },
+    {
+      "flag": "true",
+      "allowlist": " fixture , other ",
+      "workspace": "fixture",
+      "enabled": true
+    },
+    {
+      "flag": "true",
+      "allowlist": " fixture , other ",
+      "workspace": "other",
+      "enabled": true
+    },
+    {
+      "flag": "true",
+      "allowlist": " fixture , other ",
+      "workspace": "",
+      "enabled": false
+    },
+    {
+      "flag": "true",
+      "allowlist": "﻿fixture ",
+      "workspace": "fixture",
+      "enabled": true
+    },
+    {
+      "flag": "true",
+      "allowlist": "﻿fixture ",
+      "workspace": "other",
+      "enabled": false
+    },
+    {
+      "flag": "true",
+      "allowlist": "﻿fixture ",
+      "workspace": "",
+      "enabled": false
+    },
+    {
+      "flag": "true",
+      "allowlist": "Fixture",
+      "workspace": "fixture",
+      "enabled": false
+    },
+    {
+      "flag": "true",
+      "allowlist": "Fixture",
+      "workspace": "other",
+      "enabled": false
+    },
+    {
+      "flag": "true",
+      "allowlist": "Fixture",
+      "workspace": "",
+      "enabled": false
+    },
+    {
+      "flag": "false",
+      "allowlist": "",
+      "workspace": "fixture",
+      "enabled": false
+    },
+    {
+      "flag": "false",
+      "allowlist": "",
+      "workspace": "other",
+      "enabled": false
+    },
+    {
+      "flag": "false",
+      "allowlist": "",
+      "workspace": "",
+      "enabled": false
+    },
+    {
+      "flag": "false",
+      "allowlist": ",",
+      "workspace": "fixture",
+      "enabled": false
+    },
+    {
+      "flag": "false",
+      "allowlist": ",",
+      "workspace": "other",
+      "enabled": false
+    },
+    {
+      "flag": "false",
+      "allowlist": ",",
+      "workspace": "",
+      "enabled": false
+    },
+    {
+      "flag": "false",
+      "allowlist": "fixture",
+      "workspace": "fixture",
+      "enabled": false
+    },
+    {
+      "flag": "false",
+      "allowlist": "fixture",
+      "workspace": "other",
+      "enabled": false
+    },
+    {
+      "flag": "false",
+      "allowlist": "fixture",
+      "workspace": "",
+      "enabled": false
+    },
+    {
+      "flag": "false",
+      "allowlist": " fixture , other ",
+      "workspace": "fixture",
+      "enabled": false
+    },
+    {
+      "flag": "false",
+      "allowlist": " fixture , other ",
+      "workspace": "other",
+      "enabled": false
+    },
+    {
+      "flag": "false",
+      "allowlist": " fixture , other ",
+      "workspace": "",
+      "enabled": false
+    },
+    {
+      "flag": "false",
+      "allowlist": "﻿fixture ",
+      "workspace": "fixture",
+      "enabled": false
+    },
+    {
+      "flag": "false",
+      "allowlist": "﻿fixture ",
+      "workspace": "other",
+      "enabled": false
+    },
+    {
+      "flag": "false",
+      "allowlist": "﻿fixture ",
+      "workspace": "",
+      "enabled": false
+    },
+    {
+      "flag": "false",
+      "allowlist": "Fixture",
+      "workspace": "fixture",
+      "enabled": false
+    },
+    {
+      "flag": "false",
+      "allowlist": "Fixture",
+      "workspace": "other",
+      "enabled": false
+    },
+    {
+      "flag": "false",
+      "allowlist": "Fixture",
+      "workspace": "",
+      "enabled": false
+    },
+    {
+      "flag": "TRUE",
+      "allowlist": "",
+      "workspace": "fixture",
+      "enabled": false
+    },
+    {
+      "flag": "TRUE",
+      "allowlist": "",
+      "workspace": "other",
+      "enabled": false
+    },
+    {
+      "flag": "TRUE",
+      "allowlist": "",
+      "workspace": "",
+      "enabled": false
+    },
+    {
+      "flag": "TRUE",
+      "allowlist": ",",
+      "workspace": "fixture",
+      "enabled": false
+    },
+    {
+      "flag": "TRUE",
+      "allowlist": ",",
+      "workspace": "other",
+      "enabled": false
+    },
+    {
+      "flag": "TRUE",
+      "allowlist": ",",
+      "workspace": "",
+      "enabled": false
+    },
+    {
+      "flag": "TRUE",
+      "allowlist": "fixture",
+      "workspace": "fixture",
+      "enabled": false
+    },
+    {
+      "flag": "TRUE",
+      "allowlist": "fixture",
+      "workspace": "other",
+      "enabled": false
+    },
+    {
+      "flag": "TRUE",
+      "allowlist": "fixture",
+      "workspace": "",
+      "enabled": false
+    },
+    {
+      "flag": "TRUE",
+      "allowlist": " fixture , other ",
+      "workspace": "fixture",
+      "enabled": false
+    },
+    {
+      "flag": "TRUE",
+      "allowlist": " fixture , other ",
+      "workspace": "other",
+      "enabled": false
+    },
+    {
+      "flag": "TRUE",
+      "allowlist": " fixture , other ",
+      "workspace": "",
+      "enabled": false
+    },
+    {
+      "flag": "TRUE",
+      "allowlist": "﻿fixture ",
+      "workspace": "fixture",
+      "enabled": false
+    },
+    {
+      "flag": "TRUE",
+      "allowlist": "﻿fixture ",
+      "workspace": "other",
+      "enabled": false
+    },
+    {
+      "flag": "TRUE",
+      "allowlist": "﻿fixture ",
+      "workspace": "",
+      "enabled": false
+    },
+    {
+      "flag": "TRUE",
+      "allowlist": "Fixture",
+      "workspace": "fixture",
+      "enabled": false
+    },
+    {
+      "flag": "TRUE",
+      "allowlist": "Fixture",
+      "workspace": "other",
+      "enabled": false
+    },
+    {
+      "flag": "TRUE",
+      "allowlist": "Fixture",
+      "workspace": "",
+      "enabled": false
+    },
+    {
+      "flag": "1",
+      "allowlist": "",
+      "workspace": "fixture",
+      "enabled": false
+    },
+    {
+      "flag": "1",
+      "allowlist": "",
+      "workspace": "other",
+      "enabled": false
+    },
+    {
+      "flag": "1",
+      "allowlist": "",
+      "workspace": "",
+      "enabled": false
+    },
+    {
+      "flag": "1",
+      "allowlist": ",",
+      "workspace": "fixture",
+      "enabled": false
+    },
+    {
+      "flag": "1",
+      "allowlist": ",",
+      "workspace": "other",
+      "enabled": false
+    },
+    {
+      "flag": "1",
+      "allowlist": ",",
+      "workspace": "",
+      "enabled": false
+    },
+    {
+      "flag": "1",
+      "allowlist": "fixture",
+      "workspace": "fixture",
+      "enabled": false
+    },
+    {
+      "flag": "1",
+      "allowlist": "fixture",
+      "workspace": "other",
+      "enabled": false
+    },
+    {
+      "flag": "1",
+      "allowlist": "fixture",
+      "workspace": "",
+      "enabled": false
+    },
+    {
+      "flag": "1",
+      "allowlist": " fixture , other ",
+      "workspace": "fixture",
+      "enabled": false
+    },
+    {
+      "flag": "1",
+      "allowlist": " fixture , other ",
+      "workspace": "other",
+      "enabled": false
+    },
+    {
+      "flag": "1",
+      "allowlist": " fixture , other ",
+      "workspace": "",
+      "enabled": false
+    },
+    {
+      "flag": "1",
+      "allowlist": "﻿fixture ",
+      "workspace": "fixture",
+      "enabled": false
+    },
+    {
+      "flag": "1",
+      "allowlist": "﻿fixture ",
+      "workspace": "other",
+      "enabled": false
+    },
+    {
+      "flag": "1",
+      "allowlist": "﻿fixture ",
+      "workspace": "",
+      "enabled": false
+    },
+    {
+      "flag": "1",
+      "allowlist": "Fixture",
+      "workspace": "fixture",
+      "enabled": false
+    },
+    {
+      "flag": "1",
+      "allowlist": "Fixture",
+      "workspace": "other",
+      "enabled": false
+    },
+    {
+      "flag": "1",
+      "allowlist": "Fixture",
+      "workspace": "",
+      "enabled": false
+    },
+    {
+      "flag": "",
+      "allowlist": "",
+      "workspace": "fixture",
+      "enabled": false
+    },
+    {
+      "flag": "",
+      "allowlist": "",
+      "workspace": "other",
+      "enabled": false
+    },
+    {
+      "flag": "",
+      "allowlist": "",
+      "workspace": "",
+      "enabled": false
+    },
+    {
+      "flag": "",
+      "allowlist": ",",
+      "workspace": "fixture",
+      "enabled": false
+    },
+    {
+      "flag": "",
+      "allowlist": ",",
+      "workspace": "other",
+      "enabled": false
+    },
+    {
+      "flag": "",
+      "allowlist": ",",
+      "workspace": "",
+      "enabled": false
+    },
+    {
+      "flag": "",
+      "allowlist": "fixture",
+      "workspace": "fixture",
+      "enabled": false
+    },
+    {
+      "flag": "",
+      "allowlist": "fixture",
+      "workspace": "other",
+      "enabled": false
+    },
+    {
+      "flag": "",
+      "allowlist": "fixture",
+      "workspace": "",
+      "enabled": false
+    },
+    {
+      "flag": "",
+      "allowlist": " fixture , other ",
+      "workspace": "fixture",
+      "enabled": false
+    },
+    {
+      "flag": "",
+      "allowlist": " fixture , other ",
+      "workspace": "other",
+      "enabled": false
+    },
+    {
+      "flag": "",
+      "allowlist": " fixture , other ",
+      "workspace": "",
+      "enabled": false
+    },
+    {
+      "flag": "",
+      "allowlist": "﻿fixture ",
+      "workspace": "fixture",
+      "enabled": false
+    },
+    {
+      "flag": "",
+      "allowlist": "﻿fixture ",
+      "workspace": "other",
+      "enabled": false
+    },
+    {
+      "flag": "",
+      "allowlist": "﻿fixture ",
+      "workspace": "",
+      "enabled": false
+    },
+    {
+      "flag": "",
+      "allowlist": "Fixture",
+      "workspace": "fixture",
+      "enabled": false
+    },
+    {
+      "flag": "",
+      "allowlist": "Fixture",
+      "workspace": "other",
+      "enabled": false
+    },
+    {
+      "flag": "",
+      "allowlist": "Fixture",
+      "workspace": "",
+      "enabled": false
+    }
+  ],
+  "failures": [
+    {
+      "statusCode": null,
+      "name": "validation_error",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": null,
+      "name": "application_error",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": null,
+      "name": "internal_server_error",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": null,
+      "name": "concurrent_idempotent_requests",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": 400,
+      "name": "validation_error",
+      "retryable": false,
+      "retrySeconds": null
+    },
+    {
+      "statusCode": 400,
+      "name": "application_error",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": 400,
+      "name": "internal_server_error",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": 400,
+      "name": "concurrent_idempotent_requests",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": 401,
+      "name": "validation_error",
+      "retryable": false,
+      "retrySeconds": null
+    },
+    {
+      "statusCode": 401,
+      "name": "application_error",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": 401,
+      "name": "internal_server_error",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": 401,
+      "name": "concurrent_idempotent_requests",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": 403,
+      "name": "validation_error",
+      "retryable": false,
+      "retrySeconds": null
+    },
+    {
+      "statusCode": 403,
+      "name": "application_error",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": 403,
+      "name": "internal_server_error",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": 403,
+      "name": "concurrent_idempotent_requests",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": 408,
+      "name": "validation_error",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": 408,
+      "name": "application_error",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": 408,
+      "name": "internal_server_error",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": 408,
+      "name": "concurrent_idempotent_requests",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": 409,
+      "name": "validation_error",
+      "retryable": false,
+      "retrySeconds": null
+    },
+    {
+      "statusCode": 409,
+      "name": "application_error",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": 409,
+      "name": "internal_server_error",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": 409,
+      "name": "concurrent_idempotent_requests",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": 422,
+      "name": "validation_error",
+      "retryable": false,
+      "retrySeconds": null
+    },
+    {
+      "statusCode": 422,
+      "name": "application_error",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": 422,
+      "name": "internal_server_error",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": 422,
+      "name": "concurrent_idempotent_requests",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": 425,
+      "name": "validation_error",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": 425,
+      "name": "application_error",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": 425,
+      "name": "internal_server_error",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": 425,
+      "name": "concurrent_idempotent_requests",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": 429,
+      "name": "validation_error",
+      "retryable": true,
+      "retrySeconds": 60
+    },
+    {
+      "statusCode": 429,
+      "name": "application_error",
+      "retryable": true,
+      "retrySeconds": 60
+    },
+    {
+      "statusCode": 429,
+      "name": "internal_server_error",
+      "retryable": true,
+      "retrySeconds": 60
+    },
+    {
+      "statusCode": 429,
+      "name": "concurrent_idempotent_requests",
+      "retryable": true,
+      "retrySeconds": 60
+    },
+    {
+      "statusCode": 500,
+      "name": "validation_error",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": 500,
+      "name": "application_error",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": 500,
+      "name": "internal_server_error",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": 500,
+      "name": "concurrent_idempotent_requests",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": 503,
+      "name": "validation_error",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": 503,
+      "name": "application_error",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": 503,
+      "name": "internal_server_error",
+      "retryable": true,
+      "retrySeconds": 5
+    },
+    {
+      "statusCode": 503,
+      "name": "concurrent_idempotent_requests",
+      "retryable": true,
+      "retrySeconds": 5
+    }
+  ],
+  "messages": [
+    {
+      "input": {
+        "id": "fixture/id & +",
+        "email": "delivered@resend.dev",
+        "role": "owner",
+        "organizationName": "Forge <&> \"Team\"",
+        "inviterName": "Ada <script>FORGE_INVITATION_URL_MARKER</script>",
+        "inviterEmail": "ada@example.test",
+        "appUrl": "https://forge.example.test/base",
+        "reminder": false,
+        "idempotencyKey": "workspace-invitation:fixture/id & +:initial:v1"
+      },
+      "payload": {
+        "from": "Forge <fixture@example.test>",
+        "to": "delivered@resend.dev",
+        "subject": "Ada <script>FORGE_INVITATION_URL_MARKER</script> invited you to Forge <&> \"Team\" on Forge",
+        "text": "Ada <script>FORGE_INVITATION_URL_MARKER</script> (ada@example.test) invited you to join Forge <&> \"Team\" as owner.\n\nReview the invitation: https://forge.example.test/accept-invitation?id=fixture%2Fid+%26+%2B\n\nSign in with this email address. The invitation expires in 48 hours.",
+        "tags": [
+          {
+            "name": "category",
+            "value": "workspace-invitation"
+          }
+        ]
+      },
+      "htmlHash": "cf7087a3bdf27e3c3ea5e015422456396995add4028cc5cbae0e445d69712f66",
+      "key": "workspace-invitation:fixture/id & +:initial:v1"
+    },
+    {
+      "input": {
+        "id": "fixture/id & +",
+        "email": "delivered@resend.dev",
+        "role": "owner",
+        "organizationName": "Forge <&> \"Team\"",
+        "inviterName": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx😀",
+        "inviterEmail": "ada@example.test",
+        "appUrl": "https://forge.example.test/base",
+        "reminder": false,
+        "idempotencyKey": "workspace-invitation:fixture/id & +:initial:v1"
+      },
+      "payload": {
+        "from": "Forge <fixture@example.test>",
+        "to": "delivered@resend.dev",
+        "subject": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx😀 invited you to Forge <&> \"Team\" on Forge",
+        "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx😀 (ada@example.test) invited you to join Forge <&> \"Team\" as owner.\n\nReview the invitation: https://forge.example.test/accept-invitation?id=fixture%2Fid+%26+%2B\n\nSign in with this email address. The invitation expires in 48 hours.",
+        "tags": [
+          {
+            "name": "category",
+            "value": "workspace-invitation"
+          }
+        ]
+      },
+      "htmlHash": "4c3a5222d70c5b8986543162314410ee1c08ff1304da7a107917e246c9e82c64",
+      "key": "workspace-invitation:fixture/id & +:initial:v1"
+    },
+    {
+      "input": {
+        "id": "fixture/id & +",
+        "email": "delivered@resend.dev",
+        "role": "owner",
+        "organizationName": "Forge <&> \"Team\"",
+        "inviterName": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+        "inviterEmail": "ada@example.test",
+        "appUrl": "https://forge.example.test/base",
+        "reminder": false,
+        "idempotencyKey": "workspace-invitation:fixture/id & +:initial:v1"
+      },
+      "payload": {
+        "from": "Forge <fixture@example.test>",
+        "to": "delivered@resend.dev",
+        "subject": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀 invited you to Forge <&> \"Team\" on Forge",
+        "text": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀 (ada@example.test) invited you to join Forge <&> \"Team\" as owner.\n\nReview the invitation: https://forge.example.test/accept-invitation?id=fixture%2Fid+%26+%2B\n\nSign in with this email address. The invitation expires in 48 hours.",
+        "tags": [
+          {
+            "name": "category",
+            "value": "workspace-invitation"
+          }
+        ]
+      },
+      "htmlHash": "8b304e142fb54f5c91ad2e4bdee6dfae46ddc8877c3ed26e5e476db84802356a",
+      "key": "workspace-invitation:fixture/id & +:initial:v1"
+    },
+    {
+      "input": {
+        "id": "fixture/id & +",
+        "email": "delivered@resend.dev",
+        "role": "owner",
+        "organizationName": "Forge <&> \"Team\"",
+        "inviterName": "Ada",
+        "inviterEmail": "ada@example.test",
+        "appUrl": "https://forge.example.test/base",
+        "reminder": false,
+        "idempotencyKey": "workspace-invitation:fixture/id & +:initial:v1"
+      },
+      "payload": {
+        "from": "Forge <fixture@example.test>",
+        "to": "delivered@resend.dev",
+        "subject": "Ada invited you to Forge <&> \"Team\" on Forge",
+        "text": "Ada (ada@example.test) invited you to join Forge <&> \"Team\" as owner.\n\nReview the invitation: https://forge.example.test/accept-invitation?id=fixture%2Fid+%26+%2B\n\nSign in with this email address. The invitation expires in 48 hours.",
+        "tags": [
+          {
+            "name": "category",
+            "value": "workspace-invitation"
+          }
+        ]
+      },
+      "htmlHash": "73d811a17fceebe050f2c903b2fb70875dfbc71236aab9b3117bedc1ca03e88b",
+      "key": "workspace-invitation:fixture/id & +:initial:v1"
+    },
+    {
+      "input": {
+        "id": "fixture/id & +",
+        "email": "delivered@resend.dev",
+        "role": "owner",
+        "organizationName": "Forge <&> \"Team\"",
+        "inviterName": "Ada <script>FORGE_INVITATION_URL_MARKER</script>",
+        "inviterEmail": "ada@example.test",
+        "appUrl": "https://forge.example.test/base",
+        "reminder": true,
+        "idempotencyKey": "workspace-invitation:fixture/id & +:reminder-24h:v1"
+      },
+      "payload": {
+        "from": "Forge <fixture@example.test>",
+        "to": "delivered@resend.dev",
+        "subject": "Reminder: your invitation to Forge <&> \"Team\" on Forge",
+        "text": "This is a reminder that Ada <script>FORGE_INVITATION_URL_MARKER</script> (ada@example.test) invited you to join Forge <&> \"Team\" as owner.\n\nReview the invitation: https://forge.example.test/accept-invitation?id=fixture%2Fid+%26+%2B\n\nSign in with this email address. The invitation expires in 48 hours.",
+        "tags": [
+          {
+            "name": "category",
+            "value": "workspace-invitation"
+          }
+        ]
+      },
+      "htmlHash": "cf7087a3bdf27e3c3ea5e015422456396995add4028cc5cbae0e445d69712f66",
+      "key": "workspace-invitation:fixture/id & +:reminder-24h:v1"
+    },
+    {
+      "input": {
+        "id": "fixture/id & +",
+        "email": "delivered@resend.dev",
+        "role": "owner",
+        "organizationName": "Forge <&> \"Team\"",
+        "inviterName": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx😀",
+        "inviterEmail": "ada@example.test",
+        "appUrl": "https://forge.example.test/base",
+        "reminder": true,
+        "idempotencyKey": "workspace-invitation:fixture/id & +:reminder-24h:v1"
+      },
+      "payload": {
+        "from": "Forge <fixture@example.test>",
+        "to": "delivered@resend.dev",
+        "subject": "Reminder: your invitation to Forge <&> \"Team\" on Forge",
+        "text": "This is a reminder that xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx😀 (ada@example.test) invited you to join Forge <&> \"Team\" as owner.\n\nReview the invitation: https://forge.example.test/accept-invitation?id=fixture%2Fid+%26+%2B\n\nSign in with this email address. The invitation expires in 48 hours.",
+        "tags": [
+          {
+            "name": "category",
+            "value": "workspace-invitation"
+          }
+        ]
+      },
+      "htmlHash": "4c3a5222d70c5b8986543162314410ee1c08ff1304da7a107917e246c9e82c64",
+      "key": "workspace-invitation:fixture/id & +:reminder-24h:v1"
+    },
+    {
+      "input": {
+        "id": "fixture/id & +",
+        "email": "delivered@resend.dev",
+        "role": "owner",
+        "organizationName": "Forge <&> \"Team\"",
+        "inviterName": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+        "inviterEmail": "ada@example.test",
+        "appUrl": "https://forge.example.test/base",
+        "reminder": true,
+        "idempotencyKey": "workspace-invitation:fixture/id & +:reminder-24h:v1"
+      },
+      "payload": {
+        "from": "Forge <fixture@example.test>",
+        "to": "delivered@resend.dev",
+        "subject": "Reminder: your invitation to Forge <&> \"Team\" on Forge",
+        "text": "This is a reminder that 😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀 (ada@example.test) invited you to join Forge <&> \"Team\" as owner.\n\nReview the invitation: https://forge.example.test/accept-invitation?id=fixture%2Fid+%26+%2B\n\nSign in with this email address. The invitation expires in 48 hours.",
+        "tags": [
+          {
+            "name": "category",
+            "value": "workspace-invitation"
+          }
+        ]
+      },
+      "htmlHash": "8b304e142fb54f5c91ad2e4bdee6dfae46ddc8877c3ed26e5e476db84802356a",
+      "key": "workspace-invitation:fixture/id & +:reminder-24h:v1"
+    },
+    {
+      "input": {
+        "id": "fixture/id & +",
+        "email": "delivered@resend.dev",
+        "role": "owner",
+        "organizationName": "Forge <&> \"Team\"",
+        "inviterName": "Ada",
+        "inviterEmail": "ada@example.test",
+        "appUrl": "https://forge.example.test/base",
+        "reminder": true,
+        "idempotencyKey": "workspace-invitation:fixture/id & +:reminder-24h:v1"
+      },
+      "payload": {
+        "from": "Forge <fixture@example.test>",
+        "to": "delivered@resend.dev",
+        "subject": "Reminder: your invitation to Forge <&> \"Team\" on Forge",
+        "text": "This is a reminder that Ada (ada@example.test) invited you to join Forge <&> \"Team\" as owner.\n\nReview the invitation: https://forge.example.test/accept-invitation?id=fixture%2Fid+%26+%2B\n\nSign in with this email address. The invitation expires in 48 hours.",
+        "tags": [
+          {
+            "name": "category",
+            "value": "workspace-invitation"
+          }
+        ]
+      },
+      "htmlHash": "73d811a17fceebe050f2c903b2fb70875dfbc71236aab9b3117bedc1ca03e88b",
+      "key": "workspace-invitation:fixture/id & +:reminder-24h:v1"
+    },
+    {
+      "input": {
+        "id": "fixture/id & +",
+        "email": "delivered@resend.dev",
+        "role": "admin",
+        "organizationName": "Forge <&> \"Team\"",
+        "inviterName": "Ada <script>FORGE_INVITATION_URL_MARKER</script>",
+        "inviterEmail": "ada@example.test",
+        "appUrl": "https://forge.example.test/base",
+        "reminder": false,
+        "idempotencyKey": "workspace-invitation:fixture/id & +:initial:v1"
+      },
+      "payload": {
+        "from": "Forge <fixture@example.test>",
+        "to": "delivered@resend.dev",
+        "subject": "Ada <script>FORGE_INVITATION_URL_MARKER</script> invited you to Forge <&> \"Team\" on Forge",
+        "text": "Ada <script>FORGE_INVITATION_URL_MARKER</script> (ada@example.test) invited you to join Forge <&> \"Team\" as admin.\n\nReview the invitation: https://forge.example.test/accept-invitation?id=fixture%2Fid+%26+%2B\n\nSign in with this email address. The invitation expires in 48 hours.",
+        "tags": [
+          {
+            "name": "category",
+            "value": "workspace-invitation"
+          }
+        ]
+      },
+      "htmlHash": "4709b1b4a13685bf8e6384892e3a456b64819d7c48d7193218bf82ce80fc2c38",
+      "key": "workspace-invitation:fixture/id & +:initial:v1"
+    },
+    {
+      "input": {
+        "id": "fixture/id & +",
+        "email": "delivered@resend.dev",
+        "role": "admin",
+        "organizationName": "Forge <&> \"Team\"",
+        "inviterName": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx😀",
+        "inviterEmail": "ada@example.test",
+        "appUrl": "https://forge.example.test/base",
+        "reminder": false,
+        "idempotencyKey": "workspace-invitation:fixture/id & +:initial:v1"
+      },
+      "payload": {
+        "from": "Forge <fixture@example.test>",
+        "to": "delivered@resend.dev",
+        "subject": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx😀 invited you to Forge <&> \"Team\" on Forge",
+        "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx😀 (ada@example.test) invited you to join Forge <&> \"Team\" as admin.\n\nReview the invitation: https://forge.example.test/accept-invitation?id=fixture%2Fid+%26+%2B\n\nSign in with this email address. The invitation expires in 48 hours.",
+        "tags": [
+          {
+            "name": "category",
+            "value": "workspace-invitation"
+          }
+        ]
+      },
+      "htmlHash": "df4fe9bb65d9d317e271c5c83a9dc38708d26063a110189801da967c8c2c2723",
+      "key": "workspace-invitation:fixture/id & +:initial:v1"
+    },
+    {
+      "input": {
+        "id": "fixture/id & +",
+        "email": "delivered@resend.dev",
+        "role": "admin",
+        "organizationName": "Forge <&> \"Team\"",
+        "inviterName": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+        "inviterEmail": "ada@example.test",
+        "appUrl": "https://forge.example.test/base",
+        "reminder": false,
+        "idempotencyKey": "workspace-invitation:fixture/id & +:initial:v1"
+      },
+      "payload": {
+        "from": "Forge <fixture@example.test>",
+        "to": "delivered@resend.dev",
+        "subject": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀 invited you to Forge <&> \"Team\" on Forge",
+        "text": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀 (ada@example.test) invited you to join Forge <&> \"Team\" as admin.\n\nReview the invitation: https://forge.example.test/accept-invitation?id=fixture%2Fid+%26+%2B\n\nSign in with this email address. The invitation expires in 48 hours.",
+        "tags": [
+          {
+            "name": "category",
+            "value": "workspace-invitation"
+          }
+        ]
+      },
+      "htmlHash": "6a057b5b6508622f7fdaea9c7abff17b1d6772b244c232bf81d757d1e0b67b8f",
+      "key": "workspace-invitation:fixture/id & +:initial:v1"
+    },
+    {
+      "input": {
+        "id": "fixture/id & +",
+        "email": "delivered@resend.dev",
+        "role": "admin",
+        "organizationName": "Forge <&> \"Team\"",
+        "inviterName": "Ada",
+        "inviterEmail": "ada@example.test",
+        "appUrl": "https://forge.example.test/base",
+        "reminder": false,
+        "idempotencyKey": "workspace-invitation:fixture/id & +:initial:v1"
+      },
+      "payload": {
+        "from": "Forge <fixture@example.test>",
+        "to": "delivered@resend.dev",
+        "subject": "Ada invited you to Forge <&> \"Team\" on Forge",
+        "text": "Ada (ada@example.test) invited you to join Forge <&> \"Team\" as admin.\n\nReview the invitation: https://forge.example.test/accept-invitation?id=fixture%2Fid+%26+%2B\n\nSign in with this email address. The invitation expires in 48 hours.",
+        "tags": [
+          {
+            "name": "category",
+            "value": "workspace-invitation"
+          }
+        ]
+      },
+      "htmlHash": "3716697be7db1d30967e95c2e0e90836b17ceb2935a8f8816b19bb683afa024c",
+      "key": "workspace-invitation:fixture/id & +:initial:v1"
+    },
+    {
+      "input": {
+        "id": "fixture/id & +",
+        "email": "delivered@resend.dev",
+        "role": "admin",
+        "organizationName": "Forge <&> \"Team\"",
+        "inviterName": "Ada <script>FORGE_INVITATION_URL_MARKER</script>",
+        "inviterEmail": "ada@example.test",
+        "appUrl": "https://forge.example.test/base",
+        "reminder": true,
+        "idempotencyKey": "workspace-invitation:fixture/id & +:reminder-24h:v1"
+      },
+      "payload": {
+        "from": "Forge <fixture@example.test>",
+        "to": "delivered@resend.dev",
+        "subject": "Reminder: your invitation to Forge <&> \"Team\" on Forge",
+        "text": "This is a reminder that Ada <script>FORGE_INVITATION_URL_MARKER</script> (ada@example.test) invited you to join Forge <&> \"Team\" as admin.\n\nReview the invitation: https://forge.example.test/accept-invitation?id=fixture%2Fid+%26+%2B\n\nSign in with this email address. The invitation expires in 48 hours.",
+        "tags": [
+          {
+            "name": "category",
+            "value": "workspace-invitation"
+          }
+        ]
+      },
+      "htmlHash": "4709b1b4a13685bf8e6384892e3a456b64819d7c48d7193218bf82ce80fc2c38",
+      "key": "workspace-invitation:fixture/id & +:reminder-24h:v1"
+    },
+    {
+      "input": {
+        "id": "fixture/id & +",
+        "email": "delivered@resend.dev",
+        "role": "admin",
+        "organizationName": "Forge <&> \"Team\"",
+        "inviterName": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx😀",
+        "inviterEmail": "ada@example.test",
+        "appUrl": "https://forge.example.test/base",
+        "reminder": true,
+        "idempotencyKey": "workspace-invitation:fixture/id & +:reminder-24h:v1"
+      },
+      "payload": {
+        "from": "Forge <fixture@example.test>",
+        "to": "delivered@resend.dev",
+        "subject": "Reminder: your invitation to Forge <&> \"Team\" on Forge",
+        "text": "This is a reminder that xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx😀 (ada@example.test) invited you to join Forge <&> \"Team\" as admin.\n\nReview the invitation: https://forge.example.test/accept-invitation?id=fixture%2Fid+%26+%2B\n\nSign in with this email address. The invitation expires in 48 hours.",
+        "tags": [
+          {
+            "name": "category",
+            "value": "workspace-invitation"
+          }
+        ]
+      },
+      "htmlHash": "df4fe9bb65d9d317e271c5c83a9dc38708d26063a110189801da967c8c2c2723",
+      "key": "workspace-invitation:fixture/id & +:reminder-24h:v1"
+    },
+    {
+      "input": {
+        "id": "fixture/id & +",
+        "email": "delivered@resend.dev",
+        "role": "admin",
+        "organizationName": "Forge <&> \"Team\"",
+        "inviterName": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+        "inviterEmail": "ada@example.test",
+        "appUrl": "https://forge.example.test/base",
+        "reminder": true,
+        "idempotencyKey": "workspace-invitation:fixture/id & +:reminder-24h:v1"
+      },
+      "payload": {
+        "from": "Forge <fixture@example.test>",
+        "to": "delivered@resend.dev",
+        "subject": "Reminder: your invitation to Forge <&> \"Team\" on Forge",
+        "text": "This is a reminder that 😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀 (ada@example.test) invited you to join Forge <&> \"Team\" as admin.\n\nReview the invitation: https://forge.example.test/accept-invitation?id=fixture%2Fid+%26+%2B\n\nSign in with this email address. The invitation expires in 48 hours.",
+        "tags": [
+          {
+            "name": "category",
+            "value": "workspace-invitation"
+          }
+        ]
+      },
+      "htmlHash": "6a057b5b6508622f7fdaea9c7abff17b1d6772b244c232bf81d757d1e0b67b8f",
+      "key": "workspace-invitation:fixture/id & +:reminder-24h:v1"
+    },
+    {
+      "input": {
+        "id": "fixture/id & +",
+        "email": "delivered@resend.dev",
+        "role": "admin",
+        "organizationName": "Forge <&> \"Team\"",
+        "inviterName": "Ada",
+        "inviterEmail": "ada@example.test",
+        "appUrl": "https://forge.example.test/base",
+        "reminder": true,
+        "idempotencyKey": "workspace-invitation:fixture/id & +:reminder-24h:v1"
+      },
+      "payload": {
+        "from": "Forge <fixture@example.test>",
+        "to": "delivered@resend.dev",
+        "subject": "Reminder: your invitation to Forge <&> \"Team\" on Forge",
+        "text": "This is a reminder that Ada (ada@example.test) invited you to join Forge <&> \"Team\" as admin.\n\nReview the invitation: https://forge.example.test/accept-invitation?id=fixture%2Fid+%26+%2B\n\nSign in with this email address. The invitation expires in 48 hours.",
+        "tags": [
+          {
+            "name": "category",
+            "value": "workspace-invitation"
+          }
+        ]
+      },
+      "htmlHash": "3716697be7db1d30967e95c2e0e90836b17ceb2935a8f8816b19bb683afa024c",
+      "key": "workspace-invitation:fixture/id & +:reminder-24h:v1"
+    },
+    {
+      "input": {
+        "id": "fixture/id & +",
+        "email": "delivered@resend.dev",
+        "role": "member",
+        "organizationName": "Forge <&> \"Team\"",
+        "inviterName": "Ada <script>FORGE_INVITATION_URL_MARKER</script>",
+        "inviterEmail": "ada@example.test",
+        "appUrl": "https://forge.example.test/base",
+        "reminder": false,
+        "idempotencyKey": "workspace-invitation:fixture/id & +:initial:v1"
+      },
+      "payload": {
+        "from": "Forge <fixture@example.test>",
+        "to": "delivered@resend.dev",
+        "subject": "Ada <script>FORGE_INVITATION_URL_MARKER</script> invited you to Forge <&> \"Team\" on Forge",
+        "text": "Ada <script>FORGE_INVITATION_URL_MARKER</script> (ada@example.test) invited you to join Forge <&> \"Team\" as member.\n\nReview the invitation: https://forge.example.test/accept-invitation?id=fixture%2Fid+%26+%2B\n\nSign in with this email address. The invitation expires in 48 hours.",
+        "tags": [
+          {
+            "name": "category",
+            "value": "workspace-invitation"
+          }
+        ]
+      },
+      "htmlHash": "0523c81e9ce2fff2060c05cf7eceb652e92c26c67a4f1c6b8c07c9f43d19c512",
+      "key": "workspace-invitation:fixture/id & +:initial:v1"
+    },
+    {
+      "input": {
+        "id": "fixture/id & +",
+        "email": "delivered@resend.dev",
+        "role": "member",
+        "organizationName": "Forge <&> \"Team\"",
+        "inviterName": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx😀",
+        "inviterEmail": "ada@example.test",
+        "appUrl": "https://forge.example.test/base",
+        "reminder": false,
+        "idempotencyKey": "workspace-invitation:fixture/id & +:initial:v1"
+      },
+      "payload": {
+        "from": "Forge <fixture@example.test>",
+        "to": "delivered@resend.dev",
+        "subject": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx😀 invited you to Forge <&> \"Team\" on Forge",
+        "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx😀 (ada@example.test) invited you to join Forge <&> \"Team\" as member.\n\nReview the invitation: https://forge.example.test/accept-invitation?id=fixture%2Fid+%26+%2B\n\nSign in with this email address. The invitation expires in 48 hours.",
+        "tags": [
+          {
+            "name": "category",
+            "value": "workspace-invitation"
+          }
+        ]
+      },
+      "htmlHash": "b3c7c7b4bbeb7726426abf3d114c63c5fe55254a40cf6650784293aeb8857d0f",
+      "key": "workspace-invitation:fixture/id & +:initial:v1"
+    },
+    {
+      "input": {
+        "id": "fixture/id & +",
+        "email": "delivered@resend.dev",
+        "role": "member",
+        "organizationName": "Forge <&> \"Team\"",
+        "inviterName": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+        "inviterEmail": "ada@example.test",
+        "appUrl": "https://forge.example.test/base",
+        "reminder": false,
+        "idempotencyKey": "workspace-invitation:fixture/id & +:initial:v1"
+      },
+      "payload": {
+        "from": "Forge <fixture@example.test>",
+        "to": "delivered@resend.dev",
+        "subject": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀 invited you to Forge <&> \"Team\" on Forge",
+        "text": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀 (ada@example.test) invited you to join Forge <&> \"Team\" as member.\n\nReview the invitation: https://forge.example.test/accept-invitation?id=fixture%2Fid+%26+%2B\n\nSign in with this email address. The invitation expires in 48 hours.",
+        "tags": [
+          {
+            "name": "category",
+            "value": "workspace-invitation"
+          }
+        ]
+      },
+      "htmlHash": "460c2b3ec3324e0dcbf66326a0c2d281a7bd9905863d29b8e031c05a99094aa5",
+      "key": "workspace-invitation:fixture/id & +:initial:v1"
+    },
+    {
+      "input": {
+        "id": "fixture/id & +",
+        "email": "delivered@resend.dev",
+        "role": "member",
+        "organizationName": "Forge <&> \"Team\"",
+        "inviterName": "Ada",
+        "inviterEmail": "ada@example.test",
+        "appUrl": "https://forge.example.test/base",
+        "reminder": false,
+        "idempotencyKey": "workspace-invitation:fixture/id & +:initial:v1"
+      },
+      "payload": {
+        "from": "Forge <fixture@example.test>",
+        "to": "delivered@resend.dev",
+        "subject": "Ada invited you to Forge <&> \"Team\" on Forge",
+        "text": "Ada (ada@example.test) invited you to join Forge <&> \"Team\" as member.\n\nReview the invitation: https://forge.example.test/accept-invitation?id=fixture%2Fid+%26+%2B\n\nSign in with this email address. The invitation expires in 48 hours.",
+        "tags": [
+          {
+            "name": "category",
+            "value": "workspace-invitation"
+          }
+        ]
+      },
+      "htmlHash": "ed1e761c05d3e7e120b02ef1582ecc6949d0aacca090b9d2b70f49a453c25fe8",
+      "key": "workspace-invitation:fixture/id & +:initial:v1"
+    },
+    {
+      "input": {
+        "id": "fixture/id & +",
+        "email": "delivered@resend.dev",
+        "role": "member",
+        "organizationName": "Forge <&> \"Team\"",
+        "inviterName": "Ada <script>FORGE_INVITATION_URL_MARKER</script>",
+        "inviterEmail": "ada@example.test",
+        "appUrl": "https://forge.example.test/base",
+        "reminder": true,
+        "idempotencyKey": "workspace-invitation:fixture/id & +:reminder-24h:v1"
+      },
+      "payload": {
+        "from": "Forge <fixture@example.test>",
+        "to": "delivered@resend.dev",
+        "subject": "Reminder: your invitation to Forge <&> \"Team\" on Forge",
+        "text": "This is a reminder that Ada <script>FORGE_INVITATION_URL_MARKER</script> (ada@example.test) invited you to join Forge <&> \"Team\" as member.\n\nReview the invitation: https://forge.example.test/accept-invitation?id=fixture%2Fid+%26+%2B\n\nSign in with this email address. The invitation expires in 48 hours.",
+        "tags": [
+          {
+            "name": "category",
+            "value": "workspace-invitation"
+          }
+        ]
+      },
+      "htmlHash": "0523c81e9ce2fff2060c05cf7eceb652e92c26c67a4f1c6b8c07c9f43d19c512",
+      "key": "workspace-invitation:fixture/id & +:reminder-24h:v1"
+    },
+    {
+      "input": {
+        "id": "fixture/id & +",
+        "email": "delivered@resend.dev",
+        "role": "member",
+        "organizationName": "Forge <&> \"Team\"",
+        "inviterName": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx😀",
+        "inviterEmail": "ada@example.test",
+        "appUrl": "https://forge.example.test/base",
+        "reminder": true,
+        "idempotencyKey": "workspace-invitation:fixture/id & +:reminder-24h:v1"
+      },
+      "payload": {
+        "from": "Forge <fixture@example.test>",
+        "to": "delivered@resend.dev",
+        "subject": "Reminder: your invitation to Forge <&> \"Team\" on Forge",
+        "text": "This is a reminder that xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx😀 (ada@example.test) invited you to join Forge <&> \"Team\" as member.\n\nReview the invitation: https://forge.example.test/accept-invitation?id=fixture%2Fid+%26+%2B\n\nSign in with this email address. The invitation expires in 48 hours.",
+        "tags": [
+          {
+            "name": "category",
+            "value": "workspace-invitation"
+          }
+        ]
+      },
+      "htmlHash": "b3c7c7b4bbeb7726426abf3d114c63c5fe55254a40cf6650784293aeb8857d0f",
+      "key": "workspace-invitation:fixture/id & +:reminder-24h:v1"
+    },
+    {
+      "input": {
+        "id": "fixture/id & +",
+        "email": "delivered@resend.dev",
+        "role": "member",
+        "organizationName": "Forge <&> \"Team\"",
+        "inviterName": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+        "inviterEmail": "ada@example.test",
+        "appUrl": "https://forge.example.test/base",
+        "reminder": true,
+        "idempotencyKey": "workspace-invitation:fixture/id & +:reminder-24h:v1"
+      },
+      "payload": {
+        "from": "Forge <fixture@example.test>",
+        "to": "delivered@resend.dev",
+        "subject": "Reminder: your invitation to Forge <&> \"Team\" on Forge",
+        "text": "This is a reminder that 😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀 (ada@example.test) invited you to join Forge <&> \"Team\" as member.\n\nReview the invitation: https://forge.example.test/accept-invitation?id=fixture%2Fid+%26+%2B\n\nSign in with this email address. The invitation expires in 48 hours.",
+        "tags": [
+          {
+            "name": "category",
+            "value": "workspace-invitation"
+          }
+        ]
+      },
+      "htmlHash": "460c2b3ec3324e0dcbf66326a0c2d281a7bd9905863d29b8e031c05a99094aa5",
+      "key": "workspace-invitation:fixture/id & +:reminder-24h:v1"
+    },
+    {
+      "input": {
+        "id": "fixture/id & +",
+        "email": "delivered@resend.dev",
+        "role": "member",
+        "organizationName": "Forge <&> \"Team\"",
+        "inviterName": "Ada",
+        "inviterEmail": "ada@example.test",
+        "appUrl": "https://forge.example.test/base",
+        "reminder": true,
+        "idempotencyKey": "workspace-invitation:fixture/id & +:reminder-24h:v1"
+      },
+      "payload": {
+        "from": "Forge <fixture@example.test>",
+        "to": "delivered@resend.dev",
+        "subject": "Reminder: your invitation to Forge <&> \"Team\" on Forge",
+        "text": "This is a reminder that Ada (ada@example.test) invited you to join Forge <&> \"Team\" as member.\n\nReview the invitation: https://forge.example.test/accept-invitation?id=fixture%2Fid+%26+%2B\n\nSign in with this email address. The invitation expires in 48 hours.",
+        "tags": [
+          {
+            "name": "category",
+            "value": "workspace-invitation"
+          }
+        ]
+      },
+      "htmlHash": "ed1e761c05d3e7e120b02ef1582ecc6949d0aacca090b9d2b70f49a453c25fe8",
+      "key": "workspace-invitation:fixture/id & +:reminder-24h:v1"
+    }
+  ]
+}

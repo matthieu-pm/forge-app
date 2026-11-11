@@ -81,6 +81,7 @@ gate pass.
 | 3b5ag | Provider search execution, durable receipts and cross-provider history | Passed |
 | 3b6 | Scheduled agent-file retention and operational failure reporting | Passed |
 | 3b7 | Product retention, published recovery receipts and expired desktop drafts | Passed |
+| 3b8a | Invitation delivery policies, reminder mail and idempotent provider receipts | Passed |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -2033,3 +2034,35 @@ these routes do not represent a completed rewrite.
 - Full milestone gate passed: 522 Rust tests, 2,959 enabled TypeScript tests,
   all source-fixture drift checks, formatting, Clippy and three package
   typechecks. Evidence: `.forge/rust-rewrite/milestone-3b7-initial.log`.
+
+### Milestone 3b8a
+
+- Invitation policy now matches the application's pending/expired status rules,
+  exact 15-minute reminder boundary, workflow start eligibility and explicit
+  workspace allowlist. A source exporter evaluates the owning TypeScript modules
+  with an in-memory provider: 84 delivery cases, 24 start states, 90 feature gates,
+  44 provider errors and 24 rendered initial/reminder messages. The full gate
+  checks drift and compares native policy, text, tags and HTML hashes.
+- The native mail adapter supports separate stable initial/reminder effect keys,
+  provider delivery IDs, retryable error classification and the source's five-
+  second/one-minute retry delays. Responses are limited to 64 KiB and work to
+  15 seconds; redirects and ambient proxies are disabled. Errors retain only
+  status/retryability, with no provider body, recipient or exception text.
+- Local HTTP acceptance covers stable keys, receipt validation, provider errors,
+  malformed/oversized responses, redirects, unavailable providers and staging
+  restrictions. Provider configuration permits HTTPS or explicit loopback HTTP
+  fixtures; environment configuration selects the fixed Resend HTTPS endpoint.
+- The first full gate exposed fixed preview padding inherited from the original
+  static template export. Preview text now follows React Email's 150-UTF-16-unit
+  truncation and dynamic whitespace padding. Expanded parity fixtures include
+  long names, emoji crossing the truncation boundary and HTML/marker text.
+- [Resend's delivery keys expire after 24 hours](https://resend.com/docs/dashboard/emails/idempotency-keys).
+  The durable workflow must persist a conservative first-dispatch deadline and
+  require reconciliation for unknown outcomes after that window. This checkpoint
+  implements the transport/policy boundary only; lifecycle persistence, live
+  permission checks, reminder scheduling and HTTP enablement follow in 3b8b.
+  No real email was sent and the workflow-enabled endpoint remains unavailable.
+
+- Full milestone gate passed: 528 Rust tests, 2,959 enabled TypeScript tests,
+  source-fixture drift checks, formatting, Clippy and three package typechecks.
+  Evidence: `.forge/rust-rewrite/milestone-3b8a-verified.log`.

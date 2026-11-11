@@ -35,6 +35,7 @@ pub mod preferences;
 pub mod agents;
 pub mod files;
 pub mod imports;
+pub mod invitations;
 pub mod jobs;
 pub mod profiles;
 pub mod sla;

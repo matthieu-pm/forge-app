@@ -15,7 +15,15 @@ for (const role of ["owner", "admin", "member"]) templates.push([`invitation-${r
   organizationName: "FORGE_WORKSPACE_NAME_MARKER", invitationUrl: "FORGE_INVITATION_URL_MARKER", role,
 }))])
 for (const [name, html] of templates) {
-  const output = html + "\n"
+  // React Email truncates preview text at 150 UTF-16 units and pads the
+  // remainder. The Rust renderer must calculate this after substitution.
+  const preview = /(<div[^>]*data-skip-in-text="true">)[\s\S]*?<\/div><\/div>/
+  if (name.startsWith("invitation-") && !preview.test(html)) {
+    throw new Error("Invitation preview structure changed; review the native renderer.")
+  }
+  const output = (name.startsWith("invitation-")
+    ? html.replace(preview, "$1FORGE_INVITATION_PREVIEW_MARKER</div>")
+    : html) + "\n"
   const destination = new URL(`../rust/crates/forge-server/templates/${name}.html`, import.meta.url)
   if (process.argv.includes("--check")) {
     if (readFileSync(destination, "utf8") !== output) {
