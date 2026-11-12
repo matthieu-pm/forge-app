@@ -13,11 +13,12 @@ use axum::{
 };
 use forge_store::{
     StoreError,
-    loops::{Options, Service},
+    loops::{DispatchOptions, DispatchReport, Options, Service},
 };
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::sync::Arc;
+use subtle::ConstantTimeEq;
 fn service(state: &AppState) -> Result<Service, StoreError> {
     let mut service = Service::new(
         state.pool.clone().ok_or(StoreError::Unauthenticated)?,
@@ -68,6 +69,70 @@ fn response(status: StatusCode, body: Value) -> Response {
 }
 fn error(status: StatusCode, message: &str) -> Response {
     response(status, json!({"error":message}))
+}
+/// Keep scheduler authentication ahead of database and provider construction.
+/// The returned receipt is emitted only after the worker's settlement completes.
+pub async fn handle_scheduler<F, Fut>(request: Request, options: &Options, run: F) -> Response
+where
+    F: FnOnce(i64) -> Fut,
+    Fut: Future<Output = Result<DispatchReport, StoreError>>,
+{
+    let start_before = chrono::Utc::now()
+        .timestamp_millis()
+        .saturating_add(forge_core::loops::SCHEDULER_SETUP_MS);
+    if !matches!(*request.method(), Method::GET | Method::POST) {
+        return (
+            StatusCode::METHOD_NOT_ALLOWED,
+            [(header::CACHE_CONTROL, "no-store")],
+        )
+            .into_response();
+    }
+    let secret = options
+        .environment
+        .get("CRON_SECRET")
+        .map(String::as_str)
+        .unwrap_or("");
+    let credentials = request.headers().get_all(header::AUTHORIZATION);
+    let supplied = credentials
+        .iter()
+        .next()
+        .map(|h| h.as_bytes())
+        .unwrap_or_default();
+    let supplied = supplied.strip_prefix(b"Bearer ").unwrap_or(supplied);
+    if credentials.iter().count() != 1
+        || secret.encode_utf16().count() < 32
+        || supplied.len() != secret.len()
+        || !bool::from(supplied.ct_eq(secret.as_bytes()))
+    {
+        return (
+            StatusCode::UNAUTHORIZED,
+            [(header::CACHE_CONTROL, "no-store")],
+        )
+            .into_response();
+    }
+    if !options.enabled {
+        return response(StatusCode::OK, json!(DispatchReport::default()));
+    }
+    match run(start_before).await {
+        Ok(report) => response(StatusCode::OK, json!(report)),
+        Err(_) => response(
+            StatusCode::SERVICE_UNAVAILABLE,
+            json!({"code":"LOOP_DISPATCH_FAILED"}),
+        ),
+    }
+}
+pub(crate) async fn scheduler(State(state): State<AppState>, request: Request) -> Response {
+    let options = state.loops.clone().unwrap_or_else(Options::from_env);
+    handle_scheduler(request, &options, |start_before| async move {
+        service(&state)?
+            .dispatch(DispatchOptions {
+                limit: 1,
+                execution_start_before: Some(start_before),
+                ..Default::default()
+            })
+            .await
+    })
+    .await
 }
 pub(crate) async fn webhook(
     State(state): State<AppState>,

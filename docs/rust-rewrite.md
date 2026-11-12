@@ -93,6 +93,7 @@ gate pass.
 | 3b10d | Actor-scoped resource predicates and shared read projections | Passed |
 | 3b10e | Live loop authority, model and run binding, durable artifact publication | Passed |
 | 3b10f | Bound cloud loop execution, durable claims and decision settlement | Passed |
+| 3b10g | Authenticated loop scheduler, bounded dispatch and native operator | Passed |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -2500,3 +2501,44 @@ these routes do not represent a completed rewrite.
   **three typechecks**, including all fixtures, formatting and Clippy. The 607
   external-fixture tests in 31 files remain skipped.
   Evidence: `.forge/rust-rewrite/milestone-3b10f-initial.log`.
+
+### Milestone 3b10g
+
+- A dispatcher reconciles expired approvals and abandoned leases, captures native
+  and calendar events, and awaits a bounded number of durable executions. An
+  enqueue-only tick still reconciles expiry. The setup allowance is checked
+  before every claim and does not reset an execution's original deadline.
+- GET/POST `/api/internal/loops` authenticates the configured cron secret before
+  accessing the database. It accepts the reference credential forms, rejects
+  duplicate headers, and returns a no-store receipt after at most one settled
+  execution. Disabled ticks return zero counters without a database. Failures
+  return a bounded code without provider or credential details.
+- `cargo run -p forge-server --bin forge-loops -- run [--watch]` uses explicit
+  process configuration and the same recovery journal, storage and agent
+  composition as the HTTP host. Watch mode waits five seconds after idle ticks;
+  interrupt/termination stops new claims after the active dispatch settles.
+  The existing scheduler driver can call the same HTTP contract. No scheduler
+  registration, deployment or production configuration is changed.
+- Seven new scenarios cover authentication, awaited settlement, disabled and
+  unavailable workers, queue/expiry integration, setup limits between claims,
+  native/calendar capture, and operator execution/idle shutdown. Global HTTP and
+  operator scans use their own disposable PostgreSQL database. Full gate pending.
+- The initial gate passed 621 Rust tests, all 3,013 enabled reference tests and
+  three typechecks. One new calendar fixture incorrectly attempted to create a
+  schedule in the past, which the existing policy rejected. The fixture now
+  creates a future schedule and passes a later dispatch instant, preserving its
+  capture and execution assertions. Formatting and Clippy also passed; the
+  corrected full gate remains pending.
+  Evidence: `.forge/rust-rewrite/milestone-3b10g-initial.log`.
+- The second gate again passed 621 Rust tests, all reference tests and typechecks.
+  The combined fixture then reached a mistaken event-count assertion: migration
+  0068 emits nothing before an applicable loop is enabled. The fixture now
+  explicitly checks that empty initial queue, then expects the one newly created
+  source event. It retains the separate scheduled occurrence, one execution per
+  tick and no-duplicate assertions. The ineffective fixture timestamp updates
+  were removed. Application behavior and producer rules are unchanged.
+  Evidence: `.forge/rust-rewrite/milestone-3b10g-calendar.log`.
+- The corrected full gate passed **622 Rust tests**, **3,013 enabled reference
+  tests**, and **three typechecks**, including all fixtures, formatting and
+  Clippy. The 607 external-fixture tests in 31 files remain skipped.
+  Evidence: `.forge/rust-rewrite/milestone-3b10g-producer.log`.

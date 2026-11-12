@@ -11,7 +11,7 @@ pub mod files;
 mod imports;
 pub mod invitation_workflow;
 mod issues;
-mod loops;
+pub mod loops;
 pub mod mail;
 pub mod model_providers;
 pub mod model_proxy;
@@ -412,6 +412,7 @@ pub fn router_with_state(state: state::AppState) -> Router {
         .route("/api/health/ready", get(ready))
         .route("/api/files/{*path}", axum::routing::any(files::handle))
         .route("/api/internal/sla-jobs", axum::routing::any(sla::scheduler))
+        .route("/api/internal/loops", axum::routing::any(loops::scheduler))
         .route(
             "/api/internal/issue-retention",
             axum::routing::any(retention::route),

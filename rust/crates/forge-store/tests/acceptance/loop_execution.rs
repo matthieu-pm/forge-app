@@ -591,3 +591,162 @@ async fn shared_loop_execution_retains_the_workspace_budget_limit() {
     let count:i64=sqlx::query_scalar("SELECT count(*) FROM agent_runs r JOIN agent_threads t ON t.id=r.thread_id WHERE t.workspace_id=$1").bind(&f.actor.workspace_id).fetch_one(&f.pool).await.unwrap();
     assert_eq!(count, 0);
 }
+
+#[tokio::test]
+async fn dispatch_defers_late_starts_but_expires_waiting_and_abandoned_runs_without_replay() {
+    use forge_store::loops::{DispatchOptions, DispatchReport};
+    let f = Fixture::new().await;
+    let (mut s, team, definition, issue) = setup(&f).await;
+    let run = queue(&f, &s, team, definition, &issue).await;
+    let options = DispatchOptions {
+        limit: 1,
+        workspace: Some(&f.actor.workspace_id),
+        ..Default::default()
+    };
+    let probe = Probe::default();
+    probe.waiting.store(true, Ordering::SeqCst);
+    s.options.enabled = false;
+    assert_eq!(
+        s.dispatch_with(options, &probe).await.unwrap(),
+        DispatchReport::default()
+    );
+    s.options.enabled = true;
+    let deferred = s
+        .dispatch_with(
+            DispatchOptions {
+                execution_start_before: Some(Utc::now().timestamp_millis() - 1),
+                ..options
+            },
+            &probe,
+        )
+        .await
+        .unwrap();
+    assert!(deferred.enabled);
+    assert_eq!(deferred.executed, 0);
+    assert!(probe.calls.lock().unwrap().is_empty());
+    assert_eq!(saved(&f, run).await["state"], "queued");
+    assert_eq!(s.dispatch_with(options, &probe).await.unwrap().executed, 1);
+    sqlx::query("UPDATE loop_runs SET started_at=clock_timestamp()-interval '4 minutes 1 second' WHERE id=$1")
+        .bind(run).execute(&f.pool).await.unwrap();
+    assert_eq!(
+        s.dispatch_with(
+            DispatchOptions {
+                enqueue_only: true,
+                ..options
+            },
+            &probe
+        )
+        .await
+        .unwrap()
+        .executed,
+        0
+    );
+    let expired = saved(&f, run).await;
+    assert_eq!(expired["state"], "failed");
+    assert_eq!(expired["error_code"], "RUN_WALL_CLOCK_LIMIT");
+    let abandoned = queue(&f, &s, team, definition, &issue).await;
+    sqlx::query("UPDATE loop_runs SET state='running',started_at=clock_timestamp()-interval '6 minutes',lease_at=clock_timestamp()-interval '6 minutes' WHERE id=$1")
+        .bind(abandoned).execute(&f.pool).await.unwrap();
+    assert_eq!(s.dispatch_with(options, &probe).await.unwrap().executed, 0);
+    assert_eq!(saved(&f, abandoned).await["state"], "uncertain");
+    assert_eq!(
+        saved(&f, abandoned).await["error_code"],
+        "WORKER_LEASE_EXPIRED"
+    );
+    assert_eq!(probe.calls.lock().unwrap().len(), 1);
+}
+
+#[tokio::test]
+async fn dispatch_checks_the_start_allowance_again_before_each_claim() {
+    use forge_store::loops::DispatchOptions;
+    use std::sync::atomic::AtomicI64;
+    struct AdvancesClock(Probe, Arc<AtomicI64>);
+    #[async_trait]
+    impl Executor for AdvancesClock {
+        async fn execute(
+            &self,
+            actor: Actor,
+            run: ClaimedRun,
+            context: Value,
+        ) -> Result<ExecutionResult, StoreError> {
+            let result = self.0.execute(actor, run, context).await;
+            self.1.fetch_add(20_000, Ordering::SeqCst);
+            result
+        }
+    }
+    let f = Fixture::new().await;
+    let (mut s, team, definition, issue) = setup(&f).await;
+    let first = queue(&f, &s, team, definition, &issue).await;
+    let second = queue(&f, &s, team, definition, &issue).await;
+    let start = Utc::now().timestamp_millis();
+    let clock = Arc::new(AtomicI64::new(start));
+    let current = clock.clone();
+    s.now =
+        Arc::new(move || DateTime::from_timestamp_millis(current.load(Ordering::SeqCst)).unwrap());
+    let executor = AdvancesClock(Probe::default(), clock);
+    let report = s
+        .dispatch_with(
+            DispatchOptions {
+                workspace: Some(&f.actor.workspace_id),
+                execution_start_before: Some(start + 1000),
+                ..Default::default()
+            },
+            &executor,
+        )
+        .await
+        .unwrap();
+    assert_eq!(report.executed, 1);
+    assert_eq!(executor.0.calls.lock().unwrap().len(), 1);
+    assert_eq!(saved(&f, first).await["state"], "completed");
+    assert_eq!(saved(&f, second).await["state"], "queued");
+}
+
+#[tokio::test]
+async fn dispatch_combines_native_and_calendar_capture_with_bounded_durable_execution() {
+    use forge_store::loops::DispatchOptions;
+    let f = Fixture::new().await;
+    let (s, team, native, _) = setup(&f).await;
+    // The canonical producer emits only when an enabled loop can receive it.
+    // The source created by setup precedes enablement and has no queue event.
+    let before: i64 = sqlx::query_scalar("SELECT count(*) FROM loop_events WHERE workspace_id=$1")
+        .bind(&f.actor.workspace_id)
+        .fetch_one(&f.pool)
+        .await
+        .unwrap();
+    assert_eq!(before, 0);
+    let mut fields = loop_acceptance::fields();
+    let start = Utc::now() + chrono::Duration::minutes(1);
+    fields["trigger"] = json!({"kind":"schedule","unit":"hours","interval":1,
+        "startAt":forge_core::loops::iso_timestamp(start),"timeZone":"UTC"});
+    let scheduled = loop_acceptance::create(&s, &f.actor, team, fields).await;
+    loop_acceptance::enable(&s, &f.actor, team, scheduled, 1).await;
+    issue_acceptance::create(&f, team, "Native dispatch source").await;
+    let options = DispatchOptions {
+        workspace: Some(&f.actor.workspace_id),
+        limit: 1,
+        now: Some(start + chrono::Duration::minutes(1)),
+        ..Default::default()
+    };
+    let probe = Probe::default();
+    let first = s.dispatch_with(options, &probe).await.unwrap();
+    assert_eq!(first.events, 1);
+    assert_eq!(first.scheduled, 1);
+    assert_eq!(first.executed, 1);
+    let states: Vec<String> = sqlx::query_scalar(
+        "SELECT state FROM loop_runs WHERE workspace_id=$1 ORDER BY created_at,id",
+    )
+    .bind(&f.actor.workspace_id)
+    .fetch_all(&f.pool)
+    .await
+    .unwrap();
+    assert_eq!(states, ["completed", "queued"]);
+    let second = s.dispatch_with(options, &probe).await.unwrap();
+    assert_eq!(
+        (second.events, second.scheduled, second.executed),
+        (0, 0, 1)
+    );
+    let calls = probe.calls.lock().unwrap();
+    assert_eq!(calls.len(), 2);
+    assert_eq!(calls[0].1.loop_id, native);
+    assert_eq!(calls[1].1.loop_id, scheduled);
+}

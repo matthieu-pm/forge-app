@@ -16,11 +16,13 @@ mod context;
 mod directory;
 mod dispatch;
 mod execution;
+mod scheduler;
 mod webhook;
 pub(crate) use authority::{agent_run_matches, current_from_env as current_loop_actor};
 pub use dispatch::ExpiredRuns;
 pub(crate) use execution::decision_reviewer;
 pub use execution::{ClaimedRun, ExecutionResult, ExecutionState, Executor};
+pub use scheduler::{DispatchOptions, DispatchReport};
 
 #[derive(Clone)]
 pub struct Options {

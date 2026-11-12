@@ -38,6 +38,7 @@ infer = "0.22.0"
 html5ever = "0.39.0"
 
 [dev-dependencies]
+tokio = { workspace = true, features = ["process"] }
 forge-agent-runtime = { path = "../forge-agent-runtime" }
 rsa = "0.9"
 tower.workspace = true
