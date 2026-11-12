@@ -97,6 +97,7 @@ gate pass.
 | 3b11a | Call transcript contracts, shared records, notes, actions and journaled retention | Passed |
 | 3b11b | Meeting provider OAuth, deployment isolation and fenced credential publication | Passed |
 | 3b11c | Native transcript synchronization, fenced recap publication and Calls operator | Passed |
+| 3b12a | Billing contracts, configuration, country policy, calendar periods and usage authority | Passed |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -2663,3 +2664,32 @@ these routes do not represent a completed rewrite.
   tests**, three typechecks, source comparisons, formatting and Clippy. The 607
   external-fixture tests in 31 files remain skipped. Evidence:
   `.forge/rust-rewrite/milestone-3b11c-row-type.log`.
+
+### Milestone 3b12a
+
+- Shared billing contracts preserve commercial plan names, member and upload
+  limits, monthly seat pricing, safe-integer bounds, pooled allocations and the
+  distinction between Forge-managed usage and user-owned provider costs. Paid
+  Calls and Signals remain outside the customer AI pool, matching the source.
+- Billing configuration is disabled by default, validates the pinned product
+  IDs and provider environment, and restricts application origins. Credential
+  configuration has no Debug implementation; failures contain fixed codes.
+  Management identity requires a session and workspace owner/admin role.
+- The source-derived country catalog preserves all 244 accepted codes and the
+  selected EUR commercial region. Read-only billing notices use the existing
+  subscription-access decision and exact source copy.
+- Calendar policy preserves UTC time, original month-day anchors and half-open
+  usage windows through short months and leap years. Replacement payment timing
+  cannot move the usage anniversary or restart checkout grace. Trial expiry and
+  paid-to-free transitions carry committed capacity without granting another
+  allowance or creating a charge.
+- Usage authority reuses the existing read-time subscription policy for trial,
+  paid, grace and free states, rejects unreconciled identities/periods, and binds
+  downgrade transitions to their original effective time. Six fixture suites
+  cover 4,951 cases generated directly from the owning TypeScript functions.
+  Exact FX/invoice arithmetic, durable billing state and provider I/O remain
+  subsequent milestones.
+- Full gate passed **659 Rust tests**, **3,013 enabled reference tests**, all
+  three TypeScript typechecks, source fixtures, formatting and warning-free
+  Clippy. The 607 external-fixture tests remain skipped. Evidence:
+  `.forge/rust-rewrite/milestone-3b12a-initial.log`.
