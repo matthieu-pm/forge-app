@@ -8,15 +8,15 @@ pub(super) async fn authorized(
     all_public: bool,
 ) -> Result<Value, StoreError> {
     let (table, condition) = match entity {
-        "issue" => ("issues", policy::readable_issue("r.id")),
-        "project" => ("projects", policy::readable_project("r.id")),
-        "team" => ("teams", policy::readable_team("r.id")),
-        "cycle" => ("issue_cycles", policy::readable_team("r.team_id")),
+        "issue" => ("issues", policy::readable_issue(a, "r.id")),
+        "project" => ("projects", policy::readable_project(a, "r.id")),
+        "team" => ("teams", policy::readable_team(a, "r.id")),
+        "cycle" => ("issue_cycles", policy::readable_team(a, "r.team_id")),
         "initiative" => (
             "initiatives",
             format!(
                 "EXISTS(SELECT 1 FROM initiative_projects ip JOIN project_teams pt ON pt.project_id=ip.project_id AND pt.workspace_id=ip.workspace_id WHERE ip.initiative_id=r.id AND ip.workspace_id=$1 AND (CASE WHEN $6 THEN ({} AND EXISTS(SELECT 1 FROM teams t WHERE t.id=pt.team_id AND t.visibility='workspace')) ELSE pt.team_id=$5 END))",
-                policy::readable_team("pt.team_id")
+                policy::readable_team(a, "pt.team_id")
             ),
         ),
         _ => return Err(StoreError::InvalidInput),
@@ -58,7 +58,7 @@ pub(super) async fn current(
     if !ids.is_empty() {
         let q = format!(
             "SELECT t.id FROM teams t WHERE t.id=ANY($4) AND {} AND (CASE WHEN $6 THEN t.visibility='workspace' ELSE t.id=$5 END) ORDER BY t.id",
-            policy::readable_team("t.id")
+            policy::readable_team(a, "t.id")
         );
         let readable: Vec<Uuid> = sqlx::query_scalar(&q)
             .bind(&a.workspace_id)
@@ -82,7 +82,7 @@ pub(super) async fn current(
             .collect::<Result<_, _>>()?;
         let q = format!(
             "SELECT p.id FROM projects p WHERE p.id=ANY($4) AND {} AND EXISTS(SELECT 1 FROM project_teams pt WHERE pt.workspace_id=$1 AND pt.project_id=p.id AND pt.team_id=ANY($5)) ORDER BY p.id",
-            policy::readable_project("p.id")
+            policy::readable_project(a, "p.id")
         );
         let visible: Vec<Uuid> = sqlx::query_scalar(&q)
             .bind(&a.workspace_id)

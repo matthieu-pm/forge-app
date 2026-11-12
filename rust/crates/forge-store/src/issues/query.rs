@@ -79,9 +79,12 @@ pub async fn query(
         .map_or(now + 15 * 60_000, |c| c["expires"].as_i64().unwrap());
     let normalized = json!({"search":text(input,"search").to_lowercase(),"rules":input["filters"]["rules"].as_array().unwrap().iter().map(|r|json!({"field":r["field"],"operator":r["operator"],"expected":forge_core::text::trim(text(r,"value")).to_lowercase()})).collect::<Vec<_>>()});
     let sql = include_str!("query.sql")
-        .replace("{{team}}", &policy::readable_team("i.team_id"))
-        .replace("{{parent}}", &policy::readable_issue("i.parent_id"))
-        .replace("{{project}}", &policy::readable_project("i.project_id"));
+        .replace("{{team}}", &policy::readable_team(&actor, "i.team_id"))
+        .replace("{{parent}}", &policy::readable_issue(&actor, "i.parent_id"))
+        .replace(
+            "{{project}}",
+            &policy::readable_project(&actor, "i.project_id"),
+        );
     let limit = input["limit"].as_i64().unwrap();
     let mut result: Aggregated = sqlx::query_as(&sql)
         .bind(&actor.workspace_id)

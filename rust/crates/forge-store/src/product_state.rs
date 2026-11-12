@@ -67,7 +67,7 @@ async fn scope(
     if let Some(project) = contract::post_project(key) {
         let q = format!(
             "SELECT p.id FROM projects p WHERE p.id=$4 AND {}",
-            policy::readable_project("p.id")
+            policy::readable_project(a, "p.id")
         );
         sqlx::query(&q)
             .bind(&a.workspace_id)
@@ -145,7 +145,7 @@ async fn issue_value(
     );
     let q = format!(
         "SELECT i.id,i.deleted_at,i.archived_at,i.purge_started_at FROM issues i WHERE i.id=ANY($4) AND {}",
-        policy::retained_issue("i.id")
+        policy::retained_issue(a, "i.id")
     );
     let rows: Vec<Issue> = sqlx::query_as(&q)
         .bind(&a.workspace_id)
@@ -215,7 +215,7 @@ pub async fn read(
     let rows:Vec<Row>=sqlx::query_as("SELECT id,key,owner_id,encoded_value,revision FROM product_state WHERE workspace_id=$1 AND owner_id IN('workspace',$2)").bind(&a.workspace_id).bind(format!("user:{}",a.user_id)).fetch_all(&mut *tx).await?;
     let q = format!(
         "SELECT p.id,p.properties->'labelIds' FROM projects p WHERE {}",
-        policy::readable_project("p.id")
+        policy::readable_project(&a, "p.id")
     );
     let projects: Vec<(Uuid, Option<Value>)> = sqlx::query_as(&q)
         .bind(&a.workspace_id)
@@ -303,7 +303,7 @@ pub async fn read(
     }
     let q = format!(
         "SELECT t.id FROM teams t WHERE {}",
-        policy::readable_team("t.id")
+        policy::readable_team(&a, "t.id")
     );
     let team_ids: Vec<Uuid> = sqlx::query_scalar(&q)
         .bind(&a.workspace_id)

@@ -117,8 +117,17 @@ pub(crate) async fn read_tx(
         value["statuses"]["statuses"] = json!(statuses);
     }
     let labels:Vec<(Uuid,String,Option<Value>)>=sqlx::query_as("SELECT id,name,definition FROM resource_labels WHERE workspace_id=$1 AND team_id IS NOT DISTINCT FROM $2 ORDER BY name").bind(&actor.workspace_id).bind(team).fetch_all(&mut *connection).await?;
-    let counts:Vec<(Uuid,i64)>=sqlx::query_as("SELECT l.id,count(*) FROM issue_labels a JOIN resource_labels l ON l.id=a.label_id AND l.workspace_id=a.workspace_id JOIN issues i ON i.id=a.issue_id AND i.workspace_id=a.workspace_id JOIN teams t ON t.id=i.team_id AND t.workspace_id=i.workspace_id WHERE l.workspace_id=$1 AND l.team_id IS NOT DISTINCT FROM $2 AND i.deleted_at IS NULL AND i.archived_at IS NULL AND i.purged_at IS NULL AND t.deleted_at IS NULL AND (t.visibility='workspace' OR $3 OR EXISTS(SELECT 1 FROM team_members tm WHERE tm.workspace_id=t.workspace_id AND tm.team_id=t.id AND tm.user_id=$4)) GROUP BY l.id")
-        .bind(&actor.workspace_id).bind(team).bind(policy::privileged(actor)).bind(&actor.user_id).fetch_all(&mut *connection).await?;
+    let query = format!(
+        "SELECT l.id,count(*) FROM issue_labels a JOIN resource_labels l ON l.id=a.label_id AND l.workspace_id=a.workspace_id JOIN issues i ON i.id=a.issue_id AND i.workspace_id=a.workspace_id WHERE l.workspace_id=$1 AND l.team_id IS NOT DISTINCT FROM $4 AND {} GROUP BY l.id",
+        policy::readable_issue(actor, "i.id")
+    );
+    let counts: Vec<(Uuid, i64)> = sqlx::query_as(&query)
+        .bind(&actor.workspace_id)
+        .bind(policy::privileged(actor))
+        .bind(&actor.user_id)
+        .bind(team)
+        .fetch_all(&mut *connection)
+        .await?;
     let labels:Vec<_>=labels.into_iter().map(|(id,name,definition)|{
         let d=definition.unwrap_or(Value::Null);let count=counts.iter().find(|(key,_)|*key==id).map(|(_,n)|*n).unwrap_or(0);
         json!({"id":id,"name":name,"description":metadata(&d,"description",json!("")),"color":metadata(&d,"color",json!("#5e6ad2")),"groupId":metadata(&d,"groupId",Value::Null),"createdAt":metadata(&d,"createdAt",json!("2026-10-30T00:00:00.000Z")),"lastApplied":null,"archived":metadata(&d,"archived",json!(false)),"issues":count})

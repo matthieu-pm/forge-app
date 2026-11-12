@@ -360,8 +360,8 @@ pub(crate) async fn snapshot(
     let projects = projects::snapshot(c, a, Some(&selected)).await?;
     let q = format!(
         "SELECT i.project_id,count(*)::bigint,count(*) FILTER (WHERE EXISTS(SELECT 1 FROM issue_statuses s WHERE s.workspace_id=i.workspace_id AND s.team_id=i.team_id AND s.id=i.status_id AND s.status_group='completed'))::bigint FROM issues i WHERE i.workspace_id=$1 AND {} AND {} GROUP BY i.project_id",
-        policy::readable_project("i.project_id"),
-        policy::readable_issue("i.id")
+        policy::readable_project(a, "i.project_id"),
+        policy::readable_issue(a, "i.id")
     );
     let counts: Vec<(Uuid, i64, i64)> = sqlx::query_as(&q)
         .bind(&a.workspace_id)

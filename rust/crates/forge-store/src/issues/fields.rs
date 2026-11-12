@@ -13,7 +13,7 @@ pub(super) async fn require_team(
     policy::scope(actor, ApiScope::IssuesWrite)?;
     let query = format!(
         "SELECT t.visibility,t.timezone FROM teams t WHERE t.id=$4 AND t.workspace_id=$1 AND {} FOR SHARE OF t",
-        policy::readable_team("t.id")
+        policy::readable_team(actor, "t.id")
     );
     let row: Team = sqlx::query_as(&query)
         .bind(&actor.workspace_id)
@@ -186,7 +186,7 @@ pub(super) async fn resolve(
         let imported = input.get("projectImport");
         let query = format!(
             "SELECT p.id,p.properties FROM projects p WHERE p.workspace_id=$1 AND (p.id::text=$4 OR p.legacy_id=$4 OR p.id::text=$5 OR p.legacy_id=$5) AND {} FOR SHARE OF p",
-            policy::readable_project("p.id")
+            policy::readable_project(actor, "p.id")
         );
         let mut project: Option<Project> = sqlx::query_as(&query)
             .bind(&actor.workspace_id)
@@ -303,7 +303,7 @@ pub(super) async fn resolve(
     if !text(draft, "parentId").is_empty() {
         let query = format!(
             "SELECT p.id,p.team_id FROM issues p WHERE p.workspace_id=$1 AND (p.id::text=$4 OR (p.team_id=$5 AND p.legacy_id=$4)) AND {} FOR SHARE OF p",
-            policy::readable_issue("p.id")
+            policy::readable_issue(actor, "p.id")
         );
         let (id, parent_team): (Uuid, Uuid) = sqlx::query_as(&query)
             .bind(&actor.workspace_id)

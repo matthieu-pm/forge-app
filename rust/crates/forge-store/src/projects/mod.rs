@@ -63,7 +63,7 @@ struct Row {
 async fn visible(c: &mut PgConnection, a: &Actor, id: Uuid) -> Result<(), StoreError> {
     let q = format!(
         "SELECT p.id FROM projects p WHERE p.id=$4 AND {}",
-        policy::readable_project("p.id")
+        policy::readable_project(a, "p.id")
     );
     sqlx::query(&q)
         .bind(&a.workspace_id)
@@ -88,7 +88,7 @@ async fn links(c: &mut PgConnection, id: Uuid) -> Result<Vec<Uuid>, StoreError> 
 async fn visible_teams(c: &mut PgConnection, a: &Actor, id: Uuid) -> Result<Vec<Uuid>, StoreError> {
     let q = format!(
         "SELECT p.team_id FROM project_teams p WHERE p.project_id=$4 AND {}",
-        policy::readable_team("p.team_id")
+        policy::readable_team(a, "p.team_id")
     );
     Ok(sqlx::query_scalar(&q)
         .bind(&a.workspace_id)
@@ -142,7 +142,7 @@ async fn dependencies(
 ) -> Result<Value, StoreError> {
     let q = format!(
         "SELECT p.id::text FROM projects p WHERE p.workspace_id=$1 AND {}",
-        policy::readable_project("p.id")
+        policy::readable_project(a, "p.id")
     );
     let visible: HashSet<String> = sqlx::query_scalar::<_, String>(&q)
         .bind(&a.workspace_id)
@@ -611,7 +611,7 @@ pub(crate) async fn snapshot(
 ) -> Result<Vec<Value>, StoreError> {
     let q = format!(
         "SELECT p.id,p.name,p.revision,p.properties FROM projects p WHERE p.workspace_id=$1 AND {} ORDER BY p.id",
-        policy::readable_project("p.id")
+        policy::readable_project(actor, "p.id")
     );
     let rows: Vec<Row> = sqlx::query_as(&q)
         .bind(&actor.workspace_id)
@@ -622,7 +622,7 @@ pub(crate) async fn snapshot(
     let visible: HashSet<String> = rows.iter().map(|r| r.id.to_string()).collect();
     let link_query = format!(
         "SELECT p.project_id,p.team_id FROM project_teams p WHERE p.workspace_id=$1 AND {} AND ($4::uuid[] IS NULL OR p.project_id=ANY($4))",
-        policy::readable_team("p.team_id")
+        policy::readable_team(actor, "p.team_id")
     );
     let team_links: Vec<(Uuid, Uuid)> = sqlx::query_as(&link_query)
         .bind(&actor.workspace_id)

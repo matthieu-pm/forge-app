@@ -48,8 +48,8 @@ fn identity(s: &str) -> Result<Uuid, StoreError> {
     }
     s.parse().map_err(|_| StoreError::Planning(UNAVAILABLE))
 }
-fn visibility() -> String {
-    let team = policy::readable_team("v.team_id");
+fn visibility(a: &Actor) -> String {
+    let team = policy::readable_team(a, "v.team_id");
     format!(
         "v.workspace_id=$1 AND (v.owner_id=$3 OR v.visibility='workspace' OR (v.visibility='team' AND {team})) AND (v.team_id IS NULL OR {team})"
     )
@@ -124,9 +124,9 @@ async fn check(
         });
     }
     let (table, condition) = match kind {
-        "team" => ("teams", policy::readable_team("r.id")),
-        "project" => ("projects", policy::readable_project("r.id")),
-        "issue" => ("issues", policy::readable_issue("r.id")),
+        "team" => ("teams", policy::readable_team(a, "r.id")),
+        "project" => ("projects", policy::readable_project(a, "r.id")),
+        "issue" => ("issues", policy::readable_issue(a, "r.id")),
         _ => unreachable!(),
     };
     let q = format!("SELECT r.id FROM {table} r WHERE r.id=$4 AND {condition}");
@@ -196,7 +196,7 @@ pub async fn read(db: &Database, a: &Actor, options: ViewOptions) -> Result<Valu
     }
     let q = format!(
         "SELECT v.* FROM saved_views v WHERE {} AND v.deleted_at IS NULL ORDER BY v.id LIMIT 501",
-        visibility()
+        visibility(&a)
     );
     let rows: Vec<Row> = sqlx::query_as(&q)
         .bind(&a.workspace_id)
@@ -284,7 +284,7 @@ impl CommandHandler for Mutation<'_> {
         fence(c, a).await?;
         let q = format!(
             "SELECT v.* FROM saved_views v WHERE v.id=$4 AND {}",
-            visibility()
+            visibility(a)
         );
         let row: Option<Row> = sqlx::query_as(&q)
             .bind(&a.workspace_id)
@@ -455,7 +455,7 @@ pub async fn query_projects(
     validate_references(&mut tx, &a, &definition, false).await?;
     let q = format!(
         "SELECT p.id,p.name,p.revision,p.properties::text FROM projects p WHERE {} ORDER BY p.id LIMIT 501",
-        policy::readable_project("p.id")
+        policy::readable_project(&a, "p.id")
     );
     let rows: Vec<(Uuid, String, i32, String)> = sqlx::query_as(&q)
         .bind(&a.workspace_id)
@@ -472,7 +472,7 @@ pub async fn query_projects(
     let ids: Vec<String> = rows.iter().map(|r| r.0.to_string()).collect();
     let q = format!(
         "SELECT pt.project_id,pt.team_id FROM project_teams pt WHERE pt.workspace_id=$1 AND {}",
-        policy::readable_team("pt.team_id")
+        policy::readable_team(&a, "pt.team_id")
     );
     let links: Vec<(Uuid, Uuid)> = sqlx::query_as(&q)
         .bind(&a.workspace_id)

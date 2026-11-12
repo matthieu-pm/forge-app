@@ -76,7 +76,7 @@ pub async fn history(
     };
     let query = format!(
         "SELECT e.id,e.topic,e.created_at::text AS time,e.created_at,e.payload,e.actor_user_id,e.actor_name,e.system FROM (SELECT e.id,e.workspace_id,e.topic,e.created_at,e.payload,a.actor_user_id,coalesce(u.name,'Former member') actor_name,false system FROM command_outbox_events e JOIN command_audit_events a ON a.command_id=e.command_id AND a.workspace_id=e.workspace_id JOIN command_receipts r ON r.id=e.command_id AND r.workspace_id=e.workspace_id AND r.completed_at IS NOT NULL LEFT JOIN \"user\" u ON u.id=a.actor_user_id{sla}) e WHERE e.workspace_id=$1 AND e.payload->>'issueId'=$4::uuid::text AND {} AND e.topic LIKE 'issue.%' AND e.topic<>'issue.comment.mentioned' AND ($5::text IS NULL OR (e.created_at,e.id)<($5::timestamptz,$6::uuid)) ORDER BY e.created_at DESC,e.id DESC LIMIT $7",
-        policy::readable_issue("$4")
+        policy::readable_issue(&actor, "$4")
     );
     let rows: Vec<Event> = sqlx::query_as(&query)
         .bind(&actor.workspace_id)

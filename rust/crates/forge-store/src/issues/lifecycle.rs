@@ -31,7 +31,7 @@ impl Lifecycle<'_> {
     ) -> Result<Row, StoreError> {
         let sql = format!(
             "SELECT i.id,i.title,i.number,i.revision,i.archived_at,i.deleted_at,i.purge_started_at,i.properties FROM issues i WHERE i.id=$4 AND i.team_id=$5 AND {} {}",
-            policy::retained_issue("i.id"),
+            policy::retained_issue(actor, "i.id"),
             if lock { "FOR UPDATE OF i" } else { "" }
         );
         sqlx::query_as(&sql)
@@ -197,7 +197,7 @@ pub async fn inactive(
     fields::require_team(&mut tx, &actor, team).await?;
     let sql = format!(
         "SELECT i.id,i.title,i.number,i.revision,i.archived_at,i.deleted_at,i.purge_started_at,'{{}}'::jsonb AS properties FROM issues i WHERE i.team_id=$4 AND {} AND {} AND ($5::uuid IS NULL OR i.id>$5) ORDER BY i.id LIMIT 51",
-        policy::retained_issue("i.id"),
+        policy::retained_issue(&actor, "i.id"),
         if text(&input, "kind") == "deleted" {
             "i.deleted_at IS NOT NULL AND i.purge_started_at IS NULL AND i.deleted_at+interval '720 hours'>clock_timestamp()"
         } else {

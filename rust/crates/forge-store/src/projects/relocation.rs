@@ -92,7 +92,7 @@ pub(super) async fn relocate(
     }
     let q = format!(
         "SELECT i.id,i.team_id,i.properties,{} AS readable,i.purge_started_at IS NOT NULL AS purge_started FROM issues i WHERE i.workspace_id=$1 AND i.project_id=$4 AND i.properties->>'milestone'=ANY($5) ORDER BY i.id FOR UPDATE OF i",
-        policy::retained_issue("i.id")
+        policy::retained_issue(a, "i.id")
     );
     let affected: Vec<Issue> = sqlx::query_as(&q)
         .bind(&a.workspace_id)

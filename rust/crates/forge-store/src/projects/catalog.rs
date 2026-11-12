@@ -41,7 +41,7 @@ pub(super) async fn projected(c: &mut PgConnection, a: &Actor) -> Result<Value, 
     let mut result = read(c, a).await?;
     let q = format!(
         "SELECT p.properties FROM projects p WHERE p.workspace_id=$1 AND {}",
-        policy::readable_project("p.id")
+        policy::readable_project(a, "p.id")
     );
     let rows: Vec<Value> = sqlx::query_scalar(&q)
         .bind(&a.workspace_id)

@@ -69,7 +69,7 @@ impl Service {
 async fn choices(c: &mut PgConnection, a: &Actor, team: Uuid) -> Result<Value, StoreError> {
     let q = format!(
         "SELECT jsonb_build_object('id',t.id,'name',t.name) FROM teams t WHERE t.workspace_id=$1 AND t.deleted_at IS NULL AND (t.id=$4 OR t.visibility='workspace') AND {} ORDER BY t.name LIMIT 100",
-        policy::readable_team("t.id")
+        policy::readable_team(a, "t.id")
     );
     let teams: Vec<Value> = sqlx::query_scalar(&q)
         .bind(&a.workspace_id)
@@ -84,7 +84,7 @@ async fn choices(c: &mut PgConnection, a: &Actor, team: Uuid) -> Result<Value, S
         .collect::<Result<_, _>>()?;
     let q = format!(
         "SELECT jsonb_build_object('id',r.id,'name',r.title) FROM issues r WHERE r.workspace_id=$1 AND r.team_id=ANY($4) AND {} ORDER BY r.title LIMIT 100",
-        policy::readable_issue("r.id")
+        policy::readable_issue(a, "r.id")
     );
     let issues: Vec<Value> = sqlx::query_scalar(&q)
         .bind(&a.workspace_id)
@@ -95,7 +95,7 @@ async fn choices(c: &mut PgConnection, a: &Actor, team: Uuid) -> Result<Value, S
         .await?;
     let q = format!(
         "SELECT jsonb_build_object('id',r.id,'name',r.name) FROM projects r WHERE r.workspace_id=$1 AND {} AND EXISTS(SELECT 1 FROM project_teams pt WHERE pt.project_id=r.id AND pt.team_id=ANY($4)) ORDER BY r.name LIMIT 100",
-        policy::readable_project("r.id")
+        policy::readable_project(a, "r.id")
     );
     let projects: Vec<Value> = sqlx::query_scalar(&q)
         .bind(&a.workspace_id)

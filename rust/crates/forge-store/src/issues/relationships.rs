@@ -16,7 +16,7 @@ async fn visible(
     }
     let query = format!(
         "SELECT jsonb_build_object('id',i.id,'title',i.title,'revision',i.revision,'teamId',i.team_id,'teamSlug',t.slug,'identifier',t.identifier,'number',i.number) FROM issues i JOIN teams t ON t.id=i.team_id WHERE i.id=ANY($4) AND i.workspace_id=$1 AND {}",
-        policy::readable_issue("i.id")
+        policy::readable_issue(actor, "i.id")
     );
     let rows: Vec<Value> = sqlx::query_scalar(&query)
         .bind(&actor.workspace_id)
@@ -279,7 +279,7 @@ pub async fn relationships(
         UNION SELECT CASE WHEN kind='blocks' THEN 'blockedBy' ELSE kind END,issue_id FROM issue_relations WHERE related_issue_id=$4 AND workspace_id=$1 AND kind IN ('related','blocks')
     ),visible AS (SELECT e.kind,i.id,i.title,i.revision,i.team_id AS "teamId",t.slug AS "teamSlug",t.identifier,i.number FROM edges e JOIN issues i ON i.id=e.target_id JOIN teams t ON t.id=i.team_id WHERE i.workspace_id=$1 AND {})
     SELECT jsonb_build_object('resultRevision',(SELECT md5(coalesce(string_agg(jsonb_build_array(kind,id,revision,"teamSlug",identifier)::text,',' ORDER BY kind COLLATE "C",id),'')) FROM visible),'rows',coalesce((SELECT jsonb_agg(p ORDER BY p.kind COLLATE "C",p.id) FROM (SELECT * FROM visible WHERE (kind||':'||id::text) COLLATE "C">$5 COLLATE "C" ORDER BY (kind||':'||id::text) COLLATE "C" LIMIT $6) p),'[]'::jsonb))"#,
-        policy::readable_issue("i.id")
+        policy::readable_issue(&actor, "i.id")
     );
     let response: Value = sqlx::query_scalar(&query)
         .bind(&actor.workspace_id)
@@ -343,7 +343,7 @@ pub async fn search_relationships(
         .transpose()?;
     let query = format!(
         r#"WITH visible AS (SELECT i.id,i.title,i.revision,i.team_id AS "teamId",t.slug AS "teamSlug",t.identifier,i.number FROM issues i JOIN teams t ON t.id=i.team_id WHERE i.workspace_id=$1 AND {} AND i.id<>$4 AND (i.title ILIKE $5 OR (t.identifier||'-'||i.number::text) ILIKE $5)) SELECT jsonb_build_object('resultRevision',(SELECT md5(coalesce(string_agg(jsonb_build_array(id,revision,"teamSlug",identifier)::text,',' ORDER BY id),'')) FROM visible),'rows',coalesce((SELECT jsonb_agg(p ORDER BY p.id) FROM (SELECT * FROM visible WHERE $6::uuid IS NULL OR id>$6 ORDER BY id LIMIT 21) p),'[]'::jsonb))"#,
-        policy::readable_issue("i.id")
+        policy::readable_issue(&actor, "i.id")
     );
     let response: Value = sqlx::query_scalar(&query)
         .bind(&actor.workspace_id)

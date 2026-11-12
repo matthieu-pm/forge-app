@@ -183,7 +183,7 @@ pub async fn references(db: &Database, a: &Actor, options: Options) -> Result<Va
     gate(&a, options)?;
     let q = format!(
         "SELECT jsonb_build_object('id',p.id,'name',p.name) FROM projects p WHERE p.workspace_id=$1 AND {} ORDER BY p.id",
-        policy::readable_project("p.id")
+        policy::readable_project(&a, "p.id")
     );
     let projects: Vec<Value> = sqlx::query_scalar(&q)
         .bind(&a.workspace_id)
@@ -402,7 +402,7 @@ async fn project_matches(
 ) -> Result<Vec<Project>, StoreError> {
     let q = format!(
         "SELECT p.id,p.revision,p.properties FROM projects p WHERE p.workspace_id=$1 AND {} AND (p.id::text=$4 OR p.name=$4)",
-        policy::readable_project("p.id")
+        policy::readable_project(a, "p.id")
     );
     Ok(sqlx::query_as(&q)
         .bind(&a.workspace_id)
@@ -572,7 +572,7 @@ impl Apply<'_> {
             for target in blocking.into_iter().filter(|p| seen.insert(p.id)) {
                 let q = format!(
                     "SELECT p.id::text FROM projects p WHERE p.workspace_id=$1 AND {}",
-                    policy::readable_project("p.id")
+                    policy::readable_project(a, "p.id")
                 );
                 let visible: HashSet<String> = sqlx::query_scalar::<_, String>(&q)
                     .bind(&a.workspace_id)

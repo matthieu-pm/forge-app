@@ -62,9 +62,9 @@ impl FileLookup {
 async fn resource(c: &mut PgConnection, a: &Actor, key: Uuid) -> Result<Option<Value>, StoreError> {
     let q = format!(
         "SELECT to_jsonb(f),i.properties::text,p.properties::text,EXISTS(SELECT 1 FROM file_upload_intents u WHERE u.id=f.id AND u.workspace_id=$1) FROM resource_files f LEFT JOIN issues i ON i.id=f.issue_id AND i.workspace_id=$1 LEFT JOIN projects p ON p.id=f.project_id AND p.workspace_id=$1 WHERE f.workspace_id=$1 AND f.id=$4 AND f.deleted_at IS NULL AND ((f.issue_id IS NOT NULL AND {}) OR (f.project_id IS NOT NULL AND {}) OR (f.document_id IS NOT NULL AND {}))",
-        policy::readable_issue("f.issue_id"),
-        policy::readable_project("f.project_id"),
-        policy::readable_document("f.document_id")
+        policy::readable_issue(a, "f.issue_id"),
+        policy::readable_project(a, "f.project_id"),
+        policy::readable_document(a, "f.document_id")
     );
     let row: Option<(Value, Option<String>, Option<String>, bool)> = sqlx::query_as(&q)
         .bind(&a.workspace_id)
@@ -138,11 +138,11 @@ pub(crate) async fn artifact_metadata(
 ) -> Result<Option<Value>, StoreError> {
     let source = format!(
         "((lr.event->>'entity' IS DISTINCT FROM 'issue' OR {}) AND (lr.event->>'entity' IS DISTINCT FROM 'project' OR {}) AND (lr.event->>'entity' IS DISTINCT FROM 'team' OR {}) AND (lr.event->>'entity' IS DISTINCT FROM 'cycle' OR EXISTS(SELECT 1 FROM issue_cycles cycle WHERE cycle.workspace_id=$1 AND cycle.id::text=lr.event->>'entityId' AND {})) AND (lr.event->>'entity' IS DISTINCT FROM 'initiative' OR EXISTS(SELECT 1 FROM initiative_projects ip JOIN project_teams pt ON pt.project_id=ip.project_id AND pt.workspace_id=ip.workspace_id WHERE ip.workspace_id=$1 AND ip.initiative_id::text=lr.event->>'entityId' AND {})))",
-        policy::readable_issue("(lr.event->>'entityId')::uuid"),
-        policy::readable_project("(lr.event->>'entityId')::uuid"),
-        policy::readable_team("(lr.event->>'entityId')::uuid"),
-        policy::readable_team("cycle.team_id"),
-        policy::readable_team("pt.team_id")
+        policy::readable_issue(a, "(lr.event->>'entityId')::uuid"),
+        policy::readable_project(a, "(lr.event->>'entityId')::uuid"),
+        policy::readable_team(a, "(lr.event->>'entityId')::uuid"),
+        policy::readable_team(a, "cycle.team_id"),
+        policy::readable_team(a, "pt.team_id")
     );
     let scope = format!(
         "CASE lr.event->>'entity' WHEN 'issue' THEN EXISTS(SELECT 1 FROM issues si WHERE si.workspace_id=l.workspace_id AND si.id::text=lr.event->>'entityId' AND {}) WHEN 'project' THEN EXISTS(SELECT 1 FROM project_teams sp WHERE sp.workspace_id=l.workspace_id AND sp.project_id::text=lr.event->>'entityId' AND {}) WHEN 'initiative' THEN EXISTS(SELECT 1 FROM initiative_projects ip JOIN project_teams sp ON sp.project_id=ip.project_id AND sp.workspace_id=ip.workspace_id WHERE ip.workspace_id=l.workspace_id AND ip.initiative_id::text=lr.event->>'entityId' AND {}) WHEN 'cycle' THEN EXISTS(SELECT 1 FROM issue_cycles sc WHERE sc.workspace_id=l.workspace_id AND sc.id::text=lr.event->>'entityId' AND {}) WHEN 'team' THEN {} ELSE true END",
@@ -154,7 +154,7 @@ pub(crate) async fn artifact_metadata(
     );
     let q = format!(
         "SELECT to_jsonb(f),(SELECT lr.event FROM loop_runs lr WHERE lr.agent_run_id=r.id)::text,(SELECT CASE WHEN lr.event ? 'comment' OR lr.event ? 'update' THEN forge_loop_snapshot(lr.event->>'entity',(lr.event->>'entityId')::uuid,lr.workspace_id) ELSE NULL END FROM loop_runs lr WHERE lr.agent_run_id=r.id)::text FROM agent_artifacts f JOIN agent_runs r ON r.id=f.run_id JOIN agent_threads t ON t.id=r.thread_id WHERE f.id=$4 AND t.workspace_id=$1 AND (NOT $5::boolean OR (f.deleted_at IS NULL AND (f.retention_expires_at IS NULL OR f.retention_expires_at>clock_timestamp()))) AND ((t.created_by_user_id=$3 AND NOT EXISTS(SELECT 1 FROM loop_runs lr WHERE lr.agent_run_id=r.id)) OR EXISTS(SELECT 1 FROM loop_runs lr JOIN team_loops l ON l.id=lr.loop_id AND l.workspace_id=lr.workspace_id WHERE lr.agent_run_id=r.id AND l.workspace_id=$1 AND l.deleted_at IS NULL AND {source} AND ({scope}) AND {}))",
-        policy::readable_team("l.team_id")
+        policy::readable_team(a, "l.team_id")
     );
     let row: Option<(Value, Option<String>, Option<String>)> = sqlx::query_as(&q)
         .bind(&a.workspace_id)

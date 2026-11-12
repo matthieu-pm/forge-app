@@ -50,8 +50,16 @@ pub async fn summary(database: &Database, actor: &Actor) -> Result<Value, StoreE
         return Err(StoreError::Forbidden);
     }
     let rows=sqlx::query_as::<_,MemberSummary>("SELECT m.id,u.id user_id,u.name,u.email,u.image,u.username,u.title,m.role,m.created_at joined_at,max(s.updated_at) last_seen_at FROM member m JOIN \"user\" u ON u.id=m.user_id LEFT JOIN session s ON s.user_id=u.id AND s.active_organization_id=m.organization_id WHERE m.organization_id=$1 GROUP BY m.id,u.id ORDER BY m.created_at,m.id").bind(&live.workspace_id).fetch_all(&mut *tx).await?;
-    let teams:i64=sqlx::query_scalar("SELECT count(*) FROM teams t WHERE t.workspace_id=$1 AND t.deleted_at IS NULL AND (t.visibility='workspace' OR $2 OR EXISTS(SELECT 1 FROM team_members tm WHERE tm.team_id=t.id AND tm.workspace_id=t.workspace_id AND tm.user_id=$3))")
-        .bind(&live.workspace_id).bind(live.can_read_all_private_teams()).bind(&live.user_id).fetch_one(&mut *tx).await?;
+    let query = format!(
+        "SELECT count(*) FROM teams t WHERE {}",
+        crate::resource_policy::readable_team(&live, "t.id")
+    );
+    let teams: i64 = sqlx::query_scalar(&query)
+        .bind(&live.workspace_id)
+        .bind(crate::resource_policy::privileged(&live))
+        .bind(&live.user_id)
+        .fetch_one(&mut *tx)
+        .await?;
     let now = Utc::now();
     let members: Vec<_> = rows
         .into_iter()

@@ -33,15 +33,15 @@ impl Resource {
             _ => "r.name",
         }
     }
-    fn visibility(self) -> String {
+    fn visibility(self, a: &Actor) -> String {
         match self {
-            Self::Issue => policy::readable_issue("r.id"),
-            Self::Project => policy::readable_project("r.id"),
-            Self::Document => policy::readable_document("r.id"),
+            Self::Issue => policy::readable_issue(a, "r.id"),
+            Self::Project => policy::readable_project(a, "r.id"),
+            Self::Document => policy::readable_document(a, "r.id"),
             Self::Initiative => "TRUE".into(),
             Self::Label => format!(
                 "(r.team_id IS NULL OR {})",
-                policy::readable_team("r.team_id")
+                policy::readable_team(a, "r.team_id")
             ),
         }
     }
@@ -91,7 +91,7 @@ pub async fn list(
         "{CONTEXT} SELECT jsonb_build_object('id',r.id,'title',{}) FROM {} r WHERE r.workspace_id=$1 AND {} AND ($4::uuid IS NULL OR r.id>$4) AND {} ILIKE $5 ORDER BY r.id LIMIT $6",
         kind.title(),
         kind.table(),
-        kind.visibility(),
+        kind.visibility(&a),
         kind.title()
     );
     let rows: Vec<Value> = sqlx::query_scalar(&q)
@@ -130,26 +130,26 @@ async fn resource(
     let projection = match kind {
         Resource::Issue => format!(
             "jsonb_build_object('id',r.id,'title',r.title,'parentId',CASE WHEN {} THEN r.parent_id ELSE NULL END,'projectId',CASE WHEN {} AND {} THEN r.project_id ELSE NULL END)",
-            policy::readable_issue("r.parent_id"),
+            policy::readable_issue(a, "r.parent_id"),
             if a.has_scope(ApiScope::ProjectsRead) {
                 "TRUE"
             } else {
                 "FALSE"
             },
-            policy::readable_project("r.project_id")
+            policy::readable_project(a, "r.project_id")
         ),
         Resource::Document => format!(
             "jsonb_build_object('id',r.id,'title',r.title,'body',r.body,'issueId',CASE WHEN {} THEN r.issue_id ELSE NULL END,'teamId',CASE WHEN {} THEN r.team_id ELSE NULL END,'projectId',CASE WHEN {} THEN r.project_id ELSE NULL END)",
-            policy::readable_issue("r.issue_id"),
-            policy::readable_team("r.team_id"),
-            policy::readable_project("r.project_id")
+            policy::readable_issue(a, "r.issue_id"),
+            policy::readable_team(a, "r.team_id"),
+            policy::readable_project(a, "r.project_id")
         ),
         _ => format!("jsonb_build_object('id',r.id,'title',{})", kind.title()),
     };
     let q = format!(
         "{CONTEXT} SELECT ({projection})::text FROM {} r WHERE r.workspace_id=$1 AND r.id=$4 AND {}",
         kind.table(),
-        kind.visibility()
+        kind.visibility(a)
     );
     let raw: Option<String> = sqlx::query_scalar(&q)
         .bind(&a.workspace_id)
@@ -202,12 +202,12 @@ pub async fn rollup(
         }
         _ => format!(
             "EXISTS(SELECT 1 FROM initiative_projects ip WHERE ip.initiative_id=$4 AND ip.project_id=i.project_id AND {})",
-            policy::readable_project("ip.project_id")
+            policy::readable_project(&a, "ip.project_id")
         ),
     };
     let q = format!(
         "SELECT count(*) FROM issues i WHERE {relation} AND {}",
-        policy::readable_issue("i.id")
+        policy::readable_issue(&a, "i.id")
     );
     let total: i64 = sqlx::query_scalar(&q)
         .bind(&a.workspace_id)
@@ -246,7 +246,10 @@ pub async fn related(
                 Resource::Project,
                 "jsonb_build_object('teamId',r.team_id)",
                 "project_teams r",
-                format!("r.project_id=$4 AND {}", policy::readable_team("r.team_id")),
+                format!(
+                    "r.project_id=$4 AND {}",
+                    policy::readable_team(&a, "r.team_id")
+                ),
             )
         }
         Relation::InitiativeProjects => {
@@ -257,7 +260,7 @@ pub async fn related(
                 "initiative_projects r JOIN projects p ON p.id=r.project_id",
                 format!(
                     "r.initiative_id=$4 AND {}",
-                    policy::readable_project("p.id")
+                    policy::readable_project(&a, "p.id")
                 ),
             )
         }
@@ -267,7 +270,7 @@ pub async fn related(
             "issue_relations r",
             format!(
                 "r.issue_id=$4 AND {}",
-                policy::readable_issue("r.related_issue_id")
+                policy::readable_issue(&a, "r.related_issue_id")
             ),
         ),
         Relation::IssueDocuments => {
@@ -276,7 +279,10 @@ pub async fn related(
                 Resource::Issue,
                 "jsonb_build_object('id',r.id,'title',r.title)",
                 "documents r",
-                format!("r.issue_id=$4 AND {}", policy::readable_document("r.id")),
+                format!(
+                    "r.issue_id=$4 AND {}",
+                    policy::readable_document(&a, "r.id")
+                ),
             )
         }
     };

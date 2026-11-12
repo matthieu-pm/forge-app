@@ -158,7 +158,7 @@ async fn accessible(
         if deleted {
             "$2::boolean IS NOT NULL AND $3::text IS NOT NULL".into()
         } else {
-            policy::readable_document("d.id")
+            policy::readable_document(a, "d.id")
         }
     );
     let row: Row = sqlx::query_as(&q)
@@ -229,7 +229,7 @@ pub async fn read(
         };
         let q = format!(
             "SELECT d.*,d.body::text AS body_json FROM documents d WHERE {} AND {condition} ORDER BY d.updated_at DESC,d.id",
-            policy::readable_document("d.id")
+            policy::readable_document(&a, "d.id")
         );
         sqlx::query_as(&q)
             .bind(&a.workspace_id)

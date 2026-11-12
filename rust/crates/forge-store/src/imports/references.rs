@@ -140,11 +140,11 @@ pub(super) async fn resolve(
             "issues",
             format!(
                 "{} AND ($6::uuid IS NULL OR r.team_id=$6)",
-                policy::readable_issue("r.id")
+                policy::readable_issue(a, "r.id")
             ),
         )
     } else {
-        ("projects", policy::readable_project("r.id"))
+        ("projects", policy::readable_project(a, "r.id"))
     };
     let q = format!(
         "SELECT r.id FROM {table} r WHERE r.workspace_id=$1 AND {condition} AND (r.legacy_id=$4 OR r.id=$5)"

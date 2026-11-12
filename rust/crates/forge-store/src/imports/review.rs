@@ -58,10 +58,10 @@ pub(super) async fn advance_file_alias(
 async fn candidates(c: &mut PgConnection, a: &Actor, e: &Value) -> Result<Vec<Uuid>, StoreError> {
     let kind = text(e, "kind");
     let (table,condition)=match kind {
-        "issue"=>("issues",format!("r.team_id=$4::uuid AND {} AND (r.legacy_id=$5 OR lower(btrim(r.title))=$6 OR ($7::text<>'' AND r.properties->>'description'=$7))",policy::readable_issue("r.id"))),
-        "project"=>("projects",format!("{} AND (r.legacy_id=$4 OR lower(btrim(r.name))=$5)",policy::readable_project("r.id"))),
+        "issue"=>("issues",format!("r.team_id=$4::uuid AND {} AND (r.legacy_id=$5 OR lower(btrim(r.title))=$6 OR ($7::text<>'' AND r.properties->>'description'=$7))",policy::readable_issue(a, "r.id"))),
+        "project"=>("projects",format!("{} AND (r.legacy_id=$4 OR lower(btrim(r.name))=$5)",policy::readable_project(a, "r.id"))),
         "initiative"=>("initiatives","($2::boolean OR NOT $2::boolean) AND $3::text IS NOT NULL AND r.name=$4".into()),
-        "document"=>("documents",format!("{} AND (r.title=$4 OR r.id=$5)",policy::readable_document("r.id"))),
+        "document"=>("documents",format!("{} AND (r.title=$4 OR r.id=$5)",policy::readable_document(a, "r.id"))),
         "view"=>("saved_views","($2::boolean OR NOT $2::boolean) AND r.owner_id=$3 AND r.deleted_at IS NULL AND r.definition->>'name'=$4".into()),
         _=>return Ok(vec![]),
     };

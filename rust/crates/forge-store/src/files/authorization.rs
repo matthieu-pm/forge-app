@@ -77,9 +77,9 @@ pub(super) async fn authorize_target(
             .await?;
     }
     let predicate = match kind {
-        "project" => policy::readable_project("$4"),
-        "document" => policy::readable_document("$4"),
-        _ => policy::readable_issue("$4"),
+        "project" => policy::readable_project(a, "$4"),
+        "document" => policy::readable_document(a, "$4"),
+        _ => policy::readable_issue(a, "$4"),
     };
     let allowed: bool = sqlx::query_scalar(&format!("SELECT {predicate}"))
         .bind(&a.workspace_id)

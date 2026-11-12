@@ -90,6 +90,7 @@ gate pass.
 | 3b10a | Loop contracts, event filters, calendar scheduling and published model policy | Passed |
 | 3b10b | Loop source contexts, definition commands, immutable runs, history and webhook receipts | Passed |
 | 3b10c | Native loop event dispatch, schedule/cycle capture and expired-run reconciliation | Passed |
+| 3b10d | Actor-scoped resource predicates and shared read projections | Passed |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -2382,3 +2383,37 @@ these routes do not represent a completed rewrite.
   tests**, and **three typechecks**, plus fixtures, formatting and Clippy. The
   607 external-fixture tests in 31 files remain skipped, not counted as passes.
   Evidence: `.forge/rust-rewrite/milestone-3b10c-corrections.log`.
+
+### Milestone 3b10d
+
+- Resource predicates receive the live actor explicitly throughout issues,
+  projects, documents, planning, histories, relationships, imports, templates,
+  files and loop contexts. Loop scopes permit their own team, plus public teams
+  only when the resolved scope permits them. Human membership in another team
+  and a supplied administrative role cannot expand a loop's resource scope.
+- Workspace-only projects and workspace/shared documents require broader loop
+  scope. Every resource predicate also checks current membership or an enabled,
+  nondeleted loop with a running/waiting run, including resources with no team.
+  UUID parsing precedes SQL formatting; malformed scope fails closed while
+  preserving parameter types. Team locks and archived-team reads use the same
+  predicates, as do label usage counts and project team projections.
+- Six database scenarios cover private own-team access without membership,
+  narrower issue-only credentials, membership/role escalation attempts, scoped
+  project/document sources, shared documents, inactive resources, disabled or
+  terminal loops, cross-workspace and malformed identities, ordinary membership
+  revocation, archived team visibility and shared directory/count projections.
+- This completes the resource-policy prerequisite. Live loop authority,
+  artifact publication and bound coordinator execution remain gated; ordinary
+  command authority still rejects loop principals.
+- The initial gate passed all prior Rust tests and five new scope scenarios
+  (594 passes total), plus all 3,013 enabled reference tests and three typechecks.
+  The remaining new scenario stopped at a fixture foreign-key violation: adding
+  a synthetic principal to another team requires a workspace membership first.
+  The fixture now supplies that membership after proving private own-team access
+  without one. Its role/team escalation denials remain unchanged. Broad-scope
+  and ordinary-role fixtures also reflect the corresponding live team/role state.
+  Evidence: `.forge/rust-rewrite/milestone-3b10d-initial.log`.
+- The corrected gate passed all **595 Rust tests**, **3,013 enabled reference
+  tests**, and **three typechecks**, including fixture checks, formatting and
+  Clippy. The 607 external-fixture tests in 31 files remain skipped.
+  Evidence: `.forge/rust-rewrite/milestone-3b10d-fixtures.log`.

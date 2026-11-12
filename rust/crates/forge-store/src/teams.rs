@@ -2,7 +2,7 @@ use crate::{
     Database, StoreError,
     authority::current_actor,
     commands::{self, Command, CommandHandler, CommandResult, OutboxEvent},
-    security,
+    resource_policy as policy, security,
     workspaces::lock_workspace,
 };
 use async_trait::async_trait;
@@ -97,13 +97,14 @@ async fn select_team(
     lock: bool,
 ) -> Result<Option<TeamRow>, StoreError> {
     let query = format!(
-        "SELECT t.* FROM teams t WHERE t.workspace_id=$1 AND {}=$2 AND {} AND (t.visibility='workspace' OR $3 OR EXISTS(SELECT 1 FROM team_members tm WHERE tm.workspace_id=t.workspace_id AND tm.team_id=t.id AND tm.user_id=$4)) {}",
+        "SELECT t.* FROM teams t WHERE t.workspace_id=$1 AND {}=$4 AND {} AND {} {}",
         selector.column(),
         if archived {
             "t.deleted_at>clock_timestamp()-interval '30 days'"
         } else {
             "t.deleted_at IS NULL"
         },
+        policy::readable_team_including_archived(actor, "t.id", archived),
         if lock {
             "FOR UPDATE OF t"
         } else {
@@ -112,9 +113,9 @@ async fn select_team(
     );
     Ok(sqlx::query_as::<_, TeamRow>(&query)
         .bind(&actor.workspace_id)
-        .bind(selector.value())
-        .bind(actor.can_read_all_private_teams())
+        .bind(policy::privileged(actor))
         .bind(&actor.user_id)
+        .bind(selector.value())
         .fetch_optional(connection)
         .await?)
 }
@@ -302,8 +303,19 @@ pub async fn list(
     let live = current_actor(&mut tx, actor).await?;
     require_read(&live)?;
     let limit = limit.clamp(1, 100);
-    let mut rows=sqlx::query_as::<_,TeamRow>("SELECT t.* FROM teams t WHERE t.workspace_id=$1 AND t.deleted_at IS NULL AND (t.visibility='workspace' OR $2 OR EXISTS(SELECT 1 FROM team_members tm WHERE tm.workspace_id=t.workspace_id AND tm.team_id=t.id AND tm.user_id=$3)) AND ($4::text IS NULL OR t.name>$4 OR (t.name=$4 AND t.id>$5)) ORDER BY t.name,t.id LIMIT $6")
-        .bind(&live.workspace_id).bind(live.can_read_all_private_teams()).bind(&live.user_id).bind(cursor.as_ref().map(|c|&c.name)).bind(cursor.as_ref().map(|c|c.id)).bind(limit+1).fetch_all(&mut *tx).await?;
+    let query = format!(
+        "SELECT t.* FROM teams t WHERE {} AND ($4::text IS NULL OR t.name>$4 OR (t.name=$4 AND t.id>$5)) ORDER BY t.name,t.id LIMIT $6",
+        policy::readable_team(&live, "t.id")
+    );
+    let mut rows = sqlx::query_as::<_, TeamRow>(&query)
+        .bind(&live.workspace_id)
+        .bind(policy::privileged(&live))
+        .bind(&live.user_id)
+        .bind(cursor.as_ref().map(|c| &c.name))
+        .bind(cursor.as_ref().map(|c| c.id))
+        .bind(limit + 1)
+        .fetch_all(&mut *tx)
+        .await?;
     let more = rows.len() > limit as usize;
     rows.truncate(limit as usize);
     let cursor = if more {
@@ -636,8 +648,21 @@ pub(crate) async fn directory_in(
     archived: bool,
 ) -> Result<Value, StoreError> {
     require_read(live)?;
-    let rows=sqlx::query_as::<_,TeamRow>(&format!("SELECT t.* FROM teams t WHERE t.workspace_id=$1 AND {} AND (t.visibility='workspace' OR $2 OR EXISTS(SELECT 1 FROM team_members tm WHERE tm.workspace_id=t.workspace_id AND tm.team_id=t.id AND tm.user_id=$3)) ORDER BY t.name,t.id",if archived{"t.deleted_at>clock_timestamp()-interval '30 days'"}else{"t.deleted_at IS NULL"}))
-        .bind(&live.workspace_id).bind(live.can_read_all_private_teams()).bind(&live.user_id).fetch_all(&mut *connection).await?;
+    let query = format!(
+        "SELECT t.* FROM teams t WHERE {} AND {} ORDER BY t.name,t.id",
+        if archived {
+            "t.deleted_at>clock_timestamp()-interval '30 days'"
+        } else {
+            "t.deleted_at IS NULL"
+        },
+        policy::readable_team_including_archived(live, "t.id", archived)
+    );
+    let rows = sqlx::query_as::<_, TeamRow>(&query)
+        .bind(&live.workspace_id)
+        .bind(policy::privileged(live))
+        .bind(&live.user_id)
+        .fetch_all(&mut *connection)
+        .await?;
     let can_manage = live.can_manage_teams();
     let can_create = live.has_scope(ApiScope::TeamsWrite)
         && security::settings(&mut *connection, &live.workspace_id)

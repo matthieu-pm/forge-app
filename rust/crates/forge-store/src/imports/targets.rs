@@ -124,19 +124,19 @@ pub(super) async fn raw(
     lock: bool,
 ) -> Result<Option<Value>, StoreError> {
     let (table, condition) = match kind {
-        "issue" => ("issues", policy::readable_issue("r.id")),
-        "project" => ("projects", policy::readable_project("r.id")),
+        "issue" => ("issues", policy::readable_issue(a, "r.id")),
+        "project" => ("projects", policy::readable_project(a, "r.id")),
         "initiative" => (
             "initiatives",
             "($2::boolean OR NOT $2::boolean) AND $3::text IS NOT NULL".into(),
         ),
-        "document" => ("documents", policy::readable_document("r.id")),
+        "document" => ("documents", policy::readable_document(a, "r.id")),
         "view" => (
             "saved_views",
             format!(
                 "r.deleted_at IS NULL AND (r.owner_id=$3 OR r.visibility='workspace' OR (r.visibility='team' AND {})) AND (r.team_id IS NULL OR {})",
-                policy::readable_team("r.team_id"),
-                policy::readable_team("r.team_id")
+                policy::readable_team(a, "r.team_id"),
+                policy::readable_team(a, "r.team_id")
             ),
         ),
         _ => return Err(StoreError::InvalidInput),
@@ -172,7 +172,7 @@ pub(super) async fn target(
     if kind == "milestone" {
         let q = format!(
             "SELECT id,revision,properties FROM projects p WHERE p.workspace_id=$1 AND {} AND p.properties->'milestones' @> $4::jsonb ORDER BY p.id LIMIT 1 FOR SHARE OF p",
-            policy::readable_project("p.id")
+            policy::readable_project(a, "p.id")
         );
         let row: Option<(Uuid, i32, Value)> = sqlx::query_as(&q)
             .bind(&a.workspace_id)

@@ -188,7 +188,7 @@ pub async fn read_cycles_at(
     cycles.sort_by(|a, b| a.start_date.cmp(&b.start_date));
     let sql = format!(
         "SELECT i.cycle_id,count(*)::int,count(*) FILTER(WHERE EXISTS(SELECT 1 FROM issue_statuses s WHERE s.workspace_id=i.workspace_id AND s.team_id=i.team_id AND s.id=i.status_id AND s.status_group='completed'))::int FROM issues i WHERE i.workspace_id=$1 AND i.team_id=$4 AND {} GROUP BY i.cycle_id",
-        policy::readable_issue("i.id")
+        policy::readable_issue(&actor, "i.id")
     );
     let totals: Vec<(Option<Uuid>, i32, i32)> = sqlx::query_as(&sql)
         .bind(&actor.workspace_id)

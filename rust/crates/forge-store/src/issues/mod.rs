@@ -116,14 +116,14 @@ async fn read_rows(
     policy::scope(actor, ApiScope::IssuesRead)?;
     let query = format!(
         "SELECT i.id,i.team_id,i.revision,i.number,i.title,i.status_id,i.assignee_id,i.creator_id,CASE WHEN {} THEN i.project_id ELSE NULL END project_id,CASE WHEN {} THEN i.parent_id ELSE NULL END parent_id,i.cycle_id,i.legacy_id,i.properties,i.created_at,i.updated_at,{} sla FROM issues i WHERE i.workspace_id=$1 AND {} AND ($4::uuid[] IS NULL OR i.id=ANY($4)) ORDER BY i.number",
-        policy::readable_project("i.project_id"),
-        policy::readable_issue("i.parent_id"),
+        policy::readable_project(actor, "i.project_id"),
+        policy::readable_issue(actor, "i.parent_id"),
         if sla_enabled {
             "forge_sla_snapshot(i.id)"
         } else {
             "NULL::jsonb"
         },
-        policy::readable_issue("i.id")
+        policy::readable_issue(actor, "i.id")
     );
     let rows: Vec<IssueRow> = sqlx::query_as(&query)
         .bind(&actor.workspace_id)
@@ -136,7 +136,7 @@ async fn read_rows(
     let labels:Vec<(Uuid,String)>=sqlx::query_as("SELECT a.issue_id,l.name FROM issue_labels a JOIN resource_labels l ON l.id=a.label_id WHERE a.issue_id=ANY($1) ORDER BY l.name").bind(&row_ids).fetch_all(&mut *connection).await?;
     let cycle_query = format!(
         "SELECT c.id FROM issue_cycles c WHERE c.workspace_id=$1 AND {}",
-        policy::readable_team("c.team_id")
+        policy::readable_team(actor, "c.team_id")
     );
     let cycles: Vec<Uuid> = sqlx::query_scalar(&cycle_query)
         .bind(&actor.workspace_id)
@@ -250,7 +250,7 @@ pub async fn read(
     policy::scope(&actor, ApiScope::IssuesRead)?;
     let query = format!(
         "SELECT jsonb_build_object('id',p.id,'workspaceId',p.workspace_id,'name',p.name,'legacyId',p.legacy_id,'revision',p.revision,'properties',p.properties) FROM projects p WHERE p.workspace_id=$1 AND {} AND $4",
-        policy::readable_project("p.id")
+        policy::readable_project(&actor, "p.id")
     );
     let mut projects: Vec<Value> = sqlx::query_scalar(&query)
         .bind(&actor.workspace_id)
@@ -261,7 +261,7 @@ pub async fn read(
         .await?;
     let query = format!(
         "SELECT p.project_id,p.team_id FROM project_teams p WHERE p.workspace_id=$1 AND {}",
-        policy::readable_team("p.team_id")
+        policy::readable_team(&actor, "p.team_id")
     );
     let links: Vec<(Uuid, Uuid)> = sqlx::query_as(&query)
         .bind(&actor.workspace_id)
@@ -299,7 +299,7 @@ pub async fn read(
     }
     let query = format!(
         "SELECT jsonb_build_object('id',c.id,'workspaceId',c.workspace_id,'teamId',c.team_id,'number',c.number,'timezone',c.timezone,'startDate',c.start_date,'endDate',c.end_date) FROM issue_cycles c WHERE c.workspace_id=$1 AND {}",
-        policy::readable_team("c.team_id")
+        policy::readable_team(&actor, "c.team_id")
     );
     let cycles: Vec<Value> = sqlx::query_scalar(&query)
         .bind(&actor.workspace_id)
