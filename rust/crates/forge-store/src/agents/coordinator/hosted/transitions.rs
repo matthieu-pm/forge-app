@@ -20,6 +20,21 @@ impl Service {
             tx.commit().await?;
             return Ok(None);
         }
+        if run.state == RunState::WaitingForApproval {
+            let runtime = self.runtime(thread.runtime_kind)?;
+            if let Some(owner) = thread
+                .runtime_session_id
+                .as_deref()
+                .and_then(|cursor| runtime.cursor_run_id(cursor))
+            {
+                let successor: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM agent_runs WHERE thread_id=$1 AND id<>$2 AND state IN ('created','connecting','running','reconnecting'))")
+                    .bind(thread.id).bind(id).fetch_one(&mut *tx).await?;
+                if owner != id.to_string() || successor {
+                    tx.commit().await?;
+                    return Ok(None);
+                }
+            }
+        }
         Ok(Some((tx, actor, thread, run)))
     }
     pub(super) async fn start_stream(

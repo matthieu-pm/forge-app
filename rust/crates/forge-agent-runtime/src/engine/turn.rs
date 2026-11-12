@@ -194,6 +194,7 @@ impl Engine {
                     let mut definitions=forge_core::agents::tools::descriptors().iter().map(|v|json!({"type":"function","name":v["name"],"description":v["description"],"inputSchema":v["inputSchema"]})).collect::<Vec<_>>();
                     definitions.extend(forge_core::agents::context::descriptors().iter().map(|v|json!({"type":"function","name":v["name"],"description":v["description"],"inputSchema":v["inputSchema"]})));
                     definitions.extend(forge_core::agents::web::descriptors().iter().map(|v|json!({"type":"function","name":v["name"],"description":v["description"],"inputSchema":v["inputSchema"]})));
+                    definitions.extend(forge_core::agents::input::descriptors().iter().map(|v|json!({"type":"function","name":v["name"],"description":v["description"],"inputSchema":v["inputSchema"]})));
                     if let Some(search) = crate::model::search::descriptor(
                         crate::model::request::Protocol::for_provider(channel.provider()),
                     ) {
@@ -236,6 +237,9 @@ impl Engine {
                         let results=state.calls.iter().map(|c|json!({"type":"tool-result","toolCallId":c.id,"toolName":c.name,"output":c.output})).collect::<Vec<_>>();
                         let mut next = state.clone();
                         next.messages.push(json!({"role":"tool","content":results}));
+                        if let Some(message) = next.question_followup.take() {
+                            next.messages.push(message);
+                        }
                         next.calls.clear();
                         next.next_call = 0;
                         next.step = next.step.checked_add(1).ok_or(INVALID)?;
@@ -245,7 +249,10 @@ impl Engine {
                     }
                     let call = state.calls[state.next_call].clone();
                     if call.phase == CallPhase::Complete {
-                        return Err(INVALID);
+                        let mut next = state.clone();
+                        next.next_call += 1;
+                        self.commit(state, journal, next, vec![]).await?;
+                        continue;
                     }
                     if call.phase == CallPhase::Calling
                         && !matches!(
@@ -265,6 +272,12 @@ impl Engine {
                     }
                     if call.name == "todo" {
                         self.execute_todo(state, journal).await?;
+                        continue;
+                    }
+                    if call.name == "ask_question" {
+                        if self.collect_questions(state, journal).await? {
+                            return Ok(Phase::Waiting);
+                        }
                         continue;
                     }
                     if call.name == "web_fetch" {

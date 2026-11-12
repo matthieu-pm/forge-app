@@ -32,7 +32,11 @@ fn scripted(context: runtime::Context, steps: Vec<Value>) -> runtime::Events {
                     Some(v) if v["checkpoint"] == true => {
                         context
                             .checkpoint
-                            .save(format!("cursor:{}", context.run_id))
+                            .save(format!(
+                                "{}:{}",
+                                v["settled"].as_str().unwrap_or("cursor"),
+                                context.run_id
+                            ))
                             .await?
                     }
                     Some(v) if v["error"] == true => {
@@ -49,6 +53,17 @@ fn scripted(context: runtime::Context, steps: Vec<Value>) -> runtime::Events {
 impl AgentRuntime for RuntimeFixture {
     fn kind(&self) -> &'static str {
         "eve"
+    }
+    fn cursor_run_id(&self, cursor: &str) -> Option<String> {
+        self.native.load(Ordering::SeqCst).then_some(())?;
+        let (kind, run) = cursor.split_once(':')?;
+        matches!(kind, "cursor" | "admitted" | "questions" | "complete").then(|| run.to_owned())
+    }
+    fn question_continuation_run(&self, cursor: &str, terminal: bool) -> Option<String> {
+        let owner = self.cursor_run_id(cursor)?;
+        (cursor.starts_with("questions:")
+            || (terminal && (cursor.starts_with("admitted:") || cursor.starts_with("complete:"))))
+        .then_some(owner)
     }
     fn idempotent_resumption(&self) -> bool {
         self.native.load(Ordering::SeqCst)
@@ -121,6 +136,219 @@ fn delta() -> Value {
         "assistant.delta",
         json!({"messageId":"message","delta":"Hello"}),
     )
+}
+fn question(id: &str, kind: &str) -> Value {
+    event(
+        id,
+        "run.waiting",
+        json!({"reason":"input-required","request":{"requestId":id,"kind":kind,"display":"text","prompt":"Which name?","allowFreeform":true,"action":{"callId":id,"kind":"tool-call","toolName":"ask_question","input":{"prompt":"Which name?","allowFreeform":true}}}}),
+    )
+}
+
+#[tokio::test]
+async fn ordinary_question_continuation_requires_a_drained_batch_and_fences_old_checkpoints() {
+    let f = Fixture::new().await;
+    let (service, runtime, model) = setup(&f).await;
+    runtime.native.store(true, Ordering::SeqCst);
+    *runtime.start.lock().unwrap() = vec![
+        json!({"checkpoint":true}),
+        question("question-a", "question"),
+        question("question-b", "question"),
+        json!({"checkpoint":true,"settled":"questions"}),
+    ];
+    let thread = service.create_thread(&f.actor, json!({})).await.unwrap();
+    let mut first = service
+        .start_turn(&f.actor, input(thread.id, &model), None)
+        .await
+        .unwrap();
+    let first_id = first.run.id;
+    while first.events.next().await.unwrap().unwrap().kind != "run.waiting" {}
+    // The first public question is not proof that every remaining batch entry
+    // is an ordinary question. A later entry could still request approval.
+    assert!(matches!(
+        service
+            .start_turn(&f.actor, input(thread.id, &model), None)
+            .await,
+        Err(StoreError::Conflict)
+    ));
+    let remaining: Vec<Event> = first.events.try_collect().await.unwrap();
+    assert!(
+        remaining
+            .iter()
+            .any(|event| event.payload["request"]["requestId"] == "question-b")
+    );
+    let old = runtime.contexts.lock().unwrap().last().unwrap().clone();
+    let first_cursor = format!("questions:{first_id}");
+    *runtime.start.lock().unwrap() = vec![
+        json!({"checkpoint":true}),
+        delta(),
+        json!({"checkpoint":true,"settled":"complete"}),
+    ];
+    let mut answer = input(thread.id, &model);
+    answer["message"] = json!("Marigold");
+    let second = service.start_turn(&f.actor, answer, None).await.unwrap();
+    let second_id = second.run.id;
+    // Even before the successor's first network call, the old stream is fenced.
+    assert!(old.checkpoint.save(first_cursor.clone()).await.is_err());
+    second.events.try_collect::<Vec<_>>().await.unwrap();
+    assert_eq!(
+        runtime
+            .contexts
+            .lock()
+            .unwrap()
+            .last()
+            .unwrap()
+            .runtime_session_id,
+        Some(first_cursor)
+    );
+    assert!(
+        old.checkpoint
+            .save("stale-question-head".into())
+            .await
+            .is_err()
+    );
+    let old_row = current(&f, first_id).await;
+    assert_eq!(old_row.state, RunState::WaitingForApproval);
+    assert_eq!(old_row.completed_at, None);
+    assert_eq!(current(&f, second_id).await.state, RunState::Completed);
+    assert_eq!(
+        threads::get(&f.database, &f.actor.workspace_id, thread.id)
+            .await
+            .unwrap()
+            .unwrap()
+            .runtime_session_id,
+        Some(format!("complete:{second_id}"))
+    );
+    // The historical question row remains waiting after the answer completes;
+    // it must not block an ordinary third turn against that completed head.
+    let third = service
+        .start_turn(&f.actor, input(thread.id, &model), None)
+        .await
+        .unwrap();
+    third.events.try_collect::<Vec<_>>().await.unwrap();
+    let approvals: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM agent_approvals a JOIN agent_runs r ON r.id=a.run_id WHERE r.thread_id=$1")
+        .bind(thread.id).fetch_one(&f.pool).await.unwrap();
+    assert_eq!(approvals, 0);
+    assert_eq!(runtime.cancels.load(Ordering::SeqCst), 0);
+}
+
+#[tokio::test]
+async fn composer_continuation_keeps_required_inputs_and_uncertified_runtimes_blocked() {
+    for case in 0..4 {
+        let f = Fixture::new().await;
+        let (service, runtime, model) = setup(&f).await;
+        runtime.native.store(case != 0, Ordering::SeqCst);
+        let mut steps = vec![
+            json!({"checkpoint":true}),
+            question(
+                "question-a",
+                if case == 1 {
+                    "session-limit"
+                } else {
+                    "question"
+                },
+            ),
+        ];
+        if case == 2 {
+            steps.push(event("approval", "approval.requested", json!({"capabilityId":"teams.update","risk":"reversible-write","summary":"Rename a team","details":{"runtimeRequestId":"required-input"},"input":{"name":"Updated"}})));
+        }
+        if case != 3 {
+            steps.push(json!({"checkpoint":true,"settled":"questions"}));
+        }
+        *runtime.start.lock().unwrap() = steps;
+        let thread = service.create_thread(&f.actor, json!({})).await.unwrap();
+        let first = service
+            .start_turn(&f.actor, input(thread.id, &model), None)
+            .await
+            .unwrap();
+        let id = first.run.id;
+        first.events.try_collect::<Vec<_>>().await.unwrap();
+        assert!(
+            matches!(
+                service
+                    .start_turn(&f.actor, input(thread.id, &model), None)
+                    .await,
+                Err(StoreError::Conflict)
+            ),
+            "case {case}"
+        );
+        assert_eq!(current(&f, id).await.state, RunState::WaitingForApproval);
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM agent_runs WHERE thread_id=$1")
+            .bind(thread.id)
+            .fetch_one(&f.pool)
+            .await
+            .unwrap();
+        assert_eq!(count, 1);
+        if case == 2 {
+            let states: Vec<String> =
+                sqlx::query_scalar("SELECT state FROM agent_approvals WHERE run_id=$1")
+                    .bind(id)
+                    .fetch_all(&f.pool)
+                    .await
+                    .unwrap();
+            assert_eq!(states, vec!["pending"]);
+        }
+    }
+}
+
+#[tokio::test]
+async fn historical_questions_survive_terminal_answers_but_not_unconfirmed_admission() {
+    for terminal_case in ["cancel", "failed", "unconfirmed"] {
+        let f = Fixture::new().await;
+        let (service, runtime, model) = setup(&f).await;
+        runtime.native.store(true, Ordering::SeqCst);
+        *runtime.start.lock().unwrap() = vec![
+            json!({"checkpoint":true}),
+            question("question-a", "question"),
+            json!({"checkpoint":true,"settled":"questions"}),
+        ];
+        let thread = service.create_thread(&f.actor, json!({})).await.unwrap();
+        let first = service
+            .start_turn(&f.actor, input(thread.id, &model), None)
+            .await
+            .unwrap();
+        let original = first.run.id;
+        first.events.try_collect::<Vec<_>>().await.unwrap();
+        *runtime.start.lock().unwrap() = vec![
+            json!({"checkpoint":true,"settled":if terminal_case == "unconfirmed" { "cursor" } else { "admitted" }}),
+            if terminal_case == "cancel" {
+                delta()
+            } else {
+                event("failure", "run.failed", json!({}))
+            },
+            json!({"pending":true}),
+        ];
+        let mut second = service
+            .start_turn(&f.actor, input(thread.id, &model), None)
+            .await
+            .unwrap();
+        let answer = second.run.id;
+        for _ in 0..4 {
+            second.events.next().await.unwrap().unwrap();
+        }
+        if terminal_case == "cancel" {
+            service.cancel_run(&f.actor, answer).await.unwrap();
+        }
+        drop(second);
+        *runtime.start.lock().unwrap() = vec![
+            json!({"checkpoint":true}),
+            delta(),
+            json!({"checkpoint":true,"settled":"complete"}),
+        ];
+        let third = service
+            .start_turn(&f.actor, input(thread.id, &model), None)
+            .await;
+        if terminal_case == "unconfirmed" {
+            assert!(matches!(third, Err(StoreError::Conflict)));
+        } else {
+            third.unwrap().events.try_collect::<Vec<_>>().await.unwrap();
+        }
+        assert_eq!(
+            current(&f, original).await.state,
+            RunState::WaitingForApproval
+        );
+        assert_eq!(current(&f, original).await.completed_at, None);
+    }
 }
 async fn current(f: &Fixture, id: Uuid) -> Run {
     runs::get(&f.database, &f.actor.workspace_id, id)

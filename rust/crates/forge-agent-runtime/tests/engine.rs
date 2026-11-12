@@ -125,7 +125,7 @@ impl Scripted {
             pending: false,
             entered: Notify::new(),
             usage: 10,
-            tools: 10,
+            tools: 11,
         }
     }
 }
@@ -831,3 +831,6 @@ mod budget_engine;
 
 #[path = "acceptance/search_engine.rs"]
 mod search_engine;
+
+#[path = "acceptance/input_engine.rs"]
+mod input_engine;

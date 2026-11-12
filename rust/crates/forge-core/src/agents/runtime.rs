@@ -35,6 +35,17 @@ pub struct Context {
 #[async_trait]
 pub trait Runtime: Send + Sync {
     fn kind(&self) -> &'static str;
+    /// The private cursor's run owner, when this adapter has a durable native
+    /// conversation protocol. Never infer ownership from browser input.
+    fn cursor_run_id(&self, _cursor: &str) -> Option<String> {
+        None
+    }
+    /// A native head with a fully delivered ordinary-question batch, or a
+    /// confirmed admission when the application has ended that run. Required
+    /// approval and session-limit continuation remain a separate path.
+    fn question_continuation_run(&self, _cursor: &str, _terminal: bool) -> Option<String> {
+        None
+    }
     /// Whether repeating the same approval delivery is a durable no-op.
     fn idempotent_resumption(&self) -> bool {
         false

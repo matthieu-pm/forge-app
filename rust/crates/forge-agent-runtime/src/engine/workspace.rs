@@ -29,7 +29,13 @@ impl Engine {
         Ok(prepared)
     }
     pub(super) fn prepare_input(&self, name: &str, input: Value) -> Result<Value> {
-        if name == "todo" {
+        if name == "ask_question" {
+            let input = forge_core::agents::input::input(input)
+                .map_err(|_| Error("Invalid question input."))?;
+            forge_core::agents::presentation::approval_input(&input)
+                .map_err(|_| Error("The question cannot be displayed safely. Reduce its size or remove authentication data."))?;
+            Ok(input)
+        } else if name == "todo" {
             forge_core::agents::context::input(name, input)
                 .map_err(|_| Error("Invalid task list input."))
         } else if name == "web_fetch" {

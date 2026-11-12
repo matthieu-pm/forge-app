@@ -55,6 +55,79 @@ struct Prepared {
     epoch: i32,
 }
 impl Service {
+    async fn question_continuation_allowed(
+        &self,
+        tx: &mut JournalTransaction,
+        actor: &Actor,
+        thread: &Thread,
+        runtime: &dyn AgentRuntime,
+    ) -> Result<bool, StoreError> {
+        // Certification is written by the native adapter only after the entire
+        // private waiting batch has drained. A first public question event alone
+        // is insufficient: a later entry may still require human approval.
+        let Some(cursor) = thread.runtime_session_id.as_deref() else {
+            return Ok(false);
+        };
+        let Some(head) = runtime
+            .cursor_run_id(cursor)
+            .and_then(|run| Uuid::parse_str(&run).ok())
+        else {
+            return Ok(false);
+        };
+        let Some(head) = runs::get_in(tx, &actor.workspace_id, head).await? else {
+            return Ok(false);
+        };
+        if head.thread_id != thread.id
+            || head.initiated_by_user_id != actor.user_id
+            || (!terminal(head.state) && head.state != RunState::WaitingForApproval)
+            || runtime
+                .question_continuation_run(cursor, terminal(head.state))
+                .and_then(|run| Uuid::parse_str(&run).ok())
+                != Some(head.id)
+        {
+            return Ok(false);
+        }
+        let required: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM agent_approvals a JOIN agent_runs r ON r.id=a.run_id WHERE r.thread_id=$1 AND a.state IN ('pending','approved'))")
+            .bind(thread.id).fetch_one(&mut **tx).await?;
+        if required {
+            return Ok(false);
+        }
+        let active: Vec<(Uuid, String)> = sqlx::query_as("SELECT id,state FROM agent_runs WHERE thread_id=$1 AND state IN ('created','connecting','running','waiting-for-approval','reconnecting')")
+            .bind(thread.id).fetch_all(&mut **tx).await?;
+        for (id, state) in active {
+            if state != "waiting-for-approval" {
+                return Ok(false);
+            }
+            // Earlier question runs intentionally remain waiting in the public
+            // source model. They can coexist only behind the certified head.
+            let inputs: Vec<(String, String, String)> = sqlx::query_as("SELECT source,type,payload_json::text FROM agent_events WHERE run_id=$1 AND type IN ('run.waiting','approval.requested') AND sequence>COALESCE((SELECT MAX(sequence) FROM agent_events WHERE run_id=$1 AND type='approval.resolved'),0) ORDER BY sequence")
+                .bind(id).fetch_all(&mut **tx).await?;
+            if inputs.is_empty()
+                || inputs.into_iter().any(|(source, kind, payload)| {
+                    if source != "eve" || kind != "run.waiting" {
+                        return true;
+                    }
+                    let Ok(payload) = forge_core::json::parse(&payload) else {
+                        return true;
+                    };
+                    let request = &payload["request"];
+                    payload["reason"] != "input-required"
+                        || request["kind"] != "question"
+                        || request["action"]["toolName"] != "ask_question"
+                        || !matches!(request["display"].as_str(), Some("text" | "select"))
+                        || forge_core::agents::eve::normalize(
+                            json!({"type":"input.requested","data":{"requests":[request]}}),
+                            "question-admission",
+                            None,
+                        )
+                        .is_err()
+                })
+            {
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    }
     fn hosted(&self) -> Result<&Hosted, StoreError> {
         self.hosted.as_deref().ok_or_else(unavailable)
     }
@@ -144,10 +217,6 @@ impl Service {
         let mut thread = self.owned_thread(&mut tx, &actor, id, true).await?;
         super::local::active_thread(&thread)?;
         self.budget(&mut tx, &actor).await?;
-        let active:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM agent_runs WHERE thread_id=$1 AND state IN ('created','connecting','running','waiting-for-approval','reconnecting'))").bind(id).fetch_one(&mut *tx).await?;
-        if active {
-            return Err(StoreError::Conflict);
-        }
         if !ids.is_empty() {
             let count:i64=sqlx::query_scalar("SELECT COUNT(*) FROM agent_attachments WHERE id=ANY($1) AND workspace_id=$2 AND user_id=$3 AND deleted_at IS NULL AND expires_at>$4").bind(&ids).bind(&actor.workspace_id).bind(&actor.user_id).bind(self.time()).fetch_one(&mut *tx).await?;
             if count as usize != ids.len() {
@@ -163,6 +232,15 @@ impl Service {
         )?;
         let runtime_kind: Runtime = decode(resolved["route"]["runtimeKind"].clone())?;
         let runtime = self.runtime(runtime_kind)?;
+        let active:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM agent_runs WHERE thread_id=$1 AND state IN ('created','connecting','running','waiting-for-approval','reconnecting'))").bind(id).fetch_one(&mut *tx).await?;
+        if active
+            && (thread.runtime_kind != runtime_kind
+                || !self
+                    .question_continuation_allowed(&mut tx, &actor, &thread, runtime.as_ref())
+                    .await?)
+        {
+            return Err(StoreError::Conflict);
+        }
         self.preference_in(&mut tx,&actor,id,json!({"mode":input["selectionMode"],"selectedConnectionId":if input["selectionMode"]=="manual"{input["model"]["connectionId"].clone()}else{input["preferredOpenAIConnectionId"].clone()},"selectedModelId":if input["selectionMode"]=="manual"{input["model"]["modelId"].clone()}else{Value::Null},"selectedEffort":input["reasoningEffort"]})).await?;
         if thread.runtime_kind != runtime_kind {
             thread = threads::update_in(

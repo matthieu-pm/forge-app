@@ -10,11 +10,13 @@ struct Checkpoint {
     actor: Actor,
     run: Uuid,
     epoch: i32,
+    expected: tokio::sync::Mutex<Option<String>>,
 }
 #[async_trait]
 impl runtime::Checkpoint for Checkpoint {
     async fn save(&self, cursor: String) -> Result<(), runtime::Error> {
         async {
+            let mut expected = self.expected.lock().await;
             let Some((mut tx, actor, thread, _)) = self
                 .service
                 .phase(&self.actor, self.run, self.epoch, true)
@@ -22,18 +24,23 @@ impl runtime::Checkpoint for Checkpoint {
             else {
                 return Err(StoreError::Conflict);
             };
+            if thread.runtime_session_id != *expected {
+                return Err(StoreError::Conflict);
+            }
             threads::update_in(
                 &mut tx,
                 &actor.workspace_id,
                 thread.id,
                 &ThreadPatch {
-                    runtime_session_id: Some(Some(cursor)),
+                    runtime_session_id: Some(Some(cursor.clone())),
                     last_activity_at: Some(self.service.time()),
                     ..Default::default()
                 },
             )
             .await?;
-            tx.commit().await
+            tx.commit().await?;
+            *expected = Some(cursor);
+            Ok(())
         }
         .await
         .map_err(|_| runtime::Error("The runtime checkpoint could not be saved."))
@@ -68,6 +75,7 @@ pub(super) fn context(
             actor: actor.clone(),
             run: run.id,
             epoch,
+            expected: tokio::sync::Mutex::new(thread.runtime_session_id.clone()),
         }),
     }
 }

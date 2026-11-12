@@ -108,7 +108,8 @@ gate pass.
 | 3b12e | Billing management contexts, currency renewal intents and refund-renewal confirmations | Passed |
 | 3b12f | Verified provider catalogue, invoice/refund proofs, native checkout and subscription reconciliation | Passed |
 | 3b12g | Renewal mutations, signed webhook recovery, replacement proofs and authenticated billing summary | Passed |
-| 3b13a | Native general input requests, typed answers and durable continuation | Pending |
+| 3b13a1 | Ordinary question batches, typed answers and durable composer continuation | Passed |
+| 3b13a2 | Mixed required-input deferral and original approval ownership across continuation | Pending |
 | 3b13b | Native child-agent execution, shared sandbox, usage and recovery | Pending |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4a | Existing React server-call adapters and missing Rust bootstrap/read contracts | Pending |
@@ -2943,6 +2944,52 @@ these routes do not represent a completed rewrite.
   cases, including 163 signed-webhook cases. PostgreSQL billing reads and composed
   refund recovery passed. The 607 external fixture tests remain skipped. Evidence:
   `.forge/rust-rewrite/milestone-3b12g-unicode.log` (exit 0).
+
+### Milestone 3b13a1
+
+- Ordinary `ask_question` requests retain the existing React composer flow.
+  Closed schemas, request defaults, option matching and typed results have 266
+  comparisons generated from the installed EVE implementation. Option IDs take
+  precedence over labels and numeric indices; one reply is evaluated against
+  every pending ordinary question. Unmatched questions produce ignored results.
+- The engine persists a question batch before yielding. Question answers have
+  separate typed receipts; even a UUID-shaped question ID cannot receive a
+  boolean tool approval. Remaining queued calls retain their ordinary execution
+  and authorization checks. Cancellation retains questions but prevents unrelated
+  cancelled calls from executing in the successor.
+- Native admission consumes the private batch under the conversation-head lock.
+  The successor, answer events, parent consumption receipt and worker fence share
+  one transaction. Identical retries reuse the saved result; competing, foreign
+  or stale admissions cannot consume the batch. Old application waiting rows
+  remain unchanged, matching the reference application.
+- The adapter certifies a question wait only after the full runtime batch is
+  drained. Coordinator checkpoints compare the expected cursor before replacing
+  it, preventing an older stream from restoring an obsolete conversation head.
+  HTTP recovery preserves opaque question IDs and suppresses consumed or
+  cancelled prompts without discarding their private history.
+- PostgreSQL and HTTP acceptance cases cover restart, duplicate delivery,
+  conflicting siblings, scoped admission, cancellation, original approval
+  separation and subsequent composer turns, qualified by the complete gate below.
+  Mixed question/required-input batches, deferred messages and resuming the
+  original approval through a newer cursor remain milestone 3b13a2; child-agent
+  question routing belongs to 3b13b. No new question UI or public answer API is
+  introduced.
+
+- The first complete gate passed source fixtures, formatting, 3,013 enabled
+  reference tests and all three TypeScript checks. Rust compilation stopped in
+  the new schema comparison test because the validator function table had an
+  unspecified return type. Direct typed dispatch replaces that table; validation
+  behavior and assertions are unchanged. Rust tests did not execute in this
+  attempt. The 607 external fixture tests remain skipped. Evidence:
+  `.forge/rust-rewrite/milestone-3b13a1-initial.log` (exit 1).
+
+- The corrected complete gate passed: 748 Rust tests, 3,013 enabled reference
+  tests, all three TypeScript checks, documentation tests, formatting, Clippy and
+  source-fixture checks. All 266 new source comparisons passed, together with
+  twenty added Rust test groups covering the engine, private PostgreSQL journal,
+  runtime HTTP, native adapter and application coordinator. The 607 external
+  fixture tests remain skipped. Evidence:
+  `.forge/rust-rewrite/milestone-3b13a1-correction.log` (exit 0).
 
 ### React and Tauri integration direction
 

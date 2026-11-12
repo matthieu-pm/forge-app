@@ -13,6 +13,7 @@ const checks = [
   ["bun", ["scripts/rust-context-reference.mjs", "--check"]],
   ["bun", ["scripts/rust-web-reference.mjs", "--check"]],
   ["bun", ["scripts/rust-session-budget-reference.mjs", "--check"]],
+  ["node", ["scripts/rust-input-reference.mjs", "--check"]],
   ["bun", ["scripts/rust-search-reference.mjs", "--check"]],
   ["bun", ["scripts/rust-invitation-reference.mjs", "--check"]],
   ["bun", ["scripts/rust-workflow-health-reference.mjs", "--check"]],

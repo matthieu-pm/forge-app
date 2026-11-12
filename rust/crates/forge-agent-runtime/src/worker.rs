@@ -105,12 +105,21 @@ impl Worker {
         if session.cancelled {
             return Err(Error("The agent run has been cancelled."));
         }
+        if session.continued_by.is_some() {
+            if response.is_some() {
+                return Err(Error(
+                    "The agent input has already continued in another run.",
+                ));
+            }
+            return Ok(session.state.phase());
+        }
         // A repeated response is accepted only when its exact decision has a
         // durable receipt. Conflicts/stale IDs cannot allocate run resources.
         if let Some(response) = &response {
             match session.state.decision(&response.request) {
                 Some(recorded) if recorded == response.decision => {}
-                None if session.state.pending_request() == Some(response.request.as_str()) => {}
+                None if session.state.pending_request() == Some(response.request.as_str())
+                    && session.state.pending_questions().is_empty() => {}
                 _ => {
                     return Err(Error(
                         "The approval response is stale or conflicts with its recorded decision.",

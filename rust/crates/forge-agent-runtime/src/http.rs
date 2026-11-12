@@ -147,7 +147,9 @@ fn parse<T: serde::de::DeserializeOwned>(headers: &HeaderMap, bytes: &[u8]) -> H
     serde_json::from_value(value).map_err(|_| BAD)
 }
 fn public(session: &Session) -> Value {
-    json!({"phase":session.state.phase(),"cancelled":session.cancelled || session.state.phase() == Phase::Cancelled,"nextIndex":session.next_index,"deadline":session.deadline.timestamp_millis(),"pendingRequestId":session.state.pending_request(),"workerActive":session.worker_active})
+    let cancelled = session.cancelled || session.state.phase() == Phase::Cancelled;
+    let inactive = session.continued_by.is_some() || cancelled;
+    json!({"phase":session.state.phase(),"cancelled":cancelled,"nextIndex":session.next_index,"deadline":session.deadline.timestamp_millis(),"pendingRequestId":if inactive {None} else {session.state.pending_request()},"pendingRequests":if inactive {vec![]} else {session.state.pending_questions()},"continuedByRunId":session.continued_by,"workerActive":session.worker_active})
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -238,6 +240,7 @@ async fn admit(
         .map_err(|_| UNAVAILABLE)?
         .map_err(|_| CONFLICT)?;
     if !session.cancelled
+        && session.continued_by.is_none()
         && !matches!(
             session.state.phase(),
             Phase::Complete | Phase::Cancelled | Phase::Failed | Phase::Waiting
@@ -309,6 +312,7 @@ async fn recover(
     let channel = service.channel(&headers, &run)?;
     let session = service.load(&channel).await?;
     if session.cancelled
+        || session.continued_by.is_some()
         || (session.deadline <= Utc::now()
             && !matches!(
                 session.state.phase(),

@@ -22,6 +22,7 @@ const SCHEMAS: &[&str] = &[
     include_str!("../migrations/0002_conversations.sql"),
     include_str!("../migrations/0003_compaction_recovery.sql"),
     include_str!("../migrations/0004_session_budgets.sql"),
+    include_str!("../migrations/0005_input_continuations.sql"),
 ];
 fn versions() -> Vec<(i32, String)> {
     SCHEMAS
@@ -52,6 +53,7 @@ pub struct Session {
     pub deadline: DateTime<Utc>,
     pub cancelled: bool,
     pub worker_active: bool,
+    pub continued_by: Option<Uuid>,
 }
 pub struct Event {
     pub index: u64,
@@ -80,9 +82,10 @@ struct Row {
     lease_until: Option<DateTime<Utc>>,
     deadline: DateTime<Utc>,
     cancelled_at: Option<DateTime<Utc>>,
+    continued_by_run_id: Option<Uuid>,
     worker_active: bool,
 }
-const COLUMNS: &str = "workspace_id,user_id,conversation_id,parent_run_id,initial_hash,revision,engine_state::text AS snapshot,next_index,journal_bytes,epoch,lease_owner,lease_until,deadline,cancelled_at,COALESCE(lease_until > clock_timestamp() AND deadline > clock_timestamp() AND cancelled_at IS NULL,false) AS worker_active";
+const COLUMNS: &str = "workspace_id,user_id,conversation_id,parent_run_id,initial_hash,revision,engine_state::text AS snapshot,next_index,journal_bytes,epoch,lease_owner,lease_until,deadline,cancelled_at,continued_by_run_id,COALESCE(lease_until > clock_timestamp() AND deadline > clock_timestamp() AND cancelled_at IS NULL AND continued_by_run_id IS NULL,false) AS worker_active";
 fn run(channel: &Channel) -> Result<Uuid> {
     channel.run_id().parse().map_err(|_| INVALID)
 }
@@ -190,6 +193,9 @@ impl Store {
             || snapshot["output_tokens"] != 0
             || snapshot["calls"] != json!([])
             || snapshot["decisions"] != json!({})
+            || snapshot["questions"] != json!([])
+            || snapshot["question_answers"] != json!({})
+            || !snapshot["question_followup"].is_null()
             || snapshot["todos"] != json!([])
             || snapshot["budget"]
                 != json!({"prior":{"input":0,"output":0},"granted":null,"pending":null})
@@ -226,6 +232,7 @@ impl Store {
             deadline: row.deadline,
             cancelled: row.cancelled_at.is_some(),
             worker_active: row.worker_active,
+            continued_by: row.continued_by_run_id,
         })
     }
     pub async fn load(&self, channel: &Channel) -> Result<Session> {
@@ -243,6 +250,7 @@ impl Store {
             deadline: row.deadline,
             cancelled: row.cancelled_at.is_some(),
             worker_active: row.worker_active,
+            continued_by: row.continued_by_run_id,
         })
     }
     /// Persist a resolved approval before acknowledging delivery. Only a parked
@@ -255,7 +263,7 @@ impl Store {
     ) -> Result<bool> {
         let mut tx = self.pool.begin().await.map_err(|_| FAILED)?;
         let row = locked(&mut tx, channel).await?;
-        if row.cancelled_at.is_some() {
+        if row.cancelled_at.is_some() || row.continued_by_run_id.is_some() {
             return Err(LOST);
         }
         let state = restored(&row, channel)?;
@@ -290,7 +298,7 @@ impl Store {
         let row = locked(&mut tx, channel).await?;
         let now = now(&mut tx).await?;
         let state = restored(&row, channel)?;
-        if row.cancelled_at.is_some() || row.deadline <= now {
+        if row.cancelled_at.is_some() || row.continued_by_run_id.is_some() || row.deadline <= now {
             return Err(LOST);
         }
         // A parked worker has committed that it will perform no more effects.
@@ -349,7 +357,7 @@ impl Store {
     pub async fn cancel(&self, channel: &Channel) -> Result<bool> {
         let mut tx = self.pool.begin().await.map_err(|_| FAILED)?;
         let row = locked(&mut tx, channel).await?;
-        if row.cancelled_at.is_some() {
+        if row.cancelled_at.is_some() || row.continued_by_run_id.is_some() {
             tx.commit().await.map_err(|_| FAILED)?;
             return Ok(false);
         }
@@ -419,6 +427,7 @@ impl Lease {
             || row.lease_until.is_none_or(|until| until <= at)
             || row.deadline <= at
             || row.cancelled_at.is_some()
+            || row.continued_by_run_id.is_some()
         {
             return Err(LOST);
         }

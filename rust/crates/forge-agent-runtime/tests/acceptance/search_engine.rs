@@ -243,7 +243,7 @@ async fn chat_compatible_models_do_not_advertise_unsupported_provider_search() {
     let mut state = initial(&channel);
     let journal = Arc::new(Memory::new(state.clone()));
     let mut model = Scripted::new(vec![]);
-    model.tools = 9;
+    model.tools = 10;
     let (engine, _) = setup(Arc::new(model), journal.clone(), None);
     engine
         .drive(

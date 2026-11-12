@@ -64,6 +64,7 @@ impl Store {
                 deadline: row.deadline,
                 cancelled: row.cancelled_at.is_some(),
                 worker_active: row.worker_active,
+                continued_by: row.continued_by_run_id,
             });
         }
         if head.last_run_id != previous {
@@ -72,7 +73,9 @@ impl Store {
         if deadline <= now(&mut tx).await? {
             return Err(Error("The agent run deadline has elapsed."));
         }
-        let parent_state = if let Some(previous) = previous {
+        let mut initial_events = Vec::new();
+        let mut consumed_parent = None;
+        let state = if let Some(previous) = previous {
             let parent = sqlx::query_as::<_, Row>(&format!(
                 "SELECT {COLUMNS} FROM forge_runtime.sessions WHERE run_id=$1 FOR UPDATE"
             ))
@@ -82,7 +85,8 @@ impl Store {
             .map_err(|_| FAILED)?
             .ok_or(INVALID)?;
             scoped(&parent, channel)?;
-            if parent.conversation_id != Some(conversation) {
+            if parent.conversation_id != Some(conversation) || parent.continued_by_run_id.is_some()
+            {
                 return Err(INVALID);
             }
             let state = State::restore_parent(
@@ -90,26 +94,35 @@ impl Store {
                 channel,
                 &previous.to_string(),
             )?;
-            if parent.cancelled_at.is_none()
-                && !matches!(
-                    state.phase(),
-                    Phase::Complete | Phase::Cancelled | Phase::Failed
-                )
-            {
-                return Err(Error("The previous conversation run has not ended."));
+            if let Some((next, events)) = state.question_continuation(
+                channel,
+                message.clone(),
+                parent.cancelled_at.is_some(),
+            )? {
+                consumed_parent = Some((previous, parent.epoch.checked_add(1).ok_or(LOST)?));
+                initial_events = events;
+                next
+            } else {
+                if parent.cancelled_at.is_none()
+                    && !matches!(
+                        state.phase(),
+                        Phase::Complete | Phase::Cancelled | Phase::Failed
+                    )
+                {
+                    return Err(Error("The previous conversation run has not ended."));
+                }
+                let mut history = state.next_history();
+                history.push(message);
+                let mut next = State::new(channel, history)?;
+                next.inherit_context(&state);
+                next
             }
-            Some(state)
         } else {
-            None
+            fresh
         };
-        let mut history = parent_state
-            .as_ref()
-            .map(State::next_history)
-            .unwrap_or_default();
-        history.push(message);
-        let mut state = State::new(channel, history)?;
-        if let Some(parent) = parent_state {
-            state.inherit_context(&parent);
+        state.validate(channel)?;
+        if state.revision() != 0 {
+            return Err(INVALID);
         }
         let text = javascript_stringify(&state.snapshot());
         if text.len() > LIMIT {
@@ -119,6 +132,17 @@ impl Store {
         // prevents reusing an admission in a different conversation.
         sqlx::query("INSERT INTO forge_runtime.sessions(run_id,workspace_id,user_id,initial_hash,engine_state,deadline,conversation_id,parent_run_id) VALUES($1,$2,$3,$4,$5::jsonb,$6,$7,$8)")
             .bind(run(channel)?).bind(channel.workspace_id()).bind(channel.principal_id()).bind(hash).bind(text).bind(deadline).bind(conversation).bind(previous).execute(&mut *tx).await.map_err(|_|FAILED)?;
+        if !initial_events.is_empty() {
+            let row = locked(&mut tx, channel).await?;
+            let at = now(&mut tx).await?;
+            append(&mut tx, channel, &row, &initial_events, at, false).await?;
+        }
+        if let Some((parent, epoch)) = consumed_parent {
+            // The answer receipt, successor, and head advance commit together.
+            // Fence the parked worker even if it has not yet released its lease.
+            sqlx::query("UPDATE forge_runtime.sessions SET continued_by_run_id=$2,epoch=$3,lease_owner=NULL,lease_until=NULL,updated_at=clock_timestamp() WHERE run_id=$1")
+                .bind(parent).bind(run(channel)?).bind(epoch).execute(&mut *tx).await.map_err(|_|FAILED)?;
+        }
         sqlx::query("UPDATE forge_runtime.conversations SET last_run_id=$2,updated_at=clock_timestamp() WHERE id=$1").bind(conversation).bind(run(channel)?).execute(&mut *tx).await.map_err(|_|FAILED)?;
         if deadline <= now(&mut tx).await? {
             return Err(Error("The agent run deadline has elapsed."));
@@ -126,10 +150,11 @@ impl Store {
         tx.commit().await.map_err(|_| FAILED)?;
         Ok(Session {
             state,
-            next_index: 0,
+            next_index: initial_events.len() as u64,
             deadline,
             cancelled: false,
             worker_active: false,
+            continued_by: None,
         })
     }
 }

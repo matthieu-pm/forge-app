@@ -123,6 +123,96 @@ async fn actual_native_service_handles_approval_continuation_next_turn_and_provi
     );
     f.shutdown().await;
 }
+
+#[tokio::test]
+async fn ordinary_question_batch_replays_and_consumes_a_composer_answer_once() {
+    let f = Fixture::new(Mode::Questions, true).await;
+    let runtime = NativeRuntime::new(f.options()).unwrap();
+    let saved = Arc::new(Saved::default());
+    let mut ctx = context(saved.clone());
+    let original_run = ctx.run_id.clone();
+    let mut stream = runtime.start(ctx.clone(), "Choose a flower".into(), vec![]);
+    let first = loop {
+        let event = stream.next().await.unwrap().unwrap();
+        if event["type"] == "run.waiting" {
+            break event;
+        }
+    };
+    assert_eq!(
+        first["payload"]["request"]["requestId"],
+        "opaque-question-choice"
+    );
+    assert_eq!(first["payload"]["request"]["kind"], "question");
+    assert!(
+        runtime
+            .question_continuation_run(&saved.last(), false)
+            .is_none()
+    );
+    let rest = collect(stream).await;
+    assert!(
+        rest.iter()
+            .any(|event| event["payload"]["request"]["requestId"] == "opaque-question-text")
+    );
+    assert_eq!(
+        runtime.question_continuation_run(&saved.last(), false),
+        Some(original_run)
+    );
+    ctx.runtime_session_id = Some(saved.last());
+    let replay = collect(runtime.reconnect(ctx.clone())).await;
+    let requests: Vec<_> = replay
+        .iter()
+        .filter(|event| event["type"] == "run.waiting")
+        .map(|event| event["payload"]["request"].clone())
+        .collect();
+    assert_eq!(requests.len(), 2);
+    assert_eq!(requests[0], first["payload"]["request"]);
+    assert!(
+        !replay
+            .iter()
+            .any(|event| event["type"] == "approval.requested")
+    );
+    assert_eq!(f.script.models.load(Ordering::SeqCst), 1);
+
+    ctx.runtime_session_id = Some(saved.last());
+    ctx.run_id = Uuid::new_v4().to_string();
+    let answer = collect(runtime.start(ctx.clone(), "2".into(), vec![])).await;
+    assert_eq!(answer.last().unwrap()["type"], "run.completed");
+    assert_eq!(
+        runtime.question_continuation_run(&saved.last(), true),
+        Some(ctx.run_id.clone())
+    );
+    {
+        let results = f.script.question_results.lock().unwrap();
+        assert!(
+            results
+                .iter()
+                .any(|part| part["toolCallId"] == "opaque-question-choice"
+                    && part["output"]["value"]["status"] == "answered"
+                    && part["output"]["value"]["optionId"] == "b")
+        );
+        assert!(
+            results
+                .iter()
+                .any(|part| part["toolCallId"] == "opaque-question-text"
+                    && part["output"]["value"]["text"] == "2")
+        );
+    }
+    ctx.runtime_session_id = Some(saved.last());
+    let retried = collect(runtime.start(ctx.clone(), "2".into(), vec![])).await;
+    assert_eq!(retried.last().unwrap()["type"], "run.completed");
+    assert_eq!(f.script.models.load(Ordering::SeqCst), 2);
+    ctx.runtime_session_id = Some(saved.last());
+    ctx.run_id = Uuid::new_v4().to_string();
+    assert_eq!(
+        collect(runtime.start(ctx, "Thanks".into(), vec![]))
+            .await
+            .last()
+            .unwrap()["type"],
+        "run.completed"
+    );
+    assert_eq!(f.script.effects.load(Ordering::SeqCst), 0);
+    f.shutdown().await;
+}
 #[tokio::test]
 async fn cursor_advances_only_after_delivery_and_reconnect_replays_the_unacknowledged_event() {
     let f = Fixture::new(Mode::Finish, false).await;
@@ -200,6 +290,8 @@ async fn legacy_and_foreign_cursors_and_malformed_approvals_cannot_start_work() 
             previous_run_id: None,
             stream_index: 0,
             deadline_ms: chrono::Utc::now().timestamp_millis() + 60000,
+            settled: None,
+            admitted: false,
         }
         .encode(),
     ] {
@@ -225,6 +317,8 @@ async fn legacy_and_foreign_cursors_and_malformed_approvals_cannot_start_work() 
             previous_run_id: None,
             stream_index: 0,
             deadline_ms: ctx.deadline_ms,
+            settled: None,
+            admitted: false,
         }
         .encode(),
     );

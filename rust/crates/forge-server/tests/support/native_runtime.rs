@@ -31,6 +31,7 @@ pub enum Mode {
     Search,
     Budget,
     Approve,
+    Questions,
     Stall,
     LargeToolData,
     SensitiveToolData,
@@ -40,6 +41,7 @@ pub struct Script {
     pub models: AtomicUsize,
     pub effects: AtomicUsize,
     pub output_limits: Mutex<Vec<u32>>,
+    pub question_results: Mutex<Vec<Value>>,
     pub began: Notify,
 }
 struct Adapter(Arc<Script>);
@@ -61,6 +63,35 @@ impl Model for Adapter {
         self.0.began.notify_one();
         if matches!(self.0.mode, Mode::Stall) {
             std::future::pending::<()>().await;
+        }
+        if matches!(self.0.mode, Mode::Questions) {
+            let answers: Vec<Value> = turn
+                .prompt
+                .iter()
+                .filter(|message| message["role"] == "tool")
+                .filter_map(|message| message["content"].as_array())
+                .flatten()
+                .filter(|part| part["toolName"] == "ask_question")
+                .cloned()
+                .collect();
+            let asking = answers.is_empty();
+            self.0.question_results.lock().unwrap().extend(answers);
+            return Ok(Completion {
+                content: if asking {
+                    vec![
+                        json!({"type":"tool-call","toolCallId":"opaque-question-choice","toolName":"ask_question","input":{"prompt":"Choose a name","options":[{"id":"a","label":"Aster"},{"id":"b","label":"Marigold"}],"allowFreeform":false}}),
+                        json!({"type":"tool-call","toolCallId":"opaque-question-text","toolName":"ask_question","input":{"prompt":"Why?","allowFreeform":true}}),
+                    ]
+                } else {
+                    vec![json!({"type":"text","text":"The marker is marigold."})]
+                },
+                finish: if asking {
+                    Finish::ToolCalls
+                } else {
+                    Finish::Stop
+                },
+                usage: json!({"inputTokens":10,"outputTokens":5}),
+            });
         }
         if matches!(self.0.mode, Mode::Search) {
             let searched = turn.prompt.iter().any(|m| {
@@ -172,6 +203,7 @@ impl Fixture {
             models: AtomicUsize::new(0),
             effects: AtomicUsize::new(0),
             output_limits: Mutex::new(vec![]),
+            question_results: Mutex::new(vec![]),
             began: Notify::new(),
         });
         let host = Host::new(

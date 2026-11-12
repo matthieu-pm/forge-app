@@ -7,6 +7,7 @@ pub mod diagnostics;
 pub mod eve;
 pub mod files;
 pub mod framework;
+pub mod input;
 pub mod models;
 pub mod policy;
 pub mod presentation;

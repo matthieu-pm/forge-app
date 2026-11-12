@@ -21,6 +21,12 @@ use tokio::time::{sleep, timeout};
 use uuid::Uuid;
 const LINE_LIMIT: usize = 8 * 1024 * 1024 + 1024;
 const FAILED: Error = Error("The native agent runtime could not complete this request.");
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Settled {
+    Questions,
+    Complete,
+}
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Cursor {
@@ -29,6 +35,10 @@ pub struct Cursor {
     pub previous_run_id: Option<Uuid>,
     pub stream_index: u64,
     pub deadline_ms: i64,
+    #[serde(default)]
+    pub admitted: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub settled: Option<Settled>,
 }
 impl Cursor {
     pub fn encode(&self) -> String {
@@ -200,7 +210,7 @@ impl Stream {
         {
             return Err(FAILED);
         }
-        let cursor = match &mode {
+        let mut cursor = match &mode {
             Mode::Start(_, _) if previous.as_ref().is_some_and(|cursor| cursor.run_id == run) => {
                 previous.clone().unwrap()
             }
@@ -210,6 +220,8 @@ impl Stream {
                 previous_run_id: previous.as_ref().map(|c| c.run_id),
                 stream_index: 0,
                 deadline_ms: self.context.deadline_ms,
+                admitted: false,
+                settled: None,
             },
             _ => previous.filter(|cursor| cursor.run_id == run).ok_or(Error(
                 "Native runtime recovery requires this run's saved cursor.",
@@ -268,6 +280,8 @@ impl Stream {
             )
             .await?;
         self.owned()?;
+        cursor.admitted = true;
+        self.context.checkpoint.save(cursor.encode()).await?;
         let response = timeout(
             Duration::from_secs(30),
             self.runtime.0.transport.request(
@@ -344,6 +358,50 @@ impl Stream {
                     {
                         return Err(FAILED);
                     }
+                    let pending = status.get("pendingRequests").and_then(Value::as_array);
+                    let questions = pending.filter(|requests| {
+                        !requests.is_empty()
+                            && requests.iter().all(|request| {
+                                request["kind"] == "question"
+                                    && request["action"]["toolName"] == "ask_question"
+                                    && matches!(
+                                        request["display"].as_str(),
+                                        Some("text" | "select")
+                                    )
+                            })
+                    });
+                    let mut question_events = if let Some(requests) = questions {
+                        if status["phase"] != "waiting" || status["cancelled"] == true {
+                            return Err(FAILED);
+                        }
+                        eve::normalize(
+                            json!({"type":"input.requested","data":{"requests":requests}}),
+                            &format!("native:{}", cursor.run_id),
+                            Some(cursor.stream_index as f64),
+                        )
+                        .map_err(|_| FAILED)?
+                        .into_iter()
+                        .map(|event| {
+                            forge_core::agents::presentation::native_event(event)
+                                .map_err(|_| FAILED)
+                        })
+                        .collect::<Result<Vec<_>, _>>()?
+                    } else {
+                        vec![]
+                    };
+                    cursor.settled = if status["cancelled"] == true {
+                        None
+                    } else if status["phase"] == "complete" {
+                        Some(Settled::Complete)
+                    } else if questions.is_some() {
+                        Some(Settled::Questions)
+                    } else {
+                        None
+                    };
+                    // All earlier normalized batch entries were persisted before
+                    // this terminal status was read. Only now certify the head;
+                    // the first question alone must never authorize continuation.
+                    self.context.checkpoint.save(cursor.encode()).await?;
                     let kind = if status["cancelled"] == true {
                         Some("run.cancelled")
                     } else {
@@ -358,6 +416,17 @@ impl Stream {
                             self.queue.push_back(json!({"sourceEventId":format!("native:{}:status:{kind}",cursor.run_id),"source":"eve","type":kind,"payload":if kind=="run.failed"{json!({"code":"RUNTIME_EXECUTION_FAILED","message":"The native runtime run failed."})}else{json!({})}}));
                         }
                     } else if !self.waiting_seen {
+                        if !question_events.is_empty() {
+                            for (index, event) in question_events.iter_mut().enumerate() {
+                                event["sourceEventId"] = json!(format!(
+                                    "native:{}:waiting:{}:{index}",
+                                    cursor.run_id, self.owner
+                                ));
+                            }
+                            self.queue.extend(question_events);
+                            self.done = true;
+                            continue;
+                        }
                         let request = status["pendingRequestId"]
                             .as_str()
                             .filter(|v| Uuid::parse_str(v).is_ok())
@@ -453,6 +522,14 @@ impl Drop for Stream {
 impl Runtime for NativeRuntime {
     fn kind(&self) -> &'static str {
         "eve"
+    }
+    fn cursor_run_id(&self, cursor: &str) -> Option<String> {
+        Some(Cursor::decode(cursor)?.run_id.to_string())
+    }
+    fn question_continuation_run(&self, cursor: &str, terminal: bool) -> Option<String> {
+        let cursor = Cursor::decode(cursor)?;
+        (matches!(cursor.settled, Some(Settled::Questions)) || (terminal && cursor.admitted))
+            .then(|| cursor.run_id.to_string())
     }
     fn idempotent_resumption(&self) -> bool {
         true

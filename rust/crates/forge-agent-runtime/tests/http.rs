@@ -49,6 +49,7 @@ fn token(run: Uuid, user: &str, workspace: &str, issued: i64, ttl: f64) -> Strin
 enum Mode {
     Finish,
     Approval,
+    Question,
     Stall,
 }
 struct TestFactory {
@@ -96,15 +97,22 @@ impl Model for Adapter {
         }
         let approval = matches!(self.0.mode, Mode::Approval)
             && !turn.prompt.iter().any(|m| m["role"] == "tool");
+        let question = matches!(self.0.mode, Mode::Question)
+            && !turn.prompt.iter().any(|m| m["role"] == "tool");
         Ok(Completion {
-            content: if approval {
+            content: if question {
+                vec![
+                    json!({"type":"tool-call","toolCallId":"00000000-0000-4000-8000-000000000017","toolName":"ask_question","input":{"prompt":"Which option?","options":[{"id":"one","label":"One"},{"id":"two","label":"Two"}]}}),
+                    json!({"type":"tool-call","toolCallId":"opaque-question","toolName":"ask_question","input":{"prompt":"Confirm"}}),
+                ]
+            } else if approval {
                 vec![
                     json!({"type":"tool-call","toolCallId":"update","toolName":"update_team","input":{"slug":"forge","settings":{"name":"Changed"}}}),
                 ]
             } else {
                 vec![json!({"type":"text","text":"Saved."})]
             },
-            finish: if approval {
+            finish: if approval || question {
                 Finish::ToolCalls
             } else {
                 Finish::Stop
@@ -683,6 +691,132 @@ async fn conversation_admission_carries_resolved_attachments_and_prior_turns_int
     assert_eq!(
         f.request("POST", "", Some(missing)).await.status(),
         StatusCode::BAD_REQUEST
+    );
+    f.host.shutdown().await.unwrap();
+}
+
+#[tokio::test]
+async fn question_status_replays_opaque_ids_and_composer_admission_consumes_the_private_batch() {
+    let mut f = Fixture::new(Mode::Question, 2, 2).await;
+    let conversation = Uuid::new_v4();
+    f.admission["conversationId"] = json!(conversation);
+    f.begin().await;
+    f.phase(Phase::Waiting).await;
+    f.idle().await;
+    let status = json_body(f.request("GET", "", None).await).await;
+    let pending = status["status"]["pendingRequests"].as_array().unwrap();
+    assert_eq!(pending.len(), 2);
+    assert_eq!(pending[1]["requestId"], "opaque-question");
+    assert!(pending.iter().all(|v| v["kind"] == "question"));
+    let after = status["status"]["nextIndex"].as_u64().unwrap();
+    let replay = bytes(
+        f.request("GET", &format!("/stream?after={after}"), None)
+            .await,
+    )
+    .await;
+    let terminal: Value = serde_json::from_str(replay.lines().last().unwrap()).unwrap();
+    assert_eq!(terminal["status"]["pendingRequests"], json!(pending));
+    assert_eq!(
+        f.request(
+            "POST",
+            "/resume",
+            Some(json!({"requestId":pending[0]["requestId"],"approved":true}))
+        )
+        .await
+        .status(),
+        StatusCode::CONFLICT
+    );
+    assert_eq!(f.factory.models.load(Ordering::SeqCst), 1);
+    let child = Uuid::new_v4();
+    let bearer = token(
+        child,
+        "fixture-user",
+        "fixture-workspace",
+        Utc::now().timestamp(),
+        900.,
+    );
+    let channel =
+        Channel::verify(SECRET, &format!("Bearer {bearer}"), Utc::now().timestamp()).unwrap();
+    let body = json!({"message":"Two","conversationId":conversation,"previousRunId":f.run,"deadline":f.admission["deadline"]});
+    let path = format!("/native/v1/runs/{child}");
+    assert_eq!(
+        request(&f.app, "POST", &path, Some(&bearer), Some(body.clone()))
+            .await
+            .status(),
+        StatusCode::ACCEPTED
+    );
+    timeout(Duration::from_secs(5), async {
+        loop {
+            if f.store
+                .load(&channel)
+                .await
+                .is_ok_and(|s| s.state.phase() == Phase::Complete)
+            {
+                break;
+            }
+            sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap();
+    let state = f.store.load(&channel).await.unwrap().state;
+    let results = state
+        .history()
+        .iter()
+        .find(|m| m["role"] == "tool")
+        .unwrap();
+    assert_eq!(
+        results["content"][0]["output"]["value"],
+        json!({"status":"answered","optionId":"two"})
+    );
+    assert_eq!(
+        results["content"][1]["output"]["value"],
+        json!({"status":"answered","text":"Two"})
+    );
+    assert_eq!(
+        request(&f.app, "POST", &path, Some(&bearer), Some(body))
+            .await
+            .status(),
+        StatusCode::ACCEPTED
+    );
+    let old = json_body(f.request("GET", "", None).await).await;
+    assert_eq!(old["status"]["continuedByRunId"], json!(child));
+    assert_eq!(old["status"]["pendingRequests"], json!([]));
+    assert!(old["status"]["pendingRequestId"].is_null());
+    assert_eq!(
+        f.request("POST", "/recover", Some(json!({})))
+            .await
+            .status(),
+        StatusCode::CONFLICT
+    );
+    assert_eq!(f.factory.effects.load(Ordering::SeqCst), 0);
+    assert_eq!(f.factory.models.load(Ordering::SeqCst), 2);
+    f.host.shutdown().await.unwrap();
+}
+
+#[tokio::test]
+async fn cancelled_question_status_hides_prompts_but_retains_private_continuation() {
+    let f = Fixture::new(Mode::Question, 2, 2).await;
+    f.begin().await;
+    f.phase(Phase::Waiting).await;
+    f.idle().await;
+    assert_eq!(
+        f.request("POST", "/cancel", Some(json!({}))).await.status(),
+        StatusCode::OK
+    );
+    let status = json_body(f.request("GET", "", None).await).await;
+    assert_eq!(status["status"]["cancelled"], true);
+    assert_eq!(status["status"]["pendingRequests"], json!([]));
+    assert!(status["status"]["pendingRequestId"].is_null());
+    assert_eq!(
+        f.store
+            .load(&f.channel)
+            .await
+            .unwrap()
+            .state
+            .pending_questions()
+            .len(),
+        2
     );
     f.host.shutdown().await.unwrap();
 }

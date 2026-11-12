@@ -1,0 +1,59 @@
+[
+  {
+    "name": "ask_question",
+    "description": "Ask the user a question and wait for their response before continuing. Use this when you need clarification or a choice from the user.",
+    "inputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+        "allowFreeform": {
+          "type": "boolean",
+          "description": "Whether the user may answer with freeform text instead of selecting one of the provided options."
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "description": {
+                "type": "string",
+                "description": "Optional additional context for this option."
+              },
+              "id": {
+                "type": "string",
+                "description": "Stable identifier for the option."
+              },
+              "label": {
+                "type": "string",
+                "description": "User-facing label for the option."
+              },
+              "style": {
+                "type": "string",
+                "enum": [
+                  "primary",
+                  "danger",
+                  "default"
+                ],
+                "description": "Visual treatment hint for the option."
+              }
+            },
+            "required": [
+              "id",
+              "label"
+            ],
+            "additionalProperties": false
+          },
+          "description": "Selectable answer options to present to the user."
+        },
+        "prompt": {
+          "type": "string",
+          "description": "The prompt to present to the user."
+        }
+      },
+      "required": [
+        "prompt"
+      ],
+      "additionalProperties": false
+    }
+  }
+]

@@ -410,6 +410,8 @@ async fn changing_back_to_eve_cannot_silently_replace_a_saved_native_conversatio
             previous_run_id: None,
             stream_index: 0,
             deadline_ms: ctx.deadline_ms,
+            settled: None,
+            admitted: false,
         }
         .encode(),
     );

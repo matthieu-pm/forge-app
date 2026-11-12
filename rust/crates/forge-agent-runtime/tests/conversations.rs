@@ -13,6 +13,8 @@ use sha2::{Digest, Sha256};
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use std::time::Duration;
 use uuid::Uuid;
+#[path = "acceptance/input_conversations.rs"]
+mod input_conversations;
 const SECRET: &str = "public-conversation-fixture-signing-secret";
 fn channel(run: Uuid, user: &str, workspace: &str, provider: &str) -> Channel {
     let now = Utc::now().timestamp();

@@ -50,10 +50,10 @@ pub(super) struct Call {
 }
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct Binding {
-    user: String,
-    workspace: String,
-    run: String,
+pub(super) struct Binding {
+    pub(super) user: String,
+    pub(super) workspace: String,
+    pub(super) run: String,
     provider: String,
     model: String,
 }
@@ -61,7 +61,7 @@ struct Binding {
 #[serde(deny_unknown_fields)]
 pub struct State {
     pub(super) version: u32,
-    binding: Binding,
+    pub(super) binding: Binding,
     pub(super) revision: u64,
     pub(super) phase: Phase,
     pub(super) step: u64,
@@ -72,6 +72,14 @@ pub struct State {
     pub(super) output_tokens: u64,
     #[serde(default)]
     pub(super) decisions: BTreeMap<String, Decision>,
+    /// Full framework-owned requests retain their `kind: question` discriminator.
+    #[serde(default)]
+    pub(super) questions: Vec<Value>,
+    #[serde(default)]
+    pub(super) question_answers: BTreeMap<String, Value>,
+    /// Ordinary composer content follows the pending model's complete tool batch.
+    #[serde(default)]
+    pub(super) question_followup: Option<Value>,
     #[serde(default)]
     pub(super) workspace: Option<Reference>,
     #[serde(default)]
@@ -117,6 +125,9 @@ impl State {
             input_tokens: 0,
             output_tokens: 0,
             decisions: BTreeMap::new(),
+            questions: vec![],
+            question_answers: BTreeMap::new(),
+            question_followup: None,
             workspace: Some(Reference::new()),
             files: FileState::default(),
             todos: vec![],
@@ -174,6 +185,12 @@ impl State {
             }).collect::<Vec<_>>();
             messages.push(json!({"role":"tool","content":results}));
         }
+        if let Some(message) = &self.question_followup {
+            messages.push(message.clone());
+        }
+        Self::transfer_history(messages)
+    }
+    pub(super) fn transfer_history(messages: Vec<Value>) -> Vec<Value> {
         let mut messages = Self::materialize_search_history(messages);
         // Provider item IDs and signed reasoning belong to the previous model
         // connection. Keep materialized text/tools so switching connections or
@@ -216,6 +233,13 @@ impl State {
         decision: Decision,
     ) -> Result<Option<Self>> {
         self.validate(channel)?;
+        if self.question_answers.contains_key(request)
+            || self.questions.iter().any(|q| q["requestId"] == request)
+        {
+            return Err(Error(
+                "A question requires a typed answer, not an approval decision.",
+            ));
+        }
         if let Some(recorded) = self.decision(request) {
             return if recorded == decision {
                 Ok(None)
@@ -279,6 +303,9 @@ impl State {
         if let Some(pending) = &self.budget.pending {
             return Some(&pending.request_id);
         }
+        if let Some(question) = self.questions.first() {
+            return question["requestId"].as_str();
+        }
         self.calls.get(self.next_call)?.request_id.as_deref()
     }
     pub(crate) fn validate(&self, channel: &Channel) -> Result<()> {
@@ -293,8 +320,9 @@ impl State {
         }
         self.validate_structure()
     }
-    fn validate_structure(&self) -> Result<()> {
+    pub(super) fn validate_structure(&self) -> Result<()> {
         self.validate_budget()?;
+        self.validate_questions()?;
         if self.compaction.last_input_tokens.is_some()
             != self.compaction.last_prompt_messages.is_some()
             || self
@@ -343,16 +371,21 @@ impl State {
         if self.messages.first() != Some(&json!({"role":"system","content":INSTRUCTIONS})) {
             return Err(INVALID);
         }
+        let mut validated_messages = self.messages.clone();
+        if let Some(message) = &self.question_followup {
+            validated_messages.push(message.clone());
+        }
         request::build_for(
             &b.provider,
             &b.model,
-            &crate::context::model_messages(&self.messages),
+            &crate::context::model_messages(&validated_messages),
             &[],
             None,
         )
         .map_err(|_| INVALID)?;
         if self.phase == Phase::Waiting
             && self.budget.pending.is_none()
+            && self.questions.is_empty()
             && !self.calls.get(self.next_call).is_some_and(|c| {
                 c.phase == CallPhase::Waiting
                     && c.request_id.is_some()
@@ -380,6 +413,13 @@ impl State {
                     .or_else(|_| forge_core::agents::framework::input(&c.name, c.input.clone()))
                     .or_else(|_| forge_core::agents::context::input(&c.name, c.input.clone()))
                     .or_else(|_| forge_core::agents::web::input(&c.name, c.input.clone()))
+                    .or_else(|error| {
+                        if c.name == "ask_question" {
+                            forge_core::agents::input::input(c.input.clone())
+                        } else {
+                            Err(error)
+                        }
+                    })
                     .map_err(|_| INVALID)?;
                 if input != c.input || forge_core::agents::approval::input_hash(&input) != *hash {
                     return Err(INVALID);
