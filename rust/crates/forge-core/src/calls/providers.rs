@@ -29,6 +29,57 @@ pub trait Gateway: Send + Sync {
         challenge: &str,
     ) -> Result<String, Error>;
     async fn exchange(&self, provider: &str, input: Exchange<'_>) -> Result<Tokens, Error>;
+    async fn native_calls(
+        &self,
+        _provider: &str,
+        _token: &str,
+        _since: chrono::DateTime<chrono::Utc>,
+    ) -> Result<Vec<NativeCall>, Error> {
+        Err(Error)
+    }
+}
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeCall {
+    pub external_id: String,
+    pub title: String,
+    #[serde(serialize_with = "serialize_time")]
+    pub started_at: chrono::DateTime<chrono::Utc>,
+    pub duration: i32,
+    pub participants: Vec<String>,
+    pub transcript: Vec<super::TranscriptEntry>,
+}
+fn serialize_time<S: serde::Serializer>(
+    time: &chrono::DateTime<chrono::Utc>,
+    s: S,
+) -> Result<S::Ok, S::Error> {
+    s.serialize_str(&time.to_rfc3339_opts(chrono::SecondsFormat::Millis, true))
+}
+#[async_trait]
+pub trait Summarizer: Send + Sync {
+    async fn summarize(&self, text: &str) -> Result<Value, Error>;
+}
+pub fn summary_request(env: &HashMap<String, String>, text: &str) -> Result<Value, Error> {
+    if text.encode_utf16().count() > 250000 {
+        return Err(Error);
+    }
+    let mut value: Value =
+        serde_json::from_str(include_str!("../../data/call-summary-policy.json"))
+            .expect("source summary request");
+    if let Some(model) = env
+        .get("FORGE_CALLS_SUMMARY_MODEL")
+        .filter(|s| !s.is_empty())
+    {
+        value["model"] = serde_json::json!(model);
+    }
+    value["messages"][1]["content"] = serde_json::json!(text);
+    Ok(value)
+}
+pub fn summary_response(value: Value) -> Result<Value, Error> {
+    let text = value["choices"][0]["message"]["content"]
+        .as_str()
+        .unwrap_or("{}");
+    super::input("recap", crate::json::parse(text).map_err(|_| Error)?).map_err(|_| Error)
 }
 pub struct Config {
     pub provider: String,

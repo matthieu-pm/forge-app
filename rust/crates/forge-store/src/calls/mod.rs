@@ -13,6 +13,10 @@ use uuid::Uuid;
 mod connections;
 mod directory;
 mod mutations;
+mod summaries;
+mod sync;
+mod worker;
+pub use worker::Report;
 #[derive(Clone, Default)]
 pub struct Options {
     pub environment: HashMap<String, String>,
@@ -31,6 +35,7 @@ pub struct Service {
     pub now: Arc<dyn Fn() -> DateTime<Utc> + Send + Sync>,
     pub gateway: Option<Arc<dyn contract::providers::Gateway>>,
     pub vault: Option<Arc<dyn crate::agents::model_connections::Vault>>,
+    pub summarizer: Option<Arc<dyn contract::providers::Summarizer>>,
 }
 impl Service {
     pub fn new(database: Database, options: Options) -> Self {
@@ -40,6 +45,7 @@ impl Service {
             now: Arc::new(Utc::now),
             gateway: None,
             vault: None,
+            summarizer: None,
         }
     }
     fn time(&self) -> DateTime<Utc> {

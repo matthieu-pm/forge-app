@@ -1,5 +1,172 @@
 use super::*;
 #[tokio::test]
+async fn call_sync_and_summary_http_bind_current_sessions_and_publish_native_results() {
+    use forge_core::calls::providers::{Error, TokenRequest};
+    use forge_server::call_providers::{Client, Settings, Transport};
+    use std::{
+        collections::HashMap,
+        sync::atomic::{AtomicUsize, Ordering},
+    };
+    struct Provider {
+        reads: AtomicUsize,
+        summaries: AtomicUsize,
+        started: chrono::DateTime<chrono::Utc>,
+    }
+    #[async_trait]
+    impl Transport for Provider {
+        async fn exchange(&self, _: TokenRequest) -> Result<Value, Error> {
+            panic!("unexpired tokens");
+        }
+        async fn read(&self, url: &str, token: &str) -> Result<String, Error> {
+            assert_eq!(token, "private-access");
+            self.reads.fetch_add(1, Ordering::SeqCst);
+            let time = forge_core::loops::iso_timestamp(self.started);
+            let data = if url.contains("/entries?") {
+                json!({"transcriptEntries":[{"participant":"p1","startTime":time,"text":"Start the pilot."}]})
+            } else if url.contains("/participants?") {
+                json!({"participants":[{"name":"p1","signedinUser":{"displayName":"Alex"}}]})
+            } else if url.contains("/transcripts?") {
+                json!({"transcripts":[{"name":"conferenceRecords/c1/transcripts/t1","state":"FILE_GENERATED"}]})
+            } else {
+                assert!(url.starts_with("https://meet.googleapis.com/v2/conferenceRecords?"));
+                json!({"conferenceRecords":[{"name":"conferenceRecords/c1","space":"spaces/team","startTime":time,"endTime":forge_core::loops::iso_timestamp(self.started+chrono::Duration::minutes(30))}]})
+            };
+            Ok(data.to_string())
+        }
+        async fn summary(&self, key: &str, request: Value) -> Result<Value, Error> {
+            assert_eq!(key, "private-ai-key");
+            assert_eq!(request["messages"][1]["content"], "Alex: Start the pilot.");
+            self.summaries.fetch_add(1, Ordering::SeqCst);
+            Ok(
+                json!({"choices":[{"message":{"content":json!({"summary":"Pilot approved.","decisions":["Start the pilot"],"actions":[{"title":"Start pilot","owner":""}]}).to_string()}}]}),
+            )
+        }
+    }
+    let mut f = Fixture::new().await;
+    let (_, token, cookie) = f.account().await;
+    forge_store::workspaces::create(
+        &f.database,
+        &token,
+        "Calls pipeline HTTP",
+        &Uuid::new_v4().to_string(),
+        None,
+    )
+    .await
+    .unwrap();
+    let actor = forge_store::authority::session_actor(&f.database, &token)
+        .await
+        .unwrap();
+    let forge_core::actor::Authentication::Session { session_id } = &actor.authentication else {
+        panic!()
+    };
+    let team=forge_store::teams::create(&f.database,&actor,&forge_core::teams::CreateTeam::parse(json!({"name":"Calls","identifier":"CPIP","timezone":"UTC","icon":{"kind":"icon","value":"File01Icon","color":"#818cf8"}})).unwrap()).await.unwrap();
+    let provider = Arc::new(Provider {
+        reads: 0.into(),
+        summaries: 0.into(),
+        started: chrono::Utc::now() - chrono::Duration::hours(1),
+    });
+    let environment = HashMap::from([
+        ("BETTER_AUTH_URL".into(), ORIGIN.into()),
+        ("OPENAI_API_KEY".into(), "private-ai-key".into()),
+        ("FORGE_GOOGLE_MEET_CLIENT_ID".into(), "fixture-id".into()),
+        (
+            "FORGE_GOOGLE_MEET_CLIENT_SECRET".into(),
+            "private-secret".into(),
+        ),
+    ]);
+    let client = Arc::new(Client::new(environment.clone(), provider.clone()));
+    let vault = Arc::new(
+        forge_identity::model_vault::Vault::new("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
+            .unwrap(),
+    );
+    let id = Uuid::new_v4();
+    let secret = vault
+        .seal(
+            &json!({"access_token":"private-access","expires_at":4102444800000.}).to_string(),
+            &format!("meeting:{}:{id}", actor.workspace_id),
+        )
+        .unwrap();
+    sqlx::query("INSERT INTO call_connections(id,workspace_id,user_id,team_id,provider,secret) VALUES($1,$2,$3,$4,'google',$5)").bind(id).bind(&actor.workspace_id).bind(&actor.user_id).bind(team.id).bind(secret).execute(&f.pool).await.unwrap();
+    f.app = forge_server::router_with_state(
+        AppState::configured(
+            f.pool.clone(),
+            AuthSettings::new(SECRET.into(), ORIGIN).unwrap(),
+            None,
+        )
+        .with_calls(Settings {
+            options: forge_store::calls::Options { environment },
+            gateway: client.clone(),
+            summarizer: Some(client),
+            vault: Some(vault),
+        }),
+    );
+    let base = json!({"workspaceId":actor.workspace_id,"sessionId":session_id});
+    let mut wrong = base.clone();
+    wrong["sessionId"] = json!("wrong");
+    for path in ["/api/workspace/calls/sync", "/api/workspace/calls/summary"] {
+        assert_eq!(
+            f.request("POST", path, None, Some(base.clone())).await.0,
+            StatusCode::UNAUTHORIZED
+        );
+        assert_eq!(
+            f.request("POST", path, Some(&cookie), Some(wrong.clone()))
+                .await
+                .0,
+            StatusCode::FORBIDDEN
+        );
+    }
+    assert_eq!(
+        provider.reads.load(Ordering::SeqCst) + provider.summaries.load(Ordering::SeqCst),
+        0
+    );
+    for expected in [1, 0] {
+        let (status, _, body) = f
+            .request(
+                "POST",
+                "/api/workspace/calls/sync",
+                Some(&cookie),
+                Some(base.clone()),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body, expected);
+    }
+    let (_, _, rows) = f
+        .request(
+            "POST",
+            "/api/workspace/calls",
+            Some(&cookie),
+            Some(base.clone()),
+        )
+        .await;
+    let mut read = base;
+    read["callId"] = rows["calls"][0]["id"].clone();
+    for _ in 0..2 {
+        let (status, _, body) = f
+            .request(
+                "POST",
+                "/api/workspace/calls/summary",
+                Some(&cookie),
+                Some(read.clone()),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert!(body.is_null());
+    }
+    let (status, _, record) = f
+        .request(
+            "POST",
+            "/api/workspace/calls/read",
+            Some(&cookie),
+            Some(read),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(record["summary"], "Pilot approved.");
+    assert_eq!(record["actions"].as_array().unwrap().len(), 1);
+    assert_eq!(provider.summaries.load(Ordering::SeqCst), 1);
+}
+#[tokio::test]
 async fn call_http_binds_sessions_requires_consent_and_preserves_unicode_transcripts_and_retention()
 {
     let f = Fixture::new().await;
@@ -198,6 +365,7 @@ async fn meeting_oauth_http_uses_bound_sessions_and_redacted_single_use_callback
     ]);
     let provider = Arc::new(Provider::default());
     let settings = Settings {
+        summarizer: None,
         options: forge_store::calls::Options {
             environment: env.clone(),
         },

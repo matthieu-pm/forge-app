@@ -65,6 +65,8 @@ pub fn router_with_state(state: state::AppState) -> Router {
         .route("/api/workspace/calls/retention", post(calls::retention))
         .route("/api/workspace/calls/disconnect", post(calls::disconnect))
         .route("/api/workspace/calls/connect", post(calls::connect))
+        .route("/api/workspace/calls/sync", post(calls::sync))
+        .route("/api/workspace/calls/summary", post(calls::summary))
         .route("/api/calls/oauth/callback", get(calls::callback))
         .route("/api/workspace/sla/save", post(sla::save))
         .route("/api/workspace/sla/reconcile", post(sla::reconcile))

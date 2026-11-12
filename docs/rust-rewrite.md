@@ -96,6 +96,7 @@ gate pass.
 | 3b10g | Authenticated loop scheduler, bounded dispatch and native operator | Passed |
 | 3b11a | Call transcript contracts, shared records, notes, actions and journaled retention | Passed |
 | 3b11b | Meeting provider OAuth, deployment isolation and fenced credential publication | Passed |
+| 3b11c | Native transcript synchronization, fenced recap publication and Calls operator | Passed |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -2623,3 +2624,42 @@ these routes do not represent a completed rewrite.
   tests**, and **three typechecks**, including source fixtures, formatting and
   Clippy. The 607 external-fixture tests in 31 files remain skipped.
   Evidence: `.forge/rust-rewrite/milestone-3b11b-redactions.log`.
+
+### Milestone 3b11c
+
+- Google Meet, Microsoft Teams and Zoom transcript adapters preserve the owning
+  provider algorithms: bounded pagination, completed transcript selection,
+  speaker ordering and recurring-meeting occurrence windows. Download URLs use
+  the existing HTTPS host allowlist; redirects remain disabled and response
+  bodies remain bounded. Source fixtures cover 23 provider scenarios and nine
+  exact summary requests without live provider traffic.
+- Synchronization claims a fifteen-minute lease and independently acknowledges
+  it before credential use. Refreshes and imports recheck the live owner, team,
+  exact lease and connection generation. Each import is durable and deduplicated
+  by workspace/provider/external ID. An old worker cannot publish against a new
+  connection or clear a successor's lease. Recovery publication failure does not
+  roll back already committed refreshed credentials.
+- Summaries claim a ten-minute lease, enforce transcript and recap bounds, and
+  treat transcript text as untrusted user content. The source-derived model
+  request disables storage and provides no tools. Recaps, decisions and actions
+  publish atomically after current authorization, retention and lease checks;
+  failed work is retryable and successful summaries are idempotent.
+- Bound HTTP sync and summary endpoints use the same services as the native
+  `forge-calls run` operator. The operator requires an explicit environment and
+  database target plus complete Calls configuration, sweeps expired transcripts
+  first, isolates individual failures, and records durable operational health.
+  It reads no dotenv files and changes no scheduler registration. A ninth
+  disposable database isolates its global queue from other acceptance fixtures.
+- New provider, core, database, recovery, HTTP and real-operator scenarios cover
+  source parity, retries, access revocation during external I/O, overlapping
+  workers, credential refresh, exact lease cleanup, atomic recap publication,
+  independent journal failures and operational health. Full validation pending.
+- The initial full gate passed all **653 Rust tests**, **3,013 enabled reference
+  tests**, three typechecks, source comparisons and formatting. Clippy rejected
+  one complex tuple type in the new sync fixture. It now uses a named SQL row
+  type with the same assertions; no application behavior changed. Evidence:
+  `.forge/rust-rewrite/milestone-3b11c-initial.log`. Full rerun pending.
+- The corrected full gate passed **653 Rust tests**, **3,013 enabled reference
+  tests**, three typechecks, source comparisons, formatting and Clippy. The 607
+  external-fixture tests in 31 files remain skipped. Evidence:
+  `.forge/rust-rewrite/milestone-3b11c-row-type.log`.

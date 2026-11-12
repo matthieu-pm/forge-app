@@ -2,6 +2,159 @@ use super::*;
 use chrono::{Duration, Utc};
 use serde_json::json;
 #[tokio::test]
+async fn meeting_sync_and_summary_require_acknowledged_claims_and_keep_committed_results_on_publish_failure()
+ {
+    use forge_core::calls::providers::{Error, Exchange, Gateway, NativeCall, Summarizer, Tokens};
+    use std::{
+        collections::HashMap,
+        sync::atomic::{AtomicBool, AtomicI64, AtomicUsize},
+    };
+    struct Probe {
+        backend: Arc<CaptureJournal>,
+        refreshes: AtomicUsize,
+        reads: AtomicUsize,
+        summaries: AtomicUsize,
+        fail_publication: AtomicBool,
+    }
+    #[async_trait]
+    impl Gateway for Probe {
+        fn authorization_url(&self, _: &str, _: &str, _: &str) -> Result<String, Error> {
+            Err(Error)
+        }
+        async fn exchange(&self, _: &str, _: Exchange<'_>) -> Result<Tokens, Error> {
+            self.refreshes.fetch_add(1, Ordering::SeqCst);
+            if self.fail_publication.load(Ordering::SeqCst) {
+                self.backend.mode.store(2, Ordering::SeqCst);
+            }
+            Ok(Tokens {
+                access_token: "private-refreshed-access".into(),
+                refresh_token: Some("private-refresh".into()),
+                expires_at: 4102444800000.,
+            })
+        }
+        async fn native_calls(
+            &self,
+            _: &str,
+            _: &str,
+            _: chrono::DateTime<Utc>,
+        ) -> Result<Vec<NativeCall>, Error> {
+            self.reads.fetch_add(1, Ordering::SeqCst);
+            Ok(vec![])
+        }
+    }
+    #[async_trait]
+    impl Summarizer for Probe {
+        async fn summarize(&self, _: &str) -> Result<serde_json::Value, Error> {
+            self.summaries.fetch_add(1, Ordering::SeqCst);
+            if self.fail_publication.load(Ordering::SeqCst) {
+                self.backend.mode.store(2, Ordering::SeqCst);
+            }
+            Ok(
+                json!({"summary":"Decision","decisions":["Start"],"actions":[{"title":"Prepare","owner":"Sam"}]}),
+            )
+        }
+    }
+    let f = Fixture::new().await;
+    forge_store::workspaces::create(
+        &f.database,
+        &f.token,
+        "Call pipeline recovery",
+        &Uuid::new_v4().to_string(),
+        None,
+    )
+    .await
+    .unwrap();
+    let actor = forge_store::authority::session_actor(&f.database, &f.token)
+        .await
+        .unwrap();
+    let team=forge_store::teams::create(&f.database,&actor,&forge_core::teams::CreateTeam::parse(json!({"name":"Calls","identifier":"PREC","timezone":"UTC","icon":{"kind":"icon","value":"File01Icon","color":"#818cf8"}})).unwrap()).await.unwrap();
+    let clock = Arc::new(AtomicI64::new(Utc::now().timestamp_millis()));
+    let time = clock.clone();
+    let mut service = forge_store::calls::Service::new(
+        f.database.clone(),
+        forge_store::calls::Options {
+            environment: HashMap::from([("FORGE_CALLS_PROVIDERS".into(), "google".into())]),
+        },
+    );
+    service.now = Arc::new(move || {
+        chrono::DateTime::from_timestamp_millis(time.load(Ordering::SeqCst)).unwrap()
+    });
+    service.vault = Some(Arc::new(
+        forge_identity::model_vault::Vault::new("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
+            .unwrap(),
+    ));
+    let probe = Arc::new(Probe {
+        backend: f.backend.clone(),
+        refreshes: 0.into(),
+        reads: 0.into(),
+        summaries: 0.into(),
+        fail_publication: false.into(),
+    });
+    service.gateway = Some(probe.clone());
+    service.summarizer = Some(probe.clone());
+    let id = Uuid::new_v4();
+    let secret=service.vault.as_ref().unwrap().seal(&json!({"access_token":"private-access","refresh_token":"private-refresh","expires_at":0}).to_string(),&format!("meeting:{}:{id}",actor.workspace_id)).unwrap();
+    sqlx::query("INSERT INTO call_connections(id,workspace_id,user_id,team_id,provider,secret) VALUES($1,$2,$3,$4,'google',$5)").bind(id).bind(&actor.workspace_id).bind(&actor.user_id).bind(team.id).bind(secret).execute(&f.pool).await.unwrap();
+    let call=service.import(&actor,json!({"teamId":team.id,"title":"Review","startedAt":forge_core::loops::iso_timestamp((service.now)()),"text":"Alex: Private transcript","consentConfirmed":true})).await.unwrap();
+    for mode in [1, 2] {
+        f.backend.mode.store(mode, Ordering::SeqCst);
+        assert!(matches!(
+            service.sync_connection(id, None).await,
+            Err(StoreError::Recovery(_))
+        ));
+        assert!(matches!(
+            service.summarize_call(call, None).await,
+            Err(StoreError::Recovery(_))
+        ));
+        let leases:(bool,bool)=sqlx::query_as("SELECT (SELECT sync_lease_at IS NOT NULL FROM call_connections WHERE id=$1),(SELECT summary_lease_at IS NOT NULL FROM calls WHERE id=$2)").bind(id).bind(call).fetch_one(&f.pool).await.unwrap();
+        assert_eq!(leases, (mode == 2, mode == 2));
+    }
+    assert_eq!(
+        probe.reads.load(Ordering::SeqCst)
+            + probe.refreshes.load(Ordering::SeqCst)
+            + probe.summaries.load(Ordering::SeqCst),
+        0
+    );
+    clock.fetch_add(16 * 60 * 1000, Ordering::SeqCst);
+    f.backend.mode.store(0, Ordering::SeqCst);
+    probe.fail_publication.store(true, Ordering::SeqCst);
+    assert!(matches!(
+        service.sync_connection(id, None).await,
+        Err(StoreError::Recovery(_))
+    ));
+    assert_eq!(probe.refreshes.load(Ordering::SeqCst), 1);
+    assert_eq!(probe.reads.load(Ordering::SeqCst), 0);
+    let secret: String = sqlx::query_scalar("SELECT secret FROM call_connections WHERE id=$1")
+        .bind(id)
+        .fetch_one(&f.pool)
+        .await
+        .unwrap();
+    assert!(
+        service
+            .vault
+            .as_ref()
+            .unwrap()
+            .open(&secret, &format!("meeting:{}:{id}", actor.workspace_id))
+            .unwrap()
+            .contains("private-refreshed-access")
+    );
+    f.backend.mode.store(0, Ordering::SeqCst);
+    assert!(matches!(
+        service.summarize_call(call, None).await,
+        Err(StoreError::Recovery(_))
+    ));
+    let state:(String,String,Option<chrono::DateTime<Utc>>,i64)=sqlx::query_as("SELECT summary,summary_status,summary_lease_at,(SELECT count(*) FROM call_actions WHERE call_id=c.id) FROM calls c WHERE id=$1").bind(call).fetch_one(&f.pool).await.unwrap();
+    assert_eq!(state, ("Decision".into(), "ready".into(), None, 1));
+    f.backend.mode.store(0, Ordering::SeqCst);
+    probe.fail_publication.store(false, Ordering::SeqCst);
+    assert!(!service.summarize_call(call, None).await.unwrap());
+    assert_eq!(probe.summaries.load(Ordering::SeqCst), 1);
+    assert_eq!(service.sync_connection(id, None).await.unwrap(), 0);
+    assert_eq!(probe.refreshes.load(Ordering::SeqCst), 1);
+    let patches:Vec<serde_json::Value>=sqlx::query_scalar("SELECT patch FROM recovery_events WHERE table_name='call_connections' AND row_key->>'id'=$1 ORDER BY sequence").bind(id.to_string()).fetch_all(&f.pool).await.unwrap();
+    assert_eq!(patches, vec![json!({"secret":null})]);
+}
+#[tokio::test]
 async fn call_retention_requires_independent_preparation_and_keeps_committed_redaction_on_publication_failure()
  {
     let f = Fixture::new().await;

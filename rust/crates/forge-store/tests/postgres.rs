@@ -20,6 +20,8 @@ mod agent_acceptance;
 mod call_acceptance;
 #[path = "acceptance/call_connections.rs"]
 mod call_connection_acceptance;
+#[path = "acceptance/call_pipeline.rs"]
+mod call_pipeline_acceptance;
 #[path = "acceptance/definitions.rs"]
 mod definition_acceptance;
 #[path = "acceptance/documents.rs"]

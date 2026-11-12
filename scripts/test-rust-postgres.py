@@ -91,6 +91,13 @@ def main():
                 print(loops_setup.stderr, file=sys.stderr)
                 return loops_setup.returncode
             # The native runtime owns a private schema and explicit installer.
+            # Global call synchronization and summaries own an isolated queue.
+            subprocess.run(["psql", "-X", "-v", "ON_ERROR_STOP=1", "--dbname", connection, "-c", "CREATE DATABASE forge_rust_calls"], check=True, capture_output=True)
+            calls_connection = f"postgresql://forge_rust_test@127.0.0.1:{port}/forge_rust_calls"
+            calls_setup = subprocess.run(["psql", "-X", "-v", "ON_ERROR_STOP=1", "--dbname", calls_connection], input="\n".join(statements), text=True, capture_output=True)
+            if calls_setup.returncode:
+                print(calls_setup.stderr, file=sys.stderr)
+                return calls_setup.returncode
             # Keep its journal tests independent of the reference app's schema.
             subprocess.run(["psql", "-X", "-v", "ON_ERROR_STOP=1", "--dbname", connection, "-c", "CREATE DATABASE forge_rust_runtime"], check=True, capture_output=True)
             runtime_connection = f"postgresql://forge_rust_test@127.0.0.1:{port}/forge_rust_runtime"
@@ -127,6 +134,7 @@ def main():
             environment["FORGE_RUST_PRODUCT_RETENTION_TEST_DATABASE_URL"] = product_retention_connection
             environment["FORGE_RUST_HEALTH_TEST_DATABASE_URL"] = health_connection
             environment["FORGE_RUST_LOOPS_TEST_DATABASE_URL"] = loops_connection
+            environment["FORGE_RUST_CALLS_TEST_DATABASE_URL"] = calls_connection
             return subprocess.run(["cargo", "test", "--workspace", "--locked", "--no-fail-fast"], cwd=ROOT, env=environment).returncode
         finally:
             if started:

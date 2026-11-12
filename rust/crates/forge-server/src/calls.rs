@@ -23,6 +23,11 @@ async fn dispatch(
         "read" => service.read(&actor, input).await?,
         "import" => json!(service.import(&actor, input).await?),
         "connect" => json!(service.begin_connection(&actor, input).await?),
+        "sync" => json!(service.sync(&actor).await?),
+        "summary" => {
+            service.summary(&actor, input).await?;
+            Value::Null
+        }
         "note" => {
             service.add_note(&actor, input).await?;
             Value::Null
@@ -104,6 +109,20 @@ pub(crate) async fn connect(
     p: Payload,
 ) -> Result<Json<Value>, IssueHttpError> {
     dispatch(s, h, p, "connect").await
+}
+pub(crate) async fn sync(
+    State(s): State<AppState>,
+    h: HeaderMap,
+    p: Payload,
+) -> Result<Json<Value>, IssueHttpError> {
+    dispatch(s, h, p, "sync").await
+}
+pub(crate) async fn summary(
+    State(s): State<AppState>,
+    h: HeaderMap,
+    p: Payload,
+) -> Result<Json<Value>, IssueHttpError> {
+    dispatch(s, h, p, "summary").await
 }
 pub(crate) async fn callback(
     State(state): State<AppState>,
