@@ -3,10 +3,16 @@
 use crate::contract::*;
 use serde_json::{Value, json};
 
+mod context;
 mod matching;
 mod schedule;
+pub use context::{
+    ActivityError, activity_context, match_events, normalize_snapshot, snapshot_list,
+};
 pub use matching::{matches_conditions, matches_event};
-pub use schedule::{iso_timestamp, local_date_time, next_scheduled_at, schedule_start};
+pub use schedule::{
+    iso_timestamp, local_date_time, next_scheduled_at, schedule_start, start_instant,
+};
 
 pub const ENTITIES: &[&str] = &["issue", "project", "initiative", "cycle", "team"];
 pub const FIELDS: &[&str] = &[

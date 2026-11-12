@@ -25,6 +25,8 @@ mod agents_http;
 mod files_http;
 #[path = "acceptance/invitations_http.rs"]
 mod invitations_http;
+#[path = "acceptance/loops_http.rs"]
+mod loops_http;
 #[path = "acceptance/profiles_http.rs"]
 mod profiles_http;
 #[path = "acceptance/sla_http.rs"]

@@ -27,6 +27,9 @@ impl From<AuthError> for IssueHttpError {
 }
 impl From<StoreError> for IssueHttpError {
     fn from(error: StoreError) -> Self {
+        if let StoreError::LoopPolicy(message) = &error {
+            return Self(AuthError(StatusCode::BAD_REQUEST, "INVALID_LOOP", message));
+        }
         if let StoreError::Template(message) = &error {
             return Self(AuthError(
                 StatusCode::BAD_REQUEST,

@@ -11,6 +11,7 @@ pub mod files;
 mod imports;
 pub mod invitation_workflow;
 mod issues;
+mod loops;
 pub mod mail;
 pub mod model_providers;
 pub mod model_proxy;
@@ -99,6 +100,8 @@ pub fn router_with_state(state: state::AppState) -> Router {
         .route("/api/workspace/team-resources/read", post(views::resources))
         .route("/api/workspace/views", post(views::mutate))
         .route("/api/workspace/views/read", post(views::read))
+        .route("/api/workspace/loops/read", post(loops::read))
+        .route("/api/workspace/loops", post(loops::write))
         .route("/api/workspace/views/projects", post(views::query))
         .merge(
             Router::new()
@@ -391,6 +394,10 @@ pub fn router_with_state(state: state::AppState) -> Router {
             public_api::guard,
         ));
     Router::new()
+        .route(
+            "/api/loops/webhooks/{loop_id}",
+            axum::routing::any(loops::webhook),
+        )
         .route("/api/agent", axum::routing::any(agents::handle))
         .route("/api/agent/{*path}", axum::routing::any(agents::handle))
         .route(

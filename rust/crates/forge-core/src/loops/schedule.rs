@@ -51,7 +51,8 @@ pub(super) fn contract(v: Value) -> Result<Value> {
     }
     Ok(v)
 }
-fn parse_start(value: &str) -> Result<DateTime<Utc>> {
+/// Parse the published anchor itself, independently of recurrence or weekdays.
+pub fn start_instant(value: &str) -> Result<DateTime<Utc>> {
     // The scheduling function accepts Date-compatible minute precision even
     // though its published Zod contract requires seconds. JS retains only ms.
     pattern(
@@ -162,7 +163,7 @@ pub fn next_scheduled_at(schedule: &Value, after: DateTime<Utc>) -> Result<DateT
     if schedule["kind"] != "schedule" {
         return Err(ContractError("schedule"));
     }
-    let start = parse_start(
+    let start = start_instant(
         schedule["startAt"]
             .as_str()
             .ok_or(ContractError("schedule date"))?,

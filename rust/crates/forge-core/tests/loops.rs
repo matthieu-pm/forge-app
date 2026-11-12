@@ -9,6 +9,60 @@ fn date(s: &str) -> DateTime<Utc> {
     DateTime::parse_from_rfc3339(s).unwrap().with_timezone(&Utc)
 }
 #[test]
+fn source_snapshots_preserve_property_precedence_and_coercion() {
+    for (i, c) in REFERENCE["snapshots"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .enumerate()
+    {
+        assert_eq!(
+            l::normalize_snapshot(c["entity"].as_str().unwrap(), &c["raw"]),
+            c["output"],
+            "snapshot {i}: {c}"
+        );
+    }
+}
+#[test]
+fn activity_bindings_recheck_current_content_deletion_and_mentions() {
+    for (i, c) in REFERENCE["activities"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .enumerate()
+    {
+        let result = l::activity_context(&c["raw"], &c["event"]);
+        assert_eq!(
+            result.is_ok(),
+            c["valid"].as_bool().unwrap(),
+            "activity {i}: {c} {result:?}"
+        );
+        match result {
+            Ok(v) => assert_eq!(v, c["output"], "activity {i}"),
+            Err(e) => assert_eq!(
+                e.to_string(),
+                c["message"].as_str().unwrap(),
+                "activity {i}"
+            ),
+        }
+    }
+}
+#[test]
+fn source_changes_emit_new_activity_once_and_ignore_edits_and_metadata() {
+    for (i, c) in REFERENCE["changes"].as_array().unwrap().iter().enumerate() {
+        assert_eq!(
+            json!(l::match_events(
+                c["entity"].as_str().unwrap(),
+                c["event"].as_str().unwrap(),
+                &c["before"],
+                &c["after"]
+            )),
+            c["output"],
+            "change {i}: {c}"
+        );
+    }
+}
+#[test]
 fn published_contracts_match_source_validation_and_normalization() {
     let mut errors = Vec::new();
     for (i, c) in REFERENCE["cases"].as_array().unwrap().iter().enumerate() {

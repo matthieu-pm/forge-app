@@ -14,6 +14,7 @@ pub mod initiatives;
 pub mod issues;
 pub mod jobs;
 pub mod joins;
+pub mod loops;
 pub mod members;
 pub mod oauth;
 pub mod operational_health;
@@ -32,6 +33,10 @@ pub use database::Database;
 
 #[derive(Debug, thiserror::Error)]
 pub enum StoreError {
+    #[error("{0}")]
+    LoopPolicy(&'static str),
+    #[error("This Loop changed. Reload before editing it.")]
+    LoopConflict,
     #[error("{0}")]
     TemplateApplication(String),
     #[error("{0}")]

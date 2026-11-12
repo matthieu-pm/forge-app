@@ -33,6 +33,8 @@ mod issue_purge_acceptance;
 mod issue_query_acceptance;
 #[path = "acceptance/jobs.rs"]
 mod job_acceptance;
+#[path = "acceptance/loops.rs"]
+mod loop_acceptance;
 #[path = "acceptance/planning.rs"]
 mod planning_acceptance;
 #[path = "acceptance/product_state.rs"]

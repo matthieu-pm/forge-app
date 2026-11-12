@@ -1,4 +1,5 @@
 import {legacyIntlTimezones} from './rust-intl-timezones.mjs'
+import {loopContexts} from './rust-loop-context-reference.mjs'
 import { readFileSync, writeFileSync } from 'node:fs'
 import * as c from '../apps/forge/src/lib/loop-contract.ts'
 import * as m from '../apps/forge/src/lib/loop-matching.ts'
@@ -87,7 +88,7 @@ for(const candidate of [model,{...model,provider:'anthropic'},{...model,locality
 }
 const drivers=[{},...['vercel','cloudflare','','native','Vercel'].map(FORGE_LOOP_SCHEDULER_DRIVER=>({FORGE_LOOP_SCHEDULER_DRIVER}))].map(input=>{try{return{input,valid:true,output:loopSchedulerDriver(input)}}catch(error){return{input,valid:false,message:error.message}}})
 const labels=[...triggers,schedule,{kind:'webhook'}].map(input=>({input,output:c.loopTriggerLabel(input)}))
-const fixture={cases,conditions,events,schedules,local,routes,drivers,labels}
+const fixture={cases,conditions,events,schedules,local,routes,drivers,labels,...loopContexts}
 const path=new URL('../rust/crates/forge-core/data/loops-reference.json',import.meta.url)
 const output=JSON.stringify(fixture,null,2)+'\n'
 if(process.argv.includes('--check')){if(readFileSync(path,'utf8')!==output)throw Error('Loop reference changed')}else writeFileSync(path,output)

@@ -88,6 +88,7 @@ gate pass.
 | 3b9a | Template authoring, team defaults and gated recurring definitions | Passed |
 | 3b9b | Atomic template application into canonical issues and projects | Passed |
 | 3b10a | Loop contracts, event filters, calendar scheduling and published model policy | Passed |
+| 3b10b | Loop source contexts, definition commands, immutable runs, history and webhook receipts | Passed |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -2300,3 +2301,48 @@ these routes do not represent a completed rewrite.
   all source-fixture drift checks, formatting, Clippy and three package
   typechecks. The 607 external-fixture tests across 31 files remain skipped.
   Evidence: `.forge/rust-rewrite/milestone-3b10a-aliases.log`.
+
+### Milestone 3b10b
+
+- Loop source normalization and activity binding are now ported from the owning
+  service, with 1,295 snapshot cases, 225 current-activity checks and 357 native
+  change/event cases. Current comment text and linked mention sets must match;
+  edits, deletions and duplicate activity identities cannot expose stale content.
+- Versioned definition commands, immutable published revisions, manual run
+  captures, approval requests and cancellation use the existing canonical
+  command transaction. Concurrent retries share one receipt/audit/outbox effect;
+  role, session, team and workspace policies are checked again before replay.
+  Saved run fields retain the revision that authorized the event.
+- Team directories include bounded definitions, revisions, selectors and run
+  histories. History intersects captured/current team access and checks live
+  sources, hiding result/thread/approvals when a source becomes unavailable.
+- Webhook secret rotation is deterministic for a command identity; receipts
+  contain no secret. Incoming requests require the current hash and live external
+  source policy, cap transport at 128 KiB, reject non-finite JSON, preserve source
+  UTF-8/BOM and JavaScript-number behavior, and key retries by secret generation
+  plus caller event identity. Recovery preparation precedes run capture.
+- HTTP management retains session/workspace binding and same-origin protection;
+  the bearer-authenticated webhook route has its separate request contract.
+  These routes queue work only: native dispatch, current loop principals and
+  coordinator execution remain the following milestone, and readiness remains
+  unqualified.
+- Initial verification found an activity-helper ownership error before Rust
+  tests could compile. All 3,013 reference tests and three typechecks passed in
+  that run. After fixing ownership, the build check identified a webhook handler
+  borrowing the request body across an await; headers/body now have independent
+  ownership. All-target Clippy passed after both corrections. Full verification
+  is pending. Initial evidence: `.forge/rust-rewrite/milestone-3b10b-initial.log`.
+- The build-fixed full run passed the HTTP acceptance and seven of eight loop
+  database scenarios, and exposed three remaining failures: generic contract
+  errors changed the source activity message; future-start validation incorrectly
+  used recurrence calculation with an unsupported ancient timestamp; and the
+  recovery fixture updated workspace policy without preparing its journal.
+  Activity errors now retain their exact message, published starts use the
+  existing timestamp parser directly, and fixture policy changes use a prepared
+  transaction. The schedule regression uses a fixed clock and checks both daily
+  and weekly anchors. All reference tests and typechecks passed in that run.
+  Evidence: `.forge/rust-rewrite/milestone-3b10b-build-fixed.log`.
+- Full verification passed: 581 Rust tests, 3,013 enabled reference tests,
+  all source-fixture drift checks, formatting, Clippy and three package
+  typechecks. The 607 external-fixture tests across 31 files remain skipped.
+  Evidence: `.forge/rust-rewrite/milestone-3b10b-corrections.log`.
