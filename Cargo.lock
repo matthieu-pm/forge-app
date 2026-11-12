@@ -1200,6 +1200,9 @@ dependencies = [
  "icu_collator",
  "idna",
  "jiff",
+ "num-bigint-dig",
+ "num-integer",
+ "num-traits",
  "regex",
  "regress",
  "ryu-js",
@@ -2320,6 +2323,7 @@ dependencies = [
  "num-iter",
  "num-traits",
  "rand 0.8.8",
+ "serde",
  "smallvec",
  "zeroize",
 ]

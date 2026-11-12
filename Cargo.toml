@@ -44,6 +44,9 @@ jiff = { version = "=0.2.38", default-features = false, features = ["std", "tzdb
 regress = "0.10"
 icu_collator = "2"
 ring = "0.17"
+num-bigint-dig = "0.8.6"
+num-integer = "0.1"
+num-traits = "0.2"
 
 [profile.release]
 lto = "thin"

@@ -2,8 +2,11 @@
 //! belong to their adapters; these calculations never grant payment authority.
 use serde_json::{Value, json};
 use std::sync::LazyLock;
+pub mod budget;
 pub mod calendar;
 pub mod configuration;
+pub mod invoice;
+pub mod money;
 pub mod usage;
 pub const MAX_SAFE: u64 = 9_007_199_254_740_991;
 #[derive(Debug, thiserror::Error)]
@@ -171,6 +174,18 @@ pub fn evaluate(kind: &str, value: &Value) -> Result<Value> {
         "authority" => usage::authority(value),
         "paid-binding" => Ok(json!(usage::paid_binding(value)?)),
         "notices" => usage::notices(value),
+        "money-capacity" => money::capacity(value),
+        "money-cost" => money::cost(value),
+        "money-reserve" => money::reserve(value),
+        "money-cutover" => money::cutover(value),
+        "money-invoice" => invoice::monthly_report(value),
+        "ai-allowance" => Ok(json!(budget::allowance(value)?)),
+        "overage-policy" => {
+            budget::overage(value)?;
+            Ok(value.clone())
+        }
+        "budget-admission" => budget::admission(value),
+        "polar-usage-ack" => Ok(json!(invoice::acknowledgement(value)?)),
         _ => Err(invalid()),
     }
 }

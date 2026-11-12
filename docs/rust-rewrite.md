@@ -98,6 +98,7 @@ gate pass.
 | 3b11b | Meeting provider OAuth, deployment isolation and fenced credential publication | Passed |
 | 3b11c | Native transcript synchronization, fenced recap publication and Calls operator | Passed |
 | 3b12a | Billing contracts, configuration, country policy, calendar periods and usage authority | Passed |
+| 3b12b | Exact FX, spending admission, currency capacity and cumulative invoices | Passed |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -2693,3 +2694,47 @@ these routes do not represent a completed rewrite.
   three TypeScript typechecks, source fixtures, formatting and warning-free
   Clippy. The 607 external-fixture tests remain skipped. Evidence:
   `.forge/rust-rewrite/milestone-3b12a-initial.log`.
+
+### Milestone 3b12b
+
+- Usage-time currency conversion preserves the original ECB snapshot and exact
+  rational values. Integer intermediates avoid floating-point currency math;
+  reservations round up and settlements round half up. Missing, stale, future,
+  malformed and zero quotes fail closed when conversion is necessary.
+- Budget admission keeps included USD allowances separate from invoice-currency
+  caps. Paid overage requires explicit trusted payment authority and consent;
+  trial, free, user-owned provider usage and paid Calls/Signals retain the owning
+  source's policy. Exhausted caps cannot admit even a zero-cost reservation.
+- Currency changes round the carried cap down and committed capacity up, retain
+  original usage periods, preserve historical charges and grant no new payment
+  authority. Disabled overage remains disabled.
+- Invoice planning revalidates frozen settlement records and sums exact fractions
+  with arbitrary-precision integer arithmetic before rounding the cumulative
+  minor-unit total once. Prior delivery is subtracted, duplicate usage and altered
+  conversions are rejected, and credit reconciliation remains explicit. Batches
+  are bounded to 10,000 records and denominators to 1,000 digits. Single-event
+  Polar acknowledgements must prove exactly one insertion or duplicate.
+- Six comparison suites cover 2,897 cases from the actual owning TypeScript
+  functions, including both batch-limit boundaries and rational precision limits.
+  Durable ledger writes and provider delivery remain subsequent work.
+- The initial full gate passed 664 Rust tests and all 3,013 enabled reference
+  tests and three typechecks, but one new comparison suite exposed acceptance
+  of an FX observation timestamp without seconds. The owning Zod 4.6.5 validator
+  rejects that value. Rust now requires seconds and valid offset ranges; the
+  source fixture is unchanged. The comparison runner collects all mismatches
+  within each suite so one failure cannot hide later cases.
+  Initial evidence: `.forge/rust-rewrite/milestone-3b12b-initial.log`.
+
+- The timestamp correction passed all 665 Rust tests, all source fixtures,
+  formatting, Clippy and three typechecks. The original JavaScript suite then
+  encountered seven failures and two worker-start timeouts during a run spanning
+  recorded macOS Deep Idle intervals. Its reported test durations reached over
+  900 seconds against 5-second timeouts. No application code or test deadlines
+  were changed for this interruption. The complete rerun with command-scoped
+  idle sleep prevention passed, including every previously failing test file.
+  Interrupted-run evidence: `.forge/rust-rewrite/milestone-3b12b-timestamps.log`.
+
+- Final full gate passed: 665 Rust tests, 3,013 enabled reference tests, all three
+  TypeScript checks, source fixtures, formatting and Clippy. The 607 external
+  fixture tests remain skipped. Evidence:
+  `.forge/rust-rewrite/milestone-3b12b-awake.log` (exit 0).
