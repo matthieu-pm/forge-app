@@ -99,6 +99,7 @@ gate pass.
 | 3b11c | Native transcript synchronization, fenced recap publication and Calls operator | Passed |
 | 3b12a | Billing contracts, configuration, country policy, calendar periods and usage authority | Passed |
 | 3b12b | Exact FX, spending admission, currency capacity and cumulative invoices | Passed |
+| 3b12c | Durable trials, atomic usage admission, settlement and original-period carryover | Passed |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -2738,3 +2739,38 @@ these routes do not represent a completed rewrite.
   TypeScript checks, source fixtures, formatting and Clippy. The 607 external
   fixture tests remain skipped. Evidence:
   `.forge/rust-rewrite/milestone-3b12b-awake.log` (exit 0).
+
+### Milestone 3b12c
+
+- Internal trial commands serialize on the workspace, recheck the live verified
+  session and membership before replay, retain one immutable tier/window/grant,
+  reject paid history and atomically publish entitlement and audit records.
+  Cleanup preserves the original grant and cannot overwrite a paid conversion;
+  read-time access expiry remains independent of cleanup.
+- Internal usage admission locks current authority, private thread ownership,
+  server-capable native model connection, available catalog and active member
+  capacity before admitting a cost reservation. Period materialization, run,
+  reservation, initial event and audit commit together. Request hashes preserve
+  source field order and caller UUID spelling. No paid overage is inferred.
+- Settlement retains the full exposure for uncertain outcomes, releases only
+  confirmed no-charge usage, records overruns as reconciliation-required and
+  binds retries to immutable event receipts. Provider-owned costs remain outside
+  the workspace pool. Retaining/deleting the run cannot rewrite its payer or
+  historical settlement.
+- Trial expiry and paid-to-Free transitions attach existing commitments to the
+  original Free anniversary, including late settlements. Grace retains the
+  original paid account. Late downgrade processing cannot move old debt into a
+  later allowance period; ordinary renewal leaves old runs in their old account.
+- Eight grouped PostgreSQL acceptance tests exercise races, replay conflicts,
+  live revocation, failed audit rollback, immutable history, capacity, renewal,
+  grace and carryover. A separate journal test covers preparation failures and
+  committed trial/admission/settlement receipts after publication failure.
+  The owning Neon-only reference fixtures retain their original target guards.
+- These commands preserve the reference's internal release gate. No new browser
+  action or live usage pipeline is enabled. Payment projection/provider adapters
+  remain subsequent work.
+
+- Full gate passed: 674 Rust tests, 3,013 enabled reference tests, all three
+  TypeScript checks, source fixtures, formatting and Clippy. The 607 external
+  fixture tests remain skipped. Evidence:
+  `.forge/rust-rewrite/milestone-3b12c-initial.log` (exit 0).
