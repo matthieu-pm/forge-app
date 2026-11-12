@@ -256,6 +256,16 @@ struct Stream {
     waiting_seen: bool,
 }
 impl Stream {
+    fn claim(&self) -> Result<(), Error> {
+        self.runtime.0.active.lock().map_err(|_| FAILED)?.insert(
+            self.context.run_id.clone(),
+            Active {
+                owner: self.owner,
+                token: self.token.clone(),
+            },
+        );
+        Ok(())
+    }
     fn owned(&self) -> Result<(), Error> {
         if self
             .runtime
@@ -334,15 +344,11 @@ impl Stream {
             ))?,
         };
         self.token = self.runtime.0.transport.channel(&self.context, false)?;
-        self.runtime.0.active.lock().map_err(|_| FAILED)?.insert(
-            self.context.run_id.clone(),
-            Active {
-                owner: self.owner,
-                token: self.token.clone(),
-            },
-        );
         let base = format!("/native/v1/runs/{run}");
         let resuming = matches!(mode, Mode::Resume(_));
+        if !resuming {
+            self.claim()?;
+        }
         let (path, mut body) = match mode {
             Mode::Start(message, attachments) => {
                 let attachments=attachments.into_iter().map(|a|{
@@ -379,7 +385,6 @@ impl Stream {
             // The a1 cursor predates conversation ownership metadata. Migrated
             // sessions still require the current proof, but learning it must not
             // replace the app checkpoint before the response is acknowledged.
-            self.owned()?;
             cursor.conversation = Some(self.runtime.conversation(conversation, &self.token).await?);
             if Cursor::decode(&cursor.encode()).is_none() {
                 return Err(FAILED);
@@ -394,8 +399,8 @@ impl Stream {
                 body["expectedGeneration"] = json!(proof.generation);
             }
         }
-        self.owned()?;
         if !resuming {
+            self.owned()?;
             self.context.checkpoint.save(cursor.encode()).await?;
         }
         let mut refreshed = false;
@@ -447,22 +452,43 @@ impl Stream {
                 Err(PostFailure::Unknown) => return Err(FAILED),
             }
         };
-        self.owned()?;
         if acknowledged["currentDelivery"] == false {
             self.done = true;
             return Ok(());
         }
-        if let Some(status) = acknowledged.get("status") {
-            cursor.accept_conversation(status)?;
+        if resuming && acknowledged["currentDelivery"] != true {
+            return Err(FAILED);
         }
-        if resuming && let Some(index) = acknowledged.get("streamStartIndex") {
-            cursor.stream_index = index
+        if resuming {
+            cursor.accept_conversation(acknowledged.get("status").ok_or(FAILED)?)?;
+            cursor.stream_index = acknowledged
+                .get("streamStartIndex")
+                .ok_or(FAILED)?
                 .as_u64()
                 .filter(|v| *v <= 9_007_199_254_740_991)
                 .ok_or(FAILED)?;
+        } else if let Some(status) = acknowledged.get("status") {
+            cursor.accept_conversation(status)?;
         }
         cursor.admitted = true;
-        self.context.checkpoint.save(cursor.encode()).await?;
+        // A response may be rejected or replay an older delivery while this
+        // run's current stream is still live. Only a validated acknowledgement
+        // and its persisted checkpoint authorize taking over that stream.
+        if resuming {
+            if cursor
+                .conversation
+                .as_ref()
+                .is_some_and(|proof| proof.owner_run_id != run)
+            {
+                return Err(FAILED);
+            }
+            self.context.checkpoint.save(cursor.encode()).await?;
+            self.claim()?;
+            self.owned()?;
+        } else {
+            self.owned()?;
+            self.context.checkpoint.save(cursor.encode()).await?;
+        }
         let response = timeout(
             Duration::from_secs(30),
             self.runtime.0.transport.request(
@@ -496,6 +522,9 @@ impl Stream {
     async fn next(&mut self) -> Result<Option<Value>, Error> {
         if let Some(mode) = self.mode.take() {
             self.initialize(mode).await?;
+            if self.done {
+                return Ok(None);
+            }
         }
         loop {
             self.owned()?;

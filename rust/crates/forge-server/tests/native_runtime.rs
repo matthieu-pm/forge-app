@@ -77,6 +77,9 @@ fn a1_cursor(cursor: &str) -> String {
     for field in ["conversation", "pendingInputs", "deliveryComplete"] {
         fields.remove(field);
     }
+    if fields.get("settled").is_some_and(|value| value == "inputs") {
+        fields.remove("settled");
+    }
     format!("native-v1.{}", URL_SAFE_NO_PAD.encode(value.to_string()))
 }
 
@@ -95,7 +98,9 @@ async fn legacy_native_approval_cursor_fetches_current_proof_and_replays_one_eff
     let before = Cursor::decode(&saved.last()).unwrap();
     let generation = before.conversation.unwrap().generation;
     let legacy = a1_cursor(&saved.last());
-    assert!(Cursor::decode(&legacy).unwrap().conversation.is_none());
+    let decoded = Cursor::decode(&legacy).unwrap();
+    assert!(decoded.conversation.is_none());
+    assert!(decoded.settled.is_none());
     *saved.values.lock().unwrap() = vec![legacy.clone()];
     ctx.runtime_session_id = Some(legacy);
     let response = json!({"requestId":request,"optionId":"approve"});
@@ -658,6 +663,225 @@ async fn legacy_and_foreign_cursors_and_malformed_approvals_cannot_start_work() 
     assert_eq!(f.script.models.load(Ordering::SeqCst), 0);
     assert_eq!(f.deliveries.load(Ordering::SeqCst), 0);
     f.shutdown().await;
+}
+
+#[tokio::test]
+async fn approval_receipts_take_over_a_live_stream_only_when_the_current_delivery_is_acknowledged()
+{
+    use axum::{
+        Router,
+        body::{Body, to_bytes},
+        http::{Method, Request, Response},
+    };
+    use std::{convert::Infallible, sync::atomic::AtomicUsize, time::Duration};
+    for case in [
+        "rejected",
+        "unavailable",
+        "superseded",
+        "invalid",
+        "missing-status",
+        "missing-index",
+        "unsafe-index",
+        "foreign-proof",
+        "foreign-owner",
+        "checkpoint-failure",
+        "current",
+    ] {
+        let saved = Arc::new(Saved::default());
+        let mut ctx = context(saved.clone());
+        let proof = json!({"id":ctx.thread_id,"headRunId":ctx.run_id,"generation":7,"ownerRunId":ctx.run_id,"ownerNextIndex":0,"ownerDeadline":ctx.deadline_ms});
+        let cursor = Cursor {
+            conversation_id: ctx.thread_id.parse().unwrap(),
+            run_id: ctx.run_id.parse().unwrap(),
+            previous_run_id: None,
+            stream_index: 0,
+            deadline_ms: ctx.deadline_ms,
+            admitted: true,
+            settled: None,
+            conversation: Some(serde_json::from_value(proof.clone()).unwrap()),
+            pending_inputs: false,
+            delivery_complete: false,
+        }
+        .encode();
+        saved.values.lock().unwrap().push(cursor.clone());
+        ctx.runtime_session_id = Some(cursor);
+        let frame = |index, message| {
+            format!(
+                "{}\n",
+                json!({"index":index,"event":{"type":"message.completed","data":{"turnId":ctx.run_id,"stepIndex":index,"message":message}}})
+            )
+        };
+        let first = frame(0, "Before the approval retry");
+        let second = frame(1, "The original stream is still live");
+        let final_frame = format!(
+            "{}\n",
+            json!({"status":{"phase":"complete","nextIndex":2,"deliveryComplete":true,"pendingRequests":[],"conversation":proof}})
+        );
+        let replacement = format!(
+            "{}{}",
+            frame(1, "Acknowledged retry took over"),
+            final_frame
+        );
+        let (sender, receiver) = tokio::sync::mpsc::unbounded_channel::<String>();
+        let receiver = Arc::new(Mutex::new(Some(receiver)));
+        let streams = Arc::new(AtomicUsize::new(0));
+        let stream_count = streams.clone();
+        let run = ctx.run_id.clone();
+        let request_id = Uuid::new_v4();
+        let app = Router::new().fallback(move |request: Request<Body>| {
+            let run = run.clone();
+            let proof = proof.clone();
+            let receiver = receiver.clone();
+            let streams = stream_count.clone();
+            let replacement = replacement.clone();
+            async move {
+                let path = request.uri().path().to_owned();
+                if request.method() == Method::GET {
+                    assert_eq!(path, format!("/native/v1/runs/{run}/stream"));
+                    let index = streams.fetch_add(1, Ordering::SeqCst);
+                    let body = if index == 0 {
+                        assert_eq!(request.uri().query(), Some("after=0"));
+                        let receiver = receiver.lock().unwrap().take().unwrap();
+                        Body::from_stream(futures_util::stream::unfold(
+                            receiver,
+                            |mut receiver| async move {
+                                receiver
+                                    .recv()
+                                    .await
+                                    .map(|frame| (Ok::<_, Infallible>(frame), receiver))
+                            },
+                        ))
+                    } else {
+                        assert_eq!(case, "current");
+                        assert_eq!(index, 1);
+                        assert_eq!(request.uri().query(), Some("after=1"));
+                        Body::from(replacement)
+                    };
+                    return Response::builder()
+                        .header("content-type", "application/x-ndjson")
+                        .body(body)
+                        .unwrap();
+                }
+                assert_eq!(request.method(), Method::POST);
+                if path.ends_with("/recover") {
+                    return Response::builder()
+                        .header("content-type", "application/json")
+                        .body(Body::from(json!({"ok":true,"runId":run,"status":{"conversation":proof}}).to_string()))
+                        .unwrap();
+                }
+                assert_eq!(path, format!("/native/v1/runs/{run}/resume"));
+                let bytes = to_bytes(request.into_body(), 4096).await.unwrap();
+                let body: Value = serde_json::from_slice(&bytes).unwrap();
+                assert_eq!(body["requestId"], json!(request_id));
+                assert_eq!(body["expectedGeneration"], 7);
+                if matches!(case, "rejected" | "unavailable") {
+                    return Response::builder()
+                        .status(if case == "rejected" { 409 } else { 503 })
+                        .body(Body::empty())
+                        .unwrap();
+                }
+                let mut receipt = json!({"ok":true,"runId":run,"replayed":true,"currentDelivery":case!="superseded","streamStartIndex":1,"status":{"conversation":proof}});
+                match case {
+                    "superseded" => {
+                        receipt.as_object_mut().unwrap().remove("status");
+                        receipt.as_object_mut().unwrap().remove("streamStartIndex");
+                    }
+                    "invalid" => {
+                        receipt.as_object_mut().unwrap().remove("currentDelivery");
+                    }
+                    "missing-status" => {
+                        receipt.as_object_mut().unwrap().remove("status");
+                    }
+                    "missing-index" => {
+                        receipt.as_object_mut().unwrap().remove("streamStartIndex");
+                    }
+                    "unsafe-index" => receipt["streamStartIndex"] = json!(9_007_199_254_740_992u64),
+                    "foreign-proof" => receipt["status"]["conversation"]["id"] = json!(Uuid::new_v4()),
+                    "foreign-owner" => receipt["status"]["conversation"]["ownerRunId"] = json!(Uuid::new_v4()),
+                    _ => {}
+                }
+                Response::builder()
+                    .status(202)
+                    .header("content-type", "application/json")
+                    .body(Body::from(receipt.to_string()))
+                    .unwrap()
+            }
+        });
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let origin =
+            url::Url::parse(&format!("http://{}/", listener.local_addr().unwrap())).unwrap();
+        let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        let runtime = NativeRuntime::new(forge_server::agent_runtime::Options {
+            base_url: origin,
+            channel_secret: SECRET.into(),
+            capability_secret: SECRET.into(),
+            model_secret: SECRET.into(),
+            peer_origin: None,
+            peer_identity: None,
+            now: Arc::new(|| chrono::Utc::now().timestamp()),
+        })
+        .unwrap();
+        sender.send(first).unwrap();
+        let mut live = runtime.reconnect(ctx.clone());
+        let first = tokio::time::timeout(Duration::from_secs(5), live.next())
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
+        assert_eq!(first["payload"]["content"], "Before the approval retry");
+        let before = saved.values.lock().unwrap().clone();
+        ctx.runtime_session_id = Some(saved.last());
+        for _ in 0..if case == "current" { 1 } else { 2 } {
+            if case == "checkpoint-failure" {
+                saved.fail.store(true, Ordering::SeqCst);
+            }
+            let retried = tokio::time::timeout(
+                Duration::from_secs(5),
+                runtime
+                    .resume(
+                        ctx.clone(),
+                        vec![json!({"requestId":request_id,"optionId":"approve"})],
+                    )
+                    .collect::<Vec<_>>(),
+            )
+            .await
+            .unwrap();
+            if case == "superseded" {
+                assert!(retried.is_empty());
+            } else if case == "current" {
+                assert_eq!(retried.len(), 2);
+                assert_eq!(
+                    retried[0].as_ref().unwrap()["payload"]["content"],
+                    "Acknowledged retry took over"
+                );
+                assert_eq!(retried[1].as_ref().unwrap()["type"], "run.completed");
+            } else {
+                assert_eq!(retried.len(), 1);
+                assert!(retried[0].is_err());
+            }
+            if case != "current" {
+                assert_eq!(*saved.values.lock().unwrap(), before);
+            }
+            assert!(!saved.fail.load(Ordering::SeqCst));
+        }
+        if case == "current" {
+            assert!(live.next().await.unwrap().is_err());
+            assert_eq!(streams.load(Ordering::SeqCst), 2);
+        } else {
+            sender.send(second).unwrap();
+            sender.send(final_frame).unwrap();
+            let remaining = tokio::time::timeout(Duration::from_secs(5), collect(live))
+                .await
+                .unwrap();
+            assert_eq!(
+                remaining[0]["payload"]["content"],
+                "The original stream is still live"
+            );
+            assert_eq!(remaining[1]["type"], "run.completed");
+            assert_eq!(streams.load(Ordering::SeqCst), 1);
+        }
+        server.abort();
+    }
 }
 
 #[tokio::test]

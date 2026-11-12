@@ -503,6 +503,189 @@ async fn required_batches_keep_delivery_completion_separate_from_original_approv
 }
 
 #[tokio::test]
+async fn pending_native_approval_cannot_interrupt_an_active_delivery_or_unadmitted_successor() {
+    let f = Fixture::new().await;
+    let (service, runtime, model) = setup(&f).await;
+    runtime.native.store(true, Ordering::SeqCst);
+    let requests = [Uuid::new_v4(), Uuid::new_v4()];
+    *runtime.start.lock().unwrap() = vec![
+        event(
+            "overlap-first",
+            "approval.requested",
+            json!({"capabilityId":"teams.update","risk":"reversible-write","summary":"First change","details":{"runtimeRequestId":requests[0]},"input":{"name":"First"}}),
+        ),
+        event(
+            "overlap-second",
+            "approval.requested",
+            json!({"capabilityId":"teams.update","risk":"reversible-write","summary":"Second change","details":{"runtimeRequestId":requests[1]},"input":{"name":"Second"}}),
+        ),
+        json!({"checkpoint":true,"proof":{"pending":true,"complete":false}}),
+    ];
+    let thread = service.create_thread(&f.actor, json!({})).await.unwrap();
+    let original = service
+        .start_turn(&f.actor, input(thread.id, &model), None)
+        .await
+        .unwrap();
+    let a = original.run.id;
+    let issued: Vec<Event> = original.events.try_collect().await.unwrap();
+    let approvals: Vec<Uuid> = issued
+        .iter()
+        .filter(|event| event.kind == "approval.requested")
+        .map(|event| {
+            event.payload["approvalId"]
+                .as_str()
+                .unwrap()
+                .parse()
+                .unwrap()
+        })
+        .collect();
+    *runtime.resume.lock().unwrap() = vec![
+        json!({"checkpoint":true,"proof":{"pending":false,"complete":false}}),
+        delta(),
+        json!({"checkpoint":true,"proof":{"pending":true,"complete":true}}),
+        event("overlap-completed", "run.completed", json!({})),
+    ];
+    let mut first = service
+        .resolve_approval(
+            &f.actor,
+            approvals[0],
+            approval_service::Decision::Approved,
+            None,
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        first.events.next().await.unwrap().unwrap().kind,
+        "approval.resolved"
+    );
+    assert_eq!(
+        first.events.next().await.unwrap().unwrap().kind,
+        "assistant.delta"
+    );
+    assert_eq!(current(&f, a).await.state, RunState::Running);
+    let before = threads::get(&f.database, &f.actor.workspace_id, thread.id)
+        .await
+        .unwrap()
+        .unwrap()
+        .runtime_session_id
+        .unwrap();
+    assert!(matches!(
+        service
+            .resolve_approval(
+                &f.actor,
+                approvals[1],
+                approval_service::Decision::Denied,
+                None
+            )
+            .await,
+        Err(StoreError::Conflict)
+    ));
+    assert!(matches!(
+        service.resolve_approval(&f.actor, approvals[0], approval_service::Decision::Approved, None).await,
+        Err(StoreError::Approval(error)) if error.code == forge_core::agents::approval::Code::ApprovalNotPending
+    ));
+    let resolved: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM agent_events WHERE run_id=$1 AND type='approval.resolved'",
+    )
+    .bind(a)
+    .fetch_one(&f.pool)
+    .await
+    .unwrap();
+    assert_eq!(resolved, 1);
+    assert_eq!(
+        approvals::get(&mut f.pool.acquire().await.unwrap(), approvals[1])
+            .await
+            .unwrap()
+            .unwrap()
+            .state,
+        ApprovalState::Pending
+    );
+    assert_eq!(
+        threads::get(&f.database, &f.actor.workspace_id, thread.id)
+            .await
+            .unwrap()
+            .unwrap()
+            .runtime_session_id,
+        Some(before.clone())
+    );
+    assert_eq!(runtime.responses.lock().unwrap().len(), 1);
+    let active = runtime.contexts.lock().unwrap().last().unwrap().clone();
+    active.checkpoint.save(before).await.unwrap();
+    assert_eq!(
+        first
+            .events
+            .try_collect::<Vec<_>>()
+            .await
+            .unwrap()
+            .last()
+            .unwrap()
+            .kind,
+        "run.completed"
+    );
+    assert_eq!(current(&f, a).await.state, RunState::Completed);
+
+    // A new run has committed, but has not yet started its adapter or replaced
+    // the cursor naming A. The pending A approval must also wait here.
+    *runtime.start.lock().unwrap() = vec![
+        json!({"checkpoint":true,"proof":{"owner":a,"pending":true,"complete":true}}),
+        event("overlap-successor-completed", "run.completed", json!({})),
+    ];
+    let successor = service
+        .start_turn(&f.actor, input(thread.id, &model), None)
+        .await
+        .unwrap();
+    let b = successor.run.id;
+    assert_eq!(current(&f, b).await.state, RunState::Created);
+    assert!(matches!(
+        service
+            .resolve_approval(
+                &f.actor,
+                approvals[1],
+                approval_service::Decision::Denied,
+                None
+            )
+            .await,
+        Err(StoreError::Conflict)
+    ));
+    assert_eq!(
+        approvals::get(&mut f.pool.acquire().await.unwrap(), approvals[1])
+            .await
+            .unwrap()
+            .unwrap()
+            .state,
+        ApprovalState::Pending
+    );
+    successor.events.try_collect::<Vec<_>>().await.unwrap();
+    *runtime.resume.lock().unwrap() = vec![
+        json!({"checkpoint":true,"proof":{"head":b,"pending":false,"complete":true}}),
+        event("overlap-completed", "run.completed", json!({})),
+    ];
+    service
+        .resolve_approval(
+            &f.actor,
+            approvals[1],
+            approval_service::Decision::Denied,
+            None,
+        )
+        .await
+        .unwrap()
+        .events
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
+    assert_eq!(current(&f, a).await.state, RunState::Completed);
+    assert_eq!(current(&f, b).await.state, RunState::Completed);
+    assert_eq!(runtime.cancels.load(Ordering::SeqCst), 0);
+    assert_eq!(
+        *runtime.responses.lock().unwrap(),
+        vec![
+            json!({"requestId":requests[0],"optionId":"approve"}),
+            json!({"requestId":requests[1],"optionId":"deny"})
+        ]
+    );
+}
+
+#[tokio::test]
 async fn completed_approval_requires_owned_native_lineage_and_can_follow_a_matching_delivery() {
     for valid in [false, true] {
         let f = Fixture::new().await;

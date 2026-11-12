@@ -348,11 +348,22 @@ impl Service {
                 .certified_input_continuation(&mut tx, &actor, &thread, runtime.as_ref(), false)
                 .await?;
             let cursor = thread.runtime_session_id.as_deref().unwrap();
-            if let Some(owner) = runtime.cursor_run_id(cursor)
-                && owner != run.id.to_string()
-                && proof.is_none()
-            {
-                return Err(StoreError::Conflict);
+            if let Some(owner) = runtime.cursor_run_id(cursor) {
+                if owner != run.id.to_string() && proof.is_none() {
+                    return Err(StoreError::Conflict);
+                }
+                if approval.state == ApprovalState::Pending {
+                    // Recording another decision would advance the stream's
+                    // approval epoch before the native runtime can deliver it.
+                    // Also fence the interval after a successor is created but
+                    // before it saves a cursor naming that new run. Durable
+                    // queued delivery needs an independent ownership claim.
+                    let busy: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM agent_runs WHERE thread_id=$1 AND state IN ('created','connecting','running','reconnecting'))")
+                        .bind(thread.id).fetch_one(&mut *tx).await?;
+                    if busy {
+                        return Err(StoreError::Conflict);
+                    }
+                }
             }
             completed_delivery = run.state == RunState::Completed && proof.is_some();
             Some((

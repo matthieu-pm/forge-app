@@ -109,7 +109,9 @@ gate pass.
 | 3b12f | Verified provider catalogue, invoice/refund proofs, native checkout and subscription reconciliation | Passed |
 | 3b12g | Renewal mutations, signed webhook recovery, replacement proofs and authenticated billing summary | Passed |
 | 3b13a1 | Ordinary question batches, typed answers and durable composer continuation | Passed |
-| 3b13a2 | Mixed required-input deferral and original approval ownership across continuation | In progress |
+| 3b13a2 | Mixed required-input deferral and original approval ownership across continuation | Passed |
+| 3b13a3a | Private queued-input journal, handoff protocol and managed native adapter | Pending |
+| 3b13a3b | App delivery ledger, background draining and authenticated recovery | Pending |
 | 3b13a3 | Active delivery queue, authority handoff and recovery | Pending |
 | 3b13b | Native child-agent execution, shared sandbox, usage and recovery | Pending |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
@@ -127,8 +129,8 @@ their own recorded results before the relevant milestone is complete.
 
 ## Implementation layout
 
-- `rust/crates/forge-core`: shared domain rules and serializable contracts; usable
-  from the server and a future Rust browser implementation.
+- `rust/crates/forge-core`: shared domain rules and serializable contracts for
+  Rust services and the retained React UI's HTTP adapters.
 - `rust/crates/forge-server`: Rust HTTP host; runs on `127.0.0.1:3100` by default
   so the reference app can continue to run on port 3000.
 - `rust/crates/forge-recovery`: R2 deletion-journal adapter using explicit SDK
@@ -3052,10 +3054,10 @@ production promotion remain separately authorized release operations.
 - Recover a definite same-head stale-generation rejection with scoped metadata
   and one exact admission retry. Definite rejected admission rolls its checkpoint
   back with CAS; unknown outcomes preserve the original recovery checkpoint.
-- Acceptance coverage is assembled across source fixtures, engine, PostgreSQL
-  ownership/receipt transactions, private HTTP, and hosted app coordination.
-  Full milestone gate has not run yet. React integration, Tauri host, native
-  child agents, and final qualification remain later milestones.
+- Acceptance coverage spans source fixtures, engine, PostgreSQL ownership and
+  receipt transactions, private HTTP, and hosted app coordination. React
+  integration, Tauri host, native child agents, and final qualification remain
+  later milestones.
 
 - Initial full gate: source comparisons and formatting passed; 3,013 enabled
   JavaScript tests and all three typechecks passed (607 external fixtures remain
@@ -3076,6 +3078,25 @@ production promotion remain separately authorized release operations.
   Enrich a legacy approval resume from scoped private metadata in memory, then
   save only after a successful current-delivery acknowledgement. Metadata failure
   must leave the saved cursor intact. This correction remains inside 3b13a2.
+- The recovery gate passed all 772 Rust tests, 3,013 enabled JavaScript tests,
+  all three typechecks, source comparisons, formatting and Clippy. The 607
+  external-fixture checks remain skipped. Evidence:
+  `.forge/rust-rewrite/milestone-3b13a2-recovery.log` (exit 0).
+- Concurrent-delivery review found that another approval on the same active run
+  could advance its application stream epoch before native delivery accepted it.
+  Reject pending native approvals before mutation whenever the thread has an
+  active run, including a successor created before its first saved cursor. Keep
+  waiting and certified completed continuations available. Rejected/superseded
+  private retries must also leave an existing local stream owner intact; only a
+  validated current-delivery acknowledgement and successful checkpoint CAS can
+  take ownership.
+- Final ownership gate passed all 774 Rust tests, 3,013 enabled JavaScript tests,
+  three typechecks, source comparisons, formatting and Clippy. The new tests
+  cover active and newly created successor runs, rejected/superseded/malformed
+  receipts, failed checkpoint saves, and intentional exact-retry takeover.
+  All 2,927 tracked files were unchanged during the gate. The 607 external
+  fixtures remain skipped. Evidence:
+  `.forge/rust-rewrite/milestone-3b13a2-ownership.log` (exit 0).
 
 ### Milestone 3b13a3 scope
 
@@ -3090,3 +3111,21 @@ active run or replaying its effects. Owning-source coalescing retains the first
 delivery ID and the last supplied auth. Preserve exact run-bound grants and
 private event receipts; do not copy the source adapter's shared-stream race that
 can attribute another run's remaining events to the approval delivery.
+
+Implement this in two substantial checkpoints, each followed by the full gate:
+
+- **3b13a3a:** private durable intent queue, FIFO coalescing, exact delivery and
+  execution-owner boundaries, frozen handoff receipts, fresh-authority activation,
+  cancellation settlement and a typed managed native adapter. Keep the existing
+  unmanaged protocol available while preventing it from bypassing managed work.
+- **3b13a3b:** atomically record app delivery intent with canonical decisions;
+  drain runtime events independently of the HTTP reader; fence app persistence
+  with a durable delivery claim; commit terminal state and drainage before runtime
+  acknowledgement; reopen the activation run before execution. Authenticated
+  thread/run replay can recover unfinished work after process restart, preserving
+  execution scopes and loop bindings. No credentials or startup authority
+  references are persisted. Read-only callers do not acquire execution authority.
+
+The retained React client's recovery logic also needs its planned 4a adaptation:
+an older waiting/completion event must not mark a later delivery on the same run
+as settled. The existing UI code and design remain the frontend implementation.
