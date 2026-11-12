@@ -55,6 +55,113 @@ struct Prepared {
     epoch: i32,
 }
 impl Service {
+    async fn certified_input_continuation(
+        &self,
+        tx: &mut JournalTransaction,
+        actor: &Actor,
+        thread: &Thread,
+        runtime: &dyn AgentRuntime,
+        composer: bool,
+    ) -> Result<Option<runtime::Continuation>, StoreError> {
+        let Some(proof) = thread
+            .runtime_session_id
+            .as_deref()
+            .and_then(|c| runtime.input_continuation(c))
+        else {
+            return Ok(None);
+        };
+        let mut ended = true;
+        for id in [&proof.head_run_id, &proof.owner_run_id] {
+            let Ok(id) = Uuid::parse_str(id) else {
+                return Ok(None);
+            };
+            let Some(run) = runs::get_in(tx, &actor.workspace_id, id).await? else {
+                return Ok(None);
+            };
+            if run.thread_id != thread.id
+                || run.initiated_by_user_id != actor.user_id
+                || !matches!(
+                    run.state,
+                    RunState::Completed | RunState::WaitingForApproval
+                ) && !(composer && terminal(run.state))
+            {
+                return Ok(None);
+            }
+            ended &= terminal(run.state);
+        }
+        if !proof.pending_inputs && !proof.delivery_complete && !(composer && ended) {
+            return Ok(None);
+        }
+        let busy: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM agent_runs WHERE thread_id=$1 AND state IN ('created','connecting','running','reconnecting'))")
+            .bind(thread.id).fetch_one(&mut **tx).await?;
+        Ok((!busy).then_some(proof))
+    }
+    async fn input_continuation_allowed(
+        &self,
+        tx: &mut JournalTransaction,
+        actor: &Actor,
+        thread: &Thread,
+        runtime: &dyn AgentRuntime,
+    ) -> Result<bool, StoreError> {
+        if self
+            .certified_input_continuation(tx, actor, thread, runtime, true)
+            .await?
+            .is_none()
+        {
+            return self
+                .question_continuation_allowed(tx, actor, thread, runtime)
+                .await;
+        }
+        // Canonical approvals remain bound to their original runs. A composer
+        // delivery may queue or answer input, but cannot consume those grants.
+        let waiting: Vec<Uuid> = sqlx::query_scalar(
+            "SELECT id FROM agent_runs WHERE thread_id=$1 AND state='waiting-for-approval'",
+        )
+        .bind(thread.id)
+        .fetch_all(&mut **tx)
+        .await?;
+        for id in waiting {
+            let inputs: Vec<(String, String, String)> = sqlx::query_as("SELECT source,type,payload_json::text FROM agent_events WHERE run_id=$1 AND type IN ('run.waiting','approval.requested') AND sequence>COALESCE((SELECT MAX(sequence) FROM agent_events WHERE run_id=$1 AND type='approval.resolved'),0) ORDER BY sequence")
+                .bind(id).fetch_all(&mut **tx).await?;
+            if inputs.is_empty()
+                || inputs.into_iter().any(|(source, kind, payload)| {
+                    let Ok(payload) = forge_core::json::parse(&payload) else {
+                        return true;
+                    };
+                    if source == "forge" && kind == "approval.requested" {
+                        return payload["summary"]["details"]["runtimeRequestId"]
+                            .as_str()
+                            .is_none_or(|s| Uuid::parse_str(s).is_err());
+                    }
+                    if source != "eve"
+                        || kind != "run.waiting"
+                        || payload["reason"] != "input-required"
+                    {
+                        return true;
+                    }
+                    if payload["requestId"]
+                        .as_str()
+                        .is_some_and(|s| Uuid::parse_str(s).is_ok())
+                    {
+                        return false;
+                    }
+                    let request = &payload["request"];
+                    request["kind"] != "question"
+                        || request["action"]["toolName"] != "ask_question"
+                        || !matches!(request["display"].as_str(), Some("text" | "select"))
+                        || forge_core::agents::eve::normalize(
+                            json!({"type":"input.requested","data":{"requests":[request]}}),
+                            "input-admission",
+                            None,
+                        )
+                        .is_err()
+                })
+            {
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    }
     async fn question_continuation_allowed(
         &self,
         tx: &mut JournalTransaction,
@@ -236,7 +343,7 @@ impl Service {
         if active
             && (thread.runtime_kind != runtime_kind
                 || !self
-                    .question_continuation_allowed(&mut tx, &actor, &thread, runtime.as_ref())
+                    .input_continuation_allowed(&mut tx, &actor, &thread, runtime.as_ref())
                     .await?)
         {
             return Err(StoreError::Conflict);

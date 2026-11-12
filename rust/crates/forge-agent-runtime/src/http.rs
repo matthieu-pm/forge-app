@@ -4,7 +4,7 @@ use crate::{
     auth::Channel,
     engine::{Decision, Phase, State as EngineState},
     host::Host,
-    journal::Session,
+    journal::{ResponseProof, Session},
 };
 use axum::{
     Json, Router,
@@ -49,8 +49,15 @@ impl IntoResponse for Failure {
     }
 }
 type HttpResult<T> = std::result::Result<T, Failure>;
+fn persisted_input_error(error: crate::Error) -> Failure {
+    if crate::journal::outcome_unknown(&error) {
+        UNAVAILABLE
+    } else {
+        CONFLICT
+    }
+}
 impl Service {
-    fn channel(&self, headers: &HeaderMap, run: &str) -> HttpResult<Channel> {
+    fn authenticated(&self, headers: &HeaderMap) -> HttpResult<Channel> {
         if headers.get_all(header::AUTHORIZATION).iter().count() != 1 {
             return Err(AUTH);
         }
@@ -66,6 +73,13 @@ impl Service {
         {
             return Err(AUTH);
         }
+        if Uuid::parse_str(channel.run_id()).is_err() {
+            return Err(MISSING);
+        }
+        Ok(channel)
+    }
+    fn channel(&self, headers: &HeaderMap, run: &str) -> HttpResult<Channel> {
+        let channel = self.authenticated(headers)?;
         if channel.run_id() != run || Uuid::parse_str(run).is_err() {
             return Err(MISSING);
         }
@@ -101,6 +115,7 @@ pub fn router(host: Host, secret: String) -> crate::Result<Router> {
             }),
         )
         .route("/native/v1/runs/{run}", post(admit).get(status))
+        .route("/native/v1/conversations/{id}", get(conversation))
         .route("/native/v1/runs/{run}/resume", post(resume))
         .route("/native/v1/runs/{run}/recover", post(recover))
         .route("/native/v1/runs/{run}/cancel", post(cancel))
@@ -148,8 +163,13 @@ fn parse<T: serde::de::DeserializeOwned>(headers: &HeaderMap, bytes: &[u8]) -> H
 }
 fn public(session: &Session) -> Value {
     let cancelled = session.cancelled || session.state.phase() == Phase::Cancelled;
-    let inactive = session.continued_by.is_some() || cancelled;
-    json!({"phase":session.state.phase(),"cancelled":cancelled,"nextIndex":session.next_index,"deadline":session.deadline.timestamp_millis(),"pendingRequestId":if inactive {None} else {session.state.pending_request()},"pendingRequests":if inactive {vec![]} else {session.state.pending_questions()},"continuedByRunId":session.continued_by,"workerActive":session.worker_active})
+    let delivery_complete = session.delivery_only
+        || cancelled
+        || matches!(
+            session.state.phase(),
+            Phase::Complete | Phase::Cancelled | Phase::Failed
+        );
+    json!({"phase":session.state.phase(),"cancelled":cancelled,"nextIndex":session.next_index,"deadline":session.deadline.timestamp_millis(),"pendingRequestId":session.pending_requests.first().and_then(|request|request.get("requestId")),"pendingRequests":session.pending_requests,"continuedByRunId":session.continued_by,"workerActive":session.worker_active,"deliveryComplete":delivery_complete,"conversation":session.conversation})
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -160,6 +180,8 @@ struct Admission {
     conversation_id: Option<Uuid>,
     #[serde(default)]
     previous_run_id: Option<Uuid>,
+    #[serde(default)]
+    expected_generation: Option<u64>,
     #[serde(default)]
     attachments: Vec<Attachment>,
 }
@@ -177,8 +199,15 @@ impl Admission {
             || text.chars().count() > 100_000
             || self.attachments.len() > 20
             || (self.previous_run_id.is_some() && self.conversation_id.is_none())
+            || (self.expected_generation.is_some() && self.conversation_id.is_none())
+            || self
+                .expected_generation
+                .is_some_and(|value| value > 9_007_199_254_740_991)
         {
             return Err(BAD);
+        }
+        if self.attachments.is_empty() {
+            return Ok(json!({"role":"user","content":text}));
         }
         let mut parts = vec![json!({"type":"text","text":text})];
         for file in &self.attachments {
@@ -218,12 +247,13 @@ async fn admit(
             service
                 .host
                 .store()
-                .admit(
+                .admit_at(
                     &channel,
                     conversation,
                     input.previous_run_id,
                     message,
                     deadline,
+                    input.expected_generation,
                 )
                 .await
         } else {
@@ -238,8 +268,9 @@ async fn admit(
     let session = timeout(Duration::from_secs(5), admission)
         .await
         .map_err(|_| UNAVAILABLE)?
-        .map_err(|_| CONFLICT)?;
+        .map_err(persisted_input_error)?;
     if !session.cancelled
+        && !session.delivery_only
         && session.continued_by.is_none()
         && !matches!(
             session.state.phase(),
@@ -267,11 +298,32 @@ async fn status(
         json!({"ok":true,"status":public(&service.load(&channel).await?)}),
     ))
 }
+async fn conversation(
+    State(service): State<Service>,
+    Path(id): Path<Uuid>,
+    headers: HeaderMap,
+) -> HttpResult<Json<Value>> {
+    let channel = service.authenticated(&headers)?;
+    let proof = timeout(
+        Duration::from_secs(5),
+        service.host.store().conversation(&channel, id),
+    )
+    .await
+    .map_err(|_| UNAVAILABLE)?
+    .map_err(|_| MISSING)?;
+    Ok(Json(json!({"ok":true,"conversation":proof})))
+}
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct Approval {
     request_id: String,
     approved: bool,
+    #[serde(default)]
+    conversation_id: Option<Uuid>,
+    #[serde(default)]
+    expected_head_run_id: Option<Uuid>,
+    #[serde(default)]
+    expected_generation: Option<u64>,
 }
 async fn resume(
     State(service): State<Service>,
@@ -284,9 +336,29 @@ async fn resume(
     if Uuid::parse_str(&input.request_id).is_err() {
         return Err(BAD);
     }
-    timeout(
+    let proof = match (
+        input.conversation_id,
+        input.expected_head_run_id,
+        input.expected_generation,
+    ) {
+        (None, None, None) => None,
+        (Some(conversation_id), Some(expected_head_run_id), Some(expected_generation))
+            if expected_generation <= 9_007_199_254_740_991 =>
+        {
+            Some(ResponseProof {
+                conversation_id,
+                expected_head_run_id,
+                expected_generation,
+            })
+        }
+        _ => return Err(BAD),
+    };
+    if proof.is_none() && service.load(&channel).await?.conversation.is_some() {
+        return Err(CONFLICT);
+    }
+    let receipt = timeout(
         Duration::from_secs(5),
-        service.host.store().respond(
+        service.host.store().respond_at(
             &channel,
             &input.request_id,
             if input.approved {
@@ -294,15 +366,31 @@ async fn resume(
             } else {
                 Decision::Denied
             },
+            proof,
         ),
     )
     .await
     .map_err(|_| UNAVAILABLE)?
-    .map_err(|_| CONFLICT)?;
+    .map_err(persisted_input_error)?;
     // A 202 is returned only after persistence. Capacity/shutdown returns a 503;
     // the identical retry recognizes the receipt and can wake another worker.
-    service.host.kick(channel).map_err(|_| UNAVAILABLE)?;
-    Ok((StatusCode::ACCEPTED, Json(json!({"ok":true,"runId":run}))).into_response())
+    let session = service.load(&channel).await.map_err(|_| UNAVAILABLE)?;
+    let current_delivery = receipt.current_delivery
+        && receipt.generation == session.input_generation
+        && match (&receipt.conversation, &session.conversation) {
+            (None, None) => true,
+            (Some(receipt), Some(current)) => {
+                receipt.id == current.id
+                    && receipt.head_run_id == current.head_run_id
+                    && receipt.generation == current.generation
+                    && receipt.owner_run_id == current.owner_run_id
+            }
+            _ => false,
+        };
+    if current_delivery && !session.delivery_only {
+        service.host.kick(channel).map_err(|_| UNAVAILABLE)?;
+    }
+    Ok((StatusCode::ACCEPTED, Json(json!({"ok":true,"runId":run,"status":public(&session),"streamStartIndex":receipt.stream_start_index,"replayed":receipt.replayed,"currentDelivery":current_delivery}))).into_response())
 }
 async fn recover(
     State(service): State<Service>,
@@ -313,6 +401,11 @@ async fn recover(
     let session = service.load(&channel).await?;
     if session.cancelled
         || session.continued_by.is_some()
+        || (session.delivery_only
+            && session
+                .conversation
+                .as_ref()
+                .is_none_or(|conversation| conversation.head_run_id.to_string() != run))
         || (session.deadline <= Utc::now()
             && !matches!(
                 session.state.phase(),
@@ -321,8 +414,14 @@ async fn recover(
     {
         return Err(CONFLICT);
     }
-    service.host.kick(channel).map_err(|_| UNAVAILABLE)?;
-    Ok((StatusCode::ACCEPTED, Json(json!({"ok":true,"runId":run}))).into_response())
+    if !session.delivery_only {
+        service.host.kick(channel).map_err(|_| UNAVAILABLE)?;
+    }
+    Ok((
+        StatusCode::ACCEPTED,
+        Json(json!({"ok":true,"runId":run,"status":public(&session)})),
+    )
+        .into_response())
 }
 async fn cancel(
     State(service): State<Service>,
@@ -441,6 +540,8 @@ impl Reader {
                 continue;
             }
             if session.cancelled
+                || session.delivery_only
+                || session.continued_by.is_some()
                 || matches!(
                     session.state.phase(),
                     Phase::Waiting | Phase::Complete | Phase::Cancelled | Phase::Failed

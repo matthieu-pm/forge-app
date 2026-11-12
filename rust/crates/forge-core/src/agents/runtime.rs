@@ -8,6 +8,15 @@ use std::{pin::Pin, sync::Arc};
 #[error("{0}")]
 pub struct Error(pub &'static str);
 pub type Events = Pin<Box<dyn Stream<Item = Result<Value, Error>> + Send>>;
+/// An admitted private conversation checkpoint. Input/completion flags certify
+/// a fully drained delivery; otherwise only an application terminal state may
+/// permit a new composer turn. Delivery and execution ownership can differ.
+pub struct Continuation {
+    pub head_run_id: String,
+    pub owner_run_id: String,
+    pub pending_inputs: bool,
+    pub delivery_complete: bool,
+}
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Identity {
@@ -18,6 +27,11 @@ pub struct Identity {
 #[async_trait]
 pub trait Checkpoint: Send + Sync {
     async fn save(&self, cursor: String) -> Result<(), Error>;
+    /// Roll back a first admission only after the runtime definitively rejected
+    /// it. Unknown delivery outcomes must retain their recovery checkpoint.
+    async fn clear(&self) -> Result<(), Error> {
+        Err(Error("This runtime checkpoint cannot be cleared."))
+    }
 }
 #[derive(Clone)]
 pub struct Context {
@@ -44,6 +58,9 @@ pub trait Runtime: Send + Sync {
     /// confirmed admission when the application has ended that run. Required
     /// approval and session-limit continuation remain a separate path.
     fn question_continuation_run(&self, _cursor: &str, _terminal: bool) -> Option<String> {
+        None
+    }
+    fn input_continuation(&self, _cursor: &str) -> Option<Continuation> {
         None
     }
     /// Whether repeating the same approval delivery is a durable no-op.

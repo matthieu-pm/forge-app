@@ -64,8 +64,8 @@ impl Engine {
         request: &str,
         decision: Decision,
     ) -> Result<()> {
-        if let Some(next) = state.resolve(channel, request, decision)? {
-            journal.commit(state.revision(), &next, &[]).await?;
+        if let Some((next, events)) = state.resolve_approval(channel, request, decision)? {
+            journal.commit(state.revision(), &next, &events).await?;
             *state = next;
         }
         Ok(())
@@ -234,6 +234,9 @@ impl Engine {
                 }
                 Phase::Tools => {
                     if state.next_call == state.calls.len() {
+                        if self.park_input_batch(state, journal).await? {
+                            return Ok(Phase::Waiting);
+                        }
                         let results=state.calls.iter().map(|c|json!({"type":"tool-result","toolCallId":c.id,"toolName":c.name,"output":c.output})).collect::<Vec<_>>();
                         let mut next = state.clone();
                         next.messages.push(json!({"role":"tool","content":results}));
@@ -248,7 +251,7 @@ impl Engine {
                         continue;
                     }
                     let call = state.calls[state.next_call].clone();
-                    if call.phase == CallPhase::Complete {
+                    if matches!(call.phase, CallPhase::Complete | CallPhase::Waiting) {
                         let mut next = state.clone();
                         next.next_call += 1;
                         self.commit(state, journal, next, vec![]).await?;
@@ -275,9 +278,7 @@ impl Engine {
                         continue;
                     }
                     if call.name == "ask_question" {
-                        if self.collect_questions(state, journal).await? {
-                            return Ok(Phase::Waiting);
-                        }
+                        self.collect_question(state, journal).await?;
                         continue;
                     }
                     if call.name == "web_fetch" {
@@ -309,25 +310,14 @@ impl Engine {
                     }
                     if prepared.requires_approval() && call.decision.is_none() {
                         let mut next = state.clone();
-                        next.phase = Phase::Waiting;
                         let pending = &mut next.calls[next.next_call];
                         pending.phase = CallPhase::Waiting;
-                        let request = pending
+                        pending
                             .request_id
-                            .get_or_insert_with(|| Uuid::new_v4().to_string())
-                            .clone();
-                        let prompt = if call.name == "update_team" {
-                            "Allow this team settings change?"
-                        } else {
-                            "Allow this program's declared Forge writes?"
-                        };
-                        let request = json!({"requestId":request,"kind":"tool-approval","display":"confirmation","prompt":prompt,"allowFreeform":false,"options":[{"id":"approve","label":"Approve"},{"id":"deny","label":"Deny"}],"action":{"callId":call.id,"kind":"tool-call","toolName":call.name,"input":call.input}});
-                        let events = vec![
-                            event(state, "input.requested", json!({"requests":[request]})),
-                            event(state, "session.waiting", json!({"reason":"input-required"})),
-                        ];
-                        self.commit(state, journal, next, events).await?;
-                        return Ok(Phase::Waiting);
+                            .get_or_insert_with(|| Uuid::new_v4().to_string());
+                        next.next_call += 1;
+                        self.commit(state, journal, next, vec![]).await?;
+                        continue;
                     }
                     let approval = match call.decision {
                         Some(decision) => Approval::Resolved {

@@ -175,6 +175,19 @@ impl Service {
         id: Uuid,
         decision: Decision,
     ) -> Result<Resolution, StoreError> {
+        self.resolve_in_with_native_continuation(tx, actor, id, decision, false)
+            .await
+    }
+    /// Only the hosted coordinator can certify a completed delivery whose
+    /// private native conversation still permits this original canonical reply.
+    pub(crate) async fn resolve_in_with_native_continuation(
+        &self,
+        tx: &mut JournalTransaction,
+        actor: &Actor,
+        id: Uuid,
+        decision: Decision,
+        completed_delivery: bool,
+    ) -> Result<Resolution, StoreError> {
         if !actor.has_scope(ApiScope::AgentsApprove) {
             return Err(StoreError::Forbidden);
         }
@@ -213,8 +226,9 @@ impl Service {
             })?;
         if matches!(
             run.state,
-            super::RunState::Cancelled | super::RunState::Completed | super::RunState::Failed
-        ) {
+            super::RunState::Cancelled | super::RunState::Failed
+        ) || (run.state == super::RunState::Completed && !completed_delivery)
+        {
             return Err(error(
                 Code::ApprovalBindingMismatch,
                 "A finished run cannot be resumed by an approval.",

@@ -38,6 +38,18 @@ fn string<'a>(v: &'a Value, key: &str) -> Result<&'a str> {
 fn parts(v: &Value) -> Result<&Vec<Value>> {
     v["content"].as_array().ok_or(INVALID)
 }
+// Approval metadata is retained for historical response interpretation, never
+// sent as a model tool invocation or treated as a capability grant.
+fn approval_metadata(part: &Value) -> Result<()> {
+    let object = part.as_object().ok_or(INVALID)?;
+    if object.len() != 3
+        || string(part, "approvalId")?.is_empty()
+        || string(part, "toolCallId")?.is_empty()
+    {
+        return Err(INVALID);
+    }
+    Ok(())
+}
 fn reasoning_model(model: &str) -> bool {
     static O: LazyLock<regex::Regex> =
         LazyLock::new(|| regex::Regex::new(r"^o(\d+)(?:-|$)").unwrap());
@@ -206,6 +218,7 @@ fn responses(prompt: &[Value], system: &str) -> Result<Vec<Value>> {
                     "tool-result"=>output.push(super::search::response_result(part)?),
                     "text"=>{let mut value=json!({"role":"assistant","content":[{"type":"output_text","text":string(part,"text")?}]});if let Some(phase)=part["providerOptions"]["openai"].get("phase").filter(|v|!v.is_null()){value["phase"]=phase.clone();}output.push(value);},
                     "tool-call"=>output.push(json!({"type":"function_call","call_id":string(part,"toolCallId")?,"name":string(part,"toolName")?,"arguments":javascript_stringify(part.get("input").unwrap_or(&json!({})))})),
+                    "tool-approval-request"=>approval_metadata(part)?,
                     "reasoning"=>{},_=>return Err(INVALID),
                 }
                 }
@@ -249,6 +262,7 @@ fn chat(prompt: &[Value], system: &str) -> Result<Vec<Value>> {
                     "text"=>text.push_str(string(part,"text")?),
                     "tool-result" if part["toolName"]=="web_search"=>{},
                     "tool-call"=>calls.push(json!({"id":string(part,"toolCallId")?,"type":"function","function":{"name":string(part,"toolName")?,"arguments":javascript_stringify(part.get("input").unwrap_or(&json!({})))}})),
+                    "tool-approval-request"=>approval_metadata(part)?,
                     "reasoning"=>{},_=>return Err(INVALID),
                 }
                 }
@@ -325,6 +339,7 @@ fn anthropic(prompt: &[Value]) -> Result<(Vec<Value>, Vec<Value>)> {
                         "tool-result" => {
                             converted.push(super::search::anthropic_request_result(part)?)
                         }
+                        "tool-approval-request" => approval_metadata(part)?,
                         "reasoning" => {
                             let metadata = &part["providerOptions"]["anthropic"];
                             if let Some(signature) = metadata["signature"].as_str() {

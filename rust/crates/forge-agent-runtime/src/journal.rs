@@ -17,12 +17,15 @@ use std::time::Duration;
 use uuid::Uuid;
 
 mod conversation;
+mod response;
+pub use response::{InputReceipt, ResponseProof};
 const SCHEMAS: &[&str] = &[
     include_str!("../migrations/0001_runtime.sql"),
     include_str!("../migrations/0002_conversations.sql"),
     include_str!("../migrations/0003_compaction_recovery.sql"),
     include_str!("../migrations/0004_session_budgets.sql"),
     include_str!("../migrations/0005_input_continuations.sql"),
+    include_str!("../migrations/0006_input_delivery_owners.sql"),
 ];
 fn versions() -> Vec<(i32, String)> {
     SCHEMAS
@@ -37,6 +40,11 @@ fn versions() -> Vec<(i32, String)> {
         .collect()
 }
 const FAILED: Error = Error("The runtime journal is unavailable.");
+/// A failed commit acknowledgement or post-commit read is not a rejected
+/// admission. Callers must retry the exact request without rolling back intent.
+pub fn outcome_unknown(error: &Error) -> bool {
+    *error == FAILED
+}
 const INVALID: Error = Error("The runtime session is unavailable or outside this run's scope.");
 const BUSY: Error = Error("Another worker owns the runtime session.");
 const LOST: Error = Error("The runtime worker lease has expired or been superseded.");
@@ -54,6 +62,20 @@ pub struct Session {
     pub cancelled: bool,
     pub worker_active: bool,
     pub continued_by: Option<Uuid>,
+    pub delivery_only: bool,
+    pub input_generation: u64,
+    pub conversation: Option<ConversationProof>,
+    pub pending_requests: Vec<Value>,
+}
+#[derive(Clone, Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConversationProof {
+    pub id: Uuid,
+    pub head_run_id: Uuid,
+    pub generation: u64,
+    pub owner_run_id: Uuid,
+    pub owner_next_index: u64,
+    pub owner_deadline: i64,
 }
 pub struct Event {
     pub index: u64,
@@ -68,6 +90,7 @@ pub struct Lease {
 }
 #[derive(sqlx::FromRow)]
 struct Row {
+    run_id: Uuid,
     workspace_id: String,
     user_id: String,
     conversation_id: Option<Uuid>,
@@ -83,9 +106,24 @@ struct Row {
     deadline: DateTime<Utc>,
     cancelled_at: Option<DateTime<Utc>>,
     continued_by_run_id: Option<Uuid>,
+    delivery_only: bool,
+    input_generation: i64,
     worker_active: bool,
 }
-const COLUMNS: &str = "workspace_id,user_id,conversation_id,parent_run_id,initial_hash,revision,engine_state::text AS snapshot,next_index,journal_bytes,epoch,lease_owner,lease_until,deadline,cancelled_at,continued_by_run_id,COALESCE(lease_until > clock_timestamp() AND deadline > clock_timestamp() AND cancelled_at IS NULL AND continued_by_run_id IS NULL,false) AS worker_active";
+const COLUMNS: &str = "run_id,workspace_id,user_id,conversation_id,parent_run_id,initial_hash,revision,engine_state::text AS snapshot,next_index,journal_bytes,epoch,lease_owner,lease_until,deadline,cancelled_at,continued_by_run_id,delivery_only,input_generation,COALESCE(lease_until > clock_timestamp() AND deadline > clock_timestamp() AND cancelled_at IS NULL AND continued_by_run_id IS NULL AND NOT delivery_only,false) AS worker_active";
+
+#[derive(sqlx::FromRow)]
+struct ContextRow {
+    #[sqlx(flatten)]
+    row: Row,
+    head_run_id: Option<Uuid>,
+    execution_run_id: Option<Uuid>,
+    conversation_generation: Option<i64>,
+    owner_snapshot: Option<String>,
+    owner_next_index: Option<i64>,
+    owner_deadline: Option<DateTime<Utc>>,
+    owner_cancelled: Option<bool>,
+}
 fn run(channel: &Channel) -> Result<Uuid> {
     channel.run_id().parse().map_err(|_| INVALID)
 }
@@ -196,6 +234,10 @@ impl Store {
             || snapshot["questions"] != json!([])
             || snapshot["question_answers"] != json!({})
             || !snapshot["question_followup"].is_null()
+            || snapshot["pending_input"]
+                != serde_json::to_value(forge_core::agents::pending_input::PendingState::default())
+                    .map_err(|_| INVALID)?
+            || snapshot["issued_requests"] != json!({})
             || snapshot["todos"] != json!([])
             || snapshot["budget"]
                 != json!({"prior":{"input":0,"output":0},"granted":null,"pending":null})
@@ -224,8 +266,57 @@ impl Store {
         if row.initial_hash != hash || row.deadline != deadline || row.conversation_id.is_some() {
             return Err(Error("The run already has a different runtime admission."));
         }
-        let state = restored(&row, channel)?;
+        restored(&row, channel)?;
         tx.commit().await.map_err(|_| FAILED)?;
+        self.load(channel).await.map_err(|_| FAILED)
+    }
+    pub async fn load(&self, channel: &Channel) -> Result<Session> {
+        // Read delivery and current owner in one MVCC snapshot: separate reads
+        // can combine an old delivery proof with a newly rebound owner's batch.
+        let context = sqlx::query_as::<_, ContextRow>(&format!(
+            "SELECT requested.*,c.last_run_id AS head_run_id,c.execution_run_id,c.generation AS conversation_generation,owner.engine_state::text AS owner_snapshot,owner.next_index AS owner_next_index,owner.deadline AS owner_deadline,(owner.cancelled_at IS NOT NULL) AS owner_cancelled FROM (SELECT {COLUMNS} FROM forge_runtime.sessions WHERE run_id=$1) requested LEFT JOIN forge_runtime.conversations c ON c.id=requested.conversation_id LEFT JOIN forge_runtime.sessions owner ON owner.run_id=c.execution_run_id AND owner.conversation_id=c.id AND owner.workspace_id=requested.workspace_id AND owner.user_id=requested.user_id"
+        ))
+        .bind(run(channel)?)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|_| FAILED)?
+        .ok_or(INVALID)?;
+        let row = context.row;
+        let state = restored(&row, channel)?;
+        let (conversation, pending_requests) = if let Some(id) = row.conversation_id {
+            let owner_id = context.execution_run_id.ok_or(INVALID)?;
+            let owner = State::restore_parent(
+                forge_core::json::parse(context.owner_snapshot.as_deref().ok_or(INVALID)?)
+                    .map_err(|_| FAILED)?,
+                channel,
+                &owner_id.to_string(),
+            )?;
+            let pending = if context.owner_cancelled == Some(true) {
+                vec![]
+            } else {
+                owner.pending_requests()
+            };
+            (
+                Some(ConversationProof {
+                    id,
+                    head_run_id: context.head_run_id.ok_or(INVALID)?,
+                    generation: context.conversation_generation.ok_or(INVALID)? as u64,
+                    owner_run_id: owner_id,
+                    owner_next_index: context.owner_next_index.ok_or(INVALID)? as u64,
+                    owner_deadline: context.owner_deadline.ok_or(INVALID)?.timestamp_millis(),
+                }),
+                pending,
+            )
+        } else {
+            (
+                None,
+                if row.cancelled_at.is_some() {
+                    vec![]
+                } else {
+                    state.pending_requests()
+                },
+            )
+        };
         Ok(Session {
             state,
             next_index: row.next_index as u64,
@@ -233,24 +324,10 @@ impl Store {
             cancelled: row.cancelled_at.is_some(),
             worker_active: row.worker_active,
             continued_by: row.continued_by_run_id,
-        })
-    }
-    pub async fn load(&self, channel: &Channel) -> Result<Session> {
-        let row = sqlx::query_as::<_, Row>(&format!(
-            "SELECT {COLUMNS} FROM forge_runtime.sessions WHERE run_id=$1"
-        ))
-        .bind(run(channel)?)
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|_| FAILED)?
-        .ok_or(INVALID)?;
-        Ok(Session {
-            state: restored(&row, channel)?,
-            next_index: row.next_index as u64,
-            deadline: row.deadline,
-            cancelled: row.cancelled_at.is_some(),
-            worker_active: row.worker_active,
-            continued_by: row.continued_by_run_id,
+            delivery_only: row.delivery_only,
+            input_generation: row.input_generation as u64,
+            conversation,
+            pending_requests,
         })
     }
     /// Persist a resolved approval before acknowledging delivery. Only a parked
@@ -261,28 +338,10 @@ impl Store {
         request: &str,
         decision: Decision,
     ) -> Result<bool> {
-        let mut tx = self.pool.begin().await.map_err(|_| FAILED)?;
-        let row = locked(&mut tx, channel).await?;
-        if row.cancelled_at.is_some() || row.continued_by_run_id.is_some() {
-            return Err(LOST);
-        }
-        let state = restored(&row, channel)?;
-        let Some(next) = state.resolve(channel, request, decision)? else {
-            tx.commit().await.map_err(|_| FAILED)?;
-            return Ok(false);
-        };
-        let at = now(&mut tx).await?;
-        if row.deadline <= at {
-            return Err(LOST);
-        }
-        let epoch = row.epoch.checked_add(1).ok_or(LOST)?;
-        sqlx::query("UPDATE forge_runtime.sessions SET revision=$2,engine_state=$3::jsonb,epoch=$4,lease_owner=NULL,lease_until=NULL,updated_at=$5 WHERE run_id=$1")
-            .bind(run(channel)?).bind(next.revision() as i64).bind(javascript_stringify(&next.snapshot())).bind(epoch).bind(at).execute(&mut *tx).await.map_err(|_|FAILED)?;
-        if row.deadline <= now(&mut tx).await? {
-            return Err(LOST);
-        }
-        tx.commit().await.map_err(|_| FAILED)?;
-        Ok(true)
+        Ok(!self
+            .respond_at(channel, request, decision, None)
+            .await?
+            .replayed)
     }
     pub async fn acquire(
         &self,
@@ -298,7 +357,11 @@ impl Store {
         let row = locked(&mut tx, channel).await?;
         let now = now(&mut tx).await?;
         let state = restored(&row, channel)?;
-        if row.cancelled_at.is_some() || row.continued_by_run_id.is_some() || row.deadline <= now {
+        if row.cancelled_at.is_some()
+            || row.continued_by_run_id.is_some()
+            || row.delivery_only
+            || row.deadline <= now
+        {
             return Err(LOST);
         }
         // A parked worker has committed that it will perform no more effects.
@@ -428,6 +491,7 @@ impl Lease {
             || row.deadline <= at
             || row.cancelled_at.is_some()
             || row.continued_by_run_id.is_some()
+            || row.delivery_only
         {
             return Err(LOST);
         }

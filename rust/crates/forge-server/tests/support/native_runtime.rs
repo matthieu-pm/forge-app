@@ -32,6 +32,7 @@ pub enum Mode {
     Budget,
     Approve,
     Questions,
+    MixedRequired,
     Stall,
     LargeToolData,
     SensitiveToolData,
@@ -42,6 +43,9 @@ pub struct Script {
     pub effects: AtomicUsize,
     pub output_limits: Mutex<Vec<u32>>,
     pub question_results: Mutex<Vec<Value>>,
+    pub model_runs: Mutex<Vec<(String, String)>>,
+    pub callback_runs: Mutex<Vec<String>>,
+    grant_owner: Mutex<Option<String>>,
     pub began: Notify,
 }
 struct Adapter(Arc<Script>);
@@ -56,6 +60,18 @@ impl Model for Adapter {
     ) -> Result<Completion> {
         self.0.models.fetch_add(1, Ordering::SeqCst);
         self.0
+            .model_runs
+            .lock()
+            .unwrap()
+            .push((channel.run_id().into(), channel.provider().into()));
+        if matches!(self.0.mode, Mode::MixedRequired) {
+            self.0
+                .grant_owner
+                .lock()
+                .unwrap()
+                .get_or_insert_with(|| channel.run_id().into());
+        }
+        self.0
             .output_limits
             .lock()
             .unwrap()
@@ -64,7 +80,7 @@ impl Model for Adapter {
         if matches!(self.0.mode, Mode::Stall) {
             std::future::pending::<()>().await;
         }
-        if matches!(self.0.mode, Mode::Questions) {
+        if matches!(self.0.mode, Mode::Questions | Mode::MixedRequired) {
             let answers: Vec<Value> = turn
                 .prompt
                 .iter()
@@ -77,7 +93,13 @@ impl Model for Adapter {
             let asking = answers.is_empty();
             self.0.question_results.lock().unwrap().extend(answers);
             return Ok(Completion {
-                content: if asking {
+                content: if asking && matches!(self.0.mode, Mode::MixedRequired) {
+                    vec![
+                        json!({"type":"tool-call","toolCallId":"explain","toolName":"ask_question","input":{"prompt":"Any explanation?","allowFreeform":true}}),
+                        json!({"type":"tool-call","toolCallId":"first-write","toolName":"update_team","input":{"slug":"forge","settings":{"name":"First"}}}),
+                        json!({"type":"tool-call","toolCallId":"second-write","toolName":"update_team","input":{"slug":"forge","settings":{"name":"Second"}}}),
+                    ]
+                } else if asking {
                     vec![
                         json!({"type":"tool-call","toolCallId":"opaque-question-choice","toolName":"ask_question","input":{"prompt":"Choose a name","options":[{"id":"a","label":"Aster"},{"id":"b","label":"Marigold"}],"allowFreeform":false}}),
                         json!({"type":"tool-call","toolCallId":"opaque-question-text","toolName":"ask_question","input":{"prompt":"Why?","allowFreeform":true}}),
@@ -153,6 +175,18 @@ impl Capabilities for Adapter {
     async fn call(&self, channel: &Channel, request: Request) -> Result<Value> {
         assert!(!channel.run_id().is_empty());
         assert_eq!(request.id, "teams.update");
+        self.0
+            .callback_runs
+            .lock()
+            .unwrap()
+            .push(channel.run_id().into());
+        if matches!(self.0.mode, Mode::MixedRequired)
+            && self.0.grant_owner.lock().unwrap().as_deref() != Some(channel.run_id())
+        {
+            return Err(forge_agent_runtime::Error(
+                "This run has no canonical write grant.",
+            ));
+        }
         self.0.effects.fetch_add(1, Ordering::SeqCst);
         Ok(
             json!({"id":"00000000-0000-4000-8000-000000000001","slug":"forge","identifier":"FOR","name":"Changed","timezone":"Europe/Paris","description":"Fixture"}),
@@ -204,6 +238,9 @@ impl Fixture {
             effects: AtomicUsize::new(0),
             output_limits: Mutex::new(vec![]),
             question_results: Mutex::new(vec![]),
+            model_runs: Mutex::new(vec![]),
+            callback_runs: Mutex::new(vec![]),
+            grant_owner: Mutex::new(None),
             began: Notify::new(),
         });
         let host = Host::new(

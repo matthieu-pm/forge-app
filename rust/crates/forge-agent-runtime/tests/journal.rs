@@ -553,3 +553,170 @@ async fn compacting_runs_remain_recoverable_and_the_replaced_worker_cannot_settl
     let definition:String=sqlx::query_scalar("SELECT indexdef FROM pg_indexes WHERE schemaname='forge_runtime' AND indexname='runtime_sessions_recovery'").fetch_one(&f.pool).await.unwrap();
     assert!(definition.contains("compacting"));
 }
+
+struct MixedApprovalModel;
+#[async_trait]
+impl Model for MixedApprovalModel {
+    async fn generate(
+        &self,
+        _: &Channel,
+        turn: Turn<'_>,
+        _: &Cancellation,
+        _: &mut dyn Sink,
+    ) -> Result<Completion> {
+        let done = turn.prompt.iter().any(|message| message["role"] == "tool");
+        Ok(Completion {
+            content: if done {
+                vec![json!({"type":"text","text":"Both decisions recorded."})]
+            } else {
+                ["first-change", "second-change"].into_iter().map(|id| json!({"type":"tool-call","toolCallId":id,"toolName":"update_team","input":{"slug":"forge","settings":{"name":id}}})).collect()
+            },
+            finish: if done {
+                Finish::Stop
+            } else {
+                Finish::ToolCalls
+            },
+            usage: json!({"inputTokens":10,"outputTokens":5}),
+        })
+    }
+}
+#[tokio::test]
+async fn standalone_partial_input_receipts_fence_old_deliveries_and_rebind_a_fresh_model() {
+    let f = Fixture::new().await;
+    let (lease, mut state) = f
+        .store
+        .acquire(&f.channel, Uuid::new_v4(), Duration::from_secs(30))
+        .await
+        .unwrap();
+    let calls = Arc::new(Calls::default());
+    let engine = Engine::new(
+        Arc::new(MixedApprovalModel),
+        Arc::new(Executor {
+            capabilities: calls.clone(),
+            sandbox: None,
+            features: Features::default(),
+        }),
+    );
+    assert_eq!(
+        engine
+            .drive(
+                &f.channel,
+                &mut state,
+                &lease,
+                &Cancellation::default(),
+                Instant::now() + Duration::from_secs(10)
+            )
+            .await
+            .unwrap(),
+        Phase::Waiting
+    );
+    let requests = state.pending_requests();
+    assert_eq!(requests.len(), 2);
+    let first = requests[0]["requestId"].as_str().unwrap();
+    let second = requests[1]["requestId"].as_str().unwrap();
+    let before = f.store.load(&f.channel).await.unwrap();
+    let first_receipt = f
+        .store
+        .respond_at(&f.channel, first, Decision::Denied, None)
+        .await
+        .unwrap();
+    assert!(!first_receipt.replayed);
+    assert!(first_receipt.current_delivery);
+    assert!(first_receipt.conversation.is_none());
+    assert_eq!(first_receipt.stream_start_index, before.next_index);
+    assert!(
+        lease
+            .append(state.revision(), event(json!("fenced")))
+            .await
+            .is_err()
+    );
+    let partial = f.store.load(&f.channel).await.unwrap();
+    assert_eq!(partial.state.phase(), Phase::Complete);
+    assert_eq!(partial.pending_requests.len(), 2);
+    let duplicate = f
+        .store
+        .respond_at(&f.channel, first, Decision::Denied, None)
+        .await
+        .unwrap();
+    assert!(duplicate.replayed && duplicate.current_delivery);
+    assert_eq!(
+        duplicate.stream_start_index,
+        first_receipt.stream_start_index
+    );
+    assert_eq!(
+        f.store.load(&f.channel).await.unwrap().next_index,
+        partial.next_index
+    );
+    let fresh = channel(f.run, "fixture-user", "fixture-workspace", "fresh-model");
+    let second_receipt = f
+        .store
+        .respond_at(&fresh, second, Decision::Denied, None)
+        .await
+        .unwrap();
+    assert!(!second_receipt.replayed && second_receipt.current_delivery);
+    assert_eq!(second_receipt.stream_start_index, partial.next_index);
+    assert!(second_receipt.stream_start_index > first_receipt.stream_start_index);
+    let ready = f.store.load(&fresh).await.unwrap();
+    assert_eq!(ready.state.phase(), Phase::Tools);
+    assert!(ready.pending_requests.is_empty());
+    let stale = f
+        .store
+        .respond_at(&f.channel, first, Decision::Denied, None)
+        .await
+        .unwrap();
+    assert!(stale.replayed);
+    assert!(!stale.current_delivery);
+    assert_eq!(stale.stream_start_index, first_receipt.stream_start_index);
+    assert!(
+        f.store
+            .respond_at(&fresh, first, Decision::Approved, None)
+            .await
+            .is_err()
+    );
+    assert_eq!(
+        f.store.load(&fresh).await.unwrap().state.snapshot(),
+        ready.state.snapshot()
+    );
+    assert_eq!(
+        f.store.load(&fresh).await.unwrap().next_index,
+        ready.next_index
+    );
+    let duplicate = f
+        .store
+        .respond_at(&fresh, second, Decision::Denied, None)
+        .await
+        .unwrap();
+    assert!(duplicate.replayed && duplicate.current_delivery);
+    assert_eq!(
+        duplicate.stream_start_index,
+        second_receipt.stream_start_index
+    );
+    let count: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM forge_runtime.input_deliveries WHERE run_id=$1")
+            .bind(f.run)
+            .fetch_one(&f.pool)
+            .await
+            .unwrap();
+    assert_eq!(count, 2);
+    let (lease, mut state) = f
+        .store
+        .acquire(&fresh, Uuid::new_v4(), Duration::from_secs(30))
+        .await
+        .unwrap();
+    assert_eq!(
+        engine
+            .drive(
+                &fresh,
+                &mut state,
+                &lease,
+                &Cancellation::default(),
+                Instant::now() + Duration::from_secs(10)
+            )
+            .await
+            .unwrap(),
+        Phase::Complete
+    );
+    assert_eq!(calls.0.load(Ordering::SeqCst), 0);
+    assert_eq!(state.usage(), (20, 10));
+    lease.release().await.unwrap();
+}

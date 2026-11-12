@@ -15,6 +15,14 @@ struct Checkpoint {
 #[async_trait]
 impl runtime::Checkpoint for Checkpoint {
     async fn save(&self, cursor: String) -> Result<(), runtime::Error> {
+        self.replace(Some(cursor)).await
+    }
+    async fn clear(&self) -> Result<(), runtime::Error> {
+        self.replace(None).await
+    }
+}
+impl Checkpoint {
+    async fn replace(&self, cursor: Option<String>) -> Result<(), runtime::Error> {
         async {
             let mut expected = self.expected.lock().await;
             let Some((mut tx, actor, thread, _)) = self
@@ -32,14 +40,14 @@ impl runtime::Checkpoint for Checkpoint {
                 &actor.workspace_id,
                 thread.id,
                 &ThreadPatch {
-                    runtime_session_id: Some(Some(cursor.clone())),
+                    runtime_session_id: Some(cursor.clone()),
                     last_activity_at: Some(self.service.time()),
                     ..Default::default()
                 },
             )
             .await?;
             tx.commit().await?;
-            *expected = Some(cursor);
+            *expected = cursor;
             Ok(())
         }
         .await

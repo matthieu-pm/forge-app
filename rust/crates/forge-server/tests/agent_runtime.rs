@@ -411,6 +411,9 @@ async fn changing_back_to_eve_cannot_silently_replace_a_saved_native_conversatio
             stream_index: 0,
             deadline_ms: ctx.deadline_ms,
             settled: None,
+            conversation: None,
+            pending_inputs: false,
+            delivery_complete: false,
             admitted: false,
         }
         .encode(),

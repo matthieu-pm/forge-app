@@ -32,11 +32,24 @@ fn scripted(context: runtime::Context, steps: Vec<Value>) -> runtime::Events {
                     Some(v) if v["checkpoint"] == true => {
                         context
                             .checkpoint
-                            .save(format!(
-                                "{}:{}",
-                                v["settled"].as_str().unwrap_or("cursor"),
-                                context.run_id
-                            ))
+                            .save(if let Some(proof) = v.get("proof") {
+                                format!(
+                                    "input:{}",
+                                    json!({
+                                        "run":context.run_id,
+                                        "head":proof["head"].as_str().unwrap_or(&context.run_id),
+                                        "owner":proof["owner"].as_str().unwrap_or(&context.run_id),
+                                        "pending":proof["pending"],
+                                        "complete":proof["complete"],
+                                    })
+                                )
+                            } else {
+                                format!(
+                                    "{}:{}",
+                                    v["settled"].as_str().unwrap_or("cursor"),
+                                    context.run_id
+                                )
+                            })
                             .await?
                     }
                     Some(v) if v["error"] == true => {
@@ -56,6 +69,10 @@ impl AgentRuntime for RuntimeFixture {
     }
     fn cursor_run_id(&self, cursor: &str) -> Option<String> {
         self.native.load(Ordering::SeqCst).then_some(())?;
+        if let Some(value) = cursor.strip_prefix("input:") {
+            let value: Value = serde_json::from_str(value).ok()?;
+            return Some(value["run"].as_str()?.to_owned());
+        }
         let (kind, run) = cursor.split_once(':')?;
         matches!(kind, "cursor" | "admitted" | "questions" | "complete").then(|| run.to_owned())
     }
@@ -64,6 +81,16 @@ impl AgentRuntime for RuntimeFixture {
         (cursor.starts_with("questions:")
             || (terminal && (cursor.starts_with("admitted:") || cursor.starts_with("complete:"))))
         .then_some(owner)
+    }
+    fn input_continuation(&self, cursor: &str) -> Option<runtime::Continuation> {
+        self.native.load(Ordering::SeqCst).then_some(())?;
+        let value: Value = serde_json::from_str(cursor.strip_prefix("input:")?).ok()?;
+        Some(runtime::Continuation {
+            head_run_id: value["head"].as_str()?.to_owned(),
+            owner_run_id: value["owner"].as_str()?.to_owned(),
+            pending_inputs: value["pending"].as_bool()?,
+            delivery_complete: value["complete"].as_bool()?,
+        })
     }
     fn idempotent_resumption(&self) -> bool {
         self.native.load(Ordering::SeqCst)
@@ -350,6 +377,217 @@ async fn historical_questions_survive_terminal_answers_but_not_unconfirmed_admis
         assert_eq!(current(&f, original).await.completed_at, None);
     }
 }
+#[tokio::test]
+async fn required_batches_keep_delivery_completion_separate_from_original_approval_authority() {
+    let f = Fixture::new().await;
+    let (service, runtime, model) = setup(&f).await;
+    runtime.native.store(true, Ordering::SeqCst);
+    let requests = [Uuid::new_v4(), Uuid::new_v4()];
+    *runtime.start.lock().unwrap() = vec![
+        event(
+            "first-approval",
+            "approval.requested",
+            json!({"capabilityId":"teams.update","risk":"reversible-write","summary":"First change","details":{"runtimeRequestId":requests[0]},"input":{"name":"First"}}),
+        ),
+        event(
+            "second-approval",
+            "approval.requested",
+            json!({"capabilityId":"teams.update","risk":"reversible-write","summary":"Second change","details":{"runtimeRequestId":requests[1]},"input":{"name":"Second"}}),
+        ),
+        json!({"checkpoint":true,"proof":{"pending":true,"complete":false}}),
+    ];
+    let thread = service.create_thread(&f.actor, json!({})).await.unwrap();
+    let original = service
+        .start_turn(&f.actor, input(thread.id, &model), None)
+        .await
+        .unwrap();
+    let a = original.run.id;
+    let issued: Vec<Event> = original.events.try_collect().await.unwrap();
+    let approvals: Vec<Uuid> = issued
+        .iter()
+        .filter(|e| e.kind == "approval.requested")
+        .map(|e| e.payload["approvalId"].as_str().unwrap().parse().unwrap())
+        .collect();
+    let old_context = runtime.contexts.lock().unwrap().last().unwrap().clone();
+    assert_eq!(current(&f, a).await.state, RunState::WaitingForApproval);
+    *runtime.start.lock().unwrap() = vec![
+        json!({"checkpoint":true,"proof":{"owner":a,"pending":true,"complete":true}}),
+        event("deferred-complete", "run.completed", json!({})),
+    ];
+    let mut queued_input = input(thread.id, &model);
+    queued_input["message"] = json!("Keep that request queued");
+    queued_input["reasoningEffort"] = json!("low");
+    let queued = service
+        .start_turn(&f.actor, queued_input, None)
+        .await
+        .unwrap();
+    let b = queued.run.id;
+    assert!(old_context.checkpoint.save("stale".into()).await.is_err());
+    queued.events.try_collect::<Vec<_>>().await.unwrap();
+    assert_eq!(current(&f, b).await.state, RunState::Completed);
+    assert_eq!(current(&f, a).await.state, RunState::WaitingForApproval);
+    *runtime.resume.lock().unwrap() = vec![
+        json!({"checkpoint":true,"proof":{"head":b,"pending":true,"complete":true}}),
+        event("original-complete", "run.completed", json!({})),
+    ];
+    let first = service
+        .resolve_approval(
+            &f.actor,
+            approvals[0],
+            approval_service::Decision::Approved,
+            None,
+        )
+        .await
+        .unwrap();
+    let first: Vec<Event> = first.events.try_collect().await.unwrap();
+    let completion = first.last().unwrap().clone();
+    assert_eq!(completion.kind, "run.completed");
+    let partial = current(&f, a).await;
+    assert_eq!(partial.state, RunState::Completed);
+    assert!(partial.completed_at.is_some());
+    *runtime.resume.lock().unwrap() = vec![
+        json!({"checkpoint":true,"proof":{"head":b,"pending":false,"complete":true}}),
+        delta(),
+        event("original-complete", "run.completed", json!({})),
+    ];
+    let second = service
+        .resolve_approval(
+            &f.actor,
+            approvals[1],
+            approval_service::Decision::Denied,
+            None,
+        )
+        .await
+        .unwrap();
+    assert_eq!(second.run.state, RunState::Running);
+    assert_eq!(second.run.completed_at, partial.completed_at);
+    let second: Vec<Event> = second.events.try_collect().await.unwrap();
+    assert_eq!(second.last().unwrap(), &completion);
+    assert_eq!(current(&f, a).await.state, RunState::Completed);
+    assert_eq!(current(&f, b).await.state, RunState::Completed);
+    {
+        let contexts = runtime.contexts.lock().unwrap();
+        for c in contexts.iter().filter(|c| c.run_id == a.to_string()) {
+            assert_eq!(c.reasoning_effort, "high");
+            assert_eq!(c.model["connectionId"], model["connectionId"]);
+        }
+        assert_eq!(contexts.last().unwrap().run_id, a.to_string());
+    }
+    assert_eq!(
+        *runtime.responses.lock().unwrap(),
+        vec![
+            json!({"requestId":requests[0],"optionId":"approve"}),
+            json!({"requestId":requests[1],"optionId":"deny"}),
+        ]
+    );
+    let completions: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM agent_events WHERE run_id=$1 AND type='run.completed'",
+    )
+    .bind(a)
+    .fetch_one(&f.pool)
+    .await
+    .unwrap();
+    assert_eq!(completions, 1);
+    *runtime.start.lock().unwrap() = vec![
+        json!({"checkpoint":true,"proof":{"pending":false,"complete":true}}),
+        event("third-complete", "run.completed", json!({})),
+    ];
+    service
+        .start_turn(&f.actor, input(thread.id, &model), None)
+        .await
+        .unwrap()
+        .events
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn completed_approval_requires_owned_native_lineage_and_can_follow_a_matching_delivery() {
+    for valid in [false, true] {
+        let f = Fixture::new().await;
+        let (service, runtime, model) = setup(&f).await;
+        runtime.native.store(true, Ordering::SeqCst);
+        let request = Uuid::new_v4();
+        *runtime.start.lock().unwrap() = vec![
+            event(
+                "approval",
+                "approval.requested",
+                json!({"capabilityId":"teams.update","risk":"reversible-write","summary":"Change","details":{"runtimeRequestId":request}}),
+            ),
+            json!({"checkpoint":true,"proof":{"pending":true,"complete":false}}),
+        ];
+        let thread = service.create_thread(&f.actor, json!({})).await.unwrap();
+        let original = service
+            .start_turn(&f.actor, input(thread.id, &model), None)
+            .await
+            .unwrap();
+        let a = original.run.id;
+        let events: Vec<Event> = original.events.try_collect().await.unwrap();
+        let approval: Uuid = events
+            .iter()
+            .find(|e| e.kind == "approval.requested")
+            .unwrap()
+            .payload["approvalId"]
+            .as_str()
+            .unwrap()
+            .parse()
+            .unwrap();
+        *runtime.start.lock().unwrap() = vec![
+            json!({"checkpoint":true,"proof":{"pending":false,"complete":true}}),
+            event("matching-complete", "run.completed", json!({})),
+        ];
+        let mut text = input(thread.id, &model);
+        text["message"] = json!("approve");
+        let matching = service.start_turn(&f.actor, text, None).await.unwrap();
+        let b = matching.run.id;
+        matching.events.try_collect::<Vec<_>>().await.unwrap();
+        if !valid {
+            let foreign =
+                json!({"run":b,"head":b,"owner":Uuid::new_v4(),"pending":false,"complete":true});
+            sqlx::query("UPDATE agent_threads SET runtime_session_id=$2 WHERE id=$1")
+                .bind(thread.id)
+                .bind(format!("input:{foreign}"))
+                .execute(&f.pool)
+                .await
+                .unwrap();
+        }
+        *runtime.resume.lock().unwrap() = vec![
+            json!({"checkpoint":true,"proof":{"head":b,"pending":false,"complete":true}}),
+            event("canonical-complete", "run.completed", json!({})),
+        ];
+        let resumed = service
+            .resolve_approval(
+                &f.actor,
+                approval,
+                approval_service::Decision::Approved,
+                None,
+            )
+            .await;
+        if valid {
+            let resumed = resumed.unwrap();
+            assert_eq!(resumed.run.id, a);
+            resumed.events.try_collect::<Vec<_>>().await.unwrap();
+            assert_eq!(current(&f, a).await.state, RunState::Completed);
+            assert_eq!(
+                runtime.contexts.lock().unwrap().last().unwrap().run_id,
+                a.to_string()
+            );
+        } else {
+            assert!(resumed.is_err());
+            assert_eq!(
+                approvals::get(&mut f.pool.acquire().await.unwrap(), approval)
+                    .await
+                    .unwrap()
+                    .unwrap()
+                    .state,
+                ApprovalState::Pending
+            );
+            assert_eq!(current(&f, a).await.state, RunState::WaitingForApproval);
+        }
+    }
+}
+
 async fn current(f: &Fixture, id: Uuid) -> Run {
     runs::get(&f.database, &f.actor.workspace_id, id)
         .await

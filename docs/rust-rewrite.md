@@ -109,7 +109,7 @@ gate pass.
 | 3b12f | Verified provider catalogue, invoice/refund proofs, native checkout and subscription reconciliation | Passed |
 | 3b12g | Renewal mutations, signed webhook recovery, replacement proofs and authenticated billing summary | Passed |
 | 3b13a1 | Ordinary question batches, typed answers and durable composer continuation | Passed |
-| 3b13a2 | Mixed required-input deferral and original approval ownership across continuation | Pending |
+| 3b13a2 | Mixed required-input deferral and original approval ownership across continuation | In progress |
 | 3b13b | Native child-agent execution, shared sandbox, usage and recovery | Pending |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4a | Existing React server-call adapters and missing Rust bootstrap/read contracts | Pending |
@@ -3025,3 +3025,41 @@ promotion and pause policy. Packaged acceptance must cover sign-in and manual
 codes, restart recovery, deep links, local-runtime cleanup, update behavior and
 the existing React UI on the macOS webview. Public signing/distribution and
 production promotion remain separately authorized release operations.
+
+### Milestone 3b13a2
+
+- Preserve the owning EVE required-input semantics: collect mixed approval and
+  question batches, queue unmatched composer deliveries, merge partial explicit
+  answers, consume deferred input once, and convert stale interactive replies
+  into the owning source informational message. Text-only composer input stays
+  a string; attached content remains an array and does not text-match questions.
+- Add 492 owning-source comparisons for resolution, coalescing, cancellation,
+  required classification, sequential flows and stale responses. Historical
+  tool approval metadata survives private history and is omitted from model wire
+  requests. Canonical Forge capability grants remain bound to the original run.
+- Separate conversation delivery head from execution owner in private journal
+  migration 0006. Completed deferred deliveries cannot acquire worker resources.
+  Canonical response receipts persist stream boundaries and generations; exact
+  retries do not reapply input or reclaim an execution after newer deliveries.
+  Original-run responses use the latest session history with that run's fresh
+  credentials, cumulative usage and request provenance.
+- Extend the compact native cursor with trusted conversation proof and delivery
+  completion. Completed app runs can receive another pending canonical answer;
+  duplicate completion receipts settle their state without duplicating usage.
+  Cancelled/failed canonical resumption remains fenced. New composer turns can
+  continue terminal owners using private admission proof.
+- Recover a definite same-head stale-generation rejection with scoped metadata
+  and one exact admission retry. Definite rejected admission rolls its checkpoint
+  back with CAS; unknown outcomes preserve the original recovery checkpoint.
+- Acceptance coverage is assembled across source fixtures, engine, PostgreSQL
+  ownership/receipt transactions, private HTTP, and hosted app coordination.
+  Full milestone gate has not run yet. React integration, Tauri host, native
+  child agents, and final qualification remain later milestones.
+
+- Initial full gate: source comparisons and formatting passed; 3,013 enabled
+  JavaScript tests and all three typechecks passed (607 external fixtures remain
+  skipped). Rust test compilation stopped because the new serializer regression
+  called private `build_for`; Clippy also caught an unused binding. Correct the
+  regression to exercise public `build` with a provider-bound channel and remove
+  the unused binding, then rerun the entire gate. Initial evidence:
+  `.forge/rust-rewrite/milestone-3b13a2-initial.log` (exit 1).

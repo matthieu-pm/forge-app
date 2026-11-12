@@ -50,6 +50,7 @@ enum Mode {
     Finish,
     Approval,
     Question,
+    MixedInput,
     Stall,
 }
 struct TestFactory {
@@ -99,8 +100,16 @@ impl Model for Adapter {
             && !turn.prompt.iter().any(|m| m["role"] == "tool");
         let question = matches!(self.0.mode, Mode::Question)
             && !turn.prompt.iter().any(|m| m["role"] == "tool");
+        let mixed = matches!(self.0.mode, Mode::MixedInput)
+            && !turn.prompt.iter().any(|m| m["role"] == "tool");
         Ok(Completion {
-            content: if question {
+            content: if mixed {
+                vec![
+                    json!({"type":"tool-call","toolCallId":"update-one","toolName":"update_team","input":{"slug":"forge","settings":{"name":"Changed"}}}),
+                    json!({"type":"tool-call","toolCallId":"update-two","toolName":"update_team","input":{"slug":"forge","settings":{"name":"Changed"}}}),
+                    json!({"type":"tool-call","toolCallId":"color-question","toolName":"ask_question","input":{"prompt":"Which color?"}}),
+                ]
+            } else if question {
                 vec![
                     json!({"type":"tool-call","toolCallId":"00000000-0000-4000-8000-000000000017","toolName":"ask_question","input":{"prompt":"Which option?","options":[{"id":"one","label":"One"},{"id":"two","label":"Two"}]}}),
                     json!({"type":"tool-call","toolCallId":"opaque-question","toolName":"ask_question","input":{"prompt":"Confirm"}}),
@@ -112,7 +121,7 @@ impl Model for Adapter {
             } else {
                 vec![json!({"type":"text","text":"Saved."})]
             },
-            finish: if approval || question {
+            finish: if approval || question || mixed {
                 Finish::ToolCalls
             } else {
                 Finish::Stop
@@ -670,7 +679,7 @@ async fn conversation_admission_carries_resolved_attachments_and_prior_turns_int
     );
     assert_eq!(saved.state.history()[2]["content"][0]["text"], "Saved.");
     assert_eq!(
-        saved.state.history()[3]["content"][0]["text"],
+        saved.state.history()[3]["content"],
         "Continue the conversation"
     );
     for attachment in [
@@ -818,5 +827,280 @@ async fn cancelled_question_status_hides_prompts_but_retains_private_continuatio
             .len(),
         2
     );
+    f.host.shutdown().await.unwrap();
+}
+
+#[tokio::test]
+async fn deferred_deliveries_and_partial_receipts_keep_owner_history_and_exact_replay_offsets() {
+    let mut f = Fixture::new(Mode::MixedInput, 2, 2).await;
+    let conversation = Uuid::new_v4();
+    f.admission["conversationId"] = json!(conversation);
+    f.begin().await;
+    f.phase(Phase::Waiting).await;
+    f.idle().await;
+    let before = json_body(f.request("GET", "", None).await).await;
+    let pending = before["status"]["pendingRequests"]
+        .as_array()
+        .unwrap()
+        .clone();
+    assert_eq!(pending.len(), 3);
+    assert_eq!(
+        pending
+            .iter()
+            .filter(|request| request["kind"] == "tool-approval")
+            .count(),
+        2
+    );
+    assert_eq!(before["status"]["deliveryComplete"], false);
+    let child = Uuid::new_v4();
+    let bearer = token(
+        child,
+        "fixture-user",
+        "fixture-workspace",
+        Utc::now().timestamp(),
+        900.,
+    );
+    let channel =
+        Channel::verify(SECRET, &format!("Bearer {bearer}"), Utc::now().timestamp()).unwrap();
+    let metadata_path = format!("/native/v1/conversations/{conversation}");
+    // A fresh delivery credential can inspect only its own conversation before
+    // that delivery has a journal row; this is the definite-409 recovery proof.
+    let metadata =
+        json_body(request(&f.app, "GET", &metadata_path, Some(&bearer), None).await).await;
+    assert_eq!(metadata["conversation"], before["status"]["conversation"]);
+    for (user, workspace) in [("other", "fixture-workspace"), ("fixture-user", "other")] {
+        let wrong = token(child, user, workspace, Utc::now().timestamp(), 900.);
+        assert_eq!(
+            request(&f.app, "GET", &metadata_path, Some(&wrong), None)
+                .await
+                .status(),
+            StatusCode::NOT_FOUND
+        );
+    }
+    assert_eq!(
+        request(&f.app, "GET", &metadata_path, None, None)
+            .await
+            .status(),
+        StatusCode::UNAUTHORIZED
+    );
+    let mut delivery = json!({"message":"Blue","conversationId":conversation,"previousRunId":f.run,"expectedGeneration":before["status"]["conversation"]["generation"],"deadline":f.admission["deadline"]});
+    let path = format!("/native/v1/runs/{child}");
+    delivery["expectedGeneration"] = json!(
+        before["status"]["conversation"]["generation"]
+            .as_u64()
+            .unwrap()
+            + 1
+    );
+    assert_eq!(
+        request(&f.app, "POST", &path, Some(&bearer), Some(delivery.clone()))
+            .await
+            .status(),
+        StatusCode::CONFLICT
+    );
+    assert!(f.store.load(&channel).await.is_err());
+    delivery["expectedGeneration"] = before["status"]["conversation"]["generation"].clone();
+    let accepted = request(&f.app, "POST", &path, Some(&bearer), Some(delivery.clone())).await;
+    assert_eq!(accepted.status(), StatusCode::ACCEPTED);
+    let accepted = json_body(accepted).await;
+    assert_eq!(accepted["status"]["deliveryComplete"], true);
+    assert_eq!(accepted["status"]["pendingRequests"], json!(pending));
+    assert_eq!(
+        accepted["status"]["conversation"]["headRunId"],
+        json!(child)
+    );
+    assert_eq!(
+        accepted["status"]["conversation"]["ownerRunId"],
+        json!(f.run)
+    );
+    assert!(f.store.load(&channel).await.unwrap().delivery_only);
+    assert!(!f.host.is_active(&child.to_string()));
+    assert_eq!(f.factory.models.load(Ordering::SeqCst), 1);
+    assert_eq!(f.factory.effects.load(Ordering::SeqCst), 0);
+    let repeated =
+        json_body(request(&f.app, "POST", &path, Some(&bearer), Some(delivery)).await).await;
+    assert_eq!(
+        repeated["status"]["conversation"],
+        accepted["status"]["conversation"]
+    );
+    let stream = bytes(
+        request(
+            &f.app,
+            "GET",
+            &format!("{path}/stream"),
+            Some(&bearer),
+            None,
+        )
+        .await,
+    )
+    .await;
+    let frames = stream
+        .lines()
+        .map(|line| serde_json::from_str::<Value>(line).unwrap())
+        .collect::<Vec<_>>();
+    assert_eq!(frames.last().unwrap()["status"]["deliveryComplete"], true);
+    assert_eq!(
+        frames.last().unwrap()["status"]["pendingRequests"],
+        json!(pending)
+    );
+    assert_eq!(
+        request(
+            &f.app,
+            "POST",
+            &format!("{path}/recover"),
+            Some(&bearer),
+            None
+        )
+        .await
+        .status(),
+        StatusCode::ACCEPTED
+    );
+    let decision = |id: &Value, proof: &Value| json!({"requestId":id,"approved":true,"conversationId":conversation,"expectedHeadRunId":proof["headRunId"],"expectedGeneration":proof["generation"]});
+    assert_eq!(
+        f.request(
+            "POST",
+            "/resume",
+            Some(json!({"requestId":pending[0]["requestId"],"approved":true}))
+        )
+        .await
+        .status(),
+        StatusCode::CONFLICT
+    );
+    let first_body = decision(
+        &pending[0]["requestId"],
+        &accepted["status"]["conversation"],
+    );
+    let first = f.request("POST", "/resume", Some(first_body.clone())).await;
+    assert_eq!(first.status(), StatusCode::ACCEPTED);
+    let first = json_body(first).await;
+    assert_eq!(first["replayed"], false);
+    assert_eq!(first["currentDelivery"], true);
+    assert_eq!(first["streamStartIndex"], before["status"]["nextIndex"]);
+    assert_eq!(first["status"]["deliveryComplete"], true);
+    assert_eq!(first["status"]["pendingRequests"], json!(pending));
+    f.idle().await;
+    assert_eq!(f.factory.effects.load(Ordering::SeqCst), 0);
+    let second_body = decision(&pending[1]["requestId"], &first["status"]["conversation"]);
+    let second = f.request("POST", "/resume", Some(second_body)).await;
+    assert_eq!(second.status(), StatusCode::ACCEPTED);
+    let second = json_body(second).await;
+    assert_eq!(second["streamStartIndex"], first["status"]["nextIndex"]);
+    timeout(Duration::from_secs(5), async {
+        loop {
+            let current = f.store.load(&f.channel).await.unwrap();
+            if current.state.phase() == Phase::Complete && current.pending_requests.is_empty() {
+                break;
+            }
+            sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap();
+    f.idle().await;
+    assert_eq!(f.factory.effects.load(Ordering::SeqCst), 2);
+    let saved = f.store.load(&f.channel).await.unwrap();
+    let question = saved
+        .state
+        .history()
+        .iter()
+        .filter(|message| message["role"] == "tool")
+        .flat_map(|message| message["content"].as_array().unwrap())
+        .find(|part| part["toolCallId"] == "color-question")
+        .unwrap();
+    assert_eq!(
+        question["output"]["value"],
+        json!({"status":"answered","text":"Blue"})
+    );
+    f.host.shutdown().await.unwrap();
+    let recovered = request(
+        &f.app,
+        "POST",
+        &format!("{path}/recover"),
+        Some(&bearer),
+        None,
+    )
+    .await;
+    assert_eq!(recovered.status(), StatusCode::ACCEPTED);
+    let recovered = json_body(recovered).await;
+    assert_eq!(recovered["status"]["deliveryComplete"], true);
+    assert_eq!(
+        recovered["status"]["conversation"]["headRunId"],
+        json!(child)
+    );
+    assert!(!f.host.is_active(&child.to_string()));
+    // A superseded receipt must acknowledge its original offset without trying
+    // to wake a stopped host or replay the subsequent delivery's events.
+    let replay = f.request("POST", "/resume", Some(first_body)).await;
+    assert_eq!(replay.status(), StatusCode::ACCEPTED);
+    let replay = json_body(replay).await;
+    assert_eq!(replay["replayed"], true);
+    assert_eq!(replay["currentDelivery"], false);
+    assert_eq!(replay["streamStartIndex"], first["streamStartIndex"]);
+    assert_eq!(f.factory.effects.load(Ordering::SeqCst), 2);
+}
+
+#[tokio::test]
+async fn attachment_question_delivery_keeps_source_array_content_as_new_input() {
+    let mut f = Fixture::new(Mode::Question, 2, 2).await;
+    let conversation = Uuid::new_v4();
+    f.admission["conversationId"] = json!(conversation);
+    f.begin().await;
+    f.phase(Phase::Waiting).await;
+    f.idle().await;
+    let before = json_body(f.request("GET", "", None).await).await;
+    let child = Uuid::new_v4();
+    let bearer = token(
+        child,
+        "fixture-user",
+        "fixture-workspace",
+        Utc::now().timestamp(),
+        900.,
+    );
+    let channel =
+        Channel::verify(SECRET, &format!("Bearer {bearer}"), Utc::now().timestamp()).unwrap();
+    let path = format!("/native/v1/runs/{child}");
+    let body = json!({"message":"Two","conversationId":conversation,"previousRunId":f.run,"expectedGeneration":before["status"]["conversation"]["generation"],"deadline":f.admission["deadline"],"attachments":[{"name":"fixture.pdf","contentType":"application/pdf","contentBase64":"cHVibGljLWZpeHR1cmU="}]});
+    assert_eq!(
+        request(&f.app, "POST", &path, Some(&bearer), Some(body))
+            .await
+            .status(),
+        StatusCode::ACCEPTED
+    );
+    timeout(Duration::from_secs(5), async {
+        loop {
+            if f.store
+                .load(&channel)
+                .await
+                .is_ok_and(|session| session.state.phase() == Phase::Complete)
+            {
+                break;
+            }
+            sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap();
+    let saved = f.store.load(&channel).await.unwrap();
+    let tool = saved
+        .state
+        .history()
+        .iter()
+        .find(|message| message["role"] == "tool")
+        .unwrap();
+    assert!(
+        tool["content"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|part| part["output"]["value"] == json!({"status":"ignored"}))
+    );
+    let followup = saved
+        .state
+        .history()
+        .iter()
+        .find(|message| message["role"] == "user" && message["content"].is_array())
+        .unwrap();
+    assert_eq!(followup["content"][0]["text"], "Two");
+    assert_eq!(followup["content"][1]["filename"], "fixture.pdf");
+    assert_eq!(f.factory.effects.load(Ordering::SeqCst), 0);
     f.host.shutdown().await.unwrap();
 }

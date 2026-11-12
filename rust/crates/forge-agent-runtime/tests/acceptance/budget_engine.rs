@@ -313,3 +313,131 @@ async fn output_exhaustion_is_separate_and_forged_continuations_are_rejected() {
             .any(|e| e["type"] == "approval.requested")
     );
 }
+
+#[tokio::test]
+async fn composer_continuation_uses_source_limit_options_without_reusing_old_run_usage() {
+    use forge_agent_runtime::engine::InputDelivery;
+    let (channel, state, _, _, _, _) = parked().await;
+    let request = state.pending_request().unwrap().to_owned();
+    let secret = "public-engine-fixture-signing-secret";
+    let token = mint(secret, Kind::RuntimeChannel, json!({"sub":channel.principal_id(),"workspaceId":"workspace","runId":"00000000-0000-4000-8000-000000000002","forgeCapabilityToken":"public-fixture-capability-token","forgeModelAccessToken":"public-fixture-model-access-token","provider":"openai","modelId":"bound-model","reasoningEffort":"medium"}),1000,900.).unwrap();
+    let child = Channel::verify(secret, &format!("Bearer {token}"), 1001).unwrap();
+    let Some(InputDelivery::Resolved {
+        state: mut next, ..
+    }) = state
+        .compose_input(&child, json!({"role":"user","content":"continue"}), false)
+        .unwrap()
+    else {
+        panic!("source continue must grant")
+    };
+    assert!(next.issued_request(&request).is_none());
+    assert_eq!(next.usage(), (0, 0));
+    assert_eq!(next.session_usage(), state.session_usage());
+    assert_eq!(next.decision(&request), Some(Decision::Approved));
+    let journal = Arc::new(Memory::new(next.clone()));
+    let model = Arc::new(Scripted::new(vec![]));
+    let (mut engine, effects) = setup(model, journal.clone(), None);
+    engine.max_input_tokens = 10;
+    engine
+        .drive(
+            &child,
+            &mut next,
+            journal.as_ref(),
+            &Cancellation::default(),
+            deadline(),
+        )
+        .await
+        .unwrap();
+    assert!(effects.requests.lock().unwrap().is_empty());
+    assert_eq!(next.usage(), (10, 5));
+    assert_eq!(next.session_usage(), (20, 10));
+    let (stale, _) = next
+        .canonical_input(&channel, &state, &request, Decision::Approved)
+        .unwrap();
+    assert_eq!(
+        stale.history(),
+        next.history(),
+        "stale native UUID limit response is dropped, not converted to user text"
+    );
+    assert_eq!(stale.session_usage(), next.session_usage());
+}
+
+#[tokio::test]
+async fn cancelled_limit_prompt_keeps_deferred_composer_content_without_granting_a_budget() {
+    use forge_agent_runtime::engine::InputDelivery;
+    let (channel, state, _, _, _, _) = parked().await;
+    let old_request = state.pending_request().unwrap().to_owned();
+    let delivery_channel = |run: &str| {
+        let secret = "public-engine-fixture-signing-secret";
+        let token = mint(secret, Kind::RuntimeChannel, json!({"sub":channel.principal_id(),"workspaceId":"workspace","runId":run,"forgeCapabilityToken":"public-fixture-capability-token","forgeModelAccessToken":"public-fixture-model-access-token","provider":"openai","modelId":"bound-model","reasoningEffort":"medium"}),1000,900.).unwrap();
+        Channel::verify(secret, &format!("Bearer {token}"), 1001).unwrap()
+    };
+    let second = delivery_channel("00000000-0000-4000-8000-000000000002");
+    let third = delivery_channel("00000000-0000-4000-8000-000000000003");
+    let Some(InputDelivery::Deferred {
+        owner, delivery, ..
+    }) = state
+        .compose_input(
+            &second,
+            json!({"role":"user","content":"Keep this earlier note"}),
+            false,
+        )
+        .unwrap()
+    else {
+        panic!("unmatched message must wait")
+    };
+    assert_eq!(delivery.phase(), Phase::Complete);
+    let attachment = json!({"type":"file","data":{"type":"data","data":"JVBERi0xLjQK"},"mediaType":"application/pdf","filename":"context.pdf"});
+    for (content, expected) in [
+        (
+            json!("continue"),
+            json!("Keep this earlier note\n\ncontinue"),
+        ),
+        (
+            json!([{"type":"text","text":"continue"},attachment]),
+            json!([{"type":"text","text":"Keep this earlier note"},{"type":"text","text":"continue"},attachment]),
+        ),
+    ] {
+        let Some(InputDelivery::Resolved {
+            state: mut next, ..
+        }) = owner
+            .compose_input(&third, json!({"role":"user","content":content}), true)
+            .unwrap()
+        else {
+            panic!("cancelled limit must release queued input")
+        };
+        assert_eq!(next.revision(), 0);
+        assert_eq!(next.phase(), Phase::Ready);
+        assert_eq!(
+            next.history().last(),
+            Some(&json!({"role":"user","content":expected}))
+        );
+        assert!(next.pending_requests().is_empty());
+        assert!(next.snapshot()["pending_input"]["deferredInput"].is_null());
+        assert!(next.snapshot()["budget"]["pending"].is_null());
+        assert!(next.snapshot()["budget"]["granted"].is_null());
+        assert_eq!(next.decision(&old_request), None);
+        assert_eq!(next.usage(), (0, 0));
+        assert_eq!(next.session_usage(), owner.session_usage());
+        let journal = Arc::new(Memory::new(next.clone()));
+        let model = Arc::new(Scripted::new(vec![]));
+        let (mut engine, effects) = setup(model.clone(), journal.clone(), None);
+        engine.max_input_tokens = 10;
+        assert_eq!(
+            engine
+                .drive(
+                    &third,
+                    &mut next,
+                    journal.as_ref(),
+                    &Cancellation::default(),
+                    deadline()
+                )
+                .await
+                .unwrap(),
+            Phase::Waiting
+        );
+        assert_ne!(next.pending_request(), Some(old_request.as_str()));
+        assert_eq!(model.calls.load(Ordering::SeqCst), 0);
+        assert!(effects.requests.lock().unwrap().is_empty());
+    }
+}

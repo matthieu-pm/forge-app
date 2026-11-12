@@ -82,6 +82,13 @@ pub(super) struct Pending {
     resume: Phase,
     pub decision: Option<Decision>,
 }
+impl Pending {
+    pub(super) fn request(&self) -> serde_json::Value {
+        json!({"requestId":self.request_id,"kind":"session-limit","display":"confirmation","allowFreeform":false,"prompt":prompt(self.kind,self.limit),
+            "options":[{"id":"approve","label":"Approve","description":"Grant a fresh token budget","style":"primary"},{"id":"deny","label":"Stop","description":"Stop now","style":"danger"}],
+            "action":{"callId":self.request_id,"kind":"tool-call","toolName":"session_limit_continuation","input":{"kind":self.kind,"limit":self.limit,"usedTokens":self.used_tokens}}})
+    }
+}
 impl State {
     pub(super) fn total_usage(&self) -> Result<Usage> {
         self.budget.prior.add(Usage {
@@ -117,7 +124,8 @@ impl State {
                     .is_some_and(|v| usage.get(p.kind) < v.get(p.kind))
                 || match p.decision {
                     None => {
-                        self.phase != Phase::Waiting || self.decisions.contains_key(&p.request_id)
+                        !matches!(self.phase, Phase::Waiting | Phase::Complete)
+                            || self.decisions.contains_key(&p.request_id)
                     }
                     Some(d) => {
                         self.phase != Phase::Ready || self.decisions.get(&p.request_id) != Some(&d)
@@ -166,15 +174,11 @@ impl Engine {
             resume: state.phase,
             decision: None,
         };
-        let prompt = prompt(kind, pending.limit);
-        // The private UUID and approve/deny options are Forge transport bindings.
-        // The source's continuation is not a model-supplied function invocation.
-        let request = json!({"requestId":pending.request_id,"kind":"session-limit","display":"confirmation","allowFreeform":false,"prompt":prompt,
-            "options":[{"id":"approve","label":"Approve","description":"Grant a fresh token budget","style":"primary"},{"id":"deny","label":"Stop","description":"Stop now","style":"danger"}],
-            "action":{"callId":pending.request_id,"kind":"tool-call","toolName":"session_limit_continuation","input":{"kind":kind,"limit":pending.limit,"usedTokens":pending.used_tokens}}});
+        let request = pending.request();
         let mut next = state.clone();
         next.phase = Phase::Waiting;
         next.budget.pending = Some(pending);
+        next.install_batch(vec![request.clone()]);
         let mut events = vec![];
         if state.step == 0 && state.phase == Phase::Ready {
             events.push(event(state, "turn.started", json!({})));

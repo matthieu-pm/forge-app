@@ -115,6 +115,33 @@ impl Service {
             return Err(StoreError::Forbidden);
         }
         if let Some(existing) = events::existing(&mut tx, id, source).await? {
+            if existing.kind == "run.completed" && event["type"] == "run.completed" {
+                // A partial required-input reply can complete the delivery while
+                // retaining pending session input. A later canonical reply
+                // reopens the same run; its stable completion receipt must still
+                // settle that new delivery without recounting any usage.
+                runs::update_in(
+                    &mut tx,
+                    id,
+                    &RunPatch {
+                        state: Some(RunState::Completed),
+                        completed_at: Some(Some(self.time())),
+                        error_code: Some(None),
+                        ..Default::default()
+                    },
+                )
+                .await?;
+                threads::update_in(
+                    &mut tx,
+                    &actor.workspace_id,
+                    thread.id,
+                    &ThreadPatch {
+                        last_activity_at: Some(self.time()),
+                        ..Default::default()
+                    },
+                )
+                .await?;
+            }
             tx.commit().await?;
             return Ok(Some(existing));
         }
@@ -304,6 +331,7 @@ impl Service {
             .owned_run(&mut tx, &actor, approval.run_id, true)
             .await?;
         // Validate the resumption binding before spending the human decision.
+        let mut completed_delivery = false;
         let hosted = if thread.runtime_kind == Runtime::Eve {
             let request = approval.redacted_input_summary["details"]["runtimeRequestId"]
                 .as_str()
@@ -315,8 +343,20 @@ impl Service {
             {
                 return Err(unavailable());
             }
+            let runtime = self.runtime(thread.runtime_kind)?;
+            let proof = self
+                .certified_input_continuation(&mut tx, &actor, &thread, runtime.as_ref(), false)
+                .await?;
+            let cursor = thread.runtime_session_id.as_deref().unwrap();
+            if let Some(owner) = runtime.cursor_run_id(cursor)
+                && owner != run.id.to_string()
+                && proof.is_none()
+            {
+                return Err(StoreError::Conflict);
+            }
+            completed_delivery = run.state == RunState::Completed && proof.is_some();
             Some((
-                self.runtime(thread.runtime_kind)?,
+                runtime,
                 vec![
                     json!({"requestId":request,"optionId":match decision{Decision::Approved=>"approve",Decision::Denied=>"deny"}}),
                 ],
@@ -343,7 +383,7 @@ impl Service {
         };
         let result = approval_service::Service::new(self.database.clone())
             .with_clock(self.now.clone())
-            .resolve_in(&mut tx, &actor, id, decision)
+            .resolve_in_with_native_continuation(&mut tx, &actor, id, decision, completed_delivery)
             .await;
         let resolution = match result {
             Ok(r) => r,

@@ -6,7 +6,7 @@ use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use forge_core::{
     agents::{
         eve,
-        runtime::{Context, Error, Events, Runtime},
+        runtime::{Context, Continuation, Error, Events, Runtime},
     },
     canonical::javascript_stringify,
 };
@@ -21,11 +21,26 @@ use tokio::time::{sleep, timeout};
 use uuid::Uuid;
 const LINE_LIMIT: usize = 8 * 1024 * 1024 + 1024;
 const FAILED: Error = Error("The native agent runtime could not complete this request.");
+enum PostFailure {
+    Rejected(reqwest::StatusCode),
+    Unknown,
+}
 #[derive(Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Settled {
     Questions,
+    Inputs,
     Complete,
+}
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct Conversation {
+    pub id: Uuid,
+    pub head_run_id: Uuid,
+    pub generation: u64,
+    pub owner_run_id: Uuid,
+    pub owner_next_index: u64,
+    pub owner_deadline: i64,
 }
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -39,8 +54,37 @@ pub struct Cursor {
     pub admitted: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub settled: Option<Settled>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub conversation: Option<Conversation>,
+    #[serde(default)]
+    pub pending_inputs: bool,
+    #[serde(default)]
+    pub delivery_complete: bool,
 }
 impl Cursor {
+    fn accept_conversation(&mut self, status: &Value) -> Result<(), Error> {
+        let Some(value) = status.get("conversation").filter(|v| !v.is_null()) else {
+            if self.conversation.is_some() {
+                return Err(FAILED);
+            }
+            return Ok(());
+        };
+        let proof: Conversation = serde_json::from_value(value.clone()).map_err(|_| FAILED)?;
+        if proof.id != self.conversation_id
+            || proof.generation > 9_007_199_254_740_991
+            || proof.owner_next_index > 9_007_199_254_740_991
+            || chrono::DateTime::from_timestamp_millis(proof.owner_deadline).is_none()
+            || (proof.head_run_id != self.run_id && proof.owner_run_id != self.run_id)
+            || self
+                .conversation
+                .as_ref()
+                .is_some_and(|old| proof.generation < old.generation)
+        {
+            return Err(FAILED);
+        }
+        self.conversation = Some(proof);
+        Ok(())
+    }
     pub fn encode(&self) -> String {
         format!(
             "native-v1.{}",
@@ -58,6 +102,12 @@ impl Cursor {
         if value.stream_index > 9_007_199_254_740_991
             || value.previous_run_id == Some(value.run_id)
             || chrono::DateTime::from_timestamp_millis(value.deadline_ms).is_none()
+            || value.conversation.as_ref().is_some_and(|c| {
+                c.id != value.conversation_id
+                    || c.generation > 9_007_199_254_740_991
+                    || c.owner_next_index > 9_007_199_254_740_991
+                    || chrono::DateTime::from_timestamp_millis(c.owner_deadline).is_none()
+            })
         {
             return None;
         }
@@ -114,9 +164,10 @@ impl NativeRuntime {
         body: Value,
         correlation: Option<&str>,
         run: &str,
-    ) -> Result<(), Error> {
+    ) -> Result<Value, PostFailure> {
         // Every POST is idempotent: admission, decision receipt, recovery or
         // cancellation. A lost acknowledgement can safely retry the same body.
+        let mut uncertain = false;
         for attempt in 0..3 {
             let result = timeout(
                 Duration::from_secs(30),
@@ -134,25 +185,54 @@ impl NativeRuntime {
                 Ok(Ok(response)) if response.status().is_success() => {
                     match timeout(Duration::from_secs(5), bounded_json(response)).await {
                         Ok(Ok(value)) if value["ok"] == true && value["runId"] == run => {
-                            return Ok(());
+                            return Ok(value);
                         }
-                        Ok(Ok(_)) => return Err(FAILED),
-                        _ => {}
+                        Ok(Ok(_)) => return Err(PostFailure::Unknown),
+                        _ => uncertain = true,
                     }
                 }
                 Ok(Ok(response))
                     if !response.status().is_server_error()
                         && response.status() != reqwest::StatusCode::TOO_MANY_REQUESTS =>
                 {
-                    return Err(FAILED);
+                    return Err(if uncertain {
+                        PostFailure::Unknown
+                    } else {
+                        PostFailure::Rejected(response.status())
+                    });
                 }
-                _ => {}
+                _ => uncertain = true,
             }
             if attempt < 2 {
                 sleep(Duration::from_millis(100 * (attempt + 1))).await;
             }
         }
-        Err(FAILED)
+        Err(PostFailure::Unknown)
+    }
+    async fn conversation(&self, id: Uuid, token: &str) -> Result<Conversation, Error> {
+        let response = timeout(
+            Duration::from_secs(5),
+            self.0.transport.request(
+                &format!("/native/v1/conversations/{id}"),
+                reqwest::Method::GET,
+                token,
+                None,
+                None,
+                Some(Duration::from_secs(5)),
+            ),
+        )
+        .await
+        .map_err(|_| FAILED)??;
+        if !response.status().is_success() {
+            return Err(FAILED);
+        }
+        let value = timeout(Duration::from_secs(5), bounded_json(response))
+            .await
+            .map_err(|_| FAILED)??;
+        if value["ok"] != true {
+            return Err(FAILED);
+        }
+        serde_json::from_value(value["conversation"].clone()).map_err(|_| FAILED)
     }
 }
 enum Mode {
@@ -192,6 +272,8 @@ impl Stream {
         }
     }
     async fn initialize(&mut self, mode: Mode) -> Result<(), Error> {
+        let prior_checkpoint = self.context.runtime_session_id.clone();
+        let admitting = matches!(&mode, Mode::Start(_, _));
         let run: Uuid = self.context.run_id.parse().map_err(|_| FAILED)?;
         let conversation: Uuid = self.context.thread_id.parse().map_err(|_| FAILED)?;
         let previous = self
@@ -217,12 +299,36 @@ impl Stream {
             Mode::Start(_, _) => Cursor {
                 conversation_id: conversation,
                 run_id: run,
-                previous_run_id: previous.as_ref().map(|c| c.run_id),
+                previous_run_id: previous
+                    .as_ref()
+                    .map(|c| c.conversation.as_ref().map_or(c.run_id, |c| c.head_run_id)),
                 stream_index: 0,
                 deadline_ms: self.context.deadline_ms,
                 admitted: false,
                 settled: None,
+                conversation: previous.as_ref().and_then(|c| c.conversation.clone()),
+                pending_inputs: false,
+                delivery_complete: false,
             },
+            Mode::Resume(_) => {
+                let mut cursor = previous.ok_or(Error(
+                    "Native runtime recovery requires this run's saved cursor.",
+                ))?;
+                if cursor.run_id != run {
+                    let proof = cursor.conversation.as_ref().ok_or(FAILED)?;
+                    cursor.stream_index = if proof.owner_run_id == run {
+                        proof.owner_next_index
+                    } else {
+                        0
+                    };
+                    cursor.run_id = run;
+                    cursor.previous_run_id = None;
+                    cursor.deadline_ms = self.context.deadline_ms;
+                }
+                cursor.settled = None;
+                cursor.delivery_complete = false;
+                cursor
+            }
             _ => previous.filter(|cursor| cursor.run_id == run).ok_or(Error(
                 "Native runtime recovery requires this run's saved cursor.",
             ))?,
@@ -236,7 +342,8 @@ impl Stream {
             },
         );
         let base = format!("/native/v1/runs/{run}");
-        let (path, body) = match mode {
+        let resuming = matches!(mode, Mode::Resume(_));
+        let (path, mut body) = match mode {
             Mode::Start(message, attachments) => {
                 let attachments=attachments.into_iter().map(|a|{
                     if ["name","contentType","contentBase64"].iter().any(|k|!a[*k].is_string()) { return Err(FAILED); }
@@ -268,18 +375,82 @@ impl Stream {
             }
             Mode::Reconnect => (format!("{base}/recover"), json!({})),
         };
+        if let Some(proof) = &cursor.conversation {
+            if resuming {
+                body["conversationId"] = json!(conversation);
+                body["expectedHeadRunId"] = json!(proof.head_run_id);
+                body["expectedGeneration"] = json!(proof.generation);
+            } else if path == base {
+                body["expectedGeneration"] = json!(proof.generation);
+            }
+        }
         self.owned()?;
-        self.context.checkpoint.save(cursor.encode()).await?;
-        self.runtime
-            .post(
-                &path,
-                &self.token,
-                body,
-                self.context.correlation_id.as_deref(),
-                &self.context.run_id,
-            )
-            .await?;
+        if !resuming {
+            self.context.checkpoint.save(cursor.encode()).await?;
+        }
+        let mut refreshed = false;
+        let acknowledged = loop {
+            match self
+                .runtime
+                .post(
+                    &path,
+                    &self.token,
+                    body.clone(),
+                    self.context.correlation_id.as_deref(),
+                    &self.context.run_id,
+                )
+                .await
+            {
+                Ok(value) => break value,
+                Err(PostFailure::Rejected(status)) => {
+                    if admitting
+                        && !cursor.admitted
+                        && !refreshed
+                        && status == reqwest::StatusCode::CONFLICT
+                    {
+                        refreshed = true;
+                        if let Ok(proof) =
+                            self.runtime.conversation(conversation, &self.token).await
+                            && proof.id == conversation
+                            && Some(proof.head_run_id) == cursor.previous_run_id
+                            && proof.generation
+                                > cursor.conversation.as_ref().map_or(0, |p| p.generation)
+                        {
+                            cursor.conversation = Some(proof);
+                            if Cursor::decode(&cursor.encode()).is_some() {
+                                body["expectedGeneration"] =
+                                    json!(cursor.conversation.as_ref().unwrap().generation);
+                                self.context.checkpoint.save(cursor.encode()).await?;
+                                continue;
+                            }
+                        }
+                    }
+                    if admitting {
+                        if let Some(previous) = &prior_checkpoint {
+                            self.context.checkpoint.save(previous.clone()).await?;
+                        } else {
+                            self.context.checkpoint.clear().await?;
+                        }
+                    }
+                    return Err(FAILED);
+                }
+                Err(PostFailure::Unknown) => return Err(FAILED),
+            }
+        };
         self.owned()?;
+        if acknowledged["currentDelivery"] == false {
+            self.done = true;
+            return Ok(());
+        }
+        if let Some(status) = acknowledged.get("status") {
+            cursor.accept_conversation(status)?;
+        }
+        if resuming && let Some(index) = acknowledged.get("streamStartIndex") {
+            cursor.stream_index = index
+                .as_u64()
+                .filter(|v| *v <= 9_007_199_254_740_991)
+                .ok_or(FAILED)?;
+        }
         cursor.admitted = true;
         self.context.checkpoint.save(cursor.encode()).await?;
         let response = timeout(
@@ -358,43 +529,64 @@ impl Stream {
                     {
                         return Err(FAILED);
                     }
+                    cursor.accept_conversation(status)?;
                     let pending = status.get("pendingRequests").and_then(Value::as_array);
-                    let questions = pending.filter(|requests| {
-                        !requests.is_empty()
-                            && requests.iter().all(|request| {
-                                request["kind"] == "question"
-                                    && request["action"]["toolName"] == "ask_question"
-                                    && matches!(
-                                        request["display"].as_str(),
-                                        Some("text" | "select")
-                                    )
-                            })
+                    let requests = pending.filter(|requests| !requests.is_empty());
+                    let questions = requests.is_some_and(|requests| {
+                        requests.iter().all(|request| request["kind"] == "question")
                     });
-                    let mut question_events = if let Some(requests) = questions {
-                        if status["phase"] != "waiting" || status["cancelled"] == true {
+                    let mut question_events = vec![];
+                    if let Some(requests) = requests {
+                        if status["cancelled"] == true
+                            || requests
+                                .iter()
+                                .any(|request| match request["kind"].as_str() {
+                                    Some("question") => {
+                                        request["action"]["toolName"] != "ask_question"
+                                            || !matches!(
+                                                request["display"].as_str(),
+                                                Some("text" | "select")
+                                            )
+                                    }
+                                    Some("tool-approval" | "session-limit") => {
+                                        request["display"] != "confirmation"
+                                            || request["requestId"]
+                                                .as_str()
+                                                .is_none_or(|id| Uuid::parse_str(id).is_err())
+                                    }
+                                    _ => true,
+                                })
+                        {
                             return Err(FAILED);
                         }
-                        eve::normalize(
+                        let normalized = eve::normalize(
                             json!({"type":"input.requested","data":{"requests":requests}}),
                             &format!("native:{}", cursor.run_id),
                             Some(cursor.stream_index as f64),
                         )
-                        .map_err(|_| FAILED)?
-                        .into_iter()
-                        .map(|event| {
-                            forge_core::agents::presentation::native_event(event)
-                                .map_err(|_| FAILED)
-                        })
-                        .collect::<Result<Vec<_>, _>>()?
-                    } else {
-                        vec![]
-                    };
-                    cursor.settled = if status["cancelled"] == true {
+                        .map_err(|_| FAILED)?;
+                        if questions {
+                            question_events = normalized
+                                .into_iter()
+                                .map(|event| {
+                                    forge_core::agents::presentation::native_event(event)
+                                        .map_err(|_| FAILED)
+                                })
+                                .collect::<Result<Vec<_>, _>>()?;
+                        }
+                    }
+                    cursor.delivery_complete = status["deliveryComplete"]
+                        .as_bool()
+                        .unwrap_or(status["phase"] == "complete");
+                    cursor.pending_inputs = requests.is_some();
+                    cursor.settled = if status["cancelled"] == true || status["phase"] == "failed" {
                         None
-                    } else if status["phase"] == "complete" {
-                        Some(Settled::Complete)
-                    } else if questions.is_some() {
+                    } else if questions {
                         Some(Settled::Questions)
+                    } else if requests.is_some() {
+                        Some(Settled::Inputs)
+                    } else if cursor.delivery_complete {
+                        Some(Settled::Complete)
                     } else {
                         None
                     };
@@ -404,6 +596,10 @@ impl Stream {
                     self.context.checkpoint.save(cursor.encode()).await?;
                     let kind = if status["cancelled"] == true {
                         Some("run.cancelled")
+                    } else if status["phase"] == "failed" {
+                        Some("run.failed")
+                    } else if cursor.delivery_complete {
+                        Some("run.completed")
                     } else {
                         match status["phase"].as_str() {
                             Some("complete") => Some("run.completed"),
@@ -427,8 +623,17 @@ impl Stream {
                             self.done = true;
                             continue;
                         }
-                        let request = status["pendingRequestId"]
-                            .as_str()
+                        let request = requests
+                            .and_then(|requests| {
+                                requests.iter().find(|request| {
+                                    matches!(
+                                        request["kind"].as_str(),
+                                        Some("tool-approval" | "session-limit")
+                                    )
+                                })
+                            })
+                            .and_then(|request| request["requestId"].as_str())
+                            .or_else(|| status["pendingRequestId"].as_str())
                             .filter(|v| Uuid::parse_str(v).is_ok())
                             .ok_or(FAILED)?;
                         // A fresh stream may start after the approval event's
@@ -530,6 +735,19 @@ impl Runtime for NativeRuntime {
         let cursor = Cursor::decode(cursor)?;
         (matches!(cursor.settled, Some(Settled::Questions)) || (terminal && cursor.admitted))
             .then(|| cursor.run_id.to_string())
+    }
+    fn input_continuation(&self, cursor: &str) -> Option<Continuation> {
+        let cursor = Cursor::decode(cursor)?;
+        if !cursor.admitted {
+            return None;
+        }
+        let proof = cursor.conversation?;
+        Some(Continuation {
+            head_run_id: proof.head_run_id.to_string(),
+            owner_run_id: proof.owner_run_id.to_string(),
+            pending_inputs: cursor.settled.is_some() && cursor.pending_inputs,
+            delivery_complete: cursor.settled.is_some() && cursor.delivery_complete,
+        })
     }
     fn idempotent_resumption(&self) -> bool {
         true

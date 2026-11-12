@@ -40,8 +40,11 @@ impl Model for ModelStep {
 struct NoEffects;
 #[async_trait]
 impl Capabilities for NoEffects {
-    async fn call(&self, _: &Channel, _: Request) -> Result<Value> {
-        panic!("Questions and cancelled queued calls must not dispatch capabilities")
+    async fn call(&self, _: &Channel, request: Request) -> Result<Value> {
+        assert_eq!(request.id, "teams.get", "Only pre-pause reads may dispatch");
+        Ok(
+            json!({"id":"11111111-1111-4111-8111-111111111111","slug":"forge","identifier":"FOR","name":"Read before waiting","timezone":"UTC","description":""}),
+        )
     }
 }
 fn engine(content: Vec<Value>) -> Engine {
@@ -68,7 +71,7 @@ fn choice(id: &str) -> Value {
         json!({"prompt":"Which workspace?","allowFreeform":false,"options":[{"id":"first","label":"First"},{"id":"second","label":"Second"}]}),
     )
 }
-async fn parked(f: &Fixture, calls: Vec<Value>) -> (Lease, State) {
+pub(super) async fn parked(f: &Fixture, calls: Vec<Value>) -> (Lease, State) {
     f.admit_first().await;
     let (lease, mut state) = f
         .store
@@ -90,7 +93,7 @@ async fn parked(f: &Fixture, calls: Vec<Value>) -> (Lease, State) {
     );
     (lease, state)
 }
-async fn finish(f: &Fixture, channel: &Channel) -> State {
+pub(super) async fn finish(f: &Fixture, channel: &Channel) -> State {
     let (lease, mut state) = f
         .store
         .acquire(channel, Uuid::new_v4(), Duration::from_secs(30))
@@ -329,7 +332,7 @@ async fn unmatched_question_becomes_ignored_and_the_composer_message_is_preserve
 }
 
 #[tokio::test]
-async fn cancelled_questions_survive_but_other_cancelled_actions_never_execute_in_the_successor() {
+async fn cancelled_questions_survive_and_reads_completed_before_the_pause_are_preserved() {
     let f = Fixture::new().await;
     parked(
         &f,
@@ -357,6 +360,7 @@ async fn cancelled_questions_survive_but_other_cancelled_actions_never_execute_i
         outputs[0]["output"]["value"],
         json!({"status":"answered","optionId":"second"})
     );
-    assert_eq!(outputs[1]["output"]["type"], "execution-denied");
+    assert_eq!(outputs[1]["output"]["type"], "json");
+    assert_eq!(outputs[1]["output"]["value"]["name"], "Read before waiting");
     assert!(f.store.load(&f.channel).await.unwrap().cancelled);
 }

@@ -35,6 +35,10 @@ impl Checkpoint for Saved {
         self.values.lock().unwrap().push(cursor);
         Ok(())
     }
+    async fn clear(&self) -> Result<(), Error> {
+        self.values.lock().unwrap().clear();
+        Ok(())
+    }
 }
 fn context(saved: Arc<Saved>) -> Context {
     Context {
@@ -112,10 +116,7 @@ async fn actual_native_service_handles_approval_continuation_next_turn_and_provi
     assert_eq!(cursor.conversation_id.to_string(), ctx.thread_id);
     assert_eq!(cursor.previous_run_id.unwrap().to_string(), first);
     let state = f.store.load(&channel(&ctx)).await.unwrap().state;
-    assert_eq!(
-        state.history()[1]["content"][0]["text"],
-        "Remember marigold"
-    );
+    assert_eq!(state.history()[1]["content"], "Remember marigold");
     assert_eq!(f.script.effects.load(Ordering::SeqCst), 1);
     assert_eq!(
         *f.script.output_limits.lock().unwrap(),
@@ -214,6 +215,150 @@ async fn ordinary_question_batch_replays_and_consumes_a_composer_answer_once() {
     f.shutdown().await;
 }
 #[tokio::test]
+async fn required_input_deliveries_preserve_original_authority_and_current_conversation_history() {
+    for matching in [false, true] {
+        let f = Fixture::new(Mode::MixedRequired, true).await;
+        let runtime = NativeRuntime::new(f.options()).unwrap();
+        let saved = Arc::new(Saved::default());
+        let mut a = context(saved.clone());
+        let initial = collect(runtime.start(
+            a.clone(),
+            "Remember marigold and make two changes".into(),
+            vec![],
+        ))
+        .await;
+        let requests: Vec<String> = initial
+            .iter()
+            .filter(|e| e["type"] == "approval.requested")
+            .map(|e| {
+                e["payload"]["details"]["runtimeRequestId"]
+                    .as_str()
+                    .unwrap()
+                    .to_owned()
+            })
+            .collect();
+        assert_eq!(requests.len(), 2);
+        assert_eq!(f.script.models.load(Ordering::SeqCst), 1);
+        assert_eq!(f.script.effects.load(Ordering::SeqCst), 0);
+        assert!(
+            runtime
+                .input_continuation(&saved.last())
+                .unwrap()
+                .pending_inputs
+        );
+        a.runtime_session_id = Some(saved.last());
+        let replay = collect(runtime.reconnect(a.clone())).await;
+        assert!(replay.iter().any(|event| event["type"] == "run.waiting"));
+        assert!(
+            !replay
+                .iter()
+                .any(|event| event["type"] == "approval.requested")
+        );
+        let mut b = a.clone();
+        b.run_id = Uuid::new_v4().to_string();
+        b.runtime_session_id = Some(saved.last());
+        b.model["provider"] = json!("anthropic");
+        b.model["connectionId"] = json!(Uuid::new_v4());
+        let delivered = collect(
+            runtime.start(
+                b.clone(),
+                if matching {
+                    "yes"
+                } else {
+                    "Please keep the changes queued"
+                }
+                .into(),
+                vec![],
+            ),
+        )
+        .await;
+        assert_eq!(delivered.last().unwrap()["type"], "run.completed");
+        let proof = runtime.input_continuation(&saved.last()).unwrap();
+        assert_eq!(proof.head_run_id, b.run_id);
+        assert_eq!(
+            proof.owner_run_id,
+            if matching { &b.run_id } else { &a.run_id }.to_owned()
+        );
+        assert_eq!(proof.pending_inputs, !matching);
+        assert!(proof.delivery_complete);
+        assert_eq!(f.script.effects.load(Ordering::SeqCst), 0);
+        if matching {
+            assert_eq!(
+                *f.script.callback_runs.lock().unwrap(),
+                vec![b.run_id.clone(), b.run_id.clone()]
+            );
+            assert_eq!(
+                f.script.model_runs.lock().unwrap().last().unwrap(),
+                &(b.run_id.clone(), "anthropic".into())
+            );
+        } else {
+            assert_eq!(f.script.models.load(Ordering::SeqCst), 1);
+        }
+        a.runtime_session_id = Some(saved.last());
+        let first = collect(runtime.resume(
+            a.clone(),
+            vec![json!({"requestId":requests[0],"optionId":"approve"})],
+        ))
+        .await;
+        assert_eq!(first.last().unwrap()["type"], "run.completed");
+        if !matching {
+            assert!(
+                runtime
+                    .input_continuation(&saved.last())
+                    .unwrap()
+                    .pending_inputs
+            );
+            assert_eq!(f.script.models.load(Ordering::SeqCst), 1);
+            assert_eq!(f.script.effects.load(Ordering::SeqCst), 0);
+            a.runtime_session_id = Some(saved.last());
+            let second = collect(runtime.resume(
+                a.clone(),
+                vec![json!({"requestId":requests[1],"optionId":"deny"})],
+            ))
+            .await;
+            assert_eq!(second.last().unwrap()["type"], "run.completed");
+            assert_eq!(
+                first.last().unwrap()["sourceEventId"],
+                second.last().unwrap()["sourceEventId"]
+            );
+            assert_eq!(f.script.effects.load(Ordering::SeqCst), 1);
+            assert_eq!(
+                *f.script.callback_runs.lock().unwrap(),
+                vec![a.run_id.clone()]
+            );
+        }
+        let proof = runtime.input_continuation(&saved.last()).unwrap();
+        assert_eq!(proof.head_run_id, b.run_id);
+        assert_eq!(proof.owner_run_id, a.run_id);
+        assert!(!proof.pending_inputs);
+        assert_eq!(
+            f.script.model_runs.lock().unwrap().last().unwrap(),
+            &(a.run_id.clone(), "openai".into())
+        );
+        let mut c = b.clone();
+        c.run_id = Uuid::new_v4().to_string();
+        c.runtime_session_id = Some(saved.last());
+        let next = collect(runtime.start(c.clone(), "What is the marker?".into(), vec![])).await;
+        assert!(
+            next.iter()
+                .any(|e| e["payload"]["content"] == "The marker is marigold.")
+        );
+        assert_eq!(next.last().unwrap()["type"], "run.completed");
+        let cursor = Cursor::decode(&saved.last()).unwrap();
+        assert_eq!(cursor.previous_run_id.unwrap().to_string(), b.run_id);
+        assert_eq!(
+            cursor.conversation.unwrap().owner_run_id.to_string(),
+            c.run_id
+        );
+        assert_eq!(
+            f.script.effects.load(Ordering::SeqCst),
+            usize::from(!matching)
+        );
+        f.shutdown().await;
+    }
+}
+
+#[tokio::test]
 async fn cursor_advances_only_after_delivery_and_reconnect_replays_the_unacknowledged_event() {
     let f = Fixture::new(Mode::Finish, false).await;
     let runtime = NativeRuntime::new(f.options()).unwrap();
@@ -291,6 +436,9 @@ async fn legacy_and_foreign_cursors_and_malformed_approvals_cannot_start_work() 
             stream_index: 0,
             deadline_ms: chrono::Utc::now().timestamp_millis() + 60000,
             settled: None,
+            conversation: None,
+            pending_inputs: false,
+            delivery_complete: false,
             admitted: false,
         }
         .encode(),
@@ -318,6 +466,9 @@ async fn legacy_and_foreign_cursors_and_malformed_approvals_cannot_start_work() 
             stream_index: 0,
             deadline_ms: ctx.deadline_ms,
             settled: None,
+            conversation: None,
+            pending_inputs: false,
+            delivery_complete: false,
             admitted: false,
         }
         .encode(),
@@ -336,6 +487,225 @@ async fn legacy_and_foreign_cursors_and_malformed_approvals_cannot_start_work() 
     assert_eq!(f.script.models.load(Ordering::SeqCst), 0);
     assert_eq!(f.deliveries.load(Ordering::SeqCst), 0);
     f.shutdown().await;
+}
+
+#[tokio::test]
+async fn superseded_response_receipts_do_not_replace_the_current_conversation_cursor() {
+    use axum::{
+        Router,
+        body::{Body, to_bytes},
+        http::{Request, Response},
+    };
+    let saved = Arc::new(Saved::default());
+    let mut ctx = context(saved.clone());
+    let head = Uuid::new_v4();
+    let proof = forge_server::native_runtime::Conversation {
+        id: ctx.thread_id.parse().unwrap(),
+        head_run_id: head,
+        generation: 7,
+        owner_run_id: head,
+        owner_next_index: 42,
+        owner_deadline: ctx.deadline_ms,
+    };
+    let cursor = Cursor {
+        conversation_id: proof.id,
+        run_id: head,
+        previous_run_id: None,
+        stream_index: 42,
+        deadline_ms: ctx.deadline_ms,
+        admitted: true,
+        settled: Some(forge_server::native_runtime::Settled::Complete),
+        conversation: Some(proof.clone()),
+        pending_inputs: false,
+        delivery_complete: true,
+    }
+    .encode();
+    saved.values.lock().unwrap().push(cursor.clone());
+    ctx.runtime_session_id = Some(cursor.clone());
+    let run = ctx.run_id.clone();
+    let request_id = Uuid::new_v4();
+    let requests = Arc::new(Mutex::new(Vec::new()));
+    let recorded = requests.clone();
+    let app = Router::new().fallback(move |request: Request<Body>| {
+        let run = run.clone(); let proof = proof.clone(); let recorded = recorded.clone();
+        async move {
+            assert!(request.uri().path().ends_with("/resume"));
+            let bytes = to_bytes(request.into_body(), 4096).await.unwrap();
+            recorded.lock().unwrap().push(serde_json::from_slice::<Value>(&bytes).unwrap());
+            Response::builder().status(202).header("content-type", "application/json")
+                .body(Body::from(json!({"ok":true,"runId":run,"replayed":true,"currentDelivery":false,"streamStartIndex":3,"status":{"conversation":proof}}).to_string())).unwrap()
+        }
+    });
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let origin = url::Url::parse(&format!("http://{}/", listener.local_addr().unwrap())).unwrap();
+    let server = tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
+    let runtime = NativeRuntime::new(forge_server::agent_runtime::Options {
+        base_url: origin,
+        channel_secret: SECRET.into(),
+        capability_secret: SECRET.into(),
+        model_secret: SECRET.into(),
+        peer_origin: None,
+        peer_identity: None,
+        now: Arc::new(|| chrono::Utc::now().timestamp()),
+    })
+    .unwrap();
+    assert!(
+        collect(runtime.resume(
+            ctx.clone(),
+            vec![json!({"requestId":request_id,"optionId":"approve"})]
+        ))
+        .await
+        .is_empty()
+    );
+    assert_eq!(*saved.values.lock().unwrap(), vec![cursor]);
+    assert_eq!(
+        *requests.lock().unwrap(),
+        vec![
+            json!({"requestId":request_id,"approved":true,"conversationId":ctx.thread_id,"expectedHeadRunId":head,"expectedGeneration":7})
+        ]
+    );
+    server.abort();
+}
+
+#[tokio::test]
+async fn definite_admission_conflicts_refresh_same_head_once_and_unknown_outcomes_keep_recovery() {
+    use axum::{
+        Router,
+        body::{Body, to_bytes},
+        http::{Request, Response},
+    };
+    use std::sync::atomic::AtomicUsize;
+    for case in ["refresh", "rejected", "unknown"] {
+        let saved = Arc::new(Saved::default());
+        let mut ctx = context(saved.clone());
+        let old_head = Uuid::new_v4();
+        let old = forge_server::native_runtime::Conversation {
+            id: ctx.thread_id.parse().unwrap(),
+            head_run_id: old_head,
+            generation: 1,
+            owner_run_id: old_head,
+            owner_next_index: 4,
+            owner_deadline: ctx.deadline_ms,
+        };
+        if case == "refresh" {
+            ctx.runtime_session_id = Some(
+                Cursor {
+                    conversation_id: old.id,
+                    run_id: old_head,
+                    previous_run_id: None,
+                    stream_index: 4,
+                    deadline_ms: ctx.deadline_ms,
+                    admitted: true,
+                    settled: Some(forge_server::native_runtime::Settled::Complete),
+                    conversation: Some(old.clone()),
+                    pending_inputs: false,
+                    delivery_complete: true,
+                }
+                .encode(),
+            );
+            saved
+                .values
+                .lock()
+                .unwrap()
+                .push(ctx.runtime_session_id.clone().unwrap());
+        }
+        let mut refreshed = old.clone();
+        refreshed.generation = 2;
+        let mut admitted = old;
+        admitted.generation = 3;
+        admitted.head_run_id = ctx.run_id.parse().unwrap();
+        admitted.owner_run_id = admitted.head_run_id;
+        admitted.owner_next_index = 0;
+        let run = ctx.run_id.clone();
+        let posts = Arc::new(AtomicUsize::new(0));
+        let gets = Arc::new(AtomicUsize::new(0));
+        let bodies = Arc::new(Mutex::new(Vec::new()));
+        let seen_posts = posts.clone();
+        let seen_gets = gets.clone();
+        let seen_bodies = bodies.clone();
+        let app = Router::new().fallback(move |request: Request<Body>| {
+            let run = run.clone(); let refreshed = refreshed.clone(); let admitted = admitted.clone();
+            let posts = seen_posts.clone(); let gets = seen_gets.clone(); let bodies = seen_bodies.clone();
+            async move {
+                let path = request.uri().path().to_owned();
+                if path.contains("/conversations/") {
+                    gets.fetch_add(1, Ordering::SeqCst);
+                    return Response::builder().header("content-type","application/json").body(Body::from(json!({"ok":true,"conversation":refreshed}).to_string())).unwrap();
+                }
+                let status = json!({"phase":"complete","cancelled":false,"nextIndex":0,"deliveryComplete":true,"pendingRequests":[],"conversation":admitted});
+                if path.ends_with("/stream") {
+                    return Response::builder().header("content-type","application/x-ndjson").body(Body::from(format!("{}\n",json!({"status":status})))).unwrap();
+                }
+                let bytes = to_bytes(request.into_body(), 4096).await.unwrap();
+                bodies.lock().unwrap().push(serde_json::from_slice::<Value>(&bytes).unwrap());
+                let index = posts.fetch_add(1, Ordering::SeqCst);
+                if case == "refresh" && index == 0 {
+                    return Response::builder().status(409).body(Body::empty()).unwrap();
+                }
+                if case == "rejected" || (case == "unknown" && index > 0) {
+                    return Response::builder().status(400).body(Body::empty()).unwrap();
+                }
+                let body = if case == "unknown" { "{".to_owned() } else { json!({"ok":true,"runId":run,"status":status}).to_string() };
+                Response::builder().status(202).header("content-type","application/json").body(Body::from(body)).unwrap()
+            }
+        });
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let origin =
+            url::Url::parse(&format!("http://{}/", listener.local_addr().unwrap())).unwrap();
+        let server = tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
+        let runtime = NativeRuntime::new(forge_server::agent_runtime::Options {
+            base_url: origin,
+            channel_secret: SECRET.into(),
+            capability_secret: SECRET.into(),
+            model_secret: SECRET.into(),
+            peer_origin: None,
+            peer_identity: None,
+            now: Arc::new(|| chrono::Utc::now().timestamp()),
+        })
+        .unwrap();
+        let events = runtime
+            .start(ctx, "Keep marigold".into(), vec![])
+            .collect::<Vec<_>>()
+            .await;
+        if case == "refresh" {
+            assert_eq!(
+                events.last().unwrap().as_ref().unwrap()["type"],
+                "run.completed"
+            );
+            assert_eq!(gets.load(Ordering::SeqCst), 1);
+            assert_eq!(posts.load(Ordering::SeqCst), 2);
+            let bodies = bodies.lock().unwrap();
+            assert_eq!(bodies[0]["expectedGeneration"], 1);
+            let mut expected = bodies[0].clone();
+            expected["expectedGeneration"] = json!(2);
+            assert_eq!(bodies[1], expected);
+            assert_eq!(
+                Cursor::decode(&saved.last())
+                    .unwrap()
+                    .conversation
+                    .unwrap()
+                    .generation,
+                3
+            );
+        } else {
+            assert!(events.iter().any(Result::is_err));
+            assert_eq!(gets.load(Ordering::SeqCst), 0);
+            if case == "rejected" {
+                assert!(saved.values.lock().unwrap().is_empty());
+                assert_eq!(posts.load(Ordering::SeqCst), 1);
+            } else {
+                assert!(!Cursor::decode(&saved.last()).unwrap().admitted);
+                assert_eq!(posts.load(Ordering::SeqCst), 2);
+                let bodies = bodies.lock().unwrap();
+                assert_eq!(bodies[0], bodies[1]);
+            }
+        }
+        server.abort();
+    }
 }
 
 #[tokio::test]

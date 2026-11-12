@@ -54,8 +54,8 @@ pub(super) struct Binding {
     pub(super) user: String,
     pub(super) workspace: String,
     pub(super) run: String,
-    provider: String,
-    model: String,
+    pub(super) provider: String,
+    pub(super) model: String,
 }
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -80,6 +80,11 @@ pub struct State {
     /// Ordinary composer content follows the pending model's complete tool batch.
     #[serde(default)]
     pub(super) question_followup: Option<Value>,
+    #[serde(default)]
+    pub(super) pending_input: forge_core::agents::pending_input::PendingState,
+    /// Required requests emitted by this run, retained across canonical deliveries.
+    #[serde(default)]
+    pub(super) issued_requests: BTreeMap<String, Value>,
     #[serde(default)]
     pub(super) workspace: Option<Reference>,
     #[serde(default)]
@@ -128,6 +133,8 @@ impl State {
             questions: vec![],
             question_answers: BTreeMap::new(),
             question_followup: None,
+            pending_input: Default::default(),
+            issued_requests: BTreeMap::new(),
             workspace: Some(Reference::new()),
             files: FileState::default(),
             todos: vec![],
@@ -158,7 +165,11 @@ impl State {
         if forge_core::canonical::javascript_stringify(&snapshot).len() > 8 * 1024 * 1024 {
             return Err(INVALID);
         }
+        let legacy = snapshot.get("pending_input").is_none();
         let mut state: Self = serde_json::from_value(snapshot).map_err(|_| INVALID)?;
+        if legacy {
+            state.migrate_input();
+        }
         // A new deployment supplies the current instructions while preserving
         // the private conversation and any exact pending tool input binding.
         if state
@@ -226,55 +237,6 @@ impl State {
             pending: None,
         };
     }
-    pub(crate) fn resolve(
-        &self,
-        channel: &Channel,
-        request: &str,
-        decision: Decision,
-    ) -> Result<Option<Self>> {
-        self.validate(channel)?;
-        if self.question_answers.contains_key(request)
-            || self.questions.iter().any(|q| q["requestId"] == request)
-        {
-            return Err(Error(
-                "A question requires a typed answer, not an approval decision.",
-            ));
-        }
-        if let Some(recorded) = self.decision(request) {
-            return if recorded == decision {
-                Ok(None)
-            } else {
-                Err(Error(
-                    "The approval response conflicts with the recorded decision.",
-                ))
-            };
-        }
-        if self.pending_request() != Some(request) {
-            return Err(Error(
-                "The approval response is stale or belongs to another request.",
-            ));
-        }
-        if self.decisions.len() >= 4096 {
-            return Err(Error("The agent approval history exceeds its size limit."));
-        }
-        let mut next = self.clone();
-        next.revision = next.revision.checked_add(1).ok_or(INVALID)?;
-        next.decisions.insert(request.to_owned(), decision);
-        if let Some(pending) = &mut next.budget.pending {
-            pending.decision = Some(decision);
-            next.phase = Phase::Ready;
-        } else {
-            next.phase = Phase::Tools;
-            let call = &mut next.calls[next.next_call];
-            call.decision = Some(decision);
-            call.phase = CallPhase::Queued;
-        }
-        next.validate(channel)?;
-        if forge_core::canonical::javascript_stringify(&next.snapshot()).len() > 8 * 1024 * 1024 {
-            return Err(INVALID);
-        }
-        Ok(Some(next))
-    }
     pub fn decision(&self, request: &str) -> Option<Decision> {
         self.decisions.get(request).copied()
     }
@@ -297,16 +259,7 @@ impl State {
         (self.input_tokens, self.output_tokens)
     }
     pub fn pending_request(&self) -> Option<&str> {
-        if self.phase != Phase::Waiting {
-            return None;
-        }
-        if let Some(pending) = &self.budget.pending {
-            return Some(&pending.request_id);
-        }
-        if let Some(question) = self.questions.first() {
-            return question["requestId"].as_str();
-        }
-        self.calls.get(self.next_call)?.request_id.as_deref()
+        self.pending_input.batch.as_ref()?.requests.first()?["requestId"].as_str()
     }
     pub(crate) fn validate(&self, channel: &Channel) -> Result<()> {
         let b = &self.binding;
@@ -385,7 +338,7 @@ impl State {
         .map_err(|_| INVALID)?;
         if self.phase == Phase::Waiting
             && self.budget.pending.is_none()
-            && self.questions.is_empty()
+            && self.pending_input.batch.is_none()
             && !self.calls.get(self.next_call).is_some_and(|c| {
                 c.phase == CallPhase::Waiting
                     && c.request_id.is_some()
@@ -404,7 +357,8 @@ impl State {
                 || !c.input.is_object()
                 || !ids.insert(&c.id)
                 || (index < self.next_call
-                    && (c.phase != CallPhase::Complete || c.output.is_none()))
+                    && (!matches!(c.phase, CallPhase::Complete | CallPhase::Waiting)
+                        || c.phase == CallPhase::Complete && c.output.is_none()))
             {
                 return Err(INVALID);
             }

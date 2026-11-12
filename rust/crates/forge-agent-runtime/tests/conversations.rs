@@ -15,6 +15,8 @@ use std::time::Duration;
 use uuid::Uuid;
 #[path = "acceptance/input_conversations.rs"]
 mod input_conversations;
+#[path = "acceptance/required_conversations.rs"]
+mod required_conversations;
 const SECRET: &str = "public-conversation-fixture-signing-secret";
 fn channel(run: Uuid, user: &str, workspace: &str, provider: &str) -> Channel {
     let now = Utc::now().timestamp();
@@ -22,7 +24,7 @@ fn channel(run: Uuid, user: &str, workspace: &str, provider: &str) -> Channel {
     Channel::verify(SECRET, &format!("Bearer {token}"), now).unwrap()
 }
 fn message(text: &str) -> Value {
-    json!({"role":"user","content":[{"type":"text","text":text}]})
+    json!({"role":"user","content":text})
 }
 struct Fixture {
     pool: PgPool,

@@ -99,41 +99,48 @@ impl Worker {
         authorized_until: Instant,
         shutdown: &Cancellation,
     ) -> Result<Phase> {
+        let receipt = if let Some(response) = &response {
+            Some(
+                timeout(
+                    self.options.database_timeout,
+                    self.store
+                        .respond_at(channel, &response.request, response.decision, None),
+                )
+                .await
+                .map_err(|_| Error("The runtime journal is unavailable."))??,
+            )
+        } else {
+            None
+        };
         let session = timeout(self.options.database_timeout, self.store.load(channel))
             .await
             .map_err(|_| Error("The runtime journal is unavailable."))??;
         if session.cancelled {
             return Err(Error("The agent run has been cancelled."));
         }
-        if session.continued_by.is_some() {
-            if response.is_some() {
-                return Err(Error(
-                    "The agent input has already continued in another run.",
-                ));
-            }
+        if session.continued_by.is_some()
+            || session.delivery_only
+            || receipt.is_some_and(|receipt| {
+                !receipt.current_delivery
+                    || receipt.generation != session.input_generation
+                    || match (&receipt.conversation, &session.conversation) {
+                        (None, None) => false,
+                        (Some(receipt), Some(current)) => {
+                            receipt.id != current.id
+                                || receipt.head_run_id != current.head_run_id
+                                || receipt.generation != current.generation
+                                || receipt.owner_run_id != current.owner_run_id
+                        }
+                        _ => true,
+                    }
+            })
+        {
             return Ok(session.state.phase());
-        }
-        // A repeated response is accepted only when its exact decision has a
-        // durable receipt. Conflicts/stale IDs cannot allocate run resources.
-        if let Some(response) = &response {
-            match session.state.decision(&response.request) {
-                Some(recorded) if recorded == response.decision => {}
-                None if session.state.pending_request() == Some(response.request.as_str())
-                    && session.state.pending_questions().is_empty() => {}
-                _ => {
-                    return Err(Error(
-                        "The approval response is stale or conflicts with its recorded decision.",
-                    ));
-                }
-            }
         }
         if matches!(
             session.state.phase(),
             Phase::Complete | Phase::Cancelled | Phase::Failed
-        ) || (session.state.phase() == Phase::Waiting
-            && response
-                .as_ref()
-                .is_none_or(|r| session.state.decision(&r.request).is_some()))
+        ) || session.state.phase() == Phase::Waiting
         {
             return Ok(session.state.phase());
         }
@@ -164,17 +171,6 @@ impl Worker {
                     .factory
                     .create(channel, &state, &guard.cancellation)
                     .await?;
-                if let Some(response) = response {
-                    engine
-                        .resume(
-                            channel,
-                            &mut state,
-                            &*lease,
-                            &response.request,
-                            response.decision,
-                        )
-                        .await?;
-                }
                 engine
                     .drive(channel, &mut state, &*lease, &guard.cancellation, deadline)
                     .await
