@@ -18,6 +18,8 @@ mod model_discovery;
 mod agent_acceptance;
 #[path = "acceptance/billing.rs"]
 mod billing_acceptance;
+#[path = "acceptance/billing_projection.rs"]
+mod billing_projection_acceptance;
 #[path = "acceptance/calls.rs"]
 mod call_acceptance;
 #[path = "acceptance/call_connections.rs"]

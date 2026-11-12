@@ -7,6 +7,7 @@ pub mod calendar;
 pub mod configuration;
 pub mod invoice;
 pub mod money;
+pub mod projection;
 pub mod usage;
 pub const MAX_SAFE: u64 = 9_007_199_254_740_991;
 #[derive(Debug, thiserror::Error)]

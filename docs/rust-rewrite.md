@@ -100,6 +100,7 @@ gate pass.
 | 3b12a | Billing contracts, configuration, country policy, calendar periods and usage authority | Passed |
 | 3b12b | Exact FX, spending admission, currency capacity and cumulative invoices | Passed |
 | 3b12c | Durable trials, atomic usage admission, settlement and original-period carryover | Passed |
+| 3b12d | Verified subscription projection, paid proof, refunds and atomic event receipts | Passed |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -2774,3 +2775,33 @@ these routes do not represent a completed rewrite.
   TypeScript checks, source fixtures, formatting and Clippy. The 607 external
   fixture tests remain skipped. Evidence:
   `.forge/rust-rewrite/milestone-3b12c-initial.log` (exit 0).
+
+### Milestone 3b12d
+
+- Provider-verified subscription observations produce an ordered, closed command
+  set. State hashes retain the original schema field order and legacy cancellation
+  compatibility. Version conflicts, binding conflicts and event replay semantics
+  match the owning application. Termination and unsupported pauses remain
+  restrictive even when old observations arrive late.
+- Paid upgrades require usable order proof; unpaid upgrades and early downgrades
+  preserve the purchased contract and its clocks. Failure retries retain the
+  earliest failure and cannot revive refunded paid proof.
+- Refunds preserve frozen provider identifiers and ISO strings, distinguish full
+  and partial refunds, and restore Starter access only with verified base-period
+  proof. Repeated events cannot rewrite refund history.
+- The store serializes transitions per workspace and commits entitlement, audit
+  and event receipt mutations through the recovery journal. SQL identifiers come
+  from a closed mapping; values remain bound and omitted columns retain defaults.
+- Source comparisons execute the actual owning TypeScript transaction functions
+  against a deterministic command recorder. This recorder is not database
+  qualification: separate disposable PostgreSQL tests exercise concurrency,
+  uniqueness constraints, live membership, rollback and recovery failures.
+- These remain internal sinks for verified provider adapters. No browser payment
+  authority, live provider effects or cutover is enabled by this milestone.
+
+- Full gate passed on the first run: 684 Rust tests, 3,013 enabled reference
+  tests, all three TypeScript checks, source fixtures, formatting and Clippy.
+  The two new comparison suites cover 925 owning-source cases; seven grouped
+  PostgreSQL acceptance tests and one recovery test also passed. The 607 external
+  fixture tests remain skipped. Evidence:
+  `.forge/rust-rewrite/milestone-3b12d-initial.log` (exit 0).

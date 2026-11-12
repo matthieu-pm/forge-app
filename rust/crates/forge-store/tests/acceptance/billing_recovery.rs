@@ -106,3 +106,77 @@ async fn trial_and_usage_require_recovery_preparation_and_preserve_committed_rec
         0
     );
 }
+
+#[tokio::test]
+async fn verified_subscription_and_refund_writes_require_preparation_and_survive_publication_failure()
+ {
+    use chrono::{Duration, Utc};
+    use forge_core::billing::calendar::stamp;
+    let f = Fixture::new().await;
+    forge_store::workspaces::create(
+        &f.database,
+        &f.token,
+        "Subscription recovery",
+        &Uuid::new_v4().to_string(),
+        None,
+    )
+    .await
+    .unwrap();
+    let actor = forge_store::authority::session_actor(&f.database, &f.token)
+        .await
+        .unwrap();
+    let svc = forge_store::billing::Service::new(f.database.clone());
+    let now = Utc::now();
+    let input = json!({"eventId":Uuid::new_v4(),"bodyHash":"a".repeat(64),"snapshot":{"workspaceId":actor.workspace_id,"environment":"sandbox","subscriptionId":Uuid::new_v4(),"plan":"starter","status":"active","updatedAt":stamp(now-Duration::days(1)),"currentPeriodStart":stamp(now-Duration::days(1)),"currentPeriodEnd":stamp(now+Duration::days(29)),"pastDueAt":null}});
+    f.backend.mode.store(1, Ordering::SeqCst);
+    assert!(matches!(
+        svc.apply_subscription_snapshot(input.clone()).await,
+        Err(StoreError::Recovery(JournalError::Unavailable))
+    ));
+    let count: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM workspace_entitlements WHERE workspace_id=$1")
+            .bind(&actor.workspace_id)
+            .fetch_one(&f.pool)
+            .await
+            .unwrap();
+    assert_eq!(count, 0);
+    f.backend.mode.store(2, Ordering::SeqCst);
+    assert!(matches!(
+        svc.apply_subscription_snapshot(input.clone()).await,
+        Err(StoreError::Recovery(JournalError::PublicationPending))
+    ));
+    f.backend.mode.store(0, Ordering::SeqCst);
+    assert_eq!(
+        svc.apply_subscription_snapshot(input.clone())
+            .await
+            .unwrap()["replayed"],
+        true
+    );
+    let s = &input["snapshot"];
+    let refund = json!({"eventId":Uuid::new_v4(),"bodyHash":"b".repeat(64),"refund":{"workspaceId":actor.workspace_id,"environment":"sandbox","orderId":Uuid::new_v4(),"subscriptionId":s["subscriptionId"],"start":s["currentPeriodStart"],"end":s["currentPeriodEnd"],"refundedAt":stamp(now)}});
+    f.backend.mode.store(1, Ordering::SeqCst);
+    assert!(matches!(
+        svc.apply_period_refund(refund.clone()).await,
+        Err(StoreError::Recovery(JournalError::Unavailable))
+    ));
+    let history: Value = sqlx::query_scalar(
+        "SELECT refunded_periods FROM workspace_entitlements WHERE workspace_id=$1",
+    )
+    .bind(&actor.workspace_id)
+    .fetch_one(&f.pool)
+    .await
+    .unwrap();
+    assert_eq!(history, json!([]));
+    f.backend.mode.store(2, Ordering::SeqCst);
+    assert!(matches!(
+        svc.apply_period_refund(refund.clone()).await,
+        Err(StoreError::Recovery(JournalError::PublicationPending))
+    ));
+    f.backend.mode.store(0, Ordering::SeqCst);
+    assert_eq!(
+        svc.apply_period_refund(refund).await.unwrap()["replayed"],
+        true
+    );
+    let count:(i64,i64,i32)=sqlx::query_as("SELECT (SELECT count(*) FROM billing_event_receipts WHERE workspace_id=$1),(SELECT count(*) FROM workspace_security_audit_events WHERE workspace_id=$1 AND action LIKE 'billing.%'),(SELECT jsonb_array_length(refunded_periods) FROM workspace_entitlements WHERE workspace_id=$1)").bind(&actor.workspace_id).fetch_one(&f.pool).await.unwrap();
+    assert_eq!(count, (2, 2, 1));
+}

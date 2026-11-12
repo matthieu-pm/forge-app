@@ -13,6 +13,7 @@ use sha2::{Digest, Sha256};
 use sqlx::{FromRow, PgConnection};
 use uuid::Uuid;
 mod ledger;
+mod projection;
 mod trial;
 
 #[derive(Clone)]
