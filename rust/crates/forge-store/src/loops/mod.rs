@@ -13,7 +13,9 @@ use uuid::Uuid;
 mod command;
 mod context;
 mod directory;
+mod dispatch;
 mod webhook;
+pub use dispatch::ExpiredRuns;
 
 #[derive(Clone)]
 pub struct Options {

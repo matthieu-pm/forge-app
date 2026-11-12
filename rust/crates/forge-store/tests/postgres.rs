@@ -35,6 +35,8 @@ mod issue_query_acceptance;
 mod job_acceptance;
 #[path = "acceptance/loops.rs"]
 mod loop_acceptance;
+#[path = "acceptance/loop_dispatch.rs"]
+mod loop_dispatch_acceptance;
 #[path = "acceptance/planning.rs"]
 mod planning_acceptance;
 #[path = "acceptance/product_state.rs"]

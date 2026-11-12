@@ -89,6 +89,7 @@ gate pass.
 | 3b9b | Atomic template application into canonical issues and projects | Passed |
 | 3b10a | Loop contracts, event filters, calendar scheduling and published model policy | Passed |
 | 3b10b | Loop source contexts, definition commands, immutable runs, history and webhook receipts | Passed |
+| 3b10c | Native loop event dispatch, schedule/cycle capture and expired-run reconciliation | Passed |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -2346,3 +2347,38 @@ these routes do not represent a completed rewrite.
   all source-fixture drift checks, formatting, Clippy and three package
   typechecks. The 607 external-fixture tests across 31 files remain skipped.
   Evidence: `.forge/rust-rewrite/milestone-3b10b-corrections.log`.
+
+### Milestone 3b10c
+
+- Native event scans claim pending audience rows with `SKIP LOCKED`, retain a
+  shared definition lock through capture, and match the current published rule.
+  The source-change identity excludes the audience team, so projects spanning
+  several teams capture one immutable run per matching Loop. Unmatched and
+  unavailable-source events are acknowledged without launching an agent.
+- Schedule scans retain the due occurrence identity and coalesce missed ticks
+  into one queued run before advancing beyond the scan clock. Cycle boundaries
+  use the saved cycle timezone and the day after the inclusive end date; events
+  before enablement are not backfilled. Concurrent scans skip locked definitions.
+- Approval expiry uses the original start deadline and preserves cancellation
+  requests. Expired worker leases become uncertain, retaining their result and
+  decision; they never return to the runnable queue. Every capture, event
+  acknowledgement, schedule advance and expiry prepares the recovery journal.
+- Acceptance covers real migration event producers, final project memberships,
+  concurrent audience deduplication, private/archived sources, enablement timing,
+  activity edits and metadata, rollback, disable/capture lock ordering, missed
+  schedules, DST cycle boundaries, expiry and preparation failure before effects.
+- This milestone provides internal queue/maintenance APIs. Live loop principals,
+  coordinator execution and scheduler HTTP activation remain subsequent work.
+- The initial gate passed six of seven new dispatch scenarios, including the
+  concurrent disable/capture race. The cycle scanner decoded text columns as SQL
+  dates; it now retains their stored strings and parses the completion boundary
+  explicitly. The recovery test reached its final assertion after all injected
+  failures and retries passed, but incorrectly expected ordinary inserts in the
+  deletion journal. It now verifies preparation/publication acknowledgements,
+  persisted operation receipts and final queue state, matching migration 0049.
+  All 3,013 enabled reference tests and three typechecks passed in that run.
+  Evidence: `.forge/rust-rewrite/milestone-3b10c-initial.log`.
+- The corrections gate passed all **589 Rust tests**, **3,013 enabled reference
+  tests**, and **three typechecks**, plus fixtures, formatting and Clippy. The
+  607 external-fixture tests in 31 files remain skipped, not counted as passes.
+  Evidence: `.forge/rust-rewrite/milestone-3b10c-corrections.log`.

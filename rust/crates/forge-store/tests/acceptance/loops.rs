@@ -19,10 +19,10 @@ fn options() -> Options {
         ),
     ]))
 }
-fn service(f: &Fixture) -> Service {
+pub(super) fn service(f: &Fixture) -> Service {
     Service::new(f.database.clone(), options())
 }
-fn fields() -> Value {
+pub(super) fn fields() -> Value {
     json!({"name":"Investigate","description":"","instructions":"Inspect this issue.","trigger":{"kind":"event","entity":"issue","event":"created"},"conditions":[],"reasoning":"auto","teamAccess":"this-team"})
 }
 async fn call(s: &Service, a: &Actor, team: Uuid, input: Value) -> Value {
@@ -30,7 +30,7 @@ async fn call(s: &Service, a: &Actor, team: Uuid, input: Value) -> Value {
         .await
         .unwrap()
 }
-async fn create(s: &Service, a: &Actor, team: Uuid, fields: Value) -> Uuid {
+pub(super) async fn create(s: &Service, a: &Actor, team: Uuid, fields: Value) -> Uuid {
     let id = Uuid::new_v4();
     assert_eq!(
         call(
@@ -44,7 +44,7 @@ async fn create(s: &Service, a: &Actor, team: Uuid, fields: Value) -> Uuid {
     );
     id
 }
-async fn enable(s: &Service, a: &Actor, team: Uuid, id: Uuid, revision: i32) -> Value {
+pub(super) async fn enable(s: &Service, a: &Actor, team: Uuid, id: Uuid, revision: i32) -> Value {
     call(
         s,
         a,
