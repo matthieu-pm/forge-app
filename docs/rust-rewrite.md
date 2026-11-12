@@ -95,6 +95,7 @@ gate pass.
 | 3b10f | Bound cloud loop execution, durable claims and decision settlement | Passed |
 | 3b10g | Authenticated loop scheduler, bounded dispatch and native operator | Passed |
 | 3b11a | Call transcript contracts, shared records, notes, actions and journaled retention | Passed |
+| 3b11b | Meeting provider OAuth, deployment isolation and fenced credential publication | Passed |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -2581,3 +2582,44 @@ these routes do not represent a completed rewrite.
   tests**, and **three typechecks**, including source fixtures, formatting and
   Clippy. The 607 external-fixture tests in 31 files remain skipped.
   Evidence: `.forge/rust-rewrite/milestone-3b11a-authority.log`.
+
+### Milestone 3b11b
+
+- Meeting authorization and token requests preserve Google's and Teams' PKCE,
+  Zoom's Basic authentication, exact callback/state fields, provider selection,
+  token expiry and refresh-token carryover. Provider HTTP posts only to the fixed
+  token endpoints, rejects redirects, bounds response size and has a 20-second
+  timeout. Provider errors and credential values never enter callback redirects.
+- The owning staging/preview isolation checks and reviewed resource manifest are
+  ported into shared Rust policy and applied before provider requests. The source
+  exporter captures six authorizations, 36 token exchanges, nine configurations
+  and 328 deployment-isolation cases without contacting a provider.
+- Connection starts require explicit consent, current administrator authority and
+  current team access. Random state and PKCE values have 32 bytes of entropy;
+  only the state hash is persisted. Requests expire after ten minutes and must
+  be durably consumed before any token exchange. Tokens use the existing vault
+  envelope bound to the exact workspace and meeting connection.
+- Callback publication rechecks the current session, role and team. A consumed
+  request retains its hash solely as a publication fence while its expiry and
+  verifier are cleared; successful publication clears the hash too. This closes
+  the reference implementation's late-publication race without changing the
+  existing schema. A newer attempt, changed team or disconnected connection
+  cannot be overwritten by an older callback.
+- Startup composes injectable meeting settings. Bound POST connection starts and
+  GET OAuth callbacks return the existing connected/error redirect with no-store
+  and no-referrer headers. Eight new source, transport, database, HTTP and
+  journal scenarios cover replay, expiry boundaries, concurrent callbacks,
+  credential context, revoked access and independent journal failures.
+  Native provider transcript synchronization and generated summaries remain
+  subsequent work.
+- The initial full gate passed 638 Rust tests, all 3,013 enabled reference tests,
+  formatting, Clippy and three typechecks. The new recovery fixture incorrectly
+  expected no connection events: migration 0049 records credential changes as
+  null-valued redactions. The fixture now checks the exact four ordered patches,
+  their patch action and the absence of private values. The replay protection,
+  acknowledged-claim and committed-credential assertions remain unchanged.
+  Evidence: `.forge/rust-rewrite/milestone-3b11b-initial.log`.
+- The corrected full gate passed **639 Rust tests**, **3,013 enabled reference
+  tests**, and **three typechecks**, including source fixtures, formatting and
+  Clippy. The 607 external-fixture tests in 31 files remain skipped.
+  Evidence: `.forge/rust-rewrite/milestone-3b11b-redactions.log`.

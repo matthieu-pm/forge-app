@@ -10,6 +10,7 @@ use serde_json::{Value, json};
 use sqlx::{FromRow, PgConnection};
 use std::{collections::HashMap, sync::Arc};
 use uuid::Uuid;
+mod connections;
 mod directory;
 mod mutations;
 #[derive(Clone, Default)]
@@ -28,6 +29,8 @@ pub struct Service {
     pub database: Database,
     pub options: Options,
     pub now: Arc<dyn Fn() -> DateTime<Utc> + Send + Sync>,
+    pub gateway: Option<Arc<dyn contract::providers::Gateway>>,
+    pub vault: Option<Arc<dyn crate::agents::model_connections::Vault>>,
 }
 impl Service {
     pub fn new(database: Database, options: Options) -> Self {
@@ -35,6 +38,8 @@ impl Service {
             database,
             options,
             now: Arc::new(Utc::now),
+            gateway: None,
+            vault: None,
         }
     }
     fn time(&self) -> DateTime<Utc> {

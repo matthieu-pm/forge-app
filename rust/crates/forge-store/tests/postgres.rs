@@ -18,6 +18,8 @@ mod model_discovery;
 mod agent_acceptance;
 #[path = "acceptance/calls.rs"]
 mod call_acceptance;
+#[path = "acceptance/call_connections.rs"]
+mod call_connection_acceptance;
 #[path = "acceptance/definitions.rs"]
 mod definition_acceptance;
 #[path = "acceptance/documents.rs"]

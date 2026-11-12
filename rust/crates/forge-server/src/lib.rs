@@ -3,6 +3,7 @@
 pub mod agent_runtime;
 pub mod agents;
 mod auth;
+pub mod call_providers;
 mod calls;
 mod definitions;
 mod desktop_auth;
@@ -63,6 +64,8 @@ pub fn router_with_state(state: state::AppState) -> Router {
         .route("/api/workspace/calls/actions", post(calls::action))
         .route("/api/workspace/calls/retention", post(calls::retention))
         .route("/api/workspace/calls/disconnect", post(calls::disconnect))
+        .route("/api/workspace/calls/connect", post(calls::connect))
+        .route("/api/calls/oauth/callback", get(calls::callback))
         .route("/api/workspace/sla/save", post(sla::save))
         .route("/api/workspace/sla/reconcile", post(sla::reconcile))
         .route("/api/workspace/imports", post(imports::read))

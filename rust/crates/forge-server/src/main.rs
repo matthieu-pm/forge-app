@@ -50,6 +50,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             &environment,
         )?;
         let state = AppState::configured_database(database, settings, mailer)
+            .with_calls(forge_server::call_providers::Settings::configured(
+                &environment,
+            )?)
             .with_model_proxy(model_proxy)
             .with_agents(agents)
             .with_files(storage, grant_secret)

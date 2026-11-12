@@ -134,3 +134,172 @@ async fn call_http_binds_sessions_requires_consent_and_preserves_unicode_transcr
         StatusCode::UNAUTHORIZED
     );
 }
+
+#[tokio::test]
+async fn meeting_oauth_http_uses_bound_sessions_and_redacted_single_use_callback_redirects() {
+    use forge_core::calls::providers::{Error, TokenRequest};
+    use forge_server::call_providers::{Client, Settings, Transport};
+    use std::{
+        collections::HashMap,
+        sync::atomic::{AtomicBool, AtomicUsize, Ordering},
+    };
+    #[derive(Default)]
+    struct Provider {
+        calls: AtomicUsize,
+        fail: AtomicBool,
+    }
+    #[async_trait]
+    impl Transport for Provider {
+        async fn exchange(&self, r: TokenRequest) -> Result<Value, Error> {
+            self.calls.fetch_add(1, Ordering::SeqCst);
+            assert_eq!(r.url, "https://oauth2.googleapis.com/token");
+            let f: HashMap<_, _> = r.form.into_iter().collect();
+            assert_eq!(f["code_verifier"].len(), 43);
+            assert_eq!(f["client_secret"], "private-client-secret");
+            assert_eq!(
+                f["redirect_uri"],
+                format!("{ORIGIN}/api/calls/oauth/callback")
+            );
+            if self.fail.load(Ordering::SeqCst) {
+                return Err(Error);
+            }
+            Ok(
+                json!({"access_token":"private-access-token","refresh_token":"private-refresh-token","expires_in":3600}),
+            )
+        }
+    }
+    let mut f = Fixture::new().await;
+    let (_, token, cookie) = f.account().await;
+    forge_store::workspaces::create(
+        &f.database,
+        &token,
+        "Meeting HTTP",
+        &Uuid::new_v4().to_string(),
+        None,
+    )
+    .await
+    .unwrap();
+    let actor = forge_store::authority::session_actor(&f.database, &token)
+        .await
+        .unwrap();
+    let forge_core::actor::Authentication::Session { session_id } = &actor.authentication else {
+        panic!()
+    };
+    let team=forge_store::teams::create(&f.database,&actor,&forge_core::teams::CreateTeam::parse(json!({"name":"Meetings","identifier":"MEET","timezone":"UTC","icon":{"kind":"icon","value":"File01Icon","color":"#818cf8"}})).unwrap()).await.unwrap();
+    let key = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+    let env = HashMap::from([
+        ("BETTER_AUTH_URL".into(), ORIGIN.into()),
+        ("FORGE_MODEL_CREDENTIAL_KEK".into(), key.into()),
+        ("FORGE_GOOGLE_MEET_CLIENT_ID".into(), "fixture-id".into()),
+        (
+            "FORGE_GOOGLE_MEET_CLIENT_SECRET".into(),
+            "private-client-secret".into(),
+        ),
+    ]);
+    let provider = Arc::new(Provider::default());
+    let settings = Settings {
+        options: forge_store::calls::Options {
+            environment: env.clone(),
+        },
+        gateway: Arc::new(Client::new(env, provider.clone())),
+        vault: Some(Arc::new(
+            forge_identity::model_vault::Vault::new(key).unwrap(),
+        )),
+    };
+    f.app = forge_server::router_with_state(
+        AppState::configured(
+            f.pool.clone(),
+            AuthSettings::new(SECRET.into(), ORIGIN).unwrap(),
+            None,
+        )
+        .with_calls(settings),
+    );
+    let input = json!({"workspaceId":actor.workspace_id,"sessionId":session_id,"provider":"google","teamId":team.id,"consentConfirmed":true});
+    let mut denied = input.clone();
+    denied["consentConfirmed"] = json!(false);
+    assert_eq!(
+        f.request(
+            "POST",
+            "/api/workspace/calls/connect",
+            Some(&cookie),
+            Some(denied)
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
+    let mut wrong = input.clone();
+    wrong["sessionId"] = json!("old-session");
+    assert_eq!(
+        f.request(
+            "POST",
+            "/api/workspace/calls/connect",
+            Some(&cookie),
+            Some(wrong)
+        )
+        .await
+        .0,
+        StatusCode::FORBIDDEN
+    );
+    for fail in [false, true] {
+        let (status, _, body) = f
+            .request(
+                "POST",
+                "/api/workspace/calls/connect",
+                Some(&cookie),
+                Some(input.clone()),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        let url = url::Url::parse(body.as_str().unwrap()).unwrap();
+        let ticket = url
+            .query_pairs()
+            .find(|(k, _)| k == "state")
+            .unwrap()
+            .1
+            .into_owned();
+        let path = format!("/api/calls/oauth/callback?state={ticket}&code=private-code");
+        let (status, headers, body) = f.request("GET", &path, None, None).await;
+        assert_eq!(status, StatusCode::SEE_OTHER);
+        assert_eq!(
+            headers[header::LOCATION],
+            "/workspace/calls?connection=error"
+        );
+        assert!(body.is_null());
+        provider.fail.store(fail, Ordering::SeqCst);
+        let (status, headers, body) = f.request("GET", &path, Some(&cookie), None).await;
+        assert_eq!(status, StatusCode::SEE_OTHER);
+        assert_eq!(headers[header::CACHE_CONTROL], "no-store");
+        assert_eq!(headers[header::REFERRER_POLICY], "no-referrer");
+        assert!(body.is_null());
+        assert_eq!(
+            headers[header::LOCATION],
+            if fail {
+                "/workspace/calls?connection=error"
+            } else {
+                "/workspace/calls?connection=connected"
+            }
+        );
+        assert!(!format!("{headers:?}").contains("private-"));
+        let (_, headers, _) = f.request("GET", &path, Some(&cookie), None).await;
+        assert_eq!(
+            headers[header::LOCATION],
+            "/workspace/calls?connection=error"
+        );
+    }
+    assert_eq!(provider.calls.load(Ordering::SeqCst), 2);
+    for path in [
+        "/api/calls/oauth/callback?error=private-provider-error",
+        "/api/calls/oauth/callback?state=x",
+        &format!("/api/calls/oauth/callback?state={}&code=x", "a".repeat(257)),
+    ] {
+        let (status, headers, body) = f.request("GET", path, Some(&cookie), None).await;
+        assert_eq!(status, StatusCode::SEE_OTHER);
+        assert_eq!(
+            headers[header::LOCATION],
+            "/workspace/calls?connection=error"
+        );
+        assert!(body.is_null());
+    }
+    assert_eq!(provider.calls.load(Ordering::SeqCst), 2);
+}

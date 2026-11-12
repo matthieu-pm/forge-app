@@ -6,6 +6,7 @@ use serde_json::{Value, json};
 use std::{collections::HashMap, sync::LazyLock};
 
 pub const PROVIDERS: [&str; 3] = ["google", "teams", "zoom"];
+pub mod providers;
 pub const PREFIXES: [&str; 3] = ["GOOGLE_MEET", "MICROSOFT_TEAMS", "ZOOM"];
 pub fn selected_providers(env: &HashMap<String, String>) -> Vec<String> {
     if env.get("FORGE_CALLS_ENABLED").is_some_and(|s| s == "false") {

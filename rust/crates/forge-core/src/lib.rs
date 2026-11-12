@@ -9,6 +9,7 @@ pub mod comments;
 mod contract;
 pub mod cycles;
 pub mod definitions;
+pub mod deployment;
 pub mod documents;
 pub mod features;
 pub mod initiatives;
