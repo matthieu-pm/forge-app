@@ -101,6 +101,7 @@ gate pass.
 | 3b12b | Exact FX, spending admission, currency capacity and cumulative invoices | Passed |
 | 3b12c | Durable trials, atomic usage admission, settlement and original-period carryover | Passed |
 | 3b12d | Verified subscription projection, paid proof, refunds and atomic event receipts | Passed |
+| 3b12e | Billing management contexts, currency renewal intents and refund-renewal confirmations | In progress |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -2805,3 +2806,35 @@ these routes do not represent a completed rewrite.
   PostgreSQL acceptance tests and one recovery test also passed. The 607 external
   fixture tests remain skipped. Evidence:
   `.forge/rust-rewrite/milestone-3b12d-initial.log` (exit 0).
+
+### Milestone 3b12e
+
+- Billing cancellation and plan-change contexts retain first-party identity and
+  live owner/admin checks, current provider binding and paid access. Accepted
+  memberships count across all roles; invitations do not become billable seats.
+- Verified currency requests retain their original month anchor, seven-day
+  checkout grace, current seat quote and immutable request identity. Supersession,
+  withdrawal and legacy anchor capture are atomic with audit/receipt writes.
+  Retries recheck current access; these intents never schedule a provider change.
+- Upgrade-refund renewal contexts bind the verified marker, current period and
+  paid-order revision. Confirmations preserve event identity and record only
+  audit/receipt effects, never entitlement changes or a new allowance.
+- Three owning-source comparison groups cover 773 cases. Seven PostgreSQL groups
+  cover concurrency, live authority, quotes, immutable anchors, stale revisions,
+  audit rollback and membership-capacity locking. Recovery checks exercise both
+  preparation and post-commit publication failures.
+- All entries remain internal; provider I/O, public enablement and cutover remain
+  subsequent work.
+
+- The initial gate passed all 773 new source comparisons, all 33 recovery tests,
+  source fixtures, formatting, Clippy and three typechecks. One PostgreSQL test
+  expected the wrong rejection code for a one-day renewal-end shift: the owning
+  monthly policy accepts it as a candidate anchor, then the paid-binding check
+  rejects it as `BILLING_CURRENCY_CONTEXT_CHANGED` (source fixture case 762).
+  The acceptance test now checks that exact rejection and adds a separate
+  two-month span for `BILLING_ANCHOR_RECONCILIATION_REQUIRED`. No application
+  behavior was changed for this correction.
+- Three original JavaScript UI tests timed out during a run overlapping macOS
+  maintenance sleep/DarkWake cycles. Their existing 5/10-second deadlines remain
+  unchanged. The full gate must pass again after the test correction. Initial
+  evidence: `.forge/rust-rewrite/milestone-3b12e-initial.log` (exit 1).

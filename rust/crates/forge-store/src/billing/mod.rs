@@ -13,6 +13,7 @@ use sha2::{Digest, Sha256};
 use sqlx::{FromRow, PgConnection};
 use uuid::Uuid;
 mod ledger;
+mod management;
 mod projection;
 mod trial;
 
@@ -117,8 +118,11 @@ async fn state(c: &mut PgConnection, workspace: &str) -> Result<Value, StoreErro
     .bind(workspace)
     .fetch_optional(c)
     .await?;
-    let Some(Value::Object(raw)) = raw else {
-        return Ok(Value::Null);
+    Ok(raw.map(camel_columns).unwrap_or(Value::Null))
+}
+fn camel_columns(raw: Value) -> Value {
+    let Value::Object(raw) = raw else {
+        return Value::Null;
     };
     let mut result = serde_json::Map::new();
     // Only database column names change. Frozen refund records already use the
@@ -135,7 +139,7 @@ async fn state(c: &mut PgConnection, workspace: &str) -> Result<Value, StoreErro
         }
         result.insert(key, value);
     }
-    Ok(Value::Object(result))
+    Value::Object(result)
 }
 async fn audit(
     c: &mut PgConnection,

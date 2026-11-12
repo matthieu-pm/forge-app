@@ -34,29 +34,7 @@ impl Service {
         };
         let receipt=sqlx::query_scalar("SELECT jsonb_build_object('workspaceId',workspace_id,'environment',environment,'eventId',event_id,'bodyHash',body_hash,'subscriptionId',subscription_id,'outcome',outcome) FROM billing_event_receipts WHERE environment=$1 AND event_id=$2")
             .bind(&event.environment).bind(&event.event_id).fetch_optional(&mut *tx).await?.unwrap_or(Value::Null);
-        let mut previous = state(&mut tx, &event.workspace).await?;
-        // Drizzle exposes Date objects, serialized with milliseconds and Z. JSON
-        // returned directly by PostgreSQL uses its own timestamp representation.
-        if let Some(object) = previous.as_object_mut() {
-            for key in [
-                "providerUpdatedAt",
-                "updatedAt",
-                "terminatedAt",
-                "unsupportedPauseAt",
-                "paidActivatedAt",
-                "paymentFailedAt",
-                "graceExpiresAt",
-                "currentPeriodStart",
-                "currentPeriodEnd",
-                "cancellationPeriodEnd",
-            ] {
-                if let Some(value) = object.get_mut(key)
-                    && !value.is_null()
-                {
-                    *value = json!(stamp(date(value)?));
-                }
-            }
-        }
+        let previous = normalized_state(&mut tx, &event.workspace).await?;
         let plan = event.plan(&Context {
             previous,
             receipt,
@@ -67,44 +45,124 @@ impl Service {
         if !plan.commands.is_empty() {
             tx.prepare().await?;
         }
-        for command in plan.commands {
-            match command {
-                Command::EntitlementInsert { values } => {
-                    insert(&mut tx, "workspace_entitlements", values, None).await?
-                }
-                Command::EntitlementUpsert { values, set } => {
-                    insert(&mut tx, "workspace_entitlements", values, Some(set)).await?
-                }
-                Command::EntitlementUpdate { set } => {
-                    let (columns, value) = record(set)?;
-                    let sql = format!(
-                        "UPDATE workspace_entitlements SET ({columns})=(SELECT {columns} FROM jsonb_populate_record(NULL::workspace_entitlements,$1)) WHERE workspace_id=$2"
-                    );
-                    sqlx::query(&sql)
-                        .bind(value)
-                        .bind(&event.workspace)
-                        .execute(&mut *tx)
-                        .await?;
-                }
-                Command::AuditInsert { values } => {
-                    insert(&mut tx, "workspace_security_audit_events", values, None).await?
-                }
-                Command::ReceiptInsert { values } => {
-                    insert(&mut tx, "billing_event_receipts", values, None).await?
-                }
-                Command::ReceiptUpdate { set } => {
-                    sqlx::query("UPDATE billing_event_receipts SET outcome=$3 WHERE environment=$1 AND event_id=$2").bind(&event.environment).bind(&event.event_id).bind(text(&set["outcome"])?).execute(&mut *tx).await?;
-                }
-            }
-        }
+        execute_commands(
+            &mut tx,
+            &event.workspace,
+            &event.environment,
+            &event.event_id,
+            plan.commands,
+        )
+        .await?;
         tx.commit().await?;
         Ok(plan.answer)
     }
+}
+pub(super) async fn normalized_state(
+    c: &mut PgConnection,
+    workspace: &str,
+) -> Result<Value, StoreError> {
+    let mut value = state(c, workspace).await?;
+    normalize_dates(
+        &mut value,
+        &[
+            "providerUpdatedAt",
+            "updatedAt",
+            "terminatedAt",
+            "unsupportedPauseAt",
+            "paidActivatedAt",
+            "paymentFailedAt",
+            "graceExpiresAt",
+            "currentPeriodStart",
+            "currentPeriodEnd",
+            "cancellationPeriodEnd",
+        ],
+    )?;
+    Ok(value)
+}
+pub(super) fn normalize_dates(value: &mut Value, keys: &[&str]) -> Result<(), StoreError> {
+    if let Some(object) = value.as_object_mut() {
+        for key in keys {
+            if let Some(value) = object.get_mut(*key)
+                && !value.is_null()
+            {
+                *value = json!(stamp(date(value)?));
+            }
+        }
+    }
+    Ok(())
+}
+pub(super) async fn execute_commands(
+    c: &mut PgConnection,
+    workspace: &str,
+    environment: &str,
+    event_id: &str,
+    commands: Vec<Command>,
+) -> Result<(), StoreError> {
+    for command in commands {
+        match command {
+            Command::EntitlementInsert { values } => {
+                insert(c, "workspace_entitlements", values, None).await?
+            }
+            Command::EntitlementUpsert { values, set } => {
+                insert(c, "workspace_entitlements", values, Some(set)).await?
+            }
+            Command::EntitlementUpdate { set } => {
+                let (columns, value) = record(set)?;
+                let sql = format!(
+                    "UPDATE workspace_entitlements SET ({columns})=(SELECT {columns} FROM jsonb_populate_record(NULL::workspace_entitlements,$1)) WHERE workspace_id=$2"
+                );
+                sqlx::query(&sql)
+                    .bind(value)
+                    .bind(workspace)
+                    .execute(&mut *c)
+                    .await?;
+            }
+            Command::AuditInsert { values } => {
+                insert(c, "workspace_security_audit_events", values, None).await?
+            }
+            Command::ReceiptInsert { values } => {
+                insert(c, "billing_event_receipts", values, None).await?
+            }
+            Command::ReceiptUpdate { set } => {
+                sqlx::query("UPDATE billing_event_receipts SET outcome=$3 WHERE environment=$1 AND event_id=$2").bind(environment).bind(event_id).bind(text(&set["outcome"])?).execute(&mut *c).await?;
+            }
+            Command::CurrencyInsert { values } => {
+                insert(c, "workspace_currency_change_requests", values, None).await?
+            }
+            Command::CurrencyUpdate { id: key, set } => {
+                let (columns, value) = record(set)?;
+                let sql = format!(
+                    "UPDATE workspace_currency_change_requests SET ({columns})=(SELECT {columns} FROM jsonb_populate_record(NULL::workspace_currency_change_requests,$1)) WHERE id=$2 AND workspace_id=$3"
+                );
+                sqlx::query(&sql)
+                    .bind(value)
+                    .bind(id(&key)?)
+                    .bind(workspace)
+                    .execute(&mut *c)
+                    .await?;
+            }
+        }
+    }
+    Ok(())
 }
 // Only the closed policy command set can reach this mapper. Every identifier is
 // a literal; input values are always bound. Omitted columns retain database defaults.
 fn column(key: &str) -> Result<&'static str, StoreError> {
     Ok(match key {
+        "id" => "id",
+        "state" => "state",
+        "billingCountry" => "billing_country",
+        "fromCurrency" => "from_currency",
+        "targetCurrency" => "target_currency",
+        "currentPlan" => "current_plan",
+        "renewalPlan" => "renewal_plan",
+        "renewalMembers" => "renewal_members",
+        "renewalPriceMinor" => "renewal_price_minor",
+        "effectiveAt" => "effective_at",
+        "originalPeriodStart" => "original_period_start",
+        "billingAnchorDay" => "billing_anchor_day",
+        "nextRenewalAt" => "next_renewal_at",
+        "checkoutGraceEndsAt" => "checkout_grace_ends_at",
         "workspaceId" => "workspace_id",
         "plan" => "plan",
         "status" => "status",

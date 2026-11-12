@@ -44,6 +44,8 @@ pub struct Context {
 #[derive(Debug, Serialize)]
 #[serde(tag = "operation", rename_all = "snake_case")]
 pub enum Command {
+    CurrencyInsert { values: Value },
+    CurrencyUpdate { id: Value, set: Value },
     EntitlementInsert { values: Value },
     EntitlementUpsert { values: Value, set: Value },
     EntitlementUpdate { set: Value },
@@ -56,13 +58,13 @@ pub struct Plan {
     pub commands: Vec<Command>,
     pub answer: Value,
 }
-fn uuid(v: &Value) -> Result<Value> {
+pub(super) fn uuid(v: &Value) -> Result<Value> {
     if !crate::text::is_uuid(string(v)?) {
         return Err(invalid());
     }
     Ok(v.clone())
 }
-fn instant(v: &Value) -> Result<Value> {
+pub(super) fn instant(v: &Value) -> Result<Value> {
     Ok(json!(stamp(date(v).map_err(|_| invalid())?)))
 }
 fn nullable_date(v: &Value) -> Result<Value> {
@@ -75,20 +77,20 @@ fn nullable_date(v: &Value) -> Result<Value> {
 fn required(v: &Value, key: &str) -> Result<Value> {
     v.get(key).cloned().ok_or_else(invalid)
 }
-fn iso(v: &Value) -> Result<Value> {
+pub(super) fn iso(v: &Value) -> Result<Value> {
     if !super::money::INSTANT.is_match(string(v)?) {
         return Err(invalid());
     }
     date(v).map_err(|_| invalid())?;
     Ok(v.clone())
 }
-fn hash(v: &Value) -> String {
+pub(super) fn hash(v: &Value) -> String {
     format!("{:x}", Sha256::digest(v.to_string().as_bytes()))
 }
-fn present(v: &Value) -> bool {
+pub(super) fn present(v: &Value) -> bool {
     !v.is_null()
 }
-fn before(a: &Value, b: &Value) -> bool {
+pub(super) fn before(a: &Value, b: &Value) -> bool {
     date(a).ok().zip(date(b).ok()).is_some_and(|(a, b)| a < b)
 }
 fn earliest(a: &Value, b: &Value) -> Value {
@@ -98,7 +100,7 @@ fn earliest(a: &Value, b: &Value) -> Value {
         b.clone()
     }
 }
-fn extend(target: &mut Value, source: &Value) {
+pub(super) fn extend(target: &mut Value, source: &Value) {
     target
         .as_object_mut()
         .expect("owned object")

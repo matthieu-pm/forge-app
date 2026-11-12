@@ -18,6 +18,8 @@ mod agent_blobs;
 mod agent_file_recovery;
 #[path = "acceptance/agent_recovery.rs"]
 mod agent_recovery;
+#[path = "acceptance/billing_management_recovery.rs"]
+mod billing_management_recovery;
 #[path = "acceptance/billing_recovery.rs"]
 mod billing_recovery;
 #[path = "acceptance/call_recovery.rs"]

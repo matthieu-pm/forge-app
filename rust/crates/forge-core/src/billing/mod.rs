@@ -6,6 +6,7 @@ pub mod budget;
 pub mod calendar;
 pub mod configuration;
 pub mod invoice;
+pub mod management;
 pub mod money;
 pub mod projection;
 pub mod usage;
