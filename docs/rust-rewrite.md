@@ -110,6 +110,7 @@ gate pass.
 | 3b12g | Renewal mutations, signed webhook recovery, replacement proofs and authenticated billing summary | Passed |
 | 3b13a1 | Ordinary question batches, typed answers and durable composer continuation | Passed |
 | 3b13a2 | Mixed required-input deferral and original approval ownership across continuation | In progress |
+| 3b13a3 | Active delivery queue, authority handoff and recovery | Pending |
 | 3b13b | Native child-agent execution, shared sandbox, usage and recovery | Pending |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4a | Existing React server-call adapters and missing Rust bootstrap/read contracts | Pending |
@@ -3063,3 +3064,29 @@ production promotion remain separately authorized release operations.
   regression to exercise public `build` with a provider-bound channel and remove
   the unused binding, then rerun the entire gate. Initial evidence:
   `.forge/rust-rewrite/milestone-3b13a2-initial.log` (exit 1).
+
+- The first correction gate passed Clippy, source comparisons and formatting,
+  766 Rust tests, all 3,013 enabled JavaScript tests and three typechecks. Four
+  Rust test cases needed the same message normalization used by the engine: two
+  expected stored string content in the model-facing prompt, and two passed raw
+  history directly to the model serializer. All new private HTTP, ownership,
+  receipt, native adapter and hosted coordinator cases passed. Evidence:
+  `.forge/rust-rewrite/milestone-3b13a2-correction.log` (exit 1).
+- Upgrade review found that saved a1 cursors lack the new conversation proof.
+  Enrich a legacy approval resume from scoped private metadata in memory, then
+  save only after a successful current-delivery acknowledgement. Metadata failure
+  must leave the saved cursor intact. This correction remains inside 3b13a2.
+
+### Milestone 3b13a3 scope
+
+The owning app accepts a canonical approval for an older run while a newer run
+is generating. EVE buffers the delivery until a turn boundary. The current
+native coordinator safely rejects it before creating the canonical grant;
+porting the queue is still required before child execution and UI integration.
+
+Implement durable queued intent, ordered/coalesced input, fresh authority at
+handoff, cancellation/expiration and process recovery without interrupting the
+active run or replaying its effects. Owning-source coalescing retains the first
+delivery ID and the last supplied auth. Preserve exact run-bound grants and
+private event receipts; do not copy the source adapter's shared-stream race that
+can attribute another run's remaining events to the approval delivery.

@@ -139,9 +139,13 @@ async fn completed_turns_keep_materialized_history_across_provider_changes_witho
     assert_eq!(saved.state.snapshot()["decisions"], json!({}));
     assert_eq!(saved.state.phase(), Phase::Ready);
     assert_eq!(f.head().await.to_string(), next.run_id());
-    let request =
-        forge_agent_runtime::model::request::build(&next, saved.state.history(), &[], None)
-            .unwrap();
+    let request = forge_agent_runtime::model::request::build(
+        &next,
+        &forge_agent_runtime::context::model_messages(saved.state.history()),
+        &[],
+        None,
+    )
+    .unwrap();
     let text = request.body.to_string();
     assert!(text.contains("marigold"));
     assert!(!text.contains("msg_previous"));
@@ -735,7 +739,13 @@ async fn search_history_materializes_across_provider_changes_without_opaque_refe
             assert!(history.contains("https://example.com"));
             assert_eq!(saved.state.history()[2]["role"], "assistant");
             assert_eq!(saved.state.history()[3]["role"], "tool");
-            let request = request::build(&next, saved.state.history(), &[], None).unwrap();
+            let request = request::build(
+                &next,
+                &forge_agent_runtime::context::model_messages(saved.state.history()),
+                &[],
+                None,
+            )
+            .unwrap();
             assert!(!request.body.to_string().contains("item_reference"));
             assert!(!request.body.to_string().contains("server_tool_use"));
             assert!(request.body.to_string().contains("web_search"));

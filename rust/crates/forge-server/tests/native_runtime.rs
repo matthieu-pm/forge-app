@@ -1,6 +1,7 @@
 #[path = "support/native_runtime.rs"]
 mod support;
 use async_trait::async_trait;
+use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use forge_agent_runtime::auth::Channel;
 use forge_core::agents::{
     runtime::{Checkpoint, Context, Error, Identity, Runtime},
@@ -70,6 +71,176 @@ async fn collect(events: forge_core::agents::runtime::Events) -> Vec<Value> {
         .map(Result::unwrap)
         .collect()
 }
+fn a1_cursor(cursor: &str) -> String {
+    let mut value = json!(Cursor::decode(cursor).unwrap());
+    let fields = value.as_object_mut().unwrap();
+    for field in ["conversation", "pendingInputs", "deliveryComplete"] {
+        fields.remove(field);
+    }
+    format!("native-v1.{}", URL_SAFE_NO_PAD.encode(value.to_string()))
+}
+
+#[tokio::test]
+async fn legacy_native_approval_cursor_fetches_current_proof_and_replays_one_effect() {
+    let f = Fixture::new(Mode::Approve, false).await;
+    let runtime = NativeRuntime::new(f.options()).unwrap();
+    let saved = Arc::new(Saved::default());
+    let mut ctx = context(saved.clone());
+    let events = collect(runtime.start(ctx.clone(), "Remember marigold".into(), vec![])).await;
+    let request = events
+        .iter()
+        .find(|event| event["type"] == "approval.requested")
+        .unwrap()["payload"]["details"]["runtimeRequestId"]
+        .clone();
+    let before = Cursor::decode(&saved.last()).unwrap();
+    let generation = before.conversation.unwrap().generation;
+    let legacy = a1_cursor(&saved.last());
+    assert!(Cursor::decode(&legacy).unwrap().conversation.is_none());
+    *saved.values.lock().unwrap() = vec![legacy.clone()];
+    ctx.runtime_session_id = Some(legacy);
+    let response = json!({"requestId":request,"optionId":"approve"});
+    let completed = collect(runtime.resume(ctx.clone(), vec![response.clone()])).await;
+    assert!(
+        completed
+            .iter()
+            .any(|event| event["type"] == "run.completed")
+    );
+    assert_eq!(f.script.effects.load(Ordering::SeqCst), 1);
+    let upgraded = Cursor::decode(&saved.last()).unwrap();
+    let proof = upgraded.conversation.unwrap();
+    assert_eq!(proof.id.to_string(), ctx.thread_id);
+    assert_eq!(proof.head_run_id.to_string(), ctx.run_id);
+    assert_eq!(proof.owner_run_id.to_string(), ctx.run_id);
+    assert_eq!(proof.generation, generation + 1);
+    let models = f.script.models.load(Ordering::SeqCst);
+    // Retrying the original delivery from its old cursor must use the existing
+    // response receipt, even though the metadata GET now returns a newer proof.
+    let replayed = collect(runtime.resume(ctx, vec![response])).await;
+    assert!(
+        replayed
+            .iter()
+            .any(|event| event["type"] == "run.completed")
+    );
+    assert_eq!(f.script.effects.load(Ordering::SeqCst), 1);
+    assert_eq!(f.script.models.load(Ordering::SeqCst), models);
+    assert_eq!(
+        Cursor::decode(&saved.last())
+            .unwrap()
+            .conversation
+            .unwrap()
+            .generation,
+        generation + 1
+    );
+    f.shutdown().await;
+}
+
+#[tokio::test]
+async fn legacy_resume_preserves_its_checkpoint_when_metadata_or_delivery_is_rejected() {
+    use axum::{
+        Router,
+        body::{Body, to_bytes},
+        http::{Method, Request, Response},
+    };
+    for case in ["unavailable", "foreign", "invalid-range", "rejected"] {
+        let saved = Arc::new(Saved::default());
+        let mut ctx = context(saved.clone());
+        let legacy = a1_cursor(
+            &Cursor {
+                conversation_id: ctx.thread_id.parse().unwrap(),
+                run_id: ctx.run_id.parse().unwrap(),
+                previous_run_id: None,
+                stream_index: 12,
+                deadline_ms: ctx.deadline_ms,
+                admitted: true,
+                settled: None,
+                conversation: None,
+                pending_inputs: false,
+                delivery_complete: false,
+            }
+            .encode(),
+        );
+        *saved.values.lock().unwrap() = vec![legacy.clone()];
+        ctx.runtime_session_id = Some(legacy.clone());
+        let request_id = Uuid::new_v4();
+        let mut proof = json!({"id":ctx.thread_id,"headRunId":ctx.run_id,"generation":0,"ownerRunId":ctx.run_id,"ownerNextIndex":12,"ownerDeadline":ctx.deadline_ms});
+        if case == "foreign" {
+            proof["id"] = json!(Uuid::new_v4());
+        } else if case == "invalid-range" {
+            proof["ownerNextIndex"] = json!(9_007_199_254_740_992u64);
+        }
+        let requests = Arc::new(Mutex::new(Vec::new()));
+        let seen = requests.clone();
+        let thread = ctx.thread_id.clone();
+        let run = ctx.run_id.clone();
+        let app = Router::new().fallback(move |request: Request<Body>| {
+            let seen = seen.clone();
+            let proof = proof.clone();
+            let thread = thread.clone();
+            let run = run.clone();
+            async move {
+                let path = request.uri().path().to_owned();
+                let method = request.method().clone();
+                let auth = Channel::verify(
+                    SECRET,
+                    request.headers()["authorization"].to_str().unwrap(),
+                    chrono::Utc::now().timestamp(),
+                )
+                .unwrap();
+                assert_eq!(auth.run_id(), run);
+                seen.lock().unwrap().push((method.clone(), path.clone()));
+                if method == Method::GET {
+                    assert_eq!(path, format!("/native/v1/conversations/{thread}"));
+                    return Response::builder()
+                        .status(if case == "unavailable" { 503 } else { 200 })
+                        .header("content-type", "application/json")
+                        .body(Body::from(json!({"ok":true,"conversation":proof}).to_string()))
+                        .unwrap();
+                }
+                assert_eq!(case, "rejected");
+                assert_eq!(method, Method::POST);
+                assert_eq!(path, format!("/native/v1/runs/{run}/resume"));
+                let body = to_bytes(request.into_body(), 4096).await.unwrap();
+                assert_eq!(
+                    serde_json::from_slice::<Value>(&body).unwrap(),
+                    json!({"requestId":request_id,"approved":true,"conversationId":thread,"expectedHeadRunId":run,"expectedGeneration":0})
+                );
+                Response::builder().status(409).body(Body::empty()).unwrap()
+            }
+        });
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let origin =
+            url::Url::parse(&format!("http://{}/", listener.local_addr().unwrap())).unwrap();
+        let server = tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
+        let runtime = NativeRuntime::new(forge_server::agent_runtime::Options {
+            base_url: origin,
+            channel_secret: SECRET.into(),
+            capability_secret: SECRET.into(),
+            model_secret: SECRET.into(),
+            peer_origin: None,
+            peer_identity: None,
+            now: Arc::new(|| chrono::Utc::now().timestamp()),
+        })
+        .unwrap();
+        let events = runtime
+            .resume(
+                ctx,
+                vec![json!({"requestId":request_id,"optionId":"approve"})],
+            )
+            .collect::<Vec<_>>()
+            .await;
+        assert_eq!(events.len(), 1);
+        assert!(events[0].is_err());
+        assert_eq!(*saved.values.lock().unwrap(), vec![legacy]);
+        assert_eq!(
+            requests.lock().unwrap().len(),
+            if case == "rejected" { 2 } else { 1 }
+        );
+        server.abort();
+    }
+}
+
 #[tokio::test]
 async fn actual_native_service_handles_approval_continuation_next_turn_and_provider_switch() {
     let f = Fixture::new(Mode::Approve, false).await;

@@ -460,7 +460,11 @@ async fn nonmatching_composer_queues_without_effects_and_canonical_delivery_uses
         .await
         .unwrap();
     assert!(calls.requests.lock().unwrap().is_empty());
-    assert_eq!(followup.prompts.lock().unwrap()[0].last(), Some(&message));
+    assert_eq!(
+        followup.prompts.lock().unwrap()[0].last(),
+        Some(&json!({"role":"user","content":[{"type":"text","text":"Different subject"}]}))
+    );
+    assert!(resumed.history().iter().any(|stored| stored == &message));
     assert_eq!(resumed.usage(), (20, 10));
     assert_eq!(resumed.session_usage(), (20, 10));
 }
@@ -548,7 +552,12 @@ async fn two_required_decisions_are_atomic_and_queued_responses_suppress_compose
     assert!(calls.requests.lock().unwrap().is_empty());
     assert_eq!(
         followup.prompts.lock().unwrap()[0].last(),
-        Some(&json!({"role":"user","content":"Approve"}))
+        Some(&json!({"role":"user","content":[{"type":"text","text":"Approve"}]}))
+    );
+    assert!(
+        next.history()
+            .iter()
+            .any(|stored| stored == &json!({"role":"user","content":"Approve"}))
     );
     assert_eq!(outputs(&next)[2]["output"]["value"]["status"], "ignored");
 }

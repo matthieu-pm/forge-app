@@ -375,6 +375,16 @@ impl Stream {
             }
             Mode::Reconnect => (format!("{base}/recover"), json!({})),
         };
+        if resuming && cursor.conversation.is_none() {
+            // The a1 cursor predates conversation ownership metadata. Migrated
+            // sessions still require the current proof, but learning it must not
+            // replace the app checkpoint before the response is acknowledged.
+            self.owned()?;
+            cursor.conversation = Some(self.runtime.conversation(conversation, &self.token).await?);
+            if Cursor::decode(&cursor.encode()).is_none() {
+                return Err(FAILED);
+            }
+        }
         if let Some(proof) = &cursor.conversation {
             if resuming {
                 body["conversationId"] = json!(conversation);
