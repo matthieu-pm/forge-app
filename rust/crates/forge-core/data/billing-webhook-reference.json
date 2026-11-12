@@ -2719,6 +2719,162 @@
       }
     },
     {
+      "name": "customer-unicode/emoji-255",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTrwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgiJ9fX0="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,HwtxBK1UIaHWavF/Qlu/JK71jGaYU3EsSdYNOxhY/G0="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂",
+            "eventId": "event-fixture",
+            "bodyHash": "999556934b4aa0b2d3ea669b60e4b0b783ee1852e9274acd03a5f3574eb84710",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "customer-unicode/emoji-256",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTrwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYIifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,aORameVJ0+Itm4BmSrVn65JhklCG1HvcG3UOqys1NpU="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "customer-unicode/combining-255",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTplzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlIn19fQ=="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,namIqkxgXcrQAmdUr55wyxIAbQ2dsJ7g4b5V9O5FMWA="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééée",
+            "eventId": "event-fixture",
+            "bodyHash": "1e38ecc67b382c892ee142bc4cf89283b63b2668a72ed6e56d0419575e8f1205",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "customer-unicode/combining-256",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTplzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIFlzIEifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,d4eG/NrEwN90viYf1xoSvoVw866MKuUjXyU/okNBk1I="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
       "name": "method/GET",
       "now": "2027-01-15T12:00:00.250Z",
       "enabled": true,

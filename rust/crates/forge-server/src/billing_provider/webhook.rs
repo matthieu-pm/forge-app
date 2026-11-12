@@ -228,7 +228,7 @@ impl Handler {
         let customer = event["data"]["customer"]["external_id"].as_str();
         if !BILLING_EVENTS.contains(&kind)
             || !id.is_some_and(forge_core::text::is_uuid)
-            || !customer.is_some_and(|value| (1..=255).contains(&value.encode_utf16().count()))
+            || !customer.is_some_and(|value| (1..=255).contains(&value.chars().count()))
         {
             return response(
                 StatusCode::SERVICE_UNAVAILABLE,

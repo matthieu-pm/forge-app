@@ -62,6 +62,11 @@ try {
   for (const value of [{}, [], null, true, 1, 'event', { data: event.data }]) await add(`not-event/${JSON.stringify(value)}`, { event: value })
   for (const data of [null, {}, { id }, { id, customer: {} }, { id: 'bad', customer: event.data.customer }, { id: id.toUpperCase(), customer: event.data.customer }, { id: null, customer: event.data.customer }, { id, customer: { external_id: 1 } }]) await add(`event-data/${JSON.stringify(data)}`, { event: { ...event, data } })
   for (const external_id of ['', 'forge:workspace:', 'forge:workspace: ', 'forge:workspace:\uFEFF', 'customer', 'FORGE:workspace:w', 'forge:workspace: workspace ', 'forge:workspace:語🙂', 'forge:workspace:' + 'x'.repeat(239), 'forge:workspace:' + 'x'.repeat(240), 'forge:workspace:' + '🙂'.repeat(120)]) await add(`customer/${JSON.stringify(external_id)}`, { event: { ...event, data: { id, customer: { external_id } } } })
+  // Installed Zod bounds Unicode code points, including combining marks.
+  for (const [name, suffix] of [
+    ['emoji-255', '🙂'.repeat(239)], ['emoji-256', '🙂'.repeat(240)],
+    ['combining-255', 'e\u0301'.repeat(119) + 'e'], ['combining-256', 'e\u0301'.repeat(120)],
+  ]) await add(`customer-unicode/${name}`, { event: { ...event, data: { id, customer: { external_id: 'forge:workspace:' + suffix } } } })
   for (const method of ['GET', 'HEAD', 'PUT', 'PATCH', 'DELETE']) await add(`method/${method}`, { method })
   await add('disabled', { enabled: false })
   await add('disabled-before-method-and-signature', { enabled: false, method: 'GET', secret: '' })

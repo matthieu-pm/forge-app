@@ -1,10 +1,14 @@
 # Forge Rust rewrite
 
-Target: replace the application implementation, including the web UI, macOS host,
-backend, agents and jobs, while preserving the existing product's behavior and
-data. The TypeScript implementation stays runnable as the behavioral reference
+Target: retain the existing React UI code, design and interactions; replace the
+backend, agents and jobs with Rust, and replace the Electron macOS host with
+Tauri. This direction was explicitly selected on 2026-11-12. Frontend work adapts
+the existing UI's server calls and desktop bridge rather than rewriting its
+components in Rust. Existing product behavior and data remain authoritative.
+The TypeScript server implementation stays runnable as the behavioral reference
 until replacement paths are verified. No production cutover is part of local
-implementation work.
+implementation work. Older milestone notes mentioning a Rust frontend describe
+the original scope, superseded by this React + Tauri direction.
 
 Baseline source: `ac2f7eb` (the source selected in this chat's isolated worktree).
 Working branch: `dev/forge-rust-rewrite`.
@@ -103,9 +107,15 @@ gate pass.
 | 3b12d | Verified subscription projection, paid proof, refunds and atomic event receipts | Passed |
 | 3b12e | Billing management contexts, currency renewal intents and refund-renewal confirmations | Passed |
 | 3b12f | Verified provider catalogue, invoice/refund proofs, native checkout and subscription reconciliation | Passed |
-| 3b12g | Renewal mutations, signed webhook recovery, replacement proofs and authenticated billing summary | In progress |
+| 3b12g | Renewal mutations, signed webhook recovery, replacement proofs and authenticated billing summary | Passed |
+| 3b13a | Native general input requests, typed answers and durable continuation | Pending |
+| 3b13b | Native child-agent execution, shared sandbox, usage and recovery | Pending |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
-| 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
+| 4a | Existing React server-call adapters and missing Rust bootstrap/read contracts | Pending |
+| 4b | Standalone React delivery against Rust, preserving routing, styling and interactions | Pending |
+| 4c | Tauri macOS host behind the existing ForgeHost desktop interface | Pending |
+| 4d | Tauri browser sign-in, session recovery and local Codex process bridge | Pending |
+| 4e | Packaged Tauri behavior, compatible release metadata and updater qualification | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
 
 The gate includes all original workspace test suites, TypeScript typechecking,
@@ -2907,8 +2917,8 @@ these routes do not represent a completed rewrite.
   Replacement context requires live admin authority, current subscription
   binding and an explicit original billing anchor.
 - Source-generated comparison fixtures and PostgreSQL/HTTP acceptance checks
-  are assembled for the full milestone gate. Live provider qualification, Rust
-  web UI, macOS host and migration rehearsal remain later milestones.
+  are assembled for the full milestone gate. Live provider qualification, React
+  integration, Tauri host and migration rehearsal remain later milestones.
 
 - The initial gate passed source fixtures, formatting, the original JavaScript
   suites and all three TypeScript checks. Rust compilation found a private-core
@@ -2917,3 +2927,54 @@ these routes do not represent a completed rewrite.
   validator behavior was loosened. Rust tests did not execute in this attempt;
   the complete gate must pass again. Evidence:
   `.forge/rust-rewrite/milestone-3b12g-initial.log` (exit 1).
+
+- The next complete gate passed 727 Rust tests, all 3,013 enabled JavaScript
+  tests, all three typechecks, source fixtures, formatting and Clippy. One
+  webhook comparison found an incorrect UTF-16 length check: the installed
+  Zod 4.6.5 validator counts Unicode code points. The correction preserves that
+  source behavior and adds emoji and combining-character boundary fixtures.
+  All six new billing read PostgreSQL groups and the composed signed-refund
+  recovery test passed. The 607 external fixture tests remain skipped. Evidence:
+  `.forge/rust-rewrite/milestone-3b12g-correction.log` (exit 1).
+
+- The corrected complete gate passed: 728 Rust tests, 3,013 enabled reference
+  tests, all three TypeScript checks, formatting, Clippy and source-fixture checks.
+  This milestone adds 974 owning-source comparisons and ten additional SDK wire
+  cases, including 163 signed-webhook cases. PostgreSQL billing reads and composed
+  refund recovery passed. The 607 external fixture tests remain skipped. Evidence:
+  `.forge/rust-rewrite/milestone-3b12g-unicode.log` (exit 0).
+
+### React and Tauri integration direction
+
+The retained UI currently has 110 server-function calls across 38 production
+modules and 27 API route files. Preserve their exported call shapes and React
+consumers while adapting their transport to typed, same-origin Rust endpoints.
+Do not emulate generated TanStack RPC identifiers. Explicitly map auth bootstrap,
+feature snapshots, default home, team-route state, ChatGPT status and promoted
+release reads before removing their TypeScript server dependency.
+
+SPA output is already configured. Preserve the components, styles, route tree,
+loaders and providers while separating browser delivery from Start server
+functions, Nitro, workflow and other server-only dependencies. Qualify login,
+direct-link refresh, workspace switching, file upload, agent streaming and
+session races against the Rust service. The original server remains available
+for behavioral comparison until its replacement is verified.
+
+Implement the existing ForgeHost/window.forgeDesktop interface using Tauri
+commands and events. Preserve windows, menus, navigation, theme, dock badge,
+notifications, clipboard and deep links. The existing packaged app loads an
+approved HTTPS application origin; the migration does not introduce an offline
+application requirement. Scope the native bridge to the intended app origin.
+
+Port the browser/desktop authorization exchange, initiating-window binding,
+secure cookie adoption, session restoration and offline sign-out behavior.
+Retain compatibility with the existing Rust desktop-auth endpoints; browser
+Electron proxy helpers also require adaptation. Port local Codex discovery,
+process supervision and app-server behavior with the existing run-scoped
+approval, cancellation, callback and attachment limits.
+
+Adapt updater artifacts and release metadata for Tauri while preserving release
+promotion and pause policy. Packaged acceptance must cover sign-in and manual
+codes, restart recovery, deep links, local-runtime cleanup, update behavior and
+the existing React UI on the macOS webview. Public signing/distribution and
+production promotion remain separately authorized release operations.
