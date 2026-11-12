@@ -13,7 +13,7 @@ impl Service {
         let rows: Vec<Connection> = if let Some(id) = id {
             vec![accessible(&mut tx, &actor, id, false).await?]
         } else {
-            sqlx::query_as("SELECT * FROM model_connections WHERE workspace_id=$1 AND (scope='workspace' OR user_id=$2)").bind(&actor.workspace_id).bind(&actor.user_id).fetch_all(&mut *tx).await?
+            sqlx::query_as("SELECT * FROM model_connections WHERE workspace_id=$1 AND (scope='workspace' OR user_id=$2) AND (NOT $3 OR (scope='workspace' AND locality='server-capable' AND execution_kind='forge-native'))").bind(&actor.workspace_id).bind(&actor.user_id).bind(server_only(&actor)).fetch_all(&mut *tx).await?
         };
         tx.commit().await?;
         futures_util::future::join_all(

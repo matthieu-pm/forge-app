@@ -89,7 +89,7 @@ impl Service {
     pub async fn list(&self, actor: &Actor) -> Result<Vec<Value>, StoreError> {
         let mut tx = self.database.begin().await?;
         let actor = live(&mut tx, actor, ApiScope::ModelConnectionsRead).await?;
-        let rows:Vec<Connection>=sqlx::query_as("SELECT c.* FROM model_connections c WHERE c.workspace_id=$1 AND (c.scope='workspace' OR c.user_id=$2) ORDER BY c.updated_at DESC").bind(&actor.workspace_id).bind(&actor.user_id).fetch_all(&mut *tx).await?;
+        let rows:Vec<Connection>=sqlx::query_as("SELECT c.* FROM model_connections c WHERE c.workspace_id=$1 AND (c.scope='workspace' OR c.user_id=$2) AND (NOT $3 OR (c.scope='workspace' AND c.locality='server-capable' AND c.execution_kind='forge-native')) ORDER BY c.updated_at DESC").bind(&actor.workspace_id).bind(&actor.user_id).bind(server_only(&actor)).fetch_all(&mut *tx).await?;
         let mut results = Vec::new();
         for row in rows {
             let mut value = summary(&mut tx, &row).await?;
@@ -233,4 +233,12 @@ fn write_allowed(actor: &Actor, scope: &str) -> Result<(), StoreError> {
 }
 fn iso(now: DateTime<Utc>) -> String {
     now.to_rfc3339_opts(SecondsFormat::Millis, true)
+}
+
+fn server_only(actor: &Actor) -> bool {
+    actor.loop_scope.is_some()
+        || matches!(
+            actor.authentication,
+            forge_core::actor::Authentication::Loop { .. }
+        )
 }

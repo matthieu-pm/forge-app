@@ -1,10 +1,7 @@
 use super::*;
+use super::{agent_blobs as blobs, model_discovery as discovery};
 use chrono::{DateTime, Duration, Utc};
 use forge_store::agents::*;
-#[path = "../support/agent_blobs.rs"]
-mod blobs;
-#[path = "../support/model_discovery.rs"]
-mod discovery;
 
 #[path = "agent_files.rs"]
 mod agent_file_acceptance;

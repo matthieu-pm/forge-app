@@ -1,5 +1,105 @@
+use super::agent_blobs as loop_blobs;
 use super::*;
 use serde_json::json;
+
+#[tokio::test]
+async fn loop_artifact_reservation_and_publication_preserve_independent_recovery_failures() {
+    use forge_core::actor::{Actor, Authentication};
+    let (f, actor, team, loops) = setup().await;
+    let definition = Uuid::new_v4();
+    let fields = json!({"name":"Recovery upload","description":"","instructions":"Handle event","trigger":{"kind":"event","entity":"issue","event":"created"},"conditions":[],"reasoning":"auto","teamAccess":"this-team"});
+    loops
+        .command(
+            &actor,
+            &team.id.to_string(),
+            &Uuid::new_v4().to_string(),
+            json!({"action":"create","id":definition,"fields":fields}),
+        )
+        .await
+        .unwrap();
+    loops
+        .command(
+            &actor,
+            &team.id.to_string(),
+            &Uuid::new_v4().to_string(),
+            json!({"action":"enable","id":definition,"expectedRevision":1}),
+        )
+        .await
+        .unwrap();
+    let mut tx = f.database.begin().await.unwrap();
+    tx.prepare().await.unwrap();
+    let (run,thread,agent_run):(Uuid,Uuid,Uuid)=sqlx::query_as("INSERT INTO loop_runs(workspace_id,loop_id,loop_revision,event_key,event_hash,event,fields,authorizer_id,state,started_at) SELECT workspace_id,id,revision,$2,$2,'{\"kind\":\"manual\"}',fields,$3,'running',clock_timestamp() FROM team_loops WHERE id=$1 RETURNING id,thread_id,agent_run_id").bind(definition).bind(Uuid::new_v4().to_string()).bind(&actor.user_id).fetch_one(&mut *tx).await.unwrap();
+    let principal = forge_core::loops::principal_id(&definition.to_string());
+    sqlx::query("INSERT INTO agent_threads(id,workspace_id,created_by_user_id) VALUES($1,$2,$3)")
+        .bind(thread)
+        .bind(&actor.workspace_id)
+        .bind(&principal)
+        .execute(&mut *tx)
+        .await
+        .unwrap();
+    sqlx::query("INSERT INTO agent_runs(id,thread_id,initiated_by_user_id,state,execution_kind,requested_selection) VALUES($1,$2,$3,'running','forge-native',$4)").bind(agent_run).bind(thread).bind(&principal).bind(json!({"loopRunId":run})).execute(&mut *tx).await.unwrap();
+    tx.commit().await.unwrap();
+    let loop_actor = Actor {
+        user_id: principal,
+        authentication: Authentication::Loop {
+            loop_id: definition.to_string(),
+            run_id: run.to_string(),
+        },
+        ..actor
+    };
+    let blobs = Arc::new(loop_blobs::Memory::default());
+    let files = forge_store::agents::files::Service::new(f.database.clone(), blobs.clone());
+    let input = json!({"name":"loop.txt","contentType":"text/plain","content":"Private loop recovery bytes"});
+    f.backend.mode.store(1, Ordering::SeqCst);
+    assert!(matches!(
+        files
+            .create_artifact(&loop_actor, agent_run, input.clone())
+            .await,
+        Err(StoreError::Recovery(_))
+    ));
+    assert!(blobs.values.lock().unwrap().is_empty());
+    let intents: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM loop_artifact_intents WHERE agent_run_id=$1")
+            .bind(agent_run)
+            .fetch_one(&f.pool)
+            .await
+            .unwrap();
+    assert_eq!(intents, 0);
+    f.backend.mode.store(0, Ordering::SeqCst);
+    blobs.pause_put.store(true, Ordering::SeqCst);
+    let upload = files.create_artifact(&loop_actor, agent_run, input.clone());
+    let fail_publication = async {
+        blobs.entered.notified().await;
+        let intents: i64 =
+            sqlx::query_scalar("SELECT count(*) FROM loop_artifact_intents WHERE agent_run_id=$1")
+                .bind(agent_run)
+                .fetch_one(&f.pool)
+                .await
+                .unwrap();
+        assert_eq!(intents, 1);
+        f.backend.mode.store(2, Ordering::SeqCst);
+        blobs.resume.notify_one();
+    };
+    let (result, ()) = tokio::join!(upload, fail_publication);
+    assert!(matches!(result, Err(StoreError::Recovery(_))));
+    let counts:(i64,i64,i64)=sqlx::query_as("SELECT (SELECT count(*) FROM loop_artifact_intents WHERE agent_run_id=$1),(SELECT count(*) FROM agent_artifacts WHERE run_id=$1),(SELECT count(*) FROM agent_events WHERE run_id=$1 AND type='artifact.created')").bind(agent_run).fetch_one(&f.pool).await.unwrap();
+    assert_eq!(counts, (0, 1, 1));
+    assert_eq!(blobs.values.lock().unwrap().len(), 1);
+    f.backend.mode.store(0, Ordering::SeqCst);
+    let saved = files
+        .create_artifact(&loop_actor, agent_run, input)
+        .await
+        .unwrap();
+    assert_eq!(
+        files
+            .read_artifact(&loop_actor, saved["id"].as_str().unwrap().parse().unwrap())
+            .await
+            .unwrap()
+            .1,
+        b"Private loop recovery bytes"
+    );
+    assert_eq!(blobs.values.lock().unwrap().len(), 1);
+}
 async fn setup() -> (
     Fixture,
     forge_core::actor::Actor,

@@ -255,19 +255,24 @@ pub async fn current_actor(
         }
         Authentication::Agent { run_id, .. } => {
             let run_id = uuid::Uuid::parse_str(run_id).map_err(|_| StoreError::Forbidden)?;
-            let row: Option<(String,)> = sqlx::query_as(
-                "SELECT r.requested_selection::text FROM agent_runs r JOIN agent_threads t ON t.id=r.thread_id WHERE r.id=$1 AND r.initiated_by_user_id=$2 AND t.workspace_id=$3 AND r.state IN ('running','waiting-for-approval','reconnecting') FOR SHARE OF r,t",
+            let row: Option<(String, String)> = sqlx::query_as(
+                "SELECT r.requested_selection::text,r.state FROM agent_runs r JOIN agent_threads t ON t.id=r.thread_id WHERE r.id=$1 AND r.initiated_by_user_id=$2 AND t.workspace_id=$3 AND r.state IN ('running','waiting-for-approval','reconnecting') FOR SHARE OF r,t",
             ).bind(run_id).bind(&actor.user_id).bind(&actor.workspace_id).fetch_optional(&mut *connection).await?;
-            let (selection,) = row.ok_or(StoreError::Forbidden)?;
+            let (selection, state) = row.ok_or(StoreError::Forbidden)?;
             let selection =
                 forge_core::json::parse(&selection).map_err(|_| StoreError::Forbidden)?;
-            // Linked loop authority is implemented with the loop milestone.
-            if selection.get("loopRunId").and_then(Value::as_str).is_some() {
-                return Err(StoreError::Forbidden);
+            // Ordinary agent callbacks never query loop tables. A linked run
+            // has both the agent-run grant and the current loop/source grant.
+            if let Some(loop_run) = selection.get("loopRunId").and_then(Value::as_str) {
+                if state == "reconnecting" {
+                    return Err(StoreError::Forbidden);
+                }
+                return crate::loops::current_loop_actor(connection, actor, loop_run).await;
             }
         }
-        // Never permit an unmigrated loop to inherit a user's authority.
-        Authentication::Loop { .. } => return Err(StoreError::Forbidden),
+        Authentication::Loop { run_id, .. } => {
+            return crate::loops::current_loop_actor(connection, actor, run_id).await;
+        }
     }
     if current.loop_scope.is_some() {
         return Err(StoreError::Forbidden);

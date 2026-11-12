@@ -49,8 +49,8 @@ impl Service {
             return Ok(None);
         }
         let id = Uuid::parse_str(&claims.connection_id).map_err(|_| StoreError::InvalidInput)?;
-        let row:Option<Connection>=sqlx::query_as("SELECT c.* FROM model_connections c WHERE c.id=$1 AND c.workspace_id=$2 AND c.provider=$3 AND c.execution_kind='forge-native' AND c.status='ready' AND (c.scope='workspace' OR (c.scope='personal' AND c.user_id=$4)) AND EXISTS(SELECT 1 FROM model_catalog_entries e WHERE e.connection_id=c.id AND e.provider_model_id=$5 AND e.status='available')")
-            .bind(id).bind(&actor.workspace_id).bind(&claims.provider).bind(&actor.user_id).bind(&claims.model_id).fetch_optional(&mut *tx).await?;
+        let row:Option<Connection>=sqlx::query_as("SELECT c.* FROM model_connections c WHERE c.id=$1 AND c.workspace_id=$2 AND c.provider=$3 AND c.execution_kind='forge-native' AND c.status='ready' AND (c.scope='workspace' OR (c.scope='personal' AND c.user_id=$4)) AND EXISTS(SELECT 1 FROM model_catalog_entries e WHERE e.connection_id=c.id AND e.provider_model_id=$5 AND e.status='available' AND (NOT $6 OR e.execution_kind='forge-native')) AND (NOT $6 OR (c.scope='workspace' AND c.locality='server-capable'))")
+            .bind(id).bind(&actor.workspace_id).bind(&claims.provider).bind(&actor.user_id).bind(&claims.model_id).bind(server_only(&actor)).fetch_optional(&mut *tx).await?;
         let Some(row) = row else {
             tx.commit().await?;
             return Ok(None);

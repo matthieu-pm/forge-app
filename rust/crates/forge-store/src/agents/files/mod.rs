@@ -17,6 +17,7 @@ use uuid::Uuid;
 
 mod artifacts;
 mod attachments;
+mod loop_artifacts;
 mod metadata;
 mod retention;
 pub use retention::Sweep;

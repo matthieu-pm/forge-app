@@ -1,8 +1,7 @@
+use super::agent_blobs as blobs;
 use super::*;
 use chrono::{DateTime, Duration, Utc};
 use serde_json::{Value, json};
-#[path = "../support/agent_blobs.rs"]
-mod blobs;
 
 #[tokio::test]
 async fn agent_byte_publication_and_retention_respect_journal_failures() {

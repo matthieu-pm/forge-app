@@ -9,6 +9,11 @@ use serde_json::{Value, json};
 use sqlx::{PgConnection, PgPool, postgres::PgPoolOptions};
 use uuid::Uuid;
 
+#[path = "support/agent_blobs.rs"]
+mod agent_blobs;
+#[path = "support/model_discovery.rs"]
+mod model_discovery;
+
 #[path = "acceptance/agents.rs"]
 mod agent_acceptance;
 #[path = "acceptance/definitions.rs"]
@@ -35,8 +40,14 @@ mod issue_query_acceptance;
 mod job_acceptance;
 #[path = "acceptance/loops.rs"]
 mod loop_acceptance;
+#[path = "acceptance/loop_artifacts.rs"]
+mod loop_artifact_acceptance;
+#[path = "acceptance/loop_authority.rs"]
+mod loop_authority_acceptance;
 #[path = "acceptance/loop_dispatch.rs"]
 mod loop_dispatch_acceptance;
+#[path = "acceptance/loop_models.rs"]
+mod loop_model_acceptance;
 #[path = "acceptance/planning.rs"]
 mod planning_acceptance;
 #[path = "acceptance/product_state.rs"]

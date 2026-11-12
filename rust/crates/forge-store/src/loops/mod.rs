@@ -10,11 +10,13 @@ use serde_json::{Value, json};
 use sqlx::{FromRow, PgConnection};
 use std::{collections::HashMap, sync::Arc};
 use uuid::Uuid;
+mod authority;
 mod command;
 mod context;
 mod directory;
 mod dispatch;
 mod webhook;
+pub(crate) use authority::{agent_run_matches, current_from_env as current_loop_actor};
 pub use dispatch::ExpiredRuns;
 
 #[derive(Clone)]

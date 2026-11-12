@@ -136,6 +136,16 @@ pub(crate) async fn artifact_metadata(
     key: Uuid,
     only_live: bool,
 ) -> Result<Option<Value>, StoreError> {
+    let (loop_run, loop_id) = match &a.loop_scope {
+        Some(scope) => {
+            let (Ok(run), Ok(id)) = (scope.run_id.parse::<Uuid>(), scope.loop_id.parse::<Uuid>())
+            else {
+                return Ok(None);
+            };
+            (Some(run), Some(id))
+        }
+        None => (None, None),
+    };
     let source = format!(
         "((lr.event->>'entity' IS DISTINCT FROM 'issue' OR {}) AND (lr.event->>'entity' IS DISTINCT FROM 'project' OR {}) AND (lr.event->>'entity' IS DISTINCT FROM 'team' OR {}) AND (lr.event->>'entity' IS DISTINCT FROM 'cycle' OR EXISTS(SELECT 1 FROM issue_cycles cycle WHERE cycle.workspace_id=$1 AND cycle.id::text=lr.event->>'entityId' AND {})) AND (lr.event->>'entity' IS DISTINCT FROM 'initiative' OR EXISTS(SELECT 1 FROM initiative_projects ip JOIN project_teams pt ON pt.project_id=ip.project_id AND pt.workspace_id=ip.workspace_id WHERE ip.workspace_id=$1 AND ip.initiative_id::text=lr.event->>'entityId' AND {})))",
         policy::readable_issue(a, "(lr.event->>'entityId')::uuid"),
@@ -156,12 +166,17 @@ pub(crate) async fn artifact_metadata(
         "SELECT to_jsonb(f),(SELECT lr.event FROM loop_runs lr WHERE lr.agent_run_id=r.id)::text,(SELECT CASE WHEN lr.event ? 'comment' OR lr.event ? 'update' THEN forge_loop_snapshot(lr.event->>'entity',(lr.event->>'entityId')::uuid,lr.workspace_id) ELSE NULL END FROM loop_runs lr WHERE lr.agent_run_id=r.id)::text FROM agent_artifacts f JOIN agent_runs r ON r.id=f.run_id JOIN agent_threads t ON t.id=r.thread_id WHERE f.id=$4 AND t.workspace_id=$1 AND (NOT $5::boolean OR (f.deleted_at IS NULL AND (f.retention_expires_at IS NULL OR f.retention_expires_at>clock_timestamp()))) AND ((t.created_by_user_id=$3 AND NOT EXISTS(SELECT 1 FROM loop_runs lr WHERE lr.agent_run_id=r.id)) OR EXISTS(SELECT 1 FROM loop_runs lr JOIN team_loops l ON l.id=lr.loop_id AND l.workspace_id=lr.workspace_id WHERE lr.agent_run_id=r.id AND l.workspace_id=$1 AND l.deleted_at IS NULL AND {source} AND ({scope}) AND {}))",
         policy::readable_team(a, "l.team_id")
     );
+    let q = format!(
+        "{q} AND ($6::uuid IS NULL OR EXISTS(SELECT 1 FROM loop_runs bound WHERE bound.id=$6 AND bound.loop_id=$7 AND bound.agent_run_id=r.id AND bound.workspace_id=$1))"
+    );
     let row: Option<(Value, Option<String>, Option<String>)> = sqlx::query_as(&q)
         .bind(&a.workspace_id)
         .bind(policy::privileged(a))
         .bind(&a.user_id)
         .bind(key)
         .bind(only_live)
+        .bind(loop_run)
+        .bind(loop_id)
         .fetch_optional(c)
         .await?;
     let Some((file, event, source)) = row else {

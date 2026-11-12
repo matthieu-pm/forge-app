@@ -7,6 +7,12 @@ async fn owned_run(
     actor: &Actor,
     run: Uuid,
 ) -> Result<crate::agents::Run, StoreError> {
+    if !crate::loops::agent_run_matches(connection, actor, run).await? {
+        return Err(error(
+            Code::ArtifactNotFound,
+            "The agent run was not found.",
+        ));
+    }
     runs::get_in(connection, &actor.workspace_id, run)
         .await?
         .filter(|row| {
@@ -70,8 +76,9 @@ impl Service {
             deleted_at: None,
             created_at: now,
         };
-        // current_actor denies linked loop principals until the loop milestone
-        // supplies source-fenced publication and durable upload reservations.
+        if actor.loop_scope.is_some() {
+            return self.create_loop_artifact(&actor, &owned, &row, bytes).await;
+        }
         self.blobs.put(&row.storage_reference, bytes).await?;
         let result=async {
             let mut tx=self.database.begin().await?;let actor=live(&mut tx,&actor,ApiScope::AgentsWrite).await?;

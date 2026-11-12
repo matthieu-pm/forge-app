@@ -5,7 +5,7 @@ use super::{Approval, ApprovalState, Event, Risk, approvals, events, runs};
 use crate::{Database, StoreError, authority::current_actor, database::JournalTransaction};
 use chrono::{DateTime, Duration, Utc};
 use forge_core::{
-    actor::{Actor, ApiScope, Authentication},
+    actor::{Actor, ApiScope},
     agents::approval::{self, Code, Error},
 };
 use serde::{Deserialize, Serialize};
@@ -101,11 +101,10 @@ impl Service {
         if !actor.has_scope(ApiScope::AgentsWrite) {
             return Err(StoreError::Forbidden);
         }
+        let bound_run = crate::loops::agent_run_matches(tx, actor, input.run_id).await?;
         let run = runs::get_in(tx, &actor.workspace_id, input.run_id)
             .await?
-            .filter(|run| {
-                run.initiated_by_user_id == actor.user_id && agent_run_matches(actor, run.id)
-            })
+            .filter(|run| run.initiated_by_user_id == actor.user_id && bound_run)
             .ok_or_else(|| {
                 error(
                     Code::ApprovalBindingMismatch,
@@ -279,12 +278,6 @@ fn error(code: Code, message: &'static str) -> StoreError {
 fn iso(at: DateTime<Utc>) -> String {
     at.to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
 }
-fn agent_run_matches(actor: &Actor, run: Uuid) -> bool {
-    match &actor.authentication {
-        Authentication::Agent { run_id, .. } => run_id.parse::<Uuid>().ok() == Some(run),
-        _ => true,
-    }
-}
 async fn bound(
     connection: &mut PgConnection,
     actor: &Actor,
@@ -304,7 +297,7 @@ async fn bound(
             "The approval is not bound to this user and workspace.",
         ));
     }
-    if !agent_run_matches(actor, approval.run_id) {
+    if !crate::loops::agent_run_matches(connection, actor, approval.run_id).await? {
         return Err(error(
             Code::ApprovalBindingMismatch,
             "The approval is not bound to this agent run.",
@@ -379,6 +372,9 @@ pub(crate) async fn find_approved_in(
     input: &Binding,
     now: DateTime<Utc>,
 ) -> Result<Option<Approval>, StoreError> {
+    if !crate::loops::agent_run_matches(connection, actor, input.run_id).await? {
+        return Ok(None);
+    }
     let exact = approvals::find_approved(
         connection,
         &approvals::ApprovedQuery {
@@ -404,6 +400,5 @@ pub(crate) async fn find_approved_in(
         .into_iter()
         .find(|approval| grant(approval, input))
     };
-    Ok(matching
-        .filter(|approval| agent_run_matches(actor, approval.run_id) && approval.expires_at > now))
+    Ok(matching.filter(|approval| approval.expires_at > now))
 }

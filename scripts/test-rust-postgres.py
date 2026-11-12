@@ -110,6 +110,7 @@ def main():
             environment["FORGE_PERSON_NAME_FORMATTING_ENABLED"] = "true"
             environment["FORGE_SHARED_DOCUMENTS_ENABLED"] = "true"
             environment["FORGE_TEAM_RESOURCES_ENABLED"] = "true"
+            environment["FORGE_LOOPS_ENABLED"] = "true"
             environment["FORGE_RUST_RUNTIME_TEST_DATABASE_URL"] = runtime_connection
             environment["FORGE_RUST_TEST_DATABASE_URL"] = connection
             environment["FORGE_RUST_JOURNAL_TEST_DATABASE_URL"] = journal_connection

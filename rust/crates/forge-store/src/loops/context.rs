@@ -7,6 +7,7 @@ pub(super) async fn authorized(
     own: Uuid,
     all_public: bool,
 ) -> Result<Value, StoreError> {
+    let all_public = a.loop_scope.as_ref().map_or(all_public, |s| s.all_public);
     let (table, condition) = match entity {
         "issue" => ("issues", policy::readable_issue(a, "r.id")),
         "project" => ("projects", policy::readable_project(a, "r.id")),
@@ -42,6 +43,7 @@ pub(super) async fn current(
     own: Uuid,
     all_public: bool,
 ) -> Result<Value, StoreError> {
+    let all_public = a.loop_scope.as_ref().map_or(all_public, |s| s.all_public);
     authorized(c, a, entity, id, own, all_public).await?;
     let mut raw: Value =
         sqlx::query_scalar::<_, Option<Value>>("SELECT forge_loop_snapshot($1,$2,$3)")

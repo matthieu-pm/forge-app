@@ -29,13 +29,14 @@ pub(super) async fn accessible(
     lock: bool,
 ) -> Result<Connection, StoreError> {
     let query = format!(
-        "SELECT * FROM model_connections WHERE id=$3 AND workspace_id=$1 AND (scope='workspace' OR user_id=$2){}",
+        "SELECT * FROM model_connections WHERE id=$3 AND workspace_id=$1 AND (scope='workspace' OR user_id=$2) AND (NOT $4 OR (scope='workspace' AND locality='server-capable' AND execution_kind='forge-native')){}",
         if lock { " FOR UPDATE" } else { "" }
     );
     sqlx::query_as(&query)
         .bind(&actor.workspace_id)
         .bind(&actor.user_id)
         .bind(id)
+        .bind(server_only(actor))
         .fetch_optional(conn)
         .await?
         .ok_or_else(|| {

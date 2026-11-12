@@ -51,9 +51,17 @@ impl Gateway {
     pub fn descriptors(&self) -> &'static [Value] {
         contract::descriptors()
     }
-    async fn authorize(&self, actor: &Actor, invocation: &Value) -> Result<Actor, StoreError> {
+    async fn authorize(
+        &self,
+        actor: &Actor,
+        invocation: &Value,
+        run: Uuid,
+    ) -> Result<Actor, StoreError> {
         let mut tx = self.database.begin().await?;
         let actor = current_actor(&mut tx, actor).await?;
+        if !crate::loops::agent_run_matches(&mut tx, &actor, run).await? {
+            return Err(StoreError::Forbidden);
+        }
         match invocation["capabilityId"].as_str().unwrap() {
             "teams.list" | "teams.get" | "workspace.describe" => {
                 if !actor.has_scope(ApiScope::TeamsRead) {
@@ -91,7 +99,7 @@ impl Gateway {
                 "The run token does not match this invocation.",
             );
         }
-        let Ok(actor) = self.authorize(actor, &invocation).await else {
+        let Ok(actor) = self.authorize(actor, &invocation, run).await else {
             return contract::failure("FORBIDDEN", "The capability request was rejected.");
         };
         let id = invocation["capabilityId"].as_str().unwrap();
@@ -288,7 +296,7 @@ impl CommandHandler for Update<'_> {
         actor: &Actor,
         value: Option<&TeamSummary>,
     ) -> Result<(), StoreError> {
-        if !run_matches(actor, self.run) {
+        if !crate::loops::agent_run_matches(connection, actor, self.run).await? {
             return Err(StoreError::Forbidden);
         }
         if let Some(value) = value {

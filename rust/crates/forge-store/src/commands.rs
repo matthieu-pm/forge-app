@@ -168,6 +168,15 @@ pub async fn execute<H: CommandHandler>(
         .ok_or(StoreError::Forbidden)?;
     handler.before_actor(&mut tx, actor).await?;
     let current = current_actor(&mut tx, actor).await?;
+    sqlx::query("SELECT set_config('forge.loop_run_id',$1,true)")
+        .bind(
+            current
+                .loop_scope
+                .as_ref()
+                .map_or("", |s| s.run_id.as_str()),
+        )
+        .execute(&mut *tx)
+        .await?;
     handler.authorize(&mut tx, &current, None).await?;
     let (sla_enabled, sla_identity) = pool.sla_gate(&current.workspace_id);
     sqlx::query("SELECT set_config('forge.sla.workspace',$1,true),set_config('forge.sla.enabled',$2,true),set_config('forge.sla.identity',$3,true)")

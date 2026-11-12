@@ -91,6 +91,7 @@ gate pass.
 | 3b10b | Loop source contexts, definition commands, immutable runs, history and webhook receipts | Passed |
 | 3b10c | Native loop event dispatch, schedule/cycle capture and expired-run reconciliation | Passed |
 | 3b10d | Actor-scoped resource predicates and shared read projections | Passed |
+| 3b10e | Live loop authority, model and run binding, durable artifact publication | Passed |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -2417,3 +2418,50 @@ these routes do not represent a completed rewrite.
   tests**, and **three typechecks**, including fixture checks, formatting and
   Clippy. The 607 external-fixture tests in 31 files remain skipped.
   Evidence: `.forge/rust-rewrite/milestone-3b10d-fixtures.log`.
+
+### Milestone 3b10e
+
+- Loop principals and linked agent callbacks revalidate the captured run, current
+  definition, team, source, external-source policy and original four-minute
+  deadline inside the consuming transaction. Scope is rebuilt from captured and
+  current access, with a member role and no model-connection write grant. Only an
+  internal loop principal with an actual pending cancellation can use the narrow
+  cancellation exception; callbacks cannot inherit it. Ordinary agent callbacks
+  keep their existing membership path.
+- Commands set the transaction-local loop-run marker before authorization and
+  receipt handling, preventing recursive native event production. Approvals,
+  capabilities and artifact access bind loop principals to their exact captured
+  agent run, including different occurrences sharing the same synthetic user.
+- Model catalogs, routing refresh and runtime credentials restrict loops to
+  workspace connections with server-capable native execution. Personal and local
+  credentials remain unavailable even if owned by the synthetic principal.
+- Loop uploads commit an exact durable reservation before provider I/O, then
+  revalidate authority and the reservation lease before publishing metadata and
+  its event atomically. Source issue locks precede principal locks. Interrupted
+  futures leave reservations for bounded cleanup; failed byte deletion retains
+  them. Recovery probes preserve published bytes and never hide a known failure
+  to publish the independent recovery journal.
+- Ten new acceptance scenarios cover live identity and source revocation, narrow
+  and captured scopes, original deadlines, cancellation, exact approval/artifact
+  binding, command replay and recursion suppression, model restrictions, upload
+  interruption/expiry/compensation, and independent recovery failure. All use
+  disposable local PostgreSQL and local provider/blob doubles. The full gate is
+  pending; coordinator execution and scheduler wiring remain a later milestone.
+- The initial gate stopped Rust compilation at one approval lookup still calling
+  the replaced synchronous run-binding helper. The lookup now checks the same
+  transaction-bound run identity before searching direct or program approvals.
+  All 3,013 enabled reference tests and all three typechecks passed. Rust
+  acceptance remains unverified until the corrected full gate completes.
+  Evidence: `.forge/rust-rewrite/milestone-3b10e-initial.log`.
+- The next gate passed 604 Rust tests, all 3,013 enabled reference tests and all
+  three typechecks. Nine of ten new scenarios passed. The remaining model fixture
+  tried to update an immutable owner; it now inserts the intended personal owner
+  at creation, with a correctly bound encrypted credential and catalog. Its
+  personal/local/external access denials are retained, with an additional native
+  catalog-entry check. Shared test helpers are declared once per test binary to
+  satisfy Clippy's duplicate-module rule. Database constraints remain unchanged.
+  Evidence: `.forge/rust-rewrite/milestone-3b10e-binding-fixed.log`.
+- The corrected full gate passed **605 Rust tests**, **3,013 enabled reference
+  tests**, and **three typechecks**, including all fixtures, formatting and
+  Clippy. The 607 external-fixture tests in 31 files remain skipped.
+  Evidence: `.forge/rust-rewrite/milestone-3b10e-fixtures.log`.
