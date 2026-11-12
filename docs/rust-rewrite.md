@@ -101,7 +101,7 @@ gate pass.
 | 3b12b | Exact FX, spending admission, currency capacity and cumulative invoices | Passed |
 | 3b12c | Durable trials, atomic usage admission, settlement and original-period carryover | Passed |
 | 3b12d | Verified subscription projection, paid proof, refunds and atomic event receipts | Passed |
-| 3b12e | Billing management contexts, currency renewal intents and refund-renewal confirmations | In progress |
+| 3b12e | Billing management contexts, currency renewal intents and refund-renewal confirmations | Passed |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -2838,3 +2838,9 @@ these routes do not represent a completed rewrite.
   maintenance sleep/DarkWake cycles. Their existing 5/10-second deadlines remain
   unchanged. The full gate must pass again after the test correction. Initial
   evidence: `.forge/rust-rewrite/milestone-3b12e-initial.log` (exit 1).
+
+- The corrected full gate passed: 695 Rust tests, 3,013 enabled reference tests,
+  all three TypeScript checks, source fixtures, formatting and Clippy. All three
+  previously timed-out JavaScript files passed unchanged. The 607 external fixture
+  tests remain skipped. Evidence:
+  `.forge/rust-rewrite/milestone-3b12e-correction-awake.log` (exit 0).
