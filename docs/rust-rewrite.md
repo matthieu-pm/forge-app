@@ -102,6 +102,7 @@ gate pass.
 | 3b12c | Durable trials, atomic usage admission, settlement and original-period carryover | Passed |
 | 3b12d | Verified subscription projection, paid proof, refunds and atomic event receipts | Passed |
 | 3b12e | Billing management contexts, currency renewal intents and refund-renewal confirmations | Passed |
+| 3b12f | Verified provider catalogue, invoice/refund proofs, native checkout and subscription reconciliation | Passed |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -2844,3 +2845,41 @@ these routes do not represent a completed rewrite.
   previously timed-out JavaScript files passed unchanged. The 607 external fixture
   tests remain skipped. Evidence:
   `.forge/rust-rewrite/milestone-3b12e-correction-awake.log` (exit 0).
+
+### Milestone 3b12f
+
+- Provider observations verify all active catalogue prices, required nullable
+  lifecycle fields, exact customer/subscription binding and restrictive pauses,
+  cancellation and termination before producing a subscription snapshot.
+- Invoice evidence retains exact safe-integer checks, signed balance arithmetic,
+  current-period allocation and non-refunded payment proof. Refund observations
+  validate full/partial status and period/upgrade allocation. Starter basis
+  searches and paid upgrade searches stop after three pages.
+- The native Polar adapter matches the installed 2026-10 SDK's origins, version
+  header, paths, repeated query keys and JSON bodies. Requests use fixed approved
+  endpoints, 15-second deadlines, no redirects or retries, bounded response
+  bodies and generic transport errors without provider content or credentials.
+- Checkout and portal adapters preserve the source's injected live-context seam.
+  Checkout rechecks authority, country and seats after catalogue I/O; portal
+  rechecks authority before returning the hosted URL. Redirects remain pending
+  and grant no access. No billing-country persistence or public route is invented.
+- Subscription and order-paid reconciliation always retrieve current provider
+  data and publish through the existing transactional store sink. Missing paid
+  proof cannot invent proof; unsupported resumes remain restrictive.
+- Source-generated comparisons cover the owning validators, checkout/portal,
+  reconciliation request sequences and actual installed SDK request formatting.
+  Live provider qualification and refund/renewal/webhook orchestration remain
+  subsequent work. Full milestone gate pending.
+
+- The initial gate passed all source-fixture checks, formatting and three
+  TypeScript checks. Clippy reported test-module placement and an unchecked
+  fixture read length; both fixture issues are corrected. Disposable PostgreSQL
+  setup was denied by the execution sandbox, so Rust/reference suites did not
+  run in that attempt. The full gate must be repeated with local fixture access.
+  Initial evidence: `.forge/rust-rewrite/milestone-3b12f-initial.log` (exit 1).
+
+- The corrected full gate passed: 708 Rust tests, 3,013 enabled reference tests,
+  all three TypeScript checks, formatting, Clippy and source-fixture checks.
+  The new comparisons cover 2,409 owning-source/installed-SDK cases; the real
+  PostgreSQL integration also passed. The 607 external fixture tests remain
+  skipped. Evidence: `.forge/rust-rewrite/milestone-3b12f-correction.log` (exit 0).

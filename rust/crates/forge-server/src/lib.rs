@@ -3,6 +3,7 @@
 pub mod agent_runtime;
 pub mod agents;
 mod auth;
+pub mod billing_provider;
 pub mod call_providers;
 mod calls;
 mod definitions;
