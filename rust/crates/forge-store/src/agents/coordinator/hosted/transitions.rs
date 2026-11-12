@@ -309,6 +309,23 @@ impl Service {
         } else {
             None
         };
+        let reviewer = if let Some(binding) = &self.loop_binding {
+            Some(
+                crate::loops::decision_reviewer(
+                    &mut tx,
+                    &actor,
+                    binding.run_id,
+                    id,
+                    match decision {
+                        Decision::Approved => "approve",
+                        Decision::Denied => "deny",
+                    },
+                )
+                .await?,
+            )
+        } else {
+            None
+        };
         let result = approval_service::Service::new(self.database.clone())
             .with_clock(self.now.clone())
             .resolve_in(&mut tx, &actor, id, decision)
@@ -323,6 +340,16 @@ impl Service {
                 return Err(e);
             }
         };
+        if let Some(reviewer) = reviewer {
+            sqlx::query(
+                "UPDATE agent_approvals SET resolved_by_user_id=$2 WHERE id=$1 AND run_id=$3",
+            )
+            .bind(id)
+            .bind(reviewer)
+            .bind(run.id)
+            .execute(&mut *tx)
+            .await?;
+        }
         let run = runs::get_in(&mut tx, &actor.workspace_id, run.id)
             .await?
             .ok_or_else(run_missing)?;

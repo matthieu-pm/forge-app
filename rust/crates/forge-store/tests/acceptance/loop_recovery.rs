@@ -1,4 +1,93 @@
 use super::agent_blobs as loop_blobs;
+
+struct CountExecutor(std::sync::atomic::AtomicUsize);
+#[async_trait::async_trait]
+impl forge_store::loops::Executor for CountExecutor {
+    async fn execute(
+        &self,
+        _: forge_core::actor::Actor,
+        _: forge_store::loops::ClaimedRun,
+        _: serde_json::Value,
+    ) -> Result<forge_store::loops::ExecutionResult, StoreError> {
+        self.0.fetch_add(1, Ordering::SeqCst);
+        Ok(forge_store::loops::ExecutionResult {
+            state: forge_store::loops::ExecutionState::Completed,
+            result: None,
+            error_code: None,
+        })
+    }
+}
+
+#[tokio::test]
+async fn loop_claims_require_recovery_acknowledgement_before_dispatch_and_never_reclaim_uncertainty()
+ {
+    let (f, actor, team, s) = setup().await;
+    let definition = Uuid::new_v4();
+    let fields = json!({"name":"Recovery claim","description":"","instructions":"Handle event","trigger":{"kind":"event","entity":"issue","event":"created"},"conditions":[],"reasoning":"auto","teamAccess":"this-team"});
+    s.command(
+        &actor,
+        &team.id.to_string(),
+        &Uuid::new_v4().to_string(),
+        json!({"action":"create","id":definition,"fields":fields}),
+    )
+    .await
+    .unwrap();
+    s.command(
+        &actor,
+        &team.id.to_string(),
+        &Uuid::new_v4().to_string(),
+        json!({"action":"enable","id":definition,"expectedRevision":1}),
+    )
+    .await
+    .unwrap();
+    let mut tx = f.database.begin().await.unwrap();
+    tx.prepare().await.unwrap();
+    let run:Uuid=sqlx::query_scalar("INSERT INTO loop_runs(workspace_id,loop_id,loop_revision,event_key,event_hash,event,fields,authorizer_id) SELECT workspace_id,id,revision,$2,$2,'{\"kind\":\"manual\"}',fields,$3 FROM team_loops WHERE id=$1 RETURNING id")
+        .bind(definition).bind(Uuid::new_v4().to_string()).bind(&actor.user_id).fetch_one(&mut *tx).await.unwrap();
+    tx.commit().await.unwrap();
+    let executor = CountExecutor(std::sync::atomic::AtomicUsize::new(0));
+    for (mode, expected) in [(1, "queued"), (2, "running")] {
+        f.backend.mode.store(mode, Ordering::SeqCst);
+        assert!(matches!(
+            s.execute_next_with(&executor, Some(&actor.workspace_id))
+                .await,
+            Err(StoreError::Recovery(_))
+        ));
+        let state: String = sqlx::query_scalar("SELECT state FROM loop_runs WHERE id=$1")
+            .bind(run)
+            .fetch_one(&f.pool)
+            .await
+            .unwrap();
+        assert_eq!(state, expected);
+        assert_eq!(executor.0.load(Ordering::SeqCst), 0);
+    }
+    f.backend.mode.store(0, Ordering::SeqCst);
+    assert_eq!(
+        s.execute_next_with(&executor, Some(&actor.workspace_id))
+            .await
+            .unwrap(),
+        None
+    );
+    s.expire_runs(
+        chrono::Utc::now() + chrono::Duration::minutes(6),
+        Some(&actor.workspace_id),
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        s.execute_next_with(&executor, Some(&actor.workspace_id))
+            .await
+            .unwrap(),
+        None
+    );
+    let state: String = sqlx::query_scalar("SELECT state FROM loop_runs WHERE id=$1")
+        .bind(run)
+        .fetch_one(&f.pool)
+        .await
+        .unwrap();
+    assert_eq!(state, "uncertain");
+    assert_eq!(executor.0.load(Ordering::SeqCst), 0);
+}
 use super::*;
 use serde_json::json;
 

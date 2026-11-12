@@ -92,6 +92,7 @@ gate pass.
 | 3b10c | Native loop event dispatch, schedule/cycle capture and expired-run reconciliation | Passed |
 | 3b10d | Actor-scoped resource predicates and shared read projections | Passed |
 | 3b10e | Live loop authority, model and run binding, durable artifact publication | Passed |
+| 3b10f | Bound cloud loop execution, durable claims and decision settlement | Passed |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -2465,3 +2466,37 @@ these routes do not represent a completed rewrite.
   tests**, and **three typechecks**, including all fixtures, formatting and
   Clippy. The 607 external-fixture tests in 31 files remain skipped.
   Evidence: `.forge/rust-rewrite/milestone-3b10e-fixtures.log`.
+
+### Milestone 3b10f
+
+- The worker claims queued work, pending approval decisions and cancellations with
+  row locks plus a workspace advisory lock. A second check enforces one active
+  run per workspace. Uncertain starts quarantine that workspace for the existing
+  lease window and are never automatically requeued. Recovery acknowledgement
+  must succeed before the executor is contacted.
+- A private coordinator binding permits only the captured loop, thread and agent
+  run. Ordinary personal-thread access remains fenced. The cloud executor uses
+  workspace server models, immutable captured instructions, current source
+  context, explicit reasoning only when selected, and the original four-minute
+  deadline. The per-user budget is removed for synthetic principals while the
+  workspace budget remains enforced. Local execution remains unavailable to loops.
+- Approval decisions recheck live membership, team visibility and invocation
+  policy. The coordinator repeats this check in the resolution transaction and
+  attributes the approval to its human reviewer there. Lost reviewer access
+  returns the loop to waiting. Concurrent cancellation survives both waiting
+  results and execution failure; disabled loops can settle their cancellation
+  without extending the original execution window.
+- Cloud execution refuses to dispatch an already-created reserved agent run,
+  persists bounded progress, and requires a terminal or waiting agent state.
+  Settlement updates only a still-running loop; ambiguous execution becomes
+  uncertain rather than retrying effects.
+- Ten new database/recovery scenarios exercise workspace contention, concurrent
+  cancellation, uncertainty quarantine, source and deadline revocation, reviewer
+  revocation, reserved identity and shared-thread boundaries, real coordinator
+  approval resumption and cancellation, workspace budgets, and failed claim
+  acknowledgement. Provider calls use local runtime/model doubles. Scheduler
+  HTTP/operator wiring remains the next integration step.
+- The full gate passed **615 Rust tests**, **3,013 enabled reference tests**, and
+  **three typechecks**, including all fixtures, formatting and Clippy. The 607
+  external-fixture tests in 31 files remain skipped.
+  Evidence: `.forge/rust-rewrite/milestone-3b10f-initial.log`.

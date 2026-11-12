@@ -86,9 +86,15 @@ impl Service {
                         .is_none_or(|p| p.iter().any(|p| p == &provider))
             })
             .collect();
-        let result = routing::resolve(
-            &json!({"mode":input["selectionMode"],"message":input["message"],"availableModels":catalog,"manualModel":input["model"],"reasoningEffort":input["reasoningEffort"],"preferredOpenAIConnectionId":input["preferredOpenAIConnectionId"]}),
-        )?;
+        let mut request = json!({"mode":input["selectionMode"],"message":input["message"],"availableModels":catalog,"manualModel":input["model"],"reasoningEffort":input["reasoningEffort"],"preferredOpenAIConnectionId":input["preferredOpenAIConnectionId"]});
+        let result = if self.loop_binding.is_some() {
+            if input.get("reasoningEffort").is_none() {
+                request.as_object_mut().unwrap().remove("reasoningEffort");
+            }
+            forge_core::loops::resolve_model(&request)?
+        } else {
+            routing::resolve(&request)?
+        };
         // The connection's catalog is the provider authority. A client-supplied
         // reference cannot change which provider receives the run credential.
         if result["model"]["provider"] != result["route"]["provider"] {
@@ -174,7 +180,46 @@ impl Service {
             .ok_or_else(thread_missing)?;
         }
         let model = &resolved["model"];
-        let run=runs::create_in(&mut tx,&CreateRun{id:Uuid::new_v4(),thread_id:id,initiated_by_user_id:actor.user_id.clone(),state:RunState::Created,execution_kind:decode(model["executionKind"].clone())?,requested_selection:json!({"mode":input["selectionMode"],"selectionId":resolved["requestedSelection"],"provider":model["provider"],"billingMode":resolved["route"]["billingMode"]}),resolved_connection_id:Some(parse_id(&model["connectionId"])?),resolved_model_id:decode(model["modelId"].clone())?,reasoning_effort:decode(resolved["reasoningEffort"].clone())?,routing_policy_version:decode(resolved["routingPolicyVersion"].clone())?,routing_reason:decode(resolved["routingReason"].clone())?,runtime_run_id:None,input_tokens:0,output_tokens:0,cached_input_tokens:0,cost_micros:0,started_at:None,completed_at:None,error_code:None}).await?;
+        let run_id = self
+            .loop_binding
+            .as_ref()
+            .map_or_else(Uuid::new_v4, |b| b.agent_run_id);
+        if self.loop_binding.is_some()
+            && runs::get_in(&mut tx, &actor.workspace_id, run_id)
+                .await?
+                .is_some()
+        {
+            return Err(StoreError::LoopPolicy("UNCERTAIN_DISPATCH"));
+        }
+        let mut selection = json!({"mode":input["selectionMode"],"selectionId":resolved["requestedSelection"],"provider":model["provider"],"billingMode":resolved["route"]["billingMode"]});
+        if let Some(binding) = &self.loop_binding {
+            selection["loopRunId"] = json!(binding.run_id);
+        }
+        let run = runs::create_in(
+            &mut tx,
+            &CreateRun {
+                id: run_id,
+                thread_id: id,
+                initiated_by_user_id: actor.user_id.clone(),
+                state: RunState::Created,
+                execution_kind: decode(model["executionKind"].clone())?,
+                requested_selection: selection,
+                resolved_connection_id: Some(parse_id(&model["connectionId"])?),
+                resolved_model_id: decode(model["modelId"].clone())?,
+                reasoning_effort: decode(resolved["reasoningEffort"].clone())?,
+                routing_policy_version: decode(resolved["routingPolicyVersion"].clone())?,
+                routing_reason: decode(resolved["routingReason"].clone())?,
+                runtime_run_id: None,
+                input_tokens: 0,
+                output_tokens: 0,
+                cached_input_tokens: 0,
+                cost_micros: 0,
+                started_at: None,
+                completed_at: None,
+                error_code: None,
+            },
+        )
+        .await?;
         let public_attachments: Vec<_> = attachments
             .iter()
             .cloned()

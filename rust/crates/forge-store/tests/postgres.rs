@@ -46,6 +46,8 @@ mod loop_artifact_acceptance;
 mod loop_authority_acceptance;
 #[path = "acceptance/loop_dispatch.rs"]
 mod loop_dispatch_acceptance;
+#[path = "acceptance/loop_execution.rs"]
+mod loop_execution_acceptance;
 #[path = "acceptance/loop_models.rs"]
 mod loop_model_acceptance;
 #[path = "acceptance/planning.rs"]

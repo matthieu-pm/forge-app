@@ -14,9 +14,11 @@ use uuid::Uuid;
 
 mod hosted;
 mod local;
+mod loop_binding;
 mod selection;
 pub use hosted::{Hosted, RunSession};
 pub use local::PreparedLocal;
+pub(crate) use loop_binding::LoopBinding;
 pub const CODEX_LOCAL_CONNECTION_ID: &str = "00000000-0000-4000-8000-000000000099";
 
 #[derive(Clone)]
@@ -26,6 +28,7 @@ pub struct Service {
     pub hosted: Option<Arc<Hosted>>,
     pub controls: Value,
     pub now: Arc<dyn Fn() -> DateTime<Utc> + Send + Sync>,
+    loop_binding: Option<LoopBinding>,
 }
 impl Service {
     pub fn new(database: Database) -> Self {
@@ -35,6 +38,7 @@ impl Service {
             hosted: None,
             controls: policy::controls(&Default::default()),
             now: Arc::new(Utc::now),
+            loop_binding: None,
         }
     }
     fn time(&self) -> DateTime<Utc> {
@@ -59,18 +63,21 @@ impl Service {
             return Err(StoreError::Forbidden);
         }
         let actor = current_actor(&mut tx, actor).await?;
+        if self.loop_binding.is_some() && !self.bound_loop(&actor) {
+            return Err(StoreError::Forbidden);
+        }
         if !actor.has_scope(scope) {
             return Err(StoreError::Forbidden);
         }
         Ok((tx, actor))
     }
     async fn invoke(&self, tx: &mut JournalTransaction, actor: &Actor) -> Result<(), StoreError> {
-        if matches!(
-            actor.authentication,
-            Authentication::Agent { .. } | Authentication::Loop { .. }
-        ) || !crate::security::settings(tx, &actor.workspace_id)
-            .await?
-            .allows(actor, SecurityAction::AgentsInvoke)
+        if matches!(actor.authentication, Authentication::Agent { .. })
+            || (matches!(actor.authentication, Authentication::Loop { .. })
+                && !self.bound_loop(actor))
+            || !crate::security::settings(tx, &actor.workspace_id)
+                .await?
+                .allows(actor, SecurityAction::AgentsInvoke)
         {
             return Err(StoreError::Forbidden);
         }
@@ -103,7 +110,9 @@ impl Service {
         .bind(&actor.workspace_id)
         .fetch_one(&mut **tx)
         .await?;
-        if shared {
+        if (shared && !self.bound_loop_thread(actor, id))
+            || (!shared && self.loop_binding.is_some())
+        {
             return Err(StoreError::Forbidden);
         }
         if let Authentication::Agent { run_id, .. } = &actor.authentication {
@@ -127,7 +136,8 @@ impl Service {
             .await?
             .filter(|r| r.initiated_by_user_id == actor.user_id)
             .ok_or_else(run_missing)?;
-        if run.requested_selection.get("loopRunId").is_some()
+        if (run.requested_selection.get("loopRunId").is_some() && !self.bound_loop_run(actor, &run))
+            || (self.loop_binding.is_some() && !self.bound_loop_run(actor, &run))
             || matches!(&actor.authentication,Authentication::Agent{run_id,..}if run_id!=&id.to_string())
         {
             return Err(StoreError::Forbidden);

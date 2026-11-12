@@ -60,16 +60,7 @@ pub(super) fn context(
             .as_str()
             .unwrap()
             .into(),
-        deadline_ms: run
-            .started_at
-            .unwrap_or_else(|| service.time())
-            .timestamp_millis()
-            .saturating_add(
-                service.controls["runWallClockMs"]
-                    .as_i64()
-                    .unwrap_or(900000)
-                    .clamp(1, 900000),
-            ),
+        deadline_ms: service.run_deadline(run),
         runtime_session_id: thread.runtime_session_id.clone(),
         correlation_id: correlation,
         checkpoint: Arc::new(Checkpoint {
@@ -148,12 +139,7 @@ pub(super) fn open(mut p: Prepared) -> EventStream {
                 });
                 state.deadline = Some(
                     Instant::now()
-                        + Duration::from_millis(
-                            state.p.service.controls["runWallClockMs"]
-                                .as_u64()
-                                .unwrap_or(900000)
-                                .min(900000),
-                        ),
+                        + Duration::from_millis(state.p.service.stream_window(&state.p.run)),
                 );
             }
             if Instant::now() >= state.deadline.unwrap() {

@@ -17,6 +17,9 @@ impl Service {
         input: Value,
     ) -> Result<PreparedLocal, StoreError> {
         let (mut tx, actor) = self.begin(actor, ApiScope::AgentsWrite, false).await?;
+        if actor.loop_scope.is_some() {
+            return Err(StoreError::Forbidden);
+        }
         self.invoke(&mut tx, &actor).await?;
         let input = contracts::turn(input, true).map_err(|_| StoreError::InvalidInput)?;
         let id = parse_id(&input["threadId"])?;
