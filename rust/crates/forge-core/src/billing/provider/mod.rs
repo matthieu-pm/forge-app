@@ -10,7 +10,7 @@ pub mod subscription;
 pub use catalog::catalog;
 pub use subscription::snapshot;
 
-pub(super) fn instant(value: &Value) -> Result<DateTime<Utc>> {
+pub fn instant(value: &Value) -> Result<DateTime<Utc>> {
     if !value.as_str().is_some_and(|s| money::INSTANT.is_match(s)) {
         return Err(invalid());
     }

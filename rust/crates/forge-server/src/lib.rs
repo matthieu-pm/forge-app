@@ -3,6 +3,7 @@
 pub mod agent_runtime;
 pub mod agents;
 mod auth;
+pub mod billing;
 pub mod billing_provider;
 pub mod call_providers;
 mod calls;
@@ -51,6 +52,7 @@ pub fn router() -> Router {
 
 pub fn router_with_state(state: state::AppState) -> Router {
     let auth_routes = Router::new()
+        .route("/api/workspace/billing", get(billing::summary))
         .route(
             "/api/account/profile",
             get(profiles::read)
@@ -408,6 +410,10 @@ pub fn router_with_state(state: state::AppState) -> Router {
             public_api::guard,
         ));
     Router::new()
+        .route(
+            "/api/billing/polar/webhook",
+            axum::routing::any(billing::webhook),
+        )
         .route(
             "/api/loops/webhooks/{loop_id}",
             axum::routing::any(loops::webhook),

@@ -28,13 +28,19 @@ pub fn build_request(
         _ => return Err(Error("INVALID_BILLING_CONFIGURATION")),
     };
     let (method, path) = match operation {
-        Operation::Product(id) | Operation::Subscription(id) | Operation::Order(id)
+        Operation::Product(id)
+        | Operation::Subscription(id)
+        | Operation::Order(id)
+        | Operation::UpdateSubscription(id)
+        | Operation::ReadCheckout(id)
             if !forge_core::text::is_uuid(&id) =>
         {
             return Err(Error("INVALID_BILLING_INPUT"));
         }
         Operation::Product(id) => ("GET", format!("/v1/products/{id}")),
         Operation::Subscription(id) => ("GET", format!("/v1/subscriptions/{id}")),
+        Operation::UpdateSubscription(id) => ("PATCH", format!("/v1/subscriptions/{id}")),
+        Operation::ReadCheckout(id) => ("GET", format!("/v1/checkouts/{id}")),
         Operation::Order(id) => ("GET", format!("/v1/orders/{id}")),
         Operation::Orders => ("GET", "/v1/orders/".into()),
         Operation::Checkout => ("POST", "/v1/checkouts/".into()),
@@ -66,17 +72,27 @@ fn validate(request: &Request) -> Result<(), Error> {
     let path = url.path();
     let is_list = path == "/v1/orders/";
     let get = is_list
-        || ["/v1/products/", "/v1/subscriptions/", "/v1/orders/"]
-            .iter()
-            .any(|prefix| {
-                path.strip_prefix(prefix)
-                    .is_some_and(forge_core::text::is_uuid)
-            });
+        || [
+            "/v1/products/",
+            "/v1/subscriptions/",
+            "/v1/orders/",
+            "/v1/checkouts/",
+        ]
+        .iter()
+        .any(|prefix| {
+            path.strip_prefix(prefix)
+                .is_some_and(forge_core::text::is_uuid)
+        });
     let post = ["/v1/checkouts/", "/v1/customer-sessions/"].contains(&path);
+    let patch = path
+        .strip_prefix("/v1/subscriptions/")
+        .is_some_and(forge_core::text::is_uuid)
+        && request.body.as_ref().is_some_and(subscription_patch);
     if !((request.method == "GET" && get && request.body.is_none())
         || (request.method == "POST"
             && post
-            && request.body.as_ref().is_some_and(Value::is_object)))
+            && request.body.as_ref().is_some_and(Value::is_object))
+        || (request.method == "PATCH" && patch))
         || (!is_list && url.query().is_some())
         || url
             .query_pairs()
@@ -85,6 +101,26 @@ fn validate(request: &Request) -> Result<(), Error> {
         return Err(invalid());
     }
     Ok(())
+}
+fn subscription_patch(value: &Value) -> bool {
+    let Some(fields) = value.as_object() else {
+        return false;
+    };
+    if fields.len() == 1 {
+        return value.get("cancel_at_period_end") == Some(&Value::Bool(true))
+            || value.get("pending_update") == Some(&Value::Null);
+    }
+    if fields.len() != 2 {
+        return false;
+    }
+    if let Some(id) = value.get("product_id").and_then(Value::as_str) {
+        return forge_core::text::is_uuid(id)
+            && ["invoice", "next_period"]
+                .iter()
+                .any(|v| value["proration_behavior"] == *v);
+    }
+    value["proration_behavior"] == "next_period"
+        && forge_core::billing::safe_integer(&value["seats"], 1).is_ok()
 }
 pub struct HttpTransport(reqwest::Client);
 impl HttpTransport {
@@ -175,6 +211,10 @@ mod tests {
                 "orders" => Operation::Orders,
                 "checkout" => Operation::Checkout,
                 "portal" => Operation::Portal,
+                "read-checkout" => Operation::ReadCheckout(id),
+                "update-cancel" | "update-product" | "update-seats" | "update-clear" => {
+                    Operation::UpdateSubscription(id)
+                }
                 _ => panic!(),
             };
             let query = serde_json::from_value(case["query"].clone()).unwrap();
@@ -265,6 +305,34 @@ mod tests {
         );
         assert!(build_request("sandbox", Operation::Checkout, None, vec![]).is_err());
         assert!(build_request("sandbox", Operation::Orders, Some(json!({})), vec![]).is_err());
+        // Only the source-owned renewal/cancellation mutations may cross this
+        // credential boundary. Reject entitlements, money and mixed updates.
+        for body in [
+            json!({"cancel_at_period_end":false}),
+            json!({"cancel_at_period_end":true,"amount":1}),
+            json!({"pending_update":{}}),
+            json!({"pending_update":null,"seats":2}),
+            json!({"product_id":id,"proration_behavior":"prorate"}),
+            json!({"product_id":"../products/","proration_behavior":"invoice"}),
+            json!({"product_id":id,"proration_behavior":"invoice","seats":1}),
+            json!({"seats":2,"proration_behavior":"invoice"}),
+            json!({"seats":0,"proration_behavior":"next_period"}),
+            json!({"seats":1.5,"proration_behavior":"next_period"}),
+            json!({"seats":9007199254740992_u64,"proration_behavior":"next_period"}),
+            json!({"amount":1000,"proration_behavior":"next_period"}),
+        ] {
+            assert_eq!(
+                build_request(
+                    "sandbox",
+                    Operation::UpdateSubscription(id.into()),
+                    Some(body),
+                    vec![]
+                )
+                .unwrap_err()
+                .0,
+                "BILLING_PROVIDER_REQUEST_INVALID"
+            );
+        }
     }
 
     async fn local_response(status: u16, body: Vec<u8>, chunked: bool) -> reqwest::Response {

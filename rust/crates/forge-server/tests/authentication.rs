@@ -21,6 +21,8 @@ use uuid::Uuid;
 
 #[path = "acceptance/agents_http.rs"]
 mod agents_http;
+#[path = "acceptance/billing_http.rs"]
+mod billing_http;
 #[path = "acceptance/calls_http.rs"]
 mod calls_http;
 #[path = "acceptance/files_http.rs"]

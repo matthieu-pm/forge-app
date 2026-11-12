@@ -103,6 +103,7 @@ gate pass.
 | 3b12d | Verified subscription projection, paid proof, refunds and atomic event receipts | Passed |
 | 3b12e | Billing management contexts, currency renewal intents and refund-renewal confirmations | Passed |
 | 3b12f | Verified provider catalogue, invoice/refund proofs, native checkout and subscription reconciliation | Passed |
+| 3b12g | Renewal mutations, signed webhook recovery, replacement proofs and authenticated billing summary | In progress |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -2883,3 +2884,36 @@ these routes do not represent a completed rewrite.
   The new comparisons cover 2,409 owning-source/installed-SDK cases; the real
   PostgreSQL integration also passed. The 607 external fixture tests remain
   skipped. Evidence: `.forge/rust-rewrite/milestone-3b12f-correction.log` (exit 0).
+
+### Milestone 3b12g
+
+- Native plan, seat, cancellation and currency-intent adapters preserve the
+  owning service's live authority checks and current/renewal quantity boundaries.
+  Provider updates are limited to the source-owned PATCH bodies and are never
+  automatically replayed after an unknown response. Refund renewal re-reads the
+  provider and durable revision before confirming a scheduled Starter renewal.
+- Signed Polar webhook ingestion is independently default-off and uses the
+  pinned SDK's exact signature, timestamp, event identity and decoding behavior.
+  Event content identifies the resource; current provider reads establish facts.
+  Refund restrictions commit before renewal effects or missing-base errors, so
+  retries can recover evidence without repeating accepted provider mutations.
+- The fixed-origin ECB reader bounds XML bytes, rejects DTD/entities, preserves
+  JavaScript whitespace/date semantics and verifies rate freshness. Replacement
+  verification joins order, checkout, subscription, calendar and live context
+  proof and produces a read-only plan; it performs no subscription cutover.
+- The authenticated billing summary shares the persisted access policy, counts
+  all accepted membership roles and publishes only the owning five summary
+  fields. Billing enablement and explicit workspace rollout are required.
+  Replacement context requires live admin authority, current subscription
+  binding and an explicit original billing anchor.
+- Source-generated comparison fixtures and PostgreSQL/HTTP acceptance checks
+  are assembled for the full milestone gate. Live provider qualification, Rust
+  web UI, macOS host and migration rehearsal remain later milestones.
+
+- The initial gate passed source fixtures, formatting, the original JavaScript
+  suites and all three TypeScript checks. Rust compilation found a private-core
+  validator reference in the new summary read. It now uses the existing public
+  billing instant validator, whose regex and date parsing are identical. No
+  validator behavior was loosened. Rust tests did not execute in this attempt;
+  the complete gate must pass again. Evidence:
+  `.forge/rust-rewrite/milestone-3b12g-initial.log` (exit 1).

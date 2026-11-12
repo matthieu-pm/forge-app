@@ -1,0 +1,5981 @@
+{
+  "config": {
+    "enabled": true,
+    "environment": "sandbox",
+    "accessToken": "fixture-token",
+    "webhookSecret": "fixture-webhook-secret",
+    "appUrl": "https://forge.example.test",
+    "paidProducts": {
+      "starter": {
+        "usd": "00000000-0000-4000-8000-000000000001",
+        "eur": "00000000-0000-4000-8000-000000000002"
+      },
+      "plus": {
+        "usd": "00000000-0000-4000-8000-000000000003",
+        "eur": "00000000-0000-4000-8000-000000000004"
+      }
+    }
+  },
+  "cases": [
+    {
+      "name": "known-event/benefit.created",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoiYmVuZWZpdC5jcmVhdGVkIiwiZGF0YSI6eyJpZCI6ImFiY2RlZmFiLWNkZWYtNGRlZi04ZGVmLWFiY2RlZmFiY2RlZiIsImN1c3RvbWVyIjp7ImV4dGVybmFsX2lkIjoiZm9yZ2U6d29ya3NwYWNlOndvcmtzcGFjZSJ9fX0="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,U62fL2AxiRR+pzOt6jhilpLcCwD6iK47OaK1jF3MeQM="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "known-event/benefit.updated",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoiYmVuZWZpdC51cGRhdGVkIiwiZGF0YSI6eyJpZCI6ImFiY2RlZmFiLWNkZWYtNGRlZi04ZGVmLWFiY2RlZmFiY2RlZiIsImN1c3RvbWVyIjp7ImV4dGVybmFsX2lkIjoiZm9yZ2U6d29ya3NwYWNlOndvcmtzcGFjZSJ9fX0="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,kQZ11yD7PVPgCWzKcT+n+SGLgzevydUo3uxZbeSwwpA="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "known-event/benefit_grant.created",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoiYmVuZWZpdF9ncmFudC5jcmVhdGVkIiwiZGF0YSI6eyJpZCI6ImFiY2RlZmFiLWNkZWYtNGRlZi04ZGVmLWFiY2RlZmFiY2RlZiIsImN1c3RvbWVyIjp7ImV4dGVybmFsX2lkIjoiZm9yZ2U6d29ya3NwYWNlOndvcmtzcGFjZSJ9fX0="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,bIfwjqm63a14EL/ZKH7ZNkdAAnSXrqFrWk7Fl6Whto0="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "known-event/benefit_grant.cycled",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoiYmVuZWZpdF9ncmFudC5jeWNsZWQiLCJkYXRhIjp7ImlkIjoiYWJjZGVmYWItY2RlZi00ZGVmLThkZWYtYWJjZGVmYWJjZGVmIiwiY3VzdG9tZXIiOnsiZXh0ZXJuYWxfaWQiOiJmb3JnZTp3b3Jrc3BhY2U6d29ya3NwYWNlIn19fQ=="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,Odid4N9QfBraOf0NYaAvGYOmMl2qX8llonFABbCb7KA="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "known-event/benefit_grant.revoked",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoiYmVuZWZpdF9ncmFudC5yZXZva2VkIiwiZGF0YSI6eyJpZCI6ImFiY2RlZmFiLWNkZWYtNGRlZi04ZGVmLWFiY2RlZmFiY2RlZiIsImN1c3RvbWVyIjp7ImV4dGVybmFsX2lkIjoiZm9yZ2U6d29ya3NwYWNlOndvcmtzcGFjZSJ9fX0="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,8PMdOs648RNA5fd9wKXLGl6ll19lo2FMe2X1cJuvE1k="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "known-event/benefit_grant.updated",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoiYmVuZWZpdF9ncmFudC51cGRhdGVkIiwiZGF0YSI6eyJpZCI6ImFiY2RlZmFiLWNkZWYtNGRlZi04ZGVmLWFiY2RlZmFiY2RlZiIsImN1c3RvbWVyIjp7ImV4dGVybmFsX2lkIjoiZm9yZ2U6d29ya3NwYWNlOndvcmtzcGFjZSJ9fX0="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,wrDLxPZiDvTh/iv/vD9jvA38P/lIXSLsVvnkp4eh04Q="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "known-event/checkout.created",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoiY2hlY2tvdXQuY3JlYXRlZCIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,c62eKm4DTFsCh3U1EQxbXMirgKKLhfrQDmYnLAOHj0o="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "known-event/checkout.expired",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoiY2hlY2tvdXQuZXhwaXJlZCIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,XQJYko7ImEPQRV2OL2LZChAxPOIoM8Qy+7YDvIBb8M8="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "known-event/checkout.updated",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoiY2hlY2tvdXQudXBkYXRlZCIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,YNzj5inYHMpad4z6x2KfrADgq483kK2bjNBCkYKeAFQ="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "known-event/customer.created",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoiY3VzdG9tZXIuY3JlYXRlZCIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,ZfeiMBbhv1DjxHQ6hrIPrVwp2z5ZeF/ILvsXe6aUdn0="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "known-event/customer.deleted",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoiY3VzdG9tZXIuZGVsZXRlZCIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,b44N3/1GgMG+hAd06aq+ijNoZAAvjDtX5Jf64PWfA6M="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "known-event/customer.state_changed",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoiY3VzdG9tZXIuc3RhdGVfY2hhbmdlZCIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,HbH1MMJEbg21QVmn41RSssSGjR4c+FSozs4odxAmw7s="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "known-event/customer.updated",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoiY3VzdG9tZXIudXBkYXRlZCIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,VZhwdOfpM9ONPf7hYF1z9oCnJ5OXN82jCxEAK4RxAhQ="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "known-event/customer_seat.assigned",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoiY3VzdG9tZXJfc2VhdC5hc3NpZ25lZCIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,lbE8qDRsSV4GztoW5lqk2/lP+4Vm9Hfsm5yz2153u6k="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "known-event/customer_seat.claimed",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoiY3VzdG9tZXJfc2VhdC5jbGFpbWVkIiwiZGF0YSI6eyJpZCI6ImFiY2RlZmFiLWNkZWYtNGRlZi04ZGVmLWFiY2RlZmFiY2RlZiIsImN1c3RvbWVyIjp7ImV4dGVybmFsX2lkIjoiZm9yZ2U6d29ya3NwYWNlOndvcmtzcGFjZSJ9fX0="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,8eHycfT8bosc7wgHg5qcn5eVbMFzoFNbXCi8GyvuOq8="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "known-event/customer_seat.revoked",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoiY3VzdG9tZXJfc2VhdC5yZXZva2VkIiwiZGF0YSI6eyJpZCI6ImFiY2RlZmFiLWNkZWYtNGRlZi04ZGVmLWFiY2RlZmFiY2RlZiIsImN1c3RvbWVyIjp7ImV4dGVybmFsX2lkIjoiZm9yZ2U6d29ya3NwYWNlOndvcmtzcGFjZSJ9fX0="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,Jtvb5WMZvngq7YVxoVo8WQ+vby5/r7mjJltq3+01Fgs="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "known-event/discount.created",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoiZGlzY291bnQuY3JlYXRlZCIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,BHqsh4O9s73EpzaimQaT7K6qQMZLEEdrulSbsuvKBz4="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "known-event/discount.deleted",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoiZGlzY291bnQuZGVsZXRlZCIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,+TdZu9YbhF41pm4co96NHD5yPbNba3NhrZE0L27ZZkA="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "known-event/discount.updated",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoiZGlzY291bnQudXBkYXRlZCIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,nFbJaiZ1kjVPq0XiglRrDBW7RsBDjxCWPOeIuEkyGgk="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "known-event/member.created",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoibWVtYmVyLmNyZWF0ZWQiLCJkYXRhIjp7ImlkIjoiYWJjZGVmYWItY2RlZi00ZGVmLThkZWYtYWJjZGVmYWJjZGVmIiwiY3VzdG9tZXIiOnsiZXh0ZXJuYWxfaWQiOiJmb3JnZTp3b3Jrc3BhY2U6d29ya3NwYWNlIn19fQ=="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,z3Px+Ki00IqjzW+qqvWKoVlo7wSyf5RtjlxeGiTQ+Rk="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "known-event/member.deleted",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoibWVtYmVyLmRlbGV0ZWQiLCJkYXRhIjp7ImlkIjoiYWJjZGVmYWItY2RlZi00ZGVmLThkZWYtYWJjZGVmYWJjZGVmIiwiY3VzdG9tZXIiOnsiZXh0ZXJuYWxfaWQiOiJmb3JnZTp3b3Jrc3BhY2U6d29ya3NwYWNlIn19fQ=="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,30hHIZ+Oki7LVKMfCL/LwPuxymaaQ7IUQoLaaaygYCw="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "known-event/member.updated",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoibWVtYmVyLnVwZGF0ZWQiLCJkYXRhIjp7ImlkIjoiYWJjZGVmYWItY2RlZi00ZGVmLThkZWYtYWJjZGVmYWJjZGVmIiwiY3VzdG9tZXIiOnsiZXh0ZXJuYWxfaWQiOiJmb3JnZTp3b3Jrc3BhY2U6d29ya3NwYWNlIn19fQ=="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,NUuTcIU2sQ4L+J5SSmpJEuJsU9lswZD8a2OfGoFVYYk="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "known-event/order.created",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoib3JkZXIuY3JlYXRlZCIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,f81fVq8YqyFvaLBcXLx02tF1xQyK+V0ReFk8DidPeUs="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "known-event/order.paid",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoib3JkZXIucGFpZCIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,k4W7Dy7s9wH88ushEa/kKSTdazq2B5yL3QA9roVWaZE="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "order",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "1ed9a1ad42138a3346780de4297a3ce3151a18d0ed38eb86ae0a3c50fac95ff9",
+            "orderId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "known-event/order.refunded",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoib3JkZXIucmVmdW5kZWQiLCJkYXRhIjp7ImlkIjoiYWJjZGVmYWItY2RlZi00ZGVmLThkZWYtYWJjZGVmYWJjZGVmIiwiY3VzdG9tZXIiOnsiZXh0ZXJuYWxfaWQiOiJmb3JnZTp3b3Jrc3BhY2U6d29ya3NwYWNlIn19fQ=="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,CtEO/pnQk/wev6FTl7rZ7zQXqSL9LL9xUjinGjRRi64="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "refund",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "ed83f22fc3db7688b69502038b65738cd7343448b9f22c59f54873db23a7bd5d",
+            "orderId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "known-event/order.updated",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoib3JkZXIudXBkYXRlZCIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,5Ns6qTnHAsz7OXvuVMRxloRT/zK1LFHebOmZk8G+vVw="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "known-event/organization.updated",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoib3JnYW5pemF0aW9uLnVwZGF0ZWQiLCJkYXRhIjp7ImlkIjoiYWJjZGVmYWItY2RlZi00ZGVmLThkZWYtYWJjZGVmYWJjZGVmIiwiY3VzdG9tZXIiOnsiZXh0ZXJuYWxfaWQiOiJmb3JnZTp3b3Jrc3BhY2U6d29ya3NwYWNlIn19fQ=="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,YtPXnjGWB8N/tlES5p9pYhGOSLmXmrn1SpmziGF6aYA="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "known-event/product.created",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoicHJvZHVjdC5jcmVhdGVkIiwiZGF0YSI6eyJpZCI6ImFiY2RlZmFiLWNkZWYtNGRlZi04ZGVmLWFiY2RlZmFiY2RlZiIsImN1c3RvbWVyIjp7ImV4dGVybmFsX2lkIjoiZm9yZ2U6d29ya3NwYWNlOndvcmtzcGFjZSJ9fX0="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,OJtcN4T2K++ue3TE43qm8oNM9ERMlTPXfsv8+HKiP/I="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "known-event/product.updated",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoicHJvZHVjdC51cGRhdGVkIiwiZGF0YSI6eyJpZCI6ImFiY2RlZmFiLWNkZWYtNGRlZi04ZGVmLWFiY2RlZmFiY2RlZiIsImN1c3RvbWVyIjp7ImV4dGVybmFsX2lkIjoiZm9yZ2U6d29ya3NwYWNlOndvcmtzcGFjZSJ9fX0="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,7ekwnHAdNHzF3v+JwzZEukTPu4AhaZgQRfLMkZTH+GU="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "known-event/refund.created",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoicmVmdW5kLmNyZWF0ZWQiLCJkYXRhIjp7ImlkIjoiYWJjZGVmYWItY2RlZi00ZGVmLThkZWYtYWJjZGVmYWJjZGVmIiwiY3VzdG9tZXIiOnsiZXh0ZXJuYWxfaWQiOiJmb3JnZTp3b3Jrc3BhY2U6d29ya3NwYWNlIn19fQ=="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,JHDeUnJjxpOr4+2EOvmK1bFAJ5xUUZ5F11+vMtYVhvw="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "known-event/refund.updated",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoicmVmdW5kLnVwZGF0ZWQiLCJkYXRhIjp7ImlkIjoiYWJjZGVmYWItY2RlZi00ZGVmLThkZWYtYWJjZGVmYWJjZGVmIiwiY3VzdG9tZXIiOnsiZXh0ZXJuYWxfaWQiOiJmb3JnZTp3b3Jrc3BhY2U6d29ya3NwYWNlIn19fQ=="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,AYwZR08gB+i0l2VBTqM7YlathQ4sTvefXj/z+WEvflk="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "known-event/subscription.active",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,BsZYtylZOSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrs="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "3475f55eff2daee56c4aa4f2ac1a97dc36c52aeececf5e75f9e70a3b42304101",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "known-event/subscription.canceled",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmNhbmNlbGVkIiwiZGF0YSI6eyJpZCI6ImFiY2RlZmFiLWNkZWYtNGRlZi04ZGVmLWFiY2RlZmFiY2RlZiIsImN1c3RvbWVyIjp7ImV4dGVybmFsX2lkIjoiZm9yZ2U6d29ya3NwYWNlOndvcmtzcGFjZSJ9fX0="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,ywdWhfMiatFAtfXwB1/wyg+KholmhJ1c61fj3xv7w7o="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "6e8d5d0a600e871503464c40b3324b4b8ace8a8c21ffb97150fb58078472b5f8",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "known-event/subscription.created",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmNyZWF0ZWQiLCJkYXRhIjp7ImlkIjoiYWJjZGVmYWItY2RlZi00ZGVmLThkZWYtYWJjZGVmYWJjZGVmIiwiY3VzdG9tZXIiOnsiZXh0ZXJuYWxfaWQiOiJmb3JnZTp3b3Jrc3BhY2U6d29ya3NwYWNlIn19fQ=="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,EYHFAdIpjFXGGx6sFFAg0OzMS3LY3RZMSL3svnas3kI="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "known-event/subscription.cycled",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmN5Y2xlZCIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,1zqJknn/BNNQEHbmJz/AXnGBjTOIQFNa4vCFRnJh960="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "known-event/subscription.migrated",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLm1pZ3JhdGVkIiwiZGF0YSI6eyJpZCI6ImFiY2RlZmFiLWNkZWYtNGRlZi04ZGVmLWFiY2RlZmFiY2RlZiIsImN1c3RvbWVyIjp7ImV4dGVybmFsX2lkIjoiZm9yZ2U6d29ya3NwYWNlOndvcmtzcGFjZSJ9fX0="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,RI9u23IxYpBdU/xIEJRbwBTZSu0i5mF7IYbsMpQaZKA="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "known-event/subscription.past_due",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLnBhc3RfZHVlIiwiZGF0YSI6eyJpZCI6ImFiY2RlZmFiLWNkZWYtNGRlZi04ZGVmLWFiY2RlZmFiY2RlZiIsImN1c3RvbWVyIjp7ImV4dGVybmFsX2lkIjoiZm9yZ2U6d29ya3NwYWNlOndvcmtzcGFjZSJ9fX0="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,o6CvxcfbjgHSaOZnYzmHvHhtd4z3Jc+NGVSIaiTE/gg="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "798997c49bd2c040f7d92ce65a279be132f783b068e88dd1101991f0e685fc6b",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "known-event/subscription.paused",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLnBhdXNlZCIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,hDO/rBFvlCNlQaP8H2agcS/YEWK/CxwDa+q6PeRMNKE="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "532984c48b3571b145ed4a6926127ee4835cc4b08f82514bd1a4619290ced3ab",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "known-event/subscription.resumed",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLnJlc3VtZWQiLCJkYXRhIjp7ImlkIjoiYWJjZGVmYWItY2RlZi00ZGVmLThkZWYtYWJjZGVmYWJjZGVmIiwiY3VzdG9tZXIiOnsiZXh0ZXJuYWxfaWQiOiJmb3JnZTp3b3Jrc3BhY2U6d29ya3NwYWNlIn19fQ=="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,OUL/jSI1x9ybPoZEin9WTEEmDyY6048JXml5yE4b10Y="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "16d6f72921d3241e1e7e40434aa9a126d2a7305a31bd4be7c7c726b4c760e3e0",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef",
+            "unsupportedResume": true
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "known-event/subscription.revoked",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLnJldm9rZWQiLCJkYXRhIjp7ImlkIjoiYWJjZGVmYWItY2RlZi00ZGVmLThkZWYtYWJjZGVmYWJjZGVmIiwiY3VzdG9tZXIiOnsiZXh0ZXJuYWxfaWQiOiJmb3JnZTp3b3Jrc3BhY2U6d29ya3NwYWNlIn19fQ=="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,tSkQ9tEOfBjpDvviRcylQgKeluRv7EqtPwfPLofhOB0="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "e48cc74a247b31af1a92d51e07d8d9667b0577365bd28d81ae14c87e53307c1a",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "known-event/subscription.uncanceled",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLnVuY2FuY2VsZWQiLCJkYXRhIjp7ImlkIjoiYWJjZGVmYWItY2RlZi00ZGVmLThkZWYtYWJjZGVmYWJjZGVmIiwiY3VzdG9tZXIiOnsiZXh0ZXJuYWxfaWQiOiJmb3JnZTp3b3Jrc3BhY2U6d29ya3NwYWNlIn19fQ=="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,IGcqI1RBnQRLr2Uy/KLgUY8nFmPaP9iqv9Z1mepVeE8="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "5969fa2e86136a736f436526ce8a545e26068bf0a690ba1073bb0336961010b5",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "known-event/subscription.updated",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLnVwZGF0ZWQiLCJkYXRhIjp7ImlkIjoiYWJjZGVmYWItY2RlZi00ZGVmLThkZWYtYWJjZGVmYWJjZGVmIiwiY3VzdG9tZXIiOnsiZXh0ZXJuYWxfaWQiOiJmb3JnZTp3b3Jrc3BhY2U6d29ya3NwYWNlIn19fQ=="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,E/kALIASl1kIfyuRc7OU1sUV9rVwixHUIUYWdgt5bD0="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "5ee93ab095609dfdc7c9ef85629c2cc893b9a44a7a348bd9fb72416aa5165c48",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "unknown-event/\"subscription.unknown\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLnVua25vd24iLCJkYXRhIjp7ImlkIjoiYWJjZGVmYWItY2RlZi00ZGVmLThkZWYtYWJjZGVmYWJjZGVmIiwiY3VzdG9tZXIiOnsiZXh0ZXJuYWxfaWQiOiJmb3JnZTp3b3Jrc3BhY2U6d29ya3NwYWNlIn19fQ=="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,5SgA478vxAvuIfqtwg5uhe5vGNZC4xnnS/839ISZxCo="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "unknown-event/\"ORDER.PAID\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoiT1JERVIuUEFJRCIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,FWlgTyISQ/eJXmApL/H3uz8QbQIa2jCggcxEP5VEBg0="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "unknown-event/\"\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoiIiwiZGF0YSI6eyJpZCI6ImFiY2RlZmFiLWNkZWYtNGRlZi04ZGVmLWFiY2RlZmFiY2RlZiIsImN1c3RvbWVyIjp7ImV4dGVybmFsX2lkIjoiZm9yZ2U6d29ya3NwYWNlOndvcmtzcGFjZSJ9fX0="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,3UNhbNzqfepuaA0DdM1mLVxdPg8ZrSD1oa+6zUQKh50="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "unknown-event/null",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjpudWxsLCJkYXRhIjp7ImlkIjoiYWJjZGVmYWItY2RlZi00ZGVmLThkZWYtYWJjZGVmYWJjZGVmIiwiY3VzdG9tZXIiOnsiZXh0ZXJuYWxfaWQiOiJmb3JnZTp3b3Jrc3BhY2U6d29ya3NwYWNlIn19fQ=="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,fT8lHScQ56KzMUpj91imdI4RyVscv2hLJswhUMSkkTE="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "unknown-event/10",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoxMCwiZGF0YSI6eyJpZCI6ImFiY2RlZmFiLWNkZWYtNGRlZi04ZGVmLWFiY2RlZmFiY2RlZiIsImN1c3RvbWVyIjp7ImV4dGVybmFsX2lkIjoiZm9yZ2U6d29ya3NwYWNlOndvcmtzcGFjZSJ9fX0="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,fQ01v8n7d05poTy7fS5Qhxad4naeA1TgUZ36L0p2NiQ="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "unknown-event/{}",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjp7fSwiZGF0YSI6eyJpZCI6ImFiY2RlZmFiLWNkZWYtNGRlZi04ZGVmLWFiY2RlZmFiY2RlZiIsImN1c3RvbWVyIjp7ImV4dGVybmFsX2lkIjoiZm9yZ2U6d29ya3NwYWNlOndvcmtzcGFjZSJ9fX0="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,5ei1VvE01Wj9O7skw0OMYKncsm5wgNd7/eb4QvydaqQ="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "unknown-event/[]",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjpbXSwiZGF0YSI6eyJpZCI6ImFiY2RlZmFiLWNkZWYtNGRlZi04ZGVmLWFiY2RlZmFiY2RlZiIsImN1c3RvbWVyIjp7ImV4dGVybmFsX2lkIjoiZm9yZ2U6d29ya3NwYWNlOndvcmtzcGFjZSJ9fX0="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,iDCXWTMGE+yGtm0Eb4FCOiff1jre5WZuxomr7sUnKrI="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "not-event/{}",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "e30="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,0nI2UiDuU9m33Lr4IYn98+6SfdiQF8A+fUzrt1mzy1I="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "not-event/[]",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "W10="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,TjBpz+rCprUGeH6q2ySyGRoQ68uESGP7jY0hzbJBpSs="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "not-event/null",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "bnVsbA=="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,UOIc6di8bzbDOsK5ils0Deq1i99n/YUfNAh3LXBVdY4="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "not-event/true",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "dHJ1ZQ=="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,GlY0feFtCc6UjloAWeIu24D+HBVfl683iBQ/2Cek1CY="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "not-event/1",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "MQ=="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,QdxScUr5BSLWz4sdOmBakbzvP70UcpeKxYOXRXZL4zw="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "not-event/\"event\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "ZXZlbnQ="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,tqo5xvASfP+sbpME7uO/oLklP6on36fD9kJPz/yRfaA="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "not-event/{\"data\":{\"id\":\"abcdefab-cdef-4def-8def-abcdefabcdef\",\"customer\":{\"external_id\":\"forge:workspace:workspace\"}}}",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJkYXRhIjp7ImlkIjoiYWJjZGVmYWItY2RlZi00ZGVmLThkZWYtYWJjZGVmYWJjZGVmIiwiY3VzdG9tZXIiOnsiZXh0ZXJuYWxfaWQiOiJmb3JnZTp3b3Jrc3BhY2U6d29ya3NwYWNlIn19fQ=="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,tvLf/WtxoJabCerlq4sRj3n/AcTVqmXC88aokibwiBk="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "event-data/null",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOm51bGx9"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,wVdF4yd3cNijRkMmY3+ExRpX3wSESs8MOb2W+asNtmU="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "event-data/{}",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnt9fQ=="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,XrFryLI8ZLQxQBcM7Rk+avMdrH1+/hdl97jMA6XQOI0="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "event-data/{\"id\":\"abcdefab-cdef-4def-8def-abcdefabcdef\"}",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYifX0="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,NrG+H+Ztkcs0x6MoYtJngVZ8+BSXTFgyFm2oQDhKPQQ="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "event-data/{\"id\":\"abcdefab-cdef-4def-8def-abcdefabcdef\",\"customer\":{}}",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6e319fQ=="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,DjOhNGSWjTfHtkTebQ1FZOy6hafLoHFS7vq9AqP0jGc="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "event-data/{\"id\":\"bad\",\"customer\":{\"external_id\":\"forge:workspace:workspace\"}}",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJiYWQiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,/NMqriMK4tztme9tnTvVdEdyFmz4dsmPLXp1Z53LJnU="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "event-data/{\"id\":\"ABCDEFAB-CDEF-4DEF-8DEF-ABCDEFABCDEF\",\"customer\":{\"external_id\":\"forge:workspace:workspace\"}}",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJBQkNERUZBQi1DREVGLTRERUYtOERFRi1BQkNERUZBQkNERUYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,3ttonBtV8+P8f353xklpl1HZrwZySAeTy7HWQqUIkt4="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "e541735bb082188a60c4232951f1b86fc6c73f3734fcd345578df286b0df17bc",
+            "subscriptionId": "ABCDEFAB-CDEF-4DEF-8DEF-ABCDEFABCDEF"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "event-data/{\"id\":null,\"customer\":{\"external_id\":\"forge:workspace:workspace\"}}",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOm51bGwsImN1c3RvbWVyIjp7ImV4dGVybmFsX2lkIjoiZm9yZ2U6d29ya3NwYWNlOndvcmtzcGFjZSJ9fX0="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,HxEGgRbEZSHDux7XzJNVWpbglMJAXXUkRucJxrsljDM="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "event-data/{\"id\":\"abcdefab-cdef-4def-8def-abcdefabcdef\",\"customer\":{\"external_id\":1}}",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6MX19fQ=="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,zNWSUz+gAixey6EcUje31dbLQ+YNxbaid29w1ZXBzIg="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "customer/\"\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6IiJ9fX0="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,TMdEzOnARheC2ozF1FFNElW5hE7GQgdb6eQiPLrALdM="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "customer/\"forge:workspace:\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZToifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,k1h89VL64RR1Ljy1sM6S+vpIcTi4KE0PCdOgrDtWaIo="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_BILLING_IDENTITY"
+        }
+      }
+    },
+    {
+      "name": "customer/\"forge:workspace: \"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTogIn19fQ=="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,kTNmvDNYJSJdkPbbbMRD0jIt/eXNHpPaU/rl1oN/+EE="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_BILLING_IDENTITY"
+        }
+      }
+    },
+    {
+      "name": "customer/\"forge:workspace:﻿\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTrvu78ifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,UTykJH5TKB8C9K5xK0ooWM5Iv/TUQZ07/5r/VttJQ6A="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_BILLING_IDENTITY"
+        }
+      }
+    },
+    {
+      "name": "customer/\"customer\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImN1c3RvbWVyIn19fQ=="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,6m6lT62X0hNYJ+FBRqQchk4bGHRn/ePGGIWmauvuPKU="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_BILLING_IDENTITY"
+        }
+      }
+    },
+    {
+      "name": "customer/\"FORGE:workspace:w\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6IkZPUkdFOndvcmtzcGFjZTp3In19fQ=="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,P60DiOn7/TbmjHVmszYAuhewEBmYH4YO37RTJ0fg504="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_BILLING_IDENTITY"
+        }
+      }
+    },
+    {
+      "name": "customer/\"forge:workspace: workspace \"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTogd29ya3NwYWNlICJ9fX0="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,rpvg8vSFr7WkapKGCBbRNWCaZQcJcQhqkZoxM+MsJ90="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": " workspace ",
+            "eventId": "event-fixture",
+            "bodyHash": "f4787e9f67d7ad0f6fec19b6ab77e9f959eb69ac90f49e626cf4657861bb4f44",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "customer/\"forge:workspace:語🙂\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTroqp7wn5mCIn19fQ=="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,1fnw1TmHevFRis2NeYZgOzvDhDe+tmCZZGHA374Oit4="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "語🙂",
+            "eventId": "event-fixture",
+            "bodyHash": "619238865357cc273d3c32b48df90fc00427abed15864f2e067df44cf1ef1fc2",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "customer/\"forge:workspace:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eCJ9fX0="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,iynpPmEXBXL8/1jvpTYq4O3A2Rj7vaiG1FVK4zyQpg4="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "eventId": "event-fixture",
+            "bodyHash": "608a8acabb18aecfa147d3d4dceed0ba5b8dc90278c2c94a99dbe26f32cbaa45",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "customer/\"forge:workspace:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHgifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,KSLIEyBXO4aaWFDUhPXN/fjqg3qyWfGmyh0/+XEv3GE="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_EVENT_POLICY_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "customer/\"forge:workspace:🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTrwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYLwn5mC8J+ZgvCfmYIifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,fjdXBo6uQ3tN+VAqOttJn0CK7gbw3EX1OT4ziZexufA="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂",
+            "eventId": "event-fixture",
+            "bodyHash": "67415344cc5c5b17748037affb59a64c2c6689b90a6f3885f4309e55b16dee25",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "method/GET",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "GET",
+      "body": null,
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,BsZYtylZOSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrs="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 405,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "METHOD_NOT_ALLOWED"
+        }
+      }
+    },
+    {
+      "name": "method/HEAD",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "HEAD",
+      "body": null,
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,BsZYtylZOSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrs="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 405,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "METHOD_NOT_ALLOWED"
+        }
+      }
+    },
+    {
+      "name": "method/PUT",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "PUT",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,BsZYtylZOSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrs="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 405,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "METHOD_NOT_ALLOWED"
+        }
+      }
+    },
+    {
+      "name": "method/PATCH",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "PATCH",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,BsZYtylZOSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrs="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 405,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "METHOD_NOT_ALLOWED"
+        }
+      }
+    },
+    {
+      "name": "method/DELETE",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "DELETE",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,BsZYtylZOSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrs="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 405,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "METHOD_NOT_ALLOWED"
+        }
+      }
+    },
+    {
+      "name": "disabled",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": false,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,BsZYtylZOSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrs="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 404,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "NOT_FOUND"
+        }
+      }
+    },
+    {
+      "name": "disabled-before-method-and-signature",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": false,
+      "secret": "",
+      "method": "GET",
+      "body": null,
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,VLqTJW+/8SHLPoDJ3pDRflfh/UTBFkYxseJOuzwo82g="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 404,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "NOT_FOUND"
+        }
+      }
+    },
+    {
+      "name": "missing-body",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": null,
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,ZMpMHIQqGShlvulBVKxBbVLa5Dp34JmckIYIsxSHuww="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "empty-body",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": ""
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,ZMpMHIQqGShlvulBVKxBbVLa5Dp34JmckIYIsxSHuww="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "malformed-json/{} broken",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "e30gYnJva2Vu"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,3sKU1/Jnx/fm1AGTfQLciZCcSMYbiSIMwNLkgKS+HqI="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "malformed-json/\n",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "Cg=="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,AQ3YwJn1HTF3dMB13wyKGK6C641s52SqRQRFOxqBxzM="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "malformed-json/{\"type\":",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjo="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,I9+Zwg+PT1pn6UN3yY+67T72CK4W5CZv/SbgxpBN8T8="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "malformed-json/<html/>",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "PGh0bWwvPg=="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,ezF3lVSQhRl8icBHBn7ErOHbnjjFTiFWSL1IptUUB78="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "missing-header/webhook-id",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-signature",
+          "v1,BsZYtylZOSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrs="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "missing-header/webhook-timestamp",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,BsZYtylZOSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrs="
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "missing-header/webhook-signature",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "empty-secret",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,VLqTJW+/8SHLPoDJ3pDRflfh/UTBFkYxseJOuzwo82g="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "empty-event-id",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          ""
+        ],
+        [
+          "webhook-signature",
+          "v1,I67mbRey8LYLT4QtXq4HX9oxQCr38R4lWNtqTJbinzQ="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "empty-signature",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          ""
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "altered-bytes",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19IA=="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,BsZYtylZOSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrs="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "signed-body-is-not-event-state",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifSwic3RhdHVzIjoidW5wYWlkIiwicHJvZHVjdF9pZCI6InVudHJ1c3RlZCIsImFtb3VudCI6MSwicGFpZCI6dHJ1ZX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,7Hp6js1kWWQyOrAhpa906z6rGBqVwL5cca8cGTp18Dg="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "4c9dd8b7dc832512ca4dd3685142f3081f305fb15cc6ea44196764dca00ee58b",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "callback-failure/subscription.active",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,BsZYtylZOSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrs="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": true,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "3475f55eff2daee56c4aa4f2ac1a97dc36c52aeececf5e75f9e70a3b42304101",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_RECONCILIATION_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "callback-failure/subscription.resumed",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLnJlc3VtZWQiLCJkYXRhIjp7ImlkIjoiYWJjZGVmYWItY2RlZi00ZGVmLThkZWYtYWJjZGVmYWJjZGVmIiwiY3VzdG9tZXIiOnsiZXh0ZXJuYWxfaWQiOiJmb3JnZTp3b3Jrc3BhY2U6d29ya3NwYWNlIn19fQ=="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,OUL/jSI1x9ybPoZEin9WTEEmDyY6048JXml5yE4b10Y="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": true,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "16d6f72921d3241e1e7e40434aa9a126d2a7305a31bd4be7c7c726b4c760e3e0",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef",
+            "unsupportedResume": true
+          }
+        }
+      ],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_RECONCILIATION_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "callback-failure/order.paid",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoib3JkZXIucGFpZCIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,k4W7Dy7s9wH88ushEa/kKSTdazq2B5yL3QA9roVWaZE="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": true,
+      "trace": [
+        {
+          "kind": "order",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "1ed9a1ad42138a3346780de4297a3ce3151a18d0ed38eb86ae0a3c50fac95ff9",
+            "orderId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_RECONCILIATION_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "callback-failure/order.refunded",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoib3JkZXIucmVmdW5kZWQiLCJkYXRhIjp7ImlkIjoiYWJjZGVmYWItY2RlZi00ZGVmLThkZWYtYWJjZGVmYWJjZGVmIiwiY3VzdG9tZXIiOnsiZXh0ZXJuYWxfaWQiOiJmb3JnZTp3b3Jrc3BhY2U6d29ya3NwYWNlIn19fQ=="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,CtEO/pnQk/wev6FTl7rZ7zQXqSL9LL9xUjinGjRRi64="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": true,
+      "trace": [
+        {
+          "kind": "refund",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "ed83f22fc3db7688b69502038b65738cd7343448b9f22c59f54873db23a7bd5d",
+            "orderId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_RECONCILIATION_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "order-paid-without-handler",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoib3JkZXIucGFpZCIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,k4W7Dy7s9wH88ushEa/kKSTdazq2B5yL3QA9roVWaZE="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": true,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 503,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "BILLING_RECONCILIATION_REQUIRED"
+        }
+      }
+    },
+    {
+      "name": "timestamp/\"1800014400\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,BsZYtylZOSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrs="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "3475f55eff2daee56c4aa4f2ac1a97dc36c52aeececf5e75f9e70a3b42304101",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "timestamp/\"1800014400.9\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,BsZYtylZOSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrs="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400.9"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "3475f55eff2daee56c4aa4f2ac1a97dc36c52aeececf5e75f9e70a3b42304101",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "timestamp/\"1800014100.25\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,yLhrSABCiJqckmTBSJ4naF9t4ZJKG+x3Smui5dP2Bd8="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014100.25"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "3475f55eff2daee56c4aa4f2ac1a97dc36c52aeececf5e75f9e70a3b42304101",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "timestamp/\"1800014100.249\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,yLhrSABCiJqckmTBSJ4naF9t4ZJKG+x3Smui5dP2Bd8="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014100.249"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "timestamp/\"1800014700.25\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,9F7SO4lwR5x3kfMcI0Z0gcnYIxVb6B5uuuAXJ3Xj3vs="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014700.25"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "3475f55eff2daee56c4aa4f2ac1a97dc36c52aeececf5e75f9e70a3b42304101",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "timestamp/\"1800014700.251\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,9F7SO4lwR5x3kfMcI0Z0gcnYIxVb6B5uuuAXJ3Xj3vs="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014700.251"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "timestamp/\"1800014100\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,yLhrSABCiJqckmTBSJ4naF9t4ZJKG+x3Smui5dP2Bd8="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014100"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "timestamp/\"1800014700\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,9F7SO4lwR5x3kfMcI0Z0gcnYIxVb6B5uuuAXJ3Xj3vs="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014700"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "3475f55eff2daee56c4aa4f2ac1a97dc36c52aeececf5e75f9e70a3b42304101",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "timestamp/\"0x6b4a0a40\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,BsZYtylZOSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrs="
+        ],
+        [
+          "webhook-timestamp",
+          "0x6b4a0a40"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "3475f55eff2daee56c4aa4f2ac1a97dc36c52aeececf5e75f9e70a3b42304101",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "timestamp/\"0b1101011010010100000101001000000\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,BsZYtylZOSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrs="
+        ],
+        [
+          "webhook-timestamp",
+          "0b1101011010010100000101001000000"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "3475f55eff2daee56c4aa4f2ac1a97dc36c52aeececf5e75f9e70a3b42304101",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "timestamp/\"0o15322405100\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,BsZYtylZOSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrs="
+        ],
+        [
+          "webhook-timestamp",
+          "0o15322405100"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "3475f55eff2daee56c4aa4f2ac1a97dc36c52aeececf5e75f9e70a3b42304101",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "timestamp/\"1.8000144e+9\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,BsZYtylZOSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrs="
+        ],
+        [
+          "webhook-timestamp",
+          "1.8000144e+9"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "3475f55eff2daee56c4aa4f2ac1a97dc36c52aeececf5e75f9e70a3b42304101",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "timestamp/\"+1800014400\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,BsZYtylZOSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrs="
+        ],
+        [
+          "webhook-timestamp",
+          "+1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "3475f55eff2daee56c4aa4f2ac1a97dc36c52aeececf5e75f9e70a3b42304101",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "timestamp/\" 1800014400\\t\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,BsZYtylZOSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrs="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "3475f55eff2daee56c4aa4f2ac1a97dc36c52aeececf5e75f9e70a3b42304101",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "timestamp/\"1800014400.\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,BsZYtylZOSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrs="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400."
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "3475f55eff2daee56c4aa4f2ac1a97dc36c52aeececf5e75f9e70a3b42304101",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "timestamp/\"1800014400e0\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,BsZYtylZOSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrs="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400e0"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "3475f55eff2daee56c4aa4f2ac1a97dc36c52aeececf5e75f9e70a3b42304101",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "timestamp/\"\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,IWNCMscA5h9X6eDUL2Io8aM0E/eWkdVPd7loOZhNhwA="
+        ],
+        [
+          "webhook-timestamp",
+          ""
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "timestamp/\" \"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,IWNCMscA5h9X6eDUL2Io8aM0E/eWkdVPd7loOZhNhwA="
+        ],
+        [
+          "webhook-timestamp",
+          ""
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "timestamp/\"Infinity\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,9dZQqFfWq+46oOFlKJOgeKGtN+uR3Wgo5HU7cZ4qrpY="
+        ],
+        [
+          "webhook-timestamp",
+          "Infinity"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "timestamp/\"-Infinity\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,YsvYND794zN7x8J6LyTG3ykkUGS5zZON6ilgRDhs73s="
+        ],
+        [
+          "webhook-timestamp",
+          "-Infinity"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "timestamp/\"NaN\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,279lyvEqanoFmYs1HGltAGxxH4C6q+cPux1WzwAc1jk="
+        ],
+        [
+          "webhook-timestamp",
+          "NaN"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "timestamp/\"1_000\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,279lyvEqanoFmYs1HGltAGxxH4C6q+cPux1WzwAc1jk="
+        ],
+        [
+          "webhook-timestamp",
+          "1_000"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "timestamp/\"0x\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,279lyvEqanoFmYs1HGltAGxxH4C6q+cPux1WzwAc1jk="
+        ],
+        [
+          "webhook-timestamp",
+          "0x"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "timestamp/\"0xjunk\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,279lyvEqanoFmYs1HGltAGxxH4C6q+cPux1WzwAc1jk="
+        ],
+        [
+          "webhook-timestamp",
+          "0xjunk"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "timestamp/\"1800014400x\"",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,279lyvEqanoFmYs1HGltAGxxH4C6q+cPux1WzwAc1jk="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400x"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "fractional-timestamp-signed-with-fraction-rejected",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,LXjuwcEy6OsB80nXqG61eeDG15eHn8kXBHrIkya1cjE="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400.9"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "duplicate-timestamp",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ],
+        [
+          "webhook-signature",
+          "v1,BsZYtylZOSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrs="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "duplicate-id",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ],
+        [
+          "webhook-signature",
+          "v1,BsZYtylZOSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrs="
+        ],
+        [
+          "webhook-id",
+          "other"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "duplicate-signature",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ],
+        [
+          "webhook-signature",
+          "v1,BsZYtylZOSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrs="
+        ],
+        [
+          "webhook-signature",
+          "v2,AAAA"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "3475f55eff2daee56c4aa4f2ac1a97dc36c52aeececf5e75f9e70a3b42304101",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "secret/c2RrIGZpeHR1cmUga2V5/raw",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "c2RrIGZpeHR1cmUga2V5",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,BP5OLfulQ93cBOUrHgIvSmRkFWK67oPDqUISNr5/CgE="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "3475f55eff2daee56c4aa4f2ac1a97dc36c52aeececf5e75f9e70a3b42304101",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "secret/c2RrIGZpeHR1cmUga2V5/decoded",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "c2RrIGZpeHR1cmUga2V5",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,KpIjPfgNzi0YtVxBxEBnprfgCbKKN54DDbH5duh+k7A="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "3475f55eff2daee56c4aa4f2ac1a97dc36c52aeececf5e75f9e70a3b42304101",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "secret/c2RrIGZpeHR1cmUga2V5/raw",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "c2RrIGZpeHR1cmUga2V5",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,BP5OLfulQ93cBOUrHgIvSmRkFWK67oPDqUISNr5/CgE="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "3475f55eff2daee56c4aa4f2ac1a97dc36c52aeececf5e75f9e70a3b42304101",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "secret/c2RrIGZpeHR1cmUga2V5/decoded",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "c2RrIGZpeHR1cmUga2V5",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,KpIjPfgNzi0YtVxBxEBnprfgCbKKN54DDbH5duh+k7A="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "3475f55eff2daee56c4aa4f2ac1a97dc36c52aeececf5e75f9e70a3b42304101",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "secret/whsec_c2RrIGZpeHR1cmUga2V5/raw",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "whsec_c2RrIGZpeHR1cmUga2V5",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,ddJ8shM+Z8pXEo8dl9uzMnZwicXHkqJC3+YrtpewKE4="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "3475f55eff2daee56c4aa4f2ac1a97dc36c52aeececf5e75f9e70a3b42304101",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "secret/whsec_c2RrIGZpeHR1cmUga2V5/decoded",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "whsec_c2RrIGZpeHR1cmUga2V5",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,KpIjPfgNzi0YtVxBxEBnprfgCbKKN54DDbH5duh+k7A="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "3475f55eff2daee56c4aa4f2ac1a97dc36c52aeececf5e75f9e70a3b42304101",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "secret/whsec_c2RrIGZpeHR1cmUga2V5/raw",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "whsec_c2RrIGZpeHR1cmUga2V5",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,ddJ8shM+Z8pXEo8dl9uzMnZwicXHkqJC3+YrtpewKE4="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "3475f55eff2daee56c4aa4f2ac1a97dc36c52aeececf5e75f9e70a3b42304101",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "secret/whsec_c2RrIGZpeHR1cmUga2V5/decoded",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "whsec_c2RrIGZpeHR1cmUga2V5",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,KpIjPfgNzi0YtVxBxEBnprfgCbKKN54DDbH5duh+k7A="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "3475f55eff2daee56c4aa4f2ac1a97dc36c52aeececf5e75f9e70a3b42304101",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "secret-atob-whitespace",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "whsec_c2Rr\t\n IGZpeHR1cmUga2V5",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,KpIjPfgNzi0YtVxBxEBnprfgCbKKN54DDbH5duh+k7A="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "3475f55eff2daee56c4aa4f2ac1a97dc36c52aeececf5e75f9e70a3b42304101",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "secret-atob-noncanonical-bits",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "whsec_AB==",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,VLqTJW+/8SHLPoDJ3pDRflfh/UTBFkYxseJOuzwo82g="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "3475f55eff2daee56c4aa4f2ac1a97dc36c52aeececf5e75f9e70a3b42304101",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "secret-base64url-is-raw",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "whsec_____",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,zsZqHFNld7Y+1R0Zo42/E4L97eP2GP/CI6qYlNmYqiE="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "3475f55eff2daee56c4aa4f2ac1a97dc36c52aeececf5e75f9e70a3b42304101",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "secret-base64url-not-decoded",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "whsec_____",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,5uQ389OEhmFwCjWgbvzVVOH1PSvNvwbxb2AuCwe1PDo="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "secret-empty-base64-remainder-raw",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "whsec_",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,ClckyuyfU6mLRzHYIWx/oXuuCH+cWqEaeS2R1ItBCx0="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "3475f55eff2daee56c4aa4f2ac1a97dc36c52aeececf5e75f9e70a3b42304101",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "signature/bad",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,AAAA"
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "signature/wrong-version",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v2,BsZYtylZOSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrs="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "signature/no-version",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "BsZYtylZOSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrs="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "signature/unpadded",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,BsZYtylZOSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrs"
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "3475f55eff2daee56c4aa4f2ac1a97dc36c52aeececf5e75f9e70a3b42304101",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "signature/atob-tabs",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,BsZYtylZ\tOSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrs="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "3475f55eff2daee56c4aa4f2ac1a97dc36c52aeececf5e75f9e70a3b42304101",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "signature/base64-space-separates-candidates",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,BsZYtylZ OSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrs="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "signature/one-of-many",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v2,AAAA v1,AAAA  v1,BsZYtylZOSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrs="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "3475f55eff2daee56c4aa4f2ac1a97dc36c52aeececf5e75f9e70a3b42304101",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "signature/extra-comma-ignored",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,BsZYtylZOSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrs=,ignored"
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "3475f55eff2daee56c4aa4f2ac1a97dc36c52aeececf5e75f9e70a3b42304101",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "signature/excess-padding",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,BsZYtylZOSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrs=="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 400,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "INVALID_WEBHOOK"
+        }
+      }
+    },
+    {
+      "name": "signature/noncanonical-bits",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,BsZYtylZOSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrt="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "3475f55eff2daee56c4aa4f2ac1a97dc36c52aeececf5e75f9e70a3b42304101",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "utf8-bom-is-stripped-for-signature-only",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "77u/eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTp3b3Jrc3BhY2UifX19"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,BsZYtylZOSWUU9Wxd8xDnNVcPit5WRcQgbRWhzmIBrs="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "4812368eaf2b400d92995758f2e7313cd966c766a89ad0deafd5325054325b43",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "utf8-replacement-before-signature",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "base64": "eyJ0eXBlIjoic3Vic2NyaXB0aW9uLmFjdGl2ZSIsImRhdGEiOnsiaWQiOiJhYmNkZWZhYi1jZGVmLTRkZWYtOGRlZi1hYmNkZWZhYmNkZWYiLCJjdXN0b21lciI6eyJleHRlcm5hbF9pZCI6ImZvcmdlOndvcmtzcGFjZTr/In19fQ=="
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,RcNk3ZW82OpKZ6AtUep2BIAPCbLLjTUOMLSWMNyGldQ="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "�",
+            "eventId": "event-fixture",
+            "bodyHash": "1c9023b122328161726f66ab92dcfeb6473520cc6c71fca021f9d3c61a9c9fde",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "raw-body-size/1048575",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "prefix": "{\"type\":\"subscription.active\",\"data\":{\"id\":\"abcdefab-cdef-4def-8def-abcdefabcdef\",\"customer\":{\"external_id\":\"forge:workspace:workspace\"}},\"padding\":\"",
+        "byte": 120,
+        "count": 1048424,
+        "suffix": "\"}"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,k5nGSKWvIdTa9eHVc1/5NZUGnS84gvSvqm1XMXaA1BQ="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "cab30aee3b8501932a875b9d12ccc719e3b72647865ef0541e4ad9b73f42fa6e",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "raw-body-size/1048576",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "prefix": "{\"type\":\"subscription.active\",\"data\":{\"id\":\"abcdefab-cdef-4def-8def-abcdefabcdef\",\"customer\":{\"external_id\":\"forge:workspace:workspace\"}},\"padding\":\"",
+        "byte": 120,
+        "count": 1048425,
+        "suffix": "\"}"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,uwQmW/eMAIQJkr41UKvNiVlQtQlLO6E7516dH/zRiw4="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [
+        {
+          "kind": "subscription",
+          "identity": {
+            "workspaceId": "workspace",
+            "eventId": "event-fixture",
+            "bodyHash": "77a4a196459fb00e02b4d814eab2cbc061db082785e57b79c045c575243d0139",
+            "subscriptionId": "abcdefab-cdef-4def-8def-abcdefabcdef"
+          }
+        }
+      ],
+      "result": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "RECONCILED"
+        }
+      }
+    },
+    {
+      "name": "raw-body-size/1048577",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "prefix": "{\"type\":\"subscription.active\",\"data\":{\"id\":\"abcdefab-cdef-4def-8def-abcdefabcdef\",\"customer\":{\"external_id\":\"forge:workspace:workspace\"}},\"padding\":\"",
+        "byte": 120,
+        "count": 1048426,
+        "suffix": "\"}"
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,GWOaxJBiaGE9mgfSsv3jl42PmnPm2ccnf8oQbxx7vY4="
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 413,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "WEBHOOK_TOO_LARGE"
+        }
+      }
+    },
+    {
+      "name": "oversize-before-invalid-signature",
+      "now": "2027-01-15T12:00:00.250Z",
+      "enabled": true,
+      "secret": "fixture-webhook-secret",
+      "method": "POST",
+      "body": {
+        "byte": 120,
+        "count": 1048577
+      },
+      "headers": [
+        [
+          "webhook-id",
+          "event-fixture"
+        ],
+        [
+          "webhook-signature",
+          "v1,AAAA"
+        ],
+        [
+          "webhook-timestamp",
+          "1800014400"
+        ]
+      ],
+      "noOrder": false,
+      "callbackFailure": false,
+      "trace": [],
+      "result": {
+        "status": 413,
+        "cacheControl": "no-store",
+        "body": {
+          "code": "WEBHOOK_TOO_LARGE"
+        }
+      }
+    }
+  ]
+}

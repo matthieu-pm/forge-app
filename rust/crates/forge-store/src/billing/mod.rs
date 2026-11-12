@@ -15,6 +15,7 @@ use uuid::Uuid;
 mod ledger;
 mod management;
 mod projection;
+mod reads;
 mod trial;
 
 #[derive(Clone)]

@@ -113,6 +113,7 @@ impl Throttle {
 type InvitationGate = dyn Fn(&str) -> bool + Send + Sync;
 #[derive(Clone, Default)]
 pub struct AppState {
+    pub(crate) billing: Option<Arc<crate::billing::Settings>>,
     pub(crate) calls: Option<Arc<crate::call_providers::Settings>>,
     pub(crate) loops: Option<forge_store::loops::Options>,
     pub(crate) template_application: Option<forge_store::template_application::Options>,
@@ -133,6 +134,10 @@ pub struct AppState {
 }
 
 impl AppState {
+    pub fn with_billing(mut self, settings: crate::billing::Settings) -> Self {
+        self.billing = Some(Arc::new(settings));
+        self
+    }
     pub fn with_calls(mut self, settings: crate::call_providers::Settings) -> Self {
         self.calls = Some(Arc::new(settings));
         self
@@ -188,6 +193,7 @@ impl AppState {
     ) -> Self {
         Self {
             model_proxy: None,
+            billing: None,
             calls: None,
             loops: None,
             template_application: None,

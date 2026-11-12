@@ -9924,6 +9924,111 @@
       }
     },
     {
+      "environment": "sandbox",
+      "operation": "read-checkout",
+      "id": "00000000-0000-4000-8000-000000000020",
+      "body": null,
+      "query": [],
+      "request": {
+        "url": "https://sandbox-api.polar.sh/v1/checkouts/00000000-0000-4000-8000-000000000020",
+        "method": "GET",
+        "headers": {
+          "authorization": "Bearer fixture-token",
+          "content-type": "application/json",
+          "polar-version": "2026-10"
+        },
+        "body": null
+      }
+    },
+    {
+      "environment": "sandbox",
+      "operation": "update-cancel",
+      "id": "00000000-0000-4000-8000-000000000020",
+      "body": {
+        "cancel_at_period_end": true
+      },
+      "query": [],
+      "request": {
+        "url": "https://sandbox-api.polar.sh/v1/subscriptions/00000000-0000-4000-8000-000000000020",
+        "method": "PATCH",
+        "headers": {
+          "authorization": "Bearer fixture-token",
+          "content-type": "application/json",
+          "polar-version": "2026-10"
+        },
+        "body": {
+          "cancel_at_period_end": true
+        }
+      }
+    },
+    {
+      "environment": "sandbox",
+      "operation": "update-product",
+      "id": "00000000-0000-4000-8000-000000000020",
+      "body": {
+        "product_id": "00000000-0000-4000-8000-000000000001",
+        "proration_behavior": "next_period"
+      },
+      "query": [],
+      "request": {
+        "url": "https://sandbox-api.polar.sh/v1/subscriptions/00000000-0000-4000-8000-000000000020",
+        "method": "PATCH",
+        "headers": {
+          "authorization": "Bearer fixture-token",
+          "content-type": "application/json",
+          "polar-version": "2026-10"
+        },
+        "body": {
+          "product_id": "00000000-0000-4000-8000-000000000001",
+          "proration_behavior": "next_period"
+        }
+      }
+    },
+    {
+      "environment": "sandbox",
+      "operation": "update-seats",
+      "id": "00000000-0000-4000-8000-000000000020",
+      "body": {
+        "seats": 3,
+        "proration_behavior": "next_period"
+      },
+      "query": [],
+      "request": {
+        "url": "https://sandbox-api.polar.sh/v1/subscriptions/00000000-0000-4000-8000-000000000020",
+        "method": "PATCH",
+        "headers": {
+          "authorization": "Bearer fixture-token",
+          "content-type": "application/json",
+          "polar-version": "2026-10"
+        },
+        "body": {
+          "seats": 3,
+          "proration_behavior": "next_period"
+        }
+      }
+    },
+    {
+      "environment": "sandbox",
+      "operation": "update-clear",
+      "id": "00000000-0000-4000-8000-000000000020",
+      "body": {
+        "pending_update": null
+      },
+      "query": [],
+      "request": {
+        "url": "https://sandbox-api.polar.sh/v1/subscriptions/00000000-0000-4000-8000-000000000020",
+        "method": "PATCH",
+        "headers": {
+          "authorization": "Bearer fixture-token",
+          "content-type": "application/json",
+          "polar-version": "2026-10"
+        },
+        "body": {
+          "pending_update": null
+        }
+      }
+    },
+    {
       "environment": "production",
       "operation": "product",
       "id": "00000000-0000-4000-8000-000000000001",
@@ -10077,6 +10182,111 @@
         "body": {
           "external_customer_id": "forge:workspace:workspace",
           "return_url": "https://forge.test/settings/billing"
+        }
+      }
+    },
+    {
+      "environment": "production",
+      "operation": "read-checkout",
+      "id": "00000000-0000-4000-8000-000000000020",
+      "body": null,
+      "query": [],
+      "request": {
+        "url": "https://api.polar.sh/v1/checkouts/00000000-0000-4000-8000-000000000020",
+        "method": "GET",
+        "headers": {
+          "authorization": "Bearer fixture-token",
+          "content-type": "application/json",
+          "polar-version": "2026-10"
+        },
+        "body": null
+      }
+    },
+    {
+      "environment": "production",
+      "operation": "update-cancel",
+      "id": "00000000-0000-4000-8000-000000000020",
+      "body": {
+        "cancel_at_period_end": true
+      },
+      "query": [],
+      "request": {
+        "url": "https://api.polar.sh/v1/subscriptions/00000000-0000-4000-8000-000000000020",
+        "method": "PATCH",
+        "headers": {
+          "authorization": "Bearer fixture-token",
+          "content-type": "application/json",
+          "polar-version": "2026-10"
+        },
+        "body": {
+          "cancel_at_period_end": true
+        }
+      }
+    },
+    {
+      "environment": "production",
+      "operation": "update-product",
+      "id": "00000000-0000-4000-8000-000000000020",
+      "body": {
+        "product_id": "00000000-0000-4000-8000-000000000001",
+        "proration_behavior": "next_period"
+      },
+      "query": [],
+      "request": {
+        "url": "https://api.polar.sh/v1/subscriptions/00000000-0000-4000-8000-000000000020",
+        "method": "PATCH",
+        "headers": {
+          "authorization": "Bearer fixture-token",
+          "content-type": "application/json",
+          "polar-version": "2026-10"
+        },
+        "body": {
+          "product_id": "00000000-0000-4000-8000-000000000001",
+          "proration_behavior": "next_period"
+        }
+      }
+    },
+    {
+      "environment": "production",
+      "operation": "update-seats",
+      "id": "00000000-0000-4000-8000-000000000020",
+      "body": {
+        "seats": 3,
+        "proration_behavior": "next_period"
+      },
+      "query": [],
+      "request": {
+        "url": "https://api.polar.sh/v1/subscriptions/00000000-0000-4000-8000-000000000020",
+        "method": "PATCH",
+        "headers": {
+          "authorization": "Bearer fixture-token",
+          "content-type": "application/json",
+          "polar-version": "2026-10"
+        },
+        "body": {
+          "seats": 3,
+          "proration_behavior": "next_period"
+        }
+      }
+    },
+    {
+      "environment": "production",
+      "operation": "update-clear",
+      "id": "00000000-0000-4000-8000-000000000020",
+      "body": {
+        "pending_update": null
+      },
+      "query": [],
+      "request": {
+        "url": "https://api.polar.sh/v1/subscriptions/00000000-0000-4000-8000-000000000020",
+        "method": "PATCH",
+        "headers": {
+          "authorization": "Bearer fixture-token",
+          "content-type": "application/json",
+          "polar-version": "2026-10"
+        },
+        "body": {
+          "pending_update": null
         }
       }
     }

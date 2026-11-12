@@ -49,7 +49,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             storage.clone(),
             &environment,
         )?;
+        let billing = forge_server::billing::Settings::configured(database.clone(), &environment)?;
         let state = AppState::configured_database(database, settings, mailer)
+            .with_billing(billing)
             .with_calls(forge_server::call_providers::Settings::configured(
                 &environment,
             )?)

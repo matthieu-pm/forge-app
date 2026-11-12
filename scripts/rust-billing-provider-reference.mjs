@@ -64,10 +64,10 @@ const wire=[];const savedFetch=globalThis.fetch
 try{
  for(const environment of ['sandbox','production']){
   const sdk=createPolar({accessToken:config.accessToken,environment,timeout:15})
-  for(const operation of ['product','subscription','order','orders','checkout','portal']){
+  for(const operation of ['product','subscription','order','orders','checkout','portal','read-checkout','update-cancel','update-product','update-seats','update-clear']){
    let request
    globalThis.fetch=async(url,options)=>{request={url:String(url),method:options.method,headers:Object.fromEntries(options.headers),body:options.body?JSON.parse(options.body):null};return new Response('{}',{status:200})}
-   const body=operation==='checkout'?{products:[id(1)],seats:3,allow_trial:false}:operation==='portal'?{external_customer_id:'forge:workspace:workspace',return_url:'https://forge.test/settings/billing'}:null
+   const body=operation==='update-cancel'?{cancel_at_period_end:true}:operation==='update-product'?{product_id:id(1),proration_behavior:'next_period'}:operation==='update-seats'?{seats:3,proration_behavior:'next_period'}:operation==='update-clear'?{pending_update:null}:operation==='checkout'?{products:[id(1)],seats:3,allow_trial:false}:operation==='portal'?{external_customer_id:'forge:workspace:workspace',return_url:'https://forge.test/settings/billing'}:null
    const query={product_id:id(3),external_customer_id:'forge:workspace:w +/?&語',subscription_id:id(10),status:['paid','partially_refunded'],created_before:end,page:2,limit:100,sorting:['-created_at']}
    if(operation==='product')await sdk.products.get(id(1))
    if(operation==='subscription')await sdk.subscriptions.get(id(10))
@@ -75,6 +75,8 @@ try{
    if(operation==='orders')await sdk.orders.list(query)
    if(operation==='checkout')await sdk.checkouts.create(body)
    if(operation==='portal')await sdk.customerSessions.create(body)
+   if(operation==='read-checkout')await sdk.checkouts.get(id(20))
+   if(operation.startsWith('update-'))await sdk.subscriptions.update(id(20),body)
    wire.push({environment,operation,id:operation==='product'?id(1):operation==='subscription'?id(10):id(20),body,query:operation==='orders'?Object.entries(query).flatMap(([k,v])=>(Array.isArray(v)?v:[v]).map(x=>[k,String(x)])):[],request})
   }
  }

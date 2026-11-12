@@ -22,6 +22,8 @@ mod billing_acceptance;
 mod billing_management_acceptance;
 #[path = "acceptance/billing_projection.rs"]
 mod billing_projection_acceptance;
+#[path = "acceptance/billing_reads.rs"]
+mod billing_reads_acceptance;
 #[path = "acceptance/calls.rs"]
 mod call_acceptance;
 #[path = "acceptance/call_connections.rs"]
