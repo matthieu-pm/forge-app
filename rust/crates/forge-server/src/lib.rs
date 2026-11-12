@@ -3,6 +3,7 @@
 pub mod agent_runtime;
 pub mod agents;
 mod auth;
+mod calls;
 mod definitions;
 mod desktop_auth;
 pub mod desktop_retention;
@@ -55,6 +56,13 @@ pub fn router_with_state(state: state::AppState) -> Router {
                 .layer(axum::extract::DefaultBodyLimit::max(32 * 1024 * 1024)),
         )
         .route("/api/workspace/sla", post(sla::read))
+        .route("/api/workspace/calls", post(calls::list))
+        .route("/api/workspace/calls/read", post(calls::read))
+        .route("/api/workspace/calls/import", post(calls::import))
+        .route("/api/workspace/calls/notes", post(calls::note))
+        .route("/api/workspace/calls/actions", post(calls::action))
+        .route("/api/workspace/calls/retention", post(calls::retention))
+        .route("/api/workspace/calls/disconnect", post(calls::disconnect))
         .route("/api/workspace/sla/save", post(sla::save))
         .route("/api/workspace/sla/reconcile", post(sla::reconcile))
         .route("/api/workspace/imports", post(imports::read))

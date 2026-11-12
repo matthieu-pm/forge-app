@@ -4,6 +4,7 @@ pub mod accounts;
 pub mod agents;
 pub mod api_keys;
 pub mod authority;
+pub mod calls;
 pub mod commands;
 pub mod database;
 pub mod definitions;
@@ -33,6 +34,8 @@ pub use database::Database;
 
 #[derive(Debug, thiserror::Error)]
 pub enum StoreError {
+    #[error("{0}")]
+    Call(&'static str),
     #[error("{0}")]
     LoopPolicy(&'static str),
     #[error("This Loop changed. Reload before editing it.")]

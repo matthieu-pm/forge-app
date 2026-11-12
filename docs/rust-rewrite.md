@@ -94,6 +94,7 @@ gate pass.
 | 3b10e | Live loop authority, model and run binding, durable artifact publication | Passed |
 | 3b10f | Bound cloud loop execution, durable claims and decision settlement | Passed |
 | 3b10g | Authenticated loop scheduler, bounded dispatch and native operator | Passed |
+| 3b11a | Call transcript contracts, shared records, notes, actions and journaled retention | Passed |
 | 3b | Agent execution, approvals, streams, models, retention handlers, outbox, loops, calls and billing | Pending |
 | 4 | Rust web UI and macOS host, matching existing interaction and accessibility behavior | Pending |
 | 5 | Migration rehearsal, full browser/database/desktop verification and cutover instructions | Pending |
@@ -2542,3 +2543,41 @@ these routes do not represent a completed rewrite.
   tests**, and **three typechecks**, including all fixtures, formatting and
   Clippy. The 607 external-fixture tests in 31 files remain skipped.
   Evidence: `.forge/rust-rewrite/milestone-3b10g-producer.log`.
+
+### Milestone 3b11a
+
+- Call inputs and VTT/SRT/speaker-labelled transcript parsing are ported against
+  178 source contract cases, 108 transcript examples and 20 provider-selection
+  cases. ECMAScript whitespace and UTF-16 regular-expression matching preserve
+  Unicode speaker boundaries, while schema string lengths follow the installed
+  Zod implementation. Explicit consent remains required for imports/connections.
+- Calls use the existing schema, current actor and team visibility. Directories
+  bound their results to the latest 100 calls and omit transcript contents;
+  detail reads include them. Connection projections contain availability and
+  ownership metadata without credentials or OAuth state. Loop principals retain
+  their team scope and cannot acquire administrative retention privileges.
+- Manual imports preserve speakers, timestamps, unique participants and duration,
+  and enforce current retention plus the reference one-day future allowance.
+  Notes retain their author, action changes bind both call and action, and
+  administrators can disconnect a connection only in their own workspace.
+- Retention setting changes and transcript redaction share one prepared recovery
+  transaction. Expiry clears transcripts and summary leases while preserving
+  summaries, decisions, notes and action items. Workspace locking serializes
+  imports with retention changes and account/workspace lifecycle operations.
+- Session-bound HTTP adapters expose directory/detail/import/note/action/
+  retention/disconnect operations. Nine new reference, database, HTTP and recovery
+  scenarios cover normalization, privacy, live authority, expiry boundaries,
+  concurrent retention/imports, bounded directories and failed journal publication.
+  OAuth exchange, provider synchronization and generated summaries remain
+  subsequent milestones.
+- The initial full gate passed 630 Rust tests, all 3,013 enabled reference tests,
+  formatting, Clippy and three typechecks. One new fixture incorrectly expected
+  a cross-workspace lookup after its helper had already switched the session's
+  active workspace; current authority correctly returned `Forbidden` first.
+  The fixture now asserts that stale-session rejection and independently checks
+  `NotFound` using a current session from another workspace. Product behavior is
+  unchanged. Evidence: `.forge/rust-rewrite/milestone-3b11a-initial.log`.
+- The corrected full gate passed **631 Rust tests**, **3,013 enabled reference
+  tests**, and **three typechecks**, including source fixtures, formatting and
+  Clippy. The 607 external-fixture tests in 31 files remain skipped.
+  Evidence: `.forge/rust-rewrite/milestone-3b11a-authority.log`.

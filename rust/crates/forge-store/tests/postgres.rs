@@ -16,6 +16,8 @@ mod model_discovery;
 
 #[path = "acceptance/agents.rs"]
 mod agent_acceptance;
+#[path = "acceptance/calls.rs"]
+mod call_acceptance;
 #[path = "acceptance/definitions.rs"]
 mod definition_acceptance;
 #[path = "acceptance/documents.rs"]

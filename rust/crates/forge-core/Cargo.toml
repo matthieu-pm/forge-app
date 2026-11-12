@@ -23,7 +23,7 @@ jiff.workspace = true
 regex.workspace = true
 unicode-normalization.workspace = true
 base64.workspace = true
-regress.workspace = true
+regress = { workspace = true, features = ["utf16"] }
 url.workspace = true
 icu_collator.workspace = true
 

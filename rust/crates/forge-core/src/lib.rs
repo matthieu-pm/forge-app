@@ -3,6 +3,7 @@
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub mod actor;
+pub mod calls;
 pub mod canonical;
 pub mod comments;
 mod contract;
